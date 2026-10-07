@@ -1,0 +1,11 @@
+build/
+.gradle/
+.kotlin/
+.idea/
+local.properties
+*.apk
+*.log
+tools/translate*.py
+tools/edit_main.py
+tools/patch_*.py
+tools/classic_shell.kt

@@ -1,0 +1,10 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- a filled computer monitor with the pulse line on its screen -->
+    <path android:fillColor="#FFECEFF1" android:pathData="M33,28H75A5,5 0 0 1 80,33V64A5,5 0 0 1 75,69H33A5,5 0 0 1 28,64V33A5,5 0 0 1 33,28Z" />
+    <path android:fillColor="#FF0B2A33" android:pathData="M34,34H74V63H34Z" />
+    <path android:fillColor="#FFB0BEC5" android:pathData="M49,69H59V75H49Z" />
+    <path android:fillColor="#FFCFD8DC" android:pathData="M40,75H68A2,2 0 0 1 70,77V78H38V77A2,2 0 0 1 40,75Z" />
+    <path android:pathData="M37,50 L46,50 L50,41 L56,58 L61,38 L65,50 L71,50"
+        android:strokeColor="#FF6EE7B7" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000" />
+</vector>
