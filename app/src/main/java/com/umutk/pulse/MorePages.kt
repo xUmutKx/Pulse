@@ -348,7 +348,7 @@ fun AppsPage() {
                     }
                 }
                 if (open == a.pkg) {
-                    InfoRows(listOf("Package" to a.pkg, "Installed" to java.text.DateFormat.getDateInstance().format(java.util.Date(a.installed)), "Target API" to "${a.target}", "Type" to if (a.system) "System" else "User"))
+                    InfoRows(listOf("Package" to a.pkg, "Installed" to java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault()).format(java.util.Date(a.installed)), "Target API" to "${a.target}", "Type" to if (a.system) "System" else "User"))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         PButton("Open") { ctx.packageManager.getLaunchIntentForPackage(a.pkg)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } ?: run { note = "${a.label} has no screen to open" } }
                         PButton("Settings") { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${a.pkg}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }

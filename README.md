@@ -8,13 +8,9 @@ I wanted Task Manager on my phone: a process list with heat-map cells, a Perform
 
 ## Screenshots
 
-| Processes | Performance | Device |
-|---|---|---|
-| ![Processes](docs/screenshots/processes.png) | ![Performance](docs/screenshots/performance.png) | ![Device](docs/screenshots/device.png) |
-
-| Windows 10 | Themes | Settings |
-|---|---|---|
-| ![Windows 10](docs/screenshots/windows10.png) | ![Themes](docs/screenshots/themes.png) | ![Settings](docs/screenshots/settings.png) |
+| Overview (light) | Cores (dark) |
+|---|---|
+| ![Overview](docs/screenshots/overview.png) | ![Cores](docs/screenshots/cores.png) |
 
 ## What is in it
 
