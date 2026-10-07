@@ -8,7 +8,7 @@ import android.os.BatteryManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import java.io.File
 
-data class Proc(val pid: Int, val name: String, val rssMb: Int, val cpu: Float = 0f)
+data class Proc(val pid: Int, val name: String, val rssMb: Int, val cpu: Float = 0f, val user: String = "", val state: String = "", val vszMb: Int = 0, val nice: Int = 0, val ppid: Int = 0)
 
 data class Snap(
     val cpu: Int = 0,
@@ -164,9 +164,10 @@ object Sampler {
     }
 
     fun processes(): List<Proc> =
-        Shell.run("ps -A -o PID,RSS,%CPU,NAME").lineSequence().drop(1).mapNotNull { l ->
-            val f = l.trim().split(Regex("\\s+"), 4)
-            if (f.size < 4) null else Proc(f[0].toIntOrNull() ?: return@mapNotNull null, f[3], (f[1].toIntOrNull() ?: 0) / 1024, f[2].toFloatOrNull() ?: 0f)
+        Shell.run("ps -A -o PID,RSS,%CPU,USER,S,VSZ,NI,PPID,NAME").lineSequence().drop(1).mapNotNull { l ->
+            val f = l.trim().split(Regex("\\s+"), 9)
+            if (f.size < 9) null else Proc(f[0].toIntOrNull() ?: return@mapNotNull null, f[8], (f[1].toIntOrNull() ?: 0) / 1024, f[2].toFloatOrNull() ?: 0f,
+                f[3], f[4], (f[5].toIntOrNull() ?: 0) / 1024, f[6].toIntOrNull() ?: 0, f[7].toIntOrNull() ?: 0)
         }.filter { it.rssMb > 0 }.toList().also { Procs.count = it.size to 0 }
 
     fun kill(p: Proc) {

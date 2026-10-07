@@ -132,8 +132,7 @@ fun StartupPage() {
                         Text(b.label, color = T.text, fontSize = 14.sp, maxLines = 1)
                         Text(if (b.enabled) "Enabled" else "Disabled", color = if (b.enabled) Look.accent else T.sub, fontSize = 11.sp)
                     }
-                    Switch(b.enabled, { on -> if (s.root) scope.launch { withContext(Dispatchers.IO) { Startup.set(b, on) }; list = withContext(Dispatchers.IO) { Startup.list(ctx) } } }, enabled = s.root,
-                        colors = SwitchDefaults.colors(checkedTrackColor = Look.accent))
+                    PSwitch(b.enabled, { on -> if (s.root) scope.launch { withContext(Dispatchers.IO) { Startup.set(b, on) }; list = withContext(Dispatchers.IO) { Startup.list(ctx) } } }, enabled = s.root)
                 }
             }
         }
@@ -146,23 +145,29 @@ fun StartupPage() {
 fun DetailsPage() {
     var list by remember { mutableStateOf<List<Proc>>(emptyList()) }
     var sort by remember { mutableStateOf("pid") }
+    var q by remember { mutableStateOf("") }
+    val hs = rememberScrollState()
     LaunchedEffect(Unit) { while (true) { list = withContext(Dispatchers.IO) { Sampler.processes() }; delay(3000) } }
-    val shown = when (sort) { "cpu" -> list.sortedByDescending { it.cpu }; "mem" -> list.sortedByDescending { it.rssMb }; "name" -> list.sortedBy { it.name.lowercase() }; else -> list.sortedBy { it.pid } }
+    val f = list.filter { q.isBlank() || it.name.contains(q, true) || it.user.contains(q, true) || it.pid.toString() == q }
+    val shown = when (sort) { "cpu" -> f.sortedByDescending { it.cpu }; "mem" -> f.sortedByDescending { it.rssMb }; "name" -> f.sortedBy { it.name.lowercase() }; "user" -> f.sortedBy { it.user }; "vsz" -> f.sortedByDescending { it.vszMb }; else -> f.sortedBy { it.pid } }
     val mono = FontFamily.Monospace
+    val cols = listOf(Triple("PID", "pid", 60.dp), Triple("Status", "", 78.dp), Triple("User", "user", 92.dp), Triple("CPU", "cpu", 52.dp), Triple("Memory", "mem", 76.dp), Triple("Virtual", "vsz", 84.dp), Triple("Priority", "", 66.dp), Triple("Parent", "", 66.dp))
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-        Header("Details", "${list.size} processes")
+        Header("Details", "${list.size} processes · ${list.count { it.state == "R" }} running")
+        PField(q, { q = it }, "Filter by name, PID or user", Modifier.fillMaxWidth().padding(bottom = 6.dp))
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-            @Composable fun head(t: String, k: String, m: Modifier) = Text(t, m.clickable { sort = k }, color = if (sort == k) Look.accent else T.sub, fontSize = 12.sp)
-            head("Name", "name", Modifier.weight(1f)); head("PID", "pid", Modifier.width(58.dp)); head("CPU", "cpu", Modifier.width(48.dp)); head("Memory", "mem", Modifier.width(66.dp))
+            Text("Name", Modifier.width(150.dp).clickable { sort = "name" }, color = if (sort == "name") Look.accent else T.sub, fontSize = 12.sp)
+            Row(Modifier.weight(1f).horizontalScroll(hs)) { cols.forEach { (t, k, w) -> Text(t, Modifier.width(w).clickable { if (k.isNotEmpty()) sort = k }, color = if (sort == k) Look.accent else T.sub, fontSize = 12.sp) } }
         }
         if (list.isEmpty()) Center("The process list needs root")
         else LazyColumn(Modifier.fillMaxSize()) {
-            items(shown.take(300), key = { it.pid }) { p ->
+            items(shown.take(400), key = { it.pid }) { p ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
-                    Text(p.name, Modifier.weight(1f), color = T.text, fontSize = 12.sp, maxLines = 1, fontFamily = mono)
-                    Text("${p.pid}", Modifier.width(58.dp), color = T.sub, fontSize = 12.sp, fontFamily = mono)
-                    Text("%.0f".format(p.cpu), Modifier.width(48.dp), color = T.sub, fontSize = 12.sp, fontFamily = mono)
-                    Text("${p.rssMb} MB", Modifier.width(66.dp), color = T.sub, fontSize = 12.sp, fontFamily = mono)
+                    Text(p.name, Modifier.width(150.dp), color = T.text, fontSize = 12.sp, maxLines = 1, fontFamily = mono)
+                    Row(Modifier.weight(1f).horizontalScroll(hs)) {
+                        listOf("${p.pid}" to 60.dp, (if (p.state == "R") "Running" else if (p.state == "Z") "Zombie" else if (p.state == "T") "Stopped" else "Sleeping") to 78.dp, p.user to 92.dp, "%.0f".format(p.cpu) to 52.dp,
+                            "${p.rssMb} MB" to 76.dp, "${p.vszMb} MB" to 84.dp, "${p.nice}" to 66.dp, "${p.ppid}" to 66.dp).forEach { (t, w) -> Text(t, Modifier.width(w), color = T.sub, fontSize = 12.sp, fontFamily = mono, maxLines = 1) }
+                    }
                 }
             }
         }
@@ -188,21 +193,35 @@ fun DevicePage() {
 fun ServicesPage() {
     val ctx = LocalContext.current
     val s by Sampler.snap.collectAsState()
-    var list by remember { mutableStateOf<List<Svc>>(emptyList()) }
+    var running by remember { mutableStateOf<List<Svc>>(emptyList()) }
+    var declared by remember { mutableStateOf<List<Svc>>(emptyList()) }
+    var tab by rememberSaveable { mutableStateOf(if (s.root) "run" else "all") }
+    var q by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
-    LaunchedEffect(s.root) { while (s.root) { list = withContext(Dispatchers.IO) { Extra.services(ctx) }; delay(6000) } }
+    LaunchedEffect(s.root) { while (s.root) { running = withContext(Dispatchers.IO) { Extra.services(ctx) }; delay(6000) } }
+    LaunchedEffect(Unit) { declared = withContext(Dispatchers.IO) { Extra.declaredServices(ctx) } }
+    val runKeys = remember(running) { running.map { it.pkg + "/" + it.cls }.toSet() }
+    val base = if (tab == "run") running else if (tab == "off") declared.filter { !it.enabled } else declared
+    val list = base.filter { q.isBlank() || it.label.contains(q, true) || it.cls.contains(q, true) || it.pkg.contains(q, true) }
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
-        Header("Services", if (list.isNotEmpty()) "${list.size} running" else "")
-        if (!s.root) Center("Listing running services needs root.")
+        Header("Services", "${running.size} running · ${declared.size} declared · ${declared.count { !it.enabled }} disabled")
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PChip(tab == "run", "Running") { tab = "run" }; PChip(tab == "all", "All declared") { tab = "all" }; PChip(tab == "off", "Disabled") { tab = "off" }
+        }
+        PField(q, { q = it }, "Search services", Modifier.fillMaxWidth().padding(vertical = 6.dp))
+        if (tab == "run" && !s.root) Center("Listing running services needs root.\nThe other two tabs work without it.")
+        else if (list.isEmpty()) Center("Nothing here yet")
         else LazyColumn(Modifier.fillMaxSize()) {
-            items(list, key = { it.pkg + it.cls }) { v ->
+            items(list.take(400), key = { it.pkg + "/" + it.cls }) { v ->
+                val live = (v.pkg + "/" + v.cls) in runKeys || (v.cls.startsWith(".") && (v.pkg + "/" + v.pkg + v.cls) in runKeys) || tab == "run"
                 Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                     AppIcon(v.pkg, 28.dp); Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(v.label, color = T.text, fontSize = 14.sp, maxLines = 1)
-                        Text(v.cls.substringAfterLast('.'), color = T.sub, fontSize = 11.sp, maxLines = 1)
+                        Text(v.cls.substringAfterLast('.') + if (live) " · running" else if (!v.enabled) " · disabled" else "", color = if (live) Look.accent else T.sub, fontSize = 11.sp, maxLines = 1)
                     }
-                    TextButton({ scope.launch { withContext(Dispatchers.IO) { Extra.stopService(v) }; list = withContext(Dispatchers.IO) { Extra.services(ctx) } } }) { Text("Stop", color = Look.accent, fontSize = 13.sp) }
+                    if (tab == "run") PButton("Stop") { scope.launch { withContext(Dispatchers.IO) { Extra.stopService(v) }; running = withContext(Dispatchers.IO) { Extra.services(ctx) } } }
+                    else PSwitch(v.enabled, { on -> if (s.root) scope.launch { withContext(Dispatchers.IO) { Extra.setServiceEnabled(v, on) }; declared = withContext(Dispatchers.IO) { Extra.declaredServices(ctx) } } }, enabled = s.root)
                 }
             }
         }
@@ -226,7 +245,7 @@ fun SettingsPage() {
         Cat("speed", "speed", "Refresh rate", "${Cfg.interval / 1000f} s"),
         Cat("proc", "processes", "Processes", if (Cfg.confirmKill) "Ask before ending" else "End without asking"),
         Cat("root", "cpu", "Permissions", if (Shell.root == true) "Root available" else "No root (limited data)"),
-        Cat("about", "info", "About", "Pulse 0.6"),
+        Cat("about", "info", "About", "Pulse 0.7"),
     )
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title)
@@ -244,14 +263,14 @@ fun SettingsPage() {
                 Text("Appearance mode", color = T.sub, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("system" to "System", "light" to "Light", "dark" to "Dark").forEach { (id, n) ->
-                        FilterChip(Look.mode == id, { Cfg.setMode(ctx, id) }, { Text(n) })
+                        PChip(Look.mode == id, n) { Cfg.setMode(ctx, id) }
                     }
                 }
                 if (T.tabs && T.id != "win10") Text("The 7 / XP / 95 themes stay light, as they were in their day; dark mode works in Windows 11, 10 and Material.", color = T.sub, fontSize = 11.sp)
                 if (T.id == "win11") {
                     Text("Window material (Windows 11 only)", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Effects.list.forEach { (id, n) -> FilterChip(Look.effect == id, { Cfg.setEffect(ctx, id) }, { Text(n) }) }
+                        Effects.list.forEach { (id, n) -> PChip(Look.effect == id, n) { Cfg.setEffect(ctx, id) } }
                     }
                     Text("Mica: a quiet backdrop tinted only slightly by the wallpaper. Mica Alt is a touch deeper, Acrylic is more see-through with a bright edge, Glass is light.", color = T.sub, fontSize = 11.sp)
                 }
@@ -282,7 +301,7 @@ fun SettingsPage() {
                 Text("How often to read data? Faster = smoother graphs, a little more battery.", color = T.sub, fontSize = 13.sp)
                 listOf(500L to "0,5 sn", 1000L to "1 sn", 2000L to "2 sn", 5000L to "5 sn").forEach { (v, n) ->
                     Row(Modifier.fillMaxWidth().clickable { Cfg.setInterval(ctx, v) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        RadioButton(Cfg.interval == v, { Cfg.setInterval(ctx, v) }, colors = RadioButtonDefaults.colors(selectedColor = Look.accent))
+                        PRadio(Cfg.interval == v) { Cfg.setInterval(ctx, v) }
                         Text(n, color = T.text, fontSize = 15.sp)
                     }
                 }
@@ -290,7 +309,7 @@ fun SettingsPage() {
             "proc" -> PCard {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) { Text("Ask before ending", color = T.text, fontSize = 15.sp); Text("Prevents ending a process by accident", color = T.sub, fontSize = 12.sp) }
-                    Switch(Cfg.confirmKill, { Cfg.setConfirm(ctx, it) }, colors = SwitchDefaults.colors(checkedTrackColor = Look.accent))
+                    PSwitch(Cfg.confirmKill, { Cfg.setConfirm(ctx, it) })
                 }
             }
             "root" -> PCard {

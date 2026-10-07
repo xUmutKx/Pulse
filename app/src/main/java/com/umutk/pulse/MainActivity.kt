@@ -127,17 +127,12 @@ private fun App() {
 @Composable
 private fun ModernShell(page: String, go: (String) -> Unit, body: @Composable () -> Unit) {
     val t = T
-    var wide by rememberSaveable(t.id) { mutableStateOf(false) }
+    var wide by rememberSaveable(t.id) { mutableStateOf(true) }
     val s by Sampler.snap.collectAsState()
     val fx = if (t.id == "win11") Look.effect else "none"
-    Row(Modifier.fillMaxSize().backdrop(fx).statusBarsPadding().navigationBarsPadding()) {
-        Column(Modifier.width(if (wide) 200.dp else 52.dp).fillMaxHeight().padding(vertical = 8.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.Start) {
-            NavItem("menu", "Pulse", false, wide) { wide = !wide }
-            Spacer(Modifier.height(6.dp))
-            visible.forEach { NavItem(it.icon, it.label, page == it.id, wide) { _ -> go(it.id); wide = false } }
-            Spacer(Modifier.weight(1f).defaultMinSize(minHeight = 12.dp))
-            NavItem(SettingsPg.icon, SettingsPg.label, page == "settings", wide) { go("settings"); wide = false }
-        }
+    Box(Modifier.fillMaxSize().backdrop(fx).statusBarsPadding().navigationBarsPadding()) {
+        Row(Modifier.fillMaxSize()) {
+        Spacer(Modifier.width(52.dp))
         val corner = if (t.material) 24.dp else if (t.radius > 0.dp) 8.dp else 0.dp
         Column(Modifier.weight(1f).fillMaxHeight().layer(fx, RoundedCornerShape(topStart = corner, bottomStart = corner)).then(if (!t.material && t.radius == 0.dp) Modifier.border(1.dp, t.line) else Modifier).padding(top = 12.dp)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -145,6 +140,15 @@ private fun ModernShell(page: String, go: (String) -> Unit, body: @Composable ()
                 if (s.root) Text("root", color = Look.accent, fontSize = 12.sp)
             }
             Box(Modifier.weight(1f)) { body() }
+        }
+        }
+        // the menu: labelled by default like the real Task Manager, drawn over the content so the page keeps its width; the hamburger folds it to icons
+        Column(Modifier.width(if (wide) 210.dp else 52.dp).fillMaxHeight().then(if (wide) Modifier.background(t.bg.copy(alpha = .97f)).border(1.dp, t.line.copy(alpha = .5f)) else Modifier).padding(vertical = 8.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.Start) {
+            NavItem("menu", "Pulse", false, wide) { wide = !wide }
+            Spacer(Modifier.height(6.dp))
+            visible.forEach { NavItem(it.icon, it.label, page == it.id, wide) { _ -> go(it.id); wide = false } }
+            Spacer(Modifier.weight(1f).defaultMinSize(minHeight = 12.dp))
+            NavItem(SettingsPg.icon, SettingsPg.label, page == "settings", wide) { go("settings"); wide = false }
         }
     }
 }

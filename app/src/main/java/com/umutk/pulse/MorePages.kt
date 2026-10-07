@@ -331,10 +331,10 @@ fun AppsPage() {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             PHead("Apps", "${shown.size} / ${apps.size}")
-            OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Search") })
+            PField(q, { q = it }, "Search", Modifier.fillMaxWidth())
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("user" to "User", "system" to "System", "all" to "All").forEach { (k, n) -> FilterChip(kind == k, { kind = k }, { Text(n) }) }
-                listOf("name" to "Name", "size" to "Size", "date" to "Date", "perm" to "Permissions").forEach { (k, n) -> FilterChip(sort == k, { sort = k }, { Text("↕ $n") }) }
+                listOf("user" to "User", "system" to "System", "all" to "All").forEach { (k, n) -> PChip(kind == k, n) { kind = k } }
+                listOf("name" to "Name", "size" to "Size", "date" to "Date", "perm" to "Permissions").forEach { (k, n) -> PChip(sort == k, "↕ $n") { sort = k } }
             }
             if (note.isNotEmpty()) Text(note, color = Look.accent, fontSize = 12.sp)
         }
@@ -371,7 +371,7 @@ private fun SearchList(title: String, items: List<Pair<String, String>>) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
         item {
             PHead(title, "${shown.size} / ${items.size}")
-            OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth(), singleLine = true, placeholder = { Text("Search") })
+            PField(q, { q = it }, "Search", Modifier.fillMaxWidth())
             Spacer(Modifier.height(6.dp))
         }
         items(shown) { (k, v) -> Row(Modifier.fillMaxWidth().padding(vertical = 3.dp)) { Text(k, Modifier.weight(1f), color = T.sub, fontSize = 12.sp); Text(v, Modifier.weight(1f), color = T.text, fontSize = 12.sp) } }

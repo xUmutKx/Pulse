@@ -22,14 +22,14 @@ import kotlinx.coroutines.withContext
 private fun SwitchRow(title: String, sub: String, on: Boolean, onChange: (Boolean) -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) { Text(title, color = T.text, fontSize = 15.sp); if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 12.sp) }
-        Switch(on, onChange, colors = SwitchDefaults.colors(checkedTrackColor = Look.accent))
+        PSwitch(on, onChange)
     }
 }
 
 @Composable
 private fun SliderRow(title: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit, onDone: () -> Unit) {
     Text(title, color = T.text, fontSize = 14.sp)
-    Slider(value, onChange, valueRange = range, onValueChangeFinished = onDone, colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent))
+    PSlider(value, onChange, range, onDone)
 }
 
 /** Settings > General: start page, which pages show, temperature unit, screen on, text size. */
@@ -39,7 +39,7 @@ fun GeneralSettings() {
     PCard {
         Text("Start page", color = T.sub, fontSize = 12.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Pages.forEach { p -> FilterChip(Opt.startPage == p.id, { Opt.startPage = p.id; Opt.save(ctx) }, { Text(p.label) }) }
+            Pages.forEach { p -> PChip(Opt.startPage == p.id, p.label) { Opt.startPage = p.id; Opt.save(ctx) } }
         }
     }
     PCard {
@@ -51,7 +51,7 @@ fun GeneralSettings() {
         Text("Pages shown", color = T.sub, fontSize = 12.sp)
         Pages.forEach { p ->
             Row(Modifier.fillMaxWidth().clickable { Opt.hidden = if (p.id in Opt.hidden) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) }, verticalAlignment = Alignment.CenterVertically) {
-                Checkbox(p.id !in Opt.hidden, { Opt.hidden = if (it) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) }, colors = CheckboxDefaults.colors(checkedColor = Look.accent))
+                PCheck(p.id !in Opt.hidden, { Opt.hidden = if (it) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) })
                 PIcon(p.icon, T.text, 18.dp); Spacer(Modifier.width(8.dp)); Text(p.label, color = T.text, fontSize = 14.sp)
             }
         }
@@ -75,7 +75,7 @@ fun MonitorSettings() {
         Text("Show", color = T.sub, fontSize = 12.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             listOf("cpu" to "Processor", "ram" to "Memory", "gpu" to "Graphics", "temp" to "Temperature", "bat" to "Battery", "net" to "Network").forEach { (k, n) ->
-                FilterChip(k in Opt.ovItems, { Opt.ovItems = if (k in Opt.ovItems) Opt.ovItems - k else Opt.ovItems + k; apply() }, { Text(n) })
+                PChip(k in Opt.ovItems, n) { Opt.ovItems = if (k in Opt.ovItems) Opt.ovItems - k else Opt.ovItems + k; apply() }
             }
         }
         SliderRow("Opacity ${(Opt.ovAlpha * 100).toInt()}%", Opt.ovAlpha, .1f..1f, { Opt.ovAlpha = it }) { Opt.save(ctx) }

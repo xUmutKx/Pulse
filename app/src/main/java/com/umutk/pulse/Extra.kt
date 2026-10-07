@@ -12,7 +12,7 @@ import java.net.NetworkInterface
 import java.util.Calendar
 
 data class UsageRow(val pkg: String, val label: String, val ms: Long, val last: Long)
-data class Svc(val pkg: String, val cls: String, val label: String)
+data class Svc(val pkg: String, val cls: String, val label: String, val enabled: Boolean = true, val exported: Boolean = false)
 
 object Extra {
     private fun read(path: String): String = try { File(path).readText().trim() } catch (e: Exception) { "" }
@@ -92,6 +92,22 @@ object Extra {
             Svc(p, c, label)
         }.sortedBy { it.label.lowercase() }.toList()
     }
+
+    /** Every service the installed apps declare, with whether it is enabled; works without root. */
+    fun declaredServices(ctx: Context): List<Svc> {
+        val pm = ctx.packageManager
+        return pm.getInstalledPackages(android.content.pm.PackageManager.GET_SERVICES or android.content.pm.PackageManager.GET_DISABLED_COMPONENTS).flatMap { pi ->
+            val label = try { pi.applicationInfo?.loadLabel(pm)?.toString() ?: pi.packageName } catch (e: Exception) { pi.packageName }
+            pi.services.orEmpty().map { si ->
+                val st = try { pm.getComponentEnabledSetting(android.content.ComponentName(si.packageName, si.name)) } catch (e: Exception) { 0 }
+                val on = when (st) { android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED_USER -> false
+                    android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED -> true; else -> si.enabled }
+                Svc(si.packageName, si.name, label, on, si.exported)
+            }
+        }.sortedWith(compareBy({ it.label.lowercase() }, { it.cls }))
+    }
+
+    fun setServiceEnabled(s: Svc, on: Boolean) { Shell.run("pm ${if (on) "enable" else "disable"} ${s.pkg}/${s.cls}") }
 
     fun stopService(s: Svc) { Shell.run("am stopservice -n ${s.pkg}/${s.cls}") }
 

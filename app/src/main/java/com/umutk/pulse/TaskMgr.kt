@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -65,6 +66,7 @@ fun ProcessesPage() {
     var q by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf("mem") }
     var ask by remember { mutableStateOf<PRow?>(null) }
+    var expanded by rememberSaveable { mutableStateOf(setOf<String>()) }
     var collapsed by rememberSaveable { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
@@ -74,39 +76,39 @@ fun ProcessesPage() {
         }
     }
     val memPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
-    val shown = rows.filter { q.isBlank() || it.label.contains(q, true) || it.p.name.contains(q, true) }
-        .let { l -> if (sort == "cpu") l.sortedByDescending { it.p.cpu } else if (sort == "name") l.sortedBy { it.label.lowercase() } else l.sortedByDescending { it.p.rssMb } }
+    val shown = rows.filter { q.isBlank() || it.label.contains(q, true) || it.p.name.contains(q, true) || it.p.pid.toString() == q }
+    // processes of one app (com.x, com.x:service, com.x:push) fold into a single line, as Task Manager does
+    val groups = shown.groupBy { it.p.name.substringBefore(':') }.values.map { PGroup(it) }
+        .let { l -> if (sort == "cpu") l.sortedByDescending { it.cpu } else if (sort == "name") l.sortedBy { it.title.lowercase() } else if (sort == "pid") l.sortedBy { it.head.p.pid } else l.sortedByDescending { it.mem } }
     val selRow = rows.firstOrNull { it.p.pid == sel }
+    val hs = rememberScrollState()
     fun end(r: PRow) { scope.launch { withContext(Dispatchers.IO) { Sampler.kill(r.p) }; ask = null; sel = -1 } }
-    ask?.let { r ->
-        AlertDialog(onDismissRequest = { ask = null }, containerColor = T.panel, titleContentColor = T.text, textContentColor = T.sub,
-            title = { Text("End ${r.label}?") }, text = { Text("Unsaved data in this process will be lost. (PID ${r.p.pid})") },
-            confirmButton = { TextButton({ end(r) }) { Text("End process", color = Color(0xFFC42B1C)) } },
-            dismissButton = { TextButton({ ask = null }) { Text("Cancel", color = T.sub) } })
-    }
+    ask?.let { r -> PDialog("End ${r.label}?", "Unsaved data in this process will be lost. (PID ${r.p.pid})", "End process", { end(r) }, { ask = null }) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Processes", color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             if (selRow != null) PButton("End task", danger = true) { if (Cfg.confirmKill) ask = selRow else end(selRow) }
         }
-        OutlinedTextField(q, { q = it }, Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), singleLine = true, placeholder = { Text("Type a name or PID to search") },
-            leadingIcon = { PIcon("search", T.sub, 18.dp) }, shape = RoundedCornerShape(T.radius.coerceAtMost(14.dp)),
-            colors = OutlinedTextFieldDefaults.colors(focusedTextColor = T.text, unfocusedTextColor = T.text, focusedBorderColor = Look.accent, unfocusedBorderColor = T.line, cursorColor = Look.accent))
-        // column heads with the totals on top, like the real one; tap to sort
+        PField(q, { q = it }, "Type a name or PID to search", Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
+        // column heads with the totals on top, like the real one; tap to sort. Name stays put, the numbers scroll sideways.
         Row(Modifier.fillMaxWidth().height(46.dp).border(BorderStroke(1.dp, T.line.copy(alpha = .6f)))) {
-            Box(Modifier.weight(1f).fillMaxHeight().clickable { sort = "name" }.padding(start = 12.dp), contentAlignment = Alignment.CenterStart) {
+            Box(Modifier.width(NAME_W).fillMaxHeight().clickable { sort = "name" }.padding(start = 12.dp), contentAlignment = Alignment.CenterStart) {
                 Text("Name", color = if (sort == "name") Look.accent else T.sub, fontSize = 12.sp)
             }
-            Column(Modifier.width(64.dp).fillMaxHeight().clickable { sort = "cpu" }.background(heatBg(s.cpu / 100f)).padding(end = 8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
-                Text("${s.cpu}%", color = T.text, fontSize = 15.sp); Text("CPU", color = if (sort == "cpu") Look.accent else T.sub, fontSize = 11.sp)
-            }
-            Column(Modifier.width(84.dp).fillMaxHeight().clickable { sort = "mem" }.background(heatBg(memPct / 100f)).padding(end = 8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
-                Text("$memPct%", color = T.text, fontSize = 15.sp); Text("Memory", color = if (sort == "mem") Look.accent else T.sub, fontSize = 11.sp)
+            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) {
+                HeadCell("${s.cpu}%", "CPU", 64.dp, sort == "cpu", heatBg(s.cpu / 100f)) { sort = "cpu" }
+                HeadCell("$memPct%", "Memory", 84.dp, sort == "mem", heatBg(memPct / 100f)) { sort = "mem" }
+                HeadCell("", "Status", 76.dp, false, Color.Transparent) {}
+                HeadCell("", "PID", 60.dp, sort == "pid", Color.Transparent) { sort = "pid" }
+                HeadCell("", "User", 84.dp, false, Color.Transparent) {}
+                HeadCell("", "Virtual", 84.dp, false, Color.Transparent) {}
+                HeadCell("", "Priority", 64.dp, false, Color.Transparent) {}
+                HeadCell("", "Parent", 64.dp, false, Color.Transparent) {}
             }
         }
         if (loaded && rows.isEmpty()) Center("The process list needs root.\nAndroid does not show other apps' processes without it.")
         else LazyColumn(Modifier.fillMaxSize()) {
-            fun group(id: String, title: String, list: List<PRow>) {
+            fun section(id: String, title: String, list: List<PGroup>) {
                 if (list.isEmpty()) return
                 val open = id !in collapsed
                 item(key = "h$id") {
@@ -115,21 +117,66 @@ fun ProcessesPage() {
                         Text("$title (${list.size})", color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
-                if (open) items(list.take(120), key = { it.p.pid }) { r ->
-                    val on = sel == r.p.pid
-                    Row(Modifier.fillMaxWidth().height(40.dp).background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
-                        Spacer(Modifier.width(26.dp))
-                        AppIcon(r.p.name, 22.dp); Spacer(Modifier.width(8.dp))
-                        Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        HeatCell("%.1f%%".format(r.p.cpu), r.p.cpu / 100f, 64.dp)
-                        HeatCell(mb(r.p.rssMb), r.p.rssMb / 1500f, 84.dp)
+                if (open) list.take(120).forEach { g ->
+                    val many = g.rows.size > 1
+                    val isOpen = g.key in expanded
+                    item(key = "g${g.key}") {
+                        val on = !many && sel == g.head.p.pid
+                        Row(Modifier.fillMaxWidth().height(40.dp).background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.width(NAME_W), verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (many) (if (isOpen) "⌄" else "›") else "", color = T.sub, fontSize = 16.sp, modifier = Modifier.width(26.dp).padding(start = 8.dp))
+                                AppIcon(g.head.p.name, 22.dp); Spacer(Modifier.width(8.dp))
+                                Text(if (many) "${g.title} (${g.rows.size})" else g.head.label, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(g.cpu, g.mem, if (many) null else g.head.p) }
+                        }
+                    }
+                    if (many && isOpen) items(g.rows.sortedByDescending { it.p.rssMb }, key = { "p${it.p.pid}" }) { r ->
+                        val on = sel == r.p.pid
+                        Row(Modifier.fillMaxWidth().height(36.dp).background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.width(NAME_W), verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(Modifier.width(52.dp))
+                                Text(r.p.name.substringAfter(':', r.p.name.substringAfterLast('.')), color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(r.p.cpu, r.p.rssMb, r.p) }
+                        }
                     }
                 }
             }
-            group("apps", "Apps", shown.filter { it.app }); group("bg", "Background processes", shown.filter { !it.app })
+            section("apps", "Apps", groups.filter { g -> g.rows.any { it.app } }); section("bg", "Background processes", groups.filter { g -> g.rows.none { it.app } })
             item { Spacer(Modifier.height(12.dp)) }
         }
     }
+}
+
+private val NAME_W = 170.dp
+
+private class PGroup(val rows: List<PRow>) {
+    val head = rows.maxByOrNull { it.p.rssMb }!!
+    val key = rows[0].p.name.substringBefore(':')
+    val title = (rows.firstOrNull { !it.p.name.contains(':') } ?: head).label.substringBefore(" (")
+    val cpu = rows.sumOf { it.p.cpu.toDouble() }.toFloat()
+    val mem = rows.sumOf { it.p.rssMb }
+}
+
+@Composable
+private fun HeadCell(top: String, name: String, w: Dp, active: Boolean, bg: Color, onClick: () -> Unit) {
+    Column(Modifier.width(w).fillMaxHeight().clickable(onClick = onClick).background(bg).padding(end = 8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
+        if (top.isNotEmpty()) Text(top, color = T.text, fontSize = 15.sp)
+        Text(name, color = if (active) Look.accent else T.sub, fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun Cells(cpu: Float, mem: Int, p: Proc?) {
+    HeatCell("%.1f%%".format(cpu), cpu / 100f, 64.dp)
+    HeatCell(mb(mem), mem / 1500f, 84.dp)
+    HeatCell(if (p == null) "" else if (p.state == "R") "Running" else "Sleeping", 0f, 76.dp)
+    HeatCell(p?.pid?.toString() ?: "", 0f, 60.dp)
+    HeatCell(p?.user ?: "", 0f, 84.dp)
+    HeatCell(if (p == null) "" else mb(p.vszMb), 0f, 84.dp)
+    HeatCell(p?.nice?.toString() ?: "", 0f, 64.dp)
+    HeatCell(p?.ppid?.toString() ?: "", 0f, 64.dp)
 }
 
 // ---------------------------------------------------------------- Performance: resource list on the left, big graph and numbers on the right
