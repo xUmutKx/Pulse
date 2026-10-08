@@ -177,12 +177,37 @@ object Sampler {
         @Volatile var count = 0 to 0
     }
 
-    fun processes(): List<Proc> =
-        Shell.run("ps -A -o PID,RSS,%CPU,USER,S,VSZ,NI,PPID,NAME").lineSequence().drop(1).mapNotNull { l ->
+    // CPU per process the way Task Manager shows it: the change in its own CPU ticks since the last sample, as a share of all cores (0-100%).
+    // ps's %CPU is an average since the process started and can read 200% or more on many cores, so it is only a fallback.
+    private val lastTicks = HashMap<Int, Long>()
+    private var lastWall = 0L
+    private fun ticksOf(pid: Int): Long? = try {
+        val f = File("/proc/$pid/stat").readText().substringAfterLast(')').trim().split(' ')
+        f[11].toLong() + f[12].toLong()   // utime + stime
+    } catch (_: Exception) { null }
+
+    fun processes(): List<Proc> {
+        val cores = Runtime.getRuntime().availableProcessors().coerceAtLeast(1)
+        val now = System.currentTimeMillis()
+        val dtSec = if (lastWall == 0L) 0.0 else (now - lastWall) / 1000.0
+        val seen = HashMap<Int, Long>()
+        val list = Shell.run("ps -A -o PID,RSS,%CPU,USER,S,VSZ,NI,PPID,NAME").lineSequence().drop(1).mapNotNull { l ->
             val f = l.trim().split(Regex("\\s+"), 9)
-            if (f.size < 9) null else Proc(f[0].toIntOrNull() ?: return@mapNotNull null, f[8], (f[1].toIntOrNull() ?: 0) / 1024, f[2].toFloatOrNull() ?: 0f,
-                f[3], f[4], (f[5].toIntOrNull() ?: 0) / 1024, f[6].toIntOrNull() ?: 0, f[7].toIntOrNull() ?: 0)
-        }.filter { it.rssMb > 0 }.toList().also { Procs.count = it.size to 0 }
+            if (f.size < 9) null else {
+                val pid = f[0].toIntOrNull() ?: return@mapNotNull null
+                val fallback = (f[2].toFloatOrNull() ?: 0f) / cores
+                val t = ticksOf(pid)
+                val cpu = if (t != null) { seen[pid] = t; val prev = lastTicks[pid]
+                    if (prev != null && dtSec > 0) (((t - prev) / 100.0) / (dtSec * cores) * 100).toFloat().coerceIn(0f, 100f) else fallback
+                } else fallback
+                Proc(pid, f[8], (f[1].toIntOrNull() ?: 0) / 1024, cpu,
+                    f[3], f[4], (f[5].toIntOrNull() ?: 0) / 1024, f[6].toIntOrNull() ?: 0, f[7].toIntOrNull() ?: 0)
+            }
+        }.filter { it.rssMb > 0 }.toList()
+        lastTicks.clear(); lastTicks.putAll(seen); lastWall = now
+        Procs.count = list.size to 0
+        return list
+    }
 
     fun kill(p: Proc) {
         Shell.run(if (p.name.contains('.')) "am force-stop ${p.name}; kill -9 ${p.pid}" else "kill -9 ${p.pid}")

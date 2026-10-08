@@ -4,7 +4,6 @@ A task manager for Android that looks and works like the Windows one, plus a ful
 
 I wanted Task Manager on my phone: a process list with heat-map cells, a Performance tab with live graphs, startup apps, services. Then I kept adding the things I wish a system app showed: sensors, camera details, battery health, thermals, a floating monitor. This is the result.
 
-> No data is shared. Pulse reads your phone's numbers on the phone and keeps them there. The only network use is the latency test, and only when you press Start.
 
 ## Screenshots
 
