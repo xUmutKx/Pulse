@@ -245,7 +245,7 @@ fun SettingsPage() {
         Cat("speed", "speed", "Refresh rate", "${Cfg.interval / 1000f} s"),
         Cat("proc", "processes", "Processes", if (Cfg.confirmKill) "Ask before ending" else "End without asking"),
         Cat("root", "cpu", "Permissions", if (Shell.root == true) "Root available" else "No root (limited data)"),
-        Cat("about", "info", "About", "Pulse 0.7"),
+        Cat("about", "info", "About", "Pulse 0.10"),
     )
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title)

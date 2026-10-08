@@ -79,6 +79,7 @@ val Pages = listOf(
     Pg("details", "Details", "details"),
     Pg("services", "Services", "services"),
     Pg("apps", "Apps", "users"),
+    Pg("guardians", "Guardians", "shield"),
     Pg("device", "Device", "phone"),
 )
 private val visible get() = Pages.filter { it.id !in Opt.hidden }
@@ -116,16 +117,18 @@ private fun App() {
     val body: @Composable () -> Unit = {
         when (page) {
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
-            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "device" -> DeviceModule(); else -> SettingsPage()
+            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "guardians" -> GuardiansModule(); "device" -> DeviceModule(); else -> SettingsPage()
         }
     }
-    if (T.id == "win10") Win10Shell(page, { page = it }, body) else if (T.tabs) ClassicShell(page, { page = it }, body) else ModernShell(page, { page = it }, body)
+    val menus = rememberMenus { page = it }
+    if (T.id == "win10") Win10Shell(page, { page = it }, menus, body) else if (T.tabs) ClassicShell(page, { page = it }, menus, body) else ModernShell(page, { page = it }, menus, body)
+    menus.dialogs()
 }
 
 // ---------------------------------------------------------------- Windows 11 / 10, Material, AMOLED: a sidebar on the left
 
 @Composable
-private fun ModernShell(page: String, go: (String) -> Unit, body: @Composable () -> Unit) {
+private fun ModernShell(page: String, go: (String) -> Unit, menus: MenuHost, body: @Composable () -> Unit) {
     val t = T
     var wide by rememberSaveable(t.id) { mutableStateOf(true) }
     val s by Sampler.snap.collectAsState()
@@ -138,6 +141,7 @@ private fun ModernShell(page: String, go: (String) -> Unit, body: @Composable ()
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
                 if (s.root) Text("root", color = Look.accent, fontSize = 12.sp)
+                MenuOverflow(menus, t.sub)
             }
             Box(Modifier.weight(1f)) { body() }
         }
@@ -170,7 +174,7 @@ private fun NavItem(icon: String, label: String, on: Boolean, wide: Boolean, onC
 // ---------------------------------------------------------------- Windows 7 / XP / 95: each with its own window, nav pane and status bar
 
 @Composable
-private fun ClassicShell(page: String, go: (String) -> Unit, body: @Composable () -> Unit) {
+private fun ClassicShell(page: String, go: (String) -> Unit, menus: MenuHost, body: @Composable () -> Unit) {
     val t = T
     val s by Sampler.snap.collectAsState()
     val all = visible + SettingsPg
@@ -194,7 +198,7 @@ private fun ClassicShell(page: String, go: (String) -> Unit, body: @Composable (
         }
         // menu bar: Windows 95 and XP have one, 7 hides it
         if (!w7) Row(Modifier.fillMaxWidth().background(t.bg).padding(horizontal = 6.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            listOf("File", "Options", "View", "Help").forEach { Text(it, color = t.text, fontSize = 13.sp) }
+            MenuBar(menus, t.text, 13.sp)
         }
         Row(Modifier.weight(1f).fillMaxWidth().background(if (w7) Color.White else t.bg)) {
             // navigation pane, one design per Windows version
@@ -241,7 +245,7 @@ private fun ClassicShell(page: String, go: (String) -> Unit, body: @Composable (
 // ---------------------------------------------------------------- Windows 10: white window, menu bar and a strip of tabs, as Task Manager had them
 
 @Composable
-private fun Win10Shell(page: String, go: (String) -> Unit, body: @Composable () -> Unit) {
+private fun Win10Shell(page: String, go: (String) -> Unit, menus: MenuHost, body: @Composable () -> Unit) {
     val t = T
     val s by Sampler.snap.collectAsState()
     val all = visible + SettingsPg
@@ -255,13 +259,13 @@ private fun Win10Shell(page: String, go: (String) -> Unit, body: @Composable () 
             listOf("\u2500", "\u25A1", "\u2715").forEach { g -> Box(Modifier.width(44.dp).fillMaxHeight(), contentAlignment = Alignment.Center) { Text(g, color = t.text, fontSize = 12.sp) } }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-            listOf("File", "Options", "View").forEach { Text(it, color = t.text, fontSize = 12.sp) }
+            MenuBar(menus, t.text, 12.sp)
         }
         Row(Modifier.fillMaxWidth().background(stripBg).horizontalScroll(rememberScrollState()).padding(start = 6.dp, top = 4.dp)) {
             all.forEach { p ->
                 val on = page == p.id
                 Box(Modifier.then(if (on) Modifier.background(t.panel).border(1.dp, t.line) else Modifier).clickable { go(p.id) }.padding(horizontal = 12.dp, vertical = 7.dp)) {
-                    Text(p.label, color = t.text, fontSize = 12.sp, maxLines = 1)
+                    FitText(p.label, t.text, 12.sp)
                 }
             }
         }

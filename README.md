@@ -8,9 +8,9 @@ I wanted Task Manager on my phone: a process list with heat-map cells, a Perform
 
 ## Screenshots
 
-| Overview (light) | Cores (dark) |
-|---|---|
-| ![Overview](docs/screenshots/overview.png) | ![Cores](docs/screenshots/cores.png) |
+| Processes | Performance | Overview (light) | Cores (dark) |
+|---|---|---|---|
+| ![Processes](docs/screenshots/processes.png) | ![Performance](docs/screenshots/performance.png) | ![Overview](docs/screenshots/overview.png) | ![Cores](docs/screenshots/cores.png) |
 
 ## What is in it
 
@@ -19,6 +19,16 @@ I wanted Task Manager on my phone: a process list with heat-map cells, a Perform
 - **Performance**: a list of CPU, Memory, Storage, Network, GPU, Battery and Thermal on the left, the big graph and the numbers on the right.
 - **App history**, **Startup apps** (switch boot receivers off with root), **Details**, **Services**.
 - **Apps**: search, filter, sort by size, date or permissions, open, app settings, uninstall, force stop.
+
+**Guardians** (tabs along the top: Thermal, Battery, Storage, Memory)
+- One detailed page each, the idea of Samsung's Good Guardians for any phone: a gauge and a plain verdict, 30-minute graphs, and the numbers behind them.
+- **Thermal**: the hottest sensor, battery temperature, every thermal zone grouped (processor, graphics, battery, device, radio) with bars, and the processor's speed per core against its top speed, so you can see when it slows down to cool off.
+- **Battery**: charge, current and power graphs, time left (or to full), power source, condition, charge cycles and capacity against new.
+- **Storage**: used and free, disk read/write traffic, where the space goes by folder, the biggest app data folders and cache trimming (root).
+- **Memory**: in use / cached / free, a 30-minute graph, the biggest apps and quick actions.
+
+**Menus**
+- File, Options, View and Help work like Task Manager's: run a new task (a command, or an app's package name), share a report, keep the screen on, floating monitor, update speed, temperature unit. The modern looks keep them behind the "⋮" at the top right.
 
 **Device module** (tabs along the top)
 - Overview, System, CPU and per-core frequencies and governors, Memory, Storage with folder sizes, Battery, Network with a latency test, Thermal, Display with a live frame-rate graph, Camera, Sensors, Media and DRM, hardware features, system properties and a short benchmark.

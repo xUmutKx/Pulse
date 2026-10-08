@@ -65,6 +65,12 @@ object Sampler {
     private val series = HashMap<String, ArrayList<Float>>()
     private fun push(k: String, v: Float) { val l = series.getOrPut(k) { ArrayList() }; l.add(v); if (l.size > 60) l.removeAt(0) }
 
+    /** 30 minutes, one point every 5 s: the long graphs of the guardians (cpu, ram, temp, btemp, bat, ma, w, down, up). */
+    val longHistory = MutableStateFlow<Map<String, List<Float>>>(emptyMap())
+    private val longSeries = HashMap<String, ArrayList<Float>>()
+    private var lastLong = 0L
+    private fun pushLong(k: String, v: Float) { val l = longSeries.getOrPut(k) { ArrayList() }; l.add(v); if (l.size > 360) l.removeAt(0) }
+
     private var prevStat: List<LongArray>? = null
     private var prevRx = 0L
     private var prevTx = 0L
@@ -156,6 +162,14 @@ object Sampler {
         push("temp", snap.value.cpuTemp); push("bat", bpct.toFloat()); push("ma", kotlin.math.abs(bma).toFloat()); push("down", down.toFloat()); push("up", up.toFloat())
         cores.forEachIndexed { i, cr -> push("c$i", cr.usage.toFloat()) }
         history.value = series.mapValues { it.value.toList() }
+        if (now - lastLong >= 5000) {
+            lastLong = now
+            val sn = snap.value
+            pushLong("cpu", sn.cpu.toFloat()); pushLong("ram", if (totalMb == 0) 0f else 100f * usedMb / totalMb); pushLong("temp", sn.cpuTemp)
+            pushLong("btemp", sn.batTemp); pushLong("bat", bpct.toFloat()); pushLong("ma", kotlin.math.abs(bma).toFloat()); pushLong("w", kotlin.math.abs(bma) * sn.batV / 1000f)
+            pushLong("down", down.toFloat()); pushLong("up", up.toFloat())
+            longHistory.value = longSeries.mapValues { it.value.toList() }
+        }
     }
 
     /** Process and thread counts from /proc (everything the app user can see; root sees all). */

@@ -65,7 +65,7 @@ fun LiveSections(title: String, everyMs: Long = 3000, top: @Composable ColumnSco
 private fun Tile(label: String, value: String, color: Color, frac: Float, modifier: Modifier) {
     PCard(modifier) {
         Text(label, color = T.sub, fontSize = 12.sp)
-        Text(value, color = T.text, fontSize = 24.sp, maxLines = 1)
+        FitText(value, T.text, 24.sp)
         BarMeter(frac, color)
     }
 }

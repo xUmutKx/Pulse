@@ -66,7 +66,7 @@ fun MonitorSettings() {
     val canOverlay = remember(tick) { Settings.canDrawOverlays(ctx) }
     fun apply() { Opt.save(ctx); MonitorService.sync(ctx) }
     PCard {
-        SwitchRow("Floating monitor", "Live numbers over other apps; drag to move", Opt.ovOn) { Opt.ovOn = it; apply() }
+        SwitchRow("Floating monitor", "Live numbers over other apps", Opt.ovOn) { Opt.ovOn = it; apply() }
         if (!canOverlay) {
             Text("Needs the 'display over other apps' permission.", color = T.sub, fontSize = 12.sp)
             PButton("Allow") { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); tick++ }

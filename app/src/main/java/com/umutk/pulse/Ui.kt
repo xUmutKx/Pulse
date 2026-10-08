@@ -11,6 +11,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -35,7 +38,7 @@ private fun material(k: String): ImageVector = when (k) {
     "wifi" -> Icons.Outlined.Wifi; "gpu" -> Icons.Outlined.Tv; "battery" -> Icons.Outlined.BatteryFull
     "thermal" -> Icons.Outlined.Thermostat; "search" -> Icons.Outlined.Search; "close" -> Icons.Outlined.Close
     "palette" -> Icons.Outlined.Palette; "speed" -> Icons.Outlined.Timer; "info" -> Icons.Outlined.Info
-    "table" -> Icons.Outlined.TableChart; else -> Icons.Outlined.Info
+    "table" -> Icons.Outlined.TableChart; "shield" -> Icons.Outlined.Shield; else -> Icons.Outlined.Info
 }
 
 /** Material icons for the Material / AMOLED themes, Fluent (Windows 11 style) outlines for the Windows ones. */
@@ -50,7 +53,7 @@ fun PIcon(k: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifie
 
 /** Windows-like running graph: 60 s of history, grid, filled area. [max] is the full-scale value. */
 @Composable
-fun Graph(series: List<List<Float>>, colors: List<Color>, max: Float, modifier: Modifier = Modifier, height: Dp = 120.dp, grid: Boolean = true) {
+fun Graph(series: List<List<Float>>, colors: List<Color>, max: Float, modifier: Modifier = Modifier, height: Dp = 120.dp, grid: Boolean = true, n: Int = 60) {
     val t = T
     val classic = t.classicGraph
     val bgc = if (classic) Color.Black else colors[0].copy(alpha = if (t.dark) .08f else .06f)
@@ -65,7 +68,7 @@ fun Graph(series: List<List<Float>>, colors: List<Color>, max: Float, modifier: 
             if (v.size < 2) return@forEachIndexed
             val col = if (classic) (if (si == 0) Color(0xFF00FF00) else Color(0xFFFFFF00)) else colors[si.coerceAtMost(colors.lastIndex)]
             val line = Path(); val fill = Path()
-            val step = w / 59f; val x0 = w - step * (v.size - 1)
+            val step = w / (n - 1f); val x0 = w - step * (v.size - 1)
             v.forEachIndexed { i, y ->
                 val p = Offset(x0 + step * i, h * (1 - (y / max).coerceIn(0f, 1f)))
                 if (i == 0) { line.moveTo(p.x, p.y); fill.moveTo(p.x, h); fill.lineTo(p.x, p.y) } else { line.lineTo(p.x, p.y); fill.lineTo(p.x, p.y) }
@@ -90,14 +93,14 @@ fun BarMeter(frac: Float, color: Color, modifier: Modifier = Modifier, h: Dp = 1
 fun Stat(label: String, value: String, big: Boolean = false, modifier: Modifier = Modifier) {
     Column(modifier) {
         Text(label, color = T.sub, fontSize = 12.sp)
-        Text(value, color = T.text, fontSize = if (big) 24.sp else 14.sp, maxLines = 1)
+        FitText(value, T.text, if (big) 24.sp else 14.sp)
     }
 }
 
 @Composable
 fun InfoRows(rows: List<Pair<String, String>>) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        rows.forEach { (k, v) -> Row { Text(k, Modifier.weight(1f), color = T.sub, fontSize = 13.sp); Text(v, color = T.text, fontSize = 13.sp) } }
+        rows.forEach { (k, v) -> Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) { Text(k, Modifier.weight(1f), color = T.sub, fontSize = 13.sp); Text(v, Modifier.weight(1.4f), color = T.text, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.End) } }
     }
 }
 
@@ -118,3 +121,11 @@ fun hms(ms: Long): String { val s = ms / 1000; return if (s >= 3600) "${s / 3600
 @Composable
 fun Center(text: String, modifier: Modifier = Modifier) =
     Box(modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) { Text(text, color = T.sub, fontSize = 14.sp) }
+
+/** One-line text that shrinks to fit instead of wrapping onto a hidden second line. */
+@Composable
+fun FitText(text: String, color: Color, size: androidx.compose.ui.unit.TextUnit, modifier: Modifier = Modifier, weight: androidx.compose.ui.text.font.FontWeight? = null, minSize: Float = 9f) {
+    var sz by remember(text, size) { mutableStateOf(size) }
+    androidx.compose.material3.Text(text, modifier, color = color, fontSize = sz, fontWeight = weight, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        onTextLayout = { if (it.didOverflowWidth && sz.value > minSize) sz = androidx.compose.ui.unit.TextUnit(sz.value * 0.92f, androidx.compose.ui.unit.TextUnitType.Sp) })
+}

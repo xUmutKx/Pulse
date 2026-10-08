@@ -34,7 +34,7 @@ fun DeviceModule() {
             Subs.forEach { p ->
                 val on = sub == p.id
                 Column(Modifier.clickable { sub = p.id }.padding(horizontal = 10.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(p.label, color = if (on) Look.accent else T.sub, fontSize = 13.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, maxLines = 1)
+                    FitText(p.label, if (on) Look.accent else T.sub, 13.sp, weight = if (on) FontWeight.SemiBold else FontWeight.Normal)
                     Box(Modifier.padding(top = 4.dp).width(24.dp).height(2.dp).background(if (on) Look.accent else androidx.compose.ui.graphics.Color.Transparent))
                 }
             }
