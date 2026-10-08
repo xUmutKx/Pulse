@@ -198,7 +198,7 @@ fun PerformancePage() {
     val netMax = (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull()?.coerceAtLeast(102400f) ?: 102400f
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val listW = if (maxWidth >= 600.dp) 200.dp else 124.dp
+        val listW = if (maxWidth >= 600.dp) 200.dp else 148.dp
         Row(Modifier.fillMaxSize()) {
             // resource list
             Column(Modifier.width(listW).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 8.dp, end = 4.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -293,13 +293,13 @@ private fun PerfItem(title: String, line: String, series: List<List<Float>>, col
         // Windows 11's selection bar
         Box(Modifier.width(3.dp).height(if (on && !t.tabs) 30.dp else 0.dp).background(Look.accent, RoundedCornerShape(2.dp)))
         Spacer(Modifier.width(if (on && !t.tabs) 4.dp else 7.dp))
-        Box(Modifier.width(38.dp).height(34.dp).border(1.dp, color).background(color.copy(alpha = .06f))) {
+        Box(Modifier.width(32.dp).height(34.dp).border(1.dp, color).background(color.copy(alpha = .06f))) {
             if (series.isNotEmpty()) Graph(series, listOf(color, Color(0xFFE5B80B)), max, height = 32.dp, grid = false)
             else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PIcon("disk", color, 18.dp) }
         }
-        Spacer(Modifier.width(6.dp))
+        Spacer(Modifier.width(5.dp))
         Column(Modifier.weight(1f)) {
-            Text(title, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            FitText(title, T.text, 13.sp, weight = FontWeight.Medium)
             Text(line, color = T.sub, fontSize = 10.sp, maxLines = 2)
         }
     }

@@ -8,9 +8,9 @@ I wanted Task Manager on my phone: a process list with heat-map cells, a Perform
 
 ## Screenshots
 
-| Processes | Performance | Overview (light) | Cores (dark) |
-|---|---|---|---|
-| ![Processes](docs/screenshots/processes.png) | ![Performance](docs/screenshots/performance.png) | ![Overview](docs/screenshots/overview.png) | ![Cores](docs/screenshots/cores.png) |
+<table>
+<tr><td align="center"><img src="docs/screenshots/processes.png" width="240"><br><sub>Processes</sub></td><td align="center"><img src="docs/screenshots/performance.png" width="240"><br><sub>Performance</sub></td><td align="center"><img src="docs/screenshots/overview.png" width="240"><br><sub>Overview (light)</sub></td><td align="center"><img src="docs/screenshots/cores.png" width="240"><br><sub>Cores (dark)</sub></td></tr>
+</table>
 
 ## What is in it
 
