@@ -293,14 +293,15 @@ private fun PerfItem(title: String, line: String, series: List<List<Float>>, col
         // Windows 11's selection bar
         Box(Modifier.width(3.dp).height(if (on && !t.tabs) 30.dp else 0.dp).background(Look.accent, RoundedCornerShape(2.dp)))
         Spacer(Modifier.width(if (on && !t.tabs) 4.dp else 7.dp))
-        Box(Modifier.width(32.dp).height(34.dp).border(1.dp, color).background(color.copy(alpha = .06f))) {
+        Box(Modifier.width(24.dp).height(30.dp).border(1.dp, color).background(color.copy(alpha = .06f))) {
             if (series.isNotEmpty()) Graph(series, listOf(color, Color(0xFFE5B80B)), max, height = 32.dp, grid = false)
             else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { PIcon("disk", color, 18.dp) }
         }
-        Spacer(Modifier.width(5.dp))
+        Spacer(Modifier.width(4.dp))
         Column(Modifier.weight(1f)) {
             FitText(title, T.text, 13.sp, weight = FontWeight.Medium)
-            Text(line, color = T.sub, fontSize = 10.sp, maxLines = 2)
+            // one line that shrinks to fit, so the value sits right after the name instead of wrapping away
+            FitText(line, T.sub, 10.sp, minSize = 7f)
         }
     }
 }

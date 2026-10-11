@@ -89,15 +89,7 @@ object Sampler {
         return if (total <= 0) 0 else (100 * (b[0] - a[0]) / total).toInt().coerceIn(0, 100)
     }
 
-    private fun temp(): Float {
-        var best = 0f
-        for (i in 0 until 40) {
-            val t = readFile("/sys/class/thermal/thermal_zone$i/temp").trim().toFloatOrNull() ?: continue
-            val c = if (t > 1000) t / 1000 else t
-            if (c in 20f..120f && c > best) best = c
-        }
-        return best
-    }
+    private fun temp(): Float = Guard.cpuTemp()
 
     private fun gpu(): Int {
         val a = readFile("/sys/class/kgsl/kgsl-3d0/gpu_busy_percentage").filter { it.isDigit() }

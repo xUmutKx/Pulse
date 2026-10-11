@@ -9,7 +9,13 @@ import android.os.Environment
 import android.os.StatFs
 import android.provider.Settings
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.foundation.background
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CleaningServices
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -21,8 +27,6 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -69,6 +73,9 @@ object Guard {
         }
         return out
     }
+
+    /** CPU temperature: the hottest processor zone only. Battery, modem, skin and GPU zones are left out. shortcut: a phone whose zone names match no processor keyword reads 0 (shown as —). */
+    fun cpuTemp(): Float = zones().filter { it.group == "Processor" }.maxOfOrNull { it.c } ?: 0f
 
     class Bat(val plug: String, val health: String, val cycles: Int, val tech: String, val remMah: Int, val fullMah: Int, val designMah: Int)
 
@@ -313,8 +320,14 @@ fun StorageGuardian() {
     val rd = remember { mutableStateListOf<Float>() }; val wr = remember { mutableStateListOf<Float>() }
     var ioOk by remember { mutableStateOf(true) }
     val root = Shell.root == true
+    // TreeSize-style: start at the shared storage, tap a folder to see what is inside it, "Up" goes back
+    val top = remember { Environment.getExternalStorageDirectory() }
+    var here by remember { mutableStateOf(top) }
+    LaunchedEffect(here) {
+        folders = null
+        folders = withContext(Dispatchers.IO) { try { Hw.childSizes(here) } catch (e: Throwable) { emptyList() } }
+    }
     LaunchedEffect(Unit) {
-        folders = withContext(Dispatchers.IO) { try { Hw.folderSizes() } catch (e: Throwable) { emptyList() } }
         if (root) apps = withContext(Dispatchers.IO) { Guard.appData() }
     }
     LaunchedEffect(Unit) {
@@ -355,11 +368,21 @@ fun StorageGuardian() {
         }
         PCard {
             Text("Where the space goes", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(here.path.removePrefix(top.path).ifEmpty { "/" }, color = T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                if (here != top) IconAction(Icons.Filled.ArrowUpward, "Up") { here = here.parentFile ?: top }
+            }
             val f = folders
             if (f == null) Text("Measuring the folders…", color = T.sub, fontSize = 13.sp)
-            else if (f.isEmpty()) Text("Could not read the shared storage (all-files access may be needed).", color = T.sub, fontSize = 13.sp)
-            else { val mx = (f.firstOrNull()?.second ?: 1L).coerceAtLeast(1L); f.take(10).forEach { (n, sz) -> BarRow(n, sz.toFloat() / mx, Guard.gb(sz), resColor("disk")) } }
+            else if (f.isEmpty()) Text(if (here == top) "Could not read the shared storage (all-files access may be needed)." else "Nothing in this folder.", color = T.sub, fontSize = 13.sp)
+            else { val mx = (f.firstOrNull()?.second ?: 1L).coerceAtLeast(1L); f.take(12).forEach { (n, sz) ->
+                Box(Modifier.clickable { here = java.io.File(here, n) }) { BarRow(n, sz.toFloat() / mx, Guard.gb(sz), resColor("disk")) }
+            } }
         }
+        CleanerCard()
+        StorageDonutCard()
+        LargeFilesCard()
+        EmptyFoldersCard()
         if (root) PCard {
             Text("Apps by data (root)", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             val a = apps
@@ -368,9 +391,9 @@ fun StorageGuardian() {
         }
         PCard {
             Text("Clean up", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton("Trim app caches" + if (root) "" else " (root)") { scope.launch { withContext(Dispatchers.IO) { Shell.run("pm trim-caches 999G") }; msg = if (root) "App caches trimmed" else "This needs root" } }
-                PButton("Android storage settings") { try { ctx.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) { msg = "Could not open the settings" } }
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                IconAction(Icons.Filled.CleaningServices, "Trim caches") { scope.launch { withContext(Dispatchers.IO) { Shell.run("pm trim-caches 999G") }; msg = if (root) "App caches trimmed" else "This needs root" } }
+                IconAction(Icons.Filled.Settings, "Storage") { try { ctx.startActivity(Intent(Settings.ACTION_INTERNAL_STORAGE_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (e: Exception) { msg = "Could not open the settings" } }
             }
             if (msg.isNotEmpty()) Text(msg, color = Look.accent, fontSize = 12.sp)
         }
@@ -429,6 +452,105 @@ fun MemoryGuardian() {
                 PButton("Kill background apps") { scope.launch { withContext(Dispatchers.IO) { Shell.run("am kill-all") }; msg = "Background apps killed" } }
             }
             if (msg.isNotEmpty()) Text(msg, color = Look.accent, fontSize = 12.sp)
+        }
+    }
+}
+
+/** The biggest files on the shared storage, largest first. Read only: nothing is removed from here. */
+@Composable
+fun LargeFilesCard() {
+    val top = remember { android.os.Environment.getExternalStorageDirectory() }
+    var files by remember { mutableStateOf<List<Pair<String, Long>>?>(null) }
+    LaunchedEffect(Unit) {
+        files = withContext(Dispatchers.IO) {
+            top.walkTopDown().onEnter { !it.name.startsWith(".") }.filter { it.isFile }
+                .map { it.path to it.length() }.sortedByDescending { it.second }.take(25).toList()
+        }
+    }
+    PCard {
+        Text("Biggest files", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        val f = files
+        if (f == null) Text("Searching…", color = T.sub, fontSize = 13.sp)
+        else if (f.isEmpty()) Text("No files found (all-files access may be needed).", color = T.sub, fontSize = 13.sp)
+        else { val mx = f.first().second.coerceAtLeast(1L); f.forEach { (p, sz) -> BarRow(p.removePrefix(top.path), sz.toFloat() / mx, Guard.gb(sz), resColor("disk")) } }
+    }
+}
+
+/** Folders with nothing inside them. Listed only, so you can check them before anything is removed. */
+@Composable
+fun EmptyFoldersCard() {
+    val top = remember { android.os.Environment.getExternalStorageDirectory() }
+    var dirs by remember { mutableStateOf<List<String>?>(null) }
+    LaunchedEffect(Unit) {
+        dirs = withContext(Dispatchers.IO) {
+            top.walkTopDown().onEnter { !it.name.startsWith(".") }.filter { it.isDirectory && it.list()?.isEmpty() == true }
+                .map { it.path }.take(60).toList()
+        }
+    }
+    PCard {
+        Text("Empty folders", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        val d = dirs
+        if (d == null) Text("Searching…", color = T.sub, fontSize = 13.sp)
+        else if (d.isEmpty()) Text("None found.", color = T.sub, fontSize = 13.sp)
+        else {
+            Text("${d.size}${if (d.size == 60) "+" else ""} found", color = T.sub, fontSize = 13.sp)
+            d.forEach { Text(it.removePrefix(top.path), color = T.sub, fontSize = 12.sp, maxLines = 1) }
+        }
+    }
+}
+
+private fun kindOf(ext: String) = when (ext) {
+    "jpg", "jpeg", "png", "gif", "webp", "heic", "bmp" -> "Pictures"
+    "mp4", "mkv", "webm", "3gp", "avi", "mov" -> "Video"
+    "mp3", "m4a", "flac", "ogg", "wav", "aac", "opus" -> "Music"
+    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "odt", "epub" -> "Documents"
+    "apk", "xapk", "apks" -> "Apps"
+    else -> "Other"
+}
+
+private val KIND_COLORS = listOf(0xFF3DDC84, 0xFF4C8FE8, 0xFFE5B80B, 0xFFE0524D, 0xFF9A6AE0, 0xFF8A8A8A).map { Color(it) }
+
+/** Shared storage split by kind of file, drawn as a donut with a legend. Read only. */
+@Composable
+fun StorageDonutCard() {
+    val top = remember { android.os.Environment.getExternalStorageDirectory() }
+    var parts by remember { mutableStateOf<List<Pair<String, Long>>?>(null) }
+    LaunchedEffect(Unit) {
+        parts = withContext(Dispatchers.IO) {
+            val sums = HashMap<String, Long>()
+            top.walkTopDown().onEnter { !it.name.startsWith(".") && it.name != "Android" }.filter { it.isFile }.forEach { f ->
+                val k = kindOf(f.extension.lowercase()); sums[k] = (sums[k] ?: 0L) + f.length()
+            }
+            sums.entries.sortedByDescending { it.value }.map { it.key to it.value }
+        }
+    }
+    PCard {
+        Text("Storage by type", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        val p = parts
+        if (p == null) Text("Measuring…", color = T.sub, fontSize = 13.sp)
+        else if (p.isEmpty()) Text("Nothing measured (all-files access may be needed).", color = T.sub, fontSize = 13.sp)
+        else {
+            val total = p.sumOf { it.second }.coerceAtLeast(1L)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                Canvas(Modifier.size(128.dp)) {
+                    val w = 22.dp.toPx(); val box = Size(size.width - w, size.height - w)
+                    var start = -90f
+                    p.forEachIndexed { i, (_, bytes) ->
+                        val sweep = 360f * bytes / total
+                        drawArc(KIND_COLORS[i % KIND_COLORS.size], start, sweep, false, topLeft = Offset(w / 2, w / 2), size = box, style = Stroke(w))
+                        start += sweep
+                    }
+                }
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    p.forEachIndexed { i, (name, bytes) ->
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(10.dp).background(KIND_COLORS[i % KIND_COLORS.size], RoundedCornerShape(3.dp)))
+                            Spacer(Modifier.width(6.dp))
+                            Text("$name  ${Guard.gb(bytes)}  ${(100 * bytes / total)}%", color = T.text, fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
         }
     }
 }
