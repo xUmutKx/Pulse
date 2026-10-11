@@ -217,6 +217,7 @@ fun ThermalGuardian() {
     val throttling = hot >= 45f && s.cpu >= 50 && speed < .6f
     val col = Guard.heat(hot)
     Page("Thermal", if (s.root) "root" else "") {
+        ToolRows(TOOL_TEMP)
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Gauge((hot - 20f) / 40f, col, Opt.temp(hot), "hottest")
@@ -273,6 +274,7 @@ fun BatteryGuardian() {
     }
     val col = if (s.batPct <= 15 && !s.charging) Color(0xFFC0392B) else if (s.charging) Color(0xFF2E9E5B) else resColor("battery")
     Page("Battery", if (s.root) "root" else "") {
+        ToolRows(TOOL_BATTERY)
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Gauge(s.batPct / 100f, col, "${s.batPct}%", if (s.charging) "charging" else "on battery")
@@ -347,6 +349,8 @@ fun StorageGuardian() {
     val frac = if (total > 0) used.toFloat() / total else 0f
     val col = if (frac > .9f) Color(0xFFC0392B) else if (frac > .75f) Color(0xFFE67E22) else resColor("disk")
     Page("Storage", if (root) "root" else "") {
+        StorageAccessCard()
+        ToolRows(TOOL_FOLDERS, TOOL_TYPES, TOOL_CACHE)
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Gauge(frac, col, "${(frac * 100).toInt()}%", "used")

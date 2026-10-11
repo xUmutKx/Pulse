@@ -8,15 +8,22 @@ import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -24,7 +31,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -41,6 +50,43 @@ import org.xmlpull.v1.XmlPullParser
 
 private class CompRow(val name: String, val exported: Boolean)
 private class ActionRow(val action: String, val component: String)
+
+/** A plain-language function the app can perform, with the icon that stands for it. */
+private data class Fn(val label: String, val icon: ImageVector)
+
+private val FN_OTHER = Fn("Other actions", Icons.Filled.Extension)
+
+// Matched against the action string in order, first hit wins. Keep "SENDTO" above "SEND".
+private val FN_RULES: List<Pair<String, Fn>> = listOf(
+    "SENDTO" to Fn("Messages", Icons.Filled.Message),
+    "SMS" to Fn("Messages", Icons.Filled.Message),
+    "VIEW" to Fn("Opens links or files", Icons.Filled.OpenInNew),
+    "SEND" to Fn("Shares content", Icons.Filled.Share),
+    "CAPTURE" to Fn("Camera", Icons.Filled.CameraAlt),
+    "CALL" to Fn("Phone calls", Icons.Filled.Call),
+    "DIAL" to Fn("Phone calls", Icons.Filled.Call),
+    "PICK" to Fn("Picks files", Icons.Filled.FolderOpen),
+    "GET_CONTENT" to Fn("Picks files", Icons.Filled.FolderOpen),
+    "OPEN_DOCUMENT" to Fn("Picks files", Icons.Filled.FolderOpen),
+    "BOOT" to Fn("Starts at boot", Icons.Filled.RestartAlt),
+    "ALARM" to Fn("Alarms", Icons.Filled.Alarm),
+    "BLUETOOTH" to Fn("Bluetooth", Icons.Filled.Bluetooth),
+    "LOCATION" to Fn("Location", Icons.Filled.LocationOn),
+    "WIFI" to Fn("Network", Icons.Filled.Wifi),
+    "CONNECTIVITY" to Fn("Network", Icons.Filled.Wifi),
+    "PACKAGE" to Fn("App install and removal", Icons.Filled.Apps),
+    "SCREEN" to Fn("Screen events", Icons.Filled.PhoneAndroid),
+    "USER_PRESENT" to Fn("Screen events", Icons.Filled.PhoneAndroid),
+    "BATTERY" to Fn("Battery events", Icons.Filled.BatteryFull),
+    "VOICE" to Fn("Voice", Icons.Filled.Mic),
+    "ASSIST" to Fn("Voice", Icons.Filled.Mic),
+    "NOTIFICATION" to Fn("Notifications", Icons.Filled.Notifications),
+    "SEARCH" to Fn("Search", Icons.Filled.Search),
+)
+
+private fun fnFor(action: String): Fn =
+    FN_RULES.firstOrNull { action.contains(it.first, ignoreCase = true) }?.second ?: FN_OTHER
+
 private class Details(
     val label: String,
     val version: String,
@@ -50,10 +96,12 @@ private class Details(
     val receivers: List<CompRow>,
     val actions: List<ActionRow>,
     val actionsNote: String?,
+    val functions: List<Pair<Fn, Int>>,
     val permissions: List<String>,
 )
 
 private const val ANDROID_NS = "http://schemas.android.com/apk/res/android"
+private val COMPONENT_TAGS = setOf("activity", "activity-alias", "service", "receiver")
 
 /** Loads everything the details screen shows. Runs on IO. */
 private fun loadDetails(ctx: Context, pkg: String): Details {
@@ -69,6 +117,7 @@ private fun loadDetails(ctx: Context, pkg: String): Details {
     } catch (e: Exception) {
         emptyList<ActionRow>() to "Could not read the manifest (${e.javaClass.simpleName})"
     }
+    val actions = manifest.first.sortedWith(compareBy({ it.action }, { it.component }))
 
     return Details(
         label = ai.loadLabel(pm).toString(),
@@ -77,8 +126,10 @@ private fun loadDetails(ctx: Context, pkg: String): Details {
         activities = pi.activities.orEmpty().map { CompRow(it.name, it.exported) },
         services = pi.services.orEmpty().map { CompRow(it.name, it.exported) },
         receivers = pi.receivers.orEmpty().map { CompRow(it.name, it.exported) },
-        actions = manifest.first.sortedWith(compareBy({ it.action }, { it.component })),
+        actions = actions,
         actionsNote = manifest.second,
+        functions = actions.groupBy { fnFor(it.action) }.map { (fn, list) -> fn to list.size }
+            .sortedByDescending { it.second },
         permissions = pi.requestedPermissions.orEmpty().sorted(),
     )
 }
@@ -93,12 +144,12 @@ private fun manifestActions(ctx: Context, pkg: String): List<ActionRow> {
         while (event != XmlPullParser.END_DOCUMENT) {
             if (event == XmlPullParser.START_TAG) {
                 when (parser.name) {
-                    "activity", "service", "receiver" -> component = qualify(pkg, parser.getAttributeValue(ANDROID_NS, "name"))
+                    in COMPONENT_TAGS -> component = qualify(pkg, parser.getAttributeValue(ANDROID_NS, "name"))
                     "action" -> component?.let { c ->
                         parser.getAttributeValue(ANDROID_NS, "name")?.let { out += ActionRow(it, c) }
                     }
                 }
-            } else if (event == XmlPullParser.END_TAG && parser.name in setOf("activity", "service", "receiver")) {
+            } else if (event == XmlPullParser.END_TAG && parser.name in COMPONENT_TAGS) {
                 component = null
             }
             event = parser.next()
@@ -159,30 +210,30 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
         }
 
         if (d != null) {
-            section("Activities (${d.activities.size})")
-            components(d.activities)
-            section("Services (${d.services.size})")
-            components(d.services)
-            section("Receivers (${d.receivers.size})")
-            components(d.receivers)
+            section("Functions (${d.functions.size})", Icons.Filled.Bolt)
+            if (d.functions.isEmpty() && d.actionsNote == null) item { Text("None declared", color = T.sub, fontSize = 12.sp) }
+            items(d.functions, key = { "fn|" + it.first.label }) { (fn, n) ->
+                IconCard(fn.icon, fn.label, "$n intent action" + if (n == 1) "" else "s", bold = true)
+            }
 
-            section("Intent actions (${d.actions.size})")
+            section("Activities (${d.activities.size})", Icons.Filled.Web)
+            components(d.activities, Icons.Filled.Web)
+            section("Services (${d.services.size})", Icons.Filled.Build)
+            components(d.services, Icons.Filled.Build)
+            section("Receivers (${d.receivers.size})", Icons.Filled.Sensors)
+            components(d.receivers, Icons.Filled.Sensors)
+
+            section("Intent actions (${d.actions.size})", Icons.Filled.Share)
             if (d.actionsNote != null) item { Text(d.actionsNote, color = T.sub, fontSize = 12.sp) }
             else if (d.actions.isEmpty()) item { Text("None declared", color = T.sub, fontSize = 12.sp) }
             items(d.actions, key = { it.action + "|" + it.component }) { a ->
-                PCard {
-                    Text(a.action, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
-                    Text(a.component, color = T.sub, fontSize = 11.sp)
-                }
+                IconCard(fnFor(a.action).icon, a.action, a.component)
             }
 
-            section("Permissions (${d.permissions.size})")
+            section("Permissions (${d.permissions.size})", Icons.Filled.Lock)
             if (d.permissions.isEmpty()) item { Text("None requested", color = T.sub, fontSize = 12.sp) }
             items(d.permissions, key = { "perm|$it" }) { p ->
-                PCard {
-                    Text(p.substringAfterLast('.'), color = T.text, fontSize = 13.sp)
-                    Text(p, color = T.sub, fontSize = 11.sp)
-                }
+                IconCard(Icons.Filled.Lock, p.substringAfterLast('.'), p)
             }
         }
     }
@@ -203,28 +254,33 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     }
 }
 
-private fun LazyListScope.section(title: String) {
-    item {
-        Text(
-            title.uppercase(),
-            color = Look.accent,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.SemiBold,
-            modifier = Modifier.fillMaxWidth().padding(top = 10.dp),
-        )
+@Composable
+private fun IconCard(icon: ImageVector, title: String, subtitle: String, bold: Boolean = false) {
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, Modifier.size(20.dp), Look.accent)
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f)) {
+                Text(title, color = T.text, fontSize = 13.sp, fontWeight = if (bold) FontWeight.SemiBold else null)
+                Text(subtitle, color = T.sub, fontSize = 11.sp)
+            }
+        }
     }
 }
 
-private fun LazyListScope.components(list: List<CompRow>) {
+private fun LazyListScope.section(title: String, icon: ImageVector) {
+    item {
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(icon, null, Modifier.size(16.dp), Look.accent)
+            Spacer(Modifier.width(6.dp))
+            Text(title.uppercase(), color = Look.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+private fun LazyListScope.components(list: List<CompRow>, icon: ImageVector) {
     if (list.isEmpty()) item { Text("None declared", color = T.sub, fontSize = 12.sp) }
     items(list, key = { "c|" + it.name }) { c ->
-        PCard {
-            Text(c.name.substringAfterLast('.'), color = T.text, fontSize = 13.sp)
-            Text(
-                c.name + if (c.exported) " · exported" else " · not exported",
-                color = T.sub,
-                fontSize = 11.sp,
-            )
-        }
+        IconCard(icon, c.name.substringAfterLast('.'), c.name + (if (c.exported) " · exported" else " · not exported"))
     }
 }

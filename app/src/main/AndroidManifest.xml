@@ -8,6 +8,9 @@
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
     <!-- step counter sensor needs this on Android 10+ (Health tool) -->
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <!-- location tracking on the Health page, asked only when the user turns it on -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <!-- heart rate from the camera flash (Health tool); the phone may have no flash, so the features are optional -->
     <uses-permission android:name="android.permission.CAMERA" />
     <uses-feature android:name="android.hardware.camera" android:required="false" />
