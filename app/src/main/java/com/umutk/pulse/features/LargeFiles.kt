@@ -49,7 +49,7 @@ data class LargeFile(val file: File, val size: Long, val modified: Long)
 private const val MAX_RESULTS = 500
 
 // Android/data and Android/obb are app-private trees; deleting from them breaks apps, so they are never walked.
-private fun isSkippedDir(dir: File): Boolean {
+internal fun isSkippedDir(dir: File): Boolean {
     val parent = dir.parentFile ?: return false
     return parent.name == "Android" && (dir.name == "data" || dir.name == "obb")
 }

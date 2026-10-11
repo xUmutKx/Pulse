@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -15,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -22,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,25 +48,6 @@ import java.util.concurrent.atomic.AtomicLong
 /** One child of the folder on screen, with the size of everything under it. */
 private class TreeNode(val file: File, val size: Long)
 
-private fun isLink(f: File): Boolean = Files.isSymbolicLink(f.toPath())
-
-/**
- * Total size of [f]. Symlinks are never followed, so the walk stays inside the folder
- * the user picked. [counter] counts files as they are measured, for the progress line.
- */
-private suspend fun sizeOf(f: File, counter: AtomicLong): Long {
-    currentCoroutineContext().ensureActive()
-    if (isLink(f)) return 0L
-    if (f.isFile) {
-        counter.incrementAndGet()
-        return f.length()
-    }
-    if (!f.isDirectory) return 0L
-    var total = 0L
-    for (child in f.listFiles().orEmpty()) total += sizeOf(child, counter)
-    return total
-}
-
 private fun formatSize(b: Long): String = when {
     b >= 1L shl 30 -> "%.1f GB".format(b / 1073741824.0)
     b >= 1L shl 20 -> "%.1f MB".format(b / 1048576.0)
@@ -76,35 +60,23 @@ private fun formatSize(b: Long): String = when {
  * sorted by size, each with a bar showing its share of the folder total.
  * Tap a folder to go in; the back button goes up, and leaves the screen at [root].
  */
+/** Folder the user was last in. `remember` is dropped when the screen leaves composition, so this outlives it. */
+private var lastDir: File? = null
+
 @Composable
 fun FolderTreeScreen(root: File, onBack: () -> Unit) {
-    var dir by remember(root) { mutableStateOf(root) }
-    var rows by remember(root) { mutableStateOf<List<TreeNode>>(emptyList()) }
-    var loading by remember(root) { mutableStateOf(true) }
-    var scanned by remember(root) { mutableStateOf(0L) }
-
-    LaunchedEffect(dir) {
-        val target = dir
-        loading = true
-        rows = emptyList()
-        scanned = 0L
-        val counter = AtomicLong(0L)
-        val ticker = launch {
-            while (isActive) {
-                scanned = counter.get()
-                delay(150)
-            }
-        }
-        val result = withContext(Dispatchers.IO) {
-            target.listFiles().orEmpty()
-                .filter { !isLink(it) }
-                .map { TreeNode(it, sizeOf(it, counter)) }
-                .sortedByDescending { it.size }
-        }
-        ticker.cancel()
-        rows = result
-        scanned = counter.get()
-        loading = false
+    var dir by remember(root) {
+        mutableStateOf(lastDir?.takeIf { it.isDirectory && it.path.startsWith(root.path) } ?: root)
+    }
+    // the one shared walk of the storage (see StorageScan): the folder on screen, its children sorted by size
+    val snap by StorageScan.snap.collectAsState()
+    val scanned by StorageScan.scanned.collectAsState()
+    LaunchedEffect(root) { StorageScan.ensure(root) }
+    LaunchedEffect(dir) { lastDir = dir }
+    val loading = snap?.root != root.path
+    val rows = remember(snap, dir) {
+        val s = snap?.takeIf { it.root == root.path }
+        s?.childrenOf(dir)?.map { TreeNode(it, s.sizeOf(it)) }?.sortedByDescending { it.size }.orEmpty()
     }
 
     val atRoot = dir == root
@@ -121,6 +93,10 @@ fun FolderTreeScreen(root: File, onBack: () -> Unit) {
                 Icon(Icons.Filled.ArrowBack, contentDescription = if (atRoot) "Back" else "Up")
             }
             Text("Folder tree", style = MaterialTheme.typography.titleLarge)
+            Spacer(Modifier.weight(1f))
+            IconButton(onClick = { StorageScan.rescan(root) }) {
+                Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
+            }
         }
         Text(
             dir.path,

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -143,17 +144,29 @@ fun TempGraphScreen(onBack: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
-                TempChart(
-                    series = series,
-                    end = samples.last().at,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(280.dp),
-                )
+                val (yMin, yMax) = scaleOf(series)
+                Row(Modifier.fillMaxWidth().height(280.dp)) {
+                    // Scale labels so the lines can be read as values, not just shapes.
+                    Column(
+                        Modifier.fillMaxHeight().padding(end = 6.dp),
+                        verticalArrangement = Arrangement.SpaceBetween,
+                        horizontalAlignment = Alignment.End,
+                    ) {
+                        Text(Opt.temp(yMax), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(Opt.temp(yMin), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    TempChart(
+                        series = series,
+                        end = samples.last().at,
+                        yMin = yMin,
+                        yMax = yMax,
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                    )
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(10.dp).background(WarnRed.copy(alpha = 0.5f)))
                     Text(
-                        "  Above ${WARN_C.toInt()} °C",
+                        "  Above ${Opt.temp(WARN_C)}  ·  last $WINDOW_MIN min",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -176,13 +189,16 @@ private fun SeriesStat(s: Series) {
     }
 }
 
+/** Y range in °C: at least 25 to 45, widened to fit the data. Shared by the labels and the chart. */
+private fun scaleOf(series: List<Series>): Pair<Float, Float> {
+    val all = series.flatMap { s -> s.points.map { it.second } }
+    return minOf(25f, all.min() - 3f) to maxOf(45f, all.max() + 3f)
+}
+
 @Composable
-private fun TempChart(series: List<Series>, end: Long, modifier: Modifier) {
+private fun TempChart(series: List<Series>, end: Long, yMin: Float, yMax: Float, modifier: Modifier) {
     val grid = MaterialTheme.colorScheme.outlineVariant
     Canvas(modifier) {
-        val all = series.flatMap { s -> s.points.map { it.second } }
-        val yMin = minOf(25f, all.min() - 3f)
-        val yMax = maxOf(45f, all.max() + 3f)
         val windowMs = WINDOW_MIN * 60_000L
         val start = end - windowMs
         fun yOf(v: Float) = size.height * (1f - (v - yMin) / (yMax - yMin))

@@ -35,16 +35,20 @@ import kotlinx.coroutines.withContext
 
 // ---------------------------------------------------------------- shared bits
 
-private val iconCache = HashMap<String, androidx.compose.ui.graphics.ImageBitmap?>()
+private val iconCache = java.util.concurrent.ConcurrentHashMap<String, androidx.compose.ui.graphics.ImageBitmap>()
+
+/** The app's own launcher icon, loaded off the main thread and cached. The generic icon is only a fallback for packages that cannot be resolved. */
+private fun loadAppIcon(ctx: android.content.Context, pkg: String): androidx.compose.ui.graphics.ImageBitmap? = iconCache[pkg] ?: try {
+    ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap().also { iconCache[pkg] = it }
+} catch (e: Exception) { null }
 
 @Composable
 fun AppIcon(name: String, size: androidx.compose.ui.unit.Dp = 28.dp) {
     val ctx = LocalContext.current
     val pkg = name.substringBefore(':')
-    val bmp = remember(pkg) {
-        iconCache.getOrPut(pkg) { try { ctx.packageManager.getApplicationIcon(pkg).toBitmap(72, 72).asImageBitmap() } catch (e: Exception) { null } }
-    }
-    if (bmp != null) Image(bmp, null, Modifier.size(size)) else PIcon("processes", T.sub, size * 0.8f, Modifier.padding(2.dp))
+    val bmp by produceState(iconCache[pkg], pkg) { value = withContext(Dispatchers.IO) { loadAppIcon(ctx, pkg) } }
+    val icon = bmp
+    if (icon != null) Image(icon, null, Modifier.size(size)) else PIcon("processes", T.sub, size * 0.8f, Modifier.padding(2.dp))
 }
 
 fun labelOf(ctx: android.content.Context, name: String): String {
@@ -325,22 +329,36 @@ fun SettingsPage() {
     }
 }
 
-/** Tiny picture of what a theme looks like. */
+/** Tiny picture of what a theme looks like: its window, nav, card edge and graph style. */
 @Composable
 private fun ThemePreview(th: PTheme) {
-    Box(Modifier.fillMaxWidth().height(70.dp).background(th.bg).border(1.dp, th.line)) {
+    val winBg = if (th.glass) androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF7FB2E5), Color(0xFFDCE9F7))) else androidx.compose.ui.graphics.SolidColor(th.bg)
+    val cardShape = RoundedCornerShape(th.radius.coerceAtMost(8.dp))
+    Box(Modifier.fillMaxWidth().height(78.dp).background(winBg).border(1.dp, th.line)) {
         Column {
-            if (th.title != null) Box(Modifier.fillMaxWidth().height(12.dp).background(th.title)) else Box(Modifier.fillMaxWidth().height(4.dp).background(th.accent))
+            if (th.title != null) Box(Modifier.fillMaxWidth().height(12.dp).background(th.title)) else if (th.tabs) Box(Modifier.fillMaxWidth().height(10.dp).background(th.bg).border(1.dp, th.line))
             Row(Modifier.fillMaxSize().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Column(Modifier.width(10.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    repeat(4) { Box(Modifier.size(8.dp).background(if (it == 1) th.accent else th.sub.copy(alpha = .5f), RoundedCornerShape(2.dp))) }
+                Column(Modifier.width(12.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    repeat(4) { i ->
+                        val on = i == 1
+                        Box(Modifier.size(if (th.material) 12.dp else 9.dp, 9.dp).background(
+                            if (on) th.accent.copy(alpha = if (th.material) .3f else 1f) else th.sub.copy(alpha = .4f),
+                            if (th.material) RoundedCornerShape(5.dp) else RoundedCornerShape(th.radius.coerceAtMost(2.dp))))
+                    }
                 }
-                Box(Modifier.fillMaxSize().background(if (th.classicGraph) Color.Black else th.panel, RoundedCornerShape(th.radius.coerceAtMost(6.dp)))) {
-                    androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+                Box(Modifier.fillMaxSize()
+                    .background(if (th.glass) th.panel.copy(alpha = .72f) else if (th.classicGraph) Color.Black else th.panel, cardShape)
+                    .then(if (th.bevel) Modifier.bevel(false) else if (th.classicGraph || th.tabs) Modifier.border(1.dp, th.line, cardShape) else if (!th.material) Modifier.border(1.dp, th.line, cardShape) else Modifier)) {
+                    androidx.compose.foundation.Canvas(Modifier.fillMaxSize().padding(3.dp)) {
                         val p = androidx.compose.ui.graphics.Path()
                         val ys = listOf(.7f, .5f, .6f, .3f, .45f, .2f, .35f)
                         ys.forEachIndexed { i, y -> val x = size.width * i / (ys.size - 1); if (i == 0) p.moveTo(x, size.height * y) else p.lineTo(x, size.height * y) }
-                        drawPath(p, if (th.classicGraph) Color(0xFF00FF00) else th.accent, style = androidx.compose.ui.graphics.drawscope.Stroke(3f))
+                        val col = if (th.classicGraph) Color(0xFF00FF00) else th.accent
+                        if (!th.classicGraph) {
+                            val fill = androidx.compose.ui.graphics.Path().apply { addPath(p); lineTo(size.width, size.height); lineTo(0f, size.height); close() }
+                            drawPath(fill, col.copy(alpha = .22f))
+                        }
+                        drawPath(p, col, style = androidx.compose.ui.graphics.drawscope.Stroke(if (th.classicGraph) 2f else 3f))
                     }
                 }
             }

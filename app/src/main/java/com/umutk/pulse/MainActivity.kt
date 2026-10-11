@@ -81,7 +81,7 @@ val Pages = listOf(
     Pg("apps", "Apps", "users"),
     Pg("guardians", "Guardians", "shield"),
     Pg("device", "Device", "phone"),
-    Pg("tools", "Tools", "table"),
+    Pg("health", "Health", "heart"),
 )
 private val visible get() = Pages.filter { it.id !in Opt.hidden }
 private val SettingsPg = Pg("settings", "Settings", "settings")
@@ -93,6 +93,8 @@ private fun Root() {
     // the rest of the UI reads Look.theme through T, so the resolved Material look is swapped in while composing
     val cs = if (th.dark) darkColorScheme(primary = Look.accent, background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
     else lightColorScheme(primary = Look.accent, background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
+    // the opening screen plays again whenever the look changes, so each look starts with its own animation
+    var splashFor by rememberSaveable { mutableStateOf("") }
     val view = androidx.compose.ui.platform.LocalView.current
     SideEffect { WindowCompat.getInsetsController((view.context as android.app.Activity).window, view).apply { isAppearanceLightStatusBars = !th.dark; isAppearanceLightNavigationBars = !th.dark } }
     Look.resolved = if (th !== base) th else null
@@ -100,7 +102,9 @@ private fun Root() {
     val dens = androidx.compose.ui.platform.LocalDensity.current
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * Opt.fontScale)) {
     MaterialTheme(colorScheme = cs) {
-        Surface(Modifier.fillMaxSize(), color = th.bg) { key(th.dark) { App() } }
+        Surface(Modifier.fillMaxSize(), color = th.bg) {
+            if (splashFor != base.id) Splash(th) { splashFor = base.id } else key(th.dark) { App() }
+        }
     }
     }
 }
@@ -119,13 +123,14 @@ private fun App() {
     }
     val body: @Composable () -> Unit = {
         if (sub.isNotEmpty()) SubScreen(sub, { sub = it }, { sub = "" }) else when (page) {
-            "tools" -> ToolsPage { sub = it }
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
-            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "guardians" -> GuardiansModule(); "device" -> DeviceModule(); else -> SettingsPage()
+            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "guardians" -> GuardiansModule(); "device" -> DeviceModule(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; else -> SettingsPage()
         }
     }
     val menus = rememberMenus(go)
-    if (T.id == "win10") Win10Shell(page, go, menus, body) else if (T.tabs) ClassicShell(page, go, menus, body) else ModernShell(page, go, menus, body)
+    androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
+        if (T.id == "win10") Win10Shell(page, go, menus, body) else if (T.tabs) ClassicShell(page, go, menus, body) else ModernShell(page, go, menus, body)
+    }
     menus.dialogs()
 }
 

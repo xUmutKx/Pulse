@@ -110,8 +110,14 @@ fun PCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
     val t = T
     val shape = RoundedCornerShape(t.radius)
     val fx = if (t.id == "win11") Look.effect else "none"
-    Column(modifier.fillMaxWidth().then(if (t.tabs) Modifier.background(t.bg, shape) else if (fx != "none") Modifier.layer(fx, shape) else Modifier.background(t.panel, shape)).then(if (t.bevel) Modifier.bevel(false) else if (t.tabs) Modifier.border(1.dp, t.line) else if (!t.material) Modifier.border(1.dp, t.line, shape) else Modifier)
-        .padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+    val surface = when {
+        t.glass -> Modifier.background(t.panel.copy(alpha = .72f), shape).border(1.dp, Color.White.copy(alpha = .9f), shape)   // Aero: see-through with a bright edge
+        t.tabs -> Modifier.background(t.bg, shape).then(if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, t.line))
+        fx != "none" -> Modifier.layer(fx, shape).border(1.dp, t.line, shape)
+        t.material -> Modifier.background(t.panel, shape)
+        else -> Modifier.background(t.panel, shape).border(1.dp, t.line, shape)
+    }
+    Column(modifier.fillMaxWidth().then(surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
 }
 
 fun rate(b: Float) = if (b >= 1 shl 20) "%.1f MB/s".format(b / 1048576f) else "%.0f KB/s".format(b / 1024f)
