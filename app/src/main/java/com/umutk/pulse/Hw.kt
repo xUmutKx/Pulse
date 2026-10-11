@@ -296,15 +296,8 @@ object Hw {
         return out
     }
 
-    fun maxTemp(): Float {
-        var best = 0f
-        for (i in 0 until 80) {
-            val t = read("/sys/class/thermal/thermal_zone$i/temp").toFloatOrNull() ?: continue
-            val c = if (t > 1000) t / 1000 else t
-            if (c in 20f..120f && c > best) best = c
-        }
-        return best
-    }
+    /** CPU temperature, shared with the Sampler so every page shows the same number. */
+    fun maxTemp(): Float = Guard.cpuTemp()
 
     // ------------------------------------------------------------ memory + storage
     fun memory(ctx: Context): List<Section> {
@@ -336,6 +329,10 @@ object Hw {
     }
 
     /** Folder sizes of the shared storage (slow: walks the files). */
+    /** The folders directly inside [dir], biggest first, each with its total size: the level the storage card is showing. */
+    fun childSizes(dir: java.io.File): List<Pair<String, Long>> =
+        (dir.listFiles() ?: emptyArray()).filter { it.isDirectory && !it.name.startsWith(".") }.map { d -> d.name to tryOr(0L) { d.walkTopDown().filter { it.isFile }.sumOf { it.length() } } }.sortedByDescending { it.second }
+
     fun folderSizes(): List<Pair<String, Long>> {
         val root = Environment.getExternalStorageDirectory()
         return (root.listFiles() ?: emptyArray()).filter { it.isDirectory }.map { d -> d.name to tryOr(0L) { d.walkTopDown().filter { it.isFile }.sumOf { it.length() } } }.sortedByDescending { it.second }
