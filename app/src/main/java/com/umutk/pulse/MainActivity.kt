@@ -81,6 +81,7 @@ val Pages = listOf(
     Pg("apps", "Apps", "users"),
     Pg("guardians", "Guardians", "shield"),
     Pg("device", "Device", "phone"),
+    Pg("tools", "Tools", "table"),
 )
 private val visible get() = Pages.filter { it.id !in Opt.hidden }
 private val SettingsPg = Pg("settings", "Settings", "settings")
@@ -108,6 +109,8 @@ private fun Root() {
 private fun App() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     var page by rememberSaveable { mutableStateOf(if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
+    var sub by rememberSaveable { mutableStateOf("") } // a tool opened from the Tools page; empty means none
+    val go: (String) -> Unit = { sub = ""; page = it }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             Shell.detectRoot()
@@ -115,13 +118,14 @@ private fun App() {
         }
     }
     val body: @Composable () -> Unit = {
-        when (page) {
+        if (sub.isNotEmpty()) SubScreen(sub, { sub = it }, { sub = "" }) else when (page) {
+            "tools" -> ToolsPage { sub = it }
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
             "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "guardians" -> GuardiansModule(); "device" -> DeviceModule(); else -> SettingsPage()
         }
     }
-    val menus = rememberMenus { page = it }
-    if (T.id == "win10") Win10Shell(page, { page = it }, menus, body) else if (T.tabs) ClassicShell(page, { page = it }, menus, body) else ModernShell(page, { page = it }, menus, body)
+    val menus = rememberMenus(go)
+    if (T.id == "win10") Win10Shell(page, go, menus, body) else if (T.tabs) ClassicShell(page, go, menus, body) else ModernShell(page, go, menus, body)
     menus.dialogs()
 }
 

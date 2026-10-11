@@ -5,7 +5,7 @@ want = {
  "menu":["Navigation"],"cpu":["Developer Board","Chip"],"memory":["Ram","Storage"],"disk":["Hard Drive","Storage"],
  "wifi":["Wifi 2","Globe"],"gpu":["Video Card","Games"],"battery":["Battery 8","Battery 10"],"thermal":["Temperature"],
  "search":["Search"],"close":["Dismiss"],"play":["Play"],"phone":["Phone"],"chevron":["Chevron Down"],"info":["Info"],
- "run":["Add Square"],"palette":["Color"],"speed":["Timer"],"table":["Table"],
+ "run":["Add Square"],"palette":["Color"],"speed":["Timer"],"table":["Table"],"heart":["Heart"],
 }
 out = {}
 for k, names in want.items():
