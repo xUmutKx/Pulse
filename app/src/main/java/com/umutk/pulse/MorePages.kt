@@ -89,7 +89,7 @@ fun DashboardPage() {
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f))
-            Tile("Battery", "%${s.batPct}" + if (s.charging) " ⚡" else "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f))
+            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f))
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f))
@@ -331,6 +331,9 @@ fun AppsPage() {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             PHead("Apps", "${shown.size} / ${apps.size}")
+        }
+        item { ToolRows(TOOL_APPMANAGER) }
+        item {
             PField(q, { q = it }, "Search", Modifier.fillMaxWidth())
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("user" to "User", "system" to "System", "all" to "All").forEach { (k, n) -> PChip(kind == k, n) { kind = k } }

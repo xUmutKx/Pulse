@@ -207,7 +207,7 @@ fun PerformancePage() {
                 PerfItem("Storage", "$diskPct% used", emptyList(), resColor("disk"), 100f, sel == "disk") { sel = "disk" }
                 PerfItem("Network", "D ${rate(s.down.toFloat())}  U ${rate(s.up.toFloat())}", listOf(h["down"].orEmpty(), h["up"].orEmpty()), resColor("net"), netMax, sel == "net") { sel = "net" }
                 PerfItem("GPU", if (s.gpu >= 0) "${s.gpu}%" else "—", listOf(h["gpu"].orEmpty()), resColor("gpu"), 100f, sel == "gpu") { sel = "gpu" }
-                PerfItem("Battery", "${s.batPct}%${if (s.charging) " ⚡" else ""}  ${s.batMa} mA", listOf(h["bat"].orEmpty()), resColor("battery"), 100f, sel == "battery") { sel = "battery" }
+                PerfItem("Battery", "${s.batPct}%${""}  ${s.batMa} mA", listOf(h["bat"].orEmpty()), resColor("battery"), 100f, sel == "battery") { sel = "battery" }
                 PerfItem("Thermal", if (s.cpuTemp > 0) Opt.temp(s.cpuTemp) else "—", listOf(h["temp"].orEmpty()), resColor("thermal"), 100f, sel == "thermal") { sel = "thermal" }
                 Spacer(Modifier.height(12.dp))
             }

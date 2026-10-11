@@ -32,15 +32,17 @@ class PTheme(
     val titleText: Color = Color.White,
     val titleName: String = "",
     val tabSel: Color = Color.White,
+    val glass: Boolean = false,      // Windows 7 Aero: translucent panels with a bright edge
 )
 
 private fun c(v: Long) = Color(v)
 
 val Themes = listOf(
     PTheme("win11", "Windows 11", false, c(0xFFF3F3F3), c(0xFFFFFFFF), c(0xFF1A1A1A), c(0xFF5F5F5F), c(0xFF0067C0), c(0xFFE0E0E0), 8.dp),
+    PTheme("win8", "Windows 8", false, c(0xFFF2F2F2), c(0xFFFFFFFF), c(0xFF1F1F1F), c(0xFF6B6B6B), c(0xFF1BA1E2), c(0xFFD6D6D6), 0.dp),
     PTheme("win10", "Windows 10", false, c(0xFFFFFFFF), c(0xFFFFFFFF), c(0xFF000000), c(0xFF6D6D6D), c(0xFF0078D7), c(0xFFD9D9D9), 0.dp, tabs = true, titleName = "Task Manager"),
-    PTheme("win7", "Windows 7", false, c(0xFFF0F0F0), c(0xFFFFFFFF), c(0xFF000000), c(0xFF444444), c(0xFF3399FF), c(0xFF9AA7B8), 3.dp,
-        tabs = true, classicGraph = true,
+    PTheme("win7", "Windows 7", false, c(0xFFDCE9F7), c(0xFFFFFFFF), c(0xFF000000), c(0xFF444444), c(0xFF3399FF), c(0xFF9AA7B8), 3.dp,
+        tabs = true, classicGraph = true, glass = true,
         title = Brush.verticalGradient(listOf(c(0xFFDCE9F7), c(0xFFB9D1EA), c(0xFFA7C4E5))), titleText = Color.Black, titleName = "Windows Task Manager"),
     PTheme("xp", "Windows XP", false, c(0xFFECE9D8), c(0xFFFFFFFF), c(0xFF000000), c(0xFF404040), c(0xFF316AC5), c(0xFF7F9DB9), 3.dp,
         tabs = true, classicGraph = true, tabSel = c(0xFFFCFCFE),

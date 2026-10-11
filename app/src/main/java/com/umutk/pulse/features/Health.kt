@@ -7,7 +7,11 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
 import android.os.Build
+import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
@@ -16,11 +20,19 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Air
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.DirectionsWalk
+import androidx.compose.material.icons.filled.Favorite
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -31,6 +43,8 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -47,19 +61,26 @@ import androidx.core.content.ContextCompat
 import com.umutk.pulse.InfoRows
 import com.umutk.pulse.PButton
 import com.umutk.pulse.PCard
+import com.umutk.pulse.PSwitch
 import com.umutk.pulse.Look
 import com.umutk.pulse.T
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 
-/** Steps, distance and calories from the step counter, and a heart rate from the camera flash. Estimates only. */
+private const val STEP_GOAL = 10_000
+// sensors Android exposes by name (vendor SpO2 sensors, an Arable sensor); shown only once they send a value
+private val EXTRA_SENSOR = Regex("spo2|oxygen|arable", RegexOption.IGNORE_CASE)
+
+/** Steps, distance and calories from the step counter, a heart rate from the camera flash, an activity timer and location. Estimates only. */
 @Composable
 fun HealthScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val sm = remember { ctx.getSystemService(Context.SENSOR_SERVICE) as SensorManager }
     val stepSensor = remember { sm.getDefaultSensor(Sensor.TYPE_STEP_COUNTER) }
+    val extraSensors = remember { sm.getSensorList(Sensor.TYPE_ALL).filter { EXTRA_SENSOR.containsMatchIn(it.name) } }
     val prefs = remember { ctx.getSharedPreferences("health", Context.MODE_PRIVATE) }
     val flash = remember { hasFlash(ctx) }
+    val hasLoc = remember { ctx.packageManager.hasSystemFeature(PackageManager.FEATURE_LOCATION) }
     var granted by remember {
         mutableStateOf(Build.VERSION.SDK_INT < 29 || ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACTIVITY_RECOGNITION) == PackageManager.PERMISSION_GRANTED)
     }
@@ -73,6 +94,15 @@ fun HealthScreen(onBack: () -> Unit) {
     var hrMsg by remember { mutableStateOf<String?>(null) }
     var meter by remember { mutableStateOf<HeartMeter?>(null) }
     var camOk by remember { mutableStateOf(ContextCompat.checkSelfPermission(ctx, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) }
+    // activity session: start time (0 = not running) and the last length, kept in prefs so a run survives leaving the page
+    var actStart by remember { mutableLongStateOf(prefs.getLong("act_start", 0L)) }
+    var actLast by remember { mutableLongStateOf(prefs.getLong("act_last", 0L)) }
+    var actType by remember { mutableStateOf(ActivityType.fromName(prefs.getString("act_type", null))) }
+    var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
+    var locOn by remember { mutableStateOf(prefs.getBoolean("loc_on", false)) }
+    var fineOk by remember { mutableStateOf(ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) }
+    var lastLoc by remember { mutableStateOf<Location?>(null) }
+    val extra = remember { mutableStateMapOf<String, String>() }
 
     val weight = weightTxt.replace(',', '.').toFloatOrNull()?.takeIf { it in 20f..300f } ?: 70f
     val height = heightTxt.replace(',', '.').toFloatOrNull()?.takeIf { it in 100f..250f } ?: 0f
@@ -111,6 +141,45 @@ fun HealthScreen(onBack: () -> Unit) {
         }
     }
 
+    // oxygen / Arable values: only sensors that actually report
+    DisposableEffect(Unit) {
+        val l = object : SensorEventListener {
+            override fun onSensorChanged(e: SensorEvent) {
+                if (e.values.isNotEmpty()) extra[e.sensor.name] = e.values.joinToString(" ") { "%.1f".format(it) }
+            }
+            override fun onAccuracyChanged(s: Sensor?, a: Int) {}
+        }
+        extraSensors.forEach { sm.registerListener(l, it, SensorManager.SENSOR_DELAY_NORMAL) }
+        onDispose { sm.unregisterListener(l) }
+    }
+
+    // activity timer ticks once a second while a session runs
+    LaunchedEffect(actStart) {
+        while (actStart > 0L) { nowMs = System.currentTimeMillis(); delay(1000) }
+    }
+
+    fun toggleActivity() {
+        if (actStart == 0L) { actStart = System.currentTimeMillis(); nowMs = actStart; prefs.edit().putLong("act_start", actStart).apply() }
+        else {
+            actLast = System.currentTimeMillis() - actStart
+            actStart = 0L
+            prefs.edit().putLong("act_start", 0L).putLong("act_last", actLast).apply()
+        }
+    }
+
+    fun setLoc(on: Boolean) { locOn = on; prefs.edit().putBoolean("loc_on", on).apply() }
+    val askLoc = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { fineOk = it; if (it) setLoc(true) }
+    // GPS and network providers only (platform API, no Play services); updates run while the page is open
+    DisposableEffect(locOn, fineOk) {
+        if (!locOn || !fineOk) return@DisposableEffect onDispose { }
+        val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+        val l = LocationListener { lastLoc = it }
+        val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter { lm.isProviderEnabled(it) }
+        lastLoc = providers.mapNotNull { lm.getLastKnownLocation(it) }.maxByOrNull { it.time }
+        providers.forEach { lm.requestLocationUpdates(it, 2000L, 0f, l, Looper.getMainLooper()) }
+        onDispose { lm.removeUpdates(l) }
+    }
+
     fun startHeart() {
         hrMsg = null
         hrProgress = 0f
@@ -118,7 +187,7 @@ fun HealthScreen(onBack: () -> Unit) {
             meter = null
             hrProgress = -1f
             if (r != null) { bpm = r; prefs.edit().putInt("bpm", r).apply() }
-            else hrMsg = "No clear pulse. Cover the lens and the flash fully with a fingertip, keep still, and try again."
+            else hrMsg = "No clear pulse."
         }.also { it.start() }
     }
     val askCam = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { camOk = it; if (it) startHeart() }
@@ -129,11 +198,22 @@ fun HealthScreen(onBack: () -> Unit) {
             IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back", tint = T.text) }
             Text("Health", color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
         }
+        // summary bar: steps against the daily goal, heart rate beside it
         PCard {
+            val steps = today ?: 0L
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.DirectionsWalk, null, Modifier.size(18.dp), tint = Look.accent)
+                Text("%,d / %,d".format(steps, STEP_GOAL), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Icon(Icons.Filled.Favorite, null, Modifier.size(18.dp), tint = Look.accent)
+                Text(if (bpm > 0) "$bpm" else "-", color = T.text, fontSize = 15.sp)
+            }
+            LinearProgressIndicator(progress = { (steps / STEP_GOAL.toFloat()).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+        }
+        // no step counter on the device: the card is not shown at all
+        if (stepSensor != null) PCard {
             Text("Steps today", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             val t = today
             when {
-                stepSensor == null -> Text("This phone has no step counter sensor.", color = T.sub, fontSize = 13.sp)
                 !granted -> {
                     Text("Pulse needs permission to read your steps.", color = T.sub, fontSize = 13.sp)
                     PButton("Allow step counting") { ask.launch(Manifest.permission.ACTIVITY_RECOGNITION) }
@@ -145,19 +225,46 @@ fun HealthScreen(onBack: () -> Unit) {
                     InfoRows(listOf(
                         "Distance" to "%.2f km".format(t * strideM / 1000f),
                         "Calories" to "%d kcal (estimate)".format((t * 0.04f * weight / 70f).toInt()),
-                        "Stride" to if (height > 0f) "%d cm, from your height".format((strideM * 100f).toInt()) else "75 cm default, set height below",
+                        "Stride" to if (height > 0f) "%d cm, from your height".format((strideM * 100f).toInt()) else "75 cm default",
                     ))
                 }
             }
         }
         PCard {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.Timer, null, Modifier.size(18.dp), tint = Look.accent)
+                Text("Activity", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+            val running = actStart > 0L
+            ActivityPicker(selected = actType, enabled = !running) { a ->
+                actType = a
+                prefs.edit().putString("act_type", a.name).apply()
+            }
+            Text(actType.label, color = T.sub, fontSize = 13.sp)
+            val secs = (if (running) nowMs - actStart else actLast) / 1000
+            Text("%02d:%02d:%02d".format(secs / 3600, secs % 3600 / 60, secs % 60), color = T.text, fontSize = 40.sp, fontWeight = FontWeight.SemiBold)
+            PButton(if (running) "Stop" else "Start", danger = running, icon = if (running) Icons.Filled.Stop else Icons.Filled.PlayArrow) { toggleActivity() }
+        }
+        // no location hardware on the device: the card is not shown at all
+        if (hasLoc) PCard {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.LocationOn, null, Modifier.size(18.dp), tint = Look.accent)
+                Text("Location", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                PSwitch(on = locOn, onChange = { on -> if (on && !fineOk) askLoc.launch(Manifest.permission.ACCESS_FINE_LOCATION) else setLoc(on) })
+            }
+            if (locOn) {
+                val l = lastLoc
+                if (l != null) Text("%.5f, %.5f   ±%d m".format(l.latitude, l.longitude, l.accuracy.toInt()), color = T.text, fontSize = 13.sp)
+                else Text("No fix yet.", color = T.sub, fontSize = 13.sp)
+            }
+        }
+        // no camera flash on the device: heart rate needs it, so the card is not shown at all
+        if (flash) PCard {
             Text("Heart rate", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             when {
-                !flash -> Text("This phone has no camera flash, so heart rate cannot be measured here.", color = T.sub, fontSize = 13.sp)
                 hrProgress >= 0f -> {
                     Text("Measuring... %d%%".format((hrProgress * 100).toInt()), color = T.text, fontSize = 14.sp)
                     LinearProgressIndicator(progress = { hrProgress }, modifier = Modifier.fillMaxWidth())
-                    Text("Keep your fingertip still over the camera and the flash.", color = T.sub, fontSize = 12.sp)
                     PButton("Stop") { meter?.cancel(); meter = null; hrProgress = -1f }
                 }
                 else -> {
@@ -165,9 +272,16 @@ fun HealthScreen(onBack: () -> Unit) {
                     else Text("No reading yet.", color = T.sub, fontSize = 13.sp)
                     hrMsg?.let { Text(it, color = T.sub, fontSize = 13.sp) }
                     PButton(if (camOk) "Measure (15 s)" else "Allow camera and measure") { if (camOk) startHeart() else askCam.launch(Manifest.permission.CAMERA) }
-                    Text("Put a fingertip over the camera and the flash. A rough estimate, not a medical measurement.", color = T.sub, fontSize = 12.sp)
+                    Text("Estimate, not a medical measurement.", color = T.sub, fontSize = 12.sp)
                 }
             }
+        }
+        if (extra.isNotEmpty()) PCard {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Icon(Icons.Filled.Air, null, Modifier.size(18.dp), tint = Look.accent)
+                Text("Oxygen and sensors", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            }
+            InfoRows(extra.toList())
         }
         PCard {
             Text("Body", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -175,17 +289,7 @@ fun HealthScreen(onBack: () -> Unit) {
                 NumBox("Weight (kg)", weightTxt, Modifier.weight(1f)) { weightTxt = it; it.replace(',', '.').toFloatOrNull()?.takeIf { v -> v in 20f..300f }?.let { v -> prefs.edit().putFloat("weight", v).apply() } }
                 NumBox("Height (cm)", heightTxt, Modifier.weight(1f)) { heightTxt = it; it.replace(',', '.').toFloatOrNull()?.takeIf { v -> v in 100f..250f }?.let { v -> prefs.edit().putFloat("height", v).apply() } }
             }
-            Text("Used for distance and calories. Empty height means the default stride.", color = T.sub, fontSize = 12.sp)
-        }
-        PCard {
-            Text("Other health data", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            InfoRows(listOf(
-                "Steps" to if (stepSensor != null) "Available (above)" else "Not on this phone",
-                "Heart rate" to if (flash) "Camera flash, above" else "Needs a camera flash",
-                "Sleep" to "Not available: no standard Android sensor",
-                "Blood oxygen" to "Not available: no standard Android sensor",
-                "Blood pressure" to "Not available: no standard Android sensor",
-            ))
+            Text("Used for distance and calories.", color = T.sub, fontSize = 12.sp)
         }
     }
 }

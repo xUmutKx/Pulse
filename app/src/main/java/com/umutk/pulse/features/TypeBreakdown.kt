@@ -17,6 +17,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -25,6 +26,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -45,7 +47,7 @@ import java.io.File
 import java.nio.file.Files
 import java.util.PriorityQueue
 
-private const val TOP_PER_KIND = 100
+internal const val TOP_PER_KIND = 100
 
 enum class FileKind(val label: String, val exts: Set<String>) {
     IMAGES("Images", setOf("jpg", "jpeg", "png", "gif", "webp", "heic", "heif", "bmp", "svg", "raw", "dng")),
@@ -62,58 +64,23 @@ enum class FileKind(val label: String, val exts: Set<String>) {
 
 data class KindSummary(val kind: FileKind, val bytes: Long, val count: Int, val largest: List<LargeFile>)
 
-private val KindByExt: Map<String, FileKind> =
+internal val KindByExt: Map<String, FileKind> =
     FileKind.entries.flatMap { k -> k.exts.map { it to k } }.toMap()
 
-// Same rule as LargeFiles: app-private trees are never walked.
-private fun isSkippedDir(dir: File): Boolean {
-    val parent = dir.parentFile ?: return false
-    return parent.name == "Android" && (dir.name == "data" || dir.name == "obb")
-}
 
-private class KindAcc {
+internal class KindAcc {
     var bytes = 0L
     var count = 0
     val top = PriorityQueue<LargeFile>(TOP_PER_KIND, compareBy<LargeFile> { it.size })
 }
 
-/** Walks [root] iteratively and groups every file's size and count by [FileKind]. Keeps the largest files per kind. */
-suspend fun scanByFileKind(root: File): List<KindSummary> {
-    val acc = FileKind.entries.associateWith { KindAcc() }
-    val stack = ArrayDeque<File>()
-    stack.addLast(root)
-    while (stack.isNotEmpty() && currentCoroutineContext().isActive) {
-        val dir = stack.removeLast()
-        val children = dir.listFiles() ?: continue
-        for (child in children) {
-            if (Files.isSymbolicLink(child.toPath())) continue
-            if (child.isDirectory) {
-                if (!isSkippedDir(child)) stack.addLast(child)
-            } else if (child.isFile) {
-                val kind = KindByExt[child.extension.lowercase()] ?: FileKind.OTHER
-                val len = child.length()
-                val a = acc[kind]!!
-                a.bytes += len
-                a.count++
-                a.top.add(LargeFile(child, len, child.lastModified()))
-                if (a.top.size > TOP_PER_KIND) a.top.poll()
-            }
-        }
-    }
-    return FileKind.entries
-        .map { k -> acc[k]!!.let { KindSummary(k, it.bytes, it.count, it.top.sortedByDescending { f -> f.size }) } }
-        .sortedByDescending { it.bytes }
-}
-
 @Composable
 fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
-    var summaries by remember(root) { mutableStateOf<List<KindSummary>?>(null) }
     var selected by remember(root) { mutableStateOf<FileKind?>(null) }
-
-    LaunchedEffect(root) {
-        summaries = null
-        summaries = withContext(Dispatchers.IO) { scanByFileKind(root) }
-    }
+    // the shared walk of the storage (see StorageScan): the same numbers as the folder tree, and no second scan
+    val snap by StorageScan.snap.collectAsState()
+    LaunchedEffect(root) { StorageScan.ensure(root) }
+    val summaries = snap?.takeIf { it.root == root.path }?.kinds
 
     Column(Modifier.fillMaxSize().background(T.bg).padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -124,6 +91,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                 Text("Storage by type", color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(root.path, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
+            IconButton(onClick = { StorageScan.rescan(root) }) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh", tint = T.text) }
         }
 
         val data = summaries
