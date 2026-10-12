@@ -17,7 +17,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.graphics.Color
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -77,6 +81,8 @@ internal class KindAcc {
 @Composable
 fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     var selected by remember(root) { mutableStateOf<FileKind?>(null) }
+    var pending by remember { mutableStateOf<LargeFile?>(null) }
+    var note by remember { mutableStateOf("") }
     // the shared walk of the storage (see StorageScan): the same numbers as the folder tree, and no second scan
     val snap by StorageScan.snap.collectAsState()
     LaunchedEffect(root) { StorageScan.ensure(root) }
@@ -111,6 +117,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
         val open = selected
 
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
+            if (note.isNotEmpty()) item { Text(note, color = Color(0xFFC42B1C), fontSize = 12.sp) }
             item {
                 DonutChart(
                     slices = data.map { it.kind.label to it.bytes },
@@ -171,6 +178,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                             )
                             Spacer(Modifier.width(8.dp))
                             Text(tbFormatBytes(f.size), color = T.sub, fontSize = 13.sp)
+                            IconButton(onClick = { pending = f }) { Icon(Icons.Filled.Delete, "Delete", tint = Color(0xFFC42B1C)) }
                         }
                         Text(
                             f.file.parent.orEmpty().removePrefix(root.path).trimStart('/').ifEmpty { "/" },
@@ -183,6 +191,20 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                 }
             }
         }
+    }
+    pending?.let { f ->
+        AlertDialog(
+            onDismissRequest = { pending = null },
+            title = { Text("Delete this file?") },
+            text = { Text("${f.file.name}, ${tbFormatBytes(f.size)}. This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    pending = null
+                    note = if (f.file.delete()) { StorageScan.forget(f.file, f.size); "" } else "Could not delete ${f.file.name}"
+                }) { Text("Delete") }
+            },
+            dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
+        )
     }
 }
 

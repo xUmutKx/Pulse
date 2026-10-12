@@ -45,11 +45,49 @@ object Cleaner {
     fun emptyDirs(): List<Junk> = root.walkTopDown().maxDepth(5).filter { it.isDirectory && !it.name.startsWith(".") && (it.list()?.isEmpty() == true) }
         .map { Junk(it, 0L, "empty folder") }.toList()
 
-    /** App caches under Android/data/<package>/cache. */
-    fun caches(): List<Junk> = File(root, "Android/data").listFiles().orEmpty().filter { it.isDirectory }
+    /** App caches: Android/data/<package>/cache, or with root every app's cache and code_cache in every user's data. */
+    fun caches(): List<Junk> = if (Shell.root == true) rootCaches() else File(root, "Android/data").listFiles().orEmpty().filter { it.isDirectory }
         .mapNotNull { pkg -> File(pkg, "cache").takeIf { it.isDirectory } }
         .map { c -> Junk(c, c.walkTopDown().filter { it.isFile }.sumOf { it.length() }, "app cache") }
         .filter { it.size > 0 }.sortedByDescending { it.size }
+
+    /** Root only: the file API cannot see other apps' folders, so one shell pass lists them and sizes them with du. */
+    private fun rootCaches(): List<Junk> {
+        val r = root.path
+        val out = Shell.run("for d in /data/user/*/*/cache /data/user/*/*/code_cache $r/Android/data/*/cache $r/Android/data/*/code_cache; do [ -d \"\$d\" ] && du -sk \"\$d\" 2>/dev/null; done")
+        return out.lineSequence().mapNotNull { line ->
+            val kb = line.substringBefore('\t').trim().toLongOrNull() ?: return@mapNotNull null
+            Junk(File(line.substringAfter('\t').trim()), kb * 1024, "app cache")
+        }.filter { it.size > 0 }.sortedByDescending { it.size }.toList()
+    }
+
+    /** A cache folder of one app where cleaning is allowed: /data/user/<id>/<pkg>/ or Android/data/<pkg>/. */
+    private fun isCacheDir(dir: File): Boolean {
+        if (dir.name != "cache" && dir.name != "code_cache") return false
+        val base = dir.parentFile?.parentFile ?: return false
+        return base.parentFile?.path == "/data/user" || (base.name == "data" && base.parentFile?.name == "Android")
+    }
+
+    /** Empties one app cache folder and keeps the folder. Returns the bytes freed; root paths go through the shell. */
+    fun clearCache(j: Junk): Long {
+        val dir = j.file
+        if (!isCacheDir(dir)) return 0L
+        if (Shell.root == true) {
+            Shell.run("rm -rf '${dir.path}'/* '${dir.path}'/.[!.]* 2>/dev/null")
+            return (j.size - duBytes(dir.path)).coerceAtLeast(0L)
+        }
+        dir.listFiles()?.forEach { runCatching { it.deleteRecursively() } }
+        return (j.size - dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }).coerceAtLeast(0L)
+    }
+
+    /** Removes one junk item. Cache folders are emptied, everything else is deleted. */
+    fun remove(j: Junk): Boolean {
+        if (isCacheDir(j.file)) { clearCache(j); return true }
+        return runCatching { j.file.deleteRecursively() }.getOrDefault(false)
+    }
+
+    private fun duBytes(path: String): Long =
+        Shell.run("du -sk '$path' 2>/dev/null").substringBefore('\t').trim().toLongOrNull()?.times(1024) ?: 0L
 
     /** Big files that are easy to forget, biggest first. */
     fun large(minBytes: Long = 100L shl 20): List<Junk> = root.walkTopDown().maxDepth(6)
@@ -98,7 +136,7 @@ fun CleanerCard() {
             confirmButton = { TextButton({
                 val p = pending; pending = null
                 scope.launch {
-                    val n = withContext(Dispatchers.IO) { items.count { j -> runCatching { j.file.deleteRecursively() }.getOrDefault(false) } }
+                    val n = withContext(Dispatchers.IO) { items.count { j -> Cleaner.remove(j) } }
                     msg = "Removed $n of ${items.size} from $name"
                     groups = groups + (name to emptyList())
                 }
