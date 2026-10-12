@@ -26,14 +26,14 @@ object Effects {
     )
 }
 
-/** The colour the backdrop leans towards: a neutral tone of the wallpaper palette (Android 12+) or plain grey. Never the accent, so Mica stays grey, not blue. */
+/** The colour the backdrop leans towards: the wallpaper palette's primary tone (Android 12+, as Windows tints Mica with the desktop picture) or a fixed blue-grey. */
 @Composable
 fun micaTint(): Color {
     val ctx = LocalContext.current
     val dark = T.dark
     return remember(dark) {
-        if (android.os.Build.VERSION.SDK_INT >= 31) Color(ctx.getColor(if (dark) android.R.color.system_neutral1_700 else android.R.color.system_neutral1_100))
-        else if (dark) Color(0xFF2B2B2B) else Color(0xFFE6E6E6)
+        if (android.os.Build.VERSION.SDK_INT >= 31) Color(ctx.getColor(if (dark) android.R.color.system_accent1_800 else android.R.color.system_accent1_100))
+        else if (dark) Color(0xFF1E2B3C) else Color(0xFFDCE6F3)
     }
 }
 

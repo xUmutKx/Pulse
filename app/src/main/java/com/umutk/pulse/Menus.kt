@@ -66,7 +66,6 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             MenuEntry("Update speed: High (0.5 s)", Cfg.interval == 500L) { Cfg.setInterval(ctx, 500L) },
             MenuEntry("Update speed: Normal (1 s)", Cfg.interval == 1000L) { Cfg.setInterval(ctx, 1000L) },
             MenuEntry("Update speed: Low (2 s)", Cfg.interval == 2000L) { Cfg.setInterval(ctx, 2000L) },
-            MenuEntry("Guardians") { go("guardians") },
         )),
         MenuTop("Help", listOf(MenuEntry("About Pulse") { about = true })),
     )

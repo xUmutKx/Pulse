@@ -15,11 +15,11 @@ I wanted Task Manager on my phone: a process list with heat-map cells, a Perform
 
 **Task Manager side**
 - **Processes**: Apps and Background processes in groups, CPU and memory with heat-map cells, totals in the column heads, End task.
-- **Performance**: a list of CPU, Memory, Storage, Network, GPU, Battery and Thermal on the left, the big graph and the numbers on the right.
+- **Performance**: a list of CPU, Memory, Storage, Network, GPU, Battery and Thermal on the left, the big graph and the numbers on the right. Memory, Storage, Battery and Thermal open their Guardians page.
 - **App history**, **Startup apps** (switch boot receivers off with root), **Details**, **Services**.
 - **Apps**: search, filter, sort by size, date or permissions, open, app settings, uninstall, force stop.
 
-**Guardians** (tabs along the top: Thermal, Battery, Storage, Memory)
+**Guardians pages**, shown from Performance for Thermal, Battery, Storage and Memory
 - One detailed page each, the idea of Samsung's Good Guardians for any phone: a gauge and a plain verdict, 30-minute graphs, and the numbers behind them.
 - **Thermal**: the hottest sensor, battery temperature, every thermal zone grouped (processor, graphics, battery, device, radio) with bars, and the processor's speed per core against its top speed, so you can see when it slows down to cool off.
 - **Battery**: charge, current and power graphs, time left (or to full), power source, condition, charge cycles and capacity against new.
@@ -34,6 +34,7 @@ I wanted Task Manager on my phone: a process list with heat-map cells, a Perform
 
 **Always on**
 - A floating monitor over other apps, live numbers in a notification, alerts for temperature, low battery and high memory, and a Quick Settings tile.
+- **Downloads**: several connections per file, so big downloads go faster, and they keep running in the background. Paste a link, or share a link from your browser to Pulse.
 - A one-tap report of everything, to share or copy.
 
 ## Looks

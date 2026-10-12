@@ -6,6 +6,7 @@ want = {
  "wifi":["Wifi 2","Globe"],"gpu":["Video Card","Games"],"battery":["Battery 8","Battery 10"],"thermal":["Temperature"],
  "search":["Search"],"close":["Dismiss"],"play":["Play"],"phone":["Phone"],"chevron":["Chevron Down"],"info":["Info"],
  "run":["Add Square"],"palette":["Color"],"speed":["Timer"],"table":["Table"],"heart":["Heart"],
+ "download":["Arrow Download"],"delete":["Delete"],"folder":["Folder"],"filetypes":["Data Pie"],"clean":["Broom"],
 }
 out = {}
 for k, names in want.items():

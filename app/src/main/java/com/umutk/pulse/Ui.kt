@@ -38,7 +38,9 @@ private fun material(k: String): ImageVector = when (k) {
     "wifi" -> Icons.Outlined.Wifi; "gpu" -> Icons.Outlined.Tv; "battery" -> Icons.Outlined.BatteryFull
     "thermal" -> Icons.Outlined.Thermostat; "search" -> Icons.Outlined.Search; "close" -> Icons.Outlined.Close
     "palette" -> Icons.Outlined.Palette; "speed" -> Icons.Outlined.Timer; "info" -> Icons.Outlined.Info
-    "table" -> Icons.Outlined.TableChart; "shield" -> Icons.Outlined.Shield; "heart" -> Icons.Outlined.FavoriteBorder; else -> Icons.Outlined.Info
+    "table" -> Icons.Outlined.TableChart; "heart" -> Icons.Outlined.FavoriteBorder
+    "download" -> Icons.Outlined.Download; "delete" -> Icons.Outlined.Delete; "folder" -> Icons.Outlined.Folder
+    "filetypes" -> Icons.Outlined.PieChart; "clean" -> Icons.Outlined.CleaningServices; else -> Icons.Outlined.Info
 }
 
 /** Material icons for the Material / AMOLED themes, Fluent (Windows 11 style) outlines for the Windows ones. */
