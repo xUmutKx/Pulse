@@ -4,7 +4,6 @@ import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
-import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -32,7 +31,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.AppIcon
 import com.umutk.pulse.Extra
-import com.umutk.pulse.PButton
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
@@ -121,7 +119,7 @@ private fun comparatorFor(sort: AmSort): Comparator<AmRow> = when (sort) {
 }
 
 @Composable
-fun AppManagerScreen(onOpen: (String) -> Unit, onBack: () -> Unit) {
+fun AppManagerScreen(onOpen: (String) -> Unit) {
     val ctx = LocalContext.current
     var rows by remember { mutableStateOf<List<AmRow>?>(null) }
     var query by remember { mutableStateOf("") }
@@ -132,8 +130,6 @@ fun AppManagerScreen(onOpen: (String) -> Unit, onBack: () -> Unit) {
         rows = withContext(Dispatchers.IO) { loadAmRows(ctx) }
     }
 
-    BackHandler { onBack() }
-
     val all = rows.orEmpty()
     val shown = remember(rows, query, filter, sort) {
         all.filter { a ->
@@ -143,7 +139,6 @@ fun AppManagerScreen(onOpen: (String) -> Unit, onBack: () -> Unit) {
 
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            PButton("Back") { onBack() }
             PHead("App manager", if (rows == null) "Loading" else "${shown.size} / ${all.size}")
             PField(query, { query = it }, "Search", Modifier.fillMaxWidth())
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

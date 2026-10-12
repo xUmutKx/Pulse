@@ -31,7 +31,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -377,6 +381,7 @@ private fun DownloadRow(t: DlTask) {
     val st by t.state.collectAsState()
     val err by t.error.collectAsState()
     val speed by t.speed.collectAsState()
+    var pick by remember { mutableStateOf(false) }
     val label = when (st) {
         DlState.RUNNING -> (if (total > 0) "${Guard.gb(done)} of ${Guard.gb(total)}" else Guard.gb(done)) + " · " + rate(speed.toFloat())
         DlState.DONE -> "Done · ${Guard.gb(done)}"
@@ -388,10 +393,43 @@ private fun DownloadRow(t: DlTask) {
                 Text(t.file.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(label, color = T.sub, fontSize = 12.sp)
             }
-            Box(Modifier.padding(start = 8.dp).clickable { Downloads.openFolder(ctx, t.file.parentFile ?: t.file) }) { PIcon("folder", T.sub, 22.dp) }
+            Box(Modifier.padding(start = 8.dp).clickable { pick = true }) { PIcon("folder", T.sub, 22.dp) }
             Spacer(Modifier.width(12.dp))
             Box(Modifier.clickable { Downloads.remove(t) }) { PIcon("delete", T.sub, 22.dp) }
         }
         if (st == DlState.RUNNING) BarMeter(if (total > 0) done.toFloat() / total else 0f, Look.accent, Modifier.padding(top = 6.dp), h = 6.dp)
     }
+    if (pick) FolderPicker(Downloads.dirPath.let { File(it) }) { pick = false }
+}
+
+/** Picks the folder new downloads go to: browse shared storage, then "Use this folder". */
+@Composable
+private fun FolderPicker(start: File, onDismiss: () -> Unit) {
+    val ctx = LocalContext.current
+    val top = remember { Environment.getExternalStorageDirectory() }
+    var cur by remember { mutableStateOf(start) }
+    val dirs = remember(cur) { cur.listFiles { f -> f.isDirectory && !f.name.startsWith(".") }?.sortedBy { it.name.lowercase() }.orEmpty() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(cur.path.removePrefix(top.path).ifEmpty { "/" }, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 360.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (cur != top) Row(Modifier.fillMaxWidth().clickable { cur = cur.parentFile ?: top }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("chevron", T.text, 20.dp, Modifier.rotate(180f))
+                    Spacer(Modifier.width(12.dp))
+                    Text("..", color = T.text, fontSize = 14.sp)
+                }
+                dirs.forEach { d ->
+                    Row(Modifier.fillMaxWidth().clickable { cur = d }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("folder", T.text, 20.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text(d.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                if (dirs.isEmpty()) Text("No folders here", color = T.sub, fontSize = 13.sp)
+            }
+        },
+        confirmButton = { TextButton(onClick = { Downloads.setDir(ctx, cur.path); onDismiss() }) { Text("Use this folder") } },
+        dismissButton = { TextButton(onClick = { Downloads.openFolder(ctx, cur) }) { Text("Open in files") } },
+    )
 }

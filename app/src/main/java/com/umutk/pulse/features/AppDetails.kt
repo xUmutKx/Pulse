@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.Shell
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -200,6 +201,10 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
                         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg"))
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
+                }
+                PButton("Force stop") {
+                    Shell.run("am force-stop $pkg")
+                    note = "${d?.label ?: pkg} was stopped"
                 }
                 if (d != null && !d.isSystem) {
                     PButton("Uninstall", danger = true) { confirmUninstall = true }

@@ -1,16 +1,12 @@
 package com.umutk.pulse
 
-import android.content.Intent
-import android.net.Uri
-import android.provider.Settings
-import androidx.compose.foundation.clickable
+import com.umutk.pulse.features.AppManagerScreen
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -307,67 +303,10 @@ fun BenchPage() {
 
 // ---------------------------------------------------------------- apps
 
-private class AppEntry(val pkg: String, val label: String, val version: String, val sizeMb: Float, val installed: Long, val target: Int, val system: Boolean, val perms: Int)
-
 @Composable
 fun AppsPage() {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var apps by remember { mutableStateOf<List<AppEntry>>(emptyList()) }
-    var q by remember { mutableStateOf("") }
-    var kind by remember { mutableStateOf("user") }
-    var sort by remember { mutableStateOf("name") }
-    var open by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    LaunchedEffect(Unit) {
-        apps = withContext(Dispatchers.IO) {
-            val pm = ctx.packageManager
-            pm.getInstalledPackages(android.content.pm.PackageManager.GET_PERMISSIONS).map { p ->
-                val ai = p.applicationInfo!!
-                AppEntry(p.packageName, ai.loadLabel(pm).toString(), p.versionName ?: "", java.io.File(ai.sourceDir).length() / 1048576f, p.firstInstallTime, ai.targetSdkVersion,
-                    ai.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM != 0, p.requestedPermissions?.size ?: 0)
-            }
-        }
-    }
-    val shown = remember(apps, q, kind, sort) {
-        apps.filter { (kind == "all" || (kind == "system") == it.system) && (q.isBlank() || it.label.contains(q, true) || it.pkg.contains(q, true)) }
-            .sortedWith(when (sort) { "size" -> compareByDescending { it.sizeMb }; "date" -> compareByDescending { it.installed }; "perm" -> compareByDescending { it.perms }; else -> compareBy { it.label.lowercase() } })
-    }
-    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item {
-            PHead("Apps", "${shown.size} / ${apps.size}")
-        }
-        item { ToolRows(TOOL_APPMANAGER) }
-        item {
-            PField(q, { q = it }, "Search", Modifier.fillMaxWidth())
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                listOf("user" to "User", "system" to "System", "all" to "All").forEach { (k, n) -> PChip(kind == k, n) { kind = k } }
-                listOf("name" to "Name", "size" to "Size", "date" to "Date", "perm" to "Permissions").forEach { (k, n) -> PChip(sort == k, "↕ $n") { sort = k } }
-            }
-            if (note.isNotEmpty()) Text(note, color = Look.accent, fontSize = 12.sp)
-        }
-        items(shown, key = { it.pkg }) { a ->
-            PCard(Modifier.clickable { open = if (open == a.pkg) "" else a.pkg }) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    AppIcon(a.pkg, 36.dp); Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(a.label, color = T.text, fontSize = 14.sp, maxLines = 1)
-                        Text("${a.version} · %.1f MB · ${a.perms} permissions".format(a.sizeMb), color = T.sub, fontSize = 11.sp, maxLines = 1)
-                    }
-                }
-                if (open == a.pkg) {
-                    InfoRows(listOf("Package" to a.pkg, "Installed" to java.text.SimpleDateFormat("dd.MM.yyyy", java.util.Locale.getDefault()).format(java.util.Date(a.installed)), "Target API" to "${a.target}", "Type" to if (a.system) "System" else "User"))
-                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PButton("Open") { ctx.packageManager.getLaunchIntentForPackage(a.pkg)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } ?: run { note = "${a.label} has no screen to open" } }
-                        PButton("Settings") { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${a.pkg}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                        if (!a.system) PButton("Uninstall", danger = true) { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:${a.pkg}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                        PButton("Force stop") { scope.launch { withContext(Dispatchers.IO) { Shell.run("am force-stop ${a.pkg}") }; note = "${a.label} stopped (needs root)" } }
-                    }
-                }
-            }
-        }
-        item { Spacer(Modifier.height(12.dp)) }
-    }
+    val open = LocalOpenTool.current
+    AppManagerScreen(onOpen = { open("app:$it") })
 }
 
 // ---------------------------------------------------------------- searchable lists

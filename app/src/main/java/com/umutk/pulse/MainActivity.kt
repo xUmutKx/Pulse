@@ -142,7 +142,7 @@ private fun App() {
         }
     }
     val body: @Composable () -> Unit = {
-        if (sub.isNotEmpty()) SubScreen(sub, { sub = it }, { sub = "" }) else when (page) {
+        if (sub.isNotEmpty()) SubScreen(sub, { sub = "" }) else when (page) {
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
             "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "device" -> DeviceModule(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; else -> SettingsPage()
         }
