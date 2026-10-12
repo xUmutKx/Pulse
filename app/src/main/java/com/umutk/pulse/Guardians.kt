@@ -170,7 +170,8 @@ private fun LongGraph(title: String, series: List<Float>, color: Color, max: Flo
 
 @Composable
 private fun Page(title: String, trailing: String = "", content: @Composable ColumnScope.() -> Unit) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    // no scroll of its own: it sits inside the Overview page, which scrolls
+    Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead(title, trailing)
         content()
         Spacer(Modifier.height(12.dp))
