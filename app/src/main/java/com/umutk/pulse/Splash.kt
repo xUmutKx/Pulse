@@ -8,6 +8,10 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -66,48 +70,47 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
         onDone()
     }
     val mono = th.id == "amoled"
-    val background: Brush = when (th.id) {
-        "win8" -> SolidColor(th.accent)
-        "amoled" -> SolidColor(Color.Black)
-        else -> th.title ?: SolidColor(th.bg)
-    }
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
-        modifier = Modifier.fillMaxSize().background(background).clickable { onDone() }.graphicsLayer { alpha = fade.value },
+    Box(
+        modifier = Modifier.fillMaxSize().clickable { onDone() }.graphicsLayer { alpha = fade.value },
     ) {
-        when (th.id) {
-            "material" -> RobotMark(th.accent, th.panel)
-            "amoled" -> PulseMark(Color.White)
-            else -> WindowsMark(if (th.id == "win8") Color.White else th.accent)
-        }
-        Spacer(Modifier.height(18.dp))
-        Text("Pulse", color = if (mono) Color.White else if (th.id == "win8") Color.White else th.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
-        Spacer(Modifier.height(28.dp))
-        when (th.id) {
-            "win11" -> SlidingBar(th.accent, th.line, t)
-            "win8" -> MetroTiles(Color.White, t)
-            "win10" -> DotRow(th.accent, t)
-            "win7" -> DotRing(th.accent, t)
-            "xp" -> BlockBar(Color(0xFF2BB12B), Color(0xFF0A246A), t)
-            "win95" -> BevelBlocks(Color(0xFF000080), th.bg, t)
-            "material" -> TurningArc(th.accent, t)
-            else -> PulseLine(Color.White, t)
+        // one wallpaper for every look (CC0 photo, see README); the logo and the indicator are what differ
+        Image(painterResource(R.drawable.splash_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Box(Modifier.fillMaxSize().background(Color(0x8C000000)))
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+            modifier = Modifier.fillMaxSize(),
+        ) {
+            when (th.id) {
+                "material" -> RobotMark(th.accent, th.panel)
+                "amoled" -> PulseMark(Color.White)
+                else -> Image(painterResource(logoFor(th.id)), null, Modifier.size(104.dp))
+            }
+            Spacer(Modifier.height(18.dp))
+            Text("Pulse", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            Spacer(Modifier.height(28.dp))
+            when (th.id) {
+                "win11" -> SlidingBar(th.accent, th.line, t)
+                "win8" -> MetroTiles(Color.White, t)
+                "win10" -> DotRow(th.accent, t)
+                "win7" -> DotRing(th.accent, t)
+                "xp" -> BlockBar(Color(0xFF2BB12B), Color(0xFF0A246A), t)
+                "win95" -> BevelBlocks(Color(0xFF000080), th.bg, t)
+                "material" -> TurningArc(th.accent, t)
+                else -> PulseLine(Color.White, t)
+            }
         }
     }
 }
 
-/** Windows-style mark: four rounded panes. Generic shape, not Microsoft's artwork. */
-@Composable
-private fun WindowsMark(color: Color) {
-    Canvas(Modifier.size(96.dp)) {
-        val gap = size.minDimension * 0.06f
-        val cell = (size.minDimension - gap) / 2f
-        val r = CornerRadius(cell * 0.12f)
-        for (x in listOf(0f, cell + gap)) for (y in listOf(0f, cell + gap)) {
-            drawRoundRect(color = color, topLeft = Offset(x, y), size = Size(cell, cell), cornerRadius = r)
-        }
-    }
+/** The logo of each Windows look: the Windows version's own mark, from Wikimedia Commons (see README credits). */
+private fun logoFor(id: String): Int = when (id) {
+    "win95" -> R.drawable.logo_win95
+    "xp" -> R.drawable.logo_xp
+    "win7" -> R.drawable.logo_win7
+    "win8" -> R.drawable.logo_win8
+    "win10" -> R.drawable.logo_win10
+    else -> R.drawable.logo_win11
 }
 
 /** Android-style robot head drawn here, not Google's artwork. */
