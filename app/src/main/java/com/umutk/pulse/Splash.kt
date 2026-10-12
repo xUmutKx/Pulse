@@ -61,8 +61,8 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
         label = "t",
     )
     LaunchedEffect(Unit) {
-        launch { fade.animateTo(1f, tween(400)) }
-        delay(1700)
+        launch { fade.animateTo(1f, tween(200)) }
+        delay(850)
         onDone()
     }
     val mono = th.id == "amoled"

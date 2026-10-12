@@ -28,9 +28,9 @@ val LocalOpenTool = compositionLocalOf<(String) -> Unit> { {} }
 class ToolLink(val key: String, val icon: String, val title: String, val sub: String)
 
 val TOOL_APPMANAGER = ToolLink("appmanager", "services", "App manager", "Apps with their functions and intent actions")
-val TOOL_FOLDERS = ToolLink("folders", "details", "Folder tree", "Size of every folder, biggest first")
-val TOOL_TYPES = ToolLink("typebreak", "disk", "File types", "Donut chart of storage by file type")
-val TOOL_CACHE = ToolLink("cache", "memory", "Cache cleaner", "Clear app caches")
+val TOOL_FOLDERS = ToolLink("folders", "folder", "Folder tree", "Size of every folder, biggest first")
+val TOOL_TYPES = ToolLink("typebreak", "filetypes", "File types", "Donut chart of storage by file type")
+val TOOL_CACHE = ToolLink("cache", "clean", "Cache cleaner", "Clear app caches")
 val TOOL_TEMP = ToolLink("tempgraph", "thermal", "Temperature graph", "Sensor and battery temperature over time")
 val TOOL_BATTERY = ToolLink("battery", "battery", "Battery health", "Condition, cycles and capacity")
 

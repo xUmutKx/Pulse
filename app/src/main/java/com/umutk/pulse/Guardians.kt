@@ -177,31 +177,6 @@ private fun Page(title: String, trailing: String = "", content: @Composable Colu
     }
 }
 
-// ---------------------------------------------------------------- the module
-
-private class G(val id: String, val label: String)
-private val Gs = listOf(G("thermal", "Thermal"), G("battery", "Battery"), G("storage", "Storage"), G("memory", "Memory"))
-
-/** Samsung's Good Guardians idea for any phone: one detailed page each for heat, battery, storage and memory, with long graphs. */
-@Composable
-fun GuardiansModule() {
-    var sub by rememberSaveable { mutableStateOf("thermal") }
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
-            Gs.forEach { p ->
-                val on = sub == p.id
-                Column(Modifier.clickable { sub = p.id }.padding(horizontal = 14.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    FitText(p.label, if (on) Look.accent else T.sub, 14.sp, weight = if (on) FontWeight.SemiBold else FontWeight.Normal)
-                    Box(Modifier.padding(top = 4.dp).width(28.dp).height(2.dp).background(if (on) Look.accent else Color.Transparent))
-                }
-            }
-        }
-        Box(Modifier.weight(1f)) {
-            when (sub) { "thermal" -> ThermalGuardian(); "battery" -> BatteryGuardian(); "storage" -> StorageGuardian(); else -> MemoryGuardian() }
-        }
-    }
-}
-
 // ---------------------------------------------------------------- thermal
 
 @Composable

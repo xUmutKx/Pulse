@@ -28,6 +28,24 @@ object StorageScan {
 
         /** Direct children of a folder, as the walk saw them (links left out). */
         fun childrenOf(dir: File): List<File> = kids[dir.path].orEmpty()
+
+        /** The same numbers with one deleted file taken out, so the folder tree and the type list match the disk. */
+        fun without(f: File, len: Long): Snapshot {
+            val sz = HashMap(sizes)
+            var p = f.parentFile
+            while (p != null && p.path.startsWith(root)) {
+                val path = p.path
+                sz[path]?.let { sz[path] = it - len }
+                p = p.parentFile
+            }
+            val kd = HashMap(kids)
+            f.parentFile?.path?.let { pp -> kd[pp]?.let { kd[pp] = it.filterNot { c -> c.path == f.path } } }
+            val kind = KindByExt[f.extension.lowercase()] ?: FileKind.OTHER
+            val ks = kinds.map { k ->
+                if (k.kind != kind) k else KindSummary(k.kind, k.bytes - len, k.count - 1, k.largest.filterNot { it.file.path == f.path })
+            }
+            return Snapshot(root, ks, sz, kd)
+        }
     }
 
     private val snapFlow = MutableStateFlow<Snapshot?>(null)
@@ -50,6 +68,12 @@ object StorageScan {
                 running.set(false)
             }
         }
+    }
+
+    /** Takes a deleted file out of the walk (call it after the delete, with the size it had). */
+    fun forget(f: File, len: Long) {
+        val s = snapFlow.value ?: return
+        snapFlow.value = s.without(f, len)
     }
 
     /** Throws the result away and walks [root] again. */

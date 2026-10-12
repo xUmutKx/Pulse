@@ -1,6 +1,7 @@
 package com.umutk.pulse
 
 import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,6 +25,7 @@ import androidx.core.view.WindowCompat
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
+import com.umutk.pulse.features.Downloads
 
 /** Saved choices. */
 object Cfg {
@@ -52,9 +54,24 @@ object Cfg {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Cfg.load(this); Opt.load(this)
+        Cfg.load(this); Opt.load(this); Downloads.load(this)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent { Root() }
+        if (savedInstanceState == null) handleShare(intent)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        handleShare(intent)
+    }
+
+    /** A link shared from another app (browser "Share") starts a download right away. */
+    private fun handleShare(i: Intent?) {
+        if (i?.getBooleanExtra("downloads", false) == true) { Downloads.wanted = true; return }
+        if (i?.action != Intent.ACTION_SEND || i.type != "text/plain") return
+        val url = Regex("https?://\\S+").find(i.getStringExtra(Intent.EXTRA_TEXT).orEmpty())?.value ?: return
+        Downloads.add(this, url)
+        Downloads.wanted = true
     }
 }
 
@@ -69,6 +86,9 @@ private fun effective(t: PTheme): PTheme {
     return PTheme(t.id, t.name, dark, if (dark) Color(0xFF050505) else cs.background, if (dark) Color(0xFF111111) else cs.surfaceContainer, cs.onBackground, cs.onSurfaceVariant, cs.primary, cs.outlineVariant, t.radius, material = true)
 }
 
+/** The opening screen plays once per start of the app: not on a look change, not when the app comes back from the background. */
+object SplashGate { var splashed by mutableStateOf(false) }
+
 class Pg(val id: String, val label: String, val icon: String)
 
 val Pages = listOf(
@@ -79,7 +99,7 @@ val Pages = listOf(
     Pg("details", "Details", "details"),
     Pg("services", "Services", "services"),
     Pg("apps", "Apps", "users"),
-    Pg("guardians", "Guardians", "shield"),
+    Pg("downloads", "Downloads", "download"),
     Pg("device", "Device", "phone"),
     Pg("health", "Health", "heart"),
 )
@@ -94,7 +114,6 @@ private fun Root() {
     val cs = if (th.dark) darkColorScheme(primary = Look.accent, background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
     else lightColorScheme(primary = Look.accent, background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
     // the opening screen plays again whenever the look changes, so each look starts with its own animation
-    var splashFor by rememberSaveable { mutableStateOf("") }
     val view = androidx.compose.ui.platform.LocalView.current
     SideEffect { WindowCompat.getInsetsController((view.context as android.app.Activity).window, view).apply { isAppearanceLightStatusBars = !th.dark; isAppearanceLightNavigationBars = !th.dark } }
     Look.resolved = if (th !== base) th else null
@@ -103,7 +122,7 @@ private fun Root() {
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * Opt.fontScale)) {
     MaterialTheme(colorScheme = cs) {
         Surface(Modifier.fillMaxSize(), color = th.bg) {
-            if (splashFor != base.id) Splash(th) { splashFor = base.id } else key(th.dark) { App() }
+            if (!SplashGate.splashed) Splash(th) { SplashGate.splashed = true } else key(th.dark) { App() }
         }
     }
     }
@@ -115,6 +134,7 @@ private fun App() {
     var page by rememberSaveable { mutableStateOf(if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
     var sub by rememberSaveable { mutableStateOf("") } // a tool opened from the Tools page; empty means none
     val go: (String) -> Unit = { sub = ""; page = it }
+    LaunchedEffect(Downloads.wanted) { if (Downloads.wanted) { go("downloads"); Downloads.wanted = false } }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             Shell.detectRoot()
@@ -124,7 +144,7 @@ private fun App() {
     val body: @Composable () -> Unit = {
         if (sub.isNotEmpty()) SubScreen(sub, { sub = it }, { sub = "" }) else when (page) {
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
-            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "guardians" -> GuardiansModule(); "device" -> DeviceModule(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; else -> SettingsPage()
+            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "device" -> DeviceModule(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; else -> SettingsPage()
         }
     }
     val menus = rememberMenus(go)

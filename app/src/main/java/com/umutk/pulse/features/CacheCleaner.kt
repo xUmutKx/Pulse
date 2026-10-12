@@ -41,51 +41,12 @@ import com.umutk.pulse.Cleaner
 import com.umutk.pulse.Guard
 import com.umutk.pulse.Junk
 import com.umutk.pulse.Shell
-import java.io.File
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** One app row: its package, a readable label, and the cache folder found by Cleaner.caches() or rootCaches(). */
-private class CacheApp(val pkg: String, val label: String, val junk: Junk)
-
-/** Only Android/data/<pkg>/cache folders are ever deleted by the file API; root paths go through Shell. */
-private fun isAppCache(dir: File): Boolean =
-    dir.name == "cache" && dir.parentFile?.parentFile?.let { it.name == "data" && it.parentFile?.name == "Android" } == true
-
-private fun isPrivateCache(dir: File): Boolean =
-    dir.name == "cache" && (dir.path.startsWith("/data/data/") || dir.path.startsWith("/data/user/0/"))
-
-private fun duBytes(path: String): Long =
-    Shell.run("du -sk '$path' 2>/dev/null").substringBefore('\t').trim().toLongOrNull()?.times(1024) ?: 0L
-
-/** Root only: every app's private cache under /data/data and /data/user/0, one row per package, sized with du. */
-private fun rootCaches(): List<Junk> {
-    val out = Shell.run("for d in /data/data/*/cache /data/user/0/*/cache; do [ -d \"\$d\" ] && du -sk \"\$d\" 2>/dev/null; done")
-    val seen = HashSet<String>()
-    return out.lineSequence().mapNotNull { line ->
-        val kb = line.substringBefore('\t').trim().toLongOrNull() ?: return@mapNotNull null
-        val file = File(line.substringAfter('\t').trim())
-        val pkg = file.parentFile?.name ?: return@mapNotNull null
-        if (!seen.add(pkg)) return@mapNotNull null
-        Junk(file, kb * 1024, "app cache")
-    }.filter { it.size > 0 }.toList()
-}
-
-/** Deletes the contents of an app's cache folder, keeps the folder itself, and returns the bytes freed. */
-private fun clearCache(junk: Junk): Long {
-    val dir = junk.file
-    if (isAppCache(dir)) {
-        dir.listFiles()?.forEach { runCatching { it.deleteRecursively() } }
-        val left = dir.walkTopDown().filter { it.isFile }.sumOf { it.length() }
-        return (junk.size - left).coerceAtLeast(0L)
-    }
-    if (Shell.root == true && isPrivateCache(dir)) {
-        Shell.run("rm -rf '${dir.path}'/* '${dir.path}'/.[!.]* 2>/dev/null")
-        return (junk.size - duBytes(dir.path)).coerceAtLeast(0L)
-    }
-    return 0L
-}
+/** One app cache. [id] (the folder path) tells apart the same app in two users. */
+private class CacheApp(val id: String, val pkg: String, val label: String, val junk: Junk)
 
 @Composable
 fun CacheCleanerScreen(onBack: () -> Unit) {
@@ -103,21 +64,17 @@ fun CacheCleanerScreen(onBack: () -> Unit) {
             selected = emptySet()
             apps = withContext(Dispatchers.IO) {
                 val pm = ctx.packageManager
-                val root = if (Shell.root == true) rootCaches() else emptyList()
-                val rootPkgs = root.mapNotNull { it.file.parentFile?.name }.toSet()
-                (root + Cleaner.caches().filter { it.file.parentFile?.name !in rootPkgs })
-                    .sortedByDescending { it.size }
-                    .map { j ->
-                        val pkg = j.file.parentFile?.name.orEmpty()
-                        CacheApp(pkg, labelOf(pm, pkg), j)
-                    }
+                Cleaner.caches().map { j ->
+                    val pkg = j.file.parentFile?.name.orEmpty()
+                    CacheApp(j.file.path, pkg, labelOf(pm, pkg), j)
+                }
             }
         }
     }
     LaunchedEffect(Unit) { scan() }
 
     val list = apps.orEmpty()
-    val chosen = list.filter { it.pkg in selected }
+    val chosen = list.filter { it.id in selected }
     val chosenBytes = chosen.sumOf { it.junk.size }
 
     fun deleteChosen() {
@@ -127,7 +84,7 @@ fun CacheCleanerScreen(onBack: () -> Unit) {
             var freed = 0L
             targets.forEachIndexed { i, app ->
                 progress = i to targets.size
-                freed += withContext(Dispatchers.IO) { clearCache(app.junk) }
+                freed += withContext(Dispatchers.IO) { Cleaner.clearCache(app.junk) }
             }
             progress = null
             result = "Freed ${Guard.gb(freed)} from ${targets.size} apps"
@@ -157,7 +114,7 @@ fun CacheCleanerScreen(onBack: () -> Unit) {
         ) {
             TextButton(
                 enabled = list.isNotEmpty() && progress == null,
-                onClick = { selected = if (selected.size == list.size) emptySet() else list.map { it.pkg }.toSet() },
+                onClick = { selected = if (selected.size == list.size) emptySet() else list.map { it.id }.toSet() },
             ) { Text(if (selected.size == list.size && list.isNotEmpty()) "Select none" else "Select all") }
             Button(
                 onClick = { confirm = true },
@@ -189,12 +146,12 @@ fun CacheCleanerScreen(onBack: () -> Unit) {
                 modifier = Modifier.padding(top = 16.dp),
             )
             else -> LazyColumn(Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                items(list, key = { it.pkg }) { app ->
-                    val checked = app.pkg in selected
+                items(list, key = { it.id }) { app ->
+                    val checked = app.id in selected
                     Row(
                         Modifier.fillMaxWidth()
                             .clickable(enabled = progress == null) {
-                                selected = if (checked) selected - app.pkg else selected + app.pkg
+                                selected = if (checked) selected - app.id else selected + app.id
                             }
                             .padding(vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,

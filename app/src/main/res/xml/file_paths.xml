@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- the whole shared storage: downloads can go to any folder the user picks -->
+    <external-path name="shared" path="." />
+</paths>
