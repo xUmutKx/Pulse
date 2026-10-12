@@ -117,6 +117,11 @@ fun DashboardPage() {
             if (msg.isNotEmpty()) Text(msg, color = Look.accent, fontSize = 12.sp)
         }
         PCard { InfoRows(listOf("Processes" to "${s.procs}", "Up time" to hms(android.os.SystemClock.elapsedRealtime()), "Swap" to "${s.swapUsedMb} / ${s.swapTotalMb} MB", "Cached" to mb(s.ramCachedMb))) }
+        // the guardian pages, below the numbers: thermal, battery, storage, memory
+        ThermalGuardian()
+        BatteryGuardian()
+        StorageGuardian()
+        MemoryGuardian()
         Spacer(Modifier.height(12.dp))
     }
 }

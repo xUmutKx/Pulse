@@ -186,7 +186,7 @@ fun PerformancePage() {
     val ctx = LocalContext.current
     val s by Sampler.snap.collectAsState()
     val h by Sampler.history.collectAsState()
-    var sel by remember { mutableStateOf("cpu") }
+    var sel by rememberSaveable { mutableStateOf("cpu") }
     var secs by remember { mutableStateOf<List<Section>>(emptyList()) }
     val cpuName = remember { Extra.cpuName() }
     LaunchedEffect(Unit) { while (true) { secs = withContext(Dispatchers.IO) { Device.sections(ctx) }; delay(3000) } }
@@ -198,23 +198,19 @@ fun PerformancePage() {
     val netMax = (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull()?.coerceAtLeast(102400f) ?: 102400f
 
     BoxWithConstraints(Modifier.fillMaxSize()) {
-        val listW = if (maxWidth >= 600.dp) 200.dp else 148.dp
-        Row(Modifier.fillMaxSize()) {
-            // resource list
-            Column(Modifier.width(listW).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 8.dp, end = 4.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                PerfItem("CPU", "${s.cpu}%${if (avgMhz > 0) " " + "%.2f GHz".format(avgMhz / 1000f) else ""}", listOf(h["cpu"].orEmpty()), resColor("cpu"), 100f, sel == "cpu") { sel = "cpu" }
-                PerfItem("Memory", "${mb(s.ramUsedMb)}/${mb(s.ramTotalMb)} ($memPct%)", listOf(h["ram"].orEmpty()), resColor("memory"), 100f, sel == "memory") { sel = "memory" }
-                PerfItem("Storage", "$diskPct% used", emptyList(), resColor("disk"), 100f, sel == "disk") { sel = "disk" }
-                PerfItem("Network", "D ${rate(s.down.toFloat())}  U ${rate(s.up.toFloat())}", listOf(h["down"].orEmpty(), h["up"].orEmpty()), resColor("net"), netMax, sel == "net") { sel = "net" }
-                PerfItem("GPU", if (s.gpu >= 0) "${s.gpu}%" else "—", listOf(h["gpu"].orEmpty()), resColor("gpu"), 100f, sel == "gpu") { sel = "gpu" }
-                PerfItem("Battery", "${s.batPct}%${""}  ${s.batMa} mA", listOf(h["bat"].orEmpty()), resColor("battery"), 100f, sel == "battery") { sel = "battery" }
-                PerfItem("Thermal", if (s.cpuTemp > 0) Opt.temp(s.cpuTemp) else "—", listOf(h["temp"].orEmpty()), resColor("thermal"), 100f, sel == "thermal") { sel = "thermal" }
-                Spacer(Modifier.height(12.dp))
-            }
-            // detail: memory, storage, battery and thermal show their guardian page (it scrolls itself); the rest share this column
-            if (sel == "memory" || sel == "disk" || sel == "battery" || sel == "thermal") Box(Modifier.weight(1f).fillMaxHeight().padding(start = 6.dp, end = 12.dp, top = 8.dp)) {
-                when (sel) { "memory" -> MemoryGuardian(); "disk" -> StorageGuardian(); "battery" -> BatteryGuardian(); else -> ThermalGuardian() }
-            } else Column(Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 6.dp, end = 12.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        val wide = maxWidth >= 600.dp
+        val rows: List<@Composable () -> Unit> = listOf(
+            { PerfItem("CPU", "${s.cpu}%${if (avgMhz > 0) " " + "%.2f GHz".format(avgMhz / 1000f) else ""}", listOf(h["cpu"].orEmpty()), resColor("cpu"), 100f, sel == "cpu") { sel = "cpu" } },
+            { PerfItem("Memory", "${mb(s.ramUsedMb)}/${mb(s.ramTotalMb)} ($memPct%)", listOf(h["ram"].orEmpty()), resColor("memory"), 100f, sel == "memory") { sel = "memory" } },
+            { PerfItem("Storage", "$diskPct% used", emptyList(), resColor("disk"), 100f, sel == "disk") { sel = "disk" } },
+            { PerfItem("Network", "D ${rate(s.down.toFloat())}  U ${rate(s.up.toFloat())}", listOf(h["down"].orEmpty(), h["up"].orEmpty()), resColor("net"), netMax, sel == "net") { sel = "net" } },
+            { PerfItem("GPU", if (s.gpu >= 0) "${s.gpu}%" else "—", listOf(h["gpu"].orEmpty()), resColor("gpu"), 100f, sel == "gpu") { sel = "gpu" } },
+            { PerfItem("Battery", "${s.batPct}%  ${s.batMa} mA", listOf(h["bat"].orEmpty()), resColor("battery"), 100f, sel == "battery") { sel = "battery" } },
+            { PerfItem("Thermal", if (s.cpuTemp > 0) Opt.temp(s.cpuTemp) else "—", listOf(h["temp"].orEmpty()), resColor("thermal"), 100f, sel == "thermal") { sel = "thermal" } },
+        )
+        // the detail page: its own scroll, full width under the list on a phone
+        val detail: @Composable (Modifier) -> Unit = { m ->
+            Column(m.verticalScroll(rememberScrollState()).padding(start = 6.dp, end = 12.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (sel) {
                     "cpu" -> {
                         DetailTitle("CPU", cpuName)
@@ -235,6 +231,20 @@ fun PerformancePage() {
                             }
                         } else Text("Per-core detail needs root.", color = T.sub, fontSize = 12.sp)
                     }
+                    "memory" -> {
+                        DetailTitle("Memory", mb(s.ramTotalMb))
+                        TMGraph("Memory usage", mb(s.ramTotalMb), listOf(h["ram"].orEmpty()), listOf(resColor("memory")), 100f)
+                        Text("Memory composition", color = T.sub, fontSize = 12.sp)
+                        BarMeter(memPct / 100f, resColor("memory"), h = 22.dp)
+                        StatGrid(listOf("In use" to mb(s.ramUsedMb), "Available" to mb(s.ramTotalMb - s.ramUsedMb), "Cached" to mb(s.ramCachedMb), "Swap" to if (s.swapTotalMb > 0) "${mb(s.swapUsedMb)} / ${mb(s.swapTotalMb)}" else "none"))
+                    }
+                    "disk" -> {
+                        DetailTitle("Storage", "/data")
+                        Text("Capacity in use", color = T.sub, fontSize = 12.sp)
+                        BarMeter(diskPct / 100f, resColor("disk"), h = 22.dp)
+                        StatGrid(listOf("Used" to "$diskPct%"))
+                        PCard { InfoRows(sec("Storage")) }
+                    }
                     "net" -> {
                         DetailTitle("Network", "Wi-Fi / mobile")
                         TMGraph("Receive (top) and send", rate(netMax), listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), Color(0xFFE5B80B)), netMax)
@@ -242,16 +252,43 @@ fun PerformancePage() {
                         val ips = Extra.netRows()
                         if (ips.isNotEmpty() || sec("Wi-Fi").isNotEmpty()) PCard { InfoRows(sec("Wi-Fi") + ips.map { "IPv4 (${it.first})" to it.second }) }
                     }
-                    else -> {
+                    "gpu" -> {
                         DetailTitle("GPU", remember { Extra.gpuName() })
                         if (s.gpu >= 0) {
                             TMGraph("% Utilization", "100%", listOf(h["gpu"].orEmpty()), listOf(resColor("gpu")), 100f)
                             StatGrid(listOf("Utilization" to "${s.gpu}%"))
                         } else PCard { Text("GPU usage cannot be read on this phone. Adreno (kgsl) and Mali phones usually allow it with root.", color = T.sub, fontSize = 13.sp) }
                     }
+                    "battery" -> {
+                        DetailTitle("Battery", if (s.charging) "charging" else "not charging")
+                        TMGraph("% Charge", "100%", listOf(h["bat"].orEmpty()), listOf(resColor("battery")), 100f)
+                        StatGrid(listOf("Charge" to "${s.batPct}%", "Current" to "${s.batMa} mA", "Voltage" to "%.2f V".format(s.batV), "Temperature" to Opt.temp(s.batTemp)))
+                        PCard { InfoRows(sec("Battery")) }
+                    }
+                    else -> {
+                        DetailTitle("Thermal", "temperature zones")
+                        TMGraph("Hottest zone", "100°", listOf(h["temp"].orEmpty()), listOf(resColor("thermal")), 100f)
+                        val z = sec("Temperatures")
+                        if (z.isEmpty()) PCard { Text("Temperature sensors cannot be read (root may be needed).", color = T.sub, fontSize = 13.sp) }
+                        z.forEach { (k, v) ->
+                            Column { Row { Text(k, Modifier.weight(1f), color = T.text, fontSize = 13.sp); Text(v, color = T.sub, fontSize = 13.sp) }
+                                BarMeter(((v.filter { it.isDigit() || it == '.' }).toFloatOrNull() ?: 0f) / 100f, resColor("thermal"), h = 6.dp) }
+                        }
+                    }
                 }
                 Spacer(Modifier.height(12.dp))
             }
+        }
+        if (wide) Row(Modifier.fillMaxSize()) {
+            // resource list on the left, detail on the right
+            Column(Modifier.width(200.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 8.dp, end = 4.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { rows.forEach { it() } }
+            detail(Modifier.weight(1f).fillMaxHeight())
+        } else Column(Modifier.fillMaxSize()) {
+            // on a phone the list is a strip above the detail, so the detail gets the whole width
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                rows.forEach { Box(Modifier.width(140.dp)) { it() } }
+            }
+            detail(Modifier.weight(1f).fillMaxWidth())
         }
     }
 }
