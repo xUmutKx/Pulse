@@ -63,6 +63,6 @@ Kotlin and Jetpack Compose, no other services.
 
 Icons in the Windows themes are Microsoft's Fluent System Icons (MIT).
 
-The opening screen uses the logo of each Windows version and a sunset wallpaper, from Wikimedia Commons: the Windows 95, XP, 8, 10 and 11 logos are public domain, the Windows 7 logo is a fan-made variant (not Microsoft's), and the wallpaper is CC0.
+The opening screen uses the logo of each Windows version and a sunset wallpaper, from Wikimedia Commons: the Windows 95, XP, 8, 10 and 11 logos are public domain, the Windows 7 logo is a fan-made variant (not Microsoft's), the sunset wallpaper is CC0, and the Windows 7 blue wallpaper (`splash_win7_wallpaper.jpg`, a blurred blue light photo by AbstractImage, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), [source](https://commons.wikimedia.org/wiki/File:Landscape-blue-light-blur-mx.jpg), resized to 1280 px) is CC BY 3.0.
 
 Made by [UmutK](https://github.com/xUmutKx).

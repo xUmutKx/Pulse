@@ -27,7 +27,6 @@ val LocalOpenTool = compositionLocalOf<(String) -> Unit> { {} }
 /** A tool that used to sit on the Tools page. [key] is the id SubScreen understands. */
 class ToolLink(val key: String, val icon: String, val title: String, val sub: String)
 
-val TOOL_APPMANAGER = ToolLink("appmanager", "services", "App manager", "Apps with their functions and intent actions")
 val TOOL_FOLDERS = ToolLink("folders", "folder", "Folder tree", "Size of every folder, biggest first")
 val TOOL_TYPES = ToolLink("typebreak", "filetypes", "File types", "Donut chart of storage by file type")
 val TOOL_CACHE = ToolLink("cache", "clean", "Cache cleaner", "Clear app caches")

@@ -73,9 +73,11 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
     Box(
         modifier = Modifier.fillMaxSize().clickable { onDone() }.graphicsLayer { alpha = fade.value },
     ) {
-        // one wallpaper for every look (CC0 photo, see README); the logo and the indicator are what differ
-        Image(painterResource(R.drawable.splash_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-        Box(Modifier.fillMaxSize().background(Color(0x8C000000)))
+        // Windows 7 gets its backdrop drawn in code (see Win7Backdrop); the other looks keep the sunset (CC0)
+        if (th.id == "win7") Win7Backdrop() else {
+            Image(painterResource(R.drawable.splash_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color(0x8C000000)))
+        }
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -84,6 +86,10 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
             when (th.id) {
                 "material" -> RobotMark(th.accent, th.panel)
                 "amoled" -> PulseMark(Color.White)
+                "win7" -> Box(
+                    Modifier.size(136.dp).background(Brush.radialGradient(listOf(Color(0x66FFFFFF), Color.Transparent))),
+                    contentAlignment = Alignment.Center,
+                ) { Image(painterResource(logoFor(th.id)), null, Modifier.size(104.dp)) }
                 else -> Image(painterResource(logoFor(th.id)), null, Modifier.size(104.dp))
             }
             Spacer(Modifier.height(18.dp))
@@ -242,6 +248,30 @@ private fun PulseLine(color: Color, t: Float) {
         drawPath(p, color.copy(alpha = 0.25f), style = Stroke(width = 3f * k, cap = StrokeCap.Round, join = StrokeJoin.Round))
         clipRect(right = size.width * t) {
             drawPath(p, color, style = Stroke(width = 3f * k, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+    }
+}
+
+/** The Windows 7 opening backdrop, drawn here: a blue gradient, a white glow low on the right and soft green-white light streaks. */
+@Composable
+private fun Win7Backdrop() {
+    Canvas(Modifier.fillMaxSize()) {
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF3AA0F0), Color(0xFF1563C9), Color(0xFF0A3E8F))))
+        val glow = Offset(size.width * .78f, size.height * .72f)
+        drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .55f), Color.Transparent), center = glow, radius = size.width * .6f), radius = size.width * .6f, center = glow)
+        // the light streaks: curved bands that sweep across the screen
+        val streaks = listOf(
+            listOf(0f to .30f, .35f to .22f, .70f to .42f, 1f to .36f),
+            listOf(0f to .55f, .40f to .50f, .75f to .62f, 1f to .58f),
+            listOf(0f to .78f, .30f to .70f, .65f to .85f, 1f to .80f),
+        )
+        streaks.forEachIndexed { i, pts ->
+            val p = Path().apply {
+                moveTo(0f, size.height * pts[0].second)
+                cubicTo(size.width * pts[1].first, size.height * pts[1].second, size.width * pts[2].first, size.height * pts[2].second, size.width, size.height * pts[3].second)
+            }
+            drawPath(p, Color(0xFFB8F0C8).copy(alpha = .35f - i * .05f), style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round))
+            drawPath(p, Color.White.copy(alpha = .45f - i * .08f), style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
         }
     }
 }
