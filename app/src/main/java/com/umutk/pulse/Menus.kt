@@ -77,7 +77,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
 
 @Composable
 private fun Item(e: MenuEntry, close: () -> Unit) {
-    DropdownMenuItem(text = { Text(e.label) }, leadingIcon = e.checked?.let { c -> { Text(if (c) "✓" else "   ") } }, onClick = { close(); e.onClick() })
+    DropdownMenuItem(text = { Text(e.label, color = T.text) }, leadingIcon = e.checked?.let { c -> { Text(if (c) "✓" else "   ", color = Look.accent) } }, onClick = { close(); e.onClick() })
 }
 
 /** The menu bar of the classic looks: each word opens its menu. */
@@ -100,7 +100,8 @@ fun MenuOverflow(host: MenuHost, color: Color) {
     var open by remember { mutableStateOf(false) }
     Box {
         Text("⋮", color = color, fontSize = 22.sp, modifier = Modifier.clickable { open = true }.padding(horizontal = 12.dp, vertical = 2.dp))
-        DropdownMenu(open, { open = false }) {
+        // the menu takes the look: its panel, text, corners and edge, not the Material defaults
+        DropdownMenu(open, { open = false }, containerColor = T.panel, shape = RoundedCornerShape(T.radius), modifier = Modifier.border(1.dp, T.line, RoundedCornerShape(T.radius))) {
             host.tops.forEachIndexed { i, m ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line.copy(alpha = .5f)))
                 Text(m.label.uppercase(), color = Look.accent, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 2.dp))

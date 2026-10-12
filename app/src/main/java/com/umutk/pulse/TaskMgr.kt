@@ -279,16 +279,10 @@ fun PerformancePage() {
                 Spacer(Modifier.height(12.dp))
             }
         }
-        if (wide) Row(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxSize()) {
             // resource list on the left, detail on the right
-            Column(Modifier.width(200.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 8.dp, end = 4.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { rows.forEach { it() } }
+            Column(Modifier.width(if (wide) 200.dp else 148.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 8.dp, end = 4.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { rows.forEach { it() } }
             detail(Modifier.weight(1f).fillMaxHeight())
-        } else Column(Modifier.fillMaxSize()) {
-            // on a phone the list is a strip above the detail, so the detail gets the whole width
-            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                rows.forEach { Box(Modifier.width(140.dp)) { it() } }
-            }
-            detail(Modifier.weight(1f).fillMaxWidth())
         }
     }
 }
