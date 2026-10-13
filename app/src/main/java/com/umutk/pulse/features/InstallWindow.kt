@@ -23,9 +23,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -43,7 +47,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
+import com.umutk.pulse.Accents
 import com.umutk.pulse.InfoRows
+import com.umutk.pulse.onAccent
 import com.umutk.pulse.Look
 import com.umutk.pulse.LocalWindowLook
 import com.umutk.pulse.PChip
@@ -182,10 +188,29 @@ object BioGate {
     }
 }
 
-/** The loading bar while an APK is read or installed: plain and white on Material and AMOLED, Windows 11 blue on Windows 11. */
+/** The loading indicator while an APK is read or installed: always white. Round by default, a rounded bar or a thick short wave; style from Settings > Installer. */
 @Composable
 private fun BusyLine(w: PTheme) {
-    LinearProgressIndicator(Modifier.fillMaxWidth(), color = if (w.material) w.text else w.accent, trackColor = Color.Transparent)
+    val color = Color.White
+    val track = color.copy(alpha = .2f)
+    when (InstallShow.loader) {
+        "bar" -> LinearProgressIndicator(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)), color = color, trackColor = track)
+        "wave" -> {
+            // thick and short: a 4 dp tall wave, 6 dp stroke
+            val phase by rememberInfiniteTransition(label = "wave").animateFloat(0f, 2f * Math.PI.toFloat(),
+                infiniteRepeatable(tween(1000, easing = LinearEasing)), label = "phase")
+            Canvas(Modifier.fillMaxWidth().height(14.dp)) {
+                val amp = size.height * .3f; val mid = size.height / 2f; val step = 4f
+                val path = androidx.compose.ui.graphics.Path().apply {
+                    moveTo(0f, mid + amp * kotlin.math.sin(phase))
+                    var x = step
+                    while (x <= size.width) { lineTo(x, mid + amp * kotlin.math.sin(x / size.width * 3f * Math.PI.toFloat() + phase)); x += step }
+                }
+                drawPath(path, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 6.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            }
+        }
+        else -> CircularProgressIndicator(Modifier.size(36.dp), color = color, strokeWidth = 3.dp, trackColor = track)
+    }
 }
 
 /** The look of the install window, from Settings > Installer. */
@@ -211,7 +236,7 @@ fun ApkCopying(progress: Float) {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BusyLine(w)
                 Text("Copying the APK... ${(progress * 100).toInt()}%", color = w.sub, fontSize = 13.sp)
-                LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth(), color = Look.accent)
+                LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)), color = Color.White, trackColor = Color.White.copy(alpha = .2f))
             }
         }, confirmButton = {})
     }
@@ -225,15 +250,24 @@ private fun DoneMark() {
     Icon(Icons.Outlined.CheckCircle, null, Modifier.size(48.dp).graphicsLayer { scaleX = grow.value; scaleY = grow.value }, tint = Look.accent)
 }
 
-/** A Material 3 tonal button in the installer's look: a pill on Material and AMOLED, square corners on Windows 11. */
+/**
+ * Installer buttons, Material 3, monochrome: stacked full-width pills.
+ * [primary] is the main action: a filled tonal button, dark grey with white text.
+ * The rest are low-emphasis: a faint white wash with white text. [danger] is the only colour.
+ */
 @Composable
-private fun IButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, onClick: () -> Unit) {
-    val w = LocalWindowLook.current
-    val shape = if (w.material) RoundedCornerShape(50) else RoundedCornerShape(4.dp)
-    val ink = if (danger) Warn else w.text
-    FilledTonalButton(onClick, modifier, shape = shape, border = BorderStroke(1.dp, w.line),
-        colors = ButtonDefaults.filledTonalButtonColors(containerColor = w.bg, contentColor = ink)) {
-        Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+private fun IButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, primary: Boolean = false, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(percent = 50)
+    val container = when {
+        danger -> Color(0x1AFF5252)
+        primary -> Color(0xFF2E2E2E)
+        else -> Color(0x14FFFFFF)
+    }
+    val ink = if (danger) Color(0xFFFF8A80) else Color.White
+    Button(onClick, modifier.height(48.dp), shape = shape,
+        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp),
+        colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = ink)) {
+        Text(text, fontSize = 14.sp, fontWeight = if (primary) FontWeight.Medium else FontWeight.Normal)
     }
 }
 
@@ -418,7 +452,7 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
     LaunchedEffect(p) {
         val a = p ?: return@LaunchedEffect
         // with root the APK goes to pm at once; without root only an automatic profile installs without a tap
-        if ((root || Installer.cur.auto) && a.pkg !in Installer.black && statusOf(a) in listOf(Status.NEW, Status.UPGRADE)) BioGate.run(ctx) { if (root) silent(a, down = false) else commit(a) }
+        if (Installer.cur.auto && a.pkg !in Installer.black && statusOf(a) in listOf(Status.NEW, Status.UPGRADE)) BioGate.run(ctx) { if (root) silent(a, down = false) else commit(a) }
     }
 
     val pk = p
@@ -515,9 +549,9 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 InstallOptions(opts) { opts = it }
                 if (pk.pkg in Installer.black) Text("On the blacklist: Pulse does not install this package", color = Warn, fontSize = 12.sp)
                 else when (st) {
-                    Status.NEW, Status.UPGRADE, Status.IDENTICAL -> IButton(if (st == Status.UPGRADE) "Upgrade" else "Install", full) { gate { if (root) silent(pk, down = false) else commit(pk) } }
+                    Status.NEW, Status.UPGRADE, Status.IDENTICAL -> IButton(if (st == Status.UPGRADE) "Upgrade" else "Install", full, primary = true) { gate { if (root) silent(pk, down = false) else commit(pk) } }
                     Status.DOWNGRADE -> {
-                        IButton("Downgrade", full) { gate { if (root && pk.sigs == pk.installedSigs) silent(pk, down = true) else commit(pk) } }
+                        IButton("Downgrade", full, primary = true) { gate { if (root && pk.sigs == pk.installedSigs) silent(pk, down = true) else commit(pk) } }
                         if (root) IButton("Remove and restore data", full, danger = true) { gate { restore(pk) } }
                     }
                     Status.SIG -> if (root) IButton("Remove and restore data", full, danger = true) { gate { restore(pk) } }
@@ -528,7 +562,7 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
         },
         confirmButton = {},
         dismissButton = null,
-        containerColor = w.panel.copy(alpha = .8f), // see-through: what is behind shows faintly, never black
+        containerColor = w.panel, // opaque: nothing shows through the install window
         noDim = true,
     )
 }
@@ -558,6 +592,8 @@ object InstallShow {
     var cancelOnDismiss by mutableStateOf(false)
     /** Rounded corners in the install window; off = square. */
     var round by mutableStateOf(true)
+    /** The loading indicator: round (default), bar (rounded corners) or wave. */
+    var loader by mutableStateOf("round")
     /** SDK min and target rows; off by default to show less. */
     var sdk by mutableStateOf(false)
     /** The certificate fingerprint row; off by default. */
@@ -576,6 +612,7 @@ object InstallShow {
         extended = p.getBoolean("inst_ext", false); suggest = p.getBoolean("inst_sugg", true)
         expand = p.getBoolean("inst_exp", false); cancelOnDismiss = p.getBoolean("inst_cancel", false)
         round = p.getBoolean("inst_round", true)
+        loader = p.getString("inst_loader", "round") ?: "round"
         sdk = p.getBoolean("inst_sdk", false); cert = p.getBoolean("inst_cert", false)
     }
     fun set(c: android.content.Context, key: String, v: Boolean) {
@@ -588,4 +625,5 @@ object InstallShow {
         prefs(c).edit().putBoolean(key, v).apply()
     }
     fun setTheme(c: android.content.Context, v: String) { theme = v; prefs(c).edit().putString("inst_theme", v).apply() }
+    fun setLoader(c: android.content.Context, v: String) { loader = v; prefs(c).edit().putString("inst_loader", v).apply() }
 }

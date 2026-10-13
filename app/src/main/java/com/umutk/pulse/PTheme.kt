@@ -24,6 +24,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.Text
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.CompositionLocalProvider
 
 /** One look: the Windows versions of Task Manager, Material You and an AMOLED black one. */
 class PTheme(
@@ -122,7 +133,9 @@ fun Modifier.frame(t: PTheme, raised: Boolean = false): Modifier =
 
 /** The dark twin of a light sidebar theme (Windows 11 / 10); others have none. */
 fun darkTwin(t: PTheme): PTheme? = when (t.id) {
-    "win11" -> PTheme(t.id, t.name, true, c(0xFF0A1322), c(0xFF111111), c(0xFFFFFFFF), c(0xFFB8C4D6), c(0xFF60CDFF), c(0xFF22324D), t.radius)
+    // no accent colour on Windows 11: buttons and checks are neutral grey, the background is black (AMOLED) or dark grey
+    "win11" -> if (Opt.amoledBg) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFD0D0D0), c(0xFF2A2A2A), t.radius)
+        else PTheme(t.id, t.name, true, c(0xFF202020), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFD0D0D0), c(0xFF3A3A3A), t.radius)
     "win10" -> PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF0E0E0E), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF4CC2FF), c(0xFF2A2A2A), t.radius, tabs = true, titleName = t.titleName, glassA = t.glassA)
     else -> null
 }
@@ -144,12 +157,23 @@ fun WinAlert(onDismissRequest: () -> Unit, title: (@Composable () -> Unit)? = nu
     // noDim: the window behind the dialog stays as it is, no dark scrim (the installer)
     val view = LocalView.current
     if (noDim) SideEffect { (view.parent as? DialogWindowProvider)?.window?.let { it.setDimAmount(0f); it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND); it.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)) } }
-    val cs = if (w.dark) darkColorScheme(primary = Look.accent, background = w.bg, surface = w.panel, surfaceContainerHigh = w.panel, onSurface = w.text, onSurfaceVariant = w.sub, outline = w.line)
-        else lightColorScheme(primary = Look.accent, background = w.bg, surface = w.panel, surfaceContainerHigh = w.panel, onSurface = w.text, onSurfaceVariant = w.sub, outline = w.line)
+    val cs = if (w.dark) darkColorScheme(primary = if (w.tabs) w.text else Look.accent, background = w.bg, surface = w.panel, surfaceContainerHigh = w.panel, onSurface = w.text, onSurfaceVariant = w.sub, outline = w.line)
+        else lightColorScheme(primary = if (w.tabs) w.text else Look.accent, background = w.bg, surface = w.panel, surfaceContainerHigh = w.panel, onSurface = w.text, onSurfaceVariant = w.sub, outline = w.line)
     MaterialTheme(colorScheme = cs) {
         // the Windows looks get a flat window: no tonal lift, the look's own corners, and a thin edge like a real dialog
         val flat = !w.material
-        AlertDialog(onDismissRequest, title = title, text = text, confirmButton = confirmButton, dismissButton = dismissButton,
+        val classicBar = w.tabs && title != null
+        val barTitle: (@Composable () -> Unit)? = if (!classicBar) title else ({
+            Row(Modifier.fillMaxWidth().height(26.dp)
+                .then(w.title?.let { Modifier.background(it) } ?: Modifier.background(w.panel))
+                .padding(start = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides w.titleText) {
+                    androidx.compose.foundation.layout.Box(Modifier.weight(1f)) { title!!() }
+                }
+                Text("\u2715", color = w.titleText, fontSize = 11.sp, modifier = Modifier.padding(horizontal = 6.dp))
+            }
+        })
+        AlertDialog(onDismissRequest, title = barTitle, text = text, confirmButton = confirmButton, dismissButton = dismissButton,
             containerColor = containerColor ?: w.panel, shape = RoundedCornerShape(w.radius),
             tonalElevation = if (flat) 0.dp else AlertDialogDefaults.TonalElevation,
             modifier = if (flat) Modifier.border(1.dp, w.line, RoundedCornerShape(w.radius)) else Modifier)

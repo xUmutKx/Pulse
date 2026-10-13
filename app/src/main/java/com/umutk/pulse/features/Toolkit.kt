@@ -48,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.BarMeter
 import com.umutk.pulse.InfoRows
+import com.umutk.pulse.Stopwatch
 import com.umutk.pulse.Look
 import com.umutk.pulse.Opt
 import com.umutk.pulse.PButton
@@ -415,17 +416,19 @@ private fun clock(ms: Long): String { val t = ms / 10; return "%02d:%02d.%02d".f
 
 @Composable
 private fun StopwatchTool() {
-    var running by remember { mutableStateOf(false) }
-    var elapsed by remember { mutableLongStateOf(0L) }
+    val ctx = LocalContext.current
+    var running by remember { mutableStateOf(Stopwatch.running(ctx)) }
+    var elapsed by remember { mutableLongStateOf(Stopwatch.elapsed(ctx)) }
     LaunchedEffect(running) {
-        val start = System.currentTimeMillis() - elapsed
-        while (running) { elapsed = System.currentTimeMillis() - start; delay(50) }
+        while (running) { elapsed = Stopwatch.elapsed(ctx); delay(50) }
     }
     PCard {
         Text(clock(elapsed), Modifier.fillMaxWidth(), color = T.text, fontSize = 40.sp, textAlign = TextAlign.Center)
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PButton(if (running) "Stop" else "Start", Modifier.weight(1f)) { running = !running }
-            PButton("Reset", Modifier.weight(1f)) { running = false; elapsed = 0L }
+            PButton(if (running) "Stop" else "Start", Modifier.weight(1f)) {
+                Stopwatch.toggle(ctx); running = Stopwatch.running(ctx); elapsed = Stopwatch.elapsed(ctx)
+            }
+            PButton("Reset", Modifier.weight(1f)) { Stopwatch.reset(ctx); running = false; elapsed = 0L }
         }
     }
 }

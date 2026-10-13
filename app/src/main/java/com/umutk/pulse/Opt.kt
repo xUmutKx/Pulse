@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 /** More saved choices: general look, which pages show, the floating monitor and the alerts. */
 object Opt {
     var startPage by mutableStateOf("processes")
+    var amoledBg by mutableStateOf(true)    // Windows 11 dark: black background (on) or dark grey (off)
     var lang by mutableStateOf("auto")       // "auto" (phone language), "en" or "tr"
     var hidden by mutableStateOf(setOf<String>())
     var tempF by mutableStateOf(false)
@@ -32,6 +33,7 @@ object Opt {
         val p = sp(c)
         startPage = p.getString("start", "processes") ?: "processes"
         lang = p.getString("lang", "auto") ?: "auto"
+        amoledBg = p.getBoolean("amoledBg", true)
         hidden = p.getStringSet("hidden", emptySet()) ?: emptySet()
         tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false)
         fontScale = p.getFloat("fontScale", 1f); compact = p.getBoolean("compact", false)
@@ -42,7 +44,7 @@ object Opt {
     }
 
     fun save(c: Context) {
-        sp(c).edit().putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn)
+        sp(c).edit().putBoolean("amoledBg", amoledBg).putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn)
             .putFloat("fontScale", fontScale).putBoolean("compact", compact).putBoolean("ovOn", ovOn).putBoolean("notifOn", notifOn)
             .putFloat("ovAlpha", ovAlpha).putFloat("ovSize", ovSize).putStringSet("ovItems", ovItems)
             .putInt("alertTemp", alertTemp).putInt("alertBat", alertBat).putInt("alertRam", alertRam).apply()
