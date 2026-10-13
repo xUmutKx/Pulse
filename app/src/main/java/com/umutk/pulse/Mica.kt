@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.umutk.pulse.features.Backdrop
 
 /** Windows 11 materials, drawn by hand: the tint comes from the wallpaper colour (Android 12+ dynamic colour) or the accent. */
 object Effects {
@@ -46,6 +47,8 @@ fun Modifier.backdrop(kind: String): Modifier {
     val t = T
     val tint = micaTint()
     val grain = remember { grainPoints(700) }
+    // Windows 11 with the whole-app picture: the root stays see-through so the one picture shows behind the panels
+    if (t.id == "win11" && Backdrop.scope == "app" && Backdrop.image != null) return this
     t.wall?.let { if (!t.tabs) return this.background(it) }   // liquid glass themes: the coloured backdrop
     if (kind == "none" || t.tabs) return this.background(t.bg)
     val base = t.bg
@@ -73,7 +76,7 @@ fun Modifier.layer(kind: String, shape: androidx.compose.ui.graphics.Shape, edge
     val t = T
     if (t.glassA > 0f && !t.tabs) return this.background(t.panel.copy(alpha = t.glassA), shape).border(1.dp, glassEdge(t), shape)
     if (kind == "none" || t.tabs) return this.background(t.panel, shape)
-    val alpha = when (kind) { "acrylic" -> .58f; "tabbed" -> .5f; "micaAlt" -> .74f; else -> .8f }
+    val alpha = when (kind) { "acrylic" -> .42f; "tabbed" -> .36f; "micaAlt" -> .5f; else -> .6f }
     return this.background(t.panel.copy(alpha = alpha), shape)
         .border(edge, if (t.dark) Color.White.copy(alpha = .08f) else Color.Black.copy(alpha = .06f), shape)
 }

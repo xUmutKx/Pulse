@@ -141,11 +141,11 @@ fun NetUsageScreen(onBack: () -> Unit) {
             TextButton(onClick = { month = false }) { Text("Today", color = if (!month) T.accent else T.sub) }
             TextButton(onClick = { month = true }) { Text("This month", color = if (month) T.accent else T.sub) }
         }
-        if (rows.isEmpty()) Center("No network use recorded")
-        else {
-            val top = rows.first().total.coerceAtLeast(1L)
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(rows.take(150), key = { "${it.pkg}|${it.label}" }) { r ->
+        val top = rows.firstOrNull()?.total?.coerceAtLeast(1L) ?: 1L
+        LazyColumn(Modifier.fillMaxSize()) {
+            item { NetworksSection() }
+            if (rows.isEmpty()) item { Center("No network use recorded") }
+            items(rows.take(150), key = { "${it.pkg}|${it.label}" }) { r ->
                     Column(Modifier.padding(vertical = 6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (r.pkg.isNotEmpty()) AppIcon(r.pkg, 26.dp) else Spacer(Modifier.width(26.dp))
@@ -161,7 +161,6 @@ fun NetUsageScreen(onBack: () -> Unit) {
                     }
                 }
             }
-        }
     }
 }
 

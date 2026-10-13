@@ -1,9 +1,7 @@
 package com.umutk.pulse
 
-import com.umutk.pulse.features.Backdrop
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -42,7 +40,7 @@ val T get() = Look.current
 val pageGutter get() = if (T.material) 16.dp else 12.dp
 
 private fun material(k: String): ImageVector = when (k) {
-    "processes" -> Icons.Outlined.Apps; "performance" -> Icons.Outlined.ShowChart; "history" -> Icons.Outlined.History
+    "processes" -> Icons.Outlined.Apps; "apps" -> Icons.Outlined.Apps; "performance" -> Icons.Outlined.ShowChart; "history" -> Icons.Outlined.History
     "startup" -> Icons.Outlined.RocketLaunch; "users" -> Icons.Outlined.People; "details" -> Icons.Outlined.FormatListBulleted
     "services" -> Icons.Outlined.Extension; "settings" -> Icons.Outlined.Settings; "menu" -> Icons.Outlined.Menu
     "cpu" -> Icons.Outlined.DeveloperBoard; "memory" -> Icons.Outlined.Memory; "disk" -> Icons.Outlined.Storage
@@ -73,8 +71,11 @@ private fun material(k: String): ImageVector = when (k) {
 @Composable
 fun PIcon(k: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifier) {
     if (T.material) { Icon(material(k), null, modifier.size(size), tint); return }
-    val pack = if (T.id == "win10") null else ThemeIcons.bitmap(LocalContext.current, T.id, k)
+    val ctx = LocalContext.current
+    val pack = if (T.id == "win10") null else ThemeIcons.bitmap(ctx, T.id, k)
     if (pack != null) { Image(pack, null, modifier.size(size)); return }
+    // the Toolkit tools have no Fluent outline: they take the Windows 11 pack, the one set with every key
+    if (FluentPaths.map[k] == null) ThemeIcons.bitmap(ctx, "win11", k)?.let { Image(it, null, modifier.size(size)); return }
     val paths = remember(k) { (FluentPaths.map[k] ?: FluentPaths.map["info"]!!).map { PathParser().parsePathString(it).toPath() } }
     Canvas(modifier.size(size)) {
         scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
@@ -141,21 +142,12 @@ fun PCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
     val shape = RoundedCornerShape(if (t.material) t.radius.coerceIn(16.dp, 28.dp) else t.radius) // M3 cards: 16 to 28 dp corners
     val fx = if (t.id == "win11") Look.effect else "none"
     val surface = when {
-        // Windows 11 with a backdrop: the blurred picture shows through a light panel
-        t.id == "win11" && Backdrop.image != null -> Modifier.clip(shape).drawBehind {
-            Backdrop.image?.let { img ->
-                // cover the card, keep the picture's proportions, top edge stays in view
-                val s = maxOf(size.width / img.width, size.height / img.height)
-                val w = img.width * s; val h = img.height * s
-                drawImage(img, dstOffset = IntOffset(((size.width - w) / 2f).toInt(), 0), dstSize = IntSize(w.toInt(), h.toInt()))
-            }
-            drawRect(Color.Black.copy(alpha = .35f))
-        }.border(1.dp, Color.White.copy(alpha = .12f), shape)
+        // Material first: its glassA is for the window backdrop only; cards stay tonal with a soft elevation
+        t.material -> Modifier.shadow(2.dp, shape).background(t.panel, shape)
         // liquid glass: the panel is see-through with a light edge (Win 7 Aero keeps its bevel-free look, Win 95 its bevel)
         t.glassA > 0f -> Modifier.background(t.panel.copy(alpha = t.glassA), shape).then(if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, glassEdge(t), shape))
         t.tabs -> Modifier.background(t.bg, shape).then(if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, t.line))
         fx != "none" -> Modifier.layer(fx, shape).border(1.dp, t.line, shape)
-        t.material -> Modifier.background(t.panel, shape)
         else -> Modifier.background(t.panel.copy(alpha = .9f), shape).border(1.dp, t.line, shape)
     }
     Column(modifier.fillMaxWidth().then(surface).padding(if (t.material) 16.dp else 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)

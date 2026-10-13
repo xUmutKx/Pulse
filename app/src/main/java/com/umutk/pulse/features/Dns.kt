@@ -97,7 +97,7 @@ fun DnsSettings() {
 /** Quick Settings tile: toggles Private DNS between Off and Manual with the saved host; without a host it opens Settings. */
 class DnsTile : TileService() {
     override fun onStartListening() = paint()
-    private fun paint() { qsTile?.apply { state = if (Dns.current(this@DnsTile).first == "hostname") Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "DNS"; updateTile() } }
+    private fun paint() { qsTile?.apply { val on = Dns.current(this@DnsTile).first == "hostname"; state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "DNS"; subtitle = if (on) Dns.savedHost(this@DnsTile).ifEmpty { "On" } else "Off"; updateTile() } }
     override fun onClick() {
         val host = Dns.savedHost(this)
         if (!Dns.validHost(host)) { openSettings(); return }

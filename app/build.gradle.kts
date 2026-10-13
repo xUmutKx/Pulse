@@ -9,10 +9,10 @@ android {
     compileSdk = 34
     defaultConfig {
         applicationId = "com.umutk.pulse"
-        minSdk = 29
+        minSdk = 31
         targetSdk = 34
-        versionCode = 50
-        versionName = "0.10.40"
+        versionCode = 54
+        versionName = "0.10.44"
         ndk { abiFilters += "arm64-v8a" }
     }
     buildTypes {
