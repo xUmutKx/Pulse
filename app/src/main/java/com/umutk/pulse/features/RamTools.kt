@@ -33,30 +33,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** Background apps a "free memory" may stop: (package, pid). Not Pulse, not the launcher, not system apps. */
-private fun background(ctx: Context): List<Pair<String, Int>> {
-    val pm = ctx.packageManager
-    val home = pm.resolveActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo?.packageName
-    val procs = ctx.getSystemService(ActivityManager::class.java).runningAppProcesses.orEmpty()
-        .filter { it.importance > RunningAppProcessInfo.IMPORTANCE_FOREGROUND }
-    return procs.asSequence()
-        .map { it.processName.substringBefore(':') to it.pid }
-        .filter { (pkg, _) -> pkg.matches(Regex("[A-Za-z0-9_.]+")) && pkg != ctx.packageName && pkg != home }
-        .filter { (pkg, _) -> runCatching { (pm.getApplicationInfo(pkg, 0).flags and ApplicationInfo.FLAG_SYSTEM) == 0 }.getOrDefault(false) }
-        .distinctBy { it.first }
-        .toList()
-}
-
-/** RAM: total, available and used memory, a 60 s graph, and a "free memory" action (stops background apps when root is available). */
+/** RAM: total, available and used memory and a 60 s graph. */
 @Composable
 fun RamPage() {
     val ctx = LocalContext.current
     val am = remember { ctx.getSystemService(ActivityManager::class.java) }
     val h by Sampler.history.collectAsState()
-    val scope = rememberCoroutineScope()
     var mi by remember { mutableStateOf<ActivityManager.MemoryInfo?>(null) }
-    var note by remember { mutableStateOf("") }
-    var busy by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         while (true) { mi = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }; delay(2000) }
     }
@@ -75,28 +58,6 @@ fun RamPage() {
         PCard {
             Text("Memory history (60 s)", color = T.sub, fontSize = 12.sp)
             Graph(listOf(h["ram"].orEmpty()), listOf(resColor("memory")), 100f, height = 70.dp)
-        }
-        PCard {
-            Text("Free memory", color = Look.accent, fontSize = 15.sp)
-            PButton(if (busy) "Freeing…" else "Free memory") {
-                if (!busy) scope.launch {
-                    busy = true
-                    val apps = withContext(Dispatchers.IO) { background(ctx) }
-                    if (Shell.root == true) {
-                        val before = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
-                        if (apps.isNotEmpty()) withContext(Dispatchers.IO) { Shell.run(apps.joinToString("; ") { "am force-stop ${it.first}" }) }
-                        delay(1000)
-                        val after = ActivityManager.MemoryInfo().also { am.getMemoryInfo(it) }.availMem
-                        note = "Stopped ${apps.size} apps, freed ${mb(((after - before).coerceAtLeast(0L) shr 20).toInt())}"
-                    } else {
-                        // without root nothing is stopped: only the amount that could be freed is shown
-                        val pss = withContext(Dispatchers.IO) { am.getProcessMemoryInfo(apps.map { it.second }.toIntArray()).sumOf { it.totalPss.toLong() } }
-                        note = "${apps.size} background apps could free about ${mb((pss shr 10).toInt())}. Root is needed to stop them."
-                    }
-                    busy = false
-                }
-            }
-            if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
         }
         Spacer(Modifier.height(12.dp))
     }

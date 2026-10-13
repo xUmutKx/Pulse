@@ -326,6 +326,11 @@ fun SettingsPage() {
                 }
                 if (T.tabs && T.id != "win10") Text("The 7 / XP / 95 themes stay light, as they were in their day; dark mode works in Windows 11, 10 and Material.", color = T.sub, fontSize = 11.sp)
                 if (T.id == "win11") {
+                    Text(tr("Background", "Arka plan"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PChip(Opt.amoledBg, tr("Black (AMOLED)", "Siyah (AMOLED)")) { Opt.amoledBg = true; Opt.save(ctx) }
+                        PChip(!Opt.amoledBg, tr("Dark grey", "Koyu gri")) { Opt.amoledBg = false; Opt.save(ctx) }
+                    }
                     Text("Window material (Windows 11 only)", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Effects.list.forEach { (id, n) -> PChip(Look.effect == id, n) { Cfg.setEffect(ctx, id) } }
@@ -345,7 +350,7 @@ fun SettingsPage() {
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
-                if (T.material || !T.tabs || T.id == "win10") {
+                if (T.material || (!T.tabs && T.id != "win11") || T.id == "win10") {
                     Text("Accent colour", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(34.dp).background(T.accent, androidx.compose.foundation.shape.CircleShape).then(if (Look.accentIdx == -1) Modifier.border(3.dp, T.text, androidx.compose.foundation.shape.CircleShape) else Modifier).clickable { Cfg.setAccent(ctx, -1) })

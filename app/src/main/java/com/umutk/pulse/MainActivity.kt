@@ -71,6 +71,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Cfg.load(this); Opt.load(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); com.umutk.pulse.features.GlassPrefs.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
+        // installer copies from an earlier run are dead weight: a fresh start clears them (a restored instance keeps its window)
+        if (savedInstanceState == null) File(cacheDir, "installer").deleteRecursively()
         Watchdog.sync(this)
         // coming back to a process Android restarted: the saved page and scroll are restored, so the opening screen is not played again
         if (savedInstanceState != null) SplashGate.splashed = true
@@ -167,9 +169,12 @@ private fun Root() = LookHost { th ->
         }
         val wctx = androidx.compose.ui.platform.LocalContext.current
         var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("welcomed", false)) }
+        // the open page lives here, not in App: App is remounted when the theme changes dark/light, and that must not close the page
+        var appPage by rememberSaveable { mutableStateOf(if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
+        var appSub by rememberSaveable { mutableStateOf("") }
         if (!SplashGate.splashed) Splash(th) { SplashGate.splashed = true }
         else if (!welcomed) Welcome { welcomed = true }
-        else key(th.dark) { App() }
+        else key(th.dark) { App(appPage, { appPage = it }, appSub, { appSub = it }) }
     }
 }
 
@@ -204,15 +209,13 @@ fun LookHost(transparent: Boolean = false, content: @Composable (PTheme) -> Unit
 }
 
 @Composable
-private fun App() {
+private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (String) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    var page by rememberSaveable { mutableStateOf(if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
-    var sub by rememberSaveable { mutableStateOf("") } // a tool opened from the Tools page; empty means none
-    val go: (String) -> Unit = { sub = ""; page = it }
+    val go: (String) -> Unit = { onSub(""); onPage(it) }
     LaunchedEffect(Downloads.wanted) { if (Downloads.wanted) { go("downloads"); Downloads.wanted = false } }
     LaunchedEffect(com.umutk.pulse.widgets.WidgetOpen.page) {
         val p = com.umutk.pulse.widgets.WidgetOpen.page
-        if (p.isNotEmpty()) { if (p == "toolkit" || p.startsWith("toolkit:")) { com.umutk.pulse.features.ToolkitOpen.tool = p.substringAfter(":", ""); sub = "toolkit" } else if (p == SettingsPg.id || Pages.any { it.id == p }) go(p) else if (p == "installer_settings") sub = p; com.umutk.pulse.widgets.WidgetOpen.page = "" }
+        if (p.isNotEmpty()) { if (p == "toolkit" || p.startsWith("toolkit:")) { com.umutk.pulse.features.ToolkitOpen.tool = p.substringAfter(":", ""); onSub("toolkit") } else if (p == SettingsPg.id || Pages.any { it.id == p }) go(p) else if (p == "installer_settings") onSub(p); com.umutk.pulse.widgets.WidgetOpen.page = "" }
     }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -221,12 +224,12 @@ private fun App() {
         }
     }
     val body: @Composable () -> Unit = {
-        if (sub.isNotEmpty()) SubScreen(sub, { sub = "" }) else when (page) {
+        if (sub.isNotEmpty()) SubScreen(sub, { onSub("") }) else when (page) {
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
             "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "files" -> com.umutk.pulse.features.FilesPage(); "installer" -> com.umutk.pulse.features.InstallerPage(); "device" -> DeviceModule(); "toolkit" -> com.umutk.pulse.features.ToolkitPage(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; "ram" -> com.umutk.pulse.features.RamPage(); "terminal" -> com.umutk.pulse.features.TerminalPage(); else -> SettingsPage()
         }
     }
-    androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { onSub(it) }) {
         val menus = rememberMenus(go)
         if (T.id == "win10") Win10Shell(page, go, menus, body) else if (T.tabs) ClassicShell(page, go, menus, body) else ModernShell(page, go, menus, body)
         menus.dialogs()

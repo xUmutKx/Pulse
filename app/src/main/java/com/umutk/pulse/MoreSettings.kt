@@ -255,6 +255,14 @@ fun InstallWindowSettings() {
         }
     }
     PCard {
+        Text("Loading style", color = Look.accent, fontSize = 15.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("round" to "Round", "bar" to "Rounded bar", "wave" to "Wave").forEach { (id, n) ->
+                PChip(InstallShow.loader == id, n) { InstallShow.setLoader(ctx, id) }
+            }
+        }
+    }
+    PCard {
         Text("Security", color = Look.accent, fontSize = 15.sp)
         SwitchRow("Require biometric to install", "Fingerprint or face before each install. Off: never asked", InstallShow.biometric) { InstallShow.set(ctx, "inst_bio", it) }
         SwitchRow("Cancel installation on dismiss", "Closing the window stops a waiting biometric check", InstallShow.cancelOnDismiss) { InstallShow.set(ctx, "inst_cancel", it) }

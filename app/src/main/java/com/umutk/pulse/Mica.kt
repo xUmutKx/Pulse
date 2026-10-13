@@ -33,8 +33,8 @@ fun micaTint(): Color {
     val ctx = LocalContext.current
     val dark = T.dark
     return remember(dark) {
-        if (android.os.Build.VERSION.SDK_INT >= 31) Color(ctx.getColor(if (dark) android.R.color.system_accent1_800 else android.R.color.system_accent1_100))
-        else if (dark) Color(0xFF1E2B3C) else Color(0xFFDCE6F3)
+        // neutral grey: a wallpaper-coloured tint made every surface look blue
+        if (dark) Color(0xFF141414) else Color(0xFFF2F2F2)
     }
 }
 

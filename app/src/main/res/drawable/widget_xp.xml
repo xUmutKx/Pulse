@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Windows XP: beige window body with a blue frame -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#FFECE9D8" />
+    <corners android:radius="6dp" />
+    <stroke android:width="2dp" android:color="#FF0054E3" />
+</shape>

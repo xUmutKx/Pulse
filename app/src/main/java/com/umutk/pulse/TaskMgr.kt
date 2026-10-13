@@ -210,7 +210,7 @@ fun PerformancePage() {
         )
         // the detail page: its own scroll, full width under the list on a phone
         val detail: @Composable (Modifier) -> Unit = { m ->
-            Column(m.verticalScroll(rememberScrollState()).padding(start = 6.dp, end = 12.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Column(m.verticalScroll(rememberScrollState()).padding(start = 4.dp, end = 6.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 when (sel) {
                     "cpu" -> {
                         DetailTitle("CPU", cpuName)
@@ -281,7 +281,7 @@ fun PerformancePage() {
         }
         Row(Modifier.fillMaxSize()) {
             // resource list on the left, detail on the right
-            Column(Modifier.width(if (wide) 200.dp else 148.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 8.dp, end = 4.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { rows.forEach { it() } }
+            Column(Modifier.width(if (wide) 200.dp else 104.dp).fillMaxHeight().verticalScroll(rememberScrollState()).padding(start = 8.dp, end = 4.dp, top = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) { rows.forEach { it() } }
             detail(Modifier.weight(1f).fillMaxHeight())
         }
     }

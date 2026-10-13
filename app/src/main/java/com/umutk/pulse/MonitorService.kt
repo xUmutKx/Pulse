@@ -260,7 +260,6 @@ class VolumeTile : ToolkitTile() {
         return "Music ${am.getStreamVolume(AudioManager.STREAM_MUSIC)} / ${am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)}"
     }
 }
-class StopwatchTile : ToolkitTile() { override val start: String get() = "toolkit:stopwatch" }
 class TimerTile : ToolkitTile() { override val start: String get() = "toolkit:timer" }
 class CalculatorTile : ToolkitTile() { override val start: String get() = "toolkit:calc" }
 class ScaleTile : ToolkitTile() {

@@ -132,6 +132,7 @@ private const val CH = "installer"
 private const val NOTE_ID = 2001
 private const val CH_INST = "installs"
 private const val ID_INST = 2002
+private const val ID_BUSY = 2003
 private const val APK_MIME = "application/vnd.android.package-archive"
 private val MODES = listOf("dialog", "background", "auto", "silent")
 private val AUTHS = listOf("root", "shizuku", "system", "none")
@@ -327,6 +328,7 @@ object Installer {
         bg = background
         pending = pk
         pk.drop = drop
+        if (!background) notifyInstalling(c, pk.label)
         return when (eng) {
             "root", "shizuku" -> {
                 val out = withContext(Dispatchers.IO) { Shell.run(silentCmd(pk, down, user, dex && eng == "root")) }
@@ -338,12 +340,14 @@ object Installer {
                 pending = null
                 if (pk.files.size > 1) {
                     status = "Split packages need the system or root authorizer"
+                    cancelInstalling(c)
                     false
                 } else {
                     val uri = FileProvider.getUriForFile(c, "${c.packageName}.files", pk.files[0])
                     c.startActivity(Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri, APK_MIME)
                         .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
                     status = "Opened in the system installer; its result is not reported back"
+                    cancelInstalling(c)
                     true
                 }
             }
@@ -359,6 +363,7 @@ object Installer {
 
     /** Called on the main thread with the final result of an install. */
     fun finish(c: Context, ok: Boolean, msg: String) {
+        cancelInstalling(c)
         val p = pending; pending = null
         val by = if (ok && p != null) runCatching { c.packageManager.getInstallerPackageName(p.pkg) }.getOrNull() else null
         status = if (ok) "Installed ${p?.label.orEmpty()}" + (by?.let { " (installer: $it)" }.orEmpty()) else "Failed: ${msg.ifEmpty { "no message from the installer" }}"
@@ -395,6 +400,17 @@ object Installer {
             .setContentIntent(open).addAction(0, "Open LSPosed", open).build()
         NotificationManagerCompat.from(c).notify(NOTE_ID + 1, n)
     }
+
+    /** Ongoing "Installing" notification while a window install runs; [finish] removes it. */
+    private fun notifyInstalling(c: Context, label: String) {
+        c.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CH, "Installer", NotificationManager.IMPORTANCE_DEFAULT))
+        val n = NotificationCompat.Builder(c, CH).setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("Installing").setContentText(label).setOngoing(true).setOnlyAlertOnce(true)
+            .setProgress(0, 0, true).build()
+        NotificationManagerCompat.from(c).notify(ID_BUSY, n)
+    }
+
+    private fun cancelInstalling(c: Context) = NotificationManagerCompat.from(c).cancel(ID_BUSY)
 
     private fun notify(c: Context, title: String, text: String) {
         c.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CH, "Installer", NotificationManager.IMPORTANCE_DEFAULT))
