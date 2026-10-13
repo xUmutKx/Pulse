@@ -66,7 +66,6 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
         MenuTop("Tools", listOf(
             MenuEntry("Toolkit") { openTool("toolkit") },
             MenuEntry("Installer") { openTool("installer") },
-            MenuEntry("Installer settings") { openTool("installer_settings") },
             MenuEntry("DNS") { openTool("dns") },
             MenuEntry("Device troubleshoot") { openTool("troubleshoot") },
             MenuEntry("Authenticator") { openTool("authenticator") },

@@ -2,7 +2,12 @@ package com.umutk.pulse
 
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.SideEffect
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.AlertDialogDefaults
+import androidx.compose.ui.window.DialogWindowProvider
+import android.view.WindowManager
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -50,7 +55,7 @@ fun glassEdge(t: PTheme): Color = Color.White.copy(alpha = if (t.dark) .22f else
 private fun c(v: Long) = Color(v)
 
 val Themes = listOf(
-    PTheme("win11", "Windows 11", false, c(0xFFF3F3F3), c(0xFFFFFFFF), c(0xFF1A1A1A), c(0xFF5F5F5F), c(0xFF0067C0), c(0xFFE0E0E0), 8.dp),
+    PTheme("win11", "Windows 11", true, c(0xFF000000), c(0xFF1C1C1C), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF0067C0), c(0xFF3A3A3A), 8.dp),
     PTheme("win10", "Windows 10", false, c(0xFFFFFFFF), c(0xFFFFFFFF), c(0xFF000000), c(0xFF6D6D6D), c(0xFF0078D7), c(0xFFD9D9D9), 0.dp, tabs = true, titleName = "Task Manager", glassA = .9f),
     PTheme("win7", "Windows 7", false, c(0xFFDCE9F7), c(0xFFFFFFFF), c(0xFF000000), c(0xFF444444), c(0xFF3399FF), c(0xFF9AA7B8), 3.dp,
         tabs = true, classicGraph = true, glassA = .72f, wall = Brush.verticalGradient(listOf(c(0xFF7FB2E5), c(0xFFDCE9F7))),
@@ -117,7 +122,7 @@ fun Modifier.frame(t: PTheme, raised: Boolean = false): Modifier =
 
 /** The dark twin of a light sidebar theme (Windows 11 / 10); others have none. */
 fun darkTwin(t: PTheme): PTheme? = when (t.id) {
-    "win11" -> PTheme(t.id, t.name, true, c(0xFF050505), c(0xFF111111), c(0xFFFFFFFF), c(0xFFB8B8B8), c(0xFF60CDFF), c(0xFF2A2A2A), t.radius)
+    "win11" -> PTheme(t.id, t.name, true, c(0xFF0A1322), c(0xFF111111), c(0xFFFFFFFF), c(0xFFB8C4D6), c(0xFF60CDFF), c(0xFF22324D), t.radius)
     "win10" -> PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF0E0E0E), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF4CC2FF), c(0xFF2A2A2A), t.radius, tabs = true, titleName = t.titleName, glassA = t.glassA)
     else -> null
 }
@@ -125,16 +130,28 @@ fun darkTwin(t: PTheme): PTheme? = when (t.id) {
 /** The look of pop-up windows, dialogs and drop-down menus; Root provides it from Look.windowTheme. */
 val LocalWindowLook = compositionLocalOf<PTheme> { Themes[0] }
 
-/** The AMOLED window: pure black, panels #111111, the app accent. */
+/** The AMOLED window: pure black, panels #111111, white text and accent, no colour. */
 fun amoledWindow(): PTheme = PTheme("amoled", "AMOLED", true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFF9E9E9E), c(0xFFFFFFFF), c(0xFF2A2A2A), 16.dp, material = true)
+
+/** Material pop-up window in black and white only: no tint, accent black on light or white on dark. */
+fun monoWindow(t: PTheme): PTheme = if (t.dark) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFF9E9E9E), c(0xFFFFFFFF), c(0xFF2A2A2A), t.radius, material = true)
+    else PTheme(t.id, t.name, false, c(0xFFFFFFFF), c(0xFFF2F2F2), c(0xFF000000), c(0xFF5C5C5C), c(0xFF000000), c(0xFFCCCCCC), t.radius, material = true)
 
 /** A Material AlertDialog drawn in the window look: its panel, text and corners. */
 @Composable
-fun WinAlert(onDismissRequest: () -> Unit, title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null, confirmButton: @Composable () -> Unit, dismissButton: (@Composable () -> Unit)? = null, containerColor: Color? = null) {
+fun WinAlert(onDismissRequest: () -> Unit, title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null, confirmButton: @Composable () -> Unit, dismissButton: (@Composable () -> Unit)? = null, containerColor: Color? = null, noDim: Boolean = false) {
     val w = LocalWindowLook.current
+    // noDim: the window behind the dialog stays as it is, no dark scrim (the installer)
+    val view = LocalView.current
+    if (noDim) SideEffect { (view.parent as? DialogWindowProvider)?.window?.let { it.setDimAmount(0f); it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND); it.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)) } }
     val cs = if (w.dark) darkColorScheme(primary = Look.accent, background = w.bg, surface = w.panel, surfaceContainerHigh = w.panel, onSurface = w.text, onSurfaceVariant = w.sub, outline = w.line)
         else lightColorScheme(primary = Look.accent, background = w.bg, surface = w.panel, surfaceContainerHigh = w.panel, onSurface = w.text, onSurfaceVariant = w.sub, outline = w.line)
     MaterialTheme(colorScheme = cs) {
-        AlertDialog(onDismissRequest, title = title, text = text, confirmButton = confirmButton, dismissButton = dismissButton, containerColor = containerColor ?: w.panel, shape = RoundedCornerShape(w.radius))
+        // the Windows looks get a flat window: no tonal lift, the look's own corners, and a thin edge like a real dialog
+        val flat = !w.material
+        AlertDialog(onDismissRequest, title = title, text = text, confirmButton = confirmButton, dismissButton = dismissButton,
+            containerColor = containerColor ?: w.panel, shape = RoundedCornerShape(w.radius),
+            tonalElevation = if (flat) 0.dp else AlertDialogDefaults.TonalElevation,
+            modifier = if (flat) Modifier.border(1.dp, w.line, RoundedCornerShape(w.radius)) else Modifier)
     }
 }

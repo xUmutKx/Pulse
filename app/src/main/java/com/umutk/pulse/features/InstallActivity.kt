@@ -7,14 +7,12 @@ import android.provider.OpenableColumns
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.umutk.pulse.Cfg
 import com.umutk.pulse.LookHost
 import com.umutk.pulse.Opt
@@ -33,8 +31,8 @@ class InstallActivity : ComponentActivity() {
         val uri = intent.data
         if (uri == null) { finish(); return }
         setContent {
-            LookHost {
-                Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .5f))) {
+            LookHost(transparent = true) {
+                Box(Modifier.fillMaxSize()) {
                     val f = file
                     if (f != null) InstallWindow(f) { finish() } else ApkCopying(copied)
                 }

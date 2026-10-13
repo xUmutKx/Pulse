@@ -50,10 +50,11 @@ fun PCheck(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
     val t = T
     if (t.material) { Checkbox(on, onChange, enabled = enabled, colors = CheckboxDefaults.colors(checkedColor = Look.accent)); return }
     val shape = RoundedCornerShape(if (t.id == "win11") 4.dp else 0.dp)
-    Box(Modifier.padding(4.dp).size(18.dp).background(if (on && !classic) Look.accent else Color.White, shape)
-        .then(if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, if (on && !classic) Look.accent else t.text.copy(alpha = .6f), shape))
+    val fill = if (t.id == "win11") t.text else Look.accent // Windows 11 checks are neutral, not accent
+    Box(Modifier.padding(4.dp).size(18.dp).background(if (on && !classic) fill else Color.White, shape)
+        .then(if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, if (on && !classic) fill else t.text.copy(alpha = .6f), shape))
         .then(if (enabled) Modifier.clickable { onChange(!on) } else Modifier), contentAlignment = Alignment.Center) {
-        if (on) Text("✓", color = if (classic) Color.Black else Color.White, fontSize = 13.sp)
+        if (on) Text("✓", color = if (classic) Color.Black else if (t.id == "win11") t.bg else Color.White, fontSize = 13.sp)
     }
 }
 

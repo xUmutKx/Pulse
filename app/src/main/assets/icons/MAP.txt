@@ -45,3 +45,8 @@ win95	folder	w95_4.ico	win95-winxp_icons-master.zip
 win95	cpu	w95_13.ico	win95-winxp_icons-master.zip
 win95	search	w95_23.ico	win95-winxp_icons-master.zip
 win95	delete	w95_32.ico	win95-winxp_icons-master.zip
+xp	apps	Application Window.png	Windows.XP.High.Resolution.Icon.Pack.2.zip (marchmountain, CC0-1.0 per repo LICENSE)
+xp	download	Save.png	Windows.XP.High.Resolution.Icon.Pack.2.zip (marchmountain, CC0-1.0 per repo LICENSE)
+xp	heart	Favorites.png	Windows.XP.High.Resolution.Icon.Pack.2.zip (marchmountain, CC0-1.0 per repo LICENSE)
+xp	phone	Phone.png	Windows.XP.High.Resolution.Icon.Pack.2.zip (marchmountain, CC0-1.0 per repo LICENSE)
+xp	startup	Taskbar and Start Menu.png	Windows.XP.High.Resolution.Icon.Pack.2.zip (marchmountain, CC0-1.0 per repo LICENSE)

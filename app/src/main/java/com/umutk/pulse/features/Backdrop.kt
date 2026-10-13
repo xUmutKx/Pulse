@@ -14,11 +14,17 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import com.umutk.pulse.R
 
-/** The picture behind the Windows 11 windows: the phone wallpaper, the opening picture or your own, blurred once (not animated). Off = plain colours. */
+/** The picture behind the Windows 11 windows: the phone wallpaper, the opening picture or your own, decoded once per choice (not animated). Off = plain colours. */
 object Backdrop {
     /** Default: off, plain colours. The wallpapers are picked in Settings when wanted. */
     var mode by mutableStateOf("off")
+    /** Where the picture shows: "app" (behind the whole app, Windows 11 only) or "downloads" (a strip at the top of the Downloads page). */
+    var scope by mutableStateOf("downloads")
     var image by mutableStateOf<ImageBitmap?>(null)
+    /** Blur of the picture behind the whole app, in dp (0 = sharp). */
+    var blur by mutableStateOf(24f)
+    /** Which part of the picture shows when it is cropped to the screen: "top", "center" or "bottom". */
+    var align by mutableStateOf("center")
     private var custom: String? = null
     private const val PREFS = "p"
     /** The 16 bundled Windows 11 wallpapers (from the uploaded pack), named pack1..pack16 in the settings. */
@@ -27,7 +33,10 @@ object Backdrop {
     fun load(c: Context) {
         val p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         mode = p.getString("backdrop", "off") ?: "off"
+        scope = p.getString("backdrop_scope", "downloads") ?: "downloads"
         custom = p.getString("backdrop_uri", null)
+        blur = p.getFloat("backdrop_blur", 24f)
+        align = p.getString("backdrop_align", "center") ?: "center"
         image = render(c)
     }
 
@@ -54,4 +63,15 @@ object Backdrop {
         return Bitmap.createScaledBitmap(small, 960, 600, true).asImageBitmap()
     }
 
+    fun saveBlur(c: Context) { c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putFloat("backdrop_blur", blur).apply() }
+
+    fun setAlign(c: Context, v: String) { align = v; c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("backdrop_align", v).apply() }
+
+    fun alignment(): androidx.compose.ui.Alignment = when (align) {
+        "top" -> androidx.compose.ui.Alignment.TopCenter
+        "bottom" -> androidx.compose.ui.Alignment.BottomCenter
+        else -> androidx.compose.ui.Alignment.Center
+    }
+
+    fun setScope(c: Context, v: String) { scope = v; c.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit().putString("backdrop_scope", v).apply() }
 }

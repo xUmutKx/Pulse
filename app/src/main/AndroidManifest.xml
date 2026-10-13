@@ -56,6 +56,11 @@
         <!-- an APK opened from a file app: the install window floats over the current app (see features/InstallActivity.kt) -->
         <activity android:name=".features.InstallActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
             <intent-filter>
+                <action android:name="android.intent.action.INSTALL_PACKAGE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/vnd.android.package-archive" />
+            </intent-filter>
+            <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <!-- file managers send content:// (and some file:// ) APK links; the chooser lists Pulse only for these schemes -->

@@ -9,7 +9,9 @@ import android.os.StatFs
 import android.webkit.MimeTypeMap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
@@ -32,6 +34,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -67,6 +71,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.umutk.pulse.BarMeter
+import com.umutk.pulse.PButton
+import com.umutk.pulse.WinAlert
+import com.umutk.pulse.LocalWindowLook
 import com.umutk.pulse.Guard
 import com.umutk.pulse.InfoRows
 import com.umutk.pulse.Look
@@ -100,6 +107,8 @@ private class ExProps(val size: Long, val modified: String, val count: Int, val 
 /** Bookmarks and recent files live in the shared "p" preferences, one path per line. */
 private const val EX_MARKS = "ex_marks"
 private const val EX_RECENT = "ex_recent"
+private const val EX_SORT_ALL = "ex_sort_all"
+private const val EX_SORT_DIRS = "ex_sort_dirs"
 
 /** The side page for files and the tools that read them: the explorer, the folder tree, file types, cache cleaning and root. */
 @Composable
@@ -144,7 +153,14 @@ private fun ExplorerTab() {
     var bulk by remember { mutableStateOf<List<File>?>(null) }
     var sel by remember { mutableStateOf(setOf<String>()) }
     var query by rememberSaveable { mutableStateOf("") }
-    var sort by rememberSaveable { mutableStateOf(0) }
+    // sort: one order for every folder, unless a folder has its own (folderSort); both are kept on the phone
+    var sortAll by rememberSaveable { mutableStateOf(exReadInt(ctx, EX_SORT_ALL, 0)) }
+    var folderSort by remember { mutableStateOf(exReadSortMap(ctx)) }
+    var sortMenu by remember { mutableStateOf(false) }
+    var menuOf by remember { mutableStateOf<File?>(null) }
+    var archiveOf by remember { mutableStateOf<File?>(null) }
+    var apkChoice by remember { mutableStateOf<File?>(null) }
+    var archiveList by remember { mutableStateOf<List<Pair<String, Long>>?>(null) }
     var showHidden by rememberSaveable { mutableStateOf(false) }
     var showSizes by rememberSaveable { mutableStateOf(true) }
     var recentView by rememberSaveable { mutableStateOf(false) }
@@ -153,6 +169,7 @@ private fun ExplorerTab() {
     var undo by remember { mutableStateOf<ExUndo?>(null) }
     var found by remember { mutableStateOf<List<File>?>(null) }
     val dir = File(here)
+    val sort = folderSort[here] ?: sortAll
     val (total, free) = remember(refresh) { exStorage(top) }
     val listing = remember(here, refresh, showHidden, sort) {
         exSort(dir.listFiles()?.filter { showHidden || !it.name.startsWith(".") }.orEmpty(), sort)
@@ -178,7 +195,11 @@ private fun ExplorerTab() {
             else -> go((dir.parentFile ?: top).path)
         }
     }
-    fun openFile(f: File) { recents = exAddRecent(ctx, f); Downloads.openFile(ctx, f) }
+    // an APK asks first: view its contents, or install it (a tap on other files opens them as before)
+    fun openFile(f: File) {
+        if (f.extension.equals("apk", true)) { apkChoice = f; return }
+        recents = exAddRecent(ctx, f); Downloads.openFile(ctx, f)
+    }
     fun toggle(p: String) { sel = if (p in sel) sel - p else sel + p }
     fun mark(p: String) { marks = if (p in marks) marks - p else marks + p; exWrite(ctx, EX_MARKS, marks) }
 
@@ -198,7 +219,18 @@ private fun ExplorerTab() {
         PField(query, { query = it }, "Search", Modifier.fillMaxWidth())
         PCard {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                ExAct(listOf("sortName", "sortSize", "sortDate")[sort / 2], T.sub, if (sort % 2 == 1) 180f else 0f) { sort = (sort + 1) % 6 }
+                Box {
+                    ExAct(listOf("sortName", "sortSize", "sortDate")[sort / 2], if (here in folderSort) Look.accent else T.sub, if (sort % 2 == 1) 180f else 0f) { sortMenu = true }
+                    ExSortMenu(sortMenu, sort, here in folderSort, { sortMenu = false }, { mode ->
+                        if (here in folderSort) { folderSort = folderSort + (here to mode); exWriteSortMap(ctx, folderSort) }
+                        else { sortAll = mode; exWriteInt(ctx, EX_SORT_ALL, mode) }
+                        sortMenu = false
+                    }, { on ->
+                        folderSort = if (on) folderSort + (here to sort) else folderSort - here
+                        exWriteSortMap(ctx, folderSort)
+                        sortMenu = false
+                    })
+                }
                 ExAct(if (showHidden) "eyeOn" else "eyeOff", if (showHidden) Look.accent else T.sub) { showHidden = !showHidden }
                 ExAct("sizes", if (showSizes) Look.accent else T.sub) { showSizes = !showSizes }
                 ExAct("recent", if (recentView) Look.accent else T.sub) { recentView = !recentView; query = "" }
@@ -222,7 +254,7 @@ private fun ExplorerTab() {
                 Text(dir.path.removePrefix(top.path).ifEmpty { "/" }, Modifier.weight(1f).padding(horizontal = 8.dp), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 ExAct(if (dir.path in marks) "starOn" else "star", if (dir.path in marks) Look.accent else T.sub) { mark(dir.path) }
                 ExAct("home", T.text) { go(top.path) }
-                ExAct("newfolder", T.text) { name = ""; dialog = "newfolder" to dir }
+                PButton("New folder") { name = ""; dialog = "newfolder" to dir }
                 clip?.let { c ->
                     ExAct("paste", Look.accent) {
                         scope.launch {
@@ -273,34 +305,70 @@ private fun ExplorerTab() {
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                    if (f.isDirectory) {
-                        ExAct(if (isMark) "starOn" else "star", if (isMark) Look.accent else T.sub) { mark(f.path) }
-                    } else {
-                        ExAct("view", T.sub) { viewing = f }
-                        ExAct("share", T.sub) { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }
-                        ExAct("openWith", T.sub) { if (exHandOver(ctx, f, false)) { recents = exAddRecent(ctx, f) } else { note = "Could not open ${f.name}" } }
+                Box {
+                    Box(Modifier.size(36.dp).clickable { menuOf = f }, contentAlignment = Alignment.Center) { ExDots(T.sub) }
+                    val actions = buildList<Triple<String, String, () -> Unit>> {
+                        add(Triple("Open", "view", { if (f.isDirectory) go(f.path) else openFile(f) }))
+                        if (!f.isDirectory) add(Triple("Open with", "openWith", { if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }))
+                        add(Triple("Cut", "move", { clip = Clip(listOf(f), true) }))
+                        add(Triple("Copy", "copy", { clip = Clip(listOf(f), false) }))
+                        add(Triple("Delete", "delete", { bulk = listOf(f) }))
+                        add(Triple("Rename", "rename", { name = f.name; dialog = "rename" to f }))
+                        add(Triple("Compress", "zip", { scope.launch { note = withContext(Dispatchers.IO) { exZip(listOf(f), dir) }; refresh++ } }))
+                        if (!f.isDirectory) add(Triple("Share", "share", { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }))
+                        add(Triple("Copy path", "link", { exCopy(ctx, f.path); note = "Path copied" }))
+                        if (f.isDirectory) {
+                            add(Triple("Add bookmark", "bookmark", { mark(f.path) }))
+                            add(Triple("Create shortcut", "bookmark", { mark(f.path) }))
+                        }
+                        if (f.extension.equals("zip", true)) add(Triple("View archive", "zip", { archiveOf = f }))
+                        if (f.extension.equals("zip", true)) add(Triple("Extract", "extract", { scope.launch { note = withContext(Dispatchers.IO) { unzip(f, dir) }; refresh++ } }))
+                        add(Triple("Properties", "info", { propsOf = f }))
                     }
-                    ExAct("link", T.sub) { exCopy(ctx, f.path); note = "Path copied" }
-                    if (f.extension.equals("zip", true)) {
-                        ExAct("extract", Look.accent) {
-                            scope.launch {
-                                note = withContext(Dispatchers.IO) { unzip(f, dir) }
-                                refresh++
-                            }
+                    val w = LocalWindowLook.current
+                    DropdownMenu(expanded = menuOf == f, onDismissRequest = { menuOf = null }, containerColor = w.panel, shape = RoundedCornerShape(w.radius)) {
+                        actions.forEach { (label, key, act) ->
+                            DropdownMenuItem(text = { Text(label, color = w.text, fontSize = 14.sp) }, leadingIcon = { ExIcon(key, w.sub, 18.dp) },
+                                onClick = { menuOf = null; act() })
                         }
                     }
-                    ExAct("copy", T.sub) { clip = Clip(listOf(f), false) }
-                    ExAct("move", T.sub) { clip = Clip(listOf(f), true) }
-                    ExAct("rename", T.sub) { name = f.name; dialog = "rename" to f }
-                    ExAct("delete", T.sub) { bulk = listOf(f) }
-                    ExAct("info", T.sub) { propsOf = f }
                 }
             }
         }
     }
 
     viewing?.let { f -> FileViewer(f, { openFile(it) }) { viewing = null } }
+
+    apkChoice?.let { a ->
+        WinAlert(onDismissRequest = { apkChoice = null }, title = { Text(a.name) },
+            text = { Text("View the contents, or install this app?", color = T.sub, fontSize = 13.sp) },
+            confirmButton = { TextButton({ archiveOf = a; apkChoice = null }) { Text("View") } },
+            dismissButton = { TextButton({
+                apkChoice = null; recents = exAddRecent(ctx, a)
+                if (!exHandOver(ctx, a, false)) note = "Could not install ${a.name}"
+            }) { Text("Install") } })
+    }
+
+    archiveOf?.let { z ->
+        LaunchedEffect(z) { archiveList = null; archiveList = withContext(Dispatchers.IO) { exArchiveList(z) } }
+        val list = archiveList
+        WinAlert(onDismissRequest = { archiveOf = null }, title = { Text("${z.name}: ${list?.size ?: 0} items") },
+            text = {
+                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
+                    when {
+                        list == null -> Text("Reading...", color = T.sub, fontSize = 13.sp)
+                        list.isEmpty() -> Text("Empty, or not a zip file", color = T.sub, fontSize = 13.sp)
+                        else -> list.forEach { (n, size) ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(n, Modifier.weight(1f), color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (size >= 0) Text(Guard.gb(size), color = T.sub, fontSize = 11.sp)
+                            }
+                        }
+                    }
+                }
+            },
+            confirmButton = { TextButton({ archiveOf = null }) { Text("Close") } }, dismissButton = null)
+    }
 
     propsOf?.let { f ->
         var p by remember(f) { mutableStateOf<ExProps?>(null) }
@@ -397,7 +465,7 @@ private fun ExIcon(k: String, tint: Color, size: Dp = 22.dp, rot: Float = 0f) {
 }
 
 private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
-    "star" to Icons.Outlined.StarBorder, "starOn" to Icons.Filled.Star, "check" to Icons.Outlined.CheckCircle,
+    "star" to Icons.Outlined.StarBorder, "bookmark" to Icons.Outlined.BookmarkBorder, "starOn" to Icons.Filled.Star, "check" to Icons.Outlined.CheckCircle,
     "sortName" to Icons.Outlined.SortByAlpha, "sortSize" to Icons.Outlined.DataUsage, "sortDate" to Icons.Outlined.Schedule,
     "eyeOn" to Icons.Outlined.Visibility, "eyeOff" to Icons.Outlined.VisibilityOff, "sizes" to Icons.Outlined.Straighten,
     "recent" to Icons.Outlined.History, "emptyFolder" to Icons.Outlined.FolderOff, "bigFile" to Icons.Outlined.SdStorage,
@@ -407,7 +475,7 @@ private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
 )
 
 private val EX_FLUENT = mapOf(
-    "star" to "heart", "starOn" to "heart", "check" to "info", "sortName" to "details", "sortSize" to "disk", "sortDate" to "history",
+    "star" to "heart", "starOn" to "heart", "bookmark" to "bookmark", "check" to "info", "sortName" to "details", "sortSize" to "disk", "sortDate" to "history",
     "eyeOn" to "view", "eyeOff" to "view", "sizes" to "disk", "recent" to "history", "emptyFolder" to "folder", "bigFile" to "disk",
     "dupes" to "copy", "undo" to "paste", "home" to "folder", "share" to "download", "openWith" to "run", "zip" to "extract",
     "link" to "copy", "save" to "rename", "edit" to "rename",
@@ -428,6 +496,43 @@ private fun exAddRecent(ctx: Context, f: File): List<String> {
     return list
 }
 
+private fun exReadInt(ctx: Context, key: String, def: Int): Int = ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getInt(key, def)
+
+private fun exWriteInt(ctx: Context, key: String, v: Int) {
+    ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putInt(key, v).apply()
+}
+
+/** Folder path -> sort mode, one "path|mode" line each (the path may hold '|', the mode is after the last one). */
+private fun exReadSortMap(ctx: Context): Map<String, Int> = exRead(ctx, EX_SORT_DIRS).mapNotNull { line ->
+    val path = line.substringBeforeLast('|', "")
+    val mode = line.substringAfterLast('|').toIntOrNull()
+    if (path.isEmpty() || mode == null) null else path to mode
+}.toMap()
+
+private fun exWriteSortMap(ctx: Context, map: Map<String, Int>) = exWrite(ctx, EX_SORT_DIRS, map.map { "${it.key}|${it.value}" })
+
+/** The sort popup: six orders, then the switch that gives this folder its own order. */
+@Composable
+private fun ExSortMenu(expanded: Boolean, current: Int, perFolder: Boolean, onDismiss: () -> Unit, onPick: (Int) -> Unit, onPerFolder: (Boolean) -> Unit) {
+    val w = LocalWindowLook.current
+    val labels = listOf("Name A-Z", "Name Z-A", "Size smallest first", "Size largest first", "Date oldest first", "Date newest first")
+    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, containerColor = w.panel, shape = RoundedCornerShape(w.radius)) {
+        labels.forEachIndexed { mode, label ->
+            DropdownMenuItem(text = { Text((if (current == mode) "\u2713  " else "     ") + label, color = w.text, fontSize = 14.sp) }, onClick = { onPick(mode) })
+        }
+        DropdownMenuItem(text = { Text((if (perFolder) "\u2713  " else "     ") + "Only for this folder", color = w.text, fontSize = 14.sp) }, onClick = { onPerFolder(!perFolder) })
+    }
+}
+
+/** Three dots in a row: the file menu's button. */
+@Composable
+private fun ExDots(tint: Color) {
+    Canvas(Modifier.size(18.dp)) {
+        val r = size.minDimension * .08f
+        for (i in 0..2) drawCircle(tint, r, Offset(size.width * (.2f + .3f * i), size.height / 2))
+    }
+}
+
 /** Folders first, then the order picked by the sort icon: name, size or date, each ascending then descending. */
 private fun exSort(list: List<File>, mode: Int): List<File> {
     val key: Comparator<File> = when (mode / 2) {
@@ -438,6 +543,11 @@ private fun exSort(list: List<File>, mode: Int): List<File> {
     val by = if (mode % 2 == 1) key.reversed() else key
     return list.sortedWith(compareBy<File> { !it.isDirectory }.then(by))
 }
+
+/** Entries of a zip file as (name, size); empty when the file cannot be read as a zip. */
+private fun exArchiveList(f: File): List<Pair<String, Long>> = runCatching {
+    java.util.zip.ZipFile(f).use { z -> z.entries().toList().map { it.name to it.size } }
+}.getOrDefault(emptyList())
 
 /** Names containing [q] under [root]; stops after 20 000 entries or 200 hits. Hidden names only when [hidden] is on. */
 private fun exFind(root: File, q: String, hidden: Boolean): List<File> =

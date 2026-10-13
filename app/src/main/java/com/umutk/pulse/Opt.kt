@@ -10,6 +10,7 @@ import androidx.compose.runtime.setValue
 /** More saved choices: general look, which pages show, the floating monitor and the alerts. */
 object Opt {
     var startPage by mutableStateOf("processes")
+    var lang by mutableStateOf("auto")       // "auto" (phone language), "en" or "tr"
     var hidden by mutableStateOf(setOf<String>())
     var tempF by mutableStateOf(false)
     var keepOn by mutableStateOf(false)
@@ -30,6 +31,7 @@ object Opt {
     fun load(c: Context) {
         val p = sp(c)
         startPage = p.getString("start", "processes") ?: "processes"
+        lang = p.getString("lang", "auto") ?: "auto"
         hidden = p.getStringSet("hidden", emptySet()) ?: emptySet()
         tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false)
         fontScale = p.getFloat("fontScale", 1f); compact = p.getBoolean("compact", false)
@@ -40,7 +42,7 @@ object Opt {
     }
 
     fun save(c: Context) {
-        sp(c).edit().putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn)
+        sp(c).edit().putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn)
             .putFloat("fontScale", fontScale).putBoolean("compact", compact).putBoolean("ovOn", ovOn).putBoolean("notifOn", notifOn)
             .putFloat("ovAlpha", ovAlpha).putFloat("ovSize", ovSize).putStringSet("ovItems", ovItems)
             .putInt("alertTemp", alertTemp).putInt("alertBat", alertBat).putInt("alertRam", alertRam).apply()
@@ -48,4 +50,17 @@ object Opt {
 
     /** A temperature in the chosen unit. */
     fun temp(c: Float) = if (tempF) "%.1f°F".format(c * 9f / 5f + 32f) else "%.1f°C".format(c)
+}
+
+/** Turkish or English text: the Language setting decides, "auto" follows the phone. Reads Opt.lang, so screens redraw when it changes. */
+fun tr(en: String, turkish: String): String =
+    if (Opt.lang == "tr" || (Opt.lang == "auto" && java.util.Locale.getDefault().language == "tr")) turkish else en
+
+/** The Turkish name of a page in the side menu (its English label is kept for anything not listed). */
+fun pageName(id: String, en: String): String = when (id) {
+    "processes" -> tr(en, "İşlemler"); "performance" -> tr(en, "Performans"); "history" -> tr(en, "Uygulama geçmişi")
+    "startup" -> tr(en, "Başlangıç uygulamaları"); "details" -> tr(en, "Ayrıntılar"); "services" -> tr(en, "Hizmetler")
+    "apps" -> tr(en, "Uygulamalar"); "downloads" -> tr(en, "İndirilenler"); "files" -> tr(en, "Dosyalar")
+    "device" -> tr(en, "Cihaz"); "health" -> tr(en, "Sağlık"); "terminal" -> tr(en, "Terminal"); "settings" -> tr(en, "Ayarlar")
+    else -> en
 }

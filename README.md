@@ -2,7 +2,11 @@
 
 Pulse is a task manager for Android that looks like the Windows one. It shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, a terminal and a toolkit of small utilities.
 
-Pulse needs Android 10 or newer, and it is built for arm64 phones only.
+Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK is about 11 MB.
+
+## First start
+
+The first time you open Pulse, a welcome screen lists what the app does and the open-source parts it is built from. Tap **Start** to go on; it does not come back. The language is set in Settings > Language (phone language, English or Türkçe).
 
 ## Features
 
@@ -105,6 +109,7 @@ The APK is written to `app/build/outputs/apk/release/`. Release builds are curre
 
 - **Microsoft Fluent System Icons** (MIT). The icons in the Windows themes are outlines taken from them by `tools/fetch_icons.py` into `FluentPaths.kt`.
 - **Shizuku API** (MIT, copyright RikkaW). The licence text is in `app/src/main/assets/licenses/`.
+- **Windows XP icon pack** by Matt Pettit (CC0 1.0, public domain dedication). The XP theme's Apps, Download, Heart, Phone and Startup icons come from it, resized to 48 px. The licence text is in `app/src/main/assets/licenses/xp-icons-LICENSE.txt`.
 - **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
 
 Pulse's own code has no licence file yet.

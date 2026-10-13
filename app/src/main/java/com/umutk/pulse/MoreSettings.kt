@@ -11,6 +11,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import com.umutk.pulse.features.DnsSettings
+import com.umutk.pulse.features.GlassPreview
+import com.umutk.pulse.features.GlassPrefs
 import com.umutk.pulse.features.InstallShow
 import com.umutk.pulse.features.setThemeWallpaper
 import com.umutk.pulse.features.themeWallpaper
@@ -166,6 +168,19 @@ fun WindowThemeSettings() {
         }
     }
     BackdropSettings()
+    GlassSettings()
+}
+
+/** Glass panels: how soft the blur is and how strong the tint is, with a live preview. */
+@Composable
+fun GlassSettings() {
+    val ctx = LocalContext.current
+    PCard {
+        Text("Glass", color = Look.accent, fontSize = 15.sp)
+        GlassPreview()
+        SliderRow("Blur ${GlassPrefs.blur}", GlassPrefs.blur.toFloat(), 4f..40f, { GlassPrefs.blur = it.toInt() }) { GlassPrefs.save(ctx) }
+        SliderRow("Tint ${(GlassPrefs.tint * 100).toInt()}%", GlassPrefs.tint, 0f..1f, { GlassPrefs.tint = it }) { GlassPrefs.save(ctx) }
+    }
 }
 
 /** Windows 11 windows: a blurred picture behind the panels (phone wallpaper, opening picture, your own, or off). */
@@ -183,6 +198,17 @@ fun BackdropSettings() {
                 PChip(com.umutk.pulse.features.Backdrop.mode == id, n) { scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.set(ctx, id) } }
             }
             PChip(com.umutk.pulse.features.Backdrop.mode == "custom", "Own picture") { pick.launch(arrayOf("image/*")) }
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("downloads" to "Downloads top", "app" to "Whole app").forEach { (id, n) ->
+                PChip(com.umutk.pulse.features.Backdrop.scope == id, n) { scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.setScope(ctx, id) } }
+            }
+        }
+        SliderRow("Blur ${com.umutk.pulse.features.Backdrop.blur.toInt()}", com.umutk.pulse.features.Backdrop.blur, 0f..60f, { com.umutk.pulse.features.Backdrop.blur = it }) { com.umutk.pulse.features.Backdrop.saveBlur(ctx) }
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("top" to "Top", "center" to "Middle", "bottom" to "Bottom").forEach { (id, n) ->
+                PChip(com.umutk.pulse.features.Backdrop.align == id, n) { com.umutk.pulse.features.Backdrop.setAlign(ctx, id) }
+            }
         }
         // the 16 bundled pictures, in the four themes of the pack: A (1-4), B (5-8), C (9-12), D (13-16)
         // tapping a theme title sets its accent colour and its first picture; the pictures below still pick one by one
@@ -213,6 +239,8 @@ fun InstallWindowSettings() {
         SwitchRow("Version", "Show the version and code", InstallShow.version) { InstallShow.set(ctx, "inst_ver", it) }
         SwitchRow("Package name", "Show the package name", InstallShow.pkg) { InstallShow.set(ctx, "inst_pkg", it) }
         SwitchRow("Status", "Show New, Identical, Upgrade, Downgrade", InstallShow.chip) { InstallShow.set(ctx, "inst_chip", it) }
+        SwitchRow("SDK versions", "Min and target SDK of the APK. Off by default", InstallShow.sdk) { InstallShow.set(ctx, "inst_sdk", it) }
+        SwitchRow("Certificate", "The signing certificate fingerprint. Off by default", InstallShow.cert) { InstallShow.set(ctx, "inst_cert", it) }
     }
     PCard {
         Text("Default app", color = Look.accent, fontSize = 15.sp)
@@ -258,14 +286,23 @@ fun WatchdogSettings() {
 fun ThemeWallpaperRow(lookId: String) {
     val ctx = LocalContext.current
     var uri by remember(lookId) { mutableStateOf(themeWallpaper(lookId)) }
+    val scope = rememberCoroutineScope()
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
         if (u != null) {
             runCatching { ctx.contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
             setThemeWallpaper(ctx, lookId, u.toString()); uri = u.toString()
+            // Windows 11: the picked wallpaper is the app background at once, blurred under Mica (no see-through blue)
+            if (lookId == "win11") scope.launch(Dispatchers.IO) {
+                com.umutk.pulse.features.Backdrop.set(ctx, "custom", u)
+                com.umutk.pulse.features.Backdrop.setScope(ctx, "app")
+            }
         }
     }
     Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         PButton("Wallpaper") { pick.launch(arrayOf("image/*")) }
-        if (uri != null) PButton("Default") { setThemeWallpaper(ctx, lookId, null); uri = null }
+        if (uri != null) PButton("Default") {
+            setThemeWallpaper(ctx, lookId, null); uri = null
+            if (lookId == "win11") scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.set(ctx, "off") }
+        }
     }
 }

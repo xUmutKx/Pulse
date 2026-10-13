@@ -247,6 +247,7 @@ private fun LuxMeter() {
 
 @Composable
 private fun Dice() {
+    val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var face by remember { mutableIntStateOf(1) }
     var rolling by remember { mutableStateOf(false) }
@@ -254,19 +255,20 @@ private fun Dice() {
         Box(Modifier.align(Alignment.CenterHorizontally).size(150.dp).background(T.panel, RoundedCornerShape(T.radius)).border(1.dp, T.line, RoundedCornerShape(T.radius)), contentAlignment = Alignment.Center) {
             Text("$face", color = T.text, fontSize = 64.sp, fontWeight = FontWeight.Bold)
         }
-        PButton("Roll") { if (!rolling) scope.launch { rolling = true; repeat(12) { face = Random.nextInt(1, 7); delay(60) }; rolling = false } }
+        PButton("Roll") { if (!rolling) scope.launch { rolling = true; repeat(12) { face = Random.nextInt(1, 7); delay(60) }; ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putInt("dice_last", face).apply(); rolling = false } }
     }
 }
 
 @Composable
 private fun CoinFlip() {
+    val ctx = LocalContext.current
     var turns by remember { mutableIntStateOf(0) }
     val rot by animateFloatAsState(turns * 180f, tween(700))
     PCard {
         Box(Modifier.align(Alignment.CenterHorizontally).size(160.dp).graphicsLayer { rotationY = rot }.background(Look.accent, CircleShape))
         ToolNote(if (turns % 2 == 0) "Heads" else "Tails")
         // an odd number of half-turns always lands on the other side
-        PButton("Flip") { turns += 2 * Random.nextInt(3, 6) + 1 }
+        PButton("Flip") { turns += 2 * Random.nextInt(3, 6) + 1; ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString("coin_last", if (turns % 2 == 0) "Heads" else "Tails").apply() }
     }
 }
 
@@ -290,6 +292,7 @@ private fun ClipboardTool() {
 
 @Composable
 private fun ScreenshotTool() {
+    val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf("") }
     if (Shell.root != true) { PCard { ToolNote("needs root") }; return }
@@ -299,7 +302,7 @@ private fun ScreenshotTool() {
                 msg = withContext(Dispatchers.IO) {
                     val f = "/sdcard/Pictures/Screenshots/pulse_${System.currentTimeMillis()}.png"
                     Shell.run("mkdir -p /sdcard/Pictures/Screenshots && screencap -p $f")
-                    if (File(f).exists()) "Saved $f" else "Screenshot failed"
+                    if (File(f).exists()) { ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putLong("shot_last", System.currentTimeMillis()).apply(); "Saved $f" } else "Screenshot failed"
                 }
             }
         }
