@@ -1,5 +1,12 @@
 package com.umutk.pulse
 
+import androidx.compose.ui.draw.clip
+import com.umutk.pulse.features.themeWallpaper
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
@@ -15,6 +22,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -74,23 +82,38 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
         modifier = Modifier.fillMaxSize().clickable { onDone() }.graphicsLayer { alpha = fade.value },
     ) {
         // Windows 7 gets its backdrop drawn in code (see Win7Backdrop); the other looks keep the sunset (CC0)
-        if (th.id == "win7") Win7Backdrop() else {
-            Image(painterResource(R.drawable.splash_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color(0x8C000000)))
+        // each look has its own opening background: Windows 7 is drawn, XP and Material use their real default pictures, the rest the look's own colour
+        // the user's own picture wins over the look's background
+        val picked = (themeWallpaper(th.id) ?: SplashPic.uri)?.let { rememberPicture(it) }
+        if (picked != null) {
+            Image(picked, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color(0x66000000)))
+        } else when (th.id) {
+            "win7" -> { Image(painterResource(R.drawable.splash_win7_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+            "win11" -> { Image(painterResource(R.drawable.splash_win11_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop); Box(Modifier.fillMaxSize().background(Color(0x33000000))) }
+            "xp" -> { Image(painterResource(R.drawable.splash_xp_bliss), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop); Box(Modifier.fillMaxSize().background(Color(0x66000000))) }
+            "material" -> { Image(painterResource(R.drawable.splash_android), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop); Box(Modifier.fillMaxSize().background(Color(0x66000000))) }
+            // look-alike backdrops drawn here, not copies of Microsoft's pictures
+            "win11" -> Win11Backdrop()
+            "win10" -> Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0B1E3A), Color(0xFF1F5FA8)))))
+            "win95" -> Box(Modifier.fillMaxSize().background(Color(0xFF008080)))
+            else -> Box(Modifier.fillMaxSize().background(th.bg))
         }
+        // a light veil over the whole screen, so the wallpaper still shows through
+        Box(Modifier.fillMaxSize().background(Color(0x3A000000)))
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.align(Alignment.Center).padding(horizontal = 30.dp, vertical = 24.dp),
         ) {
             when (th.id) {
-                "material" -> RobotMark(th.accent, th.panel)
-                "amoled" -> PulseMark(Color.White)
+                "material" -> Image(painterResource(R.drawable.ic_android_logo), null, Modifier.size(168.dp), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(th.accent))
+                "amoled" -> Box(Modifier.graphicsLayer { scaleX = 1.6f; scaleY = 1.6f }) { PulseMark(Color.White) }
                 "win7" -> Box(
-                    Modifier.size(136.dp).background(Brush.radialGradient(listOf(Color(0x66FFFFFF), Color.Transparent))),
+                    Modifier.size(210.dp).background(Brush.radialGradient(listOf(Color(0x66FFFFFF), Color.Transparent))),
                     contentAlignment = Alignment.Center,
-                ) { Image(painterResource(logoFor(th.id)), null, Modifier.size(104.dp)) }
-                else -> Image(painterResource(logoFor(th.id)), null, Modifier.size(104.dp))
+                ) { Image(painterResource(logoFor(th.id)), null, Modifier.size(168.dp)) }
+                else -> Image(painterResource(logoFor(th.id)), null, Modifier.size(168.dp))
             }
             Spacer(Modifier.height(18.dp))
             Text("Pulse", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
@@ -252,26 +275,89 @@ private fun PulseLine(color: Color, t: Float) {
     }
 }
 
-/** The Windows 7 opening backdrop, drawn here: a blue gradient, a white glow low on the right and soft green-white light streaks. */
+/** The Windows 7 opening backdrop, drawn here like its look-alike: a bright blue sky, soft light in the top-left and a white glow on the right, and several green-white ribbons sweeping across. */
 @Composable
 private fun Win7Backdrop() {
     Canvas(Modifier.fillMaxSize()) {
-        drawRect(Brush.verticalGradient(listOf(Color(0xFF3AA0F0), Color(0xFF1563C9), Color(0xFF0A3E8F))))
-        val glow = Offset(size.width * .78f, size.height * .72f)
-        drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .55f), Color.Transparent), center = glow, radius = size.width * .6f), radius = size.width * .6f, center = glow)
-        // the light streaks: curved bands that sweep across the screen
-        val streaks = listOf(
-            listOf(0f to .30f, .35f to .22f, .70f to .42f, 1f to .36f),
-            listOf(0f to .55f, .40f to .50f, .75f to .62f, 1f to .58f),
-            listOf(0f to .78f, .30f to .70f, .65f to .85f, 1f to .80f),
+        val w = size.width; val h = size.height
+        drawRect(Brush.linearGradient(listOf(Color(0xFF0E6FD0), Color(0xFF2A9BE8), Color(0xFF5CC3F2)), start = Offset(0f, 0f), end = Offset(w, h)))
+        drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .35f), Color.Transparent), center = Offset(w * .05f, h * .10f), radius = w * .7f), radius = w * .7f, center = Offset(w * .05f, h * .10f))
+        val glow = Offset(w * .82f, h * .70f)
+        drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .75f), Color.White.copy(alpha = .15f), Color.Transparent), center = glow, radius = w * .55f), radius = w * .55f, center = glow)
+        // the ribbons: a wide soft band, then a thin bright line on top of it
+        val ribbons = listOf(
+            listOf(0f to .22f, .30f to .10f, .62f to .38f, 1f to .26f) to 7f,
+            listOf(0f to .48f, .35f to .40f, .70f to .58f, 1f to .50f) to 9f,
+            listOf(0f to .70f, .40f to .62f, .75f to .80f, 1f to .72f) to 6f,
+            listOf(0f to .90f, .45f to .84f, .80f to .94f, 1f to .88f) to 5f,
         )
-        streaks.forEachIndexed { i, pts ->
+        ribbons.forEachIndexed { i, (pts, thick) ->
             val p = Path().apply {
-                moveTo(0f, size.height * pts[0].second)
-                cubicTo(size.width * pts[1].first, size.height * pts[1].second, size.width * pts[2].first, size.height * pts[2].second, size.width, size.height * pts[3].second)
+                moveTo(0f, h * pts[0].second)
+                cubicTo(w * pts[1].first, h * pts[1].second, w * pts[2].first, h * pts[2].second, w, h * pts[3].second)
             }
-            drawPath(p, Color(0xFFB8F0C8).copy(alpha = .35f - i * .05f), style = Stroke(width = 6.dp.toPx(), cap = StrokeCap.Round))
-            drawPath(p, Color.White.copy(alpha = .45f - i * .08f), style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round))
+            drawPath(p, Color(0xFFB8F5C8).copy(alpha = .30f - i * .03f), style = Stroke(width = thick.dp.toPx() * 2.4f, cap = StrokeCap.Round))
+            drawPath(p, Color(0xFFCFFFD9).copy(alpha = .55f - i * .06f), style = Stroke(width = thick.dp.toPx() * .5f, cap = StrokeCap.Round))
         }
+        // small sparkles near the glow
+        for (k in 0 until 14) {
+            val x = w * (.55f + (k * 37 % 40) / 100f); val y = h * (.45f + (k * 53 % 35) / 100f)
+            drawCircle(Color.White.copy(alpha = .5f), radius = 1.2.dp.toPx(), center = Offset(x, y))
+        }
+    }
+}
+
+/** A dusk sky with layered towers and their reflection in still water, drawn here as a look-alike backdrop. */
+@Composable
+private fun Win11Backdrop() {
+    Canvas(Modifier.fillMaxSize()) {
+        val w = size.width; val h = size.height
+        val horizon = h * .55f
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF1B1A36), Color(0xFF3E2D55), Color(0xFF8A4F6A), Color(0xFFE39A6A)), startY = 0f, endY = horizon))
+        // a far, lighter band of cloud near the horizon
+        drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color(0x55F2A48A), Color.Transparent), startY = horizon * .80f, endY = horizon), topLeft = Offset(0f, horizon * .80f), size = Size(w, horizon * .20f))
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF2A1F2E), Color(0xFF0B0910)), startY = horizon, endY = h), topLeft = Offset(0f, horizon), size = Size(w, h - horizon))
+        // the far towers (lighter), then the near ones
+        val far = Color(0xFF3A2F45); val near = Color(0xFF0C0A10)
+        for (i in 0 until 16) {
+            val x = w * (.02f + i * .062f)
+            val hh = h * (.05f + ((i * 29) % 9) * .011f)
+            drawRect(far, Offset(x, horizon - hh * .7f), Size(w * .018f, hh * .7f))
+        }
+        for (i in 0 until 9) {
+            val x = w * (.05f + i * .11f)
+            val hh = h * (.07f + ((i * 37) % 7) * .014f)
+            drawRect(near, Offset(x, horizon - hh), Size(w * .022f, hh))
+            drawRect(Color(0xFFFFC46B).copy(alpha = .9f), Offset(x + w * .008f, horizon - hh), Size(w * .006f, h * .004f))
+            drawRect(Color(0xFFFF7A59).copy(alpha = .9f), Offset(x + w * .008f, horizon - hh * .6f), Size(w * .006f, h * .004f))
+        }
+        drawRect(near, Offset(0f, horizon - h * .02f), Size(w, h * .03f))
+        // the reflection: broken light lines under the lights
+        for (i in 0 until 18) {
+            val y = horizon + h * (.015f + i * .016f)
+            drawRect(Color(0xFFFFC46B).copy(alpha = .05f + (i % 3) * .02f), Offset(w * (.12f + (i % 5) * .02f), y), Size(w * (.7f - i * .025f), 1.5f))
+        }
+    }
+}
+
+/** The opening picture the user picked (a content uri), or none for the look's own background. */
+object SplashPic {
+    var uri by mutableStateOf<String?>(null)
+    fun load(c: android.content.Context) { uri = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getString("splashUri", null) }
+    fun set(c: android.content.Context, v: String?) {
+        uri = v
+        c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putString("splashUri", v).apply()
+    }
+}
+
+/** Decodes the user's picture once, scaled down so a large photo does not stall the start. */
+@Composable
+private fun rememberPicture(uri: String): androidx.compose.ui.graphics.ImageBitmap? {
+    val ctx = LocalContext.current
+    return remember(uri) {
+        runCatching {
+            val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 }
+            ctx.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }
+        }.getOrNull()?.asImageBitmap()
     }
 }

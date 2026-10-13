@@ -3,6 +3,9 @@ package com.umutk.pulse
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
@@ -67,7 +70,7 @@ fun PRadio(on: Boolean, onClick: () -> Unit) {
 @Composable
 fun PChip(on: Boolean, label: String, onClick: () -> Unit) {
     val t = T
-    if (t.material) { FilterChip(on, onClick, { Text(label) }); return }
+    if (t.material) { FilterChip(on, onClick, { Text(label) }, shape = CircleShape, colors = FilterChipDefaults.filterChipColors(selectedContainerColor = Look.accent.copy(alpha = .16f), selectedLabelColor = Look.accent)); return }
     if (t.bevel) {
         Box(Modifier.background(t.bg).bevel(!on).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 6.dp).offset(if (on) 1.dp else 0.dp, if (on) 1.dp else 0.dp)) {
             Text(label, color = Color.Black, fontSize = 13.sp, fontWeight = if (on) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal)
@@ -81,16 +84,13 @@ fun PChip(on: Boolean, label: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Modifier = Modifier) {
+fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Modifier = Modifier, onDone: (() -> Unit)? = null) {
     val t = T
-    if (t.material) {
-        OutlinedTextField(value, onChange, modifier, singleLine = true, placeholder = { Text(hint) }, shape = RoundedCornerShape(t.radius.coerceAtMost(14.dp)),
-            colors = OutlinedTextFieldDefaults.colors(focusedTextColor = t.text, unfocusedTextColor = t.text, focusedBorderColor = Look.accent, unfocusedBorderColor = t.line, cursorColor = Look.accent))
-        return
-    }
-    val shape = RoundedCornerShape(t.radius.coerceAtMost(8.dp))
-    BasicTextField(value, onChange, modifier.background(if (t.dark) Color.White.copy(alpha = .06f) else Color.White, shape).then(if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, t.line, shape)),
-        singleLine = true, textStyle = TextStyle(color = if (t.dark) t.text else Color.Black, fontSize = 14.sp), cursorBrush = SolidColor(Look.accent),
+    val shape = if (t.material) CircleShape else RoundedCornerShape(t.radius.coerceAtMost(8.dp)) // M3 search / text field: full pill
+    val fill = if (t.material) t.line.copy(alpha = .35f) else if (t.dark) Color.White.copy(alpha = .06f) else Color.White
+    val edge = if (t.material) Modifier else if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, t.line, shape)
+    BasicTextField(value, onChange, modifier.background(fill, shape).then(edge),
+        singleLine = true, keyboardOptions = KeyboardOptions(imeAction = if (onDone != null) ImeAction.Send else ImeAction.Default), keyboardActions = KeyboardActions(onSend = { onDone?.invoke() }), textStyle = TextStyle(color = if (t.material || t.dark) t.text else Color.Black, fontSize = if (t.material) 16.sp else 14.sp), cursorBrush = SolidColor(Look.accent),
         decorationBox = { inner -> Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("search", t.sub, 16.dp); Spacer(Modifier.width(8.dp))
             Box(Modifier.weight(1f)) { if (value.isEmpty()) Text(hint, color = t.sub, fontSize = 14.sp); inner() }
@@ -100,7 +100,7 @@ fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Mo
 @Composable
 fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, onDone: () -> Unit) {
     val t = T
-    if (t.material) { Slider(value, onChange, valueRange = range, onValueChangeFinished = onDone, colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent)); return }
+    if (t.material) { Slider(value, onChange, valueRange = range, onValueChangeFinished = onDone, colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent, inactiveTrackColor = Look.accent.copy(alpha = .24f))); return }
     val frac = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
     BoxWithConstraints(Modifier.fillMaxWidth().height(32.dp).pointerInput(Unit) {
         detectTapGestures { o -> onChange(range.start + (o.x / size.width).coerceIn(0f, 1f) * (range.endInclusive - range.start)); onDone() }
@@ -116,9 +116,10 @@ fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointR
 /** A dialog drawn as a small themed window instead of a Material AlertDialog. */
 @Composable
 fun PDialog(title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit) {
-    val t = T
+    val t = LocalWindowLook.current
     androidx.compose.ui.window.Dialog(onDismiss) {
-        Column(Modifier.fillMaxWidth().background(t.bg, RoundedCornerShape(t.radius.coerceAtMost(12.dp))).then(if (t.bevel) Modifier.bevel(true) else Modifier.border(1.dp, t.line, RoundedCornerShape(t.radius.coerceAtMost(12.dp))))) {
+        val shape = if (t.material) RoundedCornerShape(t.radius) else RoundedCornerShape(t.radius.coerceAtMost(12.dp))
+        Column(Modifier.fillMaxWidth().background(if (t.material) t.panel else t.bg, shape).then(if (t.bevel) Modifier.bevel(true) else if (t.material) Modifier else Modifier.border(1.dp, t.line, shape))) {
             if (t.title != null) Box(Modifier.fillMaxWidth().background(t.title).padding(8.dp)) { Text(title, color = t.titleText, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) }
             else Text(title, color = t.text, fontSize = 18.sp, modifier = Modifier.padding(start = 20.dp, top = 18.dp, end = 20.dp))
             Text(text, color = if (t.tabs && t.id != "win10") Color.Black else t.sub, fontSize = 14.sp, modifier = Modifier.padding(20.dp))

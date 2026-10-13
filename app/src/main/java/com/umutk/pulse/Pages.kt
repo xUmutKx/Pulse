@@ -1,18 +1,23 @@
 package com.umutk.pulse
 
 import android.content.Intent
+import com.umutk.pulse.features.themeCredit
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import com.umutk.pulse.features.DonutChart
+import com.umutk.pulse.features.NoteCount
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
@@ -22,6 +27,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -65,16 +71,19 @@ fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false
             Text(text, color = if (danger) Color(0xFFB00020) else t.text, fontSize = 13.sp)
         }
     } else {
-        Button(onClick, modifier, shape = RoundedCornerShape(t.radius.coerceAtMost(12.dp)), colors = ButtonDefaults.buttonColors(containerColor = if (danger) Color(0xFFC42B1C) else Look.accent, contentColor = Color.White), contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
-            Text(text, fontSize = 13.sp)
+        val bg = if (!t.material) (if (danger) Color(0xFFC42B1C) else Look.accent) else if (danger) MaterialTheme.colorScheme.error else Look.accent
+        val fg = if (!t.material) Color.White else if (danger) MaterialTheme.colorScheme.onError else onAccent(bg)
+        Button(onClick, modifier, shape = if (t.material) CircleShape else RoundedCornerShape(t.radius.coerceAtMost(12.dp)), colors = ButtonDefaults.buttonColors(containerColor = bg, contentColor = fg), contentPadding = if (t.material) PaddingValues(horizontal = 24.dp, vertical = 10.dp) else PaddingValues(horizontal = 14.dp, vertical = 6.dp)) {
+            Text(text, fontSize = if (t.material) 14.sp else 13.sp, fontWeight = if (t.material) FontWeight.Medium else null)
         }
     }
 }
 
 @Composable
-private fun Header(text: String, trailing: String = "") {
+private fun Header(text: String, trailing: String = "", onBack: (() -> Unit)? = null) {
     Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
-        Text(text, color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        if (onBack != null) Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("chevron", T.text, 20.dp, Modifier.rotate(90f)) }
+        Text(text, color = T.text, fontSize = 22.sp, fontWeight = if (T.material) FontWeight.Normal else FontWeight.SemiBold, modifier = Modifier.weight(1f))
         if (trailing.isNotEmpty()) Text(trailing, color = T.sub, fontSize = 12.sp)
     }
 }
@@ -86,14 +95,38 @@ fun HistoryPage() {
     val ctx = LocalContext.current
     var granted by remember { mutableStateOf(Extra.usageGranted(ctx)) }
     var rows by remember { mutableStateOf<List<UsageRow>>(emptyList()) }
+    var unlocks by remember { mutableStateOf(0) }
+    var notes by remember { mutableStateOf(0) }
+    var notesOn by remember { mutableStateOf(NoteCount.enabled(ctx)) }
+    var pie by remember { mutableStateOf(false) }
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
-        val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) granted = Extra.usageGranted(ctx) }
+        val ob = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) { granted = Extra.usageGranted(ctx); notesOn = NoteCount.enabled(ctx) }
+        }
         lifecycle.addObserver(ob); onDispose { lifecycle.removeObserver(ob) }
     }
-    LaunchedEffect(granted) { while (granted) { rows = withContext(Dispatchers.IO) { Extra.usageToday(ctx) }; delay(10000) } }
-    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+    LaunchedEffect(granted) {
+        while (granted) {
+            rows = withContext(Dispatchers.IO) { Extra.usageToday(ctx) }
+            unlocks = withContext(Dispatchers.IO) { Extra.unlocksToday(ctx) }
+            delay(10000)
+        }
+    }
+    LaunchedEffect(Unit) { while (true) { notes = NoteCount.today(ctx); delay(5000) } }
+    val total = rows.sumOf { it.ms }
+    Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Header("App history", "today")
+        PCard {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                HistoryStat("Screen time", if (granted) hms(total) else "-")
+                HistoryStat("Unlocks", if (granted) "$unlocks" else "-")
+                HistoryStat("Notifications", if (notesOn) "$notes" else "Off")
+            }
+            if (!notesOn) PButton("Allow notification count") {
+                ctx.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+        }
         if (!granted) {
             PCard {
                 Text("Showing how long each app was open needs the \"usage access\" permission.", color = T.text, fontSize = 14.sp)
@@ -101,20 +134,37 @@ fun HistoryPage() {
             }
         } else if (rows.isEmpty()) Center("Nothing recorded today")
         else {
-            val top = rows.firstOrNull()?.ms?.coerceAtLeast(1) ?: 1
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(rows.take(80), key = { it.pkg }) { r ->
-                    Column(Modifier.padding(vertical = 6.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            AppIcon(r.pkg, 26.dp); Spacer(Modifier.width(8.dp))
-                            Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
-                            Text(hms(r.ms), color = T.sub, fontSize = 13.sp)
+            PButton(if (pie) "Show list" else "Show pie chart", Modifier.fillMaxWidth()) { pie = !pie }
+            if (pie) {
+                val slices = rows.take(8).map { it.label to it.ms } +
+                    (rows.drop(8).sumOf { it.ms }.takeIf { it > 0 }?.let { listOf("Others" to it) }.orEmpty())
+                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
+                    DonutChart(slices, Modifier.size(260.dp), centerText = hms(total))
+                }
+            } else {
+                val top = rows.firstOrNull()?.ms?.coerceAtLeast(1) ?: 1
+                LazyColumn(Modifier.weight(1f)) {
+                    items(rows.take(80), key = { it.pkg }) { r ->
+                        Column(Modifier.padding(vertical = 6.dp)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                AppIcon(r.pkg, 26.dp); Spacer(Modifier.width(8.dp))
+                                Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
+                                Text(hms(r.ms), color = T.sub, fontSize = 13.sp)
+                            }
+                            BarMeter(r.ms.toFloat() / top, Look.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
                         }
-                        BarMeter(r.ms.toFloat() / top, Look.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun HistoryStat(label: String, value: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(value, color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Text(label, color = T.sub, fontSize = 11.sp)
     }
 }
 
@@ -127,7 +177,7 @@ fun StartupPage() {
     var list by remember { mutableStateOf<List<Boot>>(emptyList()) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) { list = withContext(Dispatchers.IO) { Startup.list(ctx) } }
-    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+    Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Header("Startup apps", "${list.count { it.enabled }} enabled / ${list.size}")
         Text(if (s.root) "Apps that start themselves when the phone boots. Switch one off and it stays quiet at boot." else "You can see the list; switching apps on and off needs root.", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
         LazyColumn(Modifier.fillMaxSize()) {
@@ -158,7 +208,7 @@ fun DetailsPage() {
     val shown = when (sort) { "cpu" -> f.sortedByDescending { it.cpu }; "mem" -> f.sortedByDescending { it.rssMb }; "name" -> f.sortedBy { it.name.lowercase() }; "user" -> f.sortedBy { it.user }; "vsz" -> f.sortedByDescending { it.vszMb }; else -> f.sortedBy { it.pid } }
     val mono = FontFamily.Monospace
     val cols = listOf(Triple("PID", "pid", 60.dp), Triple("Status", "", 78.dp), Triple("User", "user", 92.dp), Triple("CPU", "cpu", 52.dp), Triple("Memory", "mem", 76.dp), Triple("Virtual", "vsz", 84.dp), Triple("Priority", "", 66.dp), Triple("Parent", "", 66.dp))
-    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+    Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Header("Details", "${list.size} processes · ${list.count { it.state == "R" }} running")
         PField(q, { q = it }, "Filter by name, PID or user", Modifier.fillMaxWidth().padding(bottom = 6.dp))
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
@@ -185,10 +235,10 @@ fun DevicePage() {
     val ctx = LocalContext.current
     var secs by remember { mutableStateOf<List<Section>>(emptyList()) }
     LaunchedEffect(Unit) { while (true) { secs = withContext(Dispatchers.IO) { Device.sections(ctx) }; delay(3000) } }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(if (T.material) 12.dp else 10.dp)) {
         Header("Device")
-        secs.forEach { sc -> PCard { Text(sc.title, color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold); InfoRows(sc.rows) } }
-        PCard { Text("CPU", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold); InfoRows(remember { Extra.cpuRows() }) }
+        secs.forEach { sc -> PCard { Text(sc.title, color = Look.accent, fontSize = if (T.material) 16.sp else 15.sp, fontWeight = if (T.material) FontWeight.Medium else FontWeight.SemiBold); InfoRows(sc.rows) } }
+        PCard { Text("CPU", color = Look.accent, fontSize = if (T.material) 16.sp else 15.sp, fontWeight = if (T.material) FontWeight.Medium else FontWeight.SemiBold); InfoRows(remember { Extra.cpuRows() }) }
         Spacer(Modifier.height(12.dp))
     }
 }
@@ -209,7 +259,7 @@ fun ServicesPage() {
     val runKeys = remember(running) { running.map { it.pkg + "/" + it.cls }.toSet() }
     val base = if (tab == "run") running else if (tab == "off") declared.filter { !it.enabled } else declared
     val list = base.filter { q.isBlank() || it.label.contains(q, true) || it.cls.contains(q, true) || it.pkg.contains(q, true) }
-    Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
+    Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Header("Services", "${running.size} running · ${declared.size} declared · ${declared.count { !it.enabled }} disabled")
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip(tab == "run", "Running") { tab = "run" }; PChip(tab == "all", "All declared") { tab = "all" }; PChip(tab == "off", "Disabled") { tab = "off" }
@@ -251,21 +301,22 @@ fun SettingsPage() {
         Cat("speed", "speed", "Refresh rate", "${Cfg.interval / 1000f} s"),
         Cat("proc", "processes", "Processes", if (Cfg.confirmKill) "Ask before ending" else "End without asking"),
         Cat("root", "cpu", "Permissions", if (Shell.root == true) "Root available" else "No root (limited data)"),
-        Cat("about", "info", "About", "Pulse 0.10"),
+        Cat("about", "info", "About", "Version, privacy, licences"),
     )
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(if (T.material) 12.dp else 8.dp)) {
+        Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title, onBack = if (cat != null) ({ cat = null }) else null)
         when (cat) {
             null -> cats.forEach { c ->
                 PCard(Modifier.clickable { cat = c.id }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PIcon(c.icon, Look.accent, 28.dp); Spacer(Modifier.width(14.dp))
-                        Column(Modifier.weight(1f)) { Text(c.title, color = T.text, fontSize = 16.sp); Text(c.sub, color = T.sub, fontSize = 12.sp) }
+                        Column(Modifier.weight(1f)) { Text(c.title, color = T.text, fontSize = 16.sp, fontWeight = if (T.material) FontWeight.Medium else null); Text(c.sub, color = T.sub, fontSize = 12.sp) }
                         Text("›", color = T.sub, fontSize = 22.sp)
                     }
                 }
             }
             "look" -> {
+                if (T.material) MaterialSection(ctx) else {
                 Text("Appearance mode", color = T.sub, fontSize = 12.sp)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf("system" to "System", "light" to "Light", "dark" to "Dark").forEach { (id, n) ->
@@ -280,17 +331,20 @@ fun SettingsPage() {
                     }
                     Text("Mica: a quiet backdrop tinted only slightly by the wallpaper. Mica Alt is a touch deeper, Acrylic is more see-through with a bright edge, Glass is light.", color = T.sub, fontSize = 11.sp)
                 }
+                }
                 Text("Theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                 Themes.chunked(2).forEach { pair ->
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         pair.forEach { th -> Column(Modifier.weight(1f).clickable { Cfg.setTheme(ctx, th.id) }.then(if (th.id == Look.theme.id) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier.border(1.dp, T.line, RoundedCornerShape(10.dp))).padding(8.dp)) {
                             ThemePreview(th)
                             Text(th.name, color = T.text, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                            themeCredit(th.id)?.let { Text(it, color = T.sub, fontSize = 10.sp) }
+                            ThemeWallpaperRow(th.id)
                         } }
                         if (pair.size == 1) Spacer(Modifier.weight(1f))
                     }
                 }
-                if ((!T.tabs || T.id == "win10") && T.id != "material") {
+                if (T.material || !T.tabs || T.id == "win10") {
                     Text("Accent colour", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         Box(Modifier.size(34.dp).background(T.accent, androidx.compose.foundation.shape.CircleShape).then(if (Look.accentIdx == -1) Modifier.border(3.dp, T.text, androidx.compose.foundation.shape.CircleShape) else Modifier).clickable { Cfg.setAccent(ctx, -1) })
@@ -329,10 +383,44 @@ fun SettingsPage() {
     }
 }
 
+/** Settings > Appearance for the Material looks: Material You, mode or AMOLED black, accent and corner size. */
+@Composable
+private fun MaterialSection(ctx: android.content.Context) {
+    val canDynamic = android.os.Build.VERSION.SDK_INT >= 31
+    val dynamicOn = T.id == "material" && Look.dynamic && canDynamic
+    Text("Material", color = Look.accent, fontSize = 15.sp)
+    if (T.id == "material") Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Material You", color = T.text, fontSize = 15.sp)
+            Text(if (canDynamic) "Colours from your wallpaper" else "Needs Android 12 or newer", color = T.sub, fontSize = 12.sp)
+        }
+        PSwitch(Look.dynamic && canDynamic, { Cfg.setDynamic(ctx, it) }, enabled = canDynamic)
+    }
+    Text("Mode", color = T.sub, fontSize = 12.sp)
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("system" to "System", "light" to "Light", "dark" to "Dark").forEach { (id, n) ->
+            PChip(T.id == "material" && Look.mode == id, n) { Cfg.setTheme(ctx, "material"); Cfg.setMode(ctx, id) }
+        }
+    }
+    Text("Accent colour", color = T.sub, fontSize = 12.sp)
+    val own = Themes.first { it.id == T.id }.accent
+    Row(Modifier.alpha(if (dynamicOn) .38f else 1f), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        (-1 until Accents.size).forEach { i ->
+            Box(Modifier.size(34.dp).background(if (i < 0) own else Accents[i], androidx.compose.foundation.shape.CircleShape)
+                .then(if (Look.accentIdx == i) Modifier.border(3.dp, T.text, androidx.compose.foundation.shape.CircleShape) else Modifier)
+                .clickable(enabled = !dynamicOn) { Cfg.setAccent(ctx, i) })
+        }
+    }
+    Text("Corner size", color = T.sub, fontSize = 12.sp)
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf("small" to "Small", "medium" to "Medium", "large" to "Large").forEach { (id, n) -> PChip(Look.corner == id, n) { Cfg.setCorner(ctx, id) } }
+    }
+}
+
 /** Tiny picture of what a theme looks like: its window, nav, card edge and graph style. */
 @Composable
 private fun ThemePreview(th: PTheme) {
-    val winBg = if (th.glass) androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF7FB2E5), Color(0xFFDCE9F7))) else androidx.compose.ui.graphics.SolidColor(th.bg)
+    val winBg = th.wall ?: androidx.compose.ui.graphics.SolidColor(th.bg)
     val cardShape = RoundedCornerShape(th.radius.coerceAtMost(8.dp))
     Box(Modifier.fillMaxWidth().height(78.dp).background(winBg).border(1.dp, th.line)) {
         Column {
@@ -347,7 +435,7 @@ private fun ThemePreview(th: PTheme) {
                     }
                 }
                 Box(Modifier.fillMaxSize()
-                    .background(if (th.glass) th.panel.copy(alpha = .72f) else if (th.classicGraph) Color.Black else th.panel, cardShape)
+                    .background(if (th.glassA > 0f) th.panel.copy(alpha = th.glassA) else if (th.classicGraph) Color.Black else th.panel, cardShape)
                     .then(if (th.bevel) Modifier.bevel(false) else if (th.classicGraph || th.tabs) Modifier.border(1.dp, th.line, cardShape) else if (!th.material) Modifier.border(1.dp, th.line, cardShape) else Modifier)) {
                     androidx.compose.foundation.Canvas(Modifier.fillMaxSize().padding(3.dp)) {
                         val p = androidx.compose.ui.graphics.Path()

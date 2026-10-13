@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = 29
         targetSdk = 34
-        versionCode = 26
-        versionName = "0.10.16"
+        versionCode = 50
+        versionName = "0.10.40"
         ndk { abiFilters += "arm64-v8a" }
     }
     buildTypes {
@@ -28,11 +28,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; aidl = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
 dependencies {
+    implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation(platform("androidx.compose:compose-bom:2024.09.02"))

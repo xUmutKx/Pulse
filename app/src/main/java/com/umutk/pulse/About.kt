@@ -61,11 +61,19 @@ fun AboutPage() {
             InfoRows(listOf("Version" to ver, "Package" to ctx.packageName, "Android" to "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})", "Device" to "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"))
         }
         PButton("GitHub · xUmutKx/Pulse", Modifier.fillMaxWidth()) { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/xUmutKx/Pulse")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        Text("A task manager for Android with the look of Windows Task Manager, plus a full hardware and system browser.", color = T.sub, fontSize = 13.sp)
+        Text("A task manager for Android with the look of Windows, plus a file explorer, downloads, an app installer, network usage, a 20-tool toolkit, widgets and a terminal.", color = T.sub, fontSize = 13.sp)
+        PCard {
+            Text("Device troubleshoot", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text("A checklist of common Android problems, taken from AndroDoc (the troubleshooting app by UmutK). Each item shows what to check and how to fix it. Fixes are shown as text; Pulse does not run them for you.", color = T.text, fontSize = 13.sp)
+        }
+        PCard {
+            Text("Authenticator", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text("Two-factor codes (TOTP, 6 digits, 30 seconds). Add an account with its base32 secret or an otpauth:// link. Accounts are stored encrypted with a key kept in the Android Keystore.", color = T.text, fontSize = 13.sp)
+        }
         PCard {
             Text("Privacy", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text("No data is shared. Pulse reads your phone's numbers on the phone and keeps them there. The only network use is the latency test, and only when you press Start.", color = T.text, fontSize = 13.sp)
+            Text("No data is shared. Pulse reads your phone's numbers on the phone and keeps them there. The only network use is the latency test, and only when you press Start. Authenticator secrets never leave the phone.", color = T.text, fontSize = 13.sp)
         }
-        Text("Icons in the Windows themes: Microsoft Fluent System Icons (MIT).", color = T.sub, fontSize = 11.sp)
+        Text("Icons in the Windows themes: Microsoft Fluent System Icons (MIT). The Shizuku API files are from RikkaApps Shizuku (MIT).", color = T.sub, fontSize = 11.sp)
     }
 }

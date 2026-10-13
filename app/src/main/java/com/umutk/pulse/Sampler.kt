@@ -2,10 +2,15 @@ package com.umutk.pulse
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.IntentFilter
 import android.net.TrafficStats
 import android.os.BatteryManager
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import kotlinx.coroutines.flow.MutableStateFlow
+import rikka.shizuku.Shizuku
 import java.io.File
 
 data class Proc(val pid: Int, val name: String, val rssMb: Int, val cpu: Float = 0f, val user: String = "", val state: String = "", val vszMb: Int = 0, val nice: Int = 0, val ppid: Int = 0)
@@ -36,21 +41,40 @@ data class Snap(
 
 data class Core(val usage: Int, val mhz: Int)
 
-/** Runs a command as root when available, otherwise as the app user. */
+/** Runs a command through Shizuku (shell uid) when it is running and granted, otherwise as root when available, otherwise as the app user. */
 object Shell {
     @Volatile var root: Boolean? = null
+    /** 0 not running, 1 running without permission, 2 running and granted. The Installer page shows it. */
+    var shizuku by mutableIntStateOf(0)
 
-    fun run(cmd: String): String = try {
-        val useRoot = root ?: false
-        val p = ProcessBuilder(if (useRoot) listOf("su", "-c", cmd) else listOf("sh", "-c", cmd)).redirectErrorStream(true).start()
+    fun run(cmd: String): String =
+        if (shizukuOk()) exec { Shizuku.newProcess(arrayOf("sh", "-c", "exec 2>&1; $cmd"), null, null) }
+        else exec { ProcessBuilder(if (root == true) listOf("su", "-c", cmd) else listOf("sh", "-c", cmd)).redirectErrorStream(true).start() }
+
+    private fun exec(start: () -> Process): String = try {
+        val p = start()
         val out = p.inputStream.bufferedReader().readText()
         p.waitFor()
         out
     } catch (e: Exception) { "" }
 
+    fun shizukuOk(): Boolean = runCatching {
+        Shizuku.pingBinder() && !Shizuku.isPreV11() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
+    }.getOrDefault(false)
+
+    /** Keeps [shizuku] current; called once from MainActivity. */
+    fun watchShizuku() {
+        val update = { shizuku = if (!Shizuku.pingBinder()) 0 else if (shizukuOk()) 2 else 1 }
+        Shizuku.addBinderReceivedListenerSticky { update() }
+        Shizuku.addBinderDeadListener { update() }
+        Shizuku.addRequestPermissionResultListener { _, _ -> update() }
+    }
+
+    fun askShizuku() { if (shizuku == 1) Shizuku.requestPermission(1) }
+
     fun detectRoot(): Boolean {
         root = true
-        val ok = run("id").contains("uid=0")
+        val ok = exec { ProcessBuilder("su", "-c", "id").redirectErrorStream(true).start() }.contains("uid=0")
         root = ok
         return ok
     }
@@ -150,6 +174,7 @@ object Sampler {
             root = Shell.root == true,
             gpu = g, ramCachedMb = cached, swapTotalMb = swapT, swapUsedMb = swapU, rxTotal = rx, txTotal = tx, procs = pc.first, threads = pc.second,
         )
+        com.umutk.pulse.widgets.WidgetData.save(ctx, snap.value)
         push("cpu", total.toFloat()); push("ram", if (totalMb == 0) 0f else 100f * usedMb / totalMb); push("gpu", g.coerceAtLeast(0).toFloat())
         push("temp", snap.value.cpuTemp); push("bat", bpct.toFloat()); push("ma", kotlin.math.abs(bma).toFloat()); push("down", down.toFloat()); push("up", up.toFloat())
         cores.forEachIndexed { i, cr -> push("c$i", cr.usage.toFloat()) }

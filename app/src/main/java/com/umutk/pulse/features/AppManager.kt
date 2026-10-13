@@ -1,18 +1,24 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.WinAlert
+import androidx.compose.material3.TextButton
 import android.app.AppOpsManager
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.content.pm.PackageManager
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -23,25 +29,31 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.AppIcon
 import com.umutk.pulse.Extra
+import com.umutk.pulse.Look
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
 import com.umutk.pulse.PHead
+import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
 private enum class AmFilter(val label: String) {
-    ALL("All"), USER("User"), SYSTEM("System"), DISABLED("Disabled"), RESTRICTED("Has battery restriction"),
+    ALL("All"), USER("User"), SYSTEM("System"), DISABLED("Disabled"), RESTRICTED("Has battery restriction"), MODULES("Xposed modules"),
 }
 
 private enum class AmSort(val label: String) {
@@ -58,6 +70,7 @@ private class AmRow(
     val system: Boolean,
     val disabled: Boolean,
     val restricted: Boolean,
+    val module: Boolean,
 )
 
 // Background-run app op: anything other than ALLOWED means the system restricts it.
@@ -69,7 +82,7 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
     val pm = ctx.packageManager
     val lastUsed = if (Extra.usageGranted(ctx)) lastUsedByPackage(ctx) else emptyMap()
     val ops = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
-    return pm.getInstalledPackages(0).mapNotNull { p ->
+    return pm.getInstalledPackages(PackageManager.GET_META_DATA).mapNotNull { p ->
         val ai = p.applicationInfo ?: return@mapNotNull null
         AmRow(
             pkg = p.packageName,
@@ -82,6 +95,7 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
             system = ai.flags and ApplicationInfo.FLAG_SYSTEM != 0,
             disabled = !ai.enabled,
             restricted = isRestrictedInBackground(ops, ai),
+            module = isXposedModule(ai),
         )
     }
 }
@@ -109,6 +123,7 @@ private fun AmRow.matches(filter: AmFilter): Boolean = when (filter) {
     AmFilter.SYSTEM -> system
     AmFilter.DISABLED -> disabled
     AmFilter.RESTRICTED -> restricted
+    AmFilter.MODULES -> module
 }
 
 private fun comparatorFor(sort: AmSort): Comparator<AmRow> = when (sort) {
@@ -123,8 +138,10 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
     val ctx = LocalContext.current
     var rows by remember { mutableStateOf<List<AmRow>?>(null) }
     var query by remember { mutableStateOf("") }
+    var extractFor by remember { mutableStateOf<AmRow?>(null) }
     var filter by remember { mutableStateOf(AmFilter.ALL) }
     var sort by remember { mutableStateOf(AmSort.NAME) }
+    val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
         rows = withContext(Dispatchers.IO) { loadAmRows(ctx) }
@@ -140,12 +157,26 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             PHead("App manager", if (rows == null) "Loading" else "${shown.size} / ${all.size}")
+            extractFor?.let { a ->
+                WinAlert(
+                    onDismissRequest = { extractFor = null },
+                    title = { Text("Extract APK?") },
+                    text = { Text("${a.label} will be copied to Downloads/Pulse/extract.") },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            extractFor = null
+                            scope.launch { Toast.makeText(ctx, withContext(Dispatchers.IO) { extractApp(ctx, a.pkg) }, Toast.LENGTH_LONG).show() }
+                        }) { Text("Extract") }
+                    },
+                    dismissButton = { TextButton(onClick = { extractFor = null }) { Text("Cancel") } },
+                )
+            }
             PField(query, { query = it }, "Search", Modifier.fillMaxWidth())
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 AmFilter.entries.forEach { f -> PChip(filter == f, f.label) { filter = f } }
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AmSort.entries.forEach { s -> PChip(sort == s, "↕ ${s.label}") { sort = s } }
+                AmSort.entries.forEach { s -> PChip(sort == s, s.label) { sort = s } }
             }
         }
         items(shown, key = { it.pkg }) { a ->
@@ -154,7 +185,10 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                     AppIcon(a.pkg, 36.dp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(a.label, color = T.text, fontSize = 14.sp, maxLines = 1)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(a.label, color = T.text, fontSize = 14.sp, maxLines = 1)
+                            if (a.module) { Spacer(Modifier.width(6.dp)); ModuleBadge() }
+                        }
                         val tags = listOfNotNull(
                             a.version.ifBlank { null },
                             "%.1f MB".format(a.sizeBytes / 1048576f),
@@ -162,6 +196,13 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                             "Restricted".takeIf { a.restricted },
                         )
                         Text(tags.joinToString(" · "), color = T.sub, fontSize = 11.sp, maxLines = 1)
+                    }
+                    Column(
+                        Modifier.width(52.dp).clickable { extractFor = a }.semantics { contentDescription = "Extract APK" },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        PIcon("extract", Look.accent, 20.dp)
+                        Text("APK", color = Look.accent, fontSize = 10.sp)
                     }
                 }
             }

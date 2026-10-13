@@ -14,7 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Folder
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
+import com.umutk.pulse.WinAlert
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
@@ -206,7 +206,7 @@ fun LargeFilesScreen(root: File, onBack: () -> Unit) {
     }
 
     if (confirmDelete) {
-        AlertDialog(
+        WinAlert(
             onDismissRequest = { confirmDelete = false },
             title = { Text("Delete ${selected.size} file(s)?") },
             text = { Text("${formatSize(chosenBytes)} will be permanently deleted. This cannot be undone.") },

@@ -46,6 +46,7 @@ fun Modifier.backdrop(kind: String): Modifier {
     val t = T
     val tint = micaTint()
     val grain = remember { grainPoints(700) }
+    t.wall?.let { if (!t.tabs) return this.background(it) }   // liquid glass themes: the coloured backdrop
     if (kind == "none" || t.tabs) return this.background(t.bg)
     val base = t.bg
     // real Mica is grey with a faint wallpaper hue; the kinds differ in how far they lean towards the tint
@@ -70,6 +71,7 @@ fun Modifier.backdrop(kind: String): Modifier {
 @Composable
 fun Modifier.layer(kind: String, shape: androidx.compose.ui.graphics.Shape, edge: Dp = 1.dp): Modifier {
     val t = T
+    if (t.glassA > 0f && !t.tabs) return this.background(t.panel.copy(alpha = t.glassA), shape).border(1.dp, glassEdge(t), shape)
     if (kind == "none" || t.tabs) return this.background(t.panel, shape)
     val alpha = when (kind) { "acrylic" -> .58f; "tabbed" -> .5f; "micaAlt" -> .74f; else -> .8f }
     return this.background(t.panel.copy(alpha = alpha), shape)

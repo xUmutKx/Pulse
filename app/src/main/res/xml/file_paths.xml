@@ -2,4 +2,6 @@
 <paths>
     <!-- the whole shared storage: downloads can go to any folder the user picks -->
     <external-path name="shared" path="." />
+    <!-- installer copies of picked APKs (see features/Installer.kt) -->
+    <cache-path name="installer" path="installer/" />
 </paths>
