@@ -4,10 +4,6 @@ Pulse is a task manager for Android that looks like the Windows one. It shows li
 
 Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK is about 11 MB.
 
-## First start
-
-The first time you open Pulse, a welcome screen lists what the app does and the open-source parts it is built from. Tap **Start** to go on; it does not come back. The language is set in Settings > Language (phone language, English or Türkçe).
-
 ## Features
 
 ### Task manager
@@ -31,7 +27,7 @@ The first time you open Pulse, a welcome screen lists what the app does and the 
 ### Files and install
 
 - **Files**: a file explorer with a trash folder. Deleted files go to `.pulse_trash` until the next delete, so Undo can bring them back.
-- **Installer**: installs APK, APKS, APKM, XAPK and zip bundles. Modes are dialog, background, auto and silent. Silent install uses root or Shizuku. The installer detects Xposed modules and has an LSPosed button. You can require biometrics before each install.
+- **Installer**: installs APK, APKS, APKM, XAPK and zip bundles. Modes are dialog, background, auto and silent. Silent install uses root or Shizuku. The installer detects Xposed modules and has an LSPosed button. You can require biometrics before each install. The install window has three looks (Windows 11, Material or AMOLED black) and three loading styles: round, rounded bar, or wave. The loader is always white.
 - **Downloads**: several connections for files the server can split, and downloads keep running in the background. Paste a link, or share a link from your browser to Pulse.
 - **Extract APK**: copies an installed app to `Downloads/Pulse/extract`. Split apps are saved as one `.apks` file.
 
@@ -39,7 +35,6 @@ The first time you open Pulse, a welcome screen lists what the app does and the 
 
 - **Toolkit**: 20 tools, including compass, level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder.
 - **Terminal**: runs commands on the phone's shell, with ADB-style quick commands (model, battery, packages, logcat and more). A Run in Termux button sends a command to Termux instead.
-- **RAM**: memory history and a Free memory button that stops background apps (root).
 - **Network usage**: data use per app, split into mobile and Wi-Fi.
 - **DNS**: Private DNS as Auto, Off or Manual with a host name. Needs root or Shizuku.
 - **Watchdog**: every 15 minutes it restarts the monitor and any running downloads that Android has stopped.
@@ -57,6 +52,10 @@ Pulse has six looks:
 - Material You, which uses the wallpaper colours on Android 12 and newer
 
 You can choose light, dark or the system setting. The Windows 11, Windows 10 and Material looks have an accent colour choice. The sidebar looks have a backdrop effect: None, Mica, Mica Alt, Acrylic or Glass. Pop-up windows, dialogs and menus can use the Windows, Material or AMOLED black look.
+
+## Language
+
+Pulse follows the phone language by default. You can pick English or Türkçe instead in Settings > Language.
 
 ## Permissions
 
@@ -84,7 +83,6 @@ Pulse works without root. Root or Shizuku unlock more.
 - the full process list, kernel data and temperature zones
 - services
 - startup app switches
-- the Free memory button in RAM
 - cache trimming in the cache cleaner
 - the screenshot tool and the root tab in Files
 - silent install, downgrades that keep app data, and restoring app data
@@ -116,36 +114,20 @@ Pulse's own code has no licence file yet.
 
 ## Screenshots
 
-Screenshots go in `docs/screenshots/`, with the names below.
+Screenshots are in `docs/screenshots/`.
 
 ### Processes
 
-![Processes](docs/screenshots/01-processes.png)
+![Processes](docs/screenshots/processes.png)
 
 ### Performance
 
-![Performance](docs/screenshots/02-performance.png)
+![Performance](docs/screenshots/performance.png)
 
-### App history
+### Overview
 
-![App history](docs/screenshots/03-app-history.png)
+![Overview](docs/screenshots/overview.png)
 
-### Installer
+### CPU cores
 
-![Installer](docs/screenshots/04-installer.png)
-
-### Toolkit
-
-![Toolkit](docs/screenshots/05-toolkit.png)
-
-### Authenticator
-
-![Authenticator](docs/screenshots/06-authenticator.png)
-
-### Troubleshoot
-
-![Troubleshoot](docs/screenshots/07-troubleshoot.png)
-
-### Settings
-
-![Settings](docs/screenshots/08-settings.png)
+![CPU cores](docs/screenshots/cores.png)

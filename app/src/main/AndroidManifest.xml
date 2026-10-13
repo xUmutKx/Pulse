@@ -74,6 +74,12 @@
         </provider>
         <!-- the result of a PackageInstaller session (see features/Installer.kt); not exported, only Pulse starts sessions -->
         <receiver android:name="com.umutk.pulse.features.InstallReceiver" android:exported="false" />
+        <!-- style picker opened when a widget is added or reconfigured (see widgets/WidgetConfig.kt); the launcher starts it, so it is exported -->
+        <activity android:name="com.umutk.pulse.widgets.WidgetConfigActivity" android:exported="true" android:label="Widget style">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
         <!-- home-screen widgets (see widgets/Widgets.kt); each one has its own provider XML -->
         <receiver android:name="com.umutk.pulse.widgets.UsageWidget" android:exported="false">
             <intent-filter>
