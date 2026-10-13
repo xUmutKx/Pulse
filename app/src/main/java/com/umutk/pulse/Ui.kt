@@ -1,6 +1,12 @@
 package com.umutk.pulse
 
+import com.umutk.pulse.features.Backdrop
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -24,11 +30,16 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
+import com.umutk.pulse.features.ThemeIcons
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
 val T get() = Look.current
+
+/** Page margin: 16 dp in the Material look (M3), 12 dp in the Windows looks. */
+val pageGutter get() = if (T.material) 16.dp else 12.dp
 
 private fun material(k: String): ImageVector = when (k) {
     "processes" -> Icons.Outlined.Apps; "performance" -> Icons.Outlined.ShowChart; "history" -> Icons.Outlined.History
@@ -40,13 +51,30 @@ private fun material(k: String): ImageVector = when (k) {
     "palette" -> Icons.Outlined.Palette; "speed" -> Icons.Outlined.Timer; "info" -> Icons.Outlined.Info
     "table" -> Icons.Outlined.TableChart; "heart" -> Icons.Outlined.FavoriteBorder
     "download" -> Icons.Outlined.Download; "delete" -> Icons.Outlined.Delete; "folder" -> Icons.Outlined.Folder
-    "filetypes" -> Icons.Outlined.PieChart; "clean" -> Icons.Outlined.CleaningServices; "chevron" -> Icons.Outlined.ExpandMore; else -> Icons.Outlined.Info
+    "filetypes" -> Icons.Outlined.PieChart; "clean" -> Icons.Outlined.CleaningServices; "chevron" -> Icons.Outlined.ExpandMore
+    "copy" -> Icons.Outlined.ContentCopy; "move" -> Icons.Outlined.DriveFileMove; "rename" -> Icons.Outlined.DriveFileRenameOutline
+    "newfolder" -> Icons.Outlined.CreateNewFolder; "paste" -> Icons.Outlined.ContentPaste
+    "extract" -> Icons.Outlined.Archive; "view" -> Icons.Outlined.Visibility
+    "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Straighten; "flash" -> Icons.Outlined.FlashlightOn
+    "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "coin" -> Icons.Outlined.Paid; "clipboard" -> Icons.Outlined.ContentPaste
+    "screenshot" -> Icons.Outlined.Screenshot; "sensors" -> Icons.Outlined.Sensors; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Timer
+    "timer" -> Icons.Outlined.HourglassBottom; "calc" -> Icons.Outlined.Calculate; "scale" -> Icons.Outlined.AspectRatio; "power" -> Icons.Outlined.PowerSettingsNew
+    "volume" -> Icons.Outlined.VolumeUp
+    "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Balance; "flash" -> Icons.Outlined.FlashlightOn
+    "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "coin" -> Icons.Outlined.MonetizationOn
+    "clipboard" -> Icons.Outlined.ContentPaste; "screenshot" -> Icons.Outlined.Screenshot; "sensors" -> Icons.Outlined.Sensors
+    "volume" -> Icons.Outlined.VolumeUp; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Schedule
+    "timer" -> Icons.Outlined.HourglassEmpty; "calc" -> Icons.Outlined.Calculate; "scale" -> Icons.Outlined.FormatSize
+    "power" -> Icons.Outlined.PowerSettingsNew
+    "phone" -> Icons.Outlined.PhoneAndroid; "play" -> Icons.Outlined.PlayArrow; "run" -> Icons.Outlined.PlayArrow; "pause" -> Icons.Outlined.Pause; "sort" -> Icons.Outlined.SwapVert; else -> Icons.Outlined.Info
 }
 
 /** Material icons for the Material / AMOLED themes, Fluent (Windows 11 style) outlines for the Windows ones. */
 @Composable
 fun PIcon(k: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifier) {
     if (T.material) { Icon(material(k), null, modifier.size(size), tint); return }
+    val pack = if (T.id == "win10") null else ThemeIcons.bitmap(LocalContext.current, T.id, k)
+    if (pack != null) { Image(pack, null, modifier.size(size)); return }
     val paths = remember(k) { (FluentPaths.map[k] ?: FluentPaths.map["info"]!!).map { PathParser().parsePathString(it).toPath() } }
     Canvas(modifier.size(size)) {
         scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
@@ -110,16 +138,27 @@ fun InfoRows(rows: List<Pair<String, String>>) {
 @Composable
 fun PCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val t = T
-    val shape = RoundedCornerShape(t.radius)
+    val shape = RoundedCornerShape(if (t.material) t.radius.coerceIn(16.dp, 28.dp) else t.radius) // M3 cards: 16 to 28 dp corners
     val fx = if (t.id == "win11") Look.effect else "none"
     val surface = when {
-        t.glass -> Modifier.background(t.panel.copy(alpha = .72f), shape).border(1.dp, Color.White.copy(alpha = .9f), shape)   // Aero: see-through with a bright edge
+        // Windows 11 with a backdrop: the blurred picture shows through a light panel
+        t.id == "win11" && Backdrop.image != null -> Modifier.clip(shape).drawBehind {
+            Backdrop.image?.let { img ->
+                // cover the card, keep the picture's proportions, top edge stays in view
+                val s = maxOf(size.width / img.width, size.height / img.height)
+                val w = img.width * s; val h = img.height * s
+                drawImage(img, dstOffset = IntOffset(((size.width - w) / 2f).toInt(), 0), dstSize = IntSize(w.toInt(), h.toInt()))
+            }
+            drawRect(Color.Black.copy(alpha = .35f))
+        }.border(1.dp, Color.White.copy(alpha = .12f), shape)
+        // liquid glass: the panel is see-through with a light edge (Win 7 Aero keeps its bevel-free look, Win 95 its bevel)
+        t.glassA > 0f -> Modifier.background(t.panel.copy(alpha = t.glassA), shape).then(if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, glassEdge(t), shape))
         t.tabs -> Modifier.background(t.bg, shape).then(if (t.bevel) Modifier.bevel(false) else Modifier.border(1.dp, t.line))
         fx != "none" -> Modifier.layer(fx, shape).border(1.dp, t.line, shape)
         t.material -> Modifier.background(t.panel, shape)
-        else -> Modifier.background(t.panel, shape).border(1.dp, t.line, shape)
+        else -> Modifier.background(t.panel.copy(alpha = .9f), shape).border(1.dp, t.line, shape)
     }
-    Column(modifier.fillMaxWidth().then(surface).padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+    Column(modifier.fillMaxWidth().then(surface).padding(if (t.material) 16.dp else 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
 }
 
 fun rate(b: Float) = if (b >= 1 shl 20) "%.1f MB/s".format(b / 1048576f) else "%.0f KB/s".format(b / 1024f)
@@ -136,4 +175,10 @@ fun FitText(text: String, color: Color, size: androidx.compose.ui.unit.TextUnit,
     var sz by remember(text, size) { mutableStateOf(size) }
     androidx.compose.material3.Text(text, modifier, color = color, fontSize = sz, fontWeight = weight, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
         onTextLayout = { if (it.didOverflowWidth && sz.value > minSize) sz = androidx.compose.ui.unit.TextUnit(sz.value * 0.92f, androidx.compose.ui.unit.TextUnitType.Sp) })
+}
+
+/** The spinner used by every "loading" state: the text colour and a thin ring, so Material does not show its pink accent. */
+@Composable
+fun PLoader(modifier: Modifier = Modifier) {
+    androidx.compose.material3.CircularProgressIndicator(modifier.size(28.dp), color = T.text, strokeWidth = 2.dp)
 }

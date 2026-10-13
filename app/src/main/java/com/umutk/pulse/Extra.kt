@@ -1,6 +1,7 @@
 package com.umutk.pulse
 
 import android.app.AppOpsManager
+import android.app.usage.UsageEvents
 import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.pm.PackageManager
@@ -80,6 +81,18 @@ object Extra {
                 val label = try { pm.getApplicationInfo(p, 0).loadLabel(pm).toString() } catch (e: Exception) { p }
                 UsageRow(p, label, l.sumOf { it.totalTimeInForeground }, l.maxOf { it.lastTimeUsed })
             }.sortedByDescending { it.ms }
+    }
+
+    /** Screen unlocks today: each time the keyguard goes away (needs the usage-access permission). */
+    fun unlocksToday(ctx: Context): Int {
+        if (!usageGranted(ctx)) return 0
+        val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val events = usm.queryEvents(cal.timeInMillis, System.currentTimeMillis())
+        val e = UsageEvents.Event()
+        var n = 0
+        while (events.hasNextEvent()) { events.getNextEvent(e); if (e.eventType == UsageEvents.Event.KEYGUARD_HIDDEN) n++ }
+        return n
     }
 
     /** Running services, read from dumpsys (root only). */

@@ -14,10 +14,10 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material3.AlertDialog
+import com.umutk.pulse.WinAlert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CircularProgressIndicator
+import com.umutk.pulse.PLoader
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
@@ -137,7 +137,7 @@ fun CacheCleanerScreen(onBack: () -> Unit) {
 
         when {
             apps == null -> Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                CircularProgressIndicator(Modifier.padding(end = 12.dp))
+                PLoader(Modifier.padding(end = 12.dp))
                 Text("Measuring caches…")
             }
             list.isEmpty() -> Text(
@@ -169,7 +169,7 @@ fun CacheCleanerScreen(onBack: () -> Unit) {
     }
 
     if (confirm) {
-        AlertDialog(
+        WinAlert(
             onDismissRequest = { confirm = false },
             title = { Text("Clear cache of ${chosen.size} apps?") },
             text = { Text("Frees about ${Guard.gb(chosenBytes)}. Only cache folders are deleted; app data is kept.") },

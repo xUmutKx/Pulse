@@ -1,6 +1,7 @@
 package com.umutk.pulse
 
 import com.umutk.pulse.features.AppManagerScreen
+import com.umutk.pulse.features.NetworksSection
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -114,10 +115,14 @@ fun DashboardPage() {
         }
         PCard { InfoRows(listOf("Processes" to "${s.procs}", "Up time" to hms(android.os.SystemClock.elapsedRealtime()), "Swap" to "${s.swapUsedMb} / ${s.swapTotalMb} MB", "Cached" to mb(s.ramCachedMb))) }
         // the guardian pages, below the numbers: thermal, battery, storage, memory
-        ThermalGuardian()
-        BatteryGuardian()
-        StorageGuardian()
-        MemoryGuardian()
+        PCard {
+            val st = remember { try { android.os.StatFs(android.os.Environment.getDataDirectory().path) } catch (e: Exception) { null } }
+            val total = st?.totalBytes ?: 0L
+            val free = st?.availableBytes ?: 0L
+            Text("Storage", color = Look.accent, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            BarMeter(if (total > 0) 1f - free.toFloat() / total else 0f, resColor("disk"), h = 10.dp)
+            Text("${Guard.gb(total - free)} of ${Guard.gb(total)} used · ${Guard.gb(free)} free", color = T.sub, fontSize = 12.sp)
+        }
         Spacer(Modifier.height(12.dp))
     }
 }
@@ -164,6 +169,7 @@ fun NetworkPage() {
             }
             results.forEach { Text(it, color = T.text, fontSize = 13.sp) }
         }
+        NetworksSection()
     }) { Hw.network(it) }
 }
 

@@ -1,0 +1,47 @@
+theme	key	source file	source archive
+win11	processes	taskmanager.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	history	history.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	startup	autoruns.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	users	users.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	settings	settings.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	download	downloads.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	folder	folder.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	cpu	computerchip.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	memory	ram.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	disk	drive.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	wifi	wifi.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	search	search.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	info	info.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win11	run	run.ico	Complete-Windows-11-icon-pack-.ico--main.zip (windows11iconsV1.zip)
+win7	performance	imageres_150.ico	win7.zip
+win7	folder	dsuiext_4096.ico	win7.zip
+win7	download	imageres_169.ico	win7.zip
+win7	users	imageres_88.ico	win7.zip
+win7	settings	imageres_68.ico	win7.zip
+win7	search	imageres_177.ico	win7.zip
+win7	info	imageres_81.ico	win7.zip
+win7	close	DxpTaskSync_62.ico	win7.zip
+xp	processes	Task Manager.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	performance	Performance.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	history	IE History.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	users	User Accounts.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	services	Services.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	settings	Control Panel.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	details	Detail View.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	folder	Folder Closed.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	cpu	Chip.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	disk	Local Disk.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	wifi	Wireless Network Connection.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	gpu	Display Adaptor.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	battery	Power Status.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	search	Search.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	info	Information.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+xp	run	Run.png	Windows.XP.High.Resolution.Icon.Pack.2.zip
+win95	processes	w95_61.ico	win95-winxp_icons-master.zip
+win95	performance	w95_16.ico	win95-winxp_icons-master.zip
+win95	services	w95_47.ico	win95-winxp_icons-master.zip
+win95	settings	w95_22.ico	win95-winxp_icons-master.zip
+win95	folder	w95_4.ico	win95-winxp_icons-master.zip
+win95	cpu	w95_13.ico	win95-winxp_icons-master.zip
+win95	search	w95_23.ico	win95-winxp_icons-master.zip
+win95	delete	w95_32.ico	win95-winxp_icons-master.zip

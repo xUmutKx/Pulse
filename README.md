@@ -1,68 +1,146 @@
 # Pulse
 
-A task manager for Android that looks and works like the Windows one, plus a full browser for everything your phone knows about itself.
+Pulse is a task manager for Android that looks like the Windows one. It shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, a terminal and a toolkit of small utilities.
 
-I wanted Task Manager on my phone: a process list with heat-map cells, a Performance tab with live graphs, startup apps, services. Then I kept adding the things I wish a system app showed: sensors, camera details, battery health, thermals, a floating monitor. This is the result.
+Pulse needs Android 10 or newer, and it is built for arm64 phones only.
 
+## Features
 
-## Screenshots
+### Task manager
 
-<table>
-<tr><td align="center"><img src="docs/screenshots/processes.png" width="240"><br><sub>Processes</sub></td><td align="center"><img src="docs/screenshots/performance.png" width="240"><br><sub>Performance</sub></td><td align="center"><img src="docs/screenshots/overview.png" width="240"><br><sub>Overview (light)</sub></td><td align="center"><img src="docs/screenshots/cores.png" width="240"><br><sub>Cores (dark)</sub></td></tr>
-</table>
+- **Processes**: apps and background processes in groups, with CPU and memory per process and an End task button.
+- **Performance**: live graphs for CPU, memory, storage, network, GPU, battery and temperature.
+- **App history**: foreground time per app today, screen unlocks and a notification count, as a list or a pie chart. Needs usage access; the notification count needs notification access.
+- **Startup apps**: boot receivers, which you can switch off with root or Shizuku.
+- **Services**: running services (root only).
+- **Details** and **Apps**: search, filter, sort by name, size, install date or last used, open, app settings, uninstall, force stop, and extract the APK.
+- **Guardians**: a detail page each for Thermal, Battery, Storage and Memory, with a verdict and 30-minute graphs.
 
-## What is in it
+### Monitoring
 
-**Task Manager side**
-- **Processes**: Apps and Background processes in groups, CPU and memory with heat-map cells, totals in the column heads, End task.
-- **Performance**: a list of CPU, Memory, Storage, Network, GPU, Battery and Thermal on the left, the big graph and the numbers on the right. The Guardians pages for Memory, Storage, Battery and Thermal are on the Overview page.
-- **App history**, **Startup apps** (switch boot receivers off with root), **Details**, **Services**.
-- **Apps**: search, filter, sort by size, date or permissions, open, app settings, uninstall, force stop.
+- **Floating monitor** over other apps, live numbers in a notification, and alerts for temperature, battery and memory with limits you set.
+- **Quick Settings tiles** for the monitor, Private DNS and seven toolkit tools.
+- **20 home-screen widgets**: battery, memory, storage, network, temperature, clock, downloads and more.
+- **Device**: system, CPU and per-core frequency and governors, memory, storage, battery, network with a latency test, thermal zones, display, camera, sensors, media and DRM, system properties and a short benchmark.
+- **Health**: step counter, heart rate from the camera flash, and location tracking. Each is asked for only when you turn it on.
 
-**Guardians pages**, on the Overview page for Thermal, Battery, Storage and Memory
-- One detailed page each, the idea of Samsung's Good Guardians for any phone: a gauge and a plain verdict, 30-minute graphs, and the numbers behind them.
-- **Thermal**: the hottest sensor, battery temperature, every thermal zone grouped (processor, graphics, battery, device, radio) with bars, and the processor's speed per core against its top speed, so you can see when it slows down to cool off.
-- **Battery**: charge, current and power graphs, time left (or to full), power source, condition, charge cycles and capacity against new.
-- **Storage**: used and free, disk read/write traffic, where the space goes by folder, the biggest app data folders and cache trimming (root).
-- **Memory**: in use / cached / free, a 30-minute graph, the biggest apps and quick actions.
+### Files and install
 
-**Menus**
-- File, Options, View and Help work like Task Manager's: run a new task (a command, or an app's package name), share a report, keep the screen on, floating monitor, update speed, temperature unit. The modern looks keep them behind the "⋮" at the top right.
+- **Files**: a file explorer with a trash folder. Deleted files go to `.pulse_trash` until the next delete, so Undo can bring them back.
+- **Installer**: installs APK, APKS, APKM, XAPK and zip bundles. Modes are dialog, background, auto and silent. Silent install uses root or Shizuku. The installer detects Xposed modules and has an LSPosed button. You can require biometrics before each install.
+- **Downloads**: several connections for files the server can split, and downloads keep running in the background. Paste a link, or share a link from your browser to Pulse.
+- **Extract APK**: copies an installed app to `Downloads/Pulse/extract`. Split apps are saved as one `.apks` file.
 
-**Device module** (tabs along the top)
-- Overview, System, CPU and per-core frequencies and governors, Memory, Storage with folder sizes, Battery, Network with a latency test, Thermal, Display with a live frame-rate graph, Camera, Sensors, Media and DRM, hardware features, system properties and a short benchmark.
+### Tools
 
-**Always on**
-- A floating monitor over other apps, live numbers in a notification, alerts for temperature, low battery and high memory, and a Quick Settings tile.
-- **Downloads**: several connections per file, so big downloads go faster, and they keep running in the background. Paste a link, or share a link from your browser to Pulse.
-- A one-tap report of everything, to share or copy.
+- **Toolkit**: 20 tools, including compass, level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder.
+- **Terminal**: runs commands on the phone's shell, with ADB-style quick commands (model, battery, packages, logcat and more). A Run in Termux button sends a command to Termux instead.
+- **RAM**: memory history and a Free memory button that stops background apps (root).
+- **Network usage**: data use per app, split into mobile and Wi-Fi.
+- **DNS**: Private DNS as Auto, Off or Manual with a host name. Needs root or Shizuku.
+- **Watchdog**: every 15 minutes it restarts the monitor and any running downloads that Android has stopped.
+- **Cache cleaner**, **folder sizes**, **type breakdown** and **temperature graph**, from the Tools page.
 
-## Looks
+## Themes
 
-Windows 11 (with Mica, Mica Alt, Acrylic or Glass), Windows 10, Windows 7, XP and 95, Material You and AMOLED. Light, dark or follow the system. The dark themes are close to AMOLED black. Mica is only on the Windows 11 look, as it was on Windows.
+Pulse has six looks:
 
-## Root
+- Windows 11, with a dark version
+- Windows 10, with a dark version
+- Windows 7
+- Windows XP
+- Windows 95
+- Material You, which uses the wallpaper colours on Android 12 and newer
 
-Pulse works without root. Root adds the full process list, per-core data, services, startup switches and the quick actions. Everything else (memory, battery, network, device info) works as a normal app.
+You can choose light, dark or the system setting. The Windows 11, Windows 10 and Material looks have an accent colour choice. The sidebar looks have a backdrop effect: None, Mica, Mica Alt, Acrylic or Glass. Pop-up windows, dialogs and menus can use the Windows, Material or AMOLED black look.
 
-## Install
+## Permissions
 
-Download the APK from the releases page, or build it yourself.
+Pulse asks for these. Most are optional and only used by the feature named.
 
-Needs Android 10 or newer.
+- **Usage access**: app history and per-app network use.
+- **All files access**: the folder, cache and file tools. Granted from the Tools page.
+- **Display over other apps**: the floating monitor.
+- **Notifications**: the live notification and alerts.
+- **Notification access**: the notification count in app history.
+- **Install unknown apps**: the installer.
+- **Internet**: downloads and the latency test.
+- **Biometrics**: optional install confirmation.
+- **Camera**: heart rate on the Health page.
+- **Activity recognition and location**: the Health page step counter and location tracking.
+- **Termux run command**: the Run in Termux button.
+- **Query all packages**: the app list.
+
+## Root and Shizuku
+
+Pulse works without root. Root or Shizuku unlock more.
+
+**Root** (the `su` command) unlocks:
+
+- the full process list, kernel data and temperature zones
+- services
+- startup app switches
+- the Free memory button in RAM
+- cache trimming in the cache cleaner
+- the screenshot tool and the root tab in Files
+- silent install, downgrades that keep app data, and restoring app data
+
+**Shizuku** runs the same shell commands as root for startup switches, killing and force-stopping apps, and the terminal. It also does silent installs and sets Private DNS.
+
+Without root or Shizuku you still get memory, battery, storage, network, device info, sensors, the dialog installer, downloads, files, the toolkit and the floating monitor.
 
 ## Build
 
+Pulse is written in Kotlin with Jetpack Compose. The project has no Gradle wrapper, so build with Android Studio, or with a Gradle 8.9 install.
+
+You need JDK 17 or newer and the Android SDK with platform 34. Put the SDK path in `local.properties`, which is not committed.
+
 ```
-gradle assembleRelease
+gradle :app:assembleRelease
 ```
 
-Kotlin and Jetpack Compose, no other services.
+The APK is written to `app/build/outputs/apk/release/`. Release builds are currently signed with the debug key, so change the signing config before you publish one.
 
-## Credits
+## Licences
 
-Icons in the Windows themes are Microsoft's Fluent System Icons (MIT).
+- **Microsoft Fluent System Icons** (MIT). The icons in the Windows themes are outlines taken from them by `tools/fetch_icons.py` into `FluentPaths.kt`.
+- **Shizuku API** (MIT, copyright RikkaW). The licence text is in `app/src/main/assets/licenses/`.
+- **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
 
-The opening screen uses the logo of each Windows version and a sunset wallpaper, from Wikimedia Commons: the Windows 95, XP, 8, 10 and 11 logos are public domain, the Windows 7 logo is a fan-made variant (not Microsoft's), the sunset wallpaper is CC0, and the Windows 7 blue wallpaper (`splash_win7_wallpaper.jpg`, a blurred blue light photo by AbstractImage, [CC BY 3.0](https://creativecommons.org/licenses/by/3.0/), [source](https://commons.wikimedia.org/wiki/File:Landscape-blue-light-blur-mx.jpg), resized to 1280 px) is CC BY 3.0.
+Pulse's own code has no licence file yet.
 
-Made by [UmutK](https://github.com/xUmutKx).
+## Screenshots
+
+Screenshots go in `docs/screenshots/`, with the names below.
+
+### Processes
+
+![Processes](docs/screenshots/01-processes.png)
+
+### Performance
+
+![Performance](docs/screenshots/02-performance.png)
+
+### App history
+
+![App history](docs/screenshots/03-app-history.png)
+
+### Installer
+
+![Installer](docs/screenshots/04-installer.png)
+
+### Toolkit
+
+![Toolkit](docs/screenshots/05-toolkit.png)
+
+### Authenticator
+
+![Authenticator](docs/screenshots/06-authenticator.png)
+
+### Troubleshoot
+
+![Troubleshoot](docs/screenshots/07-troubleshoot.png)
+
+### Settings
+
+![Settings](docs/screenshots/08-settings.png)

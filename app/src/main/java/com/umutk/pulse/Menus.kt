@@ -11,8 +11,12 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Check
+import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -40,6 +44,7 @@ private fun activityOf(c: Context): Activity? { var x = c; while (x is ContextWr
 fun rememberMenus(go: (String) -> Unit): MenuHost {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
+    val openTool = LocalOpenTool.current
     var run by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
     val version = remember { try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "" } catch (e: Exception) { "" } }
@@ -55,40 +60,40 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             MenuEntry("Settings") { go("settings") },
             MenuEntry("Exit") { activityOf(ctx)?.finish() },
         )),
-        MenuTop("Options", listOf(
-            MenuEntry("Keep the screen on", Opt.keepOn) { Opt.keepOn = !Opt.keepOn; Opt.save(ctx) },
-            MenuEntry("Ask before ending a task", Cfg.confirmKill) { Cfg.setConfirm(ctx, !Cfg.confirmKill) },
-            MenuEntry("Floating monitor", Opt.ovOn) { Opt.ovOn = !Opt.ovOn; Opt.save(ctx); MonitorService.sync(ctx) },
-            MenuEntry("Temperatures in °F", Opt.tempF) { Opt.tempF = !Opt.tempF; Opt.save(ctx) },
-        )),
         MenuTop("View", listOf(
             MenuEntry("Refresh now") { scope.launch(Dispatchers.IO) { Sampler.sample(ctx) } },
-            MenuEntry("Update speed: High (0.5 s)", Cfg.interval == 500L) { Cfg.setInterval(ctx, 500L) },
-            MenuEntry("Update speed: Normal (1 s)", Cfg.interval == 1000L) { Cfg.setInterval(ctx, 1000L) },
-            MenuEntry("Update speed: Low (2 s)", Cfg.interval == 2000L) { Cfg.setInterval(ctx, 2000L) },
         )),
-        MenuTop("Help", listOf(MenuEntry("About Pulse") { about = true })),
+        MenuTop("Tools", listOf(
+            MenuEntry("Toolkit") { openTool("toolkit") },
+            MenuEntry("Installer") { openTool("installer") },
+            MenuEntry("Installer settings") { openTool("installer_settings") },
+            MenuEntry("DNS") { openTool("dns") },
+            MenuEntry("Device troubleshoot") { openTool("troubleshoot") },
+            MenuEntry("Authenticator") { openTool("authenticator") },
+            MenuEntry("Network usage") { openTool("netusage") },
+        )),
     )
     return MenuHost(tops) {
         if (run) RunTaskDialog { run = false }
-        if (about) PDialog("Pulse $version", "A task manager for Android that looks like the Windows one, with a full browser for everything your phone knows about itself.", "OK", { about = false }, { about = false })
+        if (about) PDialog("Pulse $version", "A task manager for Android that looks like Windows, with a file explorer, downloads, an app installer, network usage, a 20-tool toolkit, widgets and a terminal.", "OK", { about = false }, { about = false })
     }
 }
 
 @Composable
 private fun Item(e: MenuEntry, close: () -> Unit) {
-    DropdownMenuItem(text = { Text(e.label, color = T.text) }, leadingIcon = e.checked?.let { c -> { Text(if (c) "✓" else "   ", color = Look.accent) } }, onClick = { close(); e.onClick() })
+    DropdownMenuItem(text = { Text(e.label, color = LocalWindowLook.current.text) }, leadingIcon = e.checked?.let { c -> { if (T.material) { if (c) Icon(Icons.Outlined.Check, null, tint = Look.accent) else Spacer(Modifier.size(24.dp)) } else Text(if (c) "✓" else "   ", color = Look.accent) } }, onClick = { close(); e.onClick() })
 }
 
 /** The menu bar of the classic looks: each word opens its menu. */
 @Composable
 fun MenuBar(host: MenuHost, color: Color, size: TextUnit, gap: Dp = 14.dp) {
     var open by remember { mutableStateOf<String?>(null) }
+    val w = LocalWindowLook.current
     Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
         host.tops.forEach { m ->
             Box {
                 Text(m.label, color = color, fontSize = size, modifier = Modifier.clickable { open = m.label }.padding(vertical = 2.dp))
-                DropdownMenu(open == m.label, { open = null }) { m.items.forEach { Item(it) { open = null } } }
+                DropdownMenu(open == m.label, { open = null }, containerColor = w.panel, shape = RoundedCornerShape(w.radius), modifier = Modifier.border(1.dp, w.line, RoundedCornerShape(w.radius))) { m.items.forEach { Item(it) { open = null } } }
             }
         }
     }
@@ -98,12 +103,14 @@ fun MenuBar(host: MenuHost, color: Color, size: TextUnit, gap: Dp = 14.dp) {
 @Composable
 fun MenuOverflow(host: MenuHost, color: Color) {
     var open by remember { mutableStateOf(false) }
+    val w = LocalWindowLook.current
     Box {
-        Text("⋮", color = color, fontSize = 22.sp, modifier = Modifier.clickable { open = true }.padding(horizontal = 12.dp, vertical = 2.dp))
-        // the menu takes the look: its panel, text, corners and edge, not the Material defaults
-        DropdownMenu(open, { open = false }, containerColor = T.panel, shape = RoundedCornerShape(T.radius), modifier = Modifier.border(1.dp, T.line, RoundedCornerShape(T.radius))) {
+        if (T.material) Icon(Icons.Outlined.MoreVert, "More", Modifier.clickable { open = true }.padding(horizontal = 8.dp, vertical = 2.dp), color)
+        else Text("⋮", color = color, fontSize = 22.sp, modifier = Modifier.clickable { open = true }.padding(horizontal = 12.dp, vertical = 2.dp))
+        // the menu takes the look: its panel (the Material container colour), corners and, on the Windows looks, the edge
+        DropdownMenu(open, { open = false }, containerColor = w.panel, shape = RoundedCornerShape(w.radius), modifier = if (T.material) Modifier else Modifier.border(1.dp, w.line, RoundedCornerShape(w.radius))) {
             host.tops.forEachIndexed { i, m ->
-                if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line.copy(alpha = .5f)))
+                if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(w.line.copy(alpha = .5f)))
                 Text(m.label.uppercase(), color = Look.accent, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 2.dp))
                 m.items.forEach { Item(it) { open = false } }
             }
@@ -116,7 +123,7 @@ fun MenuOverflow(host: MenuHost, color: Color) {
 private fun RunTaskDialog(onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val t = T
+    val t = LocalWindowLook.current
     var cmd by remember { mutableStateOf("") }
     var out by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }

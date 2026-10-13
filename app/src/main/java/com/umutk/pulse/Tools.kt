@@ -1,5 +1,8 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.background
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
@@ -43,5 +46,19 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "tempgraph" -> TempGraphScreen(back)
         id == "battery" -> BatteryHealthScreen(back)
         id == "health" -> HealthScreen(back)
+        id == "toolkit" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.ToolkitPage() }
+        id == "installer" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.InstallerPage() }
+        id == "installer_settings" -> {
+            androidx.activity.compose.BackHandler { back() }
+            Column(Modifier.fillMaxSize().background(T.bg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+                PHead("Installer")
+                InstallWindowSettings()
+            }
+        }
+        id == "ram" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.RamPage() }
+        id == "dns" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.DnsSettings() }
+        id == "troubleshoot" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.doctor.TroubleshootScreen(back) }
+        id == "netusage" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.NetUsageScreen(back) }
+        id == "authenticator" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AuthenticatorScreen(back) }
     }
 }

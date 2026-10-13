@@ -6,7 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import com.umutk.pulse.WinAlert
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -123,7 +123,7 @@ fun LeftoversScreen(onBack: () -> Unit) {
     pending?.let { title ->
         val picked = chosen[title].orEmpty()
         val size = lists[title].orEmpty().filter { it.file in picked }.sumOf { it.size }
-        AlertDialog(onDismissRequest = { pending = null },
+        WinAlert(onDismissRequest = { pending = null },
             title = { Text("Remove from $title?") },
             text = { Text("${picked.size} items, ${Guard.gb(size)}. This cannot be undone.") },
             confirmButton = { TextButton({ pending = null; removeChosen(title) }) { Text("Remove") } },
