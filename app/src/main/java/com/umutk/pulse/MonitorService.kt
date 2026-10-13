@@ -5,6 +5,9 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.app.Service
+import android.hardware.camera2.CameraAccessException
+import android.hardware.camera2.CameraCharacteristics
+import android.hardware.camera2.CameraManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -142,5 +145,55 @@ class PulseTile : TileService() {
         val on = !(Opt.ovOn || Opt.notifOn)
         if (on) { if (Settings.canDrawOverlays(this)) Opt.ovOn = true else Opt.notifOn = true } else { Opt.ovOn = false; Opt.notifOn = false }
         Opt.save(this); MonitorService.sync(this); paint()
+    }
+}
+
+/** Quick Settings tile that opens the app on the Toolkit page; [start] is the "start" extra MainActivity reads. */
+open class ToolkitTile : TileService() {
+    open val start: String get() = "toolkit"
+    override fun onClick() {
+        val i = Intent(this, MainActivity::class.java).putExtra("start", start).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+        else startActivityAndCollapse(i)
+    }
+}
+
+class CompassTile : ToolkitTile() { override val start: String get() = "toolkit:compass" }
+class DiceTile : ToolkitTile() { override val start: String get() = "toolkit:dice" }
+class CoinTile : ToolkitTile() { override val start: String get() = "toolkit:coin" }
+class ScreenshotTile : ToolkitTile() { override val start: String get() = "toolkit:screenshot" }
+class SoundModeTile : ToolkitTile() { override val start: String get() = "toolkit:vibrate" }
+class LevelTile : ToolkitTile() { override val start: String get() = "toolkit:level" }
+class LuxTile : ToolkitTile() { override val start: String get() = "toolkit:light" }
+class ClipboardTile : ToolkitTile() { override val start: String get() = "toolkit:clipboard" }
+class SensorsOffTile : ToolkitTile() { override val start: String get() = "toolkit:sensors" }
+class BatteryTile : ToolkitTile() { override val start: String get() = "toolkit:battery" }
+class MemoryTile : ToolkitTile() { override val start: String get() = "toolkit:memory" }
+class TemperatureTile : ToolkitTile() { override val start: String get() = "toolkit:thermal" }
+class VolumeTile : ToolkitTile() { override val start: String get() = "toolkit:volume" }
+class StopwatchTile : ToolkitTile() { override val start: String get() = "toolkit:stopwatch" }
+class TimerTile : ToolkitTile() { override val start: String get() = "toolkit:timer" }
+class CalculatorTile : ToolkitTile() { override val start: String get() = "toolkit:calc" }
+class ScaleTile : ToolkitTile() { override val start: String get() = "toolkit:scale" }
+class FinderTile : ToolkitTile() { override val start: String get() = "toolkit:search" }
+class PowerMenuTile : ToolkitTile() { override val start: String get() = "toolkit:power" }
+
+/** Quick Settings tile that toggles the torch; the tile follows the torch, also when another app or the system changes it. */
+class FlashlightTile : TileService() {
+    private val cm by lazy { getSystemService(CameraManager::class.java) }
+    private val camId: String? by lazy {
+        try { cm.cameraIdList.firstOrNull { cm.getCameraCharacteristics(it).get(CameraCharacteristics.FLASH_INFO_AVAILABLE) == true } }
+        catch (e: CameraAccessException) { null }
+    }
+    private var torchOn = false
+    private val torch = object : CameraManager.TorchCallback() {
+        override fun onTorchModeChanged(cameraId: String, enabled: Boolean) { if (cameraId == camId) { torchOn = enabled; paint() } }
+    }
+    override fun onStartListening() { cm.registerTorchCallback(torch, null); paint() }
+    override fun onStopListening() { cm.unregisterTorchCallback(torch) }
+    private fun paint() { qsTile?.apply { state = if (torchOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; updateTile() } }
+    override fun onClick() {
+        val id = camId ?: return
+        try { cm.setTorchMode(id, !torchOn) } catch (e: CameraAccessException) { }
     }
 }

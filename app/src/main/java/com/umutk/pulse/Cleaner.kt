@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Storage
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.ui.Alignment
@@ -130,7 +129,7 @@ fun CleanerCard() {
         if (msg.isNotEmpty()) Text(msg, color = Look.accent, fontSize = 12.sp)
     }
     pending?.let { (name, items) ->
-        AlertDialog(onDismissRequest = { pending = null },
+        WinAlert(onDismissRequest = { pending = null },
             title = { Text("Remove $name?") },
             text = { Text("${items.size} items, ${Guard.gb(items.sumOf { it.size })}. This cannot be undone.") },
             confirmButton = { TextButton({

@@ -7,7 +7,9 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,7 +25,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.AlertDialog
+import com.umutk.pulse.WinAlert
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -31,11 +33,14 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -44,10 +49,15 @@ import com.umutk.pulse.Look
 import com.umutk.pulse.PButton
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PHead
+import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.xmlpull.v1.XmlPullParser
+import java.io.File
+import java.util.zip.ZipEntry
+import java.util.zip.ZipOutputStream
 
 private class CompRow(val name: String, val exported: Boolean)
 private class ActionRow(val action: String, val component: String)
@@ -161,6 +171,40 @@ private fun manifestActions(ctx: Context, pkg: String): List<ActionRow> {
     return out.distinctBy { it.action to it.component }
 }
 
+/**
+ * Copies the installed APK to Downloads/Pulse/extract. A split install (app bundle) goes into one .apks zip with
+ * base.apk and the splits. Returns the note to show: the saved path or the reason it failed. Runs on IO.
+ */
+internal fun extractApp(ctx: Context, pkg: String): String {
+    val pm = ctx.packageManager
+    val pi = pm.getPackageInfo(pkg, 0)
+    val ai = pi.applicationInfo ?: return "Could not read"
+    val splits = ai.splitSourceDirs.orEmpty().toList()
+    val files = listOf(File(ai.sourceDir)) + splits.map { File(it) }
+    if (files.any { !it.canRead() }) return "Could not read"
+    val name = listOf(ai.loadLabel(pm).toString(), pi.versionName.orEmpty())
+        .filter { it.isNotBlank() }.joinToString("-").replace(Regex("[^\\p{L}\\p{N} .-]"), "_")
+    val dir = File(Downloads.defaultDir(), "Pulse/extract").apply { mkdirs() }
+    return try {
+        val out = if (splits.isEmpty()) {
+            File(dir, "$name.apk").also { files[0].copyTo(it, overwrite = true) }
+        } else {
+            File(dir, "$name.apks").also { target ->
+                ZipOutputStream(target.outputStream().buffered()).use { zos ->
+                    files.forEachIndexed { i, f ->
+                        zos.putNextEntry(ZipEntry(if (i == 0) "base.apk" else f.name))
+                        f.inputStream().use { it.copyTo(zos) }
+                        zos.closeEntry()
+                    }
+                }
+            }
+        }
+        "Saved to ${out.path}"
+    } catch (e: Exception) {
+        "Extract failed: ${e.message ?: e.javaClass.simpleName}"
+    }
+}
+
 private fun qualify(pkg: String, name: String?): String? = when {
     name == null -> null
     name.startsWith(".") -> pkg + name
@@ -171,6 +215,7 @@ private fun qualify(pkg: String, name: String?): String? = when {
 @Composable
 fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     var details by remember(pkg) { mutableStateOf<Details?>(null) }
     var error by remember(pkg) { mutableStateOf<String?>(null) }
     var note by remember(pkg) { mutableStateOf("") }
@@ -206,6 +251,11 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
                     Shell.run("am force-stop $pkg")
                     note = "${d?.label ?: pkg} was stopped"
                 }
+                Box(
+                    Modifier.padding(horizontal = 5.dp).clickable {
+                        scope.launch { note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } }
+                    }.semantics { contentDescription = "Extract APK" },
+                ) { PIcon("extract", Look.accent, 22.dp) }
                 if (d != null && !d.isSystem) {
                     PButton("Uninstall", danger = true) { confirmUninstall = true }
                 }
@@ -244,7 +294,7 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     }
 
     if (confirmUninstall && d != null) {
-        AlertDialog(
+        WinAlert(
             onDismissRequest = { confirmUninstall = false },
             title = { Text("Uninstall ${d.label}?", color = T.text) },
             text = { Text("The system will ask you to confirm the removal.", color = T.sub) },

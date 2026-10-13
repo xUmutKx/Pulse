@@ -2,7 +2,11 @@ package com.umutk.pulse
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
+import android.widget.Toast
+import androidx.core.content.IntentCompat
+import java.io.File
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -19,6 +23,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.unit.IntSize
+import com.umutk.pulse.features.Backdrop
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.view.WindowCompat
@@ -26,6 +33,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import com.umutk.pulse.features.Downloads
+import com.umutk.pulse.features.Installer
+import com.umutk.pulse.features.InstallState
+import com.umutk.pulse.features.InstallWindow
 
 /** Saved choices. */
 object Cfg {
@@ -40,21 +50,29 @@ object Cfg {
         Look.accentIdx = p.getInt("accent2", -1)
         Look.mode = p.getString("mode", "system") ?: "system"
         Look.effect = p.getString("effect", "mica") ?: "mica"
+        Look.windowTheme = p.getString("windowTheme", "win") ?: "win"
+        Look.dynamic = p.getBoolean("dynamic", true); Look.corner = p.getString("corner", "medium") ?: "medium"
         interval = p.getLong("interval", 1000L); Sampler.interval = interval
         confirmKill = p.getBoolean("confirm", true)
     }
     fun setTheme(c: Context, id: String) { Look.theme = Themes.first { it.id == id }; sp(c).edit().putString("theme", id).apply() }
     fun setMode(c: Context, v: String) { Look.mode = v; sp(c).edit().putString("mode", v).apply() }
     fun setEffect(c: Context, v: String) { Look.effect = v; sp(c).edit().putString("effect", v).apply() }
+    fun setWindowTheme(c: Context, v: String) { Look.windowTheme = v; sp(c).edit().putString("windowTheme", v).apply() }
     fun setAccent(c: Context, i: Int) { Look.accentIdx = i; sp(c).edit().putInt("accent2", i).apply() }
     fun setInterval(c: Context, v: Long) { interval = v; Sampler.interval = v; sp(c).edit().putLong("interval", v).apply() }
     fun setConfirm(c: Context, v: Boolean) { confirmKill = v; sp(c).edit().putBoolean("confirm", v).apply() }
+    fun setDynamic(c: Context, v: Boolean) { Look.dynamic = v; sp(c).edit().putBoolean("dynamic", v).apply() }
+    fun setCorner(c: Context, v: String) { Look.corner = v; sp(c).edit().putString("corner", v).apply() }
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Cfg.load(this); Opt.load(this); Downloads.load(this)
+        Cfg.load(this); Opt.load(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
+        Watchdog.sync(this)
+        // coming back to a process Android restarted: the saved page and scroll are restored, so the opening screen is not played again
+        if (savedInstanceState != null) SplashGate.splashed = true
         WindowCompat.setDecorFitsSystemWindows(window, false)
         setContent { Root() }
         if (savedInstanceState == null) handleShare(intent)
@@ -65,9 +83,25 @@ class MainActivity : ComponentActivity() {
         handleShare(intent)
     }
 
+    /** Copies an APK from another app to the cache off the main thread, then the install window shows it. */
+    private fun handleApk(uri: Uri) {
+        Thread {
+            val f = File(cacheDir, "open/open.apk").apply { parentFile?.mkdirs() }
+            try { contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { i.copyTo(it) } } ?: throw java.io.IOException("no content") }
+            catch (e: Exception) { runOnUiThread { Toast.makeText(this, "Could not read the APK: ${e.message ?: e.javaClass.simpleName}", Toast.LENGTH_LONG).show() }; return@Thread }
+            runOnUiThread { InstallState.file = f }
+        }.start()
+    }
+
     /** A link shared from another app (browser "Share") starts a download right away. */
     private fun handleShare(i: Intent?) {
+        i?.getStringExtra("start")?.let { com.umutk.pulse.widgets.WidgetOpen.page = it }
         if (i?.getBooleanExtra("downloads", false) == true) { Downloads.wanted = true; return }
+        if (i?.type == "application/vnd.android.package-archive") {
+            val uri = IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, Uri::class.java)
+            if (uri != null) handleApk(uri)
+            return
+        }
         if (i?.action != Intent.ACTION_SEND || i.type != "text/plain") return
         val url = Regex("https?://\\S+").find(i.getStringExtra(Intent.EXTRA_TEXT).orEmpty())?.value ?: return
         Downloads.add(this, url)
@@ -75,15 +109,27 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-/** The Material themes follow the system dark mode and, on Android 12+, the wallpaper colours. */
+/** The Material looks follow the system dark mode, the wallpaper colours (Android 12+, when Material You is on), the chosen accent and corner size. */
 @Composable
-private fun effective(t: PTheme): PTheme {
+fun effective(t: PTheme): PTheme {
     val sysDark = androidx.compose.foundation.isSystemInDarkTheme()
     val dark = when (Look.mode) { "dark" -> true; "light" -> false; else -> sysDark }
-    if (t.id != "material") return if (dark) darkTwin(t) ?: t else t
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val cs = if (android.os.Build.VERSION.SDK_INT >= 31) (if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)) else (if (dark) darkColorScheme() else lightColorScheme())
-    return PTheme(t.id, t.name, dark, if (dark) Color(0xFF050505) else cs.background, if (dark) Color(0xFF111111) else cs.surfaceContainer, cs.onBackground, cs.onSurfaceVariant, cs.primary, cs.outlineVariant, t.radius, material = true)
+    if (!t.material) return if (dark) darkTwin(t) ?: t else t
+    val amoled = t.id == "amoled"
+    val dynamic = if (!amoled && Look.dynamic && android.os.Build.VERSION.SDK_INT >= 31) {
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
+    } else null
+    val accent = dynamic?.primary ?: Accents.getOrNull(Look.accentIdx) ?: t.accent
+    val r = Look.cornerDp
+    return when {
+        dynamic != null -> PTheme(t.id, t.name, dark, if (dark) Color(0xFF050505) else dynamic.background, if (dark) Color(0xFF111111) else dynamic.surfaceContainer,
+            dynamic.onBackground, dynamic.onSurfaceVariant, accent, dynamic.outlineVariant, r, material = true, glassA = t.glassA)
+        amoled -> PTheme(t.id, t.name, true, t.bg, t.panel, t.text, t.sub, accent, t.line, r, material = true, glassA = t.glassA)
+        // Material You off: the fixed Material 3 palette, light or dark
+        dark -> PTheme(t.id, t.name, true, Color(0xFF141218), Color(0xFF211F26), Color(0xFFE6E1E5), Color(0xFFCAC4D0), accent, Color(0xFF49454F), r, material = true, glassA = t.glassA)
+        else -> PTheme(t.id, t.name, false, t.bg, t.panel, t.text, t.sub, accent, t.line, r, material = true, glassA = t.glassA)
+    }
 }
 
 /** The opening screen plays once per start of the app: not on a look change, not when the app comes back from the background. */
@@ -100,31 +146,49 @@ val Pages = listOf(
     Pg("services", "Services", "services"),
     Pg("apps", "Apps", "users"),
     Pg("downloads", "Downloads", "download"),
+    Pg("files", "Files", "folder"),
     Pg("device", "Device", "phone"),
     Pg("health", "Health", "heart"),
+    Pg("terminal", "Terminal", "run"),
 )
 private val visible get() = Pages.filter { it.id !in Opt.hidden }
 private val SettingsPg = Pg("settings", "Settings", "settings")
 
 @Composable
-private fun Root() {
+private fun Root() = LookHost { th ->
+    // Windows 11 with a picture chosen: the app background is see-through and the picture shows behind everything
+    val pic = if (th.id == "win11") com.umutk.pulse.features.Backdrop.image else null
+    Surface(Modifier.fillMaxSize(), color = if (pic != null) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+        if (pic != null) androidx.compose.foundation.Image(pic, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop, alignment = androidx.compose.ui.Alignment.TopCenter)
+        if (!SplashGate.splashed) Splash(th) { SplashGate.splashed = true } else key(th.dark) { App() }
+    }
+}
+
+/** Resolves the look and provides it to the content: MainActivity and InstallActivity both use it. */
+@Composable
+fun LookHost(content: @Composable (PTheme) -> Unit) {
     val base = Look.theme
     val th = effective(base)
     // the rest of the UI reads Look.theme through T, so the resolved Material look is swapped in while composing
-    val cs = if (th.dark) darkColorScheme(primary = Look.accent, background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
-    else lightColorScheme(primary = Look.accent, background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
-    // the opening screen plays again whenever the look changes, so each look starts with its own animation
+    Look.resolved = if (th !== base) th else null
+    // pop-up windows take their own look: the app look, Material, or AMOLED black
+    val wl = when (Look.windowTheme) { "material" -> effective(Themes.first { it.id == "material" }); "amoled" -> amoledWindow(); else -> th }
+    val acc = Look.accent
+    val cs = if (th.dark) darkColorScheme(primary = acc, onPrimary = onAccent(acc), background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
+    else lightColorScheme(primary = acc, onPrimary = onAccent(acc), background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
     val view = androidx.compose.ui.platform.LocalView.current
     SideEffect { WindowCompat.getInsetsController((view.context as android.app.Activity).window, view).apply { isAppearanceLightStatusBars = !th.dark; isAppearanceLightNavigationBars = !th.dark } }
-    Look.resolved = if (th !== base) th else null
     SideEffect { val w = (view.context as android.app.Activity).window; if (Opt.keepOn) w.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
     val dens = androidx.compose.ui.platform.LocalDensity.current
-    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * Opt.fontScale)) {
-    MaterialTheme(colorScheme = cs) {
-        Surface(Modifier.fillMaxSize(), color = th.bg) {
-            if (!SplashGate.splashed) Splash(th) { SplashGate.splashed = true } else key(th.dark) { App() }
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * Opt.fontScale), LocalWindowLook provides wl) {
+        MaterialTheme(colorScheme = cs) {
+            // liquid glass: the wallpaper (or the theme's backdrop) is blurred behind the glass panels
+            GlassRoot(wallpaperKey = th.id to Backdrop.image, wallpaper = {
+                val img = Backdrop.image
+                if (img != null) drawImage(img, dstSize = IntSize(size.width.toInt(), size.height.toInt()))
+                else drawRect(th.wall ?: SolidColor(th.bg))
+            }) { content(th) }
         }
-    }
     }
 }
 
@@ -135,6 +199,10 @@ private fun App() {
     var sub by rememberSaveable { mutableStateOf("") } // a tool opened from the Tools page; empty means none
     val go: (String) -> Unit = { sub = ""; page = it }
     LaunchedEffect(Downloads.wanted) { if (Downloads.wanted) { go("downloads"); Downloads.wanted = false } }
+    LaunchedEffect(com.umutk.pulse.widgets.WidgetOpen.page) {
+        val p = com.umutk.pulse.widgets.WidgetOpen.page
+        if (p.isNotEmpty()) { if (p == "toolkit" || p.startsWith("toolkit:")) { com.umutk.pulse.features.ToolkitOpen.tool = p.substringAfter(":", ""); sub = "toolkit" } else if (p == SettingsPg.id || Pages.any { it.id == p }) go(p); com.umutk.pulse.widgets.WidgetOpen.page = "" }
+    }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
             Shell.detectRoot()
@@ -144,14 +212,15 @@ private fun App() {
     val body: @Composable () -> Unit = {
         if (sub.isNotEmpty()) SubScreen(sub, { sub = "" }) else when (page) {
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
-            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "device" -> DeviceModule(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; else -> SettingsPage()
+            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "files" -> com.umutk.pulse.features.FilesPage(); "installer" -> com.umutk.pulse.features.InstallerPage(); "device" -> DeviceModule(); "toolkit" -> com.umutk.pulse.features.ToolkitPage(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; "ram" -> com.umutk.pulse.features.RamPage(); "terminal" -> com.umutk.pulse.features.TerminalPage(); else -> SettingsPage()
         }
     }
-    val menus = rememberMenus(go)
     androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
+        val menus = rememberMenus(go)
         if (T.id == "win10") Win10Shell(page, go, menus, body) else if (T.tabs) ClassicShell(page, go, menus, body) else ModernShell(page, go, menus, body)
+        menus.dialogs()
     }
-    menus.dialogs()
+    InstallState.file?.let { f -> InstallWindow(f) { InstallState.file = null } }
 }
 
 // ---------------------------------------------------------------- Windows 11 / 10, Material, AMOLED: a sidebar on the left
@@ -159,13 +228,14 @@ private fun App() {
 @Composable
 private fun ModernShell(page: String, go: (String) -> Unit, menus: MenuHost, body: @Composable () -> Unit) {
     val t = T
-    var wide by rememberSaveable(t.id) { mutableStateOf(true) }
+    if (t.material) { MaterialRail(page, go, menus, body); return }
+    var wide by rememberSaveable(t.id) { mutableStateOf(false) }
     val s by Sampler.snap.collectAsState()
     val fx = if (t.id == "win11") Look.effect else "none"
     Box(Modifier.fillMaxSize().backdrop(fx).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxSize()) {
         Spacer(Modifier.width(52.dp))
-        val corner = if (t.material) 24.dp else if (t.radius > 0.dp) 8.dp else 0.dp
+        val corner = if (t.material) t.radius else if (t.radius > 0.dp) 8.dp else 0.dp
         Column(Modifier.weight(1f).fillMaxHeight().layer(fx, RoundedCornerShape(topStart = corner, bottomStart = corner)).then(if (!t.material && t.radius == 0.dp) Modifier.border(1.dp, t.line) else Modifier).padding(top = 12.dp)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
@@ -197,6 +267,34 @@ private fun NavItem(icon: String, label: String, on: Boolean, wide: Boolean, onC
         Box(Modifier.width(3.dp).height(if (on) 18.dp else 0.dp).background(Look.accent, RoundedCornerShape(2.dp)))
         Box(Modifier.width(if (wide) 36.dp else 42.dp), contentAlignment = Alignment.Center) { PIcon(icon, tint, 21.dp) }
         if (wide) Text(label, color = tint, fontSize = 14.sp, maxLines = 1)
+    }
+}
+
+/** Material look: the M3 navigation rail on the left, and the page under a 64 dp small top app bar. */
+@Composable
+private fun MaterialRail(page: String, go: (String) -> Unit, menus: MenuHost, body: @Composable () -> Unit) {
+    val t = T
+    val s by Sampler.snap.collectAsState()
+    Row(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+        NavigationRail(containerColor = t.bg) {
+            Column(Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+                (visible + SettingsPg).forEach { p ->
+                    val on = page == p.id
+                    NavigationRailItem(selected = on, onClick = { go(p.id) },
+                        icon = { PIcon(p.icon, if (on) Look.accent else t.sub, 22.dp) },
+                        label = { Text(p.label, maxLines = 1) },
+                        colors = NavigationRailItemDefaults.colors(selectedIconColor = Look.accent, selectedTextColor = Look.accent))
+                }
+            }
+        }
+        Column(Modifier.weight(1f).fillMaxHeight()) {
+            Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                if (s.root) Text("root", color = Look.accent, fontSize = 12.sp)
+                MenuOverflow(menus, t.sub)
+            }
+            Box(Modifier.weight(1f)) { body() }
+        }
     }
 }
 

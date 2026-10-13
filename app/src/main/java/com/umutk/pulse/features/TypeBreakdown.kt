@@ -19,10 +19,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Refresh
-import androidx.compose.material3.AlertDialog
+import com.umutk.pulse.WinAlert
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.graphics.Color
-import androidx.compose.material3.CircularProgressIndicator
+import com.umutk.pulse.PLoader
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -104,7 +104,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
         if (data == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = Look.accent)
+                    PLoader()
                     Spacer(Modifier.height(12.dp))
                     Text("Scanning...", color = T.sub, fontSize = 13.sp)
                 }
@@ -193,7 +193,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
         }
     }
     pending?.let { f ->
-        AlertDialog(
+        WinAlert(
             onDismissRequest = { pending = null },
             title = { Text("Delete this file?") },
             text = { Text("${f.file.name}, ${tbFormatBytes(f.size)}. This cannot be undone.") },

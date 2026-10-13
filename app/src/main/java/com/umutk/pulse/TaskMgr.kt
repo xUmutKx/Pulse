@@ -91,7 +91,7 @@ fun ProcessesPage() {
         }
         PField(q, { q = it }, "Type a name or PID to search", Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
         // column heads with the totals on top, like the real one; tap to sort. Name stays put, the numbers scroll sideways.
-        Row(Modifier.fillMaxWidth().height(46.dp).border(BorderStroke(1.dp, T.line.copy(alpha = .6f)))) {
+        Row(Modifier.fillMaxWidth().height(58.dp).border(BorderStroke(1.dp, T.line.copy(alpha = .6f)))) {
             Box(Modifier.width(NAME_W).fillMaxHeight().clickable { sort = "name" }.padding(start = 12.dp), contentAlignment = Alignment.CenterStart) {
                 Text("Name", color = if (sort == "name") Look.accent else T.sub, fontSize = 12.sp)
             }
@@ -161,9 +161,9 @@ private class PGroup(val rows: List<PRow>) {
 
 @Composable
 private fun HeadCell(top: String, name: String, w: Dp, active: Boolean, bg: Color, onClick: () -> Unit) {
-    Column(Modifier.width(w).fillMaxHeight().clickable(onClick = onClick).background(bg).padding(end = 8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Center) {
-        if (top.isNotEmpty()) Text(top, color = T.text, fontSize = 15.sp)
-        Text(name, color = if (active) Look.accent else T.sub, fontSize = 11.sp)
+    Column(Modifier.width(w).fillMaxHeight().clickable(onClick = onClick).background(bg).padding(top = 4.dp, end = 8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Top) {
+        if (top.isNotEmpty()) Text(top, color = T.text, fontSize = 15.sp, maxLines = 1)
+        Text(name, color = if (active) Look.accent else T.sub, fontSize = 11.sp, maxLines = 1)
     }
 }
 

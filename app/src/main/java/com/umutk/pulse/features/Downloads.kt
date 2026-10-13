@@ -1,5 +1,9 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.WinAlert
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.draw.rotate
+import androidx.compose.material3.TextButton
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -31,11 +35,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.ui.draw.rotate
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -72,6 +72,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
@@ -82,6 +83,7 @@ import java.net.URL
 import java.nio.ByteBuffer
 import java.nio.channels.FileChannel
 import java.nio.file.StandardOpenOption
+import java.util.concurrent.atomic.AtomicLong
 
 /** Parallel connections for a file the server can split. */
 private const val PARTS = 6
@@ -91,8 +93,10 @@ private const val BUF = 64 * 1024
 private const val CH_RUN = "downloads"
 private const val CH_DONE = "downloads_done"
 private const val ID_RUN = 7
+/** Speed limit when the switch on the Downloads page is on, in KB/s. */
+private const val LIMIT_KBS = 512
 
-enum class DlState { RUNNING, DONE, FAILED }
+enum class DlState { RUNNING, PAUSED, DONE, FAILED }
 
 /** One download: where it goes, how far it has got, its speed, and how it ended. */
 class DlTask(val url: String, val file: File) {
@@ -104,6 +108,19 @@ class DlTask(val url: String, val file: File) {
     val speed = MutableStateFlow(0L)
     @Volatile var lastDone = 0L
     @Volatile var cancelled = false
+    /** true while the file on disk is one sequential copy that a retry can continue from */
+    @Volatile var resumable = false
+    /** set after a failure: the next try uses one connection */
+    @Volatile var noSplit = false
+    /** where each part of a split download has got to, so a continue picks up each part where it stopped */
+    @Volatile var partPos: LongArray? = null
+    /** set by [Downloads.pause]: the transfer stops and keeps its partial file */
+    @Volatile var paused = false
+    /** the coroutine fetching this download, so a resume can wait until it has stopped */
+    @Volatile var job: Job? = null
+    /** speed limit: when the counted bytes started, and how many there are */
+    @Volatile var gateStart = 0L
+    val gateBytes = AtomicLong()
 }
 
 /**
@@ -116,6 +133,10 @@ object Downloads {
     var wanted by mutableStateOf(false)
     /** Where new downloads go. Picked on the Downloads page and kept between runs. */
     var dirPath by mutableStateOf(defaultDir())
+    /** false: ask which app each time; true: open with the app that handles the file */
+    var directOpen by mutableStateOf(false)
+    /** true: downloads are held to [LIMIT_KBS]; kept between runs */
+    var limitOn by mutableStateOf(false)
     private var app: Context? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -123,7 +144,40 @@ object Downloads {
 
     fun load(ctx: Context) {
         app = ctx.applicationContext
-        dirPath = ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getString("dlDir", null) ?: defaultDir()
+        val p = ctx.getSharedPreferences("p", Context.MODE_PRIVATE)
+        dirPath = p.getString("dlDir", null) ?: defaultDir()
+        directOpen = p.getBoolean("openDirect", false)
+        limitOn = p.getBoolean("dlLimit", false)
+        // every download kept from earlier runs: finished ones stay finished, the rest are shown as interrupted
+        val saved = p.getStringSet("dl_list", emptySet()).orEmpty().sorted()
+        tasks.value = saved.mapNotNull { row ->
+            val cols = row.split('\t')
+            if (cols.size < 4) return@mapNotNull null
+            val f = File(cols[3])
+            DlTask(cols[2], f).also { t ->
+                t.resumable = cols.getOrNull(4) == "1"
+                t.partPos = cols.getOrNull(5)?.takeIf { it.isNotBlank() }?.split(',')?.map { it.toLong() }?.toLongArray()
+                if (cols[1] == DlState.DONE.name && f.isFile) { t.state.value = DlState.DONE; t.done.value = f.length(); t.total.value = f.length() }
+                else { t.state.value = DlState.FAILED; t.error.value = "interrupted"; t.done.value = if (f.isFile) f.length() else 0L }
+            }
+        }
+    }
+
+    /** Saves the list (in order) so the downloads are still there after the app restarts. */
+    internal fun persist() {
+        val c = app ?: return
+        val rows = tasks.value.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty()) }.toSet()
+        c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
+    }
+
+    fun setDirectOpen(ctx: Context, v: Boolean) {
+        directOpen = v
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("openDirect", v).apply()
+    }
+
+    fun setLimit(ctx: Context, v: Boolean) {
+        limitOn = v
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlLimit", v).apply()
     }
 
     fun setDir(ctx: Context, path: String) {
@@ -140,8 +194,9 @@ object Downloads {
         while (file.exists()) file = File(dir, "$n-$name").also { n++ }
         val t = DlTask(url, file)
         tasks.value = tasks.value + t
+        persist()
         DownloadService.start(ctx)
-        scope.launch { t.fetch() }
+        t.job = scope.launch { t.fetch() }
     }
 
     /** Stops a download (its partial file goes too) or removes a finished one together with its file. */
@@ -149,6 +204,34 @@ object Downloads {
         t.cancelled = true
         tasks.value = tasks.value - t
         t.file.delete()
+        persist()
+    }
+
+    /** Holds a running download: the transfer stops and the partial file stays, so [resume] continues it. */
+    fun pause(t: DlTask) {
+        if (t.state.value != DlState.RUNNING) return
+        t.paused = true
+        t.state.value = DlState.PAUSED
+        persist()
+    }
+
+    fun pauseAll() = tasks.value.forEach { pause(it) }
+
+    fun resumeAll() = tasks.value.filter { it.state.value == DlState.PAUSED }.forEach { resume(it) }
+
+    /** Continues a download that stopped or was paused: a single copy picks up from its length, anything else starts again. */
+    fun resume(t: DlTask) {
+        val c = app ?: return
+        if (t.state.value == DlState.DONE || t.state.value == DlState.RUNNING) return
+        t.cancelled = false
+        t.paused = false
+        t.error.value = ""
+        t.state.value = DlState.RUNNING
+        persist()
+        DownloadService.start(c)
+        // waits for the transfer that is still stopping, so two never write the same file
+        val prev = t.job
+        t.job = scope.launch { prev?.join(); if (t.state.value == DlState.RUNNING) t.fetch() }
     }
 
     fun activeCount() = tasks.value.count { it.state.value == DlState.RUNNING }
@@ -162,10 +245,18 @@ object Downloads {
         }
     }
 
+    /** Overall progress of the running downloads, 0 to 100 (0 while no size is known). */
+    fun percent(): Int {
+        val known = tasks.value.filter { it.state.value == DlState.RUNNING && it.total.value > 0 }
+        val total = known.sumOf { it.total.value }
+        return if (total <= 0) 0 else (known.sumOf { it.done.value } * 100 / total).toInt().coerceIn(0, 100)
+    }
+
     fun summary(): String {
         val run = tasks.value.filter { it.state.value == DlState.RUNNING }
         if (run.isEmpty()) return "Downloading in the background"
-        return "${run.size} running · ${rate(run.sumOf { it.speed.value }.toFloat())}"
+        val pct = if (run.any { it.total.value > 0 }) " · ${percent()}%" else ""
+        return "${run.size} running$pct · ${rate(run.sumOf { it.speed.value }.toFloat())}"
     }
 
     /** Posts a notification when a download ends; tapping it opens the Downloads page. */
@@ -185,13 +276,22 @@ object Downloads {
     fun openFile(ctx: Context, f: File) {
         try {
             val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
-            val mime = if (f.extension.equals("apk", true)) "application/vnd.android.package-archive"
-                else MimeTypeMap.getSingleton().getMimeTypeFromExtension(f.extension.lowercase()) ?: "*/*"
+            if (f.extension.equals("apk", true)) {
+                ctx.startActivity(Intent(ctx, InstallActivity::class.java).setDataAndType(uri, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+                return
+            }
+            val mime = fileMime(f)
             val view = Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             view.clipData = ClipData.newRawUri("", uri)
-            try {
-                ctx.startActivity(Intent(view).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            } catch (e: ActivityNotFoundException) {
+            if (directOpen) {
+                try {
+                    ctx.startActivity(Intent(view).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                } catch (e: ActivityNotFoundException) {
+                    ctx.startActivity(Intent.createChooser(view, f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                }
+            } else {
+                // ask: the phone's own chooser shows every app that can open the file
                 ctx.startActivity(Intent.createChooser(view, f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
         } catch (e: Exception) {
@@ -213,86 +313,134 @@ object Downloads {
     internal fun openPage(c: Context) = Intent(c, MainActivity::class.java).putExtra("downloads", true)
 }
 
+private const val RETRIES = 6
+
 private fun open(url: String, range: String): HttpURLConnection =
     (URL(url).openConnection() as HttpURLConnection).apply {
         instanceFollowRedirects = true
-        connectTimeout = 15_000
+        connectTimeout = 20_000
         readTimeout = 30_000
+        // some hosts refuse the default Java agent
+        setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
         setRequestProperty("Range", range)
         // a compressed body would not match the byte ranges
         setRequestProperty("Accept-Encoding", "identity")
     }
 
+/** Tries the transfer again after a failure, continuing from the file on disk when it can. Gives up after [RETRIES] tries. */
 private suspend fun DlTask.fetch() {
-    try {
-        val first = open(url, "bytes=0-")
-        val code = first.responseCode
-        if (code !in 200..299) throw IOException("HTTP $code")
-        val total = if (code == 206) first.getHeaderField("Content-Range")?.substringAfter('/')?.toLongOrNull() ?: -1L else first.contentLengthLong
-        this.total.value = total
-        if (code == 206 && total > MIN_SPLIT) {
-            first.disconnect()
-            split(total)
-        } else {
-            first.inputStream.use { copy(it) }
-        }
-        if (!cancelled) {
+    var tries = 0
+    while (!cancelled && !paused) {
+        try {
+            // false: paused or removed; the partial file stays for the next resume
+            if (!transfer() || cancelled) return
             state.value = DlState.DONE
+            Downloads.persist()
             Downloads.notifyDone(this, true)
-        }
-    } catch (e: Exception) {
-        if (!cancelled) {
-            error.value = e.message ?: e.javaClass.simpleName
-            state.value = DlState.FAILED
-            Downloads.notifyDone(this, false)
+            return
+        } catch (e: Exception) {
+            if (cancelled || paused) return
+            tries++
+            // a split download keeps its part positions, so only a single copy falls back to one connection
+            if (partPos == null) noSplit = true
+            if (tries >= RETRIES) {
+                error.value = e.message ?: e.javaClass.simpleName
+                state.value = DlState.FAILED
+                Downloads.persist()
+                Downloads.notifyDone(this, false)
+                return
+            }
+            error.value = "retrying (${tries}/${RETRIES - 1}): ${e.message ?: e.javaClass.simpleName}"
+            delay(4000L * tries)
         }
     }
 }
 
+/** true when the whole file arrived; false when it was paused or removed on the way. */
+private suspend fun DlTask.transfer(): Boolean {
+    // a single sequential copy can resume from its length; a split download starts again
+    val have = if (resumable && file.isFile) file.length() else 0L
+    val first = open(url, if (have > 0) "bytes=$have-" else "bytes=0-")
+    val code = first.responseCode
+    if (code !in 200..299) throw IOException("HTTP $code")
+    val ranged = code == 206
+    val resumed = ranged && have > 0
+    val total = if (ranged) first.getHeaderField("Content-Range")?.substringAfter('/')?.toLongOrNull() ?: -1L else first.contentLengthLong
+    this.total.value = total
+    return if (partPos != null || (!resumed && ranged && total > MIN_SPLIT && !noSplit)) {
+        first.disconnect()
+        split(total)
+    } else {
+        first.inputStream.use { copy(it, append = resumed, start = if (resumed) have else 0L) }
+    }
+}
+
 /** Writes each range from its own connection at its own place in the file. */
-private suspend fun DlTask.split(total: Long) = coroutineScope {
+private suspend fun DlTask.split(total: Long): Boolean = coroutineScope {
+    resumable = false
     FileChannel.open(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING).use { ch ->
+        done.value = 0L
         val step = (total + PARTS - 1) / PARTS
         (0 until PARTS).map { i ->
             async(Dispatchers.IO) {
                 val from = i * step
                 val to = minOf(total, from + step) - 1
-                if (from <= to) {
-                    val c = open(url, "bytes=$from-$to")
-                    if (c.responseCode != 206) throw IOException("the server did not split the file (HTTP ${c.responseCode})")
-                    var pos = from
-                    c.inputStream.use { ins ->
-                        val buf = ByteArray(BUF)
-                        while (!cancelled) {
-                            val n = ins.read(buf)
-                            if (n < 0) break
-                            val bb = ByteBuffer.wrap(buf, 0, n)
-                            while (bb.hasRemaining()) ch.write(bb, pos + bb.position())
-                            pos += n
-                            done.update { it + n }
-                        }
+                if (from > to) return@async true
+                val c = open(url, "bytes=$from-$to")
+                if (c.responseCode != 206) throw IOException("the server did not split the file (HTTP ${c.responseCode})")
+                var pos = from
+                var eof = false
+                c.inputStream.use { ins ->
+                    val buf = ByteArray(BUF)
+                    while (!cancelled && !paused) {
+                        val n = ins.read(buf)
+                        if (n < 0) { eof = true; break }
+                        val bb = ByteBuffer.wrap(buf, 0, n)
+                        while (bb.hasRemaining()) ch.write(bb, pos + bb.position())
+                        pos += n
+                        done.update { it + n }
+                        throttle(n)
                     }
                 }
+                eof
             }
-        }.awaitAll()
+        }.awaitAll().all { it }
     }
 }
 
-private fun DlTask.copy(ins: InputStream) {
-    FileOutputStream(file).use { out ->
+/** Sleeps when this transfer is ahead of [LIMIT_KBS]; the bytes count from the moment the switch is on. */
+private fun DlTask.throttle(n: Int) {
+    if (!Downloads.limitOn) { gateBytes.set(0); gateStart = 0L; return }
+    val now = System.currentTimeMillis()
+    if (gateStart == 0L) gateStart = now
+    val due = gateBytes.addAndGet(n.toLong()) * 1000 / (LIMIT_KBS * 1024L)
+    val wait = due - (now - gateStart)
+    if (wait > 0) Thread.sleep(wait)
+}
+
+private fun DlTask.copy(ins: InputStream, append: Boolean = false, start: Long = 0L): Boolean {
+    resumable = true
+    done.value = start
+    FileOutputStream(file, append).use { out ->
         val buf = ByteArray(BUF)
-        while (!cancelled) {
+        while (!cancelled && !paused) {
             val n = ins.read(buf)
-            if (n < 0) break
+            if (n < 0) return true
             out.write(buf, 0, n)
             done.update { it + n }
+            throttle(n)
         }
     }
+    return false
 }
 
 /** Keeps the app in the foreground while downloads run, so they are not stopped when Pulse leaves the screen. Its notification shows the speed. */
 class DownloadService : Service() {
     private var watching = false
+    /** keeps the CPU awake while a download runs, so the screen going off does not stop it */
+    private var lock: android.os.PowerManager.WakeLock? = null
+    /** keeps Wi-Fi at full speed and awake while the screen is off (the CPU lock alone does not) */
+    private var wifi: android.net.wifi.WifiManager.WifiLock? = null
 
     override fun onBind(i: Intent?): IBinder? = null
 
@@ -300,6 +448,15 @@ class DownloadService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH_RUN, "Downloads", NotificationManager.IMPORTANCE_LOW))
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID_RUN, note(Downloads.summary()), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID_RUN, note(Downloads.summary()))
+        if (lock == null) {
+            lock = getSystemService(android.os.PowerManager::class.java).newWakeLock(android.os.PowerManager.PARTIAL_WAKE_LOCK, "pulse:downloads").apply { setReferenceCounted(false) }
+        }
+        if (lock?.isHeld == false) lock?.acquire(6 * 60 * 60 * 1000L)
+        if (wifi == null) {
+            wifi = applicationContext.getSystemService(android.net.wifi.WifiManager::class.java)
+                ?.createWifiLock(android.net.wifi.WifiManager.WIFI_MODE_FULL_HIGH_PERF, "pulse:downloads")?.apply { setReferenceCounted(false) }
+        }
+        if (wifi?.isHeld == false) wifi?.acquire()
         if (!watching) {
             watching = true
             CoroutineScope(Dispatchers.Default).launch {
@@ -308,6 +465,8 @@ class DownloadService : Service() {
                     nm.notify(ID_RUN, note(Downloads.summary()))
                     delay(1000)
                 }
+                if (lock?.isHeld == true) lock?.release()
+                if (wifi?.isHeld == true) wifi?.release()
                 stopSelf()
             }
         }
@@ -317,6 +476,7 @@ class DownloadService : Service() {
     private fun note(text: String): Notification =
         NotificationCompat.Builder(this, CH_RUN).setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("Pulse downloads").setContentText(text)
+            .setProgress(100, Downloads.percent(), false)
             .setContentIntent(PendingIntent.getActivity(this, 0, Downloads.openPage(this), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
             .setOngoing(true).setOnlyAlertOnce(true).setPriority(NotificationCompat.PRIORITY_LOW).build()
 
@@ -329,6 +489,18 @@ class DownloadService : Service() {
 
 /** Folders offered as one tap; any other folder can be typed in. */
 private val QUICK_DIRS = listOf("Download", "Documents", "Pictures", "Movies", "Music")
+/** Filter chips: the file kinds, by extension ("Other" takes the rest). */
+private val CATEGORIES = listOf("All", "Apps", "Video", "Images", "Documents", "Other")
+/** The sort icon cycles through these. */
+private val SORTS = listOf("Date", "Size", "Name")
+
+private fun category(f: File): String = when (f.extension.lowercase()) {
+    "apk", "xapk", "apks", "aab" -> "Apps"
+    "mp4", "mkv", "avi", "mov", "webm", "3gp", "m4v", "flv" -> "Video"
+    "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "svg" -> "Images"
+    "pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf", "odt", "csv", "epub" -> "Documents"
+    else -> "Other"
+}
 
 @Composable
 fun DownloadsPage() {
@@ -336,14 +508,34 @@ fun DownloadsPage() {
     val list by Downloads.tasks.collectAsState()
     var link by remember { mutableStateOf("") }
     var folder by remember { mutableStateOf(Downloads.dirPath) }
+    var cat by remember { mutableStateOf("All") }
+    var sort by remember { mutableStateOf(0) }
     // Android 13+ hides notifications until the user allows them; the download still runs without
     val askNotes = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
         if (Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
             askNotes.launch(android.Manifest.permission.POST_NOTIFICATIONS)
     }
+    val order: Comparator<DlTask> = when (sort) {
+        0 -> compareByDescending<DlTask> { it.file.lastModified() }
+        1 -> compareByDescending<DlTask> { it.done.value }
+        else -> compareBy<DlTask> { it.file.name.lowercase() }
+    }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PHead("Downloads")
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Box(Modifier.clickable { Downloads.pauseAll() }) { PIcon("pause", T.text, 22.dp) }
+            Box(Modifier.clickable { Downloads.resumeAll() }) { PIcon("play", T.text, 22.dp) }
+            Row(Modifier.clickable { sort = (sort + 1) % SORTS.size }, verticalAlignment = Alignment.CenterVertically) {
+                PIcon("sort", T.text, 22.dp)
+                Spacer(Modifier.width(4.dp))
+                Text(SORTS[sort], color = T.sub, fontSize = 12.sp)
+            }
+            PChip(Downloads.limitOn, "Limit $LIMIT_KBS KB/s") { Downloads.setLimit(ctx, !Downloads.limitOn) }
+        }
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            CATEGORIES.forEach { c -> PChip(cat == c, c) { cat = c } }
+        }
         PCard {
             Text("Save to ${Downloads.dirPath.removePrefix(Environment.getExternalStorageDirectory().path).ifEmpty { "/" }}", color = T.sub, fontSize = 12.sp)
             Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
@@ -369,7 +561,7 @@ fun DownloadsPage() {
             }
         }
         if (list.isEmpty()) Text("No downloads", color = T.sub, fontSize = 13.sp)
-        list.asReversed().forEach { DownloadRow(it) }
+        list.filter { cat == "All" || category(it.file) == cat }.sortedWith(order).forEach { DownloadRow(it) }
     }
 }
 
@@ -381,9 +573,10 @@ private fun DownloadRow(t: DlTask) {
     val st by t.state.collectAsState()
     val err by t.error.collectAsState()
     val speed by t.speed.collectAsState()
-    var pick by remember { mutableStateOf(false) }
+    val size = if (total > 0) "${Guard.gb(done)} of ${Guard.gb(total)}" else Guard.gb(done)
     val label = when (st) {
-        DlState.RUNNING -> (if (total > 0) "${Guard.gb(done)} of ${Guard.gb(total)}" else Guard.gb(done)) + " · " + rate(speed.toFloat())
+        DlState.RUNNING -> size + " · " + rate(speed.toFloat())
+        DlState.PAUSED -> "Paused · $size"
         DlState.DONE -> "Done · ${Guard.gb(done)}"
         DlState.FAILED -> "Failed: $err"
     }
@@ -393,13 +586,17 @@ private fun DownloadRow(t: DlTask) {
                 Text(t.file.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 Text(label, color = T.sub, fontSize = 12.sp)
             }
+            if (st == DlState.RUNNING) Box(Modifier.padding(start = 8.dp).clickable { Downloads.pause(t) }) { PIcon("pause", T.sub, 22.dp) }
+            if (st == DlState.PAUSED) Box(Modifier.padding(start = 8.dp).clickable { Downloads.resume(t) }) { PIcon("play", Look.accent, 22.dp) }
+            if (st == DlState.FAILED) Box(Modifier.padding(start = 8.dp).clickable { Downloads.resume(t) }) { PIcon("download", Look.accent, 22.dp) }
+            var pick by remember { mutableStateOf(false) }
             Box(Modifier.padding(start = 8.dp).clickable { pick = true }) { PIcon("folder", T.sub, 22.dp) }
+            if (pick) FolderPicker(File(Downloads.dirPath)) { pick = false }
             Spacer(Modifier.width(12.dp))
             Box(Modifier.clickable { Downloads.remove(t) }) { PIcon("delete", T.sub, 22.dp) }
         }
-        if (st == DlState.RUNNING) BarMeter(if (total > 0) done.toFloat() / total else 0f, Look.accent, Modifier.padding(top = 6.dp), h = 6.dp)
+        if (st == DlState.RUNNING || st == DlState.PAUSED) BarMeter(if (total > 0) done.toFloat() / total else 0f, Look.accent, Modifier.padding(top = 6.dp), h = 6.dp)
     }
-    if (pick) FolderPicker(Downloads.dirPath.let { File(it) }) { pick = false }
 }
 
 /** Picks the folder new downloads go to: browse shared storage, then "Use this folder". */
@@ -409,7 +606,7 @@ private fun FolderPicker(start: File, onDismiss: () -> Unit) {
     val top = remember { Environment.getExternalStorageDirectory() }
     var cur by remember { mutableStateOf(start) }
     val dirs = remember(cur) { cur.listFiles { f -> f.isDirectory && !f.name.startsWith(".") }?.sortedBy { it.name.lowercase() }.orEmpty() }
-    AlertDialog(
+    WinAlert(
         onDismissRequest = onDismiss,
         title = { Text(cur.path.removePrefix(top.path).ifEmpty { "/" }, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         text = {
@@ -433,3 +630,25 @@ private fun FolderPicker(start: File, onDismiss: () -> Unit) {
         dismissButton = { TextButton(onClick = { Downloads.openFolder(ctx, cur) }) { Text("Open in files") } },
     )
 }
+
+/** Text formats Android often does not know (m3u, lrc, srt, ...) open as text. */
+private val textExts = setOf("txt", "lrc", "srt", "vtt", "ass", "md", "log", "json", "xml", "csv", "tsv", "ini", "conf", "cfg",
+    "yml", "yaml", "properties", "sh", "kt", "java", "py", "js", "ts", "html", "htm", "css", "gradle", "toml", "sql", "nfo", "bat")
+
+/** The MIME type a file opens with: the known type, else text/plain for text formats, else sniffed text, else any. */
+fun fileMime(f: File): String {
+    val ext = f.extension.lowercase()
+    if (ext == "m3u" || ext == "m3u8") return "audio/x-mpegurl"
+    android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext)?.let { return it }
+    if (ext in textExts || looksLikeText(f)) return "text/plain"
+    return "*/*"
+}
+
+/** True when the first 512 bytes hold no NUL byte, the usual sign of plain text. */
+private fun looksLikeText(f: File): Boolean = runCatching {
+    f.inputStream().use { i ->
+        val b = ByteArray(512)
+        val n = i.read(b)
+        n > 0 && (0 until n).none { b[it] == 0.toByte() }
+    }
+}.getOrDefault(false)
