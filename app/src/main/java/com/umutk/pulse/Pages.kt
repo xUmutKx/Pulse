@@ -296,6 +296,7 @@ fun SettingsPage() {
     val cats = listOf(
         Cat("look", "palette", "Appearance", "Theme: ${T.name}"),
         Cat("general", "table", "General", "Start page, pages shown, units, text size"),
+        Cat("lang", "info", "Language / Dil", if (Opt.lang == "auto") "Phone language" else if (Opt.lang == "tr") "Türkçe" else "English"),
         Cat("monitor", "performance", "Monitor and alerts", if (Opt.ovOn || Opt.notifOn) "On" else "Floating numbers, notification, temperature / battery / memory alerts"),
         Cat("report", "info", "Report", "Share all device information"),
         Cat("speed", "speed", "Refresh rate", "${Cfg.interval / 1000f} s"),
@@ -355,6 +356,14 @@ fun SettingsPage() {
                 }
             }
             "general" -> GeneralSettings()
+            "lang" -> PCard {
+                Text(tr("Language", "Dil"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    listOf("auto" to "Phone / Telefon", "en" to "English", "tr" to "Türkçe").forEach { (v, label) ->
+                        PChip(Opt.lang == v, label) { Opt.lang = v; Opt.save(ctx) }
+                    }
+                }
+            }
             "monitor" -> MonitorSettings()
             "report" -> ReportSettings()
             "speed" -> PCard {

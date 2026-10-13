@@ -26,6 +26,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -95,6 +96,7 @@ private const val CH_DONE = "downloads_done"
 private const val ID_RUN = 7
 /** Speed limit when the switch on the Downloads page is on, in KB/s. */
 private const val LIMIT_KBS = 512
+private const val APK_MIME = "application/vnd.android.package-archive"
 
 enum class DlState { RUNNING, PAUSED, DONE, FAILED }
 
@@ -121,7 +123,13 @@ class DlTask(val url: String, val file: File) {
     /** speed limit: when the counted bytes started, and how many there are */
     @Volatile var gateStart = 0L
     val gateBytes = AtomicLong()
+
+    /** Bytes a split download has already written, from its part positions. */
+    fun partBytes(): Long = partPos?.let { p -> val step = partStep(total.value); p.indices.sumOf { p[it] - it * step } } ?: 0L
 }
+
+/** Size of each range of a split download. */
+private fun partStep(total: Long) = (total + PARTS - 1) / PARTS
 
 /**
  * Downloads run in this process and keep going while the app is in the background: [DownloadService] holds the
@@ -157,8 +165,9 @@ object Downloads {
             DlTask(cols[2], f).also { t ->
                 t.resumable = cols.getOrNull(4) == "1"
                 t.partPos = cols.getOrNull(5)?.takeIf { it.isNotBlank() }?.split(',')?.map { it.toLong() }?.toLongArray()
+                t.total.value = cols.getOrNull(6)?.toLongOrNull() ?: -1L
                 if (cols[1] == DlState.DONE.name && f.isFile) { t.state.value = DlState.DONE; t.done.value = f.length(); t.total.value = f.length() }
-                else { t.state.value = DlState.FAILED; t.error.value = "interrupted"; t.done.value = if (f.isFile) f.length() else 0L }
+                else { t.state.value = DlState.FAILED; t.error.value = "interrupted"; t.done.value = if (t.partPos != null) t.partBytes() else if (f.isFile) f.length() else 0L }
             }
         }
     }
@@ -166,7 +175,7 @@ object Downloads {
     /** Saves the list (in order) so the downloads are still there after the app restarts. */
     internal fun persist() {
         val c = app ?: return
-        val rows = tasks.value.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty()) }.toSet()
+        val rows = tasks.value.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value) }.toSet()
         c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
     }
 
@@ -264,7 +273,12 @@ object Downloads {
         val c = app ?: return
         val nm = c.getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH_DONE, "Finished downloads", NotificationManager.IMPORTANCE_DEFAULT))
-        val open = PendingIntent.getActivity(c, t.hashCode(), openPage(c), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        // a finished APK opens the installer window from the notification; anything else opens the Downloads page
+        val apk = if (ok && t.file.extension.equals("apk", true)) runCatching {
+            Intent(c, InstallActivity::class.java).setDataAndType(FileProvider.getUriForFile(c, "${c.packageName}.files", t.file), APK_MIME)
+                .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+        }.getOrNull() else null
+        val open = PendingIntent.getActivity(c, t.hashCode(), apk ?: openPage(c), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val n = NotificationCompat.Builder(c, CH_DONE).setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle(if (ok) "Download finished" else "Download failed")
             .setContentText(if (ok) t.file.name else t.error.value)
@@ -315,6 +329,9 @@ object Downloads {
 
 private const val RETRIES = 6
 
+/** The server did not answer a range request, so a split cannot go on. */
+private class NoRange(msg: String) : IOException(msg)
+
 private fun open(url: String, range: String): HttpURLConnection =
     (URL(url).openConnection() as HttpURLConnection).apply {
         instanceFollowRedirects = true
@@ -341,6 +358,8 @@ private suspend fun DlTask.fetch() {
         } catch (e: Exception) {
             if (cancelled || paused) return
             tries++
+            // no ranges from the server: the parts are dropped and the file starts again on one connection
+            if (e is NoRange) partPos = null
             // a split download keeps its part positions, so only a single copy falls back to one connection
             if (partPos == null) noSplit = true
             if (tries >= RETRIES) {
@@ -358,54 +377,57 @@ private suspend fun DlTask.fetch() {
 
 /** true when the whole file arrived; false when it was paused or removed on the way. */
 private suspend fun DlTask.transfer(): Boolean {
-    // a single sequential copy can resume from its length; a split download starts again
+    // a single sequential copy can resume from its length; a split download resumes from its part positions
     val have = if (resumable && file.isFile) file.length() else 0L
     val first = open(url, if (have > 0) "bytes=$have-" else "bytes=0-")
     val code = first.responseCode
     if (code !in 200..299) throw IOException("HTTP $code")
     val ranged = code == 206
     val resumed = ranged && have > 0
-    val total = if (ranged) first.getHeaderField("Content-Range")?.substringAfter('/')?.toLongOrNull() ?: -1L else first.contentLengthLong
-    this.total.value = total
-    return if (partPos != null || (!resumed && ranged && total > MIN_SPLIT && !noSplit)) {
+    val size = if (ranged) first.getHeaderField("Content-Range")?.substringAfter('/')?.toLongOrNull() ?: -1L else first.contentLengthLong
+    // saved part positions count only for the same file, and only when the server answers ranges
+    if (partPos != null && (!ranged || size != total.value)) partPos = null
+    total.value = size
+    return if (partPos != null || (!resumed && ranged && size > MIN_SPLIT && !noSplit)) {
         first.disconnect()
-        split(total)
+        split(size)
     } else {
         first.inputStream.use { copy(it, append = resumed, start = if (resumed) have else 0L) }
     }
 }
 
-/** Writes each range from its own connection at its own place in the file. */
+/** Writes each range from its own connection at its own place in the file. [partPos] keeps where each part has got to, so a resume goes on from there. */
 private suspend fun DlTask.split(total: Long): Boolean = coroutineScope {
     resumable = false
-    FileChannel.open(file.toPath(), StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING).use { ch ->
-        done.value = 0L
-        val step = (total + PARTS - 1) / PARTS
+    val step = partStep(total)
+    val fresh = partPos == null
+    val pos = partPos ?: LongArray(PARTS) { it * step }.also { partPos = it }
+    FileChannel.open(file.toPath(), if (fresh) setOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
+        else setOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE)).use { ch ->
+        done.value = pos.indices.sumOf { pos[it] - it * step }
         (0 until PARTS).map { i ->
             async(Dispatchers.IO) {
-                val from = i * step
-                val to = minOf(total, from + step) - 1
-                if (from > to) return@async true
-                val c = open(url, "bytes=$from-$to")
-                if (c.responseCode != 206) throw IOException("the server did not split the file (HTTP ${c.responseCode})")
-                var pos = from
-                var eof = false
+                val end = minOf(total, (i + 1) * step) - 1
+                if (pos[i] > end) return@async
+                val c = open(url, "bytes=${pos[i]}-$end")
+                if (c.responseCode != 206) throw NoRange("the server does not split the file (HTTP ${c.responseCode})")
                 c.inputStream.use { ins ->
                     val buf = ByteArray(BUF)
-                    while (!cancelled && !paused) {
+                    while (!cancelled && !paused && pos[i] <= end) {
                         val n = ins.read(buf)
-                        if (n < 0) { eof = true; break }
+                        // the stream ended before the part did: retry, the bytes so far are kept
+                        if (n < 0) throw IOException("connection closed early")
                         val bb = ByteBuffer.wrap(buf, 0, n)
-                        while (bb.hasRemaining()) ch.write(bb, pos + bb.position())
-                        pos += n
+                        while (bb.hasRemaining()) ch.write(bb, pos[i] + bb.position())
+                        pos[i] += n
                         done.update { it + n }
                         throttle(n)
                     }
                 }
-                eof
             }
-        }.awaitAll().all { it }
+        }.awaitAll()
     }
+    !cancelled && !paused
 }
 
 /** Sleeps when this transfer is ahead of [LIMIT_KBS]; the bytes count from the moment the switch is on. */
@@ -462,6 +484,8 @@ class DownloadService : Service() {
             CoroutineScope(Dispatchers.Default).launch {
                 while (Downloads.activeCount() > 0) {
                     Downloads.tick()
+                    // shortcut: progress is saved once a second, so a kill loses at most that much
+                    Downloads.persist()
                     nm.notify(ID_RUN, note(Downloads.summary()))
                     delay(1000)
                 }
@@ -504,6 +528,16 @@ private fun category(f: File): String = when (f.extension.lowercase()) {
 
 @Composable
 fun DownloadsPage() {
+    // no background on the page: only a strip of the chosen picture at its top, when the scope is "downloads"
+    val pic = Backdrop.image
+    androidx.compose.foundation.layout.Column(Modifier.fillMaxSize()) {
+        if (pic != null && Backdrop.scope == "downloads") androidx.compose.foundation.Image(pic, null, Modifier.fillMaxWidth().height(120.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop, alignment = androidx.compose.ui.Alignment.TopCenter)
+        Box(Modifier.weight(1f).fillMaxWidth()) { DownloadsContent() }
+    }
+}
+
+@Composable
+private fun DownloadsContent() {
     val ctx = LocalContext.current
     val list by Downloads.tasks.collectAsState()
     var link by remember { mutableStateOf("") }

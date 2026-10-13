@@ -13,8 +13,8 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,6 +23,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Android
 import androidx.compose.material.icons.outlined.CheckCircle
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
@@ -33,10 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -48,19 +47,19 @@ import com.umutk.pulse.InfoRows
 import com.umutk.pulse.Look
 import com.umutk.pulse.LocalWindowLook
 import com.umutk.pulse.PChip
+import com.umutk.pulse.PIcon
 import com.umutk.pulse.PTheme
 import com.umutk.pulse.R
 import com.umutk.pulse.Shell
 import com.umutk.pulse.Themes
 import com.umutk.pulse.WinAlert
 import com.umutk.pulse.amoledWindow
+import com.umutk.pulse.monoWindow
 import com.umutk.pulse.effective
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
-import kotlin.math.PI
-import kotlin.math.sin
 
 /** The APK the install window shows. MainActivity sets it when an APK is opened from outside, Downloads.openFile when one is tapped. */
 object InstallState { var file by mutableStateOf<File?>(null) }
@@ -183,29 +182,17 @@ object BioGate {
     }
 }
 
-/** Wavy line for the Material and AMOLED windows: it moves while the APK is read or installed. */
+/** The loading bar while an APK is read or installed: plain and white on Material and AMOLED, Windows 11 blue on Windows 11. */
 @Composable
-private fun WavyLine(color: Color) {
-    val phase by rememberInfiniteTransition(label = "wavy").animateFloat(
-        0f, (2 * PI).toFloat(), infiniteRepeatable(tween(1200, easing = LinearEasing), RepeatMode.Restart), label = "phase")
-    Canvas(Modifier.fillMaxWidth().height(14.dp)) {
-        val path = Path()
-        val mid = size.height / 2
-        val amp = size.height * .4f
-        for (i in 0..80) {
-            val x = size.width * i / 80
-            val y = mid + amp * sin(i * (2 * PI.toFloat()) / 16 + phase)
-            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
-        }
-        drawPath(path, color, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
-    }
+private fun BusyLine(w: PTheme) {
+    LinearProgressIndicator(Modifier.fillMaxWidth(), color = if (w.material) w.text else w.accent, trackColor = Color.Transparent)
 }
 
 /** The look of the install window, from Settings > Installer. */
 @Composable
 private fun installLook(): PTheme {
     val t = when (InstallShow.theme) {
-        "material" -> effective(Themes.first { it.id == "material" })
+        "material" -> monoWindow(effective(Themes.first { it.id == "material" }))
         "amoled" -> amoledWindow()
         else -> effective(Themes.first { it.id == "win11" })
     }
@@ -222,7 +209,7 @@ fun ApkCopying(progress: Float) {
         val w = LocalWindowLook.current
         WinAlert(onDismissRequest = {}, text = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                WavyLine(Color.White)
+                BusyLine(w)
                 Text("Copying the APK... ${(progress * 100).toInt()}%", color = w.sub, fontSize = 13.sp)
                 LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth(), color = Look.accent)
             }
@@ -238,15 +225,15 @@ private fun DoneMark() {
     Icon(Icons.Outlined.CheckCircle, null, Modifier.size(48.dp).graphicsLayer { scaleX = grow.value; scaleY = grow.value }, tint = Look.accent)
 }
 
-/** A button in the installer's own look: a filled pill on Material and AMOLED, a bordered box on Windows 11. */
+/** A Material 3 tonal button in the installer's look: a pill on Material and AMOLED, square corners on Windows 11. */
 @Composable
 private fun IButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, onClick: () -> Unit) {
     val w = LocalWindowLook.current
     val shape = if (w.material) RoundedCornerShape(50) else RoundedCornerShape(4.dp)
     val ink = if (danger) Warn else w.text
-    Box(modifier.clip(shape).background(w.panel).border(1.dp, Color.White.copy(alpha = .35f), shape)
-        .clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
-        Text(text, color = ink, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+    FilledTonalButton(onClick, modifier, shape = shape, border = BorderStroke(1.dp, w.line),
+        colors = ButtonDefaults.filledTonalButtonColors(containerColor = w.bg, contentColor = ink)) {
+        Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -303,12 +290,19 @@ private fun SdkRows(pk: Picked, old: OldApp?) {
     } else Text("SDK: min ${o.minSdk} \u2192 ${pk.minSdk}, target ${o.target} \u2192 ${pk.targetSdk}", color = w.sub, fontSize = 12.sp)
 }
 
+/** The module card: what the module needs, and an Open button for LSPosed. */
 @Composable
 private fun XposedRows(m: XposedInfo) {
+    val ctx = LocalContext.current
     val w = LocalWindowLook.current
-    Text("Xposed module", color = Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-    if (m.description.isNotEmpty()) Text(m.description, color = w.sub, fontSize = 12.sp)
-    if (m.minVersion.isNotEmpty()) Text("Needs Xposed API ${m.minVersion} or newer", color = w.sub, fontSize = 12.sp)
+    Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(if (w.material) 16.dp else 4.dp)).background(w.line.copy(alpha = .3f)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Xposed module", color = Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        if (m.description.isNotEmpty()) Text(m.description, color = w.sub, fontSize = 12.sp)
+        if (m.minVersion.isNotEmpty()) Text("Needs Xposed API ${m.minVersion} or newer", color = w.sub, fontSize = 12.sp)
+        Text("Turn it on in LSPosed", color = w.sub, fontSize = 12.sp)
+        IButton("Open", Modifier.fillMaxWidth()) { openLSPosed(ctx) }
+    }
 }
 
 /** Centred install window for an APK, in the look chosen under Settings > Installer. */
@@ -382,6 +376,11 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
         busy = false; installing = false
     }
 
+    // the installed app opens when its install is done, and the window closes behind it
+    LaunchedEffect(doneOk) {
+        if (doneOk) p?.pkg?.let { pkg -> ctx.packageManager.getLaunchIntentForPackage(pkg)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); onDone() } }
+    }
+
     // silent install with root: keeps data for a downgrade (-d) when the signature matches
     fun silent(pk: Picked, down: Boolean) {
         busy = true
@@ -418,18 +417,22 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
     // install on open: only New or Upgrade, never a blacklisted package, and only after the biometric check if it is on
     LaunchedEffect(p) {
         val a = p ?: return@LaunchedEffect
-        if (Installer.cur.auto && a.pkg !in Installer.black && statusOf(a) in listOf(Status.NEW, Status.UPGRADE)) BioGate.run(ctx) { if (root) silent(a, down = false) else commit(a) }
+        // with root the APK goes to pm at once; without root only an automatic profile installs without a tap
+        if ((root || Installer.cur.auto) && a.pkg !in Installer.black && statusOf(a) in listOf(Status.NEW, Status.UPGRADE)) BioGate.run(ctx) { if (root) silent(a, down = false) else commit(a) }
     }
 
     val pk = p
     val st = pk?.let { statusOf(it) }
     // the Android logo: its wordmark is white, so it reads on AMOLED and dark windows; black on light windows, accent on Material
-    val logoTint = when { w.id == "amoled" -> null; w.material -> ColorFilter.tint(Look.accent); w.dark -> null; else -> ColorFilter.tint(Color.Black) }
+    val logoTint = when { w.id == "amoled" -> null; w.material -> ColorFilter.tint(w.accent); w.dark -> null; else -> ColorFilter.tint(Color.Black) }
     fun gate(f: () -> Unit) = BioGate.run(ctx, f)
     WinAlert(
         // the window stays until the install is really done; only a finished or idle window can be closed
         onDismissRequest = { if (!installing) { if (InstallShow.cancelOnDismiss) BioGate.pending?.cancel(); onDone() } },
-        title = null,
+        title = {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            }
+        },
         text = {
             Column(Modifier.fillMaxWidth().graphicsLayer {
                 if (fancy) { alpha = enter.value; scaleX = .92f + .08f * enter.value; scaleY = .92f + .08f * enter.value }
@@ -438,7 +441,7 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 when {
                     doneOk -> DoneMark()
                     img != null -> Image(img, null, Modifier.size(64.dp))
-                    fancy -> WavyLine(Color.White)
+                    fancy -> BusyLine(w)
                     else -> Image(painterResource(R.drawable.ic_android_logo), null, Modifier.size(64.dp), colorFilter = logoTint)
                 }
                 if (pk == null) {
@@ -454,8 +457,15 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 }
                 if (InstallShow.pkg) Text(pk.pkg, color = w.sub, fontSize = 12.sp)
                 if (InstallShow.version) VersionRows(pk, old)
-                if (InstallShow.chip) Box(Modifier.background(w.line.copy(alpha = .5f), RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 4.dp)) {
-                    Text(st!!.label, color = if (st == Status.SIG) Warn else w.text, fontSize = 12.sp)
+                if (InstallShow.chip) {
+                    val (chipBg, chipInk) = when (st) {
+                        Status.NEW, Status.UPGRADE -> Color(0xFFC8E6C9) to Color(0xFF1B5E20)
+                        Status.DOWNGRADE, Status.SIG -> Color(0xFFFFCDD2) to Color(0xFFB71C1C)
+                        else -> w.line.copy(alpha = .5f) to w.text
+                    }
+                    Box(Modifier.background(chipBg, RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 4.dp)) {
+                        Text(st!!.label, color = chipInk, fontSize = 12.sp)
+                    }
                 }
                 // the warning for the state, shown above the buttons
                 val warning = when (st) {
@@ -466,9 +476,9 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                     else -> null
                 }
                 if (warning != null) Text(warning, color = if (st == Status.SIG) Warn else w.sub, fontSize = 12.sp)
-                SdkRows(pk, old)
+                if (InstallShow.sdk) SdkRows(pk, old)
                 xp?.let { XposedRows(it) }
-                InfoRows(listOf("Certificate" to (pk.sigs.firstOrNull()?.let { "SHA-256 " + it.take(23) + "..." } ?: "Not signed")))
+                if (InstallShow.cert) InfoRows(listOf("Certificate" to (pk.sigs.firstOrNull()?.let { "SHA-256 " + it.take(23) + "..." } ?: "Not signed")))
                 SplitList(pk)
                 if (error.isNotEmpty()) Text(error, color = Warn, fontSize = 12.sp)
                 if (error.isNotEmpty() && InstallShow.suggest) suggestions(error).forEach { Text("\u2022 $it", color = w.sub, fontSize = 12.sp) }
@@ -486,12 +496,11 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 }
                 if (busy) {
                     // the animation keeps moving until the result; the system installer may ask for a confirm tap meanwhile
-                    WavyLine(Color.White)
+                    BusyLine(w)
                     Text(if (installing) "Installing ${pk.label}... Confirm in the system installer if it asks."
                         else "Working...", color = w.sub, fontSize = 12.sp)
                     return@Column
                 }
-                if (xp != null) IButton("Open LSPosed", full) { openLSPosed(ctx) }
                 if (InstallShow.extended) {
                     IButton(if (more) "Fewer options" else "More options", full) { more = !more }
                     if (more) {
@@ -506,7 +515,7 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 InstallOptions(opts) { opts = it }
                 if (pk.pkg in Installer.black) Text("On the blacklist: Pulse does not install this package", color = Warn, fontSize = 12.sp)
                 else when (st) {
-                    Status.NEW, Status.UPGRADE, Status.IDENTICAL -> IButton("Install", full) { gate { if (root) silent(pk, down = false) else commit(pk) } }
+                    Status.NEW, Status.UPGRADE, Status.IDENTICAL -> IButton(if (st == Status.UPGRADE) "Upgrade" else "Install", full) { gate { if (root) silent(pk, down = false) else commit(pk) } }
                     Status.DOWNGRADE -> {
                         IButton("Downgrade", full) { gate { if (root && pk.sigs == pk.installedSigs) silent(pk, down = true) else commit(pk) } }
                         if (root) IButton("Remove and restore data", full, danger = true) { gate { restore(pk) } }
@@ -519,7 +528,8 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
         },
         confirmButton = {},
         dismissButton = null,
-        containerColor = if (w.id == "amoled") Color(0xD9000000) else null, // see-through black: what is behind shows faintly
+        containerColor = w.panel.copy(alpha = .8f), // see-through: what is behind shows faintly, never black
+        noDim = true,
     )
 }
 
@@ -548,6 +558,10 @@ object InstallShow {
     var cancelOnDismiss by mutableStateOf(false)
     /** Rounded corners in the install window; off = square. */
     var round by mutableStateOf(true)
+    /** SDK min and target rows; off by default to show less. */
+    var sdk by mutableStateOf(false)
+    /** The certificate fingerprint row; off by default. */
+    var cert by mutableStateOf(false)
     private var loaded = false
     private fun prefs(c: android.content.Context) = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     fun load(c: android.content.Context) {
@@ -562,13 +576,14 @@ object InstallShow {
         extended = p.getBoolean("inst_ext", false); suggest = p.getBoolean("inst_sugg", true)
         expand = p.getBoolean("inst_exp", false); cancelOnDismiss = p.getBoolean("inst_cancel", false)
         round = p.getBoolean("inst_round", true)
+        sdk = p.getBoolean("inst_sdk", false); cert = p.getBoolean("inst_cert", false)
     }
     fun set(c: android.content.Context, key: String, v: Boolean) {
         when (key) {
             "inst_name" -> name = v; "inst_ver" -> version = v; "inst_pkg" -> pkg = v; "inst_chip" -> chip = v
             "inst_bio" -> biometric = v; "inst_cmp1" -> cmpSingle = v; "inst_sdkm" -> sdkMulti = v; "inst_same1" -> sameSingle = v
             "inst_ext" -> extended = v; "inst_sugg" -> suggest = v; "inst_exp" -> expand = v; "inst_cancel" -> cancelOnDismiss = v
-            "inst_round" -> round = v
+            "inst_round" -> round = v; "inst_sdk" -> sdk = v; "inst_cert" -> cert = v
         }
         prefs(c).edit().putBoolean(key, v).apply()
     }

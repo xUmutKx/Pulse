@@ -96,14 +96,16 @@ private val LocalGlassBackdrop = compositionLocalOf<GlassBackdrop?> { null }
 fun GlassRoot(
     wallpaperKey: Any,
     modifier: Modifier = Modifier.fillMaxSize(),
+    /** Shrink factor of the blurred copy: bigger = softer. Changing it rebuilds the backdrop. */
+    blurDiv: Int = 12,
     wallpaper: GlassPainter,
     content: @Composable BoxScope.() -> Unit,
 ) {
     var size by remember { mutableStateOf(IntSize.Zero) }
     val density = LocalDensity.current
     val direction = LocalLayoutDirection.current
-    val backdrop = remember(size, wallpaperKey) {
-        if (size.width <= 0 || size.height <= 0) null else makeBackdrop(size, density, direction, wallpaper)
+    val backdrop = remember(size, wallpaperKey, blurDiv) {
+        if (size.width <= 0 || size.height <= 0) null else makeBackdrop(size, density, direction, blurDiv, wallpaper)
     }
     CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {
         Box(
@@ -115,8 +117,7 @@ fun GlassRoot(
     }
 }
 
-private fun makeBackdrop(size: IntSize, density: Density, direction: LayoutDirection, wallpaper: GlassPainter): GlassBackdrop {
-    val div = 12
+private fun makeBackdrop(size: IntSize, density: Density, direction: LayoutDirection, div: Int, wallpaper: GlassPainter): GlassBackdrop {
     val w = (size.width / div).coerceAtLeast(2)
     val h = (size.height / div).coerceAtLeast(2)
     val small = ImageBitmap(w, h)

@@ -21,6 +21,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -69,7 +70,7 @@ object Cfg {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Cfg.load(this); Opt.load(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
+        Cfg.load(this); Opt.load(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); com.umutk.pulse.features.GlassPrefs.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
         Watchdog.sync(this)
         // coming back to a process Android restarted: the saved page and scroll are restored, so the opening screen is not played again
         if (savedInstanceState != null) SplashGate.splashed = true
@@ -144,7 +145,7 @@ val Pages = listOf(
     Pg("startup", "Startup apps", "startup"),
     Pg("details", "Details", "details"),
     Pg("services", "Services", "services"),
-    Pg("apps", "Apps", "users"),
+    Pg("apps", "Apps", "apps"),
     Pg("downloads", "Downloads", "download"),
     Pg("files", "Files", "folder"),
     Pg("device", "Device", "phone"),
@@ -157,22 +158,30 @@ private val SettingsPg = Pg("settings", "Settings", "settings")
 @Composable
 private fun Root() = LookHost { th ->
     // Windows 11 with a picture chosen: the app background is see-through and the picture shows behind everything
-    val pic = if (th.id == "win11") com.umutk.pulse.features.Backdrop.image else null
+    // Windows 11 with the whole-app scope: the picture is the app background, blurred and tinted blue; the panels sit on top
+    val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.scope == "app") com.umutk.pulse.features.Backdrop.image else null
     Surface(Modifier.fillMaxSize(), color = if (pic != null) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
-        if (pic != null) androidx.compose.foundation.Image(pic, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop, alignment = androidx.compose.ui.Alignment.TopCenter)
-        if (!SplashGate.splashed) Splash(th) { SplashGate.splashed = true } else key(th.dark) { App() }
+        if (pic != null) {
+            androidx.compose.foundation.Image(pic, null, Modifier.fillMaxSize().blur(com.umutk.pulse.features.Backdrop.blur.dp), contentScale = androidx.compose.ui.layout.ContentScale.Crop, alignment = com.umutk.pulse.features.Backdrop.alignment())
+            Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .35f)))
+        }
+        val wctx = androidx.compose.ui.platform.LocalContext.current
+        var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("welcomed", false)) }
+        if (!SplashGate.splashed) Splash(th) { SplashGate.splashed = true }
+        else if (!welcomed) Welcome { welcomed = true }
+        else key(th.dark) { App() }
     }
 }
 
 /** Resolves the look and provides it to the content: MainActivity and InstallActivity both use it. */
 @Composable
-fun LookHost(content: @Composable (PTheme) -> Unit) {
+fun LookHost(transparent: Boolean = false, content: @Composable (PTheme) -> Unit) {
     val base = Look.theme
     val th = effective(base)
     // the rest of the UI reads Look.theme through T, so the resolved Material look is swapped in while composing
     Look.resolved = if (th !== base) th else null
     // pop-up windows take their own look: the app look, Material, or AMOLED black
-    val wl = when (Look.windowTheme) { "material" -> effective(Themes.first { it.id == "material" }); "amoled" -> amoledWindow(); else -> th }
+    val wl = when (Look.windowTheme) { "material" -> monoWindow(effective(Themes.first { it.id == "material" })); "amoled" -> amoledWindow(); else -> th }
     val acc = Look.accent
     val cs = if (th.dark) darkColorScheme(primary = acc, onPrimary = onAccent(acc), background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
     else lightColorScheme(primary = acc, onPrimary = onAccent(acc), background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
@@ -183,7 +192,9 @@ fun LookHost(content: @Composable (PTheme) -> Unit) {
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens.density, dens.fontScale * Opt.fontScale), LocalWindowLook provides wl) {
         MaterialTheme(colorScheme = cs) {
             // liquid glass: the wallpaper (or the theme's backdrop) is blurred behind the glass panels
-            GlassRoot(wallpaperKey = th.id to Backdrop.image, wallpaper = {
+            // the installer window (transparent): nothing is drawn behind it, the app behind shows through
+            if (transparent) Box(Modifier.fillMaxSize()) { content(th) }
+            else GlassRoot(wallpaperKey = th.id to Backdrop.image, wallpaper = {
                 val img = Backdrop.image
                 if (img != null) drawImage(img, dstSize = IntSize(size.width.toInt(), size.height.toInt()))
                 else drawRect(th.wall ?: SolidColor(th.bg))
@@ -201,7 +212,7 @@ private fun App() {
     LaunchedEffect(Downloads.wanted) { if (Downloads.wanted) { go("downloads"); Downloads.wanted = false } }
     LaunchedEffect(com.umutk.pulse.widgets.WidgetOpen.page) {
         val p = com.umutk.pulse.widgets.WidgetOpen.page
-        if (p.isNotEmpty()) { if (p == "toolkit" || p.startsWith("toolkit:")) { com.umutk.pulse.features.ToolkitOpen.tool = p.substringAfter(":", ""); sub = "toolkit" } else if (p == SettingsPg.id || Pages.any { it.id == p }) go(p); com.umutk.pulse.widgets.WidgetOpen.page = "" }
+        if (p.isNotEmpty()) { if (p == "toolkit" || p.startsWith("toolkit:")) { com.umutk.pulse.features.ToolkitOpen.tool = p.substringAfter(":", ""); sub = "toolkit" } else if (p == SettingsPg.id || Pages.any { it.id == p }) go(p) else if (p == "installer_settings") sub = p; com.umutk.pulse.widgets.WidgetOpen.page = "" }
     }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
@@ -249,9 +260,9 @@ private fun ModernShell(page: String, go: (String) -> Unit, menus: MenuHost, bod
         Column(Modifier.width(if (wide) 210.dp else 52.dp).fillMaxHeight().then(if (wide) Modifier.background(t.bg.copy(alpha = .97f)).border(1.dp, t.line.copy(alpha = .5f)) else Modifier).padding(vertical = 8.dp).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.Start) {
             NavItem("menu", "Pulse", false, wide) { wide = !wide }
             Spacer(Modifier.height(6.dp))
-            visible.forEach { NavItem(it.icon, it.label, page == it.id, wide) { _ -> go(it.id); wide = false } }
+            visible.forEach { NavItem(it.icon, pageName(it.id, it.label), page == it.id, wide) { _ -> go(it.id); wide = false } }
             Spacer(Modifier.weight(1f).defaultMinSize(minHeight = 12.dp))
-            NavItem(SettingsPg.icon, SettingsPg.label, page == "settings", wide) { go("settings"); wide = false }
+            NavItem(SettingsPg.icon, pageName("settings", SettingsPg.label), page == "settings", wide) { go("settings"); wide = false }
         }
     }
 }
@@ -282,7 +293,7 @@ private fun MaterialRail(page: String, go: (String) -> Unit, menus: MenuHost, bo
                     val on = page == p.id
                     NavigationRailItem(selected = on, onClick = { go(p.id) },
                         icon = { PIcon(p.icon, if (on) Look.accent else t.sub, 22.dp) },
-                        label = { Text(p.label, maxLines = 1) },
+                        label = { Text(pageName(p.id, p.label), maxLines = 1) },
                         colors = NavigationRailItemDefaults.colors(selectedIconColor = Look.accent, selectedTextColor = Look.accent))
                 }
             }
