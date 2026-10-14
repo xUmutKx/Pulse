@@ -1,6 +1,6 @@
 # Pulse
 
-Pulse is a task manager for Android that looks like the Windows one. It shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, a terminal and a toolkit of small utilities.
+**An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
 
 Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK is about 11 MB.
 
@@ -13,49 +13,56 @@ Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK 
 - **App history**: foreground time per app today, screen unlocks and a notification count, as a list or a pie chart. Needs usage access; the notification count needs notification access.
 - **Startup apps**: boot receivers, which you can switch off with root or Shizuku.
 - **Services**: running services (root only).
-- **Details** and **Apps**: search, filter, sort by name, size, install date or last used, open, app settings, uninstall, force stop, and extract the APK.
+- **Details**: search, filter, sort, and open the app.
 - **Guardians**: a detail page each for Thermal, Battery, Storage and Memory, with a verdict and 30-minute graphs.
+
+### App manager and debloater
+
+- **Apps**: search, filter (All, User, System, Disabled, Battery limit, Xposed modules) and sort (name, size, install date, last used), each with its own icon. Open an app to open it, see its app settings, force stop it, uninstall it, or extract its APK to `Downloads/Pulse/extract`.
+- **Debloat**: remove system apps you do not need. Every app is marked **Safe**, **Expert** or **Unsafe**, with a short description of what it does. Removal is for your user only: the app's data stays, and the **Reinstall** tab brings any removed app back. **Undo last** at the top restores the most recent removal. The list is downloaded from GitHub with **Update list**, and a copy is bundled with the app for offline use. Debloat needs root.
 
 ### Monitoring
 
 - **Floating monitor** over other apps, live numbers in a notification, and alerts for temperature, battery and memory with limits you set.
-- **Quick Settings tiles** for the monitor, Private DNS and seven toolkit tools.
-- **20 home-screen widgets**: battery, memory, storage, network, temperature, clock, downloads and more.
+- **Quick Settings tiles** for the monitor, Private DNS and the toolkit tools.
+- **20 home-screen widgets**: battery, memory, storage, network, temperature, clock, downloads and more. The **Widgets** page shows every widget drawn live, in the theme you have chosen, with an **Add to home** button. The launcher's own widget picker also shows a preview of each one.
 - **Device**: system, CPU and per-core frequency and governors, memory, storage, battery, network with a latency test, thermal zones, display, camera, sensors, media and DRM, system properties and a short benchmark.
 - **Health**: step counter, heart rate from the camera flash, and location tracking. Each is asked for only when you turn it on.
 
 ### Files and install
 
-- **Files**: a file explorer with a trash folder. Deleted files go to `.pulse_trash` until the next delete, so Undo can bring them back.
+- **Files**: a file explorer with a trash folder. Deleted files go to `.pulse_trash` until the next delete, so Undo can bring them back. Each file has its menu on the right, with the three dots stacked.
 - **Installer**: installs APK, APKS, APKM, XAPK and zip bundles. Modes are dialog, background, auto and silent. Silent install uses root or Shizuku. The installer detects Xposed modules and has an LSPosed button. You can require biometrics before each install. The install window has three looks (Windows 11, Material or AMOLED black) and three loading styles: round, rounded bar, or wave. The loader is always white.
 - **Downloads**: several connections for files the server can split, and downloads keep running in the background. Paste a link, or share a link from your browser to Pulse.
-- **Extract APK**: copies an installed app to `Downloads/Pulse/extract`. Split apps are saved as one `.apks` file.
 
 ### Tools
 
-- **Toolkit**: 20 tools, including compass, level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder.
+- **Toolkit**: 20 tools, including compass (every direction is written round the dial), level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder. Dice, coin and sound mode act right in the Quick Settings panel without opening the app.
 - **Terminal**: runs commands on the phone's shell, with ADB-style quick commands (model, battery, packages, logcat and more). A Run in Termux button sends a command to Termux instead.
 - **Network usage**: data use per app, split into mobile and Wi-Fi.
 - **DNS**: Private DNS as Auto, Off or Manual with a host name. Needs root or Shizuku.
 - **Watchdog**: every 15 minutes it restarts the monitor and any running downloads that Android has stopped.
-- **Cache cleaner**, **folder sizes**, **type breakdown** and **temperature graph**, from the Tools page.
+- **Cache cleaner**, **folder sizes**, **type breakdown** and **temperature graph**, from the Tools page. Pie charts draw each slice flush against the next.
 
 ## Themes
 
-Pulse has six looks:
+Pulse has these looks, each with its own title bar, buttons and window edge:
 
-- Windows 11, with a dark version
-- Windows 10, with a dark version
-- Windows 7
-- Windows XP
-- Windows 95
-- Material You, which uses the wallpaper colours on Android 12 and newer
+- **Windows 11**, with a dark version. Dialogs are see-through, with the accent colour as a 1 px edge.
+- **Windows 10**, with a dark version
+- **Windows 7**, with an Aero style glass title bar and glossy buttons
+- **Windows XP**, with the Luna blue title bar
+- **Windows 95**, with grey bevelled buttons
+- **Material You**, which uses the wallpaper colours on Android 12 and newer
+- **AMOLED**, pure black
 
 You can choose light, dark or the system setting. The Windows 11, Windows 10 and Material looks have an accent colour choice. The sidebar looks have a backdrop effect: None, Mica, Mica Alt, Acrylic or Glass. Pop-up windows, dialogs and menus can use the Windows, Material or AMOLED black look.
 
+Each look can have its own wallpaper. The Settings page shows the picture in the theme's preview, and sliders place it across and up or down.
+
 ## Language
 
-Pulse follows the phone language by default. You can pick English or Türkçe instead in Settings > Language.
+Pulse follows the phone language by default. You can pick English or Türkçe on the **About** page, with a direct switch.
 
 ## Permissions
 
@@ -67,7 +74,7 @@ Pulse asks for these. Most are optional and only used by the feature named.
 - **Notifications**: the live notification and alerts.
 - **Notification access**: the notification count in app history.
 - **Install unknown apps**: the installer.
-- **Internet**: downloads and the latency test.
+- **Internet**: downloads, the latency test and the debloat list.
 - **Biometrics**: optional install confirmation.
 - **Camera**: heart rate on the Health page.
 - **Activity recognition and location**: the Health page step counter and location tracking.
@@ -86,10 +93,11 @@ Pulse works without root. Root or Shizuku unlock more.
 - cache trimming in the cache cleaner
 - the screenshot tool and the root tab in Files
 - silent install, downgrades that keep app data, and restoring app data
+- the debloater (removing and restoring system apps)
 
 **Shizuku** runs the same shell commands as root for startup switches, killing and force-stopping apps, and the terminal. It also does silent installs and sets Private DNS.
 
-Without root or Shizuku you still get memory, battery, storage, network, device info, sensors, the dialog installer, downloads, files, the toolkit and the floating monitor.
+Without root or Shizuku you still get memory, battery, storage, network, device info, sensors, the dialog installer, downloads, files, the toolkit, widgets and the floating monitor.
 
 ## Build
 
@@ -106,6 +114,7 @@ The APK is written to `app/build/outputs/apk/release/`. Release builds are curre
 ## Licences
 
 - **Microsoft Fluent System Icons** (MIT). The icons in the Windows themes are outlines taken from them by `tools/fetch_icons.py` into `FluentPaths.kt`.
+- **Universal Android Debloater package list** (GPL-3.0, Universal-Debloater-Alliance). The debloater downloads it from GitHub; a copy is bundled in `app/src/main/assets/debloat/uad_lists.json`.
 - **Shizuku API** (MIT, copyright RikkaW). The licence text is in `app/src/main/assets/licenses/`.
 - **Windows XP icon pack** by Matt Pettit (CC0 1.0, public domain dedication). The XP theme's Apps, Download, Heart, Phone and Startup icons come from it, resized to 48 px. The licence text is in `app/src/main/assets/licenses/xp-icons-LICENSE.txt`.
 - **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
