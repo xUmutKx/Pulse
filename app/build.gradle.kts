@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = 31
         targetSdk = 34
-        versionCode = 87
-        versionName = "0.10.77"
+        versionCode = 88
+        versionName = "0.10.78"
         ndk { abiFilters += "arm64-v8a" }
     }
     buildTypes {
