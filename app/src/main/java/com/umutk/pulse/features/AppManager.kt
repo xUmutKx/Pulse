@@ -9,6 +9,11 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -42,22 +47,43 @@ import com.umutk.pulse.AppIcon
 import com.umutk.pulse.Extra
 import com.umutk.pulse.Look
 import com.umutk.pulse.PCard
+import com.umutk.pulse.PButton
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
 import com.umutk.pulse.PHead
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
+import com.umutk.pulse.onAccent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 
-private enum class AmFilter(val label: String) {
-    ALL("All"), USER("User"), SYSTEM("System"), DISABLED("Disabled"), RESTRICTED("Has battery restriction"), MODULES("Xposed modules"),
+private enum class AmFilter(val label: String, val icon: String) {
+    ALL("All", "folder"), USER("User", "filetypes"), SYSTEM("System", "disk"), DISABLED("Disabled", "delete"),
+    RESTRICTED("Battery limit", "performance"), MODULES("Xposed modules", "table"),
 }
 
-private enum class AmSort(val label: String) {
-    NAME("Name"), SIZE("Size"), INSTALLED("Install date"), LAST_USED("Last used"),
+private enum class AmSort(val label: String, val icon: String) {
+    NAME("Name", "rename"), SIZE("Size", "disk"), INSTALLED("Install date", "download"), LAST_USED("Last used", "info"),
+}
+
+/** A filter or sort chip with its icon: the picked one takes the accent, the others stay quiet. */
+@Composable
+private fun AmChip(on: Boolean, label: String, icon: String, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(T.radius.coerceAtMost(12.dp))
+    Row(
+        Modifier.clip(shape)
+            .background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent)
+            .border(1.dp, if (on) Look.accent else T.line, shape)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PIcon(icon, if (on) Look.accent else T.sub, 16.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(label, color = if (on) T.text else T.sub, fontSize = 12.sp)
+    }
 }
 
 private class AmRow(
@@ -138,14 +164,13 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
     val ctx = LocalContext.current
     var rows by remember { mutableStateOf<List<AmRow>?>(null) }
     var query by remember { mutableStateOf("") }
-    var extractFor by remember { mutableStateOf<AmRow?>(null) }
     var filter by remember { mutableStateOf(AmFilter.ALL) }
     var sort by remember { mutableStateOf(AmSort.NAME) }
+    var debloat by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    LaunchedEffect(Unit) {
-        rows = withContext(Dispatchers.IO) { loadAmRows(ctx) }
-    }
+    // the descriptions of what each app is live in Debloat, not here
+    LaunchedEffect(Unit) { rows = withContext(Dispatchers.IO) { loadAmRows(ctx) } }
 
     val all = rows.orEmpty()
     val shown = remember(rows, query, filter, sort) {
@@ -154,32 +179,34 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
         }.sortedWith(comparatorFor(sort))
     }
 
+    // the debloater opens over this list (its own screen, with Back)
+    if (debloat) {
+        DebloatScreen { debloat = false }
+        return
+    }
+
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             PHead("App manager", if (rows == null) "Loading" else "${shown.size} / ${all.size}")
-            extractFor?.let { a ->
-                WinAlert(
-                    onDismissRequest = { extractFor = null },
-                    title = { Text("Extract APK?") },
-                    text = { Text("${a.label} will be copied to Downloads/Pulse/extract.") },
-                    confirmButton = {
-                        TextButton(onClick = {
-                            extractFor = null
-                            scope.launch { Toast.makeText(ctx, withContext(Dispatchers.IO) { extractApp(ctx, a.pkg) }, Toast.LENGTH_LONG).show() }
-                        }) { Text("Extract") }
-                    },
-                    dismissButton = { TextButton(onClick = { extractFor = null }) { Text("Cancel") } },
-                )
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Spacer(Modifier.weight(1f))
+                // the one button on the right opens the debloater (Recommended and Advanced system apps)
+                Row(Modifier.border(1.dp, T.line, RoundedCornerShape(50)).clickable { debloat = true }.padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("delete", T.text, 16.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text("Debloat", color = T.text, fontSize = 13.sp)
+                }
             }
             PField(query, { query = it }, "Search", Modifier.fillMaxWidth())
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AmFilter.entries.forEach { f -> PChip(filter == f, f.label) { filter = f } }
+                AmFilter.entries.forEach { f -> AmChip(filter == f, f.label, f.icon) { filter = f } }
             }
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                AmSort.entries.forEach { s -> PChip(sort == s, s.label) { sort = s } }
+                AmSort.entries.forEach { s -> AmChip(sort == s, s.label, s.icon) { sort = s } }
             }
         }
         items(shown, key = { it.pkg }) { a ->
+            // a tap opens the app's details; picking several apps lives in Debloat
             PCard(Modifier.clickable { onOpen(a.pkg) }) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AppIcon(a.pkg, 36.dp)
@@ -196,13 +223,6 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                             "Restricted".takeIf { a.restricted },
                         )
                         Text(tags.joinToString(" · "), color = T.sub, fontSize = 11.sp, maxLines = 1)
-                    }
-                    Column(
-                        Modifier.width(52.dp).clickable { extractFor = a }.semantics { contentDescription = "Extract APK" },
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        PIcon("extract", Look.accent, 20.dp)
-                        Text("APK", color = Look.accent, fontSize = 10.sp)
                     }
                 }
             }

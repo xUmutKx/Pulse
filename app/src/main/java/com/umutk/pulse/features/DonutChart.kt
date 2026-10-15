@@ -62,25 +62,32 @@ fun DonutChart(slices: List<Pair<String, Long>>, modifier: Modifier = Modifier, 
                 val topLeft = Offset(inset, inset)
                 if (total <= 0L) {
                     drawArc(T.line, 0f, 360f, false, topLeft, arcSize, style = Stroke(strokePx))
-                } else {
-                    // Round caps stick out by half a stroke at each end; trim that so neighbours do not touch.
-                    val capDeg = Math.toDegrees((strokePx / 2 / (arcSize.width / 2)).toDouble()).toFloat()
+                } else if (T.material) {
+                    // M3 Expressive: rounded segments with gaps on a tonal track
+                    drawArc(T.line.copy(alpha = .5f), 0f, 360f, false, topLeft, arcSize, style = Stroke(strokePx))
+                    val capDeg = Math.toDegrees((strokePx / 2 / (arcSize.width / 2)).toDouble()).toFloat() // round cap overhang
+                    val gapDeg = if (parts.size > 1) 2 * capDeg + 4f else 0f
                     var start = -90f
                     parts.forEachIndexed { i, (_, v) ->
                         val sweepDeg = 360f * v / total * sweep.value
-                        val drawn = sweepDeg - 2 * capDeg
-                        if (drawn > 0f) {
-                            drawArc(
-                                palette[i % palette.size], start + capDeg, drawn, false, topLeft, arcSize,
-                                style = Stroke(strokePx, cap = StrokeCap.Round),
-                            )
-                        }
+                        val draw = sweepDeg - gapDeg
+                        if (parts.size == 1) drawArc(palette[0], start, sweepDeg, false, topLeft, arcSize, style = Stroke(strokePx, cap = StrokeCap.Round))
+                        else if (draw > 0f) drawArc(palette[i % palette.size], start + gapDeg / 2, draw, false, topLeft, arcSize, style = Stroke(strokePx, cap = StrokeCap.Round))
+                        else if (sweepDeg > 0f) drawCircle(palette[i % palette.size], strokePx / 3, androidx.compose.ui.geometry.Offset(center.x + arcSize.width / 2 * kotlin.math.cos(Math.toRadians((start + sweepDeg / 2).toDouble())).toFloat(), center.y + arcSize.width / 2 * kotlin.math.sin(Math.toRadians((start + sweepDeg / 2).toDouble())).toFloat())) // tiny slice: a dot
+                        start += sweepDeg
+                    }
+                } else {
+                    // slices touch each other: flat ends, no gap between them, the ring is one whole circle
+                    var start = -90f
+                    parts.forEachIndexed { i, (_, v) ->
+                        val sweepDeg = 360f * v / total * sweep.value
+                        drawArc(palette[i % palette.size], start, sweepDeg, false, topLeft, arcSize, style = Stroke(strokePx))
                         start += sweepDeg
                     }
                 }
             }
             if (centerText.isNotEmpty()) {
-                Text(centerText, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                Text(centerText, color = T.text, fontSize = if (T.material) 22.sp else 16.sp, fontWeight = if (T.material) FontWeight.Medium else FontWeight.SemiBold) // M3 title-large in Material
             }
         }
         Spacer(Modifier.height(12.dp))

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material You widget card: tonal surface, 28dp corners, subtle tinted gradient and Material shape art. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item>
+        <shape android:shape="rectangle">
+            <corners android:radius="28dp" />
+            <gradient
+                android:angle="315"
+                android:startColor="#FFF3EDF7"
+                android:endColor="#FFE8DEF8"
+                android:type="linear" />
+        </shape>
+    </item>
+    <item
+        android:gravity="end|top"
+        android:width="120dp"
+        android:height="120dp"
+        android:top="-24dp"
+        android:end="-28dp"
+        android:drawable="@drawable/mw_flower" />
+    <item
+        android:gravity="start|bottom"
+        android:width="112dp"
+        android:height="112dp"
+        android:bottom="-30dp"
+        android:start="-30dp"
+        android:drawable="@drawable/mw_waves" />
+</layer-list>

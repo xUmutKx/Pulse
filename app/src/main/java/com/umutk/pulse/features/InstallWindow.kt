@@ -1,6 +1,39 @@
 package com.umutk.pulse.features
 
 import android.content.ClipData
+import android.graphics.drawable.GradientDrawable
+import android.os.Build
+import android.view.WindowManager
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.ShaderBrush
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.window.DialogWindowProvider
+import com.umutk.pulse.Cap7
+import com.umutk.pulse.CapGlyph95
+import com.umutk.pulse.TitleIcon95
+import com.umutk.pulse.bevel
+import com.umutk.pulse.winButtonLooks
+import com.umutk.pulse.xpCaption
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -47,7 +80,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
-import com.umutk.pulse.Accents
 import com.umutk.pulse.InfoRows
 import com.umutk.pulse.onAccent
 import com.umutk.pulse.Look
@@ -188,11 +220,64 @@ object BioGate {
     }
 }
 
-/** The loading indicator while an APK is read or installed: always white. Round by default, a rounded bar or a thick short wave; style from Settings > Installer. */
+/** Radius (0..1) of each loader shape at angle [a]: circle, 8-lobe burst, rounded pentagon, oval, 9-lobe cookie, rounded square, clover. */
+private fun loaderRadius(shape: Int, a: Float): Float {
+    val c = kotlin.math.cos(a); val s = kotlin.math.sin(a)
+    return when (shape) {
+        0 -> 1f
+        1 -> (1f + .12f * kotlin.math.cos(8 * a)) / 1.12f
+        2 -> {
+            val seg = 2f * Math.PI.toFloat() / 5
+            val local = a % seg - seg / 2
+            val poly = kotlin.math.cos(Math.PI.toFloat() / 5) / kotlin.math.cos(local)
+            .65f * poly + .35f
+        }
+        3 -> { val b = .7f; b / kotlin.math.sqrt(b * b * c * c + s * s) }
+        4 -> (1f + .08f * kotlin.math.cos(9 * a)) / 1.08f
+        5 -> {
+            val sq = 1f / Math.pow((Math.pow(kotlin.math.abs(c).toDouble(), 4.0) + Math.pow(kotlin.math.abs(s).toDouble(), 4.0)), .25).toFloat()
+            sq / 1.19f
+        }
+        else -> (1f + .18f * kotlin.math.cos(6 * a)) / 1.18f
+    }
+}
+
+/** The Material layout's own loader: a solid shape that keeps turning and morphs from one shape to the next (circle, burst, pentagon, oval, cookie, square, clover), drawn in the accent. */
+@Composable
+private fun MaterialLoader(color: Color) {
+    val count = 7
+    val inf = rememberInfiniteTransition(label = "matLoader")
+    val step by inf.animateFloat(0f, count.toFloat(), infiniteRepeatable(tween(count * 750, easing = LinearEasing)), label = "step")
+    Canvas(Modifier.size(44.dp)) {
+        val cx = size.width / 2f; val cy = size.height / 2f
+        val base = size.minDimension / 2f * .86f
+        val from = step.toInt() % count
+        val to = (from + 1) % count
+        // hold the shape for a third of the step, then ease into the next one
+        val f = ((step - step.toInt() - .33f) / .67f).coerceIn(0f, 1f)
+        val k = f * f * (3f - 2f * f)
+        // one turn per cycle, continuous: a per-step push reset to zero at each step and jumped
+        val rot = step * 2f * Math.PI.toFloat() / count
+        val path = androidx.compose.ui.graphics.Path()
+        val n = 72
+        for (i in 0..n) {
+            val a = 2f * Math.PI.toFloat() * i / n
+            val r = base * (loaderRadius(from, a) * (1f - k) + loaderRadius(to, a) * k)
+            val x = cx + r * kotlin.math.cos(a + rot); val y = cy + r * kotlin.math.sin(a + rot)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        drawPath(path, color)
+    }
+}
+
+/** The loading indicator while an APK is read or installed: the Material layout uses its own shape, the other looks the chosen style in the accent (Material/AMOLED) or white (Windows). Round by default, a rounded bar or a thick short wave; style from Settings > Installer. */
 @Composable
 private fun BusyLine(w: PTheme) {
-    val color = Color.White
+    val color = if (w.material) w.accent else Color.White
     val track = color.copy(alpha = .2f)
+    if (w.id == "material") { MaterialLoader(color); return }
+    if (w.id in winButtonLooks) { WinProgress(w, null); return }
     when (InstallShow.loader) {
         "bar" -> LinearProgressIndicator(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)), color = color, trackColor = track)
         "wave" -> {
@@ -215,11 +300,12 @@ private fun BusyLine(w: PTheme) {
 
 /** The look of the install window, from Settings > Installer. */
 @Composable
-private fun installLook(): PTheme {
-    val t = when (InstallShow.theme) {
-        "material" -> monoWindow(effective(Themes.first { it.id == "material" }))
+internal fun installLook(): PTheme {
+    val id = if (InstallShow.theme == "app") Look.theme.id else InstallShow.theme
+    val t = when (id) {
         "amoled" -> amoledWindow()
-        else -> effective(Themes.first { it.id == "win11" })
+        in winButtonLooks -> effective(Themes.first { it.id == id })
+        else -> monoWindow(effective(Themes.first { it.id == "material" }))
     }
     // Windows 10 stays square; the others are rounded (16 dp) unless the setting is off; same colours
     return PTheme(id = t.id, name = t.name, dark = t.dark, bg = t.bg, panel = t.panel, text = t.text, sub = t.sub, accent = t.accent, line = t.line,
@@ -229,14 +315,24 @@ private fun installLook(): PTheme {
 
 /** Shown while an APK from another app is copied into the cache: the download status, with a bar. */
 @Composable
-fun ApkCopying(progress: Float) {
+fun ApkCopying(progress: Float, onCancel: () -> Unit = {}) {
     CompositionLocalProvider(LocalWindowLook provides installLook()) {
         val w = LocalWindowLook.current
+        if (w.id in winButtonLooks) {
+            WinFrame(w, null, "Copying the APK", onMin = onCancel, onClose = onCancel) {
+                Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text("Copying the APK... ${(progress * 100).toInt()}%", color = w.text, fontSize = 13.sp)
+                    WinProgress(w, progress)
+                }
+            }
+            return@CompositionLocalProvider
+        }
         WinAlert(onDismissRequest = {}, text = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 BusyLine(w)
                 Text("Copying the APK... ${(progress * 100).toInt()}%", color = w.sub, fontSize = 13.sp)
-                LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)), color = Color.White, trackColor = Color.White.copy(alpha = .2f))
+                val color = if (w.material) w.accent else Color.White
+                LinearProgressIndicator(progress = { progress }, Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)), color = color, trackColor = color.copy(alpha = .2f))
             }
         }, confirmButton = {})
     }
@@ -247,7 +343,8 @@ fun ApkCopying(progress: Float) {
 private fun DoneMark() {
     val grow = remember { Animatable(0f) }
     LaunchedEffect(Unit) { grow.animateTo(1f, spring(dampingRatio = .5f)) }
-    Icon(Icons.Outlined.CheckCircle, null, Modifier.size(48.dp).graphicsLayer { scaleX = grow.value; scaleY = grow.value }, tint = Look.accent)
+    val w = LocalWindowLook.current
+    Icon(Icons.Outlined.CheckCircle, null, Modifier.size(48.dp).graphicsLayer { scaleX = grow.value; scaleY = grow.value }, tint = if (w.material) w.accent else Look.accent)
 }
 
 /**
@@ -257,17 +354,18 @@ private fun DoneMark() {
  */
 @Composable
 private fun IButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, primary: Boolean = false, onClick: () -> Unit) {
-    val shape = RoundedCornerShape(percent = 50)
+    val shape = RoundedCornerShape(6.dp)   // squarer corners, like the Windows 11 buttons
     val container = when {
-        danger -> Color(0x1AFF5252)
-        primary -> Color(0xFF2E2E2E)
-        else -> Color(0x14FFFFFF)
+        danger -> Color(0x33FF5252)
+        primary -> Color(0xFF3A3A3A)
+        else -> Color(0x24FFFFFF)
     }
+    if (LocalWindowLook.current.id in winButtonLooks) { WinBtn(LocalWindowLook.current, text, modifier, danger, primary, onClick); return }
     val ink = if (danger) Color(0xFFFF8A80) else Color.White
-    Button(onClick, modifier.height(48.dp), shape = shape,
+    Button(onClick, modifier.height(56.dp), shape = shape,
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp),
         colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = ink)) {
-        Text(text, fontSize = 14.sp, fontWeight = if (primary) FontWeight.Medium else FontWeight.Normal)
+        Text(text, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
     }
 }
 
@@ -331,8 +429,7 @@ private fun XposedRows(m: XposedInfo) {
     val w = LocalWindowLook.current
     Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(if (w.material) 16.dp else 4.dp)).background(w.line.copy(alpha = .3f)).padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text("Xposed module", color = Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-        if (m.description.isNotEmpty()) Text(m.description, color = w.sub, fontSize = 12.sp)
+        Text("Xposed module", color = if (w.material) w.accent else Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
         if (m.minVersion.isNotEmpty()) Text("Needs Xposed API ${m.minVersion} or newer", color = w.sub, fontSize = 12.sp)
         Text("Turn it on in LSPosed", color = w.sub, fontSize = 12.sp)
         IButton("Open", Modifier.fillMaxWidth()) { openLSPosed(ctx) }
@@ -410,10 +507,8 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
         busy = false; installing = false
     }
 
-    // the installed app opens when its install is done, and the window closes behind it
-    LaunchedEffect(doneOk) {
-        if (doneOk) p?.pkg?.let { pkg -> ctx.packageManager.getLaunchIntentForPackage(pkg)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); onDone() } }
-    }
+    // after a successful install the window stays on screen with its result; only its Close button (or the back gesture) closes it
+
 
     // silent install with root: keeps data for a downgrade (-d) when the signature matches
     fun silent(pk: Picked, down: Boolean) {
@@ -460,14 +555,9 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
     // the Android logo: its wordmark is white, so it reads on AMOLED and dark windows; black on light windows, accent on Material
     val logoTint = when { w.id == "amoled" -> null; w.material -> ColorFilter.tint(w.accent); w.dark -> null; else -> ColorFilter.tint(Color.Black) }
     fun gate(f: () -> Unit) = BioGate.run(ctx, f)
-    WinAlert(
-        // the window stays until the install is really done; only a finished or idle window can be closed
-        onDismissRequest = { if (!installing) { if (InstallShow.cancelOnDismiss) BioGate.pending?.cancel(); onDone() } },
-        title = {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-            }
-        },
-        text = {
+    // the window stays until the install is really done; only a finished or idle window can be closed
+    val dismiss = { if (!installing) { if (InstallShow.cancelOnDismiss) BioGate.pending?.cancel(); onDone() } }
+    val body: @Composable () -> Unit = {
             Column(Modifier.fillMaxWidth().graphicsLayer {
                 if (fancy) { alpha = enter.value; scaleX = .92f + .08f * enter.value; scaleY = .92f + .08f * enter.value }
             }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -559,12 +649,211 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 }
                 IButton("Cancel", full) { onDone() }
             }
-        },
+    }
+    // − hides the window; a committed install goes on in PackageInstaller (window installs post no notification of their own)
+    if (w.id in winButtonLooks) WinFrame(w, icon, pk?.label ?: file.name, onMin = onDone, onClose = dismiss, content = body)
+    else WinAlert(
+        onDismissRequest = dismiss,
+        text = body,
         confirmButton = {},
         dismissButton = null,
-        containerColor = w.panel, // opaque: nothing shows through the install window
+        containerColor = w.panel, // matte: an opaque panel, nothing shows through the install window
         noDim = true,
     )
+}
+
+/** Acrylic grain: a 64 px tile of black and white pixels, drawn at 2% like the Windows noise texture. */
+private val noise: ShaderBrush by lazy {
+    val b = android.graphics.Bitmap.createBitmap(64, 64, android.graphics.Bitmap.Config.ARGB_8888)
+    val r = java.util.Random(11)
+    for (y in 0 until 64) for (x in 0 until 64) b.setPixel(x, y, if (r.nextBoolean()) android.graphics.Color.WHITE else android.graphics.Color.BLACK)
+    ShaderBrush(ImageShader(b.asImageBitmap(), TileMode.Repeated, TileMode.Repeated))
+}
+
+/**
+ * The install window as a real window of the chosen Windows look: frame, title bar with the app icon, title, − and ×, then [content].
+ * Windows 11 is acrylic (blur + luminosity + 70% #202020 tint + 2% noise, WinUI's dark recipe); 7's Aero frame is blurred glass too.
+ */
+@Composable
+private fun WinFrame(w: PTheme, icon: ImageBitmap?, title: String, onMin: () -> Unit, onClose: () -> Unit, content: @Composable () -> Unit) {
+    Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false)) {
+        val view = LocalView.current
+        val ctx = LocalContext.current
+        val id = w.id
+        val corner = if (id == "win11" && InstallShow.round) 8.dp else if (id == "win7") 6.dp else 0.dp
+        val cornerPx = with(LocalDensity.current) { corner.toPx() }
+        var blur by remember { mutableStateOf(false) }
+        SideEffect { (view.parent as? DialogWindowProvider)?.window?.let { it.setDimAmount(0f); it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND) } }
+        // the window wraps the frame, so its background drawable (transparent, frame corners) is the blur's outline
+        DisposableEffect(view, id) {
+            val win = (view.parent as? DialogWindowProvider)?.window
+            if (win == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S || (id != "win11" && id != "win7")) return@DisposableEffect onDispose {}
+            win.setBackgroundDrawable(GradientDrawable().apply { setColor(android.graphics.Color.TRANSPARENT); cornerRadius = cornerPx })
+            val wm = ctx.getSystemService(WindowManager::class.java)
+            // blurs go off in battery saver or the developer setting: fall back to a solid panel then
+            val l = java.util.function.Consumer<Boolean> { on -> blur = on; win.setBackgroundBlurRadius(if (on) 60 else 0) }
+            l.accept(wm.isCrossWindowBlurEnabled)
+            wm.addCrossWindowBlurEnabledListener(l)
+            onDispose { wm.removeCrossWindowBlurEnabledListener(l) }
+        }
+        val classic = id == "win95" || id == "xp"
+        val bodyBg = when (id) { "win95" -> Color(0xFFC0C0C0); "xp" -> Color(0xFFECE9D8); "win7" -> Color.White; "win10" -> w.panel; else -> Color.Transparent }
+        val outer = when (id) {
+            "win95" -> Modifier.background(bodyBg).bevel(true).padding(3.dp)
+            "xp" -> Modifier.clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).background(Color(0xFF0054E3)).padding(start = 3.dp, end = 3.dp, bottom = 3.dp)
+            "win7" -> Modifier.clip(RoundedCornerShape(6.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFFC9DEF3), Color(0xFF9DBDE0), Color(0xFFB4CEEB)).map { it.copy(alpha = if (blur) .7f else 1f) }))
+                .border(1.dp, Color(0xFF3A4A5E), RoundedCornerShape(6.dp)).padding(1.dp).border(1.dp, Color.White.copy(alpha = .55f), RoundedCornerShape(5.dp))
+                .padding(start = 6.dp, end = 6.dp, bottom = 6.dp)
+            "win10" -> Modifier.background(bodyBg).border(1.dp, Look.accent.copy(alpha = 1f))
+            else -> {
+                // acrylic layers over the blur: luminosity, tint, noise; without blur WinUI's opaque fallback colour
+                val sh = RoundedCornerShape(corner)
+                val base = if (w.dark) Color(0xFF202020) else Color(0xFFF3F3F3)
+                Modifier.clip(sh)
+                    .then(if (blur) Modifier.background((if (w.dark) Color(0xFF2C2C2C) else Color.White).copy(alpha = .15f)).background(base.copy(alpha = .7f))
+                        else Modifier.background(if (w.dark) Color(0xFF1C1C1C) else Color(0xFFEEEEEE)))
+                    .background(noise, alpha = .02f)
+                    .border(1.dp, if (w.dark) Color.White.copy(alpha = .1f) else Color.Black.copy(alpha = .08f), sh)
+            }
+        }
+        val titleCol = if (classic) Color.White else w.text
+        val width = minOf(LocalConfiguration.current.screenWidthDp - 32, 420).dp
+        Column(Modifier.width(width).then(outer)) {
+            Row(Modifier.fillMaxWidth().height(when (id) { "win95" -> 20.dp; "xp", "win7" -> 28.dp; else -> 32.dp })
+                .then(when (id) {
+                    "xp" -> Modifier.background(Brush.verticalGradient(0f to Color(0xFF0058EE), .14f to Color(0xFF3A93FF), .32f to Color(0xFF0A60EE), .85f to Color(0xFF0050E0), 1f to Color(0xFF0046C8)))
+                    "win95" -> Modifier.background(Color(0xFF000080))
+                    "win10" -> Modifier.background(w.panel)
+                    else -> Modifier
+                })
+                .padding(start = if (id == "win95") 3.dp else 10.dp, end = if (classic) 2.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
+                when {
+                    icon != null -> Image(icon, null, Modifier.size(16.dp))
+                    id == "win95" -> TitleIcon95()
+                    else -> Icon(Icons.Outlined.Android, null, Modifier.size(16.dp), tint = titleCol)
+                }
+                Spacer(Modifier.width(6.dp))
+                Text(title, color = titleCol, fontSize = if (id == "xp") 13.sp else 12.sp, fontWeight = if (classic) FontWeight.Bold else FontWeight.Normal, maxLines = 1,
+                    modifier = Modifier.weight(1f))
+                when (id) {
+                    "win95" -> listOf(false to onMin, true to onClose).forEach { (close, f) ->
+                        Box(Modifier.padding(start = 2.dp).size(16.dp, 14.dp).background(Color(0xFFC0C0C0)).bevel(true).clickable(onClick = f).capLabel(close), contentAlignment = Alignment.Center) { CapGlyph95(close) }
+                    }
+                    "xp" -> listOf(false to onMin, true to onClose).forEach { (close, f) ->
+                        Box(Modifier.padding(start = 2.dp).size(21.dp).drawBehind { xpCaption(close) }.clickable(onClick = f).capLabel(close))
+                    }
+                    // Aero buttons hang from the frame top
+                    "win7" -> Row(Modifier.offset(y = (-4.5).dp)) { Cap7(false, onMin); Cap7(true, onClose) }
+                    else -> { FluentCap(false, titleCol, id == "win11", onMin); FluentCap(true, titleCol, id == "win11", onClose) }
+                }
+            }
+            Column(Modifier.weight(1f, fill = false).fillMaxWidth().background(bodyBg)
+                .then(if (id == "win7") Modifier.border(1.dp, Color(0xFF8A9BB0)) else Modifier)
+                .verticalScroll(rememberScrollState()).padding(if (classic) 14.dp else 20.dp)) { content() }
+        }
+    }
+}
+
+private fun Modifier.capLabel(close: Boolean) = semantics { contentDescription = if (close) "Close" else "Minimise" }
+
+/** Windows 10 / 11 caption button: 46 x 32, 10 dp glyph in 1 dp lines; × turns red while pressed. */
+@Composable
+private fun FluentCap(close: Boolean, ink: Color, w11: Boolean, onClick: () -> Unit) {
+    val src = remember { MutableInteractionSource() }
+    val down by src.collectIsPressedAsState()
+    val bg = when { close && down -> if (w11) Color(0xFFC42B1C) else Color(0xFFE81123); down -> ink.copy(alpha = .1f); else -> Color.Transparent }
+    Box(Modifier.size(46.dp, 32.dp).background(bg).clickable(src, null, onClick = onClick).capLabel(close), contentAlignment = Alignment.Center) {
+        Canvas(Modifier.size(10.dp)) {
+            val g = if (close && down) Color.White else ink; val p = 1.dp.toPx(); val e = size.width
+            if (close) { drawLine(g, Offset(0f, 0f), Offset(e, e), p); drawLine(g, Offset(e, 0f), Offset(0f, e), p) }
+            else drawLine(g, Offset(0f, e / 2), Offset(e, e / 2), p)
+        }
+    }
+}
+
+/** A button of the Windows look: 95 grey bevel, XP Luna, 7 glossy glass, 10 flat grey (accent edge on the main one), 11 rounded (accent fill on the main one). */
+@Composable
+private fun WinBtn(w: PTheme, text: String, modifier: Modifier, danger: Boolean, primary: Boolean, onClick: () -> Unit) {
+    val id = w.id
+    val accent = Look.accent.copy(alpha = 1f)
+    val shape = RoundedCornerShape(when (id) { "xp", "win7" -> 3.dp; "win11" -> 4.dp; else -> 0.dp })
+    val fill: Brush = when (id) {
+        "win95" -> SolidColor(Color(0xFFC0C0C0))
+        "xp" -> Brush.verticalGradient(listOf(Color.White, Color(0xFFF4F3EE), Color(0xFFECEBE6), Color(0xFFD6D0C5)))
+        "win7" -> Brush.verticalGradient(0f to Color(0xFFF2F2F2), .5f to Color(0xFFEBEBEB), .5f to Color(0xFFDDDDDD), 1f to Color(0xFFCFCFCF))
+        "win10" -> SolidColor(if (w.dark) Color(0xFF333333) else Color(0xFFE1E1E1))
+        else -> SolidColor(if (primary) accent else if (w.dark) Color.White.copy(alpha = .06f) else Color.White.copy(alpha = .7f))
+    }
+    val edge = when (id) {
+        "xp" -> Color(0xFF003C74); "win7" -> if (primary) Color(0xFF3C7FB1) else Color(0xFF707070)
+        "win10" -> if (primary) accent else Color(0xFFADADAD); else -> if (w.dark) Color.White.copy(alpha = .1f) else Color.Black.copy(alpha = .1f)
+    }
+    val ink = when {
+        id == "win11" && primary -> onAccent(accent)
+        danger -> if (w.dark) Color(0xFFFF8A80) else Warn
+        id == "win10" || id == "win11" -> w.text
+        else -> Color.Black
+    }
+    Box(modifier.heightIn(min = 40.dp).clip(shape).background(fill, shape)
+        .then(if (id == "win95") Modifier.bevel(true) else Modifier.border(1.dp, edge, shape))
+        .clickable(role = Role.Button, onClick = onClick)
+        // XP default button: blue inner ring; 7 default button: soft blue glow
+        .then(if (primary && id == "xp") Modifier.padding(1.dp).border(2.dp, Brush.verticalGradient(listOf(Color(0xFFCEE7FF), Color(0xFF6982EE))), shape)
+            else if (primary && id == "win7") Modifier.padding(1.dp).border(2.dp, Color(0xCC7FD3F8), shape) else Modifier)
+        .padding(horizontal = 16.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
+        Text(text, color = ink, fontSize = if (classic(id)) 13.sp else 14.sp, fontWeight = if (id == "win11" && primary) FontWeight.SemiBold else FontWeight.Normal)
+    }
+}
+
+private fun classic(id: String) = id == "win95" || id == "xp"
+
+/** Progress bar of the Windows look: 95 navy blocks in a sunken well, XP green blocks, 7 glossy green, 10 / 11 thin accent line. [progress] null: a moving piece. */
+@Composable
+private fun WinProgress(w: PTheme, progress: Float?) {
+    val id = w.id
+    val t by rememberInfiniteTransition(label = "winBar").animateFloat(0f, 1f, infiniteRepeatable(tween(if (classic(id)) 2400 else 1600, easing = LinearEasing)), label = "run")
+    val accent = Look.accent.copy(alpha = 1f)
+    val h = when (id) { "win95" -> 18.dp; "xp", "win7" -> 14.dp; "win10" -> 4.dp; else -> 3.dp }
+    Canvas(Modifier.fillMaxWidth().height(h).then(if (id == "win95") Modifier.background(Color(0xFFC0C0C0)).bevel(false) else Modifier)) {
+        val wd = size.width; val ht = size.height; val p = 1.dp.toPx()
+        // the filled span 0..1: the progress, or a 30% piece sliding across
+        val s = t * 1.3f - .3f
+        val a = if (progress != null) 0f else s.coerceAtLeast(0f)
+        val b = progress?.coerceIn(0f, 1f) ?: (s + .3f).coerceAtMost(1f)
+        when (id) {
+            "win95", "xp" -> {
+                val pad = if (id == "win95") 3 * p else 2 * p
+                if (id == "xp") { drawRoundRect(Color.White, cornerRadius = CornerRadius(3 * p)); drawRoundRect(Color(0xFF686868), cornerRadius = CornerRadius(3 * p), style = Stroke(p)) }
+                val bw = if (id == "win95") 8 * p else 6 * p; val gap = 2 * p
+                val x0 = pad + a * (wd - 2 * pad); val x1 = pad + b * (wd - 2 * pad)
+                val green = Brush.verticalGradient(listOf(Color(0xFFB7F0B8), Color(0xFF2FC032), Color(0xFF1FA01F)), pad, ht - pad)
+                var x = pad
+                while (x + bw <= x1 + .5f) {
+                    if (x >= x0 - .5f) {
+                        if (id == "win95") drawRect(Color(0xFF000080), Offset(x, pad), Size(bw, ht - 2 * pad))
+                        else drawRect(green, Offset(x, pad), Size(bw, ht - 2 * pad))
+                    }
+                    x += bw + gap
+                }
+            }
+            "win7" -> {
+                val r = CornerRadius(2 * p)
+                drawRoundRect(Brush.verticalGradient(listOf(Color(0xFFF3F3F3), Color(0xFFD6D6D6))), cornerRadius = r)
+                drawRoundRect(Color(0xFF8E8E8E), cornerRadius = r, style = Stroke(p))
+                val x0 = p + a * (wd - 2 * p); val fw = (b - a) * (wd - 2 * p)
+                if (fw > 0f) {
+                    drawRect(Brush.verticalGradient(0f to Color(0xFF8BE88D), .45f to Color(0xFF37D33A), .55f to Color(0xFF06B025), 1f to Color(0xFF0CA21C), startY = p, endY = ht - p), Offset(x0, p), Size(fw, ht - 2 * p))
+                    drawRect(Color.White.copy(alpha = .35f), Offset(x0, p), Size(fw, (ht - 2 * p) * .45f))   // gloss
+                }
+            }
+            else -> {
+                val cap = if (id == "win11") StrokeCap.Round else StrokeCap.Butt
+                if (id == "win10") drawRect(w.line) else drawLine(w.line.copy(alpha = .6f), Offset(ht / 2, ht / 2), Offset(wd - ht / 2, ht / 2), ht / 3, cap)
+                if (b > a) drawLine(accent, Offset(a * wd + (if (id == "win11") ht / 2 else 0f), ht / 2), Offset(b * wd - (if (id == "win11") ht / 2 else 0f), ht / 2), ht, cap)
+            }
+        }
+    }
 }
 
 /** Android does not let an app make itself the default: this opens the screen where the user picks Pulse for APK files. */
@@ -580,8 +869,8 @@ object InstallShow {
     var version by mutableStateOf(true)
     var pkg by mutableStateOf(false)
     var chip by mutableStateOf(true)
-    /** The window's look: win11, material or amoled. */
-    var theme by mutableStateOf("amoled")
+    /** The window's look: material (default), amoled, or a Windows look (win95, xp, win7, win10, win11). */
+    var theme by mutableStateOf("material")
     var biometric by mutableStateOf(false)
     var cmpSingle by mutableStateOf(true)
     var sdkMulti by mutableStateOf(true)
@@ -606,7 +895,7 @@ object InstallShow {
         val p = prefs(c)
         name = p.getBoolean("inst_name", true); version = p.getBoolean("inst_ver", true)
         pkg = p.getBoolean("inst_pkg", false); chip = p.getBoolean("inst_chip", true)
-        theme = p.getString("inst_theme", "amoled") ?: "amoled"
+        theme = p.getString("inst_theme", "material") ?: "material"
         biometric = p.getBoolean("inst_bio", false); cmpSingle = p.getBoolean("inst_cmp1", true)
         sdkMulti = p.getBoolean("inst_sdkm", true); sameSingle = p.getBoolean("inst_same1", true)
         extended = p.getBoolean("inst_ext", false); suggest = p.getBoolean("inst_sugg", true)

@@ -19,12 +19,15 @@ import android.content.pm.ServiceInfo
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
+import android.graphics.drawable.Icon
 import android.media.AudioManager
 import android.os.BatteryManager
 import android.content.IntentFilter
 import java.util.Date
 import android.os.Build
+import android.os.Handler
 import android.os.IBinder
+import android.os.Looper
 import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
@@ -175,17 +178,19 @@ open class ToolkitTile : TileService() {
     }
     private fun show(s: String?) { qsTile?.apply { if (subtitle != s) { subtitle = s; updateTile() } } }
     override fun onStartListening() {
+        paintPicture()
         val t = sensor
         val m = t?.let { getSystemService(SensorManager::class.java) }
         val s = t?.let { m?.getDefaultSensor(it) }
         if (m != null && s != null) { m.registerListener(listener, s, SensorManager.SENSOR_DELAY_NORMAL); sm = m } else show(subtitleFor(null))
     }
     override fun onStopListening() { sm?.unregisterListener(listener); sm = null }
-    override fun onClick() {
-        val i = Intent(this, MainActivity::class.java).putExtra("start", start).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
-        else startActivityAndCollapse(i)
-    }
+    /** The tile's own job, done right in the panel (roll, flip, sound mode). Returns false when there is nothing to do here: a tap then does nothing, it never opens the app. */
+    open fun act(): Boolean = false
+    /** The tile's own picture, when it has one (the dice face). Null keeps the Toolkit icon. */
+    open val picture: Int? get() = null
+    private fun paintPicture() { val p = picture ?: return; qsTile?.apply { icon = Icon.createWithResource(this@ToolkitTile, p); updateTile() } }
+    override fun onClick() { if (act()) { show(subtitleFor(null)); paintPicture() } }
 }
 
 class CompassTile : ToolkitTile() {
@@ -202,10 +207,15 @@ class CompassTile : ToolkitTile() {
 class DiceTile : ToolkitTile() {
     override val start: String get() = "toolkit:dice"
     override fun subtitleFor(values: FloatArray?): String? = prefs.getInt("dice_last", 0).takeIf { it > 0 }?.let { "Last: $it" }
+    // a tap rolls in the panel; the tile shows the face that came up
+    override fun act(): Boolean { prefs.edit().putInt("dice_last", (1..6).random()).apply(); return true }
+    override val picture: Int? get() = prefs.getInt("dice_last", 0).takeIf { it in 1..6 }?.let { DICE_FACES[it - 1] }
 }
+private val DICE_FACES = intArrayOf(R.drawable.ic_dice_1, R.drawable.ic_dice_2, R.drawable.ic_dice_3, R.drawable.ic_dice_4, R.drawable.ic_dice_5, R.drawable.ic_dice_6)
 class CoinTile : ToolkitTile() {
     override val start: String get() = "toolkit:coin"
     override fun subtitleFor(values: FloatArray?): String? = prefs.getString("coin_last", null)?.let { "Last: $it" }
+    override fun act(): Boolean { prefs.edit().putString("coin_last", if ((0..1).random() == 0) "Heads" else "Tails").apply(); return true }
 }
 class ScreenshotTile : ToolkitTile() {
     override val start: String get() = "toolkit:screenshot"
@@ -216,6 +226,12 @@ class SoundModeTile : ToolkitTile() {
     override val start: String get() = "toolkit:vibrate"
     override fun subtitleFor(values: FloatArray?): String? = when (getSystemService(AudioManager::class.java).ringerMode) {
         AudioManager.RINGER_MODE_NORMAL -> "Normal"; AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"; else -> "Silent"
+    }
+    // a tap goes Normal, Vibrate, Silent in turn; Silent needs Do Not Disturb access, without it the tap just does nothing
+    override fun act(): Boolean {
+        val am = getSystemService(AudioManager::class.java)
+        val next = when (am.ringerMode) { AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE; AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT; else -> AudioManager.RINGER_MODE_NORMAL }
+        return try { am.ringerMode = next; true } catch (e: SecurityException) { false }
     }
 }
 class LevelTile : ToolkitTile() {
@@ -260,7 +276,30 @@ class VolumeTile : ToolkitTile() {
         return "Music ${am.getStreamVolume(AudioManager.STREAM_MUSIC)} / ${am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)}"
     }
 }
-class TimerTile : ToolkitTile() { override val start: String get() = "toolkit:timer" }
+/** Timer tile: while a timer runs, its remaining time is the subtitle and the icon turns to an hourglass. The Toolkit timer writes its end time (ms) to prefs "timer", key "end". */
+class TimerTile : ToolkitTile() {
+    override val start: String get() = "toolkit:timer"
+    private val main = Handler(Looper.getMainLooper())
+    private val tick = object : Runnable {
+        override fun run() { paintTimer(); if (remainingMs() > 0) main.postDelayed(this, 1000) }
+    }
+    private fun remainingMs(): Long = getSharedPreferences("timer", Context.MODE_PRIVATE).getLong("end", 0L) - System.currentTimeMillis()
+    override fun subtitleFor(values: FloatArray?): String? = remainingMs().takeIf { it > 0 }?.let { ms ->
+        val s = (ms + 999) / 1000 // round up, so the last second shows 00:01
+        "%02d:%02d".format(s / 60, s % 60)
+    }
+    override fun onStartListening() { super.onStartListening(); paintTimer(); main.removeCallbacks(tick); if (remainingMs() > 0) main.postDelayed(tick, 1000) }
+    override fun onStopListening() { super.onStopListening(); main.removeCallbacks(tick) }
+    private fun paintTimer() {
+        val running = remainingMs() > 0
+        qsTile?.apply {
+            state = if (running) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            icon = Icon.createWithResource(this@TimerTile, if (running) R.drawable.qs_hourglass else R.drawable.ic_qs_timer)
+            subtitle = subtitleFor(null)
+            updateTile()
+        }
+    }
+}
 class CalculatorTile : ToolkitTile() { override val start: String get() = "toolkit:calc" }
 class ScaleTile : ToolkitTile() {
     override val start: String get() = "toolkit:scale"
@@ -268,6 +307,7 @@ class ScaleTile : ToolkitTile() {
 }
 class FinderTile : ToolkitTile() { override val start: String get() = "toolkit:search" }
 class PowerMenuTile : ToolkitTile() { override val start: String get() = "toolkit:power" }
+class DinkTile : ToolkitTile() { override val start: String get() = "toolkit:dink" }
 
 /** Quick Settings tile that toggles the torch; the tile follows the torch, also when another app or the system changes it. */
 class FlashlightTile : TileService() {
@@ -282,7 +322,7 @@ class FlashlightTile : TileService() {
     }
     override fun onStartListening() { cm.registerTorchCallback(torch, null); paint() }
     override fun onStopListening() { cm.unregisterTorchCallback(torch) }
-    private fun paint() { qsTile?.apply { state = if (torchOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; updateTile() } }
+    private fun paint() { qsTile?.apply { state = if (torchOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; icon = Icon.createWithResource(this@FlashlightTile, if (torchOn) R.drawable.ic_qs_flashlight else R.drawable.qs_flashlight_off); updateTile() } }
     override fun onClick() {
         val id = camId ?: return
         try { cm.setTorchMode(id, !torchOn) } catch (e: CameraAccessException) { }

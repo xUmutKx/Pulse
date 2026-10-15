@@ -38,6 +38,8 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
@@ -58,6 +60,7 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.PSlider
 import com.umutk.pulse.Shell
 import com.umutk.pulse.T
+import com.umutk.pulse.tr
 import com.umutk.pulse.mb
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -95,6 +98,7 @@ private val tools = listOf(
     Tool("Screen scale", "scale") { ScreenScaleTool() },
     Tool("Finder", "search") { FinderTool() },
     Tool("Power menu", "power") { PowerMenuTool() },
+    Tool("Dink", "dink") { Dink() },
 )
 
 /** The Toolkit page: a 3-column grid of tiles; a tile opens its tool, the chevron goes back. */
@@ -105,7 +109,7 @@ fun ToolkitPage() {
     if (open >= 0) {
         val t = tools[open]
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            Box(Modifier.size(40.dp).clickable { open = -1 }, contentAlignment = Alignment.Center) { PIcon("chevron", T.text, 20.dp, Modifier.rotate(90f)) }
+            Box(Modifier.size(40.dp).clickable { open = -1 }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
             PHead(t.label)
             t.body()
             Spacer(Modifier.height(12.dp))
@@ -113,7 +117,7 @@ fun ToolkitPage() {
         return
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PHead("Toolkit")
+        PHead("Toolkit", guide = "toolkit")
         tools.chunked(3).forEachIndexed { r, row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEachIndexed { c, t ->
@@ -173,11 +177,21 @@ private fun Compass() {
     val az = Math.toDegrees(o[0].toDouble()).toFloat()
     val deg = (az + 360f) % 360f
     val dir = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")[((deg + 22.5f) / 45f).toInt() % 8]
+    val names = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+    val active = names[((deg + 22.5f) / 45f).toInt() % 8]
     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(220.dp)) {
             val c = Offset(size.width / 2, size.height / 2)
             val r = size.minDimension / 2 * .8f
             drawCircle(T.line, size.minDimension / 2, c, style = Stroke(3f))
+            // every direction is written round the dial; the letters turn with the heading, so each one stays on its own bearing
+            val paint = android.graphics.Paint().apply { textSize = 30f; textAlign = android.graphics.Paint.Align.CENTER; isAntiAlias = true; isFakeBoldText = true; color = T.text.toArgb() }
+            names.forEachIndexed { i, n ->
+                val a = Math.toRadians((i * 45f - az).toDouble())
+                val x = c.x + (r * 1.15f * Math.sin(a)).toFloat()
+                val y = c.y - (r * 1.15f * Math.cos(a)).toFloat()
+                drawContext.canvas.nativeCanvas.drawText(n, x, y + 10f, paint)
+            }
             // the needle turns against the heading, so the red tip keeps pointing north
             rotate(-az, c) {
                 drawPath(Path().apply { moveTo(c.x, c.y - r); lineTo(c.x - r * .15f, c.y); lineTo(c.x + r * .15f, c.y); close() }, Color(0xFFE53935))
@@ -187,6 +201,10 @@ private fun Compass() {
     }
     PCard {
         Text("${deg.roundToInt()}°  $dir", Modifier.fillMaxWidth(), color = T.text, fontSize = 28.sp, textAlign = TextAlign.Center)
+        // all eight directions in a row; the one the phone points to is highlighted
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            names.forEach { n -> Text(n, color = if (n == active) T.accent else T.sub, fontSize = 12.sp, fontWeight = if (n == active) FontWeight.ExtraBold else FontWeight.Normal) }
+        }
     }
 }
 
@@ -296,7 +314,7 @@ private fun ScreenshotTool() {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf("") }
-    if (Shell.root != true) { PCard { ToolNote("needs root") }; return }
+    if (Shell.root != true && !Shell.shizukuOk()) { AccessNeededCard(tr("Screenshot", "Ekran görüntüsü"), tr("Taking a screenshot from here needs root or Shizuku.", "Buradan ekran görüntüsü almak için root veya Shizuku gerekir.")); return }
     PCard {
         PButton("Take screenshot") {
             scope.launch {
@@ -315,7 +333,7 @@ private fun ScreenshotTool() {
 private fun SensorsOffTool() {
     PCard {
         PIcon("sensors", T.sub, 48.dp, Modifier.align(Alignment.CenterHorizontally))
-        ToolNote(if (Shell.root == true) "Root is on. No sensor switch is set up." else "needs root")
+        if (Shell.root == true) ToolNote(tr("Root is on. No sensor switch is set up.", "Root açık. Sensör anahtarı kurulmadı.")) else AccessNeededCard(tr("Sensors off", "Sensörleri kapat"), tr("Switching sensors needs root or Shizuku.", "Sensörleri kapatmak için root veya Shizuku gerekir."))
     }
 }
 
@@ -438,16 +456,24 @@ private fun TimerTool() {
     var set by remember { mutableIntStateOf(60) }
     var left by remember { mutableIntStateOf(60) }
     var running by remember { mutableStateOf(false) }
-    LaunchedEffect(running) { while (running && left > 0) { delay(1000); left-- }; running = false }
+    // the end time is kept in prefs "timer" so the Quick Settings tile can show the seconds left while it runs
+    val ctx = LocalContext.current
+    fun clearEnd() = ctx.getSharedPreferences("timer", android.content.Context.MODE_PRIVATE).edit().remove("end").apply()
+    LaunchedEffect(running) {
+        if (running) ctx.getSharedPreferences("timer", android.content.Context.MODE_PRIVATE).edit().putLong("end", System.currentTimeMillis() + left * 1000L).apply()
+        while (running && left > 0) { delay(1000); left-- }
+        running = false
+        clearEnd()
+    }
     PCard {
         Text("%02d:%02d".format(left / 60, left % 60), Modifier.fillMaxWidth(), color = T.text, fontSize = 40.sp, textAlign = TextAlign.Center)
         if (left == 0) ToolNote("Done")
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(60, 300, 600).forEach { s -> PButton("${s / 60} min", Modifier.weight(1f)) { set = s; left = s; running = false } }
+            listOf(60, 300, 600).forEach { s -> PButton("${s / 60} min", Modifier.weight(1f)) { set = s; left = s; running = false; clearEnd() } }
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton(if (running) "Pause" else "Start", Modifier.weight(1f)) { if (left > 0) running = !running }
-            PButton("Reset", Modifier.weight(1f)) { running = false; left = set }
+            PButton("Reset", Modifier.weight(1f)) { running = false; left = set; clearEnd() }
         }
     }
 }

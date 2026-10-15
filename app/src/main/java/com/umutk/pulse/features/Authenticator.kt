@@ -231,7 +231,7 @@ fun AuthenticatorScreen(back: () -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        PHead("Authenticator")
+        PHead("Authenticator", guide = "authenticator")
         PCard {
             Text("Add account", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             PField(issuer, { issuer = it }, "Issuer (e.g. GitHub)")

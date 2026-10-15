@@ -21,6 +21,7 @@ import com.umutk.pulse.Proc
 import com.umutk.pulse.Sampler
 import com.umutk.pulse.T
 import com.umutk.pulse.labelOf
+import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -51,7 +52,7 @@ fun ProcessListScreen(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         while (true) {
             rows = withContext(Dispatchers.IO) {
-                Sampler.processes().sortedByDescending { it.rssMb }.map { p ->
+                Sampler.processes().ifEmpty { ownProcesses(ctx) }.sortedByDescending { it.rssMb }.map { p ->
                     // never offer to stop this app's own processes
                     ProcRow(p, labelOf(ctx, p.name), stoppable = p.name.substringBefore(':') != ctx.packageName)
                 }
@@ -85,8 +86,9 @@ fun ProcessListScreen(onBack: () -> Unit) {
             Text("State", color = T.sub, fontSize = 12.sp, modifier = Modifier.width(84.dp).padding(start = 8.dp))
             Spacer(Modifier.width(72.dp))
         }
+        AccessNeededCard(tr("Processes", "İşlemler"), tr("Showing this app's own processes only. Other apps' processes need root or Shizuku.", "Yalnızca bu uygulamanın kendi işlemleri gösteriliyor. Diğer uygulamaların işlemleri için root veya Shizuku gerekir."), Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
         if (loaded && rows.isEmpty()) {
-            Center("The process list needs root.\nAndroid does not show other apps' processes without it.")
+            Center(tr("No processes could be read", "İşlemler okunamadı"))
         } else {
             LazyColumn(Modifier.fillMaxSize()) {
                 items(rows, key = { it.proc.pid }) { r ->

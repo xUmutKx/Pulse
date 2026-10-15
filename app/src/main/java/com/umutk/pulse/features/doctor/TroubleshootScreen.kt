@@ -47,7 +47,7 @@ fun TroubleshootScreen(back: () -> Unit) {
         item(key = "head") {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("chevron", T.text, 20.dp, Modifier.rotate(90f)) }
-                PHead(tx("Device troubleshoot", "Cihaz sorun giderme"))
+                PHead(tx("Device troubleshoot", "Cihaz sorun giderme"), guide = "troubleshoot")
             }
         }
         item(key = "search") {

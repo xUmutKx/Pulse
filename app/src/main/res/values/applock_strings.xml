@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="applock_service_desc">Shows the App lock card when a locked app opens. Reads only which app is in front.</string>
+</resources>

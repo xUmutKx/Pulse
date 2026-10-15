@@ -251,11 +251,7 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
                     Shell.run("am force-stop $pkg")
                     note = "${d?.label ?: pkg} was stopped"
                 }
-                Box(
-                    Modifier.padding(horizontal = 5.dp).clickable {
-                        scope.launch { note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } }
-                    }.semantics { contentDescription = "Extract APK" },
-                ) { PIcon("extract", Look.accent, 22.dp) }
+                PButton("Extract APK") { scope.launch { note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
                 if (d != null && !d.isSystem) {
                     PButton("Uninstall", danger = true) { confirmUninstall = true }
                 }
@@ -294,17 +290,19 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     }
 
     if (confirmUninstall && d != null) {
+        val uninstall = {
+            confirmUninstall = false
+            ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        // the Windows looks frame the button themselves, so they get a plain TextButton inside it
+        val winBtn = com.umutk.pulse.LocalWindowLook.current.id in com.umutk.pulse.winButtonLooks
         WinAlert(
             onDismissRequest = { confirmUninstall = false },
-            title = { Text("Uninstall ${d.label}?", color = T.text) },
-            text = { Text("The system will ask you to confirm the removal.", color = T.sub) },
-            confirmButton = {
-                PButton("Uninstall", danger = true) {
-                    confirmUninstall = false
-                    ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                }
-            },
-            dismissButton = { PButton("Cancel") { confirmUninstall = false } },
+            title = { Text("Uninstall") },
+            text = { Text("Uninstall ${d.label}? The system will ask you to confirm the removal.", color = T.sub) },
+            confirmButton = { if (winBtn) androidx.compose.material3.TextButton(uninstall) { Text("Uninstall") } else PButton("Uninstall", danger = true, onClick = uninstall) },
+            dismissButton = { if (winBtn) androidx.compose.material3.TextButton({ confirmUninstall = false }) { Text("Cancel") } else PButton("Cancel") { confirmUninstall = false } },
+            warn = true,
         )
     }
 }

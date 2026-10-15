@@ -14,6 +14,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -56,8 +58,24 @@ fun ToolRows(vararg tools: ToolLink) {
 @Composable
 fun StorageAccessCard() {
     val ctx = LocalContext.current
-    if (Build.VERSION.SDK_INT >= 30 && !Environment.isExternalStorageManager()) PCard(Modifier.fillMaxWidth()) {
+    var granted by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()) }
+    // back from the system screen: look again, so the card goes away once allowed
+    val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    androidx.compose.runtime.DisposableEffect(owner) {
+        val ob = androidx.lifecycle.LifecycleEventObserver { _, e ->
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) granted = Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
+        }
+        owner.lifecycle.addObserver(ob)
+        onDispose { owner.lifecycle.removeObserver(ob) }
+    }
+    fun ask() = ctx.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    // the first time the files page opens without access, the system screen opens by itself
+    androidx.compose.runtime.LaunchedEffect(granted) {
+        val sp = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
+        if (!granted && !sp.getBoolean("files_asked", false)) { sp.edit().putBoolean("files_asked", true).apply(); runCatching { ask() } }
+    }
+    if (!granted) PCard(Modifier.fillMaxWidth()) {
         Text("Storage tools need access to all files.", color = T.sub, fontSize = 12.sp)
-        PButton("Allow all files") { ctx.startActivity(Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        PButton("Allow all files") { ask() }
     }
 }
