@@ -136,7 +136,27 @@ enum class Skin(val family: SkinFamily, val label: String, val w: Int, val h: In
 
 /** A home-screen widget drawn as one bitmap in its theme's look; one provider per [Skin] so each is listed on its own. */
 abstract class SkinWidget(val skin: Skin) : AppWidgetProvider() {
-    override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) = push(ctx, mgr, ids)
+    override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) { push(ctx, mgr, ids); if (ticking && ids.isNotEmpty()) scheduleTick(ctx) }
+
+    // the world clock and Up next are drawn into one bitmap, so a per-minute alarm chain (inexact, may lag in Doze) and the time, zone and date broadcasts redraw them
+    private val ticking get() = skin == Skin.IOS_WORLD || skin == Skin.IOS_UP_NEXT
+    private fun alarm(ctx: Context) = ctx.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
+    private fun tickIntent(ctx: Context) = PendingIntent.getBroadcast(ctx, 2000 + skin.ordinal, Intent(ctx, javaClass).setAction(TICK), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+    private fun scheduleTick(ctx: Context) = alarm(ctx).setAndAllowWhileIdle(android.app.AlarmManager.RTC, (System.currentTimeMillis() / 60_000 + 1) * 60_000, tickIntent(ctx))
+
+    override fun onDisabled(ctx: Context) { if (ticking) alarm(ctx).cancel(tickIntent(ctx)) }
+
+    override fun onReceive(ctx: Context, intent: Intent) {
+        super.onReceive(ctx, intent)
+        if (!ticking) return
+        when (intent.action) {
+            Intent.ACTION_TIME_CHANGED, Intent.ACTION_TIMEZONE_CHANGED, Intent.ACTION_DATE_CHANGED, TICK -> {
+                val mgr = AppWidgetManager.getInstance(ctx)
+                val ids = mgr.getAppWidgetIds(ComponentName(ctx, javaClass))
+                if (ids.isNotEmpty()) { push(ctx, mgr, ids); scheduleTick(ctx) }
+            }
+        }
+    }
 
     override fun onAppWidgetOptionsChanged(ctx: Context, mgr: AppWidgetManager, id: Int, o: android.os.Bundle?) = push(ctx, mgr, intArrayOf(id))
 
@@ -154,8 +174,13 @@ abstract class SkinWidget(val skin: Skin) : AppWidgetProvider() {
         val px = WidgetSize.dp(ctx, id)?.let { (it.first * dens).toInt() to (it.second * dens).toInt() } ?: (0 to 0)
         val v = when {
             art("dial") != 0 -> RemoteViews(ctx.packageName, if (skin == Skin.GL_CLOCK) R.layout.widget_skin_gl_clock else R.layout.widget_skin_analog).apply {
-                if (skin == Skin.W11_CLOCK) setIcon(R.id.clock, "setDial", Icon.createWithBitmap(Skins.win11Dial(ctx, id, (WidgetSize.dp(ctx, id)?.let { minOf(it.first, it.second) * dens }?.toInt() ?: 400).coerceIn(160, 512))))
-                else setIcon(R.id.clock, "setDial", Icon.createWithResource(ctx, art("dial")))
+                // AnalogClock scales the dial and the hands together only when they are the same size, so the drawn dials take the hands' size
+                val hs = Skins.sizeOf(ctx, art("hour"))
+                when (skin) {
+                    Skin.W11_CLOCK -> setIcon(R.id.clock, "setDial", Icon.createWithBitmap(Skins.win11Dial(ctx, id, hs.first)))
+                    Skin.XP_CLOCK, Skin.W95_TIME, Skin.GL_CLOCK -> setIcon(R.id.clock, "setDial", Icon.createWithBitmap(Skins.liveDial(ctx, skin, id, accent, hs.first, hs.second)))
+                    else -> setIcon(R.id.clock, "setDial", Icon.createWithResource(ctx, art("dial")))
+                }
                 setIcon(R.id.clock, "setHourHand", Icon.createWithResource(ctx, art("hour")).apply { if (skin == Skin.GL_CLOCK) setTint(Skins.readable(accent)) })
                 setIcon(R.id.clock, "setMinuteHand", Icon.createWithResource(ctx, art("minute")))
                 art("second").let { if (it != 0) setIcon(R.id.clock, "setSecondHand", Icon.createWithResource(ctx, it)) }
@@ -169,7 +194,8 @@ abstract class SkinWidget(val skin: Skin) : AppWidgetProvider() {
                     setIcon(R.id.clock, "setMinuteHand", Icon.createWithResource(ctx, art("minute")).setTint(a))
                 }
                 // the art is opaque: fade the whole live clock like Skins.draw fades the bitmap (Windows 11 always follows its opacity)
-                if (skin.family != SkinFamily.WIN11 && WidgetOver.has(ctx, id)) setFloat(R.id.root, "setAlpha", WidgetOver.opacity(ctx, id).coerceIn(0f, 1f))
+                // (the drawn dials are faded in liveDial; only the Windows 7 gadget art, which is a resource, fades as a whole here)
+                if (skin.family == SkinFamily.WIN7) Skins.opacity(ctx, skin, id).let { if (it < 1f) setFloat(R.id.root, "setAlpha", it) }
             }
             digital != null -> RemoteViews(ctx.packageName, digital).apply {
                 val d = SkinData.read(ctx)
@@ -209,6 +235,7 @@ abstract class SkinWidget(val skin: Skin) : AppWidgetProvider() {
             Skin.GL_TIME to R.layout.widget_skin_am_clock, Skin.GL_DATE to R.layout.widget_skin_m3_date,
         )
         private val clockIds = intArrayOf(R.id.skin_t1, R.id.skin_t2, R.id.skin_t3)
+        private const val TICK = "com.umutk.pulse.SKIN_TICK"
 
         /** Redraws every placed themed widget; called with the other widget refreshes. */
         fun refreshAll(ctx: Context) {
@@ -275,12 +302,47 @@ object Skins {
             }
         } finally { Win11Material.forId.set(prev) }
         // the other families are opaque art: a per-widget opacity fades the whole bitmap (Windows 11 applies it to its tile only)
-        if (s.family != SkinFamily.WIN11 && WidgetOver.has(ctx, id)) {
-            val faded = Bitmap.createBitmap(bmp.width, bmp.height, Bitmap.Config.ARGB_8888)
-            Canvas(faded).drawBitmap(bmp, 0f, 0f, Paint().apply { alpha = (WidgetOver.opacity(ctx, id, s.family.theme).coerceIn(0f, 1f) * 255).toInt() })
-            bmp = faded
-        }
+        val op = opacity(ctx, s, id)
+        if (op < 1f) bmp = fade(bmp, op)
         return bmp
+    }
+
+    /** The tile opacity of a skin: the widget's own, else its design's default (XP, 95 and AMOLED opaque, Windows 7 .85, Glass .6, iOS .9, Material .95); Windows 11 fades its tile itself. */
+    fun opacity(ctx: Context, s: Skin, id: Int): Float = if (s.family == SkinFamily.WIN11) 1f else WidgetOver.opacity(ctx, id, s.family.theme).coerceIn(0f, 1f)
+
+    private fun fade(b: Bitmap, a: Float): Bitmap {
+        val faded = Bitmap.createBitmap(b.width, b.height, Bitmap.Config.ARGB_8888)
+        Canvas(faded).drawBitmap(b, 0f, 0f, Paint().apply { alpha = (a * 255).toInt() })
+        return faded
+    }
+
+    /** True while a live dial is drawn: the window or panel only, the face centred, no hands and no digits (AnalogClock and TextClocks add those). */
+    private val dialOnly = ThreadLocal.withInitial { false }
+
+    /** The pixel size of a drawable resource without loading it; AnalogClock needs the dial exactly as big as its hands. */
+    fun sizeOf(ctx: Context, res: Int): Pair<Int, Int> {
+        val o = BitmapFactory.Options().apply { inJustDecodeBounds = true; inScaled = false }
+        BitmapFactory.decodeResource(ctx.resources, res, o)
+        return o.outWidth.coerceAtLeast(1) to o.outHeight.coerceAtLeast(1)
+    }
+
+    /** The dial of a live analog skin (Windows XP, Windows 95, Glass) drawn by the same function as the skin's other widgets, at [w] x [h] px (the hands' size), faded to the skin's opacity. */
+    fun liveDial(ctx: Context, s: Skin, id: Int, accent: Int, w: Int, h: Int): Bitmap {
+        val b = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(b)
+        c.scale(w / s.w.toFloat(), h / s.h.toFloat())
+        val prev = Win11Material.forId.get(); Win11Material.forId.set(id); dialOnly.set(true)
+        try {
+            val d = SkinData.read(ctx)
+            when (s.family) {
+                SkinFamily.XP -> xp(c, s, d)
+                SkinFamily.WIN95 -> win95(c, s, d)
+                SkinFamily.GLASS -> glass(c, s, d, false, accent)
+                else -> {}
+            }
+        } finally { dialOnly.set(false); Win11Material.forId.set(prev) }
+        val op = opacity(ctx, s, id)
+        return if (op < 1f) fade(b, op) else b
     }
 
     // ---------------------------------------------------------------- shared helpers
@@ -428,9 +490,11 @@ object Skins {
                 c.drawBitmap(img(ctx, R.drawable.gadget_cal_page), null, RectF(0f, 0f, 130f, 141f), p)
                 if (!withText) return
                 val sunday = d.now.get(Calendar.DAY_OF_WEEK) == Calendar.SUNDAY
-                text(c, fmt(d, "MMMM yyyy"), 65f, 36f, 14f, Color.rgb(64, 64, 64), sansBold)
+                val mo = fmt(d, "MMMM yyyy")
+                text(c, mo, 65f, 36f, fitText(mo, 110f, 14f, sansBold), Color.rgb(64, 64, 64), sansBold)
                 text(c, "${d.now.get(Calendar.DAY_OF_MONTH)}", 65f, 106f, 70f, if (sunday) Color.rgb(214, 66, 32) else Color.rgb(52, 52, 52), light)
-                text(c, fmt(d, "EEEE"), 65f, 132f, 14f, Color.rgb(80, 80, 80), sansBold)
+                val wd = fmt(d, "EEEE")
+                text(c, wd, 65f, 132f, fitText(wd, 110f, 14f, sansBold), Color.rgb(80, 80, 80), sansBold)
             }
             Skin.W7_BATTERY -> {
                 // the gadget's 135 x 75 body: its battery picture with the charge filled in eighths, the percentage over it
@@ -475,7 +539,8 @@ object Skins {
                 analog(c, cx, h / 2f, w * .4f, d, acc, acc, numerals = acc, face = medium, minuteW = w * .016f)
             }
             Skin.W11_DATE -> if (withText) {
-                text(c, fmt(d, "EEE MMM"), cx, h * .2f, w * .16f, acc, sansBold)
+                val dm = fmt(d, "EEE MMM")
+                text(c, dm, cx, h * .2f, fitText(dm, w * .8f, w * .16f, sansBold), acc, sansBold)
                 text(c, "${d.now.get(Calendar.DAY_OF_MONTH)}", cx, h * .76f, w * .55f, acc, medium)
                 text(c, fmt(d, "yyyy"), cx, h * .93f, w * .11f, acc, sans)
             }
@@ -497,7 +562,8 @@ object Skins {
                 }
             }
             Skin.W11_CALENDAR -> {
-                text(c, fmt(d, "MMMM yyyy").uppercase(Locale.getDefault()), w * .08f, h * .17f, w * .09f, Color.WHITE, sansBold, Paint.Align.LEFT)
+                val head = fmt(d, "MMMM yyyy").uppercase(Locale.getDefault())
+                text(c, head, w * .08f, h * .17f, fitText(head, w * .84f, w * .09f, sansBold), Color.WHITE, sansBold, Paint.Align.LEFT)
                 monthGrid(c, d, RectF(w * .06f, h * .2f, w * .94f, h * .95f), Color.WHITE, Color.WHITE, acc, Color.BLACK, Color.rgb(150, 150, 150), medium, true)
             }
             Skin.W11_TIME -> {
@@ -589,11 +655,11 @@ object Skins {
             Skin.XP_CLOCK -> {
                 val b = lunaWindow(c, w, h, "Clock")
                 val r = min(b.width(), b.height() - 22 * u) * .42f
-                val cy = b.top + 8 * u + r
+                val cy = if (dialOnly.get()) b.centerY() else b.top + 8 * u + r   // live: the face sits at the window centre, where AnalogClock turns the hands
                 c.drawCircle(b.centerX(), cy, r * 1.04f, paint(Color.rgb(127, 157, 185)))
                 c.drawCircle(b.centerX(), cy, r, paint(Color.WHITE))
-                analog(c, b.centerX(), cy, r, d, Color.rgb(0, 51, 153), Color.BLACK, numerals = Color.rgb(0, 51, 153), face = sansBold, minuteW = r * .05f)
-                text(c, "${hh(d)}:${mm(d)}", b.centerX(), b.bottom - 6 * u, 11 * u, Color.BLACK, sans)
+                analog(c, b.centerX(), cy, r, d, Color.rgb(0, 51, 153), Color.BLACK, numerals = Color.rgb(0, 51, 153), face = sansBold, minuteW = r * .05f, hands = !dialOnly.get())
+                if (!dialOnly.get()) text(c, "${hh(d)}:${mm(d)}", b.centerX(), b.bottom - 6 * u, 11 * u, Color.BLACK, sans)
             }
             Skin.XP_CPU -> {
                 // the Task Manager CPU Usage box: green LED meter on black, the percentage under it
@@ -686,7 +752,7 @@ object Skins {
         when (s) {
             Skin.W95_TIME -> {
                 groupBox(c, RectF(6f, 9f, lw - 6, lh - 6), "Time")
-                val cx = lw / 2f; val cy = 9f + (lh - 15f) / 2f + 2f; val r = (lh - 26f) / 2f
+                val cx = lw / 2f; val cy = if (dialOnly.get()) lh / 2f else 9f + (lh - 15f) / 2f + 2f; val r = (lh - 26f) / 2f
                 // twelve teal dots with a black shadow, as on the Windows 95 clock
                 for (i in 0 until 12) {
                     val a = Math.toRadians(i * 30.0)
@@ -703,7 +769,7 @@ object Skins {
                     val path = Path().apply { moveTo(cx + nx, cy + ny); lineTo(tx, ty); lineTo(cx - nx, cy - ny); lineTo(cx - (len * .12f * sin(a)).toFloat(), cy + (len * .12f * cos(a)).toFloat()); close() }
                     c.drawPath(path, paint(W95_TEAL)); c.drawPath(path, paint(Color.BLACK).apply { style = Paint.Style.STROKE; strokeWidth = .7f })
                 }
-                hand(ha, r * .55f, 3f); hand(ma, r * .85f, 2.4f)
+                if (!dialOnly.get()) { hand(ha, r * .55f, 3f); hand(ma, r * .85f, 2.4f) }
             }
             Skin.W95_CPU, Skin.W95_BATTERY, Skin.W95_MEMORY -> {
                 val (label, v) = when (s) { Skin.W95_CPU -> "CPU" to d.cpu; Skin.W95_BATTERY -> "Battery" to d.bat; else -> "Memory" to d.ram }
@@ -960,6 +1026,7 @@ object Skins {
             }
             Skin.GL_CLOCK -> {
                 // big digital time with thin analog hands over it
+                if (dialOnly.get()) return
                 text(c, hh(d), w / 2f, h * .46f, w * .34f, Color.argb(170, 255, 255, 255), thin)
                 text(c, mm(d), w / 2f, h * .86f, w * .34f, Color.argb(170, 255, 255, 255), thin)
                 val (ha, ma) = angles(d)
@@ -1062,7 +1129,7 @@ object Skins {
                     c.drawCircle(cx, cy, cr, paint(if (dayTime) Color.WHITE else Color.rgb(60, 60, 64)))
                     analog(c, cx, cy, cr, local, if (dayTime) grey else Color.rgb(120, 120, 126), if (dayTime) Color.BLACK else Color.WHITE, minuteW = cr * .07f)
                     c.drawCircle(cx, cy, cr * .06f, paint(a))
-                    text(c, name, cx, h * .78f, fitText(name, w * .22f, h * .085f, sansBold), Color.WHITE, sansBold)
+                    text(c, name, cx, h * .78f, fitText(name, w * .2f, h * .085f, sansBold), Color.WHITE, sansBold)
                     val diff = (z.getOffset(ms) - here.getOffset(ms)) / 3_600_000
                     text(c, if (i == 0) "Local" else String.format(Locale.getDefault(), "%+dh", diff), cx, h * .91f, h * .07f, grey, sans)
                 }
