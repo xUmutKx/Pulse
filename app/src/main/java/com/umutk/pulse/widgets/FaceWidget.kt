@@ -45,8 +45,8 @@ abstract class FaceWidget(val look: Int) : AppWidgetProvider() {
     /** The face at the current time in [accent]; analog faces are a live AnalogClock (dial and hands as separate translucent bitmaps), the others one bitmap. A tap opens the matching app. */
     fun views(ctx: Context, look: Int, accent: Int, id: Int = 0): RemoteViews {
         val frost = Faces.looks[look]?.frost == true
-        // like the previews: the frosted clock always follows the opacity setting, the others only once the widget has its own
-        val op = if (frost || WidgetOver.has(ctx, id)) WidgetOver.opacity(ctx, id).coerceIn(0f, 1f) else 1f
+        // the widget's own opacity, else its design's default (Windows 7 .85, iOS .9, the frosted Windows 11 clock .62)
+        val op = WidgetOver.opacity(ctx, id, FaceWidgets.theme(look)).coerceIn(0f, 1f)
         val v = if (Faces.analog(look)) {
             val px = (WidgetSize.dp(ctx, id)?.let { minOf(it.first, it.second) * ctx.resources.displayMetrics.density }?.toInt() ?: 400).coerceIn(160, 512)
             RemoteViews(ctx.packageName, R.layout.widget_face_analog).apply {

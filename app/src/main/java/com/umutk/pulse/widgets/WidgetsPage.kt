@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.AddHome
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -258,7 +259,7 @@ private fun FamilyHeader(theme: String, label: String) {
 
 /** A see-through card: the preview square on top, the name and add button below. */
 @Composable
-private fun WidgetCard(label: String, onAdd: () -> Unit, preview: @Composable () -> Unit) {
+private fun WidgetCard(label: String, onAdd: () -> Unit, aspect: Float = 1f, preview: @Composable () -> Unit) {
     // a tap on the card opens its settings as a floating window over the page
     var open by remember { mutableStateOf(false) }
     if (open) {
@@ -268,7 +269,7 @@ private fun WidgetCard(label: String, onAdd: () -> Unit, preview: @Composable ()
             title = { Text(label) },
             text = {
                 Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) { preview() }
+                    Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) { Box(Modifier.aspectRatio(aspect)) { preview() } }
                     LookSettings(c, win11 = true)
                 }
             },
@@ -277,7 +278,8 @@ private fun WidgetCard(label: String, onAdd: () -> Unit, preview: @Composable ()
         )
     }
     Column(Modifier.fillMaxWidth().border(1.dp, T.line, RoundedCornerShape(16.dp)).clickable { open = true }.padding(10.dp)) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) { preview() }
+        // the card keeps a square cell; the preview inside takes the widget's own aspect, so wide and tall ones are shown whole and centred
+        Box(Modifier.fillMaxWidth().aspectRatio(1f), contentAlignment = Alignment.Center) { Box(Modifier.aspectRatio(aspect)) { preview() } }
         Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(label, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             Box(Modifier.size(36.dp).clickable(onClick = onAdd), contentAlignment = Alignment.Center) {
@@ -296,7 +298,7 @@ private fun SkinCard(ctx: Context, skin: Skin, cls: String?) {
             delay(30_000)
         }
     }
-    WidgetCard(skin.label, { if (cls != null) addToHome(ctx, cls) }) {
+    WidgetCard(skin.label, { if (cls != null) addToHome(ctx, cls) }, skin.w.toFloat() / skin.h) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), skin.label, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         else Placeholder()
