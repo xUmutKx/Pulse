@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- App Lock (see applock/LockService.kt): window changes (and taps in the launcher, to cover the app before its window) tell which app is in front; the window list (canRetrieveWindowContent +
+     flagRetrieveInteractiveWindows) tells a chat bubble from a full-screen app. No text or content of other apps is read. -->
+<accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
+    android:accessibilityEventTypes="typeWindowStateChanged|typeWindowsChanged|typeViewClicked"
+    android:accessibilityFeedbackType="feedbackGeneric"
+    android:accessibilityFlags="flagRetrieveInteractiveWindows"
+    android:notificationTimeout="0"
+    android:canRetrieveWindowContent="true"
+    android:description="@string/applock_service_desc" />

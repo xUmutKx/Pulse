@@ -35,6 +35,8 @@ import androidx.compose.ui.graphics.asImageBitmap
 import android.graphics.Bitmap
 import androidx.core.graphics.drawable.toBitmap
 import com.umutk.pulse.WinAlert
+import com.umutk.pulse.LocalWindowLook
+import com.umutk.pulse.winButtonLooks
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -46,6 +48,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -730,15 +733,18 @@ fun InstallerPage() {
         }
     }
 
-    win?.let { w ->
-        InstallWindow(w, root = root, refused = refused, uninstOk = prof.uninst, busy = busy,
-            onInstall = { win = null; installAll(listOf(w), false) },
-            onDowngrade = { installAll(listOf(w), false, forceDown = true) },
-            onRestore = { removeRestore(w) },
-            onUninstall = { win = null; installAll(listOf(w), true) },
-            onCancel = { win = null })
+    // the installer's own look (Settings > Installer) for its window and confirm boxes
+    CompositionLocalProvider(LocalWindowLook provides installLook()) {
+        win?.let { w ->
+            InstallWindow(w, root = root, refused = refused, uninstOk = prof.uninst, busy = busy,
+                onInstall = { win = null; installAll(listOf(w), false) },
+                onDowngrade = { installAll(listOf(w), false, forceDown = true) },
+                onRestore = { removeRestore(w) },
+                onUninstall = { win = null; installAll(listOf(w), true) },
+                onCancel = { win = null })
+        }
+        dlg?.let { d -> PDialog(d.title, d.text, d.label, onConfirm = { dlg = null; d.go() }, onDismiss = { dlg = null }) }
     }
-    dlg?.let { d -> PDialog(d.title, d.text, d.label, onConfirm = { dlg = null; d.go() }, onDismiss = { dlg = null }) }
 }
 
 /** The install window: icon, name, package, version, status chip and the actions that fit the status. */
@@ -747,48 +753,54 @@ private fun InstallWindow(
     pk: Picked, root: Boolean, refused: Boolean, uninstOk: Boolean, busy: Boolean,
     onInstall: () -> Unit, onDowngrade: () -> Unit, onRestore: () -> Unit, onUninstall: () -> Unit, onCancel: () -> Unit,
 ) {
+    val t = LocalWindowLook.current
     val kind = pk.kind()
     val chip = when (kind) {
         "Signature differs" -> Color(0xFFC42B1C)
         "Downgrade" -> Color(0xFFCA5010)
-        "Identical" -> T.sub
+        "Identical" -> t.sub
         else -> Look.accent
     }
     val ic = pk.icon
-    WinAlert(onDismissRequest = onCancel,
-        title = {
+    // Windows looks: the title bar holds one line, so the header moves into the body
+    val winLook = t.id in winButtonLooks
+    val winTitle: @Composable () -> Unit = { Text(pk.label) }
+    val header: @Composable () -> Unit = {
             Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (ic != null) Image(ic.asImageBitmap(), null, Modifier.size(72.dp)) else PIcon("extract", Look.accent, 56.dp)
                 Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(pk.label, color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(pk.label, color = t.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                     Spacer(Modifier.width(6.dp))
                     Box(Modifier.background(Color(0xFF3DDC84), RoundedCornerShape(4.dp)).padding(horizontal = 5.dp, vertical = 1.dp)) {
                         Text("Android", color = Color(0xFF073D1E), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-                Text(pk.pkg, color = T.sub, fontSize = 12.sp)
-                Text("Version: ${pk.version} (${pk.code})", color = T.sub, fontSize = 12.sp)
+                Text(pk.pkg, color = t.sub, fontSize = 12.sp)
+                Text("Version: ${pk.version} (${pk.code})", color = t.sub, fontSize = 12.sp)
                 Box(Modifier.padding(top = 6.dp).background(chip, RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 3.dp)) {
                     Text(kind, color = Color.White, fontSize = 12.sp)
                 }
             }
-        },
+    }
+    WinAlert(onDismissRequest = onCancel,
+        title = if (winLook) winTitle else header,
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                if (winLook) header()
                 if (pk.mismatch) Text(
                     "The signature differs from the installed app, so it cannot be installed over it. " +
                         (if (root) "Remove and restore data deletes the app and copies its data back. The data may not work with the new signature."
                         else if (uninstOk) "Uninstalling deletes the app's data."
                         else "Turn on uninstall on mismatch in the profile to replace it."),
-                    color = T.sub, fontSize = 13.sp)
+                    color = t.sub, fontSize = 13.sp)
                 if (refused) Text("The downgrade was refused by the system. Remove and restore data is risky: the app is removed, the older APK is installed and the data is copied back. If a step fails, the backup stays on the device.",
                     color = Color(0xFFC42B1C), fontSize = 13.sp)
-                Text("SHA-256 ${pk.sigShort}", color = T.sub, fontSize = 12.sp)
+                Text("SHA-256 ${pk.sigShort}", color = t.sub, fontSize = 12.sp)
             }
         },
         confirmButton = {
-            if (busy) Text("Working...", color = T.sub, fontSize = 13.sp)
+            if (busy) Text("Working...", color = t.sub, fontSize = 13.sp)
             else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!pk.mismatch) when (kind) {
                     "Downgrade" -> PButton("Downgrade", onClick = onDowngrade)

@@ -43,9 +43,13 @@ data class Core(val usage: Int, val mhz: Int)
 
 /** Runs a command through Shizuku (shell uid) when it is running and granted, otherwise as root when available, otherwise as the app user. */
 object Shell {
-    @Volatile var root: Boolean? = null
+    /** null = not checked yet, false = checked and refused/absent. Compose state so pages redraw; never cached as final: every check re-runs su. */
+    var root by mutableStateOf<Boolean?>(null)
     /** 0 not running, 1 running without permission, 2 running and granted. The Installer page shows it. */
     var shizuku by mutableIntStateOf(0)
+    /** Raw results of the last root check and the last Shizuku error, shown in Settings > Permissions. */
+    var rootLog by mutableStateOf("")
+    var shizukuErr by mutableStateOf("")
 
     fun run(cmd: String): String =
         if (shizukuOk()) exec { Shizuku.newProcess(arrayOf("sh", "-c", "exec 2>&1; $cmd"), null, null) }
@@ -58,23 +62,70 @@ object Shell {
         out
     } catch (e: Exception) { "" }
 
+    /** Runs one su attempt with a timeout (the first call waits for the root manager popup). Returns "exit=N out" or the error. */
+    private fun suTry(cmd: List<String>): String {
+        val sb = StringBuilder()
+        return try {
+            val p = ProcessBuilder(cmd).redirectErrorStream(true).start()
+            runCatching { p.outputStream.close() }
+            val t = Thread { runCatching { sb.append(p.inputStream.bufferedReader().readText()) } }.apply { isDaemon = true; start() }
+            t.join(25000)
+            if (t.isAlive) { p.destroy(); "timeout 25s" } else "exit=${p.waitFor()} ${sb.toString().trim()}"
+        } catch (e: Exception) { "error ${e.message}" }
+    }
+
+    fun shizukuInstalled(ctx: Context): Boolean = listOf("moe.shizuku.privileged.api", "rikka.shizuku", "dev.rikka.shizuku").any {
+        runCatching { ctx.packageManager.getPackageInfo(it, 0); true }.getOrDefault(false)
+    }
+
     fun shizukuOk(): Boolean = runCatching {
         Shizuku.pingBinder() && !Shizuku.isPreV11() && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
 
-    /** Keeps [shizuku] current; called once from MainActivity. */
-    fun watchShizuku() {
-        val update = { shizuku = if (!Shizuku.pingBinder()) 0 else if (shizukuOk()) 2 else 1 }
-        Shizuku.addBinderReceivedListenerSticky { update() }
-        Shizuku.addBinderDeadListener { update() }
-        Shizuku.addRequestPermissionResultListener { _, _ -> update() }
+    /** Re-reads the binder and permission; called by the listeners and on resume. */
+    fun refreshShizuku() {
+        shizuku = runCatching { if (!Shizuku.pingBinder()) 0 else if (shizukuOk()) 2 else 1 }.getOrElse { shizukuErr = it.toString(); 0 }
     }
 
-    fun askShizuku() { if (shizuku == 1) Shizuku.requestPermission(1) }
+    private var watching = false
+
+    /** Keeps [shizuku] current; called from MainActivity. */
+    fun watchShizuku() {
+        if (watching) return
+        watching = true
+        Shizuku.addBinderReceivedListenerSticky { refreshShizuku() }
+        Shizuku.addBinderDeadListener { refreshShizuku() }
+        Shizuku.addRequestPermissionResultListener { _, _ -> refreshShizuku() }
+        refreshShizuku()
+    }
+
+    fun askShizuku() {
+        refreshShizuku()
+        if (shizuku == 1) try { Shizuku.requestPermission(1); shizukuErr = "" } catch (e: Throwable) { shizukuErr = "requestPermission: $e" }
+    }
+
+    /** Tries every common su variant and path; result and raw outputs go to [rootLog]. Always re-runs, a refusal is never remembered. */
+    @Volatile private var detecting = false
 
     fun detectRoot(): Boolean {
-        root = true
-        val ok = exec { ProcessBuilder("su", "-c", "id").redirectErrorStream(true).start() }.contains("uid=0")
+        if (detecting) return root == true
+        detecting = true
+        try { return detectRootNow() } finally { detecting = false }
+    }
+
+    private fun detectRootNow(): Boolean {
+        val dirs = listOf("", "/system/bin/", "/system/xbin/", "/sbin/", "/debug_ramdisk/", "/data/adb/ksu/bin/", "/data/adb/ap/bin/", "/data/adb/magisk/", "/vendor/bin/")
+        val tries = dirs.map { listOf(it + "su", "-c", "id") } + listOf(listOf("su", "0", "id"), listOf("su", "--mount-master", "-c", "id"))
+        val log = StringBuilder()
+        var ok = false
+        for (c in tries) {
+            val r = suTry(c)
+            if (r.startsWith("error") && r.contains("No such file")) continue
+            log.append(c.joinToString(" ")).append(" -> ").append(r).append('\n')
+            if (r.contains("uid=0")) { ok = true; break }
+        }
+        if (log.isEmpty()) log.append("no su binary found")
+        rootLog = log.toString().trim()
         root = ok
         return ok
     }

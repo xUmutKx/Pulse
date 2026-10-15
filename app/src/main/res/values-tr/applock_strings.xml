@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="applock_service_desc">Kilitli bir uygulama açıldığında Uygulama kilidi kartını gösterir. Yalnızca önde hangi uygulamanın olduğunu okur.</string>
+</resources>

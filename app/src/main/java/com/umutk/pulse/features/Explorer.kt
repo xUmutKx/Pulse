@@ -2,6 +2,7 @@ package com.umutk.pulse.features
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.graphics.ImageDecoder
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
@@ -43,6 +44,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +53,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
@@ -71,8 +74,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.umutk.pulse.BarMeter
+import com.umutk.pulse.FluentPaths
 import com.umutk.pulse.PButton
 import com.umutk.pulse.WinAlert
+import com.umutk.pulse.ThemedMenu
+import com.umutk.pulse.ThemedMenuItem
 import com.umutk.pulse.LocalWindowLook
 import com.umutk.pulse.Guard
 import com.umutk.pulse.InfoRows
@@ -82,7 +88,12 @@ import com.umutk.pulse.WinAlert
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
 import com.umutk.pulse.PHead
+import com.umutk.pulse.tr
+import com.umutk.pulse.Opt
 import com.umutk.pulse.PIcon
+import com.umutk.pulse.BinIcon
+import com.umutk.pulse.MoreIcon
+import androidx.compose.material.icons.outlined.Description
 import com.umutk.pulse.Shell
 import com.umutk.pulse.T
 import kotlinx.coroutines.Dispatchers
@@ -117,8 +128,9 @@ fun FilesPage() {
     val top = remember { Environment.getExternalStorageDirectory() }
     val back: () -> Unit = { tab = "files" }
     Column(Modifier.fillMaxSize()) {
+        com.umutk.pulse.StorageAccessCard()
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("files" to "Files", "tree" to "Folder tree", "types" to "File types", "cache" to "Cache", "root" to "Root").forEach { (k, label) ->
+            listOf("files" to "Files", "tree" to "Folder tree", "types" to "File types", "cache" to "Cache").forEach { (k, label) ->
                 PChip(tab == k, label) { tab = k }
             }
         }
@@ -127,7 +139,6 @@ fun FilesPage() {
                 "tree" -> FolderTreeScreen(top, back)
                 "types" -> TypeBreakdownScreen(top, back)
                 "cache" -> CacheCleanerScreen(back)
-                "root" -> RootPage()
                 else -> ExplorerTab()
             }
         }
@@ -150,7 +161,6 @@ private fun ExplorerTab() {
     var viewing by remember { mutableStateOf<File?>(null) }
     var propsOf by remember { mutableStateOf<File?>(null) }
     var finder by remember { mutableStateOf<String?>(null) }
-    var bulk by remember { mutableStateOf<List<File>?>(null) }
     var sel by remember { mutableStateOf(setOf<String>()) }
     var query by rememberSaveable { mutableStateOf("") }
     // sort: one order for every folder, unless a folder has its own (folderSort); both are kept on the phone
@@ -168,6 +178,18 @@ private fun ExplorerTab() {
     var recents by remember { mutableStateOf(exRead(ctx, EX_RECENT)) }
     var undo by remember { mutableStateOf<ExUndo?>(null) }
     var found by remember { mutableStateOf<List<File>?>(null) }
+    // files waiting for the delete confirm box; the box calls deleteNow
+    var bulk by remember { mutableStateOf<List<File>?>(null) }
+    // the bin (when on) keeps the files and Undo brings them back
+    val deleteNow: (List<File>) -> Unit = { files ->
+        sel = emptySet()
+        scope.launch {
+            val u = withContext(Dispatchers.IO) { if (Opt.recycle) exTrash(top, files) else { files.forEach { it.deleteRecursively() }; null } }
+            undo = u
+            note = if (u == null && Opt.recycle) "Could not delete" else ""
+            refresh++
+        }
+    }
     val dir = File(here)
     val sort = folderSort[here] ?: sortAll
     val (total, free) = remember(refresh) { exStorage(top) }
@@ -289,24 +311,29 @@ private fun ExplorerTab() {
         shown.forEach { f ->
             val isMark = f.path in marks
             val isPicked = f.path in sel
-            PCard(Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().combinedClickable(
+            // folders keep their card; files are plain rows in a list
+            val rowBody: @Composable () -> Unit = {
+                // one row: the name on the left, the three dots (menu) on the right of the same line
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
-                    ExIcon(if (isPicked) "check" else if (f.isDirectory) "folder" else "filetypes", Look.accent, 22.dp)
+                    val thumb = if (f.isDirectory || isPicked) null else exThumb(f)
+                    if (thumb != null) Image(thumb, null, Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
+                    else ExIcon(if (isPicked) "check" else if (f.isDirectory) "folder" else "filetypes", Look.accent, 22.dp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(f.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val sub = when {
                             found != null -> exRel(f, top)
-                            !f.isDirectory && showSizes -> Guard.gb(f.length())
+                            !f.isDirectory && showSizes -> exSize(f.length())
                             else -> ""
                         }
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 Box {
-                    Box(Modifier.size(36.dp).clickable { menuOf = f }, contentAlignment = Alignment.Center) { ExDots(T.sub) }
+                    Box(Modifier.size(36.dp).clickable { menuOf = f }, contentAlignment = Alignment.Center) { MoreIcon(T.sub, 20.dp) }
                     val actions = buildList<Triple<String, String, () -> Unit>> {
                         add(Triple("Open", "view", { if (f.isDirectory) go(f.path) else openFile(f) }))
                         if (!f.isDirectory) add(Triple("Open with", "openWith", { if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }))
@@ -316,24 +343,25 @@ private fun ExplorerTab() {
                         add(Triple("Rename", "rename", { name = f.name; dialog = "rename" to f }))
                         add(Triple("Compress", "zip", { scope.launch { note = withContext(Dispatchers.IO) { exZip(listOf(f), dir) }; refresh++ } }))
                         if (!f.isDirectory) add(Triple("Share", "share", { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }))
-                        add(Triple("Copy path", "link", { exCopy(ctx, f.path); note = "Path copied" }))
+                        add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
                         if (f.isDirectory) {
                             add(Triple("Add bookmark", "bookmark", { mark(f.path) }))
-                            add(Triple("Create shortcut", "bookmark", { mark(f.path) }))
+                            add(Triple("Create shortcut", "link", { mark(f.path) }))
                         }
                         if (f.extension.equals("zip", true)) add(Triple("View archive", "zip", { archiveOf = f }))
                         if (f.extension.equals("zip", true)) add(Triple("Extract", "extract", { scope.launch { note = withContext(Dispatchers.IO) { unzip(f, dir) }; refresh++ } }))
                         add(Triple("Properties", "info", { propsOf = f }))
                     }
                     val w = LocalWindowLook.current
-                    DropdownMenu(expanded = menuOf == f, onDismissRequest = { menuOf = null }, containerColor = w.panel, shape = RoundedCornerShape(w.radius)) {
+                    ThemedMenu(menuOf == f, { menuOf = null }) {
                         actions.forEach { (label, key, act) ->
-                            DropdownMenuItem(text = { Text(label, color = w.text, fontSize = 14.sp) }, leadingIcon = { ExIcon(key, w.sub, 18.dp) },
-                                onClick = { menuOf = null; act() })
+                            ThemedMenuItem(label, { menuOf = null; act() }, leading = { ExIcon(if (T.id == "win11") W11_ACTION[label] ?: key else key, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) })
                         }
                     }
                 }
+                }
             }
+            if (f.isDirectory) PCard(Modifier.fillMaxWidth()) { rowBody() } else Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { rowBody() }
         }
     }
 
@@ -415,21 +443,15 @@ private fun ExplorerTab() {
             confirmButton = { TextButton({ finder = null }) { Text("Close") } })
     }
 
+
     bulk?.let { files ->
         WinAlert(onDismissRequest = { bulk = null },
-            title = { Text(if (files.size == 1) "Delete ${files[0].name}?" else "Delete ${files.size} items?") },
-            text = { Text("Kept in .pulse_trash until the next delete, so Undo can bring them back.", color = T.sub, fontSize = 13.sp) },
-            confirmButton = { TextButton({
-                bulk = null
-                sel = emptySet()
-                scope.launch {
-                    val u = withContext(Dispatchers.IO) { exTrash(top, files) }
-                    undo = u
-                    note = if (u == null) "Could not delete" else ""
-                    refresh++
-                }
-            }) { Text("Delete") } },
-            dismissButton = { TextButton({ bulk = null }) { Text("Cancel") } })
+            title = { Text(if (files.size > 1) "Delete Items" else if (files[0].isDirectory) "Delete Folder" else "Delete File") },
+            text = { Text(if (Opt.recycle) (if (files.size == 1) tr("Move this item to the Recycle Bin?", "Bu öğe Çöp Kutusuna taşınsın mı?") else tr("Move these ${files.size} items to the Recycle Bin?", "Bu ${files.size} öğe Çöp Kutusuna taşınsın mı?"))
+                else (if (files.size == 1) tr("Are you sure you want to permanently delete this item?", "Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?") else tr("Are you sure you want to permanently delete these ${files.size} items?", "Bu ${files.size} öğeyi kalıcı olarak silmek istediğinizden emin misiniz?")), fontSize = 13.sp) },
+            // the Windows looks draw their own button, so the red text stays on Material only
+            confirmButton = { TextButton({ bulk = null; deleteNow(files) }) { Text("Delete", color = if (com.umutk.pulse.LocalWindowLook.current.id in com.umutk.pulse.winButtonLooks) Color.Unspecified else Color(0xFFC42B1C)) } },
+            dismissButton = { TextButton({ bulk = null }) { Text(tr("Cancel", "İptal")) } }, iconKey = if (Opt.recycle) "recycle" else "close")
     }
 
     dialog?.let { (kind, f) ->
@@ -460,8 +482,13 @@ private fun ExAct(k: String, tint: Color, rot: Float = 0f, onClick: () -> Unit) 
 private fun ExIcon(k: String, tint: Color, size: Dp = 22.dp, rot: Float = 0f) {
     val m = Modifier.rotate(rot)
     val v = EX_MATERIAL[k]
-    if (T.material && v != null) Icon(v, null, m.size(size), tint)
-    else PIcon(EX_FLUENT[k] ?: k, tint, size, m)
+    val ctx = LocalContext.current
+    // a pack that has the exact key (share, link, zip...) shows its own icon before the nearest-Fluent stand-in
+    val own = !T.material && T.id != "win10" && k != "delete" && (ThemeIcons.bitmap(ctx, T.id, k) != null || ((T.id == "win11" || T.id == "win10") && FluentPaths.map[k] != null))
+    if (k == "delete" && T.id != "win11") BinIcon(tint, size, m)
+    else if (T.material && v != null) Icon(v, null, m.size(size), tint)
+    else if (T.id == "win11") PIcon(k, tint, size, m)
+    else PIcon(if (own) k else EX_FLUENT[k] ?: k, tint, size, m)
 }
 
 private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
@@ -472,7 +499,11 @@ private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
     "dupes" to Icons.Outlined.FileCopy, "undo" to Icons.Outlined.Undo, "home" to Icons.Outlined.Home,
     "share" to Icons.Outlined.Share, "openWith" to Icons.Outlined.OpenWith, "zip" to Icons.Outlined.FolderZip,
     "link" to Icons.Outlined.Link, "save" to Icons.Outlined.Save, "edit" to Icons.Outlined.Edit,
+    "delete" to Icons.Outlined.Delete, "document" to Icons.Outlined.Description,
 )
+
+/** Win11 file menu: one distinct Fluent glyph per action. */
+private val W11_ACTION = mapOf("Open" to "open", "Cut" to "cut", "Properties" to "properties", "View archive" to "openFolder", "Copy path" to "link", "Create shortcut" to "folderLink")
 
 private val EX_FLUENT = mapOf(
     "star" to "heart", "starOn" to "heart", "bookmark" to "bookmark", "check" to "info", "sortName" to "details", "sortSize" to "disk", "sortDate" to "history",
@@ -516,11 +547,9 @@ private fun exWriteSortMap(ctx: Context, map: Map<String, Int>) = exWrite(ctx, E
 private fun ExSortMenu(expanded: Boolean, current: Int, perFolder: Boolean, onDismiss: () -> Unit, onPick: (Int) -> Unit, onPerFolder: (Boolean) -> Unit) {
     val w = LocalWindowLook.current
     val labels = listOf("Name A-Z", "Name Z-A", "Size smallest first", "Size largest first", "Date oldest first", "Date newest first")
-    DropdownMenu(expanded = expanded, onDismissRequest = onDismiss, containerColor = w.panel, shape = RoundedCornerShape(w.radius)) {
-        labels.forEachIndexed { mode, label ->
-            DropdownMenuItem(text = { Text((if (current == mode) "\u2713  " else "     ") + label, color = w.text, fontSize = 14.sp) }, onClick = { onPick(mode) })
-        }
-        DropdownMenuItem(text = { Text((if (perFolder) "\u2713  " else "     ") + "Only for this folder", color = w.text, fontSize = 14.sp) }, onClick = { onPerFolder(!perFolder) })
+    ThemedMenu(expanded, onDismiss) {
+        labels.forEachIndexed { mode, label -> ThemedMenuItem(label, { onPick(mode) }, checked = current == mode) }
+        ThemedMenuItem("Only for this folder", { onPerFolder(!perFolder) }, checked = perFolder)
     }
 }
 
@@ -529,7 +558,8 @@ private fun ExSortMenu(expanded: Boolean, current: Int, perFolder: Boolean, onDi
 private fun ExDots(tint: Color) {
     Canvas(Modifier.size(18.dp)) {
         val r = size.minDimension * .08f
-        for (i in 0..2) drawCircle(tint, r, Offset(size.width * (.2f + .3f * i), size.height / 2))
+        // three dots stacked vertically, the usual "more" button
+        for (i in 0..2) drawCircle(tint, r, Offset(size.width / 2, size.height * (.2f + .3f * i)))
     }
 }
 
@@ -563,6 +593,24 @@ private fun exFinder(kind: String, dir: File): List<File> = when (kind) {
 /** The folder of [f] as shown from the storage root, e.g. "/Download". */
 private fun exRel(f: File, top: File): String = (f.parentFile?.path ?: top.path).removePrefix(top.path).ifEmpty { "/" }
 
+/** KB under 1 MB, MB under 1 GB, GB above. */
+private fun exSize(b: Long): String = when {
+    b < 1_048_576L -> "%.0f KB".format(b / 1024.0)
+    b < 1_073_741_824L -> "%.0f MB".format(b / 1_048_576.0)
+    else -> "%.1f GB".format(b / 1_073_741_824.0)
+}
+
+private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
+
+/** A small decoded picture for an image file, or null for anything else or when the device cannot decode it. */
+@Composable
+private fun exThumb(f: File): ImageBitmap? {
+    if (f.extension.lowercase() !in EX_IMAGE_EXT) return null
+    val ctx = LocalContext.current
+    val first = remember(f.path) { Thumbs.cached(f) }
+    return produceState(first, f.path) { if (value == null) value = Thumbs.load(ctx, f) }.value
+}
+
 /** Total and free bytes of the shared storage; zeros when the system will not say. */
 private fun exStorage(top: File): Pair<Long, Long> = runCatching {
     val s = StatFs(top.path)
@@ -571,10 +619,11 @@ private fun exStorage(top: File): Pair<Long, Long> = runCatching {
 
 /** Moves [files] into a trash folder at the storage root, replacing the previous trash, so Undo can bring them back. Null when nothing moved. */
 private fun exTrash(top: File, files: List<File>): ExUndo? {
-    val trash = File(top, ".pulse_trash").apply { deleteRecursively(); mkdirs() }
+    val trash = File(top, ".pulse_trash").apply { mkdirs() }
+    val stamp = System.currentTimeMillis()
     val moves = files.mapIndexedNotNull { i, f ->
-        val t = File(trash, "$i-${f.name}")
-        if (f.renameTo(t)) (t to f) else { f.deleteRecursively(); null }
+        val t = File(trash, "$stamp-$i-${f.name}")
+        if (f.renameTo(t)) { RecycleBin.remember(t, f); (t to f) } else { f.deleteRecursively(); null }
     }
     return if (moves.isEmpty()) null else ExUndo(moves)
 }

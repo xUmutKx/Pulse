@@ -64,6 +64,7 @@ import com.umutk.pulse.PCard
 import com.umutk.pulse.PSwitch
 import com.umutk.pulse.Look
 import com.umutk.pulse.T
+import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 
@@ -99,7 +100,7 @@ fun HealthScreen(onBack: () -> Unit) {
     var actLast by remember { mutableLongStateOf(prefs.getLong("act_last", 0L)) }
     var actType by remember { mutableStateOf(ActivityType.fromName(prefs.getString("act_type", null))) }
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
-    var locOn by remember { mutableStateOf(prefs.getBoolean("loc_on", false)) }
+    var locOn by remember { mutableStateOf(prefs.getBoolean("loc_on", false) && actStart > 0L) }
     var fineOk by remember { mutableStateOf(ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) }
     var lastLoc by remember { mutableStateOf<Location?>(null) }
     val extra = remember { mutableStateMapOf<String, String>() }
@@ -158,17 +159,23 @@ fun HealthScreen(onBack: () -> Unit) {
         while (actStart > 0L) { nowMs = System.currentTimeMillis(); delay(1000) }
     }
 
+    fun setLoc(on: Boolean) { locOn = on; prefs.edit().putBoolean("loc_on", on).apply() }
+    fun startAct() {
+        actStart = System.currentTimeMillis(); nowMs = actStart; prefs.edit().putLong("act_start", actStart).apply()
+        setLoc(actType.gps && fineOk)
+    }
+    // location is asked only when a GPS activity starts; if it is refused the activity still runs, without a track
+    val askLoc = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { fineOk = it; startAct() }
     fun toggleActivity() {
-        if (actStart == 0L) { actStart = System.currentTimeMillis(); nowMs = actStart; prefs.edit().putLong("act_start", actStart).apply() }
-        else {
+        if (actStart == 0L) {
+            if (actType.gps && hasLoc && !fineOk) askLoc.launch(Manifest.permission.ACCESS_FINE_LOCATION) else startAct()
+        } else {
             actLast = System.currentTimeMillis() - actStart
             actStart = 0L
             prefs.edit().putLong("act_start", 0L).putLong("act_last", actLast).apply()
+            setLoc(false)
         }
     }
-
-    fun setLoc(on: Boolean) { locOn = on; prefs.edit().putBoolean("loc_on", on).apply() }
-    val askLoc = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { fineOk = it; if (it) setLoc(true) }
     // GPS and network providers only (platform API, no Play services); updates run while the page is open
     DisposableEffect(locOn, fineOk) {
         if (!locOn || !fineOk) return@DisposableEffect onDispose { }
@@ -240,19 +247,21 @@ fun HealthScreen(onBack: () -> Unit) {
                 actType = a
                 prefs.edit().putString("act_type", a.name).apply()
             }
-            Text(actType.label, color = T.sub, fontSize = 13.sp)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ActivityIcon(actType.key, T.sub, 24.dp)
+                Text(actType.label, color = T.sub, fontSize = 13.sp)
+            }
             val secs = (if (running) nowMs - actStart else actLast) / 1000
             Text("%02d:%02d:%02d".format(secs / 3600, secs % 3600 / 60, secs % 60), color = T.text, fontSize = 40.sp, fontWeight = FontWeight.SemiBold)
             PButton(if (running) "Stop" else "Start", danger = running, icon = if (running) Icons.Filled.Stop else Icons.Filled.PlayArrow) { toggleActivity() }
         }
         // no location hardware on the device: the card is not shown at all
-        if (hasLoc) PCard {
+        if (hasLoc && locOn) PCard {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.LocationOn, null, Modifier.size(18.dp), tint = Look.accent)
-                Text("Location", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                PSwitch(on = locOn, onChange = { on -> if (on && !fineOk) askLoc.launch(Manifest.permission.ACCESS_FINE_LOCATION) else setLoc(on) })
+                Text(tr("Location", "Konum"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             }
-            if (locOn) {
+            if (fineOk) {
                 val l = lastLoc
                 if (l != null) Text("%.5f, %.5f   ±%d m".format(l.latitude, l.longitude, l.accuracy.toInt()), color = T.text, fontSize = 13.sp)
                 else Text("No fix yet.", color = T.sub, fontSize = 13.sp)

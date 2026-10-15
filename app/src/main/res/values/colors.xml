@@ -1,3 +1,9 @@
 <resources>
     <color name="launcher_bg">#FF123A4A</color>
+    <color name="ti_bg_default">#FF000000</color>
+    <color name="ti_bg_95">#FF008080</color>
+    <color name="ti_bg_xp">#FFEAF1FB</color>
+    <color name="ti_bg_7">#FF2B6CA3</color>
+    <color name="ti_bg_10">#FF0B4F8F</color>
+    <color name="ti_bg_11">#FF1B1B26</color>
 </resources>

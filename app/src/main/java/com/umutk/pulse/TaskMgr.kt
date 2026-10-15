@@ -1,5 +1,8 @@
 package com.umutk.pulse
 
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -21,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -28,6 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.umutk.pulse.features.AccessNeededCard
+import com.umutk.pulse.features.ownProcesses
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -38,7 +44,7 @@ import kotlinx.coroutines.withContext
 @Composable
 private fun heatBg(f: Float): Color {
     val t = T
-    if (f < .02f) return Color.Transparent
+    if (f < .02f || win95Authentic || xpAuthentic) return Color.Transparent // 95 / XP lists had no heat colours
     if (!t.dark && (t.id == "win10" || t.id == "win7" || t.id == "xp" || t.id == "win95"))
         return when { f < .1f -> Color(0xFFFFF4C4); f < .3f -> Color(0xFFFFE8A3); f < .6f -> Color(0xFFFFCF70); else -> Color(0xFFFFA45C) }
     val lo = if (t.dark) .14f else .09f; val span = if (t.dark) .5f else .36f
@@ -46,9 +52,9 @@ private fun heatBg(f: Float): Color {
 }
 
 @Composable
-private fun HeatCell(text: String, f: Float, width: Dp, bold: Boolean = false) {
-    Box(Modifier.width(width).fillMaxHeight().background(heatBg(f)), contentAlignment = Alignment.CenterEnd) {
-        Text(text, color = T.text, fontSize = 13.sp, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.padding(end = 8.dp), textAlign = TextAlign.End)
+private fun HeatCell(text: String, f: Float, width: Dp, bold: Boolean = false, ink: Color = T.text) {
+    Box(Modifier.width(width).fillMaxHeight().clipToBounds().background(heatBg(f)), contentAlignment = Alignment.CenterEnd) {
+        Text(text, color = ink, fontSize = if (win95Authentic) 12.sp else 13.sp, fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.padding(end = 8.dp), textAlign = TextAlign.End, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -59,7 +65,9 @@ private class PRow(val p: Proc, val app: Boolean, val label: String)
 @Composable
 fun ProcessesPage() {
     val ctx = LocalContext.current
+    val openTool = LocalOpenTool.current
     val s by Sampler.snap.collectAsState()
+    ColW.load(ctx)
     var rows by remember { mutableStateOf<List<PRow>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
     var sel by remember { mutableStateOf(-1) }
@@ -71,12 +79,13 @@ fun ProcessesPage() {
     val scope = rememberCoroutineScope()
     LaunchedEffect(Unit) {
         while (true) {
-            rows = withContext(Dispatchers.IO) { Sampler.processes().map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name)) } }
+            rows = withContext(Dispatchers.IO) { Sampler.processes().ifEmpty { ownProcesses(ctx) }.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name)) } }
             loaded = true; delay(3000)
         }
     }
     val memPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
-    val shown = rows.filter { q.isBlank() || it.label.contains(q, true) || it.p.name.contains(q, true) || it.p.pid.toString() == q }
+    val diskPct = try { android.os.StatFs(android.os.Environment.getDataDirectory().path).let { 100 * (it.totalBytes - it.availableBytes) / it.totalBytes.coerceAtLeast(1) }.toInt() } catch (e: Exception) { 0 }
+    val shown =rows.filter { q.isBlank() || it.label.contains(q, true) || it.p.name.contains(q, true) || it.p.pid.toString() == q }
     // processes of one app (com.x, com.x:service, com.x:push) fold into a single line, as Task Manager does
     val groups = shown.groupBy { it.p.name.substringBefore(':') }.values.map { PGroup(it) }
         .let { l -> if (sort == "cpu") l.sortedByDescending { it.cpu } else if (sort == "name") l.sortedBy { it.title.lowercase() } else if (sort == "pid") l.sortedBy { it.head.p.pid } else l.sortedByDescending { it.mem } }
@@ -86,35 +95,57 @@ fun ProcessesPage() {
     ask?.let { r -> PDialog("End ${r.label}?", "Unsaved data in this process will be lost. (PID ${r.p.pid})", "End process", { end(r) }, { ask = null }) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Processes", color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            if (selRow != null) PButton("End task", danger = true) { if (Cfg.confirmKill) ask = selRow else end(selRow) }
+            if (win95Authentic) Text("Processes", color = Color.Black, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            else Text("Processes", color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            // see-through like the other buttons, with a soft shadow and a lighter edge so it reads as floating above the list
+            if (selRow != null && win95Authentic) PButton("End Task") { if (Cfg.confirmKill) ask = selRow else end(selRow) }
+            else if (selRow != null) {
+                val shape = RoundedCornerShape(if (T.material) 50 else 6)
+                Box(Modifier.shadow(8.dp, shape, clip = false).clip(shape).background(T.text.copy(alpha = .06f)).border(1.dp, T.text.copy(alpha = .45f), shape)
+                    .clickable { if (Cfg.confirmKill) ask = selRow else end(selRow) }.padding(horizontal = 14.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                    Text("End task", color = Color(0xFFC42B1C), fontSize = 13.sp)
+                }
+            }
         }
         PField(q, { q = it }, "Type a name or PID to search", Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
         // column heads with the totals on top, like the real one; tap to sort. Name stays put, the numbers scroll sideways.
-        Row(Modifier.fillMaxWidth().height(58.dp).border(BorderStroke(1.dp, T.line.copy(alpha = .6f)))) {
-            Box(Modifier.width(NAME_W).fillMaxHeight().clickable { sort = "name" }.padding(start = 12.dp), contentAlignment = Alignment.CenterStart) {
-                Text("Name", color = if (sort == "name") Look.accent else T.sub, fontSize = 12.sp)
+        // 95: header buttons (grey, raised) on top of a white sunken list
+        Row(Modifier.fillMaxWidth().height(if (win95Authentic) 44.dp else 58.dp).then(if (win95Authentic) Modifier.padding(horizontal = 2.dp) else if (xpAuthentic) Modifier.background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.White, Color(0xFFEBEADB)))).border(1.dp, Color(0xFFD6D2C2)) else Modifier.border(BorderStroke(1.dp, T.line.copy(alpha = .6f))))) { // XP: list-view header, white to beige
+            Box(Modifier.width(ColW.w("name")).fillMaxHeight()) {
+                Box(Modifier.fillMaxSize().clickable { sort = "name" }.then(if (win95Authentic) Modifier.background(Color(0xFFC0C0C0)).bevel(true) else Modifier).padding(start = 12.dp), contentAlignment = Alignment.CenterStart) {
+                    Text("Name", color = if (win95Authentic) Color.Black else if (sort == "name") Look.accent else T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                ColHandle("name", Modifier.align(Alignment.CenterEnd))
             }
             Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) {
-                HeadCell("${s.cpu}%", "CPU", 64.dp, sort == "cpu", heatBg(s.cpu / 100f)) { sort = "cpu" }
-                HeadCell("$memPct%", "Memory", 84.dp, sort == "mem", heatBg(memPct / 100f)) { sort = "mem" }
-                HeadCell("", "Status", 76.dp, false, Color.Transparent) {}
-                HeadCell("", "PID", 60.dp, sort == "pid", Color.Transparent) { sort = "pid" }
-                HeadCell("", "User", 84.dp, false, Color.Transparent) {}
-                HeadCell("", "Virtual", 84.dp, false, Color.Transparent) {}
-                HeadCell("", "Priority", 64.dp, false, Color.Transparent) {}
-                HeadCell("", "Parent", 64.dp, false, Color.Transparent) {}
+                HeadCell("${s.cpu}%", "CPU", "cpu", sort == "cpu", heatBg(s.cpu / 100f)) { sort = "cpu" }
+                HeadCell("$memPct%", "Memory", "mem", sort == "mem", heatBg(memPct / 100f)) { sort = "mem" }
+                HeadCell(rate((s.down + s.up).toFloat()), "Network", "net", false, resColor("net").copy(alpha = .25f)) {
+                    // a double tap opens Network usage
+                    val now = System.currentTimeMillis()
+                    if (now - NetTap.last < 400) openTool("netusage")
+                    NetTap.last = now
+                }
+                HeadCell("$diskPct%", "Storage", "disk", false, resColor("disk").copy(alpha = .25f)) {}
+                HeadCell("", "Status", "status", false, Color.Transparent) {}
+                HeadCell("", "PID", "pid", sort == "pid", Color.Transparent) { sort = "pid" }
+                HeadCell("", "User", "user", false, Color.Transparent) {}
+                HeadCell("", "Virtual", "virt", false, Color.Transparent) {}
+                HeadCell("", "Priority", "prio", false, Color.Transparent) {}
+                HeadCell("", "Parent", "ppid", false, Color.Transparent) {}
             }
         }
-        if (loaded && rows.isEmpty()) Center("The process list needs root.\nAndroid does not show other apps' processes without it.")
-        else LazyColumn(Modifier.fillMaxSize()) {
+        AccessNeededCard(tr("Processes", "İşlemler"), tr("Showing this app's own processes only. Other apps' processes, CPU and virtual size need root or Shizuku.", "Yalnızca bu uygulamanın kendi işlemleri gösteriliyor. Diğer uygulamaların işlemleri, CPU ve sanal bellek için root veya Shizuku gerekir."), Modifier.padding(horizontal = 12.dp, vertical = 4.dp))
+        if (loaded && rows.isEmpty()) Center(tr("No processes could be read", "İşlemler okunamadı"))
+        else LazyColumn(Modifier.fillMaxSize().then(if (win95Authentic) Modifier.padding(horizontal = 2.dp).background(Color.White).bevel(false).padding(2.dp) else Modifier)) {
             fun section(id: String, title: String, list: List<PGroup>) {
                 if (list.isEmpty()) return
                 val open = id !in collapsed
                 item(key = "h$id") {
                     Row(Modifier.fillMaxWidth().clickable { collapsed = if (open) collapsed + id else collapsed - id }.padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(if (open) "⌄" else "›", color = T.sub, fontSize = 16.sp, modifier = Modifier.width(18.dp))
-                        Text("$title (${list.size})", color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                        if (win95Authentic) Text("$title (${list.size})", color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        else Text("$title (${list.size})", color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
                     }
                 }
                 if (open) list.take(120).forEach { g ->
@@ -122,23 +153,25 @@ fun ProcessesPage() {
                     val isOpen = g.key in expanded
                     item(key = "g${g.key}") {
                         val on = !many && sel == g.head.p.pid
-                        Row(Modifier.fillMaxWidth().height(40.dp).background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
-                            Row(Modifier.width(NAME_W), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().height(40.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.width(ColW.w("name")).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
                                 Text(if (many) (if (isOpen) "⌄" else "›") else "", color = T.sub, fontSize = 16.sp, modifier = Modifier.width(26.dp).padding(start = 8.dp))
                                 AppIcon(g.head.p.name, 22.dp); Spacer(Modifier.width(8.dp))
-                                Text(if (many) "${g.title} (${g.rows.size})" else g.head.label, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                // 95 list view: the selected item's label is navy with white text
+                                if (win95Authentic) Text(if (many) "${g.title} (${g.rows.size})" else g.head.label, color = if (on) Color.White else Color.Black, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.background(if (on) Color(0xFF000080) else Color.Transparent).padding(horizontal = 2.dp))
+                                else Text(if (many) "${g.title} (${g.rows.size})" else g.head.label, color = if (on && xpAuthentic) Color.White else T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(g.cpu, g.mem, if (many) null else g.head.p) }
+                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(g.cpu, g.mem, if (many) null else g.head.p, if (on && xpAuthentic) Color.White else T.text) }
                         }
                     }
                     if (many && isOpen) items(g.rows.sortedByDescending { it.p.rssMb }, key = { "p${it.p.pid}" }) { r ->
                         val on = sel == r.p.pid
-                        Row(Modifier.fillMaxWidth().height(36.dp).background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
-                            Row(Modifier.width(NAME_W), verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().height(36.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { sel = if (on) -1 else r.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.width(ColW.w("name")).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
                                 Spacer(Modifier.width(52.dp))
-                                Text(r.p.name.substringAfter(':', r.p.name.substringAfterLast('.')), color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(r.p.name.substringAfter(':', r.p.name.substringAfterLast('.')), color = if (on && (win95Authentic || xpAuthentic)) Color.White else T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = if (on && win95Authentic) Modifier.background(Color(0xFF000080)).padding(horizontal = 2.dp) else Modifier)
                             }
-                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(r.p.cpu, r.p.rssMb, r.p) }
+                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(r.p.cpu, r.p.rssMb, r.p, if (on && xpAuthentic) Color.White else T.text) }
                         }
                     }
                 }
@@ -149,7 +182,6 @@ fun ProcessesPage() {
     }
 }
 
-private val NAME_W = 170.dp
 
 private class PGroup(val rows: List<PRow>) {
     val head = rows.maxByOrNull { it.p.rssMb }!!
@@ -160,23 +192,73 @@ private class PGroup(val rows: List<PRow>) {
 }
 
 @Composable
-private fun HeadCell(top: String, name: String, w: Dp, active: Boolean, bg: Color, onClick: () -> Unit) {
-    Column(Modifier.width(w).fillMaxHeight().clickable(onClick = onClick).background(bg).padding(top = 4.dp, end = 8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Top) {
-        if (top.isNotEmpty()) Text(top, color = T.text, fontSize = 15.sp, maxLines = 1)
-        Text(name, color = if (active) Look.accent else T.sub, fontSize = 11.sp, maxLines = 1)
+private fun HeadCell(top: String, name: String, key: String, active: Boolean, bg: Color, onClick: () -> Unit) {
+    val w = ColW.w(key)
+    Box(Modifier.width(w).fillMaxHeight()) {
+        HeadCellBody(top, name, w, active, bg, onClick)
+        ColHandle(key, Modifier.align(Alignment.CenterEnd))
     }
 }
 
 @Composable
-private fun Cells(cpu: Float, mem: Int, p: Proc?) {
-    HeatCell("%.1f%%".format(cpu), cpu / 100f, 64.dp)
-    HeatCell(mb(mem), mem / 1500f, 84.dp)
-    HeatCell(if (p == null) "" else if (p.state == "R") "Running" else "Sleeping", 0f, 76.dp)
-    HeatCell(p?.pid?.toString() ?: "", 0f, 60.dp)
-    HeatCell(p?.user ?: "", 0f, 84.dp)
-    HeatCell(if (p == null) "" else mb(p.vszMb), 0f, 84.dp)
-    HeatCell(p?.nice?.toString() ?: "", 0f, 64.dp)
-    HeatCell(p?.ppid?.toString() ?: "", 0f, 64.dp)
+private fun HeadCellBody(top: String, name: String, w: Dp, active: Boolean, bg: Color, onClick: () -> Unit) {
+    if (win95Authentic) { // 95 column header: a grey raised button, black text, total above the name
+        Column(Modifier.width(w).fillMaxHeight().clickable(onClick = onClick).background(Color(0xFFC0C0C0)).bevel(true).padding(top = 4.dp, end = 6.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Top) {
+            if (top.isNotEmpty()) Text(top, color = Color.Black, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(name, color = Color.Black, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        return
+    }
+    Column(Modifier.width(w).fillMaxHeight().clickable(onClick = onClick).background(bg).padding(top = 4.dp, end = 8.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.Top) {
+        if (top.isNotEmpty()) Text(top, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(name, color = if (active) Look.accent else T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun Cells(cpu: Float, mem: Int, p: Proc?, ink: Color = T.text) {
+    HeatCell("%.1f%%".format(cpu), cpu / 100f, ColW.w("cpu"), ink = ink)
+    HeatCell(mb(mem), mem / 1500f, ColW.w("mem"), ink = ink)
+    HeatCell("", 0f, ColW.w("net"), ink = ink)
+    HeatCell("", 0f, ColW.w("disk"), ink = ink)
+    HeatCell(if (p == null) "" else if (p.state == "R") "Running" else "Sleeping", 0f, ColW.w("status"), ink = ink)
+    HeatCell(p?.pid?.toString() ?: "", 0f, ColW.w("pid"), ink = ink)
+    HeatCell(p?.user ?: "", 0f, ColW.w("user"), ink = ink)
+    HeatCell(if (p == null) "" else mb(p.vszMb), 0f, ColW.w("virt"), ink = ink)
+    HeatCell(p?.nice?.toString() ?: "", 0f, ColW.w("prio"), ink = ink)
+    HeatCell(p?.ppid?.toString() ?: "", 0f, ColW.w("ppid"), ink = ink)
+}
+
+/** Shared, persisted column widths of the Processes table (header and rows read the same state). */
+private object ColW {
+    private val def = mapOf("name" to 170, "cpu" to 64, "mem" to 84, "net" to 96, "disk" to 84, "status" to 76, "pid" to 60, "user" to 84, "virt" to 84, "prio" to 64, "ppid" to 64)
+    private val map = mutableStateMapOf<String, Float>()
+    private var loaded = false
+    fun load(ctx: android.content.Context) {
+        if (loaded) return
+        loaded = true
+        val sp = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
+        def.keys.forEach { k -> if (sp.contains("proc_col_$k")) map[k] = sp.getFloat("proc_col_$k", def[k]!!.toFloat()) }
+    }
+    fun w(k: String): Dp = (map[k] ?: def[k]!!.toFloat()).dp
+    fun set(k: String, v: Float) { map[k] = v.coerceIn(48f, 360f) }
+    fun save(ctx: android.content.Context, k: String) { map[k]?.let { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putFloat("proc_col_$k", it).apply() } }
+}
+
+/** Drag handle on the right edge of a column head: the head's separator line (Material: a small pill) with a wide invisible touch area. */
+@Composable
+private fun ColHandle(key: String, modifier: Modifier) {
+    val ctx = LocalContext.current
+    val dens = androidx.compose.ui.platform.LocalDensity.current
+    Box(modifier.width(20.dp).fillMaxHeight().pointerInput(key) {
+        detectHorizontalDragGestures(onDragEnd = { ColW.save(ctx, key) }, onDragCancel = { ColW.save(ctx, key) }) { ch, dx ->
+            ch.consume()
+            ColW.set(key, ColW.w(key).value + dx / dens.density)
+        }
+    }, contentAlignment = Alignment.CenterEnd) {
+        if (T.material) Box(Modifier.padding(end = 3.dp).width(4.dp).height(22.dp).clip(RoundedCornerShape(50)).background(T.sub.copy(alpha = .55f)))
+        else Box(Modifier.fillMaxHeight(.7f).width(1.dp).background(T.line.copy(alpha = .9f)))
+    }
 }
 
 // ---------------------------------------------------------------- Performance: resource list on the left, big graph and numbers on the right
@@ -229,7 +311,7 @@ fun PerformancePage() {
                                     if (pair.size == 1) Spacer(Modifier.weight(1f))
                                 }
                             }
-                        } else Text("Per-core detail needs root.", color = T.sub, fontSize = 12.sp)
+                        } else AccessNeededCard(tr("Per-core detail", "Çekirdek ayrıntısı"), tr("Overall CPU is shown above.", "Genel CPU yukarıda gösteriliyor."))
                     }
                     "memory" -> {
                         DetailTitle("Memory", mb(s.ramTotalMb))
@@ -336,3 +418,6 @@ private fun StatGrid(items: List<Pair<String, String>>) {
         }
     }
 }
+
+/** Time of the last tap on the Network column head, for the double tap. */
+private object NetTap { var last = 0L }

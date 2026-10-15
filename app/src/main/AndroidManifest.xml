@@ -25,8 +25,12 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <queries>
         <package android:name="com.termux" />
+        <package android:name="moe.shizuku.privileged.api" />
+        <package android:name="rikka.shizuku" />
+        <package android:name="dev.rikka.shizuku" />
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="text/*" /></intent>
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="audio/*" /></intent>
     </queries>
@@ -48,11 +52,43 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/vnd.android.package-archive" />
             </intent-filter>
+        </activity>
+        <activity-alias android:name=".IconDefault" android:targetActivity=".MainActivity" android:exported="true" android:enabled="true" android:icon="@mipmap/ic_ti_default" android:roundIcon="@mipmap/ic_ti_default" android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
+        </activity-alias>
+        <activity-alias android:name=".IconWin95" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_ti_95" android:roundIcon="@mipmap/ic_ti_95" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconXp" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_ti_xp" android:roundIcon="@mipmap/ic_ti_xp" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconWin7" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_ti_7" android:roundIcon="@mipmap/ic_ti_7" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconWin10" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_ti_10" android:roundIcon="@mipmap/ic_ti_10" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".IconWin11" android:targetActivity=".MainActivity" android:exported="true" android:enabled="false" android:icon="@mipmap/ic_ti_11" android:roundIcon="@mipmap/ic_ti_11" android:label="@string/app_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <!-- an APK opened from a file app: the install window floats over the current app (see features/InstallActivity.kt) -->
         <activity android:name=".features.InstallActivity" android:exported="true" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
             <intent-filter>
@@ -75,127 +111,127 @@
         <!-- the result of a PackageInstaller session (see features/Installer.kt); not exported, only Pulse starts sessions -->
         <receiver android:name="com.umutk.pulse.features.InstallReceiver" android:exported="false" />
         <!-- style picker opened when a widget is added or reconfigured (see widgets/WidgetConfig.kt); the launcher starts it, so it is exported -->
-        <activity android:name="com.umutk.pulse.widgets.WidgetConfigActivity" android:exported="true" android:label="Widget style">
+        <activity android:name="com.umutk.pulse.widgets.WidgetConfigActivity" android:exported="true" android:label="Widget style" android:theme="@style/Theme.Pulse.Floating">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
         </activity>
         <!-- home-screen widgets (see widgets/Widgets.kt); each one has its own provider XML -->
-        <receiver android:name="com.umutk.pulse.widgets.UsageWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.UsageWidget" android:label="Pulse · CPU and memory" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_usage" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.BatteryWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.BatteryWidget" android:label="Pulse · Battery" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_battery" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.StorageWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.StorageWidget" android:label="Pulse · Storage" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_storage" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.DownloadsWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.DownloadsWidget" android:label="Pulse · Downloads" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_downloads" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.MemoryWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.MemoryWidget" android:label="Pulse · Memory" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_memory" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.TempWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.TempWidget" android:label="Pulse · Temperature" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_temp" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.NetworkWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.NetworkWidget" android:label="Pulse · Network" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_network" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.ClockWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.ClockWidget" android:label="Pulse · Clock" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_clock" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.UptimeWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.UptimeWidget" android:label="Pulse · Uptime" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_uptime" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.StorageBarWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.StorageBarWidget" android:label="Pulse · Storage bar" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_storagebar" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.RamFreeWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.RamFreeWidget" android:label="Pulse · Free RAM" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_ramfree" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.CoresWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.CoresWidget" android:label="Pulse · Cores" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cores" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.BrightnessWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.BrightnessWidget" android:label="Pulse · Brightness" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_brightness" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.WifiWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.WifiWidget" android:label="Pulse · Wi-Fi" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wifi" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.SignalWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.SignalWidget" android:label="Pulse · Signal" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_signal" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.BatteryHealthWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.BatteryHealthWidget" android:label="Pulse · Battery health" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_batthealth" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.AppCountWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.AppCountWidget" android:label="Pulse · Apps" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_apps" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.LastDownloadWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.LastDownloadWidget" android:label="Pulse · Last download" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_lastdl" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.NextAlarmWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.NextAlarmWidget" android:label="Pulse · Next alarm" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_alarm" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.QuickWidget" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.QuickWidget" android:label="Pulse · Quick action" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
@@ -203,6 +239,10 @@
         </receiver>
         <!-- restarts the monitor and downloads every 15 minutes while the watchdog is on (see Watchdog.kt) -->
         <receiver android:name=".WatchdogReceiver" android:exported="false" />
+        <!-- carries on unfinished downloads after a reboot -->
+        <receiver android:name="com.umutk.pulse.features.DownloadBoot" android:exported="false">
+            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
+        </receiver>
         <service android:name="com.umutk.pulse.features.DownloadService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="downloads that carry on in the background" />
         </service>
@@ -306,9 +346,472 @@
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
+        <service android:name=".DinkTile" android:exported="true" android:label="Dink" android:icon="@drawable/qs_dink"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
         <service android:name="com.umutk.pulse.features.NoteCounter" android:exported="true"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
         </service>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock1Widget" android:label="Windows 7 · Clock Traditional" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_1" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock2Widget" android:label="Windows 7 · Clock System" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_2" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock3Widget" android:label="Windows 7 · Clock Chronometer" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_3" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock4Widget" android:label="Windows 7 · Clock Diner" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_4" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock5Widget" android:label="Windows 7 · Clock Flower" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_5" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock6Widget" android:label="Windows 7 · Clock Modern" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_6" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock7Widget" android:label="Windows 7 · Clock Square" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_7" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock8Widget" android:label="Windows 7 · Clock Novelty" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_8" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock9Widget" android:label="Windows 7 · Clock Monitor" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_9" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock10Widget" android:label="Pulse · Clock clear" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_10" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win7Clock11Widget" android:label="Pulse · Clock wood" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_11" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosClockWidget" android:label="iOS · Clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_12" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosDayWidget" android:label="iOS · Day" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_13" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosCalendarWidget" android:label="iOS · Calendar" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_14" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosBatteryWidget" android:label="iOS · Battery" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_15" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosSunTimeWidget" android:label="iOS · Sun and time" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_16" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.Win11FrostClockWidget" android:label="Windows 11 · Frosted clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_face_17" />
+        </receiver>
+        <!-- App Lock: sees which app is in front and shows the lock card (see applock/LockService.kt); the user switches it on in Accessibility settings -->
+        <service android:name="com.umutk.pulse.applock.LockService" android:exported="true" android:label="App lock"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/accessibility_config" />
+        </service>
+        <!-- App Lock fallback: full-screen lock over the app when the overlay window cannot be added -->
+        <activity android:name="com.umutk.pulse.applock.LockActivity" android:exported="false" android:excludeFromRecents="true"
+            android:launchMode="singleInstance" android:taskAffinity="" android:showWhenLocked="true"
+            android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" android:windowSoftInputMode="adjustPan" />
+        <!-- transparent host for the fingerprint prompt of App Lock; its own task, so the locked app stays behind it -->
+        <activity android:name="com.umutk.pulse.applock.AppLockAuthActivity" android:exported="false" android:excludeFromRecents="true"
+            android:taskAffinity="" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <!-- themed widgets (see widgets/ThemeWidgets.kt), one provider per look -->
+        <receiver android:name="com.umutk.pulse.widgets.W7CpuWidget" android:label="Windows 7 · CPU Meter" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w7_cpu" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W7CalendarWidget" android:label="Windows 7 · Calendar" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w7_calendar" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W7BatteryWidget" android:label="Windows 7 · Battery" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w7_battery" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W7DriveWidget" android:label="Windows 7 · Drive" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w7_drive" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W11ClockWidget" android:label="Windows 11 · Clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w11_clock" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W11DateWidget" android:label="Windows 11 · Date" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w11_date" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W11CpuWidget" android:label="Windows 11 · CPU" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w11_cpu" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W11MemoryWidget" android:label="Windows 11 · Memory" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w11_memory" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W11BatteryWidget" android:label="Windows 11 · Battery" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w11_battery" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W11StorageWidget" android:label="Windows 11 · Storage" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w11_storage" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W11CalendarWidget" android:label="Windows 11 · Calendar" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w11_calendar" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W11TimeWidget" android:label="Windows 11 · Time" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w11_time" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.XpClockWidget" android:label="Windows XP · Clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_xp_clock" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.XpCpuWidget" android:label="Windows XP · CPU Usage" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_xp_cpu" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.XpBatteryWidget" android:label="Windows XP · Power Meter" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_xp_battery" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.XpDiskWidget" android:label="Windows XP · Local Disk" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_xp_disk" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W95TimeWidget" android:label="Windows 95 · Time" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w95_time" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W95CpuWidget" android:label="Windows 95 · CPU" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w95_cpu" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W95BatteryWidget" android:label="Windows 95 · Battery" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w95_battery" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W95MemoryWidget" android:label="Windows 95 · Memory" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w95_memory" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.W95DateWidget" android:label="Windows 95 · Date" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_w95_date" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3BatteryWidget" android:label="Material You · Battery" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_battery" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3ClockWidget" android:label="Material You · Clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_clock" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3DateWidget" android:label="Material You · Date" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_date" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3CpuWidget" android:label="Material You · CPU" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_cpu" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3StorageWidget" android:label="Material You · Storage" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_storage" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3MemoryWidget" android:label="Material You · Memory" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_memory" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.AmClockWidget" android:label="AMOLED · Clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_am_clock" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.AmBatteryWidget" android:label="AMOLED · Battery" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_am_battery" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.AmCpuWidget" android:label="AMOLED · CPU" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_am_cpu" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.AmDateWidget" android:label="AMOLED · Date" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_am_date" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.GlBatteryWidget" android:label="Glass · Battery" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_gl_battery" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.GlClockWidget" android:label="Glass · Clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_gl_clock" />
+        </receiver>
+        <!-- more Material You, Glass and iOS widgets (see widgets/ThemeWidgets.kt) -->
+        <receiver android:name="com.umutk.pulse.widgets.M3DatePillWidget" android:label="Material You · Date pill" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_date_pill" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3ClockDateWidget" android:label="Material You · Clock and date" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_clock_date" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3BatteryRingWidget" android:label="Material You · Battery ring" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_battery_ring" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3TempWidget" android:label="Material You · Temperature" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_temp" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3RamBarWidget" android:label="Material You · Memory bar" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_ram_bar" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3NetworkWidget" android:label="Material You · Network" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_network" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3UptimeWidget" android:label="Material You · Uptime" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_uptime" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.M3OverviewWidget" android:label="Material You · Overview" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_m3_overview" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.GlTimeWidget" android:label="Glass · Digital clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_gl_time" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.GlDateWidget" android:label="Glass · Date" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_gl_date" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.GlBatteryRingWidget" android:label="Glass · Battery ring" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_gl_battery_ring" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.GlCpuWidget" android:label="Glass · CPU" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_gl_cpu" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.GlMemoryWidget" android:label="Glass · Memory" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_gl_memory" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.GlStorageWidget" android:label="Glass · Storage" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_gl_storage" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosClockDateWidget" android:label="iOS · Clock and date" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_ios_clock_date" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosRingsWidget" android:label="iOS · Battery rings" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_ios_rings" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosStorageWidget" android:label="iOS · Storage" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_ios_storage" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosMemoryWidget" android:label="iOS · Memory" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_ios_memory" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosUpNextWidget" android:label="iOS · Up next" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_ios_up_next" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.IosWorldWidget" android:label="iOS · World clock" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_ios_world" />
+        </receiver>
     </application>
 </manifest>

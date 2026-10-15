@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The resource shrinker drops the widget previews (only the provider XML names them) and the widget art looked up at runtime; keep them. -->
+<resources xmlns:tools="http://schemas.android.com/tools"
+    tools:keep="@drawable/mat_*,@drawable/ic_ti_*,@drawable/wall_*,@drawable/preview_*,@drawable/ios_*,@drawable/widget_*,@drawable/gadget_*,@drawable/face_*,@layout/widget_*,@drawable/clk_*,@layout/widget_skin_*" />

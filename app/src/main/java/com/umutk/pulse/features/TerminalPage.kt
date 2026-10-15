@@ -84,7 +84,7 @@ fun TerminalPage() {
         }
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PHead("Terminal", if (Shell.root == true) "root" else "")
+        PHead("Terminal", if (Shell.root == true) "root" else "", guide = "terminal")
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PField(cmd, { cmd = it }, "Command", Modifier.weight(1f), onDone = { go() })

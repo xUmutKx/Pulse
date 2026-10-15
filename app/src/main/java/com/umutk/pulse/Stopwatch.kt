@@ -1,6 +1,7 @@
 package com.umutk.pulse
 
 import android.content.Context
+import android.graphics.drawable.Icon
 import android.os.Handler
 import android.os.Looper
 import android.service.quicksettings.Tile
@@ -55,7 +56,9 @@ class StopwatchTile : TileService() {
 
     private fun paint() {
         qsTile?.apply {
-            state = if (Stopwatch.running(this@StopwatchTile)) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            val on = Stopwatch.running(this@StopwatchTile)
+            state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            icon = Icon.createWithResource(this@StopwatchTile, if (on) R.drawable.qs_pause else R.drawable.qs_play)
             label = "Stopwatch"
             subtitle = Stopwatch.clock(Stopwatch.elapsed(this@StopwatchTile))
             updateTile()

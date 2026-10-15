@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "expand_more" (Outlined, 24px), Apache-2.0, github.com/google/material-design-icons -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group android:scaleX="0.025" android:scaleY="0.025" android:translateY="24">
+            <path android:fillColor="#FF000000" android:pathData="M480-345 240-585l56-56 184 184 184-184 56 56-240 240Z"/>
+    </group>
+</vector>
