@@ -57,7 +57,7 @@ fun builtinWall(lookId: String): Int? =
 object ThemeWallState { val pos = mutableStateMapOf<String, Float>() }
 
 fun themeWallPos(lookId: String, axis: String): Float =
-    ThemeWallState.pos["$axis$lookId"] ?: appCtx?.getSharedPreferences("p", Context.MODE_PRIVATE)?.getFloat("wall${axis}_$lookId", .5f) ?: .5f
+    ThemeWallState.pos["$axis$lookId"] ?: appCtx?.getSharedPreferences("p", Context.MODE_PRIVATE)?.getFloat("wall${axis}_$lookId", if (axis == "z") 1f else .5f) ?: (if (axis == "z") 1f else .5f)
 
 fun setThemeWallPos(c: Context, lookId: String, axis: String, v: Float) {
     ThemeWallState.pos["$axis$lookId"] = v
@@ -66,21 +66,36 @@ fun setThemeWallPos(c: Context, lookId: String, axis: String, v: Float) {
 
 fun wallBias(lookId: String): BiasAlignment = BiasAlignment(themeWallPos(lookId, "x") * 2 - 1, themeWallPos(lookId, "y") * 2 - 1)
 
-/** A look's wallpaper as a picture: the user's pick first, then the built-in one. Draws nothing for looks without a picture. */
+/** A look's wallpaper bitmap: the user's pick first, then the built-in one. Null for looks without a picture. */
 @Composable
-fun ThemeWallPicture(lookId: String, modifier: Modifier = Modifier) {
+fun themeWallBitmap(lookId: String): androidx.compose.ui.graphics.ImageBitmap? {
     val ctx = LocalContext.current
     val uri = themeWallpaper(lookId)
-    val picked = uri?.let { u ->
-        remember(u) {
-            runCatching {
-                ctx.contentResolver.openInputStream(Uri.parse(u))?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = 4 }) }
-            }.getOrNull()?.asImageBitmap()
-        }
+    val res = if (uri == null) builtinWall(lookId) else null
+    return remember(uri, res) {
+        runCatching {
+            if (uri != null) ctx.contentResolver.openInputStream(Uri.parse(uri))?.use { BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = 2 }) }
+            else res?.let { BitmapFactory.decodeResource(ctx.resources, it, BitmapFactory.Options().apply { inSampleSize = 2 }) }
+        }.getOrNull()?.asImageBitmap()
     }
-    val bias = wallBias(lookId)
-    if (picked != null) Image(picked, null, modifier, contentScale = ContentScale.Crop, alignment = bias)
-    else builtinWall(lookId)?.let { Image(painterResource(it), null, modifier, contentScale = ContentScale.Crop, alignment = bias) }
+}
+
+/** A look's wallpaper, drawn with the position and zoom from the editor. Draws nothing for looks without a picture. */
+@Composable
+fun ThemeWallPicture(lookId: String, modifier: Modifier = Modifier) {
+    val img = themeWallBitmap(lookId) ?: return
+    val x = themeWallPos(lookId, "x"); val y = themeWallPos(lookId, "y"); val z = themeWallPos(lookId, "z")
+    androidx.compose.foundation.Canvas(modifier) { with(Backdrop) { drawBackdrop(img, x, y, z) } }
+}
+
+/** Full-screen editor for a Windows 7 / XP wallpaper: drag and pinch, the result is saved per look. */
+@Composable
+fun ThemeWallEditor(lookId: String, onClose: () -> Unit) {
+    val img = themeWallBitmap(lookId) ?: return
+    val ctx = LocalContext.current
+    CropEditor(img, themeWallPos(lookId, "x"), themeWallPos(lookId, "y"), themeWallPos(lookId, "z"), if (lookId == "win7") 14f else 0f, onClose) { x, y, z ->
+        setThemeWallPos(ctx, lookId, "x", x); setThemeWallPos(ctx, lookId, "y", y); setThemeWallPos(ctx, lookId, "z", z)
+    }
 }
 
 /** Material's own backdrop, drawn: a pale surface with soft pastel circles. */

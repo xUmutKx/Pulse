@@ -58,8 +58,6 @@ class ActivityType(val key: String, private val en: String, private val tur: Str
             ActivityType("football", "Football", "Futbol", false, "soccer"),
             ActivityType("basketball", "Basketball", "Basketbol", false, "hoop"),
             ActivityType("tennis", "Tennis", "Tenis", false, "racket"),
-            ActivityType("badminton", "Badminton", "Badminton", false, "shuttlecock racket"),
-            ActivityType("table_tennis", "Table tennis", "Masa tenisi", false, "ping pong pingpong"),
             ActivityType("squash", "Squash", "Squash", false, "racket"),
             ActivityType("volleyball", "Volleyball", "Voleybol", false, "beach volley"),
             ActivityType("handball", "Handball", "Hentbol", false, ""),
@@ -91,6 +89,8 @@ class ActivityType(val key: String, private val en: String, private val tur: Str
             ActivityType("scooter", "Scooter", "Scooter", true, "kick scooter"),
             ActivityType("scuba_diving", "Scuba diving", "Tüplü dalış", false, "diving dive snorkel dalis"),
             ActivityType("paragliding", "Paragliding", "Yamaç paraşütü", true, "glider parachute parasut"),
+            ActivityType("badminton", "Badminton", "Badminton", false, "shuttlecock racket"),
+            ActivityType("table_tennis", "Table tennis", "Masa tenisi", false, "ping pong pingpong"),
         )
         /** The six shown before "More" is opened. */
         val common: List<ActivityType> get() = listOf("walking", "running", "cycling", "hiking", "swimming", "gym").map { k -> all.first { it.key == k } }

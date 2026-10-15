@@ -135,7 +135,7 @@ class LockService : AccessibilityService() {
     }
 
     private var viaActivity = false         // the lock screen is hosted by LockActivity (overlay window was refused)
-    private var lastPolled: String? = null  // last app the usage-stats poll saw come to the front
+    @Volatile private var lastPolled: String? = null  // last app the usage-stats poll saw come to the front
     private val never by lazy {             // never locked: Pulse itself, the launcher(s), system UI
         val home = packageManager.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME), 0).map { it.activityInfo.packageName }
         (home + listOf(packageName, "com.android.systemui", "android")).toSet()
@@ -143,7 +143,13 @@ class LockService : AccessibilityService() {
     // dialogs of the system that sit over an app: not "leaving" it, or a permission prompt would relock the app under it
     private val transient = setOf("com.google.android.permissioncontroller", "com.android.permissioncontroller", "android")
     private val poll = object : Runnable {
-        override fun run() { runCatching { if (tick++ % 10 == 0) syncFast(); pollOnce(); prebuild() }.onFailure { Log.e("AppLock", "poll failed", it) }; main.postDelayed(this, 200) }
+        private var missing = false
+        override fun run() { runCatching { if (tick++ % 10 == 0) syncFast(); missing = prebuild() }.onFailure { Log.e("AppLock", "poll failed", it) }; main.postDelayed(this, if (missing) 40L else 200L) }
+    }
+    // the usage-stats query is a binder call: it runs on its own thread so it never holds up an accessibility event on the main thread
+    private val bg by lazy { Handler(android.os.HandlerThread("applock-poll").apply { start() }.looper) }
+    private val bgPoll = object : Runnable {
+        override fun run() { runCatching { pollOnce() }.onFailure { Log.e("AppLock", "poll failed", it) }; bg.postDelayed(this, 120) }
     }
 
     private val ready = HashMap<String, FrameLayout>()   // lock screens built ahead, one per locked app
@@ -167,15 +173,16 @@ class LockService : AccessibilityService() {
     }
 
     /** One missing lock screen per call (never a burst on the main thread), so the hot path only has to add a ready view. */
-    private fun prebuild() {
+    private fun prebuild(): Boolean {
         sync()
-        val p = AppLock.locked.firstOrNull { it !in ready && it !in never } ?: return
+        val p = AppLock.locked.firstOrNull { it !in ready && it !in never } ?: return false
         val v = build(p)
         // laid out ahead: the first frame after addView needs no measure pass of its own
         runCatching { val b = wm.maximumWindowMetrics.bounds
             v.measure(android.view.View.MeasureSpec.makeMeasureSpec(b.width(), android.view.View.MeasureSpec.EXACTLY), android.view.View.MeasureSpec.makeMeasureSpec(b.height(), android.view.View.MeasureSpec.EXACTLY))
             v.layout(0, 0, b.width(), b.height()) }
         ready[p] = v
+        return true
     }
 
     /** Second detection path, independent of accessibility events: the newest "activity resumed" from usage stats. */
@@ -187,9 +194,13 @@ class LockService : AccessibilityService() {
         var pkg: String? = null; var cls = ""
         while (ev.hasNextEvent()) { ev.getNextEvent(e); if (e.eventType == UsageEvents.Event.ACTIVITY_RESUMED) { pkg = e.packageName; cls = e.className ?: "" } }
         if (pkg == null || pkg == lastPolled || pkg == packageName || pkg in transient || cls.contains("Bubble", ignoreCase = true)) return
-        lastPolled = pkg
-        Log.d("AppLock", "poll front $pkg/$cls")
-        if (pkg != current) { if (pkg in AppLock.locked) mark("poll"); onForeground(pkg) }
+        val p: String = pkg
+        fast {
+            if (p == lastPolled) return@fast
+            lastPolled = p
+            Log.d("AppLock", "poll front $p/$cls")
+            if (p != current) { if (p in AppLock.locked) mark("poll"); onForeground(p) }
+        }
     }
 
     companion object {
@@ -203,6 +214,7 @@ class LockService : AccessibilityService() {
         AppLock.load(this); Cfg.load(this); Opt.load(this)
         readyRev = -1
         main.removeCallbacks(poll); main.post(poll)
+        bg.removeCallbacks(bgPoll); bg.post(bgPoll)
         runCatching { unregisterReceiver(screen) }
         ContextCompat.registerReceiver(this, screen, IntentFilter(Intent.ACTION_SCREEN_OFF).apply { addAction(Intent.ACTION_USER_PRESENT) }, ContextCompat.RECEIVER_NOT_EXPORTED)
         main.postDelayed({ recheck() }, 500)   // the app in front when the service (re)starts has sent no event
@@ -211,6 +223,7 @@ class LockService : AccessibilityService() {
     override fun onUnbind(intent: Intent?): Boolean {
         instance = null
         main.removeCallbacks(poll)
+        bg.removeCallbacks(bgPoll)
         fastWatch?.stop(); fastWatch = null
         runCatching { unregisterReceiver(screen) }
         hideCard()
@@ -239,7 +252,6 @@ class LockService : AccessibilityService() {
             mark("a11y-hot", SystemClock.uptimeMillis() - e.eventTime)
             Log.d("AppLock", "a11y hot $pkg/$cls (event age ${SystemClock.uptimeMillis() - e.eventTime}ms)")
             onForeground(pkg)
-            main.postDelayed({ if (current == pkg && isSmallWindow(e.windowId)) hideCard() }, 450)
             return
         }
         // Only an application window changes the app in front: the keyboard, toasts and our own overlay do not
@@ -253,13 +265,19 @@ class LockService : AccessibilityService() {
         Log.d("AppLock", "front $pkg/$cls locked=${pkg in AppLock.locked}")
         onForeground(pkg)
         // the window is still animating open now, so its size says nothing yet: look again, a small window is a bubble and loses the lock
-        if (shown || authing) main.postDelayed({ if (current == pkg && isSmallWindow(e.windowId)) hideCard() }, 450)
     }
 
-    private fun isSmallWindow(id: Int): Boolean {
-        val win = runCatching { windows.firstOrNull { it.id == id } }.getOrNull() ?: return false
-        val b = Rect().also { win.getBoundsInScreen(it) }
-        if (b.isEmpty) return false
+    /** Covered by any path (events, usage poll, root watch): once the window has settled, a floating app (chat bubble) loses the lock. */
+    private fun bubbleCheck(pkg: String) = main.postDelayed({
+        if (current == pkg && cardPkg == pkg && (shown || authing) && onlySmallWindows(pkg)) { Log.d("AppLock", "bubble $pkg, lock removed"); hideCard() }
+    }, 450)
+
+    private fun onlySmallWindows(pkg: String): Boolean = runCatching {
+        val own = windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION && it.root?.packageName?.toString() == pkg }
+        own.isNotEmpty() && own.all { w -> val b = Rect().also { w.getBoundsInScreen(it) }; !b.isEmpty && isSmall(b) }
+    }.getOrDefault(false)
+
+    private fun isSmall(b: Rect): Boolean {
         val screen = wm.maximumWindowMetrics.bounds
         // shortcut: split-screen and freeform windows count as floating too, upgrade if a locked app in split screen must ask
         return b.width() < screen.width() * 0.9f || b.height() < screen.height() * 0.6f
@@ -276,6 +294,7 @@ class LockService : AccessibilityService() {
             spec = null
             showCard(pkg)
             if (guessed && bioOk && !authing) startAuth(pkg)   // covered by the guess, the fingerprint sheet follows now the app is confirmed
+            bubbleCheck(pkg)
         } else { spec = null; hideCard() }
     }
 
@@ -302,7 +321,15 @@ class LockService : AccessibilityService() {
         attach(true)
     }
 
-    fun onAuthShown() { authSeen = true; attach(false) }   // the overlay would sit above the system fingerprint sheet
+    /** The lock screen as a picture, for the fingerprint host to show under the system sheet. Null when it is not laid out. */
+    fun snapshot(): android.graphics.Bitmap? = runCatching {
+        val v = root ?: return null
+        if (v.width <= 0 || v.height <= 0) return null
+        android.graphics.Bitmap.createBitmap(v.width, v.height, android.graphics.Bitmap.Config.RGB_565).also { v.draw(android.graphics.Canvas(it)) }
+    }.onFailure { Log.e("AppLock", "snapshot failed", it) }.getOrNull()
+
+    // the overlay would sit above the system fingerprint sheet; it comes off only once the host shows the lock picture
+    fun onAuthShown() { authSeen = true; attach(false) }
 
     private fun startAuth(pkg: String) {
         if (authing && authSeen) return   // the prompt is already up: a second tap on the fingerprint button must not stack another
@@ -310,7 +337,7 @@ class LockService : AccessibilityService() {
         authSeen = false
         runCatching { startActivity(Intent(this, AppLockAuthActivity::class.java)
             .putExtra(AppLockAuthActivity.EXTRA_PKG, pkg)
-            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.onFailure { Log.e("AppLock", "auth activity start failed", it) }
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)) }.onFailure { Log.e("AppLock", "auth activity start failed", it) }
         // a blocked start would leave the app open: bring the lock screen back if the prompt never came up
         main.postDelayed({ if (authing && !authSeen && cardPkg == pkg) onAuthEnded(pkg) }, 1500)
     }
@@ -385,13 +412,30 @@ class LockService : AccessibilityService() {
  */
 class AppLockAuthActivity : FragmentActivity() {
     private var pkg = ""
+    private var ended = false
 
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
         pkg = intent.getStringExtra(EXTRA_PKG) ?: run { finish(); return }
-        LockService.instance?.onAuthShown()
         if (BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG)
-            != BiometricManager.BIOMETRIC_SUCCESS) { finish(); return }   // no fingerprint: the lock screen asks for the PIN or password
+            != BiometricManager.BIOMETRIC_SUCCESS) { LockService.instance?.onAuthShown(); finish(); return }   // no fingerprint: the lock screen asks for the PIN or password
+        // the lock screen stays visible under the fingerprint sheet: this window shows its picture, edge to edge, and the
+        // overlay is taken off only after this window has drawn, so the locked app is never seen in between
+        window.setWindowAnimations(0)
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
+        if (android.os.Build.VERSION.SDK_INT >= 28) window.attributes = window.attributes.apply { layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES }
+        val pic = LockService.instance?.snapshot()
+        setContentView(android.widget.ImageView(this).apply {
+            scaleType = android.widget.ImageView.ScaleType.FIT_XY
+            if (pic != null) setImageBitmap(pic) else setBackgroundColor(android.graphics.Color.BLACK)
+        })
+        window.decorView.viewTreeObserver.addOnPreDrawListener(object : android.view.ViewTreeObserver.OnPreDrawListener {
+            override fun onPreDraw(): Boolean {
+                window.decorView.viewTreeObserver.removeOnPreDrawListener(this)
+                window.decorView.postDelayed({ if (!ended) LockService.instance?.onAuthShown() }, 32)
+                return true
+            }
+        })
         val info = BiometricPrompt.PromptInfo.Builder()
             .setTitle(tr("App locked", "Uygulama kilitli"))
             .setSubtitle(AppLock.label(this, pkg))
@@ -401,17 +445,23 @@ class AppLockAuthActivity : FragmentActivity() {
         BiometricPrompt(this, ContextCompat.getMainExecutor(this), object : BiometricPrompt.AuthenticationCallback() {
             override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
                 AppLock.markUnlocked(pkg)
-                finish()
+                end()
             }
 
-            // Cancel, negative button, lockout: back to the lock screen.
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { finish() }
+            // Cancel, negative button, lockout: the lock screen goes back up before this window closes.
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) { end() }
         }).authenticate(info)
+    }
+
+    private fun end() {
+        if (!ended) { ended = true; LockService.instance?.onAuthEnded(pkg) }
+        finish()
+        @Suppress("DEPRECATION") overridePendingTransition(0, 0)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        if (pkg.isNotEmpty()) LockService.instance?.onAuthEnded(pkg)
+        if (pkg.isNotEmpty() && !ended) { ended = true; LockService.instance?.onAuthEnded(pkg) }
     }
 
     companion object {

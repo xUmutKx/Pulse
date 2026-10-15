@@ -9,4 +9,6 @@
     android:previewImage="@drawable/preview_skin_xp_battery"
     android:description="@string/app_name"
     android:resizeMode="horizontal|vertical"
-    android:widgetCategory="home_screen" />
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
+    android:configure="com.umutk.pulse.widgets.WidgetConfigActivity" />

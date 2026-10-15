@@ -33,6 +33,8 @@ object WidgetLook {
     /** The Windows 11 tile material: acrylic / mica / blur (the lock-screen wallpaper blur; its amount is [blur], its darkness [tint]). */
     var material by mutableStateOf("acrylic")
     var tint by mutableFloatStateOf(.25f)
+    /** What the Windows 11 "blur" material shows behind the tile: stock (the Windows 11 wallpaper) / phone (the phone wallpaper) / file (own picture) / none (just the dark tint). */
+    var blurBg by mutableStateOf("stock")
     /** The widget configuration window: material (Material You, default) / own (the widget's design) / blur (Windows 11 over a blurred wallpaper). */
     var windowLook by mutableStateOf("material")
     private var loaded = false
@@ -48,12 +50,14 @@ object WidgetLook {
         blur = p.getFloat("blur", .3f)
         accentColor = p.getInt("accentColor", 0)
         material = p.getString("material", "acrylic") ?: "acrylic"; tint = p.getFloat("tint", .25f); windowLook = p.getString("windowLook", "material") ?: "material"
+        blurBg = p.getString("blurBg", "stock") ?: "stock"
     }
 
     /** Saves and redraws the placed widgets. */
     fun save(c: Context) {
-        prefs(c).edit().apply { picked.forEach { (k, v) -> putFloat("op_$k", v) } }.putFloat("opacity", opacity).putFloat("blur", blur).putInt("accentColor", accentColor).putString("material", material).putFloat("tint", tint).putString("windowLook", windowLook).apply()
+        prefs(c).edit().apply { picked.forEach { (k, v) -> putFloat("op_$k", v) } }.putFloat("opacity", opacity).putFloat("blur", blur).putInt("accentColor", accentColor).putString("blurBg", blurBg).putString("material", material).putFloat("tint", tint).putString("windowLook", windowLook).apply()
         WidgetData.refreshNow(c)
+        WidgetPreviews.publish(c)
     }
 }
 
@@ -71,7 +75,9 @@ object WidgetAccent {
         val p = c.getSharedPreferences("p", Context.MODE_PRIVATE)
         val t = Themes.firstOrNull { it.id == p.getString("theme", "win11") } ?: Themes[0]
         if (t.id == "material" && p.getBoolean("dynamic", true)) return c.getColor(android.R.color.system_accent1_200)
-        return (accentsFor(t.material).getOrNull(p.getInt("accent2", -1)) ?: t.accent).toArgb()
+        // same rule as Look.accent: only Material, tab-less and the two Windows 10/11 themes take the picked swatch
+        val swatch = t.material || !t.tabs || t.id == "win10" || t.id == "win11"
+        return (if (swatch) accentsFor(t.material).getOrNull(p.getInt("accent2", -1)) ?: t.accent else t.accent).toArgb()
     }
 
     /** The widget's own accent, or 0 when it follows the app. */

@@ -46,7 +46,8 @@ private fun Fold(title: String, body: @Composable () -> Unit) {
 fun AboutPage() {
     val ctx = LocalContext.current
     var licences by remember { mutableStateOf(false) }
-    if (licences) { LicencesPage { licences = false }; return }
+    InnerBackStep(licences) { licences = false }
+    if (licences) { LicencesPage(); return }
     val ver = remember { try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "" } catch (e: Exception) { "" } }
     val t = rememberInfiniteTransition(label = "about")
     val p by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "beat")
@@ -106,12 +107,9 @@ fun AboutPage() {
 
 /** Settings > About > Licences and thanks: where the pictures, icons and lists come from. */
 @Composable
-private fun LicencesPage(onBack: () -> Unit) {
+private fun LicencesPage() {
     Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.fillMaxWidth().clickable(onClick = onBack).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon("back", T.text, 22.dp)
-            Text(tr("Licences and thanks", "Lisanslar ve teşekkürler"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
-        }
+        Text(tr("Licences and thanks", "Lisanslar ve teşekkürler"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(vertical = 6.dp))
         PCard {
             Text(
                 "Wikimedia Commons (each picture keeps its own licence):\n" +

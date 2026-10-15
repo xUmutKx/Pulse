@@ -13,6 +13,7 @@ import android.hardware.SensorManager
 import android.hardware.camera2.CameraAccessException
 import android.hardware.camera2.CameraCharacteristics
 import android.hardware.camera2.CameraManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -37,6 +38,7 @@ import android.view.WindowManager
 import android.widget.TextView
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
+import com.umutk.pulse.features.TileActions
 import kotlinx.coroutines.*
 
 /** Keeps sampling when the app is closed: floating numbers over other apps, a live notification and threshold alerts. */
@@ -44,7 +46,7 @@ class MonitorService : Service() {
     private val scope = CoroutineScope(Dispatchers.Default + SupervisorJob())
     private var job: Job? = null
     private var wm: WindowManager? = null
-    private var tv: TextView? = null
+    private var tv: android.widget.LinearLayout? = null
     private var lp: WindowManager.LayoutParams? = null
     private val lastAlert = HashMap<String, Long>()
 
@@ -79,11 +81,24 @@ class MonitorService : Service() {
         return parts.joinToString("  ·  ")
     }
 
+    private fun items(): List<Pair<String, String>> {
+        val s = Sampler.snap.value
+        val l = ArrayList<Pair<String, String>>()
+        if ("cpu" in Opt.ovItems) l += "cpu" to "%${s.cpu}"
+        if ("ram" in Opt.ovItems) l += "ram" to "%${if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb}"
+        if ("gpu" in Opt.ovItems && s.gpu >= 0) l += "gpu" to "%${s.gpu}"
+        if ("temp" in Opt.ovItems) l += "temp" to Opt.temp(s.cpuTemp)
+        if ("bat" in Opt.ovItems) l += "bat" to "${s.batPct}% ${s.batMa}mA"
+        if ("net" in Opt.ovItems) { l += "down" to rate(s.down.toFloat()); l += "up" to rate(s.up.toFloat()) }
+        return l
+    }
+
     private suspend fun loop() {
         while (true) {
             if (System.currentTimeMillis() - Sampler.lastSample > 2500) Sampler.sample(this)
             val text = line()
-            withContext(Dispatchers.Main) { showOverlay(text) }
+            val its = items()
+            withContext(Dispatchers.Main) { showOverlay(its) }
             if (Opt.notifOn) getSystemService(NotificationManager::class.java).notify(ID, build(text))
             alerts()
             if (!Opt.ovOn && !Opt.notifOn && Opt.alertTemp == 0 && Opt.alertBat == 0 && Opt.alertRam == 0) { stopSelf(); return }
@@ -106,11 +121,11 @@ class MonitorService : Service() {
         if (Opt.alertRam > 0 && ram >= Opt.alertRam) fire("ram", "Memory $ram% (limit ${Opt.alertRam}%)")
     }
 
-    private fun showOverlay(text: String) {
+    private fun showOverlay(its: List<Pair<String, String>>) {
         if (!Opt.ovOn || !Settings.canDrawOverlays(this)) { hideOverlay(); return }
         if (tv == null) {
             wm = getSystemService(WINDOW_SERVICE) as WindowManager
-            val v = TextView(this).apply { setTextColor(Color.WHITE); typeface = Typeface.MONOSPACE; setPadding(20, 10, 20, 10) }
+            val v = android.widget.LinearLayout(this)
             val p = WindowManager.LayoutParams(WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT)
@@ -125,10 +140,7 @@ class MonitorService : Service() {
             }
             try { wm?.addView(v, p); tv = v; lp = p } catch (e: Exception) { return }
         }
-        tv?.apply {
-            this.text = text; textSize = Opt.ovSize
-            setBackgroundColor(Color.argb((Opt.ovAlpha * 255).toInt(), 0, 0, 0))
-        }
+        tv?.let { OverlayUi.fill(it, its) }
     }
 
     private fun hideOverlay() { tv?.let { try { wm?.removeView(it) } catch (e: Exception) { } }; tv = null }
@@ -151,7 +163,7 @@ class MonitorService : Service() {
 /** Quick Settings tile: switches the floating monitor (or, without the overlay permission, the notification monitor) on and off. */
 class PulseTile : TileService() {
     override fun onStartListening() { Opt.load(this); paint() }
-    private fun paint() { qsTile?.apply { state = if (Opt.ovOn || Opt.notifOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "Pulse"; subtitle = if (Opt.ovOn) "Overlay" else if (Opt.notifOn) "Notification" else "Off"; updateTile() } }
+    private fun paint() { qsTile?.apply { state = if (Opt.ovOn || Opt.notifOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "Pulse"; subtitle = if (Opt.ovOn) tr("Overlay", "Ekran üstü") else if (Opt.notifOn) tr("Notification", "Bildirim") else tr("Off", "Kapalı"); updateTile() } }
     override fun onClick() {
         Opt.load(this)
         val on = !(Opt.ovOn || Opt.notifOn)
@@ -162,39 +174,86 @@ class PulseTile : TileService() {
 
 private val DIRS = arrayOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
-/** Quick Settings tile that opens the app on the Toolkit page; [start] is the "start" extra MainActivity reads. */
+/** Long-pressing a tile opens Pulse on that tile's page (MainActivity handles ACTION_QS_TILE_PREFERENCES); keyed by the tile's class name. */
+fun tilePage(cls: String): String = when (cls.substringAfterLast('.')) {
+    "PulseTile", "DnsTile" -> "settings"
+    "FlashlightTile" -> "toolkit:flash"
+    "StopwatchTile" -> "toolkit:stopwatch"
+    "ToolkitTile" -> "toolkit"
+    else -> runCatching { (Class.forName(cls).getDeclaredConstructor().newInstance() as ToolkitTile).start }.getOrDefault("toolkit")
+}
+
+/** Opens Pulse on [page] and closes the panel. */
+fun TileService.openPulse(page: String) {
+    val i = Intent(this, MainActivity::class.java).putExtra("start", page).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+    if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, page.hashCode(), i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+    else @Suppress("DEPRECATION") startActivityAndCollapse(i)
+}
+
+/** Quick Settings tile for one Toolkit tool; [start] is the "start" extra MainActivity reads. The plain Toolkit tile opens the Toolkit page.
+ *  A tap does the tool's own job in the panel ([act]); a tile without one opens its tool. Sensor tiles switch their live reading on and off. */
 open class ToolkitTile : TileService() {
     open val start: String get() = "toolkit"
-    /** Sensor that feeds [subtitleFor]. Registered only while the tile is listening, so it is off when the tile is off. */
+    /** Turkish name; the English one is the manifest label. */
+    open val trName: String get() = "Araç kutusu"
+    /** Sensor that feeds [subtitleFor]. Registered only while the tile is listening and switched on. */
     open val sensor: Int? get() = null
     /** Line under the tile name. [values] is the latest sensor reading, null otherwise. Null hides the line. */
     open fun subtitleFor(values: FloatArray?): String? = null
+    /** Highlighted (ACTIVE) look, e.g. while charging or a timer runs. */
+    open fun active(): Boolean = false
+    /** The tile's own picture (the dice face). Null keeps the manifest icon. */
+    open val picture: Int? get() = null
+    /** Repaint period while the panel is open, for readings that change on their own; 0 = only on open and tap. */
+    open val refreshMs: Long get() = 0L
+    /** The tile's own job, done in the panel. Returns true to repaint; a tile without one opens its tool. */
+    open fun act(): Boolean = if (sensor != null) { live = !live; listen(); true } else { openPulse(start); false }
+
     protected val prefs get() = getSharedPreferences("p", Context.MODE_PRIVATE)
+    protected val main = Handler(Looper.getMainLooper())
     protected fun batteryIntent(): Intent? = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
-    private var sm: SensorManager? = null
+    private val name by lazy { runCatching { packageManager.getServiceInfo(ComponentName(this, javaClass), 0).loadLabel(packageManager).toString() }.getOrDefault("Toolkit") }
+    private var live: Boolean
+        get() = prefs.getBoolean("qs_live_$start", true)
+        set(v) { prefs.edit().putBoolean("qs_live_$start", v).apply() }
+    private val sensorMgr get() = getSystemService(SensorManager::class.java)
+    private var listening = false
+    private var registered = false
     private val listener = object : SensorEventListener {
-        override fun onSensorChanged(e: SensorEvent) = show(subtitleFor(e.values))
+        override fun onSensorChanged(e: SensorEvent) { qsTile?.apply { val s = subtitleFor(e.values); if (subtitle != s) { subtitle = s; updateTile() } } }
         override fun onAccuracyChanged(s: Sensor?, a: Int) {}
     }
-    private fun show(s: String?) { qsTile?.apply { if (subtitle != s) { subtitle = s; updateTile() } } }
-    override fun onStartListening() {
-        paintPicture()
-        val t = sensor
-        val m = t?.let { getSystemService(SensorManager::class.java) }
-        val s = t?.let { m?.getDefaultSensor(it) }
-        if (m != null && s != null) { m.registerListener(listener, s, SensorManager.SENSOR_DELAY_NORMAL); sm = m } else show(subtitleFor(null))
+    private val tick = object : Runnable { override fun run() { paint(); if (listening) main.postDelayed(this, refreshMs) } }
+
+    private fun listen() {
+        if (registered) { sensorMgr.unregisterListener(listener); registered = false }
+        val s = sensor?.let { sensorMgr.getDefaultSensor(it) } ?: return
+        if (listening && live) registered = sensorMgr.registerListener(listener, s, SensorManager.SENSOR_DELAY_UI)
     }
-    override fun onStopListening() { sm?.unregisterListener(listener); sm = null }
-    /** The tile's own job, done right in the panel (roll, flip, sound mode). Returns false when there is nothing to do here: a tap then does nothing, it never opens the app. */
-    open fun act(): Boolean = false
-    /** The tile's own picture, when it has one (the dice face). Null keeps the Toolkit icon. */
-    open val picture: Int? get() = null
-    private fun paintPicture() { val p = picture ?: return; qsTile?.apply { icon = Icon.createWithResource(this@ToolkitTile, p); updateTile() } }
-    override fun onClick() { if (act()) { show(subtitleFor(null)); paintPicture() } }
+
+    protected fun paint() {
+        val noSensor = sensor?.let { sensorMgr.getDefaultSensor(it) == null } == true
+        qsTile?.apply {
+            label = tr(name, trName)
+            state = when { noSensor -> Tile.STATE_UNAVAILABLE; (if (sensor != null) live else active()) -> Tile.STATE_ACTIVE; else -> Tile.STATE_INACTIVE }
+            subtitle = when { noSensor -> tr("No sensor", "Sensör yok"); sensor != null && !live -> tr("Off", "Kapalı"); else -> subtitleFor(null) }
+            picture?.let { icon = Icon.createWithResource(this@ToolkitTile, it) }
+            updateTile()
+        }
+    }
+
+    override fun onStartListening() {
+        Opt.load(this) // the language for tr()
+        listening = true; paint(); listen()
+        main.removeCallbacks(tick); if (refreshMs > 0) main.postDelayed(tick, refreshMs)
+    }
+    override fun onStopListening() { listening = false; listen(); main.removeCallbacks(tick) }
+    override fun onClick() { if (act()) paint() }
 }
 
 class CompassTile : ToolkitTile() {
     override val start: String get() = "toolkit:compass"
+    override val trName: String get() = "Pusula"
     override val sensor: Int? get() = Sensor.TYPE_ROTATION_VECTOR
     override fun subtitleFor(values: FloatArray?): String? {
         if (values == null) return null
@@ -204,9 +263,24 @@ class CompassTile : ToolkitTile() {
         return "%.0f° %s".format(deg, DIRS[((deg + 22.5) / 45).toInt() % 8])
     }
 }
+class LevelTile : ToolkitTile() {
+    override val start: String get() = "toolkit:level"
+    override val trName: String get() = "Su terazisi"
+    override val sensor: Int? get() = Sensor.TYPE_ACCELEROMETER
+    override fun subtitleFor(values: FloatArray?): String? = values?.let {
+        tr("Tilt %.0f°", "Eğim %.0f°").format(Math.toDegrees(Math.atan2(Math.hypot(it[0].toDouble(), it[1].toDouble()), it[2].toDouble())))
+    }
+}
+class LuxTile : ToolkitTile() {
+    override val start: String get() = "toolkit:light"
+    override val trName: String get() = "Işık ölçer"
+    override val sensor: Int? get() = Sensor.TYPE_LIGHT
+    override fun subtitleFor(values: FloatArray?): String? = values?.let { "%.0f lx".format(it[0]) }
+}
 class DiceTile : ToolkitTile() {
     override val start: String get() = "toolkit:dice"
-    override fun subtitleFor(values: FloatArray?): String? = prefs.getInt("dice_last", 0).takeIf { it > 0 }?.let { "Last: $it" }
+    override val trName: String get() = "Zar"
+    override fun subtitleFor(values: FloatArray?): String? = prefs.getInt("dice_last", 0).takeIf { it > 0 }?.toString()
     // a tap rolls in the panel; the tile shows the face that came up
     override fun act(): Boolean { prefs.edit().putInt("dice_last", (1..6).random()).apply(); return true }
     override val picture: Int? get() = prefs.getInt("dice_last", 0).takeIf { it in 1..6 }?.let { DICE_FACES[it - 1] }
@@ -214,100 +288,146 @@ class DiceTile : ToolkitTile() {
 private val DICE_FACES = intArrayOf(R.drawable.ic_dice_1, R.drawable.ic_dice_2, R.drawable.ic_dice_3, R.drawable.ic_dice_4, R.drawable.ic_dice_5, R.drawable.ic_dice_6)
 class CoinTile : ToolkitTile() {
     override val start: String get() = "toolkit:coin"
-    override fun subtitleFor(values: FloatArray?): String? = prefs.getString("coin_last", null)?.let { "Last: $it" }
+    override val trName: String get() = "Yazı tura"
+    // stored in English (shared with the Toolkit page): heads is "tura" in Turkish, tails "yazı"
+    override fun subtitleFor(values: FloatArray?): String? = prefs.getString("coin_last", null)?.let { tr(it, if (it == "Heads") "Tura" else "Yazı") }
     override fun act(): Boolean { prefs.edit().putString("coin_last", if ((0..1).random() == 0) "Heads" else "Tails").apply(); return true }
 }
 class ScreenshotTile : ToolkitTile() {
     override val start: String get() = "toolkit:screenshot"
-    override fun subtitleFor(values: FloatArray?): String? = prefs.getLong("shot_last", 0).takeIf { it > 0 }
-        ?.let { "Last: ${android.text.format.DateFormat.getTimeFormat(this).format(Date(it))}" }
+    override val trName: String get() = "Ekran görüntüsü"
+    private var failed = false
+    // with root/Shizuku the panel closes and the screen is captured; without them the tool opens
+    override fun act(): Boolean {
+        if (!TileActions.screenshot(this) { ok -> failed = !ok; paint(); if (!ok) openPulse(start) }) { openPulse(start); return false }
+        return false
+    }
+    override fun subtitleFor(values: FloatArray?): String? = if (failed) tr("Failed", "Olmadı") else prefs.getLong("shot_last", 0).takeIf { it > 0 }
+        ?.let { android.text.format.DateFormat.getTimeFormat(this).format(Date(it)) }
 }
 class SoundModeTile : ToolkitTile() {
     override val start: String get() = "toolkit:vibrate"
+    override val trName: String get() = "Ses modu"
+    override val refreshMs: Long get() = 1000L // follows the volume keys
+    override fun active(): Boolean = getSystemService(AudioManager::class.java).ringerMode == AudioManager.RINGER_MODE_NORMAL
     override fun subtitleFor(values: FloatArray?): String? = when (getSystemService(AudioManager::class.java).ringerMode) {
-        AudioManager.RINGER_MODE_NORMAL -> "Normal"; AudioManager.RINGER_MODE_VIBRATE -> "Vibrate"; else -> "Silent"
+        AudioManager.RINGER_MODE_NORMAL -> tr("Normal", "Normal"); AudioManager.RINGER_MODE_VIBRATE -> tr("Vibrate", "Titreşim"); else -> tr("Silent", "Sessiz")
     }
-    // a tap goes Normal, Vibrate, Silent in turn; Silent needs Do Not Disturb access, without it the tap just does nothing
+    // Normal, Vibrate, Silent in turn; Silent needs Do Not Disturb access, without it the cycle skips Silent, and a refused change opens the tool (it asks for that access)
     override fun act(): Boolean {
         val am = getSystemService(AudioManager::class.java)
-        val next = when (am.ringerMode) { AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE; AudioManager.RINGER_MODE_VIBRATE -> AudioManager.RINGER_MODE_SILENT; else -> AudioManager.RINGER_MODE_NORMAL }
-        return try { am.ringerMode = next; true } catch (e: SecurityException) { false }
+        val dnd = getSystemService(NotificationManager::class.java).isNotificationPolicyAccessGranted
+        val next = when (am.ringerMode) {
+            AudioManager.RINGER_MODE_NORMAL -> AudioManager.RINGER_MODE_VIBRATE
+            AudioManager.RINGER_MODE_VIBRATE -> if (dnd) AudioManager.RINGER_MODE_SILENT else AudioManager.RINGER_MODE_NORMAL
+            else -> AudioManager.RINGER_MODE_NORMAL
+        }
+        return try { am.ringerMode = next; true } catch (e: SecurityException) { openPulse(start); false }
     }
 }
-class LevelTile : ToolkitTile() {
-    override val start: String get() = "toolkit:level"
-    override val sensor: Int? get() = Sensor.TYPE_ACCELEROMETER
-    override fun subtitleFor(values: FloatArray?): String? = values?.let {
-        "Tilt %.0f°".format(Math.toDegrees(Math.atan2(Math.hypot(it[0].toDouble(), it[1].toDouble()), it[2].toDouble())))
+class ClipboardTile : ToolkitTile() {
+    override val start: String get() = "toolkit:clipboard"
+    override val trName: String get() = "Pano"
+    private var text: String? = null
+    override fun subtitleFor(values: FloatArray?): String? = text?.replace('\n', ' ')?.take(40)
+    // Android hands the clipboard only to the foreground app, so this is mostly null: the tap then opens the tool
+    override fun act(): Boolean { text = TileActions.clipboardText(this)?.takeIf { it.isNotBlank() } ?: run { openPulse(start); return false }; return true }
+}
+class SensorsOffTile : ToolkitTile() {
+    override val start: String get() = "toolkit:sensors"
+    override val trName: String get() = "Sensörler kapalı"
+    private var busy = false
+    private var off: Boolean? = null // read in the background (dumpsys), so kept here instead of asking on every paint
+    override fun active(): Boolean = off == true
+    override fun subtitleFor(values: FloatArray?): String? = if (busy) "…" else when (off) { true -> tr("Mic + camera off", "Mikrofon + kamera kapalı"); false -> tr("On", "Açık"); null -> null }
+    override fun onStartListening() { super.onStartListening(); TileActions.refreshSensors(this) { off = it ?: off; paint() } }
+    override fun act(): Boolean {
+        if (busy) return false
+        if (!TileActions.toggleSensorsOff(this) { now -> busy = false; off = now ?: off; paint(); if (now == null) openPulse(start) }) { openPulse(start); return false }
+        busy = true; return true
     }
 }
-class LuxTile : ToolkitTile() {
-    override val start: String get() = "toolkit:light"
-    override val sensor: Int? get() = Sensor.TYPE_LIGHT
-    override fun subtitleFor(values: FloatArray?): String? = values?.let { "%.0f lx".format(it[0]) }
-}
-class ClipboardTile : ToolkitTile() { override val start: String get() = "toolkit:clipboard" }
-class SensorsOffTile : ToolkitTile() { override val start: String get() = "toolkit:sensors" }
 class BatteryTile : ToolkitTile() {
     override val start: String get() = "toolkit:battery"
+    override val trName: String get() = "Pil"
+    override val refreshMs: Long get() = 3000L
+    override fun act(): Boolean = true // the reading is the job; a tap refreshes it
+    override fun active(): Boolean = batteryIntent()?.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0)?.let { it != 0 } == true
     override fun subtitleFor(values: FloatArray?): String? = batteryIntent()?.let { i ->
         val scale = i.getIntExtra(BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1)
-        "${i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) * 100 / scale}%"
+        "${i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) * 100 / scale}%" + if (active()) tr(" · charging", " · şarjda") else ""
     }
 }
 class MemoryTile : ToolkitTile() {
     override val start: String get() = "toolkit:memory"
+    override val trName: String get() = "Bellek"
+    override val refreshMs: Long get() = 3000L
+    override fun act(): Boolean = true // the reading is the job; a tap refreshes it
     override fun subtitleFor(values: FloatArray?): String? {
         val m = ActivityManager.MemoryInfo().also { getSystemService(ActivityManager::class.java).getMemoryInfo(it) }
-        return "${(m.totalMem - m.availMem) * 100 / m.totalMem}% used"
+        return tr("%d%% used", "%%%d dolu").format((m.totalMem - m.availMem) * 100 / m.totalMem)
     }
 }
 class TemperatureTile : ToolkitTile() {
     override val start: String get() = "toolkit:thermal"
-    override fun subtitleFor(values: FloatArray?): String? = batteryIntent()?.let {
-        Opt.load(this)
-        Opt.temp(it.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10f)
-    }
+    override val trName: String get() = "Sıcaklık"
+    override val refreshMs: Long get() = 3000L
+    override fun act(): Boolean = true // the reading is the job; a tap refreshes it
+    override fun subtitleFor(values: FloatArray?): String? = batteryIntent()?.let { Opt.temp(it.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10f) }
 }
 class VolumeTile : ToolkitTile() {
     override val start: String get() = "toolkit:volume"
+    override val trName: String get() = "Ses düzeyi"
+    override val refreshMs: Long get() = 1000L // follows the volume panel and keys
+    override fun act(): Boolean { TileActions.volumePanel(this); return true }
     override fun subtitleFor(values: FloatArray?): String? {
         val am = getSystemService(AudioManager::class.java)
-        return "Music ${am.getStreamVolume(AudioManager.STREAM_MUSIC)} / ${am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)}"
+        return tr("Media", "Medya") + " ${am.getStreamVolume(AudioManager.STREAM_MUSIC)}/${am.getStreamMaxVolume(AudioManager.STREAM_MUSIC)}"
     }
 }
-/** Timer tile: while a timer runs, its remaining time is the subtitle and the icon turns to an hourglass. The Toolkit timer writes its end time (ms) to prefs "timer", key "end". */
+/** Timer tile: while a timer runs, its remaining time is the subtitle and the icon turns to an hourglass. The Toolkit timer writes its end time (ms) to prefs "timer", key "end". A tap opens the timer. */
 class TimerTile : ToolkitTile() {
     override val start: String get() = "toolkit:timer"
-    private val main = Handler(Looper.getMainLooper())
-    private val tick = object : Runnable {
-        override fun run() { paintTimer(); if (remainingMs() > 0) main.postDelayed(this, 1000) }
-    }
+    override val trName: String get() = "Zamanlayıcı"
+    override val refreshMs: Long get() = 1000L
     private fun remainingMs(): Long = getSharedPreferences("timer", Context.MODE_PRIVATE).getLong("end", 0L) - System.currentTimeMillis()
+    override fun active(): Boolean = remainingMs() > 0
+    override val picture: Int? get() = if (active()) R.drawable.qs_hourglass else R.drawable.ic_qs_timer
     override fun subtitleFor(values: FloatArray?): String? = remainingMs().takeIf { it > 0 }?.let { ms ->
         val s = (ms + 999) / 1000 // round up, so the last second shows 00:01
         "%02d:%02d".format(s / 60, s % 60)
     }
-    override fun onStartListening() { super.onStartListening(); paintTimer(); main.removeCallbacks(tick); if (remainingMs() > 0) main.postDelayed(tick, 1000) }
-    override fun onStopListening() { super.onStopListening(); main.removeCallbacks(tick) }
-    private fun paintTimer() {
-        val running = remainingMs() > 0
-        qsTile?.apply {
-            state = if (running) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            icon = Icon.createWithResource(this@TimerTile, if (running) R.drawable.qs_hourglass else R.drawable.ic_qs_timer)
-            subtitle = subtitleFor(null)
-            updateTile()
-        }
-    }
 }
-class CalculatorTile : ToolkitTile() { override val start: String get() = "toolkit:calc" }
+class CalculatorTile : ToolkitTile() { override val start: String get() = "toolkit:calc"; override val trName: String get() = "Hesap makinesi" }
+class FinderTile : ToolkitTile() { override val start: String get() = "toolkit:search"; override val trName: String get() = "Bulucu" }
+class DinkTile : ToolkitTile() { override val start: String get() = "toolkit:dink"; override val trName: String get() = "Dink" }
 class ScaleTile : ToolkitTile() {
     override val start: String get() = "toolkit:scale"
-    override fun subtitleFor(values: FloatArray?): String? { Opt.load(this); return "Text ${(Opt.fontScale * 100).toInt()}%" }
+    override val trName: String get() = "Ekran ölçeği"
+    override fun subtitleFor(values: FloatArray?): String? = tr("Text ", "Yazı ") + TileActions.scaleLabel(this)
+    // the next font size step (as TileActions.scaleNext), but with a callback: through the shell the answer comes later
+    override fun act(): Boolean {
+        val cur = TileActions.fontScale(this)
+        val next = TileActions.scales.firstOrNull { it > cur + .01f } ?: TileActions.scales[0]
+        if (!TileActions.setFontScale(this, next) { ok -> paint(); if (!ok) openPulse(start) }) { openPulse(start); return false }
+        return true
+    }
 }
-class FinderTile : ToolkitTile() { override val start: String get() = "toolkit:search" }
-class PowerMenuTile : ToolkitTile() { override val start: String get() = "toolkit:power" }
-class DinkTile : ToolkitTile() { override val start: String get() = "toolkit:dink" }
+class PowerMenuTile : ToolkitTile() {
+    override val start: String get() = "toolkit:power"
+    override val trName: String get() = "Güç menüsü"
+    override fun act(): Boolean { if (!TileActions.powerMenu()) openPulse(start); return false }
+}
+
+/** The system power menu: through the App lock accessibility service when it runs, otherwise a long power-key press with root/Shizuku. */
+object PowerMenu {
+    fun show(): Boolean {
+        com.umutk.pulse.applock.LockService.instance?.let { if (it.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_POWER_DIALOG)) return true }
+        if (Shell.root != true && !Shell.shizukuOk()) return false
+        Thread { Shell.run("cmd statusbar collapse; input keyevent --longpress 26") }.start()
+        return true
+    }
+}
 
 /** Quick Settings tile that toggles the torch; the tile follows the torch, also when another app or the system changes it. */
 class FlashlightTile : TileService() {
@@ -317,14 +437,24 @@ class FlashlightTile : TileService() {
         catch (e: CameraAccessException) { null }
     }
     private var torchOn = false
+    private var busy = false // the camera is in use by another app: the torch cannot be switched now
     private val torch = object : CameraManager.TorchCallback() {
-        override fun onTorchModeChanged(cameraId: String, enabled: Boolean) { if (cameraId == camId) { torchOn = enabled; paint() } }
+        override fun onTorchModeChanged(cameraId: String, enabled: Boolean) { if (cameraId == camId) { torchOn = enabled; busy = false; paint() } }
+        override fun onTorchModeUnavailable(cameraId: String) { if (cameraId == camId) { busy = true; paint() } }
     }
-    override fun onStartListening() { cm.registerTorchCallback(torch, null); paint() }
+    override fun onStartListening() { Opt.load(this); cm.registerTorchCallback(torch, null); paint() }
     override fun onStopListening() { cm.unregisterTorchCallback(torch) }
-    private fun paint() { qsTile?.apply { state = if (torchOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; icon = Icon.createWithResource(this@FlashlightTile, if (torchOn) R.drawable.ic_qs_flashlight else R.drawable.qs_flashlight_off); updateTile() } }
+    private fun paint() {
+        qsTile?.apply {
+            label = tr("Flashlight", "El feneri")
+            state = if (camId == null) Tile.STATE_UNAVAILABLE else if (torchOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            subtitle = when { camId == null -> tr("No flash", "Flaş yok"); busy -> tr("Camera in use", "Kamera kullanımda"); torchOn -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
+            icon = Icon.createWithResource(this@FlashlightTile, if (torchOn) R.drawable.ic_qs_flashlight else R.drawable.qs_flashlight_off)
+            updateTile()
+        }
+    }
     override fun onClick() {
         val id = camId ?: return
-        try { cm.setTorchMode(id, !torchOn) } catch (e: CameraAccessException) { }
+        try { cm.setTorchMode(id, !torchOn) } catch (e: Exception) { busy = true; paint() }
     }
 }

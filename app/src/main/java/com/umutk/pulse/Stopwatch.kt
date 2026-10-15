@@ -30,7 +30,8 @@ object Stopwatch {
 
     fun reset(c: Context) { p(c).edit().putLong("sw_base", 0L).putLong("sw_start", 0L).apply() }
 
-    fun clock(ms: Long): String { val t = ms / 10; return "%02d:%02d.%02d".format(t / 6000, t / 100 % 60, t % 100) }
+    /** mm:ss.cc, with hours in front from the first hour on. */
+    fun clock(ms: Long): String { val t = ms / 10; return if (t >= 360000) "%d:%02d:%02d.%02d".format(t / 360000, t / 6000 % 60, t / 100 % 60, t % 100) else "%02d:%02d.%02d".format(t / 6000, t / 100 % 60, t % 100) }
 }
 
 /** Quick Settings tile: a tap starts or stops the stopwatch right there, without opening the app. The line under the name shows the time. */
@@ -40,7 +41,7 @@ class StopwatchTile : TileService() {
         override fun run() { paint(); main.postDelayed(this, 1000) }
     }
 
-    override fun onStartListening() { paint(); restartTicking() }
+    override fun onStartListening() { Opt.load(this); paint(); restartTicking() }
     override fun onStopListening() { main.removeCallbacks(tick) }
 
     override fun onClick() {
@@ -59,7 +60,7 @@ class StopwatchTile : TileService() {
             val on = Stopwatch.running(this@StopwatchTile)
             state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             icon = Icon.createWithResource(this@StopwatchTile, if (on) R.drawable.qs_pause else R.drawable.qs_play)
-            label = "Stopwatch"
+            label = tr("Stopwatch", "Kronometre")
             subtitle = Stopwatch.clock(Stopwatch.elapsed(this@StopwatchTile))
             updateTile()
         }

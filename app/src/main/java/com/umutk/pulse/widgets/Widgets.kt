@@ -419,7 +419,7 @@ class NextAlarmWidget : PulseWidget() {
 
 class QuickWidget : PulseWidget() {
     override fun content(ctx: Context, s: WidgetStyle) =
-        views(ctx, s, R.layout.widget_quick, "Quick action", "Toolkit", "toolkit", Tile("Toolkit", listOf("Tools, cleaners, shell", "Tap to open")))
+        views(ctx, s, R.layout.widget_quick, "Quick action", "Toolkit", "toolkit", Tile("Toolkit", listOf("Tools, cleaners, shell")))
 }
 
 /** What a tap on a placed widget opens, in one place: clocks the phone's Clock app, dates the Calendar, batteries the system battery screen, the rest Pulse on their own page. */

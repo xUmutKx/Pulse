@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
@@ -26,6 +26,12 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <!-- Private DNS (DNS tile, Settings): Pulse grants this to itself once through root/Shizuku, then writes the setting directly -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
+    <!-- Screen scale tile: font_scale in Settings.System, after "Modify system settings" is allowed -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:ignore="ProtectedPermissions" />
+    <!-- Sound mode tile: Silent needs Do Not Disturb access, and Pulse is listed there only with this -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <queries>
         <package android:name="com.termux" />
         <package android:name="moe.shizuku.privileged.api" />
@@ -42,6 +48,17 @@
         android:theme="@style/Theme.Pulse">
         <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
             <!-- "Share" a link from a browser: Pulse starts the download (see MainActivity.handleShare) -->
+            <!-- long press on a Pulse Quick Settings tile opens that tile's page (see tilePage) -->
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+            <!-- Pulse as the file manager: a folder to browse opens Files full screen -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="resource/folder" />
+                <data android:mimeType="vnd.android.document/directory" />
+            </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -110,6 +127,7 @@
         </provider>
         <!-- the result of a PackageInstaller session (see features/Installer.kt); not exported, only Pulse starts sessions -->
         <receiver android:name="com.umutk.pulse.features.InstallReceiver" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.features.TimerReceiver" android:exported="false" />
         <!-- style picker opened when a widget is added or reconfigured (see widgets/WidgetConfig.kt); the launcher starts it, so it is exported -->
         <activity android:name="com.umutk.pulse.widgets.WidgetConfigActivity" android:exported="true" android:label="Widget style" android:theme="@style/Theme.Pulse.Floating">
             <intent-filter>
@@ -252,9 +270,10 @@
         <service android:name=".MonitorService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="live system monitor (floating numbers, notification, alerts)" />
         </service>
-        <service android:name=".PulseTile" android:exported="true" android:label="Pulse" android:icon="@drawable/ic_launcher_fg"
+        <service android:name=".PulseTile" android:exported="true" android:label="Pulse" android:icon="@drawable/ic_qs_pulse"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
         <service android:name=".ToolkitTile" android:exported="true" android:label="Toolkit" android:icon="@drawable/ic_toolkit_tile"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -263,10 +282,12 @@
         <service android:name="com.umutk.pulse.features.DnsTile" android:exported="true" android:label="DNS" android:icon="@drawable/ic_qs_dns"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
         <service android:name=".FlashlightTile" android:exported="true" android:label="Flashlight" android:icon="@drawable/ic_qs_flashlight"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
         <service android:name=".CompassTile" android:exported="true" android:label="Compass" android:icon="@drawable/ic_qs_compass"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -290,7 +311,7 @@
         </service>
         <!-- Shizuku API (vendored, licence in assets/licenses): the binder is handed over by this provider; the permission keeps other apps out -->
         <provider android:name="rikka.shizuku.ShizukuProvider" android:authorities="${applicationId}.shizuku" android:multiprocess="false" android:enabled="true" android:exported="true" android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
-            <service android:name=".LevelTile" android:exported="true" android:label="Level" android:icon="@drawable/ic_qs_level"
+        <service android:name=".LevelTile" android:exported="true" android:label="Level" android:icon="@drawable/ic_qs_level"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
@@ -305,6 +326,7 @@
         <service android:name=".SensorsOffTile" android:exported="true" android:label="Sensors off" android:icon="@drawable/ic_qs_sensors"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
         <service android:name=".BatteryTile" android:exported="true" android:label="Battery" android:icon="@drawable/ic_qs_battery"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -325,6 +347,7 @@
         <service android:name=".StopwatchTile" android:exported="true" android:label="Stopwatch" android:icon="@drawable/ic_qs_stopwatch"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
         <service android:name=".TimerTile" android:exported="true" android:label="Timer" android:icon="@drawable/ic_qs_timer"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
