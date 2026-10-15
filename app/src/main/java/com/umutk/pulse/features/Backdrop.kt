@@ -213,10 +213,10 @@ fun CropEditor(img: ImageBitmap, x0: Float, y0: Float, z0: Float, blurDp: Float,
                     detectTransformGestures { _, pan, gz, _ ->
                         z = (z * gz).coerceIn(1f, Backdrop.MAX_ZOOM)
                         val r = Backdrop.crop(img, screenW, screenH, x, y, z)
-                        // the finger carries the frame; no free room on an axis = nothing to move
+                        // the picture follows the finger (the frame moves the other way); no free room on an axis = nothing to move
                         val freeX = (img.width - r[2]) * k; val freeY = (img.height - r[3]) * k
-                        if (freeX > 0f) x = (x + pan.x / freeX).coerceIn(0f, 1f)
-                        if (freeY > 0f) y = (y + pan.y / freeY).coerceIn(0f, 1f)
+                        if (freeX > 0f) x = (x - pan.x / freeX).coerceIn(0f, 1f)
+                        if (freeY > 0f) y = (y - pan.y / freeY).coerceIn(0f, 1f)
                     }
                 }
                 // the picture, blurred like the real background, scaled down with the frame

@@ -103,7 +103,7 @@ fun DnsSettings() {
     }
 }
 
-/** Quick Settings tile: Private DNS Auto, Manual (the host saved in Pulse) and Off, one tap moves to the next.
+/** Quick Settings tile: Private DNS Auto, Manual (the host saved in Pulse, else dns.google) and Off, one tap moves to the next.
  *  A failed change shows its reason as the subtitle; without root or Shizuku the tap opens Settings. */
 class DnsTile : TileService() {
     private var note: String? = null
@@ -123,8 +123,9 @@ class DnsTile : TileService() {
         val (m, h) = Dns.current(this)
         // a host set in the system Settings is kept, so switching back on returns to it
         if (m == "hostname" && Dns.savedHost(this).isEmpty() && Dns.validHost(h)) Dns.saveHost(this, h)
-        val host = Dns.savedHost(this)
-        // Auto -> Manual (when a host is saved in Pulse) -> Off -> Auto
+        // Manual with no host saved in Pulse falls back to Google's resolver, so the tap always has the three steps
+        val host = Dns.savedHost(this).ifEmpty { "dns.google" }
+        // Auto -> Manual (the host saved in Pulse, else dns.google) -> Off -> Auto
         val next = when (m) { "off" -> "opportunistic"; "hostname" -> "off"; else -> if (Dns.validHost(host)) "hostname" else "off" }
         busy = true; note = null; paint()
         Thread {

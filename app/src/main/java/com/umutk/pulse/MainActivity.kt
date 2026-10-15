@@ -148,7 +148,8 @@ fun effective(t: PTheme): PTheme {
         val ctx = androidx.compose.ui.platform.LocalContext.current
         if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
     } else null
-    val accent = dynamic?.primary ?: MaterialAccents.getOrNull(Look.accentIdx) ?: t.accent
+    // AMOLED has one fixed accent, white: no wallpaper colour and no swatch
+    val accent = if (amoled) Color.White else dynamic?.primary ?: MaterialAccents.getOrNull(Look.accentIdx) ?: t.accent
     val r = Look.cornerDp
     return when {
         dynamic != null -> PTheme(t.id, t.name, dark, if (dark) Color(0xFF050505) else dynamic.background, if (dark) Color(0xFF111111) else dynamic.surfaceContainer,

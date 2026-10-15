@@ -157,7 +157,7 @@ object Look {
     val cornerDp get() = when (corner) { "small" -> 8.dp; "large" -> 28.dp; else -> 20.dp }
     @Volatile var resolved: PTheme? = null   // the Material look as resolved for this composition (see effective in MainActivity)
     val current get() = resolved ?: theme
-    val accent get() = (if (current.material || !current.tabs || current.id == "win10" || current.id == "win11") accentsFor(current.material).getOrNull(accentIdx) ?: current.accent else current.accent)
+    val accent get() = if (current.id == "amoled") Color.White else (if (current.material || !current.tabs || current.id == "win10" || current.id == "win11") accentsFor(current.material).getOrNull(accentIdx) ?: current.accent else current.accent)
         // Windows 11: the accent is drawn half see-through
         .let { if (current.id == "win11") it.copy(alpha = .5f) else it }
 }
