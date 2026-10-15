@@ -42,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.Hw
 import com.umutk.pulse.Opt
+import com.umutk.pulse.m3Guides
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -204,8 +205,8 @@ private fun TempChart(series: List<Series>, end: Long, yMin: Float, yMax: Float,
         fun yOf(v: Float) = size.height * (1f - (v - yMin) / (yMax - yMin))
         fun xOf(t: Long) = size.width * ((t - start).toFloat() / windowMs).coerceIn(0f, 1f)
 
-        // Grid, four horizontal lines
-        for (i in 0..4) {
+        // Grid, four horizontal lines; Material You: faint dotted guides instead
+        if (com.umutk.pulse.T.material) m3Guides(com.umutk.pulse.T.line) else for (i in 0..4) {
             val y = size.height * i / 4f
             drawLine(grid, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.dp.toPx())
         }

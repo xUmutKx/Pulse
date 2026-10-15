@@ -125,6 +125,32 @@ Pulse's own code has no licence file yet.
 
 Screenshots are in `docs/screenshots/`.
 
+### The looks
+
+Pulse can dress up as Windows 95, XP, 7, 10 or 11, or stay plain Material You / AMOLED. Each look draws its own windows, menus, buttons, dialogs and graphs. Settings has a switch to go back to the simpler earlier versions of the old looks.
+
+<p>
+<img src="docs/screenshots/win95-performance.png" width="32%" alt="Windows 95 Performance tab">
+<img src="docs/screenshots/win7-startup.png" width="32%" alt="Windows 7 Startup apps">
+<img src="docs/screenshots/xp-widgets.png" width="32%" alt="Windows XP widgets">
+</p>
+
+- **Windows 95**: the Performance tab with the CPU graph in green on black, the CPU details and a status bar at the bottom.
+- **Windows 7**: Startup apps with the Aero frame, so you can stop apps from starting at boot (root).
+- **Windows XP**: the Widgets page. Pick a look from the logo row and the list shows only that look's widgets.
+
+### Widgets and gadgets
+
+Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery and drive; XP and 95 classics; Windows 11 tiles that follow your accent colour; Material You, AMOLED, glass and iOS-style tiles.
+
+<p>
+<img src="docs/screenshots/win7-gadgets.png" width="32%" alt="Windows 7 gadget clocks">
+<img src="docs/screenshots/app-manager.png" width="32%" alt="App manager">
+</p>
+
+- **Windows 7 gadgets**: the nine original clock faces, live, with a second hand.
+- **App manager**: filter and sort your apps, open the details of any app, and jump to Debloat to remove system apps with descriptions from the Universal Debloater list.
+
 ### Processes
 
 ![Processes](docs/screenshots/processes.png)

@@ -1,0 +1,6 @@
+# iOS-style widget graphics. Files live in res/drawable-nodpi/. SVGs were converted to Android VectorDrawable XML (no build check done).
+ios_weather_sun.xml | vecnehladny/ubersicht-ios-clock-upnext-weather | icons/weather/01d.svg | Clear-day sun (yellow, original colours), converted from SVG
+ios_weather_cloud.xml | vecnehladny/ubersicht-ios-clock-upnext-weather | icons/weather/03d.svg | Cloud (light grey, original colour), converted from SVG
+ios_calendar.png | vecnehladny/ubersicht-ios-clock-upnext-weather | icons/calendar.png | Calendar icon, raster PNG, copied as-is
+ios_wind.xml | erikflowers/weather-icons | svg/wi-strong-wind.svg | Strong wind symbol, white fill for tinting, converted from SVG
+ios_barometer.xml | erikflowers/weather-icons | svg/wi-barometer.svg | Barometer gauge, white fill for tinting, converted from SVG

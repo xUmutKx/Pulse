@@ -97,8 +97,13 @@ object Extra {
 
     /** Running services, read from dumpsys (root only). */
     fun services(ctx: Context): List<Svc> {
-        if (Shell.root != true) return emptyList()
         val pm = ctx.packageManager
+        if (Shell.root != true && !Shell.shizukuOk()) {
+            // without root or Shizuku Android only reports this app's own services
+            @Suppress("DEPRECATION")
+            val am = ctx.getSystemService(Context.ACTIVITY_SERVICE) as android.app.ActivityManager
+            return am.getRunningServices(100).map { Svc(it.service.packageName, it.service.className, "Pulse") }.sortedBy { it.cls }
+        }
         val re = Regex("ServiceRecord\\{\\S+ u\\d+ ([^/\\s]+)/([^}\\s]+)\\}")
         return re.findAll(Shell.run("dumpsys activity services")).map { it.groupValues[1] to it.groupValues[2] }.distinct().map { (p, c) ->
             val label = try { pm.getApplicationInfo(p, 0).loadLabel(pm).toString() } catch (e: Exception) { p }

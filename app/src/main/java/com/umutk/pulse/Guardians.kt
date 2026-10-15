@@ -418,7 +418,7 @@ fun MemoryGuardian() {
         PCard { LongGraph("Memory in use (30 min)", lh["ram"].orEmpty(), col, 100f, "%", 90.dp) }
         PCard {
             Text("Biggest apps", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            if (top.isEmpty()) Text(if (root) "Reading…" else "Other apps' memory needs root.", color = T.sub, fontSize = 13.sp)
+            if (top.isEmpty()) { if (root) Text(tr("Reading…", "Okunuyor…"), color = T.sub, fontSize = 13.sp) else com.umutk.pulse.features.AccessNeededCard(tr("Biggest apps", "En büyük uygulamalar"), tr("Overall memory is shown above. Other apps' memory needs root or Shizuku.", "Genel bellek yukarıda gösteriliyor. Diğer uygulamaların belleği için root veya Shizuku gerekir.")) }
             else { val mx = top.first().rssMb.coerceAtLeast(1); top.forEach { p -> BarRow(labelOf(ctx, p.name), p.rssMb.toFloat() / mx, mb(p.rssMb), resColor("memory")) } }
         }
         PCard {

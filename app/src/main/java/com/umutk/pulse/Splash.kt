@@ -48,6 +48,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
@@ -59,8 +62,8 @@ import kotlin.math.floor
 import kotlin.math.sin
 
 /**
- * Opening screen. Each look opens its own way: Windows 7 a ring of dots, Windows 11 a sliding bar,
- * Windows 8 pulsing tiles, Windows 10 a row of dots, XP a green block bar, Windows 95 a block bar in a
+ * Opening screen. Each look opens its own way: Windows 7 "Starting Windows" then Welcome, Windows 11 a sliding bar,
+ * Windows 8 pulsing tiles, Windows 10 the five-dot ring, XP the boot bar then welcome, Windows 95 a block bar in a
  * bevel, Material a turning arc, AMOLED a pulse line drawn on black. The logo follows the look too.
  * Tap to skip.
  */
@@ -72,30 +75,30 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
         animationSpec = infiniteRepeatable(tween(1400, easing = LinearEasing), RepeatMode.Restart),
         label = "t",
     )
+    // XP and 7 boot on black, then show their welcome step on the wallpaper
+    var welcome by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         launch { fade.animateTo(1f, tween(200)) }
-        delay(850)
+        when (th.id) {
+            "xp", "win7" -> { delay(1100); welcome = true; delay(900) }
+            "win10" -> delay(1800)
+            else -> delay(850)
+        }
         onDone()
     }
     val mono = th.id == "amoled"
+    val root = Modifier.fillMaxSize().clickable { onDone() }.graphicsLayer { alpha = fade.value }
+    when (th.id) {
+        "win10" -> { Box(root) { Win10Boot() }; return }
+        "xp" -> { Box(root) { if (welcome) XpWelcome() else XpBoot(t) }; return }
+        "win7" -> { Box(root) { if (welcome) Win7Welcome() else Win7Boot(t) }; return }
+    }
     Box(
-        modifier = Modifier.fillMaxSize().clickable { onDone() }.graphicsLayer { alpha = fade.value },
+        modifier = root,
     ) {
-        // Windows 7 gets its backdrop drawn in code (see Win7Backdrop); the other looks keep the sunset (CC0)
-        // each look has its own opening background: Windows 7 is drawn, XP and Material use their real default pictures, the rest the look's own colour
-        // the user's own picture wins over the look's background
-        val picked = (themeWallpaper(th.id) ?: SplashPic.uri)?.let { rememberPicture(it) }
-        if (picked != null) {
-            Image(picked, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color(0x66000000)))
-        } else when (th.id) {
-            "win7" -> { Image(painterResource(R.drawable.splash_win7_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
-            "win11" -> { Image(painterResource(R.drawable.splash_win11_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop); Box(Modifier.fillMaxSize().background(Color(0x33000000))) }
-            "xp" -> { Image(painterResource(R.drawable.splash_xp_bliss), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop); Box(Modifier.fillMaxSize().background(Color(0x66000000))) }
-            "material" -> { Image(painterResource(R.drawable.splash_android), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop); Box(Modifier.fillMaxSize().background(Color(0x66000000))) }
-            // look-alike backdrops drawn here, not copies of Microsoft's pictures
-            "win11" -> Win11Backdrop()
-            "win10" -> Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF0B1E3A), Color(0xFF1F5FA8)))))
+        // the opening screen is the look's own colour or a drawn backdrop, never a wallpaper picture: wallpapers live in the theme's window and are placed by hand there
+        when (th.id) {
+            "win11" -> Image(painterResource(R.drawable.splash_win11_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             "win95" -> Box(Modifier.fillMaxSize().background(Color(0xFF008080)))
             else -> Box(Modifier.fillMaxSize().background(th.bg))
         }
@@ -104,15 +107,14 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
-            modifier = Modifier.align(Alignment.Center).padding(horizontal = 30.dp, vertical = 24.dp),
+            modifier = Modifier.align(Alignment.Center)
+                // a faint translucent layer behind the logo, name and loading bar, so they stand apart from the picture
+                .background(Color(0x33000000), RoundedCornerShape(22.dp))
+                .padding(horizontal = 30.dp, vertical = 24.dp),
         ) {
             when (th.id) {
-                "material" -> Image(painterResource(R.drawable.ic_android_logo), null, Modifier.size(168.dp), colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(th.accent))
-                "amoled" -> Box(Modifier.graphicsLayer { scaleX = 1.6f; scaleY = 1.6f }) { PulseMark(Color.White) }
-                "win7" -> Box(
-                    Modifier.size(210.dp).background(Brush.radialGradient(listOf(Color(0x66FFFFFF), Color.Transparent))),
-                    contentAlignment = Alignment.Center,
-                ) { Image(painterResource(logoFor(th.id)), null, Modifier.size(168.dp)) }
+                "amoled", "material" -> Box(Modifier.graphicsLayer { scaleX = 1.6f; scaleY = 1.6f }) { PulseMark(Color.White) }
+                "win95" -> Image(painterResource(logoFor(th.id)), null, Modifier.background(Color.White, RoundedCornerShape(14.dp)).padding(14.dp).size(140.dp))
                 else -> Image(painterResource(logoFor(th.id)), null, Modifier.size(168.dp))
             }
             Spacer(Modifier.height(18.dp))
@@ -121,11 +123,7 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
             when (th.id) {
                 "win11" -> SlidingBar(th.accent, th.line, t)
                 "win8" -> MetroTiles(Color.White, t)
-                "win10" -> DotRow(th.accent, t)
-                "win7" -> DotRing(th.accent, t)
-                "xp" -> BlockBar(Color(0xFF2BB12B), Color(0xFF0A246A), t)
                 "win95" -> BevelBlocks(Color(0xFF000080), th.bg, t)
-                "material" -> TurningArc(th.accent, t)
                 else -> PulseLine(Color.White, t)
             }
         }
@@ -197,45 +195,130 @@ private fun MetroTiles(color: Color, t: Float) {
     }
 }
 
+/** Windows 10 boot: dark hero-style light beams, the four-pane logo, and the five-dot spinner. */
 @Composable
-private fun DotRow(accent: Color, t: Float) {
-    Canvas(Modifier.size(width = 120.dp, height = 24.dp)) {
-        val step = size.width / 5f
-        for (i in 0 until 5) {
-            val wave = (sin(2f * PI.toFloat() * (t - i * 0.1f)) + 1f) / 2f
-            drawCircle(accent.copy(alpha = 0.3f + 0.7f * wave), radius = 4.dp.toPx() + 3.dp.toPx() * wave, center = Offset(step * (i + 0.5f), size.height / 2f))
+private fun Win10Boot() {
+    val p by rememberInfiniteTransition(label = "w10").animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(5500, easing = LinearEasing), RepeatMode.Restart),
+        label = "p",
+    )
+    Box(Modifier.fillMaxSize()) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height
+            drawRect(Color.Black)
+            val glow = Offset(w * .5f, h * .4f)
+            drawCircle(Brush.radialGradient(listOf(Color(0xFF0A3D7A), Color(0xFF041A38), Color.Transparent), center = glow, radius = h * .55f), radius = h * .55f, center = glow)
+            // light beams fanning out from behind the logo, like the hero wallpaper
+            for (i in 0 until 7) {
+                val a = (-60 + i * 20).toDouble() * PI / 180.0
+                val tip = Offset(glow.x + (h * cos(a)).toFloat(), glow.y + (h * sin(a)).toFloat())
+                val beam = Path().apply {
+                    moveTo(glow.x, glow.y)
+                    lineTo(tip.x, tip.y - h * .06f); lineTo(tip.x, tip.y + h * .06f); close()
+                }
+                drawPath(beam, Brush.linearGradient(listOf(Color(0x553FA9FF), Color.Transparent), start = glow, end = tip))
+                val left = Path().apply {
+                    moveTo(glow.x, glow.y)
+                    lineTo(2 * glow.x - tip.x, tip.y - h * .06f); lineTo(2 * glow.x - tip.x, tip.y + h * .06f); close()
+                }
+                drawPath(left, Brush.linearGradient(listOf(Color(0x333FA9FF), Color.Transparent), start = glow, end = Offset(2 * glow.x - tip.x, tip.y)))
+            }
+        }
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(painterResource(R.drawable.logo_win10), null, Modifier.size(132.dp))
+            Spacer(Modifier.height(96.dp))
+            Win10Spinner(p)
         }
     }
 }
 
-/** Eight dots in a ring; the head is the brightest and the ring turns once per cycle. */
+// Windows 10 spinner keyframes: phase -> clockwise angle from the top, from the classic CSS clone of the boot ring
+private val w10Keys = floatArrayOf(0f, .07f, .30f, .39f, .70f, .75f)
+private val w10Angles = floatArrayOf(225f, 345f, 455f, 690f, 815f, 945f)
+
+/** Angle of a dot at this phase, or null while it is hidden at the end of the cycle. */
+private fun w10Angle(phase: Float): Float? {
+    val q = (phase % 1f + 1f) % 1f
+    for (k in 0 until 5) if (q < w10Keys[k + 1]) {
+        val x = (q - w10Keys[k]) / (w10Keys[k + 1] - w10Keys[k])
+        val e = when (k) { 0, 4 -> 1f - (1f - x) * (1f - x); 2 -> x * x * (3f - 2f * x); else -> x }
+        return w10Angles[k] + (w10Angles[k + 1] - w10Angles[k]) * e
+    }
+    return null
+}
+
+/** Five white dots chasing round a ring; each trails the one before by 240 ms of a 5.5 s cycle. */
 @Composable
-private fun DotRing(accent: Color, t: Float) {
-    Canvas(Modifier.size(56.dp)) {
-        val r = size.minDimension / 2f - 6f
-        val dot = size.minDimension * 0.07f
+private fun Win10Spinner(p: Float) {
+    Canvas(Modifier.size(44.dp)) {
+        val r = size.minDimension / 2f - 3.dp.toPx()
         val c = Offset(size.width / 2f, size.height / 2f)
-        for (i in 0 until 8) {
-            val head = ((t - i / 8f) % 1f + 1f) % 1f
-            val a = Math.toRadians(-90.0 + i * 45.0)
-            val p = Offset(c.x + (r * cos(a)).toFloat(), c.y + (r * sin(a)).toFloat())
-            drawCircle(accent.copy(alpha = 0.15f + 0.85f * (1f - head)), radius = dot, center = p)
+        for (i in 0 until 5) {
+            val deg = w10Angle(p - i * 0.24f / 5.5f) ?: continue
+            val a = Math.toRadians(deg.toDouble())
+            drawCircle(Color.White, radius = 2.6.dp.toPx(), center = Offset(c.x + (r * sin(a)).toFloat(), c.y - (r * cos(a)).toFloat()))
         }
     }
 }
 
-/** XP style: a row of green blocks, a short run of them lit and moving along the bar. */
+/** XP boot: black screen, the logo, and three blue blocks running through a rounded box. */
 @Composable
-private fun BlockBar(block: Color, box: Color, t: Float) {
-    Canvas(Modifier.size(width = 180.dp, height = 16.dp)) {
-        drawRect(box.copy(alpha = 0.35f), size = size)
-        val n = 14
-        val w = size.width / n
-        val head = floor(t * n).toInt()
-        for (i in 0 until n) {
-            val lit = ((head - i) % n + n) % n < 5
-            if (lit) drawRect(block, topLeft = Offset(i * w + w * 0.15f, size.height * 0.2f), size = Size(w * 0.7f, size.height * 0.6f))
+private fun XpBoot(t: Float) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+            Image(painterResource(R.drawable.logo_xp), null, Modifier.background(Color.White, RoundedCornerShape(18.dp)).padding(16.dp).size(168.dp))
+            Spacer(Modifier.height(40.dp))
+            Canvas(Modifier.size(width = 130.dp, height = 18.dp)) {
+                val rad = CornerRadius(size.height / 3f)
+                drawRoundRect(Color(0xFFB2B2B2), cornerRadius = rad, style = Stroke(width = 1.5.dp.toPx()))
+                val inset = 3.dp.toPx()
+                val bw = 8.dp.toPx(); val gap = 2.dp.toPx()
+                val run = size.width - 2 * inset
+                clipRect(inset, inset, size.width - inset, size.height - inset) {
+                    for (k in 0 until 3) {
+                        // the group slides right and re-enters from the left
+                        val x = inset - 3 * (bw + gap) + (t * (run + 3 * (bw + gap))) + k * (bw + gap)
+                        drawRect(Brush.verticalGradient(listOf(Color(0xFF9DB8F5), Color(0xFF2D5FD8), Color(0xFF1A3F9E)), startY = inset, endY = size.height - inset), topLeft = Offset(x, inset), size = Size(bw, size.height - 2 * inset))
+                    }
+                }
+            }
         }
+    }
+}
+
+/** XP welcome step on the logon background. */
+@Composable
+private fun XpWelcome() {
+    Box(Modifier.fillMaxSize()) {
+        Image(painterResource(R.drawable.xp_logon_bg), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Text("welcome", Modifier.align(Alignment.Center), color = Color.White, fontSize = 46.sp, fontWeight = FontWeight.Bold, fontStyle = FontStyle.Italic,
+            style = TextStyle(shadow = Shadow(Color(0x88000000), Offset(3f, 3f), 4f)))
+    }
+}
+
+/** Windows 7 "Starting Windows": the coloured logo with a breathing glow on black. */
+@Composable
+private fun Win7Boot(t: Float) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Column(Modifier.align(Alignment.Center), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier.size(220.dp).background(Brush.radialGradient(listOf(Color.White.copy(alpha = .12f + .25f * pingPong(t)), Color.Transparent))),
+                contentAlignment = Alignment.Center,
+            ) { Image(painterResource(R.drawable.logo_win7), null, Modifier.size(150.dp).graphicsLayer { alpha = .75f + .25f * pingPong(t) }) }
+            Spacer(Modifier.height(24.dp))
+            Text("Starting Windows", color = Color(0xFFE8E8E8), fontSize = 20.sp)
+        }
+    }
+}
+
+/** Windows 7 welcome step on the uploaded wallpaper. */
+@Composable
+private fun Win7Welcome() {
+    Box(Modifier.fillMaxSize()) {
+        Image(painterResource(R.drawable.splash_win7_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        Text("Welcome", Modifier.align(Alignment.Center), color = Color.White, fontSize = 34.sp,
+            style = TextStyle(shadow = Shadow(Color(0xAA000000), Offset(2f, 2f), 6f)))
     }
 }
 
@@ -262,48 +345,19 @@ private fun TurningArc(accent: Color, t: Float) {
     }
 }
 
-/** The pulse line is drawn left to right, then starts over. */
+/** The pulse line spans the whole width (so it sits centred under the logo), drawn left to right, then starts over. */
 @Composable
 private fun PulseLine(color: Color, t: Float) {
-    Canvas(Modifier.size(width = 180.dp, height = 60.dp)) {
-        val k = size.minDimension / 108f
-        val p = pulsePath(k)
-        drawPath(p, color.copy(alpha = 0.25f), style = Stroke(width = 3f * k, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        clipRect(right = size.width * t) {
-            drawPath(p, color, style = Stroke(width = 3f * k, cap = StrokeCap.Round, join = StrokeJoin.Round))
-        }
-    }
-}
-
-/** The Windows 7 opening backdrop, drawn here like its look-alike: a bright blue sky, soft light in the top-left and a white glow on the right, and several green-white ribbons sweeping across. */
-@Composable
-private fun Win7Backdrop() {
-    Canvas(Modifier.fillMaxSize()) {
+    Canvas(Modifier.size(width = 200.dp, height = 48.dp)) {
         val w = size.width; val h = size.height
-        drawRect(Brush.linearGradient(listOf(Color(0xFF0E6FD0), Color(0xFF2A9BE8), Color(0xFF5CC3F2)), start = Offset(0f, 0f), end = Offset(w, h)))
-        drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .35f), Color.Transparent), center = Offset(w * .05f, h * .10f), radius = w * .7f), radius = w * .7f, center = Offset(w * .05f, h * .10f))
-        val glow = Offset(w * .82f, h * .70f)
-        drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .75f), Color.White.copy(alpha = .15f), Color.Transparent), center = glow, radius = w * .55f), radius = w * .55f, center = glow)
-        // the ribbons: a wide soft band, then a thin bright line on top of it
-        val ribbons = listOf(
-            listOf(0f to .22f, .30f to .10f, .62f to .38f, 1f to .26f) to 7f,
-            listOf(0f to .48f, .35f to .40f, .70f to .58f, 1f to .50f) to 9f,
-            listOf(0f to .70f, .40f to .62f, .75f to .80f, 1f to .72f) to 6f,
-            listOf(0f to .90f, .45f to .84f, .80f to .94f, 1f to .88f) to 5f,
-        )
-        ribbons.forEachIndexed { i, (pts, thick) ->
-            val p = Path().apply {
-                moveTo(0f, h * pts[0].second)
-                cubicTo(w * pts[1].first, h * pts[1].second, w * pts[2].first, h * pts[2].second, w, h * pts[3].second)
-            }
-            drawPath(p, Color(0xFFB8F5C8).copy(alpha = .30f - i * .03f), style = Stroke(width = thick.dp.toPx() * 2.4f, cap = StrokeCap.Round))
-            drawPath(p, Color(0xFFCFFFD9).copy(alpha = .55f - i * .06f), style = Stroke(width = thick.dp.toPx() * .5f, cap = StrokeCap.Round))
+        // same beat as the logo mark, x stretched over the width, y 34..68 mapped onto the height
+        val pts = listOf(0f to 54f, .12f to 54f, .24f to 40f, .40f to 68f, .55f to 34f, .70f to 54f, 1f to 54f)
+        val p = Path().apply {
+            pts.forEachIndexed { n, (x, y) -> val px = x * w; val py = (y - 30f) / 42f * h; if (n == 0) moveTo(px, py) else lineTo(px, py) }
         }
-        // small sparkles near the glow
-        for (k in 0 until 14) {
-            val x = w * (.55f + (k * 37 % 40) / 100f); val y = h * (.45f + (k * 53 % 35) / 100f)
-            drawCircle(Color.White.copy(alpha = .5f), radius = 1.2.dp.toPx(), center = Offset(x, y))
-        }
+        val st = Stroke(width = 3.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        drawPath(p, color.copy(alpha = 0.25f), style = st)
+        clipRect(right = w * t) { drawPath(p, color, style = st) }
     }
 }
 

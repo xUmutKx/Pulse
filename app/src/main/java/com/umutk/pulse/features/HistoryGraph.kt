@@ -23,6 +23,8 @@ import com.umutk.pulse.PCard
 import com.umutk.pulse.PHead
 import com.umutk.pulse.Sampler
 import com.umutk.pulse.T
+import com.umutk.pulse.m3Guides
+import com.umutk.pulse.m3Line
 import com.umutk.pulse.resColor
 import kotlinx.coroutines.delay
 
@@ -115,6 +117,17 @@ private fun Stat(title: String, value: Float?, modifier: Modifier = Modifier) {
 /** Percent values (0..100) drawn left to right, newest at the right edge. */
 @Composable
 private fun LineGraph(values: FloatArray, color: Color, modifier: Modifier = Modifier) {
+    if (T.material) {
+        // M3 Expressive: rounded tonal area, dotted guides, smooth gradient line
+        Canvas(modifier.clip(RoundedCornerShape(20.dp)).background(if (T.id == "amoled") Color.Black else color.copy(alpha = .08f))) {
+            m3Guides(T.line)
+            if (values.size < 2) return@Canvas
+            val pad = 3.dp.toPx()
+            val pts = values.mapIndexed { i, v -> Offset(size.width * (Hist.CAP - values.size + i) / (Hist.CAP - 1f), pad + (size.height - 2 * pad) * (1 - v.coerceIn(0f, 100f) / 100f)) }
+            m3Line(pts, color, size.height)
+        }
+        return
+    }
     Canvas(modifier) {
         val w = size.width
         val h = size.height

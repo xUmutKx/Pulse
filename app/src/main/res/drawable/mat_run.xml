@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Material Symbols "play_arrow" (Outlined, 24px), Apache-2.0, github.com/google/material-design-icons -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <group android:scaleX="0.025" android:scaleY="0.025" android:translateY="24">
+            <path android:fillColor="#FF000000" android:pathData="M320-200v-560l440 280-440 280Zm80-280Zm0 134 210-134-210-134v268Z"/>
+    </group>
+</vector>

@@ -15,6 +15,15 @@ object Opt {
     var hidden by mutableStateOf(setOf<String>())
     var tempF by mutableStateOf(false)
     var keepOn by mutableStateOf(false)
+    var crt by mutableStateOf(false)         // the old-monitor filter over the app
+    var signIn by mutableStateOf(false)      // on: the look's sign-in screen at start; off: Pulse opens directly
+    /** Old designs (default): Windows 95 / XP / 7 / 10 / 11 pop-ups drawn like the real systems. Off: the earlier, plainer menus. */
+    var oldPopups by mutableStateOf(true)
+    /** The same switch read as "the classic looks are drawn like the real systems" (95, XP, 7 windows, bars, controls). */
+    val authentic: Boolean get() = oldPopups
+    /** Windows 11 left menu: the first icon set (default) or the new Fluency one. */
+    var oldNavIcons by mutableStateOf(true)
+    var recycle by mutableStateOf(false)     // off: deleted files are gone at once; on: they go to the Recycle Bin page first
     var fontScale by mutableFloatStateOf(1f)
     var compact by mutableStateOf(false)
 
@@ -35,8 +44,8 @@ object Opt {
         lang = p.getString("lang", "auto") ?: "auto"
         amoledBg = p.getBoolean("amoledBg", true)
         hidden = p.getStringSet("hidden", emptySet()) ?: emptySet()
-        tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false)
-        fontScale = p.getFloat("fontScale", 1f); compact = p.getBoolean("compact", false)
+        tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false); signIn = p.getBoolean("signIn", false); crt = p.getBoolean("crt", false); oldPopups = p.getBoolean("oldPopups", true); recycle = p.getBoolean("recycle", false); oldNavIcons = p.getBoolean("oldNavIcons", true)
+        fontScale = p.getFloat("fontScale", 1f); compact = p.getBoolean("compact", false);
         ovOn = p.getBoolean("ovOn", false); notifOn = p.getBoolean("notifOn", false)
         ovAlpha = p.getFloat("ovAlpha", .75f); ovSize = p.getFloat("ovSize", 11f)
         ovItems = p.getStringSet("ovItems", setOf("cpu", "ram", "temp", "net")) ?: emptySet()
@@ -44,7 +53,7 @@ object Opt {
     }
 
     fun save(c: Context) {
-        sp(c).edit().putBoolean("amoledBg", amoledBg).putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn)
+        sp(c).edit().putBoolean("amoledBg", amoledBg).putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn).putBoolean("signIn", signIn).putBoolean("crt", crt).putBoolean("oldPopups", oldPopups).putBoolean("recycle", recycle).putBoolean("oldNavIcons", oldNavIcons)
             .putFloat("fontScale", fontScale).putBoolean("compact", compact).putBoolean("ovOn", ovOn).putBoolean("notifOn", notifOn)
             .putFloat("ovAlpha", ovAlpha).putFloat("ovSize", ovSize).putStringSet("ovItems", ovItems)
             .putInt("alertTemp", alertTemp).putInt("alertBat", alertBat).putInt("alertRam", alertRam).apply()
@@ -62,7 +71,7 @@ fun tr(en: String, turkish: String): String =
 fun pageName(id: String, en: String): String = when (id) {
     "processes" -> tr(en, "İşlemler"); "performance" -> tr(en, "Performans"); "history" -> tr(en, "Uygulama geçmişi")
     "startup" -> tr(en, "Başlangıç uygulamaları"); "details" -> tr(en, "Ayrıntılar"); "services" -> tr(en, "Hizmetler")
-    "apps" -> tr(en, "Uygulamalar"); "downloads" -> tr(en, "İndirilenler"); "files" -> tr(en, "Dosyalar")
+    "apps" -> tr(en, "Uygulamalar"); "widgets" -> tr(en, "Widget'lar"); "downloads" -> tr(en, "İndirilenler"); "files" -> tr(en, "Dosyalar")
     "device" -> tr(en, "Cihaz"); "health" -> tr(en, "Sağlık"); "terminal" -> tr(en, "Terminal"); "settings" -> tr(en, "Ayarlar")
     else -> en
 }

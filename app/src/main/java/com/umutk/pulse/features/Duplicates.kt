@@ -148,14 +148,7 @@ fun DuplicatesScreen(root: File, onBack: () -> Unit) {
         when {
             current == null -> {
                 Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
-                    if (progress.total > 0) {
-                        LinearProgressIndicator(
-                            progress = { progress.done.toFloat() / progress.total },
-                            modifier = Modifier.fillMaxWidth(),
-                        )
-                    } else {
-                        LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
-                    }
+                    com.umutk.pulse.PProgress(if (progress.total > 0) progress.done.toFloat() / progress.total else null)
                     Text(
                         "${progress.stage}${if (progress.total > 0) " ${progress.done}/${progress.total}" else ""}",
                         style = MaterialTheme.typography.bodyMedium,

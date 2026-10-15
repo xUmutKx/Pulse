@@ -22,13 +22,16 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -64,7 +67,7 @@ private fun formatSize(b: Long): String = when {
 private var lastDir: File? = null
 
 @Composable
-fun FolderTreeScreen(root: File, onBack: () -> Unit) {
+private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     var dir by remember(root) {
         mutableStateOf(lastDir?.takeIf { it.isDirectory && it.path.startsWith(root.path) } ?: root)
     }
@@ -112,7 +115,7 @@ fun FolderTreeScreen(root: File, onBack: () -> Unit) {
         )
 
         if (loading) {
-            LinearProgressIndicator(modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
+            com.umutk.pulse.Busy(modifier = Modifier.padding(top = 8.dp))
             Text(
                 "Measuring… ${scanned} files",
                 style = MaterialTheme.typography.bodyMedium,
@@ -168,4 +171,10 @@ fun FolderTreeScreen(root: File, onBack: () -> Unit) {
             }
         }
     }
+}
+
+/** Storage screens sit on the transparent page, so their text is white rather than the theme's dark text. */
+@Composable
+fun FolderTreeScreen(root: File, onBack: () -> Unit) {
+    CompositionLocalProvider(LocalContentColor provides com.umutk.pulse.T.text) { FolderTreeContent(root, onBack) }
 }

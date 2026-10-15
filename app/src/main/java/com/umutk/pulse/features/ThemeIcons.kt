@@ -19,3 +19,5 @@ object ThemeIcons {
         return cache[path]
     }
 }
+
+// Win11 look: every action has its own Fluent glyph in FluentPaths (keys: trash cut share properties open openFolder openWith star starOn lock unlock eyeOn eyeOff zip upload refresh sortName sortSize sortDate filter selectAll add newfile check edit save link pin tag storage bell shield bolt batteryFull clock home forward sizes recent emptyFolder bigFile dupes undo redo more globe image music video code print person key calendar mail chat cloud bug wrench flag gridView listView compare up down stop trashAll restore fullscreen zoomIn notes shieldOk warning error question usb sdcard folderLink foldersCopy). Menus pass these keys to PIcon / ExIcon.

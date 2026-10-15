@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.Color
 import com.umutk.pulse.PLoader
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -85,10 +86,11 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     var note by remember { mutableStateOf("") }
     // the shared walk of the storage (see StorageScan): the same numbers as the folder tree, and no second scan
     val snap by StorageScan.snap.collectAsState()
+    val scanned by StorageScan.scanned.collectAsState()
     LaunchedEffect(root) { StorageScan.ensure(root) }
     val summaries = snap?.takeIf { it.root == root.path }?.kinds
 
-    Column(Modifier.fillMaxSize().background(T.bg).padding(horizontal = 16.dp)) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = T.text)
@@ -102,12 +104,10 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
 
         val data = summaries
         if (data == null) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    PLoader()
-                    Spacer(Modifier.height(12.dp))
-                    Text("Scanning...", color = T.sub, fontSize = 13.sp)
-                }
+            // the same loading bar and count as the folder tree
+            Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+                com.umutk.pulse.Busy()
+                Text("Measuring… $scanned files", color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
             }
             return@Column
         }

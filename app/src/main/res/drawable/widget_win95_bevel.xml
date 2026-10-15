@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Windows 95: raised grey face. Outer edge white top-left, black bottom-right; inner edge #DFDFDF and #808080. -->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <item><shape android:shape="rectangle"><solid android:color="#FF000000" /></shape></item>
+    <item android:right="1dp" android:bottom="1dp"><shape android:shape="rectangle"><solid android:color="#FFFFFFFF" /></shape></item>
+    <item android:left="1dp" android:top="1dp" android:right="1dp" android:bottom="1dp"><shape android:shape="rectangle"><solid android:color="#FF808080" /></shape></item>
+    <item android:left="1dp" android:top="1dp" android:right="2dp" android:bottom="2dp"><shape android:shape="rectangle"><solid android:color="#FFDFDFDF" /></shape></item>
+    <item android:left="2dp" android:top="2dp" android:right="2dp" android:bottom="2dp"><shape android:shape="rectangle"><solid android:color="#FFC0C0C0" /></shape></item>
+</layer-list>

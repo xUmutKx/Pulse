@@ -1,5 +1,15 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.Image
+import androidx.compose.material.icons.outlined.Crop
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.layout.Row
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.activity.result.contract.ActivityResultContracts
@@ -7,8 +17,12 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.*
 import com.umutk.pulse.features.DnsSettings
 import com.umutk.pulse.features.GlassPreview
@@ -24,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.font.FontWeight
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -46,8 +61,6 @@ private fun SliderRow(title: String, value: Float, range: ClosedFloatingPointRan
 @Composable
 fun GeneralSettings() {
     val ctx = LocalContext.current
-    WindowThemeSettings()
-    InstallWindowSettings()
     WatchdogSettings()
     DnsSettings()
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
@@ -81,8 +94,19 @@ fun GeneralSettings() {
     PCard {
         SwitchRow("Temperature: Fahrenheit", "Celsius when off", Opt.tempF) { Opt.tempF = it; Opt.save(ctx) }
         SwitchRow("Keep screen on", "The screen stays on while Pulse is open", Opt.keepOn) { Opt.keepOn = it; Opt.save(ctx) }
+        SwitchRow(tr("Old monitor filter", "Eski monitör filtresi"), tr("Scan lines and dots, like a CRT", "CRT gibi tarama çizgileri ve noktalar"), Opt.crt) { Opt.crt = it; Opt.save(ctx) }
+        SwitchRow(tr("Sign-in screen at start", "Açılışta giriş ekranı"), tr("Windows 95, XP, 7, 10 and 11 looks", "Windows 95, XP, 7, 10 ve 11 görünümleri"), Opt.signIn) { Opt.signIn = it; Opt.save(ctx) }
         SliderRow("Text size ${(Opt.fontScale * 100).toInt()}%", Opt.fontScale, .8f..1.4f, { Opt.fontScale = it }) { Opt.save(ctx) }
     }
+    PCard {
+        Text(tr("Language", "Dil"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf("auto" to "Phone / Telefon", "en" to "English", "tr" to "Türkçe").forEach { (v, label) ->
+                PChip(Opt.lang == v, label) { Opt.lang = v; Opt.save(ctx) }
+            }
+        }
+    }
+    PCard { AppIconChooser() }
     PCard {
         Text("Pages shown", color = T.sub, fontSize = 12.sp)
         Pages.forEach { p ->
@@ -129,6 +153,7 @@ fun MonitorSettings() {
             PButton("Notification settings") { ctx.startActivity(Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).putExtra(Settings.EXTRA_APP_PACKAGE, ctx.packageName).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         }
     }
+    PCard { SwitchRow("Ask before ending", "Prevents ending a process by accident", Cfg.confirmKill) { Cfg.setConfirm(ctx, it) } }
 }
 
 /** Settings > Report: everything in one text, to share or copy. */
@@ -155,78 +180,56 @@ fun ReportSettings() {
     }
 }
 
-/** Settings > General, top: the look of pop-up windows, dialogs and menus. */
-@Composable
-fun WindowThemeSettings() {
-    val ctx = LocalContext.current
-    PCard {
-        Text("Window theme", color = Look.accent, fontSize = 15.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("win" to "Windows", "material" to "Material", "amoled" to "AMOLED").forEach { (id, n) ->
-                PChip(Look.windowTheme == id, n) { Cfg.setWindowTheme(ctx, id) }
-            }
-        }
-    }
-    BackdropSettings()
-    GlassSettings()
-}
-
-/** Glass panels: how soft the blur is and how strong the tint is, with a live preview. */
-@Composable
-fun GlassSettings() {
-    val ctx = LocalContext.current
-    PCard {
-        Text("Glass", color = Look.accent, fontSize = 15.sp)
-        GlassPreview()
-        SliderRow("Blur ${GlassPrefs.blur}", GlassPrefs.blur.toFloat(), 4f..40f, { GlassPrefs.blur = it.toInt() }) { GlassPrefs.save(ctx) }
-        SliderRow("Tint ${(GlassPrefs.tint * 100).toInt()}%", GlassPrefs.tint, 0f..1f, { GlassPrefs.tint = it }) { GlassPrefs.save(ctx) }
-    }
-}
-
-/** Windows 11 windows: a blurred picture behind the panels (phone wallpaper, opening picture, your own, or off). */
+/** Windows 11: a blurred picture behind the windows (phone wallpaper, the bundled A-D pictures, your own, or off). */
 @Composable
 fun BackdropSettings() {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
+    val bd = com.umutk.pulse.features.Backdrop
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.set(ctx, "custom", uri) }
+        if (uri != null) scope.launch(Dispatchers.IO) { bd.set(ctx, "custom", uri) }
     }
     PCard {
         Text("Background behind windows", color = Look.accent, fontSize = 15.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf("off" to "Off", "phone" to "Phone wallpaper").forEach { (id, n) ->
-                PChip(com.umutk.pulse.features.Backdrop.mode == id, n) { scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.set(ctx, id) } }
+                PChip(bd.mode == id, n) { scope.launch(Dispatchers.IO) { bd.set(ctx, id) } }
             }
-            PChip(com.umutk.pulse.features.Backdrop.mode == "custom", "Own picture") { pick.launch(arrayOf("image/*")) }
+            PChip(bd.mode == "custom", "Own picture") { pick.launch(arrayOf("image/*")) }
         }
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("downloads" to "Downloads top", "app" to "Whole app").forEach { (id, n) ->
-                PChip(com.umutk.pulse.features.Backdrop.scope == id, n) { scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.setScope(ctx, id) } }
+        // linear 0-40 dp: small moves change little, 0 is sharp; the blur is rendered once on release
+        val b = bd.blur
+        SliderRow("Blur ${b.toInt()}", (b / 40f).coerceIn(0f, 1f), 0f..1f, { bd.blur = it * 40f }) { bd.saveBlur(ctx) }
+        var editing by remember { mutableStateOf(false) }
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (bd.image != null) PButton(tr("Edit", "Düzenle"), icon = androidx.compose.material.icons.Icons.Outlined.Crop) { editing = true }
+            listOf("top" to tr("Top", "Üst"), "center" to tr("Middle", "Orta"), "bottom" to tr("Bottom", "Alt")).forEach { (id, n) ->
+                PChip(bd.align == id, n) { bd.setAlign(ctx, id) }
             }
         }
-        SliderRow("Blur ${com.umutk.pulse.features.Backdrop.blur.toInt()}", com.umutk.pulse.features.Backdrop.blur, 0f..60f, { com.umutk.pulse.features.Backdrop.blur = it }) { com.umutk.pulse.features.Backdrop.saveBlur(ctx) }
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("top" to "Top", "center" to "Middle", "bottom" to "Bottom").forEach { (id, n) ->
-                PChip(com.umutk.pulse.features.Backdrop.align == id, n) { com.umutk.pulse.features.Backdrop.setAlign(ctx, id) }
-            }
-        }
-        // the 16 bundled pictures, in the four themes of the pack: A (1-4), B (5-8), C (9-12), D (13-16)
-        // tapping a theme title sets its accent colour and its first picture; the pictures below still pick one by one
+        if (editing) com.umutk.pulse.features.BackdropEditor { editing = false }
+        // the 16 bundled pictures in four themes: A (1-4), B (5-8), C (9-12), D (13-16); a theme title sets its accent and first picture
         listOf("A" to 1, "B" to 5, "C" to 9, "D" to 13).forEachIndexed { g, (theme, first) ->
-            Text("Theme $theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp).clickable {
+            Text("Theme $theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.clickable {
                 Cfg.setAccent(ctx, 7 + g)
-                scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.set(ctx, "pack$first") }
-            })
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$first") }
+            }.padding(top = 6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 (first until first + 4).forEach { i ->
-                    PChip(com.umutk.pulse.features.Backdrop.mode == "pack$i", "$theme$i") { scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.set(ctx, "pack$i") } }
+                    val res = remember(i) { ctx.resources.getIdentifier("win11_wall_$i", "drawable", ctx.packageName) }
+                    val picked = bd.mode == "pack$i"
+                    Box(Modifier.weight(1f).aspectRatio(1.6f).clip(RoundedCornerShape(8.dp))
+                        .border(if (picked) 3.dp else 1.dp, if (picked) Look.accent else T.line, RoundedCornerShape(8.dp))
+                        .clickable { scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$i") } }) {
+                        if (res != 0) Image(painterResource(res), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                    }
                 }
             }
         }
     }
 }
 
-/** Switches for what the install window shows. */
+/** Settings > Installer: what the install window shows, how it looks and how it loads. */
 @Composable
 fun InstallWindowSettings() {
     val ctx = LocalContext.current
@@ -248,9 +251,20 @@ fun InstallWindowSettings() {
     }
     PCard {
         Text("Window look", color = Look.accent, fontSize = 15.sp)
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("win11" to "Windows 11", "material" to "Material", "amoled" to "AMOLED black").forEach { (id, n) ->
-                PChip(InstallShow.theme == id, n) { InstallShow.setTheme(ctx, id) }
+        // one preview per look, three to a row, the name under each; "App theme" shows the look of the app right now
+        val installLooks = listOf("material" to "Material You", "app" to tr("App theme", "Uygulama teması"), "amoled" to "AMOLED black", "win11" to "Windows 11", "win10" to "Windows 10",
+            "win7" to "Windows 7", "xp" to "Windows XP", "win95" to "Windows 95")
+        installLooks.chunked(3).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (id, n) ->
+                    val sel = InstallShow.theme == id
+                    Column(Modifier.weight(1f).clickable { InstallShow.setTheme(ctx, id) }
+                        .border(if (sel) 2.dp else 1.dp, if (sel) Look.accent else T.line, RoundedCornerShape(10.dp)).padding(6.dp)) {
+                        ThemePreview(if (id == "app") Look.theme else Themes.first { it.id == id })
+                        Text(n, color = if (sel) Look.accent else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
     }
@@ -302,7 +316,19 @@ fun ThemeWallpaperRow(lookId: String) {
             // Windows 11: the picked wallpaper is the app background at once, blurred under Mica (no see-through blue)
             if (lookId == "win11") scope.launch(Dispatchers.IO) {
                 com.umutk.pulse.features.Backdrop.set(ctx, "custom", u)
-                com.umutk.pulse.features.Backdrop.setScope(ctx, "app")
+            }
+        }
+    }
+    // the stock pictures of this look's era (Windows 11 has its own A-D packs under Background); the own picture wins while one is set
+    val walls = com.umutk.pulse.features.wallsFor(lookId)
+    if (walls.isNotEmpty()) {
+        val sel = com.umutk.pulse.features.wallSel(lookId)
+        Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            walls.forEachIndexed { i, id ->
+                val on = uri == null && sel == i
+                Image(painterResource(id), null, Modifier.size(width = 96.dp, height = 60.dp).clip(RoundedCornerShape(6.dp))
+                    .border(if (on) 3.dp else 1.dp, if (on) Look.accent else T.sub, RoundedCornerShape(6.dp))
+                    .clickable { com.umutk.pulse.features.setWallSel(ctx, lookId, i); setThemeWallpaper(ctx, lookId, null); uri = null }, contentScale = ContentScale.Crop)
             }
         }
     }
@@ -313,4 +339,72 @@ fun ThemeWallpaperRow(lookId: String) {
             if (lookId == "win11") scope.launch(Dispatchers.IO) { com.umutk.pulse.features.Backdrop.set(ctx, "off") }
         }
     }
+}
+
+private class LauncherIcon(val alias: String, val fg: Int, val bg: Int)
+private val launcherIcons = listOf(
+    LauncherIcon("IconDefault", R.drawable.ic_ti_default, R.color.ti_bg_default),
+    LauncherIcon("IconWin95", R.drawable.ic_ti_95, R.color.ti_bg_95),
+    LauncherIcon("IconXp", R.drawable.ic_ti_xp, R.color.ti_bg_xp),
+    LauncherIcon("IconWin7", R.drawable.ic_ti_7, R.color.ti_bg_7),
+    LauncherIcon("IconWin10", R.drawable.ic_ti_10, R.color.ti_bg_10),
+    LauncherIcon("IconWin11", R.drawable.ic_ti_11, R.color.ti_bg_11),
+)
+
+/** Launcher icon choice: exactly one activity-alias stays enabled; the new one is enabled before the others are switched off. */
+@Composable
+private fun AppIconChooser() {
+    val ctx = LocalContext.current
+    fun on(i: LauncherIcon): Boolean {
+        val st = ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + i.alias))
+        return st == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED ||
+            (st == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && i === launcherIcons[0])
+    }
+    var cur by remember { mutableStateOf((launcherIcons.firstOrNull { on(it) } ?: launcherIcons[0]).alias) }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        launcherIcons.forEach { i ->
+            Box(
+                Modifier.size(56.dp).clip(RoundedCornerShape(16.dp))
+                    .background(androidx.compose.ui.res.colorResource(i.bg))
+                    .border(if (cur == i.alias) 3.dp else 1.dp, if (cur == i.alias) Look.accent else T.sub, RoundedCornerShape(16.dp))
+                    .clickable {
+                        val pm = ctx.packageManager
+                        fun set(a: LauncherIcon, e: Boolean) = pm.setComponentEnabledSetting(
+                            android.content.ComponentName(ctx, "com.umutk.pulse." + a.alias),
+                            if (e) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                            android.content.pm.PackageManager.DONT_KILL_APP,
+                        )
+                        set(i, true)
+                        launcherIcons.forEach { if (it !== i) set(it, false) }
+                        cur = i.alias
+                    },
+            ) { Image(painterResource(i.fg), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f }) }
+        }
+    }
+}
+
+/** Settings > Functions: what Pulse does, not how it looks: the recycle bin, how often data is read, the report and the root / Shizuku access. */
+@Composable
+fun FunctionsSettings() {
+    val ctx = LocalContext.current
+    PCard {
+        SwitchRow(tr("Recycle bin", "Çöp kutusu"), tr("Deleted files wait there; off deletes for good", "Silinen dosyalar orada bekler; kapalıyken kalıcı silinir"), Opt.recycle) { Opt.recycle = it; Opt.save(ctx) }
+        // the recycle bin page of the file manager
+        if (Opt.recycle)
+        Row(Modifier.fillMaxWidth().clickable { com.umutk.pulse.widgets.WidgetOpen.page = "recycle" }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("delete", T.text, 22.dp)
+            Spacer(Modifier.width(12.dp))
+            Text(tr("Open Recycle bin", "Çöp kutusunu aç"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            PIcon("chevron", T.sub, 18.dp)
+        }
+    }
+    PCard {
+        SwitchRow(tr("Old icons", "Eski ikonlar"), tr("Windows 11 left menu: the first icon set; off uses the new Fluency icons", "Windows 11 sol menüsü: ilk ikon seti; kapalıyken yeni Fluency ikonları"), Opt.oldNavIcons) { Opt.oldNavIcons = it; Opt.save(ctx) }
+    }
+    Text(tr("Refresh rate", "Yenileme hızı"), color = Look.accent, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+    RefreshSettings()
+    Text(tr("Report", "Rapor"), color = Look.accent, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+    ReportSettings()
+    Text(tr("Permissions", "İzinler"), color = Look.accent, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+    RootSettings()
 }

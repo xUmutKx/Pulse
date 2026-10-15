@@ -9,11 +9,17 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.clickable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -24,10 +30,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/** A section that starts folded: the title with a chevron, the body when it is opened. */
+@Composable
+private fun Fold(title: String, body: @Composable () -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = if (open) 180f else 0f })
+    }
+    if (open) body()
+}
+
 /** Settings > About: an animated heartbeat line, who made it, version and device, the GitHub link and the privacy promise. */
 @Composable
 fun AboutPage() {
     val ctx = LocalContext.current
+    var licences by remember { mutableStateOf(false) }
+    if (licences) { LicencesPage { licences = false }; return }
     val ver = remember { try { ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: "" } catch (e: Exception) { "" } }
     val t = rememberInfiniteTransition(label = "about")
     val p by t.animateFloat(0f, 1f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "beat")
@@ -60,19 +79,61 @@ fun AboutPage() {
         PCard {
             InfoRows(listOf("Version" to ver, "Package" to ctx.packageName, "Android" to "${android.os.Build.VERSION.RELEASE} (API ${android.os.Build.VERSION.SDK_INT})", "Device" to "${android.os.Build.MANUFACTURER} ${android.os.Build.MODEL}"))
         }
+        val openTool = LocalOpenTool.current
+        PButton(tr("Guide", "Kılavuz"), Modifier.fillMaxWidth()) { openTool("guide") }
         PButton("GitHub · xUmutKx/Pulse", Modifier.fillMaxWidth()) { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/xUmutKx/Pulse")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         Text("A task manager for Android with the look of Windows, plus a file explorer, downloads, an app installer, network usage, a 20-tool toolkit, widgets and a terminal.", color = T.sub, fontSize = 13.sp)
         PCard {
-            Text("Device troubleshoot", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text("A checklist of common Android problems, taken from AndroDoc (the troubleshooting app by UmutK). Each item shows what to check and how to fix it. Fixes are shown as text; Pulse does not run them for you.", color = T.text, fontSize = 13.sp)
+            Fold("Device troubleshoot") {
+                Text("A checklist of common Android problems, taken from AndroDoc (the troubleshooting app by UmutK). Each item shows what to check and how to fix it. Fixes are shown as text; Pulse does not run them for you.", color = T.text, fontSize = 13.sp)
+            }
+            Fold("Authenticator") {
+                Text("Two-factor codes (TOTP, 6 digits, 30 seconds). Add an account with its base32 secret or an otpauth:// link. Accounts are stored encrypted with a key kept in the Android Keystore.", color = T.text, fontSize = 13.sp)
+            }
+            Fold("Privacy") {
+                Text("No data is shared. Pulse reads your phone's numbers on the phone and keeps them there. The only network use is the latency test, and only when you press Start. Authenticator secrets never leave the phone.", color = T.text, fontSize = 13.sp)
+            }
+        }
+        // licences and credits open on their own page
+        PCard(Modifier.clickable { licences = true }) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Licences and thanks", "Lisanslar ve teşekkürler"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
+                PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = -90f })
+            }
+        }
+    }
+}
+
+/** Settings > About > Licences and thanks: where the pictures, icons and lists come from. */
+@Composable
+private fun LicencesPage(onBack: () -> Unit) {
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onBack).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("back", T.text, 22.dp)
+            Text(tr("Licences and thanks", "Lisanslar ve teşekkürler"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 10.dp))
         }
         PCard {
-            Text("Authenticator", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text("Two-factor codes (TOTP, 6 digits, 30 seconds). Add an account with its base32 secret or an otpauth:// link. Accounts are stored encrypted with a key kept in the Android Keystore.", color = T.text, fontSize = 13.sp)
-        }
-        PCard {
-            Text("Privacy", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text("No data is shared. Pulse reads your phone's numbers on the phone and keeps them there. The only network use is the latency test, and only when you press Start. Authenticator secrets never leave the phone.", color = T.text, fontSize = 13.sp)
+            Text(
+                "Wikimedia Commons (each picture keeps its own licence):\n" +
+                "Windows 95 logo (logo_win95.png): commons.wikimedia.org/wiki/File:Windows_95_logo.svg\n" +
+                "Windows XP logo (logo_xp.png): commons.wikimedia.org/wiki/Category:Windows_XP_logos\n" +
+                "Windows 7 logo (logo_win7.png): commons.wikimedia.org/wiki/Category:Windows_7_logos\n" +
+                "Windows 8 logo (logo_win8.png): commons.wikimedia.org/wiki/File:Windows_8_logo_and_wordmark.svg\n" +
+                "Windows 10 logo (logo_win10.png): commons.wikimedia.org/wiki/File:Windows_10_Logo.svg\n" +
+                "Windows 11 logo (logo_win11.png): commons.wikimedia.org/wiki/File:Windows_11_logo.svg\n" +
+                "Bliss, Windows XP wallpaper (splash_xp_bliss.jpg), Charles O'Rear, CC0: commons.wikimedia.org/wiki/Category:Bliss\n" +
+                "Android Nougat wallpaper (splash_android.png), AOSP, Apache 2.0: commons.wikimedia.org/wiki/File:Android_Nougat_default_wallpaper_(sw720dp).png\n" +
+                "Windows 7 and Windows 11 wallpapers (splash_win7_wallpaper.jpg, splash_win11_wallpaper.jpg): source not recorded.\n" +
+                "Windows 11 icons: Complete-Windows-11-icon-pack.\n" +
+                "Windows 7 icons: Windows-7-master (Se7en icon theme).\n" +
+                "Windows XP icons: Windows XP High Resolution Icon Pack.\n" +
+                "Windows 95 and XP icons: win95-winxp_icons.\n" +
+                "Windows 11 wallpapers: windows11wallpapers.\n" +
+                "Debloat list: Universal Android Debloater (Next Generation).\n" +
+                "Windows 7 gadget art (clocks, CPU Meter, Calendar, Battery, Drive Info): the Windows Sidebar gadgets from the Gadgets-ESR1 pack.\n" +
+                "Material and Fluent icons: Google Material Symbols, Microsoft Fluent System Icons (MIT).\n" +
+                "Shizuku API: RikkaApps Shizuku (MIT).",
+                color = T.sub, fontSize = 12.sp)
         }
         Text("Icons in the Windows themes: Microsoft Fluent System Icons (MIT). The Shizuku API files are from RikkaApps Shizuku (MIT).", color = T.sub, fontSize = 11.sp)
     }

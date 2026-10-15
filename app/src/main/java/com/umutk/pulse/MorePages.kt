@@ -2,6 +2,7 @@ package com.umutk.pulse
 
 import com.umutk.pulse.features.AppManagerScreen
 import com.umutk.pulse.features.NetworksSection
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -24,10 +25,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 @Composable
-fun PHead(text: String, trailing: String = "") {
+fun PHead(text: String, trailing: String = "", guide: String = "") {
+    var info by remember { mutableStateOf(false) }
+    if (info) com.umutk.pulse.features.GuideDialog(guide) { info = false }
     Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
         Text(text, color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        if (trailing.isNotEmpty()) Text(trailing, color = T.sub, fontSize = 12.sp)
+        if (guide.isNotEmpty()) androidx.compose.foundation.layout.Box(Modifier.size(32.dp).clickable { info = true }, contentAlignment = Alignment.Center) { PIcon("info", T.sub, 20.dp) }
     }
 }
 
