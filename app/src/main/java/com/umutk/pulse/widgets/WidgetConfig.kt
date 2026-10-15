@@ -117,7 +117,9 @@ class WidgetConfigActivity : ComponentActivity() {
                     text = {
                         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                             val accent = own.value.takeIf { it != 0 } ?: WidgetAccent.app(c)
-                            Box(Modifier.fillMaxWidth().height(150.dp), contentAlignment = Alignment.Center) {
+                            Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                              // the box takes the widget's own aspect, so a wide or tall skin is shown whole and centred
+                              Box(if (kind != null) Modifier.fillMaxSize() else Modifier.aspectRatio(if (skin != null) skin.skin.w.toFloat() / skin.skin.h else 1f)) {
                                 if (skin != null) {
                                     val bmp = remember(accent, rev.value) { runCatching { Skins.draw(c, skin.skin, SkinData.read(c), accent, widgetId) }.getOrNull() }
                                     if (bmp != null) Image(bmp.asImageBitmap(), skin.skin.label, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
@@ -134,6 +136,7 @@ class WidgetConfigActivity : ComponentActivity() {
                                         frame.addView(View(c).apply { setOnClickListener {} }, FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT))
                                     },
                                 )
+                              }
                             }
                             if (kind != null) {
                                 // the styles as logos, five to a row, the picked one's name above them
@@ -147,7 +150,7 @@ class WidgetConfigActivity : ComponentActivity() {
                             }
                             if (face == null) {
                                 Text("Opacity", color = wl.text, fontSize = 14.sp)
-                                val shown = opacity.value ?: if (skin != null && skin.skin.family != SkinFamily.WIN11) 1f else WidgetOver.opacity(c, widgetId, if (skin != null) skin.skin.family.theme else chosen.value.design)
+                                val shown = opacity.value ?: WidgetOver.opacity(c, widgetId, if (skin != null) skin.skin.family.theme else chosen.value.design)
                                 PSlider(shown, { opacity.value = it }, 0f..1f) { apply() }
                             }
                             if (win11) {
