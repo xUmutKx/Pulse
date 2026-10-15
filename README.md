@@ -1,27 +1,43 @@
-# Pulse
+### Pulse
 
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
 
 Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK is about 11 MB.
 
-## Features
+### Features
 
-### Task manager
+#### Task manager
 
 - **Processes**: apps and background processes in groups, with CPU and memory per process and an End task button.
-- **Performance**: live graphs for CPU, memory, storage, network, GPU, battery and temperature.
+- **Performance**: live graphs for CPU, memory, storage, network, GPU, battery and temperature. Thermal, Battery, Storage and Memory each have a detail page with a verdict and 30-minute graphs.
 - **App history**: foreground time per app today, screen unlocks and a notification count, as a list or a pie chart. Needs usage access; the notification count needs notification access.
 - **Startup apps**: boot receivers, which you can switch off with root or Shizuku.
 - **Services**: running services (root only).
 - **Details**: search, filter, sort, and open the app.
-- **Guardians**: a detail page each for Thermal, Battery, Storage and Memory, with a verdict and 30-minute graphs.
 
-### App manager and debloater
+#### Processes
+
+![Processes](docs/screenshots/processes.png)
+
+#### Performance
+
+![Performance](docs/screenshots/performance.png)
+
+#### Overview
+
+![Overview](docs/screenshots/overview.png)
+
+#### CPU cores
+
+![CPU cores](docs/screenshots/cores.png)
+
+#### App manager and debloater
 
 - **Apps**: search, filter (All, User, System, Disabled, Battery limit, Xposed modules) and sort (name, size, install date, last used), each with its own icon. Open an app to open it, see its app settings, force stop it, uninstall it, or extract its APK to `Downloads/Pulse/extract`.
 - **Debloat**: remove system apps you do not need. Every app is marked **Safe**, **Expert** or **Unsafe**, with a short description of what it does. Removal is for your user only: the app's data stays, and the **Reinstall** tab brings any removed app back. **Undo last** at the top restores the most recent removal. The list is downloaded from GitHub with **Update list**, and a copy is bundled with the app for offline use. Debloat needs root.
 
-### Monitoring
+
+#### Monitoring
 
 - **Floating monitor** over other apps, live numbers in a notification, and alerts for temperature, battery and memory with limits you set.
 - **Quick Settings tiles** for the monitor, Private DNS and the toolkit tools.
@@ -29,13 +45,29 @@ Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK 
 - **Device**: system, CPU and per-core frequency and governors, memory, storage, battery, network with a latency test, thermal zones, display, camera, sensors, media and DRM, system properties and a short benchmark.
 - **Health**: step counter, heart rate from the camera flash, and location tracking. Each is asked for only when you turn it on.
 
-### Files and install
+#### Widgets and gadgets
+
+Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery and drive; XP and 95 classics; Windows 11 tiles that follow your accent colour; Material You, AMOLED, glass and iOS-style tiles.
+
+<p>
+<img src="docs/screenshots/win7-gadgets.png" width="32%" alt="Windows 7 gadget clocks">
+<img src="docs/screenshots/app-manager.png" width="32%" alt="App manager">
+</p>
+
+- **Windows 7 gadgets**: the nine original clock faces, live, with a second hand.
+- **App manager**: filter and sort your apps, open the details of any app, and jump to Debloat to remove system apps with descriptions from the Universal Debloater list.
+
+#### Files and install
 
 - **Files**: a file explorer with a trash folder. Deleted files go to `.pulse_trash` until the next delete, so Undo can bring them back. Each file has its menu on the right, with the three dots stacked.
 - **Installer**: installs APK, APKS, APKM, XAPK and zip bundles. Modes are dialog, background, auto and silent. Silent install uses root or Shizuku. The installer detects Xposed modules and has an LSPosed button. You can require biometrics before each install. The install window has three looks (Windows 11, Material or AMOLED black) and three loading styles: round, rounded bar, or wave. The loader is always white.
 - **Downloads**: several connections for files the server can split, and downloads keep running in the background. Paste a link, or share a link from your browser to Pulse.
 
-### Tools
+#### App lock
+
+Lock any app behind a pattern, PIN or password, with optional fingerprint. The lock screen covers the app before you see it, also when the app opens as a chat bubble or a floating window. It follows the look you have chosen. Needs the accessibility service; usage access and root or Shizuku make it quicker.
+
+#### Tools
 
 - **Toolkit**: 20 tools, including compass (every direction is written round the dial), level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder. Dice, coin and sound mode act right in the Quick Settings panel without opening the app.
 - **Terminal**: runs commands on the phone's shell, with ADB-style quick commands (model, battery, packages, logcat and more). A Run in Termux button sends a command to Termux instead.
@@ -44,7 +76,7 @@ Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK 
 - **Watchdog**: every 15 minutes it restarts the monitor and any running downloads that Android has stopped.
 - **Cache cleaner**, **folder sizes**, **type breakdown** and **temperature graph**, from the Tools page. Pie charts draw each slice flush against the next.
 
-## Themes
+### Themes
 
 Pulse has these looks, each with its own title bar, buttons and window edge:
 
@@ -60,11 +92,25 @@ You can choose light, dark or the system setting. The Windows 11, Windows 10 and
 
 Each look can have its own wallpaper. The Settings page shows the picture in the theme's preview, and sliders place it across and up or down.
 
-## Language
+#### The looks
+
+Pulse can dress up as Windows 95, XP, 7, 10 or 11, or stay plain Material You / AMOLED. Each look draws its own windows, menus, buttons, dialogs and graphs. Settings has a switch to go back to the simpler earlier versions of the old looks.
+
+<p>
+<img src="docs/screenshots/win95-performance.png" width="32%" alt="Windows 95 Performance tab">
+<img src="docs/screenshots/win7-startup.png" width="32%" alt="Windows 7 Startup apps">
+<img src="docs/screenshots/xp-widgets.png" width="32%" alt="Windows XP widgets">
+</p>
+
+- **Windows 95**: the Performance tab with the CPU graph in green on black, the CPU details and a status bar at the bottom.
+- **Windows 7**: Startup apps with the Aero frame, so you can stop apps from starting at boot (root).
+- **Windows XP**: the Widgets page. Pick a look from the logo row and the list shows only that look's widgets.
+
+### Language
 
 Pulse follows the phone language by default. You can pick English or Türkçe on the **About** page, with a direct switch.
 
-## Permissions
+### Permissions
 
 Pulse asks for these. Most are optional and only used by the feature named.
 
@@ -81,7 +127,7 @@ Pulse asks for these. Most are optional and only used by the feature named.
 - **Termux run command**: the Run in Termux button.
 - **Query all packages**: the app list.
 
-## Root and Shizuku
+### Root and Shizuku
 
 Pulse works without root. Root or Shizuku unlock more.
 
@@ -99,7 +145,7 @@ Pulse works without root. Root or Shizuku unlock more.
 
 Without root or Shizuku you still get memory, battery, storage, network, device info, sensors, the dialog installer, downloads, files, the toolkit, widgets and the floating monitor.
 
-## Build
+### Build
 
 Pulse is written in Kotlin with Jetpack Compose. The project has no Gradle wrapper, so build with Android Studio, or with a Gradle 8.9 install.
 
@@ -111,7 +157,7 @@ gradle :app:assembleRelease
 
 The APK is written to `app/build/outputs/apk/release/`. Release builds are currently signed with the debug key, so change the signing config before you publish one.
 
-## Licences
+### Licences
 
 - **Microsoft Fluent System Icons** (MIT). The icons in the Windows themes are outlines taken from them by `tools/fetch_icons.py` into `FluentPaths.kt`.
 - **Universal Android Debloater package list** (GPL-3.0, Universal-Debloater-Alliance). The debloater downloads it from GitHub; a copy is bundled in `app/src/main/assets/debloat/uad_lists.json`.
@@ -120,49 +166,3 @@ The APK is written to `app/build/outputs/apk/release/`. Release builds are curre
 - **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
 
 Pulse's own code has no licence file yet.
-
-## Screenshots
-
-Screenshots are in `docs/screenshots/`.
-
-### The looks
-
-Pulse can dress up as Windows 95, XP, 7, 10 or 11, or stay plain Material You / AMOLED. Each look draws its own windows, menus, buttons, dialogs and graphs. Settings has a switch to go back to the simpler earlier versions of the old looks.
-
-<p>
-<img src="docs/screenshots/win95-performance.png" width="32%" alt="Windows 95 Performance tab">
-<img src="docs/screenshots/win7-startup.png" width="32%" alt="Windows 7 Startup apps">
-<img src="docs/screenshots/xp-widgets.png" width="32%" alt="Windows XP widgets">
-</p>
-
-- **Windows 95**: the Performance tab with the CPU graph in green on black, the CPU details and a status bar at the bottom.
-- **Windows 7**: Startup apps with the Aero frame, so you can stop apps from starting at boot (root).
-- **Windows XP**: the Widgets page. Pick a look from the logo row and the list shows only that look's widgets.
-
-### Widgets and gadgets
-
-Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery and drive; XP and 95 classics; Windows 11 tiles that follow your accent colour; Material You, AMOLED, glass and iOS-style tiles.
-
-<p>
-<img src="docs/screenshots/win7-gadgets.png" width="32%" alt="Windows 7 gadget clocks">
-<img src="docs/screenshots/app-manager.png" width="32%" alt="App manager">
-</p>
-
-- **Windows 7 gadgets**: the nine original clock faces, live, with a second hand.
-- **App manager**: filter and sort your apps, open the details of any app, and jump to Debloat to remove system apps with descriptions from the Universal Debloater list.
-
-### Processes
-
-![Processes](docs/screenshots/processes.png)
-
-### Performance
-
-![Performance](docs/screenshots/performance.png)
-
-### Overview
-
-![Overview](docs/screenshots/overview.png)
-
-### CPU cores
-
-![CPU cores](docs/screenshots/cores.png)
