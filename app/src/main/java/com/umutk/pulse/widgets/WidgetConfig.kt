@@ -80,7 +80,7 @@ class WidgetConfigActivity : ComponentActivity() {
         if (kind == null && skin == null && face == null) { finish(); return }
         // the app's accent and look settings, for when Pulse itself has not run yet
         Cfg.load(this)
-        val tinted = skin?.skin?.family.let { it == SkinFamily.MATERIAL || it == SkinFamily.GLASS || it == SkinFamily.IOS } || (face != null && face.look in 12..16)
+        val tinted = skin?.skin?.family.let { it == SkinFamily.MATERIAL || it == SkinFamily.GLASS || it == SkinFamily.IOS || it == SkinFamily.WIN11 } || (face != null && face.look in 12..17)
 
         WidgetLook.load(this)
         if (WidgetLook.windowLook == "blur") window.setBackgroundDrawable(android.graphics.drawable.BitmapDrawable(resources, com.umutk.pulse.features.BlurBackdrop.blurredWallpaper(this, WidgetLook.blur * 40f, (WidgetLook.tint * 255).toInt() shl 24)))

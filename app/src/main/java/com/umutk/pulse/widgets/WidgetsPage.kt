@@ -48,6 +48,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -123,7 +125,7 @@ fun WidgetsPage() {
     // the design shown; null shows them all
     var only by remember { mutableStateOf<String?>(designOf(Look.theme.id)) }
     // the design shown first is the app's look: new widgets get its style, not the last one picked in an earlier visit
-    LaunchedEffect(Unit) { only?.let { d -> styleFor(d, style)?.let { style = it; WidgetStyles.saveDefault(ctx, it) } } }
+    LaunchedEffect(Unit) { only?.let { d -> styleFor(d, style)?.let { style = it; WidgetStyles.saveDefault(ctx, it) } }; WidgetPreviews.publish(ctx) }
     var tab by remember { mutableStateOf(0) }
     var query by remember { mutableStateOf("") }
     val providers = remember { WidgetData.all.associateBy { it.javaClass.simpleName } }
@@ -198,7 +200,7 @@ private fun LookSettings(ctx: Context, win11: Boolean) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             previews.forEach { sk ->
-                val bmp by produceState<Bitmap?>(null, WidgetLook.opacity, WidgetLook.blur, WidgetLook.accentColor, WidgetLook.material, WidgetLook.tint) {
+                val bmp by produceState<Bitmap?>(null, WidgetLook.opacity, WidgetLook.blur, WidgetLook.accentColor, WidgetLook.material, WidgetLook.tint, WidgetLook.blurBg) {
                     value = withContext(drawer) { runCatching { Skins.draw(ctx, sk, SkinData.read(ctx)) }.getOrNull() }
                 }
                 Box(Modifier.weight(1f).aspectRatio(1f), contentAlignment = Alignment.Center) {
@@ -231,6 +233,19 @@ private fun LookSettings(ctx: Context, win11: Boolean) {
             if (WidgetLook.material == "blur") {
                 Text(tr("Tint (darkness)", "Koyuluk"), color = T.text, fontSize = 14.sp)
                 PSlider(WidgetLook.tint, { WidgetLook.tint = it }, 0f..1f) { WidgetLook.save(ctx) }
+                Text(tr("Picture behind the blur", "Bulanıklığın arkasındaki resim"), color = T.text, fontSize = 14.sp)
+                val pickBg = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri: android.net.Uri? ->
+                    if (uri != null) {
+                        val ok = runCatching { ctx.contentResolver.openInputStream(uri)?.use { i -> java.io.File(ctx.filesDir, "widget_blur_bg.jpg").outputStream().use { i.copyTo(it) } } }.isSuccess
+                        if (ok) { WidgetLook.blurBg = "file"; WidgetLook.save(ctx) }
+                    }
+                }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(WidgetLook.blurBg == "stock", tr("Default", "Varsayılan")) { WidgetLook.blurBg = "stock"; WidgetLook.save(ctx) }
+                    PChip(WidgetLook.blurBg == "phone", tr("Phone wallpaper", "Telefon duvar kağıdı")) { WidgetLook.blurBg = "phone"; WidgetLook.save(ctx) }
+                    PChip(WidgetLook.blurBg == "file", tr("My picture", "Resmim")) { pickBg.launch(arrayOf("image/*")) }
+                    PChip(WidgetLook.blurBg == "none", tr("None", "Yok")) { WidgetLook.blurBg = "none"; WidgetLook.save(ctx) }
+                }
             }
             }
             Text(tr("Window look", "Pencere görünümü"), color = T.text, fontSize = 14.sp)
@@ -327,7 +342,11 @@ private fun FaceCard(ctx: Context, f: FaceWidget) {
 
 @Composable
 private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style: WidgetStyle) {
-    WidgetCard(w.label, { addToHome(ctx, w.provider) }) {
+    // laid out at a real widget size, then scaled down as a whole so the text keeps its proportions (some blank space is fine)
+    WidgetCard(w.label, { addToHome(ctx, w.provider) }, aspect = 2.2f) {
+      androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        val k = (maxWidth / 264.dp) * 0.9f
+        Box(Modifier.requiredSize(264.dp, 120.dp).graphicsLayer { scaleX = k; scaleY = k }) {
         AndroidView(
             factory = { c -> FrameLayout(c) },
             update = { frame ->
@@ -342,6 +361,8 @@ private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style:
             },
             modifier = Modifier.fillMaxSize(),
         )
+        }
+      }
     }
 }
 

@@ -180,8 +180,8 @@ object Backdrop {
     }
 
     /** Draws the picture filling the area, cropped at the chosen focus and zoom. */
-    fun DrawScope.drawBackdrop(img: ImageBitmap) {
-        val r = crop(img, size.width, size.height)
+    fun DrawScope.drawBackdrop(img: ImageBitmap, x: Float = fx, y: Float = fy, z: Float = zoom) {
+        val r = crop(img, size.width, size.height, x, y, z)
         val w = r[2].roundToInt(); val h = r[3].roundToInt()
         drawImage(img, srcOffset = IntOffset(r[0].roundToInt().coerceIn(0, img.width - w), r[1].roundToInt().coerceIn(0, img.height - h)), srcSize = IntSize(w, h), dstSize = IntSize(size.width.toInt(), size.height.toInt()))
     }
@@ -192,11 +192,17 @@ object Backdrop {
 fun BackdropEditor(onClose: () -> Unit) {
     val img = Backdrop.image ?: return
     val ctx = LocalContext.current
+    CropEditor(img, Backdrop.fx, Backdrop.fy, Backdrop.zoom, Backdrop.blur, onClose) { x, y, z -> Backdrop.setCrop(ctx, x, y, z) }
+}
+
+/** The editor itself, shared by the Windows 11 background and the Windows 7 / XP wallpapers: the start crop in, the chosen crop out on Done. */
+@Composable
+fun CropEditor(img: ImageBitmap, x0: Float, y0: Float, z0: Float, blurDp: Float, onClose: () -> Unit, onDone: (Float, Float, Float) -> Unit) {
     val conf = LocalConfiguration.current
     val screenW = conf.screenWidthDp.toFloat(); val screenH = conf.screenHeightDp.toFloat()
-    var x by remember { mutableStateOf(Backdrop.fx) }
-    var y by remember { mutableStateOf(Backdrop.fy) }
-    var z by remember { mutableStateOf(Backdrop.zoom) }
+    var x by remember { mutableStateOf(x0) }
+    var y by remember { mutableStateOf(y0) }
+    var z by remember { mutableStateOf(z0) }
     Dialog(onClose, DialogProperties(usePlatformDefaultWidth = false)) {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
             BoxWithConstraints(Modifier.fillMaxSize().padding(16.dp).padding(bottom = 64.dp)) {
@@ -215,7 +221,7 @@ fun BackdropEditor(onClose: () -> Unit) {
                 }
                 // the picture, blurred like the real background, scaled down with the frame
                 val shrink = Backdrop.crop(img, screenW, screenH, x, y, z)[2] * k / (screenW * LocalDensity.current.density)
-                Canvas(Modifier.fillMaxSize().blur((Backdrop.blur * shrink).dp)) {
+                Canvas(Modifier.fillMaxSize().blur((blurDp * shrink).dp)) {
                     drawImage(img, dstOffset = IntOffset(ox.roundToInt(), oy.roundToInt()), dstSize = IntSize((img.width * k).roundToInt(), (img.height * k).roundToInt()))
                 }
                 // dim outside the frame, then the phone outline
@@ -229,13 +235,20 @@ fun BackdropEditor(onClose: () -> Unit) {
                         addRoundRect(RoundRect(fl, ft, fl + fw, ft + fh, corner))
                     }
                     drawPath(hole, Color.Black.copy(alpha = .6f))
+                    // a miniature of the app on top, so the result is visible: status bar, title bar, two cards
+                    val card = Color.White.copy(alpha = .22f)
+                    drawRect(Color.Black.copy(alpha = .25f), Offset(fl, ft), Size(fw, fh * .04f))
+                    drawRect(card, Offset(fl, ft + fh * .04f), Size(fw, fh * .07f))
+                    drawRoundRect(card, Offset(fl + fw * .05f, ft + fh * .15f), Size(fw * .9f, fh * .25f), CornerRadius(fw * .03f))
+                    drawRoundRect(card, Offset(fl + fw * .05f, ft + fh * .44f), Size(fw * .9f, fh * .25f), CornerRadius(fw * .03f))
+                    drawRect(card, Offset(fl, ft + fh * .93f), Size(fw, fh * .07f))
                     drawRoundRect(Color.White, Offset(fl, ft), Size(fw, fh), corner, style = Stroke(2.dp.toPx()))
                 }
             }
             Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().navigationBarsPadding().padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally)) {
                 PButton(tr("Cancel", "İptal"), icon = Icons.Filled.Close) { onClose() }
                 PButton(tr("Reset", "Sıfırla"), icon = Icons.Filled.Refresh) { x = .5f; y = .5f; z = 1f }
-                PButton(tr("Done", "Tamam"), icon = Icons.Filled.Check) { Backdrop.setCrop(ctx, x, y, z); onClose() }
+                PButton(tr("Done", "Tamam"), icon = Icons.Filled.Check) { onDone(x, y, z); onClose() }
             }
         }
     }

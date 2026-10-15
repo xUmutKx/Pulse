@@ -1,5 +1,6 @@
 package com.umutk.pulse
 
+import androidx.compose.material.icons.outlined.Crop
 import com.umutk.pulse.features.themeWallpaper
 import com.umutk.pulse.features.builtinWall
 import android.content.Intent
@@ -305,8 +306,9 @@ fun ServicesPage() {
     var running by remember { mutableStateOf<List<Svc>>(emptyList()) }
     var declared by remember { mutableStateOf<List<Svc>>(emptyList()) }
     val can = !accessMissing()
-    // without root or Shizuku only this app's own services can be listed, so the full list opens first
-    var tab by rememberSaveable { mutableStateOf(if (can) "run" else "all") }
+    // All declared opens first; Running and Disabled are one tap away.
+    var picked by rememberSaveable { mutableStateOf<String?>(null) }
+    val tab = picked ?: "all"
     var q by remember { mutableStateOf("") }
     val scope = rememberCoroutineScope()
     LaunchedEffect(can) { while (true) { running = withContext(Dispatchers.IO) { Extra.services(ctx) }; delay(6000) } }
@@ -321,7 +323,7 @@ fun ServicesPage() {
         Text("${running.size} running  ·  ${declared.size} declared  ·  ${declared.count { !it.enabled }} disabled", color = T.sub, fontSize = countSize.sp, maxLines = 1, softWrap = false,
             onTextLayout = { if (it.didOverflowWidth && countSize > 8f) countSize -= .5f }, modifier = Modifier.padding(bottom = 6.dp))
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            PChip(tab == "run", "Running") { tab = "run" }; PChip(tab == "all", "All declared") { tab = "all" }; PChip(tab == "off", "Disabled") { tab = "off" }
+            PChip(tab == "run", "Running") { picked = "run" }; PChip(tab == "all", "All declared") { picked = "all" }; PChip(tab == "off", "Disabled") { picked = "off" }
         }
         PField(q, { q = it }, "Search services", Modifier.fillMaxWidth().padding(vertical = 6.dp))
         if (tab == "run" && !can) AccessNeededCard(tr("Running services", "Çalışan hizmetler"), tr("Showing this app's own running services only. Other apps' services need root or Shizuku. The other two tabs show everything.", "Yalnızca bu uygulamanın çalışan hizmetleri gösteriliyor. Diğer uygulamaların hizmetleri için root veya Shizuku gerekir. Diğer iki sekme her şeyi gösterir."), Modifier.padding(bottom = 6.dp))
@@ -351,7 +353,7 @@ private class Cat(val id: String, val icon: String, val title: String, val sub: 
 fun SettingsPage() {
     val ctx = LocalContext.current
     var cat by remember { mutableStateOf<String?>(null) }
-    BackHandler(cat != null) { cat = null }
+    InnerBackStep(cat != null) { cat = null }
     val cats = listOf(
         Cat("look", "palette", "Appearance", "Theme: ${T.name}"),
         Cat("general", "table", "General", "Start page, pages shown, units, text size"),
@@ -360,7 +362,7 @@ fun SettingsPage() {
         Cat("about", "info", "About", "Version, privacy, licences"),
     )
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(if (T.material) 12.dp else 8.dp)) {
-        Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title, onBack = if (cat != null) ({ cat = null }) else null)
+        Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title)
         when (cat) {
             null -> cats.forEach { c ->
                 PCard(Modifier.clickable { cat = c.id }) {
@@ -420,15 +422,10 @@ fun SettingsPage() {
                 if (ThemeFold.open) Themes.filter { it.id in folded }.chunked(2).forEach { ThemeRow(it) }
                 // the picture's position, only where the look really draws a picture: Windows 11 (the app background) and authentic Windows 7 / XP
                 val bd = com.umutk.pulse.features.Backdrop
-                if (T.id == "win11" && bd.image != null) {
-                    Text("Picture position", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    Slider(bd.fx, { bd.setCrop(ctx, it, bd.fy, bd.zoom) }, Modifier.fillMaxWidth())
-                    Slider(bd.fy, { bd.setCrop(ctx, bd.fx, it, bd.zoom) }, Modifier.fillMaxWidth())
-                } else if ((T.id == "win7" || T.id == "xp") && Opt.authentic) {
-                    Text("Picture position", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    Slider(themeWallPos(T.id, "x"), { setThemeWallPos(ctx, T.id, "x", it) }, Modifier.fillMaxWidth())
-                    Slider(themeWallPos(T.id, "y"), { setThemeWallPos(ctx, T.id, "y", it) }, Modifier.fillMaxWidth())
-                }
+                var editWall by remember { mutableStateOf(false) }
+                val wallLook = (T.id == "win7" || T.id == "xp") && Opt.authentic
+                if ((T.id == "win11" && bd.image != null) || wallLook) PButton(tr("Edit picture", "Resmi düzenle"), icon = androidx.compose.material.icons.Icons.Outlined.Crop) { editWall = true }
+                if (editWall) { if (wallLook) com.umutk.pulse.features.ThemeWallEditor(T.id) { editWall = false } else com.umutk.pulse.features.BackdropEditor { editWall = false } }
                 // one picker for the selected look only, not under every card
                 ThemeWallpaperRow(T.id)
                 if (T.material || !T.tabs || T.id == "win10" || T.id == "win11") {
@@ -441,12 +438,6 @@ fun SettingsPage() {
                             Box(Modifier.size(34.dp).background(c, androidx.compose.foundation.shape.CircleShape).then(if (Look.accentIdx == i) Modifier.border(3.dp, T.text, androidx.compose.foundation.shape.CircleShape) else Modifier).clickable(enabled = !lockedByYou) { Cfg.setAccent(ctx, i) })
                         }
                     }
-                }
-                // menus and message boxes: the current look, or Material You for every look
-                Text(tr("Pop-up windows", "Açılır pencereler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PChip(Look.windowTheme != "material", tr("Current theme", "Mevcut tema")) { Cfg.setWindowTheme(ctx, "win") }
-                    PChip(Look.windowTheme == "material", "Material You") { Cfg.setWindowTheme(ctx, "material") }
                 }
                 // the picture behind the Windows 11 windows: phone wallpaper, the bundled A-D packs, or your own
                 if (T.id == "win11") BackdropSettings()
@@ -489,7 +480,11 @@ private fun MaterialSection(ctx: android.content.Context) {
 @Composable
 fun ThemePreview(thRaw: PTheme) {
     // the Material looks are shown with the colours they really get: the wallpaper's Material You scheme, the chosen accent and corners
-    val th = if (thRaw.material) effective(thRaw) else thRaw
+    val eff = if (thRaw.material) effective(thRaw) else thRaw
+    // preview only: AMOLED is all white on black; dark Material gets a visible purple-navy tone instead of near black
+    val th = if (thRaw.id == "amoled") amoledWindow()
+        else if (thRaw.id == "material" && eff.dark) PTheme("material", eff.name, true, androidx.compose.ui.graphics.Color(0xFF2A2640), androidx.compose.ui.graphics.Color(0xFF3B3658), eff.text, eff.sub, eff.accent, androidx.compose.ui.graphics.Color(0xFF4F4A70), eff.radius, material = true, glassA = eff.glassA)
+        else eff
     val winBg = th.wall ?: androidx.compose.ui.graphics.SolidColor(th.bg)
     val cardShape = RoundedCornerShape(th.radius.coerceAtMost(8.dp))
     Box(Modifier.fillMaxWidth().height(78.dp).background(winBg).border(1.dp, th.line)) {

@@ -9,7 +9,9 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -163,7 +165,20 @@ val GUIDE = listOf(
 
 /** The icon and the text of one entry, in the app's language. */
 @Composable
-private fun GuideBody(e: GuideEntry) = Text(tr(e.en, e.tr), color = T.text, fontSize = 13.sp)
+private fun GuideBody(e: GuideEntry) {
+    Text(tr(e.en, e.tr), color = T.text, fontSize = 13.sp)
+    GuidePicture(e.id)
+}
+
+/** A screenshot of the feature from assets/guide/<id>.webp, when there is one. */
+@Composable
+private fun GuidePicture(id: String) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val pic = remember(id) { runCatching { ctx.assets.open("guide/$id.webp").use { android.graphics.BitmapFactory.decodeStream(it) }.asImageBitmap() }.getOrNull() } ?: return
+    Box(Modifier.fillMaxWidth().padding(top = 8.dp), contentAlignment = Alignment.Center) {
+        androidx.compose.foundation.Image(pic, null, Modifier.fillMaxWidth(.7f).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)), contentScale = androidx.compose.ui.layout.ContentScale.FillWidth)
+    }
+}
 
 /** The Guide page: every feature as a card that folds open. */
 @Composable

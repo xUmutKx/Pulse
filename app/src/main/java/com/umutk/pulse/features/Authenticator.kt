@@ -32,6 +32,7 @@ import com.umutk.pulse.PField
 import com.umutk.pulse.PHead
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
+import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -217,15 +218,20 @@ fun AuthenticatorScreen(back: () -> Unit) {
         }
     }
 
-    // a picture from the gallery: its QR code, if it holds an otpauth:// link, goes into the secret field
+    // a QR code (camera or gallery) with an otpauth:// link fills the form: secret field, issuer and account name
+    fun useQr(text: String?) {
+        if (text != null && text.startsWith("otpauth://", true)) {
+            secret = text; msg = ""
+            parseOtpauth(text)?.let { a -> if (issuer.isBlank()) issuer = a.issuer; if (name.isBlank()) name = a.name }
+        } else msg = tr("No authenticator QR code found", "Doğrulayıcı QR kodu bulunamadı")
+    }
     val pickQr = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
-        scope.launch {
-            val text = withContext(Dispatchers.IO) { decodeQr(ctx, uri) }
-            if (text != null && text.startsWith("otpauth://", true)) { secret = text; msg = "" }
-            else msg = "No authenticator QR code found in that picture"
-        }
+        scope.launch { useQr(withContext(Dispatchers.IO) { decodeQr(ctx, uri) }) }
     }
+    var scanning by remember { mutableStateOf(false) }
+    val askCam = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) scanning = true else msg = tr("Camera permission is needed to scan", "Taramak için kamera izni gerekir") }
+    if (scanning) QrScanDialog({ useQr(it) }) { scanning = false }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
@@ -238,7 +244,13 @@ fun AuthenticatorScreen(back: () -> Unit) {
             PField(name, { name = it }, "Account name")
             PField(secret, { secret = it }, "Base32 secret or otpauth:// URI")
             if (msg.isNotEmpty()) Text(msg, color = Color(0xFFC42B1C), fontSize = 13.sp)
-            PButton("Scan QR from gallery") { pickQr.launch("image/*") }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PButton(tr("Scan QR", "QR tara")) {
+                    if (androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.CAMERA) == android.content.pm.PackageManager.PERMISSION_GRANTED) scanning = true
+                    else askCam.launch(android.Manifest.permission.CAMERA)
+                }
+                PButton(tr("QR from gallery", "Galeriden QR")) { pickQr.launch("image/*") }
+            }
             PButton("Add account") {
                 val input = secret.trim()
                 val a = if (input.startsWith("otpauth://", true)) parseOtpauth(input)

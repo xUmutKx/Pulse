@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.features.AccessNeededCard
 import com.umutk.pulse.features.ownProcesses
+import com.umutk.pulse.features.ProcStats
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -58,7 +59,7 @@ private fun HeatCell(text: String, f: Float, width: Dp, bold: Boolean = false, i
     }
 }
 
-private class PRow(val p: Proc, val app: Boolean, val label: String)
+private class PRow(val p: Proc, val app: Boolean, val label: String, val uid: Int = -1)
 
 // ---------------------------------------------------------------- Processes
 
@@ -77,10 +78,15 @@ fun ProcessesPage() {
     var expanded by rememberSaveable { mutableStateOf(setOf<String>()) }
     var collapsed by rememberSaveable { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
+    var net by remember { mutableStateOf<Map<Int, Float>>(emptyMap()) }     // uid -> bytes/s
+    var sizes by remember { mutableStateOf<Map<Int, Long>>(emptyMap()) }   // uid -> app + data bytes
     LaunchedEffect(Unit) {
         while (true) {
-            rows = withContext(Dispatchers.IO) { Sampler.processes().ifEmpty { ownProcesses(ctx) }.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name)) } }
-            loaded = true; delay(3000)
+            rows = withContext(Dispatchers.IO) { Sampler.processes().ifEmpty { ownProcesses(ctx) }.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
+            loaded = true
+            net = withContext(Dispatchers.IO) { ProcStats.netRates(ctx) }
+            sizes = withContext(Dispatchers.IO) { rows.map { it.uid }.distinct().mapNotNull { u -> ProcStats.size(ctx, u)?.let { u to it } }.toMap() }
+            delay(3000)
         }
     }
     val memPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
@@ -88,7 +94,10 @@ fun ProcessesPage() {
     val shown =rows.filter { q.isBlank() || it.label.contains(q, true) || it.p.name.contains(q, true) || it.p.pid.toString() == q }
     // processes of one app (com.x, com.x:service, com.x:push) fold into a single line, as Task Manager does
     val groups = shown.groupBy { it.p.name.substringBefore(':') }.values.map { PGroup(it) }
-        .let { l -> if (sort == "cpu") l.sortedByDescending { it.cpu } else if (sort == "name") l.sortedBy { it.title.lowercase() } else if (sort == "pid") l.sortedBy { it.head.p.pid } else l.sortedByDescending { it.mem } }
+        .let { l -> when (sort) {
+            "cpu" -> l.sortedByDescending { it.cpu }; "name" -> l.sortedBy { it.title.lowercase() }; "pid" -> l.sortedBy { it.head.p.pid }
+            "net" -> l.sortedByDescending { net[it.uid] ?: 0f }; "disk" -> l.sortedByDescending { sizes[it.uid] ?: 0L }
+            else -> l.sortedByDescending { it.mem } } }
     val selRow = rows.firstOrNull { it.p.pid == sel }
     val hs = rememberScrollState()
     fun end(r: PRow) { scope.launch { withContext(Dispatchers.IO) { Sampler.kill(r.p) }; ask = null; sel = -1 } }
@@ -120,13 +129,14 @@ fun ProcessesPage() {
             Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) {
                 HeadCell("${s.cpu}%", "CPU", "cpu", sort == "cpu", heatBg(s.cpu / 100f)) { sort = "cpu" }
                 HeadCell("$memPct%", "Memory", "mem", sort == "mem", heatBg(memPct / 100f)) { sort = "mem" }
-                HeadCell(rate((s.down + s.up).toFloat()), "Network", "net", false, resColor("net").copy(alpha = .25f)) {
-                    // a double tap opens Network usage
+                HeadCell(rate((s.down + s.up).toFloat()), "Network", "net", sort == "net", resColor("net").copy(alpha = .25f)) {
+                    // a tap sorts, a double tap opens Network usage
+                    sort = "net"
                     val now = System.currentTimeMillis()
                     if (now - NetTap.last < 400) openTool("netusage")
                     NetTap.last = now
                 }
-                HeadCell("$diskPct%", "Storage", "disk", false, resColor("disk").copy(alpha = .25f)) {}
+                HeadCell("$diskPct%", "Storage", "disk", sort == "disk", resColor("disk").copy(alpha = .25f)) { sort = "disk" }
                 HeadCell("", "Status", "status", false, Color.Transparent) {}
                 HeadCell("", "PID", "pid", sort == "pid", Color.Transparent) { sort = "pid" }
                 HeadCell("", "User", "user", false, Color.Transparent) {}
@@ -161,7 +171,7 @@ fun ProcessesPage() {
                                 if (win95Authentic) Text(if (many) "${g.title} (${g.rows.size})" else g.head.label, color = if (on) Color.White else Color.Black, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.background(if (on) Color(0xFF000080) else Color.Transparent).padding(horizontal = 2.dp))
                                 else Text(if (many) "${g.title} (${g.rows.size})" else g.head.label, color = if (on && xpAuthentic) Color.White else T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
-                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(g.cpu, g.mem, if (many) null else g.head.p, if (on && xpAuthentic) Color.White else T.text) }
+                            Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(hs)) { Cells(g.cpu, g.mem, if (many) null else g.head.p, if (on && xpAuthentic) Color.White else T.text, net[g.uid], sizes[g.uid]) }
                         }
                     }
                     if (many && isOpen) items(g.rows.sortedByDescending { it.p.rssMb }, key = { "p${it.p.pid}" }) { r ->
@@ -189,6 +199,7 @@ private class PGroup(val rows: List<PRow>) {
     val title = (rows.firstOrNull { !it.p.name.contains(':') } ?: head).label.substringBefore(" (")
     val cpu = rows.sumOf { it.p.cpu.toDouble() }.toFloat()
     val mem = rows.sumOf { it.p.rssMb }
+    val uid = rows[0].uid
 }
 
 @Composable
@@ -216,11 +227,12 @@ private fun HeadCellBody(top: String, name: String, w: Dp, active: Boolean, bg: 
 }
 
 @Composable
-private fun Cells(cpu: Float, mem: Int, p: Proc?, ink: Color = T.text) {
+private fun Cells(cpu: Float, mem: Int, p: Proc?, ink: Color = T.text, net: Float? = null, size: Long? = null) {
     HeatCell("%.1f%%".format(cpu), cpu / 100f, ColW.w("cpu"), ink = ink)
     HeatCell(mb(mem), mem / 1500f, ColW.w("mem"), ink = ink)
-    HeatCell("", 0f, ColW.w("net"), ink = ink)
-    HeatCell("", 0f, ColW.w("disk"), ink = ink)
+    // speed right now (0 shows as "0 KB/s" so a quiet app reads as measured, not missing); heat from 1 MB/s
+    HeatCell(net?.let { rate(it) } ?: "", (net ?: 0f) / 1048576f, ColW.w("net"), ink = ink)
+    HeatCell(size?.let { sizeText(it) } ?: "", 0f, ColW.w("disk"), ink = ink)
     HeatCell(if (p == null) "" else if (p.state == "R") "Running" else "Sleeping", 0f, ColW.w("status"), ink = ink)
     HeatCell(p?.pid?.toString() ?: "", 0f, ColW.w("pid"), ink = ink)
     HeatCell(p?.user ?: "", 0f, ColW.w("user"), ink = ink)
@@ -228,6 +240,8 @@ private fun Cells(cpu: Float, mem: Int, p: Proc?, ink: Color = T.text) {
     HeatCell(p?.nice?.toString() ?: "", 0f, ColW.w("prio"), ink = ink)
     HeatCell(p?.ppid?.toString() ?: "", 0f, ColW.w("ppid"), ink = ink)
 }
+
+private fun sizeText(b: Long) = if (b >= 1L shl 30) "%.1f GB".format(b / 1073741824.0) else "%.0f MB".format(b / 1048576.0)
 
 /** Shared, persisted column widths of the Processes table (header and rows read the same state). */
 private object ColW {

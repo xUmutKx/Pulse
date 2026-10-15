@@ -1,9 +1,6 @@
 package com.umutk.pulse.features
 
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
-import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.Settings
@@ -15,13 +12,14 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.Look
-import com.umutk.pulse.MainActivity
 import com.umutk.pulse.PButton
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
 import com.umutk.pulse.Shell
 import com.umutk.pulse.T
+import com.umutk.pulse.openPulse
+import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -43,14 +41,25 @@ object Dns {
 
     fun validHost(h: String): Boolean = HOST.matches(h)
 
-    /** Blocking. Returns "" on success, otherwise the note to show ("Needs root or Shizuku" or the command output). */
-    fun write(mode: String, host: String = ""): String {
-        if (Shell.root == null) Shell.detectRoot()
-        if (!Shell.shizukuOk() && Shell.root != true) return "Needs root or Shizuku"
+    /** Blocking. Returns "" on success, otherwise the note to show ("Needs root or Shizuku" or the command output).
+     *  Writes the setting directly when WRITE_SECURE_SETTINGS is granted (fast, works from the tile); otherwise through
+     *  Shizuku or root, and then grants that permission so the next change is direct. */
+    fun write(c: Context, mode: String, host: String = ""): String {
         if (mode == "hostname" && !validHost(host)) return "Enter a valid host name"
-        val cmd = if (mode == "hostname") "settings put global private_dns_mode hostname; settings put global private_dns_specifier $host"
+        val cr = c.contentResolver
+        try {
+            if (mode == "hostname") Settings.Global.putString(cr, "private_dns_specifier", host)
+            Settings.Global.putString(cr, "private_dns_mode", mode)
+            return ""
+        } catch (e: SecurityException) { }
+        // a tile wakes Pulse in a fresh process: give the Shizuku binder a moment to arrive
+        repeat(15) { if (!Shell.shizukuOk() && Shell.root != true) Thread.sleep(100) }
+        if (!Shell.shizukuOk() && Shell.root != true) Shell.detectRoot()
+        if (!Shell.shizukuOk() && Shell.root != true) return "Needs root or Shizuku"
+        val cmd = if (mode == "hostname") "settings put global private_dns_specifier $host; settings put global private_dns_mode hostname"
         else "settings put global private_dns_mode $mode"
-        return Shell.run(cmd).trim()
+        val out = Shell.run("$cmd; pm grant ${c.packageName} android.permission.WRITE_SECURE_SETTINGS").trim()
+        return if (current(c).first == mode) "" else out.ifEmpty { "Could not change Private DNS" }
     }
 }
 
@@ -72,7 +81,7 @@ fun DnsSettings() {
     LaunchedEffect(Unit) { reload() }
     fun apply(mode: String, host: String = "") {
         scope.launch {
-            val r = withContext(Dispatchers.IO) { Dns.write(mode, host) }
+            val r = withContext(Dispatchers.IO) { Dns.write(ctx, mode, host) }
             note = r
             if (r.isEmpty() && mode == "hostname") Dns.saveHost(ctx, host)
             reload()
@@ -94,19 +103,39 @@ fun DnsSettings() {
     }
 }
 
-/** Quick Settings tile: toggles Private DNS between Off and Manual with the saved host; without a host it opens Settings. */
+/** Quick Settings tile: Private DNS Auto, Manual (the host saved in Pulse) and Off, one tap moves to the next.
+ *  A failed change shows its reason as the subtitle; without root or Shizuku the tap opens Settings. */
 class DnsTile : TileService() {
-    override fun onStartListening() = paint()
-    private fun paint() { qsTile?.apply { val on = Dns.current(this@DnsTile).first == "hostname"; state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "DNS"; subtitle = if (on) Dns.savedHost(this@DnsTile).ifEmpty { "On" } else "Off"; updateTile() } }
-    override fun onClick() {
-        val host = Dns.savedHost(this)
-        if (!Dns.validHost(host)) { openSettings(); return }
-        val manual = Dns.current(this).first == "hostname"
-        Thread { Dns.write(if (manual) "off" else "hostname", host); Handler(Looper.getMainLooper()).post { paint() } }.start()
+    private var note: String? = null
+    private var busy = false
+    override fun onStartListening() { com.umutk.pulse.Opt.load(this); note = null; paint() }
+    private fun paint() {
+        qsTile?.apply {
+            val (m, h) = Dns.current(this@DnsTile)
+            state = if (m != "off") Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            label = tr("Private DNS", "Özel DNS")
+            subtitle = if (busy) "…" else note ?: when (m) { "off" -> tr("Off", "Kapalı"); "hostname" -> tr("Manual", "Manuel") + h.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty(); else -> tr("Auto", "Otomatik") }
+            updateTile()
+        }
     }
-    private fun openSettings() {
-        val i = Intent(this, MainActivity::class.java).putExtra("start", "settings").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
-        else startActivityAndCollapse(i)
+    override fun onClick() {
+        if (busy) return
+        val (m, h) = Dns.current(this)
+        // a host set in the system Settings is kept, so switching back on returns to it
+        if (m == "hostname" && Dns.savedHost(this).isEmpty() && Dns.validHost(h)) Dns.saveHost(this, h)
+        val host = Dns.savedHost(this)
+        // Auto -> Manual (when a host is saved in Pulse) -> Off -> Auto
+        val next = when (m) { "off" -> "opportunistic"; "hostname" -> "off"; else -> if (Dns.validHost(host)) "hostname" else "off" }
+        busy = true; note = null; paint()
+        Thread {
+            val r = Dns.write(this, next, host)
+            Handler(Looper.getMainLooper()).post {
+                busy = false
+                // the reason stays under the tile until the panel is opened again
+                note = r.takeIf { it.isNotEmpty() }?.lineSequence()?.first()?.take(40)?.let { tr("Failed: ", "Olmadı: ") + it }
+                paint()
+                if (r == "Needs root or Shizuku") openPulse("settings")
+            }
+        }.start()
     }
 }

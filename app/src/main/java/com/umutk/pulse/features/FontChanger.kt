@@ -9,6 +9,14 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.width
+import com.umutk.pulse.Busy
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import com.umutk.pulse.PChip
+import com.umutk.pulse.PField
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -170,11 +178,31 @@ fun FontChangerScreen() {
     var note by remember { mutableStateOf("") }
     var have by remember { mutableStateOf(false) }
     var items by remember { mutableStateOf<List<FontItem>>(emptyList()) }
-    var preview by remember { mutableStateOf<Pair<String, FontFamily>?>(null) }
+    var category by remember { mutableStateOf("Stylish") }
+    var query by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+    // fonts fetched for preview: name -> (family, cached file); every font keeps its own file so many can be shown at once
+    val loaded = remember { androidx.compose.runtime.mutableStateMapOf<String, Pair<FontFamily, File>>() }
+    val busy = remember { androidx.compose.runtime.mutableStateListOf<String>() }
     LaunchedEffect(Unit) { have = withContext(Dispatchers.IO) { FontPack.installed(ctx) } }
-    LaunchedEffect(Unit) {
+    LaunchedEffect(category) {
         val u = prefs.getString("font_index", "").orEmpty() // optional custom index (JSON [{name,author,url}]) instead of zFont's
-        items = withContext(Dispatchers.IO) { runCatching { (if (u.isNotBlank()) JsonIndexSource(u) else ZFontSource()).list() }.getOrDefault(emptyList()) }
+        loading = true; items = emptyList()
+        items = withContext(Dispatchers.IO) { runCatching { (if (u.isNotBlank()) JsonIndexSource(u) else ZFontSource(category)).list() }.getOrDefault(emptyList()) }
+        loading = false
+    }
+    /** Downloads [f] once and keeps its typeface for the preview. */
+    fun fetch(f: FontItem) {
+        if (loaded.containsKey(f.url) || f.url in busy) return
+        busy.add(f.url)
+        scope.launch {
+            val file = withContext(Dispatchers.IO) {
+                runCatching { File(File(ctx.cacheDir, "browse").apply { mkdirs() }, "${f.url.hashCode()}.ttf").also { if (it.length() == 0L) it.writeBytes(httpGet(f.url)) } }.getOrNull()
+            }
+            val tf = file?.let { runCatching { Typeface.createFromFile(it) }.getOrNull() }
+            if (tf != null) loaded[f.url] = FontFamily(tf) to file else note = tr("Download failed", "İndirilemedi")
+            busy.remove(f.url)
+        }
     }
     /** Packs [ttf] and opens the install window. */
     fun pack(ttf: File) = scope.launch {
@@ -188,32 +216,62 @@ fun FontChangerScreen() {
             if (runCatching { Typeface.createFromFile(f) }.isSuccess) pack(f) else note = tr("Not a font file", "Yazı tipi dosyası değil")
         }
     }
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        PHead(tr("System font", "Sistem yazı tipi"), guide = "fonts")
-        PCard {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton("TTF", icon = Icons.Outlined.FolderOpen) { pick.launch(arrayOf("font/ttf", "font/otf", "font/*", "application/x-font-ttf", "application/octet-stream")) }
-                PButton(tr("Font style", "Yazı tipi"), icon = Icons.Outlined.Settings) { FontPack.openSettings(ctx) }
-                if (have) PButton(tr("Remove", "Kaldır"), danger = true) { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:${FontPack.PKG}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }
-            if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+    // a search looks through every category (an "iOS" font lives under Emoji, not Stylish): all lists are fetched once, on the first search
+    var everything by remember { mutableStateOf<List<FontItem>>(emptyList()) }
+    LaunchedEffect(query.isNotBlank()) {
+        if (query.isNotBlank() && everything.isEmpty()) {
+            loading = true
+            everything = withContext(Dispatchers.IO) { FONT_CATEGORIES.flatMap { (id, _) -> runCatching { ZFontSource(id).list() }.getOrDefault(emptyList()) }.distinctBy { it.url } }
+            loading = false
         }
-        items.forEach { f ->
+    }
+    val shown = (if (query.isBlank()) items else everything).filter { query.isBlank() || it.name.contains(query, true) || it.author.contains(query, true) }
+    // lazy: a font's preview is fetched only when its card scrolls into view
+    androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        item { PHead(tr("System font", "Sistem yazı tipi"), guide = "fonts") }
+        item {
             PCard {
-                Row(Modifier.fillMaxWidth().clickable {
-                    scope.launch {
-                        val file = withContext(Dispatchers.IO) { runCatching { File(ctx.cacheDir, "browse_font.ttf").also { it.writeBytes(httpGet(f.url)) } }.getOrNull() }
-                        val tf = file?.let { runCatching { Typeface.createFromFile(it) }.getOrNull() }
-                        if (tf != null) preview = f.name to FontFamily(tf) else note = tr("Download failed", "İndirilemedi")
-                    }
-                }, verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PButton("TTF", icon = Icons.Outlined.FolderOpen) { pick.launch(arrayOf("font/ttf", "font/otf", "font/*", "application/x-font-ttf", "application/octet-stream")) }
+                    PButton(tr("Font style", "Yazı tipi"), icon = Icons.Outlined.Settings) { FontPack.openSettings(ctx) }
+                    if (have) PButton(tr("Remove", "Kaldır"), danger = true) { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:${FontPack.PKG}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }
+                if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            }
+        }
+        item { PField(query, { query = it }, tr("Search fonts", "Yazı tipi ara"), Modifier.fillMaxWidth()) }
+        item {
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                FONT_CATEGORIES.forEach { (id, label) -> PChip(category == id, label) { category = id } }
+            }
+        }
+        if (loading) item { Box(Modifier.fillMaxWidth().padding(vertical = 40.dp), contentAlignment = androidx.compose.ui.Alignment.Center) { Busy() } }
+        else if (shown.isEmpty()) item { Text(tr("No fonts (no connection?)", "Yazı tipi yok (bağlantı?)"), color = T.sub, fontSize = 12.sp) }
+        items(shown, key = { it.url }) { f ->
+            LaunchedEffect(f.url) { fetch(f) }
+            val got = loaded[f.url]
+            PCard {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                     Column(Modifier.weight(1f)) {
-                        Text(f.name, color = T.text, fontSize = 15.sp, fontFamily = preview?.takeIf { it.first == f.name }?.second)
+                        Text(f.name, color = T.text, fontSize = 15.sp, fontFamily = got?.first)
                         if (f.author.isNotBlank()) Text(f.author, color = T.sub, fontSize = 12.sp)
+                        // the preview: text in the font, then emoji (the font's own when it has them, the phone's otherwise)
+                        if (got != null) {
+                            Text("The quick brown fox jumps over the lazy dog\nÇçĞğİıÖöŞşÜü 0123456789", color = T.text, fontSize = 18.sp, fontFamily = got.first, modifier = Modifier.padding(top = 6.dp))
+                            Text("😀 😍 🎉 👍 ❤️ 🔥 🌍 ⭐ 🍕 🐱", color = T.text, fontSize = 20.sp, fontFamily = got.first, modifier = Modifier.padding(top = 4.dp))
+                        }
                     }
-                    if (preview?.first == f.name) PButton("", icon = Icons.Outlined.Download) { pack(File(ctx.cacheDir, "browse_font.ttf")) }
+                    if (got != null) PButton("", icon = Icons.Outlined.Download) { pack(got.second) }
+                    else if (f.url in busy) Busy(modifier = Modifier.width(40.dp))
                 }
             }
         }
     }
 }
+
+/** zFont's category files (github.com/zFont/main). */
+private val FONT_CATEGORIES = listOf(
+    "Stylish" to "Stylish", "Emoji" to "Emoji", "Color" to "Color", "Russia" to "Russian", "Ukrainian" to "Ukrainian", "Vietnamese" to "Vietnamese",
+    "Thai" to "Thai", "Arabic" to "Arabic", "Kurdish" to "Kurdish", "Urdu" to "Urdu", "Chinese" to "Chinese", "Korean" to "Korean", "Khmer" to "Khmer",
+    "Lao" to "Lao", "Myanmar" to "Myanmar", "Bengali" to "Bengali", "Shan" to "Shan",
+)

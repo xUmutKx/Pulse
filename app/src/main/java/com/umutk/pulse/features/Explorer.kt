@@ -12,6 +12,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -48,6 +55,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -74,6 +82,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import com.umutk.pulse.BarMeter
+import com.umutk.pulse.bevel
+import com.umutk.pulse.xpCaption
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.Brush
 import com.umutk.pulse.FluentPaths
 import com.umutk.pulse.PButton
 import com.umutk.pulse.WinAlert
@@ -118,37 +131,96 @@ private class ExProps(val size: Long, val modified: String, val count: Int, val 
 /** Bookmarks and recent files live in the shared "p" preferences, one path per line. */
 private const val EX_MARKS = "ex_marks"
 private const val EX_RECENT = "ex_recent"
+private const val EX_FREQ = "ex_freq"
 private const val EX_SORT_ALL = "ex_sort_all"
 private const val EX_SORT_DIRS = "ex_sort_dirs"
 
-/** The side page for files and the tools that read them: the explorer, the folder tree, file types, cache cleaning and root. */
+/** Set by an intent that opens a folder (Pulse chosen as the file manager): Files then opens full screen. */
+object FilesLaunch { var full by mutableStateOf(false) }
+
+/** The side page for files and the tools that read them: the explorer, the folder tree, file types, cache cleaning and root. Full screen (Settings > Functions) puts it in its own window with the look's caption buttons. */
 @Composable
 fun FilesPage() {
     var tab by rememberSaveable { mutableStateOf("files") }
     val top = remember { Environment.getExternalStorageDirectory() }
     val back: () -> Unit = { tab = "files" }
-    Column(Modifier.fillMaxSize()) {
-        com.umutk.pulse.StorageAccessCard()
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            listOf("files" to "Files", "tree" to "Folder tree", "types" to "File types", "cache" to "Cache").forEach { (k, label) ->
-                PChip(tab == k, label) { tab = k }
+    var full by rememberSaveable { mutableStateOf(Opt.filesFull || FilesLaunch.full) }
+    LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full) { full = true; FilesLaunch.full = false } }
+    val body: @Composable () -> Unit = {
+        Column(Modifier.fillMaxSize()) {
+            com.umutk.pulse.StorageAccessCard()
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when (tab) {
+                    "tree" -> FolderTreeScreen(top, back)
+                    "types" -> TypeBreakdownScreen(top, back)
+                    "cache" -> CacheCleanerScreen(back)
+                    else -> ExplorerTab(full, { tab = it }) { full = !full }
+                }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-            when (tab) {
-                "tree" -> FolderTreeScreen(top, back)
-                "types" -> TypeBreakdownScreen(top, back)
-                "cache" -> CacheCleanerScreen(back)
-                else -> ExplorerTab()
+    }
+    if (!full) { body(); return }
+    // closing leaves the page for the start page; minimise and maximise both give the window back to the app
+    val close = { full = false; com.umutk.pulse.widgets.WidgetOpen.page = Opt.startPage }
+    val w = LocalWindowLook.current
+    val classic = w.tabs && w.title != null
+    val ink = if (classic) w.titleText else w.text
+    Dialog(close, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+        Column(Modifier.fillMaxSize().background(w.bg).statusBarsPadding().navigationBarsPadding()
+            .then(if (w.id == "win95") Modifier.bevel(true) else Modifier)) {
+            Row(Modifier.fillMaxWidth().height(if (w.id == "win95") 22.dp else 34.dp)
+                .then(if (classic) Modifier.background(w.title!!) else Modifier.background(w.panel))
+                .padding(start = 10.dp, end = if (classic) 3.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Files", Modifier.weight(1f), color = ink, fontSize = 12.sp, fontWeight = if (classic) androidx.compose.ui.text.font.FontWeight.Bold else null)
+                ExCaption(w, ink, { full = false }, { full = false }, close)
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) { body() }
+        }
+    }
+}
+
+/** Minimise, maximise and close in the look's style: 95 bevelled, XP glossy squares, 7 glass, 10 and 11 flat, Material round. */
+@Composable
+private fun ExCaption(w: com.umutk.pulse.PTheme, ink: Color, onMin: () -> Unit, onMax: () -> Unit, onClose: () -> Unit) {
+    val id = w.id
+    // kind 0 minimise, 1 maximise, 2 close
+    @Composable
+    fun cap(kind: Int, size: androidx.compose.ui.unit.DpSize, deco: Modifier, glyph: Color, onClick: () -> Unit) {
+        Box(Modifier.size(size).then(deco).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+            if (id == "xp") return@Box
+            Canvas(Modifier.size(if (id == "win95") 8.dp else 10.dp)) {
+                val st = if (id == "win95") 1.5.dp.toPx() else 1.dp.toPx(); val a = this.size.width
+                when (kind) {
+                    0 -> drawLine(glyph, Offset(0f, a * .85f), Offset(a, a * .85f), st)
+                    1 -> drawRect(glyph, Offset(st / 2, st / 2), androidx.compose.ui.geometry.Size(a - st, a - st), style = androidx.compose.ui.graphics.drawscope.Stroke(st))
+                    else -> { drawLine(glyph, Offset(0f, 0f), Offset(a, a), st); drawLine(glyph, Offset(a, 0f), Offset(0f, a), st) }
+                }
             }
         }
+    }
+    val acts = listOf(onMin, onMax, onClose)
+    when (id) {
+        "win95" -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { (0..2).forEach { k ->
+            if (k == 2) Spacer(Modifier.width(2.dp))
+            cap(k, androidx.compose.ui.unit.DpSize(16.dp, 14.dp), Modifier.background(Color(0xFFC0C0C0)).bevel(true), Color.Black, acts[k]) } }
+        "xp" -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { (0..2).forEach { k ->
+            cap(k, androidx.compose.ui.unit.DpSize(21.dp, 21.dp), Modifier.drawBehind { xpCaption(k == 2, k == 1) }, Color.Transparent, acts[k]) } }
+        "win7" -> Row(Modifier.offset(y = (-3).dp)) { (0..2).forEach { k ->
+            val shape = RoundedCornerShape(bottomStart = if (k == 0) 4.dp else 0.dp, bottomEnd = if (k == 2) 4.dp else 0.dp)
+            cap(k, androidx.compose.ui.unit.DpSize(if (k == 2) 44.dp else 27.dp, 19.dp),
+                Modifier.clip(shape).background(if (k == 2) Brush.verticalGradient(listOf(Color(0xFFE9A394), Color(0xFFC9442B))) else Brush.verticalGradient(listOf(Color(0xFFDCE8F6), Color(0xFF9DBBDD)))).border(1.dp, Color(0xFF3A4A5E), shape),
+                if (k == 2) Color.White else Color(0xFF1B2B45), acts[k]) } }
+        "win10", "win11" -> Row { (0..2).forEach { k ->
+            cap(k, androidx.compose.ui.unit.DpSize(46.dp, 34.dp), Modifier, ink, acts[k]) } }
+        else -> Row(Modifier.padding(end = 4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) { (0..2).forEach { k ->
+            cap(k, androidx.compose.ui.unit.DpSize(36.dp, 34.dp), Modifier.clip(androidx.compose.foundation.shape.CircleShape), ink, acts[k]) } }
     }
 }
 
 /** The file manager on shared storage: browse, search, select, sort, open, share, zip, bookmarks, properties, finders and undo. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ExplorerTab() {
+private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val top = remember { Environment.getExternalStorageDirectory() }
@@ -166,6 +238,8 @@ private fun ExplorerTab() {
     // sort: one order for every folder, unless a folder has its own (folderSort); both are kept on the phone
     var sortAll by rememberSaveable { mutableStateOf(exReadInt(ctx, EX_SORT_ALL, 0)) }
     var folderSort by remember { mutableStateOf(exReadSortMap(ctx)) }
+    var drawer by remember { mutableStateOf(false) }
+    var freq by remember { mutableStateOf(exRead(ctx, EX_FREQ)) }
     var sortMenu by remember { mutableStateOf(false) }
     var menuOf by remember { mutableStateOf<File?>(null) }
     var archiveOf by remember { mutableStateOf<File?>(null) }
@@ -193,8 +267,13 @@ private fun ExplorerTab() {
     val dir = File(here)
     val sort = folderSort[here] ?: sortAll
     val (total, free) = remember(refresh) { exStorage(top) }
-    val listing = remember(here, refresh, showHidden, sort) {
-        exSort(dir.listFiles()?.filter { showHidden || !it.name.startsWith(".") }.orEmpty(), sort)
+    // folders the app cannot read (/data, ...) are listed through su or Shizuku when either is there
+    val canRoot = Shell.root == true || Shell.shizuku == 2
+    val viaRoot by produceState<List<File>?>(null, here, refresh, canRoot) {
+        value = if (canRoot && dir.listFiles() == null) withContext(Dispatchers.IO) { exRootList(dir) } else null
+    }
+    val listing = remember(here, refresh, showHidden, sort, viaRoot) {
+        exSort((dir.listFiles()?.toList() ?: viaRoot).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort)
     }
     LaunchedEffect(query, here, refresh, showHidden) {
         found = if (query.isBlank()) null else withContext(Dispatchers.IO) { exFind(dir, query.trim(), showHidden) }
@@ -207,7 +286,7 @@ private fun ExplorerTab() {
     val bookmarks = marks.filter { File(it).isDirectory }
     val picked = sel.map { File(it) }
 
-    fun go(p: String) { here = p; sel = emptySet(); query = ""; recentView = false }
+    fun go(p: String) { freq = exBump(ctx, p); here = p; sel = emptySet(); query = ""; recentView = false }
     // Back steps out of the current view first (selection, search, recents), then up one folder; only at the top does it leave the page
     androidx.activity.compose.BackHandler(enabled = sel.isNotEmpty() || query.isNotBlank() || recentView || dir != top) {
         when {
@@ -225,8 +304,17 @@ private fun ExplorerTab() {
     fun toggle(p: String) { sel = if (p in sel) sel - p else sel + p }
     fun mark(p: String) { marks = if (p in marks) marks - p else marks + p; exWrite(ctx, EX_MARKS, marks) }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        PHead("Files")
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(36.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Menu, null, Modifier.size(24.dp), T.text) }
+            Spacer(Modifier.weight(1f))
+            // the other file tools sit in the header as icons
+            listOf("tree" to "sizes", "types" to "filetypes", "cache" to "clean").forEach { (k, icon) ->
+                Box(Modifier.size(36.dp).clickable { onTab(k) }, contentAlignment = Alignment.Center) { FluentGlyph(icon, T.text, 22.dp) }
+            }
+            if (!full) Box(Modifier.size(36.dp).clickable(onClick = onToggleFull), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.OpenInFull, null, Modifier.size(20.dp), T.sub) }
+        }
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PIcon("disk", T.sub, 20.dp)
@@ -345,7 +433,7 @@ private fun ExplorerTab() {
                         if (!f.isDirectory) add(Triple("Share", "share", { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }))
                         add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
                         if (f.isDirectory) {
-                            add(Triple("Add bookmark", "bookmark", { mark(f.path) }))
+                            add(Triple(if (f.path in marks) "Remove bookmark" else "Add bookmark", "bookmark", { mark(f.path) }))
                             add(Triple("Create shortcut", "link", { mark(f.path) }))
                         }
                         if (f.extension.equals("zip", true)) add(Triple("View archive", "zip", { archiveOf = f }))
@@ -363,6 +451,26 @@ private fun ExplorerTab() {
             }
             if (f.isDirectory) PCard(Modifier.fillMaxWidth()) { rowBody() } else Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { rowBody() }
         }
+    }
+    if (drawer) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { drawer = false })
+        Column(Modifier.fillMaxHeight().width(280.dp).background(T.panel).verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
+            val pick: (String) -> Unit = { go(it); drawer = false }
+            ExDrawerRow("disk", tr("Internal storage", "Dahili depolama"), here == top.path) { pick(top.path) }
+            if (canRoot) ExDrawerRow("folder", tr("Root (/)", "Kök (/)"), here == "/") { pick("/") }
+            else ExDrawerRow("folder", tr("Root: not available", "Kök: yok"), false, dim = true) { }
+            if (marks.isNotEmpty()) {
+                ExDrawerHead(tr("Bookmarks", "Yer imleri"))
+                marks.forEach { p -> ExDrawerRow("bookmark", File(p).name.ifEmpty { "/" }, here == p) { pick(p) } }
+            }
+            // DCIM and Download are always there; the folders opened most often follow
+            val defaults = listOf(File(top, "DCIM").path, File(top, "Download").path)
+            val often = defaults + freq.mapNotNull { l -> l.substringAfterLast('|').toIntOrNull()?.let { l.substringBeforeLast('|') to it } }
+                .sortedByDescending { it.second }.map { it.first }.filter { it !in defaults }.take(6)
+            ExDrawerHead(tr("Frequent", "Sık kullanılanlar"))
+            often.forEach { p -> ExDrawerRow("history", File(p).name.ifEmpty { "/" }, here == p) { pick(p) } }
+        }
+    }
     }
 
     viewing?.let { f -> FileViewer(f, { openFile(it) }) { viewing = null } }
@@ -469,6 +577,41 @@ private fun ExplorerTab() {
             }) { Text("OK") } },
             dismissButton = { TextButton({ dialog = null }) { Text("Cancel") } })
     }
+}
+
+@Composable
+private fun ExDrawerHead(t: String) = Text(t, Modifier.padding(start = 16.dp, top = 14.dp, bottom = 4.dp), color = T.sub, fontSize = 12.sp)
+
+@Composable
+private fun ExDrawerRow(icon: String, label: String, on: Boolean, dim: Boolean = false, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable(enabled = !dim, onClick = onClick).padding(horizontal = 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+        ExIcon(icon, if (dim) T.sub else if (on) Look.accent else T.text, 20.dp)
+        Spacer(Modifier.width(14.dp))
+        Text(label, color = if (dim) T.sub else T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** An entry listed through su: the app itself cannot stat it, so the folder flag comes from the "/" that ls -p adds. */
+private class RootFile(path: String, private val dir: Boolean) : File(path) {
+    override fun isDirectory() = dir
+    override fun isFile() = !dir
+    override fun exists() = true
+    override fun length() = 0L
+    override fun lastModified() = 0L
+}
+
+private fun exRootList(dir: File): List<File> {
+    val q = dir.path.replace("'", "'\\''")
+    return Shell.run("ls -1Ap '$q'").lines().filter { it.isNotBlank() && !it.startsWith("ls:") }.map { RootFile(File(dir, it.trimEnd('/')).path, it.endsWith("/")) }
+}
+
+/** Counts one more visit to [p] ("path|count" lines) and returns the list. */
+private fun exBump(ctx: Context, p: String): List<String> {
+    val m = exRead(ctx, EX_FREQ).associate { it.substringBeforeLast('|') to (it.substringAfterLast('|').toIntOrNull() ?: 0) }.toMutableMap()
+    m[p] = (m[p] ?: 0) + 1
+    val l = m.entries.sortedByDescending { it.value }.take(40).map { "${it.key}|${it.value}" }
+    exWrite(ctx, EX_FREQ, l)
+    return l
 }
 
 /** One tappable icon in a row or bar; [rot] turns it (the sort icon turns for descending). */
@@ -843,4 +986,13 @@ private fun unzip(z: File, dir: File): String {
         }
         ""
     }.getOrElse { "Could not extract ${z.name}" }
+}
+
+/** A Fluent outline from FluentPaths in every look (the header tool icons stay the same whatever the design). */
+@Composable
+private fun FluentGlyph(k: String, tint: Color, size: androidx.compose.ui.unit.Dp) {
+    val paths = remember(k) { (com.umutk.pulse.FluentPaths.map[k] ?: com.umutk.pulse.FluentPaths.map["info"]!!).map { androidx.compose.ui.graphics.vector.PathParser().parsePathString(it).toPath() } }
+    androidx.compose.foundation.Canvas(Modifier.size(size)) {
+        scale(this.size.width / 24f, pivot = androidx.compose.ui.geometry.Offset.Zero) { paths.forEach { drawPath(it, tint) } }
+    }
 }

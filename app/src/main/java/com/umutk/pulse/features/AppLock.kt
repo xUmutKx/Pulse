@@ -17,6 +17,8 @@ import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Pattern
 import androidx.compose.material.icons.outlined.Dialpad
 import androidx.compose.material3.Icon
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.foundation.layout.Arrangement
@@ -195,11 +197,22 @@ object AppLock {
 
     fun installedApps(c: Context): List<AppRow> {
         val pm = c.packageManager
-        return pm.getInstalledApplications(0)
-            .filter { it.packageName != c.packageName }
-            .map { AppRow(it.packageName, it.loadLabel(pm).toString()) }
-            .sortedBy { it.label.lowercase() }
+        val all = HashMap<String, AppRow>()
+        // installed packages plus everything with a launcher entry (some come only from the latter, e.g. other profiles / hidden-from-list)
+        try { pm.getInstalledApplications(android.content.pm.PackageManager.MATCH_DISABLED_COMPONENTS).forEach { all[it.packageName] = AppRow(it.packageName, it.loadLabel(pm).toString()) } } catch (_: Exception) {}
+        try {
+            pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER), 0).forEach {
+                val ai = it.activityInfo.applicationInfo
+                all.getOrPut(ai.packageName) { AppRow(ai.packageName, it.loadLabel(pm).toString()) }
+            }
+        } catch (_: Exception) {}
+        all.remove(c.packageName)
+        return all.values.sortedBy { fold(it.label) }
     }
+
+    /** Search folding: case, Turkish dotted/dotless i and accents all compare equal. */
+    fun fold(s: String): String = java.text.Normalizer.normalize(s.replace('İ', 'i').replace('ı', 'i'), java.text.Normalizer.Form.NFD)
+        .replace(Regex("\\p{M}+"), "").lowercase(java.util.Locale.ROOT)
 
     /** Usage access (second detection path) and "display over other apps" (overlay fallback). */
     fun usageGranted(c: Context): Boolean = (c.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager)
@@ -216,6 +229,7 @@ object AppLock {
 }
 
 /** App Lock settings page: permissions, fallback PIN/password, grace time, look, and the app switches. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AppLockPage() {
     val ctx = LocalContext.current
@@ -243,6 +257,7 @@ fun AppLockPage() {
     var s2 by remember { mutableStateOf("") }
     var patternNote by remember { mutableStateOf("") }
     val list = rememberLazyListState()
+    var appCount by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
     LazyColumn(
@@ -361,13 +376,22 @@ fun AppLockPage() {
                 }
             }
         }
-        item(key = "search") {
-            // the search goes to the top when the keyboard opens, so the apps under it stay in view
-            OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
-                modifier = Modifier.fillMaxWidth().onFocusChanged { f -> if (f.isFocused) scope.launch { list.animateScrollToItem(4) } },
-                label = { Text(tr("Search apps", "Uygulama ara"), maxLines = 1, overflow = TextOverflow.Ellipsis) })
+        // the search stays pinned at the top while the apps scroll under it; tapping it brings it to the top at once
+        stickyHeader(key = "search") {
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().background(t.bg).padding(vertical = 4.dp)) {
+                OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
+                    modifier = Modifier.fillMaxWidth().onFocusChanged { f ->
+                        if (f.isFocused) scope.launch { list.animateScrollToItem((list.layoutInfo.totalItemsCount - appCount - 1).coerceAtLeast(0)) }
+                    },
+                    label = { Text(tr("Search apps", "Uygulama ara"), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    trailingIcon = if (query.isNotEmpty()) ({
+                        Icon(Icons.Outlined.Close, null, tint = t.sub, modifier = Modifier.clickable { query = "" })
+                    }) else null)
+            }
         }
-        val shown = apps.filter { it.label.contains(query, ignoreCase = true) || it.pkg.contains(query, ignoreCase = true) }
+        val q = AppLock.fold(query.trim())
+        val shown = if (q.isEmpty()) apps else apps.filter { AppLock.fold(it.label).contains(q) || it.pkg.contains(q, ignoreCase = true) }
+        appCount = shown.size
         items(shown, key = { it.pkg }) { a ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 com.umutk.pulse.AppIcon(a.pkg, 36.dp)

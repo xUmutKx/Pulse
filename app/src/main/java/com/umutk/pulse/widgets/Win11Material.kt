@@ -14,8 +14,6 @@ import android.graphics.Path
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
-import androidx.compose.ui.graphics.toArgb
-import com.umutk.pulse.WinAccents
 import kotlin.random.Random
 
 /**
@@ -35,13 +33,12 @@ object Win11Material {
     /** The appWidgetId being drawn (0 = the global look); set by [Skins.draw] and the text widgets around their draw. */
     val forId = ThreadLocal.withInitial { 0 }
 
-    /** The accent for text, gauges and icons: the app accent lightened ~45% toward white, as Windows does on dark. */
+    /** The accent for text, gauges and icons: the widget's own pick, else the widget/app accent as [WidgetAccent] resolves it (theme swatch, Material You), dark ones lightened ~45% toward white as Windows does. */
     fun accent(ctx: Context): Int {
-        WidgetLook.load(ctx)
-        val base = if (forId.get() > 0 && WidgetAccent.own(ctx, forId.get()) != 0) WidgetAccent.own(ctx, forId.get()) else if (WidgetLook.accentColor != 0) WidgetLook.accentColor else {
-            val i = ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getInt("accent2", -1)
-            WinAccents.getOrNull(i)?.toArgb() ?: 0xFF0067C0.toInt()
-        }
+        val id = forId.get()
+        // WidgetAccent knows the theme's swatch list and the wallpaper accent; reading WinAccents[accent2] here gave the wrong colour on non-Windows themes
+        val base = if (id > 0) WidgetAccent.of(ctx, id) else WidgetAccent.app(ctx)
+        if (androidx.core.graphics.ColorUtils.calculateLuminance(base) > .4) return base or 0xFF000000.toInt()
         fun up(c: Int) = c + ((255 - c) * .45f).toInt()
         return Color.rgb(up(Color.red(base)), up(Color.green(base)), up(Color.blue(base)))
     }
@@ -61,7 +58,14 @@ object Win11Material {
         c.save(); c.clipPath(clip)
         c.saveLayerAlpha(box, alpha)
         if (mat == "blur") { // the lock screen's blurred wallpaper (BlurBackdrop), centre-cropped to the tile
-            val b = com.umutk.pulse.features.BlurBackdrop.blurredWallpaper(ctx, WidgetOver.blur(ctx, id).coerceIn(0f, 1f) * 40f, (WidgetOver.tint(ctx, id).coerceIn(0f, 1f) * 255).toInt() shl 24)
+            val tintA = (WidgetOver.tint(ctx, id).coerceIn(0f, 1f) * 255).toInt() shl 24
+            val b = blurSource(ctx, WidgetOver.blur(ctx, id).coerceIn(0f, 1f) * 40f, tintA)
+            if (b == null) { // "none": only the dark tint, no picture
+                c.drawRect(box, Paint().apply { color = Color.argb(205 + (tintA ushr 24) / 5, 20, 20, 20) })
+                c.restore(); c.restore()
+                c.drawRoundRect(RectF(.75f, .75f, w - .75f, h - .75f), radius, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.5f; color = Color.argb(40, 255, 255, 255) })
+                return
+            }
             val s = maxOf(w / b.width, h / b.height); val sw = (w / s).toInt().coerceAtMost(b.width); val sh = (h / s).toInt().coerceAtMost(b.height)
             val x = (b.width - sw) / 2; val y = (b.height - sh) / 2
             c.drawBitmap(b, Rect(x, y, x + sw, y + sh), box, Paint(Paint.FILTER_BITMAP_FLAG))
@@ -74,7 +78,9 @@ object Win11Material {
             // saturation up a little like the Windows blur, then the dark luminosity/tint layer over it
             val sat = ColorMatrix().apply { setSaturation(1.25f) }
             c.drawBitmap(wall, null, box, Paint(Paint.FILTER_BITMAP_FLAG).apply { colorFilter = ColorMatrixColorFilter(sat) })
-            c.drawColor(when (mat) { "mica" -> Color.argb(236, 10, 10, 10); "acrylic" -> Color.argb(222, 12, 12, 12); else -> Color.argb(240, 6, 6, 6) })   // all dark, only the tint differs
+            // the Tint slider sets how dark the wash is (default .25 = the old 235), so the wallpaper can really show through
+            val a = (150 + WidgetOver.tint(ctx, id).coerceIn(0f, 1f) * 340).toInt().coerceAtMost(255)
+            c.drawColor(when (mat) { "mica" -> Color.argb(a, 10, 10, 10); "acrylic" -> Color.argb(a - 12, 12, 12, 12); else -> Color.argb(a, 6, 6, 6) })
         } else c.drawColor(when (mat) { "mica" -> Color.rgb(10, 10, 10); "acrylic" -> Color.rgb(12, 12, 12); else -> Color.rgb(6, 6, 6) })
         if (mat == "acrylic") c.drawRect(box, Paint().apply { shader = BitmapShader(noise, Shader.TileMode.REPEAT, Shader.TileMode.REPEAT) })
         c.drawRect(box, Paint().apply { shader = LinearGradient(0f, 0f, 0f, h * .45f, Color.argb(7, 255, 255, 255), 0, Shader.TileMode.CLAMP) })
@@ -86,6 +92,26 @@ object Win11Material {
             shader = LinearGradient(0f, 0f, 0f, h, Color.argb(70, 255, 255, 255), Color.argb(22, 255, 255, 255), Shader.TileMode.CLAMP)
         }
         c.drawRoundRect(RectF(.75f, .75f, w - .75f, h - .75f), radius, radius, edge)
+    }
+
+    private var bgKey = ""
+    private var bgBmp: Bitmap? = null
+    /** The picture behind the blur material, blurred and tinted: the stock wallpaper, the phone's, an own picture, or null for none. */
+    @Synchronized
+    private fun blurSource(ctx: Context, radiusDp: Float, tint: Int): Bitmap? {
+        val mode = WidgetLook.blurBg
+        val file = java.io.File(ctx.filesDir, "widget_blur_bg.jpg")
+        if (mode == "none") return null
+        if (mode == "stock" || (mode == "file" && !file.exists())) return com.umutk.pulse.features.BlurBackdrop.blurredWallpaper(ctx, radiusDp, tint)
+        val k = "$mode/${radiusDp.toInt()}/$tint/${if (mode == "file") file.lastModified() else 0}"
+        bgBmp?.let { if (k == bgKey) return it }
+        val src: Bitmap = (if (mode == "file") {
+            val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            android.graphics.BitmapFactory.decodeFile(file.path, o)
+            o.inSampleSize = Integer.highestOneBit((o.outWidth / 540).coerceAtLeast(1)); o.inJustDecodeBounds = false
+            android.graphics.BitmapFactory.decodeFile(file.path, o)
+        } else wallpaper(ctx)) ?: return com.umutk.pulse.features.BlurBackdrop.blurredWallpaper(ctx, radiusDp, tint)
+        return com.umutk.pulse.features.BlurBackdrop.blur(src, radiusDp, tint).also { bgBmp = it; bgKey = k }
     }
 
     /** The wallpaper centre-cropped to [aspect] and shrunk by WidgetLook.blur; scaling it back up is the blur. */
