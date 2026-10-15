@@ -442,9 +442,6 @@ fun FunctionsSettings() {
             PChip(Look.windowTheme == "material", "Material You") { Cfg.setWindowTheme(ctx, "material") }
         }
     }
-    PCard {
-        SwitchRow(tr("Old icons", "Eski ikonlar"), tr("Windows 11 left menu: the first icon set; off uses the new Fluency icons", "Windows 11 sol menüsü: ilk ikon seti; kapalıyken yeni Fluency ikonları"), Opt.oldNavIcons) { Opt.oldNavIcons = it; Opt.save(ctx) }
-    }
     Text(tr("Refresh rate", "Yenileme hızı"), color = Look.accent, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
     RefreshSettings()
     Text(tr("Report", "Rapor"), color = Look.accent, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)

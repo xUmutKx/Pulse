@@ -102,14 +102,9 @@ fun PIcon(k: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifie
     }
 }
 
-/** An icon of the left menu: on Windows 11 the first icon set while "Old icons" is on in Settings > Functions, otherwise the look's own icon. */
+/** An icon of the left menu: the look's own icon. */
 @Composable
 fun PNavIcon(k: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifier) {
-    if (T.id == "win11" && !T.material && Opt.oldNavIcons) {
-        val ctx = LocalContext.current
-        val old = ThemeIcons.bitmap(ctx, "win11old", k)
-        if (old != null) { Image(old, null, modifier.size(size)); return }
-    }
     PIcon(k, tint, size, modifier)
 }
 

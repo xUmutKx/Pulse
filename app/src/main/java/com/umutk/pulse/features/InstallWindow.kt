@@ -66,6 +66,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -403,11 +404,13 @@ private fun VersionRows(pk: Picked, old: OldApp?) {
     val new = "${pk.version.ifEmpty { "-" }} (${pk.code})"
     val prev = old?.let { "${it.version.ifEmpty { "-" }} (${it.code})" }
     if (prev == null || (InstallShow.sameSingle && prev == new)) { Text("Version: $new", color = w.text, fontSize = 14.sp); return }
-    if (InstallShow.cmpSingle) Text("Version: $prev \u2192 $new", color = w.text, fontSize = 14.sp)
-    else {
-        Text("Installed: $prev", color = w.text, fontSize = 14.sp)
-        Text("New: $new", color = w.text, fontSize = 14.sp)
-    }
+    // one line always: the type shrinks until "old -> new" fits, it never wraps. Installed in pastel red, new in green
+    val red = androidx.compose.ui.graphics.Color(0xFFE88B8B); val green = androidx.compose.ui.graphics.Color(0xFF6FCF8F)
+    var size by remember(prev, new) { mutableStateOf(14f) }
+    Text(androidx.compose.ui.text.buildAnnotatedString {
+        append("Version: "); withStyle(androidx.compose.ui.text.SpanStyle(color = red)) { append(prev) }; append(" \u2192 "); withStyle(androidx.compose.ui.text.SpanStyle(color = green)) { append(new) }
+    }, color = w.text, fontSize = size.sp, maxLines = 1, softWrap = false,
+        onTextLayout = { if (it.didOverflowWidth && size > 8f) size -= .5f })
 }
 
 @Composable
@@ -615,6 +618,8 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 }
                 if (doneOk) {
                     Text("${pk.label} is installed.", color = w.text, fontSize = 13.sp)
+                    // opens the app that was just installed
+                    ctx.packageManager.getLaunchIntentForPackage(pk.pkg)?.let { li -> IButton("Open", full, primary = true) { ctx.startActivity(li.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); onDone() } }
                     IButton("Close", full) { onDone() }
                     return@Column
                 }
