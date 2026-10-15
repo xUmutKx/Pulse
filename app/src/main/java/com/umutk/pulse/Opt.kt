@@ -23,6 +23,7 @@ object Opt {
     val authentic: Boolean get() = oldPopups
     /** Windows 11 left menu: the first icon set (default) or the new Fluency one. */
     var oldNavIcons by mutableStateOf(true)
+    var filesFull by mutableStateOf(true)    // Files page opens as a full-screen window with its own frame
     var recycle by mutableStateOf(false)     // off: deleted files are gone at once; on: they go to the Recycle Bin page first
     var fontScale by mutableFloatStateOf(1f)
     var compact by mutableStateOf(false)
@@ -44,7 +45,7 @@ object Opt {
         lang = p.getString("lang", "auto") ?: "auto"
         amoledBg = p.getBoolean("amoledBg", true)
         hidden = p.getStringSet("hidden", emptySet()) ?: emptySet()
-        tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false); signIn = p.getBoolean("signIn", false); crt = p.getBoolean("crt", false); oldPopups = p.getBoolean("oldPopups", true); recycle = p.getBoolean("recycle", false); oldNavIcons = p.getBoolean("oldNavIcons", true)
+        tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false); signIn = p.getBoolean("signIn", false); crt = p.getBoolean("crt", false); oldPopups = p.getBoolean("oldPopups", true); recycle = p.getBoolean("recycle", false); oldNavIcons = p.getBoolean("oldNavIcons", true); filesFull = p.getBoolean("filesFull", true)
         fontScale = p.getFloat("fontScale", 1f); compact = p.getBoolean("compact", false);
         ovOn = p.getBoolean("ovOn", false); notifOn = p.getBoolean("notifOn", false)
         ovAlpha = p.getFloat("ovAlpha", .75f); ovSize = p.getFloat("ovSize", 11f)
@@ -53,7 +54,7 @@ object Opt {
     }
 
     fun save(c: Context) {
-        sp(c).edit().putBoolean("amoledBg", amoledBg).putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn).putBoolean("signIn", signIn).putBoolean("crt", crt).putBoolean("oldPopups", oldPopups).putBoolean("recycle", recycle).putBoolean("oldNavIcons", oldNavIcons)
+        sp(c).edit().putBoolean("amoledBg", amoledBg).putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn).putBoolean("signIn", signIn).putBoolean("crt", crt).putBoolean("oldPopups", oldPopups).putBoolean("recycle", recycle).putBoolean("oldNavIcons", oldNavIcons).putBoolean("filesFull", filesFull)
             .putFloat("fontScale", fontScale).putBoolean("compact", compact).putBoolean("ovOn", ovOn).putBoolean("notifOn", notifOn)
             .putFloat("ovAlpha", ovAlpha).putFloat("ovSize", ovSize).putStringSet("ovItems", ovItems)
             .putInt("alertTemp", alertTemp).putInt("alertBat", alertBat).putInt("alertRam", alertRam).apply()

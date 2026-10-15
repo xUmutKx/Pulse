@@ -64,7 +64,7 @@ object Cfg {
         interval = p.getLong("interval", 1000L); Sampler.interval = interval
         confirmKill = p.getBoolean("confirm", true)
     }
-    fun setTheme(c: Context, id: String) { Look.theme = Themes.first { it.id == id }; sp(c).edit().putString("theme", id).apply() }
+    fun setTheme(c: Context, id: String) { Look.theme = Themes.first { it.id == id }; sp(c).edit().putString("theme", id).apply(); com.umutk.pulse.widgets.WidgetData.refreshNow(c) }
     fun setMode(c: Context, v: String) { Look.mode = v; sp(c).edit().putString("mode", v).apply() }
     fun setEffect(c: Context, v: String) { Look.effect = v; sp(c).edit().putString("effect", v).apply() }
     fun setBlur(c: Context) { sp(c).edit().putFloat("blurDp2", Look.blurDp).putFloat("blurTint2", Look.blurTint).apply() }
@@ -72,7 +72,7 @@ object Cfg {
     fun setAccent(c: Context, i: Int) { Look.accentIdx = i; sp(c).edit().putInt("accent2", i).apply(); com.umutk.pulse.widgets.WidgetData.refreshNow(c) }
     fun setInterval(c: Context, v: Long) { interval = v; Sampler.interval = v; sp(c).edit().putLong("interval", v).apply() }
     fun setConfirm(c: Context, v: Boolean) { confirmKill = v; sp(c).edit().putBoolean("confirm", v).apply() }
-    fun setDynamic(c: Context, v: Boolean) { Look.dynamic = v; sp(c).edit().putBoolean("dynamic", v).apply() }
+    fun setDynamic(c: Context, v: Boolean) { Look.dynamic = v; sp(c).edit().putBoolean("dynamic", v).apply(); com.umutk.pulse.widgets.WidgetData.refreshNow(c) }
     fun setCorner(c: Context, v: String) { Look.corner = v; sp(c).edit().putString("corner", v).apply() }
 }
 
@@ -93,6 +93,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onResume() {
         super.onResume()
+        // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready
+        if (android.os.Environment.isExternalStorageManager()) com.umutk.pulse.features.StorageScan.ensure(android.os.Environment.getExternalStorageDirectory())
         Shell.refreshShizuku()
         if (Shell.root != true) Thread { Shell.detectRoot() }.start()
     }
@@ -115,6 +117,13 @@ class MainActivity : ComponentActivity() {
     /** A link shared from another app (browser "Share") starts a download right away. */
     private fun handleShare(i: Intent?) {
         i?.getStringExtra("start")?.let { com.umutk.pulse.widgets.WidgetOpen.page = it }
+        // a long-pressed Quick Settings tile: open the page of that tile instead of the app info screen
+        if (i?.action == android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES)
+            IntentCompat.getParcelableExtra(i, Intent.EXTRA_COMPONENT_NAME, android.content.ComponentName::class.java)?.let { com.umutk.pulse.widgets.WidgetOpen.page = tilePage(it.className) }
+        // Pulse chosen as the file manager: a folder VIEW opens Files full screen
+        if (i?.action == Intent.ACTION_VIEW && (i.type == "resource/folder" || i.type == "vnd.android.document/directory")) {
+            com.umutk.pulse.features.FilesLaunch.full = true; com.umutk.pulse.widgets.WidgetOpen.page = "files"; return
+        }
         if (i?.getBooleanExtra("downloads", false) == true) { Downloads.wanted = true; return }
         if (i?.type == "application/vnd.android.package-archive") {
             val uri = IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, Uri::class.java)
@@ -233,6 +242,22 @@ fun LookHost(transparent: Boolean = false, content: @Composable (PTheme) -> Unit
     }
 }
 
+/** A page's own "one level up" (a Settings category, a tool inside Toolkit, Licences): the shared back arrow runs the newest
+ *  one before leaving the page, so a page never draws a second arrow of its own. */
+object InnerBack { val steps = androidx.compose.runtime.mutableStateListOf<() -> Unit>() }
+
+/** Registers [onBack] with the shared back arrow and the back gesture while [enabled]. */
+@Composable
+fun InnerBackStep(enabled: Boolean, onBack: () -> Unit) {
+    val cb by androidx.compose.runtime.rememberUpdatedState(onBack)
+    if (enabled) androidx.compose.runtime.DisposableEffect(Unit) {
+        val f = { cb() }
+        InnerBack.steps.add(f)
+        onDispose { InnerBack.steps.remove(f) }
+    }
+    androidx.activity.compose.BackHandler(enabled) { cb() }
+}
+
 @Composable
 private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (String) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -241,7 +266,9 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
     val start = if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes"
     val go: (String) -> Unit = { p -> onSub(""); if (p != page) trail = (trail + page).takeLast(20); onPage(p) }
     val back: () -> Unit = {
-        if (sub.isNotEmpty()) onSub("")
+        val inner = InnerBack.steps.lastOrNull()
+        if (inner != null) inner()
+        else if (sub.isNotEmpty()) onSub("")
         else {
             val prev = trail.lastOrNull { it != page }
             trail = if (prev == null) emptyList() else trail.subList(0, trail.lastIndexOf(prev))
@@ -261,7 +288,7 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
         }
     }
     // tools that draw no back arrow of their own get the shared one; so does every page but the start page
-    val bar = (sub.isEmpty() && page != start) || sub in setOf("toolkit", "installer", "installer_settings", "ram", "dns", "fonts")
+    val bar = (sub.isEmpty() && page != start) || sub in setOf("toolkit", "installer", "installer_settings", "ram", "dns", "fonts", "guide") || InnerBack.steps.isNotEmpty()
     val body: @Composable () -> Unit = { Column(Modifier.fillMaxSize()) {
         if (bar) Box(Modifier.padding(start = 4.dp).size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
         Box(Modifier.weight(1f)) {

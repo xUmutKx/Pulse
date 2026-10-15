@@ -14,6 +14,7 @@ import android.os.Build
 import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -99,6 +100,10 @@ fun HealthScreen(onBack: () -> Unit) {
     var actStart by remember { mutableLongStateOf(prefs.getLong("act_start", 0L)) }
     var actLast by remember { mutableLongStateOf(prefs.getLong("act_last", 0L)) }
     var actType by remember { mutableStateOf(ActivityType.fromName(prefs.getString("act_type", null))) }
+    var actDist by remember { mutableFloatStateOf(prefs.getFloat("act_dist", 0f)) }
+    var finished by remember { mutableStateOf<ActRecord?>(null) }
+    var log by remember { mutableStateOf(loadActLog(prefs)) }
+    var tab by remember { mutableStateOf(0) }
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var locOn by remember { mutableStateOf(prefs.getBoolean("loc_on", false) && actStart > 0L) }
     var fineOk by remember { mutableStateOf(ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) }
@@ -161,7 +166,7 @@ fun HealthScreen(onBack: () -> Unit) {
 
     fun setLoc(on: Boolean) { locOn = on; prefs.edit().putBoolean("loc_on", on).apply() }
     fun startAct() {
-        actStart = System.currentTimeMillis(); nowMs = actStart; prefs.edit().putLong("act_start", actStart).apply()
+        actStart = System.currentTimeMillis(); nowMs = actStart; actDist = 0f; finished = null; prefs.edit().putLong("act_start", actStart).putFloat("act_dist", 0f).apply()
         setLoc(actType.gps && fineOk)
     }
     // location is asked only when a GPS activity starts; if it is refused the activity still runs, without a track
@@ -171,6 +176,7 @@ fun HealthScreen(onBack: () -> Unit) {
             if (actType.gps && hasLoc && !fineOk) askLoc.launch(Manifest.permission.ACCESS_FINE_LOCATION) else startAct()
         } else {
             actLast = System.currentTimeMillis() - actStart
+            ActRecord(actType.key, actStart, actLast, actDist).also { addActRecord(prefs, it); finished = it; log = loadActLog(prefs) }
             actStart = 0L
             prefs.edit().putLong("act_start", 0L).putLong("act_last", actLast).apply()
             setLoc(false)
@@ -180,7 +186,11 @@ fun HealthScreen(onBack: () -> Unit) {
     DisposableEffect(locOn, fineOk) {
         if (!locOn || !fineOk) return@DisposableEffect onDispose { }
         val lm = ctx.getSystemService(Context.LOCATION_SERVICE) as LocationManager
-        val l = LocationListener { lastLoc = it }
+        var prev: Location? = null // distance counts only fixes seen in this session
+        val l = LocationListener { n ->
+            lastLoc = n
+            if (n.accuracy < 50f) { prev?.let { actDist += it.distanceTo(n) }; prev = n; prefs.edit().putFloat("act_dist", actDist).apply() }
+        }
         val providers = listOf(LocationManager.GPS_PROVIDER, LocationManager.NETWORK_PROVIDER).filter { lm.isProviderEnabled(it) }
         lastLoc = providers.mapNotNull { lm.getLastKnownLocation(it) }.maxByOrNull { it.time }
         providers.forEach { lm.requestLocationUpdates(it, 2000L, 0f, l, Looper.getMainLooper()) }
@@ -216,6 +226,13 @@ fun HealthScreen(onBack: () -> Unit) {
             }
             LinearProgressIndicator(progress = { (steps / STEP_GOAL.toFloat()).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
         }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(tr("Overview", "Özet"), tr("Track", "Takip")).forEachIndexed { i, n ->
+                Text(n, color = if (tab == i) Look.accent else T.sub, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.clickable { tab = i }.padding(horizontal = 10.dp, vertical = 6.dp))
+            }
+        }
+        if (tab == 0) HealthOverview(log) else {
         // no step counter on the device: the card is not shown at all
         if (stepSensor != null) PCard {
             Text("Steps today", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -253,8 +270,10 @@ fun HealthScreen(onBack: () -> Unit) {
             }
             val secs = (if (running) nowMs - actStart else actLast) / 1000
             Text("%02d:%02d:%02d".format(secs / 3600, secs % 3600 / 60, secs % 60), color = T.text, fontSize = 40.sp, fontWeight = FontWeight.SemiBold)
+            if (running && locOn) Text(fmtDist(actDist), color = T.sub, fontSize = 13.sp)
             PButton(if (running) "Stop" else "Start", danger = running, icon = if (running) Icons.Filled.Stop else Icons.Filled.PlayArrow) { toggleActivity() }
         }
+        finished?.let { if (actStart == 0L) FinishCard(it) }
         // no location hardware on the device: the card is not shown at all
         if (hasLoc && locOn) PCard {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -299,6 +318,7 @@ fun HealthScreen(onBack: () -> Unit) {
                 NumBox("Height (cm)", heightTxt, Modifier.weight(1f)) { heightTxt = it; it.replace(',', '.').toFloatOrNull()?.takeIf { v -> v in 100f..250f }?.let { v -> prefs.edit().putFloat("height", v).apply() } }
             }
             Text("Used for distance and calories.", color = T.sub, fontSize = 12.sp)
+        }
         }
     }
 }

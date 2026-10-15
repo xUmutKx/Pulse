@@ -404,18 +404,21 @@ def win7(c, s, w, h):
 
 # ---------------------------------------------------------------- Windows 11
 
-W11_TILE, W11_BLUE, W11_TRACK = argb(240, 44, 44, 44), (96, 182, 246), (58, 70, 80)
+# see-through dark acrylic at the default .62 opacity, like Win11Material over the wallpaper
+W11_TILE, W11_BLUE, W11_TRACK = argb(158, 10, 10, 10), (96, 182, 246), argb(56, 255, 255, 255)
 
 
 def win11(c, s, w, h):
     c.rrect(0, 0, w, h, w * .16, W11_TILE)
+    c.rrect_stroke(.75, .75, w - .75, h - .75, w * .16, 1.5, argb(60, 255, 255, 255))
     cx = w / 2
     if s == "W11_CLOCK":
-        c.circle(cx, h / 2, w * .4, (42, 54, 64))
-        analog(c, cx, h / 2, w * .4, W11_BLUE, W11_BLUE, numerals=W11_BLUE, face="medium", minute_w=w * .016)
+        c.circle(cx, h / 2, w * .36, argb(24, 255, 255, 255))
+        analog(c, cx, h / 2, w * .36, W11_BLUE, W11_BLUE, numerals=W11_BLUE, face="medium", minute_w=w * .016)
     elif s == "W11_DATE":
-        c.text(NOW.strftime("%a %b"), cx, h * .28, w * .15, W11_BLUE, "bold")
-        c.text(str(NOW.day), cx, h * .84, w * .5, W11_BLUE, "medium")
+        c.text(NOW.strftime("%a %b"), cx, h * .23, w * .14, W11_BLUE, "bold")
+        c.text(str(NOW.day), cx, h * .73, w * .5, W11_BLUE, "medium")
+        c.text(NOW.strftime("%Y"), cx, h * .89, w * .1, W11_BLUE, "sans")
     elif s == "W11_CPU":
         r = (w * .12, h * .1, w * .44, h * .42)
         gauge(c, r, CPU, w * .025, W11_TRACK, W11_BLUE, -90, 360)
@@ -435,7 +438,7 @@ def win11(c, s, w, h):
         c.text(NOW.strftime("%B").upper(), w * .1, h * .17, w * .07, WHITE, "medium", "left")
         month_grid(c, (w * .06, h * .2, w * .94, h * .95), WHITE, WHITE, W11_BLUE, WHITE, (150, 150, 150), "medium", True)
     elif s == "W11_TIME":
-        c.circle(cx, h / 2, w * .4, (58, 74, 88))
+        c.circle(cx, h / 2, w * .36, argb(32, 255, 255, 255))
         sun(c, cx, h * .36, w * .06, W11_BLUE)
         c.text("%s:%s" % (hh(), mm()), cx, h * .64, w * .16, W11_BLUE, "bold")
 
@@ -868,6 +871,362 @@ SKINS = [
 ]
 
 
+# ---------------------------------------------------------------- the 20 text widgets (port of TextTile in widgets/TextTiles.kt)
+
+def vector_mask(name, size):
+    """Fills an Android vector drawable's paths (M L H V C S Q T A Z) into a size x size L mask (even-odd)."""
+    import re
+    import xml.etree.ElementTree as ET
+    root = ET.parse(os.path.join(RES, "drawable", name + ".xml")).getroot()
+    A = "{http://schemas.android.com/apk/res/android}"
+    vw = float(root.get(A + "viewportWidth")); vh = float(root.get(A + "viewportHeight"))
+    ss = 8
+    m = Image.new("L", (size * ss, size * ss), 0)
+    for el in root.iter("path"):
+        toks = re.findall(r"[A-Za-z]|-?(?:\d+\.?\d*|\.\d+)(?:[eE][-+]?\d+)?", el.get(A + "pathData"))
+        polys, cur = [], []
+        x = y = sx = sy = 0.0; cx2 = cy2 = None; i = 0; cmd = None; prev = None
+
+        def num():
+            nonlocal i
+            v = float(toks[i]); i += 1
+            return v
+
+        def cubic(x0, y0, x1, y1, x2, y2, x3, y3):
+            for k in range(1, 13):
+                t = k / 12; u = 1 - t
+                cur.append((u**3*x0 + 3*u*u*t*x1 + 3*u*t*t*x2 + t**3*x3, u**3*y0 + 3*u*u*t*y1 + 3*u*t*t*y2 + t**3*y3))
+
+        def arc(x0, y0, rx, ry, phi, fa, fs, x1, y1):
+            if rx == 0 or ry == 0:
+                cur.append((x1, y1)); return
+            ph = math.radians(phi); co, si = math.cos(ph), math.sin(ph)
+            dx, dy = (x0 - x1) / 2, (y0 - y1) / 2
+            xp, yp = co*dx + si*dy, -si*dx + co*dy
+            rx, ry = abs(rx), abs(ry)
+            lam = xp*xp/(rx*rx) + yp*yp/(ry*ry)
+            if lam > 1: rx *= math.sqrt(lam); ry *= math.sqrt(lam)
+            num_ = rx*rx*ry*ry - rx*rx*yp*yp - ry*ry*xp*xp
+            c_ = math.sqrt(max(0, num_ / (rx*rx*yp*yp + ry*ry*xp*xp)))
+            if fa == fs: c_ = -c_
+            cxp, cyp = c_*rx*yp/ry, -c_*ry*xp/rx
+            ccx = co*cxp - si*cyp + (x0 + x1)/2; ccy = si*cxp + co*cyp + (y0 + y1)/2
+            def ang(ux, uy, vx, vy):
+                a = math.atan2(ux*vy - uy*vx, ux*vx + uy*vy); return a
+            t1 = ang(1, 0, (xp - cxp)/rx, (yp - cyp)/ry)
+            dt = ang((xp - cxp)/rx, (yp - cyp)/ry, (-xp - cxp)/rx, (-yp - cyp)/ry)
+            if not fs and dt > 0: dt -= 2*math.pi
+            elif fs and dt < 0: dt += 2*math.pi
+            n = max(4, int(abs(dt) * 8))
+            for k in range(1, n + 1):
+                t = t1 + dt * k / n
+                cur.append((ccx + rx*math.cos(t)*co - ry*math.sin(t)*si, ccy + rx*math.cos(t)*si + ry*math.sin(t)*co))
+        while i < len(toks):
+            if toks[i].isalpha():
+                cmd = toks[i]; i += 1
+            elif cmd in ("M", "m"):
+                cmd = "L" if cmd == "M" else "l"
+            rel = cmd.islower(); C = cmd.upper(); ox, oy = (x, y) if rel else (0.0, 0.0)
+            if C == "Z":
+                if cur: polys.append(cur); cur = []
+                x, y = sx, sy; prev = C; continue
+            if C == "M":
+                if cur: polys.append(cur)
+                x, y = num() + ox, num() + oy; sx, sy = x, y; cur = [(x, y)]
+            elif C == "L":
+                x, y = num() + ox, num() + oy; cur.append((x, y))
+            elif C == "H":
+                x = num() + (x if rel else 0); cur.append((x, y))
+            elif C == "V":
+                y = num() + (y if rel else 0); cur.append((x, y))
+            elif C in ("C", "S"):
+                if C == "C":
+                    x1, y1 = num() + ox, num() + oy
+                else:
+                    x1, y1 = (2*x - cx2, 2*y - cy2) if prev in ("C", "S") else (x, y)
+                x2, y2, x3, y3 = num() + ox, num() + oy, num() + ox, num() + oy
+                cubic(x, y, x1, y1, x2, y2, x3, y3); cx2, cy2 = x2, y2; x, y = x3, y3
+            elif C in ("Q", "T"):
+                if C == "Q":
+                    x1, y1 = num() + ox, num() + oy
+                else:
+                    x1, y1 = (2*x - cx2, 2*y - cy2) if prev in ("Q", "T") else (x, y)
+                x3, y3 = num() + ox, num() + oy
+                cubic(x, y, x + 2/3*(x1 - x), y + 2/3*(y1 - y), x3 + 2/3*(x1 - x3), y3 + 2/3*(y1 - y3), x3, y3); cx2, cy2 = x1, y1; x, y = x3, y3
+            elif C == "A":
+                rx, ry, phi, fa, fs = num(), num(), num(), num(), num()
+                x3, y3 = num() + ox, num() + oy
+                arc(x, y, rx, ry, phi, int(fa), int(fs), x3, y3); x, y = x3, y3
+            prev = C
+        if cur: polys.append(cur)
+        for pl in polys:
+            if len(pl) < 3: continue
+            pm = Image.new("L", m.size, 0)
+            ImageDraw.Draw(pm).polygon([(px / vw * size * ss, py / vh * size * ss) for px, py in pl], fill=255)
+            m = ImageChops.logical_xor(m.convert("1"), pm.convert("1")).convert("L")
+    return m.resize((size, size), Image.LANCZOS)
+
+
+def blend(a, b, f):
+    return tuple(round(x + (y - x) * f) for x, y in zip(a[:3], b[:3]))
+
+
+def lum(c):
+    def ch(v):
+        v /= 255
+        return v / 12.92 if v <= .03928 else ((v + .055) / 1.055) ** 2.4
+    return .2126 * ch(c[0]) + .7152 * ch(c[1]) + .0722 * ch(c[2])
+
+
+def readable(c):
+    return blend(c, WHITE, .45) if lum(c) < .25 else c
+
+
+def text_fit(c, s, x, y, size, color, face, maxw, minsize):
+    while measure(s, size, face) > maxw and size > minsize:
+        size -= .5
+    while measure(s, size, face) > maxw and len(s) > 1:
+        s = s[:-2] + "…"
+    c.text(s, x, y, size, color, face, "left")
+
+
+def text_tile(style, icon_name, title, t, W, H, d, accent=(0, 103, 192)):
+    """TextTile.draw, Pillow edition: same rules, sample data. t = dict(big, sub, frac, series, series2, max, bars, lit, tone)."""
+    crisp = style == "WIN95"
+    c = Canvas(int(W), int(H), ss=1 if crisp else 2, aa=not crisp)
+    win11 = style in ("WIN11", "WIN11_DARK"); xp = style == "XP"; w95 = style == "WIN95"; strip = xp or w95
+    w10 = style == "WIN10"; w7 = style == "WIN7"; mat = style == "MATERIAL"; amo = style == "AMOLED"
+    app = accent
+    w10bg = accent; w10light = w10 and lum(w10bg) > .55
+    mat_card, mat_chip, mat_on = blend(app, WHITE, .84), blend(app, WHITE, .5), blend(app, BLACK, .68)
+    if win11:
+        c.rrect(0, 0, W, H, 12 * d, argb(158, 10, 10, 10))
+        c.rrect_stroke(.75, .75, W - .75, H - .75, 12 * d, 1.5, argb(60, 255, 255, 255))
+    elif w10:
+        c.rect(0, 0, W, H, w10bg)
+    elif mat:
+        c.rrect(0, 0, W, H, 24 * d, mat_card)
+    elif amo:
+        c.rrect(0, 0, W, H, 24 * d, BLACK)
+        c.rrect_stroke(d * .5, d * .5, W - d * .5, H - d * .5, 24 * d, d, app[:3] + (70,))
+    elif w7:
+        c.rrect(0, 0, W, H, 10 * d, c.gradient(0, 0, 0, H, [(46, 58, 68), (12, 18, 24)]))
+        c.rrect_stroke(.5 * d, .5 * d, W - .5 * d, H - .5 * d, 10 * d, d, argb(102, 255, 255, 255))
+    elif xp:
+        c.rrect(0, 0, W, H, 6 * d, (236, 233, 216))
+        c.rrect_stroke(d, d, W - d, H - d, 6 * d, 2 * d, (0, 84, 227))
+    else:
+        c.rect(0, 0, W, H, BLACK); c.rect(0, 0, W - d, H - d, WHITE); c.rect(d, d, W - d, H - d, (128, 128, 128))
+        c.rect(d, d, W - 2 * d, H - 2 * d, (223, 223, 223)); c.rect(2 * d, 2 * d, W - 2 * d, H - 2 * d, (192, 192, 192))
+    fg = mat_on if mat else BLACK if (xp or w95 or w10light) else WHITE
+    if mat: fg2 = blend(mat_on, mat_card, .3)
+    elif xp: fg2 = (60, 60, 60)
+    elif w95: fg2 = (32, 32, 32)
+    elif w10: fg2 = fg[:3] + (210,)
+    elif win11: fg2 = (200, 200, 200)
+    elif w7: fg2 = (207, 232, 255)
+    else: fg2 = (158, 158, 158)
+    if win11: acc = blend(app, WHITE, .45) if lum(app) <= .4 else app
+    elif xp: acc = (45, 181, 45)
+    elif w95: acc = (0, 0, 128)
+    elif w10: acc = fg
+    elif w7: acc = (92, 200, 255)
+    elif mat: acc = blend(app, BLACK, .25)
+    else: acc = readable(app)
+    fill = t.get("tone") or acc
+    if mat: track = mat_chip + (150,)
+    elif strip: track = WHITE
+    elif w10: track = fg[:3] + (60,)
+    else: track = argb(56, 255, 255, 255)
+    vface = "light" if (w10 or amo) else "medium" if (win11 or mat) else "bold"
+
+    def icon(x0, y0, sz, col):   # noqa: the vector glyph tinted [col]
+        m = vector_mask(icon_name, max(1, round(c.d(sz))))
+        layer = Image.new("L", c.img.size, 0); layer.paste(m, (round(c.d(x0)), round(c.d(y0))))
+        c._fill(layer, col)
+    compact = W < 190 * d or W < H * 1.5
+    pad = (6 if w95 else 8 if xp else 12 if compact else 14) * d
+    L, R = pad, W - pad
+    bottom = H - pad
+    if strip:
+        hh_ = (18 if w95 else 22) * d
+        r = (2 * d, 2 * d, W - 2 * d, 2 * d + hh_) if xp else (3 * d, 3 * d, W - 3 * d, 3 * d + hh_)
+        if xp: c.rrect(*r, 4 * d, c.gradient(0, r[1], 0, r[3], [(58, 147, 255), (0, 88, 238)]))
+        else: c.rect(*r, c.gradient(r[0], 0, r[2], 0, [(0, 0, 128), (16, 132, 208)]))
+        isz = hh_ * .7; cy = (r[1] + r[3]) / 2
+        icon(r[0] + 4 * d, cy - isz / 2, isz, WHITE)
+        text_fit(c, title, r[0] + 8 * d + isz, cy + hh_ * .56 * .36, hh_ * .56, WHITE, "bold", r[2] - r[0] - 12 * d - isz, 9 * d)
+        top = r[3] + (6 if w95 else 8) * d
+    elif w10:
+        icon(L, pad, 18 * d, fg)
+        text_fit(c, title, L, H - pad, 12 * d, fg, "sans", R - L, 9 * d)
+        top = pad + 26 * d; bottom = H - pad - 20 * d
+    else:
+        hs = (22 if compact else 24) * d
+        if mat:
+            c.circle(L + hs / 2, pad + hs / 2, hs / 2, mat_chip)
+            icon(L + hs * .2, pad + hs * .2, hs * .6, mat_on)
+        else:
+            icon(L, pad + hs * .1, hs * .8, acc)
+        tx = L + hs + 6 * d
+        text_fit(c, title, tx, pad + hs / 2 + 12.5 * d * .36, 12.5 * d, fg2, "medium", R - tx, 9 * d)
+        top = pad + hs + (4 if compact else 6) * d
+    series, bars = t.get("series", []), t.get("bars", [])
+    has_graph = len(series) >= 2 or bool(bars)
+    frac = t.get("frac")
+    ring = not strip and not compact and frac is not None and not has_graph
+    panel = (L + (R - L) * .6, top, R, bottom) if (not compact and (has_graph or ring)) else None
+    left_r = panel[0] - 10 * d if panel else R
+    bh = (12 if xp else 14 if w95 else 8 if mat else 6 if w7 else 3 if amo else 4) * d
+    show_bar = frac is not None and not ring
+    bar_r = (L, bottom - bh, left_r, bottom) if show_bar else None
+    mini = (L, bottom - min(26 * d, (bottom - top) * .35), R, bottom) if (compact and has_graph and not show_bar) else None
+    text_bottom = (bar_r[1] if bar_r else mini[1] if mini else bottom) - 6 * d
+    avail = max(12 * d, text_bottom - top)
+    line_h = 15 * d
+    subs = t.get("sub", [])[:1 if compact else 2]
+    subs = subs[:max(0, int(avail * .45 / line_h))]
+    vs = max(12 * d, min((avail - len(subs) * line_h) * .9, (34 if compact else 42) * d))
+    if w95:
+        fr = (L, top, left_r, top + vs * 1.15)
+        c.rect(*fr, WHITE); c.rect(fr[0], fr[1], fr[2] - d, fr[3] - d, (128, 128, 128)); c.rect(fr[0] + d, fr[1] + d, fr[2] - 2 * d, fr[3] - 2 * d, (64, 64, 64)); c.rect(fr[0] + 2 * d, fr[1] + 2 * d, fr[2] - 2 * d, fr[3] - 2 * d, WHITE)
+        text_fit(c, t["big"], L + 5 * d, fr[3] - vs * .28, vs * .8, fg, vface, left_r - L - 10 * d, 9 * d)
+        y = fr[3]
+    else:
+        y = top + vs * .82
+        text_fit(c, t["big"], L - (d if (w10 or amo) else 0), y, vs, fg, vface, left_r - L, 9 * d)
+        y += vs * .12
+    for line in subs:
+        y += line_h
+        text_fit(c, line, L, y - 3 * d, 12 * d, fg2, "sans", left_r - L, 9 * d)
+    g = panel if (panel and has_graph) else mini
+    if g:
+        line_c = (0, 255, 0) if strip else fill
+        if strip:
+            c.rect(*g, BLACK)
+            xx = g[0]
+            while xx < g[2]: c.line(xx, g[1], xx, g[3], 1, (0, 128, 64)); xx += 10 * d
+            yy = g[1]
+            while yy < g[3]: c.line(g[0], yy, g[2], yy, 1, (0, 128, 64)); yy += 10 * d
+        if bars:
+            n = len(bars); gap = (2 if n > 6 else 4) * d; bw = (g[2] - g[0] - gap * (n - 1)) / n
+            sig = t.get("lit", -1) >= 0
+            for i, v in enumerate(bars):
+                x = g[0] + i * (bw + gap); rr = min(bw / 2, 3 * d)
+                full = (x, g[3] - (g[3] - g[1]) * v if sig else g[1], x + bw, g[3])
+                if not strip: c.rrect(*full, rr, track)
+                if sig:
+                    if i < t["lit"]: c.rrect(*full, rr, line_c)
+                else:
+                    c.rrect(x, g[3] - (g[3] - g[1]) * max(.04, v), x + bw, g[3], rr, line_c)
+        else:
+            mx = t.get("max") or max([1] + series + t.get("series2", []))
+            c.clip_rect(*g)
+            if not strip: c.line(g[0], g[3] - d / 2, g[2], g[3] - d / 2, d, track)
+
+            def curve(v, col, area):
+                if len(v) < 2: return
+                pts = [(g[0] + (g[2] - g[0]) * i / (len(v) - 1), g[3] - 2 * d - (g[3] - g[1] - 4 * d) * min(1, max(0, y0 / mx))) for i, y0 in enumerate(v)]
+                if area:
+                    c.polygon(pts + [(g[2], g[3]), (g[0], g[3])], c.gradient(0, g[1], 0, g[3], [col[:3] + ((70 if strip else 120),), col[:3] + (0,)]))
+                for a, b in zip(pts, pts[1:]):
+                    c.line(a[0], a[1], b[0], b[1], (1.5 if strip else 2) * d, col, round_cap=True)
+            curve(t.get("series2", []), (255, 255, 0) if strip else fg2[:3] + (170,), False)
+            curve(series, line_c, True)
+            c.restore()
+    if ring and panel:
+        f = min(1, max(0, frac)); sz = min(panel[2] - panel[0], panel[3] - panel[1]); sw = sz * .1
+        pcx, pcy = (panel[0] + panel[2]) / 2, (panel[1] + panel[3]) / 2
+        rr = (pcx - sz / 2 + sw / 2, pcy - sz / 2 + sw / 2, pcx + sz / 2 - sw / 2, pcy + sz / 2 - sw / 2)
+        c.arc(*rr, 0, 360, sw, track)
+        c.arc(*rr, -90, 360 * f, sw, fill, round_cap=not w10)
+        c.text("%d%%" % (f * 100), pcx, pcy + sz * .24 * .35, sz * .24, fg, vface)
+    if bar_r:
+        v = min(1, max(0, frac))
+        if strip:
+            if xp:
+                c.rrect(*bar_r, 3 * d, WHITE); c.rrect_stroke(*bar_r, 3 * d, d, (127, 157, 185))
+            else:
+                c.rect(*bar_r, WHITE); c.line(bar_r[0], bar_r[1], bar_r[2], bar_r[1], d, (128, 128, 128)); c.line(bar_r[0], bar_r[1], bar_r[0], bar_r[3], d, (128, 128, 128))
+            bw = (7 if xp else 9) * d; gap = 2 * d
+            inner = (bar_r[0] + 2 * d, bar_r[1] + 2 * d, bar_r[2] - 2 * d, bar_r[3] - 2 * d)
+            n = int((inner[2] - inner[0]) * v / (bw + gap))
+            pf = c.gradient(0, inner[1], 0, inner[3], [blend(fill, WHITE, .55), fill, blend(fill, BLACK, .1)], [0, .5, 1]) if xp else fill
+            for i in range(n):
+                c.rect(inner[0] + i * (bw + gap), inner[1], inner[0] + i * (bw + gap) + bw, inner[3], pf)
+        elif w7:
+            rr = (bar_r[3] - bar_r[1]) / 2
+            c.rrect(*bar_r, rr, argb(102, 0, 0, 0))
+            fx = max(bar_r[0] + (bar_r[3] - bar_r[1]), bar_r[0] + (bar_r[2] - bar_r[0]) * v)
+            c.rrect(bar_r[0], bar_r[1], fx, bar_r[3], rr, c.gradient(0, bar_r[1], 0, bar_r[3], [blend(fill, WHITE, .5), fill]))
+            c.rrect_stroke(*bar_r, rr, d * .8, argb(85, 255, 255, 255))
+        else:
+            rr = 0 if w10 else (bar_r[3] - bar_r[1]) / 2
+            c.rrect(*bar_r, rr, track)
+            if v > 0: c.rrect(bar_r[0], bar_r[1], max(bar_r[0] + (bar_r[3] - bar_r[1]), bar_r[0] + (bar_r[2] - bar_r[0]) * v), bar_r[3], rr, fill)
+    return c.result()
+
+
+_wave = lambda base, amp, n=40, ph=0: [base + amp * math.sin(i * .45 + ph) + amp * .5 * math.sin(i * 1.3 + ph) for i in range(n)]
+TEXT_WIDGETS = [   # provider xml / icon name, title, sample tile
+    ("usage", "CPU and memory", dict(big="CPU 23%", sub=["RAM 58% · 4.6 GB / 8 GB", "CPU 47°C"], frac=.58, series=_wave(28, 12), series2=_wave(58, 3, ph=1), max=100)),
+    ("battery", "Battery", dict(big="76%", sub=["On battery", "4.12 V · 420 mA · 31°C"], frac=.76, series=[90 - i * .35 for i in range(40)], max=100)),
+    ("storage", "Storage", dict(big="40 GB", sub=["free of 128 GB", "69% used · 88 GB"], frac=.69)),
+    ("downloads", "Downloads", dict(big="2.1 MB/s", sub=["1 active", "Last: video.mp4"], frac=1.0, series=[abs(v) for v in _wave(2, 1.2)])),
+    ("memory", "Memory", dict(big="4.6 GB", sub=["of 8 GB · 58%", "Swap 0.5 GB / 4 GB"], frac=.58, series=_wave(58, 4), max=100)),
+    ("temp", "Temperature", dict(big="47°C", sub=["CPU", "Battery 31°C"], frac=.47, series=_wave(47, 5), max=100)),
+    ("network", "Network", dict(big="↓ 1.4 MB/s", sub=["↑ 96 KB/s", "Total ↓ 3.2 GB ↑ 0.4 GB"], series=[abs(v) for v in _wave(1.4, 1)], series2=[abs(v) * .3 for v in _wave(.3, .3, ph=2)])),
+    ("clock", "Wed, 14 Oct", dict(big="10:09", sub=["Wednesday", "Week 42 · day 287"], frac=.42)),
+    ("uptime", "Uptime", dict(big="3d 05h 12m", sub=["Booted Sun 11 Oct, 04:57", "Next day in 18h 48m"], frac=.22)),
+    ("storagebar", "Storage free", dict(big="31%", sub=["free", "40 GB of 128 GB"], frac=.31)),
+    ("ramfree", "RAM free", dict(big="3.4 GB", sub=["free of 8 GB", "42% available"], frac=.42)),
+    ("cores", "Cores online", dict(big="8", sub=["cores online", "CPU 23% · up to 2850 MHz"], bars=[.35, .2, .6, .15, .4, .8, .25, .1])),
+    ("brightness", "Brightness", dict(big="62%", sub=["Automatic", "level 158 / 255"], frac=.62)),
+    ("wifi", "Wi-Fi network", dict(big="Home", sub=["Wi-Fi 6 · 5.2 GHz", "866 Mbps · -52 dBm"], bars=[.3, .55, .8, 1], lit=4)),
+    ("signal", "Mobile signal", dict(big="4G LTE", sub=["Carrier", "-89 dBm"], bars=[.3, .55, .8, 1], lit=3)),
+    ("batthealth", "Battery health", dict(big="Good", sub=["312 cycles", "Capacity 91% of design (4100 mAh)"], frac=.91)),
+    ("apps", "Apps", dict(big="214", sub=["96 user", "118 system"], frac=.45)),
+    ("lastdl", "Last download", dict(big="video.mp4", sub=["Nothing downloading"])),
+    ("alarm", "Next alarm", dict(big="Thu 07:30", sub=["in 21 h 21 min"], frac=.9)),
+    ("quick", "Quick action", dict(big="Toolkit", sub=["Tools, cleaners, shell"])),
+]
+TEXT_STYLES = ["MATERIAL", "AMOLED", "WIN11", "WIN11_DARK", "WIN10", "WIN7", "WIN95", "XP"]
+
+
+def text_previews(sheet=None):
+    """preview_widget_<name>.png in the default Material look at the 4 x 2 size (250 x 110 dp at d = 1.6); [sheet] also writes every look side by side."""
+    d = 1.6
+    for name, title, t in TEXT_WIDGETS:
+        img = text_tile("MATERIAL", "wi_" + name, title, t, 250 * d, 110 * d, d)
+        out = "preview_widget_" + name
+        assert "@drawable/" + out + '"' in open(os.path.join(RES, "xml", "widget_%s.xml" % name)).read(), name
+        save(img, out)
+        print(out, img.size)
+    if sheet:
+        rows = []
+        for name, title, t in TEXT_WIDGETS[:6] + TEXT_WIDGETS[11:15]:
+            row = [text_tile(s, "wi_" + name, title, t, 250 * 2, 110 * 2, 2) for s in TEXT_STYLES]
+            row.append(text_tile("MATERIAL", "wi_" + name, title, t, 110 * 2, 110 * 2, 2))
+            row.append(text_tile("WIN11", "wi_" + name, title, t, 110 * 2, 110 * 2, 2))
+            rows.append(row)
+        W = sum(i.width + 12 for i in rows[0]); H = sum(r[0].height + 12 for r in rows)
+        out = Image.new("RGBA", (W, H), (70, 110, 90, 255)); y = 0
+        for r in rows:
+            x = 0
+            for i in r:
+                out.alpha_composite(i, (x, y)); x += i.width + 12
+            y += r[0].height + 12
+        out.convert("RGB").save(sheet)
+
+
+def save(img, out):
+    """Writes res/drawable-nodpi/<out>.webp (lossy, alpha kept) and drops an older .png of the same name, which would clash."""
+    img.save(os.path.join(ART, out + ".webp"), "WEBP", quality=88, method=6)
+    png = os.path.join(ART, out + ".png")
+    if os.path.exists(png):
+        os.remove(png)
+
+
 def main():
     assert NOW.strftime("%A") == "Wednesday"
     face = 0
@@ -887,8 +1246,12 @@ def main():
             out, xml = "preview_skin_" + name.lower(), "widget_skin_%s.xml" % name.lower()
         # every preview must be the one its provider XML names
         assert "@drawable/" + out + '"' in open(os.path.join(RES, "xml", xml)).read(), xml
-        img.save(os.path.join(ART, out + ".png"), optimize=True)
+        save(img, out)
         print(out, w, h)
+        if name == "W11_CLOCK":   # the frosted clock (face 17) is the same Windows 11 tile and dial now
+            save(img, "preview_face_17")
+    if not only or "TEXT" in only:
+        text_previews(os.environ.get("SHEET"))
 
 
 if __name__ == "__main__":

@@ -68,7 +68,7 @@ private fun material(k: String): ImageVector = when (k) {
     "volume" -> Icons.Outlined.VolumeUp; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Schedule
     "timer" -> Icons.Outlined.HourglassEmpty; "calc" -> Icons.Outlined.Calculate; "scale" -> Icons.Outlined.FormatSize
     "power" -> Icons.Outlined.PowerSettingsNew
-    "phone" -> Icons.Outlined.PhoneAndroid; "play" -> Icons.Outlined.PlayArrow; "run" -> Icons.Outlined.PlayArrow; "pause" -> Icons.Outlined.Pause; "sort" -> Icons.Outlined.SwapVert; "book" -> Icons.Outlined.MenuBook; else -> Icons.Outlined.Info
+    "phone" -> Icons.Outlined.PhoneAndroid; "play" -> Icons.Outlined.PlayArrow; "run" -> Icons.Outlined.PlayArrow; "pause" -> Icons.Outlined.Pause; "sort" -> Icons.Outlined.SwapVert; "book" -> Icons.Outlined.MenuBook; "snail" -> Icons.Outlined.HourglassEmpty; else -> Icons.Outlined.Info
 }
 
 /** Material icons for the Material / AMOLED themes, Fluent (Windows 11 style) outlines for the Windows ones. */

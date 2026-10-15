@@ -240,7 +240,7 @@ object Installer {
     fun inspect(c: Context, uri: Uri): Picked {
         val dir = File(c.cacheDir, "installer/${System.nanoTime()}").apply { mkdirs() }.canonicalFile
         val raw = File(dir, "pick.bin")
-        c.contentResolver.openInputStream(uri)?.use { i -> raw.outputStream().use { i.copyTo(it) } } ?: throw IOException("Cannot open the file")
+        c.contentResolver.openInputStream(uri)?.use { i -> raw.outputStream().use { i.copyCapped(it) } } ?: throw IOException("Cannot open the file")
         val names = try { entryNames(raw) } catch (e: IOException) { throw IOException("Not an APK or zip file") }
         val type = when {
             "AndroidManifest.xml" in names -> "APK"
@@ -296,7 +296,7 @@ object Installer {
                 if (e.isDirectory || !name.endsWith(".apk", true)) continue
                 val f = File(dir, name).canonicalFile
                 if (f.parentFile != dir) continue   // zip-slip guard
-                z.getInputStream(e).use { i -> f.outputStream().use { i.copyTo(it) } }
+                z.getInputStream(e).use { i -> f.outputStream().use { i.copyCapped(it) } }
                 out += f
             }
         }
@@ -319,7 +319,7 @@ object Installer {
         val inst = c.packageManager.packageInstaller
         val id = inst.createSession(PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL))
         inst.openSession(id).use { s ->
-            for (f in p.files) f.inputStream().use { i -> s.openWrite(f.name, 0, f.length()).use { o -> i.copyTo(o); s.fsync(o) } }
+            for (f in p.files) f.inputStream().use { i -> s.openWrite(f.name, 0, f.length()).use { o -> i.copyCapped(o); s.fsync(o) } }
             val cb = PendingIntent.getBroadcast(c, id, Intent(c, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
             s.commit(cb.intentSender)
         }

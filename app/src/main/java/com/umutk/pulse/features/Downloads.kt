@@ -65,6 +65,9 @@ import com.umutk.pulse.MainActivity
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PField
+import com.umutk.pulse.ThemedMenu
+import com.umutk.pulse.ThemedMenuItem
+import com.umutk.pulse.tr
 import com.umutk.pulse.PHead
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
@@ -103,8 +106,8 @@ private const val CH_DONE = "downloads_done"
 private const val ID_RUN = 7
 /** The running downloads' notifications sit together under the service's one. */
 private const val GROUP = "pulse_downloads"
-/** Speed limit when the switch on the Downloads page is on, in KB/s. */
-private const val LIMIT_KBS = 512
+/** Write speed per mode in KB/s: Unlimited, Steady, Slow, Snail. 0 = no limit. */
+val SPEED_KBS = intArrayOf(0, 8192, 1024, 128)
 private const val APK_MIME = "application/vnd.android.package-archive"
 /** Notification buttons, handled by [DownloadService]. */
 private const val ACT_PAUSE = "pause"
@@ -168,8 +171,8 @@ object Downloads {
     var dirPath by mutableStateOf(defaultDir())
     /** false: ask which app each time; true: open with the app that handles the file */
     var directOpen by mutableStateOf(false)
-    /** true: downloads are held to [LIMIT_KBS]; kept between runs */
-    var limitOn by mutableStateOf(false)
+    /** index into [SPEED_KBS]: caps downloads and installer copies; kept between runs */
+    var speed by mutableStateOf(0)
     /** false while there is no working network; transfers wait for it instead of failing */
     val online = MutableStateFlow(true)
     private var app: Context? = null
@@ -185,7 +188,7 @@ object Downloads {
         val p = ctx.getSharedPreferences("p", Context.MODE_PRIVATE)
         dirPath = p.getString("dlDir", null) ?: defaultDir()
         directOpen = p.getBoolean("openDirect", false)
-        limitOn = p.getBoolean("dlLimit", false)
+        speed = p.getInt("dlSpeed", 0).coerceIn(0, SPEED_KBS.size - 1)
         // the activity, the service and the boot receiver all call this; the list is read once per process
         if (loaded) return
         loaded = true
@@ -242,9 +245,9 @@ object Downloads {
         ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("openDirect", v).apply()
     }
 
-    fun setLimit(ctx: Context, v: Boolean) {
-        limitOn = v
-        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putBoolean("dlLimit", v).apply()
+    fun setSpeed(ctx: Context, v: Int) {
+        speed = v
+        ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putInt("dlSpeed", v).apply()
     }
 
     fun setDir(ctx: Context, path: String) {
@@ -516,6 +519,13 @@ private suspend fun DlTask.fetch() {
             delay(1500)
             if (!Downloads.online.value) { waitForNetwork(); continue }
             tries++
+            // a refusal from the server (404, 403, 410...) is final; a network error never is: it keeps retrying once a minute
+            val refused = Regex("HTTP 4\\d\\d").matches(e.message.orEmpty()) && e.message != "HTTP 408" && e.message != "HTTP 429"
+            if (tries >= RETRIES && !refused) {
+                error.value = "retrying: ${e.message ?: e.javaClass.simpleName}"
+                delay(60_000L)
+                continue
+            }
             if (tries >= RETRIES) {
                 error.value = e.message ?: e.javaClass.simpleName
                 state.value = DlState.FAILED
@@ -636,12 +646,25 @@ private suspend fun DlTask.split(total: Long): Boolean = coroutineScope {
     !cancelled && !paused
 }
 
-/** Sleeps when this transfer is ahead of [LIMIT_KBS]; the bytes count from the moment the switch is on. */
+/** Copy for the installer: the same speed cap as downloads (one stream, so a local counter). */
+fun InputStream.copyCapped(out: java.io.OutputStream) {
+    val kbs = SPEED_KBS[Downloads.speed]
+    val buf = ByteArray(if (kbs in 1..1023) 4096 else 65536)
+    val t0 = System.currentTimeMillis(); var sent = 0L
+    while (true) {
+        val n = read(buf); if (n < 0) break
+        out.write(buf, 0, n); sent += n
+        if (kbs > 0) { val wait = sent * 1000 / (kbs * 1024L) - (System.currentTimeMillis() - t0); if (wait > 0) Thread.sleep(wait) }
+    }
+}
+
+/** Sleeps when this transfer is ahead of the chosen speed; the bytes count from the moment a cap is on. */
 private fun DlTask.throttle(n: Int) {
-    if (!Downloads.limitOn) { gateBytes.set(0); gateStart = 0L; return }
+    val kbs = SPEED_KBS[Downloads.speed]
+    if (kbs == 0) { gateBytes.set(0); gateStart = 0L; return }
     val now = System.currentTimeMillis()
     if (gateStart == 0L) gateStart = now
-    val due = gateBytes.addAndGet(n.toLong()) * 1000 / (LIMIT_KBS * 1024L)
+    val due = gateBytes.addAndGet(n.toLong()) * 1000 / (kbs * 1024L)
     val wait = due - (now - gateStart)
     if (wait > 0) Thread.sleep(wait)
 }
@@ -711,7 +734,11 @@ class DownloadService : Service() {
         if (!watching) {
             watching = true
             CoroutineScope(Dispatchers.Main).launch {
+                var armed = 0L
                 while (true) {
+                    // the guard alarm brings the service back if Android kills it; re-armed while downloads run
+                    if (SystemClock.elapsedRealtime() - armed > 30_000L) { DlGuard.arm(this@DownloadService); armed = SystemClock.elapsedRealtime() }
+                    unstick()
                     withContext(Dispatchers.IO) {
                         Downloads.tick()
                         // shortcut: progress is saved once a second, so a kill loses at most that much (the bytes are re-fetched)
@@ -723,6 +750,7 @@ class DownloadService : Service() {
                     delay(if (Downloads.activeCount() > 3) 2000 else 1000)
                 }
                 // back on the main thread: nothing runs any more, so this pass sees every end
+                DlGuard.cancel(this@DownloadService)
                 post(nm)
                 watching = false
                 if (lock?.isHeld == true) lock?.release()
@@ -733,6 +761,24 @@ class DownloadService : Service() {
         }
         // the system restarts the service after killing the process, and the running downloads go on
         return START_STICKY
+    }
+
+    /** Bytes and time of each running download's last progress. */
+    private val progress = HashMap<DlTask, Pair<Long, Long>>()
+
+    /** A running download that moved no byte for 90 s (not waiting for the network, not between retries) is restarted from its bytes. */
+    private fun unstick() {
+        val now = SystemClock.elapsedRealtime()
+        progress.keys.retainAll(Downloads.tasks.value.toSet())
+        Downloads.tasks.value.filter { it.state.value == DlState.RUNNING }.forEach { t ->
+            val (b, at) = progress[t] ?: (-1L to now)
+            if (t.done.value != b || t.waiting || t.error.value.startsWith("retrying")) { progress[t] = t.done.value to now; return@forEach }
+            if (now - at > 90_000L) {
+                android.util.Log.w("Downloads", "stalled 90 s, restarting ${t.file.name}")
+                progress[t] = t.done.value to now
+                Downloads.pause(t); Downloads.resume(t)
+            }
+        }
     }
 
     /** Updates each download's notification and posts the end of each one that stopped since the last pass. */
@@ -764,21 +810,34 @@ class DownloadService : Service() {
     }
 }
 
-/** After a reboot: brings the download list back and carries on the downloads that were running. */
+/** After a reboot, and on each guard alarm: brings the download list back and carries on the downloads that were running. */
 class DownloadBoot : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent?) {
-        if (i?.action == Intent.ACTION_BOOT_COMPLETED) Downloads.load(c)
+        if (i?.action != Intent.ACTION_BOOT_COMPLETED && i?.action != DlGuard.ACTION) return
+        Downloads.load(c)
+        if (Downloads.activeCount() > 0) { DownloadService.start(c); DlGuard.arm(c) }
     }
+}
+
+/** Download watchdog, always on while a download runs: a wake-up alarm every minute restarts the download service if Android stopped it. */
+object DlGuard {
+    const val ACTION = "com.umutk.pulse.DL_GUARD"
+    private fun pi(c: Context) = PendingIntent.getBroadcast(c, 31, Intent(c, DownloadBoot::class.java).setAction(ACTION), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+    fun arm(c: Context) = runCatching { c.getSystemService(android.app.AlarmManager::class.java).setAndAllowWhileIdle(android.app.AlarmManager.ELAPSED_REALTIME_WAKEUP, SystemClock.elapsedRealtime() + 60_000L, pi(c)) }
+    fun cancel(c: Context) = runCatching { c.getSystemService(android.app.AlarmManager::class.java).cancel(pi(c)) }
 }
 
 // ---------------------------------------------------------------- the page
 
 /** Folders offered as one tap; any other folder can be typed in. */
-private val QUICK_DIRS = listOf("Download", "Documents", "Pictures", "Movies", "Music")
+val QUICK_DIRS = listOf("Download", "Documents", "Pictures", "Movies", "Music")
 /** Filter chips: the file kinds, by extension ("Other" takes the rest). */
 private val CATEGORIES = listOf("All", "Apps", "Video", "Images", "Documents", "Other")
-/** The sort icon cycles through these. */
+/** The sort menu offers these. */
 private val SORTS = listOf("Date", "Size", "Name")
+private val SORTS_TR = listOf("Tarih", "Boyut", "Ad")
+private val CAT_ICON = mapOf("All" to "details", "Apps" to "apps", "Video" to "video", "Images" to "image", "Documents" to "document", "Other" to "more")
+private val CAT_TR = mapOf("All" to "Tümü", "Apps" to "Uygulamalar", "Video" to "Video", "Images" to "Görseller", "Documents" to "Belgeler", "Other" to "Diğer")
 
 private fun category(f: File): String = when (f.extension.lowercase()) {
     "apk", "xapk", "apks", "aab" -> "Apps"
@@ -801,7 +860,7 @@ private fun DownloadsContent() {
     val ctx = LocalContext.current
     val list by Downloads.tasks.collectAsState()
     var link by remember { mutableStateOf("") }
-    var folder by remember { mutableStateOf(Downloads.dirPath) }
+    val openTool = com.umutk.pulse.LocalOpenTool.current
     var cat by remember { mutableStateOf("All") }
     var sort by remember { mutableStateOf(0) }
     // Android 13+ hides notifications until the user allows them; the download still runs without
@@ -820,31 +879,30 @@ private fun DownloadsContent() {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.clickable { Downloads.pauseAll() }) { PIcon("pause", T.text, 22.dp) }
             Box(Modifier.clickable { Downloads.resumeAll() }) { PIcon("play", T.text, 22.dp) }
-            Row(Modifier.clickable { sort = (sort + 1) % SORTS.size }, verticalAlignment = Alignment.CenterVertically) {
-                PIcon("sort", T.text, 22.dp)
-                Spacer(Modifier.width(4.dp))
-                Text(SORTS[sort], color = T.sub, fontSize = 12.sp)
-            }
-            PChip(Downloads.limitOn, "Limit $LIMIT_KBS KB/s") { Downloads.setLimit(ctx, !Downloads.limitOn) }
-        }
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            CATEGORIES.forEach { c -> PChip(cat == c, c) { cat = c } }
-        }
-        PCard {
-            Text("Save to ${Downloads.dirPath.removePrefix(Environment.getExternalStorageDirectory().path).ifEmpty { "/" }}", color = T.sub, fontSize = 12.sp)
-            Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                QUICK_DIRS.forEach { name ->
-                    val p = "${Environment.getExternalStorageDirectory().path}/$name"
-                    PChip(Downloads.dirPath == p, name) { Downloads.setDir(ctx, p); folder = p }
+            var sortMenu by remember { mutableStateOf(false) }
+            Box {
+                Row(Modifier.clickable { sortMenu = true }, verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("sort", T.text, 22.dp)
+                    Spacer(Modifier.width(4.dp))
+                    Text(tr(SORTS[sort], SORTS_TR[sort]), color = T.sub, fontSize = 12.sp)
+                }
+                ThemedMenu(sortMenu, { sortMenu = false }) {
+                    SORTS.forEachIndexed { i, n -> ThemedMenuItem(tr(n, SORTS_TR[i]), { sort = i; sortMenu = false }, checked = sort == i) }
                 }
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PField(folder, { folder = it }, "/storage/emulated/0/...", Modifier.weight(1f))
-                Box(Modifier.padding(start = 8.dp).clickable {
-                    val d = File(folder.trim())
-                    if (d.isDirectory || d.mkdirs()) Downloads.setDir(ctx, d.path) else Toast.makeText(ctx, "Cannot use this folder", Toast.LENGTH_SHORT).show()
-                }) { PIcon("folder", T.text, 24.dp) }
+            var catMenu by remember { mutableStateOf(false) }
+            Box {
+                Row(Modifier.clickable { catMenu = true }, verticalAlignment = Alignment.CenterVertically) {
+                    PIcon(CAT_ICON[cat] ?: "filter", T.text, 22.dp)
+                    Spacer(Modifier.width(4.dp))
+                    Text(tr(cat, CAT_TR[cat] ?: cat), color = T.sub, fontSize = 12.sp)
+                }
+                ThemedMenu(catMenu, { catMenu = false }) {
+                    CATEGORIES.forEach { c -> ThemedMenuItem(tr(c, CAT_TR[c] ?: c), { cat = c; catMenu = false }, iconKey = CAT_ICON[c], checked = cat == c) }
+                }
             }
+            Spacer(Modifier.weight(1f))
+            Box(Modifier.clickable { openTool("installer_settings") }) { PIcon("settings", T.text, 22.dp) }
         }
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {

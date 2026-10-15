@@ -28,6 +28,9 @@ import com.umutk.pulse.features.DnsSettings
 import com.umutk.pulse.features.GlassPreview
 import com.umutk.pulse.features.GlassPrefs
 import com.umutk.pulse.features.InstallShow
+import com.umutk.pulse.features.Downloads
+import com.umutk.pulse.features.QUICK_DIRS
+import android.os.Environment
 import com.umutk.pulse.features.setThemeWallpaper
 import com.umutk.pulse.features.themeWallpaper
 import androidx.compose.foundation.rememberScrollState
@@ -245,6 +248,36 @@ fun InstallWindowSettings() {
         SwitchRow("SDK versions", "Min and target SDK of the APK. Off by default", InstallShow.sdk) { InstallShow.set(ctx, "inst_sdk", it) }
         SwitchRow("Certificate", "The signing certificate fingerprint. Off by default", InstallShow.cert) { InstallShow.set(ctx, "inst_cert", it) }
     }
+    Downloads.load(ctx)
+    PCard {
+        Text(tr("Save to", "Kayıt konumu"), color = Look.accent, fontSize = 15.sp)
+        var folder by remember { mutableStateOf(Downloads.dirPath) }
+        val sd = Environment.getExternalStorageDirectory().path
+        Text(Downloads.dirPath.removePrefix(sd).ifEmpty { "/" }, color = T.sub, fontSize = 12.sp)
+        Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+            QUICK_DIRS.forEach { name ->
+                val p = "$sd/$name"
+                PChip(Downloads.dirPath == p, name) { Downloads.setDir(ctx, p); folder = p }
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PField(folder, { folder = it }, "$sd/...", Modifier.weight(1f))
+            Box(Modifier.padding(start = 8.dp).clickable {
+                val d = java.io.File(folder.trim())
+                if (d.isDirectory || d.mkdirs()) Downloads.setDir(ctx, d.path) else android.widget.Toast.makeText(ctx, tr("Cannot use this folder", "Bu klasör kullanılamaz"), android.widget.Toast.LENGTH_SHORT).show()
+            }) { PIcon("folder", T.text, 24.dp) }
+        }
+    }
+    PCard {
+        Text(tr("Speed", "Hız"), color = Look.accent, fontSize = 15.sp)
+        listOf(Triple("speed", "Unlimited", "Sınırsız"), Triple("bolt", "Steady", "Dengeli"), Triple("clock", "Slow", "Yavaş"), Triple("snail", "Snail mode", "Salyangoz modu")).forEachIndexed { i, (ic, en, trk) ->
+            Row(Modifier.fillMaxWidth().clickable { Downloads.setSpeed(ctx, i) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                PIcon(ic, if (Downloads.speed == i) Look.accent else T.sub, 22.dp)
+                Text(tr(en, trk), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                if (Downloads.speed == i) PIcon("check", Look.accent, 20.dp)
+            }
+        }
+    }
     PCard {
         Text("Default app", color = Look.accent, fontSize = 15.sp)
         PButton("Make Pulse the default for APK files") { com.umutk.pulse.features.openDefaultApkSettings(ctx) }
@@ -396,6 +429,17 @@ fun FunctionsSettings() {
             Spacer(Modifier.width(12.dp))
             Text(tr("Open Recycle bin", "Çöp kutusunu aç"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
             PIcon("chevron", T.sub, 18.dp)
+        }
+    }
+    PCard {
+        SwitchRow(tr("Files: full screen", "Dosyalar: tam ekran"), "", Opt.filesFull) { Opt.filesFull = it; Opt.save(ctx) }
+    }
+    // menus and message boxes: the current look, or Material You for every look
+    PCard {
+        Text(tr("Pop-up windows", "Açılır pencereler"), color = T.sub, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PChip(Look.windowTheme != "material", tr("Current theme", "Mevcut tema")) { Cfg.setWindowTheme(ctx, "win") }
+            PChip(Look.windowTheme == "material", "Material You") { Cfg.setWindowTheme(ctx, "material") }
         }
     }
     PCard {
