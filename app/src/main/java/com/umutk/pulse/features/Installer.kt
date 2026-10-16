@@ -134,6 +134,9 @@ class Rec(val time: Long, val pkg: String, val label: String, val ver: String) {
 private const val CH = "installer"
 private const val NOTE_ID = 2001
 private const val CH_INST = "installs"
+/** Silent channel for the install progress and result notifications. */
+private const val CH_QUIET = "installer_quiet"
+private fun quietChannel(c: Context) = c.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CH_QUIET, "Installer", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
 private const val ID_INST = 2002
 private const val ID_BUSY = 2003
 private const val APK_MIME = "application/vnd.android.package-archive"
@@ -312,12 +315,29 @@ object Installer {
 
     /** pm with every split in one call: the first path is the base. */
     fun silentCmd(p: Picked, down: Boolean, user: Int, dex: Boolean = false) =
-        "pm install -r" + (if (down) " -d" else "") + (if (dex) " --force-dex-opt" else "") + " --user $user" + p.files.joinToString("") { " '${it.path}'" }
+        "pm install -r" + (if (down) " -d" else "") + InstallShow.srcPkg?.let { " -d -i $it --install-reason 0" }.orEmpty() + (if (dex) " --force-dex-opt" else "") + " --user $user" + p.files.joinToString("") { " '${it.path}'" }
+
+    /** Root/Shizuku: makes the installed [pkg] report [src] as its installer. Returns "" on success, else the error. */
+    fun setSource(pkg: String, src: String): String {
+        if (!PKG_RE.matches(pkg) || !PKG_RE.matches(src)) return "Bad package name"
+        val a = Shell.run("cmd package set-installer $pkg $src")
+        if (a.isBlank() || a.contains("Success", true)) return ""
+        // no set-installer on this build: reinstall the app's own APKs with -i
+        val paths = Shell.run("pm path $pkg").lines().filter { it.startsWith("package:") }.map { it.removePrefix("package:").trim() }
+        if (paths.isEmpty()) return a.trim()
+        val b = Shell.run("pm install -r -d -i $src --install-reason 0" + paths.joinToString("") { " '$it'" })
+        return if (b.contains("Success")) "" else b.trim()
+    }
+
+    private val PKG_RE = Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+")
 
     /** One PackageInstaller session with every file written into it; the system screen or [InstallReceiver] takes it from there. */
     fun commit(c: Context, p: Picked) {
         val inst = c.packageManager.packageInstaller
-        val id = inst.createSession(PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL))
+        val sp = PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL)
+        // best effort without root: only the "package source" changes, the installer name stays Pulse
+        if (InstallShow.srcPkg == "com.android.vending" && Build.VERSION.SDK_INT >= 33) runCatching { sp.setPackageSource(PackageInstaller.PACKAGE_SOURCE_STORE) }
+        val id = inst.createSession(sp)
         inst.openSession(id).use { s ->
             for (f in p.files) f.inputStream().use { i -> s.openWrite(f.name, 0, f.length()).use { o -> i.copyCapped(o); s.fsync(o) } }
             val cb = PendingIntent.getBroadcast(c, id, Intent(c, InstallReceiver::class.java), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
@@ -377,7 +397,7 @@ object Installer {
             while (recent.size > 8) recent.removeAt(recent.lastIndex)
             sp(c).edit().putStringSet("inst_recent", recent.map { it.enc() }.toSet()).apply()
         }
-        if (bg) notify(c, if (ok) "Installed ${p?.label.orEmpty()}" else "Install failed", if (ok) p?.pkg.orEmpty() else msg)
+        notify(c, if (ok) "Installed ${p?.label.orEmpty()}" else "Install failed", if (ok) p?.pkg.orEmpty() else msg, ok)
         if (ok && p?.xposed == true) notifyModule(c, p.label)
         outcome = Outcome(p?.pkg.orEmpty(), ok, msg)
         waiter?.complete(ok)
@@ -404,22 +424,24 @@ object Installer {
         NotificationManagerCompat.from(c).notify(NOTE_ID + 1, n)
     }
 
-    /** Ongoing "Installing" notification while a window install runs; [finish] removes it. */
+    /** Ongoing "Installing" notification while a window install runs; [finish] swaps it for the result. */
     private fun notifyInstalling(c: Context, label: String) {
-        c.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CH, "Installer", NotificationManager.IMPORTANCE_DEFAULT))
-        val n = NotificationCompat.Builder(c, CH).setSmallIcon(android.R.drawable.stat_sys_download)
-            .setContentTitle("Installing").setContentText(label).setOngoing(true).setOnlyAlertOnce(true)
+        quietChannel(c)
+        val n = NotificationCompat.Builder(c, CH_QUIET).setSmallIcon(android.R.drawable.stat_sys_download)
+            .setContentTitle("Installing").setContentText(label).setOngoing(true).setOnlyAlertOnce(true).setSilent(true)
             .setProgress(0, 0, true).build()
         NotificationManagerCompat.from(c).notify(ID_BUSY, n)
     }
 
     private fun cancelInstalling(c: Context) = NotificationManagerCompat.from(c).cancel(ID_BUSY)
 
-    private fun notify(c: Context, title: String, text: String) {
-        c.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CH, "Installer", NotificationManager.IMPORTANCE_DEFAULT))
-        val n = NotificationCompat.Builder(c, CH).setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle(title).setContentText(text).setAutoCancel(true).build()
-        NotificationManagerCompat.from(c).notify(NOTE_ID, n)
+    /** The result, silent; a success clears itself 3 seconds later. */
+    private fun notify(c: Context, title: String, text: String, ok: Boolean = false) {
+        quietChannel(c)
+        val b = NotificationCompat.Builder(c, CH_QUIET).setSmallIcon(android.R.drawable.stat_sys_download_done)
+            .setContentTitle(title).setContentText(text).setAutoCancel(true).setSilent(true)
+        if (ok) b.setTimeoutAfter(3000)
+        NotificationManagerCompat.from(c).notify(NOTE_ID, b.build())
     }
 }
 

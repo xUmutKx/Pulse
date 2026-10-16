@@ -14,7 +14,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Build
+import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.Contacts
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.Image
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Check
 import androidx.compose.material.icons.outlined.DataUsage
 import androidx.compose.material.icons.outlined.Dns
@@ -77,13 +84,19 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
         )),
         MenuTop("Tools", listOf(
             MenuEntry("Toolkit", icon = Icons.Outlined.Build, key = "settings") { openTool("toolkit") },
-            MenuEntry("App lock", icon = Icons.Outlined.Lock, key = "services") { go("applock") },
-            MenuEntry("Installer", icon = Icons.Outlined.InstallMobile, key = "download") { openTool("installer") },
-            MenuEntry("DNS", icon = Icons.Outlined.Dns, key = "wifi") { openTool("dns") },
+            MenuEntry("App lock", icon = Icons.Outlined.Lock, key = "applock") { go("applock") },
+            MenuEntry("APK installer", icon = Icons.Outlined.Download, key = "download") { openTool("installer") },
             MenuEntry("Device troubleshoot", icon = Icons.Outlined.HealthAndSafety, key = "info") { openTool("troubleshoot") },
             MenuEntry("Authenticator", icon = Icons.Outlined.Key, key = "users") { openTool("authenticator") },
             MenuEntry("Network usage", icon = Icons.Outlined.DataUsage, key = "speed") { openTool("netusage") },
             MenuEntry("Guide", icon = Icons.Outlined.MenuBook, key = "book") { openTool("guide") },
+        )),
+        // keys are the per-look icon names (Win11 Fluency PNG, 95/XP/7 packs or Fluent vectors); Material uses the ImageVector
+        MenuTop(EXTRA_APPS, listOf(
+            MenuEntry(tr("Files", "Dosyalar"), icon = Icons.Outlined.Folder, key = "folder") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
+            MenuEntry(tr("Photos", "Fotoğraflar"), icon = Icons.Outlined.Image, key = "image") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
+            MenuEntry(tr("Calendar", "Takvim"), icon = Icons.Outlined.CalendarMonth, key = "calendar") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
+            MenuEntry(tr("Contacts", "Kişiler"), icon = Icons.Outlined.Contacts, key = "users") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
         )),
     )
     return MenuHost(tops) {
@@ -98,6 +111,13 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
     }
 }
 
+private val EXTRA_APPS get() = tr("Extra apps", "Ek uygulamalar")
+
+/** Class-name launch so the menu compiles before the Calendar/Contacts activities exist. */
+private fun launchExtra(ctx: Context, cls: String) {
+    try { ctx.startActivity(Intent().setClassName(ctx, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+}
+
 @Composable
 private fun Item(e: MenuEntry, close: () -> Unit) {
     ThemedMenuItem(e.label, { close(); e.onClick() }, iconKey = if (T.id == "win11" && !T.material) WIN11_MENU_KEY[e.label] ?: e.key else e.key, icon = e.icon, checked = e.checked)
@@ -106,7 +126,7 @@ private fun Item(e: MenuEntry, close: () -> Unit) {
 /** Win11 look: one Fluent glyph per menu entry (FluentPaths), so no icon repeats in the overflow menu. */
 private val WIN11_MENU_KEY = mapOf(
     "Run new task…" to "open", "Exit" to "power", "Refresh now" to "refresh", "Widgets" to "gridView", "System font" to "edit",
-    "Toolkit" to "wrench", "App lock" to "lock", "Installer" to "download", "DNS" to "globe", "Device troubleshoot" to "shieldOk",
+    "Toolkit" to "wrench", "App lock" to "applock", "APK installer" to "download", "Settings" to "settings", "DNS" to "globe", "Device troubleshoot" to "shieldOk",
     "Authenticator" to "key", "Network usage" to "compare", "Guide" to "book",
 )
 
@@ -129,6 +149,7 @@ fun MenuBar(host: MenuHost, color: Color, size: TextUnit, gap: Dp = 14.dp) {
 @Composable
 fun MenuOverflow(host: MenuHost, color: Color) {
     var open by remember { mutableStateOf(false) }
+    var extra by rememberSaveable { mutableStateOf(false) }
     val w = LocalWindowLook.current
     Box {
         MoreIcon(color, 22.dp, Modifier.clickable { open = true }.padding(horizontal = 8.dp, vertical = 2.dp))
@@ -136,8 +157,10 @@ fun MenuOverflow(host: MenuHost, color: Color) {
         ThemedMenu(open, { open = false }) {
             host.tops.forEachIndexed { i, m ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(w.line.copy(alpha = .5f)))
-                Text(m.label.uppercase(), color = Look.accent, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp, top = 8.dp, bottom = 2.dp))
-                m.items.forEach { Item(it) { open = false } }
+                val fold = m.label == EXTRA_APPS
+                Text((if (fold) (if (extra) "▾ " else "▸ ") else "") + m.label.uppercase(), color = Look.accent, fontSize = 11.sp,
+                    modifier = Modifier.fillMaxWidth().then(if (fold) Modifier.clickable { extra = !extra } else Modifier).padding(start = 16.dp, top = 8.dp, bottom = 2.dp))
+                if (!fold || extra) m.items.forEach { Item(it) { open = false } }
             }
         }
     }

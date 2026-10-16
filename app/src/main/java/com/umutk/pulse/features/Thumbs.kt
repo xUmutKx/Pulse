@@ -23,6 +23,16 @@ object Thumbs {
     @OptIn(ExperimentalCoroutinesApi::class)
     private val io = Dispatchers.IO.limitedParallelism(3)
 
+    @Volatile private var trimmed = false
+    private const val MAX_BYTES = 8L shl 20
+
+    /** The disk cache had no limit: once per run the oldest previews go until it is under 8 MB. */
+    private fun trim(dir: File) = runCatching {
+        val files = dir.listFiles()?.sortedBy { it.lastModified() } ?: return@runCatching
+        var total = files.sumOf { it.length() }
+        for (f in files) { if (total <= MAX_BYTES) break; total -= f.length(); f.delete() }
+    }
+
     private fun key(f: File): String {
         val raw = "${f.path}|${f.lastModified()}|${f.length()}"
         return MessageDigest.getInstance("MD5").digest(raw.toByteArray()).joinToString("") { "%02x".format(it) }
@@ -36,6 +46,7 @@ object Thumbs {
         val k = key(f)
         mem.get(k)?.let { return@withContext it }
         val dir = File(ctx.cacheDir, "thumbs").apply { mkdirs() }
+        if (!trimmed) { trimmed = true; trim(dir) }
         val disk = File(dir, "$k.webp")
         val bmp = runCatching { if (disk.exists()) BitmapFactory.decodeFile(disk.path) else null }.getOrNull()
             ?: runCatching {

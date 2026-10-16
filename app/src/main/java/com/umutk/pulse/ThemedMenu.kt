@@ -61,12 +61,14 @@ class MenuStyle(
 val LocalMenuStyle = compositionLocalOf { menuStyleMaterial(Themes[0]) }
 
 /** The menu style of a look; the Material and AMOLED windows (and anything unknown) take the Material one. */
-fun menuStyle(w: PTheme): MenuStyle = if (!Opt.oldPopups && w.id != "material" && w.id != "amoled") menuStyleCurrent(w) else when (w.id) {
+fun menuStyle(w: PTheme): MenuStyle = if (!Opt.oldPopups && w.id != "material" && w.id != "amoled" && w.id != "oneui" && w.id != "coloros") menuStyleCurrent(w) else when (w.id) {
     "win95" -> menuStyle95(w)
     "xp" -> menuStyleXp(w)
     "win7" -> menuStyle7(w)
     "win10" -> menuStyle10(w)
     "win11" -> menuStyle11(w)
+    "oneui" -> menuStyleOneUi(w)
+    "coloros" -> menuStyleColorOs(w)
     else -> menuStyleMaterial(w)
 }
 

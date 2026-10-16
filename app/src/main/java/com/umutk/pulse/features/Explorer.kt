@@ -14,9 +14,13 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.lazy.items
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -39,7 +43,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
@@ -50,6 +54,10 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.mutableIntStateOf
@@ -66,6 +74,7 @@ import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
@@ -88,6 +97,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Brush
 import com.umutk.pulse.FluentPaths
+import com.umutk.pulse.PRadio
+import com.umutk.pulse.PSwitch
+import androidx.compose.foundation.shape.CircleShape
 import com.umutk.pulse.PButton
 import com.umutk.pulse.WinAlert
 import com.umutk.pulse.ThemedMenu
@@ -138,51 +150,121 @@ private const val EX_SORT_DIRS = "ex_sort_dirs"
 /** Set by an intent that opens a folder (Pulse chosen as the file manager): Files then opens full screen. */
 object FilesLaunch { var full by mutableStateOf(false) }
 
+/** When set, tapping a file hands it to this callback instead of opening it (the Office "Open file" picker). */
+val LocalFilePick = androidx.compose.runtime.staticCompositionLocalOf<((File) -> Unit)?> { null }
+
 /** The side page for files and the tools that read them: the explorer, the folder tree, file types, cache cleaning and root. Full screen (Settings > Functions) puts it in its own window with the look's caption buttons. */
 @Composable
 fun FilesPage() {
+    // the Files look override belongs to the standalone Files app; inside Pulse the page follows the global look
+    val fl = if (LocalContext.current is com.umutk.pulse.FilesActivity) filesLook() else null
+    FilesPrefs.load(LocalContext.current)
+    // The file manager's own look: T reads Look.current (= Look.resolved ?: Look.theme, a global), so the chosen look is swapped into Look.resolved
+    // while this page is on screen (the same trick LookHost uses for the Material look) and the old value is put back when it leaves.
+    // Look.theme is read so a change of the app look re-runs this after LookHost has reset resolved. Pulse's own chrome may briefly share the look.
+    @Suppress("UNUSED_EXPRESSION") Look.theme
+    val saved = remember { Look.resolved }
+    Look.resolved = fl ?: saved
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { Look.resolved = saved } }
+    if (fl == null) FilesPageInner() else androidx.compose.runtime.CompositionLocalProvider(LocalWindowLook provides fl) { FilesPageInner() }
+}
+
+@Composable
+private fun FilesPageInner() {
     var tab by rememberSaveable { mutableStateOf("files") }
     val top = remember { Environment.getExternalStorageDirectory() }
     val back: () -> Unit = { tab = "files" }
-    var full by rememberSaveable { mutableStateOf(Opt.filesFull || FilesLaunch.full) }
-    LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full) { full = true; FilesLaunch.full = false } }
-    val body: @Composable () -> Unit = {
-        Column(Modifier.fillMaxSize()) {
+    val ctx = LocalContext.current
+    val standalone = ctx is com.umutk.pulse.FilesActivity
+    // the full-screen window is the standalone app's; embedded in Pulse the page stays a page
+    var full by rememberSaveable { mutableStateOf(standalone && (Opt.filesFull || FilesLaunch.full)) }
+    LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full && standalone) { full = true; FilesLaunch.full = false } }
+    var windowed by rememberSaveable { mutableStateOf(false) }
+    var settings by rememberSaveable { mutableStateOf(false) }
+    val openTool = com.umutk.pulse.LocalOpenTool.current
+    val wl = LocalWindowLook.current
+    val glassId = wl.id == "win11"
+    if (standalone) androidx.compose.runtime.SideEffect { (ctx as com.umutk.pulse.FilesActivity).setGlass(glassId) }
+    val body: @Composable () -> Unit = { com.umutk.pulse.LookFade(FilesLook.theme) {
+        // full screen is a Dialog that covers the app, so the settings screen opens inside it (the app's sub screen would sit behind)
+        androidx.compose.runtime.CompositionLocalProvider(com.umutk.pulse.LocalOpenTool provides { id -> if (full && id == "files_settings") settings = true else openTool(id) }) {
+        if (settings && full) {
+            androidx.activity.compose.BackHandler { settings = false }
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clickable { settings = false }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), T.text) }
+                    PHead("Files")
+                }
+                FilesSettings()
+            }
+        } else
+        Column(Modifier.fillMaxSize().then(if (standalone && glassId) Modifier.background(wl.bg.copy(alpha = .72f)) else Modifier)) {
             com.umutk.pulse.StorageAccessCard()
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when (tab) {
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
                     "cache" -> CacheCleanerScreen(back)
-                    else -> ExplorerTab(full, { tab = it }) { full = !full }
+                    else -> ExplorerTab(full || !standalone, { tab = it }) { full = !full }
                 }
             }
         }
-    }
-    if (!full) { body(); return }
-    // closing leaves the page for the start page; minimise and maximise both give the window back to the app
-    val close = { full = false; com.umutk.pulse.widgets.WidgetOpen.page = Opt.startPage }
+        }
+    } }
+    if (!full) { ExOpenAnim { body() }; return }
+    // close leaves the page (Pulse Files: finishes the activity), minimise sends the task to the back (embedded: gives the window back to the app),
+    // maximise toggles between the full-screen window and an inset, rounded one
+    val close: () -> Unit = { if (standalone) (ctx as android.app.Activity).finish() else { full = false; com.umutk.pulse.widgets.WidgetOpen.page = Opt.startPage } }
+    val minimise: () -> Unit = { if (standalone) (ctx as android.app.Activity).moveTaskToBack(true) else { full = false } }
     val w = LocalWindowLook.current
     val classic = w.tabs && w.title != null
     val ink = if (classic) w.titleText else w.text
+    // Windows 11, 10 and 7: the surfaces are see-through and the window blurs what is behind it (the backdrop / wallpaper), like Mica / Aero
+    val glass = glassId
     Dialog(close, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-        Column(Modifier.fillMaxSize().background(w.bg).statusBarsPadding().navigationBarsPadding()
+        val view = androidx.compose.ui.platform.LocalView.current
+        androidx.compose.runtime.SideEffect {
+            val win = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window ?: return@SideEffect
+            win.clearFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+            if (android.os.Build.VERSION.SDK_INT >= 31) win.setBackgroundBlurRadius(if (glass && ctx.getSystemService(android.view.WindowManager::class.java).isCrossWindowBlurEnabled) 40 else 0)
+        }
+        val shape = if (windowed) RoundedCornerShape(if (w.tabs) w.radius else if (w.material) 20.dp else 12.dp) else RoundedCornerShape(0.dp)
+        ExOpenAnim {
+        Column(Modifier.fillMaxSize().then(if (windowed) Modifier.padding(horizontal = 14.dp, vertical = 30.dp) else Modifier).clip(shape)
+            .background(if (glass) w.bg.copy(alpha = .7f) else w.bg).statusBarsPadding().navigationBarsPadding()
             .then(if (w.id == "win95") Modifier.bevel(true) else Modifier)) {
             Row(Modifier.fillMaxWidth().height(if (w.id == "win95") 22.dp else 34.dp)
-                .then(if (classic) Modifier.background(w.title!!) else Modifier.background(w.panel))
+                .then(if (classic) Modifier.background(w.title!!) else Modifier.background(if (glass) w.panel.copy(alpha = .4f) else w.panel))
                 .padding(start = 10.dp, end = if (classic) 3.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Files", Modifier.weight(1f), color = ink, fontSize = 12.sp, fontWeight = if (classic) androidx.compose.ui.text.font.FontWeight.Bold else null)
-                ExCaption(w, ink, { full = false }, { full = false }, close)
+                if (standalone) Spacer(Modifier.weight(1f)) else Text("Files", Modifier.weight(1f), color = ink, fontSize = 12.sp, fontWeight = if (classic) androidx.compose.ui.text.font.FontWeight.Bold else null)
+                ExCaption(w, ink, minimise, { windowed = !windowed }, close, showMin = !standalone)
             }
             Box(Modifier.weight(1f).fillMaxWidth()) { body() }
+        }
         }
     }
 }
 
+/** Opening animation: grows from the centre while fading in (95 and XP only zoom, quicker; Opt.authentic off keeps the one soft zoom for every look). */
+@Composable
+private fun ExOpenAnim(content: @Composable () -> Unit) {
+    // the standalone Files app (launcher entry) opens without the zoom; only the window inside Pulse animates
+    if (LocalContext.current is com.umutk.pulse.FilesActivity) { content(); return }
+    val id = T.id
+    val retro = Opt.authentic && (id == "win95" || id == "xp")
+    val p = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) { p.animateTo(1f, androidx.compose.animation.core.tween(if (retro) 140 else 260, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+    Box(Modifier.fillMaxSize().graphicsLayer {
+        val sc = (if (retro) .85f else .92f) + (if (retro) .15f else .08f) * p.value
+        scaleX = sc; scaleY = sc; alpha = if (retro) 1f else p.value
+    }) { content() }
+}
+
 /** Minimise, maximise and close in the look's style: 95 bevelled, XP glossy squares, 7 glass, 10 and 11 flat, Material round. */
 @Composable
-private fun ExCaption(w: com.umutk.pulse.PTheme, ink: Color, onMin: () -> Unit, onMax: () -> Unit, onClose: () -> Unit) {
+private fun ExCaption(w: com.umutk.pulse.PTheme, ink: Color, onMin: () -> Unit, onMax: () -> Unit, onClose: () -> Unit, showMin: Boolean = true) {
     val id = w.id
+    val ks = if (showMin) 0..2 else 1..2
     // kind 0 minimise, 1 maximise, 2 close
     @Composable
     fun cap(kind: Int, size: androidx.compose.ui.unit.DpSize, deco: Modifier, glyph: Color, onClick: () -> Unit) {
@@ -200,20 +282,23 @@ private fun ExCaption(w: com.umutk.pulse.PTheme, ink: Color, onMin: () -> Unit, 
     }
     val acts = listOf(onMin, onMax, onClose)
     when (id) {
-        "win95" -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { (0..2).forEach { k ->
+        "win95" -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { ks.forEach { k ->
             if (k == 2) Spacer(Modifier.width(2.dp))
             cap(k, androidx.compose.ui.unit.DpSize(16.dp, 14.dp), Modifier.background(Color(0xFFC0C0C0)).bevel(true), Color.Black, acts[k]) } }
-        "xp" -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { (0..2).forEach { k ->
+        "xp" -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { ks.forEach { k ->
             cap(k, androidx.compose.ui.unit.DpSize(21.dp, 21.dp), Modifier.drawBehind { xpCaption(k == 2, k == 1) }, Color.Transparent, acts[k]) } }
-        "win7" -> Row(Modifier.offset(y = (-3).dp)) { (0..2).forEach { k ->
+        "win7" -> Row(Modifier.offset(y = (-3).dp)) { ks.forEach { k ->
             val shape = RoundedCornerShape(bottomStart = if (k == 0) 4.dp else 0.dp, bottomEnd = if (k == 2) 4.dp else 0.dp)
             cap(k, androidx.compose.ui.unit.DpSize(if (k == 2) 44.dp else 27.dp, 19.dp),
                 Modifier.clip(shape).background(if (k == 2) Brush.verticalGradient(listOf(Color(0xFFE9A394), Color(0xFFC9442B))) else Brush.verticalGradient(listOf(Color(0xFFDCE8F6), Color(0xFF9DBBDD)))).border(1.dp, Color(0xFF3A4A5E), shape),
                 if (k == 2) Color.White else Color(0xFF1B2B45), acts[k]) } }
-        "win10", "win11" -> Row { (0..2).forEach { k ->
+        "win10", "win11" -> Row { ks.forEach { k ->
             cap(k, androidx.compose.ui.unit.DpSize(46.dp, 34.dp), Modifier, ink, acts[k]) } }
-        else -> Row(Modifier.padding(end = 4.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) { (0..2).forEach { k ->
-            cap(k, androidx.compose.ui.unit.DpSize(36.dp, 34.dp), Modifier.clip(androidx.compose.foundation.shape.CircleShape), ink, acts[k]) } }
+        // Material, AMOLED, One UI, ColorOS: one minimise button (two arrows pointing at each other); every other look gets the three flat buttons
+        else -> if (!w.material) Row { ks.forEach { k -> cap(k, androidx.compose.ui.unit.DpSize(46.dp, 34.dp), Modifier, ink, acts[k]) } }
+        else if (showMin) Box(Modifier.padding(end = 4.dp).size(36.dp, 34.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable(onClick = onMin), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.CloseFullscreen, null, Modifier.size(20.dp), ink)
+        }
     }
 }
 
@@ -222,13 +307,17 @@ private fun ExCaption(w: com.umutk.pulse.PTheme, ink: Color, onMin: () -> Unit, 
 @Composable
 private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: () -> Unit) {
     val ctx = LocalContext.current
+    val standalone = ctx is com.umutk.pulse.FilesActivity
     val scope = rememberCoroutineScope()
     val top = remember { Environment.getExternalStorageDirectory() }
-    var here by rememberSaveable { mutableStateOf(top.path) }
+    FilesPrefs.load(ctx)
+    var here by rememberSaveable { mutableStateOf(FilesPrefs.start.takeIf { it.isNotEmpty() && File(it).isDirectory } ?: top.path) }
     var clip by remember { mutableStateOf<Clip?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
     var dialog by remember { mutableStateOf<Pair<String, File>?>(null) }
     var name by remember { mutableStateOf("") }
+    var newExt by remember { mutableStateOf("docx") }
+    val filePick = LocalFilePick.current
     var note by remember { mutableStateOf("") }
     var viewing by remember { mutableStateOf<File?>(null) }
     var propsOf by remember { mutableStateOf<File?>(null) }
@@ -236,16 +325,29 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var sel by remember { mutableStateOf(setOf<String>()) }
     var query by rememberSaveable { mutableStateOf("") }
     // sort: one order for every folder, unless a folder has its own (folderSort); both are kept on the phone
-    var sortAll by rememberSaveable { mutableStateOf(exReadInt(ctx, EX_SORT_ALL, 0)) }
+    var sortAll by remember { mutableStateOf(exReadInt(ctx, EX_SORT_ALL, 0)) }  // not saveable: the settings screen can change it
+    // type filter: remembered for all folders or just this one ("all" = none; "ext:a,b" = custom extensions)
+    var filtAll by remember { mutableStateOf(ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getString("ex_filt_all", "all") ?: "all") }
+    var filtDir by remember { mutableStateOf(exRead(ctx, "ex_filt_dir").associate { it.substringBeforeLast('|') to it.substringAfterLast('|') }) }
+    var filterDlg by remember { mutableStateOf(false) }
     var folderSort by remember { mutableStateOf(exReadSortMap(ctx)) }
     var drawer by remember { mutableStateOf(false) }
+    var searchOpen by rememberSaveable { mutableStateOf(false) }
     var freq by remember { mutableStateOf(exRead(ctx, EX_FREQ)) }
     var sortMenu by remember { mutableStateOf(false) }
     var menuOf by remember { mutableStateOf<File?>(null) }
+    var about by remember { mutableStateOf(false) }
+    val openToolFn = com.umutk.pulse.LocalOpenTool.current
     var archiveOf by remember { mutableStateOf<File?>(null) }
-    var apkChoice by remember { mutableStateOf<File?>(null) }
+    var arc by remember { mutableStateOf<ArcReq?>(null) }
     var archiveList by remember { mutableStateOf<List<Pair<String, Long>>?>(null) }
-    var showHidden by rememberSaveable { mutableStateOf(false) }
+    // an archive opened like a folder: the file and the folder inside it ("" = its root, "a/b/")
+    var arcFile by remember { mutableStateOf<File?>(null) }
+    var arcCwd by remember { mutableStateOf("") }
+    val arcAll by produceState<List<AEntry>?>(null, arcFile) {
+        value = arcFile?.let { f -> withContext(Dispatchers.IO) { runCatching { archiveEntries(f) }.getOrDefault(emptyList()) } }
+    }
+    var showHidden by remember { mutableStateOf(FilesPrefs.hidden) }
     var showSizes by rememberSaveable { mutableStateOf(true) }
     var recentView by rememberSaveable { mutableStateOf(false) }
     var marks by remember { mutableStateOf(exRead(ctx, EX_MARKS)) }
@@ -264,6 +366,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             refresh++
         }
     }
+    val askDelete: (List<File>) -> Unit = { if (FilesPrefs.confirm) bulk = it else deleteNow(it) }
     val dir = File(here)
     val sort = folderSort[here] ?: sortAll
     val (total, free) = remember(refresh) { exStorage(top) }
@@ -275,21 +378,28 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val listing = remember(here, refresh, showHidden, sort, viaRoot) {
         exSort((dir.listFiles()?.toList() ?: viaRoot).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort)
     }
-    LaunchedEffect(query, here, refresh, showHidden) {
-        found = if (query.isBlank()) null else withContext(Dispatchers.IO) { exFind(dir, query.trim(), showHidden) }
+    var resultsFor by remember { mutableStateOf<String?>(null) }
+    LaunchedEffect(resultsFor, here, showHidden) {
+        found = null
+        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { exFind(dir, q, showHidden) } }
     }
     val shown: List<File> = when {
+        arcFile != null -> emptyList()
         recentView -> recents.map { File(it) }.filter { it.exists() }
-        found != null -> found.orEmpty()
-        else -> listing
+        query.isNotBlank() -> listing.filter { it.name.contains(query.trim(), ignoreCase = true) }.filter { exFilterOk(it, filtDir[here] ?: filtAll) }
+        else -> listing.filter { exFilterOk(it, filtDir[here] ?: filtAll) }
     }
+    val filt = filtDir[here] ?: filtAll
     val bookmarks = marks.filter { File(it).isDirectory }
     val picked = sel.map { File(it) }
 
-    fun go(p: String) { freq = exBump(ctx, p); here = p; sel = emptySet(); query = ""; recentView = false }
+    fun go(p: String) { freq = exBump(ctx, p); arcFile = null; arcCwd = ""; here = p; sel = emptySet(); query = ""; recentView = false }
     // Back steps out of the current view first (selection, search, recents), then up one folder; only at the top does it leave the page
-    androidx.activity.compose.BackHandler(enabled = sel.isNotEmpty() || query.isNotBlank() || recentView || dir != top) {
+    androidx.activity.compose.BackHandler(enabled = resultsFor != null || searchOpen || arcFile != null || sel.isNotEmpty() || query.isNotBlank() || recentView || dir != top) {
         when {
+            resultsFor != null -> resultsFor = null
+            searchOpen -> { searchOpen = false; query = "" }
+            arcFile != null -> if (arcCwd.isEmpty()) arcFile = null else arcCwd = arcCwd.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" }
             sel.isNotEmpty() -> sel = emptySet()
             query.isNotBlank() -> query = ""
             recentView -> recentView = false
@@ -298,48 +408,135 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
     // an APK asks first: view its contents, or install it (a tap on other files opens them as before)
     fun openFile(f: File) {
-        if (f.extension.equals("apk", true)) { apkChoice = f; return }
-        recents = exAddRecent(ctx, f); Downloads.openFile(ctx, f)
+        if (filePick != null) { if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS || com.umutk.pulse.ofIsText(f)) filePick(f); return }
+        if (f.extension.equals("apk", true) || (standalone && f.extension.lowercase() in setOf("xapk", "apks", "apkm"))) { arc = ArcReq("apk", f); return }
+        if (isArchiveFile(f)) { arcFile = f; arcCwd = ""; sel = emptySet(); return }
+        if (FilesPrefs.openAsk) { recents = exAddRecent(ctx, f); if (exHandOver(ctx, f, false)) return }
+        if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpen(ctx, f, if (ctx is com.umutk.pulse.FilesActivity) "material" else null); return }
+        if (f.extension.lowercase() in com.umutk.pulse.IMG_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f); return }
+        if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
+        recents = exAddRecent(ctx, f)
+        if (FilesPrefs.openAsk && exHandOver(ctx, f, false)) return
+        Downloads.openFile(ctx, f)
     }
     fun toggle(p: String) { sel = if (p in sel) sel - p else sel + p }
     fun mark(p: String) { marks = if (p in marks) marks - p else marks + p; exWrite(ctx, EX_MARKS, marks) }
+    // paste = into the folder on screen; cut moves (and the clipboard empties), copy copies (the clipboard stays); name clashes get a "1-" prefix (see paste)
+    val canPaste = clip?.let { c -> !(c.move && c.files.all { it.parentFile == dir }) } == true
+    val doPaste: () -> Unit = {
+        clip?.let { c ->
+            note = tr("Pasting…", "Yapıştırılıyor…")
+            scope.launch {
+                val moved = mutableListOf<Pair<File, File>>()
+                note = withContext(Dispatchers.IO) { paste(c, dir, moved) }
+                if (moved.isNotEmpty()) undo = ExUndo(moved)
+                if (c.move) clip = null
+                refresh++
+            }
+        }
+    }
+    val filterUi: @Composable () -> Unit = {
+        if (filterDlg) ExFilterDialog(filt, here in filtDir, { filterDlg = false }) { type, onlyHere ->
+            filterDlg = false
+            if (onlyHere) { filtDir = filtDir + (here to type); exWrite(ctx, "ex_filt_dir", filtDir.map { "${it.key}|${it.value}" }) }
+            else { filtDir = filtDir - here; exWrite(ctx, "ex_filt_dir", filtDir.map { "${it.key}|${it.value}" }); filtAll = type; ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString("ex_filt_all", type).apply() }
+        }
+    }
+    val sortUi: @Composable () -> Unit = {
+        ExSortMenu(sortMenu, sort, here in folderSort, { sortMenu = false }, { mode ->
+            if (here in folderSort) { folderSort = folderSort + (here to mode); exWriteSortMap(ctx, folderSort) }
+            else { sortAll = mode; exWriteInt(ctx, EX_SORT_ALL, mode) }
+            sortMenu = false
+        }, { on ->
+            folderSort = if (on) folderSort + (here to sort) else folderSort - here
+            exWriteSortMap(ctx, folderSort)
+            sortMenu = false
+        })
+    }
+    var ovf by remember { mutableStateOf(false) }
+    var selMore by remember { mutableStateOf(false) }
 
     Box(Modifier.fillMaxSize()) {
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // the header stays on screen while the list scrolls under it
+        Column(Modifier.padding(horizontal = 12.dp)) {
+        if (standalone) Row(verticalAlignment = Alignment.CenterVertically) {
+            // declutter: menu, title, search and one overflow menu
+            Box(Modifier.size(40.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Menu, null, Modifier.size(24.dp), T.text) }
+            Column(Modifier.weight(1f).padding(start = 4.dp)) {
+                Text(if (arcFile != null) arcFile!!.name else if (dir.path == top.path) "Files" else dir.name.ifEmpty { "/" }, color = T.text, fontSize = 20.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (arcFile == null) {
+                    val nd = shown.count { it.isDirectory }
+                    Text("$nd ${tr("folders", "klasör")}, ${shown.size - nd} ${tr("files", "dosya")}", color = T.sub, fontSize = 12.sp, maxLines = 1)
+                }
+            }
+            Box(Modifier.size(40.dp).clickable { searchOpen = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Search, null, Modifier.size(22.dp), T.text) }
+            Box {
+                Box(Modifier.size(40.dp).clickable { ovf = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.MoreVert, null, Modifier.size(22.dp), T.text) }
+                val openTool = com.umutk.pulse.LocalOpenTool.current
+                val sep: @Composable () -> Unit = { Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(T.line)) }
+                ThemedMenu(ovf, { ovf = false }) {
+                    @Composable fun row(label: String, ic: androidx.compose.ui.graphics.vector.ImageVector, checked: Boolean? = null, act: () -> Unit) =
+                        ThemedMenuItem(label, { ovf = false; act() }, icon = ic, checked = checked)
+                    row(if (FilesPrefs.grid) tr("List", "Liste") else tr("Grid", "Izgara"), if (FilesPrefs.grid) Icons.Outlined.ViewList else Icons.Outlined.GridView) { FilesPrefs.grid = !FilesPrefs.grid; FilesPrefs.save(ctx) }
+                    row(tr("Sort", "Sırala"), Icons.Outlined.Sort) { sortMenu = true }
+                    row(tr("Filter", "Filtre"), Icons.Outlined.FilterList) { filterDlg = true }
+                    row(tr("Hidden files", "Gizli dosyalar"), Icons.Outlined.Visibility, showHidden) { showHidden = !showHidden }
+                    row(tr("Sizes and dates", "Boyut ve tarih"), Icons.Outlined.Straighten, showSizes) { showSizes = !showSizes }
+                    row(tr("Recent", "Son"), Icons.Outlined.History, recentView) { recentView = !recentView; query = "" }
+                    sep()
+                    row(tr("Select all", "Tümünü seç"), Icons.Outlined.SelectAll) { sel = shown.map { it.path }.toSet() }
+                    row(tr("Invert selection", "Seçimi ters çevir"), Icons.Outlined.Deselect) { sel = shown.map { it.path }.toSet() - sel }
+                    sep()
+                    row(if (dir.path in marks) tr("Remove bookmark", "Yer imini kaldır") else tr("Add bookmark", "Yer imi ekle"), if (dir.path in marks) Icons.Outlined.Star else Icons.Outlined.StarBorder) { mark(dir.path) }
+                    row(tr("Home", "Ana klasör"), Icons.Outlined.Home) { go(top.path) }
+                    row(tr("Refresh", "Yenile"), Icons.Outlined.Refresh) { refresh++ }
+                    row(tr("Properties", "Özellikler"), Icons.Outlined.Info) { propsOf = dir }
+                    undo?.let { u -> row(tr("Undo", "Geri al"), Icons.Outlined.Undo) { scope.launch { note = withContext(Dispatchers.IO) { exUndo(u) }; undo = null; refresh++ } } }
+                    sep()
+                    row(tr("Folder sizes", "Klasör boyutları"), Icons.Outlined.Straighten) { onTab("tree") }
+                    row(tr("File types", "Dosya türleri"), Icons.Outlined.Category) { onTab("types") }
+                    row(tr("Clean cache", "Önbelleği temizle"), Icons.Outlined.CleaningServices) { onTab("cache") }
+                    row(tr("Empty folders", "Boş klasörler"), Icons.Outlined.FolderOff) { finder = "empty" }
+                    row(tr("Large files", "Büyük dosyalar"), Icons.Outlined.SdStorage) { finder = "large" }
+                    row(tr("Duplicates", "Kopyalar"), Icons.Outlined.FileCopy) { finder = "dupes" }
+                    row(tr("Settings", "Ayarlar"), Icons.Outlined.Settings) { openTool("files_settings") }
+                }
+                sortUi()
+            }
+        } else Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(36.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Menu, null, Modifier.size(24.dp), T.text) }
             Spacer(Modifier.weight(1f))
-            // the other file tools sit in the header as icons
-            listOf("tree" to "sizes", "types" to "filetypes", "cache" to "clean").forEach { (k, icon) ->
-                Box(Modifier.size(36.dp).clickable { onTab(k) }, contentAlignment = Alignment.Center) { FluentGlyph(icon, T.text, 22.dp) }
-            }
+            ExToolbar { onTab(it) }
+            val openTool = com.umutk.pulse.LocalOpenTool.current
+            Box(Modifier.size(36.dp).clickable { openTool("files_settings") }, contentAlignment = Alignment.Center) { PIcon("settings", T.sub, 20.dp) }
             if (!full) Box(Modifier.size(36.dp).clickable(onClick = onToggleFull), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.OpenInFull, null, Modifier.size(20.dp), T.sub) }
         }
-        PCard {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PIcon("disk", T.sub, 20.dp)
-                Spacer(Modifier.width(8.dp))
-                Text("${Guard.gb(total - free)} used, ${Guard.gb(free)} free", color = T.text, fontSize = 13.sp)
+        // clipboard cue: stays while navigating between folders
+        clip?.let { c ->
+            Row(Modifier.padding(top = 6.dp).clip(RoundedCornerShape(20.dp)).background(Look.accent.copy(alpha = .16f)).padding(start = 12.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(if (c.move) Icons.Outlined.ContentCut else Icons.Outlined.ContentCopy, null, Modifier.size(16.dp), Look.accent)
+                val n = c.files.size
+                Text(if (c.move) tr("Cut $n", "$n kesildi") else tr("Copied $n", "$n kopyalandı"), Modifier.padding(horizontal = 8.dp), color = T.text, fontSize = 13.sp)
+                if (canPaste) Box(Modifier.size(36.dp).clickable { doPaste() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ContentPaste, null, Modifier.size(20.dp), Look.accent) }
+                Box(Modifier.size(36.dp).clickable { clip = null }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Close, null, Modifier.size(18.dp), T.sub) }
             }
-            BarMeter(if (total > 0) (total - free).toFloat() / total else 0f, Look.accent, h = 8.dp)
         }
+        }
+        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
-        PField(query, { query = it }, "Search", Modifier.fillMaxWidth())
-        PCard {
+        if (!standalone) PCard {
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
                 Box {
+                    ExAct("filter", if (filt != "all") Look.accent else T.sub) { filterDlg = true }
+                    if (filt != "all") Box(Modifier.align(Alignment.TopEnd).padding(top = 1.dp, end = 3.dp).size(7.dp).background(Look.accent, CircleShape))
+                }
+                filterUi()
+                Box {
                     ExAct(listOf("sortName", "sortSize", "sortDate")[sort / 2], if (here in folderSort) Look.accent else T.sub, if (sort % 2 == 1) 180f else 0f) { sortMenu = true }
-                    ExSortMenu(sortMenu, sort, here in folderSort, { sortMenu = false }, { mode ->
-                        if (here in folderSort) { folderSort = folderSort + (here to mode); exWriteSortMap(ctx, folderSort) }
-                        else { sortAll = mode; exWriteInt(ctx, EX_SORT_ALL, mode) }
-                        sortMenu = false
-                    }, { on ->
-                        folderSort = if (on) folderSort + (here to sort) else folderSort - here
-                        exWriteSortMap(ctx, folderSort)
-                        sortMenu = false
-                    })
+                    sortUi()
                 }
                 ExAct(if (showHidden) "eyeOn" else "eyeOff", if (showHidden) Look.accent else T.sub) { showHidden = !showHidden }
                 ExAct("sizes", if (showSizes) Look.accent else T.sub) { showSizes = !showSizes }
@@ -360,66 +557,64 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                if (dir != top) Box(Modifier.clickable { go((dir.parentFile ?: top).path) }) { PIcon("chevron", T.text, 22.dp, Modifier.rotate(180f)) }
-                Text(dir.path.removePrefix(top.path).ifEmpty { "/" }, Modifier.weight(1f).padding(horizontal = 8.dp), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                ExAct(if (dir.path in marks) "starOn" else "star", if (dir.path in marks) Look.accent else T.sub) { mark(dir.path) }
-                ExAct("home", T.text) { go(top.path) }
-                PButton("New folder") { name = ""; dialog = "newfolder" to dir }
-                clip?.let { c ->
-                    ExAct("paste", Look.accent) {
-                        scope.launch {
-                            val moved = mutableListOf<Pair<File, File>>()
-                            note = withContext(Dispatchers.IO) { paste(c, dir, moved) }
-                            if (moved.isNotEmpty()) undo = ExUndo(moved)
-                            if (c.move) clip = null
-                            refresh++
-                        }
+                if (dir != top || arcFile != null) Box(Modifier.clickable { if (arcFile != null) { if (arcCwd.isEmpty()) arcFile = null else arcCwd = arcCwd.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" } } else go((dir.parentFile ?: top).path) }) { PIcon("chevron", T.text, 22.dp, Modifier.rotate(180f)) }
+                val cur = buildList<Triple<String, String, () -> Unit>> {
+                    val inTop = dir.path == top.path || dir.path.startsWith(top.path + "/")
+                    val base = if (inTop) top.path else ""
+                    add(Triple("d:" + base, if (inTop) top.name else "/", { go(base.ifEmpty { "/" }) }))
+                    var acc = base
+                    dir.path.removePrefix(base).split('/').filter { it.isNotEmpty() }.forEach { n -> acc += "/$n"; val q = acc; add(Triple("d:$q", n, { go(q) })) }
+                    arcFile?.let { af ->
+                        add(Triple("a:" + af.path, af.name, { arcCwd = "" }))
+                        var c = ""
+                        arcCwd.split('/').filter { it.isNotEmpty() }.forEach { n -> c += "$n/"; val q = c; add(Triple("c:$q", n, { arcCwd = q })) }
                     }
+                }
+                // forward trail: stepping back keeps the deeper segments (dimmed); a different folder replaces it
+                val hold = remember { arrayOf(listOf<Triple<String, String, () -> Unit>>()) }
+                val trail = if (hold[0].size >= cur.size && cur.indices.all { hold[0][it].first == cur[it].first }) hold[0] else cur
+                hold[0] = trail
+                ExCrumbs(trail.map { it.second to it.third }, cur.lastIndex, Modifier.weight(1f).padding(horizontal = 4.dp))
+                if (!standalone) {
+                    ExAct(if (dir.path in marks) "starOn" else "star", if (dir.path in marks) Look.accent else T.sub) { mark(dir.path) }
+                    ExAct("home", T.text) { go(top.path) }
+                    if (canPaste) ExAct("paste", Look.accent) { doPaste() }
                 }
             }
         }
         if (sel.isNotEmpty()) PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 ExAct("close", T.sub) { sel = emptySet() }
-                Text("${sel.size} selected", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 14.sp)
-                ExAct("copy", T.text) { clip = Clip(picked, false); sel = emptySet() }
-                ExAct("move", T.text) { clip = Clip(picked, true); sel = emptySet() }
-                ExAct("zip", Look.accent) {
-                    scope.launch {
-                        note = withContext(Dispatchers.IO) { exZip(picked, dir) }
-                        sel = emptySet()
-                        refresh++
+                Text("${sel.size} ${tr("selected", "seçili")}", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 14.sp)
+                Box(Modifier.size(36.dp).clickable { sel = shown.map { it.path }.toSet() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SelectAll, null, Modifier.size(20.dp), T.text) }
+                ExAct("delete", T.text) { askDelete(picked) }
+                Box {
+                    Box(Modifier.size(36.dp).clickable { selMore = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.MoreVert, null, Modifier.size(20.dp), T.text) }
+                    ThemedMenu(selMore, { selMore = false }) {
+                        ThemedMenuItem(tr("Copy", "Kopyala"), { selMore = false; clip = Clip(picked, false); sel = emptySet() }, icon = Icons.Outlined.ContentCopy)
+                        ThemedMenuItem(tr("Cut", "Kes"), { selMore = false; clip = Clip(picked, true); sel = emptySet() }, icon = Icons.Outlined.ContentCut)
+                        ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; scope.launch { note = withContext(Dispatchers.IO) { exZip(picked, dir) }; sel = emptySet(); refresh++ } }, icon = Icons.Outlined.FolderZip)
+                        picked.singleOrNull()?.takeIf { !it.isDirectory }?.let { f -> ThemedMenuItem(tr("Share", "Paylaş"), { selMore = false; if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }, icon = Icons.Outlined.Share) }
+                        picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Rename", "Yeniden adlandır"), { selMore = false; name = f.name; dialog = "rename" to f }, icon = Icons.Outlined.DriveFileRenameOutline) }
+                        picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Properties", "Özellikler"), { selMore = false; propsOf = f }, icon = Icons.Outlined.Info) }
                     }
                 }
-                ExAct("delete", T.text) { bulk = picked }
             }
         }
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
-        if (shown.isEmpty()) Text(if (recentView) "No recent files" else "No files here", color = T.sub, fontSize = 13.sp)
-        shown.forEach { f ->
+        if (shown.isEmpty() && arcFile == null) Text(if (recentView) "No recent files" else "No files here", color = T.sub, fontSize = 13.sp)
+        val item: @Composable (File) -> Unit = { f ->
+            val grid = FilesPrefs.grid
+            val isz = listOf(30, 40, 56)[FilesPrefs.icon.coerceIn(0, 2)].let { if (grid) it * 3 / 2 else it }
+            val shownName = if (!FilesPrefs.ext && !f.isDirectory) f.nameWithoutExtension.ifEmpty { f.name } else f.name
             val isMark = f.path in marks
             val isPicked = f.path in sel
+            val cutA = if (clip?.let { it.move && f in it.files } == true) .5f else 1f
+            val copied = clip?.let { !it.move && f in it.files } == true
             // folders keep their card; files are plain rows in a list
             val rowBody: @Composable () -> Unit = {
                 // one row: the name on the left, the three dots (menu) on the right of the same line
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Row(Modifier.weight(1f).combinedClickable(
-                    onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
-                    onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
-                    val thumb = if (f.isDirectory || isPicked) null else exThumb(f)
-                    if (thumb != null) Image(thumb, null, Modifier.size(40.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
-                    else ExIcon(if (isPicked) "check" else if (f.isDirectory) "folder" else "filetypes", Look.accent, 22.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(f.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        val sub = when {
-                            found != null -> exRel(f, top)
-                            !f.isDirectory && showSizes -> exSize(f.length())
-                            else -> ""
-                        }
-                        if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                }
+                val more: @Composable () -> Unit = {
                 Box {
                     Box(Modifier.size(36.dp).clickable { menuOf = f }, contentAlignment = Alignment.Center) { MoreIcon(T.sub, 20.dp) }
                     val actions = buildList<Triple<String, String, () -> Unit>> {
@@ -427,7 +622,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         if (!f.isDirectory) add(Triple("Open with", "openWith", { if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }))
                         add(Triple("Cut", "move", { clip = Clip(listOf(f), true) }))
                         add(Triple("Copy", "copy", { clip = Clip(listOf(f), false) }))
-                        add(Triple("Delete", "delete", { bulk = listOf(f) }))
+                        add(Triple("Delete", "delete", { askDelete(listOf(f)) }))
                         add(Triple("Rename", "rename", { name = f.name; dialog = "rename" to f }))
                         add(Triple("Compress", "zip", { scope.launch { note = withContext(Dispatchers.IO) { exZip(listOf(f), dir) }; refresh++ } }))
                         if (!f.isDirectory) add(Triple("Share", "share", { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }))
@@ -436,8 +631,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             add(Triple(if (f.path in marks) "Remove bookmark" else "Add bookmark", "bookmark", { mark(f.path) }))
                             add(Triple("Create shortcut", "link", { mark(f.path) }))
                         }
-                        if (f.extension.equals("zip", true)) add(Triple("View archive", "zip", { archiveOf = f }))
-                        if (f.extension.equals("zip", true)) add(Triple("Extract", "extract", { scope.launch { note = withContext(Dispatchers.IO) { unzip(f, dir) }; refresh++ } }))
+                        if (isArchiveFile(f)) archiveMenu(f).forEach { (l, k, kind) -> add(Triple(l, k, { arc = ArcReq(kind, f, if (kind == "add" && f.path in sel) picked else listOf(f)) })) }
                         add(Triple("Properties", "info", { propsOf = f }))
                     }
                     val w = LocalWindowLook.current
@@ -448,62 +642,166 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                 }
                 }
+                if (grid) Column(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.fillMaxWidth().combinedClickable(
+                    onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
+                    onLongClick = { toggle(f.path) }), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val thumb = if (f.isDirectory || isPicked) null else (exThumb(f) ?: exPreview(f))
+                    ExBadged(f, isz.dp) {
+                        if (thumb != null) Image(thumb, null, Modifier.size(isz.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
+                        else ExIcon(if (isPicked) "check" else if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
+                    }
+                    Text(shownName, Modifier.padding(top = 4.dp), color = T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    }
+                    more()
+                }
+                else Row(Modifier.fillMaxWidth().heightIn(min = 56.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.weight(1f).heightIn(min = 56.dp).combinedClickable(
+                    onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
+                    onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
+                    val thumb = if (f.isDirectory || isPicked) null else (exThumb(f) ?: exPreview(f))
+                    ExBadged(f, maxOf(isz, 40).dp) {
+                        if (thumb != null) Image(thumb, null, Modifier.size(maxOf(isz, 40).dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop)
+                        else ExIcon(if (isPicked) "check" else if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
+                    }
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
+                        Text(shownName, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val sub = when {
+                            found != null -> exRel(f, top)
+                            !f.isDirectory && showSizes -> exSize(f.length()) + "  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            f.isDirectory && standalone && showSizes -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            else -> ""
+                        }
+                        if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                more()
+                }
             }
-            if (f.isDirectory) PCard(Modifier.fillMaxWidth()) { rowBody() } else Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { rowBody() }
+            if (standalone) {
+                // same row for folders and files; optional card look (own background, rounded, 2dp gaps)
+                if (FilesPrefs.cards) {
+                    val base = if (FilesLook.theme == "amoled") Color(0xFF0A0A0A) else T.panel
+                    val bgc = if (FilesPrefs.alt && shown.indexOf(f) % 2 == 1) T.text.copy(alpha = .05f).compositeOver(base) else base
+                    Box(Modifier.fillMaxWidth().padding(vertical = 1.dp).clip(RoundedCornerShape(listOf(8, 14, 22)[FilesPrefs.radius.coerceIn(0, 2)].dp)).background(bgc).padding(horizontal = 10.dp, vertical = 4.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
+                } else Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
+            } else if (f.isDirectory) PCard(Modifier.fillMaxWidth()) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } } else Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
+        }
+        arcFile?.let { af ->
+            val all = arcAll
+            val rows = remember(all, arcCwd) { childrenOf(all.orEmpty(), arcCwd) }
+            val fmt = remember { java.text.DateFormat.getDateInstance(java.text.DateFormat.SHORT) }
+            if (all == null) Text(tr("Reading…", "Okunuyor…"), color = T.sub, fontSize = 13.sp)
+            else if (rows.isEmpty()) Text(tr("Empty", "Boş"), color = T.sub, fontSize = 13.sp)
+            // shortcut: only the first 400 rows of an archive folder are drawn, a lazy list is the upgrade
+            rows.take(400).forEach { r ->
+                Row(Modifier.fillMaxWidth().clickable {
+                    val p = arcCwd + r.name
+                    if (r.dir) arcCwd = "$p/" else scope.launch {
+                        val out = File(ctx.cacheDir, "arc/${System.nanoTime()}/${r.name}")
+                        val ok = withContext(Dispatchers.IO) { runCatching { archiveExtractOne(af, p, out) }.getOrDefault(false) }
+                        if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
+                    }
+                }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ExIcon(if (r.dir) "folder" else "filetypes", Look.accent, 22.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(r.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        val sub = ((if (r.dir) "" else exSize(r.size) + "  ") + (if (r.time > 0) exDate(r.time, FilesPrefs.dateFmt) else "")).trim()
+                        if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 11.sp)
+                    }
+                }
+            }
+        }
+        if (FilesPrefs.grid) {
+            val cols = listOf(4, 3, 2)[FilesPrefs.icon.coerceIn(0, 2)]
+            shown.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                r.forEach { f -> Box(Modifier.weight(1f)) { item(f) } }
+                repeat(cols - r.size) { Spacer(Modifier.weight(1f)) }
+            } }
+        } else shown.forEach { f -> item(f) }
+        Spacer(Modifier.height(88.dp))
         }
     }
+    if (arcFile == null && resultsFor == null) ExSearchBar(searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = "" })
+    resultsFor?.let { q ->
+        Column(Modifier.fillMaxSize().background(T.bg)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp).clickable { resultsFor = null }, contentAlignment = Alignment.Center) { ExIcon("back", T.text, 22.dp) }
+                Text(q, Modifier.weight(1f), color = T.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            val hits = found
+            if (hits == null) Text(tr("Searching…", "Aranıyor…"), Modifier.padding(16.dp), color = T.sub, fontSize = 13.sp)
+            else if (hits.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), Modifier.padding(16.dp), color = T.sub, fontSize = 13.sp)
+            else androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 12.dp, vertical = 4.dp)) {
+                items(hits.size) { i ->
+                    val f = hits[i]
+                    Row(Modifier.fillMaxWidth().clickable { if (f.isDirectory) { resultsFor = null; searchOpen = false; go(f.path) } else openFile(f) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ExIcon(if (f.isDirectory) "folder" else "filetypes", Look.accent, 22.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(f.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(exRel(f, top), color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Box(Modifier.size(40.dp).clickable { resultsFor = null; searchOpen = false; go(if (f.isDirectory) f.path else f.parentFile?.path ?: top.path) }, contentAlignment = Alignment.Center) { ExIcon("openFolder", T.sub, 20.dp) }
+                    }
+                }
+            }
+        }
+    }
+    if (arcFile == null && resultsFor == null && canPaste) clip?.let { c -> ExPasteFab(c.files.size, c.move, { doPaste() }) { clip = null } }
+    if (arcFile == null && resultsFor == null) ExNewFab { k -> name = ""; if (k == "folder") dialog = "newfolder" to dir else { newExt = k; dialog = "newfile" to dir } }
     if (drawer) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { drawer = false })
         Column(Modifier.fillMaxHeight().width(280.dp).background(T.panel).verticalScroll(rememberScrollState()).padding(vertical = 8.dp)) {
             val pick: (String) -> Unit = { go(it); drawer = false }
-            ExDrawerRow("disk", tr("Internal storage", "Dahili depolama"), here == top.path) { pick(top.path) }
+            var rm by remember { mutableStateOf<String?>(null) }
+            ExDrawerRow("disk", tr("Internal storage", "Dahili depolama"), here == top.path, sub = if (FilesPrefs.storageInfo) tr("${Guard.gb(free)} free of ${Guard.gb(total)}", "${Guard.gb(total)} içinde ${Guard.gb(free)} boş") else null,
+                bar = if (FilesPrefs.storageInfo && total > 0) (total - free).toFloat() / total else null) { pick(top.path) }
+            // an inserted SD card or USB drive is a slot of its own: the other app-specific dirs sit on the removable volumes
+            ctx.getExternalFilesDirs(null).drop(1).filterNotNull().map { it.path.substringBefore("/Android") }.filter { File(it).canRead() }.forEach { v ->
+                ExDrawerRow("disk", tr("SD card", "SD kart") + " · " + File(v).name, here.startsWith(v)) { pick(v) }
+            }
             if (canRoot) ExDrawerRow("folder", tr("Root (/)", "Kök (/)"), here == "/") { pick("/") }
             else ExDrawerRow("folder", tr("Root: not available", "Kök: yok"), false, dim = true) { }
-            if (marks.isNotEmpty()) {
-                ExDrawerHead(tr("Bookmarks", "Yer imleri"))
-                marks.forEach { p -> ExDrawerRow("bookmark", File(p).name.ifEmpty { "/" }, here == p) { pick(p) } }
+            // the usual folders of internal storage (Files settings: Standard folders)
+            if (FilesPrefs.stdFolders) { ExDrawerDivider(); ExDrawerHead(tr("Standard folders", "Standart klasörler")) }
+            if (FilesPrefs.stdFolders) listOf("DCIM", "Download", "Movies", "Music", "Pictures", "Documents").map { File(top, it).path }.filter { File(it).isDirectory }.forEach { p ->
+                ExDrawerRow("folderY", File(p).name, here == p, glyph = when (File(p).name) {
+                    "DCIM" -> Icons.Outlined.PhotoCamera; "Download" -> Icons.Outlined.Download; "Pictures" -> Icons.Outlined.Image
+                    "Movies" -> Icons.Outlined.Movie; "Music" -> Icons.Outlined.MusicNote; else -> Icons.Outlined.Description }) { pick(p) }
             }
-            // DCIM and Download are always there; the folders opened most often follow
+            if (FilesPrefs.bookmarks && marks.isNotEmpty()) {
+                ExDrawerDivider(); ExDrawerHead(tr("Bookmarks", "Yer imleri"))
+                marks.forEach { p -> Box {
+                    ExDrawerRow("bookmark", File(p).name.ifEmpty { "/" }, here == p, onLong = { rm = p }) { pick(p) }
+                    ThemedMenu(rm == p, { rm = null }) { ThemedMenuItem(tr("Remove", "Kaldır"), { rm = null; mark(p) }, leading = { ExIcon("delete", com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) }
+                } }
+            }
+            // the most opened folders, apart from the fixed ones above
             val defaults = listOf(File(top, "DCIM").path, File(top, "Download").path)
-            val often = defaults + freq.mapNotNull { l -> l.substringAfterLast('|').toIntOrNull()?.let { l.substringBeforeLast('|') to it } }
+            val often = freq.mapNotNull { l -> l.substringAfterLast('|').toIntOrNull()?.let { l.substringBeforeLast('|') to it } }
                 .sortedByDescending { it.second }.map { it.first }.filter { it !in defaults }.take(6)
-            ExDrawerHead(tr("Frequent", "Sık kullanılanlar"))
+            if (often.isNotEmpty()) ExDrawerHead(tr("Frequent", "Sık kullanılanlar"))
             often.forEach { p -> ExDrawerRow("history", File(p).name.ifEmpty { "/" }, here == p) { pick(p) } }
+            ExDrawerDivider()
+            if (Opt.recycle) ExDrawerRow("delete", tr("Trash", "Çöp kutusu"), false) { drawer = false; openToolFn("recycle") }
+            ExDrawerRow("settings", tr("Settings", "Ayarlar"), false) { drawer = false; openToolFn("files_settings") }
+            ExDrawerRow("info", tr("About", "Hakkında"), false) { drawer = false; about = true }
         }
     }
     }
 
+    if (about) WinAlert(onDismissRequest = { about = false }, title = { Text("Pulse Files") },
+        text = { Text(tr("Files for Pulse. Browse, search, archives, bookmarks.", "Pulse için dosyalar. Gezin, arayın, arşivler, yer imleri."), color = T.sub, fontSize = 13.sp) },
+        confirmButton = { TextButton({ about = false }) { Text(tr("Close", "Kapat")) } })
     viewing?.let { f -> FileViewer(f, { openFile(it) }) { viewing = null } }
 
-    apkChoice?.let { a ->
-        WinAlert(onDismissRequest = { apkChoice = null }, title = { Text(a.name) },
-            text = { Text("View the contents, or install this app?", color = T.sub, fontSize = 13.sp) },
-            confirmButton = { TextButton({ archiveOf = a; apkChoice = null }) { Text("View") } },
-            dismissButton = { TextButton({
-                apkChoice = null; recents = exAddRecent(ctx, a)
-                if (!exHandOver(ctx, a, false)) note = "Could not install ${a.name}"
-            }) { Text("Install") } })
-    }
-
-    archiveOf?.let { z ->
-        LaunchedEffect(z) { archiveList = null; archiveList = withContext(Dispatchers.IO) { exArchiveList(z) } }
-        val list = archiveList
-        WinAlert(onDismissRequest = { archiveOf = null }, title = { Text("${z.name}: ${list?.size ?: 0} items") },
-            text = {
-                Column(Modifier.heightIn(max = 360.dp).verticalScroll(rememberScrollState())) {
-                    when {
-                        list == null -> Text("Reading...", color = T.sub, fontSize = 13.sp)
-                        list.isEmpty() -> Text("Empty, or not a zip file", color = T.sub, fontSize = 13.sp)
-                        else -> list.forEach { (n, size) ->
-                            Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(n, Modifier.weight(1f), color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                if (size >= 0) Text(Guard.gb(size), color = T.sub, fontSize = 11.sp)
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = { TextButton({ archiveOf = null }) { Text("Close") } }, dismissButton = null)
+    arc?.let { r ->
+        ArchiveHost(r, { arc = null }, { note = it }, { refresh++ }) { v ->
+            if (v.extension.lowercase() in TEXT_EXT || v.extension.lowercase() in IMAGE_EXT) viewing = v else Downloads.openFile(ctx, v)
+        }
     }
 
     propsOf?.let { f ->
@@ -564,9 +862,28 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
 
     dialog?.let { (kind, f) ->
         WinAlert(onDismissRequest = { dialog = null },
-            title = { Text(if (kind == "rename") "Rename" else "New folder") },
-            text = { PField(name, { name = it }, "Name", Modifier.fillMaxWidth()) },
+            title = { Text(if (kind == "rename") "Rename" else if (kind == "newfile") tr("New file", "Yeni dosya") + " (." + newFileSplit(name, newExt).second + ")" else "New folder") },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PField(name, { name = it }, "Name", Modifier.fillMaxWidth())
+                if (kind == "newfile") Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    // a chip sets the extension; one already typed in the name is replaced by it
+                    (listOf("docx", "xlsx", "pptx", "pdf", "txt") + tr("Other…", "Diğer…")).forEachIndexed { i, e ->
+                        val other = i == 5
+                        PChip(if (other) newExt !in listOf("docx", "xlsx", "pptx", "pdf", "txt") else newExt == e, if (other) e else ".$e") {
+                            val (b, x) = newFileSplit(name, newExt)
+                            if (other) { newExt = "other" } else { newExt = e; if (name.trim().let { it.lastIndexOf('.') in 1 until it.length - 1 }) name = "$b.$e" }
+                        }
+                    }
+                }
+            } },
             confirmButton = { TextButton({
+                if (kind == "newfile") {
+                    val (b, x) = newFileSplit(name, newExt)
+                    val made = runCatching { com.umutk.pulse.ofCreateIn(f, b.ifBlank { "New" }, x) }.getOrNull()
+                    note = if (made != null) "" else "Could not use that name"
+                    dialog = null; refresh++
+                    return@TextButton
+                }
                 val target = if (kind == "rename") File(f.parentFile, name.trim()) else File(f, name.trim())
                 val ok = name.isNotBlank() && !target.exists() && runCatching {
                     if (kind == "rename") f.renameTo(target) else target.mkdirs()
@@ -579,17 +896,54 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
 }
 
+/** "name.ext" typed in the new-file box -> (name, extension); without a usable extension the chosen one counts ("other" = txt). */
+private fun newFileSplit(typed: String, chosen: String): Pair<String, String> {
+    val t = typed.trim()
+    val i = t.lastIndexOf('.')
+    val typedExt = if (i in 1 until t.length - 1) t.substring(i + 1).filter { it.isLetterOrDigit() || it in "_+-" } else ""
+    val ext = typedExt.ifEmpty { if (chosen == "other") "txt" else chosen }.let { if (it.lowercase() in setOf("docx", "xlsx", "pptx", "pdf")) it.lowercase() else it }
+    return (if (typedExt.isNotEmpty()) t.substring(0, i) else t) to ext
+}
+
+/** The path as clickable segments with chevrons between; it scrolls sideways and stays at the end. */
+@Composable
+private fun ExCrumbs(segs: List<Pair<String, () -> Unit>>, curIdx: Int, modifier: Modifier) {
+    val sc = rememberScrollState()
+    LaunchedEffect(segs.map { it.first }, curIdx) { snapshotFlow { sc.maxValue }.collect { sc.scrollTo(it) } }
+    Row(modifier.horizontalScroll(sc), verticalAlignment = Alignment.CenterVertically) {
+        segs.forEachIndexed { i, (n, act) ->
+            if (i > 0) PIcon("chevron", if (i > curIdx) T.sub.copy(alpha = .45f) else T.sub, 14.dp)
+            val c = if (i == curIdx) Look.accent else if (i > curIdx) T.sub.copy(alpha = .5f) else T.text
+            Text(n, Modifier.clickable(onClick = act).padding(horizontal = 4.dp, vertical = 8.dp), color = c, fontSize = 15.sp, fontWeight = if (i == curIdx) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1)
+        }
+    }
+}
+
 @Composable
 private fun ExDrawerHead(t: String) = Text(t, Modifier.padding(start = 16.dp, top = 14.dp, bottom = 4.dp), color = T.sub, fontSize = 12.sp)
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ExDrawerRow(icon: String, label: String, on: Boolean, dim: Boolean = false, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable(enabled = !dim, onClick = onClick).padding(horizontal = 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
-        ExIcon(icon, if (dim) T.sub else if (on) Look.accent else T.text, 20.dp)
+private fun ExDrawerRow(icon: String, label: String, on: Boolean, dim: Boolean = false, glyph: ImageVector? = null, sub: String? = null, bar: Float? = null, onLong: (() -> Unit)? = null, onClick: () -> Unit) {
+    // Material: a rounded pill marks the open entry and the outline icons keep the theme colours; the other looks keep the flat bar and yellow folders
+    val mat = LocalWindowLook.current.material
+    val pill = if (mat) RoundedCornerShape(28.dp) else RoundedCornerShape(0.dp)
+    Row((if (mat) Modifier.padding(horizontal = 12.dp) else Modifier).fillMaxWidth().clip(pill).background(if (on) Look.accent.copy(alpha = .16f) else Color.Transparent)
+        .combinedClickable(enabled = !dim, onLongClick = onLong, onClick = onClick).padding(horizontal = if (mat) 16.dp else 16.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (glyph != null) Icon(glyph, null, Modifier.size(20.dp), if (mat) (if (on) Look.accent else T.sub) else Color(0xFFE8B84A))
+        else if (icon == "folderY") ExIcon("folder", Color(0xFFE8B84A), 20.dp)
+        else ExIcon(icon, if (dim) T.sub else if (on) Look.accent else T.text, 20.dp)
         Spacer(Modifier.width(14.dp))
-        Text(label, color = if (dim) T.sub else T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Column {
+            Text(label, color = if (dim) T.sub else T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (sub != null) Text(sub, color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (bar != null) BarMeter(bar, Look.accent, h = 4.dp)
+        }
     }
 }
+
+@Composable
+private fun ExDrawerDivider() = Box(Modifier.fillMaxWidth().padding(vertical = 6.dp).height(1.dp).background(T.line.copy(alpha = .6f)))
 
 /** An entry listed through su: the app itself cannot stat it, so the folder flag comes from the "/" that ls -p adds. */
 private class RootFile(path: String, private val dir: Boolean) : File(path) {
@@ -622,7 +976,7 @@ private fun ExAct(k: String, tint: Color, rot: Float = 0f, onClick: () -> Unit) 
 
 /** Material outline icons in the Material looks; the Windows looks use the nearest Fluent glyph they already have. */
 @Composable
-private fun ExIcon(k: String, tint: Color, size: Dp = 22.dp, rot: Float = 0f) {
+private fun ExIcon(k: String, tint: Color, size: Dp = 22.dp, rot: Float = 0f) = androidx.compose.runtime.key(T.id) {
     val m = Modifier.rotate(rot)
     val v = EX_MATERIAL[k]
     val ctx = LocalContext.current
@@ -635,14 +989,15 @@ private fun ExIcon(k: String, tint: Color, size: Dp = 22.dp, rot: Float = 0f) {
 }
 
 private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
-    "star" to Icons.Outlined.StarBorder, "bookmark" to Icons.Outlined.BookmarkBorder, "starOn" to Icons.Filled.Star, "check" to Icons.Outlined.CheckCircle,
-    "sortName" to Icons.Outlined.SortByAlpha, "sortSize" to Icons.Outlined.DataUsage, "sortDate" to Icons.Outlined.Schedule,
-    "eyeOn" to Icons.Outlined.Visibility, "eyeOff" to Icons.Outlined.VisibilityOff, "sizes" to Icons.Outlined.Straighten,
-    "recent" to Icons.Outlined.History, "emptyFolder" to Icons.Outlined.FolderOff, "bigFile" to Icons.Outlined.SdStorage,
-    "dupes" to Icons.Outlined.FileCopy, "undo" to Icons.Outlined.Undo, "home" to Icons.Outlined.Home,
-    "share" to Icons.Outlined.Share, "openWith" to Icons.Outlined.OpenWith, "zip" to Icons.Outlined.FolderZip,
-    "link" to Icons.Outlined.Link, "save" to Icons.Outlined.Save, "edit" to Icons.Outlined.Edit,
-    "delete" to Icons.Outlined.Delete, "document" to Icons.Outlined.Description,
+    "star" to Icons.Filled.StarBorder, "bookmark" to Icons.Filled.BookmarkBorder, "starOn" to Icons.Filled.Star, "check" to Icons.Filled.CheckCircle,
+    "sortName" to Icons.Filled.SortByAlpha, "sortSize" to Icons.Filled.DataUsage, "sortDate" to Icons.Filled.Schedule,
+    "eyeOn" to Icons.Filled.Visibility, "eyeOff" to Icons.Filled.VisibilityOff, "sizes" to Icons.Filled.Straighten,
+    "recent" to Icons.Filled.History, "emptyFolder" to Icons.Filled.FolderOff, "bigFile" to Icons.Filled.SdStorage,
+    "dupes" to Icons.Filled.FileCopy, "undo" to Icons.Filled.Undo, "home" to Icons.Filled.Home,
+    "share" to Icons.Filled.Share, "openWith" to Icons.Filled.OpenWith, "zip" to Icons.Filled.FolderZip,
+    "link" to Icons.Filled.Link, "save" to Icons.Filled.Save, "edit" to Icons.Filled.Edit,
+    "delete" to Icons.Filled.Delete, "document" to Icons.Filled.Description,
+    "search" to Icons.Filled.Search, "filter" to Icons.Filled.FilterList, "back" to Icons.Filled.ArrowBack, "close" to Icons.Filled.Close, "openFolder" to Icons.Filled.FolderOpen,
 )
 
 /** Win11 file menu: one distinct Fluent glyph per action. */
@@ -652,7 +1007,7 @@ private val EX_FLUENT = mapOf(
     "star" to "heart", "starOn" to "heart", "bookmark" to "bookmark", "check" to "info", "sortName" to "details", "sortSize" to "disk", "sortDate" to "history",
     "eyeOn" to "view", "eyeOff" to "view", "sizes" to "disk", "recent" to "history", "emptyFolder" to "folder", "bigFile" to "disk",
     "dupes" to "copy", "undo" to "paste", "home" to "folder", "share" to "download", "openWith" to "run", "zip" to "extract",
-    "link" to "copy", "save" to "rename", "edit" to "rename",
+    "filter" to "details", "link" to "copy", "save" to "rename", "edit" to "rename",
 )
 
 /** Recent files and bookmarks: one path per line under [key]. */
@@ -685,6 +1040,62 @@ private fun exReadSortMap(ctx: Context): Map<String, Int> = exRead(ctx, EX_SORT_
 
 private fun exWriteSortMap(ctx: Context, map: Map<String, Int>) = exWrite(ctx, EX_SORT_DIRS, map.map { "${it.key}|${it.value}" })
 
+private val EX_FILTERS = listOf("all" to "All", "images" to "Images", "videos" to "Videos", "audio" to "Audio", "docs" to "Documents", "archives" to "Archives", "apks" to "APKs", "folders" to "Folders only")
+
+private fun exFilterOk(f: File, type: String): Boolean {
+    if (type == "all") return true
+    if (type == "folders") return f.isDirectory
+    if (f.isDirectory) return true // folders stay so the list can still be walked
+    val e = f.extension.lowercase()
+    return when {
+        type.startsWith("ext:") -> e in type.removePrefix("ext:").split(',').map { it.trim().trimStart('.').lowercase() }.filter { it.isNotEmpty() }
+        type == "images" -> e in setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "avif", "svg")
+        type == "videos" -> e in setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v")
+        type == "audio" -> e in setOf("mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma", "lrc")
+        type == "docs" -> e in setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "rtf", "odt", "csv", "md", "json")
+        type == "archives" -> e in setOf("zip", "rar", "7z", "tar", "gz", "bz2", "xz", "jar")
+        type == "apks" -> e in setOf("apk", "apks", "xapk", "apkm")
+        else -> true
+    }
+}
+
+/** The filter dialog in the Files look (WinAlert follows LocalWindowLook): big type rows, custom extensions, "Only this folder" and Clear. */
+@Composable
+private fun ExFilterDialog(current: String, perFolder: Boolean, onDismiss: () -> Unit, onApply: (String, Boolean) -> Unit) {
+    val w = LocalWindowLook.current
+    var type by remember { mutableStateOf(current) }
+    var here by remember { mutableStateOf(perFolder || current == "all") }
+    var custom by remember { mutableStateOf(current.removePrefix("ext:").takeIf { current.startsWith("ext:") }.orEmpty()) }
+    val isCustom = type.startsWith("ext:")
+    val result = if (isCustom) "ext:$custom" else type
+    WinAlert(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Filter", "Süz"), color = w.text) },
+        text = {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
+                (EX_FILTERS + ("ext:" to "Custom extensions")).forEach { (id, label) ->
+                    val on = if (id == "ext:") isCustom else type == id
+                    Row(Modifier.fillMaxWidth().clickable { type = if (id == "ext:") "ext:$custom" else id }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PRadio(on) { type = if (id == "ext:") "ext:$custom" else id }
+                        Spacer(Modifier.width(14.dp))
+                        Text(label, color = w.text, fontSize = 16.sp)
+                    }
+                }
+                if (isCustom) PField(custom, { custom = it; type = "ext:$it" }, "jpg, png, txt", Modifier.fillMaxWidth().padding(bottom = 8.dp))
+                Row(Modifier.fillMaxWidth().clickable { here = !here }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Only this folder", Modifier.weight(1f), color = w.text, fontSize = 16.sp)
+                    PSwitch(here, { here = it })
+                }
+                Row(Modifier.fillMaxWidth().clickable { onApply("all", here) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Clear filter", color = Look.accent, fontSize = 16.sp)
+                }
+            }
+        },
+        confirmButton = { PButton("OK", onClick = { onApply(result, here) }) },
+        dismissButton = { PButton("Cancel", onClick = onDismiss) },
+    )
+}
+
 /** The sort popup: six orders, then the switch that gives this folder its own order. */
 @Composable
 private fun ExSortMenu(expanded: Boolean, current: Int, perFolder: Boolean, onDismiss: () -> Unit, onPick: (Int) -> Unit, onPerFolder: (Boolean) -> Unit) {
@@ -714,7 +1125,7 @@ private fun exSort(list: List<File>, mode: Int): List<File> {
         else -> compareBy<File> { it.lastModified() }
     }
     val by = if (mode % 2 == 1) key.reversed() else key
-    return list.sortedWith(compareBy<File> { !it.isDirectory }.then(by))
+    return list.sortedWith(if (FilesPrefs.foldersFirst) compareBy<File> { !it.isDirectory }.then(by) else by)
 }
 
 /** Entries of a zip file as (name, size); empty when the file cannot be read as a zip. */
@@ -737,10 +1148,20 @@ private fun exFinder(kind: String, dir: File): List<File> = when (kind) {
 private fun exRel(f: File, top: File): String = (f.parentFile?.path ?: top.path).removePrefix(top.path).ifEmpty { "/" }
 
 /** KB under 1 MB, MB under 1 GB, GB above. */
-private fun exSize(b: Long): String = when {
-    b < 1_048_576L -> "%.0f KB".format(b / 1024.0)
-    b < 1_073_741_824L -> "%.0f MB".format(b / 1_048_576.0)
-    else -> "%.1f GB".format(b / 1_073_741_824.0)
+private fun exSize(b: Long): String {
+    val bin = FilesPrefs.binary; val k = if (bin) 1024.0 else 1000.0; val u = if (bin) listOf("KiB", "MiB", "GiB") else listOf("KB", "MB", "GB")
+    return when {
+        b < k * k -> "%.0f %s".format(b / k, u[0])
+        b < k * k * k -> "%.0f %s".format(b / (k * k), u[1])
+        else -> "%.1f %s".format(b / (k * k * k), u[2])
+    }
+}
+
+/** A modification time in the chosen format: 0 short, 1 long, 2 ISO. */
+internal fun exDate(ms: Long, fmt: Int): String = when (fmt) {
+    1 -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(ms))
+    2 -> java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(Date(ms))
+    else -> DateFormat.getDateInstance(DateFormat.SHORT).format(Date(ms))
 }
 
 private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
@@ -748,7 +1169,7 @@ private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "he
 /** A small decoded picture for an image file, or null for anything else or when the device cannot decode it. */
 @Composable
 private fun exThumb(f: File): ImageBitmap? {
-    if (f.extension.lowercase() !in EX_IMAGE_EXT) return null
+    if (!FilesPrefs.thumbs || f.extension.lowercase() !in EX_IMAGE_EXT) return null
     val ctx = LocalContext.current
     val first = remember(f.path) { Thumbs.cached(f) }
     return produceState(first, f.path) { if (value == null) value = Thumbs.load(ctx, f) }.value
@@ -996,3 +1417,104 @@ private fun FluentGlyph(k: String, tint: Color, size: androidx.compose.ui.unit.D
         scale(this.size.width / 24f, pivot = androidx.compose.ui.geometry.Offset.Zero) { paths.forEach { drawPath(it, tint) } }
     }
 }
+
+/** The file tools in the header: Windows 95 gets a flat grey bar of raised buttons, Windows 7 a light glossy command bar; the other looks keep plain icons. */
+@Composable
+private fun ExToolbar(onTab: (String) -> Unit) {
+    val tools = listOf("tree" to "sizes", "types" to "filetypes", "cache" to "clean")
+    val t = T
+    val barMod = when (t.id) {
+        "win95" -> Modifier.background(Color(0xFFC0C0C0)).bevel(true).padding(2.dp)
+        "win7" -> Modifier.clip(RoundedCornerShape(3.dp)).background(Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFF0F4FA), Color(0xFFDCE5F2), Color(0xFFE9EFF8)))).border(1.dp, Color(0xFFB5C4D9), RoundedCornerShape(3.dp)).padding(horizontal = 2.dp, vertical = 1.dp)
+        else -> Modifier
+    }
+    Row(barMod, verticalAlignment = Alignment.CenterVertically) {
+        tools.forEachIndexed { i, (k, icon) ->
+            when (t.id) {
+                "win95" -> {
+                    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                    val down by src.collectIsPressedAsState()
+                    Box(Modifier.padding(horizontal = 1.dp).size(26.dp).background(Color(0xFFC0C0C0)).bevel(!down).clickable(src, null) { onTab(k) }, contentAlignment = Alignment.Center) { FluentGlyph(icon, Color.Black, 16.dp) }
+                }
+                "win7" -> {
+                    if (i > 0) Box(Modifier.width(1.dp).height(18.dp).background(Color(0xFFC9D5E6)))
+                    Box(Modifier.size(width = 30.dp, height = 26.dp).clickable { onTab(k) }, contentAlignment = Alignment.Center) { FluentGlyph(icon, Color(0xFF2B4F86), 16.dp) }
+                }
+                else -> Box(Modifier.size(36.dp).clickable { onTab(k) }, contentAlignment = Alignment.Center) { FluentGlyph(icon, t.text, 22.dp) }
+            }
+        }
+    }
+}
+
+/** Paste button above the "+" while the clipboard holds something: tap pastes here, long press clears the clipboard; the badge counts the items. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.ExPasteFab(count: Int, move: Boolean, onPaste: () -> Unit, onClear: () -> Unit) {
+    val win = Opt.authentic && LocalWindowLook.current.id in com.umutk.pulse.winButtonLooks
+    val shape = RoundedCornerShape(if (win) (if (LocalWindowLook.current.id == "win95") 0.dp else 4.dp) else 14.dp)
+    Box(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 24.dp, bottom = 16.dp + 56.dp + 12.dp)) {
+        Box(Modifier.size(44.dp).shadow(4.dp, shape).clip(shape).background(T.panel).border(1.dp, Look.accent, shape).combinedClickable(onClick = onPaste, onLongClick = onClear), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.ContentPaste, null, Modifier.size(22.dp), Look.accent)
+        }
+        Box(Modifier.align(Alignment.TopEnd).offset(6.dp, (-6).dp).size(18.dp).clip(CircleShape).background(Look.accent), contentAlignment = Alignment.Center) {
+            Text("$count", color = com.umutk.pulse.onAccent(Look.accent), fontSize = 10.sp)
+        }
+    }
+}
+
+/** Floating search at the bottom-left: a round button that expands into a field (clear + close); Enter calls [onSearch]. Material = pill, the other looks = square. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.ExSearchBar(open: Boolean, onOpen: () -> Unit, query: String, onQuery: (String) -> Unit, onSearch: () -> Unit, onClose: () -> Unit) {
+    val shape = if (T.material) RoundedCornerShape(28.dp) else RoundedCornerShape(0.dp)
+    val fr = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(open) { if (open) runCatching { fr.requestFocus() } }
+    Row(Modifier.align(Alignment.BottomStart).navigationBarsPadding().imePadding().padding(start = 16.dp, bottom = 16.dp, end = if (open) 88.dp else 0.dp)
+        .then(if (open) Modifier.fillMaxWidth() else Modifier)
+        .shadow(6.dp, shape).clip(shape).background(T.panel).then(if (!open) Modifier.clickable(onClick = onOpen) else Modifier),
+        verticalAlignment = Alignment.CenterVertically) {
+        if (!open) Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) { ExIcon("search", T.text, 24.dp) }
+        else {
+            Box(Modifier.size(44.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) { ExIcon("back", T.text, 20.dp) }
+            PField(query, onQuery, tr("Search", "Ara"), Modifier.weight(1f).focusRequester(fr), onSearch)
+            if (query.isNotEmpty()) Box(Modifier.size(44.dp).clickable { onQuery("") }, contentAlignment = Alignment.Center) { ExIcon("close", T.sub, 20.dp) }
+        }
+    }
+}
+
+/** Floating "+" at the bottom-right: Material = speed-dial, Windows looks (Opt.authentic) = a copy of Explorer's "New" menu. [pick] gets "folder" or the file extension. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.ExNewFab(pick: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val win = Opt.authentic && LocalWindowLook.current.id in com.umutk.pulse.winButtonLooks
+    val go: (String) -> Unit = { open = false; pick(it) }
+    if (open && !win) Box(Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { open = false })
+    val fabInk = com.umutk.pulse.onAccent(Look.accent)
+    // both children sit at the bottom-right of this box, so the speed dial grows upward from the button
+    Box(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(16.dp)) {
+        if (open && !win) Column(Modifier.align(Alignment.BottomEnd).padding(bottom = 68.dp), horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            listOf("txt" to Icons.Outlined.NoteAdd, "folder" to Icons.Outlined.CreateNewFolder).forEach { (k, ic) ->
+                Row(Modifier.clip(RoundedCornerShape(28.dp)).background(T.panel).clickable { go(k) }.padding(start = 16.dp, end = 6.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (k == "folder") tr("New folder", "Yeni klasör") else tr("New file", "Yeni dosya"), color = T.text, fontSize = 14.sp)
+                    Spacer(Modifier.width(10.dp))
+                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(Look.accent), contentAlignment = Alignment.Center) { Icon(ic, null, Modifier.size(22.dp), fabInk) }
+                }
+            }
+        }
+        val fabShape = RoundedCornerShape(if (win && LocalWindowLook.current.id == "win95") 0.dp else 16.dp)
+        Box(Modifier.align(Alignment.BottomEnd).size(56.dp).shadow(6.dp, fabShape).clip(fabShape).background(Look.accent).clickable { open = !open }, contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.Add, null, Modifier.size(28.dp).rotate(if (open) 45f else 0f), fabInk)
+        if (win) ThemedMenu(open, { open = false }) {
+            val sub = com.umutk.pulse.LocalMenuStyle.current.sub
+            ThemedMenuItem(tr("Folder", "Klasör"), { go("folder") }, leading = { ExIcon("folder", Color(0xFFE8B84A), 18.dp) })
+            ThemedMenuItem(tr("Text Document", "Metin Belgesi"), { go("txt") }, leading = { ExIcon("filetypes", sub, 18.dp) })
+            listOf(
+                Triple(com.umutk.pulse.OfKind.WORD, "docx", tr("Microsoft Word Document", "Microsoft Word Belgesi")),
+                Triple(com.umutk.pulse.OfKind.EXCEL, "xlsx", tr("Microsoft Excel Worksheet", "Microsoft Excel Çalışma Sayfası")),
+                Triple(com.umutk.pulse.OfKind.PPT, "pptx", tr("Microsoft PowerPoint Presentation", "Microsoft PowerPoint Sunusu")),
+                Triple(com.umutk.pulse.OfKind.PDF, "pdf", tr("PDF Document", "PDF Belgesi")),
+            ).forEach { (k, e, l) -> ThemedMenuItem(l, { go(e) }, leading = { com.umutk.pulse.OfLogo(k, 18.dp) }) }
+        }
+        }
+    }
+}
+

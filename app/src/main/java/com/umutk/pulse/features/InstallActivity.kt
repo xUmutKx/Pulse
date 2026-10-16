@@ -34,7 +34,7 @@ class InstallActivity : ComponentActivity() {
             LookHost(transparent = true) {
                 Box(Modifier.fillMaxSize()) {
                     val f = file
-                    if (f != null) InstallWindow(f) { finish() } else ApkCopying(copied) { finish() }
+                    if (f != null) InstallWindow(f, intent.getStringExtra("look")) { finish() } else ApkCopying(copied) { finish() }
                 }
             }
         }

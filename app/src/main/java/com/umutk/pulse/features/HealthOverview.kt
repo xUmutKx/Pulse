@@ -13,7 +13,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import com.umutk.pulse.PChip
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -69,16 +76,84 @@ private fun Stat(label: String, value: String, modifier: Modifier) {
     }
 }
 
+/** The Health page: goal rings, step history, streak and averages, activity totals, BMI and heart-rate history. [rev] changes when goals or body numbers did. */
 @Composable
-fun HealthOverview(log: List<ActRecord>) {
+fun HealthOverview(p: SharedPreferences, log: List<ActRecord>, steps: Long, bpm: Int, rev: Int, onGoals: () -> Unit) {
     val today = LocalDate.now()
     val d = log.filter { day(it.start) == today }
     val w = log.filter { !day(it.start).isBefore(today.minusDays(6)) }
+    val gs = HealthStore.goalSteps(p); val gm = HealthStore.goalMinutes(p); val gk = HealthStore.goalKcal(p)
+    val minutes = (d.sumOf { it.dur } / 60_000L).toInt()
+    val kcal = HealthStore.kcal(p, steps)
     PCard {
-        Text(tr("Totals", "Toplamlar"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Today", "Bugün"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Icon(Icons.Filled.Edit, tr("Goals", "Hedefler"), Modifier.size(22.dp).clickable { onGoals() }, tint = T.sub)
+        }
+        GoalRings(listOf(
+            Ring(steps.toFloat() / gs, Look.accent, tr("Steps", "Adım"), "%,d / %,d".format(steps, gs)),
+            Ring(minutes.toFloat() / gm, Color(0xFF4CAF50), tr("Active", "Aktif"), "$minutes / $gm ${tr("min", "dk")}"),
+            Ring(kcal.toFloat() / gk, Color(0xFFFF7043), tr("Calories", "Kalori"), "$kcal / $gk kcal"),
+        ))
+        Text("%.2f km".format(HealthStore.km(p, steps)) + " · " + tr("calories are an estimate", "kalori tahmindir"), color = T.sub, fontSize = 12.sp)
+    }
+    // history: recomputed when today's steps or the goal change
+    var span by remember { mutableStateOf(7) }
+    val hist = remember(steps, rev, span) { HealthStore.days(p, span) }
+    val h30 = remember(steps, rev) { HealthStore.days(p, 30) }
+    val best = remember(steps, rev) { HealthStore.best(p) }
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(tr("Steps", "Adımlar"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            PChip(span == 7, tr("7 days", "7 gün")) { span = 7 }
+            PChip(span == 30, tr("30 days", "30 gün")) { span = 30 }
+        }
+        StepsChart(hist, gs)
+        Row(Modifier.fillMaxWidth()) {
+            Stat(tr("Streak", "Seri"), tr("${HealthStore.streak(p)} days", "${HealthStore.streak(p)} gün"), Modifier.weight(1f))
+            Stat(tr("Best day", "En iyi gün"), best?.let { "%,d".format(it.second) } ?: "-", Modifier.weight(1f))
+        }
+        Row(Modifier.fillMaxWidth()) {
+            Stat(tr("Average, 7 days", "Ortalama, 7 gün"), "%,d".format(h30.takeLast(7).map { it.second }.average().toLong()), Modifier.weight(1f))
+            Stat(tr("Average, 30 days", "Ortalama, 30 gün"), "%,d".format(h30.map { it.second }.average().toLong()), Modifier.weight(1f))
+        }
+    }
+    PCard {
+        Text(tr("Activity log", "Aktivite günlüğü"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Row(Modifier.fillMaxWidth()) {
             Stat(tr("Today", "Bugün"), "${fmtDur(d.sumOf { it.dur })} · ${fmtDist(d.sumOf { it.dist.toDouble() }.toFloat())}", Modifier.weight(1f))
             Stat(tr("7 days", "7 gün"), "${fmtDur(w.sumOf { it.dur })} · ${fmtDist(w.sumOf { it.dist.toDouble() }.toFloat())}", Modifier.weight(1f))
+        }
+        if (log.isEmpty()) Text(tr("No activities yet.", "Henüz aktivite yok."), color = T.sub, fontSize = 13.sp)
+        // per type, all recorded sessions
+        log.groupBy { it.key }.entries.sortedByDescending { e -> e.value.sumOf { it.dur } }.forEach { (k, v) ->
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ActivityIcon(k, Look.accent, 22.dp)
+                Text("${ActivityType.fromName(k).label} · ${v.size}", color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Text("${fmtDur(v.sumOf { it.dur })} · ${fmtDist(v.sumOf { it.dist.toDouble() }.toFloat())}", color = T.sub, fontSize = 13.sp)
+            }
+        }
+    }
+    val bmi = remember(rev) { HealthStore.bmi(p) }
+    if (bmi > 0f) PCard {
+        Text("BMI", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text("%.1f".format(bmi), color = T.text, fontSize = 32.sp, fontWeight = FontWeight.SemiBold)
+            Text(bmiLabel(bmi), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
+        }
+        BmiBar(bmi)
+        val gw = HealthStore.goalWeight(p); val wt = HealthStore.weight(p)
+        if (gw > 0f) Text(tr("Weight %.1f kg, goal %.1f kg (%+.1f kg to go)", "Kilo %.1f kg, hedef %.1f kg (%+.1f kg kaldı)").format(wt, gw, gw - wt), color = T.sub, fontSize = 12.sp)
+    }
+    val hr = remember(bpm) { HealthStore.hrLog(p).reversed() }
+    if (hr.isNotEmpty()) PCard {
+        Text(tr("Heart rate", "Nabız"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        val f = remember { DateTimeFormatter.ofPattern("d MMM HH:mm") }
+        hr.take(8).forEach { (t, b) ->
+            Row(Modifier.fillMaxWidth()) {
+                Text(Instant.ofEpochMilli(t).atZone(ZoneId.systemDefault()).format(f), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Text("$b bpm", color = T.text, fontSize = 13.sp)
+            }
         }
     }
     PCard {

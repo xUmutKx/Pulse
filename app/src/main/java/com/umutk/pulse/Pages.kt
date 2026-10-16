@@ -1,5 +1,7 @@
 package com.umutk.pulse
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.outlined.Crop
 import com.umutk.pulse.features.themeWallpaper
 import com.umutk.pulse.features.builtinWall
@@ -78,9 +80,18 @@ fun labelOf(ctx: android.content.Context, name: String): String {
 }
 
 @Composable
-fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, onClick: () -> Unit) {
+fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false, icon: androidx.compose.ui.graphics.vector.ImageVector? = null, compact: Boolean = false, onClick: () -> Unit) {
     val t = T
-    if (win95Authentic) {
+    if (oem) {
+        val inDlg = InOemDialog.current
+        val acc = Look.accent.copy(alpha = 1f)
+        val fg = if (inDlg) LocalContentColor.current else if (danger) Color(0xFFC42B1C) else if (oneUi) t.text else onAccent(acc)
+        val bg = if (inDlg) Color.Transparent else if (oneUi) t.text.copy(alpha = .08f) else if (danger) Color(0xFFC42B1C).copy(alpha = .12f) else acc
+        Row(modifier.heightIn(min = 40.dp).background(bg, CircleShape).clickable(onClick = onClick).padding(horizontal = if (compact) 10.dp else 24.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+            if (icon != null) { Icon(icon, null, Modifier.size(16.dp), tint = fg); Spacer(Modifier.width(6.dp)) }
+            Text(text, color = if (!inDlg && colorOs && danger) Color(0xFFC42B1C) else fg, fontSize = if (compact) 12.sp else 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+        }
+    } else if (win95Authentic) {
         // 95 push button: 75x23 grey bevel that sinks while held; the outer padding keeps a ~40 dp touch target
         val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
         val down by src.collectIsPressedAsState()
@@ -120,14 +131,23 @@ fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false
         // single outline, no accent fill: the same for every look
         val shape = if (t.material) CircleShape else RoundedCornerShape(if (t.id == "win11") 6.dp else t.radius.coerceAtMost(12.dp))
         val fg = if (danger) Color(0xFFC42B1C) else t.text
-        Box(modifier.border(1.dp, if (danger) fg else if (t.id == "amoled") Color.White else t.line, shape).clickable(onClick = onClick).padding(horizontal = if (t.material) 24.dp else 14.dp, vertical = if (t.material) 10.dp else 6.dp), contentAlignment = Alignment.Center) {
-            Text(text, color = fg, fontSize = if (t.material) 14.sp else 13.sp, fontWeight = if (t.material) FontWeight.Medium else null)
+        Box(modifier.border(1.dp, if (danger) fg else if (t.id == "amoled") Color.White else t.line, shape).clickable(onClick = onClick).padding(horizontal = if (compact) 8.dp else if (t.material) 24.dp else 14.dp, vertical = if (t.material) 10.dp else 6.dp), contentAlignment = Alignment.Center) {
+            Text(text, color = fg, fontSize = if (compact) 12.sp else if (t.material) 14.sp else 13.sp, fontWeight = if (t.material) FontWeight.Medium else null, maxLines = 1)
         }
     }
 }
 
 @Composable
 private fun Header(text: String, trailing: String = "", onBack: (() -> Unit)? = null) {
+    if (colorOs) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            if (onBack != null) Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+            Box(Modifier.weight(1f)) { OemTitle(text) }
+            if (trailing.isNotEmpty()) Text(trailing, color = T.sub, fontSize = 12.sp)
+        }
+        return
+    }
+    if (oneUi) { OemTitle(text) { if (trailing.isNotEmpty()) Text(trailing, color = T.sub, fontSize = 12.sp) }; return }
     Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
         if (onBack != null) Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
         // 95 had no big page titles: plain small system text
@@ -150,6 +170,7 @@ fun HistoryPage() {
     var notes by remember { mutableStateOf(0) }
     var notesOn by remember { mutableStateOf(NoteCount.enabled(ctx)) }
     var pie by remember { mutableStateOf(false) }
+    var screenOnly by remember { mutableStateOf(false) }
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e ->
@@ -157,9 +178,9 @@ fun HistoryPage() {
         }
         lifecycle.addObserver(ob); onDispose { lifecycle.removeObserver(ob) }
     }
-    LaunchedEffect(granted) {
+    LaunchedEffect(granted, screenOnly) {
         while (granted) {
-            rows = withContext(Dispatchers.IO) { Extra.usageToday(ctx) }
+            rows = withContext(Dispatchers.IO) { if (screenOnly) Extra.usageScreenOn(ctx) else Extra.usageToday(ctx) }
             unlocks = withContext(Dispatchers.IO) { Extra.unlocksToday(ctx) }
             delay(10000)
         }
@@ -167,7 +188,12 @@ fun HistoryPage() {
     LaunchedEffect(Unit) { while (true) { notes = NoteCount.today(ctx); delay(5000) } }
     val total = rows.sumOf { it.ms }
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
-        Header("App history", "today")
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f)) { Header("App history", "today") }
+            PChip(!screenOnly, tr("Total", "Toplam")) { screenOnly = false }
+            Spacer(Modifier.width(6.dp))
+            PChip(screenOnly, tr("Screen on", "Ekran açık")) { screenOnly = true }
+        }
         PCard {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                 HistoryStat("Screen time", if (granted) hms(total) else "-")
@@ -187,10 +213,11 @@ fun HistoryPage() {
         else {
             PButton(if (pie) "Show list" else "Show pie chart", Modifier.fillMaxWidth()) { pie = !pie }
             if (pie) {
-                val slices = rows.take(8).map { it.label to it.ms } +
-                    (rows.drop(8).sumOf { it.ms }.takeIf { it > 0 }?.let { listOf("Others" to it) }.orEmpty())
-                Box(Modifier.fillMaxWidth().weight(1f), contentAlignment = Alignment.Center) {
-                    DonutChart(slices, Modifier.size(260.dp), centerText = hms(total))
+                val slices = rows.take(15).map { it.label to it.ms } +
+                    (rows.drop(15).sumOf { it.ms }.takeIf { it > 0 }?.let { listOf("Others" to it) }.orEmpty())
+                // the legend under the ring lists every slice, so the whole block scrolls instead of being cut at the ring's height
+                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
+                    DonutChart(slices, Modifier.fillMaxWidth(), centerText = hms(total))
                 }
             } else {
                 val top = rows.firstOrNull()?.ms?.coerceAtLeast(1) ?: 1
@@ -402,24 +429,27 @@ fun SettingsPage() {
                 }
                 }
                 Text("Theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                @Composable fun ThemeRow(pair: List<PTheme>) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        pair.forEach { th -> Column(Modifier.weight(1f).clickable { Cfg.setTheme(ctx, th.id) }.then(if (th.id == Look.theme.id) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier.border(1.dp, T.line, RoundedCornerShape(10.dp))).padding(8.dp)) {
+                @Composable fun ThemeRow(pair: List<PTheme>, center: Boolean = false) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, if (center) Alignment.CenterHorizontally else Alignment.Start)) {
+                        pair.forEach { th -> Column((if (center) Modifier.fillMaxWidth(.5f) else Modifier.weight(1f)).semantics { contentDescription = th.name }.clickable { Cfg.setTheme(ctx, th.id) }.then(if (th.id == Look.theme.id) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier.border(1.dp, T.line, RoundedCornerShape(10.dp))).padding(8.dp)) {
                             ThemePreview(th)
-                            Text(th.name, color = T.text, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                            Text(th.name, color = T.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
                         } }
-                        if (pair.size == 1) Spacer(Modifier.weight(1f))
+                        if (pair.size == 1 && !center) Spacer(Modifier.weight(1f))
                     }
                 }
-                // Material and AMOLED share the first row; the Windows looks follow; the pastel and dark looks fold away below
+                fun byId(vararg ids: String) = ids.map { id -> Themes.first { it.id == id } }
                 val folded = listOf("aurora", "sakura", "ocean", "ember", "frost")
-                ThemeRow(Themes.filter { it.id == "material" || it.id == "amoled" })
-                Themes.filter { it.id != "material" && it.id != "amoled" && it.id !in folded }.chunked(2).forEach { ThemeRow(it) }
+                // Material You and AMOLED are plain appearance choices; the Windows looks have their own group, 95 centred on top
+                ThemeRow(byId("material", "amoled"))
+                Text("Windows", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                ThemeRow(byId("win11", "win10")); ThemeRow(byId("win7", "xp"))
+                ThemeRow(byId("win95"), center = true)
                 Row(Modifier.fillMaxWidth().clickable { ThemeFold.open = !ThemeFold.open }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(tr("More themes", "Diğer temalar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text(tr("Other colors", "Diğer renkler"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = if (ThemeFold.open) 180f else 0f })
                 }
-                if (ThemeFold.open) Themes.filter { it.id in folded }.chunked(2).forEach { ThemeRow(it) }
+                if (ThemeFold.open) Themes.filter { it.id in folded + listOf("oneui", "coloros") }.chunked(2).forEach { ThemeRow(it) }
                 // the picture's position, only where the look really draws a picture: Windows 11 (the app background) and authentic Windows 7 / XP
                 val bd = com.umutk.pulse.features.Backdrop
                 var editWall by remember { mutableStateOf(false) }
@@ -467,7 +497,8 @@ private fun MaterialSection(ctx: android.content.Context) {
     Text("Mode", color = T.sub, fontSize = 12.sp)
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf("system" to "System", "light" to "Light", "dark" to "Dark").forEach { (id, n) ->
-            PChip(T.id == "material" && Look.mode == id, n) { Cfg.setTheme(ctx, "material"); Cfg.setMode(ctx, id) }
+            val mid = if (T.id == "oneui" || T.id == "coloros") T.id else "material"
+            PChip(T.id == mid && Look.mode == id, n) { Cfg.setTheme(ctx, mid); Cfg.setMode(ctx, id) }
         }
     }
     Text("Corner size", color = T.sub, fontSize = 12.sp)
@@ -485,12 +516,15 @@ fun ThemePreview(thRaw: PTheme) {
     val th = if (thRaw.id == "amoled") amoledWindow()
         else if (thRaw.id == "material" && eff.dark) PTheme("material", eff.name, true, androidx.compose.ui.graphics.Color(0xFF2A2640), androidx.compose.ui.graphics.Color(0xFF3B3658), eff.text, eff.sub, eff.accent, androidx.compose.ui.graphics.Color(0xFF4F4A70), eff.radius, material = true, glassA = eff.glassA)
         else eff
+    if (th.id == "coloros") { ColorOsPreview(th); return }
     val winBg = th.wall ?: androidx.compose.ui.graphics.SolidColor(th.bg)
     val cardShape = RoundedCornerShape(th.radius.coerceAtMost(8.dp))
-    Box(Modifier.fillMaxWidth().height(78.dp).background(winBg).border(1.dp, th.line)) {
+    if (th.id == "oneui") { Box(Modifier.fillMaxWidth().aspectRatio(1.3f).background(winBg)) { OneUiPreview(th) }; return }
+    Box(Modifier.fillMaxWidth().aspectRatio(1.3f).background(winBg).border(1.dp, th.line)) {
         // the look's own wallpaper behind the little window, so the choice is seen before picking anything
         ThemeWallPicture(thRaw.id, Modifier.fillMaxSize())
         Column {
+            if (th.id == "oneui") Spacer(Modifier.height(14.dp))
             if (th.title != null) Box(Modifier.fillMaxWidth().height(12.dp).background(th.title)) else if (th.tabs) Box(Modifier.fillMaxWidth().height(10.dp).background(th.bg).border(1.dp, th.line))
             Row(Modifier.fillMaxSize().padding(4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Column(Modifier.width(12.dp).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -498,7 +532,7 @@ fun ThemePreview(thRaw: PTheme) {
                         val on = i == 1
                         Box(Modifier.size(if (th.material) 12.dp else 9.dp, 9.dp).background(
                             if (on) th.accent.copy(alpha = if (th.material) .3f else 1f) else th.sub.copy(alpha = .4f),
-                            if (th.material) RoundedCornerShape(5.dp) else RoundedCornerShape(th.radius.coerceAtMost(2.dp))))
+                            if (th.id == "coloros") androidx.compose.foundation.shape.CircleShape else if (th.material) RoundedCornerShape(5.dp) else RoundedCornerShape(th.radius.coerceAtMost(2.dp))))
                     }
                 }
                 Box(Modifier.fillMaxSize()

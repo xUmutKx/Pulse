@@ -90,6 +90,8 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.PTheme
 import com.umutk.pulse.R
 import com.umutk.pulse.Shell
+import com.umutk.pulse.tr
+import androidx.compose.ui.draw.alpha
 import com.umutk.pulse.Themes
 import com.umutk.pulse.WinAlert
 import com.umutk.pulse.amoledWindow
@@ -102,6 +104,9 @@ import java.io.File
 
 /** The APK the install window shows. MainActivity sets it when an APK is opened from outside, Downloads.openFile when one is tapped. */
 object InstallState { var file by mutableStateOf<File?>(null) }
+
+/** The standalone Files app shows the install window inside its own task (FilesRoot): no second activity, Pulse is never started. */
+object FilesInstall { var file by mutableStateOf<File?>(null) }
 
 private val Warn = Color(0xFFB00020)
 private const val BACKUP_DIR = "/data/local/tmp/pulse_restore"
@@ -301,11 +306,12 @@ private fun BusyLine(w: PTheme) {
 
 /** The look of the install window, from Settings > Installer. */
 @Composable
-internal fun installLook(): PTheme {
-    val id = if (InstallShow.theme == "app") Look.theme.id else InstallShow.theme
+internal fun installLook(sel: String = InstallShow.theme): PTheme {
+    val id = if (sel == "app") Look.theme.id else sel
     val t = when (id) {
         "amoled" -> amoledWindow()
-        in winButtonLooks -> effective(Themes.first { it.id == id })
+        "coloros" -> effective(Themes.first { it.id == "coloros" })
+        in winButtonLooks, "oneui" -> effective(Themes.first { it.id == id })
         else -> monoWindow(effective(Themes.first { it.id == "material" }))
     }
     // Windows 10 stays square; the others are rounded (16 dp) unless the setting is off; same colours
@@ -395,6 +401,31 @@ private fun InstallOptions(open: Boolean, toggle: (Boolean) -> Unit) {
         OptRow("Optimise after install (dexopt)", prof.dex) { v -> Installer.edit(ctx) { it.copy(dex = v) } }
         OptRow("Delete the source file after install", prof.dropSrc) { v -> Installer.edit(ctx) { it.copy(dropSrc = v) } }
         OptRow("Install on open", prof.auto) { v -> Installer.edit(ctx) { it.copy(auto = v) } }
+        InstallSourcePicker()
+    }
+}
+
+/** Install source choice; shared by the install window and Settings > Installer. Disabled without root/Shizuku. */
+@Composable
+fun InstallSourcePicker() {
+    val ctx = LocalContext.current
+    val w = LocalWindowLook.current
+    val ok = InstallShow.shellOk
+    Column(Modifier.alpha(if (ok) 1f else .5f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(tr("Install source", "Kurulum kaynağı"), color = w.text, fontSize = 13.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PChip(InstallShow.srcMode == "def", "Pulse") { if (ok) InstallShow.setSrc(ctx, "def") }
+            PChip(InstallShow.srcMode == "play", "Play Store") { if (ok) InstallShow.setSrc(ctx, "play") }
+            PChip(InstallShow.srcMode == "custom", tr("Custom", "Özel")) { if (ok) InstallShow.setSrc(ctx, "custom") }
+        }
+        if (InstallShow.srcMode == "custom" && ok) androidx.compose.foundation.text.BasicTextField(
+            InstallShow.srcCustom, { InstallShow.setSrc(ctx, "custom", it.trim()) }, singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = w.text, fontSize = 13.sp),
+            cursorBrush = SolidColor(w.accent),
+            modifier = Modifier.fillMaxWidth().background(w.line.copy(alpha = .3f)).padding(8.dp),
+            decorationBox = { f -> if (InstallShow.srcCustom.isEmpty()) Text("com.google.android.packageinstaller", color = w.sub, fontSize = 13.sp); f() })
+        if (!ok) Text(tr("Needs root or Shizuku", "Root veya Shizuku gerekir"), color = w.sub, fontSize = 12.sp)
+        else if (InstallShow.srcMode != "def") Text(tr("Only the installer name changes; a genuine Play licence check still fails", "Yalnızca kurucu adı değişir; gerçek Play lisans denetimi yine başarısız olur"), color = w.sub, fontSize = 12.sp)
     }
 }
 
@@ -441,8 +472,8 @@ private fun XposedRows(m: XposedInfo) {
 
 /** Centred install window for an APK, in the look chosen under Settings > Installer. */
 @Composable
-fun InstallWindow(file: File, onDone: () -> Unit) {
-    CompositionLocalProvider(LocalWindowLook provides installLook()) { InstallWindowBody(file, onDone) }
+fun InstallWindow(file: File, look: String? = null, onDone: () -> Unit) {
+    CompositionLocalProvider(LocalWindowLook provides installLook(look ?: InstallShow.theme)) { InstallWindowBody(file, onDone) }
 }
 
 @Composable
@@ -464,6 +495,8 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
     var more by remember(file) { mutableStateOf(false) }
     var opts by remember(file) { mutableStateOf(InstallShow.expand) }
     val root = Shell.root == true
+    // a custom install source needs the shell path (root or Shizuku)
+    val useShell = root || InstallShow.srcPkg != null
     val enter = remember(file) { Animatable(0f) }
     LaunchedEffect(file) { enter.animateTo(1f, tween(360)) }
 
@@ -550,7 +583,7 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
     LaunchedEffect(p) {
         val a = p ?: return@LaunchedEffect
         // with root the APK goes to pm at once; without root only an automatic profile installs without a tap
-        if (Installer.cur.auto && a.pkg !in Installer.black && statusOf(a) in listOf(Status.NEW, Status.UPGRADE)) BioGate.run(ctx) { if (root) silent(a, down = false) else commit(a) }
+        if (Installer.cur.auto && a.pkg !in Installer.black && statusOf(a) in listOf(Status.NEW, Status.UPGRADE)) BioGate.run(ctx) { if (useShell) silent(a, down = false) else commit(a) }
     }
 
     val pk = p
@@ -642,11 +675,19 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                     }
                 }
                 InstallOptions(opts) { opts = it }
+                if (old != null && InstallShow.shellOk) IButton(tr("Set source to Play Store", "Kaynağı Play Store yap"), full) {
+                    busy = true
+                    scope.launch {
+                        val r = withContext(Dispatchers.IO) { Installer.setSource(pk.pkg, "com.android.vending") }
+                        busy = false
+                        Toast.makeText(ctx, if (r.isEmpty()) "OK" else r, Toast.LENGTH_LONG).show()
+                    }
+                }
                 if (pk.pkg in Installer.black) Text("On the blacklist: Pulse does not install this package", color = Warn, fontSize = 12.sp)
                 else when (st) {
-                    Status.NEW, Status.UPGRADE, Status.IDENTICAL -> IButton(if (st == Status.UPGRADE) "Upgrade" else "Install", full, primary = true) { gate { if (root) silent(pk, down = false) else commit(pk) } }
+                    Status.NEW, Status.UPGRADE, Status.IDENTICAL -> IButton(if (st == Status.UPGRADE) "Upgrade" else "Install", full, primary = true) { gate { if (useShell) silent(pk, down = false) else commit(pk) } }
                     Status.DOWNGRADE -> {
-                        IButton("Downgrade", full, primary = true) { gate { if (root && pk.sigs == pk.installedSigs) silent(pk, down = true) else commit(pk) } }
+                        IButton("Downgrade", full, primary = true) { gate { if (useShell && pk.sigs == pk.installedSigs) silent(pk, down = true) else commit(pk) } }
                         if (root) IButton("Remove and restore data", full, danger = true) { gate { restore(pk) } }
                     }
                     Status.SIG -> if (root) IButton("Remove and restore data", full, danger = true) { gate { restore(pk) } }
@@ -686,21 +727,8 @@ private fun WinFrame(w: PTheme, icon: ImageBitmap?, title: String, onMin: () -> 
         val ctx = LocalContext.current
         val id = w.id
         val corner = if (id == "win11" && InstallShow.round) 8.dp else if (id == "win7") 6.dp else 0.dp
-        val cornerPx = with(LocalDensity.current) { corner.toPx() }
-        var blur by remember { mutableStateOf(false) }
+        val blur = if (id == "win11" || id == "win7") com.umutk.pulse.rememberWindowBlur(corner) else false
         SideEffect { (view.parent as? DialogWindowProvider)?.window?.let { it.setDimAmount(0f); it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND) } }
-        // the window wraps the frame, so its background drawable (transparent, frame corners) is the blur's outline
-        DisposableEffect(view, id) {
-            val win = (view.parent as? DialogWindowProvider)?.window
-            if (win == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.S || (id != "win11" && id != "win7")) return@DisposableEffect onDispose {}
-            win.setBackgroundDrawable(GradientDrawable().apply { setColor(android.graphics.Color.TRANSPARENT); cornerRadius = cornerPx })
-            val wm = ctx.getSystemService(WindowManager::class.java)
-            // blurs go off in battery saver or the developer setting: fall back to a solid panel then
-            val l = java.util.function.Consumer<Boolean> { on -> blur = on; win.setBackgroundBlurRadius(if (on) 60 else 0) }
-            l.accept(wm.isCrossWindowBlurEnabled)
-            wm.addCrossWindowBlurEnabledListener(l)
-            onDispose { wm.removeCrossWindowBlurEnabledListener(l) }
-        }
         val classic = id == "win95" || id == "xp"
         val bodyBg = when (id) { "win95" -> Color(0xFFC0C0C0); "xp" -> Color(0xFFECE9D8); "win7" -> Color.White; "win10" -> w.panel; else -> Color.Transparent }
         val outer = when (id) {
@@ -717,7 +745,7 @@ private fun WinFrame(w: PTheme, icon: ImageBitmap?, title: String, onMin: () -> 
                 val base = if (w.dark) Color(0xFF202020) else Color(0xFFF3F3F3)
                 Modifier.clip(sh)
                     .then(if (blur) Modifier.background((if (w.dark) Color(0xFF2C2C2C) else Color.White).copy(alpha = .15f)).background(base.copy(alpha = .7f))
-                        else Modifier.background(if (w.dark) Color(0xFF1C1C1C) else Color(0xFFEEEEEE)))
+                        else Modifier.background((if (w.dark) Color(0xFF1C1C1C) else Color(0xFFEEEEEE)).copy(alpha = .9f)))
                     .background(noise, alpha = .02f)
                     .border(1.dp, if (w.dark) Color.White.copy(alpha = .1f) else Color.Black.copy(alpha = .08f), sh)
             }
@@ -892,6 +920,20 @@ object InstallShow {
     var sdk by mutableStateOf(false)
     /** The certificate fingerprint row; off by default. */
     var cert by mutableStateOf(false)
+    /** Install source: "def" (Pulse), "play" or "custom" with [srcCustom]. Needs root or Shizuku to take effect. */
+    var srcMode by mutableStateOf("def")
+    var srcCustom by mutableStateOf("")
+    /** The installer package to fake, or null for the default. */
+    val srcPkg: String? get() = when (srcMode) {
+        "play" -> "com.android.vending"
+        "custom" -> srcCustom.takeIf { Regex("[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+").matches(it) }
+        else -> null
+    }.takeIf { shellOk }
+    val shellOk: Boolean get() = Shell.root == true || Shell.shizuku == 2
+    fun setSrc(c: android.content.Context, mode: String, custom: String = srcCustom) {
+        srcMode = mode; srcCustom = custom
+        prefs(c).edit().putString("inst_src", mode).putString("inst_src_custom", custom).apply()
+    }
     private var loaded = false
     private fun prefs(c: android.content.Context) = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     fun load(c: android.content.Context) {
@@ -907,6 +949,7 @@ object InstallShow {
         expand = p.getBoolean("inst_exp", false); cancelOnDismiss = p.getBoolean("inst_cancel", false)
         round = p.getBoolean("inst_round", true)
         loader = p.getString("inst_loader", "round") ?: "round"
+        srcMode = p.getString("inst_src", "def") ?: "def"; srcCustom = p.getString("inst_src_custom", "") ?: ""
         sdk = p.getBoolean("inst_sdk", false); cert = p.getBoolean("inst_cert", false)
     }
     fun set(c: android.content.Context, key: String, v: Boolean) {

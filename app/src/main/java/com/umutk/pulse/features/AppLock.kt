@@ -82,7 +82,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /** An installed app as the App Lock list shows it. */
-class AppRow(val pkg: String, val label: String)
+class AppRow(val pkg: String, val label: String) {
+    /** the label folded once, so a keystroke only compares strings */
+    val folded: String by lazy { AppLock.fold(label) }
+}
 
 /**
  * App Lock state, rules and storage. Plain SharedPreferences: androidx.security (EncryptedSharedPreferences)
@@ -94,10 +97,10 @@ object AppLock {
     private const val ITER = 100_000   // shortcut: fixed cost, verification runs on the main thread (~0.1-0.3 s)
 
     /** Looks the overlay can use: the Material default and the Windows looks, by PTheme id. */
-    val looks = listOf("material", "amoled", "win7", "xp", "win95", "win10", "win11")
+    val looks = listOf("material", "coloros", "amoled", "win7", "xp", "win95", "win10", "win11", "oneui")
 
     var locked by mutableStateOf<Set<String>>(emptySet())
-    var graceMin by mutableIntStateOf(0)          // 0 = ask every time
+    var graceMin by mutableIntStateOf(-1)         // -1 = until closed (default), 0 = ask every time, >0 = minutes after leaving
     var look by mutableStateOf("material")        // lock screen look: "material" (Material You, default), "follow" (current theme), "win11blur", or a theme id
     var blurDp by mutableIntStateOf(25)           // Windows 11 blur: strength 0..40
     var tintA by mutableIntStateOf(89)            // Windows 11 blur: dark tint 0..255
@@ -110,14 +113,14 @@ object AppLock {
     @Volatile var lockedUntil = 0L                // no tries before this time (every fifth wrong try)
     private var secret: String? = null            // "iterations:saltB64:hashB64"
 
-    private val unlockedAt = HashMap<String, Long>()   // in memory only: relocked on screen off
+    private val unlockedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()   // in memory only: relocked on screen off
 
     private fun sp(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
     fun load(c: Context) {
         val p = sp(c)
         locked = p.getStringSet("locked", emptySet())?.toSet() ?: emptySet()
-        graceMin = p.getInt("grace", 0)
+        graceMin = p.getInt("grace2", -1)
         look = p.getString("look", "material") ?: "material"
         blurDp = p.getInt("blur", 25); tintA = p.getInt("tint", 89)
         secretKind = p.getString("kind", "pin") ?: "pin"
@@ -128,7 +131,7 @@ object AppLock {
     }
 
     fun save(c: Context) {
-        sp(c).edit().putStringSet("locked", HashSet(locked)).putInt("grace", graceMin).putString("look", look)
+        sp(c).edit().putStringSet("locked", HashSet(locked)).putInt("grace2", graceMin).putString("look", look)
             .putInt("blur", blurDp).putInt("tint", tintA).putString("kind", secretKind).putString("secret", secret).putBoolean("bio", useBio).putBoolean("fast", fast).apply()
         rev++
     }
@@ -176,10 +179,22 @@ object AppLock {
 
     private fun b64(b: ByteArray) = Base64.encodeToString(b, Base64.NO_WRAP)
 
-    fun markUnlocked(pkg: String) { unlockedAt[pkg] = System.currentTimeMillis(); fails = 0 }
+    private const val IN_APP = Long.MAX_VALUE   // unlocked and still open: the grace time only starts when the app is left
+
+    fun markUnlocked(pkg: String) { unlockedAt[pkg] = IN_APP; fails = 0 }
 
     /** The app left the front: with "ask every time" its unlock ends here. */
-    fun leave(pkg: String) { if (graceMin == 0) unlockedAt.remove(pkg) }
+    fun leave(pkg: String) {
+        if (unlockedAt[pkg] == null) return
+        if (graceMin < 0) return   // until closed: leaving never relocks (see relock / LockService.closedCheck)
+        if (graceMin == 0) unlockedAt.remove(pkg) else unlockedAt[pkg] = System.currentTimeMillis()
+    }
+
+    /** The app was closed (process gone / task removed): unlocked state ends. */
+    fun relock(pkg: String) { unlockedAt.remove(pkg) }
+
+    /** Packages unlocked and not yet closed, for the closed-app check. */
+    fun unlockedPkgs(): List<String> = unlockedAt.keys.toList()
 
     /** Screen off: everything is locked again. */
     fun relockAll() { unlockedAt.clear() }
@@ -188,6 +203,7 @@ object AppLock {
     fun needsAsk(pkg: String, now: Long): Boolean {
         if (pkg !in locked) return false
         val at = unlockedAt[pkg] ?: return true
+        if (at == IN_APP) return false
         return graceMin > 0 && now - at >= graceMin * 60_000L
     }
 
@@ -207,12 +223,16 @@ object AppLock {
             }
         } catch (_: Exception) {}
         all.remove(c.packageName)
-        return all.values.sortedBy { fold(it.label) }
+        return all.values.sortedBy { it.folded }.also { cachedApps = it }
     }
+
+    /** The last list read: the page shows it at once and refreshes it behind. */
+    @Volatile var cachedApps: List<AppRow>? = null
+    private val marks = Regex("\\p{M}+")
 
     /** Search folding: case, Turkish dotted/dotless i and accents all compare equal. */
     fun fold(s: String): String = java.text.Normalizer.normalize(s.replace('İ', 'i').replace('ı', 'i'), java.text.Normalizer.Form.NFD)
-        .replace(Regex("\\p{M}+"), "").lowercase(java.util.Locale.ROOT)
+        .replace(marks, "").lowercase(java.util.Locale.ROOT)
 
     /** Usage access (second detection path) and "display over other apps" (overlay fallback). */
     fun usageGranted(c: Context): Boolean = (c.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager)
@@ -248,7 +268,7 @@ fun AppLockPage() {
     val usage = remember(tick) { AppLock.usageGranted(ctx) }
     val draw = remember(tick) { AppLock.canDraw(ctx) }
 
-    val apps by produceState(initialValue = emptyList<AppRow>()) {
+    val apps by produceState(initialValue = AppLock.cachedApps ?: emptyList<AppRow>()) {
         value = withContext(Dispatchers.IO) { AppLock.installedApps(ctx) }
     }
     var query by remember { mutableStateOf("") }
@@ -258,6 +278,8 @@ fun AppLockPage() {
     var patternNote by remember { mutableStateOf("") }
     val list = rememberLazyListState()
     var appCount by remember { mutableIntStateOf(0) }
+    // typing keeps the search at the top of the view, so the results sit right under it and above the keyboard
+    LaunchedEffect(query) { if (query.isNotEmpty()) list.scrollToItem((list.layoutInfo.totalItemsCount - appCount - 1).coerceAtLeast(0)) }
     val scope = rememberCoroutineScope()
 
     LazyColumn(
@@ -283,6 +305,7 @@ fun AppLockPage() {
                 }
             }
         }
+        item { com.umutk.pulse.ProfilePhotoRow() }
         item {
             PCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -336,9 +359,9 @@ fun AppLockPage() {
         item {
             PCard(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(tr("Ask again after", "Tekrar sor"), color = t.text, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(tr("Ask again", "Tekrar sor"), color = t.text, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     ChoiceRow(
-                        listOf("0" to tr("Every time", "Her seferinde"), "1" to tr("1 min", "1 dk"), "5" to tr("5 min", "5 dk"),
+                        listOf("-1" to tr("Until closed", "Kapanana dek"), "0" to tr("Every time", "Her seferinde"), "1" to tr("1 min", "1 dk"), "5" to tr("5 min", "5 dk"),
                             "15" to tr("15 min", "15 dk"), "30" to tr("30 min", "30 dk"), "60" to tr("1 h", "1 sa")),
                         selected = AppLock.graceMin.toString(),
                     ) { AppLock.setGrace(ctx, it.toInt()) }
@@ -350,8 +373,10 @@ fun AppLockPage() {
                 Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(tr("Lock screen look", "Kilit ekranı görünümü"), color = t.text, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     // one live preview per look, three to a row so every look is in view; the name sits under each
-                    val looks = listOf("material" to "Material You", "follow" to tr("Current theme", "Mevcut tema"), "amoled" to "AMOLED", "win95" to "Windows 95", "xp" to "Windows XP",
-                        "win7" to "Windows 7", "win10" to "Windows 10", "win11" to "Windows 11", "win11blur" to "Windows 11 blur")
+                    val looks = listOf("material" to "Material You", "follow" to tr("Current theme", "Mevcut tema"), "coloros" to "ColorOS", "amoled" to "AMOLED", "win95" to "Windows 95", "xp" to "Windows XP",
+                        "win7" to "Windows 7", "win10" to "Windows 10", "win11" to "Windows 11", "win11blur" to "Windows 11 blur", "oneui" to "One UI")
+                    com.umutk.pulse.FadeCollapse(rows = (looks.size + 2) / 3, key = "applock_looks") {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     looks.chunked(3).forEach { row ->
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             row.forEach { (id, name) ->
@@ -369,6 +394,8 @@ fun AppLockPage() {
                             repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
                         }
                     }
+                    }
+                    }
                     if (AppLock.look == "win11blur") {
                         Slider(AppLock.blurDp.toFloat(), { AppLock.blurDp = it.toInt() }, valueRange = 0f..40f, onValueChangeFinished = { AppLock.save(ctx) })
                         Slider(AppLock.tintA.toFloat(), { AppLock.tintA = it.toInt() }, valueRange = 0f..255f, onValueChangeFinished = { AppLock.save(ctx) })
@@ -379,7 +406,10 @@ fun AppLockPage() {
         // the search stays pinned at the top while the apps scroll under it; tapping it brings it to the top at once
         stickyHeader(key = "search") {
             androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().background(t.bg).padding(vertical = 4.dp)) {
+                val kb = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
                 OutlinedTextField(value = query, onValueChange = { query = it }, singleLine = true,
+                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { kb?.hide() }),
                     modifier = Modifier.fillMaxWidth().onFocusChanged { f ->
                         if (f.isFocused) scope.launch { list.animateScrollToItem((list.layoutInfo.totalItemsCount - appCount - 1).coerceAtLeast(0)) }
                     },
@@ -390,8 +420,9 @@ fun AppLockPage() {
             }
         }
         val q = AppLock.fold(query.trim())
-        val shown = if (q.isEmpty()) apps else apps.filter { AppLock.fold(it.label).contains(q) || it.pkg.contains(q, ignoreCase = true) }
+        val shown = if (q.isEmpty()) apps else apps.filter { it.folded.contains(q) || it.pkg.contains(q, ignoreCase = true) }
         appCount = shown.size
+        if (apps.isEmpty()) item { Text(tr("Loading apps…", "Uygulamalar yükleniyor…"), color = t.sub, fontSize = 13.sp, modifier = Modifier.padding(8.dp)) }
         items(shown, key = { it.pkg }) { a ->
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 com.umutk.pulse.AppIcon(a.pkg, 36.dp)
