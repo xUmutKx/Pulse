@@ -138,3 +138,10 @@ win95	shortcut	w2k_shortcut.ico	trapd00r/win95-winxp_icons on GitHub (no licence
 win95	archive	w98_directory_open_cabinet.ico	trapd00r/win95-winxp_icons on GitHub (no licence file: Microsoft icons)
 win95	extract	w98_directory_zipper.ico	trapd00r/win95-winxp_icons on GitHub (no licence file: Microsoft icons)
 win95	info	w98_msg_information.ico	trapd00r/win95-winxp_icons on GitHub (no licence file: Microsoft icons)
+win11	snail	snail.png	icons8 Fluency (img.icons8.com/fluency/96)
+win11	rotate	rotate-screen.png	icons8 Fluency (img.icons8.com/fluency/96)
+win11	touch	hand-cursor.png	icons8 Fluency (img.icons8.com/fluency/96)
+win11	pointer	cursor.png	icons8 Fluency (img.icons8.com/fluency/96)
+oneui	(all keys)	phosphor-icons/core assets/light/<name>-light.svg (npm @phosphor-icons/core, MIT), rendered black 96px with resvg; key->name table = same as coloros
+coloros	(all keys)	phosphor-icons/core assets/duotone/<name>-duotone.svg, rendered black 96px with resvg; tinted at runtime
+win11	motion	sensors.png	icons8 Fluency (copy of sensors, motion cues)

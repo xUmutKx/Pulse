@@ -50,10 +50,11 @@ enum class WidgetStyle(val label: String, val bg: Int, val title: Int, val value
     WIN10("Windows 10", R.drawable.widget_win10, 0xFFCCE4F7.toInt(), 0xFFFFFFFF.toInt()),
     WIN7("Windows 7", R.drawable.widget_win7_gadget, 0xFFCFE8FF.toInt(), 0xFFFFFFFF.toInt()),
     WIN95("Windows 95", R.drawable.widget_win95_bevel, 0xFF000000.toInt(), 0xFF000000.toInt(), valueBg = R.drawable.widget_win95_field),
-    XP("Windows XP", R.drawable.widget_xp, 0xFFFFFFFF.toInt(), 0xFF000000.toInt(), R.drawable.widget_xp_title);
+    XP("Windows XP", R.drawable.widget_xp, 0xFFFFFFFF.toInt(), 0xFF000000.toInt(), R.drawable.widget_xp_title),
+    ONEUI("One UI", R.drawable.widget_oneui, 0xFF6B6B70.toInt(), 0xFF000000.toInt());
 
     /** The design key of the opacity defaults ([WidgetLook.defaults]). */
-    val design get() = when (this) { MATERIAL -> "material"; AMOLED -> "amoled"; WIN11, WIN11_DARK -> "win11"; WIN10 -> "win10"; WIN7 -> "win7"; WIN95 -> "win95"; XP -> "xp" }
+    val design get() = when (this) { MATERIAL -> "material"; AMOLED -> "amoled"; WIN11, WIN11_DARK -> "win11"; WIN10 -> "win10"; WIN7 -> "win7"; WIN95 -> "win95"; XP -> "xp"; ONEUI -> "oneui" }
 }
 
 /** Which look each widget instance wears, kept per appWidgetId in SharedPreferences. */
@@ -124,7 +125,7 @@ object WidgetData {
             TempWidget(), NetworkWidget(), ClockWidget(), UptimeWidget(), StorageBarWidget(),
             RamFreeWidget(), CoresWidget(), BrightnessWidget(), WifiWidget(), SignalWidget(),
             BatteryHealthWidget(), AppCountWidget(), LastDownloadWidget(), NextAlarmWidget(), QuickWidget(),
-        )
+        ) + HealthWidgets.all
     }
 }
 
@@ -139,7 +140,7 @@ private val ICONS = mapOf(
     R.layout.widget_temp to R.drawable.wi_temp, R.layout.widget_cores to R.drawable.wi_cores, R.layout.widget_network to R.drawable.wi_network,
     R.layout.widget_wifi to R.drawable.wi_wifi, R.layout.widget_signal to R.drawable.wi_signal, R.layout.widget_brightness to R.drawable.wi_brightness,
     R.layout.widget_clock to R.drawable.wi_clock, R.layout.widget_uptime to R.drawable.wi_uptime, R.layout.widget_alarm to R.drawable.wi_alarm,
-    R.layout.widget_apps to R.drawable.wi_apps, R.layout.widget_quick to R.drawable.wi_quick,
+    R.layout.widget_apps to R.drawable.wi_apps, R.layout.widget_quick to R.drawable.wi_quick, R.layout.widget_health to R.drawable.wi_health,
 )
 
 /** Base of the 20 home-screen widgets: each one shows a title and a value; a tap opens Pulse on [page]. */

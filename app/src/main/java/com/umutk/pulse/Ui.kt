@@ -25,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
@@ -61,25 +63,35 @@ private fun material(k: String): ImageVector = when (k) {
     "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "coin" -> Icons.Outlined.Paid; "clipboard" -> Icons.Outlined.ContentPaste
     "screenshot" -> Icons.Outlined.Screenshot; "sensors" -> Icons.Outlined.Sensors; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Timer
     "timer" -> Icons.Outlined.HourglassBottom; "calc" -> Icons.Outlined.Calculate; "scale" -> Icons.Outlined.AspectRatio; "power" -> Icons.Outlined.PowerSettingsNew
-    "volume" -> Icons.Outlined.VolumeUp
+    "volume" -> Icons.Outlined.VolumeUp; "rotate" -> Icons.Outlined.ScreenRotation; "touch" -> Icons.Outlined.TouchApp; "motion" -> Icons.Outlined.Waves; "pointer" -> Icons.Outlined.Adjust
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Balance; "flash" -> Icons.Outlined.FlashlightOn
     "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "coin" -> Icons.Outlined.MonetizationOn
     "clipboard" -> Icons.Outlined.ContentPaste; "screenshot" -> Icons.Outlined.Screenshot; "sensors" -> Icons.Outlined.Sensors
     "volume" -> Icons.Outlined.VolumeUp; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Schedule
     "timer" -> Icons.Outlined.HourglassEmpty; "calc" -> Icons.Outlined.Calculate; "scale" -> Icons.Outlined.FormatSize
-    "power" -> Icons.Outlined.PowerSettingsNew
+    "power" -> Icons.Outlined.PowerSettingsNew; "rotate" -> Icons.Outlined.ScreenRotation; "touch" -> Icons.Outlined.TouchApp; "pointer" -> Icons.Outlined.Adjust
     "phone" -> Icons.Outlined.PhoneAndroid; "play" -> Icons.Outlined.PlayArrow; "run" -> Icons.Outlined.PlayArrow; "pause" -> Icons.Outlined.Pause; "sort" -> Icons.Outlined.SwapVert; "book" -> Icons.Outlined.MenuBook; "snail" -> Icons.Outlined.HourglassEmpty; else -> Icons.Outlined.Info
 }
 
 /** Material icons for the Material / AMOLED themes, Fluent (Windows 11 style) outlines for the Windows ones. */
 @Composable
-fun PIcon(k: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifier) {
+fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifier) {
     val ctx = LocalContext.current
-    if (k == "recycle" && !T.material) { BinIcon(tint, size, modifier); return }
+    // App lock: the Windows 11 / One UI / ColorOS / classic packs have their own padlock; the tile with a padlock is for the vector looks
+    val k = if (k0 == "applock" && T.id in setOf("win11", "oneui", "coloros", "win95", "xp", "win7")) "lock" else k0
+    if (k == "office") { OfSuiteLogo(size, modifier, tint); return }
+    if (k == "applock") { com.umutk.pulse.applock.AppLockIcon(tint, size, modifier); return }
+    if (k == "recycle" && !T.material) {
+        // Windows 11: the real Fluent recycle bin picture
+        if (T.id == "win11") ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
+        BinIcon(tint, size, modifier); return
+    }
     // Windows 11: the Fluency PNG pack (one distinct icon per key) first, FluentPaths vectors only for a key without a PNG
     if (T.id == "win11" && !T.material) ThemeIcons.bitmap(ctx, "win11", k)?.let { Image(it, null, modifier.size(size)); return }
     // the bin is always the plain bin icon, never the Fluent glyph that has a cross in it
     if (k == "delete" && !T.material) { BinIcon(tint, size, modifier); return }
+    // One UI / ColorOS: own black-glyph PNG packs (Phosphor light / duotone), tinted
+    if (T.id == "oneui" || T.id == "coloros") ThemeIcons.bitmap(ctx, T.id, k)?.let { Image(it, null, modifier.size(size), colorFilter = ColorFilter.tint(tint)); return }
     if (T.material) {
         // downloaded Material Symbols (res/drawable/mat_<key>.xml); the built-in set is the fallback for a missing one
         val id = remember(k) { ctx.resources.getIdentifier("mat_$k", "drawable", ctx.packageName) }
@@ -225,10 +237,13 @@ fun InfoRows(rows: List<Pair<String, String>>) {
 @Composable
 fun PCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
     val t = T
-    val shape = RoundedCornerShape(if (t.material) t.radius.coerceIn(16.dp, 28.dp) else t.radius) // M3 cards: 16 to 28 dp corners
+    val shape = RoundedCornerShape(if (colorOs) 20.dp else if (t.material) t.radius.coerceIn(16.dp, 28.dp) else t.radius) // M3 cards: 16 to 28 dp corners
     val fx = if (t.id == "win11") Look.effect else "none"
     val surface = when {
         // Material first: its glassA is for the window backdrop only; cards stay tonal with a soft elevation
+        // One UI: big soft white card, no shadow, no edge; ColorOS: flat card with a hairline edge
+        oneUi -> Modifier.background(t.panel, shape)
+        colorOs -> Modifier.background(t.panel, shape)
         t.material -> Modifier.shadow(2.dp, shape).background(t.panel, shape)
         // Win7 group box: white with a pale blue-grey rounded edge
         win7Authentic -> Modifier.background(Color.White, shape).border(1.dp, Color(0xFFD5DFE5), shape)
@@ -244,7 +259,7 @@ fun PCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
         fx != "none" -> Modifier.layer(fx, shape).border(1.dp, t.line, shape)
         else -> Modifier.background(t.panel.copy(alpha = .9f), shape).border(1.dp, t.line, shape)
     }
-    Column(modifier.fillMaxWidth().then(surface).padding(if (t.material) 16.dp else 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
+    Column(modifier.fillMaxWidth().then(surface).padding(if (oneUi) 20.dp else if (t.material) 16.dp else 14.dp), verticalArrangement = Arrangement.spacedBy(8.dp), content = content)
 }
 
 fun rate(b: Float) = if (b >= 1 shl 20) "%.1f MB/s".format(b / 1048576f) else "%.0f KB/s".format(b / 1024f)
@@ -271,3 +286,70 @@ fun PLoader(modifier: Modifier = Modifier) {
 
 /** XP icon keys the pack lacks, drawn with the nearest XP icon it has. */
 val XP_ICON_ALIAS = mapOf("power" to "run", "speed" to "performance", "bookmark" to "heart", "view" to "search", "copy" to "folder", "paste" to "folder", "rename" to "details", "extract" to "folder")
+
+/** The profile photo: a square-cropped copy in the app's files, so it survives the picker's permission going away. */
+object ProfilePhoto {
+    var rev by mutableStateOf(0)
+    fun file(c: android.content.Context) = java.io.File(c.filesDir, "profile.jpg")
+    fun set(c: android.content.Context, uri: android.net.Uri) {
+        runCatching {
+            val src = c.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it) } ?: return
+            val s = minOf(src.width, src.height)
+            val sq = android.graphics.Bitmap.createBitmap(src, (src.width - s) / 2, (src.height - s) / 2, s, s)
+            val out = if (s > 512) android.graphics.Bitmap.createScaledBitmap(sq, 512, 512, true) else sq
+            file(c).outputStream().use { out.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, it) }
+            rev++
+        }
+    }
+    fun clear(c: android.content.Context) { file(c).delete(); rev++ }
+}
+
+@Composable
+private fun rememberProfileBitmap(): androidx.compose.ui.graphics.ImageBitmap? {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    return remember(ProfilePhoto.rev) { runCatching { android.graphics.BitmapFactory.decodeFile(ProfilePhoto.file(ctx).path)?.asImageBitmap() }.getOrNull() }
+}
+
+/** The user's photo cropped to a circle, or the plain figure in [tint] when there is none (for the logon frames that draw their own backdrop). */
+@Composable
+fun ProfileMark(size: androidx.compose.ui.unit.Dp, tint: Color = Color.White) {
+    val bmp = rememberProfileBitmap()
+    if (bmp != null) Image(bmp, null, Modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+    else Canvas(Modifier.size(size)) {
+        drawCircle(tint, radius = this.size.width * .22f, center = Offset(this.size.width / 2, this.size.height * .3f))
+        drawOval(tint, Offset(this.size.width * .12f, this.size.height * .58f), Size(this.size.width * .76f, this.size.height * .6f))
+    }
+}
+
+/** The profile picture of a look: the photo in a circle, or that look's own placeholder (95 bevelled grey, XP blue tile, 7 glass blue, 10/11 grey disc, Material tonal disc, AMOLED outline). */
+@Composable
+fun ProfileAvatar(size: androidx.compose.ui.unit.Dp, th: PTheme = T, modifier: Modifier = Modifier) {
+    val bmp = rememberProfileBitmap()
+    if (bmp != null) { Image(bmp, null, modifier.size(size).clip(androidx.compose.foundation.shape.CircleShape), contentScale = androidx.compose.ui.layout.ContentScale.Crop); return }
+    val circle = androidx.compose.foundation.shape.CircleShape
+    val m = when (th.id) {
+        "win95" -> Modifier.background(Color(0xFFC0C0C0)).bevel(true) to Color(0xFF000080)
+        "xp" -> Modifier.clip(RoundedCornerShape(size / 8)).background(Color(0xFF2B6FD6)).border(2.dp, Color.White, RoundedCornerShape(size / 8)) to Color.White
+        "win7" -> Modifier.clip(RoundedCornerShape(size / 10)).background(Brush.verticalGradient(listOf(Color(0xFF7FB6E8), Color(0xFF2C6FB3)))).border(1.dp, Color(0x99FFFFFF), RoundedCornerShape(size / 10)) to Color.White
+        "win10", "win11" -> Modifier.clip(circle).background(Color(0xFFD4D4D4)) to Color(0xFF8C8C8C)
+        "amoled" -> Modifier.clip(circle).background(Color.Black).border(1.dp, Color.White, circle) to Color.White
+        "oneui" -> Modifier.clip(circle).background(th.accent.copy(alpha = .18f)) to th.accent
+        "coloros" -> Modifier.clip(circle).background(th.accent.copy(alpha = .15f)) to th.accent
+        else -> Modifier.clip(circle).background(th.accent.copy(alpha = .25f)) to th.text.copy(alpha = .7f)
+    }
+    Box(modifier.size(size).then(m.first), contentAlignment = Alignment.Center) { ProfileMark(size * .62f, m.second) }
+}
+
+/** Settings row: the avatar with Choose and Remove; the system photo picker needs no storage permission. */
+@Composable
+fun ProfilePhotoRow() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { u -> if (u != null) ProfilePhoto.set(ctx, u) }
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            ProfileAvatar(56.dp)
+            PButton(tr("Choose photo", "Fotoğraf seç")) { pick.launch(androidx.activity.result.PickVisualMediaRequest(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia.ImageOnly)) }
+            if (ProfilePhoto.rev >= 0 && ProfilePhoto.file(ctx).exists()) PButton(tr("Remove", "Kaldır")) { ProfilePhoto.clear(ctx) }
+        }
+    }
+}

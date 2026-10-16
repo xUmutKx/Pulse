@@ -83,6 +83,36 @@ object Extra {
             }.sortedByDescending { it.ms }
     }
 
+    /** Foreground time per app today counted only while the screen was on (screen-off playback, calls etc. dropped). */
+    fun usageScreenOn(ctx: Context): List<UsageRow> {
+        if (!usageGranted(ctx)) return emptyList()
+        val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+        val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val start = cal.timeInMillis; val now = System.currentTimeMillis()
+        val ev = usm.queryEvents(start, now); val e = UsageEvents.Event()
+        // pass 1: collect events
+        class Ev(val t: Long, val type: Int, val pkg: String)
+        val list = ArrayList<Ev>()
+        while (ev.hasNextEvent()) { ev.getNextEvent(e); list.add(Ev(e.timeStamp, e.eventType, e.packageName ?: "")) }
+        val on = ArrayList<LongArray>()
+        var onSince = if (list.firstOrNull { it.type == UsageEvents.Event.SCREEN_INTERACTIVE || it.type == UsageEvents.Event.SCREEN_NON_INTERACTIVE }?.type == UsageEvents.Event.SCREEN_NON_INTERACTIVE) start else -1L
+        val fg = HashMap<String, Long>(); val ms = HashMap<String, Long>(); val last = HashMap<String, Long>()
+        fun overlap(a: Long, b: Long): Long { var sum = 0L; for (iv in on) sum += (minOf(b, iv[1]) - maxOf(a, iv[0])).coerceAtLeast(0); if (onSince >= 0) sum += (b - maxOf(a, onSince)).coerceAtLeast(0); return sum }
+        fun close(pkg: String, t: Long) { val a = fg.remove(pkg) ?: return; ms[pkg] = (ms[pkg] ?: 0L) + overlap(a, t); last[pkg] = t }
+        for (x in list) when (x.type) {
+            UsageEvents.Event.SCREEN_INTERACTIVE -> if (onSince < 0) onSince = x.t
+            UsageEvents.Event.SCREEN_NON_INTERACTIVE -> if (onSince >= 0) { on.add(longArrayOf(onSince, x.t)); onSince = -1L }
+            UsageEvents.Event.ACTIVITY_RESUMED -> fg[x.pkg] = x.t
+            UsageEvents.Event.ACTIVITY_PAUSED -> close(x.pkg, x.t)
+        }
+        for (p in fg.keys.toList()) close(p, now)
+        val pm = ctx.packageManager
+        return ms.filter { it.value > 0 }.map { (p, v) ->
+            val label = try { pm.getApplicationInfo(p, 0).loadLabel(pm).toString() } catch (ex: Exception) { p }
+            UsageRow(p, label, v, last[p] ?: 0L)
+        }.sortedByDescending { it.ms }
+    }
+
     /** Screen unlocks today: each time the keyguard goes away (needs the usage-access permission). */
     fun unlocksToday(ctx: Context): Int {
         if (!usageGranted(ctx)) return 0

@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = 31
         targetSdk = 34
-        versionCode = 88
-        versionName = "0.10.78"
+        versionCode = 104
+        versionName = "0.10.94"
         ndk { abiFilters += "arm64-v8a" }
     }
     buildTypes {
@@ -47,6 +47,10 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.9.20")
     implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.9.20")
     implementation("com.squareup.okio:okio:3.9.0")
+    implementation("org.apache.commons:commons-compress:1.21") // 7z and tar.bz2 / tar.xz in the file manager (features/ExplorerArchive.kt)
+    implementation("org.tukaani:xz:1.9") // LZMA / XZ for commons-compress
+    implementation("com.github.junrar:junrar:7.5.5") // rar in the file manager
+    implementation("org.slf4j:slf4j-api:1.7.36") // junrar logs through it
     implementation("com.android.tools.build:apksig:8.5.2") // signs the font pack APK on the phone (features/FontChanger.kt)
 }
 

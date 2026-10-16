@@ -15,6 +15,8 @@ import android.os.Looper
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -69,7 +71,6 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 
-private const val STEP_GOAL = 10_000
 // sensors Android exposes by name (vendor SpO2 sensors, an Arable sensor); shown only once they send a value
 private val EXTRA_SENSOR = Regex("spo2|oxygen|arable", RegexOption.IGNORE_CASE)
 
@@ -104,6 +105,9 @@ fun HealthScreen(onBack: () -> Unit) {
     var finished by remember { mutableStateOf<ActRecord?>(null) }
     var log by remember { mutableStateOf(loadActLog(prefs)) }
     var tab by remember { mutableStateOf(0) }
+    var rev by remember { mutableStateOf(0) } // bumped when goals or body numbers change
+    var showGoals by remember { mutableStateOf(false) }
+    val goalSteps = remember(rev) { HealthStore.goalSteps(prefs) }
     var nowMs by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var locOn by remember { mutableStateOf(prefs.getBoolean("loc_on", false) && actStart > 0L) }
     var fineOk by remember { mutableStateOf(ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) }
@@ -121,17 +125,9 @@ fun HealthScreen(onBack: () -> Unit) {
         val l = object : SensorEventListener {
             override fun onSensorChanged(e: SensorEvent) {
                 val total = e.values[0].toLong()
-                val day = LocalDate.now().toString()
-                val prevDay = prefs.getString("day", "")
-                val last = prefs.getLong("last", -1L)
-                var base = prefs.getLong("base", -1L)
-                // shortcut: steps before the app first reads a day are not counted; a new day starts from yesterday's last reading
-                if (prevDay != day || base < 0 || total < base) {
-                    base = if (prevDay == LocalDate.now().minusDays(1).toString() && last >= 0 && last <= total) last else total
-                }
-                prefs.edit().putString("day", day).putLong("base", base).putLong("last", total).apply()
-                today = total - base
+                today = HealthStore.onCounter(prefs, total)
                 sinceBoot = total
+                HealthStore.push(ctx)
             }
             override fun onAccuracyChanged(s: Sensor?, a: Int) {}
         }
@@ -178,6 +174,7 @@ fun HealthScreen(onBack: () -> Unit) {
             actLast = System.currentTimeMillis() - actStart
             ActRecord(actType.key, actStart, actLast, actDist).also { addActRecord(prefs, it); finished = it; log = loadActLog(prefs) }
             actStart = 0L
+            HealthStore.push(ctx)
             prefs.edit().putLong("act_start", 0L).putLong("act_last", actLast).apply()
             setLoc(false)
         }
@@ -203,36 +200,32 @@ fun HealthScreen(onBack: () -> Unit) {
         meter = HeartMeter(ctx, { hrProgress = it }) { r ->
             meter = null
             hrProgress = -1f
-            if (r != null) { bpm = r; prefs.edit().putInt("bpm", r).apply() }
+            if (r != null) { bpm = r; HealthStore.addHr(prefs, r); HealthStore.push(ctx) }
             else hrMsg = "No clear pulse."
         }.also { it.start() }
     }
     val askCam = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { camOk = it; if (it) startHeart() }
     DisposableEffect(Unit) { onDispose { meter?.cancel() } }
 
+    androidx.activity.compose.BackHandler(tab == 1) { tab = 0 }
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) { Icon(Icons.Filled.ArrowBack, "Back", tint = T.text) }
-            Text("Health", color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+            IconButton(onClick = { if (tab == 1) tab = 0 else onBack() }) { Icon(Icons.Filled.ArrowBack, "Back", tint = T.text) }
+            Text(if (tab == 1) tr("New activity", "Yeni etkinlik") else "Health", color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
         }
         // summary bar: steps against the daily goal, heart rate beside it
         PCard {
             val steps = today ?: 0L
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Filled.DirectionsWalk, null, Modifier.size(18.dp), tint = Look.accent)
-                Text("%,d / %,d".format(steps, STEP_GOAL), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text("%,d / %,d".format(steps, goalSteps), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Icon(Icons.Filled.Favorite, null, Modifier.size(18.dp), tint = Look.accent)
                 Text(if (bpm > 0) "$bpm" else "-", color = T.text, fontSize = 15.sp)
             }
-            LinearProgressIndicator(progress = { (steps / STEP_GOAL.toFloat()).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
+            LinearProgressIndicator(progress = { (steps / goalSteps.toFloat()).coerceIn(0f, 1f) }, modifier = Modifier.fillMaxWidth())
         }
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(tr("Overview", "Özet"), tr("Track", "Takip")).forEachIndexed { i, n ->
-                Text(n, color = if (tab == i) Look.accent else T.sub, fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.clickable { tab = i }.padding(horizontal = 10.dp, vertical = 6.dp))
-            }
-        }
-        if (tab == 0) HealthOverview(log) else {
+        if (tab == 0) HealthOverview(prefs, log, today ?: HealthStore.today(prefs), bpm, rev) { showGoals = true } else {
         // no step counter on the device: the card is not shown at all
         if (stepSensor != null) PCard {
             Text("Steps today", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -314,12 +307,21 @@ fun HealthScreen(onBack: () -> Unit) {
         PCard {
             Text("Body", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                NumBox("Weight (kg)", weightTxt, Modifier.weight(1f)) { weightTxt = it; it.replace(',', '.').toFloatOrNull()?.takeIf { v -> v in 20f..300f }?.let { v -> prefs.edit().putFloat("weight", v).apply() } }
-                NumBox("Height (cm)", heightTxt, Modifier.weight(1f)) { heightTxt = it; it.replace(',', '.').toFloatOrNull()?.takeIf { v -> v in 100f..250f }?.let { v -> prefs.edit().putFloat("height", v).apply() } }
+                NumBox("Weight (kg)", weightTxt, Modifier.weight(1f)) { weightTxt = it; it.replace(',', '.').toFloatOrNull()?.takeIf { v -> v in 20f..300f }?.let { v -> prefs.edit().putFloat("weight", v).apply(); rev++ } }
+                NumBox("Height (cm)", heightTxt, Modifier.weight(1f)) { heightTxt = it; it.replace(',', '.').toFloatOrNull()?.takeIf { v -> v in 100f..250f }?.let { v -> prefs.edit().putFloat("height", v).apply(); rev++ } }
             }
             Text("Used for distance and calories.", color = T.sub, fontSize = 12.sp)
         }
         }
+    }
+    if (showGoals) GoalsDialog(prefs, { showGoals = false }) { rev++ }
+    if (tab == 0) {
+        val fab = Look.accent
+        androidx.compose.foundation.layout.Box(Modifier.align(Alignment.BottomEnd).padding(16.dp).size(56.dp)
+            .background(fab, androidx.compose.foundation.shape.CircleShape).clickable { tab = 1 }, contentAlignment = Alignment.Center) {
+            Icon(androidx.compose.material.icons.Icons.Filled.Add, tr("New activity", "Yeni etkinlik"), Modifier.size(26.dp), tint = com.umutk.pulse.onAccent(fab))
+        }
+    }
     }
 }
 

@@ -70,6 +70,7 @@ fun Modifier.aero7(hot: Boolean): Modifier {
 fun PSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
     val t = T
     when {
+        oem -> OemSwitch(on, onChange, enabled)
         t.material -> Switch(on, onChange, enabled = enabled, colors = SwitchDefaults.colors(checkedTrackColor = Look.accent))
         classic -> PCheck(on, onChange, enabled)
         else -> { // Windows 10 / 11 toggle
@@ -174,6 +175,15 @@ fun PRadio(on: Boolean, onClick: () -> Unit) {
 @Composable
 fun PChip(on: Boolean, label: String, onClick: () -> Unit) {
     val t = T
+    if (oem) {
+        val acc = Look.accent.copy(alpha = 1f)
+        Box(Modifier.heightIn(min = 40.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+            Box(Modifier.background(if (on) (if (oneUi) acc.copy(alpha = .2f) else acc) else t.text.copy(alpha = .07f), CircleShape).padding(horizontal = 16.dp, vertical = 7.dp)) {
+                Text(label, color = if (on) (if (oneUi) acc else onAccent(acc)) else t.text, fontSize = 13.sp, fontWeight = if (on) androidx.compose.ui.text.font.FontWeight.Medium else androidx.compose.ui.text.font.FontWeight.Normal)
+            }
+        }
+        return
+    }
     if (t.material) { FilterChip(on, onClick, { Text(label) }, shape = CircleShape, colors = FilterChipDefaults.filterChipColors(containerColor = Color.Transparent, selectedContainerColor = Color.Transparent, selectedLabelColor = t.text)); return }
     if (win95Authentic) { // a 95 push button that stays pushed in: sunken bevel, text moved 1 px, no bold
         Box(Modifier.heightIn(min = 40.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
@@ -208,6 +218,8 @@ fun PChip(on: Boolean, label: String, onClick: () -> Unit) {
 @Composable
 fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Modifier = Modifier, onDone: (() -> Unit)? = null) {
     val t = T
+    if (colorOs) { ColorOsField(value, onChange, hint, modifier, onDone); return }
+    if (oneUi) { OneUiField(value, onChange, hint, modifier, onDone); return }
     if (win95Authentic) { // 95 edit box: white, 2 px sunken edge, small black text, no icon
         BasicTextField(value, onChange, modifier.heightIn(min = 40.dp).background(Color.White).bevel(false),
             singleLine = true, keyboardOptions = KeyboardOptions(imeAction = if (onDone != null) ImeAction.Send else ImeAction.Default), keyboardActions = KeyboardActions(onSend = { onDone?.invoke() }),
@@ -230,6 +242,8 @@ fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Mo
 @Composable
 fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, onDone: () -> Unit) {
     val t = T
+    if (colorOs) { ColorOsSlider(value, onChange, range, onDone); return }
+    if (oneUi) { OneUiSlider(value, onChange, range, onDone); return }
     if (t.material) { Slider(value, onChange, valueRange = range, onValueChangeFinished = onDone, colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent, inactiveTrackColor = Look.accent.copy(alpha = .24f))); return }
     val frac = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
     BoxWithConstraints(Modifier.fillMaxWidth().height(32.dp).pointerInput(Unit) {

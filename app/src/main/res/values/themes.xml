@@ -4,6 +4,22 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
     </style>
+    <!-- OfficeViewActivity: see-through window, so the 365 / 2017 splash has no background of its own -->
+    <style name="Theme.Pulse.Office" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <!-- FilesActivity: see-through window for the Windows 11 / 10 / 7 looks (the window colour is set in code) -->
+    <style name="Theme.Pulse.Files" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+    <style name="Theme.Pulse.Files.Glass" parent="Theme.Pulse.Files">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+    </style>
     <!-- WidgetConfigActivity: a see-through window so only the floating card shows over the dimmed home screen -->
     <style name="Theme.Pulse.Floating" parent="android:Theme.Material.NoActionBar">
         <item name="android:windowIsTranslucent">true</item>

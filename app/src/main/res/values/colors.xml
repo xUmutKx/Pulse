@@ -6,4 +6,5 @@
     <color name="ti_bg_7">#FF2B6CA3</color>
     <color name="ti_bg_10">#FF0B4F8F</color>
     <color name="ti_bg_11">#FF1B1B26</color>
+    <color name="ic_app_bg">#FF000000</color>
 </resources>

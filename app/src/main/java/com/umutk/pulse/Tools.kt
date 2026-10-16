@@ -55,6 +55,13 @@ fun SubScreen(id: String, back: () -> Unit) {
                 InstallWindowSettings()
             }
         }
+        id == "files_settings" -> {
+            androidx.activity.compose.BackHandler { back() }
+            Column(Modifier.fillMaxSize().background(T.bg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+                PHead("Files")
+                com.umutk.pulse.features.FilesSettings()
+            }
+        }
         id == "ram" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.RamPage() }
         id == "fonts" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.FontChangerScreen() }
         id == "dns" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.DnsSettings() }

@@ -53,6 +53,11 @@ class LockService : AccessibilityService() {
     private val labels = HashMap<String, String>()   // lower-case app label -> locked package
     private var labelsFor: Set<String>? = null
 
+    private val kgm by lazy { getSystemService(android.app.KeyguardManager::class.java) }
+    /** The phone's own lock screen is up: nothing of ours may show over it. */
+    private fun kgUp() = runCatching { kgm.isKeyguardLocked }.getOrDefault(false)
+    private val closedAt = java.util.concurrent.ConcurrentHashMap<String, Long>()   // wall-clock time of the last "closed" relock, so a replayed old DESTROYED event is ignored
+
     private fun mark(src: String, ageMs: Long = 0) { t0 = SystemClock.elapsedRealtime() - ageMs; trig = src }
 
     /** Run now when on the main thread, otherwise at the front of its queue. */
@@ -69,7 +74,7 @@ class LockService : AccessibilityService() {
     private fun fastEvent(pkg: String, cls: String) {
         val t = SystemClock.elapsedRealtime()
         fast {
-            if (pkg == packageName || pkg in transient || cls.contains("Bubble", ignoreCase = true)) return@fast
+            if (pkg == packageName || pkg in transient || kgUp()) return@fast
             if (cls == AppLockAuthActivity::class.java.name || cls == LockActivity::class.java.name) return@fast
             if (pkg in AppLock.locked) { mark("root", SystemClock.elapsedRealtime() - t); Log.d("AppLock", "root resumed $pkg/$cls (queue ${SystemClock.elapsedRealtime() - t}ms)") }
             lastPolled = pkg
@@ -110,18 +115,22 @@ class LockService : AccessibilityService() {
     private val screen = object : BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             // Screen off relocks everything; the next window change of a locked app asks again.
-            if (i.action == Intent.ACTION_USER_PRESENT) { main.postDelayed({ recheck() }, 300); main.postDelayed({ recheck() }, 1200); return }
-            // Screen off relocks everything. A locked app in front stays covered, so waking the phone never shows it for a moment.
+            // Keyguard gone: look again at the app that was open (it was ignored while the keyguard showed).
+            if (i.action == Intent.ACTION_USER_PRESENT) { lastPolled = null; current?.let { onForeground(it) }; main.postDelayed({ recheck() }, 300); main.postDelayed({ recheck() }, 1200); return }
+            // Phone without a keyguard: waking shows the app at once, so a locked one is covered right away.
+            if (i.action == Intent.ACTION_SCREEN_ON) { if (!kgUp()) current?.let { if (it in AppLock.locked) onForeground(it) }; return }
+            // Screen off relocks everything. Nothing is shown now: the keyguard comes up and our window must not sit on it. Covered again on unlock / screen on.
             val c = current
             AppLock.relockAll()
             lastPolled = null
-            if (c != null && c in AppLock.locked && c !in never) runCatching { showCard(c, auth = false) }.onFailure { Log.e("AppLock", "cover on screen off failed", it) }
-            else { current = null; hideCard() }
+            hideCard()
+            if (c == null || c !in AppLock.locked || c in never) current = null
         }
     }
 
     /** Looks at what is in front right now (no event came: wake-up, service start after boot or process death). */
     private fun recheck() {
+        if (kgUp()) return
         runCatching {
             val pkg = rootInActiveWindow?.packageName?.toString()
                 ?: windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION && (it.isActive || it.isFocused) }.firstNotNullOfOrNull { it.root?.packageName?.toString() }
@@ -144,12 +153,12 @@ class LockService : AccessibilityService() {
     private val transient = setOf("com.google.android.permissioncontroller", "com.android.permissioncontroller", "android")
     private val poll = object : Runnable {
         private var missing = false
-        override fun run() { runCatching { if (tick++ % 10 == 0) syncFast(); missing = prebuild() }.onFailure { Log.e("AppLock", "poll failed", it) }; main.postDelayed(this, if (missing) 40L else 200L) }
+        override fun run() { runCatching { if (tick++ % 10 == 0) syncFast(); if (shown && !authing && kgUp()) hideCard(); if (tick % 3 == 0) scanWindows(); missing = prebuild() }.onFailure { Log.e("AppLock", "poll failed", it) }; main.postDelayed(this, if (missing) 40L else 200L) }
     }
     // the usage-stats query is a binder call: it runs on its own thread so it never holds up an accessibility event on the main thread
     private val bg by lazy { Handler(android.os.HandlerThread("applock-poll").apply { start() }.looper) }
     private val bgPoll = object : Runnable {
-        override fun run() { runCatching { pollOnce() }.onFailure { Log.e("AppLock", "poll failed", it) }; bg.postDelayed(this, 120) }
+        override fun run() { runCatching { pollOnce(); closedCheck() }.onFailure { Log.e("AppLock", "poll failed", it) }; bg.postDelayed(this, 120) }
     }
 
     private val ready = HashMap<String, FrameLayout>()   // lock screens built ahead, one per locked app
@@ -185,15 +194,47 @@ class LockService : AccessibilityService() {
         return true
     }
 
+    private val destroyed = java.util.concurrent.ConcurrentHashMap<String, Long>()
+    private var lastProc = 0L
+
+    /**
+     * "Until closed" mode: an unlocked app is relocked only when it was closed.
+     * With root/Shizuku: its process is gone (pidof), checked every 3 s.
+     * Without: shortcut: an ACTIVITY_DESTROYED usage event with no ACTIVITY_RESUMED of that app within 1.5 s counts as closed.
+     * That misses a swipe-away that leaves no destroy event and relocks when the app's last screen is finished with Back; upgrade by using root/Shizuku.
+     */
+    private fun closedCheck() {
+        if (AppLock.graceMin >= 0) return
+        val un = AppLock.unlockedPkgs().filter { it in AppLock.locked }
+        if (un.isEmpty()) return
+        val now = SystemClock.elapsedRealtime()
+        if (kgUp()) return
+        if (com.umutk.pulse.Shell.root == true || com.umutk.pulse.Shell.shizukuOk()) {
+            if (now - lastProc < 3000) return
+            lastProc = now
+            val out = com.umutk.pulse.Shell.run("echo ok; for p in ${un.joinToString(" ")}; do pidof \$p >/dev/null && echo \$p; done")
+            if (!out.lines().any { it.trim() == "ok" }) return   // shell failed: do not relock on no information
+            val alive = out.lines().map { it.trim() }.toSet()
+            for (p in un) if (p !in alive && p != current) { Log.d("AppLock", "process gone, relock $p"); closedAt[p] = System.currentTimeMillis(); AppLock.relock(p) }
+        } else {
+            for ((p, at) in destroyed) if (now - at >= 1500) { destroyed.remove(p); if (p != current) { Log.d("AppLock", "activity destroyed, relock $p"); closedAt[p] = System.currentTimeMillis(); AppLock.relock(p) } }
+        }
+    }
+
     /** Second detection path, independent of accessibility events: the newest "activity resumed" from usage stats. */
     private fun pollOnce() {
-        if (AppLock.locked.isEmpty() || !AppLock.usageGranted(this) || !getSystemService(PowerManager::class.java).isInteractive) return
+        if (AppLock.locked.isEmpty() || !AppLock.usageGranted(this) || !getSystemService(PowerManager::class.java).isInteractive || kgUp()) return
         val now = System.currentTimeMillis()
         val ev = getSystemService(UsageStatsManager::class.java).queryEvents(now - 3000, now)
         val e = UsageEvents.Event()
         var pkg: String? = null; var cls = ""
-        while (ev.hasNextEvent()) { ev.getNextEvent(e); if (e.eventType == UsageEvents.Event.ACTIVITY_RESUMED) { pkg = e.packageName; cls = e.className ?: "" } }
-        if (pkg == null || pkg == lastPolled || pkg == packageName || pkg in transient || cls.contains("Bubble", ignoreCase = true)) return
+        while (ev.hasNextEvent()) {
+            ev.getNextEvent(e)
+            // RESUMED == MOVE_TO_FOREGROUND (both 1); the same event is replayed for 3 s, so it is the last one that counts
+            if (e.eventType == UsageEvents.Event.ACTIVITY_RESUMED) { pkg = e.packageName; cls = e.className ?: ""; destroyed.remove(e.packageName) }
+            else if (e.eventType == 24 /* ACTIVITY_DESTROYED, hidden constant */ && e.timeStamp > (closedAt[e.packageName] ?: 0L)) destroyed.putIfAbsent(e.packageName, SystemClock.elapsedRealtime())
+        }
+        if (pkg == null || pkg == lastPolled || pkg == packageName || pkg in transient) return
         val p: String = pkg
         fast {
             if (p == lastPolled) return@fast
@@ -216,7 +257,7 @@ class LockService : AccessibilityService() {
         main.removeCallbacks(poll); main.post(poll)
         bg.removeCallbacks(bgPoll); bg.post(bgPoll)
         runCatching { unregisterReceiver(screen) }
-        ContextCompat.registerReceiver(this, screen, IntentFilter(Intent.ACTION_SCREEN_OFF).apply { addAction(Intent.ACTION_USER_PRESENT) }, ContextCompat.RECEIVER_NOT_EXPORTED)
+        ContextCompat.registerReceiver(this, screen, IntentFilter(Intent.ACTION_SCREEN_OFF).apply { addAction(Intent.ACTION_USER_PRESENT); addAction(Intent.ACTION_SCREEN_ON) }, ContextCompat.RECEIVER_NOT_EXPORTED)
         main.postDelayed({ recheck() }, 500)   // the app in front when the service (re)starts has sent no event
     }
 
@@ -235,7 +276,9 @@ class LockService : AccessibilityService() {
     override fun onInterrupt() {}
 
     override fun onAccessibilityEvent(e: AccessibilityEvent) {
+        if (kgUp()) return   // the phone's lock screen (and notifications on it) never triggers ours
         if (e.eventType == AccessibilityEvent.TYPE_VIEW_CLICKED) { runCatching { tap(e) }.onFailure { Log.e("AppLock", "tap failed", it) }; return }
+        if (e.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED) { scanWindows(); return }
         if (e.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) return
         runCatching { handle(e) }.onFailure { Log.e("AppLock", "event failed", it) }   // an exception here would kill the service process
     }
@@ -245,10 +288,10 @@ class LockService : AccessibilityService() {
         val cls = e.className?.toString() ?: ""
         if (cls == AppLockAuthActivity::class.java.name || cls == LockActivity::class.java.name) return
         // the recents screen is system UI on some phones: leaving the app there relocks it, so coming back from recents asks again
-        if (pkg == "com.android.systemui") { if (cls.contains("Recents", ignoreCase = true)) onForeground(pkg); return }
+        if (pkg == "com.android.systemui") { if (cls.contains("Recents", ignoreCase = true)) onForeground(pkg) else scanWindows(); return }
         if (pkg in transient) return
         // hot path: a locked app that must ask is covered at once, before any window lookup (the later size check removes it for a floating window)
-        if (!cls.contains("Bubble", ignoreCase = true) && pkg in AppLock.locked && pkg !in never && AppLock.needsAsk(pkg, System.currentTimeMillis())) {
+        if (pkg in AppLock.locked && pkg !in never && AppLock.needsAsk(pkg, System.currentTimeMillis())) {
             mark("a11y-hot", SystemClock.uptimeMillis() - e.eventTime)
             Log.d("AppLock", "a11y hot $pkg/$cls (event age ${SystemClock.uptimeMillis() - e.eventTime}ms)")
             onForeground(pkg)
@@ -260,41 +303,77 @@ class LockService : AccessibilityService() {
         val win = runCatching { windows.firstOrNull { it.id == e.windowId } }.getOrNull()
         if (win != null) { if (win.type != AccessibilityWindowInfo.TYPE_APPLICATION) return }
         else if (!isActivity.getOrPut("$pkg/$cls") { runCatching { packageManager.getActivityInfo(ComponentName(pkg, cls), 0) }.isSuccess }) return
-        if (cls.contains("Bubble", ignoreCase = true)) return   // a chat bubble floats over the app in front: not a launch, no lock
         if (pkg in AppLock.locked) mark("a11y", SystemClock.uptimeMillis() - e.eventTime)
         Log.d("AppLock", "front $pkg/$cls locked=${pkg in AppLock.locked}")
         onForeground(pkg)
-        // the window is still animating open now, so its size says nothing yet: look again, a small window is a bubble and loses the lock
     }
 
-    /** Covered by any path (events, usage poll, root watch): once the window has settled, a floating app (chat bubble) loses the lock. */
-    private fun bubbleCheck(pkg: String) = main.postDelayed({
-        if (current == pkg && cardPkg == pkg && (shown || authing) && onlySmallWindows(pkg)) { Log.d("AppLock", "bubble $pkg, lock removed"); hideCard() }
-    }, 450)
+    private var lastScan = 0L
+    private var cardAt = 0L   // uptime the current lock screen went up
+    private val rescan = Runnable { scanWindows() }
 
-    private fun onlySmallWindows(pkg: String): Boolean = runCatching {
-        val own = windows.filter { it.type == AccessibilityWindowInfo.TYPE_APPLICATION && it.root?.packageName?.toString() == pkg }
-        own.isNotEmpty() && own.all { w -> val b = Rect().also { w.getBoundsInScreen(it) }; !b.isEmpty && isSmall(b) }
+    /**
+     * Chat bubbles, floating windows and pop-ups of a locked app are windows of any type (a bubble is hosted by system UI):
+     * every window's own package is looked at, not just the one the last event named. A locked app seen in any window is covered;
+     * a card whose app has no window left (bubble collapsed) is taken off. Throttled: each window root is a binder call.
+     */
+    private fun scanWindows() {
+        if (AppLock.locked.isEmpty() || kgUp()) return
+        val now = SystemClock.uptimeMillis()
+        if (now - lastScan < 120) { main.removeCallbacks(rescan); main.postDelayed(rescan, 130); return }   // a throttled event is retried, not lost
+        lastScan = now
+        runCatching {
+            val ws = windows
+            var allKnown = true
+            val seen = HashSet<String>()
+            for (w in ws) {
+                if (w.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD || w.type == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY) continue
+                val p = w.root?.packageName?.toString()
+                if (p == null) { if (w.type == AccessibilityWindowInfo.TYPE_APPLICATION) allKnown = false; continue }
+                seen += p
+            }
+            // an unlocked app whose last window (bubble) is gone has now been left: its grace time starts
+            if (allKnown) for (p in AppLock.locked) if (p !in seen && (p != current || SystemClock.uptimeMillis() - cardAt > 1500)) AppLock.leave(p)
+            val hit = seen.firstOrNull { it in AppLock.locked && it !in never && it !in transient && it != packageName && AppLock.needsAsk(it, System.currentTimeMillis()) }
+            if (hit != null) {
+                if (hit != cardPkg) {
+                    mark("windows"); Log.d("AppLock", "window of locked app $hit (bubble or floating)")
+                    spec = null; showCard(hit)
+                    current = hit   // a bubble opened while another app was in front: it is now the app being used
+                }
+            } else if (allKnown && shown && !authing && cardPkg != null && (cardPkg != current || SystemClock.uptimeMillis() - cardAt > 1500) && cardPkg !in seen) { Log.d("AppLock", "window of $cardPkg gone, lock removed"); hideCard() }
+        }.onFailure { Log.e("AppLock", "window scan failed", it) }
+    }
+
+    /** The app only shows in a small window (chat bubble, floating window). Opening the fingerprint host would collapse a bubble, so it is not started by itself then. */
+    private fun floating(pkg: String): Boolean = runCatching {
+        val b = wm.maximumWindowMetrics.bounds; val r = android.graphics.Rect(); var any = false
+        for (w in windows) {
+            if (w.type == AccessibilityWindowInfo.TYPE_INPUT_METHOD || w.type == AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY || w.root?.packageName?.toString() != pkg) continue
+            w.getBoundsInScreen(r)
+            if (r.width().toLong() * r.height() >= b.width().toLong() * b.height() * 8 / 10) return false
+            any = true
+        }
+        any
     }.getOrDefault(false)
 
-    private fun isSmall(b: Rect): Boolean {
-        val screen = wm.maximumWindowMetrics.bounds
-        // shortcut: split-screen and freeform windows count as floating too, upgrade if a locked app in split screen must ask
-        return b.width() < screen.width() * 0.9f || b.height() < screen.height() * 0.6f
-    }
+    private fun hasWindow(pkg: String): Boolean = runCatching {
+        windows.any { w -> w.type != AccessibilityWindowInfo.TYPE_INPUT_METHOD && w.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY && w.root?.packageName?.toString() == pkg }
+    }.getOrDefault(false)
 
     private fun onForeground(pkg: String) {
+        lastPolled = pkg   // else reopening the app the poll saw last (after an event-only visit elsewhere) was taken for "already in front"
         if (spec != null && pkg in never) return   // the launcher's own events during the first 0.7 s must not take the guessed lock away
         if (pkg != current) {
-            current?.let { AppLock.leave(it) }
+            // an app that still has a window (chat bubble, floating window) is not left yet
+            current?.let { if (!hasWindow(it)) AppLock.leave(it) }
             current = pkg
         }
         if (pkg !in never && AppLock.needsAsk(pkg, System.currentTimeMillis())) {
             val guessed = spec == pkg && shown && cardPkg == pkg
             spec = null
             showCard(pkg)
-            if (guessed && bioOk && !authing) startAuth(pkg)   // covered by the guess, the fingerprint sheet follows now the app is confirmed
-            bubbleCheck(pkg)
+            if (guessed && bioOk && !authing && !floating(pkg)) startAuth(pkg)   // covered by the guess, the fingerprint sheet follows now the app is confirmed
         } else { spec = null; hideCard() }
     }
 
@@ -302,13 +381,15 @@ class LockService : AccessibilityService() {
         BiometricManager.from(this).canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) == BiometricManager.BIOMETRIC_SUCCESS
 
     private fun showCard(pkg: String, auth: Boolean = true) {
+        if (kgUp()) { if (shown) hideCard(); return }
         if (cardPkg != pkg) {
             hideCard()
             sync()
             root = ready.remove(pkg) ?: runCatching { build(pkg) }.onFailure { Log.e("AppLock", "build failed", it) }.getOrNull() ?: return
             cardPkg = pkg
+            cardAt = SystemClock.uptimeMillis()
             attach(true)   // covered first, the fingerprint sheet is asked for afterwards
-            if (bioOk && auth) startAuth(pkg)
+            if (bioOk && auth && !floating(pkg)) startAuth(pkg)
             return
         }
         if (!authing) attach(true)
