@@ -413,6 +413,61 @@ class ScaleTile : ToolkitTile() {
         return true
     }
 }
+class RotationTile : ToolkitTile() {
+    override val start: String get() = "toolkit:rotate"
+    override val trName: String get() = "Ekran yönü"
+    private var steps = 0
+    private var base = 0
+    private val apply = Runnable {
+        val n = steps; steps = 0
+        if (n % 4 != 0) TileActions.setRotation(this, (base + n) % 4) { paint() } else paint()
+    }
+    override fun subtitleFor(values: FloatArray?): String? =
+        if (steps > 0) "${((base + steps) % 4) * 90}°" else TileActions.rotationLabel(TileActions.rotation(this))
+    override fun active(): Boolean = (base + steps) % 4 != 0 && steps > 0 || steps == 0 && TileActions.rotation(this) > 0
+    override val picture: Int? get() = null
+    override fun act(): Boolean {
+        if (steps == 0) base = TileActions.rotation(this).coerceAtLeast(0)
+        steps++
+        prefs.edit().putLong("rot_tap", System.currentTimeMillis()).apply()
+        main.removeCallbacks(apply); main.postDelayed(apply, 500)
+        qsTile?.icon = android.graphics.drawable.Icon.createWithBitmap(turned(((base + steps) % 4) * 90f))
+        return true
+    }
+    /** The tile's own picture turned to [deg], so each tap visibly turns the phone. */
+    private fun turned(deg: Float): android.graphics.Bitmap {
+        val d = androidx.core.content.ContextCompat.getDrawable(this, R.drawable.ic_qs_rotate)!!
+        val sz = 96
+        val b = android.graphics.Bitmap.createBitmap(sz, sz, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(b)
+        c.rotate(deg, sz / 2f, sz / 2f); d.setBounds(0, 0, sz, sz); d.draw(c)
+        return b
+    }
+}
+class TouchesTile : ToolkitTile() {
+    override val start: String get() = "toolkit:touch"
+    override val trName: String get() = "Dokunma noktaları"
+    override fun active(): Boolean = TileActions.flagOn(this, "show_touches")
+    override fun act(): Boolean {
+        if (!TileActions.toggleFlag(this, "show_touches") { ok -> paint(); if (!ok) openPulse(start) }) { openPulse(start); return false }
+        return true
+    }
+}
+class PointerTile : ToolkitTile() {
+    override val start: String get() = "toolkit:pointer"
+    override val trName: String get() = "Dokunma çizgileri"
+    override fun active(): Boolean = TileActions.flagOn(this, "pointer_location")
+    override fun act(): Boolean {
+        if (!TileActions.toggleFlag(this, "pointer_location") { ok -> paint(); if (!ok) openPulse(start) }) { openPulse(start); return false }
+        return true
+    }
+}
+class MotionCueTile : ToolkitTile() {
+    override val start: String get() = "toolkit:motion"
+    override val trName: String get() = "Hareket noktaları"
+    override fun active(): Boolean = MotionCueService.running
+    override fun act(): Boolean { if (!MotionCueService.toggle(this)) { openPulse(start); return false }; main.postDelayed({ paint() }, 300); return true }
+}
 class PowerMenuTile : ToolkitTile() {
     override val start: String get() = "toolkit:power"
     override val trName: String get() = "Güç menüsü"

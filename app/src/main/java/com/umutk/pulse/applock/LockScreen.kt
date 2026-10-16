@@ -29,6 +29,7 @@ import android.widget.TextView
 import androidx.compose.ui.graphics.toArgb
 import com.umutk.pulse.Look
 import com.umutk.pulse.R
+import com.umutk.pulse.ProfilePhoto
 import com.umutk.pulse.features.AppLock
 import com.umutk.pulse.tr
 
@@ -45,16 +46,30 @@ private const val W = Color.WHITE
 private const val B = Color.BLACK
 private fun k(v: Long) = v.toInt()
 
-private class LockScreen(val c: Context, pkg: String, val tryUnlock: (String) -> Boolean, val bio: (() -> Unit)?, val cancel: () -> Unit, val look: String) {
+private class LockScreen(val c: Context, val pkg: String, val tryUnlock: (String) -> Boolean, val bio: (() -> Unit)?, val cancel: () -> Unit, val look: String) {
     val t = AppLock.lookTheme(look)
     val d = c.resources.displayMetrics.density
     val name = AppLock.label(c, pkg)
-    // the locked app is the "user": its icon is the user picture
-    val icon: Drawable = runCatching { c.packageManager.getApplicationIcon(pkg) }.getOrNull() ?: c.getDrawable(R.drawable.mat_users)!!
+    // the user picture of the look: the photo from Settings, or the look's own placeholder figure
+    val icon: Drawable = profileDrawable()
     val kind = if (AppLock.hasSecret) AppLock.secretKind else ""   // "": fingerprint only
     val wrong = tr("Wrong, try again", "Yanlış, tekrar deneyin")
     val msg = TextView(c).apply { textSize = 13f; maxLines = 2; gravity = Gravity.CENTER }
     lateinit var entry: EditText
+
+    private fun profileDrawable(): Drawable {
+        val f = ProfilePhoto.file(c)
+        runCatching { if (f.exists()) android.graphics.BitmapFactory.decodeFile(f.path)?.let { return android.graphics.drawable.BitmapDrawable(c.resources, it) } }
+        val n = 256
+        val bmp = android.graphics.Bitmap.createBitmap(n, n, android.graphics.Bitmap.Config.ARGB_8888)
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = when (t.id) { "win95" -> k(0xFF000080); "xp" -> k(0xFF2B6FD6); "win7" -> k(0xFF2C6FB3); else -> W }
+        }
+        val cv = android.graphics.Canvas(bmp)
+        cv.drawCircle(n / 2f, n * .3f, n * .22f, p)
+        cv.drawOval(android.graphics.RectF(n * .12f, n * .58f, n * .88f, n * 1.18f), p)
+        return android.graphics.drawable.BitmapDrawable(c.resources, bmp)
+    }
 
     fun build(): FrameLayout = when (t.id) {
         "win10", "win11" -> win10()
@@ -308,16 +323,23 @@ private class LockScreen(val c: Context, pkg: String, val tryUnlock: (String) ->
         // shortcut: ignores Look.dynamic off and a picked Material accent, upgrade if the lock must match those exactly
         val dyn = t.id == "material"
         fun sys(dark: Int, light: Int) = c.getColor(if (night) dark else light)
-        val bg = if (dyn) sys(android.R.color.system_neutral1_900, android.R.color.system_neutral1_10) else t.bg.toArgb()
-        val panel = if (dyn) sys(android.R.color.system_accent2_700, android.R.color.system_accent2_100) else t.panel.toArgb()
-        val text = if (dyn) sys(android.R.color.system_neutral1_100, android.R.color.system_neutral1_900) else t.text.toArgb()
-        val sub = if (dyn) sys(android.R.color.system_neutral2_200, android.R.color.system_neutral2_700) else t.sub.toArgb()
+        val coN = t.id == "coloros" && night   // ColorOS: its own dark greys
+        val bg = if (dyn) sys(android.R.color.system_neutral1_900, android.R.color.system_neutral1_10) else if (coN) k(0xFF0B1210) else t.bg.toArgb()
+        val panel = if (dyn) sys(android.R.color.system_accent2_700, android.R.color.system_accent2_100) else if (coN) k(0xFF16211D) else t.panel.toArgb()
+        val text = if (dyn) sys(android.R.color.system_neutral1_100, android.R.color.system_neutral1_900) else if (coN) k(0xFFF2F2F2) else t.text.toArgb()
+        val sub = if (dyn) sys(android.R.color.system_neutral2_200, android.R.color.system_neutral2_700) else if (coN) k(0xFF9AAAA2) else t.sub.toArgb()
         val accent = if (dyn) sys(android.R.color.system_accent1_200, android.R.color.system_accent1_600) else t.accent.toArgb()
         val onAcc = if (Color.luminance(accent) > .45f) B else W
         val r = minOf(t.radius.value, 16f)
 
         val col = column()
-        col.put(circle(panel, 18), 0, px(84), px(84))
+        // the locked app's own icon: no user photo in the Material, One UI and ColorOS looks
+        col.put(ImageView(c).apply {
+            setImageDrawable(runCatching { c.packageManager.getApplicationIcon(pkg) }.getOrNull() ?: icon)
+            background = GradientDrawable().apply { shape = GradientDrawable.OVAL; setColor(panel) }
+            outlineProvider = ViewOutlineProvider.BACKGROUND; clipToOutline = true
+            setPadding(px(14), px(14), px(14), px(14))
+        }, 0, px(84), px(84))
         col.put(label(name, 24f, text), 16)
         col.put(label(when (kind) {
             "pin" -> tr("Enter PIN", "PIN girin"); "pass" -> tr("Enter password", "Şifre girin")
@@ -328,7 +350,7 @@ private class LockScreen(val c: Context, pkg: String, val tryUnlock: (String) ->
         when (kind) {
             "pattern" -> col.put(pad(text, accent), 8)
             "pin", "pass" -> {
-                col.put(input(text, sub).apply { background = box(Color.TRANSPARENT, r, 1.5f, sub); hint = null }, 10, px(280), px(52))
+                col.put(input(text, sub).apply { background = if (t.id == "coloros") box(panel, 26) else box(Color.TRANSPARENT, r, 1.5f, sub); hint = null }, 10, px(280), px(52))
                 col.put(button(tr("Unlock", "Aç"), onAcc, box(accent, 24)) { submit() }, 12, px(280), px(48))
             }
         }

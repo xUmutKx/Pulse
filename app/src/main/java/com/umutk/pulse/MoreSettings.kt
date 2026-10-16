@@ -1,5 +1,7 @@
 package com.umutk.pulse
 
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.Image
 import androidx.compose.material.icons.outlined.Crop
 import androidx.compose.foundation.layout.Box
@@ -19,6 +21,8 @@ import android.net.Uri
 import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import android.widget.Toast
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.alpha
@@ -110,6 +114,7 @@ fun GeneralSettings() {
         }
     }
     PCard { AppIconChooser() }
+    ExtraAppsCard()
     PCard {
         Text("Pages shown", color = T.sub, fontSize = 12.sp)
         Pages.forEach { p ->
@@ -236,8 +241,6 @@ fun BackdropSettings() {
 @Composable
 fun InstallWindowSettings() {
     val ctx = LocalContext.current
-    val open = LocalOpenTool.current
-    PCard { PButton("Installer") { open("installer") } }
     InstallShow.load(ctx)
     PCard {
         Text("Install window", color = Look.accent, fontSize = 15.sp)
@@ -285,20 +288,21 @@ fun InstallWindowSettings() {
     PCard {
         Text("Window look", color = Look.accent, fontSize = 15.sp)
         // one preview per look, three to a row, the name under each; "App theme" shows the look of the app right now
-        val installLooks = listOf("material" to "Material You", "app" to tr("App theme", "Uygulama teması"), "amoled" to "AMOLED black", "win11" to "Windows 11", "win10" to "Windows 10",
-            "win7" to "Windows 7", "xp" to "Windows XP", "win95" to "Windows 95")
+        val installLooks = listOf("material" to "Material You", "app" to tr("App theme", "Uygulama teması"), "amoled" to "AMOLED black", "coloros" to "ColorOS", "win11" to "Windows 11", "win10" to "Windows 10",
+            "win7" to "Windows 7", "xp" to "Windows XP", "win95" to "Windows 95", "oneui" to "One UI")
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         installLooks.chunked(3).forEach { row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 row.forEach { (id, n) ->
                     val sel = InstallShow.theme == id
                     Column(Modifier.weight(1f).clickable { InstallShow.setTheme(ctx, id) }
-                        .border(if (sel) 2.dp else 1.dp, if (sel) Look.accent else T.line, RoundedCornerShape(10.dp)).padding(6.dp)) {
-                        ThemePreview(if (id == "app") Look.theme else Themes.first { it.id == id })
-                        Text(n, color = if (sel) Look.accent else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+                        .semantics { contentDescription = n }.border(if (sel) 2.dp else 1.dp, if (sel) Look.accent else T.line, RoundedCornerShape(10.dp)).padding(6.dp)) {
+                        com.umutk.pulse.features.InstallPreview(id)
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
+        }
         }
     }
     PCard {
@@ -308,6 +312,10 @@ fun InstallWindowSettings() {
                 PChip(InstallShow.loader == id, n) { InstallShow.setLoader(ctx, id) }
             }
         }
+    }
+    PCard {
+        Text(tr("Install source", "Kurulum kaynağı"), color = Look.accent, fontSize = 15.sp)
+        androidx.compose.runtime.CompositionLocalProvider(LocalWindowLook provides com.umutk.pulse.features.installLook()) { com.umutk.pulse.features.InstallSourcePicker() }
     }
     PCard {
         Text("Security", color = Look.accent, fontSize = 15.sp)
@@ -425,7 +433,7 @@ fun FunctionsSettings() {
         // the recycle bin page of the file manager
         if (Opt.recycle)
         Row(Modifier.fillMaxWidth().clickable { com.umutk.pulse.widgets.WidgetOpen.page = "recycle" }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon("delete", T.text, 22.dp)
+            PIcon("recycle", T.text, 22.dp)
             Spacer(Modifier.width(12.dp))
             Text(tr("Open Recycle bin", "Çöp kutusunu aç"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
             PIcon("chevron", T.sub, 18.dp)
@@ -448,4 +456,94 @@ fun FunctionsSettings() {
     ReportSettings()
     Text(tr("Permissions", "İzinler"), color = Look.accent, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
     RootSettings()
+}
+
+/** Settings > General: which of the extra apps (Files, Photos, Calendar, Contacts) show in the launcher; each is a launcher activity-alias. */
+@Composable
+private fun ExtraAppsCard() {
+    val ctx = LocalContext.current
+    val pm = ctx.packageManager
+    val apps = listOf(
+        Triple("FilesLauncher", R.drawable.ic_files, tr("Files", "Dosyalar")),
+        Triple("PhotosLauncher", R.drawable.ic_photos, tr("Photos", "Fotoğraflar")),
+        Triple("CalendarLauncher", R.drawable.ic_calendar, tr("Calendar", "Takvim")),
+        Triple("ContactsLauncher", R.drawable.ic_contacts, tr("Contacts", "Kişiler")),
+    )
+    fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
+    fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }
+    var rev by remember { mutableIntStateOf(0) }
+    DisposableEffect(ctx) {
+        val lo = ctx as? androidx.lifecycle.LifecycleOwner
+        val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) rev++ }
+        lo?.lifecycle?.addObserver(ob)
+        onDispose { lo?.lifecycle?.removeObserver(ob) }
+    }
+    PCard {
+        Text(tr("Extra apps", "Ek uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        apps.forEach { (alias, icon, label) ->
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
+                    Image(painterResource(icon), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f })
+                }
+                Spacer(Modifier.width(12.dp))
+                Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                val isDef = remember(rev) { extraIsDefault(ctx, alias) }
+                Box(Modifier.padding(end = 10.dp).size(30.dp).clip(CircleShape).background(if (isDef) T.text else androidx.compose.ui.graphics.Color.Transparent)
+                    .border(1.dp, T.text.copy(alpha = .6f), CircleShape).clickable { extraSetDefault(ctx, alias) { rev++ } },
+                    contentAlignment = Alignment.Center) { PIcon("check", if (isDef) T.bg else T.text, 16.dp) }
+                PSwitch(state[alias] == true, { on ->
+                    pm.setComponentEnabledSetting(cn(alias), if (on) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
+                    state[alias] = on
+                })
+            }
+        }
+    }
+}
+
+/** Intent a launcher alias should win as the default handler (alias name -> intent, activity classes that count as Pulse's). */
+private fun extraProbe(alias: String): Pair<Intent, List<String>> = when (alias) {
+    "FilesLauncher" -> Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse("content://com.android.externalstorage.documents/document/primary%3A"), "vnd.android.document/directory") to listOf("FilesActivity", "MainActivity")
+    "PhotosLauncher" -> Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse("content://media/external/images/media/1"), "image/*") to listOf("ImageViewActivity")
+    "CalendarLauncher" -> Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse("content://com.android.calendar/events/1"), "vnd.android.cursor.item/event") to listOf("CalendarActivity")
+    else -> Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse("content://com.android.contacts/contacts/1"), "vnd.android.cursor.item/contact") to listOf("ContactsActivity")
+}
+
+private fun extraIsDefault(ctx: android.content.Context, alias: String): Boolean = try {
+    val (i, names) = extraProbe(alias)
+    val ai = ctx.packageManager.resolveActivity(i, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo
+    ai != null && ai.packageName == ctx.packageName && names.any { ai.name.endsWith(it) }
+} catch (_: Throwable) { false }
+
+/** Roles the platform has for an app; Files has none (chooser only). */
+private fun extraRole(alias: String) = when (alias) {
+    "PhotosLauncher" -> "android.app.role.GALLERY"; "CalendarLauncher" -> "android.app.role.CALENDAR"; "ContactsLauncher" -> "android.app.role.CONTACTS"; else -> null
+}
+
+/** With root/Shizuku: add Pulse as the role holder. Otherwise (or when that did not stick) the system "Open with" sheet is shown, where "Always" makes the choice. */
+private fun extraSetDefault(ctx: android.content.Context, alias: String, done: () -> Unit) {
+    Thread {
+        val h = android.os.Handler(android.os.Looper.getMainLooper())
+        try {
+            val role = extraRole(alias)
+            if (role != null && (Shell.root == true || Shell.shizuku == 2)) {
+                val has = Shell.run("cmd role get-role-holders --user 0 $role")
+                if (!has.contains("Exception") && !has.contains("Unknown") && !has.contains("not found", true))
+                    Shell.run("cmd role add-role-holder --user 0 $role ${ctx.packageName}")
+            }
+            if (extraIsDefault(ctx, alias)) { h.post { Toast.makeText(ctx, tr("Default", "Varsayılan"), Toast.LENGTH_SHORT).show(); done() }; return@Thread }
+            val dir = java.io.File(ctx.cacheDir, "installer").apply { mkdirs() }
+            val (name, mime, body) = when (alias) {
+                "PhotosLauncher" -> Triple("sample.png", "image/png", android.util.Base64.decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==", 0))
+                "CalendarLauncher" -> Triple("sample.ics", "text/calendar", "BEGIN:VCALENDAR\r\nVERSION:2.0\r\nEND:VCALENDAR\r\n".toByteArray())
+                "ContactsLauncher" -> Triple("sample.vcf", "text/x-vcard", "BEGIN:VCARD\r\nVERSION:3.0\r\nFN:Sample\r\nEND:VCARD\r\n".toByteArray())
+                else -> Triple("", "", ByteArray(0))
+            }
+            val i = if (name.isEmpty()) extraProbe(alias).first else {
+                val f = java.io.File(dir, name).apply { writeBytes(body) }
+                Intent(Intent.ACTION_VIEW).setDataAndType(androidx.core.content.FileProvider.getUriForFile(ctx, ctx.packageName + ".files", f), mime).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            h.post { try { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {} }
+        } catch (_: Throwable) {}
+    }.start()
 }

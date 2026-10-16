@@ -35,6 +35,9 @@ import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -134,8 +137,13 @@ private val tools = listOf(
     Tool("Calculator", "Hesap makinesi", "calc") { CalculatorTool() },
     Tool("Screen scale", "Ekran ölçeği", "scale") { ScreenScaleTool() },
     Tool("Finder", "Bulucu", "search") { FinderTool() },
+    Tool("Screen rotation", "Ekran yönü", "rotate") { RotationTool() },
+    Tool("Show touches", "Dokunma noktaları", "touch") { FlagTool("show_touches", tr("Show a dot under every finger", "Her parmağın altında nokta göster")) },
+    Tool("Pointer location", "Dokunma çizgileri", "pointer") { FlagTool("pointer_location", tr("Show touch lines and coordinates", "Dokunma çizgilerini ve koordinatları göster")) },
+    Tool("Motion cues", "Hareket noktaları", "motion") { MotionCueTool() },
     Tool("Power menu", "Güç menüsü", "power") { PowerMenuTool() },
     Tool("Dink", "Dink", "dink") { Dink() },
+    Tool("DNS", "DNS", "wifi") { DnsSettings() },
 )
 
 /** The Toolkit page: a 3-column grid of tiles; a tile opens its tool, the chevron goes back. */
@@ -924,6 +932,97 @@ private fun ScreenScaleTool() {
             tr("Density", "Yoğunluk") to "%.2f×".format(dm.density),
         ))
     }
+}
+
+@Composable
+private fun RotationTool() {
+    val ctx = LocalContext.current
+    val cur = polled(500) { TileActions.rotation(ctx) }
+    var failed by remember { mutableStateOf(false) }
+    val accent = Look.accent; val line = T.line; val sub = T.sub
+    fun pick(r: Int) { failed = !TileActions.setRotation(ctx, r) { ok -> failed = !ok } }
+    PCard {
+        Text(tr("Tap a side: the phone turns that way. Middle: auto.", "Bir yöne dokun: telefon o yöne döner. Orta: otomatik."), color = T.text, fontSize = 14.sp)
+        Box(Modifier.align(Alignment.CenterHorizontally).padding(top = 10.dp).size(220.dp)
+            .pointerInput(Unit) {
+                detectTapGestures { o ->
+                    val dx = o.x - size.width / 2f; val dy = o.y - size.height / 2f
+                    val r = when {
+                        dx * dx + dy * dy < (size.width * .2f) * (size.width * .2f) -> -1
+                        kotlin.math.abs(dx) > kotlin.math.abs(dy) -> if (dx < 0) 1 else 3
+                        else -> if (dy < 0) 0 else 2
+                    }
+                    pick(r)
+                }
+            }) {
+            Canvas(Modifier.fillMaxSize()) {
+                val w = size.width; val c = Offset(w / 2, w / 2)
+                val zone = w * .2f
+                // the picked side is filled
+                fun wedge(r: Int): androidx.compose.ui.graphics.Path = androidx.compose.ui.graphics.Path().apply {
+                    when (r) {
+                        0 -> { moveTo(c.x, c.y); lineTo(0f, 0f); lineTo(w, 0f) }
+                        2 -> { moveTo(c.x, c.y); lineTo(0f, w); lineTo(w, w) }
+                        1 -> { moveTo(c.x, c.y); lineTo(0f, 0f); lineTo(0f, w) }
+                        else -> { moveTo(c.x, c.y); lineTo(w, 0f); lineTo(w, w) }
+                    }
+                    close()
+                }
+                if (cur in 0..3) drawPath(wedge(cur), accent.copy(alpha = .28f))
+                drawRoundRect(line, size = Size(w, w), cornerRadius = CornerRadius(24f), style = androidx.compose.ui.graphics.drawscope.Stroke(2f))
+                drawLine(line, Offset(0f, 0f), Offset(w, w), 2f); drawLine(line, Offset(w, 0f), Offset(0f, w), 2f)
+                // a little phone in each side, turned the way it will look
+                val pos = listOf(Offset(c.x, w * .14f), Offset(w * .14f, c.y), Offset(c.x, w * .86f), Offset(w * .86f, c.y))
+                for (r in 0..3) {
+                    val col = if (cur == r) accent else sub
+                    rotate(-90f * r, pos[r]) {
+                        drawRoundRect(col, Offset(pos[r].x - 11f, pos[r].y - 19f), Size(22f, 38f), CornerRadius(6f), style = androidx.compose.ui.graphics.drawscope.Stroke(3f))
+                        drawLine(col, Offset(pos[r].x - 5f, pos[r].y + 13f), Offset(pos[r].x + 5f, pos[r].y + 13f), 3f)
+                    }
+                }
+                drawCircle(T.panel, zone, c); drawCircle(if (cur < 0) accent else line, zone, c, style = androidx.compose.ui.graphics.drawscope.Stroke(if (cur < 0) 5f else 2f))
+            }
+            Text(tr("Auto", "Oto"), color = if (cur < 0) accent else T.text, fontSize = 14.sp, modifier = Modifier.align(Alignment.Center))
+        }
+    }
+    if (failed) AccessNeededCard(tr("Screen rotation", "Ekran yönü"), tr("Changing it needs root or Shizuku.", "Değiştirmek için root veya Shizuku gerekir."))
+}
+
+/** One developer-option switch (Settings.System [key]) as a Toolkit tool. */
+@Composable
+private fun FlagTool(key: String, text: String) {
+    val ctx = LocalContext.current
+    val on = polled(500) { TileActions.flagOn(ctx, key) }
+    var failed by remember { mutableStateOf(false) }
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text, color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            PSwitch(on, { failed = !TileActions.toggleFlag(ctx, key) { ok -> failed = !ok } })
+        }
+    }
+    if (failed) AccessNeededCard(text, tr("Changing it needs root or Shizuku.", "Değiştirmek için root veya Shizuku gerekir."))
+}
+
+@Composable
+private fun MotionCueTool() {
+    val ctx = LocalContext.current
+    val on = polled(500) { com.umutk.pulse.MotionCueService.running }
+    val canDraw = polled(1000) { android.provider.Settings.canDrawOverlays(ctx) }
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Dots at the screen edges that move with the car, against motion sickness", "Araba tutmasına karşı, araçla birlikte kayan kenar noktaları"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            PSwitch(on, { com.umutk.pulse.MotionCueService.toggle(ctx) })
+        }
+    }
+    remember { com.umutk.pulse.MotionCueService.loadPrefs(ctx) }
+    val wave = polled(500) { com.umutk.pulse.MotionCueService.wave }
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Wave rising from the bottom of the screen", "Ekranın altından yükselen dalga"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            PSwitch(wave, { com.umutk.pulse.MotionCueService.setWave(ctx, it) })
+        }
+    }
+    if (!canDraw) AccessNeededCard(tr("Motion cues", "Hareket noktaları"), tr("Needs the permission to display over other apps.", "Diğer uygulamaların üzerinde gösterme izni gerekir."))
 }
 
 @Composable

@@ -1,5 +1,6 @@
 package com.umutk.pulse
 
+import androidx.compose.ui.graphics.toArgb
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -76,7 +77,7 @@ object Cfg {
     fun setCorner(c: Context, v: String) { Look.corner = v; sp(c).edit().putString("corner", v).apply() }
 }
 
-class MainActivity : ComponentActivity() {
+open class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Cfg.load(this); Opt.load(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); com.umutk.pulse.features.GlassPrefs.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
@@ -85,14 +86,22 @@ class MainActivity : ComponentActivity() {
         Watchdog.sync(this)
         // coming back to a process Android restarted: the saved page and scroll are restored, so the opening screen is not played again
         // a fresh start plays the opening screen again, even when the process was still alive (back out, then open)
-        SplashGate.splashed = savedInstanceState != null
+        SplashGate.splashed = savedInstanceState != null || this is FilesActivity // the standalone Files app has no opening screen
         WindowCompat.setDecorFitsSystemWindows(window, false)
-        setContent { Root() }
+        beforeContent()
+        setContent { if (this is FilesActivity) FilesRoot() else Root() }
         if (savedInstanceState == null) handleShare(intent)
     }
 
+    /** Runs before the first composition: a subclass sets its own look and window colour here. */
+    protected open fun beforeContent() {}
+
+    override fun onStart() { super.onStart(); if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) } }
+
     override fun onResume() {
         super.onResume()
+        // Pulse always comes back in its own saved look (Files, same process, swaps colours / language in while it is open)
+        if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) }
         // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready
         if (android.os.Environment.isExternalStorageManager()) com.umutk.pulse.features.StorageScan.ensure(android.os.Environment.getExternalStorageDirectory())
         Shell.refreshShizuku()
@@ -116,10 +125,21 @@ class MainActivity : ComponentActivity() {
 
     /** A link shared from another app (browser "Share") starts a download right away. */
     private fun handleShare(i: Intent?) {
+        // Pulse Files (own launcher entry and task) always opens on the Files page
+        if (this is FilesActivity) { com.umutk.pulse.features.FilesLaunch.full = true; return }
         i?.getStringExtra("start")?.let { com.umutk.pulse.widgets.WidgetOpen.page = it }
         // a long-pressed Quick Settings tile: open the page of that tile instead of the app info screen
         if (i?.action == android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES)
-            IntentCompat.getParcelableExtra(i, Intent.EXTRA_COMPONENT_NAME, android.content.ComponentName::class.java)?.let { com.umutk.pulse.widgets.WidgetOpen.page = tilePage(it.className) }
+            IntentCompat.getParcelableExtra(i, Intent.EXTRA_COMPONENT_NAME, android.content.ComponentName::class.java)?.let {
+                if (it.className.endsWith("RotationTile")) {
+                    // long press: 0° normally, automatic when a tap came just before
+                    val p = getSharedPreferences("p", MODE_PRIVATE); val now = System.currentTimeMillis()
+                    val auto = now - p.getLong("rot_tap", 0L) < 3000
+                    com.umutk.pulse.features.TileActions.setRotation(this, if (auto) -1 else 0)
+                    finish(); return
+                }
+                com.umutk.pulse.widgets.WidgetOpen.page = tilePage(it.className)
+            }
         // Pulse chosen as the file manager: a folder VIEW opens Files full screen
         if (i?.action == Intent.ACTION_VIEW && (i.type == "resource/folder" || i.type == "vnd.android.document/directory")) {
             com.umutk.pulse.features.FilesLaunch.full = true; com.umutk.pulse.widgets.WidgetOpen.page = "files"; return
@@ -143,6 +163,12 @@ fun effective(t: PTheme): PTheme {
     val sysDark = androidx.compose.foundation.isSystemInDarkTheme()
     val dark = when (Look.mode) { "dark" -> true; "light" -> false; else -> sysDark }
     if (!t.material) return if (dark) darkTwin(t) ?: t else if (t.id == "win11") lightTwin(t) else t
+    if (t.id == "oneui" || t.id == "coloros") {
+        val one = t.id == "oneui"
+        return if (!dark) PTheme(t.id, t.name, false, t.bg, t.panel, t.text, t.sub, t.accent, t.line, t.radius, material = true, glassA = t.glassA)
+        else if (one) PTheme(t.id, t.name, true, Color(0xFF000000), Color(0xFF161618), Color(0xFFF2F2F2), Color(0xFF9A9AA0), t.accent, Color(0xFF262628), t.radius, material = true, glassA = t.glassA)
+        else PTheme(t.id, t.name, true, Color(0xFF0B1210), Color(0xFF16211D), Color(0xFFEEF6F1), Color(0xFF8FA79B), Color(0xFF2EDC8E), Color(0xFF24342D), t.radius, material = true, glassA = t.glassA)
+    }
     val amoled = t.id == "amoled"
     val dynamic = if (!amoled && Look.dynamic && android.os.Build.VERSION.SDK_INT >= 31) {
         val ctx = androidx.compose.ui.platform.LocalContext.current
@@ -176,6 +202,7 @@ val Pages = listOf(
     Pg("apps", "Apps", "apps"),
     Pg("downloads", "Downloads", "download"),
     Pg("files", "Files", "folder"),
+    Pg("office", "Office", "office"),
     Pg("recycle", "Recycle bin", "recycle"),
     Pg("device", "Device", "phone"),
     Pg("health", "Health", "heart"),
@@ -185,11 +212,11 @@ private val visible get() = Pages.filter { it.id !in Opt.hidden && (it.id != "re
 private val SettingsPg = Pg("settings", "Settings", "settings")
 
 @Composable
-private fun Root() = LookHost { th ->
+private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
     // Windows 11 with a picture chosen: the app background is see-through and the picture shows behind everything
     // Windows 11 with the whole-app scope: the picture is the app background, blurred and tinted blue; the panels sit on top
     val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
-    Surface(Modifier.fillMaxSize(), color = if (pic != null) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+    Surface(Modifier.fillMaxSize(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
         if (pic != null) {
             // drawn with the crop from the background editor (position and zoom)
             // the blurred copy is rendered once (off the main thread) when the choice changes; here it is only drawn
@@ -200,24 +227,56 @@ private fun Root() = LookHost { th ->
         val wctx = androidx.compose.ui.platform.LocalContext.current
         var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("welcomed", false)) }
         // the open page lives here, not in App: App is remounted when the theme changes dark/light, and that must not close the page
-        var appPage by rememberSaveable { mutableStateOf(if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
+        var appPage by rememberSaveable { mutableStateOf(if (wctx is FilesActivity) "files" else if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
         var appSub by rememberSaveable { mutableStateOf("") }
         // the look's sign-in screen only when the setting is on, otherwise the Pulse splash
-        if (!SplashGate.splashed) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
+        if (!SplashGate.splashed && wctx !is FilesActivity) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
         else if (!welcomed) Welcome { welcomed = true }
         else key(th.dark) { App(appPage, { appPage = it }, appSub, { appSub = it }) }
     }
 }
 
+/** One rule for the extra apps (Files, Photos, Calendar, Contacts): apply the app's own look + window colour on every start / resume, give Pulse its own back on stop. */
+object AppLookGuard {
+    fun enter(apply: () -> Unit, paint: () -> Unit) { apply(); paint() }
+    fun leave(c: Context) { Cfg.load(c); Opt.load(c) }
+}
+
+/** The standalone Files app: only the Files page (and its settings) under the Files look, no Pulse shell, splash or pages. */
+@Composable
+private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
+    val ctx = androidx.compose.ui.platform.LocalContext.current as FilesActivity
+    var sub by rememberSaveable { mutableStateOf("") }
+    val back: () -> Unit = { InnerBack.steps.lastOrNull()?.invoke() ?: if (sub.isNotEmpty()) sub = "" else ctx.finish() }
+    androidx.activity.compose.BackHandler { back() }
+    Surface(Modifier.fillMaxSize(), color = if (FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
+            Column(Modifier.fillMaxSize()) {
+                Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+                    if (sub.isEmpty()) Text("Files", color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
+                }
+                Box(Modifier.weight(1f)) { if (sub.isNotEmpty()) SubScreen(sub) { sub = "" } else com.umutk.pulse.features.FilesPage() }
+            }
+            com.umutk.pulse.features.FilesInstall.file?.let { f ->
+                com.umutk.pulse.features.InstallWindow(f, com.umutk.pulse.features.FilesLook.theme) { com.umutk.pulse.features.FilesInstall.file = null }
+            }
+        }
+    }
+}
+
 /** Resolves the look and provides it to the content: MainActivity and InstallActivity both use it. */
 @Composable
-fun LookHost(transparent: Boolean = false, content: @Composable (PTheme) -> Unit) {
-    val base = Look.theme
+fun LookHost(transparent: Boolean = false, lookId: String? = null, content: @Composable (PTheme) -> Unit) {
+    // the standalone Files app takes its own look here, whatever the process-wide Look.theme was reset to by other activities / services
+    val files = androidx.compose.ui.platform.LocalContext.current is FilesActivity
+    val fid = if (files) com.umutk.pulse.features.FilesLook.theme.let { if (it == "amoled") "material" else it } else lookId.orEmpty()
+    val base = Themes.firstOrNull { it.id == fid } ?: Look.theme
     val th = effective(base)
-    // the rest of the UI reads Look.theme through T, so the resolved Material look is swapped in while composing
-    Look.resolved = if (th !== base) th else null
+    // the rest of the UI reads Look.theme through T, so the resolved look is swapped in while composing
+    Look.resolved = if (th !== Look.theme) th else null
     // pop-up windows take their own look: the app look, Material, or AMOLED black
-    val wl = when (Look.windowTheme) { "material" -> monoWindow(effective(Themes.first { it.id == "material" })); "amoled" -> amoledWindow(); else -> th }
+    val wl = if (files) (com.umutk.pulse.features.filesLook() ?: th) else when (Look.windowTheme) { "material" -> monoWindow(effective(Themes.first { it.id == "material" })); "amoled" -> amoledWindow(); else -> th }
     val acc = Look.accent
     val cs = if (th.dark) darkColorScheme(primary = acc, onPrimary = onAccent(acc), background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
     else lightColorScheme(primary = acc, onPrimary = onAccent(acc), background = th.bg, surface = th.panel, onBackground = th.text, onSurface = th.text, surfaceVariant = th.panel, onSurfaceVariant = th.sub, outline = th.line)
@@ -270,13 +329,14 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
         val inner = InnerBack.steps.lastOrNull()
         if (inner != null) inner()
         else if (sub.isNotEmpty()) onSub("")
+        else if (ctx is FilesActivity && page == "files") ctx.finish()
         else {
             val prev = trail.lastOrNull { it != page }
             trail = if (prev == null) emptyList() else trail.subList(0, trail.lastIndexOf(prev))
             onPage(prev ?: start)
         }
     }
-    androidx.activity.compose.BackHandler(sub.isEmpty() && page != start) { back() }
+    androidx.activity.compose.BackHandler(sub.isEmpty() && (page != start || ctx is FilesActivity)) { back() }
     LaunchedEffect(Downloads.wanted) { if (Downloads.wanted) { go("downloads"); Downloads.wanted = false } }
     LaunchedEffect(com.umutk.pulse.widgets.WidgetOpen.page) {
         val p = com.umutk.pulse.widgets.WidgetOpen.page
@@ -289,13 +349,17 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
         }
     }
     // tools that draw no back arrow of their own get the shared one; so does every page but the start page
-    val bar = (sub.isEmpty() && page != start) || sub in setOf("toolkit", "installer", "installer_settings", "ram", "dns", "fonts", "guide") || InnerBack.steps.isNotEmpty()
+    val bar = (sub.isEmpty() && (page != start || ctx is FilesActivity)) || sub in setOf("toolkit", "installer", "installer_settings", "files_settings", "ram", "dns", "fonts", "guide") || InnerBack.steps.isNotEmpty()
     val body: @Composable () -> Unit = { Column(Modifier.fillMaxSize()) {
-        if (bar) Box(Modifier.padding(start = 4.dp).size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+        if (bar) Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+            val pgName = if (sub.isEmpty() && page !in setOf("downloads", "terminal", "recycle", "installer", "toolkit")) Pages.firstOrNull { it.id == page }?.label else null
+            if (pgName != null) Text(pgName, color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
+        }
         Box(Modifier.weight(1f)) {
         if (sub.isNotEmpty()) SubScreen(sub, { onSub("") }) else when (page) {
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
-            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "applock" -> com.umutk.pulse.features.AppLockPage(); "widgets" -> com.umutk.pulse.widgets.WidgetsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "files" -> com.umutk.pulse.features.FilesPage(); "recycle" -> com.umutk.pulse.features.RecycleBinPage(); "installer" -> com.umutk.pulse.features.InstallerPage(); "device" -> DeviceModule(); "toolkit" -> com.umutk.pulse.features.ToolkitPage(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; "ram" -> com.umutk.pulse.features.RamPage(); "terminal" -> com.umutk.pulse.features.TerminalPage(); else -> SettingsPage()
+            "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "applock" -> com.umutk.pulse.features.AppLockPage(); "widgets" -> com.umutk.pulse.widgets.WidgetsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "files" -> com.umutk.pulse.features.FilesPage(); "office" -> OfficePage(); "recycle" -> com.umutk.pulse.features.RecycleBinPage(); "installer" -> com.umutk.pulse.features.InstallerPage(); "device" -> DeviceModule(); "toolkit" -> com.umutk.pulse.features.ToolkitPage(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; "ram" -> com.umutk.pulse.features.RamPage(); "terminal" -> com.umutk.pulse.features.TerminalPage(); else -> SettingsPage()
         }
         }
     } }
@@ -356,6 +420,7 @@ private fun NavItem(icon: String, label: String, on: Boolean, wide: Boolean, onC
 /** Material look: the M3 navigation rail on the left, and the page under a 64 dp small top app bar. */
 @Composable
 private fun MaterialRail(page: String, go: (String) -> Unit, menus: MenuHost, body: @Composable () -> Unit) {
+    if (oneUi) { OneUiShell(page, go, menus, visible + SettingsPg, body); return }
     val t = T
     val s by Sampler.snap.collectAsState()
     Row(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
@@ -363,6 +428,7 @@ private fun MaterialRail(page: String, go: (String) -> Unit, menus: MenuHost, bo
             Column(Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
                 (visible + SettingsPg).forEach { p ->
                     val on = page == p.id
+                    if (oem) { OemRailItem(p.icon, pageName(p.id, p.label), on) { go(p.id) }; return@forEach }
                     NavigationRailItem(selected = on, onClick = { go(p.id) },
                         icon = { PNavIcon(p.icon, if (on) Look.accent else t.sub, 22.dp) },
                         label = { Text(pageName(p.id, p.label), maxLines = 1) },
@@ -645,4 +711,15 @@ private fun CrtOverlay() {
             listOf(androidx.compose.ui.graphics.Color.Transparent, androidx.compose.ui.graphics.Color.Black.copy(alpha = .35f)),
             center = center, radius = size.maxDimension * .75f))
     }
+}
+
+/** Window background (shown before the first frame) in the colour the app is about to draw, so no wrong colour flashes at start. */
+internal fun android.app.Activity.paintWindow(dark: Boolean, amoled: Boolean, themed: PTheme? = null) {
+    val c = when {
+        amoled && dark -> 0xFF000000.toInt()
+        themed != null && !themed.material -> themed.bg.toArgb()
+        dark -> 0xFF141218.toInt()
+        else -> 0xFFFEF7FF.toInt()
+    }
+    window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(c))
 }

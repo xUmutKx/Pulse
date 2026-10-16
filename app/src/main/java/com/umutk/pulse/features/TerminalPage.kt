@@ -120,9 +120,9 @@ fun TerminalPage() {
                 Box(Modifier.size(40.dp).clickable { go() }, contentAlignment = Alignment.Center) { PIcon("run", Look.accent, 24.dp) }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton("Ctrl-C", Modifier.weight(1f)) { TermSession.interrupt() }
-                PButton("Clear", Modifier.weight(1f)) { TermSession.text = "" }
-                if (Shell.root == true) PButton(if (TermSession.asRoot) "sh" else "su", Modifier.weight(1f)) {
+                PButton("Ctrl-C", Modifier.weight(1f), compact = true) { TermSession.interrupt() }
+                PButton("Clear", Modifier.weight(1f), compact = true) { TermSession.text = "" }
+                if (Shell.root == true) PButton(if (TermSession.asRoot) "sh" else "su", Modifier.weight(1f), compact = true) {
                     TermSession.start(TermSession.cwd.ifEmpty { home }, !TermSession.asRoot)
                 }
             }

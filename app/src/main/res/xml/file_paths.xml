@@ -4,4 +4,6 @@
     <external-path name="shared" path="." />
     <!-- installer copies of picked APKs (see features/Installer.kt) -->
     <cache-path name="installer" path="installer/" />
+    <!-- Contacts call backgrounds (shared via ACTION_SEND) -->
+    <files-path name="callbg" path="callbg/" />
 </paths>

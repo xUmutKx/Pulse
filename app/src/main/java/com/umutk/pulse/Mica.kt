@@ -4,6 +4,8 @@ import android.app.WallpaperManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
@@ -143,4 +145,30 @@ fun Modifier.layer(kind: String, shape: androidx.compose.ui.graphics.Shape, edge
 private fun grainPoints(n: Int): List<Offset> {
     val r = java.util.Random(7)
     return List(n) { Offset(r.nextFloat(), r.nextFloat()) }
+}
+
+/**
+ * Acrylic for a Compose Dialog window: the window shrinks to its panel, its background is a transparent rounded shape and the system blurs what is behind it.
+ * Returns whether the blur is really on (it is off in battery saver / without GPU support or below Android 12); callers then draw a translucent tint instead.
+ */
+@Composable
+fun rememberWindowBlur(corner: Dp): Boolean {
+    val view = androidx.compose.ui.platform.LocalView.current
+    val ctx = LocalContext.current
+    val cornerPx = with(androidx.compose.ui.platform.LocalDensity.current) { corner.toPx() }
+    var blur by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val win = (view.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window
+    // the dialog window is match-parent by default, so a blur would cover the whole screen: wrap it around the panel
+    androidx.compose.runtime.SideEffect { win?.setLayout(android.view.WindowManager.LayoutParams.WRAP_CONTENT, android.view.WindowManager.LayoutParams.WRAP_CONTENT) }
+    androidx.compose.runtime.DisposableEffect(view, cornerPx) {
+        if (win == null || android.os.Build.VERSION.SDK_INT < 31) return@DisposableEffect onDispose {}
+        // the background drawable's outline is the blur's outline
+        win.setBackgroundDrawable(android.graphics.drawable.GradientDrawable().apply { setColor(android.graphics.Color.TRANSPARENT); cornerRadius = cornerPx })
+        val wm = ctx.getSystemService(android.view.WindowManager::class.java)
+        val l = java.util.function.Consumer<Boolean> { on -> blur = on; win.setBackgroundBlurRadius(if (on) 60 else 0) }
+        l.accept(wm.isCrossWindowBlurEnabled)
+        wm.addCrossWindowBlurEnabledListener(l)
+        onDispose { wm.removeCrossWindowBlurEnabledListener(l) }
+    }
+    return blur
 }

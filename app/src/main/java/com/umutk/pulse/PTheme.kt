@@ -110,6 +110,9 @@ val Themes = listOf(
         tabs = true, classicGraph = true, bevel = true, glassA = .85f, tabSel = c(0xFFC0C0C0),
         title = Brush.horizontalGradient(listOf(c(0xFF000080), c(0xFF1084D0))), titleName = "Windows Task Manager"),
     PTheme("material", "Material You", false, c(0xFFFEF7FF), c(0xFFF3EDF7), c(0xFF1D1B20), c(0xFF49454F), c(0xFFFFFFFF), c(0xFFCAC4D0), 20.dp, material = true, glassA = .9f),
+    // One UI (Samsung): soft, very round, big headers. ColorOS (OPPO): clean, green accent, pill shapes. Both have a dark mode (see effective).
+    PTheme("oneui", "One UI", false, c(0xFFF4F4F6), c(0xFFFFFFFF), c(0xFF000000), c(0xFF6B6B70), c(0xFF3E91FF), c(0xFFE6E6EA), 28.dp, material = true, glassA = .9f),
+    PTheme("coloros", "ColorOS", false, c(0xFFEAF5EE), c(0xFFFFFFFF), c(0xFF0F1A14), c(0xFF667B6E), c(0xFF00B96B), c(0xFFD3E6DB), 18.dp, material = true, glassA = .9f),
     PTheme("aurora", "Aurora", true, c(0xFF0A0F1F), c(0xFF1B2540), c(0xFFFFFFFF), c(0xFFA9B4D0), c(0xFF5EEAD4), c(0xFF2C3A5C), 16.dp,
         glassA = .55f, wall = Brush.linearGradient(listOf(c(0xFF0B1B3A), c(0xFF12506B), c(0xFF3B1F6B)))),
     PTheme("sakura", "Sakura", false, c(0xFFFCEFF5), c(0xFFFFFFFF), c(0xFF2B1B2E), c(0xFF7A5C73), c(0xFFD6336C), c(0xFFE8C9DB), 16.dp,
@@ -157,7 +160,7 @@ object Look {
     val cornerDp get() = when (corner) { "small" -> 8.dp; "large" -> 28.dp; else -> 20.dp }
     @Volatile var resolved: PTheme? = null   // the Material look as resolved for this composition (see effective in MainActivity)
     val current get() = resolved ?: theme
-    val accent get() = if (current.id == "amoled") Color.White else (if (current.material || !current.tabs || current.id == "win10" || current.id == "win11") accentsFor(current.material).getOrNull(accentIdx) ?: current.accent else current.accent)
+    val accent get() = if (current.id == "amoled") Color.White else if (current.id == "oneui" || current.id == "coloros") current.accent else (if (current.material || !current.tabs || current.id == "win10" || current.id == "win11") accentsFor(current.material).getOrNull(accentIdx) ?: current.accent else current.accent)
         // Windows 11: the accent is drawn half see-through
         .let { if (current.id == "win11") it.copy(alpha = .5f) else it }
 }
@@ -209,6 +212,7 @@ fun WinAlert(onDismissRequest: () -> Unit, title: (@Composable () -> Unit)? = nu
     // noDim: the window behind the dialog stays as it is, no dark scrim (the installer)
     val view = LocalView.current
     if (noDim) SideEffect { (view.parent as? DialogWindowProvider)?.window?.let { it.setDimAmount(0f); it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND); it.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT)) } }
+    if (w.id == "oneui" || w.id == "coloros") { OemDialog(w, onDismissRequest, title, text, confirmButton, dismissButton, containerColor); return }
     if (w.id in winButtonLooks) { WinDialog(w, onDismissRequest, title, text, confirmButton, dismissButton, containerColor, noDim, warn, iconKey); return }
     // Material and AMOLED windows use their own accent (black or white); the Windows looks keep the app's accent
     val primary = when { w.tabs -> w.text; w.material -> w.accent; else -> Look.accent }
@@ -263,15 +267,9 @@ private fun WinDialog(w: PTheme, onDismissRequest: () -> Unit, title: (@Composab
         if (noDim) SideEffect { (view.parent as? DialogWindowProvider)?.window?.let { it.setDimAmount(0f); it.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND) } }
         val id = w.id
         val classic = id == "win95" || id == "xp"
-        // Windows 11 is acrylic: the panel and the button strip let the screen behind show through, and the window blurs it where the phone can
-        if (id == "win11") SideEffect {
-            (view.parent as? DialogWindowProvider)?.window?.let { win ->
-                runCatching {
-                    if (android.os.Build.VERSION.SDK_INT >= 31) { win.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND); win.attributes = win.attributes.apply { blurBehindRadius = 40 } }
-                }
-            }
-        }
-        val body = containerColor ?: when (id) { "win95" -> Color(0xFFC0C0C0); "xp" -> Color(0xFFECE9D8); "win7" -> Color.White; "win11" -> w.panel.copy(alpha = .72f); else -> w.panel }
+        // Windows 11 is acrylic: the window blurs the screen behind it where the phone can, the panel and the button strip are translucent tints
+        val blur = if (id == "win11") rememberWindowBlur(8.dp) else false
+        val body = containerColor ?: when (id) { "win95" -> Color(0xFFC0C0C0); "xp" -> Color(0xFFECE9D8); "win7" -> Color.White; "win11" -> (if (w.dark) Color(0xFF202020) else Color(0xFFF3F3F3)).copy(alpha = if (blur) .7f else .88f); else -> w.panel }
         val footer = when (id) { "win7" -> Color(0xFFF0F0F0); "win10" -> if (w.dark) Color(0xFF1F1F1F) else Color(0xFFF0F0F0); "win11" -> w.bg.copy(alpha = .5f); else -> body }
         val titleCol = if (classic) Color.White else w.text
         val outer = when (id) {
@@ -282,9 +280,10 @@ private fun WinDialog(w: PTheme, onDismissRequest: () -> Unit, title: (@Composab
                 .border(1.dp, Color(0xFF3A4A5E), RoundedCornerShape(6.dp)).padding(1.dp).border(1.dp, Color.White.copy(alpha = .55f), RoundedCornerShape(5.dp))
                 .padding(start = 6.dp, end = 6.dp, bottom = 6.dp)
             "win10" -> Modifier.background(body).border(1.dp, Look.accent.copy(alpha = 1f))
-            else -> Modifier.clip(RoundedCornerShape(8.dp)).background(if (id == "win11") Color.Transparent else body).border(1.dp, w.line, RoundedCornerShape(8.dp))
+            else -> Modifier.clip(RoundedCornerShape(8.dp)).background(if (id == "win11") Color.Transparent else body)
+                .border(1.dp, if (id == "win11") (if (w.dark) Color.White.copy(alpha = .14f) else Color.White.copy(alpha = .8f)) else w.line, RoundedCornerShape(8.dp))
         }
-        Column(Modifier.padding(16.dp).widthIn(min = 280.dp, max = 480.dp).then(outer)) {
+        Column(Modifier.then(if (id == "win11") Modifier.widthIn(min = 280.dp, max = minOf(480, androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 32).dp) else Modifier.padding(16.dp).widthIn(min = 280.dp, max = 480.dp)).then(outer)) {
             Row(Modifier.fillMaxWidth().height(when (id) { "win95" -> 20.dp; "xp", "win7" -> 28.dp; else -> 32.dp })
                 .then(if (id == "xp") Modifier.background(Brush.verticalGradient(0f to Color(0xFF0058EE), .14f to Color(0xFF3A93FF), .32f to Color(0xFF0A60EE), .85f to Color(0xFF0050E0), 1f to Color(0xFF0046C8)))
                 .drawBehind { drawLine(Color(0xFF7DB4FF), Offset(0f, 1.dp.toPx() / 2), Offset(size.width, 1.dp.toPx() / 2), 1.dp.toPx()) } else if (id == "win95") Modifier.background(Color(0xFF000080)) else if (classic) w.title?.let { Modifier.background(it) } ?: Modifier else if (id == "win11") Modifier.background(body) else Modifier)

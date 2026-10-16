@@ -2,6 +2,9 @@ package com.umutk.pulse
 
 import com.umutk.pulse.features.AppManagerScreen
 import com.umutk.pulse.features.NetworksSection
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
@@ -28,9 +31,11 @@ import kotlinx.coroutines.withContext
 fun PHead(text: String, trailing: String = "", guide: String = "") {
     var info by remember { mutableStateOf(false) }
     if (info) com.umutk.pulse.features.GuideDialog(guide) { info = false }
+    val infoBtn: @Composable () -> Unit = { if (guide.isNotEmpty()) androidx.compose.foundation.layout.Box(Modifier.size(32.dp).clickable { info = true }, contentAlignment = Alignment.Center) { PIcon("info", T.sub, 20.dp) } }
+    if (oem) { OemTitle(text, infoBtn); return }
     Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
         Text(text, color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        if (guide.isNotEmpty()) androidx.compose.foundation.layout.Box(Modifier.size(32.dp).clickable { info = true }, contentAlignment = Alignment.Center) { PIcon("info", T.sub, 20.dp) }
+        infoBtn()
     }
 }
 
@@ -225,9 +230,25 @@ fun CoresPage() {
     LaunchedEffect(Unit) { while (true) { info = withContext(Dispatchers.IO) { Hw.cores() }; delay(3000) } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead("Cores", "${s.cores.size} cores")
+        // each core keeps its own colour; tapping a legend entry hides or shows that core's line
+        var hidden by remember { mutableStateOf(setOf<Int>()) }
+        val coreColor = { i: Int -> Color.hsv(i * 360f / maxOf(1, s.cores.size), .6f, .85f) }
+        val visible = s.cores.indices.filter { it !in hidden }
         PCard {
-            Graph(s.cores.indices.map { h["c$it"].orEmpty() }, s.cores.indices.map { Color.hsv(it * 360f / maxOf(1, s.cores.size), .6f, .85f) }, 100f, height = 90.dp)
-            Text("One colour per core", color = T.sub, fontSize = 11.sp)
+            Graph(visible.map { h["c$it"].orEmpty() }, visible.map(coreColor), 100f, height = 90.dp)
+            s.cores.indices.chunked(4).forEach { row ->
+                Row(Modifier.fillMaxWidth()) {
+                    row.forEach { i ->
+                        val on = i !in hidden
+                        Row(Modifier.weight(1f).clickable { hidden = if (on) hidden + i else hidden - i }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(10.dp).background(if (on) coreColor(i) else Color.Transparent, CircleShape).border(1.5.dp, coreColor(i), CircleShape))
+                            Spacer(Modifier.width(5.dp))
+                            Text("CPU $i", color = if (on) T.text else T.sub, fontSize = 11.sp, maxLines = 1)
+                        }
+                    }
+                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
         }
         s.cores.forEachIndexed { i, c ->
             val ci = info.getOrNull(i)

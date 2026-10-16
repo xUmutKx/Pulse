@@ -95,6 +95,11 @@ private val WIDGET_ENTRIES = listOf(
     WidgetEntry("Next alarm", "NextAlarmWidget"),
     WidgetEntry("App count", "AppCountWidget"),
     WidgetEntry("Quick", "QuickWidget"),
+    WidgetEntry("Steps", "StepsWidget"),
+    WidgetEntry("Distance and calories", "DistanceWidget"),
+    WidgetEntry("Heart rate", "HeartWidget"),
+    WidgetEntry("Activity", "ActivityWidget"),
+    WidgetEntry("Steps, 7 days", "WeekStepsWidget"),
 )
 
 // Skins.draw caches art in a plain HashMap, so previews are drawn one at a time
@@ -375,6 +380,7 @@ internal fun ThemeLogo(theme: String, size: Dp) {
     val res = when (theme) {
         "win95" -> R.drawable.logo_win95; "xp" -> R.drawable.logo_xp; "win7" -> R.drawable.logo_win7
         "win10" -> R.drawable.logo_win10; "win11" -> R.drawable.logo_win11; "material" -> R.drawable.ic_logo_android
+        "oneui" -> R.drawable.widget_oneui
         else -> 0
     }
     if (res != 0) Image(painterResource(res), null, Modifier.size(size), contentScale = ContentScale.Fit)
@@ -411,12 +417,13 @@ internal fun styleLogo(s: WidgetStyle) = when (s) {
     WidgetStyle.WIN7 -> "win7"
     WidgetStyle.WIN95 -> "win95"
     WidgetStyle.XP -> "xp"
+    WidgetStyle.ONEUI -> "oneui"
 }
 
 internal fun styleShort(s: WidgetStyle) = when (s) {
     WidgetStyle.MATERIAL -> "Material"; WidgetStyle.AMOLED -> "AMOLED"
     WidgetStyle.WIN11 -> "11"; WidgetStyle.WIN11_DARK -> "11 dark"; WidgetStyle.WIN10 -> "10"
-    WidgetStyle.WIN7 -> "7"; WidgetStyle.WIN95 -> "95"; WidgetStyle.XP -> "XP"
+    WidgetStyle.WIN7 -> "7"; WidgetStyle.WIN95 -> "95"; WidgetStyle.XP -> "XP"; WidgetStyle.ONEUI -> "One UI"
 }
 
 private fun addToHome(ctx: Context, provider: String) {

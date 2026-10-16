@@ -83,14 +83,8 @@ fun AboutPage() {
         val openTool = LocalOpenTool.current
         PButton(tr("Guide", "Kılavuz"), Modifier.fillMaxWidth()) { openTool("guide") }
         PButton("GitHub · xUmutKx/Pulse", Modifier.fillMaxWidth()) { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/xUmutKx/Pulse")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-        Text("A task manager for Android with the look of Windows, plus a file explorer, downloads, an app installer, network usage, a 20-tool toolkit, widgets and a terminal.", color = T.sub, fontSize = 13.sp)
+        Text("An all-in-one file manager for Android with the look of Windows, plus a task manager, a file explorer, downloads, an app installer, network usage, a 20-tool toolkit, widgets and a terminal.", color = T.sub, fontSize = 13.sp)
         PCard {
-            Fold("Device troubleshoot") {
-                Text("A checklist of common Android problems, taken from AndroDoc (the troubleshooting app by UmutK). Each item shows what to check and how to fix it. Fixes are shown as text; Pulse does not run them for you.", color = T.text, fontSize = 13.sp)
-            }
-            Fold("Authenticator") {
-                Text("Two-factor codes (TOTP, 6 digits, 30 seconds). Add an account with its base32 secret or an otpauth:// link. Accounts are stored encrypted with a key kept in the Android Keystore.", color = T.text, fontSize = 13.sp)
-            }
             Fold("Privacy") {
                 Text("No data is shared. Pulse reads your phone's numbers on the phone and keeps them there. The only network use is the latency test, and only when you press Start. Authenticator secrets never leave the phone.", color = T.text, fontSize = 13.sp)
             }

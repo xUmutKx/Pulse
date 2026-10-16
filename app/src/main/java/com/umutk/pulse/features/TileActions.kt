@@ -38,9 +38,25 @@ object TileActions {
                 // the gallery's own uri for the shot, so the Toolkit screen can open it without file access
                 MediaScannerConnection.scanFile(app, arrayOf(f), arrayOf("image/png")) { _, uri -> if (uri != null) prefs(app).edit().putString("shot_uri", uri.toString()).apply() }
             }
+            if (ok) main.post { flash(app) }
             main.post { onDone(ok) }
         }
         return true
+    }
+
+    /** A glow along the screen edges that fades out, so you can tell the shot was taken. Needs the overlay permission; silent without it. */
+    private fun flash(c: Context) = runCatching {
+        if (!Settings.canDrawOverlays(c)) return@runCatching
+        val d = c.resources.displayMetrics.density
+        val wm = c.getSystemService(android.view.WindowManager::class.java)
+        val v = android.view.View(c).apply {
+            background = android.graphics.drawable.GradientDrawable().apply { setStroke((10 * d).toInt(), 0xCCFFFFFF.toInt()); cornerRadius = 28 * d }
+        }
+        val lp = android.view.WindowManager.LayoutParams(-1, -1, android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or android.view.WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or android.view.WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            android.graphics.PixelFormat.TRANSLUCENT)
+        wm.addView(v, lp)
+        v.animate().alpha(0f).setDuration(450).withEndAction { runCatching { wm.removeView(v) } }.start()
     }
 
     // "Sensors off" here is the microphone + camera privacy pair: the all-sensors switch (SensorPrivacyManager.setSensorPrivacy)
@@ -121,6 +137,35 @@ object TileActions {
     fun clipboardText(c: Context): String? = runCatching {
         c.getSystemService(ClipboardManager::class.java).primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(c)?.toString()
     }.getOrNull()
+
+
+    /** Writes one Settings.System int directly when allowed, otherwise through root/Shizuku. */
+    fun putSystem(c: Context, key: String, v: Int, onDone: (Boolean) -> Unit = {}): Boolean {
+        if (runCatching { Settings.System.putInt(c.contentResolver, key, v) }.getOrDefault(false)) { onDone(true); return true }
+        if (!mayShell()) return false
+        bg { val ok = waitShell().also { if (it) Shell.run("settings put system $key $v") }; main.post { onDone(ok) } }
+        return true
+    }
+    fun getSystem(c: Context, key: String, def: Int = 0) = Settings.System.getInt(c.contentResolver, key, def)
+
+    /** Developer-option overlays: "show_touches" draws a dot under each finger, "pointer_location" the touch lines and coordinates. */
+    fun flagOn(c: Context, key: String) = getSystem(c, key) == 1
+    fun toggleFlag(c: Context, key: String, onDone: (Boolean) -> Unit = {}) = putSystem(c, key, if (flagOn(c, key)) 0 else 1, onDone)
+
+    /** Screen rotation steps: -1 = automatic, else the fixed rotation 0, 90, 180 or 270 degrees (all four, including upside down). */
+    val rotations = intArrayOf(-1, 0, 1, 2, 3)
+    fun rotation(c: Context): Int = if (getSystem(c, "accelerometer_rotation", 1) == 1) -1 else getSystem(c, "user_rotation")
+    fun rotationLabel(r: Int) = if (r < 0) "Auto" else "${r * 90}°"
+    fun setRotation(c: Context, r: Int, onDone: (Boolean) -> Unit = {}): Boolean {
+        val app = c.applicationContext
+        if (r < 0) return putSystem(app, "accelerometer_rotation", 1, onDone)
+        // pick the angle first, then lock: the lock alone would freeze whatever the screen shows now
+        return putSystem(app, "user_rotation", r) { ok -> if (ok) putSystem(app, "accelerometer_rotation", 0, onDone) else onDone(false) }
+    }
+    fun rotationNext(c: Context, onDone: (Boolean) -> Unit = {}): Boolean {
+        val cur = rotations.indexOf(rotation(c)).coerceAtLeast(0)
+        return setRotation(c, rotations[(cur + 1) % rotations.size], onDone)
+    }
 
     fun powerMenu(): Boolean = com.umutk.pulse.PowerMenu.show()
 

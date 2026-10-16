@@ -78,7 +78,7 @@ private fun Win7Logon(onUnlock: () -> Unit) {
                 .border(1.dp, Color(0x99FFFFFF), RoundedCornerShape(8.dp)).padding(8.dp)) {
                 Box(Modifier.fillMaxSize().clip(RoundedCornerShape(3.dp))
                     .background(Brush.verticalGradient(listOf(Color(0xFF7FB6E8), Color(0xFF2C6FB3)))), contentAlignment = Alignment.Center) {
-                    UserFigure(80.dp)
+                    ProfileMark(80.dp)
                 }
             }
             Spacer(Modifier.height(14.dp))
@@ -112,9 +112,7 @@ private fun Win10Logon(win11: Boolean, onUnlock: () -> Unit) {
         // the sign-in screen blurs and dims the lock-screen picture
         Box(Modifier.fillMaxSize().background(Color(0x55000000)))
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(Modifier.size(150.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFD4D4D4)), contentAlignment = Alignment.Center) {
-                UserFigure(90.dp, Color(0xFF8C8C8C))
-            }
+            ProfileAvatar(150.dp, Themes.first { it.id == "win10" })
             Spacer(Modifier.height(18.dp))
             Text("Pulse", color = Color.White, fontSize = 30.sp)
             Spacer(Modifier.height(22.dp))
@@ -138,7 +136,7 @@ private fun XpLogon(onUnlock: () -> Unit) {
                 // the user tile: a blue square with a white figure, as the XP logon shows it
                 Box(Modifier.size(56.dp).clip(RoundedCornerShape(6.dp)).background(Color(0xFF2B6FD6))
                     .border(2.dp, Color.White, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
-                    UserFigure(34.dp)
+                    ProfileMark(34.dp)
                 }
                 Spacer(Modifier.width(16.dp))
                 Column {
