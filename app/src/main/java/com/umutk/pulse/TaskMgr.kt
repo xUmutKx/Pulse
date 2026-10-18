@@ -80,10 +80,15 @@ fun ProcessesPage() {
     val scope = rememberCoroutineScope()
     var net by remember { mutableStateOf<Map<Int, Float>>(emptyMap()) }     // uid -> bytes/s
     var sizes by remember { mutableStateOf<Map<Int, Long>>(emptyMap()) }   // uid -> app + data bytes
+    var own by remember { mutableStateOf(false) }      // no root/Shizuku: only this app's own processes, CPU and virtual size unknown
+    var usage by remember { mutableStateOf(false) }    // usage access: needed for network speed and app size
     LaunchedEffect(Unit) {
         while (true) {
-            rows = withContext(Dispatchers.IO) { Sampler.processes().ifEmpty { ownProcesses(ctx) }.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
+            val raw = withContext(Dispatchers.IO) { Sampler.processes() }
+            own = raw.isEmpty()
+            rows = withContext(Dispatchers.IO) { raw.ifEmpty { ownProcesses(ctx) }.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
             loaded = true
+            usage = withContext(Dispatchers.IO) { Extra.usageGranted(ctx) }
             net = withContext(Dispatchers.IO) { ProcStats.netRates(ctx) }
             sizes = withContext(Dispatchers.IO) { rows.map { it.uid }.distinct().mapNotNull { u -> ProcStats.size(ctx, u)?.let { u to it } }.toMap() }
             delay(3000)

@@ -33,8 +33,8 @@ import java.security.MessageDigest
 
 /** Previews of PDF / Office / video / audio / APK files for the Files list: lazy (produceState dies when the row scrolls away), memory capped at 16 MB, plus a PNG disk cache. */
 object FilePreviews {
-    private const val PX = 160
-    private val mem = object : LruCache<String, Bitmap>(16 shl 20) { override fun sizeOf(k: String, v: Bitmap) = v.byteCount }
+    private const val PX = 400
+    private val mem = object : LruCache<String, Bitmap>(32 shl 20) { override fun sizeOf(k: String, v: Bitmap) = v.byteCount }
     private val miss = HashSet<String>()
     @OptIn(ExperimentalCoroutinesApi::class) private val io: CoroutineDispatcher = Dispatchers.IO.limitedParallelism(2)
 
@@ -43,7 +43,7 @@ object FilePreviews {
     val VIDEO = setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v")
     val AUDIO = setOf("mp3", "m4a", "aac", "flac", "ogg", "opus", "wav")
 
-    private fun key(f: File) = MessageDigest.getInstance("MD5").digest("${f.path}|${f.lastModified()}|${f.length()}".toByteArray()).joinToString("") { "%02x".format(it) }
+    private fun key(f: File) = MessageDigest.getInstance("MD5").digest("v2|${f.path}|${f.lastModified()}|${f.length()}".toByteArray()).joinToString("") { "%02x".format(it) }
     fun cached(f: File): Bitmap? = mem.get(key(f))
 
     suspend fun load(ctx: Context, f: File): Bitmap? = withContext(io) {
@@ -89,8 +89,8 @@ object FilePreviews {
                 val ai = pi.applicationInfo ?: return null
                 ai.sourceDir = f.path; ai.publicSourceDir = f.path
                 val d = ai.loadIcon(pm)
-                val b = Bitmap.createBitmap(96, 96, Bitmap.Config.ARGB_8888)
-                d.setBounds(0, 0, 96, 96); d.draw(Canvas(b)); b
+                val b = Bitmap.createBitmap(256, 256, Bitmap.Config.ARGB_8888)
+                d.setBounds(0, 0, 256, 256); d.draw(Canvas(b)); b
             }
             e in VIDEO || e in AUDIO -> {
                 val m = android.media.MediaMetadataRetriever()

@@ -45,6 +45,7 @@ import com.umutk.pulse.features.Downloads
 import com.umutk.pulse.features.Installer
 import com.umutk.pulse.features.InstallState
 import com.umutk.pulse.features.InstallWindow
+import com.umutk.pulse.ui.MaxWidthBox
 
 /** Saved choices. */
 object Cfg {
@@ -113,6 +114,15 @@ open class MainActivity : ComponentActivity() {
         handleShare(intent)
     }
 
+    /** Starts the last track again: the queue still in the player if there is one, else the saved file. */
+    private fun resumeLastPlayed() {
+        val last = com.umutk.pulse.extras.watchdog.QuickTileContract.load(this) ?: return
+        val engine = com.umutk.pulse.extras.music.MusicPlayerEngine.get(this)
+        if (engine.player.mediaItemCount > 0) engine.play()
+        else if (last.kind == com.umutk.pulse.extras.watchdog.QuickTileContract.Kind.TRACK && last.ref.isNotEmpty())
+            engine.playQueue(listOf(com.umutk.pulse.extras.music.Track(last.ref, last.name)))
+    }
+
     /** Copies an APK from another app to the cache off the main thread, then the install window shows it. */
     private fun handleApk(uri: Uri) {
         Thread {
@@ -127,6 +137,8 @@ open class MainActivity : ComponentActivity() {
     private fun handleShare(i: Intent?) {
         // Pulse Files (own launcher entry and task) always opens on the Files page
         if (this is FilesActivity) { com.umutk.pulse.features.FilesLaunch.full = true; return }
+        // Quick panel "last played" tile
+        if (i?.action == com.umutk.pulse.extras.watchdog.QuickTileContract.ACTION_RESUME) { resumeLastPlayed(); return }
         i?.getStringExtra("start")?.let { com.umutk.pulse.widgets.WidgetOpen.page = it }
         // a long-pressed Quick Settings tile: open the page of that tile instead of the app info screen
         if (i?.action == android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES)
@@ -174,8 +186,9 @@ fun effective(t: PTheme): PTheme {
         val ctx = androidx.compose.ui.platform.LocalContext.current
         if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx)
     } else null
-    // AMOLED has one fixed accent, white: no wallpaper colour and no swatch
-    val accent = if (amoled) Color.White else dynamic?.primary ?: MaterialAccents.getOrNull(Look.accentIdx) ?: t.accent
+    // AMOLED has one fixed accent, white: no wallpaper colour and no swatch.
+    // Material You's default accent is white too (wallpaper colour only when a swatch is picked)
+    val accent = if (amoled || (t.id == "material" && Look.accentIdx == -1)) Color.White else dynamic?.primary ?: MaterialAccents.getOrNull(Look.accentIdx) ?: t.accent
     val r = Look.cornerDp
     return when {
         dynamic != null -> PTheme(t.id, t.name, dark, if (dark) Color(0xFF050505) else dynamic.background, if (dark) Color(0xFF111111) else dynamic.surfaceContainer,
@@ -216,7 +229,8 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
     // Windows 11 with a picture chosen: the app background is see-through and the picture shows behind everything
     // Windows 11 with the whole-app scope: the picture is the app background, blurred and tinted blue; the panels sit on top
     val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
-    Surface(Modifier.fillMaxSize(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+    // landscape notch / cutout: the shells pad the top and bottom bars only, so the sides are kept clear here
+    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
         if (pic != null) {
             // drawn with the crop from the background editor (position and zoom)
             // the blurred copy is rendered once (off the main thread) when the choice changes; here it is only drawn
@@ -229,10 +243,12 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         // the open page lives here, not in App: App is remounted when the theme changes dark/light, and that must not close the page
         var appPage by rememberSaveable { mutableStateOf(if (wctx is FilesActivity) "files" else if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
         var appSub by rememberSaveable { mutableStateOf("") }
+        // every page / tool change (store included) re-reads Pulse's own look: an extra app's apply() may have replaced the process-wide Look while Pulse was open
+        val restoreLook = { Cfg.load(wctx); Opt.load(wctx) }
         // the look's sign-in screen only when the setting is on, otherwise the Pulse splash
         if (!SplashGate.splashed && wctx !is FilesActivity) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
         else if (!welcomed) Welcome { welcomed = true }
-        else key(th.dark) { App(appPage, { appPage = it }, appSub, { appSub = it }) }
+        else key(th.dark) { App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it }) }
     }
 }
 
@@ -249,9 +265,17 @@ private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
     var sub by rememberSaveable { mutableStateOf("") }
     val back: () -> Unit = { InnerBack.steps.lastOrNull()?.invoke() ?: if (sub.isNotEmpty()) sub = "" else ctx.finish() }
     androidx.activity.compose.BackHandler { back() }
-    Surface(Modifier.fillMaxSize(), color = if (FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+    // Windows 11: the picture chosen in Pulse's own backdrop setting is drawn behind the Files window (same as the Pulse app)
+    val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
+    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+        if (pic != null) {
+            val shown = com.umutk.pulse.features.Backdrop.blurred ?: pic
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { with(com.umutk.pulse.features.Backdrop) { drawBackdrop(shown) } }
+            Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
+        }
         androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
-            Column(Modifier.fillMaxSize()) {
+            // below the status bar and the clock, so the back arrow and title stay reachable
+            Column(Modifier.fillMaxSize().statusBarsPadding()) {
                 Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
                     if (sub.isEmpty()) Text("Files", color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
@@ -318,11 +342,14 @@ fun InnerBackStep(enabled: Boolean, onBack: () -> Unit) {
     androidx.activity.compose.BackHandler(enabled) { cb() }
 }
 
+/** Pages that read as a list or form: capped at 720 dp on wide screens (Settings, Files, Widgets). Apps caps itself: on tablets it splits list and details. */
+private val CappedPages = setOf("settings", "files", "widgets")
+
 @Composable
 private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (String) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     // the pages visited, so the back arrow and the back gesture return to the previous one
-    var trail by remember { mutableStateOf(listOf<String>()) }
+    var trail by rememberSaveable { mutableStateOf(listOf<String>()) }
     val start = if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes"
     val go: (String) -> Unit = { p -> onSub(""); if (p != page) trail = (trail + page).takeLast(20); onPage(p) }
     val back: () -> Unit = {
@@ -357,10 +384,12 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
             if (pgName != null) Text(pgName, color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
         }
         Box(Modifier.weight(1f)) {
-        if (sub.isNotEmpty()) SubScreen(sub, { onSub("") }) else when (page) {
+        // list-style pages are capped at 720 dp and centred on tablets; tables and charts keep the full width
+        val content: @Composable () -> Unit = { if (sub.isNotEmpty()) SubScreen(sub, { onSub("") }) else when (page) {
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
             "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "applock" -> com.umutk.pulse.features.AppLockPage(); "widgets" -> com.umutk.pulse.widgets.WidgetsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "files" -> com.umutk.pulse.features.FilesPage(); "office" -> OfficePage(); "recycle" -> com.umutk.pulse.features.RecycleBinPage(); "installer" -> com.umutk.pulse.features.InstallerPage(); "device" -> DeviceModule(); "toolkit" -> com.umutk.pulse.features.ToolkitPage(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; "ram" -> com.umutk.pulse.features.RamPage(); "terminal" -> com.umutk.pulse.features.TerminalPage(); else -> SettingsPage()
-        }
+        } }
+        if (sub.isEmpty() && page in CappedPages) MaxWidthBox { content() } else content()
         }
     } }
     androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { onSub(it) }) {

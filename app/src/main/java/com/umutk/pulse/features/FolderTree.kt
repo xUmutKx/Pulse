@@ -1,8 +1,21 @@
 package com.umutk.pulse.features
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.draw.clip
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -24,6 +37,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,6 +51,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.BarMeter
+import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
@@ -67,6 +82,7 @@ private fun formatSize(b: Long): String = when {
 private var lastDir: File? = null
 
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     var dir by remember(root) {
         mutableStateOf(lastDir?.takeIf { it.isDirectory && it.path.startsWith(root.path) } ?: root)
@@ -89,6 +105,11 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     BackHandler { up() }
 
     val total = rows.sumOf { it.size }
+    // long press picks files and folders; a picked set can be deleted from here
+    var sel by remember(root) { mutableStateOf(setOf<String>()) }
+    var askDelete by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    fun toggleSel(p: String) { sel = if (p in sel) sel - p else sel + p }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -129,6 +150,22 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             )
         }
 
+        if (sel.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            IconButton(onClick = { sel = emptySet() }) { Icon(Icons.Filled.Close, contentDescription = "Clear") }
+            Text("${sel.size}", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            IconButton(onClick = { askDelete = true }) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
+        }
+        if (askDelete) AlertDialog(
+            onDismissRequest = { askDelete = false },
+            title = { Text("Delete ${sel.size} item(s)?") },
+            text = { Text("Folders are deleted with everything in them.") },
+            confirmButton = { TextButton(onClick = {
+                val paths = sel; askDelete = false; sel = emptySet()
+                scope.launch(Dispatchers.IO) { paths.forEach { File(it).deleteRecursively() }; StorageScan.rescan(root) }
+            }) { Text("Delete") } },
+            dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Cancel") } },
+        )
+
         LazyColumn(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
@@ -136,15 +173,22 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             items(rows, key = { it.file.path }) { node ->
                 val isDir = node.file.isDirectory
                 val share = if (total > 0) node.size.toFloat() / total else 0f
+                val picked = node.file.path in sel
+                val thumb = if (isDir) null else exThumb(node.file)
                 Column(
                     Modifier
                         .fillMaxWidth()
-                        .clickable(enabled = isDir) { dir = node.file }
+                        .background(if (picked) MaterialTheme.colorScheme.primary.copy(alpha = .12f) else Color.Transparent)
+                        .combinedClickable(
+                            onClick = { if (sel.isNotEmpty()) toggleSel(node.file.path) else if (isDir) dir = node.file },
+                            onLongClick = { toggleSel(node.file.path) },
+                        )
                         .padding(vertical = 6.dp),
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            if (isDir) Icons.Filled.Folder else Icons.Filled.InsertDriveFile,
+                        if (thumb != null) Image(thumb, null, Modifier.size(36.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
+                        else Icon(
+                            if (picked) Icons.Filled.CheckCircle else if (isDir) Icons.Filled.Folder else Icons.Filled.InsertDriveFile,
                             contentDescription = null,
                             modifier = Modifier.size(20.dp),
                         )
@@ -176,5 +220,16 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
 /** Storage screens sit on the transparent page, so their text is white rather than the theme's dark text. */
 @Composable
 fun FolderTreeScreen(root: File, onBack: () -> Unit) {
-    CompositionLocalProvider(LocalContentColor provides com.umutk.pulse.T.text) { FolderTreeContent(root, onBack) }
+    // with root (or Shizuku) the tree can also start at the system root "/"; the chip switches between the two
+    var base by remember(root) { mutableStateOf(root) }
+    val canRoot = com.umutk.pulse.Shell.root == true || com.umutk.pulse.Shell.shizuku == 2
+    CompositionLocalProvider(LocalContentColor provides com.umutk.pulse.T.text) {
+        Column(Modifier.fillMaxSize()) {
+            if (canRoot) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp)) {
+                androidx.compose.material3.FilterChip(base.path == "/", { base = if (base.path == "/") root else File("/") },
+                    { Text(if (base.path == "/") tr("Storage", "Dahili depolama") else tr("Root (/)", "Kök (/)")) })
+            }
+            Box(Modifier.weight(1f).fillMaxWidth()) { key(base) { FolderTreeContent(base, onBack) } }
+        }
+    }
 }

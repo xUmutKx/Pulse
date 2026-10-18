@@ -28,12 +28,19 @@ class MotionCueService : Service() {
     private lateinit var sm: SensorManager
     private val g = FloatArray(3); private val gs = FloatArray(3); private var seeded = false
 
+    // true when the phone gives linear acceleration (gravity already removed); otherwise the raw accelerometer is filtered below
+    private var linear = false
+
     private val listener = object : SensorEventListener {
         override fun onSensorChanged(e: SensorEvent) {
-            if (!seeded) { for (i in 0..2) { g[i] = e.values[i]; gs[i] = e.values[i] }; seeded = true } // start at rest, not at 0
-            for (i in 0..2) { g[i] += .05f * (e.values[i] - g[i]); gs[i] += .004f * (e.values[i] - gs[i]) }
-            // acceleration = raw minus gravity estimate; tilt = gravity drifting from its slow baseline, decays back to rest
-            val ax = e.values[0] - g[0] + (g[0] - gs[0]) * .8f; val ay = e.values[1] - g[1] + (g[1] - gs[1]) * .8f
+            val ax: Float; val ay: Float
+            if (linear) { ax = e.values[0]; ay = e.values[1] }
+            else {
+                if (!seeded) { for (i in 0..2) { g[i] = e.values[i]; gs[i] = e.values[i] }; seeded = true } // start at rest, not at 0
+                for (i in 0..2) { g[i] += .05f * (e.values[i] - g[i]); gs[i] += .004f * (e.values[i] - gs[i]) }
+                // acceleration = raw minus gravity estimate; tilt = gravity drifting from its slow baseline, decays back to rest
+                ax = e.values[0] - g[0] + (g[0] - gs[0]) * .8f; ay = e.values[1] - g[1] + (g[1] - gs[1]) * .8f
+            }
             // device axes to screen axes for the current rotation
             val (sx, sy) = when (wm.defaultDisplay.rotation) {
                 Surface.ROTATION_90 -> -ay to ax
@@ -60,7 +67,9 @@ class MotionCueService : Service() {
         wm.addView(v, WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT))
         sm = getSystemService(SensorManager::class.java)
-        sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME, android.os.Handler(android.os.Looper.getMainLooper())) }
+        val lin = sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
+        linear = lin != null
+        (lin ?: sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER))?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME, android.os.Handler(android.os.Looper.getMainLooper())) }
     }
 
     override fun onStartCommand(i: Intent?, f: Int, id: Int) = START_STICKY
@@ -76,7 +85,7 @@ class MotionCueService : Service() {
     private class CueView(c: Context) : View(c) {
         private val d = c.resources.displayMetrics.density
         private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF000000.toInt() }
-        private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); style = Paint.Style.STROKE; strokeWidth = 1f } // 1 px
+        private val ring = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); style = Paint.Style.STROKE; strokeWidth = 1.5f * d } // solid white rim
         private val waveP = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x40000000 }
         private val waveL = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt(); style = Paint.Style.STROKE; strokeWidth = 1f }
         private val path = android.graphics.Path()
@@ -97,30 +106,26 @@ class MotionCueService : Service() {
             val cell = 100f * d
             val cols = Math.max(3, Math.round(w / cell)); val rows = Math.max(4, Math.round(h / cell))
             val cw = w / cols; val ch = h / rows
-            for (r in 0 until rows) for (c in 0 until cols) {
+            // one extra row and column past each edge, so the slide never shows an empty border
+            for (r in -1..rows) for (c in -1..cols) {
                 val x = cw * (c + .5f) + sx; val y = ch * (r + .5f) + sy
                 cv.drawCircle(x, y, 6f * d, fill); cv.drawCircle(x, y, 6f * d, ring)
             }
             if (wave) drawWave(cv, w, h, dt)
             postInvalidateOnAnimation()
         }
-        /** A soft wave that rises from the bottom every few seconds and fades out; sideways motion slides it along, forward/back motion lifts it. */
+        /** A flat surface, like liquid in a glass: it rises from the bottom every few seconds and fades out. Sideways motion tilts it, forward/back motion lifts it. */
         private fun drawWave(cv: Canvas, w: Float, h: Float, dt: Float) {
             rise = (rise + dt / 7f) % 1f
-            phase = (phase + dt * 1.6f) % 6.2831855f
             val t = rise
-            val base = h - h * .55f * t + sy * 1.5f
+            val level = h - h * .55f * t + sy * 1.5f
             val a = (1f - t) * (if (t < .1f) t / .1f else 1f)
             waveP.alpha = (a * 90).toInt(); waveL.alpha = (a * 255).toInt()
-            val shift = sx / w * 6.2831855f * 2f // device moves right, the wave slides the same way
+            // the surface stays level with the horizon: its height at each edge follows the sideways offset
+            val tilt = sx * .6f
+            val yl = level + tilt; val yr = level - tilt
             path.rewind()
-            var px = 0f; var first = true
-            while (true) {
-                val y = base + Math.sin(px / (w / 2f) * 6.2831855 + phase + shift).toFloat() * 16f * d
-                if (first) { path.moveTo(px, y); first = false } else path.lineTo(px, y)
-                if (px >= w) break
-                px = Math.min(w, px + 8f * d)
-            }
+            path.moveTo(0f, yl); path.lineTo(w, yr)
             cv.drawPath(path, waveL)
             path.lineTo(w, h); path.lineTo(0f, h); path.close()
             cv.drawPath(path, waveP)

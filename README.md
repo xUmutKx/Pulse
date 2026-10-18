@@ -67,6 +67,10 @@ Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery a
 
 Lock any app behind a pattern, PIN or password, with optional fingerprint. The lock screen covers the app before you see it, also when the app opens as a chat bubble or a floating window. It follows the look you have chosen. Needs the accessibility service; usage access and root or Shizuku make it quicker.
 
+#### Extra apps store
+
+Everything extra lives in one place: the **Extra apps** store in the top-right menu. It lists the built-in tools (music player with Poweramp and Winamp looks and lyrics, video, white noise) and the standalone apps (Files, Photos, Calendar, Contacts, ArtCraft). Store modules are downloaded only when you choose them. The store has a back arrow.
+
 #### Tools
 
 - **Toolkit**: 20 tools, including compass (every direction is written round the dial), level, flashlight, lux meter, dice, coin flip, clipboard, screenshot (root), volume, stopwatch, timer, calculator, screen scale and a finder. Dice, coin and sound mode act right in the Quick Settings panel without opening the app.

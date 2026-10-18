@@ -163,6 +163,10 @@ class PAnn(val page: Int, val kind: Int, val pts: List<Offset>, val color: Int, 
 /** Box of a text mark in pixels (kind 3 paints it white first, hiding the original text under it). */
 private fun annBounds(a: PAnn, w: Float, h: Float, pt: android.graphics.Paint): android.graphics.RectF {
     pt.textSize = w * .03f
+    if (a.pts.size >= 2) { // a dragged cover box: the two corners, in any order
+        val (p, q) = a.pts[0] to a.pts[1]
+        return android.graphics.RectF(minOf(p.x, q.x) * w, minOf(p.y, q.y) * h, maxOf(p.x, q.x) * w, maxOf(p.y, q.y) * h)
+    }
     val p0 = a.pts.first(); val ls = a.text.split('\n'); val pad = pt.textSize * .15f
     return android.graphics.RectF(p0.x * w - pad, p0.y * h - pt.textSize, p0.x * w + (ls.maxOf { pt.measureText(it) }) + pad, p0.y * h + (ls.size - 1) * pt.textSize * 1.2f + pt.textSize * .3f)
 }
@@ -173,8 +177,11 @@ private fun drawAnn(cv: android.graphics.Canvas, a: PAnn, w: Float, h: Float, pt
     if (a.kind >= 2) {
         pt.style = android.graphics.Paint.Style.FILL; pt.textSize = w * .03f
         val p0 = a.pts.firstOrNull() ?: return
-        if (a.kind == 3) { val r = annBounds(a, w, h, pt); val c = pt.color; pt.color = if (dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE; cv.drawRect(r, pt); pt.color = c }
-        a.text.split('\n').forEachIndexed { k, l -> cv.drawText(l, p0.x * w, p0.y * h + k * pt.textSize * 1.2f, pt) }
+        val box = if (a.kind == 3 && a.pts.size >= 2) annBounds(a, w, h, pt) else null
+        if (a.kind == 3) { val r = box ?: annBounds(a, w, h, pt); val c = pt.color; pt.color = if (dark) android.graphics.Color.BLACK else android.graphics.Color.WHITE; cv.drawRect(r, pt); pt.color = c }
+        val ox = box?.let { it.left + pt.textSize * .15f } ?: p0.x * w
+        val oy = box?.let { it.top + pt.textSize } ?: p0.y * h
+        a.text.split('\n').forEachIndexed { k, l -> cv.drawText(l, ox, oy + k * pt.textSize * 1.2f, pt) }
         return
     }
     pt.style = android.graphics.Paint.Style.STROKE; pt.strokeCap = android.graphics.Paint.Cap.ROUND; pt.strokeJoin = android.graphics.Paint.Join.ROUND
@@ -258,8 +265,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         WinAlert(onDismissRequest = { textAt = null }, title = { Text(if (tool == 4 || editing != null) tr("Edit text", "Metni düzenle") else tr("Add text", "Yazı ekle")) },
             text = { PField(textVal, { textVal = it }, "") },
             confirmButton = { TextButton({
-                val old = editing; if (old != null) anns.remove(old)
-                if (textVal.isNotBlank()) anns.add(PAnn(pg, if (tool == 4 || old?.kind == 3) 3 else 2, if (old != null) old.pts else listOf(Offset(x, y)), old?.color ?: cols[ci], textVal))
+                val old = editing; val fresh = old != null && old.pts.size >= 2 && old !in anns; if (old != null) anns.remove(old)
+                if (textVal.isNotBlank() || fresh) anns.add(PAnn(pg, if (tool == 4 || old?.kind == 3) 3 else 2, if (old != null) old.pts else listOf(Offset(x, y)), old?.color ?: cols[ci], textVal))
                 if (textVal.isNotBlank() || old != null) doc.dirty = true; textAt = null; editing = null }) { Text("OK") } },
             dismissButton = { TextButton({ textAt = null; editing = null }) { Text(tr("Cancel", "İptal")) } })
     }
@@ -287,9 +294,22 @@ private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, colo
         else Box(Modifier.fillMaxWidth().aspectRatio(.707f).background(bg), contentAlignment = Alignment.Center) { Text("${i + 1}", color = Color.Gray) }
         if (anns.isNotEmpty() || tool != 0 || cur != null) Canvas(Modifier.matchParentSize()
             .pointerInput(tool, anns) {
-                if (tool == 3 || tool == 4) detectTapGestures { o ->
+                if (tool == 3) detectTapGestures { o ->
                     val hit = anns.lastOrNull { it.kind >= 2 && annBounds(it, size.width.toFloat(), size.height.toFloat(), paint).contains(o.x, o.y) }
                     onText(o.x / size.width, o.y / size.height, hit) }
+                else if (tool == 4) detectDragGestures(
+                    onDragStart = { o -> cur = PAnn(i, 3, listOf(Offset(o.x / size.width, o.y / size.height), Offset(o.x / size.width, o.y / size.height)), colNow) },
+                    onDrag = { ch, _ -> cur?.let { c -> cur = PAnn(c.page, 3, listOf(c.pts[0], Offset(ch.position.x / size.width, ch.position.y / size.height)), c.color) } },
+                    onDragEnd = {
+                        val c = cur; cur = null
+                        if (c != null) {
+                            val (a, b) = c.pts[0] to c.pts[1]
+                            val big = Math.abs(b.x - a.x) * size.width > 12 && Math.abs(b.y - a.y) * size.height > 8
+                            if (big) onText(minOf(a.x, b.x), minOf(a.y, b.y), c)
+                            else { val hit = anns.lastOrNull { it.kind >= 2 && annBounds(it, size.width.toFloat(), size.height.toFloat(), paint).contains(a.x * size.width, a.y * size.height) }
+                                onText(a.x, a.y, hit) }
+                        }
+                    }, onDragCancel = { cur = null })
                 else if (tool != 0) detectDragGestures(
                     onDragStart = { o -> cur = PAnn(i, toolNow - 1, listOf(Offset(o.x / size.width, o.y / size.height)), colNow) },
                     onDragEnd = { cur?.let(onAdd); cur = null }, onDragCancel = { cur = null },

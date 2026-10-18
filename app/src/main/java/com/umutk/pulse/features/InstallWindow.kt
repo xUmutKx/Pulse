@@ -389,7 +389,7 @@ private fun OptRow(label: String, on: Boolean, set: (Boolean) -> Unit) {
 
 /** The install options for this app, from the active profile; the header opens and closes them. */
 @Composable
-private fun InstallOptions(open: Boolean, toggle: (Boolean) -> Unit) {
+private fun InstallOptions(open: Boolean, toggle: (Boolean) -> Unit, extra: @Composable () -> Unit = {}) {
     val ctx = LocalContext.current
     val w = LocalWindowLook.current
     val prof = Installer.cur
@@ -401,7 +401,7 @@ private fun InstallOptions(open: Boolean, toggle: (Boolean) -> Unit) {
         OptRow("Optimise after install (dexopt)", prof.dex) { v -> Installer.edit(ctx) { it.copy(dex = v) } }
         OptRow("Delete the source file after install", prof.dropSrc) { v -> Installer.edit(ctx) { it.copy(dropSrc = v) } }
         OptRow("Install on open", prof.auto) { v -> Installer.edit(ctx) { it.copy(auto = v) } }
-        InstallSourcePicker()
+        extra()
     }
 }
 
@@ -674,14 +674,16 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                         }
                     }
                 }
-                InstallOptions(opts) { opts = it }
-                if (old != null && InstallShow.shellOk) IButton(tr("Set source to Play Store", "Kaynağı Play Store yap"), full) {
-                    busy = true
-                    scope.launch {
-                        val r = withContext(Dispatchers.IO) { Installer.setSource(pk.pkg, "com.android.vending") }
-                        busy = false
-                        Toast.makeText(ctx, if (r.isEmpty()) "OK" else r, Toast.LENGTH_LONG).show()
-                    }
+                InstallOptions(opts, { opts = it }) {
+                    if (old != null && InstallShow.shellOk) Text(tr("Set source to Play Store", "Kaynağı Play Store yap"), color = w.accent, fontSize = 13.sp,
+                        modifier = Modifier.fillMaxWidth().clickable {
+                            busy = true
+                            scope.launch {
+                                val r = withContext(Dispatchers.IO) { Installer.setSource(pk.pkg, "com.android.vending") }
+                                busy = false
+                                Toast.makeText(ctx, if (r.isEmpty()) "OK" else r, Toast.LENGTH_LONG).show()
+                            }
+                        }.padding(vertical = 8.dp))
                 }
                 if (pk.pkg in Installer.black) Text("On the blacklist: Pulse does not install this package", color = Warn, fontSize = 12.sp)
                 else when (st) {

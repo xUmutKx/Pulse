@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.WRITE_CALENDAR" />
     <!-- Pulse Photos gallery (MediaStore); not needed while all-files access is granted -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
     <uses-permission android:name="com.termux.permission.RUN_COMMAND" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
@@ -36,6 +38,11 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- music, video and ambient playback services (extras/watchdog, extras/music) -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <!-- asked once from the player when the user turns background playback on (extras/watchdog/BatteryExemption) -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Private DNS (DNS tile, Settings): Pulse grants this to itself once through root/Shizuku, then writes the setting directly -->
     <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:ignore="ProtectedPermissions" />
@@ -48,6 +55,7 @@
         <package android:name="moe.shizuku.privileged.api" />
         <package android:name="rikka.shizuku" />
         <package android:name="dev.rikka.shizuku" />
+        <package android:name="com.deniscerri.ytdl" />
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="text/*" /></intent>
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="audio/*" /></intent>
     </queries>
@@ -57,11 +65,16 @@
         android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:theme="@style/Theme.Pulse">
-        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
+        <activity android:name=".MainActivity" android:exported="true" android:supportsPictureInPicture="true" android:launchMode="singleTop" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode">
             <!-- "Share" a link from a browser: Pulse starts the download (see MainActivity.handleShare) -->
             <!-- long press on a Pulse Quick Settings tile opens that tile's page (see tilePage) -->
             <intent-filter>
                 <action android:name="android.service.quicksettings.action.QS_TILE_PREFERENCES" />
+            </intent-filter>
+            <!-- Last played tile: resume the last track or mix (QuickTileContract.ACTION_RESUME) -->
+            <intent-filter>
+                <action android:name="com.umutk.pulse.action.RESUME_LAST" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
             <!-- Pulse as the file manager: a folder to browse opens Files full screen -->
             <intent-filter>
@@ -196,6 +209,16 @@
                 <action android:name="android.intent.action.INSERT" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.dir/contact" />
+                <data android:mimeType="vnd.android.cursor.dir/raw_contact" />
+            </intent-filter>
+            <!-- "add contact" / "create new contact" from the dialer and other apps send INSERT_OR_EDIT -->
+            <intent-filter>
+                <action android:name="android.intent.action.INSERT_OR_EDIT" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="vnd.android.cursor.item/contact" />
+                <data android:mimeType="vnd.android.cursor.item/raw_contact" />
+                <data android:mimeType="vnd.android.cursor.dir/contact" />
+                <data android:mimeType="vnd.android.cursor.dir/raw_contact" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
@@ -214,6 +237,14 @@
             </intent-filter>
         </activity>
         <activity-alias android:name=".ContactsLauncher" android:targetActivity=".ContactsActivity" android:exported="true" android:icon="@mipmap/ic_contacts" android:roundIcon="@mipmap/ic_contacts" android:label="@string/contacts_name">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <!-- ArtCraft: launcher for the APKs of MostafaXS1/artcraft-android (download, install, update) -->
+        <activity android:name=".ArtCraftActivity" android:exported="true" android:label="ArtCraft" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
+        <activity-alias android:name=".ArtCraftLauncher" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -487,14 +518,20 @@
         <receiver android:name="com.umutk.pulse.features.DownloadBoot" android:exported="false">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
         </receiver>
-        <service android:name="com.umutk.pulse.features.DownloadService" android:exported="false" android:foregroundServiceType="specialUse">
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="downloads that carry on in the background" />
+        <service android:name="com.umutk.pulse.features.DownloadService" android:exported="false" android:foregroundServiceType="dataSync">
         </service>
         <service android:name="com.umutk.pulse.features.InstallService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="installs that carry on in the background" />
         </service>
         <service android:name=".MonitorService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="live system monitor (floating numbers, notification, alerts)" />
+        </service>
+        <service android:name="com.umutk.pulse.extras.watchdog.MusicPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <service android:name="com.umutk.pulse.extras.watchdog.VideoPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <service android:name="com.umutk.pulse.extras.watchdog.AmbientPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <!-- Media3 session service the player binds to (MusicPlayerEngine) -->
+        <service android:name="com.umutk.pulse.extras.music.MusicPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback">
+            <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
         </service>
         <service android:name=".PulseTile" android:exported="true" android:label="Pulse" android:icon="@drawable/ic_qs_pulse"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -613,6 +650,11 @@
         <service android:name=".PowerMenuTile" android:exported="true" android:label="Power menu" android:icon="@drawable/ic_qs_power"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name="com.umutk.pulse.extras.watchdog.LastPlayedToggleTile" android:exported="true" android:label="Last played" android:icon="@drawable/ic_qs_last_played"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
         <service android:name=".DinkTile" android:exported="true" android:label="Dink" android:icon="@drawable/qs_dink"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -1087,5 +1129,14 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_ios_world" />
         </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.music.WinampWidget" android:label="Pulse · Winamp" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_winamp_info" />
+        </receiver>
+        <activity android:name="com.umutk.pulse.widgets.music.WinampWidgetConfig" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
     </application>
 </manifest>

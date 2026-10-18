@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.IntentFilter
 import android.net.TrafficStats
+import android.net.Uri
 import android.os.BatteryManager
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -51,6 +52,8 @@ object Shell {
     /** Raw results of the last root check and the last Shizuku error, shown in Settings > Permissions. */
     var rootLog by mutableStateOf("")
     var shizukuErr by mutableStateOf("")
+    /** Result of the last Shizuku button press, shown next to the button. */
+    var shizukuMsg by mutableStateOf("")
 
     fun run(cmd: String): String =
         if (shizukuOk()) exec { Shizuku.newProcess(arrayOf("sh", "-c", "exec 2>&1; $cmd"), null, null) }
@@ -96,13 +99,25 @@ object Shell {
         watching = true
         Shizuku.addBinderReceivedListenerSticky { refreshShizuku() }
         Shizuku.addBinderDeadListener { refreshShizuku() }
-        Shizuku.addRequestPermissionResultListener { _, _ -> refreshShizuku() }
+        Shizuku.addRequestPermissionResultListener { _, result ->
+            shizukuMsg = if (result == PackageManager.PERMISSION_GRANTED) tr("Shizuku permission granted.", "Shizuku izni verildi.") else tr("Shizuku permission denied.", "Shizuku izni reddedildi.")
+            refreshShizuku()
+        }
         refreshShizuku()
     }
 
-    fun askShizuku() {
+    /** Shizuku button. Not installed: opens the download page. Installed but not started: says so. Running: asks for permission; the answer arrives in [shizukuMsg] through the listener. */
+    fun askShizuku(ctx: Context) {
         refreshShizuku()
-        if (shizuku == 1) try { Shizuku.requestPermission(1); shizukuErr = "" } catch (e: Throwable) { shizukuErr = "requestPermission: $e" }
+        shizukuMsg = when {
+            shizuku == 2 -> tr("Shizuku is running and allowed.", "Shizuku çalışıyor ve izinli.")
+            shizuku == 0 && !shizukuInstalled(ctx) -> {
+                runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                tr("Shizuku is not installed. Its download page is open.", "Shizuku yüklü değil. İndirme sayfası açıldı.")
+            }
+            shizuku == 0 -> tr("Shizuku not started.", "Shizuku başlatılmamış.")
+            else -> try { Shizuku.requestPermission(1); tr("Permission request sent.", "İzin isteği gönderildi.") } catch (e: Throwable) { "requestPermission: $e" }
+        }
     }
 
     /** Tries every common su variant and path; result and raw outputs go to [rootLog]. Always re-runs, a refusal is never remembered. */

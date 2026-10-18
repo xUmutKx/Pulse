@@ -1,5 +1,7 @@
 package com.umutk.pulse
 
+import com.umutk.pulse.files.editor.SaveTo
+
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -33,7 +35,6 @@ import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.foundation.background
-import androidx.compose.ui.draw.clip
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
@@ -77,6 +78,8 @@ class OfficeViewActivity : ComponentActivity() {
     private var saveAsDest: File? = null
     /** a plain Save on a file that cannot be rewritten in its own format (.doc, .rtf, .odt): the writer waits for a Save as target */
     private var pendingSave by mutableStateOf<Pair<(File) -> Unit, (String) -> Unit>?>(null)
+    /** "TXT olarak kaydet" asks for a .txt target; the text is the screen's current content */
+    private var txtAsk by mutableStateOf(false)
     private val convExt get() = name.substringAfterLast('.', "").lowercase().let { if (it in setOf("doc", "rtf", "odt", "dotx")) "docx" else if (it in setOf("xls", "xlt")) "xlsx" else if (it in setOf("ppt", "pps", "pot")) "pptx" else null }
     private var name = ""
     private var srcFile: File? = null
@@ -133,7 +136,18 @@ class OfficeViewActivity : ComponentActivity() {
 
     private fun fileOps(d: OfDoc, k: OfKind) = OfFileOps(d.name, { d.dirty }, { share(d) }, { pickOther.launch(arrayOf("*/*")) },
         { try { ofOpen(this, ofCreate(k, "${k.app} ${tr("document", "belge")}")) } catch (e: Exception) { Toast.makeText(this, "Could not create: ${e.message ?: e.javaClass.simpleName}", Toast.LENGTH_LONG).show() } },
-        if (k == OfKind.PDF) ({ print(d) }) else null, { info(d, k) }, { trig -> saveAsTrigger = trig })
+        if (k == OfKind.PDF) ({ print(d) }) else null, { info(d, k) }, { trig -> saveAsTrigger = trig },
+        saveTxt = if (k == OfKind.WORD) ({ txtAsk = true }) else null)
+
+    /** writes the screen's plain text to [f] on a worker thread; the result is a toast */
+    private fun saveTxt(f: File) {
+        val text = doc?.txt?.invoke() ?: return
+        Thread {
+            val msg = try { f.writeText(text); tr("Saved as TXT: ${f.name}", "TXT olarak kaydedildi: ${f.name}") }
+                catch (e: Throwable) { "Save failed: ${e.message ?: e.javaClass.simpleName}" }
+            runOnUiThread { Toast.makeText(this, msg, Toast.LENGTH_SHORT).show() }
+        }.start()
+    }
 
     private fun share(d: OfDoc) {
         try {
@@ -192,11 +206,8 @@ class OfficeViewActivity : ComponentActivity() {
                     tmp.copyTo(f, true); return f.name
                 }
                 var ok = false
-                if (!copy) {
-                    srcFile?.let { runCatching { tmp.copyTo(it, true); ok = true } }
-                    val u = srcUri
-                    if (!ok && srcFile == null && u != null) runCatching { contentResolver.openOutputStream(u, "wt")!!.use { o -> tmp.inputStream().use { it.copyTo(o) } }; ok = true }
-                }
+                // plain Save writes the same path; a failure throws (shown as "Save failed") and never turns into a "(copy)" file
+                if (!copy) { SaveTo.overwrite(tmp, srcFile, srcUri, contentResolver); ok = true }
                 val r = if (ok) tr("Saved", "Kaydedildi") else asCopy().let { tr("Saved copy: $it", "Kopya kaydedildi: $it") }
                 tmp.delete(); r
             } catch (e: Throwable) { "Save failed: ${e.message ?: e.javaClass.simpleName}" }
@@ -246,10 +257,13 @@ class OfficeViewActivity : ComponentActivity() {
             }
         }
         pendingSave?.let { (w, done) ->
-            OfSaveAsDialog(name.substringBeforeLast('.') + "_edited.${convExt ?: "docx"}", listOf(convExt ?: "docx"), srcFile?.parentFile, { pendingSave = null; done("Save failed (cancelled)") }) { f ->
-                pendingSave = null; saveAsDest = f; persist(true, w, done)
-            }
+            OfOldFormatDialog(name, convExt ?: "docx", srcFile?.parentFile,
+                onDismiss = { pendingSave = null; done("Save failed (cancelled)") },
+                onOverwrite = { f -> pendingSave = null; saveAsDest = f; persist(true, w, done) },
+                onPick = { f -> pendingSave = null; saveAsDest = f; persist(true, w, done) },
+                onTxt = { pendingSave = null; txtAsk = true })
         }
+        if (txtAsk) OfSaveAsDialog(name, listOf("txt"), srcFile?.parentFile, { txtAsk = false }, overwrite = true) { f -> txtAsk = false; saveTxt(f) }
         if (confirm) WinAlert(onDismissRequest = { confirm = false }, title = { Text(tr("Close without saving?", "Kaydetmeden kapatılsın mı?")) },
             confirmButton = { TextButton({ confirm = false; finish() }) { Text(tr("Close", "Kapat")) } },
             dismissButton = { TextButton({ confirm = false }) { Text(tr("Cancel", "İptal")) } })
