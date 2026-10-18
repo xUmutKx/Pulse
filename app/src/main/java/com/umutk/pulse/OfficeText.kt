@@ -18,6 +18,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.SaveAs
+import androidx.compose.material.icons.outlined.TextSnippet
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -65,18 +66,25 @@ class OfficeTextActivity : ComponentActivity() {
                 var text by remember { mutableStateOf(first) }
                 var saved by remember { mutableStateOf(first) }
                 var saveAs by remember { mutableStateOf(false) }
+                var txtSave by remember { mutableStateOf(false) }
                 fun save() { runCatching { f.writeText(text) }.onSuccess { saved = text }.onFailure { Toast.makeText(this, "Could not save: ${it.message}", Toast.LENGTH_LONG).show() } }
                 BackHandler { if (text != saved) save(); finish() }
                 Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(40.dp).clickable { if (text != saved) save(); finish() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), T.text) }
                         Text(f.name + if (text != saved) " •" else "", color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(40.dp).clickable { txtSave = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.TextSnippet, null, Modifier.size(22.dp), T.text) }
                         Box(Modifier.size(40.dp).clickable { saveAs = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SaveAs, null, Modifier.size(22.dp), T.text) }
                         Box(Modifier.size(40.dp).clickable { save() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Save, null, Modifier.size(22.dp), Look.accent) }
                     }
                     if (saveAs) OfSaveAsDialog(f.name, (listOf(f.extension.lowercase()) + OF_TEXT_EXTS + "tsv").filter { it.isNotEmpty() }.distinct(), f.parentFile, { saveAs = false }) { d ->
                         saveAs = false
                         runCatching { d.writeText(text) }.onSuccess { saved = text; ofOpenText(this@OfficeTextActivity, d); finish() }
+                            .onFailure { Toast.makeText(this@OfficeTextActivity, "Could not save: ${it.message}", Toast.LENGTH_LONG).show() }
+                    }
+                    if (txtSave) OfSaveAsDialog(f.name, listOf("txt"), f.parentFile, { txtSave = false }, overwrite = true) { d ->
+                        txtSave = false
+                        runCatching { d.writeText(text) }.onSuccess { if (d == f) saved = text; Toast.makeText(this@OfficeTextActivity, tr("Saved as TXT: ${d.name}", "TXT olarak kaydedildi: ${d.name}"), Toast.LENGTH_SHORT).show() }
                             .onFailure { Toast.makeText(this@OfficeTextActivity, "Could not save: ${it.message}", Toast.LENGTH_LONG).show() }
                     }
                     BasicTextField(text, { text = it }, Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),

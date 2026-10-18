@@ -379,7 +379,7 @@ private class Cat(val id: String, val icon: String, val title: String, val sub: 
 @Composable
 fun SettingsPage() {
     val ctx = LocalContext.current
-    var cat by remember { mutableStateOf<String?>(null) }
+    var cat by rememberSaveable { mutableStateOf<String?>(null) }
     InnerBackStep(cat != null) { cat = null }
     val cats = listOf(
         Cat("look", "palette", "Appearance", "Theme: ${T.name}"),
@@ -391,13 +391,18 @@ fun SettingsPage() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(if (T.material) 12.dp else 8.dp)) {
         Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title)
         when (cat) {
-            null -> cats.forEach { c ->
+            null -> {
+                // search over the settings categories
+                var q by remember { mutableStateOf("") }
+                PField(q, { q = it }, tr("Search settings", "Ayarlarda ara"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
+                cats.filter { q.isBlank() || it.title.contains(q, true) || it.sub.contains(q, true) }.forEach { c ->
                 PCard(Modifier.clickable { cat = c.id }) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         PIcon(c.icon, Look.accent, 28.dp); Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) { Text(c.title, color = T.text, fontSize = 16.sp, fontWeight = if (T.material) FontWeight.Medium else null); Text(c.sub, color = T.sub, fontSize = 12.sp) }
                         Text("›", color = T.sub, fontSize = 22.sp)
                     }
+                }
                 }
             }
             "look" -> {
@@ -592,6 +597,7 @@ fun RootSettings() {
         val installed = Shell.shizukuInstalled(ctx)
         val sv = runCatching { if (Shizuku.pingBinder()) "v${Shizuku.getVersion()}" else "-" }.getOrDefault("-")
         Text("Shizuku: installed=$installed, binder=${Shell.shizuku > 0}, permission=${Shell.shizuku == 2}, version=$sv\n" + (if (Shell.shizukuErr.isNotBlank()) "error: ${Shell.shizukuErr}\n" else "") + "su: " + Shell.rootLog.ifBlank { "not checked yet" }, color = T.sub, fontSize = 11.sp)
-        PButton("Ask Shizuku") { Shell.askShizuku() }
+        if (Shell.shizukuMsg.isNotBlank()) Text(Shell.shizukuMsg, color = T.sub, fontSize = 11.sp)
+        PButton("Ask Shizuku") { Shell.askShizuku(ctx) }
     }
 }

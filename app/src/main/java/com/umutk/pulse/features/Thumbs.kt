@@ -16,17 +16,21 @@ import java.security.MessageDigest
 
 /** Small picture previews for the file list: memory cache, then a disk cache in cacheDir/thumbs, then a sampled decode. */
 object Thumbs {
-    private const val PX = 160
-    private val mem = LruCache<String, ImageBitmap>(300)
+    // 480 px keeps the grid icons sharp when they are enlarged (the viewer itself decodes the original)
+    private const val PX = 480
+    // a byte budget, not a count: 480 px previews are ~0.9 MB each in memory
+    private val mem = object : LruCache<String, ImageBitmap>((Runtime.getRuntime().maxMemory() / 10).toInt().coerceAtLeast(8 shl 20)) {
+        override fun sizeOf(key: String, value: ImageBitmap): Int = value.width * value.height * 4
+    }
 
     // a few decodes at a time, so a folder like DCIM/Camera does not swamp the IO pool
     @OptIn(ExperimentalCoroutinesApi::class)
     private val io = Dispatchers.IO.limitedParallelism(3)
 
     @Volatile private var trimmed = false
-    private const val MAX_BYTES = 8L shl 20
+    private const val MAX_BYTES = 96L shl 20
 
-    /** The disk cache had no limit: once per run the oldest previews go until it is under 8 MB. */
+    /** The disk cache had no limit: once per run the oldest previews go until it is under 96 MB. */
     private fun trim(dir: File) = runCatching {
         val files = dir.listFiles()?.sortedBy { it.lastModified() } ?: return@runCatching
         var total = files.sumOf { it.length() }
@@ -34,7 +38,7 @@ object Thumbs {
     }
 
     private fun key(f: File): String {
-        val raw = "${f.path}|${f.lastModified()}|${f.length()}"
+        val raw = "v2|${f.path}|${f.lastModified()}|${f.length()}"
         return MessageDigest.getInstance("MD5").digest(raw.toByteArray()).joinToString("") { "%02x".format(it) }
     }
 
@@ -52,7 +56,7 @@ object Thumbs {
             ?: runCatching {
                 // keeps the aspect ratio and reads the EXIF rotation; HEIC included
                 ThumbnailUtils.createImageThumbnail(f, Size(PX, PX), null).also { b ->
-                    runCatching { disk.outputStream().use { b.compress(Bitmap.CompressFormat.WEBP_LOSSY, 80, it) } }
+                    runCatching { disk.outputStream().use { b.compress(Bitmap.CompressFormat.WEBP_LOSSY, 92, it) } }
                 }
             }.getOrNull()
         bmp?.asImageBitmap()?.also { mem.put(k, it) }

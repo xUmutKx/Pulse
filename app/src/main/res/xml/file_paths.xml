@@ -6,4 +6,6 @@
     <cache-path name="installer" path="installer/" />
     <!-- Contacts call backgrounds (shared via ACTION_SEND) -->
     <files-path name="callbg" path="callbg/" />
+    <!-- ArtCraft APKs downloaded to the app's own storage (install through the system installer) -->
+    <files-path name="artcraft" path="artcraft/" />
 </paths>

@@ -188,6 +188,10 @@ fun DebloatScreen(onBack: () -> Unit) {
     // search: by app name or package, on both the uninstall and the reinstall lists
     var query by remember { mutableStateOf("") }
     var sys by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // the reinstall list also holds the system apps of the catalog that are gone from the phone, removed by Canta or another tool (root needed to tell)
+    val removedShown = remember(removed, installed, list) {
+        removed + (installed?.let { inst -> list.keys.filter { it !in inst && it !in removed } } ?: emptyList())
+    }
     LaunchedEffect(Unit) {
         // no list yet (first open, or never downloaded): fetch it once, so each app shows why it can go
         if (list.isEmpty()) {
@@ -406,8 +410,8 @@ fun DebloatScreen(onBack: () -> Unit) {
                 }
             }
         } else {
-            if (removed.isEmpty()) item { Text("Nothing removed yet.", color = T.sub, fontSize = 13.sp) }
-            items(removed.reversed().filter { matchesQuery(it, labels, query) }, key = { "r_$it" }) { pkg ->
+            if (removedShown.isEmpty()) item { Text("Nothing removed yet.", color = T.sub, fontSize = 13.sp) }
+            items(removedShown.reversed().filter { matchesQuery(it, labels, query) }, key = { "r_$it" }) { pkg ->
                 PCard(Modifier.fillMaxWidth()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         AppIcon(pkg, 36.dp)

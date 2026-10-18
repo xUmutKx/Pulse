@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.NoteAdd
 import androidx.compose.material.icons.outlined.Print
 import androidx.compose.material.icons.outlined.SaveAs
+import androidx.compose.material.icons.outlined.TextSnippet
 import androidx.compose.material.icons.outlined.Share
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.DropdownMenu
@@ -92,6 +93,8 @@ class OfDoc(
 ) {
     /** set true once the screen has unsaved changes: closing then asks first (the activity handles it) */
     var dirty by mutableStateOf(false)
+    /** the screen's current content as plain text ("TXT olarak kaydet"); null when the kind has no text form */
+    var txt: (() -> String)? = null
 }
 
 /** One colour set of one look of one app. */
@@ -442,6 +445,8 @@ class OfFileOps(
     val print: (() -> Unit)?, val info: () -> List<Pair<String, String>>,
     /** opens the Save as dialog; the given trigger (the screen's "Save a copy") then writes to the chosen file */
     val saveAs: ((() -> Unit) -> Unit)? = null,
+    /** "Save as TXT": the viewer asks for a .txt target and writes [OfDoc.txt] there; null when not offered */
+    val saveTxt: (() -> Unit)? = null,
 )
 val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 
@@ -484,6 +489,7 @@ private fun ofFileItems(acts: List<OAct>, onBack: () -> Unit, showInfo: () -> Un
     val extra = buildList {
         val cp = own.firstOrNull { it.label == "Save a copy" || it.label == tr("Save a copy", "Kopya kaydet") }
         if (cp != null && ops.saveAs != null) add(OAct(tr("Save as", "Farklı kaydet"), "File", Icons.Outlined.SaveAs, cp.enabled, click = { ops.saveAs.invoke(cp.click) }))
+        ops.saveTxt?.let { t -> add(OAct(tr("Save as TXT", "TXT olarak kaydet"), "File", Icons.Outlined.TextSnippet, click = t)) }
         add(OAct(tr("Open another file", "Başka dosya aç"), "File", Icons.Outlined.FolderOpen, click = ops.openOther))
         add(OAct(tr("New", "Yeni"), "File", Icons.Outlined.NoteAdd, click = ops.newBlank))
         add(OAct(tr("Share", "Paylaş"), "File", Icons.Outlined.Share, click = ops.share))

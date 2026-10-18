@@ -112,6 +112,8 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
     val lastUsed = if (Extra.usageGranted(ctx)) lastUsedByPackage(ctx) else emptyMap()
     val ops = ctx.getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
     return pm.getInstalledPackages(PackageManager.GET_META_DATA).mapNotNull { p ->
+        // extra modules from the Extra Apps store stay out of the app list
+        if (com.umutk.pulse.extras.store.StoreInstaller.isStoreInstalled(ctx, p.packageName)) return@mapNotNull null
         val ai = p.applicationInfo ?: return@mapNotNull null
         AmRow(
             pkg = p.packageName,

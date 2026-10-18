@@ -72,8 +72,11 @@ import com.umutk.pulse.PHead
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import com.umutk.pulse.rate
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.awaitCancellation
+import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -97,10 +100,10 @@ import java.nio.file.StandardOpenOption
 import java.util.concurrent.atomic.AtomicLong
 
 /** Parallel connections for a file the server can split. */
-private const val PARTS = 6
+private const val PARTS = 4
 /** Smaller files are one connection; splitting them costs more than it saves. */
 private const val MIN_SPLIT = 4L shl 20
-private const val BUF = 64 * 1024
+private const val BUF = 256 * 1024
 private const val CH_RUN = "downloads"
 private const val CH_DONE = "downloads_done"
 private const val ID_RUN = 7
@@ -146,6 +149,23 @@ class DlTask(val url: String, file: File) {
     @Volatile var lastMod: String? = null
     /** true while the transfer waits for the network to come back */
     @Volatile var waiting = false
+    /** a store download: keeps the name it was given, is not saved in the list and posts no end notification */
+    @Volatile var quiet = false
+    private var pending = 0L
+    private var shownAt = 0L
+
+    /** Counts [n] more bytes. [done] is published at most every 500 ms; [flush] publishes the rest. */
+    fun count(n: Long) {
+        synchronized(this) {
+            pending += n
+            val now = SystemClock.elapsedRealtime()
+            if (now - shownAt >= 500) { done.value += pending; pending = 0L; shownAt = now }
+        }
+    }
+
+    fun flush() {
+        synchronized(this) { done.value += pending; pending = 0L }
+    }
     /** this download's notification */
     val nid: Int get() = hashCode()
 
@@ -236,7 +256,7 @@ object Downloads {
     internal fun persist() {
         val c = app ?: return
         fun clean(s: String?) = s.orEmpty().replace('\t', ' ')
-        val rows = tasks.value.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod)) }.toSet()
+        val rows = tasks.value.filter { !it.quiet }.mapIndexed { i, t -> "%04d\t%s\t%s\t%s\t%d\t%s\t%d\t%s\t%s".format(i, t.state.value.name, t.url, t.file.path, if (t.resumable) 1 else 0, t.partPos?.joinToString(",").orEmpty(), t.total.value, clean(t.etag), clean(t.lastMod)) }.toSet()
         c.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putStringSet("dl_list", rows).apply()
     }
 
@@ -276,6 +296,36 @@ object Downloads {
         }
     }
 
+    /**
+     * Downloads [url] to [file] and returns when it is whole: the same engine, notification and service as the
+     * Downloads page, for callers that then use the file themselves. [onProgress] gets 0..1 of [size].
+     * Throws IOException when it fails, CancellationException when it is cancelled or removed.
+     */
+    suspend fun fetchFile(c: Context, url: String, file: File, size: Long, onProgress: (Float) -> Unit) {
+        val app = c.applicationContext
+        load(app)
+        val t = DlTask(url, file).apply { quiet = true; job = currentCoroutineContext()[Job] }
+        tasks.update { it + t }
+        DownloadService.start(app)
+        try {
+            val returned = java.util.concurrent.atomic.AtomicBoolean(false)
+            coroutineScope {
+                val show = launch { t.done.collect { onProgress((it.toFloat() / size).coerceIn(0f, 1f)) } }
+                // cancelling the caller (before the fetch has returned) stops the transfer at its next read
+                val stop = launch { try { awaitCancellation() } finally { if (!returned.get()) t.cancelled = true } }
+                try { t.fetch() } finally { returned.set(true); show.cancel(); stop.cancel() }
+            }
+            when {
+                t.state.value == DlState.DONE -> Unit
+                t.cancelled -> throw CancellationException("cancelled")
+                else -> throw IOException(t.error.value.ifEmpty { "download failed" })
+            }
+        } finally {
+            tasks.update { it - t }
+            if (t.state.value != DlState.DONE) t.file.delete()
+        }
+    }
+
     /** Stops a download (its partial file goes too) or removes a finished one together with its file. */
     fun remove(t: DlTask) {
         t.cancelled = true
@@ -289,7 +339,7 @@ object Downloads {
 
     /** Holds a running download: the transfer stops and the partial file stays, so [resume] continues it. */
     fun pause(t: DlTask) {
-        if (t.state.value != DlState.RUNNING) return
+        if (t.state.value != DlState.RUNNING || t.quiet) return
         t.paused = true
         t.state.value = DlState.PAUSED
         persist()
@@ -472,7 +522,7 @@ private fun open(url: String, range: String, ifRange: String? = null): HttpURLCo
     repeat(10) {
         val c = (u.openConnection() as HttpURLConnection).apply {
             instanceFollowRedirects = false
-            connectTimeout = 20_000
+            connectTimeout = 15_000
             readTimeout = 30_000
             // some hosts refuse the default Java agent
             setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/120 Mobile Safari/537.36")
@@ -588,7 +638,7 @@ private suspend fun DlTask.transfer(): Boolean {
         if (started && ranged && ((etag != null && tag != etag) || (lastMod != null && mod != lastMod) || (total.value > 0 && size != total.value))) throw Changed()
         etag = tag
         lastMod = mod
-        if (!started) rename(dispositionName(first.getHeaderField("Content-Disposition")) ?: Uri.decode(first.url.path).takeIf { first.url.toString() != url })
+        if (!started && !quiet) rename(dispositionName(first.getHeaderField("Content-Disposition")) ?: Uri.decode(first.url.path).takeIf { first.url.toString() != url })
         // no ranges this time: the parts cannot go on, the copy below starts from the first byte
         if (partPos != null && !ranged) partPos = null
         total.value = size
@@ -602,6 +652,7 @@ private suspend fun DlTask.transfer(): Boolean {
         }
     } finally {
         first.disconnect()
+        flush()
     }
 }
 
@@ -633,7 +684,7 @@ private suspend fun DlTask.split(total: Long): Boolean = coroutineScope {
                             val bb = ByteBuffer.wrap(buf, 0, n)
                             while (bb.hasRemaining()) ch.write(bb, pos[i] + bb.position())
                             pos[i] += n
-                            done.update { it + n }
+                            count(n.toLong())
                             throttle(n)
                         }
                     }
@@ -682,7 +733,7 @@ private fun DlTask.copy(ins: InputStream, append: Boolean = false, start: Long =
                 return true
             }
             out.write(buf, 0, n)
-            done.update { it + n }
+            count(n.toLong())
             throttle(n)
         }
     }
@@ -711,7 +762,7 @@ class DownloadService : Service() {
         val nm = getSystemService(NotificationManager::class.java)
         nm.createNotificationChannel(NotificationChannel(CH_RUN, "Downloads", NotificationManager.IMPORTANCE_LOW))
         val fg = runCatching {
-            if (Build.VERSION.SDK_INT >= 34) startForeground(ID_RUN, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID_RUN, note())
+            if (Build.VERSION.SDK_INT >= 34) startForeground(ID_RUN, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(ID_RUN, note())
         }
         if (fg.isFailure) { stopSelf(startId); return START_NOT_STICKY }
         // a restart after the process was killed brings the list back and carries on the running ones
@@ -735,19 +786,18 @@ class DownloadService : Service() {
             watching = true
             CoroutineScope(Dispatchers.Main).launch {
                 var armed = 0L
+                var pass = 0
                 while (true) {
                     // the guard alarm brings the service back if Android kills it; re-armed while downloads run
                     if (SystemClock.elapsedRealtime() - armed > 30_000L) { DlGuard.arm(this@DownloadService); armed = SystemClock.elapsedRealtime() }
                     unstick()
                     withContext(Dispatchers.IO) {
+                        // speeds and progress every 500 ms; notifications and the saved list every second (the system drops faster updates)
                         Downloads.tick()
-                        // shortcut: progress is saved once a second, so a kill loses at most that much (the bytes are re-fetched)
-                        Downloads.persist()
-                        post(nm)
+                        if (pass++ % 2 == 0) { Downloads.persist(); post(nm) }
                     }
                     if (Downloads.activeCount() == 0) break
-                    // the system drops more than about 5 notification updates a second
-                    delay(if (Downloads.activeCount() > 3) 2000 else 1000)
+                    delay(500)
                 }
                 // back on the main thread: nothing runs any more, so this pass sees every end
                 DlGuard.cancel(this@DownloadService)
@@ -770,7 +820,7 @@ class DownloadService : Service() {
     private fun unstick() {
         val now = SystemClock.elapsedRealtime()
         progress.keys.retainAll(Downloads.tasks.value.toSet())
-        Downloads.tasks.value.filter { it.state.value == DlState.RUNNING }.forEach { t ->
+        Downloads.tasks.value.filter { it.state.value == DlState.RUNNING && !it.quiet }.forEach { t ->
             val (b, at) = progress[t] ?: (-1L to now)
             if (t.done.value != b || t.waiting || t.error.value.startsWith("retrying")) { progress[t] = t.done.value to now; return@forEach }
             if (now - at > 90_000L) {
@@ -792,7 +842,7 @@ class DownloadService : Service() {
                 st == DlState.RUNNING -> nm.notify(t.nid, Downloads.runNote(this, t))
                 was != DlState.RUNNING -> Unit
                 st == DlState.PAUSED -> nm.notify(t.nid, Downloads.pausedNote(this, t))
-                else -> Downloads.notifyDone(t, st == DlState.DONE)
+                !t.quiet -> Downloads.notifyDone(t, st == DlState.DONE)
             }
         }
         nm.notify(ID_RUN, note())

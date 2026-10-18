@@ -47,6 +47,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "battery" -> BatteryHealthScreen(back)
         id == "health" -> HealthScreen(back)
         id == "toolkit" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.ToolkitPage() }
+        id == "extrastore" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.ui.MaxWidthBox { com.umutk.pulse.extras.store.ExtraStoreScreen(onBack = back) } }
         id == "installer" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.InstallerPage() }
         id == "installer_settings" -> {
             androidx.activity.compose.BackHandler { back() }
@@ -69,5 +70,9 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "netusage" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.NetUsageScreen(back) }
         id == "guide" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.GuidePage() }
         id == "authenticator" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AuthenticatorScreen(back) }
+        id == "video" -> com.umutk.pulse.extras.video.VideoHub(back)
+        id == "music" -> com.umutk.pulse.extras.music.MusicHub(back)
+        id == "whitenoise" -> com.umutk.pulse.extras.whitenoise.WhiteNoiseHub(back)
+        id == "playlists" -> com.umutk.pulse.extras.playlists.OnlinePlaylistsHub(back)
     }
 }

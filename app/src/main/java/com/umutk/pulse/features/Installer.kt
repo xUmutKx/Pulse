@@ -697,7 +697,7 @@ fun InstallerPage() {
                 AUTH_LABEL.forEach { (a, label) -> PChip(prof.auth == a, label) { Installer.edit(ctx) { it.copy(auth = a) } } }
             }
             Text(if (root) "Root: available" else "Root: not available", color = T.sub, fontSize = 12.sp)
-            Row(Modifier.clickable(enabled = Shell.shizuku == 1) { Shell.askShizuku() }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.clickable { Shell.askShizuku(ctx) }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 PIcon("power", T.sub, 16.dp)
                 Text(when (Shell.shizuku) { 2 -> "Shizuku: running, granted"; 1 -> "Shizuku: running, not granted"; else -> "Shizuku: not running" }, color = T.sub, fontSize = 12.sp)
             }

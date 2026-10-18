@@ -1,0 +1,41 @@
+package com.umutk.pulse.files.root
+
+import com.umutk.pulse.Shell
+import java.io.File
+
+/**
+ * Root access for the Files app: folders the app cannot read (/data, other apps' Android/data and obb)
+ * are listed through one `su -c ls` call. Read-only. Our own code, written from the idea of Material Files'
+ * root service (GPL, not copied); no libsu dependency.
+ * shortcut: names with a newline inside are cut at the newline, and a whole folder is one su call with no cache, upgrade to a root service when large folders feel slow.
+ */
+object RootFs {
+    sealed class Result {
+        class Ok(val entries: List<Entry>) : Result()
+        /** no su and no Shizuku grant: the caller shows the "root needed" message */
+        object NoRoot : Result()
+        class Failed(val msg: String) : Result()
+    }
+
+    class Entry(val name: String, val dir: Boolean)
+
+    /** Folders the app cannot list by itself: they only show up through root. */
+    fun needsRoot(path: String) = path.startsWith("/data") || path.contains("/Android/data") || path.contains("/Android/obb")
+
+    /** Files can start without Pulse's main screen, so the root check may never have run: run it once here. */
+    fun ensureChecked() { if (Shell.root == null) Shell.detectRoot() }
+
+    fun available() = Shell.root == true || Shell.shizuku == 2
+
+    fun list(dir: File): Result {
+        if (!available()) return Result.NoRoot
+        val q = dir.path.replace("'", "'\\''")
+        // the exit code is echoed last, so an su refusal or a missing folder is not mistaken for an empty one
+        val out = Shell.run("ls -1Ap -- '$q' 2>&1; echo __rc=\$?")
+        val lines = out.lines().filter { it.isNotBlank() }
+        val rc = lines.lastOrNull()?.removePrefix("__rc=")?.toIntOrNull() ?: return Result.Failed("no answer from su")
+        val body = lines.dropLast(1)
+        if (rc != 0) return Result.Failed(body.lastOrNull() ?: "ls exit $rc")
+        return Result.Ok(body.map { if (it.endsWith("/")) Entry(it.dropLast(1), true) else Entry(it, false) })
+    }
+}

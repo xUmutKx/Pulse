@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -336,7 +337,13 @@ fun BenchPage() {
 @Composable
 fun AppsPage() {
     val open = LocalOpenTool.current
-    AppManagerScreen(onOpen = { open("app:$it") })
+    // tablet: app list on the left, the picked app's details on the right; phone: details open as a sub screen
+    var sel by rememberSaveable { mutableStateOf("") }
+    if (com.umutk.pulse.ui.winClass() == com.umutk.pulse.ui.WinClass.Expanded) com.umutk.pulse.ui.ListDetail(
+        hasDetail = sel.isNotEmpty(), listWidth = 380.dp,
+        list = { AppManagerScreen(onOpen = { sel = it }) },
+        detail = { if (sel.isNotEmpty()) key(sel) { com.umutk.pulse.features.AppDetailsScreen(sel, { sel = "" }) } })
+    else com.umutk.pulse.ui.MaxWidthBox { AppManagerScreen(onOpen = { open("app:$it") }) }
 }
 
 // ---------------------------------------------------------------- searchable lists

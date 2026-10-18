@@ -37,7 +37,7 @@ fun AccessNeededCard(feature: String, limited: String = "", modifier: Modifier =
     val shizukuState = when {
         Shell.shizuku == 1 -> tr("Shizuku: permission needed", "Shizuku: izin gerekli")
         Shell.shizuku == 2 -> tr("Shizuku: ready", "Shizuku: hazır")
-        installed -> tr("Shizuku: not running", "Shizuku: çalışmıyor")
+        installed -> tr("Shizuku not started", "Shizuku başlatılmamış")
         else -> tr("Shizuku: not installed", "Shizuku: yüklü değil")
     }
     PCard(modifier) {
@@ -45,12 +45,13 @@ fun AccessNeededCard(feature: String, limited: String = "", modifier: Modifier =
         if (limited.isNotBlank()) Text(limited, color = T.sub, fontSize = 13.sp)
         Text(if (rootTried) tr("Root: not available", "Root: yok") else tr("Root: not detected", "Root: algılanmadı"), color = T.sub, fontSize = 13.sp)
         Text(shizukuState, color = T.sub, fontSize = 13.sp)
+        if (Shell.shizukuMsg.isNotBlank()) Text(Shell.shizukuMsg, color = T.sub, fontSize = 13.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton(tr("Check root", "Root'u dene")) { scope.launch { withContext(Dispatchers.IO) { Shell.detectRoot() }; rootTried = true } }
             when {
-                Shell.shizuku == 1 -> PButton(tr("Allow Shizuku", "Shizuku'ya izin ver")) { Shell.askShizuku() }
+                Shell.shizuku == 1 -> PButton(tr("Allow Shizuku", "Shizuku'ya izin ver")) { Shell.askShizuku(ctx) }
                 installed -> PButton(tr("Open Shizuku", "Shizuku'yu aç")) { (listOf(SHIZUKU_PKG, "rikka.shizuku", "dev.rikka.shizuku").firstNotNullOfOrNull { ctx.packageManager.getLaunchIntentForPackage(it) })?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
-                else -> PButton(tr("Get Shizuku", "Shizuku'yu indir")) { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://shizuku.rikka.app/download/")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+                else -> PButton(tr("Get Shizuku", "Shizuku'yu indir")) { Shell.askShizuku(ctx) }
             }
         }
     }

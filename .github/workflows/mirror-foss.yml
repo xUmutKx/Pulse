@@ -1,0 +1,21 @@
+name: Mirror FOSS APKs
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  mirror:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: python3 -I tools/mirror_foss.py
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit changes
+        run: |
+          git config user.name "pulse-mirror"
+          git config user.email "actions@users.noreply.github.com"
+          git add extras
+          git diff --cached --quiet || (git commit -m "Mirror FOSS APKs" && git push)
