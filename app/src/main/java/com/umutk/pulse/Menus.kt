@@ -13,9 +13,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.outlined.Contacts
+import androidx.compose.material.icons.outlined.VideoLibrary
+import androidx.compose.material.icons.outlined.Subject
+import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -93,10 +97,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
         )),
         // keys are the per-look icon names (Win11 Fluency PNG, 95/XP/7 packs or Fluent vectors); Material uses the ImageVector
         MenuTop(EXTRA_APPS, listOf(
-            MenuEntry(tr("Files", "Dosyalar"), icon = Icons.Outlined.Folder, key = "folder") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
-            MenuEntry(tr("Photos", "Fotoğraflar"), icon = Icons.Outlined.Image, key = "image") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
-            MenuEntry(tr("Calendar", "Takvim"), icon = Icons.Outlined.CalendarMonth, key = "calendar") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
-            MenuEntry(tr("Contacts", "Kişiler"), icon = Icons.Outlined.Contacts, key = "users") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
+            MenuEntry(tr("Store", "Mağaza"), icon = Icons.Outlined.Download, key = "download") { openTool("extrastore") },
         )),
     )
     return MenuHost(tops) {
@@ -104,7 +105,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
         if (font) WinAlert(
             onDismissRequest = { font = false },
             title = { Text("Font size ${(Opt.fontScale * 100).toInt()}%", color = T.text) },
-            text = { PSlider(Opt.fontScale, { Opt.fontScale = it }, .8f..1.4f, { Opt.save(ctx) }) },
+            text = { PSlider(Opt.fontScale, { Opt.fontScale = it }, .8f..1.4f) { Opt.save(ctx) } },
             confirmButton = { PButton("OK") { font = false } },
         )
         if (about) PDialog("Pulse $version", "A task manager for Android that looks like Windows, with a file explorer, downloads, an app installer, network usage, a 20-tool toolkit, widgets and a terminal.", "OK", { about = false }, { about = false }, info = true)
@@ -114,7 +115,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
 private val EXTRA_APPS get() = tr("Extra apps", "Ek uygulamalar")
 
 /** Class-name launch so the menu compiles before the Calendar/Contacts activities exist. */
-private fun launchExtra(ctx: Context, cls: String) {
+internal fun launchExtra(ctx: Context, cls: String) {
     try { ctx.startActivity(Intent().setClassName(ctx, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
 }
 

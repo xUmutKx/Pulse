@@ -240,35 +240,40 @@ fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Mo
 }
 
 @Composable
-fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, onDone: () -> Unit) {
+fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, thick: Boolean = false, modifier: Modifier = Modifier, onDone: () -> Unit) {
     val t = T
     if (colorOs) { ColorOsSlider(value, onChange, range, onDone); return }
     if (oneUi) { OneUiSlider(value, onChange, range, onDone); return }
-    if (t.material) { Slider(value, onChange, valueRange = range, onValueChangeFinished = onDone, colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent, inactiveTrackColor = Look.accent.copy(alpha = .24f))); return }
+    // thick: a wide groove and a big thumb, drawn by this function for every look (Material included)
+    if (t.material && !thick) { Slider(value, onChange, modifier = modifier, valueRange = range, onValueChangeFinished = onDone, colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent, inactiveTrackColor = Look.accent.copy(alpha = .24f))); return }
     val frac = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
-    BoxWithConstraints(Modifier.fillMaxWidth().height(32.dp).pointerInput(Unit) {
+    val groove = if (thick) 12.dp else 4.dp
+    val thumbW = if (thick) 22.dp else 11.dp
+    val thumbH = if (thick) 30.dp else 21.dp
+    BoxWithConstraints(modifier.fillMaxWidth().height(if (thick) 40.dp else 32.dp).pointerInput(Unit) {
         detectTapGestures { o -> onChange(range.start + (o.x / size.width).coerceIn(0f, 1f) * (range.endInclusive - range.start)); onDone() }
     }.pointerInput(Unit) {
         detectHorizontalDragGestures(onDragEnd = onDone) { c, _ -> onChange(range.start + (c.position.x / size.width).coerceIn(0f, 1f) * (range.endInclusive - range.start)) }
     }, contentAlignment = Alignment.CenterStart) {
         if (win95Authentic) { // 95 trackbar: sunken 4 px groove, raised 11x21 grey thumb
-            Box(Modifier.fillMaxWidth().height(4.dp).background(Color(0xFFC0C0C0)).bevel(false))
-            Box(Modifier.offset(maxWidth * frac - 5.dp).size(11.dp, 21.dp).background(Color(0xFFC0C0C0)).bevel(true))
+            Box(Modifier.fillMaxWidth().height(groove).background(Color(0xFFC0C0C0)).bevel(false))
+            Box(Modifier.offset(maxWidth * frac - thumbW / 2).size(thumbW, thumbH).background(Color(0xFFC0C0C0)).bevel(true))
             return@BoxWithConstraints
         }
         if (win7Authentic) { // Win7 trackbar: pale sunken groove, glossy Aero thumb
-            Box(Modifier.fillMaxWidth().height(4.dp).background(Color(0xFFE7EAEA)).border(1.dp, Color(0xFFB0B4B8)))
-            Box(Modifier.offset(maxWidth * frac - 5.dp).size(11.dp, 20.dp).aero7(false))
+            Box(Modifier.fillMaxWidth().height(groove).background(Color(0xFFE7EAEA)).border(1.dp, Color(0xFFB0B4B8)))
+            Box(Modifier.offset(maxWidth * frac - thumbW / 2).size(thumbW, thumbH - 1.dp).aero7(false))
             return@BoxWithConstraints
         }
         if (xpAuthentic) { // XP trackbar: thin sunken groove, Luna thumb
-            Box(Modifier.fillMaxWidth().height(4.dp).background(Color(0xFFF4F3EE)).border(1.dp, Color(0xFF9D9C99)))
-            Box(Modifier.offset(maxWidth * frac - 5.dp).size(11.dp, 21.dp).luna(false))
+            Box(Modifier.fillMaxWidth().height(groove).background(Color(0xFFF4F3EE)).border(1.dp, Color(0xFF9D9C99)))
+            Box(Modifier.offset(maxWidth * frac - thumbW / 2).size(thumbW, thumbH).luna(false))
             return@BoxWithConstraints
         }
-        Box(Modifier.fillMaxWidth().height(if (classic) 4.dp else 3.dp).background(t.line))
-        Box(Modifier.fillMaxWidth(frac).height(if (classic) 4.dp else 3.dp).background(if (classic) t.line else Look.accent))
-        Box(Modifier.offset(maxWidth * frac - 8.dp).size(if (classic) 10.dp else 16.dp, 18.dp).then(if (t.bevel) Modifier.background(t.bg).bevel(true) else Modifier.background(if (classic) t.bg else Look.accent, if (classic) RoundedCornerShape(2.dp) else CircleShape).then(if (classic) Modifier.border(1.dp, t.line, RoundedCornerShape(2.dp)) else Modifier)))
+        val bar = if (thick) 12.dp else if (classic) 4.dp else 3.dp
+        Box(Modifier.fillMaxWidth().height(bar).background(t.line))
+        Box(Modifier.fillMaxWidth(frac).height(bar).background(if (classic) t.line else Look.accent))
+        Box(Modifier.offset(maxWidth * frac - (if (thick) thumbW else if (classic) 10.dp else 16.dp) / 2).size(if (thick) thumbW else if (classic) 10.dp else 16.dp, if (thick) thumbH else 18.dp).then(if (t.bevel) Modifier.background(t.bg).bevel(true) else Modifier.background(if (classic) t.bg else Look.accent, if (classic) RoundedCornerShape(2.dp) else CircleShape).then(if (classic) Modifier.border(1.dp, t.line, RoundedCornerShape(2.dp)) else Modifier)))
     }
 }
 

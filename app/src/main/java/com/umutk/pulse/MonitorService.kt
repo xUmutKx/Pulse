@@ -473,6 +473,25 @@ class PowerMenuTile : ToolkitTile() {
     override val trName: String get() = "Güç menüsü"
     override fun act(): Boolean { if (!TileActions.powerMenu()) openPulse(start); return false }
 }
+/** Quick Settings tile "last played": shows the last track or mix ([QuickTileContract]); a tap resumes it through MainActivity. */
+class LastPlayedTile : TileService() {
+    override fun onStartListening() { Opt.load(this); paint() }
+    private fun paint() {
+        val last = com.umutk.pulse.extras.watchdog.QuickTileContract.load(this)
+        qsTile?.apply {
+            label = com.umutk.pulse.extras.watchdog.QuickTileContract.label(this@LastPlayedTile)
+            state = if (last != null) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            subtitle = last?.let { if (it.kind == com.umutk.pulse.extras.watchdog.QuickTileContract.Kind.MIX) tr("Mix", "Karışım") else tr("Track", "Parça") }
+            updateTile()
+        }
+    }
+    override fun onClick() {
+        val i = com.umutk.pulse.extras.watchdog.QuickTileContract.resumeIntent(this, MainActivity::class.java)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+        if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+        else @Suppress("DEPRECATION") startActivityAndCollapse(i)
+    }
+}
 
 /** The system power menu: through the App lock accessibility service when it runs, otherwise a long power-key press with root/Shizuku. */
 object PowerMenu {

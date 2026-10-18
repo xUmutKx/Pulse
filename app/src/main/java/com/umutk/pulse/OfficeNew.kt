@@ -7,6 +7,7 @@ import android.graphics.pdf.PdfDocument
 import java.io.BufferedOutputStream
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import java.io.File
 import java.io.FileOutputStream
 import java.util.zip.ZipEntry
@@ -116,11 +117,13 @@ fun ofCreateIn(dir: File, base: String, ext: String): File {
 /** Creates "<base>.<ext>" in the Office folder (a number is added when the name is taken) and returns it. */
 fun ofCreate(k: OfKind, base: String): File = ofCreateIn(OfficePrefs.folder, base, k.ext)
 
-/** "Save as" dialog shared by the viewer and the text editor: name, extension (only [exts]), folder; [onPick] gets the free target file. */
+/** "Save as" dialog shared by the viewer and the text editor: name, extension (only [exts]), folder; [onPick] gets the free target file.
+ *  [overwrite] adds an "Üstüne yaz" switch: the name is then taken as it is (an existing file of that name is replaced). */
 @androidx.compose.runtime.Composable
-fun OfSaveAsDialog(name: String, exts: List<String>, srcDir: File?, onDismiss: () -> Unit, onPick: (File) -> Unit) {
+fun OfSaveAsDialog(name: String, exts: List<String>, srcDir: File?, onDismiss: () -> Unit, overwrite: Boolean = false, onPick: (File) -> Unit) {
     var base by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(name.substringBeforeLast('.')) }
     var ext by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(name.substringAfterLast('.', exts.first()).lowercase().takeIf { it in exts } ?: exts.first()) }
+    var over by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val root = android.os.Environment.getExternalStorageDirectory()
     val dirs = listOfNotNull(OfficePrefs.folder, srcDir, File(root, "Documents"), File(root, "Download")).distinctBy { it.path }
     var dir by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(dirs.first()) }
@@ -133,13 +136,39 @@ fun OfSaveAsDialog(name: String, exts: List<String>, srcDir: File?, onDismiss: (
             androidx.compose.foundation.layout.Row(androidx.compose.ui.Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
                 dirs.forEach { d -> PChip(dir.path == d.path, if (d.path == OfficePrefs.folder.path) "Office" else d.name) { dir = d } }
             }
+            if (overwrite) PChip(over, tr("Overwrite", "Üstüne yaz")) { over = !over }
         } },
         confirmButton = { androidx.compose.material3.TextButton({
             val clean = base.trim().ifEmpty { "Document" }.replace(Regex("[\\\\/:*?\"<>|]"), "_")
             dir.mkdirs()
             var f = File(dir, "$clean.$ext"); var n = 2
-            while (f.exists()) f = File(dir, "$clean ${n++}.$ext")
+            while (!over && f.exists()) f = File(dir, "$clean ${n++}.$ext")
             onPick(f)
         }) { androidx.compose.material3.Text(tr("Save", "Kaydet")) } },
         dismissButton = { androidx.compose.material3.TextButton(onDismiss) { androidx.compose.material3.Text(tr("Cancel", "İptal")) } })
+}
+
+/**
+ * Plain Save on a file the Office page cannot write back in its own format (.doc, .xls, .ppt, .rtf, .odt, ...).
+ * Nothing is written until the user picks: overwrite the converted copy beside the original (the original stays),
+ * a Save as target, or a TXT copy. [onOverwrite] / [onPick] get the target file; [onTxt] hands over to the TXT flow.
+ */
+@androidx.compose.runtime.Composable
+fun OfOldFormatDialog(name: String, convExt: String, srcDir: File?, onDismiss: () -> Unit, onOverwrite: (File) -> Unit, onPick: (File) -> Unit, onTxt: () -> Unit) {
+    var asSaveAs by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
+    if (asSaveAs) { OfSaveAsDialog(name.substringBeforeLast('.') + "_edited.$convExt", listOf(convExt), srcDir, onDismiss, onPick = onPick); return }
+    val base = name.substringBeforeLast('.')
+    WinAlert(onDismissRequest = onDismiss, title = { androidx.compose.material3.Text(tr("Save", "Kaydet")) },
+        text = { androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+            androidx.compose.material3.Text(tr("$name is an old format and cannot be saved in place. The original file stays unchanged.",
+                "$name eski bir biçim, olduğu yere kaydedilemez. Özgün dosya değişmeden kalır."), fontSize = 14.sp)
+            if (srcDir != null) androidx.compose.material3.Text(tr("Overwrite writes $base.$convExt in the same folder (replacing one with that name).",
+                "Üstüne yaz, aynı klasörde $base.$convExt dosyasını yazar (aynı adlı varsa değiştirir)."), fontSize = 13.sp)
+        } },
+        confirmButton = { if (srcDir != null) androidx.compose.material3.TextButton({ onOverwrite(File(srcDir, "$base.$convExt")) }) { androidx.compose.material3.Text(tr("Overwrite", "Üstüne yaz")) } },
+        dismissButton = { androidx.compose.foundation.layout.Column {
+            androidx.compose.material3.TextButton({ asSaveAs = true }) { androidx.compose.material3.Text(tr("Save as", "Farklı kaydet")) }
+            androidx.compose.material3.TextButton(onTxt) { androidx.compose.material3.Text(tr("Save as TXT", "TXT olarak kaydet")) }
+            androidx.compose.material3.TextButton(onDismiss) { androidx.compose.material3.Text(tr("Cancel", "İptal")) }
+        } })
 }

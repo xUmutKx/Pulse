@@ -127,9 +127,10 @@ val Themes = listOf(
 )
 
 /** Material accents: pastel, plus the four wallpaper themes A-D (indices 7..10). */
-val MaterialAccents = listOf(0xFFA8D8EA, 0xFFB5EAD7, 0xFFC7CEEA, 0xFFFFDAC1, 0xFFFFB7B2, 0xFFE2F0CB, 0xFFF8BBD0,
-    0xFF2D58C8, 0xFFEE3836, 0xFF3B828F, 0xFF3C698C,
-    0xFFD1C4E9, 0xFFB2DFDB, 0xFFFFF9C4, 0xFFBBDEFB, 0xFFC8E6C9, 0xFFF0C6DA, 0xFFD7CCC8, 0xFFFFE0B2, 0xFFB3E5FC, 0xFFE1BEE7).map { Color(it) }
+val MaterialAccents = listOf(0xFF1E88E5, 0xFF00ACC1, 0xFF00897B, 0xFF43A047, 0xFF7CB342,
+    0xFFFFB300, 0xFFFB8C00, 0xFFF4511E, 0xFFE53935, 0xFFD81B60,
+    0xFF8E24AA, 0xFF5E35B1, 0xFF3949AB, 0xFF039BE5, 0xFF26A69A,
+    0xFF9CCC65, 0xFFFFCA28, 0xFFEC407A, 0xFFAB47BC, 0xFF5C6BC0).map { Color(it) }
 
 /** Windows accents: the classic Task Manager colours, with the wallpaper themes A-D at 7..10. */
 val WinAccents = listOf(0xFF0067C0, 0xFF00A388, 0xFF6750A4, 0xFFD13438, 0xFFE67E22, 0xFF2E7D32, 0xFFC2185B,
@@ -160,13 +161,17 @@ object Look {
     val cornerDp get() = when (corner) { "small" -> 8.dp; "large" -> 28.dp; else -> 20.dp }
     @Volatile var resolved: PTheme? = null   // the Material look as resolved for this composition (see effective in MainActivity)
     val current get() = resolved ?: theme
-    val accent get() = if (current.id == "amoled") Color.White else if (current.id == "oneui" || current.id == "coloros") current.accent else (if (current.material || !current.tabs || current.id == "win10" || current.id == "win11") accentsFor(current.material).getOrNull(accentIdx) ?: current.accent else current.accent)
+    val accent get() = if (current.id == "amoled" || (current.id == "material" && accentIdx == -1)) Color.White else if (current.id == "oneui" || current.id == "coloros") current.accent else (if (current.material || !current.tabs || current.id == "win10" || current.id == "win11") accentsFor(current.material).getOrNull(accentIdx) ?: current.accent else current.accent)
         // Windows 11: the accent is drawn half see-through
         .let { if (current.id == "win11") it.copy(alpha = .5f) else it }
 }
 
 /** Text colour on an accent: black on light accents, white on dark ones. */
 fun onAccent(c: Color): Color = if (c.luminance() > .45f) Color.Black else Color.White
+
+/** Round plus buttons: AMOLED is a black button with a white mark, every other look uses its accent. */
+fun fabFill(): Color = if (T.id == "amoled") Color.Black else Look.accent
+fun fabMark(): Color = if (T.id == "amoled") Color.White else onAccent(Look.accent)
 
 /** Windows 95 raised / sunken edge. */
 fun Modifier.bevel(raised: Boolean = true): Modifier = drawBehind {

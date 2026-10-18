@@ -212,7 +212,9 @@ fun CalMain() {
             })
         },
         floatingActionButton = {
-            if (!sOpen && !results) FloatingActionButton({ newEvent(if (anchor == LocalDate.now()) LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0) else anchor.atTime(9, 0)) }, shape = calFabShape() ?: FloatingActionButtonDefaults.shape) { CalIc("add", Icons.Outlined.Add, ct("New event")) }
+            if (!sOpen && !results) FloatingActionButton({ newEvent(if (anchor == LocalDate.now()) LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0) else anchor.atTime(9, 0)) }, shape = calFabShape() ?: FloatingActionButtonDefaults.shape,
+                containerColor = if (T.id == "amoled") fabFill() else FloatingActionButtonDefaults.containerColor,
+                contentColor = if (T.id == "amoled") fabMark() else contentColorFor(FloatingActionButtonDefaults.containerColor)) { CalIc("add", Icons.Outlined.Add, ct("New event")) }
         }
     ) { pad ->
         Box(Modifier.fillMaxSize()) {

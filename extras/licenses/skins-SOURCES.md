@@ -1,0 +1,22 @@
+# Skin sources (licences not stated by the authors; classic Winamp skins are community art)
+- Winamp Base 2.91: Nullsoft, via webamp-demo
+- Windows Classic: archive.org winampskin_Windows_Classic
+- Internet Archive: webamp-demo
+- Skinner Atlas: webamp-demo
+- TopazAmp: webamp-demo
+- Vizor: webamp-demo
+- XMMS Turquoise: webamp-demo
+- Zaxon Remake: webamp-demo
+- Green Dimension: webamp-demo
+- Amiga PPC Dark: webamp-demo
+- My Funny Valentine: webamp-demo
+- MpAmp: archive.org winampskin_MpAmp
+- 3D Show II: archive.org winampskin_3D_Show_II
+- Mistletoe: archive.org winampskins_Mistletoe
+- HackerS_kin: Mickey Knox, archive.org
+- Italo Disco Yellow: archive.org
+- Amp Ayu: archive.org winampskins_amp_ayu11
+- GEM Water: bunji, archive.org
+- Je t'aime: archive.org winampskins_je_taime
+- Boreas: jww, archive.org
+- Chimera: archive.org winampskins_Chimera1-0

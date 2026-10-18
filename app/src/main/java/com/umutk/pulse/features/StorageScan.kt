@@ -10,6 +10,7 @@ import kotlinx.coroutines.launch
 import java.io.File
 import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicBoolean
+import com.umutk.pulse.Shell
 
 /**
  * One walk of the shared storage, used by the folder tree and the file-type breakdown alike. It runs once and the
@@ -82,6 +83,24 @@ object StorageScan {
         ensure(root)
     }
 
+    /** Sizes the children of Android/data or Android/obb with one `du` through root or Shizuku; 0 when neither is granted. */
+    private fun androidSizes(d: File, sizes: HashMap<String, Long>, kids: HashMap<String, List<File>>): Long {
+        if (Shell.root != true && Shell.shizuku != 2) return 0L
+        val q = d.path.replace("'", "'\\''")
+        val list = ArrayList<File>()
+        var total = 0L
+        for (line in Shell.run("du -sk '$q'/* 2>/dev/null").lines()) {
+            val t = line.indexOf('\t')
+            if (t <= 0) continue
+            val bytes = (line.substring(0, t).trim().toLongOrNull() ?: continue) * 1024
+            val f = File(line.substring(t + 1).trim())
+            list.add(f); sizes[f.path] = bytes; total += bytes
+        }
+        kids[d.path] = list
+        sizes[d.path] = total
+        return total
+    }
+
     private fun walk(root: File): Snapshot {
         val acc = FileKind.entries.associateWith { KindAcc() }
         val sizes = HashMap<String, Long>()
@@ -100,7 +119,8 @@ object StorageScan {
                 if (Files.isSymbolicLink(child.toPath())) continue
                 mine.add(child)
                 if (child.isDirectory) {
-                    if (!isSkippedDir(child)) total += dir(child)
+                    // Android/data and Android/obb: the other apps' folders only size through root or Shizuku
+                    if (isSkippedDir(child)) total += androidSizes(child, sizes, kids) else total += dir(child)
                 } else if (child.isFile) {
                     val len = child.length()
                     total += len

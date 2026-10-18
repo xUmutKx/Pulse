@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = 31
         targetSdk = 34
-        versionCode = 104
-        versionName = "0.10.94"
+        versionCode = 121
+        versionName = "0.10.111"
         ndk { abiFilters += "arm64-v8a" }
     }
     buildTypes {
@@ -36,6 +36,7 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")
+    implementation("androidx.fragment:fragment:1.5.4") // 1.3.0+ needed by ActivityResult APIs (lint InvalidFragmentVersionForActivityResult)
     implementation("androidx.biometric:biometric:1.1.0") // App Lock: fingerprint prompt (applock/LockService.kt)
     implementation(platform("androidx.compose:compose-bom:2024.09.02"))
     implementation("androidx.compose.ui:ui")
@@ -52,6 +53,11 @@ dependencies {
     implementation("com.github.junrar:junrar:7.5.5") // rar in the file manager
     implementation("org.slf4j:slf4j-api:1.7.36") // junrar logs through it
     implementation("com.android.tools.build:apksig:8.5.2") // signs the font pack APK on the phone (features/FontChanger.kt)
+    implementation("androidx.media3:media3-exoplayer:1.4.1") // Apache-2.0; music player (extras/music), 1.4.1 is the last with minCompileSdk 34
+    implementation("androidx.media3:media3-session:1.4.1") // MediaSessionService: background playback and media notification
+    implementation("androidx.media3:media3-ui:1.4.1") // PlayerView in extras/video
+    implementation("androidx.work:work-runtime-ktx:2.9.1") // ServiceWatchdog: periodic CheckWorker (extras/watchdog); 2.10 needs compileSdk 35
+    testImplementation("junit:junit:4.13.2") // JVM tests for extras/music (M3uParserTest)
 }
 
 composeCompiler { includeComposeMappingFile.set(false) }

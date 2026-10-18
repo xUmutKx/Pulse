@@ -61,7 +61,7 @@ private fun SwitchRow(title: String, sub: String, on: Boolean, onChange: (Boolea
 @Composable
 private fun SliderRow(title: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit, onDone: () -> Unit) {
     Text(title, color = T.text, fontSize = 14.sp)
-    PSlider(value, onChange, range, onDone)
+    PSlider(value, onChange, range, onDone = onDone)
 }
 
 /** Settings > General: start page, which pages show, temperature unit, screen on, text size. */
@@ -463,11 +463,13 @@ fun FunctionsSettings() {
 private fun ExtraAppsCard() {
     val ctx = LocalContext.current
     val pm = ctx.packageManager
+    val openTool = LocalOpenTool.current
     val apps = listOf(
         Triple("FilesLauncher", R.drawable.ic_files, tr("Files", "Dosyalar")),
         Triple("PhotosLauncher", R.drawable.ic_photos, tr("Photos", "Fotoğraflar")),
         Triple("CalendarLauncher", R.drawable.ic_calendar, tr("Calendar", "Takvim")),
         Triple("ContactsLauncher", R.drawable.ic_contacts, tr("Contacts", "Kişiler")),
+        Triple("ArtCraftLauncher", R.drawable.ic_files, "ArtCraft"),
     )
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
@@ -481,6 +483,11 @@ private fun ExtraAppsCard() {
     }
     PCard {
         Text(tr("Extra apps", "Ek uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth().clickable { openTool("extrastore") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("download", T.text, 22.dp)
+            Spacer(Modifier.width(12.dp))
+            Text(tr("Store", "Mağaza"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        }
         apps.forEach { (alias, icon, label) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {

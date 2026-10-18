@@ -45,7 +45,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalTextToolbar
+import androidx.compose.ui.platform.TextToolbar
+import androidx.compose.ui.platform.TextToolbarStatus
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
@@ -178,7 +182,7 @@ private fun hlColor(n: String) = when (n) {
     "yellow" -> Color(0xFFFFFF00); "green" -> Color(0xFF00FF00); "cyan" -> Color(0xFF00FFFF); "magenta" -> Color(0xFFFF00FF); "red" -> Color(0xFFFF0000)
     "blue" -> Color(0xFF0000FF); "lightGray" -> Color(0xFFD3D3D3); "darkGray" -> Color(0xFF808080); else -> Color(0xFFFFFF00)
 }
-private fun fam(n: String?): FontFamily? = when {
+private fun fam(n: String?): FontFamily? = BundledFonts.firstOrNull { it.first == n }?.second ?: when {
     n == null -> null
     n.contains("Courier", true) || n.contains("Consolas", true) || n.contains("Mono", true) -> FontFamily.Monospace
     n.contains("Times", true) || n.contains("Cambria", true) || n.contains("Georgia", true) || n.contains("Garamond", true) -> FontFamily.Serif
@@ -217,9 +221,10 @@ private fun WParaView(c: WCtx, p: XN) {
             if (editing) {
                 val fr = remember { FocusRequester() }
                 LaunchedEffect(Unit) { runCatching { fr.requestFocus() } }
-                BasicTextField(c.ed, c.onEd, Modifier.fillMaxWidth().focusRequester(fr).border(1.dp, c.t.pal.accent.copy(alpha = .5f)),
+                // no Android copy/paste bar here: the Pulse bubble is the only menu
+                CompositionLocalProvider(LocalTextToolbar provides NoTextToolbar) { BasicTextField(c.ed, c.onEd, Modifier.fillMaxWidth().focusRequester(fr).border(1.dp, c.t.pal.accent.copy(alpha = .5f)),
                     textStyle = TextStyle(color = ink, fontSize = sp(size), fontWeight = if (frp.b == true) FontWeight.Bold else null, fontStyle = if (frp.i == true) FontStyle.Italic else null, textAlign = align, fontFamily = fam(frp.font)),
-                    cursorBrush = SolidColor(ink))
+                    cursorBrush = SolidColor(ink)) }
             } else {
                 val all = StringBuilder()
                 val ann = buildAnnotatedString {
@@ -241,11 +246,12 @@ private fun WParaView(c: WCtx, p: XN) {
                     modifier = Modifier.fillMaxWidth().then(if (c.editable && i >= 0) Modifier.combinedClickable(onLongClick = { c.onSel(i); menuOn = true }) { c.onSel(i) } else Modifier))
             }
             if (menuOn) DropdownMenu(true, { menuOn = false }) {
-                Column(Modifier.padding(horizontal = 4.dp)) {
-                    c.menu.chunked(6).forEach { rw -> Row { rw.forEach { a ->
-                        Icon(a.icon, null, Modifier.size(40.dp).clickable(enabled = a.enabled) { menuOn = false; a.click() }.padding(8.dp),
+                // small one-row bubble next to the text, scrolls sideways instead of covering the page
+                Row(Modifier.widthIn(max = 260.dp).horizontalScroll(rememberScrollState()).clip(RoundedCornerShape(20.dp)).background(c.t.pal.ribbonBg).padding(horizontal = 4.dp)) {
+                    c.menu.forEach { a ->
+                        Icon(a.icon, a.label, Modifier.size(32.dp).clickable(enabled = a.enabled) { menuOn = false; a.click() }.padding(6.dp),
                             if (a.on) c.t.pal.accent else c.t.pal.ink.copy(alpha = if (a.enabled) 1f else .35f))
-                    } } }
+                    }
                 }
             }
             imagesOf(p).forEach { (id, wp, hp) -> WImage(c, id, wp, hp) }
@@ -421,6 +427,7 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
         val wr = try { w.writer() } catch (e: Exception) { toast(e.message ?: "Save failed"); return }
         (if (copy) doc.saveCopy else doc.save)(wr) { msg -> if (!copy && !msg.startsWith("Save failed")) doc.dirty = false; toast(msg) }
     }
+    SideEffect { doc.txt = { commit(); w.plain() } } // "TXT olarak kaydet" reads what is on screen now
     val pickImg = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) scope.launch {
             val pic = withContext(Dispatchers.IO) { runCatching { prepImage(ctx, uri) }.getOrNull() }
@@ -474,7 +481,8 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
     ) + fmtActs
     val inTbl = E && w.fmt == "docx" && flat.parents.getOrNull(sel)?.name == "w:tc"
     val acts = listOf(
-        OAct(tr("Save", "Kaydet"), "File", Icons.Outlined.Save, enabled = E && doc.dirty) { save(false) },
+        // always tappable for an editable file, not only after a change
+        OAct(tr("Save", "Kaydet"), "File", Icons.Outlined.Save, enabled = E) { save(false) },
         OAct(tr("Save a copy", "Kopya kaydet"), "File", Icons.Outlined.ContentCopy, enabled = w.editableFmt, png = "copy") { save(true) },
         OAct(tr("Word count", "Sözcük sayısı"), "File", Icons.Outlined.FormatListNumbered) { commit(); countDlg = true },
         OAct(tr("Close", "Kapat"), "File", Icons.Outlined.Close, png = "exit") { doc.close() },
@@ -555,7 +563,7 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
                             Box(sw.border(1.dp, theme.pal.line).clickable { doIt { p -> w.setSize(p, n * 2) } }, contentAlignment = Alignment.Center) { Text("$n", fontSize = 13.sp) } } } }
                         2 -> listOf("000000", "7F7F7F", "C00000", "FF0000", "FFC000", "FFFF00", "92D050", "00B050", "00B0F0", "0070C0", "002060", "7030A0", "FFFFFF", null).chunked(5).forEach { rw -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { rw.forEach { h ->
                             Box(sw.background(h?.let { hexColor(it) } ?: Color.White).border(1.dp, theme.pal.line).clickable { doIt { p -> w.setColor(p, h) } }, contentAlignment = Alignment.Center) { if (h == null) Text("A", fontSize = 14.sp, color = Color.Black) } } } }
-                        4 -> listOf("Calibri", "Arial", "Times New Roman", "Cambria", "Courier New", "Verdana", "Georgia", "Comic Sans MS").forEach { n ->
+                        4 -> (listOf("Calibri", "Arial", "Times New Roman", "Cambria", "Courier New", "Verdana", "Georgia", "Comic Sans MS") + BundledFonts.map { it.first }).forEach { n ->
                             Text(n, fontFamily = fam(n), fontSize = 16.sp, modifier = Modifier.fillMaxWidth().clickable { doIt { p -> w.setFont(p, n) } }.padding(horizontal = 8.dp, vertical = 7.dp)) }
                         else -> listOf("yellow", "green", "cyan", "magenta", "red", "blue", "lightGray", "darkGray", null).chunked(5).forEach { rw -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { rw.forEach { h ->
                             Box(sw.background(h?.let { hlColor(it) } ?: Color.White).border(1.dp, theme.pal.line).clickable { doIt { p -> w.setHighlight(p, h) } }, contentAlignment = Alignment.Center) { if (h == null) Icon(Icons.Outlined.Close, null, tint = Color.Black) } } } }
@@ -605,4 +613,11 @@ private fun WordPresent(c: WCtx, blocks: List<XN>, cum: FloatArray, pg: WPage, p
         }
         Text("${page + 1}/$pages", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(2.dp))
     }
+}
+
+/** Swallows the system text toolbar (Copy / Paste / Cut) so only the Pulse bubble shows. */
+private object NoTextToolbar : TextToolbar {
+    override val status = TextToolbarStatus.Hidden
+    override fun showMenu(rect: Rect, onCopyRequested: (() -> Unit)?, onPasteRequested: (() -> Unit)?, onCutRequested: (() -> Unit)?, onSelectAllRequested: (() -> Unit)?) {}
+    override fun hide() {}
 }

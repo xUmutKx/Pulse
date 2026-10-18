@@ -41,6 +41,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
@@ -58,6 +65,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -134,10 +142,18 @@ private fun CtGlyph(v: androidx.compose.ui.graphics.vector.ImageVector, cd: Stri
 }
 
 @Composable
-private fun CtIcon(v: androidx.compose.ui.graphics.vector.ImageVector, tint: Color = Color.Unspecified, onClick: (() -> Unit)? = null) {
+private fun CtIcon(v: androidx.compose.ui.graphics.vector.ImageVector, tint: Color = Color.Unspecified, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     val c = if (tint != Color.Unspecified) tint else LocalCtFg.current ?: T.text
     if (onClick == null) CtGlyph(v, null, tint = c)
-    else IconButton(onClick) { CtGlyph(v, null, tint = c) }
+    else IconButton(onClick, modifier) { CtGlyph(v, null, tint = c) }
+}
+
+/** Recycle-bin button: the look's own bin, tilted open around its bottom-left hinge by [angle]. */
+@Composable
+private fun CtBinButton(angle: Float, onClick: () -> Unit) {
+    IconButton(onClick, Modifier.size(40.dp)) {
+        BinIcon(LocalCtFg.current ?: T.text, 24.dp, Modifier.graphicsLayer { rotationZ = angle; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 1f) })
+    }
 }
 
 /** Era chrome of the title strip: Win95 navy, XP/Messenger blue, Win7 Aero glass, Win10 flat accent. Null: plain. */
@@ -222,12 +238,30 @@ private fun CtAvatar(photo: String?, name: String, size: Dp, bitmap: Bitmap? = n
 
 @Composable
 private fun CtInput(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, kb: KeyboardType = KeyboardType.Text, single: Boolean = true, trailing: @Composable (() -> Unit)? = null) {
-    Column(modifier) {
-    Text(label, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
-    OutlinedTextField(value, onChange, Modifier.fillMaxWidth(), singleLine = single, shape = RoundedCornerShape(ctRadius), trailingIcon = trailing,
-        keyboardOptions = KeyboardOptions(keyboardType = kb),
-        colors = OutlinedTextFieldDefaults.colors(focusedTextColor = T.text, unfocusedTextColor = T.text, focusedBorderColor = ctAcc, focusedLabelColor = ctAcc, cursorColor = ctAcc,
-            unfocusedBorderColor = T.line, unfocusedLabelColor = T.sub))
+    // the label sits on the top border, left-aligned, and cuts the line behind it; the text starts a little lower inside the box
+    var focused by remember { mutableStateOf(false) }
+    var labelW by remember { mutableStateOf(0) }
+    val border = if (focused) ctAcc else T.line
+    val labelX = maxOf(12.dp, ctRadius + 4.dp)
+    Box(modifier.padding(top = 8.dp)) {
+        Box(Modifier.matchParentSize().drawBehind {
+            val sw = (if (focused) 2.dp else 1.dp).toPx()
+            val gapStart = labelX.toPx()
+            clipRect(gapStart, -sw, gapStart + labelW, sw * 2, androidx.compose.ui.graphics.ClipOp.Difference) {
+                drawRoundRect(border, topLeft = Offset(sw / 2, sw / 2), size = Size(size.width - sw, size.height - sw), cornerRadius = CornerRadius(ctRadius.toPx()), style = Stroke(sw))
+            }
+        })
+        Row(Modifier.fillMaxWidth().padding(start = 14.dp, end = if (trailing != null) 4.dp else 14.dp, top = 14.dp, bottom = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.foundation.text.BasicTextField(
+                value, onChange, Modifier.weight(1f).onFocusChanged { focused = it.isFocused },
+                textStyle = androidx.compose.ui.text.TextStyle(color = T.text, fontSize = 16.sp),
+                singleLine = single, cursorBrush = androidx.compose.ui.graphics.SolidColor(ctAcc),
+                keyboardOptions = KeyboardOptions(keyboardType = kb),
+            )
+            trailing?.invoke()
+        }
+        Text(label, color = if (focused) ctAcc else T.sub, fontSize = 12.sp, maxLines = 1,
+            modifier = Modifier.align(Alignment.TopStart).offset(labelX, (-8).dp).padding(horizontal = 4.dp).onSizeChanged { labelW = it.width })
     }
 }
 
@@ -375,7 +409,7 @@ private fun CtMain(
             }
         },
         floatingActionButton = {
-            if (tab < 3) FloatingActionButton({ if (tab == 2) newGroup = true else onAdd() }, containerColor = ctAcc, contentColor = onAccent(ctAcc), shape = RoundedCornerShape(if (T.material) 18.dp else T.radius)) {
+            if (tab < 3) FloatingActionButton({ if (tab == 2) newGroup = true else onAdd() }, containerColor = fabFill(), contentColor = fabMark(), shape = RoundedCornerShape(if (T.material) 18.dp else T.radius)) {
                 CtGlyph(if (tab == 2) Icons.Outlined.GroupAdd else Icons.Outlined.Add, null)
             }
         }) { pad ->
@@ -627,8 +661,9 @@ private fun CtDetailScreen(id: Long, groups: List<CtGroup>, onBack: () -> Unit, 
     var rev by remember { mutableStateOf(0) }
     var d by remember { mutableStateOf<CtDetail?>(null) }
     LaunchedEffect(id, rev) { d = withContext(Dispatchers.IO) { ctLoadDetails(ctx, setOf(id)).firstOrNull() } }
-    var confirm by remember { mutableStateOf(false) }
     var pickGroup by remember { mutableStateOf(false) }
+    val binAngle = remember { androidx.compose.animation.core.Animatable(0f) }
+    var deleting by remember { mutableStateOf(false) }
     fun go(i: Intent) { runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
     val c = d
     if (c == null) { CtTopBar("", onBack); return }
@@ -637,14 +672,25 @@ private fun CtDetailScreen(id: Long, groups: List<CtGroup>, onBack: () -> Unit, 
     val st = remember(c.lookup, rev) { ctStyleGet(ctx, c.lookup) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).navigationBarsPadding()) {
         CtTopBar("", onBack) {
-            CtIcon(if (c.starred) Icons.Outlined.Star else Icons.Outlined.StarOutline, if (c.starred) ctAcc else T.text) { scope.launch { withContext(Dispatchers.IO) { ctSetStar(ctx, id, !c.starred) }; rev++; onChanged() } }
-            CtIcon(Icons.Outlined.Info) { go(Intent(Intent.ACTION_VIEW, android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Contacts.CONTENT_URI, id))) }
-            CtIcon(Icons.Outlined.Tune) { onCustom(id) }
-            CtIcon(Icons.Outlined.Edit) { onEdit(id) }
-            CtIcon(Icons.Outlined.Share) {
+            // 40 dp targets: six icons plus the back button fit a 360 dp phone with room to spare, the bin stays on the right
+            val bs = Modifier.size(40.dp)
+            CtIcon(if (c.starred) Icons.Outlined.Star else Icons.Outlined.StarOutline, if (c.starred) ctAcc else T.text, bs) { scope.launch { withContext(Dispatchers.IO) { ctSetStar(ctx, id, !c.starred) }; rev++; onChanged() } }
+            CtIcon(Icons.Outlined.Info, modifier = bs) { go(Intent(Intent.ACTION_VIEW, android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Contacts.CONTENT_URI, id))) }
+            CtIcon(Icons.Outlined.Tune, modifier = bs) { onCustom(id) }
+            CtIcon(Icons.Outlined.Edit, modifier = bs) { onEdit(id) }
+            CtIcon(Icons.Outlined.Share, modifier = bs) {
                 go(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/x-vcard").putExtra(Intent.EXTRA_TEXT, ctVcf(listOf(c))), null))
             }
-            CtIcon(Icons.Outlined.Delete) { confirm = true }
+            CtBinButton(binAngle.value) {
+                if (!deleting) {
+                    deleting = true
+                    scope.launch {
+                        binAngle.animateTo(-25f, androidx.compose.animation.core.tween(250))
+                        withContext(Dispatchers.IO) { ctDelete(ctx, id) }
+                        onChanged(); onBack()
+                    }
+                }
+            }
         }
         val l = ctL
         val fill = when (l) {
@@ -693,9 +739,6 @@ private fun CtDetailScreen(id: Long, groups: List<CtGroup>, onBack: () -> Unit, 
         val gs = groups.filter { it.id in c.groups }
         if (gs.isNotEmpty()) CtInfo(Icons.Outlined.Group, gs.joinToString(", ") { it.title }, null, null)
     }
-    if (confirm) AlertDialog({ confirm = false }, containerColor = T.panel, shape = RoundedCornerShape(ctRadius), text = { Text(name, color = T.text) },
-        confirmButton = { IconButton({ confirm = false; scope.launch { withContext(Dispatchers.IO) { ctDelete(ctx, id) }; onChanged(); onBack() } }) { CtGlyph(Icons.Outlined.Delete, null, tint = Color(0xFFE5484D)) } },
-        dismissButton = { IconButton({ confirm = false }) { CtGlyph(Icons.Outlined.Close, null, tint = T.sub) } })
     if (pickGroup) AlertDialog({ pickGroup = false }, containerColor = T.panel, shape = RoundedCornerShape(ctRadius),
         text = {
             Column {
@@ -736,7 +779,6 @@ private fun CtBgCard(bg: CtBg?, lookup: String, id: Long, onCustom: (Long) -> Un
                 if (!ok) ctx.toast(ctr("Samsung Contacts not found", "Samsung Kişiler yok"))
             }
         }
-        Text(ctr("Samsung and Google keep theirs private: share the file and pick it there.", "Samsung ve Google kendi arka planlarını saklar: dosyayı paylaşıp orada seçin."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
@@ -828,11 +870,14 @@ private fun CtEditScreen(id: Long, seed: CtDetail?, onBack: () -> Unit, onSaved:
                 if (newPhoto != null || (b?.photo != null && !clearPhoto)) IconButton({ newPhoto = null; clearPhoto = true }) { CtGlyph(Icons.Outlined.Delete, null, tint = T.sub) }
             }
             // an extra name field shows when its switch is on or the contact already has a value
-            if (CtPrefs.showPrefix || !b?.prefix.isNullOrBlank()) CtInput(prefix, { prefix = it }, ctr("Prefix", "Ön ek"), Modifier.fillMaxWidth())
-            CtInput(given, { given = it }, ctr("First name", "Ad"), Modifier.fillMaxWidth())
-            if (CtPrefs.showMiddle || !b?.middle.isNullOrBlank()) CtInput(middle, { middle = it }, ctr("Middle name", "İkinci ad"), Modifier.fillMaxWidth())
-            CtInput(family, { family = it }, ctr("Surname", "Soyad"), Modifier.fillMaxWidth())
-            if (CtPrefs.showSuffix || !b?.suffix.isNullOrBlank()) CtInput(suffix, { suffix = it }, ctr("Suffix", "Son ek"), Modifier.fillMaxWidth())
+            // name fields: one framed box each, label above, same as the phone field
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (CtPrefs.showPrefix || !b?.prefix.isNullOrBlank()) CtInput(prefix, { prefix = it }, ctr("Name prefix", "Ön ek"), Modifier.fillMaxWidth())
+                CtInput(given, { given = it }, ctr("First name", "Ad"), Modifier.fillMaxWidth())
+                if (CtPrefs.showMiddle || !b?.middle.isNullOrBlank()) CtInput(middle, { middle = it }, ctr("Middle name", "İkinci ad"), Modifier.fillMaxWidth())
+                CtInput(family, { family = it }, ctr("Surname", "Soyad"), Modifier.fillMaxWidth())
+                if (CtPrefs.showSuffix || !b?.suffix.isNullOrBlank()) CtInput(suffix, { suffix = it }, ctr("Name suffix", "Son ek"), Modifier.fillMaxWidth())
+            }
             if (CtPrefs.showNick || !b?.nick.isNullOrBlank()) CtInput(nick, { nick = it }, ctr("Nickname", "Takma ad"), Modifier.fillMaxWidth())
             if (!b?.lookup.isNullOrBlank()) CtBgRow(b!!.lookup)
             CtMulti(0, Icons.Outlined.Call, ctr("Phone", "Telefon"), phones)
@@ -951,15 +996,24 @@ private fun CtCustomScreen(id: Long, onBack: () -> Unit, onChanged: () -> Unit) 
     val shoot = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { b -> if (b != null) photo(b) }
     val name = CtContact(c.id, c.display, c.given, c.family, c.starred, c.photo, "", c.prefix, c.middle, c.suffix).label()
     Column(Modifier.fillMaxSize()) {
-        CtTopBar(ctr("Customise", "Özelleştir"), onBack)
+        CtTopBar(ctr("Call background", "Arama arka planı"), onBack)
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Box(Modifier.fillMaxWidth().height(240.dp).clip(RoundedCornerShape(ctRadius + 6.dp)).background(T.panel), contentAlignment = Alignment.Center) {
+            // preview drawn as the incoming call screen: background, photo, name in the chosen style, number, answer / decline
+            val ink = if (bg != null) Color.White else T.text
+            Box(Modifier.fillMaxWidth().height(400.dp).clip(RoundedCornerShape(ctRadius + 6.dp)).background(T.panel)) {
                 if (bg != null) { CtBgView(bg, Modifier.matchParentSize()); Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = .35f))) }
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Spacer(Modifier.weight(1f))
                     CtAvatar(c.photo, name, 96.dp)
-                    Spacer(Modifier.height(12.dp))
-                    Text(name, color = if (st.color != 0) Color(st.color) else if (bg != null) Color.White else T.text, fontSize = (if (st.size > 0) st.size else 24).sp,
+                    Spacer(Modifier.height(14.dp))
+                    Text(name, color = if (st.color != 0) Color(st.color) else ink, fontSize = (if (st.size > 0) st.size else 24).sp, maxLines = 2, textAlign = TextAlign.Center,
                         fontWeight = if (st.bold) FontWeight.Bold else FontWeight.SemiBold, fontStyle = if (st.italic) androidx.compose.ui.text.font.FontStyle.Italic else null, fontFamily = ctFont(st.fam))
+                    c.phones.firstOrNull()?.let { Text(it.value, color = ink.copy(alpha = .8f), fontSize = 15.sp, modifier = Modifier.padding(top = 4.dp)) }
+                    Spacer(Modifier.weight(1f))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(60.dp).clip(CircleShape).background(Color(0xFFE5484D)), contentAlignment = Alignment.Center) { CtGlyph(Icons.Outlined.CallEnd, null, tint = Color.White) }
+                        Box(Modifier.size(60.dp).clip(CircleShape).background(Color(0xFF3FB950)), contentAlignment = Alignment.Center) { CtGlyph(Icons.Outlined.Call, null, tint = Color.White) }
+                    }
                 }
             }
             if (c.lookup.isNotBlank()) CtBgRow(c.lookup) { bgRev++ }

@@ -326,7 +326,6 @@ internal fun archiveMenu(f: File): List<Triple<String, String, String>> = listOf
     Triple(tr("Extract here", "Buraya çıkar"), "extract", "here"),
     Triple(tr("Extract to ${baseName(f)}/", "${baseName(f)}/ içine çıkar"), "folder", "named"),
     Triple(tr("Extract to…", "Şuraya çıkar…"), "openWith", "pick"),
-    Triple(tr("Test archive", "Arşivi sına"), "check", "test"),
     Triple(tr("Add to archive…", "Arşive ekle…"), "zip", "add"),
     Triple(tr("Archive info", "Arşiv bilgisi"), "info", "info"),
 )
@@ -417,35 +416,20 @@ private fun ArcRow(icon: String, name: String, sub: String, onClick: () -> Unit)
     }
 }
 
-/** Tap on an APK / bundle: Material info dialog (follows the Files look), Cancel left, Install right; the installer gets the Files look in the standalone app. */
+/** Tap on an APK / bundle: Material info dialog (follows the Files look), Open archive, Install, Cancel; the installer gets the Files look in the standalone app. */
 @Composable
 internal fun ApkInfo(f: File, onClose: () -> Unit, onView: () -> Unit) {
     val ctx = LocalContext.current
-    val meta by androidx.compose.runtime.produceState<ApkMeta?>(null, f) { value = withContext(Dispatchers.IO) { apkMeta(ctx, f) } }
+    // one line: Cancel on the left, Browse and Install side by side on the right
     WinAlert(onDismissRequest = onClose,
-        title = {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                meta?.icon?.let { Image(it, null, Modifier.size(36.dp)); Spacer(Modifier.width(10.dp)) }
-                Text(meta?.label ?: f.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        },
-        text = {
-            val m = meta
-            Column {
-                if (m == null) Text(f.name + "  ·  " + Guard.gb(f.length()), color = T.sub, fontSize = 13.sp)
-                else InfoRows(listOfNotNull(
-                    tr("Package", "Paket") to m.pkg, tr("Version", "Sürüm") to m.ver, tr("Size", "Boyut") to Guard.gb(f.length()),
-                    (if (m.min > 0 || m.target > 0) "SDK" to "min ${m.min}, target ${m.target}" else null),
-                    (if (m.sig.isNotEmpty()) tr("Signature", "İmza") to m.sig else null),
-                    tr("Installed", "Kurulu") to (m.installed?.let { "$it → ${m.ver}" } ?: tr("Not installed", "Kurulu değil")),
-                    tr("Permissions", "İzinler") to m.perms.size.toString()))
-                Row(Modifier.fillMaxWidth().clickable(onClick = onView).padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("folder", Look.accent, 20.dp); Spacer(Modifier.width(8.dp)); Text(tr("Contents", "İçerik"), color = Look.accent, fontSize = 13.sp)
-                }
-            }
-        },
-        confirmButton = { TextButton({ onClose(); apkInstall(ctx, f) }) { Text(tr("Install", "Yükle")) } },
-        dismissButton = { TextButton(onClose) { Text(tr("Cancel", "İptal")) } })
+        title = { Text(f.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        text = { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            TextButton(onClose) { Text("Cancel") }
+            Spacer(Modifier.weight(1f))
+            TextButton(onView) { Text("Browse") }
+            TextButton({ onClose(); apkInstall(ctx, f) }) { Text("Install") }
+        } },
+        confirmButton = {})
 }
 
 /** Starts the existing installer window; from the standalone Files app it is told to use the Files look. */
@@ -576,15 +560,17 @@ object FilesLook {
     private fun sp(c: android.content.Context) = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     fun applyGlobal() { com.umutk.pulse.Look.dynamic = dynamic; com.umutk.pulse.Look.accentIdx = accentIdx; com.umutk.pulse.Opt.lang = lang }
     fun setDynamic(c: android.content.Context, v: Boolean) { dynamic = v; sp(c).edit().putBoolean("files_dyn", v).apply(); applyGlobal() }
-    fun setAccent(c: android.content.Context, i: Int) { accentIdx = i; sp(c).edit().putInt("files_accent", i).apply(); applyGlobal() }
+    // picking a colour turns Material You off, so the chosen accent is the one shown
+    fun setAccent(c: android.content.Context, i: Int) { accentIdx = i; dynamic = false; sp(c).edit().putInt("files_accent", i).putBoolean("files_dyn", false).apply(); applyGlobal() }
     fun setLang(c: android.content.Context, v: String) { lang = v; sp(c).edit().putString("files_lang", v).apply(); applyGlobal() }
     fun load(c: android.content.Context) {
         if (loaded) return
         loaded = true
         val q = sp(c)
         dynamic = q.getBoolean("files_dyn", q.getBoolean("dynamic", true)); accentIdx = q.getInt("files_accent", q.getInt("accent2", -1)); lang = q.getString("files_lang", q.getString("lang", "auto")) ?: "auto"
-        theme = (c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getString("files_theme", "material") ?: "material")
-            .takeIf { it == "app" || it == "amoled" || com.umutk.pulse.Themes.any { t -> t.id == it } } ?: "material"
+        // no choice saved yet: the file manager follows the app's look, so it does not switch to Material when opened
+        theme = (c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getString("files_theme", "app") ?: "app")
+            .takeIf { it == "app" || it == "amoled" || com.umutk.pulse.Themes.any { t -> t.id == it } } ?: "app"
     }
     fun set(c: android.content.Context, v: String) { theme = v; c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putString("files_theme", v).apply() }
 }
@@ -609,7 +595,7 @@ object FilesPrefs {
     var start by mutableStateOf("")          // default start folder, "" = internal storage
     var hidden by mutableStateOf(false)      // show hidden files
     var grid by mutableStateOf(false)        // list or grid
-    var icon by mutableStateOf(1)            // 0 small, 1 medium, 2 large
+    var icon by mutableStateOf(2)            // 0 tiny, 1 small, 2 medium, 3 large, 4 huge
     var confirm by mutableStateOf(true)      // ask before delete
     var ext by mutableStateOf(true)          // show file extensions
     var stdFolders by mutableStateOf(true)   // drawer: standard folders
@@ -618,11 +604,14 @@ object FilesPrefs {
     var previews by mutableStateOf(true)     // PDF / Office / video / audio / APK previews and type badges
     var thumbs by mutableStateOf(true)       // image thumbnails in the list
     var binary by mutableStateOf(false)      // sizes in KiB/MiB (1024) instead of KB/MB (1000)
+    var openRecent by mutableStateOf(false)  // opening page: false = start folder, true = recent files
     var dateFmt by mutableStateOf(0)         // 0 short, 1 long, 2 ISO
     var foldersFirst by mutableStateOf(true)
     var openAsk by mutableStateOf(false)     // files open through the system chooser instead of Pulse's viewers
     var storageInfo by mutableStateOf(true)  // drawer: storage bar and free space
     var cards by mutableStateOf(true)        // standalone app: each row is its own card
+    var rowSep by mutableStateOf(false)      // a thin line between list rows
+    var folderCards by mutableStateOf(false) // a card behind each folder (Material looks start without it)
     var alt by mutableStateOf(false)         // alternate row colours
     var radius by mutableStateOf(1)          // card corner radius: small / medium / large
     private var loaded = false
@@ -635,13 +624,13 @@ object FilesPrefs {
         icon = p.getInt("ex_icon", 1); confirm = p.getBoolean("ex_confirm", true); ext = p.getBoolean("ex_ext", true); sort = p.getInt("ex_sort_all", 0)
         stdFolders = p.getBoolean("ex_std", true); bookmarks = p.getBoolean("ex_bm", true)
         thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0)
-        foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); storageInfo = p.getBoolean("ex_sinfo", true)
-        cards = p.getBoolean("ex_cards", true); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
+        foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
+        cards = p.getBoolean("ex_cards", true); folderCards = p.getBoolean("ex_fcards", false); rowSep = p.getBoolean("ex_rowsep", false); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
     }
     fun save(c: android.content.Context) {
         sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putInt("ex_icon", icon)
             .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
-            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_ff", foldersFirst).putBoolean("ex_ask", openAsk).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).apply()
+            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).apply()
     }
 }
 
@@ -651,6 +640,8 @@ fun FilesSettings() {
     val ctx = LocalContext.current
     FilesLook.load(ctx); FilesPrefs.load(ctx)
     val fp = FilesPrefs
+    // the chips above only change the values: store them, or the choice is lost on the next start
+    androidx.compose.runtime.LaunchedEffect(fp.grid, fp.sort, fp.icon, fp.start, fp.cards, fp.folderCards, fp.rowSep) { fp.save(ctx) }
     @Composable
     fun Ic(k: String) = PIcon(k, T.text, 22.dp)
     @Composable
@@ -684,7 +675,7 @@ fun FilesSettings() {
                 Ic("palette"); Text("Material You", Modifier.weight(1f).padding(start = 12.dp), color = T.text, fontSize = 15.sp)
                 com.umutk.pulse.PSwitch(FilesLook.dynamic, { FilesLook.setDynamic(ctx, it) })
             }
-            if (!(canDyn && FilesLook.dynamic)) {
+            run {
                 var dots by remember { mutableStateOf(false) }
                 Row(Modifier.fillMaxWidth().clickable { dots = true }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Ic("palette"); Text(tr("Accent", "Vurgu"), Modifier.weight(1f).padding(start = 12.dp), color = T.text, fontSize = 15.sp)
@@ -712,7 +703,7 @@ fun FilesSettings() {
             Chips(tr("Sort by", "Sıralama"), "sort", listOf(tr("Name", "Ad"), tr("Size", "Boyut"), tr("Date", "Tarih")), fp.sort / 2) { fp.sort = it * 2 + fp.sort % 2 }
             Chips(tr("Order", "Düzen"), "sort", listOf(tr("Ascending", "Artan"), tr("Descending", "Azalan")), fp.sort % 2) { fp.sort = fp.sort / 2 * 2 + it }
             Chips(tr("View", "Görünüm"), "gridView", listOf(tr("List", "Liste"), tr("Grid", "Izgara")), if (fp.grid) 1 else 0) { fp.grid = it == 1 }
-            Chips(tr("Icon size", "Simge boyutu"), "image", listOf(tr("Small", "Küçük"), tr("Medium", "Orta"), tr("Large", "Büyük")), fp.icon) { fp.icon = it }
+            Chips(tr("Icon size", "Simge boyutu"), "image", listOf(tr("Tiny", "En küçük"), tr("Small", "Küçük"), tr("Medium", "Orta"), tr("Large", "Büyük"), tr("Huge", "En büyük")), fp.icon / 2) { fp.icon = it * 2 + 1 }
             SwRow(tr("Show hidden files", "Gizli dosyaları göster"), "search", fp.hidden) { fp.hidden = it }
             SwRow(tr("Show file extensions", "Dosya uzantılarını göster"), "notes", fp.ext) { fp.ext = it }
             SwRow(tr("Confirm before delete", "Silmeden önce sor"), "delete", fp.confirm) { fp.confirm = it }
@@ -721,10 +712,13 @@ fun FilesSettings() {
             SwRow(tr("Folders first", "Önce klasörler"), "folder", fp.foldersFirst) { fp.foldersFirst = it }
             Chips(tr("Size units", "Boyut birimi"), "sizes", listOf("KB · MB", "KiB · MiB"), if (fp.binary) 1 else 0) { fp.binary = it == 1 }
             Chips(tr("Date format", "Tarih biçimi"), "history", listOf(exDate(1_700_000_000_000L, 0), exDate(1_700_000_000_000L, 1), exDate(1_700_000_000_000L, 2)), fp.dateFmt) { fp.dateFmt = it }
+            Chips(tr("Start page", "Açılış sayfası"), "folder", listOf(tr("Home", "Ana ekran"), tr("Recent", "Son")), if (fp.openRecent) 1 else 0) { fp.openRecent = it == 1 }
             Chips(tr("Open files", "Dosyaları aç"), "openFolder", listOf(tr("Pulse viewers", "Pulse görüntüleyiciler"), tr("Ask", "Sor")), if (fp.openAsk) 1 else 0) { fp.openAsk = it == 1 }
         }
         Sec(tr("Appearance of rows", "Satır görünümü"), "gridView") {
             SwRow(tr("Separate rows (cards)", "Ayrı satırlar (kartlar)"), "gridView", fp.cards, tr("Each file in its own card", "Her dosya kendi kartında")) { fp.cards = it }
+            SwRow(tr("Folder cards", "Klasör kartları"), "folder", fp.folderCards, tr("A card behind each folder", "Her klasörün arkasında kart")) { fp.folderCards = it }
+            SwRow(tr("Row separators", "Satır çizgileri"), "folder", fp.rowSep, tr("A thin line between list rows", "Liste satırları arasında ince çizgi")) { fp.rowSep = it }
             if (fp.cards) {
                 SwRow(tr("Alternate row colours", "Dönüşümlü satır renkleri"), "light", fp.alt, tr("Every second row slightly different", "Her ikinci satır biraz farklı")) { fp.alt = it }
                 Chips(tr("Row corner radius", "Satır köşe yarıçapı"), "gridView", listOf(tr("Small", "Küçük"), tr("Medium", "Orta"), tr("Large", "Büyük")), fp.radius) { fp.radius = it }
