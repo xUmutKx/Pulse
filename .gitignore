@@ -9,3 +9,4 @@ tools/translate*.py
 tools/edit_main.py
 tools/patch_*.py
 tools/classic_shell.kt
+!extras/apks/*.apk

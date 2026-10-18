@@ -94,10 +94,8 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             MenuEntry("Authenticator", icon = Icons.Outlined.Key, key = "users") { openTool("authenticator") },
             MenuEntry("Network usage", icon = Icons.Outlined.DataUsage, key = "speed") { openTool("netusage") },
             MenuEntry("Guide", icon = Icons.Outlined.MenuBook, key = "book") { openTool("guide") },
-        )),
-        // keys are the per-look icon names (Win11 Fluency PNG, 95/XP/7 packs or Fluent vectors); Material uses the ImageVector
-        MenuTop(EXTRA_APPS, listOf(
-            MenuEntry(tr("Store", "Mağaza"), icon = Icons.Outlined.Download, key = "download") { openTool("extrastore") },
+            // the store is the last entry of the main menu; the music player, video, white noise and the standalone apps are listed inside it
+            MenuEntry(EXTRA_APPS, icon = Icons.Outlined.Apps, key = "apps") { openTool("extrastore") },
         )),
     )
     return MenuHost(tops) {
