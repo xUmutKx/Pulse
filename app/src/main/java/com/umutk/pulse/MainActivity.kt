@@ -52,7 +52,7 @@ object Cfg {
     var interval by mutableLongStateOf(1000L)
     var confirmKill by mutableStateOf(true)
 
-    private fun sp(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+    private fun sp(c: Context) = ownPrefs(c, "pulse_settings")
 
     fun load(c: Context) {
         val p = sp(c)
@@ -99,10 +99,15 @@ open class MainActivity : ComponentActivity() {
 
     override fun onStart() { super.onStart(); if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) } }
 
+    // the standalone tools in Pulse's own process (ExtraToolActivity) write the global Look.resolved while they are in front
+    private var pulseResolved: PTheme? = null
+    override fun onPause() { super.onPause(); pulseResolved = Look.resolved }
+
     override fun onResume() {
         super.onResume()
         // Pulse always comes back in its own saved look (Files, same process, swaps colours / language in while it is open)
         if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) }
+        Look.resolved = pulseResolved
         // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready
         if (android.os.Environment.isExternalStorageManager()) com.umutk.pulse.features.StorageScan.ensure(android.os.Environment.getExternalStorageDirectory())
         Shell.refreshShizuku()

@@ -37,7 +37,7 @@ object Opt {
     var alertBat by mutableIntStateOf(0)      // % at or below, 0 = off
     var alertRam by mutableIntStateOf(0)      // % at or above, 0 = off
 
-    private fun sp(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+    private fun sp(c: Context) = ownPrefs(c, "pulse_settings")
 
     fun load(c: Context) {
         val p = sp(c)

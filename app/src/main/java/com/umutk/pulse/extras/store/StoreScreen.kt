@@ -184,7 +184,10 @@ private fun EntryAction(e: StoreEntry, st: ModuleState, onRemove: (ExtraModule) 
     when (e) {
         is ModuleEntry -> when (st) {
             ModuleState.DOWNLOADING -> PButton(tr("Cancel", "İptal"), compact = true) { StoreInstaller.cancel(e.m.id) }
-            ModuleState.INSTALLED -> PButton(tr("Remove", "Kaldır"), danger = true, compact = true) { onRemove(e.m) }
+            ModuleState.INSTALLED -> Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                e.m.paket?.takeIf { e.m.isApk }?.let { pkg -> PButton(tr("Open", "Aç"), compact = true) { StoreInstaller.launch(ctx, pkg) } }
+                PButton(tr("Remove", "Kaldır"), danger = true, compact = true) { onRemove(e.m) }
+            }
             ModuleState.UPDATE -> PButton(tr("Update", "Güncelle"), compact = true) { StoreInstaller.download(ctx, e.m) }
             else -> PButton(if (StoreInstaller.isBundled(ctx, e.m)) tr("Install", "Kur") else tr("Get", "İndir") + " · " + formatMb(e.m.boyut), compact = true) { StoreInstaller.download(ctx, e.m) }
         }

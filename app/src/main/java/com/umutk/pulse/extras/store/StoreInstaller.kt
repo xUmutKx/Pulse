@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.update
 import java.io.File
 import java.io.IOException
+import java.io.InputStream
 import java.util.concurrent.ConcurrentHashMap
 import java.util.zip.ZipInputStream
 
@@ -172,21 +173,42 @@ object StoreInstaller {
 
     private var bundledIds: Set<String>? = null
 
-    /** True when the APK ships inside Pulse as assets/extras/<id>.apk: no download, installed from the app itself. */
+    /** True when the APK ships inside Pulse (assets/extras/<id>.apk, or the backup assets/extras/backup/<id>.zip): no download. */
     fun isBundled(c: Context, m: ExtraModule): Boolean {
         if (!m.isApk) return false
-        val ids = bundledIds ?: (runCatching { c.assets.list("extras") }.getOrNull().orEmpty()
-            .filter { it.endsWith(".apk") }.map { it.removeSuffix(".apk") }.toSet()).also { bundledIds = it }
+        val ids = bundledIds ?: (
+            runCatching { c.assets.list("extras").orEmpty().filter { it.endsWith(".apk") }.map { it.removeSuffix(".apk") } }.getOrDefault(emptyList()) +
+                runCatching { c.assets.list("extras/backup").orEmpty().filter { it.endsWith(".zip") }.map { it.removeSuffix(".zip") } }.getOrDefault(emptyList())
+            ).toSet().also { bundledIds = it }
         return m.id in ids
     }
 
-    /** Copies the bundled APK to cache; null when it is older than the manifest version (then the download path runs). */
+    /** Opens the bundled APK: the plain asset, or (plain = false) the one entry named <id>.apk in the backup zip. */
+    private fun openBundled(c: Context, id: String, plain: Boolean): InputStream? {
+        if (plain) return runCatching { c.assets.open("extras/$id.apk") }.getOrNull()
+        val z = runCatching { ZipInputStream(c.assets.open("extras/backup/$id.zip")) }.getOrNull() ?: return null
+        // matched by exact name and only that entry is read; no path from the zip is ever used
+        val hit = runCatching { generateSequence { z.nextEntry }.firstOrNull { !it.isDirectory && it.name == "$id.apk" } }.getOrNull()
+        if (hit == null) { z.close(); return null }
+        return z
+    }
+
+    /** Copies one bundled source to [out]; true when it reads and its version is the manifest one or newer. */
+    private fun copyBundled(c: Context, m: ExtraModule, out: File, plain: Boolean): Boolean {
+        val ok = runCatching {
+            val src = openBundled(c, m.id, plain) ?: return@runCatching false
+            src.use { i -> out.outputStream().use { i.copyTo(it) } }
+            out.length() <= m.boyut + EXTRA_LIMIT &&
+                compareVersions(c.packageManager.getPackageArchiveInfo(out.path, 0)?.versionName.orEmpty(), m.surum) >= 0
+        }
+        return ok.getOrDefault(false)
+    }
+
+    /** Copies the bundled APK to cache: the plain asset first, then the backup zip. Null when neither is usable (the download path runs). */
     private fun bundledCopy(c: Context, m: ExtraModule): File? {
         val out = File(c.cacheDir, "installer/store-${m.id}.apk")
         out.parentFile?.mkdirs()
-        c.assets.open("extras/${m.id}.apk").use { i -> out.outputStream().use { i.copyTo(it) } }
-        val v = c.packageManager.getPackageArchiveInfo(out.path, 0)?.versionName.orEmpty()
-        if (compareVersions(v, m.surum) >= 0) return out
+        for (plain in listOf(true, false)) if (copyBundled(c, m, out, plain)) return out
         out.delete()
         return null
     }
