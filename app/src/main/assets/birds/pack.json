@@ -1,0 +1,25 @@
+{
+ "sounds": [
+  {
+   "id": "dawnchorus",
+   "en": "Dawn chorus",
+   "tr": "Şafak korosu",
+   "file": "dawnchorus.ogg",
+   "cat": "birds"
+  },
+  {
+   "id": "blackbird",
+   "en": "Blackbird",
+   "tr": "Karatavuk",
+   "file": "blackbird.ogg",
+   "cat": "birds"
+  },
+  {
+   "id": "nightingale",
+   "en": "Nightingale",
+   "tr": "Bülbül",
+   "file": "nightingale.ogg",
+   "cat": "birds"
+  }
+ ]
+}

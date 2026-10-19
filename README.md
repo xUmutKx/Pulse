@@ -67,9 +67,27 @@ Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery a
 
 Lock any app behind a pattern, PIN or password, with optional fingerprint. The lock screen covers the app before you see it, also when the app opens as a chat bubble or a floating window. It follows the look you have chosen. Needs the accessibility service; usage access and root or Shizuku make it quicker.
 
+#### Music player
+
+One player with four looks: Material, Poweramp, Winamp and Windows Media Player, plus a Lyrics look.
+
+- **Poweramp**: now-playing page with the album cover as a full-screen backdrop (or plain black, your choice in settings). Play sits in the centre with previous and next beside it; the waveform and time sit under it. The lyrics button and a three-dot menu (favourite, edit tags) sit beside the title. Sleep timer is a floating rotary dial from 0 to 120 minutes, with end of track and off.
+- **Album cover**: the three-dot button on the cover searches the internet for album art (iTunes catalogue, no account needed) and saves the picked image for that track. Tags (title, artist, album) can be edited from the same menu.
+- **Winamp**: the classic skin with lyrics drawn inside the skin's title bar. Skins are picked in a three-row strip with previews; the visualizer bars fall back slowly like the original.
+- **White noise** and **playlists** open from buttons at the top of the player, not as separate apps.
+- **Lyrics** are searched by song or by text, and the look shows them in bold.
+
 #### Extra apps store
 
-Everything extra lives in one place: the **Extra apps** store in the top-right menu. It lists the built-in tools (music player with Poweramp and Winamp looks and lyrics, video, white noise) and the standalone apps (Files, Photos, Calendar, Contacts, ArtCraft). Store modules are downloaded only when you choose them. The store has a back arrow.
+Everything extra lives in one place: the **Extra apps** store in the top-right menu. It lists the standalone apps (Files, Photos, Calendar, Contacts, ArtCraft). Store modules are downloaded only when you choose them. The store has a back arrow.
+
+#### Video player and subtitles
+
+The video player searches subtitles online from its subtitle menu, like VLC does. The search uses yifysubtitles.ch, which needs no account or key. It is mainly movies, so TV episodes may not be found.
+
+#### Updates
+
+Pulse checks GitHub for a newer release at most every 12 hours. When one exists, a **New update available** dialog shows its notes; you can download it or dismiss it for that version. The check can also be started from settings.
 
 #### Tools
 

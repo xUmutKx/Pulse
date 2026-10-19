@@ -146,6 +146,10 @@ class AmbientPlaybackService : MediaService() {
     override val notifId = 9303
     override fun onResume(last: QuickTileContract.LastPlayed?) {
         val a = com.umutk.pulse.extras.ambient.AmbientLast
-        if (a.hasLast(this) && !a.isPlaying()) a.toggle(this)
+        if (a.isPlaying()) return
+        if (!a.hasLast(this)) { finish(); return }
+        a.resume(this)
+        // a mix that cannot start (packs gone, engine failed) must not leave a "playing" notification over silence
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (!a.isPlaying()) finish() }, 5000)
     }
 }

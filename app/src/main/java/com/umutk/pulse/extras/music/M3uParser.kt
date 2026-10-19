@@ -8,6 +8,10 @@ data class Track(
     val artist: String? = null,
     val album: String? = null,
     val albumId: Long = -1,
+    val genre: String? = null,
+    val year: Int = 0,
+    val composer: String? = null,
+    val dateAdded: Long = 0,
 )
 
 /** Pure Kotlin M3U / M3U8 reader and writer. No Android types, so it can be unit tested on the JVM. */

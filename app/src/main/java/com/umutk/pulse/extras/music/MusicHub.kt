@@ -34,6 +34,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Arrangement
+import com.umutk.pulse.Look
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -64,9 +68,10 @@ import com.umutk.pulse.extras.music.wmp7.Wmp7Player
 import com.umutk.pulse.extras.music.wmp7.Wmp7Skin
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** The four looks, in switcher order. Material is the default. */
-private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player") }
+private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), LYRICS("Lyrics") }
 
 private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE_PRIVATE)
 
@@ -85,11 +90,27 @@ fun MusicHub(onBack: () -> Unit) {
     var artBg by remember { mutableStateOf(prefs(ctx).getBoolean("artBg", false)) }
     var lyrics by remember { mutableStateOf(false) }
     var playlistsOpen by remember { mutableStateOf(false) }
+    var settingsOpen by remember { mutableStateOf(false) }
+    var rev by remember { mutableIntStateOf(0) }
+    var noiseOpen by remember { mutableStateOf(false) }
+    var onlineOpen by remember { mutableStateOf(false) }
+    var spotifyOpen by remember { mutableStateOf(false) }
+    var searchOpen by remember { mutableStateOf(false) }
+    var floating by remember { mutableStateOf(false) }
+    var hitResult by remember { mutableStateOf<com.umutk.pulse.extras.lyrics.LyricsResult?>(null) }
+    val hubScope = androidx.compose.runtime.rememberCoroutineScope()
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        when ((ctx as? android.app.Activity)?.intent?.getStringExtra(MusicPlaybackService.EXTRA_OPEN)) {
+            "lyrics" -> lyrics = true
+            "noise" -> noiseOpen = true
+            "eq" -> settingsOpen = true
+        }
+    }
     var granted by remember { mutableStateOf(MusicLibrary.hasPermission(ctx)) }
 
     val askPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
     LaunchedEffect(Unit) {
-        Playlists.restore(ctx, engine)
+        if (MusicSettings.resume(ctx)) Playlists.restore(ctx, engine)
         if (!granted && !prefs(ctx).getBoolean("asked", false)) {
             prefs(ctx).edit().putBoolean("asked", true).apply()
             askPermission.launch(MusicLibrary.permission)
@@ -97,6 +118,11 @@ fun MusicHub(onBack: () -> Unit) {
     }
     LaunchedEffect(granted) { MusicLibrary.refresh(ctx) }
     DisposableEffect(Unit) { onDispose { engine.saveResume(); engine.equalizer.save(ctx) } }
+    val hostView = androidx.compose.ui.platform.LocalView.current
+    DisposableEffect(rev, settingsOpen) {
+        hostView.keepScreenOn = MusicSettings.keepScreenOn(ctx)
+        onDispose { hostView.keepScreenOn = false }
+    }
 
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) engine.playQueue(uris.map { Track(it.toString()) })
@@ -114,37 +140,116 @@ fun MusicHub(onBack: () -> Unit) {
         Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
-                Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                    MusicLook.values().forEach { l ->
-                        PChip(look == l && !lyrics, l.label) { look = l; lyrics = false; prefs(ctx).edit().putString("look", l.name).apply() }
-                        Spacer(Modifier.width(6.dp))
-                    }
-                    PChip(lyrics, tr("Lyrics", "Şarkı sözleri")) { lyrics = !lyrics }
-                }
-            }
-            Spacer(Modifier.height(6.dp))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(40.dp).clickable { pick.launch(arrayOf("audio/*")) }, contentAlignment = Alignment.Center) { PIcon("folder", Color.White, 22.dp) }
-                Box(Modifier.size(40.dp).clickable { playlistsOpen = true }, contentAlignment = Alignment.Center) { PIcon("newfolder", Color.White, 22.dp) }
-                com.umutk.pulse.extras.watchdog.BatteryExemptionButton()
-                if (!granted) Box(Modifier.size(40.dp).clickable { askPermission.launch(MusicLibrary.permission) }, contentAlignment = Alignment.Center) { PIcon("search", Color.White, 22.dp) }
                 Spacer(Modifier.weight(1f))
-                Text(tr("Art background", "Kapak arka planı"), color = Color.White, fontSize = 13.sp)
-                Spacer(Modifier.width(8.dp))
-                com.umutk.pulse.PSwitch(artBg, { artBg = it; prefs(ctx).edit().putBoolean("artBg", it).apply() })
+                // the looks, art background, add music and playlists live on the settings page behind the gear
+                // labelled, so the white noise page is easy to find from the player
+                // Winamp has its own bar, so these two pills stay off that look
+                if (look != MusicLook.WINAMP) {
+                    Row(Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .14f)).clickable { noiseOpen = true }
+                        .padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("volume", Color.White, 18.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(tr("White noise", "Beyaz gürültü"), color = Color.White, fontSize = 12.sp)
+                    }
+                    Spacer(Modifier.width(6.dp))
+                    Row(Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .14f)).clickable { onlineOpen = true }
+                        .padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("newfolder", Color.White, 18.dp)
+                        Spacer(Modifier.width(6.dp))
+                        Text(tr("Playlists", "Çalma listeleri"), color = Color.White, fontSize = 12.sp)
+                    }
+                }
+                Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
             }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
+              androidx.compose.runtime.key(rev) {
                 when {
                     lyrics -> LyricsPanel(st.current, rememberPosition(engine, st).value.first, Modifier.fillMaxSize(), onSeek = { engine.seekTo(it) })
                     look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg)
                     look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx)
                     look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") })
+                    look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
+                }
+              }
+                // Poweramp and Winamp carry their own lyrics button; the others get one on the right edge
+                if (look != MusicLook.POWERAMP && look != MusicLook.WINAMP && look != MusicLook.LYRICS) Box(Modifier.align(Alignment.CenterEnd).clip(RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp))
+                    .background(if (lyrics) Look.accent else Color.Black.copy(alpha = .6f)).clickable { lyrics = !lyrics }.padding(horizontal = 10.dp, vertical = 16.dp)) {
+                    Text(tr("Lyrics", "Sözler"), color = Color.White, fontSize = 12.sp)
                 }
             }
         }
+        if (noiseOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.whitenoise.WhiteNoiseHub { noiseOpen = false } }
+        if (onlineOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.playlists.OnlinePlaylistsHub { onlineOpen = false } }
+        if (spotifyOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
+        if (searchOpen) Box(Modifier.fillMaxSize().background(T.bg)) {
+            com.umutk.pulse.extras.lyrics.LyricsSearchScreen(
+                onOpen = { hit -> hubScope.launch { hitResult = com.umutk.pulse.extras.lyrics.Lyrics.forHit(ctx, hit) } },
+                onClose = { searchOpen = false },
+            )
+        }
+        hitResult?.let { r ->
+            BackHandler { hitResult = null }
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                com.umutk.pulse.extras.lyrics.LyricsView(r, -1L, null, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp))
+                Box(Modifier.align(Alignment.TopEnd).size(44.dp).clickable { hitResult = null }, contentAlignment = Alignment.Center) { PIcon("close", Color.White, 22.dp) }
+            }
+        }
         if (playlistsOpen) PlaylistsDialog(engine, st.queue) { playlistsOpen = false }
+        if (settingsOpen) {
+            BackHandler { settingsOpen = false; rev++ }
+            val ink = T.text
+            Column(Modifier.fillMaxSize().background(T.bg).padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clickable { settingsOpen = false; rev++ }, contentAlignment = Alignment.Center) { PIcon("back", ink, 22.dp) }
+                    Text(tr("Player settings", "Oynatıcı ayarları"), color = ink, fontSize = 18.sp, modifier = Modifier.padding(start = 8.dp))
+                }
+                Spacer(Modifier.height(12.dp))
+                Text(tr("Look", "Görünüm"), color = Look.accent, fontSize = 12.sp)
+                MusicLook.values().forEach { l ->
+                    Row(Modifier.fillMaxWidth().clickable { look = l; lyrics = false; prefs(ctx).edit().putString("look", l.name).apply() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        com.umutk.pulse.PRadio(look == l) { look = l; lyrics = false; prefs(ctx).edit().putString("look", l.name).apply() }
+                        Text(l.label, color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
+                    }
+                }
+                com.umutk.pulse.ExtraLookRow(ink)
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Art background", "Kapak arka planı"), color = ink, fontSize = 16.sp, modifier = Modifier.weight(1f))
+                    com.umutk.pulse.PSwitch(artBg, { artBg = it; prefs(ctx).edit().putBoolean("artBg", it).apply() })
+                }
+                Text(tr("Music", "Müzik"), color = Look.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+                Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; pick.launch(arrayOf("audio/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("folder", ink, 22.dp); Text(tr("Add music", "Müzik ekle"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                }
+                Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; playlistsOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("newfolder", ink, 22.dp); Text(tr("Playlists", "Çalma listeleri"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                }
+                Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; searchOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("book", ink, 22.dp); Text(tr("Find lyrics by text", "Sözlerle şarkı bul"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                }
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("search", ink, 22.dp); Text(tr("Floating lyrics search", "Yüzen söz araması"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp).weight(1f))
+                    com.umutk.pulse.PSwitch(floating, { floating = it; if (it) com.umutk.pulse.extras.lyrics.FloatingLyricsSearch.show(ctx) else com.umutk.pulse.extras.lyrics.FloatingLyricsSearch.hide(ctx) })
+                }
+                Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; spotifyOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("heart", ink, 22.dp); Text("Spotify", color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                }
+                if (!granted) Row(Modifier.fillMaxWidth().clickable { askPermission.launch(MusicLibrary.permission) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("search", ink, 22.dp); Text(tr("Scan the phone's music", "Telefondaki müziği tara"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                }
+                Text(tr("Background", "Arka plan"), color = Look.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
+                com.umutk.pulse.extras.watchdog.BatteryExemptionButton()
+                Spacer(Modifier.height(8.dp))
+                MusicSettingsSections(
+                    engine, when (look) { MusicLook.MATERIAL -> SettingsFor.MATERIAL; MusicLook.POWERAMP -> SettingsFor.POWERAMP; MusicLook.WINAMP -> SettingsFor.WINAMP; else -> SettingsFor.WMP },
+                    onRescan = { MusicLibrary.refresh(ctx) },
+                ) {
+                    if (look == MusicLook.WINAMP) com.umutk.pulse.extras.ui.SettingsSection("Winamp") { com.umutk.pulse.extras.music.winamp.WinampSkinSettings() }
+                }
+                Spacer(Modifier.height(24.dp))
+            }
+        }
     }
 }
 
@@ -225,7 +330,7 @@ private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<
         Wmp7Player(
             mode = mode,
             skin = skin,
-            now = Wmp7Now(st.current?.displayName().orEmpty(), st.current?.artist.orEmpty(), st.isPlaying, pos, dur, emptyList()),
+            now = Wmp7Now(st.current?.displayName().orEmpty(), st.current?.artist.orEmpty(), st.isPlaying, pos, dur, rememberLevels(16).value),
             menus = listOf(tr("File", "Dosya"), tr("View", "Görünüm"), tr("Play", "Yürüt")),
             nav = navLabels,
             navSelected = nav,

@@ -1,17 +1,20 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -25,20 +28,25 @@ fun Welcome(onDone: () -> Unit) {
         onDone()
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter).padding(top = 40.dp, bottom = 24.dp)) {
-        Text(tr("Welcome to Pulse", "Pulse'a hoş geldin"), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.Black)
+        Image(imageResource(R.mipmap.ic_launcher), null, Modifier.size(72.dp))
+        Text(tr("Welcome to Pulse", "Pulse'a hoş geldin"), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 12.dp))
         Text(tr("A task manager for Android that looks like the Windows one, with tools for the rest of the phone.",
             "Windows'a benzeyen bir Android görev yöneticisi, telefonun geri kalanı için araçlarla birlikte."),
             color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
 
-        WelcomeCard(tr("What it does", "Neler yapabilir")) {
-            WelcomeLine(tr("Live CPU, memory, storage, network, battery and temperature, with processes and startup apps.",
-                "CPU, bellek, depolama, ağ, pil ve sıcaklığı canlı gösterir; işlemler ve başlangıç uygulamalarını yönetir."))
-            WelcomeLine(tr("A floating monitor, a notification with live numbers, alerts and home-screen widgets.",
-                "Üstte yüzen izleyici, canlı sayıları gösteren bildirim, uyarılar ve ana ekran widget'ları."))
-            WelcomeLine(tr("A file explorer with archive viewing and compressing, an APK installer and a downloads manager.",
-                "Arşiv görüntüleme ve sıkıştırma özellikli dosya yöneticisi, APK kurucu ve indirme yöneticisi."))
-            WelcomeLine(tr("A toolkit with a terminal, DNS settings, network usage and a cleaner for caches and large files.",
-                "Terminal, DNS ayarları, ağ kullanımı ve önbellek ile büyük dosyalar için temizleyicili bir araç takımı."))
+        WelcomeCard(tr("What's new", "Yenilikler")) {
+            WelcomeLine(tr("Music player with its own settings page, and playlists inside it: no separate app.",
+                "Müzik çalar kendi ayarlar sayfasıyla; çalma listeleri içinde, ayrı bir uygulama yok."))
+            WelcomeLine(tr("A white noise button in the music player.", "Müzik çalarda beyaz gürültü düğmesi."))
+            WelcomeLine(tr("Winamp skins as widgets: every skin, with the whole window.",
+                "Winamp skin'leri widget olarak: her skin, pencerenin tamamıyla."))
+            WelcomeLine(tr("Online subtitle search in the video player, like VLC.",
+                "Video oynatıcıda çevrimiçi altyazı arama, VLC gibi."))
+            WelcomeLine(tr("Album art search and tag editing in the Poweramp player.",
+                "Poweramp oynatıcıda albüm kapağı arama ve etiket düzenleme."))
+            WelcomeLine(tr("A sleep timer with a rotary dial.", "Döner kadranlı uyku zamanlayıcısı."))
+            WelcomeLine(tr("Update check: a pop-up when a newer version is out.",
+                "Güncelleme denetimi: yeni bir sürüm çıkınca bildirim."))
         }
 
         WelcomeCard(tr("Built from open source", "Açık kaynak parçalar")) {

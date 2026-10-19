@@ -30,9 +30,11 @@ class MotionCueService : Service() {
 
     // true when the phone gives linear acceleration (gravity already removed); otherwise the raw accelerometer is filtered below
     private var linear = false
+    private var events = 0
 
     private val listener = object : SensorEventListener {
         override fun onSensorChanged(e: SensorEvent) {
+            events++
             val ax: Float; val ay: Float
             if (linear) { ax = e.values[0]; ay = e.values[1] }
             else {
@@ -67,9 +69,19 @@ class MotionCueService : Service() {
         wm.addView(v, WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT))
         sm = getSystemService(SensorManager::class.java)
+        // the raw accelerometer reacts to tilting as well as to the vehicle pushing; the linear sensor strips gravity and stays still on a tilt.
+        // Its gravity estimate in the fallback follows a steady push within half a second, so a car that speeds up for seconds gave no motion at all.
         val lin = sm.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION)
         linear = lin != null
-        (lin ?: sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER))?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME, android.os.Handler(android.os.Looper.getMainLooper())) }
+        val acc = lin ?: sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        acc?.let { sm.registerListener(listener, it, SensorManager.SENSOR_DELAY_GAME, android.os.Handler(android.os.Looper.getMainLooper())) }
+        // some phones keep sensors quiet for a background service: if nothing arrives, register again at a slower rate with no handler
+        view?.postDelayed({
+            if (events == 0 && acc != null) {
+                runCatching { sm.unregisterListener(listener) }
+                sm.registerListener(listener, acc, SensorManager.SENSOR_DELAY_UI)
+            }
+        }, 1500)
     }
 
     override fun onStartCommand(i: Intent?, f: Int, id: Int) = START_STICKY

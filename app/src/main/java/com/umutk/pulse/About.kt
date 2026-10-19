@@ -18,7 +18,9 @@ import androidx.compose.foundation.clickable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -83,6 +85,27 @@ fun AboutPage() {
         val openTool = LocalOpenTool.current
         PButton(tr("Guide", "Kılavuz"), Modifier.fillMaxWidth()) { openTool("guide") }
         PButton("GitHub · xUmutKx/Pulse", Modifier.fillMaxWidth()) { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/xUmutKx/Pulse")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        // manual check: the same release lookup as the start-up one, without the 12-hour wait
+        val scope = rememberCoroutineScope()
+        var upd by remember { mutableStateOf<Updates.Release?>(null) }
+        var updMsg by remember { mutableStateOf("") }
+        PCard(Modifier.clickable {
+            scope.launch {
+                updMsg = tr("Checking...", "Denetleniyor...")
+                val r = Updates.fetch()
+                updMsg = when {
+                    r == null -> tr("Could not check", "Denetlenemedi")
+                    Updates.newer(r.version, Updates.installed(ctx)) -> { upd = r; "" }
+                    else -> tr("Up to date", "Güncel")
+                }
+            }
+        }) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Check for updates", "Güncellemeleri denetle"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
+                Text(updMsg, color = T.sub, fontSize = 13.sp, maxLines = 1)
+            }
+        }
+        upd?.let { r -> UpdateDialog(r) { upd = null } }
         Text("An all-in-one file manager for Android with the look of Windows, plus a task manager, a file explorer, downloads, an app installer, network usage, a 20-tool toolkit, widgets and a terminal.", color = T.sub, fontSize = 13.sp)
         PCard {
             Fold("Privacy") {

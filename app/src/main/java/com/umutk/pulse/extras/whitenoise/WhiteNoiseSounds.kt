@@ -8,15 +8,8 @@ import java.io.File
 /** One built-in loop: [res] is the raw WAV in res/raw. */
 class WhiteNoiseSound(val id: String, val en: String, val tr: String, val res: Int)
 
-val WhiteNoiseSounds = listOf(
-    WhiteNoiseSound("white", "White noise", "Beyaz gürültü", R.raw.wn_white),
-    WhiteNoiseSound("coffee", "Coffee", "Kahve", R.raw.wn_coffee),
-    WhiteNoiseSound("bell", "Bell", "Çan", R.raw.wn_bell),
-    WhiteNoiseSound("rain", "Rain", "Yağmur", R.raw.wn_rain),
-    WhiteNoiseSound("fire", "Fire", "Ateş", R.raw.wn_fire),
-    WhiteNoiseSound("wind", "Wind", "Rüzgar", R.raw.wn_wind),
-    WhiteNoiseSound("waves", "Waves", "Dalga", R.raw.wn_waves),
-)
+/** Empty: every sound ships in the ogg packs (assets/ambient, assets/birds); the old raw WAV loops were poor and are gone. */
+val WhiteNoiseSounds = emptyList<WhiteNoiseSound>()
 
 /**
  * Copies the raw loops to filesDir/extras/whitenoise (AmbientEngine plays files, not resources) and returns one track per sound.
@@ -35,5 +28,28 @@ fun installWhiteNoiseSounds(context: Context): List<AmbientTrack> {
             if (!tmp.renameTo(f)) tmp.delete()
         }
         AmbientTrack(s.id, f.path)
+    }
+}
+
+/**
+ * Unpacks the bundled packs (assets/ambient, assets/birds) to filesDir/extras/bundled/<name> because AmbientEngine plays files.
+ * Re-copied after every app update (stamp = lastUpdateTime). Call on Dispatchers.IO. Returns the dirs that hold a pack.json.
+ */
+fun installBundledPacks(context: Context): List<Pair<String, File>> {
+    val stamp = runCatching { context.packageManager.getPackageInfo(context.packageName, 0).lastUpdateTime.toString() }.getOrDefault("0")
+    return listOf("ambient", "birds").mapNotNull { name ->
+        val dir = File(context.filesDir, "extras/bundled/$name")
+        val mark = File(dir, ".stamp")
+        runCatching {
+            if (!(mark.isFile && mark.readText() == stamp && File(dir, "pack.json").isFile)) {
+                dir.mkdirs()
+                for (f in context.assets.list(name).orEmpty()) {
+                    val out = File(dir, f)
+                    context.assets.open("$name/$f").use { i -> out.outputStream().use { i.copyTo(it) } }
+                }
+                mark.writeText(stamp)
+            }
+        }
+        (name to dir).takeIf { File(dir, "pack.json").isFile }
     }
 }

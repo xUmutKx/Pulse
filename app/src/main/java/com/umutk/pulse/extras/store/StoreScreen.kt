@@ -109,11 +109,13 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
     var category by rememberSaveable { mutableStateOf<String?>(null) }
     var openKey by rememberSaveable { mutableStateOf<String?>(null) }
     var askRemove by remember { mutableStateOf<ExtraModule?>(null) }
+    var settings by rememberSaveable { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         StoreCatalog.refresh(ctx)
         modules = StoreCatalog.load(ctx)
         offline = StoreCatalog.offline
+        StoreInstaller.autoUpdate(ctx, modules)
     }
     // back from the system uninstall screen or the settings page: re-read the states
     DisposableEffect(lifecycle) {
@@ -139,9 +141,11 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
         installed.filterIsInstance<ModuleEntry>().sumOf { StoreInstaller.installedBytes(ctx, it.m) }
     }
 
-    BackHandler(enabled = openKey != null) { openKey = null }
+    BackHandler(enabled = openKey != null || settings) { if (settings) settings = false else openKey = null }
     val detail = entries.firstOrNull { it.key == openKey }
-    if (detail != null) {
+    if (settings) {
+        StoreSettingsScreen(modules) { settings = false }
+    } else if (detail != null) {
         StoreDetail(detail, states[detail.key] ?: ModuleState.NOT_INSTALLED, progress[detail.key], errors[detail.key],
             installedBytes = (detail as? ModuleEntry)?.let { StoreInstaller.installedBytes(ctx, it.m) } ?: 0L,
             onBack = { openKey = null }, onRemove = { askRemove = it })
@@ -149,107 +153,15 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
         val style = storeStyle()
         val totals = tr("Total", "Toplam") + " " + formatMb(StoreInstaller.totalBytes(modules)) + "  ·  " + tr("Installed", "Kurulu") + " " + formatMb(installedBytes)
         Column(Modifier.fillMaxSize()) {
-            StoreHeader(tr("Extra apps", "Ek uygulamalar"), onBack,
-                onSearch = if (style == StoreStyle.PLAY) null else ({ searching = !searching; if (!searching) query = "" }))
-            Column(Modifier.weight(1f).padding(horizontal = 16.dp, vertical = 8.dp)) {
-            if (searching || style == StoreStyle.PLAY) {
-                PField(query, { query = it }, hint = tr("Search modules", "Modül ara"), modifier = Modifier.fillMaxWidth())
-                Spacer(Modifier.height(6.dp))
-            }
-            if (style != StoreStyle.CLASSIC) Text(totals, color = T.sub, fontSize = 13.sp)
-            if (offline) Text(tr("Offline, saved list", "Çevrimdışı, son liste"), color = T.sub, fontSize = 12.sp)
-            Spacer(Modifier.height(8.dp))
-            val upd = states.values.count { it == ModuleState.UPDATE }
-            StoreTabBar(
-                listOf(tr("Store", "Mağaza"), tr("Installed", "Kurulu") + " (${installed.size})" + if (upd > 0) " · $upd↑" else ""),
-                if (tab == StoreTab.STORE) 0 else 1,
-            ) { tab = if (it == 0) StoreTab.STORE else StoreTab.INSTALLED }
-            Spacer(Modifier.height(8.dp))
-
-            LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (tab == StoreTab.STORE) {
-                    val q = query.trim().lowercase()
-                    if (q.isNotEmpty()) {
-                        val hits = entries.filter { it.name.lowercase().contains(q) || categoryName(it.kategori).lowercase().contains(q) }
-                        items(hits, key = { it.key }) { e ->
-                            StoreRow(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
-                                onOpen = { openKey = e.key }, onRemove = { askRemove = it })
-                        }
-                        if (hits.isEmpty()) item { Text(tr("Nothing found", "Bulunamadı"), color = T.sub, fontSize = 14.sp) }
-                    } else {
-                        item { BuiltinRows() }
-                        val featured = entries.filterIsInstance<ModuleEntry>().sortedByDescending { it.m.guncellendi }.take(3)
-                        if (featured.isNotEmpty()) {
-                            item { SectionTitle(tr("Featured", "Öne çıkanlar")) }
-                            if (style == StoreStyle.CLASSIC) {
-                                items(featured, key = { "f-" + it.key }) { e ->
-                                    StoreRow(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
-                                        onOpen = { openKey = e.key }, onRemove = { askRemove = it })
-                                }
-                            } else item {
-                                LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    items(featured, key = { it.key }) { e ->
-                                        FeaturedCard(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
-                                            onOpen = { openKey = e.key }, onRemove = { askRemove = it })
-                                    }
-                                }
-                            }
-                        }
-                        val cats = entries.map { it.kategori }.distinct()
-                        item {
-                            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                items(cats, key = { it }) { k ->
-                                    val n = entries.count { it.kategori == k }
-                                    if (style == StoreStyle.CLASSIC) PChip(category == k, categoryName(k) + " ($n)") { category = if (category == k) null else k }
-                                    else CategoryTile(categoryName(k), categoryIcon(k), n, selected = category == k) {
-                                        category = if (category == k) null else k
-                                    }
-                                }
-                            }
-                        }
-                        val groups = entries.filter { category == null || it.kategori == category }.groupBy { it.kategori }
-                        groups.forEach { (k, list) ->
-                            item(key = "h-$k") {
-                                val mods = list.filterIsInstance<ModuleEntry>()
-                                SectionTitle(categoryName(k) + "  ·  " + list.size + "  ·  " + formatMb(mods.sumOf { it.m.boyut }))
-                            }
-                            items(list, key = { it.key }) { e ->
-                                StoreRow(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
-                                    onOpen = { openKey = e.key }, onRemove = { askRemove = it })
-                            }
-                        }
-                        if (groups.isEmpty()) item { Text(tr("No modules yet", "Henüz modül yok"), color = T.sub, fontSize = 14.sp) }
-                    }
-                } else {
-                    val updates = installed.filter { states[it.key] == ModuleState.UPDATE }
-                    if (updates.isNotEmpty()) {
-                        item {
-                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.weight(1f)) { SectionTitle(tr("Updates", "Güncellemeler") + " (${updates.size})") }
-                                PButton(tr("Update all", "Hepsini güncelle"), compact = true) {
-                                    StoreInstaller.updateAll(ctx, updates.filterIsInstance<ModuleEntry>().map { it.m })
-                                }
-                            }
-                        }
-                        items(updates, key = { "u-" + it.key }) { e ->
-                            StoreRow(e, ModuleState.UPDATE, progress[e.key], errors[e.key],
-                                onOpen = { openKey = e.key }, onRemove = { askRemove = it })
-                        }
-                    }
-                    item {
-                        StoreRowShell {
-                            InfoRows(listOf(tr("Installed modules", "Kurulu modüller") to formatMb(installedBytes)))
-                        }
-                    }
-                    if (installed.isEmpty()) item { Text(tr("No installed modules", "Kurulu modül yok"), color = T.sub, fontSize = 14.sp) }
-                    items(installed, key = { "i-" + it.key }) { e ->
-                        StoreRow(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
-                            onOpen = { openKey = e.key }, onRemove = { askRemove = it })
-                    }
+            StoreHeader(tr("Extra apps", "Ek uygulamalar"), onBack, onSearch = null)
+            // a plain list of the extra apps: the built-in ones, then any downloadable module, nothing above them
+            LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item { BuiltinRows() }
+                items(entries, key = { it.key }) { e ->
+                    StoreRow(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
+                        onOpen = { openKey = e.key }, onRemove = { askRemove = it })
                 }
             }
-            }
-            if (style == StoreStyle.CLASSIC) StoreStatusBar(totals)
         }
     }
 
@@ -274,7 +186,7 @@ private fun EntryAction(e: StoreEntry, st: ModuleState, onRemove: (ExtraModule) 
             ModuleState.DOWNLOADING -> PButton(tr("Cancel", "İptal"), compact = true) { StoreInstaller.cancel(e.m.id) }
             ModuleState.INSTALLED -> PButton(tr("Remove", "Kaldır"), danger = true, compact = true) { onRemove(e.m) }
             ModuleState.UPDATE -> PButton(tr("Update", "Güncelle"), compact = true) { StoreInstaller.download(ctx, e.m) }
-            else -> PButton(tr("Get", "İndir") + " · " + formatMb(e.m.boyut), compact = true) { StoreInstaller.download(ctx, e.m) }
+            else -> PButton(if (StoreInstaller.isBundled(ctx, e.m)) tr("Install", "Kur") else tr("Get", "İndir") + " · " + formatMb(e.m.boyut), compact = true) { StoreInstaller.download(ctx, e.m) }
         }
         is ExternalEntry -> {
             if (st == ModuleState.INSTALLED) PButton(tr("Open", "Aç"), compact = true) { StoreInstaller.launch(ctx, e.a.pkg) }
@@ -400,7 +312,7 @@ private fun StoreDetail(
                 val m = e.m
                 StoreRowShell {
                     InfoRows(buildList<Pair<String, String>> {
-                        add(tr("Download", "İndirme") to formatMb(m.boyut))
+                        add(if (StoreInstaller.isBundled(ctx, m)) tr("Built-in", "Dahili") to formatMb(m.boyut) else tr("Download", "İndirme") to formatMb(m.boyut))
                         if (inList(st)) add(tr("Installed", "Kurulu") to formatMb(installedBytes))
                     })
                 }
@@ -417,6 +329,8 @@ private fun StoreDetail(
                         tr("Source", "Kaynak") to (m.upstream ?: "—"),
                     ))
                 }
+                Spacer(Modifier.height(12.dp))
+                ModuleOptions(m)
                 m.atif?.let { Spacer(Modifier.height(8.dp)); Text(it, color = T.sub, fontSize = 12.sp) }
                 Spacer(Modifier.height(12.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -453,15 +367,12 @@ private fun BuiltinRows() {
     val rows = listOf(
         BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play") { open("music") },
         BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image") { open("video") },
-        BuiltinRow(tr("Online playlists", "Çevrimiçi çalma listeleri"), tr("YouTube and Spotify playlists, streamed", "YouTube ve Spotify listeleri, akış"), "play") { open("playlists") },
-        BuiltinRow(tr("White noise", "Beyaz gürültü"), tr("Steady background sounds", "Sabit arka plan sesleri"), "volume") { open("whitenoise") },
         BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
         BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
         BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
         BuiltinRow(tr("Contacts", "Kişiler"), tr("Contacts and groups", "Kişiler ve gruplar"), "users") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
         BuiltinRow("ArtCraft", tr("Drawing", "Çizim"), "menu") { launchExtra(ctx, "com.umutk.pulse.ArtCraftActivity") },
     )
-    SectionTitle(tr("Built in", "Yerleşik"))
     rows.forEach { r ->
         Row(Modifier.fillMaxWidth().clickable { r.onClick() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon(r.icon, T.text, 26.dp)

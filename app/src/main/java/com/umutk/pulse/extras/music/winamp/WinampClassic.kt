@@ -9,7 +9,8 @@ import com.umutk.pulse.extras.music.skin.WinampSkin
 
 /**
  * Classic Winamp main window (275x116 skin pixels) drawn from [skin]: display, spectrum, seek bar, volume,
- * transport, shuffle/repeat and the EQ/PL toggles. [levels] are the 19 visualizer bar heights 0..1, [volume] 0..1,
+ * transport, shuffle/repeat and the EQ/PL toggles. [levels] are the 19 visualizer bar heights 0..1, [wave] the scope points
+ * for [scope] mode (tap the vis area to switch, [onVisToggle]), [volume] 0..1,
  * [positionMs]/[durationMs] in ms. [scaleDp] (when above 0) overrides the whole-number [scale] with dp per skin pixel.
  */
 @Composable
@@ -42,6 +43,11 @@ fun WinampClassic(
     onShuffle: () -> Unit = {},
     onRepeat: () -> Unit = {},
     onShade: () -> Unit = {},
+    scope: Boolean = false,
+    wave: List<Float> = emptyList(),
+    onVisToggle: () -> Unit = {},
+    lyricsOn: Boolean = false,
+    onLyrics: () -> Unit = {},
 ) {
     WinampMain(
         skin = skin,
@@ -68,6 +74,8 @@ fun WinampClassic(
         onVolume = onVolume,
         onShuffle = onShuffle, onRepeat = onRepeat,
         onToggleEq = onToggleEq, onTogglePlaylist = onTogglePlaylist, onShade = onShade,
+        scope = scope, wave = wave, onVisToggle = onVisToggle,
+        lyricsOn = lyricsOn, onLyrics = onLyrics,
     )
 }
 

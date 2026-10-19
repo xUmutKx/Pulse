@@ -34,8 +34,10 @@ fun PHead(text: String, trailing: String = "", guide: String = "") {
     if (info) com.umutk.pulse.features.GuideDialog(guide) { info = false }
     val infoBtn: @Composable () -> Unit = { if (guide.isNotEmpty()) androidx.compose.foundation.layout.Box(Modifier.size(32.dp).clickable { info = true }, contentAlignment = Alignment.Center) { PIcon("info", T.sub, 20.dp) } }
     if (oem) { OemTitle(text, infoBtn); return }
-    Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.Bottom) {
-        Text(text, color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+    // the page title lives in the bar at the top (back arrow + name); here only the small count line and the guide button remain
+    if (trailing.isEmpty() && guide.isEmpty()) return
+    Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(trailing, color = T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
         infoBtn()
     }
 }

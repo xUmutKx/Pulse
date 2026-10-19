@@ -470,6 +470,8 @@ private fun ExtraAppsCard() {
         Triple("CalendarLauncher", R.drawable.ic_calendar, tr("Calendar", "Takvim")),
         Triple("ContactsLauncher", R.drawable.ic_contacts, tr("Contacts", "Kişiler")),
         Triple("ArtCraftLauncher", R.drawable.ic_files, "ArtCraft"),
+        Triple("MusicLauncher", R.drawable.ic_music, tr("Music player", "Müzik çalar")),
+        Triple("VideoLauncher", R.drawable.ic_video, tr("Video", "Video")),
     )
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
@@ -495,10 +497,13 @@ private fun ExtraAppsCard() {
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                val isDef = remember(rev) { extraIsDefault(ctx, alias) }
-                Box(Modifier.padding(end = 10.dp).size(30.dp).clip(CircleShape).background(if (isDef) T.text else androidx.compose.ui.graphics.Color.Transparent)
-                    .border(1.dp, T.text.copy(alpha = .6f), CircleShape).clickable { extraSetDefault(ctx, alias) { rev++ } },
-                    contentAlignment = Alignment.Center) { PIcon("check", if (isDef) T.bg else T.text, 16.dp) }
+                // "make default" only exists for the four apps that handle a system link (files, pictures, events, contacts)
+                if (alias in setOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher")) {
+                    val isDef = remember(rev) { extraIsDefault(ctx, alias) }
+                    Box(Modifier.padding(end = 10.dp).size(30.dp).clip(CircleShape).background(if (isDef) T.text else androidx.compose.ui.graphics.Color.Transparent)
+                        .border(1.dp, T.text.copy(alpha = .6f), CircleShape).clickable { extraSetDefault(ctx, alias) { rev++ } },
+                        contentAlignment = Alignment.Center) { PIcon("check", if (isDef) T.bg else T.text, 16.dp) }
+                }
                 PSwitch(state[alias] == true, { on ->
                     pm.setComponentEnabledSetting(cn(alias), if (on) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
                     state[alias] = on

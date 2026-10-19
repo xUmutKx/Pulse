@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="ic_music_bg">#FF5B3FD6</color>
+    <color name="ic_video_bg">#FFD2342E</color>
+    <color name="ic_whitenoise_bg">#FF1E88A8</color>
+    <color name="ic_playlists_bg">#FFE0782B</color>
+</resources>
