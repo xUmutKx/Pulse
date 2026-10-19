@@ -81,6 +81,8 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -232,8 +234,16 @@ fun NowPlayingScreen(
             // one does nothing. Vertical drags are consumed here so the page neither scrolls nor closes from the cover.
             val lyricsNow by rememberUpdatedState(onLyrics)
             val slop = with(LocalDensity.current) { 72.dp.toPx() }
+            // the cover's band across the window is excluded from the system back gesture, so a downward drag that starts
+            // near a screen edge stays on the cover instead of going back out of the player
+            val view = LocalView.current
+            DisposableEffect(view) { onDispose { view.systemGestureExclusionRects = emptyList() } }
             Box(
                 Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(style.artCorner.coerceAtMost(24.dp))).background(style.panel)
+                    .onGloballyPositioned { c ->
+                        val b = c.boundsInWindow()
+                        view.systemGestureExclusionRects = listOf(android.graphics.Rect(0, b.top.roundToInt(), view.width, b.bottom.roundToInt()))
+                    }
                     .pointerInput(Unit) {
                         var startY = 0f
                         var sum = 0f
