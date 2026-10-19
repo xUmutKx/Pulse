@@ -146,7 +146,7 @@ object StoreCatalog {
     }
 
     private fun fetch(c: Context, p: SharedPreferences) {
-        val cn = openHttps(EXTRAS_MANIFEST_URL)
+        val cn = openHttps(StoreInstaller.resolveUrl(c, EXTRAS_MANIFEST_URL))
         try {
             val etag = p.getString("etag", "").orEmpty()
             if (etag.isNotEmpty()) cn.setRequestProperty("If-None-Match", etag)

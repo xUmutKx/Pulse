@@ -67,6 +67,9 @@ import com.umutk.pulse.PSlider
 import com.umutk.pulse.R
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
+import com.umutk.pulse.extras.music.skin.WINAMP_H
+import com.umutk.pulse.extras.music.skin.WINAMP_W
+import com.umutk.pulse.widgets.music.WinampWidget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -144,7 +147,7 @@ fun WidgetsPage() {
         Modifier.fillMaxSize().padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { PHead(tr("Widgets", "Widget'lar"), "${Skin.values().size + FaceWidgets.all.size + WIDGET_ENTRIES.size}") }
+        item { PHead(tr("Widgets", "Widget'lar"), "${Skin.values().size + FaceWidgets.all.size + WIDGET_ENTRIES.size + 2}") }
         item(key = "tabs") {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PChip(tab == 0, tr("Widgets", "Widget'lar")) { tab = 0 }
@@ -192,6 +195,14 @@ fun WidgetsPage() {
                 item(key = "h_$theme") { FamilyHeader(theme, label) }
                 items(cards.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
             }
+        }
+        // the Winamp widgets belong to no design: one Music header, shown while the search matches a card
+        val music = mutableListOf<Pair<String, @Composable () -> Unit>>()
+        if (hit("Winamp")) music += "m_winamp" to @Composable { WinampCard(ctx, false) }
+        if (hit("Winamp 4x1")) music += "m_winamp4" to @Composable { WinampCard(ctx, true) }
+        if (music.isNotEmpty()) {
+            item(key = "h_music") { Text(tr("Music", "Müzik"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
+            items(music.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
         }
         item { Spacer(Modifier.size(24.dp)) }
     }
@@ -371,8 +382,22 @@ private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style:
     }
 }
 
+/** The Winamp widget or its 4x1 strip, drawn by the widget's own render with the classic skin; the card keeps the widget's shape. */
 @Composable
-private fun Placeholder() = Box(Modifier.size(40.dp).border(1.dp, T.line, CircleShape))
+private fun WinampCard(ctx: Context, compact: Boolean) {
+    val h = if (compact) WinampWidget.STRIP_H else WINAMP_H
+    val bmp by produceState<Bitmap?>(null, compact) {
+        value = withContext(drawer) { runCatching { WinampWidget.render(null, "Pulse", 0.4f, true, 83, boxH = 2 * h, strip = compact) }.getOrNull() }
+    }
+    WidgetCard(if (compact) "Winamp 4x1" else "Winamp", { addToHome(ctx, if (compact) "music.WinampWidgetCompact" else "music.WinampWidget") }, WINAMP_W.toFloat() / h) {
+        val b = bmp
+        if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        else Placeholder()
+    }
+}
+
+@Composable
+private fun Placeholder() =Box(Modifier.size(40.dp).border(1.dp, T.line, CircleShape))
 
 /** A theme's logo by theme id: the Windows logos, the Android robot for Material, a black disc for AMOLED, a clear disc for Glass, a dark rounded tile for iOS, a grid for All. */
 @Composable

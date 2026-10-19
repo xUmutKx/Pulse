@@ -27,7 +27,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -85,6 +85,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -557,8 +558,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             }
         }
         PCard {
-            // the empty space of the path row is the item-size slider: drag sideways, left = smaller, right = larger
-            if (sel.isNotEmpty()) selBar() else Row(Modifier.fillMaxWidth().sizeDrag(ctx), verticalAlignment = Alignment.CenterVertically) {
+            // hold the path row and slide: it turns into a full-width size slider (left = smaller, right = larger) until the finger lifts
+            var sizing by remember { mutableStateOf(false) }
+            if (sel.isNotEmpty()) selBar() else Row(Modifier.fillMaxWidth().sizeDrag(ctx) { sizing = it }.sizeOverlay(sizing, T.panel, T.line, Look.accent), verticalAlignment = Alignment.CenterVertically) {
                 if (dir != top || arcFile != null) Box(Modifier.clickable { if (arcFile != null) { if (arcCwd.isEmpty()) arcFile = null else arcCwd = arcCwd.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" } } else go((dir.parentFile ?: top).path) }) { PIcon("chevron", T.text, 22.dp, Modifier.rotate(180f)) }
                 val cur = buildList<Triple<String, String, () -> Unit>> {
                     val inTop = dir.path == top.path || dir.path.startsWith(top.path + "/")
@@ -908,23 +910,35 @@ private fun newFileSplit(typed: String, chosen: String): Pair<String, String> {
     return (if (typedExt.isNotEmpty()) t.substring(0, i) else t) to ext
 }
 
-/** Dragging sideways over a row sets the item size live (a full row width is about ten steps); the choice is saved when the finger lifts. */
-private fun Modifier.sizeDrag(ctx: android.content.Context): Modifier = pointerInput(Unit) {
-    var acc = 0f
-    detectHorizontalDragGestures(
-        onDragStart = { acc = 0f },
-        onDragEnd = { FilesPrefs.save(ctx) },
-        onDragCancel = { FilesPrefs.save(ctx) },
-    ) { change, dx ->
-        change.consume()
-        acc += dx
-        val step = size.width / 10f
-        val n = (acc / step).toInt()
-        if (n != 0) {
-            FilesPrefs.icon = (FilesPrefs.icon + n).coerceIn(0, 9)
-            acc -= n * step
-        }
+private const val SIZE_PAD_DP = 16
+
+/** Press and hold the row, then slide: the finger position sets the item size live (0 at the left edge, 9 at the right); saved on release. */
+private fun Modifier.sizeDrag(ctx: android.content.Context, active: (Boolean) -> Unit): Modifier = pointerInput(Unit) {
+    fun setAt(x: Float) {
+        val pad = SIZE_PAD_DP.dp.toPx()
+        val w = (size.width - 2 * pad).coerceAtLeast(1f)
+        FilesPrefs.icon = (((x - pad) / w).coerceIn(0f, 1f) * 9f).roundToInt()
     }
+    detectDragGesturesAfterLongPress(
+        onDragStart = { o -> active(true); setAt(o.x) },
+        onDragEnd = { active(false); FilesPrefs.save(ctx) },
+        onDragCancel = { active(false); FilesPrefs.save(ctx) },
+        onDrag = { change, _ -> change.consume(); setAt(change.position.x) },
+    )
+}
+
+/** While [on], the row shows a thick full-width slider (track, fill, thumb) instead of its content. */
+private fun Modifier.sizeOverlay(on: Boolean, bg: Color, track: Color, fill: Color): Modifier = drawWithContent {
+    if (!on) { drawContent(); return@drawWithContent }
+    val frac = FilesPrefs.icon.coerceIn(0, 9) / 9f
+    val h = 12.dp.toPx()
+    val pad = SIZE_PAD_DP.dp.toPx()
+    val w = size.width - 2 * pad
+    val cy = size.height / 2
+    drawRect(bg)
+    drawRoundRect(track, androidx.compose.ui.geometry.Offset(pad, cy - h / 2), androidx.compose.ui.geometry.Size(w, h), androidx.compose.ui.geometry.CornerRadius(h / 2))
+    drawRoundRect(fill, androidx.compose.ui.geometry.Offset(pad, cy - h / 2), androidx.compose.ui.geometry.Size(w * frac, h), androidx.compose.ui.geometry.CornerRadius(h / 2))
+    drawCircle(fill, 13.dp.toPx(), androidx.compose.ui.geometry.Offset(pad + w * frac, cy))
 }
 
 /** The path as clickable segments with chevrons between; it scrolls sideways and stays at the end. */

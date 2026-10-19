@@ -45,6 +45,15 @@ data class PowerampStyle(
     val onBackdrop: Color
         get() = if (backdrop == PowerampBackdrop.SOLID && solid.luminance() > .5f) Color.Black else text
 
+    /** Transport icon family follows the button shape: bare/filled, rounded, thin line, sharp (pixel when also square-cornered). */
+    val icons: com.umutk.pulse.extras.ui.IconStyle
+        get() = when (buttons) {
+            PowerampButtons.PLAIN -> com.umutk.pulse.extras.ui.IconStyle.FILLED
+            PowerampButtons.ROUND -> com.umutk.pulse.extras.ui.IconStyle.ROUNDED
+            PowerampButtons.SOFT -> com.umutk.pulse.extras.ui.IconStyle.LINE
+            PowerampButtons.SQUARE -> if (artCorner == 0.dp) com.umutk.pulse.extras.ui.IconStyle.PIXEL else com.umutk.pulse.extras.ui.IconStyle.SHARP
+        }
+
     companion object {
         @Composable
         fun materialYou(backdrop: PowerampBackdrop = PowerampBackdrop.BLACK, solid: Color = Color.Black): PowerampStyle {

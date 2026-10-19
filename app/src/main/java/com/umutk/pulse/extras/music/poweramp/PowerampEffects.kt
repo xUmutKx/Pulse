@@ -252,7 +252,12 @@ private fun VBand(value: Int, min: Int, max: Int, enabled: Boolean, style: Power
 private fun KnobsPage(style: PowerampStyle, ui: EqState, engine: MusicPlayerEngine?) {
     val fg = style.onBackdrop
     val (vol, setVol) = rememberVolume()
-    fun setTempo(t: Float) { ui.tempo = t.coerceIn(.5f, 2f); engine?.player?.setPlaybackSpeed(ui.tempo) }
+    val appc = LocalContext.current
+    fun setTempo(t: Float) {
+        ui.tempo = t.coerceIn(.5f, 2f)
+        com.umutk.pulse.extras.music.MusicSettings.setSpeed(appc, ui.tempo)
+        engine?.reloadSettings()
+    }
     Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
         if (engine != null) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {

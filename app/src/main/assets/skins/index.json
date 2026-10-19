@@ -1,0 +1,602 @@
+[
+ {
+  "id": "174760-pioneer",
+  "name": "174760-Pioneer",
+  "author": "",
+  "source": "https://archive.org/details/winampskins_-Pioneer",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 57609
+ },
+ {
+  "id": "4-ever-xp",
+  "name": "4-ever XP",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/0074975fbe1c312140618a9f8efb70e6/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 29467
+ },
+ {
+  "id": "aimp-classic",
+  "name": "Aimp Classic",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Aimp_Classic",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 54476
+ },
+ {
+  "id": "alpine-cda-w551mp",
+  "name": "ALPINE CDA-W551mp",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_ALPINE_CDA-W551mp",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 41270
+ },
+ {
+  "id": "alpineamp",
+  "name": "alpineamp",
+  "author": "",
+  "source": "https://archive.org/details/winampskins_alpineamp",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 81589
+ },
+ {
+  "id": "amigappc-dark",
+  "name": "AmigaPPC-dark",
+  "author": "",
+  "source": "https://github.com/captbaritone/webamp/blob/master/packages/webamp-demo/skins/AmigaPPC-dark.wsz",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 11495
+ },
+ {
+  "id": "ampboy",
+  "name": "AMPBOY",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/0eaba96cdab9ebac4d72f852aef6c69b/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 55185
+ },
+ {
+  "id": "andamp-dark",
+  "name": "AndAmp Dark",
+  "author": "",
+  "source": "https://github.com/andrehickmann/macamp/blob/master/Resources/Skins/AndAmp Dark.wsz",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 13736
+ },
+ {
+  "id": "andamp-light",
+  "name": "AndAmp Light",
+  "author": "",
+  "source": "https://github.com/andrehickmann/macamp/blob/master/Resources/Skins/AndAmp Light.wsz",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 13732
+ },
+ {
+  "id": "andamp-spot",
+  "name": "AndAmp Spot",
+  "author": "",
+  "source": "https://github.com/andrehickmann/macamp/blob/master/Resources/Skins/AndAmp Spot.wsz",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 13459
+ },
+ {
+  "id": "ascii",
+  "name": "ascii",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/e06363340d1e7db147b2b61e9c3601a4/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 11701
+ },
+ {
+  "id": "axon-amp",
+  "name": "Axon amp",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/edbd0697172ad1ad1546ecf6bc5e4239/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 18097
+ },
+ {
+  "id": "beerforwinamp",
+  "name": "BEERFORWINAMP",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/b6ca2857edb9b7d9923011646ba0b8c8/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 44534
+ },
+ {
+  "id": "casio-sf-4100",
+  "name": "casio sf 4100",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_casio_sf_4100",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 17640
+ },
+ {
+  "id": "classic-ebony",
+  "name": "Classic Ebony",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Classic_Ebony",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 10911
+ },
+ {
+  "id": "cuteamp",
+  "name": "cuteamp",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/2a0453c5c41414a4e359f0797f47a830/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 47061
+ },
+ {
+  "id": "d-a-s-h-a-m-p",
+  "name": "D-A-S-H-a-m-p",
+  "author": "Fred Mitchell",
+  "source": "https://skins.webamp.org/skin/7ef90ab12e572ff5941b6f67fe8423e8/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 23259
+ },
+ {
+  "id": "dervish",
+  "name": "dervish",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_dervish",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 49830
+ },
+ {
+  "id": "deskamp-comp",
+  "name": "Deskamp comp",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/47c6b233cc200e31bbd4fe57cc1dcbde/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 71457
+ },
+ {
+  "id": "deviantamp",
+  "name": "deviantamp",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/76e35b43e81fd30995f49f851938c6ab/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 22415
+ },
+ {
+  "id": "dosamp",
+  "name": "dosamp",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/a56d3e7bd9de9c9bd42e4cd33468a46d/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 12200
+ },
+ {
+  "id": "dumamp",
+  "name": "DumAmp",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/794b73f1afa5c365ab931a1fb56ff995/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 15170
+ },
+ {
+  "id": "elaysia",
+  "name": "elaysia",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_elaysia",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 62627
+ },
+ {
+  "id": "fade-to-black",
+  "name": "fade to black",
+  "author": "dare",
+  "source": "https://archive.org/details/winampskin_fade_to_black_by_dare",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 26877
+ },
+ {
+  "id": "felicet",
+  "name": "felicet",
+  "author": "franticmezmer",
+  "source": "https://archive.org/details/winampskin_felicet_by_franticmezmer",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 128231
+ },
+ {
+  "id": "frootyamp",
+  "name": "FrootyAmp",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/dc5dfd84006400f6303b96d141305fa8/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 15562
+ },
+ {
+  "id": "gameboy",
+  "name": "gameboy",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/42ebc1642cab76ea703db6e937af5c97/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 98884
+ },
+ {
+  "id": "ie",
+  "name": "ie",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/0e38ac23c5e02cba57b0825516be5279/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 42050
+ },
+ {
+  "id": "iory-purple-flames",
+  "name": "iory purple flames",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/ff923188fbde3063a444b8f18df85be2/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 29140
+ },
+ {
+  "id": "jiji",
+  "name": "jiji",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_jiji",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 73129
+ },
+ {
+  "id": "jvc",
+  "name": "Jvc",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Jvc",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 43561
+ },
+ {
+  "id": "kenwood",
+  "name": "kenwood",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_kenwood",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 91447
+ },
+ {
+  "id": "limeamp",
+  "name": "LimeAmp",
+  "author": "",
+  "source": "https://archive.org/details/winampskins_LimeAmp_3",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 66378
+ },
+ {
+  "id": "mac-os-x",
+  "name": "mac os x",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_mac_os_x",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 69049
+ },
+ {
+  "id": "majestic-12-winamp-skin",
+  "name": "Majestic 12 Winamp skin",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Majestic_12_Winamp_skin",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 52442
+ },
+ {
+  "id": "moonlight-night",
+  "name": "Moonlight night",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Moonlight_night",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 92574
+ },
+ {
+  "id": "night-glow",
+  "name": "Night Glow",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Night_Glow",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 24801
+ },
+ {
+  "id": "old-mac-os",
+  "name": "Old Mac-OS",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Old_Mac-OS",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 10577
+ },
+ {
+  "id": "paper-amp",
+  "name": "Paper-Amp",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/0050f442e1438c491cb450f9fae047e4/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 88041
+ },
+ {
+  "id": "purple-glow",
+  "name": "Purple Glow",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/cb7102ec7a4f6cefbc63d0dc0aecea16/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 31341
+ },
+ {
+  "id": "rebel-amp-2-0",
+  "name": "Rebel Amp 2.0",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Rebel_Amp_2_0",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 90861
+ },
+ {
+  "id": "rebel-amp-2k",
+  "name": "Rebel Amp 2k",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Rebel_Amp_2k",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 72434
+ },
+ {
+  "id": "skinner-atlas",
+  "name": "Skinner Atlas",
+  "author": "",
+  "source": "https://github.com/captbaritone/webamp/blob/master/packages/webamp-demo/skins/Skinner_Atlas.wsz",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 15811
+ },
+ {
+  "id": "skull-inc-cross",
+  "name": "Skull inc Cross",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Skull_inc_Cross",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 74034
+ },
+ {
+  "id": "sony",
+  "name": "Sony",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Sony",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 30013
+ },
+ {
+  "id": "sony-cdx-mp3",
+  "name": "Sony CDX-MP3",
+  "author": "",
+  "source": "https://archive.org/details/winampskins_Sony_CDX-MP3",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 81373
+ },
+ {
+  "id": "sony-mpfx3-v2",
+  "name": "Sony MPFX3-v2",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Sony_MPFX3-v2_5",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 36240
+ },
+ {
+  "id": "sos-amp",
+  "name": "sos amp",
+  "author": "loganno1",
+  "source": "https://archive.org/details/winampskin_sos_amp_by_loganno1",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 83408
+ },
+ {
+  "id": "starfish",
+  "name": "starfish",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/7e833da867f4d7ed633d9d9ca8d12812/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 38004
+ },
+ {
+  "id": "sublimespotamp-v21",
+  "name": "SublimeSpotAmp v21",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_SublimeSpotAmp_v21",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 80261
+ },
+ {
+  "id": "the-red",
+  "name": "THE RED",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_THE_RED",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 8182
+ },
+ {
+  "id": "the-ukraine",
+  "name": "The Ukraine",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/0623a31c97caaf188d6545cdab075370/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 65883
+ },
+ {
+  "id": "topazamp-v5",
+  "name": "TopazAmp v5",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_TopazAmp_v5",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 85039
+ },
+ {
+  "id": "traffic",
+  "name": "traffic",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/b4c420c59b2db2a2ea164ca42062f69b/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 11824
+ },
+ {
+  "id": "tundra-winamp-skin-actualized",
+  "name": "Tundra Winamp Skin Actualized",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Tundra_Winamp_Skin_Actualized",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 14581
+ },
+ {
+  "id": "void-dark",
+  "name": "Void dark",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Void_dark",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 11206
+ },
+ {
+  "id": "winamp-3",
+  "name": "winamp 3",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_winamp_3",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 63134
+ },
+ {
+  "id": "winamp-black",
+  "name": "winamp black",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_winamp_black",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 39894
+ },
+ {
+  "id": "winamp-krzlite-1-09",
+  "name": "Winamp KRZLite 1.09",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Winamp_KRZLite_1.09",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 64917
+ },
+ {
+  "id": "winamp-skin-deep-black",
+  "name": "winamp skin deep black",
+  "author": "daemonofnivas",
+  "source": "https://archive.org/details/winampskin_winamp_skin_deep_black_by_daemonofnivas",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 9026
+ },
+ {
+  "id": "winamp-ti",
+  "name": "winamp Ti",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_winamp_Ti",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 66822
+ },
+ {
+  "id": "winamp-vista-classic",
+  "name": "Winamp Vista Classic",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Winamp_Vista_Classic",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 59347
+ },
+ {
+  "id": "winamp-xp-lookalike",
+  "name": "Winamp XP Lookalike",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/26121cc0685fedd0d070938ef3f392ed/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 36011
+ },
+ {
+  "id": "winamp98-plus-ie5",
+  "name": "Winamp98 plus IE5",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/6431ff7cf844dc360b71388d75fe6d65/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 20281
+ },
+ {
+  "id": "windows-98",
+  "name": "Windows 98",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/1d9d29cb8e7a0adb9ab092a043f752d5/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 18422
+ },
+ {
+  "id": "windows-xp",
+  "name": "Windows XP",
+  "author": "techweenie",
+  "source": "https://archive.org/details/winampskin_Windows_XP_by_techweenie",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 48796
+ },
+ {
+  "id": "windows-xp-2",
+  "name": "Windows XP",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/7544b258ac7174fd293c1f32b4a5685a/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 109406
+ },
+ {
+  "id": "xmms-skin-for-winamp",
+  "name": "xmms skin for winamp",
+  "author": "dainori",
+  "source": "https://archive.org/details/winampskin_xmms_skin_for_winamp_by_dainori",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 62536
+ },
+ {
+  "id": "yufo05",
+  "name": "Yufo05",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/65fd7a784112b74134698bb962e2bf0d/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 27418
+ },
+ {
+  "id": "yufo06",
+  "name": "Yufo06",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/5ea2d974dad5507b83a6ddff7003a8ee/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 27512
+ },
+ {
+  "id": "yufo07",
+  "name": "Yufo07",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/5391974c8d7d9d6a6343f8ee251eca88/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 28174
+ },
+ {
+  "id": "yufo12",
+  "name": "Yufo12",
+  "author": "",
+  "source": "https://skins.webamp.org/skin/a1e982d98c62c7fc2230af7916888d43/",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 28622
+ },
+ {
+  "id": "yummiyogurt",
+  "name": "YummiYogurt",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_YummiYogurt",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 103558
+ },
+ {
+  "id": "yummiyogurt-v5",
+  "name": "YummiYogurt v5",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_YummiYogurt_v5",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 97657
+ },
+ {
+  "id": "zeus-v5",
+  "name": "Zeus v5",
+  "author": "",
+  "source": "https://archive.org/details/winampskin_Zeus_v5",
+  "licence": "community skin, licence not stated by the author",
+  "bytes": 62286
+ }
+]

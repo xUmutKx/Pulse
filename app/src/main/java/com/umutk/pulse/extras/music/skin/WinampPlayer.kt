@@ -15,8 +15,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -32,6 +35,13 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.umutk.pulse.extras.music.visual.VIS_H
+import com.umutk.pulse.extras.music.visual.VIS_W
+import com.umutk.pulse.extras.music.visual.VIS_X
+import com.umutk.pulse.extras.music.visual.VIS_Y
+import com.umutk.pulse.extras.music.visual.VisState
+import com.umutk.pulse.extras.music.visual.drawVisBars
+import com.umutk.pulse.extras.music.visual.drawVisScope
 import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 
@@ -43,6 +53,8 @@ private const val Z_REP = 13
 private const val Z_EQ = 14
 private const val Z_PL = 15
 private const val Z_SHADE = 16
+private const val Z_VIS = 17
+private const val Z_LYR = 18
 
 private val MAIN_ZONES = listOf(
     Zone(Z_SHADE, 248f, 0f, 26f, 14f),
@@ -53,6 +65,8 @@ private val MAIN_ZONES = listOf(
     Zone(Z_PL, 242f, 58f, 23f, 12f, padY = 4f),
     Zone(Z_SHUF, 164f, 89f, 47f, 15f, padY = 2f),
     Zone(Z_REP, 211f, 89f, 28f, 15f, padY = 2f),
+    Zone(Z_VIS, VIS_X.toFloat(), VIS_Y.toFloat(), VIS_W.toFloat(), VIS_H.toFloat()),
+    Zone(Z_LYR, 196f, 0f, 38f, 14f), // title bar, free between the title and the shade key
 )
 
 private val SHADE_ZONES = listOf(
@@ -94,11 +108,29 @@ fun WinampMain(
     onToggleEq: () -> Unit = {},
     onTogglePlaylist: () -> Unit = {},
     onShade: () -> Unit = {},
+    /** Oscilloscope line instead of bars; the caller keeps the choice. */
+    scope: Boolean = false,
+    /** Waveform points for the oscilloscope, [VIS_W] values 0..1 (0.5 centre). */
+    wave: List<Float> = emptyList(),
+    /** Tap on the vis area. */
+    onVisToggle: () -> Unit = {},
+    /** The LYRICS label in the title bar; [lyricsOn] draws it on a dark patch. */
+    lyricsOn: Boolean = false,
+    onLyrics: () -> Unit = {},
 ) {
     val sc = with(LocalDensity.current) { scale.dp.toPx() }
     var pressed by remember { mutableIntStateOf(-1) }
     var seekDrag by remember { mutableFloatStateOf(-1f) }
     var volDrag by remember { mutableFloatStateOf(-1f) }
+    // vis smoothing runs in its own frame loop; it writes [visFrame] (draw phase only), so the window never recomposes for it
+    val visState = remember { VisState() }
+    val levelsNow by rememberUpdatedState(levels)
+    val waveNow by rememberUpdatedState(wave)
+    var visFrame by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(shade) {
+        if (shade) return@LaunchedEffect
+        while (true) withFrameNanos { t -> if (visState.step(levelsNow, waveNow, t)) visFrame++ }
+    }
     val width = title.length * 5
     val shown = if (shade) 53 else 153
     var tick by remember { mutableIntStateOf(0) }
@@ -132,6 +164,8 @@ fun WinampMain(
                         Z_REP -> onRepeat()
                         Z_EQ -> onToggleEq()
                         Z_PL -> onTogglePlaylist()
+                        Z_VIS -> onVisToggle()
+                        Z_LYR -> onLyrics()
                         else -> onTransport(WinampButton.entries[id - 1].t.let { if (shade && playing && it == Transport.PLAY) Transport.PAUSE else it })
                     }
                 }
@@ -146,9 +180,11 @@ fun WinampMain(
             blit(skin.titlebar, if (sh) 9 else 0, 18, 9, 9, 254f, 3f, u)
             return@Canvas
         }
-        blit(skin.main, 0, 0, WINAMP_W, WINAMP_H, 0f, 0f, u)
+        blitFit(skin.main, u)
         blit(skin.titlebar, 27, 0, 275, 14, 0f, 0f, u)
         blit(skin.titlebar, if (pressed == Z_SHADE) 9 else 0, 18, 9, 9, 254f, 3f, u)
+        if (lyricsOn) drawRect(skin.playlist.normalBg, Offset(196f * u, 0f), Size(38f * u, 14f * u))
+        skinText(skin, "LYRICS", 200f, 4f, u)
         // time mm:ss
         val d = timeText.filter { it.isDigit() }.padStart(4, '0').takeLast(4).map { it - '0' }
         listOf(48f, 60f, 78f, 90f).forEachIndexed { i, x -> skinDigit(skin, d[i], x, 26f, u) }
@@ -158,12 +194,9 @@ fun WinampMain(
         blit(skin.monoster, 29, if (stereo) 12 else 0, 27, 12, 212f, 41f, u)
         blit(skin.monoster, 0, if (stereo) 0 else 12, 29, 12, 239f, 41f, u)
         blit(skin.playpaus, if (playing) 0 else 18, 0, 9, 9, 26f, 28f, u)
-        // spectrum: 19 bars of 3 px every 4 px, row colours come from viscolor.txt entries 2..17
-        levels.take(19).forEachIndexed { i, lv ->
-            val rows = (lv.coerceIn(0f, 1f) * 16).roundToInt()
-            for (t in 16 - rows until 16) {
-                drawRect(skin.vis[2 + t], Offset((24 + i * 4) * u, (43 + t) * u), Size(3 * u, u))
-            }
+        // reading visFrame here redraws this Canvas when the vis state moves on
+        if (visFrame >= 0L) {
+            if (scope) drawVisScope(visState, skin.vis, u) else drawVisBars(visState, skin.vis, u)
         }
         if (pos >= 0f) { // a negative progress means no track: the bar is hidden
             blit(skin.posbar, 0, 0, 248, 10, 16f, 72f, u)

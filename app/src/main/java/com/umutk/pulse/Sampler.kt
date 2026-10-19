@@ -59,6 +59,46 @@ object Shell {
         if (shizukuOk()) exec { Shizuku.newProcess(arrayOf("sh", "-c", "exec 2>&1; $cmd"), null, null) }
         else exec { ProcessBuilder(if (root == true) listOf("su", "-c", cmd) else listOf("sh", "-c", cmd)).redirectErrorStream(true).start() }
 
+    private fun q(c: String) = "'" + c.replace("'", "'\\''") + "'"
+
+    /**
+     * Always as root, never Shizuku (shell uid cannot read other apps' data). [mode] 0 plain su, 1 su --mount-master (global mount view),
+     * 2 nsenter into PID 1's mount namespace. Output includes stderr.
+     */
+    fun runRoot(cmd: String, mode: Int = 0): String = exec {
+        ProcessBuilder(when (mode) {
+            1 -> listOf("su", "--mount-master", "-c", cmd)
+            2 -> listOf("su", "-c", "nsenter -t 1 -m -- sh -c " + q(cmd))
+            3 -> listOf("su", "-M", "-c", cmd)                                  // Magisk short form of --mount-master
+            4 -> listOf("su", "-c", "nsenter --mount=/proc/1/ns/mnt -- sh -c " + q(cmd))
+            5 -> listOf("su", "0", "sh", "-c", cmd)                             // su <uid> <cmd> form (some KernelSU/old su builds)
+            else -> listOf("su", "-c", cmd)
+        }).redirectErrorStream(true).start().also { runCatching { it.outputStream.close() } }
+    }
+
+    const val ROOT_MODES = 6
+    private val modeNames = listOf("su -c", "su --mount-master", "nsenter -t 1", "su -M", "nsenter --mount", "su 0")
+    /** The root mount view that worked last; tried first next time. */
+    @Volatile var rootMode = 0
+
+    /**
+     * Finds which root view sees one of [paths]. Returns (mode, path) or null; [why] gets a readable list of what failed.
+     * Needed because plain `su` can run in an isolated mount namespace (KernelSU / Magisk mount-namespace "isolated"), where other apps' data is invisible.
+     */
+    fun rootSee(paths: List<String>, why: StringBuilder? = null): Pair<Int, String>? {
+        for (m in listOf(rootMode) + (0 until ROOT_MODES).filter { it != rootMode }) {
+            for (p in paths) {
+                val r = runRoot("[ -e '$p' ] && echo __YES", m)
+                if (r.contains("__YES")) { rootMode = m; return m to p }
+            }
+            why?.append(modeNames[m])?.append(if (runRoot("id -u", m).trim().endsWith("0")) ": folder not visible; " else ": refused; ")
+        }
+        return null
+    }
+
+    /** Data folder aliases for one package: the same files through the paths a mount view may expose. */
+    fun dataPaths(pkg: String) = listOf("/data/user/0/$pkg", "/data/data/$pkg", "/data_mirror/data_ce/null/0/$pkg", "/data/user_de/0/$pkg")
+
     private fun exec(start: () -> Process): String = try {
         val p = start()
         val out = p.inputStream.bufferedReader().readText()
@@ -106,6 +146,12 @@ object Shell {
         refreshShizuku()
     }
 
+    /** Opens the Shizuku app; false when it is not installed. */
+    fun openShizuku(ctx: Context): Boolean {
+        val i = listOf("moe.shizuku.privileged.api", "rikka.shizuku", "dev.rikka.shizuku").firstNotNullOfOrNull { ctx.packageManager.getLaunchIntentForPackage(it) } ?: return false
+        return runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false)
+    }
+
     /** Shizuku button. Not installed: opens the download page. Installed but not started: says so. Running: asks for permission; the answer arrives in [shizukuMsg] through the listener. */
     fun askShizuku(ctx: Context) {
         refreshShizuku()
@@ -116,7 +162,14 @@ object Shell {
                 tr("Shizuku is not installed. Its download page is open.", "Shizuku yüklü değil. İndirme sayfası açıldı.")
             }
             shizuku == 0 -> tr("Shizuku not started.", "Shizuku başlatılmamış.")
-            else -> try { Shizuku.requestPermission(1); tr("Permission request sent.", "İzin isteği gönderildi.") } catch (e: Throwable) { "requestPermission: $e" }
+            else -> try {
+                when {
+                    Shizuku.isPreV11() -> tr("Shizuku is too old. Update it.", "Shizuku çok eski. Güncelle.")
+                    // denied before: Shizuku answers "denied" at once and shows no prompt, only its own app can allow Pulse again
+                    Shizuku.shouldShowRequestPermissionRationale() -> { openShizuku(ctx); tr("Shizuku blocks Pulse. Allow it in the Shizuku app.", "Shizuku Pulse'u engelliyor. Shizuku uygulamasında izin ver.") }
+                    else -> { Shizuku.requestPermission(1); tr("Permission request sent.", "İzin isteği gönderildi.") }
+                }
+            } catch (e: Throwable) { "requestPermission: $e" }
         }
     }
 

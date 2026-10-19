@@ -64,8 +64,12 @@ private fun CloseBox(m: MusicLook, onClose: () -> Unit) {
     val tap = Modifier.padding(start = 4.dp).clickable(role = Role.Button, onClick = onClose)
     if (m.id == "xp") {
         Canvas(tap.size(16.dp)) { xpCaption(close = true) }
+    } else if (m.id == "win95") {
+        Box(tap.size(16.dp, 14.dp).background(androidx.compose.ui.graphics.Color(0xFFC0C0C0)).bevel(raised = true), contentAlignment = Alignment.Center) {
+            com.umutk.pulse.extras.ui.TIcon("close", androidx.compose.ui.graphics.Color.Black, 10.dp, com.umutk.pulse.extras.ui.IconStyle.PIXEL)
+        }
     } else {
-        Box(tap.size(18.dp), contentAlignment = Alignment.Center) { Text("✕", color = m.titleText, fontSize = 10.sp) }
+        Box(tap.size(18.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.extras.ui.TIcon("close", m.titleText, 12.dp, com.umutk.pulse.extras.ui.IconSet.styleFor(m.id)) }
     }
 }
 

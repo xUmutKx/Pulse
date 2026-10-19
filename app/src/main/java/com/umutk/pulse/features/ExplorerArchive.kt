@@ -682,7 +682,7 @@ fun FilesSettings() {
                     Box(Modifier.size(22.dp).background(Look.accent, androidx.compose.foundation.shape.CircleShape))
                 }
                 if (dots) WinAlert(onDismissRequest = { dots = false }, title = { Text(tr("Accent", "Vurgu")) },
-                    text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { com.umutk.pulse.MaterialAccents.chunked(5).forEachIndexed { r, row -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { row.forEachIndexed { k, c ->
+                    text = { Column(verticalArrangement = Arrangement.spacedBy(10.dp)) { com.umutk.pulse.accentsFor(T.material).chunked(5).forEachIndexed { r, row -> Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) { row.forEachIndexed { k, c ->
                         val i = r * 5 + k
                         Box(Modifier.size(38.dp).background(c, androidx.compose.foundation.shape.CircleShape)
                             .border(if (Look.accentIdx == i) 3.dp else 1.dp, if (Look.accentIdx == i) T.text else T.line, androidx.compose.foundation.shape.CircleShape)

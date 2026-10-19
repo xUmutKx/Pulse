@@ -37,6 +37,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -48,7 +49,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.Look
 import com.umutk.pulse.PSlider
-import com.umutk.pulse.T
 import com.umutk.pulse.extras.music.MusicPlayerEngine
 import com.umutk.pulse.extras.music.Track
 import com.umutk.pulse.extras.music.trackArt
@@ -58,6 +58,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
+private val PBG = Color(0xFF0B0B0F)
+private val PANEL = Color(0xFF1A1A22)
+private val TXT = Color(0xFFF2F2F7)
+private val SUB = Color(0xFFA0A0B0)
 private fun Track.name() = title?.takeIf { it.isNotBlank() } ?: path.substringAfterLast('/').substringBeforeLast('.')
 private fun Track.artistName() = artist?.takeIf { it.isNotBlank() } ?: tr("Unknown artist", "Bilinmeyen sanatçı")
 private fun Track.folder() = path.substringBeforeLast('/', "")
@@ -106,7 +110,7 @@ private fun rememberArt(t: Track?): ImageBitmap? {
 @Composable
 private fun Art(t: Track?, size: androidx.compose.ui.unit.Dp?, tint: Color, modifier: Modifier = Modifier) {
     val bm = rememberArt(t)
-    val m = (if (size != null) modifier.size(size) else modifier).clip(RoundedCornerShape(if (size != null && size < 80.dp) 10.dp else 28.dp))
+    val m = (if (size != null) modifier.size(size) else modifier).clip(RoundedCornerShape(if (size != null && size < 80.dp) 12.dp else 32.dp))
     if (bm != null) Image(bm, null, m, contentScale = ContentScale.Crop)
     else Box(m.background(tint.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = tint, modifier = Modifier.fillMaxSize(.45f)) }
 }
@@ -122,7 +126,12 @@ private class Lists(val ctx: android.content.Context) {
 fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Modifier = Modifier, artBackground: Boolean = false) {
     val ctx = LocalContext.current
     val st by engine.state.collectAsState()
-    val accent = Look.accent
+    val cur = st.current
+    val art = rememberArt(cur)
+    val base = Look.accent.let { if (it.luminance() < .35f) Color(0xFFB9C3FF) else it }
+    // always a dark player, whatever the look or light mode; the cover colour is the accent
+    val accent = remember(art, base) { art?.let { coverColor(it, base) }?.let { c -> if (c.luminance() < .3f) androidx.compose.ui.graphics.lerp(c, Color.White, .45f) else c } ?: base }
+    val dyn = accent
     val tabs = listOf(tr("Songs", "Şarkılar"), tr("Albums", "Albümler"), tr("Artists", "Sanatçılar"), tr("Playlists", "Listeler"), tr("Folders", "Klasörler"))
     var tab by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
@@ -147,30 +156,27 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
         while (sleepLeft > 0) { delay(60_000); sleepLeft--; if (sleepLeft == 0) engine.pause() }
     }
 
-    val cur = st.current
-    val art = rememberArt(cur)
-    val dyn = remember(art) { art?.let { coverColor(it, accent) } ?: accent }
     BackHandler(showNow || group != null) { if (showQueue) showQueue = false else if (showNow) showNow = false else group = null }
 
     val q = query.trim().lowercase()
     val songs = remember(library, q) { if (q.isEmpty()) library else library.filter { it.name().lowercase().contains(q) || it.folder().lowercase().contains(q) } }
 
-    Box(modifier.fillMaxSize().background(if (T.dark) Color.Black else T.bg)) {
+    Box(modifier.fillMaxSize().background(PBG)) {
         Column(Modifier.fillMaxSize()) {
             // search
-            Row(Modifier.fillMaxWidth().padding(12.dp, 8.dp).clip(RoundedCornerShape(28.dp)).background(T.panel).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.Search, null, tint = T.sub, modifier = Modifier.size(20.dp))
+            Row(Modifier.fillMaxWidth().padding(12.dp, 8.dp).clip(RoundedCornerShape(28.dp)).background(PANEL).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(Icons.Rounded.Search, null, tint = SUB, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
                 Box(Modifier.weight(1f)) {
-                    if (query.isEmpty()) Text(tr("Search", "Ara"), color = T.sub, fontSize = 15.sp)
-                    BasicTextField(query, { query = it }, singleLine = true, textStyle = TextStyle(color = T.text, fontSize = 15.sp), cursorBrush = SolidColor(accent), modifier = Modifier.fillMaxWidth())
+                    if (query.isEmpty()) Text(tr("Search", "Ara"), color = SUB, fontSize = 15.sp)
+                    BasicTextField(query, { query = it }, singleLine = true, textStyle = TextStyle(color = TXT, fontSize = 15.sp), cursorBrush = SolidColor(accent), modifier = Modifier.fillMaxWidth())
                 }
-                if (query.isNotEmpty()) Icon(Icons.Rounded.Close, null, tint = T.sub, modifier = Modifier.size(20.dp).clickable { query = "" })
+                if (query.isNotEmpty()) Icon(Icons.Rounded.Close, null, tint = SUB, modifier = Modifier.size(20.dp).clickable { query = "" })
             }
             // tabs
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
                 tabs.forEachIndexed { i, s ->
-                    Text(s, color = if (tab == i) onAccent(accent) else T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium,
+                    Text(s, color = if (tab == i) onAccent(accent) else TXT, fontSize = 14.sp, fontWeight = FontWeight.Medium,
                         modifier = Modifier.padding(horizontal = 4.dp).clip(RoundedCornerShape(50)).background(if (tab == i) accent else Color.Transparent)
                             .clickable { tab = i; group = null }.padding(horizontal = 14.dp, vertical = 8.dp))
                 }
@@ -189,8 +195,8 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     val shown = if (tab == 0) songs else groups[g ?: ""].orEmpty()
                     Column {
                         if (g != null) Row(Modifier.fillMaxWidth().clickable { group = null }.padding(16.dp, 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.ArrowBack, null, tint = T.text); Spacer(Modifier.width(12.dp))
-                            Text(if (tab == 4) g.substringAfterLast('/') else g, color = T.text, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                            Icon(Icons.Rounded.ArrowBack, null, tint = TXT); Spacer(Modifier.width(12.dp))
+                            Text(if (tab == 4) g.substringAfterLast('/') else g, color = TXT, fontWeight = FontWeight.Bold, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                             Icon(Icons.Rounded.Shuffle, null, tint = accent, modifier = Modifier.clickable { if (shown.isNotEmpty()) engine.playQueue(shown.shuffled()) })
                         }
                         LazyColumn(Modifier.fillMaxSize()) {
@@ -200,10 +206,10 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                                     Art(t, 44.dp, accent)
                                     Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {
-                                        Text(t.name(), color = if (on) accent else T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                        Text(t.albumName(), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(t.name(), color = if (on) accent else TXT, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(t.albumName(), color = SUB, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
-                                    Icon(Icons.Rounded.PlaylistAdd, null, tint = T.sub, modifier = Modifier.clickable { engine.addToQueue(t) }.padding(6.dp))
+                                    Icon(Icons.Rounded.PlaylistAdd, null, tint = SUB, modifier = Modifier.clickable { engine.addToQueue(t) }.padding(6.dp))
                                 }
                             }
                         }
@@ -224,10 +230,10 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                                 Art(ts.firstOrNull(), 52.dp, accent)
                                 Spacer(Modifier.width(12.dp))
                                 Column(Modifier.weight(1f)) {
-                                    Text(if (tab == 4) k.substringAfterLast('/') else k, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                    Text("${ts.size}", color = T.sub, fontSize = 12.sp)
+                                    Text(if (tab == 4) k.substringAfterLast('/') else k, color = TXT, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text("${ts.size}", color = SUB, fontSize = 12.sp)
                                 }
-                                if (tab == 3) Icon(Icons.Rounded.Delete, null, tint = T.sub, modifier = Modifier.clickable { lists.delete(k); playlists = lists.all() }.padding(6.dp))
+                                if (tab == 3) Icon(Icons.Rounded.Delete, null, tint = SUB, modifier = Modifier.clickable { lists.delete(k); playlists = lists.all() }.padding(6.dp))
                             }
                         }
                     }
@@ -238,16 +244,16 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                 Art(cur, 44.dp, dyn)
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(cur.name(), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(cur.artistName(), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(cur.name(), color = TXT, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(cur.artistName(), color = SUB, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Icon(if (st.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = T.text, modifier = Modifier.size(40.dp).clickable { engine.togglePlayPause() }.padding(6.dp))
-                Icon(Icons.Rounded.SkipNext, null, tint = T.text, modifier = Modifier.size(40.dp).clickable { engine.next() }.padding(6.dp))
+                Icon(if (st.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = TXT, modifier = Modifier.size(40.dp).clickable { engine.togglePlayPause() }.padding(6.dp))
+                Icon(Icons.Rounded.SkipNext, null, tint = TXT, modifier = Modifier.size(40.dp).clickable { engine.next() }.padding(6.dp))
             }
         }
 
         if (showNow && cur != null) {
-            val bg = if (T.dark) Color.Black else T.bg
+            val bg = PBG
             Box(Modifier.fillMaxSize().background(bg)) {
                 if (artBackground && art != null) {
                     Image(art, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop)
@@ -255,11 +261,11 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                 } else Box(Modifier.fillMaxSize().background(dyn.copy(alpha = .22f)))
                 Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.KeyboardArrowDown, null, tint = T.text, modifier = Modifier.size(36.dp).clickable { showQueue = false; showNow = false })
+                        Icon(Icons.Rounded.KeyboardArrowDown, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { showQueue = false; showNow = false })
                         Spacer(Modifier.weight(1f))
-                        Icon(Icons.Rounded.Bedtime, null, tint = if (sleepLeft > 0) dyn else T.text, modifier = Modifier.clickable { sleepLeft = when (sleepLeft) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 } }.padding(6.dp))
+                        Icon(Icons.Rounded.Bedtime, null, tint = if (sleepLeft > 0) dyn else TXT, modifier = Modifier.clickable { sleepLeft = when (sleepLeft) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 } }.padding(6.dp))
                         if (sleepLeft > 0) Text("$sleepLeft", color = dyn, fontSize = 13.sp)
-                        Icon(Icons.Rounded.QueueMusic, null, tint = if (showQueue) dyn else T.text, modifier = Modifier.clickable { showQueue = !showQueue }.padding(6.dp))
+                        Icon(Icons.Rounded.QueueMusic, null, tint = if (showQueue) dyn else TXT, modifier = Modifier.clickable { showQueue = !showQueue }.padding(6.dp))
                     }
                     if (showQueue) {
                         val qs = st.queue
@@ -267,10 +273,10 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         LazyColumn(Modifier.weight(1f).fillMaxWidth(), ls) {
                             itemsIndexed(qs, key = { i, t -> "$i${t.path}" }) { i, t ->
                                 Row(Modifier.fillMaxWidth().clickable { engine.playAt(i) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Text(t.name(), color = if (i == st.index) dyn else T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                                    if (i > 0) Icon(Icons.Rounded.KeyboardArrowUp, null, tint = T.sub, modifier = Modifier.clickable { engine.moveInQueue(i, i - 1) }.padding(6.dp))
-                                    if (i < qs.lastIndex) Icon(Icons.Rounded.KeyboardArrowDown, null, tint = T.sub, modifier = Modifier.clickable { engine.moveInQueue(i, i + 1) }.padding(6.dp))
-                                    Icon(Icons.Rounded.Close, null, tint = T.sub, modifier = Modifier.clickable { engine.removeFromQueue(i) }.padding(6.dp))
+                                    Text(t.name(), color = if (i == st.index) dyn else TXT, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                    if (i > 0) Icon(Icons.Rounded.KeyboardArrowUp, null, tint = SUB, modifier = Modifier.clickable { engine.moveInQueue(i, i - 1) }.padding(6.dp))
+                                    if (i < qs.lastIndex) Icon(Icons.Rounded.KeyboardArrowDown, null, tint = SUB, modifier = Modifier.clickable { engine.moveInQueue(i, i + 1) }.padding(6.dp))
+                                    Icon(Icons.Rounded.Close, null, tint = SUB, modifier = Modifier.clickable { engine.removeFromQueue(i) }.padding(6.dp))
                                 }
                             }
                         }
@@ -279,19 +285,19 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         Art(cur, null, dyn, Modifier.fillMaxWidth().aspectRatio(1f))
                         Spacer(Modifier.weight(1f))
                     }
-                    Text(cur.name(), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(cur.artistName(), color = T.sub, fontSize = 15.sp, maxLines = 1)
+                    Text(cur.name(), color = TXT, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(cur.artistName(), color = SUB, fontSize = 15.sp, maxLines = 1)
                     val d = dur.coerceAtLeast(1)
                     PSlider(pos.coerceIn(0, d).toFloat(), { dragging = true; pos = it.toInt() }, 0f..d.toFloat()) { engine.seekTo(pos); dragging = false }
-                    Row(Modifier.fillMaxWidth()) { Text(fmt(pos), color = T.sub, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(fmt(dur), color = T.sub, fontSize = 12.sp) }
+                    Row(Modifier.fillMaxWidth()) { Text(fmt(pos), color = SUB, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(fmt(dur), color = SUB, fontSize = 12.sp) }
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Shuffle, null, tint = if (shuffle) dyn else T.sub, modifier = Modifier.size(44.dp).clickable { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }.padding(10.dp))
-                        Icon(Icons.Rounded.SkipPrevious, null, tint = T.text, modifier = Modifier.size(48.dp).clickable { engine.previous() }.padding(8.dp))
+                        Icon(Icons.Rounded.Shuffle, null, tint = if (shuffle) dyn else SUB, modifier = Modifier.size(44.dp).clickable { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }.padding(10.dp))
+                        Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(48.dp).clickable { engine.previous() }.padding(8.dp))
                         Box(Modifier.size(68.dp).clip(CircleShape).background(dyn).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
                             Icon(if (st.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(36.dp))
                         }
-                        Icon(Icons.Rounded.SkipNext, null, tint = T.text, modifier = Modifier.size(48.dp).clickable { engine.next() }.padding(8.dp))
-                        Icon(if (repeat == 1) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, null, tint = if (repeat != 0) dyn else T.sub,
+                        Icon(Icons.Rounded.SkipNext, null, tint = TXT, modifier = Modifier.size(48.dp).clickable { engine.next() }.padding(8.dp))
+                        Icon(if (repeat == 1) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, null, tint = if (repeat != 0) dyn else SUB,
                             modifier = Modifier.size(44.dp).clickable { repeat = when (repeat) { 0 -> 2; 2 -> 1; else -> 0 }; engine.player.repeatMode = repeat }.padding(10.dp))
                     }
                 }

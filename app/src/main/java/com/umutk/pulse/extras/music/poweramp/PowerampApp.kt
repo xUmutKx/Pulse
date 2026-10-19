@@ -55,7 +55,10 @@ import androidx.media3.common.Player
 import com.umutk.pulse.extras.music.MusicPlayerEngine
 import com.umutk.pulse.extras.music.Track
 import com.umutk.pulse.tr
+import com.umutk.pulse.extras.music.stats.MusicStats
+import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /**
  * The whole Poweramp-style player. The caller owns [engine] (hold it in a foreground service) and the
@@ -65,7 +68,7 @@ import kotlinx.coroutines.delay
 fun PowerampApp(
     engine: MusicPlayerEngine,
     library: List<Track>,
-    style: PowerampStyle,
+    skinStyle: PowerampStyle,
     art: (Track) -> ImageBitmap?,
     modifier: Modifier = Modifier,
     skinId: String? = null,
@@ -80,7 +83,17 @@ fun PowerampApp(
     var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }
     var repeat by remember { mutableIntStateOf(engine.player.repeatMode) }
     val eqUi = remember { EqState() }
-    BackHandler(enabled = tab != null) { tab = null }
+    val ctx = LocalContext.current
+    var favs by remember { mutableStateOf(MusicStats.favourites(ctx)) }
+    val sleepLeft by engine.sleepLeftMs.collectAsState()
+    var lyricsOpen by remember { mutableStateOf(false) }
+    var tagEdit by remember { mutableStateOf(false) }
+    var artOpen by remember { mutableStateOf(false) }
+    var coverRev by remember { mutableIntStateOf(0) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    if (tagEdit && track != null) com.umutk.pulse.extras.music.TagEditDialog(track, onDone = { scope.launch { com.umutk.pulse.extras.music.MusicLibrary.refresh(ctx) } }, onClose = { tagEdit = false })
+    BackHandler(enabled = lyricsOpen) { lyricsOpen = false }
+    BackHandler(enabled = tab != null && !lyricsOpen) { tab = null }
     DisposableEffect(engine) {
         val l = object : Player.Listener {
             override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { shuffle = shuffleModeEnabled }
@@ -99,12 +112,18 @@ fun PowerampApp(
         }
     }
 
-    val cover = remember(track) { track?.let(art) }
+    // a cover picked online (saved under files/covers) wins over the embedded one; coverRev reloads it after a pick
+    val cover = remember(track, coverRev) { track?.let { PowerampCovers.saved(ctx, it.path) ?: art(it) } }
 
-    Box(modifier.fillMaxSize().skinBackdrop(style)) {
-        if (style.backdrop == PowerampBackdrop.BLURRED_ART && cover != null) {
+    // every page is pure black, edges included; the skin's colours stay as accents and text
+    val style = remember(skinStyle) { skinStyle.copy(backdrop = PowerampBackdrop.BLACK, solid = Color.Black, gradientTo = null) }
+    if (artOpen && track != null) CoverArtDialog(track, style, onSaved = { coverRev++ }, onClose = { artOpen = false })
+    val artBg = PowerampPrefs.playerArt(ctx)
+    Box(modifier.fillMaxSize().background(Color.Black)) {
+        // only the now-playing page takes the blurred cover as its backdrop, when the player setting allows it
+        if (tab == null && artBg && cover != null) {
             Image(cover, null, Modifier.fillMaxSize().blur(40.dp), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .7f)))
         }
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Box(Modifier.weight(1f)) {
@@ -134,8 +153,16 @@ fun PowerampApp(
                                 }
                             },
                             onOpenEffects = { tab = PowerampTab.EFFECTS },
+                            favourite = track != null && track.path in favs,
+                            onFavourite = { track?.let { MusicStats.toggleFavourite(ctx, it.path); favs = MusicStats.favourites(ctx) } },
+                            sleepMinutes = if (sleepLeft < 0) -1 else ((sleepLeft + 59_999L) / 60_000L).toInt(),
+                            onSleepSet = { m, end -> engine.setSleep(m, end) },
+                            onLyrics = { lyricsOpen = !lyricsOpen },
+                            lyricsOpen = lyricsOpen,
+                            onEditTags = { tagEdit = true },
+                            onFindArt = { artOpen = true },
                         )
-                        PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, skinId = skinId, onSkin = onSkin)
+                        PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, skinId = skinId, onSkin = onSkin, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
                         PowerampTab.SEARCH -> SearchScreen(library, track, style, onPlay = { engine.playQueue(library, it) })
                         PowerampTab.EFFECTS -> EffectsScreen(engine.equalizer, style, engine = engine, ui = eqUi)
                         PowerampTab.QUEUE -> QueueScreen(
@@ -202,7 +229,7 @@ private fun MiniBar(
                     .clickable(onClick = onPlayPause),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = style.accent, modifier = Modifier.size(30.dp))
+                Icon(com.umutk.pulse.extras.ui.IconSet.vec(if (playing) "pause" else "play", style.icons), null, tint = style.accent, modifier = Modifier.size(30.dp))
             }
         }
         Spacer(Modifier.height(8.dp))

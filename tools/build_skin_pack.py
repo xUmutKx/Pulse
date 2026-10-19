@@ -1,62 +1,112 @@
-"""Builds paket/skins/skins.zip (pack.json + files/*.wsz), SOURCES.md and manifest-skins.json.
-Usage: python3 -I build_skin_pack.py <raw_dir_with_wsz>   (fetch them first with fetch_skins.py)
-Skins whose zip has no main.bmp are skipped. Nothing is published."""
-import hashlib, json, os, sys, zipfile
+"""Validates raw Winamp skins and builds the bundled set (mirrors extras/music/skin/WszParser.kt requirements).
+Usage: python3 -I build_skin_pack.py <raw_dir> [max_total_bytes]
+Writes app/src/main/assets/skins/<id>.wsz + index.json and paket/skins/SOURCES.md. Nothing is published.
+Each accepted skin is re-zipped flat with only the files the parser reads, so junk/readme/exe/cursors never ship."""
+import hashlib, io, json, os, re, struct, sys, zipfile
 
 RAW = sys.argv[1]
-OUT = "/sdcard/Download/projects/paket/skins"
-MANIFEST = "/sdcard/Download/projects/.scratch/extra-apps/manifest-skins.json"
-# file -> (id, en, tr, author/source)
-SKINS = {
-    "base-2.91.wsz": ("base", "Winamp Base 2.91", "Winamp Temel 2.91", "Nullsoft, via webamp-demo"),
-    "Windows_Classic.wsz": ("windows-classic", "Windows Classic", "Windows Klasik", "archive.org winampskin_Windows_Classic"),
-    "Internet-Archive.wsz": ("internet-archive", "Internet Archive", "Internet Archive", "webamp-demo"),
-    "Skinner_Atlas.wsz": ("skinner-atlas", "Skinner Atlas", "Skinner Atlas", "webamp-demo"),
-    "TopazAmp1-2.wsz": ("topazamp", "TopazAmp", "TopazAmp", "webamp-demo"),
-    "Vizor1-01.wsz": ("vizor", "Vizor", "Vizor", "webamp-demo"),
-    "XMMS-Turquoise.wsz": ("xmms-turquoise", "XMMS Turquoise", "XMMS Turkuaz", "webamp-demo"),
-    "ZaxonRemake1-0.wsz": ("zaxon", "Zaxon Remake", "Zaxon Remake", "webamp-demo"),
-    "Green-Dimension-V2.wsz": ("green-dimension", "Green Dimension", "Yeşil Boyut", "webamp-demo"),
-    "AmigaPPC-dark.wsz": ("amiga-dark", "Amiga PPC Dark", "Amiga PPC Koyu", "webamp-demo"),
-    "My_Funny_Valentine.wsz": ("valentine", "My Funny Valentine", "My Funny Valentine", "webamp-demo"),
-    "MpAmp.wsz": ("mpamp", "MpAmp", "MpAmp", "archive.org winampskin_MpAmp"),
-    "3D_Show_II.wsz": ("3d-show", "3D Show II", "3D Show II", "archive.org winampskin_3D_Show_II"),
-    "Mistletoe.wsz": ("mistletoe", "Mistletoe", "Mistletoe", "archive.org winampskins_Mistletoe"),
-    "HackerS_kin_1.3_-_by_Mickey_Knox.wsz": ("hackerskin", "HackerS_kin", "HackerS_kin", "Mickey Knox, archive.org"),
-    "Italo_Disco_Yellow_Skin.wsz": ("italo-disco", "Italo Disco Yellow", "Italo Disco Sarı", "archive.org"),
-    "amp_ayu11.wsz": ("amp-ayu", "Amp Ayu", "Amp Ayu", "archive.org winampskins_amp_ayu11"),
-    "bunji_GEM-water.wsz": ("gem-water", "GEM Water", "GEM Su", "bunji, archive.org"),
-    "je_taime.wsz": ("je-taime", "Je t'aime", "Je t'aime", "archive.org winampskins_je_taime"),
-    "jww_boreas.wsz": ("boreas", "Boreas", "Boreas", "jww, archive.org"),
-    "Chimera1-0.wsz": ("chimera", "Chimera", "Chimera", "archive.org winampskins_Chimera1-0"),
-}
+CAP = int(sys.argv[2]) if len(sys.argv) > 2 else 7_800_000
+ASSETS = "/root/projects/Pulse/app/src/main/assets/skins"
+PAKET = "/sdcard/Download/projects/paket/skins"
+MAX_ENTRY = 8 << 20
+WANTED = {"main.bmp", "cbuttons.bmp", "pledit.txt", "viscolor.txt", "region.txt", "titlebar.bmp", "posbar.bmp", "volume.bmp",
+          "balance.bmp", "numbers.bmp", "nums_ex.bmp", "text.bmp", "shufrep.bmp", "monoster.bmp", "playpaus.bmp", "eqmain.bmp", "pledit.bmp"}
+# name -> min (w, h); balance is optional (parser falls back to the painted one)
+NEED = {"main.bmp": (275, 116), "cbuttons.bmp": (136, 36), "text.bmp": (155, 18), "posbar.bmp": (277, 10), "volume.bmp": (68, 433),
+        "titlebar.bmp": (302, 15), "playpaus.bmp": (42, 9), "shufrep.bmp": (75, 45), "monoster.bmp": (56, 24), "eqmain.bmp": (275, 116)}
+NUMS = ("numbers.bmp", "nums_ex.bmp")
 
-os.makedirs(OUT, exist_ok=True)
-pack, src = [], ["# Skin sources (licences not stated by the authors; classic Winamp skins are community art)\n"]
-zpath = os.path.join(OUT, "skins.zip")
-with zipfile.ZipFile(zpath, "w", zipfile.ZIP_STORED) as z:  # wsz is already deflated
-    for f, (i, en, tr, by) in SKINS.items():
-        p = os.path.join(RAW, f)
-        if not os.path.exists(p):
-            print("missing", f); continue
-        try:
-            names = {n.split("/")[-1].lower() for n in zipfile.ZipFile(p).namelist()}
-        except zipfile.BadZipFile:
-            print("bad zip", f); continue
-        if "main.bmp" not in names:
-            print("no main.bmp", f); continue
-        z.write(p, "files/%s.wsz" % i)
-        pack.append({"id": i, "en": en, "tr": tr, "file": "files/%s.wsz" % i})
-        src.append("- %s: %s\n" % (en, by))
-    z.writestr("pack.json", json.dumps({"skins": pack}, ensure_ascii=False, indent=1))
-open(os.path.join(OUT, "SOURCES.md"), "w").write("".join(src))
-data = open(zpath, "rb").read()
-man = {"id": "skins", "ad_en": "Winamp skins", "ad_tr": "Winamp temaları", "tur": "veri", "kategori": "skin",
-       "boyut": len(data), "surum": "1.0.0",
-       "url": "https://github.com/xUmutKx/Pulse/releases/download/extras-skins-1/skins.zip",
-       "sha256": hashlib.sha256(data).hexdigest(), "lisans": "LicenseRef-community-skins",
-       "lisans_metni": "https://github.com/xUmutKx/Pulse/blob/main/extras/licenses/skins-SOURCES.md",
-       "atif": "Winamp skin authors; see SOURCES.md. Sources: Webamp demo skins, Internet Archive winampskins",
-       "min_pulse": 120, "guncellendi": "2026-10-18T00:00:00Z", "yayinlandi": False}
-json.dump(man, open(MANIFEST, "w"), ensure_ascii=False, indent=1)
-print(len(pack), "skins,", len(data), "bytes")
+def bmp_ok(b):
+    """Same acceptance rules as decodeBmp(): BM header, dib>=40, size 1..4096, bpp, compression, data in range."""
+    if len(b) < 54 or b[:2] != b"BM": return None
+    off, dib, w, h = struct.unpack("<IIii", b[10:14] + b[14:18] + b[18:26])
+    bpp, comp = struct.unpack("<H", b[28:30])[0], struct.unpack("<I", b[30:34])[0]
+    h = abs(h)
+    if dib < 40 or not (1 <= w <= 4096 and 1 <= h <= 4096) or bpp not in (1, 4, 8, 16, 24, 32): return None
+    rle = (comp == 1 and bpp == 8) or (comp == 2 and bpp == 4)
+    if comp != 0 and not rle and not (comp == 3 and bpp in (16, 32)): return None
+    stride = ((w * bpp + 31) // 32) * 4
+    if off > len(b) or (not rle and off + stride * h > len(b)): return None
+    if bpp <= 8 and 14 + dib + 4 > len(b): return None
+    return w, h
+
+def check(path):
+    """Returns (files dict, reason). files empty -> rejected with reason."""
+    try:
+        z = zipfile.ZipFile(path)
+    except Exception: return None, "badzip"
+    files = {}
+    for i in z.infolist():
+        n = i.filename.replace("\\", "/")
+        if n.startswith("/") or ".." in n.split("/") or re.match(r"^[A-Za-z]:", n): return None, "zipslip"
+        if i.is_dir(): continue
+        base = n.rsplit("/", 1)[-1].lower()
+        if base in WANTED and base not in files:
+            if i.file_size > MAX_ENTRY: return None, "big-entry"
+            try: files[base] = z.read(i)
+            except Exception: return None, "unreadable"
+    for k, (mw, mh) in NEED.items():
+        if k not in files: return None, "missing " + k
+        d = bmp_ok(files[k])
+        if not d: return None, "bad bmp " + k
+        if d[0] < mw or d[1] < mh: return None, "small " + k
+    n = next((k for k in NUMS if k in files and bmp_ok(files[k]) and bmp_ok(files[k])[0] >= 99 and bmp_ok(files[k])[1] >= 13), None)
+    if not n: return None, "missing numbers"
+    if "pledit.txt" not in files: return None, "missing pledit.txt"
+    if "balance.bmp" in files and not bmp_ok(files["balance.bmp"]): del files["balance.bmp"]
+    for k in [k for k in files if k.endswith(".bmp") and not bmp_ok(files[k])]: del files[k]
+    return files, "ok"
+
+# fan art / game / show / band / brand skins: the owner wants generic themes
+SKIP = re.compile(r"castlevania|chips.?challenge|dig.?dug|donkey|doritos|deus.?ex|springfield|frasier|gir.?amp|half.?life|puffy|jackie|kirby|law.?and|marijuana|max.?payne|mgs2|kid.?icarus|playstation|radiohead|sim.?city|star.?trek|stuart|weezer|aphex|johnny.?rebel|(?<![a-z])lain|american.?psycho|coca|megaman|playboy|spider|unreal|mine.?amp|scughost|memorial|makemesad|kari\b|georgeskin|tostie|winzip|realplayer|explorer|netscape|excel|tricorder|all.?your.?base", re.I)
+
+def pretty(fn):
+    s = re.sub(r"^[a-z\-]+__", "", os.path.splitext(fn)[0])
+    s = re.sub(r"^winampskins?_", "", s, flags=re.I)
+    by = ""
+    m = re.search(r"[_ -]+by[_ -]+(.+)$", s, re.I)
+    if m: by, s = m.group(1).replace("_", " "), s[:m.start()]
+    s = re.sub(r"[_]+", " ", s).strip(" -")
+    return (s or fn)[:40], by
+
+src = json.load(open(os.path.join(RAW, "sources.json")))
+cands, seen, rej = [], set(), {}
+for fn in sorted(os.listdir(RAW)):
+    if fn == "sources.json": continue
+    files, why = check(os.path.join(RAW, fn))
+    if not files: rej[fn] = why; continue
+    key = hashlib.sha256(files["main.bmp"] + files["cbuttons.bmp"]).hexdigest()
+    if SKIP.search(fn): rej[fn] = "theme"; continue
+    if key in seen: rej[fn] = "duplicate"; continue
+    seen.add(key)
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as o:
+        for k in sorted(files): o.writestr(zipfile.ZipInfo(k, (1980, 1, 1, 0, 0, 0)), files[k], zipfile.ZIP_DEFLATED, 9)
+    name, by = pretty(fn)
+    cands.append(dict(fn=fn, name=name, author=by, data=buf.getvalue(), source=src.get(fn, {}).get("url", ""), site=src.get(fn, {}).get("site", "")))
+# round-robin by site keeps the mix varied if the cap bites; smallest first inside a site
+by_site = {}
+for c in sorted(cands, key=lambda c: len(c["data"])): by_site.setdefault(c["site"], []).append(c)
+order = []
+while any(by_site.values()):
+    for s in list(by_site):
+        if by_site[s]: order.append(by_site[s].pop(0))
+os.makedirs(ASSETS, exist_ok=True)
+for f in os.listdir(ASSETS): os.remove(os.path.join(ASSETS, f))
+idx, total, ids = [], 0, set()
+for c in order:
+    if total + len(c["data"]) > CAP: continue
+    i = re.sub(r"[^a-z0-9]+", "-", c["name"].lower()).strip("-") or "skin"
+    while i in ids: i += "-2"
+    ids.add(i); total += len(c["data"])
+    open(os.path.join(ASSETS, i + ".wsz"), "wb").write(c["data"])
+    idx.append({"id": i, "name": c["name"], "author": c["author"], "source": c["source"],
+                "licence": "community skin, licence not stated by the author", "bytes": len(c["data"])})
+idx.sort(key=lambda e: e["name"].lower())
+json.dump(idx, open(os.path.join(ASSETS, "index.json"), "w"), ensure_ascii=False, indent=1)
+os.makedirs(PAKET, exist_ok=True)
+with open(os.path.join(PAKET, "SOURCES.md"), "w") as f:
+    f.write("# Bundled Winamp skins (assets/skins). Licences are not stated by the authors; classic skins are community art.\n\n")
+    for e in idx: f.write("- %s%s: %s\n" % (e["name"], " (%s)" % e["author"] if e["author"] else "", e["source"]))
+print(len(idx), "skins", total, "bytes; rejected:", len(rej))
+for k, v in sorted(rej.items(), key=lambda x: x[1]): print(" ", v, k)

@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
     <!-- Pulse Contacts -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
@@ -56,6 +57,7 @@
         <package android:name="rikka.shizuku" />
         <package android:name="dev.rikka.shizuku" />
         <package android:name="com.deniscerri.ytdl" />
+        <package android:name="com.spotify.music" />
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="text/*" /></intent>
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="audio/*" /></intent>
     </queries>
@@ -132,7 +134,7 @@
         </activity-alias>
         <!-- an APK opened from a file app: the install window floats over the current app (see features/InstallActivity.kt) -->
         <!-- Pulse Files: its own launcher entry and task (Edge panel, recents), opens the Files page -->
-        <activity android:name=".FilesActivity" android:theme="@style/Theme.Pulse.Files" android:exported="true" android:label="@string/files_name" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTask" android:taskAffinity="com.umutk.pulse.files" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
+        <activity android:name=".FilesActivity" android:process=":files" android:theme="@style/Theme.Pulse.Files" android:exported="true" android:label="@string/files_name" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTask" android:taskAffinity="com.umutk.pulse.files" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
                     <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -147,7 +149,7 @@
             </intent-filter>
         </activity-alias>
         <!-- Pulse Calendar: own launcher entry and task -->
-        <activity android:name=".CalendarActivity" android:exported="true" android:label="Calendar" android:icon="@mipmap/ic_calendar" android:roundIcon="@mipmap/ic_calendar" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.calendar" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
+        <activity android:name=".CalendarActivity" android:process=":calendar" android:exported="true" android:label="Calendar" android:icon="@mipmap/ic_calendar" android:roundIcon="@mipmap/ic_calendar" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.calendar" android:configChanges="orientation|screenSize|keyboardHidden|uiMode">
                     <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -186,7 +188,7 @@
             </intent-filter>
         </activity-alias>
         <!-- Pulse Contacts: own launcher entry and task -->
-        <activity android:name=".ContactsActivity" android:exported="true" android:label="@string/contacts_name" android:icon="@mipmap/ic_contacts" android:roundIcon="@mipmap/ic_contacts" android:theme="@style/Theme.Pulse" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.contacts" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize" android:windowSoftInputMode="adjustResize">
+        <activity android:name=".ContactsActivity" android:process=":contacts" android:exported="true" android:label="@string/contacts_name" android:icon="@mipmap/ic_contacts" android:roundIcon="@mipmap/ic_contacts" android:theme="@style/Theme.Pulse" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.contacts" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize" android:windowSoftInputMode="adjustResize">
                     <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -243,7 +245,7 @@
             </intent-filter>
         </activity-alias>
         <!-- ArtCraft: launcher for the APKs of MostafaXS1/artcraft-android (download, install, update) -->
-        <activity android:name=".ArtCraftActivity" android:exported="true" android:label="ArtCraft" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
+        <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
         <activity-alias android:name=".ArtCraftLauncher" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -266,7 +268,7 @@
         </activity>
         <!-- Office viewer: Word / Excel / PowerPoint / PDF opened from the file manager or from other apps (see OfficeViewer.kt) -->
         <!-- Image viewer / gallery / basic editor (ImageViewer.kt) -->
-        <activity android:name=".ImageViewActivity" android:exported="true" android:label="@string/photos_name" android:icon="@mipmap/ic_photos" android:roundIcon="@mipmap/ic_photos" android:theme="@style/Theme.Pulse" android:taskAffinity="com.umutk.pulse.photos" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize" android:windowSoftInputMode="adjustResize">
+        <activity android:name=".ImageViewActivity" android:process=":photos" android:exported="true" android:label="@string/photos_name" android:icon="@mipmap/ic_photos" android:roundIcon="@mipmap/ic_photos" android:theme="@style/Theme.Pulse" android:taskAffinity="com.umutk.pulse.photos" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize" android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -287,8 +289,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity android:name=".OfficeTextActivity" android:exported="false" android:label="Pulse Text" android:theme="@style/Theme.Pulse" android:taskAffinity="com.umutk.pulse.office" android:windowSoftInputMode="adjustResize" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize" />
-        <activity android:name=".OfficeViewActivity" android:exported="true" android:label="Pulse Office" android:theme="@style/Theme.Pulse.Office" android:taskAffinity="com.umutk.pulse.office" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize" android:windowSoftInputMode="adjustResize">
+        <activity android:name=".OfficeTextActivity" android:process=":office" android:exported="false" android:label="Text" android:theme="@style/Theme.Pulse" android:taskAffinity="com.umutk.pulse.office" android:windowSoftInputMode="adjustResize" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize" />
+        <activity android:name=".OfficeViewActivity" android:process=":office" android:exported="true" android:label="Office" android:theme="@style/Theme.Pulse.Office" android:taskAffinity="com.umutk.pulse.office" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize" android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <action android:name="android.intent.action.EDIT" />
@@ -1129,13 +1131,70 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_skin_ios_world" />
         </receiver>
-        <receiver android:name="com.umutk.pulse.widgets.music.WinampWidget" android:label="Pulse · Winamp" android:exported="false">
+        <receiver android:name="com.umutk.pulse.widgets.music.WinampWidget" android:label="Winamp" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_winamp_info" />
         </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.music.WinampWidgetCompact" android:label="Winamp 4x1" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_winamp_compact_info" />
+        </receiver>
+        <activity android:name="com.umutk.pulse.widgets.music.VideoWidgetConfig" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
         <activity android:name="com.umutk.pulse.widgets.music.WinampWidgetConfig" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
+        </activity>
+        <!-- Music player (white noise and playlists inside it), video: one activity, one launcher entry each (the entry's name picks the page) -->
+        <activity android:name=".ExtraToolActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:documentLaunchMode="always"
+            android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
+        <activity-alias android:name=".MusicLauncher" android:targetActivity=".ExtraToolActivity" android:exported="true" android:enabled="true" android:icon="@mipmap/ic_music" android:roundIcon="@mipmap/ic_music" android:label="Music Player">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".VideoLauncher" android:targetActivity=".ExtraToolActivity" android:exported="true" android:enabled="true" android:icon="@mipmap/ic_video" android:roundIcon="@mipmap/ic_video" android:label="Video Player">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:mimeType="video/*"/></intent-filter>
+        </activity-alias>
+        <service android:name="com.umutk.pulse.extras.lyrics.LyricsListenerService" android:exported="true"
+            android:label="Lyrics" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
+        </service>
+        <activity android:name="com.umutk.pulse.extras.spotify.SpotifyAuthActivity" android:exported="true"
+            android:launchMode="singleTask" android:theme="@android:style/Theme.Translucent.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="pulse-spotify" android:host="callback" />
+            </intent-filter>
+        </activity>
+        <receiver android:name="com.umutk.pulse.widgets.music.MusicWidget" android:label="Music" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_music_info" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.music.MusicWidgetSquare" android:label="Music 2x2" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_music_square_info" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.music.MusicWidgetBig" android:label="Music 4x3" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_music_big_info" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.music.MusicWidgetSlim" android:label="Music bar" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_music_slim_info" />
+        </receiver>
+        <activity android:name="com.umutk.pulse.widgets.music.MusicWidgetConfig" android:exported="false">
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
     </application>

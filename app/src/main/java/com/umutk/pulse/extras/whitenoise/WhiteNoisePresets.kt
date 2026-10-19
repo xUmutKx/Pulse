@@ -31,7 +31,7 @@ val BuiltInPresets = listOf(
     p("Fireplace", "Şömine", "fire" to 60, "wind" to 10),
     p("Campfire", "Kamp ateşi", "fire" to 65, "orman" to 35, "wind" to 20),
     p("Train ride", "Tren yolculuğu", "tren" to 55, "wind" to 15),
-    p("Stormy night", "Fırtınalı gece", "gok_gultusu" to 60, "rain" to 55, "wind" to 40),
+    p("Stormy night", "Fırtınalı gece", "gok_gultusu" to 60, "rain" to 45, "wind" to 40),
 )
 
 val DefaultPreset get() = BuiltInPresets[0]

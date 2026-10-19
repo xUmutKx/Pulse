@@ -22,6 +22,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
+import com.umutk.pulse.PSlider
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
@@ -46,6 +49,7 @@ import java.net.URL
 
 private const val YTDLNIS = "com.deniscerri.ytdl"
 private val thumbs = HashMap<String, Bitmap?>()
+private val thumbOf = HashMap<String, String?>()
 
 private fun ytdlnisInstalled(c: Context) = runCatching { c.packageManager.getPackageInfo(YTDLNIS, 0); true }.getOrDefault(false)
 
@@ -104,14 +108,44 @@ fun OnlinePlaylistsHub(onBack: () -> Unit) {
         }
         if (list?.items.isNullOrEmpty()) status = tr("Nothing found", "Bulunamadı")
     }
+    val engine = remember { MusicPlayerEngine.get(ctx) }
+    val st by engine.state.collectAsState()
+    var showQueue by remember { mutableStateOf(false) }
+    var gen by remember { mutableIntStateOf(0) }
+    var pos by remember { mutableIntStateOf(0) }
+    var dur by remember { mutableIntStateOf(0) }
+    LaunchedEffect(st.current, st.isPlaying) {
+        while (true) { pos = engine.positionMs; dur = engine.durationMs; delay(if (st.isPlaying) 500L else 1500L) }
+    }
+    fun item(i: PItem, u: String) { synchronized(thumbs) { thumbOf[u] = i.thumb } }
+    // The first song starts as soon as its stream is known; the rest of the list is resolved in the background and appended.
     fun play(from: Int) {
         val l = list ?: return
+        val mine = ++gen
         scope.launch {
             busy = true
-            val got = PlaylistClient.audioUrls(l.items.drop(from).take(6))
+            val first = l.items.drop(from).take(1)
+            val got = PlaylistClient.audioUrls(first)
             busy = false
             if (got.isEmpty()) { toast(tr("Cannot play it", "Çalınamıyor")); return@launch }
-            MusicPlayerEngine.get(ctx).playQueue(got.map { (i, u) -> Track(u, "${i.artist} - ${i.title}", i.durSec) })
+            got.forEach { (i, u) -> item(i, u) }
+            engine.playQueue(got.map { (i, u) -> Track(u, "${i.artist} - ${i.title}", i.durSec) })
+            l.items.drop(from + 1).chunked(4).forEach { chunk ->
+                if (mine != gen) return@launch
+                val more = PlaylistClient.audioUrls(chunk)
+                if (mine != gen) return@launch
+                more.forEach { (i, u) -> item(i, u); engine.addToQueue(Track(u, "${i.artist} - ${i.title}", i.durSec)) }
+            }
+        }
+    }
+    fun enqueue(i: PItem) {
+        scope.launch {
+            val got = PlaylistClient.audioUrls(listOf(i))
+            if (got.isEmpty()) { toast(tr("Cannot play it", "Çalınamıyor")); return@launch }
+            val (it, u) = got[0]
+            item(it, u)
+            val t = Track(u, "${it.artist} - ${it.title}", it.durSec)
+            if (engine.player.mediaItemCount == 0) engine.playQueue(listOf(t)) else engine.addToQueue(t)
         }
     }
     fun saveM3u() {
@@ -136,6 +170,7 @@ fun OnlinePlaylistsHub(onBack: () -> Unit) {
     Column(Modifier.fillMaxSize().background(T.bg).padding(horizontal = 12.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { if (list != null) { list = null; found = emptyList() } else onBack() }) { PIcon("back", T.text, 22.dp) }
+            com.umutk.pulse.ExtraLookIcon()
             Box(Modifier.weight(1f).border(BorderStroke(1.dp, T.sub), RoundedCornerShape(12.dp)).padding(horizontal = 12.dp, vertical = 10.dp)) {
                 if (input.isEmpty()) Text(tr("YouTube / Spotify link or search", "YouTube / Spotify bağlantısı veya arama"), color = T.sub, fontSize = 14.sp, maxLines = 1)
                 BasicTextField(input, { input = it }, singleLine = true, textStyle = TextStyle(color = T.text, fontSize = 15.sp), cursorBrush = SolidColor(T.text), modifier = Modifier.fillMaxWidth())
@@ -152,7 +187,15 @@ fun OnlinePlaylistsHub(onBack: () -> Unit) {
                 if (dl && l.ytPlaylistUrl != null) IconButton(onClick = { download(null) }) { PIcon("download", T.text, 22.dp) }
             }
         }
-        LazyColumn(Modifier.weight(1f)) {
+        if (showQueue) LazyColumn(Modifier.weight(1f)) {
+            itemsIndexed(st.queue) { idx, t ->
+                Row(Modifier.fillMaxWidth().clickable { engine.playAt(idx) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Thumb(synchronized(thumbs) { thumbOf[t.path] })
+                    Text(t.title ?: t.path, color = if (idx == st.index) com.umutk.pulse.Look.accent.copy(alpha = 1f) else T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
+                    IconButton(onClick = { engine.removeFromQueue(idx) }) { PIcon("close", T.sub, 20.dp) }
+                }
+            }
+        } else LazyColumn(Modifier.weight(1f)) {
             itemsIndexed(found) { _, (id, name) ->
                 Text(name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.fillMaxWidth().clickable { open(PlaylistClient.Src.YtList(id)) }.padding(vertical = 10.dp))
@@ -164,7 +207,30 @@ fun OnlinePlaylistsHub(onBack: () -> Unit) {
                         Text(it.title, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(listOf(it.artist, mmss(it.durSec)).filter { s -> s.isNotEmpty() }.joinToString(" · "), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
+                    IconButton(onClick = { enqueue(it) }) { PIcon("newfolder", T.sub, 20.dp) }
                     if (dl) IconButton(onClick = { download(it) }) { PIcon("download", T.sub, 20.dp) }
+                }
+            }
+        }
+        // the player: the same engine as the Music page, so it keeps playing in the background and drives the widgets
+        st.current?.let { cur ->
+            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Thumb(synchronized(thumbs) { thumbOf[cur.path] })
+                    Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                        Text(cur.title ?: "", color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${mmss(pos / 1000)} / ${mmss(dur / 1000)}", color = T.sub, fontSize = 12.sp)
+                    }
+                    IconButton(onClick = { showQueue = !showQueue }) { PIcon("sort", if (showQueue) com.umutk.pulse.Look.accent.copy(alpha = 1f) else T.text, 22.dp) }
+                }
+                var drag by remember { mutableStateOf<Float?>(null) }
+                PSlider(drag ?: pos.toFloat(), { drag = it }, 0f..maxOf(dur, 1).toFloat(), onDone = { drag?.let { engine.seekTo(it.toInt()); pos = it.toInt() }; drag = null })
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = { engine.player.shuffleModeEnabled = !engine.player.shuffleModeEnabled }) { PIcon("dice", if (engine.player.shuffleModeEnabled) com.umutk.pulse.Look.accent.copy(alpha = 1f) else T.sub, 22.dp) }
+                    IconButton(onClick = engine::previous) { PIcon("back", T.text, 24.dp) }
+                    IconButton(onClick = engine::togglePlayPause) { PIcon(if (st.isPlaying) "pause" else "play", T.text, 30.dp) }
+                    IconButton(onClick = engine::next) { PIcon("back", T.text, 24.dp, Modifier.graphicsLayer { rotationZ = 180f }) }
+                    IconButton(onClick = { engine.player.repeatMode = if (engine.player.repeatMode == 0) 2 else 0 }) { PIcon("rotate", if (engine.player.repeatMode != 0) com.umutk.pulse.Look.accent.copy(alpha = 1f) else T.sub, 22.dp) }
                 }
             }
         }

@@ -48,22 +48,29 @@ object AmbientMixer {
     /** Built-in loops plus every pack found under extras/ambient and extras/birds. Call on IO. */
     fun scan(ctx: Context): List<Snd> {
         val out = ArrayList<Snd>()
-        val built = installWhiteNoiseSounds(ctx)
-        WhiteNoiseSounds.forEach { s ->
-            built.firstOrNull { it.id == s.id }?.let { out += Snd(s.id, s.en, s.tr, BUILTIN_CAT[s.id] ?: "noise", it.path) }
-        }
+        val bundled = com.umutk.pulse.extras.whitenoise.installBundledPacks(ctx).toMap()
         listOf("ambient" to null, "birds" to "birds").forEach { (dir, forced) ->
-            // the store unzips under Android/data/<pkg>/extras/<id>; older installs may sit in filesDir/extras/<id>
-            val d = listOf(com.umutk.pulse.extras.store.StoreInstaller.dataDir(ctx, dir), File(ctx.filesDir, "extras/$dir"))
-                .firstOrNull { File(it, "pack.json").isFile } ?: return@forEach
-            val arr = runCatching { JSONObject(File(d, "pack.json").readText()).getJSONArray("sounds") }.getOrNull() ?: return@forEach
-            for (i in 0 until arr.length()) runCatching {
-                val o = arr.getJSONObject(i)
-                val f = File(d, o.getString("file"))
-                val id = o.getString("id")
-                if (f.isFile && out.none { it.id == id }) {
-                    out += Snd(id, o.optString("en", id), o.optString("tr", o.optString("en", id)), forced ?: o.optString("cat", "nature"), f.path)
+            // bundled assets first; a downloaded pack (Android/data/<pkg>/extras/<id>, or older filesDir/extras/<id>) only adds missing ids
+            val dirs = listOfNotNull(bundled[dir], com.umutk.pulse.extras.store.StoreInstaller.dataDir(ctx, dir), File(ctx.filesDir, "extras/$dir"))
+                .filter { File(it, "pack.json").isFile }
+            for (d in dirs) {
+                val arr = runCatching { JSONObject(File(d, "pack.json").readText()).getJSONArray("sounds") }.getOrNull() ?: continue
+                for (i in 0 until arr.length()) runCatching {
+                    val o = arr.getJSONObject(i)
+                    val f = File(d, o.getString("file"))
+                    val id = o.getString("id")
+                    if (f.isFile && out.none { it.id == id }) {
+                        out += Snd(id, o.optString("en", id), o.optString("tr", o.optString("en", id)), forced ?: o.optString("cat", "nature"), f.path)
+                    }
                 }
+            }
+        }
+        // raw WAV loops stay as the fallback for ids the packs do not have
+        val missing = WhiteNoiseSounds.filter { s -> out.none { it.id == s.id } }
+        if (missing.isNotEmpty()) {
+            val built = installWhiteNoiseSounds(ctx)
+            missing.forEach { s ->
+                built.firstOrNull { it.id == s.id }?.let { out += Snd(s.id, s.en, s.tr, BUILTIN_CAT[s.id] ?: "noise", it.path) }
             }
         }
         return out
@@ -117,6 +124,36 @@ object AmbientMixer {
     fun setMany(ids: Collection<String>, on: Boolean) = ids.forEach { setEnabled(it, on) }
 
     fun stopAll() { scope.launch { engine?.setAllEnabled(false) } }
+
+    private var fadeJob: Job? = null
+
+    /** Ramps the master volume to zero over [sec] seconds, stops everything, then puts the volume back. Without a fade it is [stopAll]. */
+    fun stopFaded(sec: Int) {
+        fadeJob?.cancel()
+        if (sec <= 0) { stopAll(); return }
+        fadeJob = scope.launch {
+            val base = master.value
+            val steps = 24
+            try {
+                for (i in 1..steps) { setMaster(base * (steps - i) / steps); kotlinx.coroutines.delay(sec * 1000L / steps) }
+                engine?.setAllEnabled(false)
+            } finally { setMaster(base) }
+        }
+    }
+
+    /** [applyMix] with the master volume rising from zero over [sec] seconds. */
+    fun startFaded(m: Map<String, Int>, sec: Int) {
+        fadeJob?.cancel()
+        if (sec <= 0) { applyMix(m); return }
+        fadeJob = scope.launch {
+            val base = master.value
+            val steps = 24
+            try {
+                setMaster(0); applyMix(m)
+                for (i in 1..steps) { setMaster(base * i / steps); kotlinx.coroutines.delay(sec * 1000L / steps) }
+            } finally { setMaster(base) }
+        }
+    }
 
     /** Plays exactly [m]; ids that are not installed are skipped. */
     fun applyMix(m: Map<String, Int>) {

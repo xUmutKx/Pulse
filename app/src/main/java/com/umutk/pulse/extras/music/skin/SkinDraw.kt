@@ -28,6 +28,12 @@ fun DrawScope.blit(img: ImageBitmap?, sx: Int, sy: Int, sw: Int, sh: Int, dx: Fl
     )
 }
 
+/** Draws the whole [img] stretched over the 275x116 window, so a skin whose main.bmp is not exactly that size leaves no blank band. */
+fun DrawScope.blitFit(img: ImageBitmap?, u: Float) {
+    if (img == null) return
+    drawImage(img, IntOffset.Zero, IntSize(img.width, img.height), IntOffset.Zero, IntSize((WINAMP_W * u).roundToInt(), (WINAMP_H * u).roundToInt()), filterQuality = FilterQuality.None)
+}
+
 private val TEXT_ROW0 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"@"
 private val TEXT_ROW1 = "0123456789….:()-'!_+\\/[]^&%,=$#"
 private val TEXT_ROW2 = "ÅÖÄ?* "
