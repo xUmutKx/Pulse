@@ -72,7 +72,7 @@ object WidgetAccent {
     fun app(c: Context): Int {
         WidgetLook.load(c)
         if (WidgetLook.accentColor != 0) return WidgetLook.accentColor
-        val p = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+        val p = com.umutk.pulse.ownPrefs(c, "pulse_settings")
         val t = Themes.firstOrNull { it.id == p.getString("theme", "win11") } ?: Themes[0]
         if (t.id == "material" && p.getBoolean("dynamic", true)) return c.getColor(android.R.color.system_accent1_200)
         // same rule as Look.accent: only Material, tab-less and the two Windows 10/11 themes take the picked swatch

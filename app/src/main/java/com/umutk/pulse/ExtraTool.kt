@@ -32,6 +32,22 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+/**
+ * A store's own preference file. Its keys are copied once from the shared "p" file, then only this file is written:
+ * other processes (Files, Photos, Office) hold a stale copy of "p" and would write old look keys back to disk.
+ */
+fun ownPrefs(c: Context, name: String, keep: (String) -> Boolean = { true }): android.content.SharedPreferences {
+    val own = c.getSharedPreferences(name, Context.MODE_PRIVATE)
+    if (own.getBoolean("_moved", false)) return own
+    val e = own.edit()
+    for ((k, v) in c.getSharedPreferences("p", Context.MODE_PRIVATE).all) if (keep(k)) when (v) {
+        is Boolean -> e.putBoolean(k, v); is Int -> e.putInt(k, v); is Long -> e.putLong(k, v); is Float -> e.putFloat(k, v)
+        is String -> e.putString(k, v); is Set<*> -> e.putStringSet(k, v.filterIsInstance<String>().toSet())
+    }
+    e.putBoolean("_moved", true).apply()
+    return own
+}
+
 /** The look of the music player, video player, white noise and playlists when opened from their own launcher icon: Material until the user picks another. */
 object ExtraToolLook {
     val ids = listOf("material", "win11", "win10", "win7", "xp", "win95")
@@ -76,6 +92,11 @@ fun ExtraLookIcon(tint: Color = T.text) {
  * started through picks the page, so it always knows where it was opened from. Back from the page closes it.
  */
 class ExtraToolActivity : ComponentActivity() {
+
+    // same process as Pulse: LookHost writes the one global Look.resolved, so this tool keeps its own across pause / resume and Pulse keeps its own (MainActivity)
+    private var ownResolved: PTheme? = null
+    override fun onPause() { super.onPause(); ownResolved = Look.resolved }
+    override fun onResume() { super.onResume(); Look.resolved = ownResolved }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

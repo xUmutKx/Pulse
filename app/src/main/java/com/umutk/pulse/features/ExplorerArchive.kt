@@ -557,7 +557,7 @@ object FilesLook {
     var accentIdx by mutableStateOf(-1)
     var lang by mutableStateOf("auto")
     private var loaded = false
-    private fun sp(c: android.content.Context) = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
+    private fun sp(c: android.content.Context) = com.umutk.pulse.ownPrefs(c, "files_look") { it.startsWith("files_") }
     fun applyGlobal() { com.umutk.pulse.Look.dynamic = dynamic; com.umutk.pulse.Look.accentIdx = accentIdx; com.umutk.pulse.Opt.lang = lang }
     fun setDynamic(c: android.content.Context, v: Boolean) { dynamic = v; sp(c).edit().putBoolean("files_dyn", v).apply(); applyGlobal() }
     // picking a colour turns Material You off, so the chosen accent is the one shown
@@ -567,12 +567,14 @@ object FilesLook {
         if (loaded) return
         loaded = true
         val q = sp(c)
-        dynamic = q.getBoolean("files_dyn", q.getBoolean("dynamic", true)); accentIdx = q.getInt("files_accent", q.getInt("accent2", -1)); lang = q.getString("files_lang", q.getString("lang", "auto")) ?: "auto"
+        // no Files choice saved yet: Pulse's own colours / language are the fallback (read from Pulse's settings file, not "p")
+        val pulse = com.umutk.pulse.ownPrefs(c, "pulse_settings")
+        dynamic = q.getBoolean("files_dyn", pulse.getBoolean("dynamic", true)); accentIdx = q.getInt("files_accent", pulse.getInt("accent2", -1)); lang = q.getString("files_lang", pulse.getString("lang", "auto")) ?: "auto"
         // no choice saved yet: the file manager follows the app's look, so it does not switch to Material when opened
-        theme = (c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getString("files_theme", "app") ?: "app")
+        theme = (q.getString("files_theme", "app") ?: "app")
             .takeIf { it == "app" || it == "amoled" || com.umutk.pulse.Themes.any { t -> t.id == it } } ?: "app"
     }
-    fun set(c: android.content.Context, v: String) { theme = v; c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putString("files_theme", v).apply() }
+    fun set(c: android.content.Context, v: String) { theme = v; sp(c).edit().putString("files_theme", v).apply() }
 }
 
 /** The window look the file manager provides to its content, or null to leave the app's look. */

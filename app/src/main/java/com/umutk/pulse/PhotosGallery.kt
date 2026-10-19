@@ -100,7 +100,7 @@ internal object PhotosPrefs {
     var confirmDelete by mutableStateOf(true)
     var keepOn by mutableStateOf(false)
     var exifDefault by mutableStateOf(false)
-    private fun sp(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+    private fun sp(c: Context) = ownPrefs(c, "photos_prefs") { it.startsWith("ph_") }
     fun load(c: Context) {
         val p = sp(c)
         look = p.getString("ph_look", "material") ?: "material"; amoled = p.getBoolean("ph_amoled", false); lang = p.getString("ph_lang", "en") ?: "en"
