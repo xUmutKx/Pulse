@@ -60,17 +60,17 @@ fun LyricsBody(rec: LyricsRecord, positionMs: Int, onSeek: ((Int) -> Unit)?, mod
         lines.isNotEmpty() -> LazyColumn(modifier, state = state) {
             itemsIndexed(lines) { i, l ->
                 val on = i == cur
-                Text(
-                    l.text.ifEmpty { "♪" },
+                if (l.text.isEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.extras.ui.TIcon("note", T.sub, 20.dp) } else Text(
+                    l.text,
                     color = if (on) MaterialTheme.colorScheme.primary else T.sub,
                     fontSize = if (on) 22.sp else 17.sp,
-                    fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                    fontWeight = if (on) FontWeight.Bold else FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth().then(if (onSeek != null) Modifier.clickable { onSeek(l.timeMs.toInt()) } else Modifier).padding(vertical = 8.dp),
                 )
             }
         }
-        else -> Text(rec.plainLyrics ?: tr("No lyrics", "Söz yok"), color = T.text, fontSize = 16.sp, textAlign = TextAlign.Center, modifier = modifier.verticalScroll(rememberScrollState()))
+        else -> Text(rec.plainLyrics ?: tr("No lyrics", "Söz yok"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, modifier = modifier.verticalScroll(rememberScrollState()))
     }
 }
 

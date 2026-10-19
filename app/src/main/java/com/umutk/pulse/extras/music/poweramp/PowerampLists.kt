@@ -23,6 +23,18 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountTree
+import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.TrendingUp
+import androidx.compose.material.icons.rounded.History
+import androidx.compose.material.icons.rounded.NewReleases
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.Piano
+import androidx.compose.material.icons.rounded.Event
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import com.umutk.pulse.extras.ui.ThemeGrid
+import com.umutk.pulse.extras.ui.ThemeItem
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DragHandle
@@ -31,6 +43,10 @@ import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Palette
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.SortByAlpha
+import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.BarChart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -70,9 +86,27 @@ private sealed interface Lib {
     object Songs : Lib
     object Folders : Lib
     object Settings : Lib
+    object Stats : Lib
+    object Favs : Lib
+    /** 0 most played, 1 recently played, 2 last added */
+    class Quick(val kind: Int) : Lib
+    object Playlists : Lib
+    class Playlist(val name: String) : Lib
     class Folder(val name: String) : Lib
     class Tree(val dir: String) : Lib
+    /** kind 0 albums, 1 artists, 2 genres, 3 years, 4 composers: the list of groups. */
+    class Cat(val kind: Int) : Lib
+    class Group(val kind: Int, val key: String) : Lib
 }
+
+private val quickNames get() = listOf(tr("Most played", "En çok çalınan"), tr("Recently played", "Son çalınan"), tr("Last added", "Son eklenen"))
+
+private fun groupKey(t: Track, kind: Int): String? = when (kind) {
+    0 -> t.album; 1 -> t.artist; 2 -> t.genre; 3 -> t.year.takeIf { it > 0 }?.toString(); else -> t.composer
+}?.takeIf { it.isNotBlank() }
+
+private val catNames get() = listOf(tr("Albums", "Albümler"), tr("Artists", "Sanatçılar"), tr("Genres", "Türler"), tr("Years", "Yıllar"), tr("Composers", "Besteciler"))
+private val catIcons = listOf(Icons.Rounded.Album, Icons.Rounded.Person, Icons.Rounded.Piano, Icons.Rounded.Event, Icons.Rounded.Edit)
 
 private fun dirOf(path: String) = path.substringBeforeLast('/', "")
 
@@ -99,7 +133,11 @@ fun LibraryScreen(
     modifier: Modifier = Modifier,
     skinId: String? = null,
     onSkin: ((String) -> Unit)? = null,
+    queue: List<Track> = emptyList(),
+    onPlayTracks: (List<Track>, Int) -> Unit = { _, _ -> },
 ) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var sortBy by remember { mutableIntStateOf(0) } // 0 title, 1 folder, 2 library order
     var node by remember { mutableStateOf<Lib>(Lib.Root) }
     val fg = style.onBackdrop
     // the tree starts at the longest directory shared by every file
@@ -110,6 +148,8 @@ fun LibraryScreen(
         node = when (val n = node) {
             is Lib.Tree -> if (n.dir.length > root.length) Lib.Tree(dirOf(n.dir)) else Lib.Root
             is Lib.Folder -> Lib.Folders
+            is Lib.Playlist -> Lib.Playlists
+            is Lib.Group -> Lib.Cat(n.kind)
             else -> Lib.Root
         }
     }
@@ -118,6 +158,13 @@ fun LibraryScreen(
         Lib.Songs -> tr("All songs", "Tüm şarkılar")
         Lib.Folders -> tr("Folders", "Klasörler")
         Lib.Settings -> tr("Skin", "Görünüm")
+        Lib.Stats -> tr("Statistics", "İstatistikler")
+        Lib.Favs -> tr("Favourites", "Favoriler")
+        is Lib.Quick -> quickNames[n.kind]
+        Lib.Playlists -> tr("Playlists", "Çalma listeleri")
+        is Lib.Playlist -> n.name
+        is Lib.Cat -> catNames[n.kind]
+        is Lib.Group -> n.key
         is Lib.Folder -> n.name
         is Lib.Tree -> n.dir.substringAfterLast('/').ifEmpty { tr("Folders", "Klasörler") }
     }
@@ -127,6 +174,9 @@ fun LibraryScreen(
                 IconButton(onClick = { node = Lib.Root }) { Icon(Icons.Rounded.ArrowBack, tr("Back", "Geri"), tint = fg) }
             }
             Text(title, color = fg, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            if (node == Lib.Songs) {
+                IconButton(onClick = { sortBy = (sortBy + 1) % 3 }) { Icon(Icons.Rounded.SortByAlpha, tr("Sort", "Sırala"), tint = if (sortBy == 2) style.textDim else style.accent) }
+            }
             if (node == Lib.Root && onSkin != null) {
                 IconButton(onClick = { node = Lib.Settings }) { Icon(Icons.Rounded.Palette, tr("Skin", "Görünüm"), tint = style.textDim) }
             }
@@ -134,16 +184,65 @@ fun LibraryScreen(
         when (val n = node) {
             Lib.Root -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
                 val cats = listOf(
+                    Triple(Icons.Rounded.TrendingUp, Color(0xFFD9695B), Lib.Quick(0) to quickNames[0]),
+                    Triple(Icons.Rounded.History, Color(0xFF5BA0D9), Lib.Quick(1) to quickNames[1]),
+                    Triple(Icons.Rounded.NewReleases, Color(0xFF6BC08A), Lib.Quick(2) to quickNames[2]),
                     Triple(Icons.Rounded.LibraryMusic, Color(0xFF6E8BE8), Lib.Songs to tr("All songs", "Tüm şarkılar")),
+                    Triple(Icons.Rounded.Album, Color(0xFFD96B6B), Lib.Cat(0) to catNames[0]),
+                    Triple(Icons.Rounded.Person, Color(0xFFD98A5B), Lib.Cat(1) to catNames[1]),
+                    Triple(Icons.Rounded.Piano, Color(0xFF9B6BD9), Lib.Cat(2) to catNames[2]),
+                    Triple(Icons.Rounded.Event, Color(0xFF5BA0D9), Lib.Cat(3) to catNames[3]),
+                    Triple(Icons.Rounded.Edit, Color(0xFF6BC08A), Lib.Cat(4) to catNames[4]),
                     Triple(Icons.Rounded.Folder, Color(0xFF4A7BD6), Lib.Folders to tr("Folders", "Klasörler")),
                     Triple(Icons.Rounded.AccountTree, Color(0xFF5B63D9), Lib.Tree(root) to tr("Folder tree", "Klasör ağacı")),
+                    Triple(Icons.Rounded.QueueMusic, Color(0xFF8E5BD9), Lib.Playlists to tr("Playlists", "Çalma listeleri")),
+                    Triple(Icons.Rounded.Star, Color(0xFFD9A05B), Lib.Favs to tr("Favourites", "Favoriler")),
+                    Triple(Icons.Rounded.BarChart, Color(0xFF5BB5A8), Lib.Stats to tr("Statistics", "İstatistikler")),
                 )
                 itemsIndexed(cats) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
             }
-            Lib.Settings -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
-                PowerampSkinStrip(skinId ?: "", { onSkin?.invoke(it) }, Modifier.fillMaxWidth().padding(horizontal = 16.dp))
+            Lib.Settings -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 8.dp)) {
+                ThemeGrid(powerampSkins.map { sk -> ThemeItem(sk.id, sk.name) { PowerampSkinTile(sk) } }, skinId ?: "", { onSkin?.invoke(it) })
             }
-            Lib.Songs -> SongList(tracks.withIndex().toList(), current, style, onPlay)
+            is Lib.Cat -> {
+                val groups = remember(tracks, n.kind) {
+                    tracks.mapNotNull { t -> groupKey(t, n.kind)?.let { it to t } }.groupBy({ it.first }, { it.second })
+                        .toList().let { if (n.kind == 3) it.sortedByDescending { g -> g.first } else it.sortedBy { g -> g.first.lowercase() } }
+                }
+                LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
+                    itemsIndexed(groups) { _, (name, list) -> CatRow(catIcons[n.kind], Color(0xFF6E8BE8), name, style, count = list.size) { node = Lib.Group(n.kind, name) } }
+                }
+            }
+            is Lib.Group -> SongList(tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }, current, style, onPlay)
+            Lib.Songs -> {
+                val items = remember(tracks, sortBy) {
+                    val l = tracks.withIndex().toList()
+                    when (sortBy) { 0 -> l.sortedBy { it.value.displayName().lowercase() }; 1 -> l.sortedBy { it.value.folderName().lowercase() }; else -> l }
+                }
+                SongList(items, current, style, onPlay)
+            }
+            Lib.Stats -> StatsPage(style)
+            Lib.Playlists -> PlaylistsPage(queue, style) { node = Lib.Playlist(it) }
+            is Lib.Playlist -> {
+                val l = remember(n.name) { com.umutk.pulse.extras.music.Playlists.load(ctx, n.name) }
+                SongList(l.withIndex().toList(), current, style) { onPlayTracks(l, it) }
+            }
+            is Lib.Quick -> {
+                val ix = remember(n.kind, tracks) {
+                    val st = com.umutk.pulse.extras.music.stats.MusicStats
+                    val byPath = tracks.withIndex().associateBy { it.value.path }
+                    when (n.kind) {
+                        0 -> st.mostPlayed(ctx, 100).mapNotNull { byPath[it.path] }
+                        1 -> st.recent(ctx, 100).mapNotNull { byPath[it.path] }
+                        else -> tracks.withIndex().filter { it.value.dateAdded > 0 }.sortedByDescending { it.value.dateAdded }.take(100)
+                    }
+                }
+                SongList(ix, current, style, onPlay)
+            }
+            Lib.Favs -> {
+                val fav = remember { com.umutk.pulse.extras.music.stats.MusicStats.favourites(ctx) }
+                SongList(tracks.withIndex().filter { it.value.path in fav }, current, style, onPlay)
+            }
             Lib.Folders -> {
                 val groups = remember(tracks) { tracks.groupBy { it.folderName() }.toList().sortedBy { it.first.lowercase() } }
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {

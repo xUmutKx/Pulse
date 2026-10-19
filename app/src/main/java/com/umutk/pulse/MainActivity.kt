@@ -249,6 +249,7 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         if (!SplashGate.splashed && wctx !is FilesActivity) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
         else if (!welcomed) Welcome { welcomed = true }
         else key(th.dark) { App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it }) }
+        if (SplashGate.splashed && welcomed && wctx !is FilesActivity) UpdatePrompt()
     }
 }
 
@@ -351,11 +352,15 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
     // the pages visited, so the back arrow and the back gesture return to the previous one
     var trail by rememberSaveable { mutableStateOf(listOf<String>()) }
     val start = if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes"
-    val go: (String) -> Unit = { p -> onSub(""); if (p != page) trail = (trail + page).takeLast(20); onPage(p) }
+    // a tool opened from the Extra apps store returns to the store, not to the page behind it
+    var subBack by rememberSaveable { mutableStateOf("") }
+    val openSub: (String) -> Unit = { id -> subBack = if (sub == "extrastore" && id.isNotEmpty() && id != "extrastore") "extrastore" else ""; onSub(id) }
+    val closeSub: () -> Unit = { val to = subBack; subBack = ""; onSub(to) }
+    val go: (String) -> Unit = { p -> subBack = ""; onSub(""); if (p != page) trail = (trail + page).takeLast(20); onPage(p) }
     val back: () -> Unit = {
         val inner = InnerBack.steps.lastOrNull()
         if (inner != null) inner()
-        else if (sub.isNotEmpty()) onSub("")
+        else if (sub.isNotEmpty()) closeSub()
         else if (ctx is FilesActivity && page == "files") ctx.finish()
         else {
             val prev = trail.lastOrNull { it != page }
@@ -380,25 +385,32 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
     val body: @Composable () -> Unit = { Column(Modifier.fillMaxSize()) {
         if (bar) Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
-            val pgName = if (sub.isEmpty() && page !in setOf("downloads", "terminal", "recycle", "installer", "toolkit")) Pages.firstOrNull { it.id == page }?.label else null
+            val pgName = if (sub.isEmpty()) Pages.firstOrNull { it.id == page }?.label else SUB_TITLES[sub]?.let { tr(it.first, it.second) }
             if (pgName != null) Text(pgName, color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
         }
         Box(Modifier.weight(1f)) {
         // list-style pages are capped at 720 dp and centred on tablets; tables and charts keep the full width
-        val content: @Composable () -> Unit = { if (sub.isNotEmpty()) SubScreen(sub, { onSub("") }) else when (page) {
+        val content: @Composable () -> Unit = { if (sub.isNotEmpty()) SubScreen(sub, closeSub) else when (page) {
             "processes" -> ProcessesPage(); "performance" -> PerformancePage(); "history" -> HistoryPage(); "startup" -> StartupPage()
             "details" -> DetailsPage(); "services" -> ServicesPage(); "apps" -> AppsPage(); "applock" -> com.umutk.pulse.features.AppLockPage(); "widgets" -> com.umutk.pulse.widgets.WidgetsPage(); "downloads" -> com.umutk.pulse.features.DownloadsPage(); "files" -> com.umutk.pulse.features.FilesPage(); "office" -> OfficePage(); "recycle" -> com.umutk.pulse.features.RecycleBinPage(); "installer" -> com.umutk.pulse.features.InstallerPage(); "device" -> DeviceModule(); "toolkit" -> com.umutk.pulse.features.ToolkitPage(); "health" -> com.umutk.pulse.features.HealthScreen { go("processes") }; "ram" -> com.umutk.pulse.features.RamPage(); "terminal" -> com.umutk.pulse.features.TerminalPage(); else -> SettingsPage()
         } }
         if (sub.isEmpty() && page in CappedPages) MaxWidthBox { content() } else content()
         }
     } }
-    androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { onSub(it) }) {
+    androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides openSub) {
         val menus = rememberMenus(go)
         if (T.id == "win10") Win10Shell(page, go, menus, body) else if (T.tabs) ClassicShell(page, go, menus, body) else ModernShell(page, go, menus, body)
         menus.dialogs()
     }
     InstallState.file?.let { f -> InstallWindow(f) { InstallState.file = null } }
 }
+
+/** The title next to the back arrow for the tools that open on top of a page (their own big heading is gone). */
+private val SUB_TITLES = mapOf(
+    "toolkit" to ("Toolkit" to "Araç kutusu"), "installer" to ("Installer" to "Yükleyici"), "installer_settings" to ("Installer" to "Yükleyici"),
+    "files_settings" to ("Files" to "Dosyalar"), "ram" to ("RAM" to "RAM"), "dns" to ("DNS" to "DNS"), "fonts" to ("System font" to "Sistem yazı tipi"),
+    "guide" to ("Guide" to "Kılavuz"),
+)
 
 // ---------------------------------------------------------------- Windows 11 / 10, Material, AMOLED: a sidebar on the left
 

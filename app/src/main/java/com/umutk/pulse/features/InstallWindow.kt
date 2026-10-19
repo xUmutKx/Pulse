@@ -138,15 +138,29 @@ private fun apkIcon(ctx: Context, path: String): ImageBitmap? = runCatching {
  * then puts the data back under the new owner. The backup stays until the restore is done.
  */
 private fun removeAndRestore(pk: Picked): String {
-    val data = "/data/data/${pk.pkg}"
     val bak = "$BACKUP_DIR/${pk.pkg}"
-    val saved = Shell.run("rm -rf '$bak' && mkdir -p '$bak' && cp -a '$data/.' '$bak/' && echo BACKUP_OK")
-    if (!saved.contains("BACKUP_OK")) return "Backup failed, nothing was removed: ${saved.trim()}"
-    Shell.run("pm uninstall ${pk.pkg}")
-    val out = Shell.run(Installer.silentCmd(pk, down = true, user = 0))
-    if (!out.contains("Success")) return "Install failed, data kept in $bak: ${out.trim()}"
-    val uid = Shell.run("stat -c %u '$data'").trim()
-    Shell.run("cp -a '$bak/.' '$data/' && chown -R $uid:$uid '$data' && rm -rf '$bak'")
+    fun fail(en: String, trk: String) = tr("Backup failed, nothing was removed: $en", "Yedek alınamadı, hiçbir şey silinmedi: $trk")
+    if (!Regex("[A-Za-z0-9_.]+").matches(pk.pkg)) return fail("bad package name.", "geçersiz paket adı.")
+    if (Shell.root != true && !Shell.detectRoot()) return fail("root is needed. Shizuku runs as the shell user, which cannot read other apps' data.", "root gerekli. Shizuku shell kullanıcısıdır, diğer uygulamaların verisini okuyamaz.")
+    if (!Shell.runRoot("id -u").trim().endsWith("0")) return fail("root was refused.", "root reddedildi.")
+    // the app's data folder: several paths, each seen through every root mount view (plain su may run in an isolated namespace)
+    val why = StringBuilder()
+    val (mode, data) = Shell.rootSee(Shell.dataPaths(pk.pkg), why)
+        ?: return fail("root cannot see the app's data folder. Tried: $why", "root uygulamanın veri klasörünü göremiyor. Denenen: $why")
+    fun count(d: String) = Shell.runRoot("find '$d' | wc -l", mode).trim().toIntOrNull() ?: -1
+    val saved = Shell.runRoot("rm -rf '$bak' && mkdir -p '$bak' && cp -a '$data/.' '$bak/' && echo BACKUP_OK", mode)
+    if (!saved.contains("BACKUP_OK")) return fail(saved.trim(), saved.trim())
+    val n = count(data)
+    if (n < 1 || n != count(bak)) { Shell.runRoot("rm -rf '$bak'", mode); return fail("the copy does not match the original.", "kopya aslıyla uyuşmuyor.") }
+    val un = Shell.runRoot("pm uninstall ${pk.pkg}")
+    if (!un.contains("Success")) { Shell.runRoot("rm -rf '$bak'", mode); return tr("Could not remove the app, nothing changed: ${un.trim()}", "Uygulama kaldırılamadı, hiçbir şey değişmedi: ${un.trim()}") }
+    val out = Shell.runRoot(Installer.silentCmd(pk, down = true, user = 0))
+    if (!out.contains("Success")) return tr("Install failed, data kept in $bak: ${out.trim()}", "Kurulum başarısız, veri $bak içinde: ${out.trim()}")
+    val uid = Shell.runRoot("stat -c %u '$data'", mode).trim()
+    if (uid.toIntOrNull() == null) return tr("Installed, but the new data folder is missing. Data kept in $bak", "Kuruldu ama yeni veri klasörü yok. Veri $bak içinde")
+    val back = Shell.runRoot("cp -a '$bak/.' '$data/' && chown -R $uid:$uid '$data' && (restorecon -RF '$data' || true) && echo RESTORED", mode)
+    if (!back.contains("RESTORED") || count(data) < n) return tr("Restore failed, data kept in $bak: ${back.trim()}", "Geri yükleme başarısız, veri $bak içinde: ${back.trim()}")
+    Shell.runRoot("rm -rf '$bak'", mode)
     return "Restored data for ${pk.label}"
 }
 
@@ -191,7 +205,7 @@ private fun suggestions(err: String): List<String> {
     val e = err.uppercase()
     val out = mutableListOf<String>()
     if ("DOWNGRADE" in e) out += "Downgrade needs root. Use Downgrade, or uninstall the newer app first."
-    if ("INCOMPATIBLE" in e || "SIGNATURE" in e) out += "The signature differs from the installed app. Remove and restore data (root), or uninstall the old app first."
+    if ("INCOMPATIBLE" in e || "SIGNATURE" in e) out += tr("The signature differs from the installed app. Remove and restore data needs root. Uninstalling the old app instead deletes its data.", "İmza kurulu uygulamadan farklı. Kaldır ve veriyi geri yükle root ister. Eski uygulamayı kaldırmak verisini siler.")
     if ("INSUFFICIENT_STORAGE" in e) out += "Free some storage, then try again."
     if ("SDK" in e) out += "This Android version does not match the app's SDK."
     if ("NO_MATCHING_ABIS" in e) out += "The app does not support this phone's CPU type."
@@ -629,8 +643,8 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 }
                 // the warning for the state, shown above the buttons
                 val warning = when (st) {
-                    Status.SIG -> if (root) "The signature differs from the installed app. Remove and restore data deletes the app, then puts its data back. If the restore fails, the data stays in $BACKUP_DIR."
-                        else "The signature differs, so Install will fail. Removing the app and keeping its data needs root."
+                    Status.SIG -> if (root) tr("The signature differs. Remove and restore data copies the data aside and checks the copy, then removes the app, installs this one and puts the data back. If the restore fails, the data stays in $BACKUP_DIR.", "İmza farklı. Kaldır ve veriyi geri yükle önce veriyi kopyalayıp doğrular, sonra uygulamayı kaldırır, bunu kurar ve veriyi geri koyar. Geri yükleme olmazsa veri $BACKUP_DIR içinde kalır.")
+                        else tr("The signature differs, so Install will fail. Keeping the data while replacing the app needs root.", "İmza farklı, kurulum başarısız olur. Veriyi koruyarak değiştirmek root ister.")
                     Status.DOWNGRADE -> if (root) "A downgrade keeps the data only when the signature matches. Otherwise use Remove and restore data, which may break the data for an older version."
                         else "Downgrade needs root to keep the data. Without it the system refuses the older version."
                     else -> null

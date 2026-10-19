@@ -1,6 +1,7 @@
 package com.umutk.pulse.files.root
 
 import com.umutk.pulse.Shell
+import com.umutk.pulse.tr
 import java.io.File
 
 /**
@@ -31,7 +32,16 @@ object RootFs {
         if (!available()) return Result.NoRoot
         val q = dir.path.replace("'", "'\\''")
         // the exit code is echoed last, so an su refusal or a missing folder is not mistaken for an empty one
-        val out = Shell.run("ls -1Ap -- '$q' 2>&1; echo __rc=\$?")
+        val cmd = "ls -1Ap -- '$q' 2>&1; echo __rc=\$?"
+        var mode = -1
+        var out: String
+        if (Shell.root == true && needsRoot(dir.path)) {
+            // shell-uid Shizuku cannot read other apps' data: pick the root mount view that sees the folder (/data/data may only exist as /data/user/0 or /data_mirror there)
+            val alt = Regex("^/data/(?:data|user/0)/([^/]+)(/.*)?$").find(dir.path)?.let { m -> Shell.dataPaths(m.groupValues[1]).map { it + m.groupValues[2] } }
+            val seen = Shell.rootSee(alt ?: listOf(dir.path)) ?: return Result.Failed(tr("Root cannot see this folder", "Root bu klasörü göremiyor"))
+            mode = seen.first
+            out = Shell.runRoot(cmd.replace(q, seen.second.replace("'", "'\\''")), mode)
+        } else out = Shell.run(cmd)
         val lines = out.lines().filter { it.isNotBlank() }
         val rc = lines.lastOrNull()?.removePrefix("__rc=")?.toIntOrNull() ?: return Result.Failed("no answer from su")
         val body = lines.dropLast(1)

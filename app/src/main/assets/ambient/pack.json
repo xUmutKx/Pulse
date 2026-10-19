@@ -1,0 +1,123 @@
+{
+ "sounds": [
+  {
+   "id": "rain",
+   "en": "Rain",
+   "tr": "Yağmur",
+   "file": "rain.ogg",
+   "cat": "water"
+  },
+  {
+   "id": "rain_roof",
+   "en": "Rain on the roof",
+   "tr": "Çatıda yağmur",
+   "file": "rain_roof.ogg",
+   "cat": "water"
+  },
+  {
+   "id": "gok_gultusu",
+   "en": "Thunderstorm",
+   "tr": "Gök gürültülü fırtına",
+   "file": "gok_gultusu.ogg",
+   "cat": "water"
+  },
+  {
+   "id": "wind",
+   "en": "Wind",
+   "tr": "Rüzgar",
+   "file": "wind.ogg",
+   "cat": "nature"
+  },
+  {
+   "id": "crickets",
+   "en": "Night crickets",
+   "tr": "Gece cırcır böcekleri",
+   "file": "crickets.ogg",
+   "cat": "nature"
+  },
+  {
+   "id": "waves",
+   "en": "Ocean waves",
+   "tr": "Okyanus dalgaları",
+   "file": "waves.ogg",
+   "cat": "water"
+  },
+  {
+   "id": "beach",
+   "en": "Quiet beach",
+   "tr": "Sakin sahil",
+   "file": "beach.ogg",
+   "cat": "water"
+  },
+  {
+   "id": "selale",
+   "en": "Waterfall",
+   "tr": "Şelale",
+   "file": "selale.ogg",
+   "cat": "water"
+  },
+  {
+   "id": "dere",
+   "en": "Stream",
+   "tr": "Dere",
+   "file": "dere.ogg",
+   "cat": "water"
+  },
+  {
+   "id": "damlama",
+   "en": "Water dripping",
+   "tr": "Su damlaması",
+   "file": "damlama.ogg",
+   "cat": "water"
+  },
+  {
+   "id": "fire",
+   "en": "Campfire",
+   "tr": "Kamp ateşi",
+   "file": "fire.ogg",
+   "cat": "fire"
+  },
+  {
+   "id": "coffee",
+   "en": "Coffee shop",
+   "tr": "Kahve dükkanı",
+   "file": "coffee.ogg",
+   "cat": "city"
+  },
+  {
+   "id": "cafe_jazz",
+   "en": "Jazz café",
+   "tr": "Caz kafe",
+   "file": "cafe_jazz.ogg",
+   "cat": "city"
+  },
+  {
+   "id": "tren",
+   "en": "Train ride",
+   "tr": "Tren yolculuğu",
+   "file": "tren.ogg",
+   "cat": "city"
+  },
+  {
+   "id": "bell",
+   "en": "Wind chimes",
+   "tr": "Rüzgar çanı",
+   "file": "bell.ogg",
+   "cat": "instruments"
+  },
+  {
+   "id": "bowl",
+   "en": "Singing bowl",
+   "tr": "Şarkı söyleyen çanak",
+   "file": "bowl.ogg",
+   "cat": "instruments"
+  },
+  {
+   "id": "brown",
+   "en": "Brown noise",
+   "tr": "Kahverengi gürültü",
+   "file": "brown.ogg",
+   "cat": "noise"
+  }
+ ]
+}

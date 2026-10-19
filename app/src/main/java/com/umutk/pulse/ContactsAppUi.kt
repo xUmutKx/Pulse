@@ -107,6 +107,21 @@ internal fun ctHandle(i: Intent?) {
     }
 }
 
+/**
+ * Contact id behind a URI sent by another app (dialer "info", share sheets): a contact, a lookup link (contacts/lookup/key/id)
+ * or one data row (data/id, which holds the contact id). 0 when none of them resolves.
+ */
+private fun ctIdOf(ctx: Context, u: Uri): Long = runCatching {
+    val cr = ctx.contentResolver
+    val seg = u.pathSegments
+    when {
+        "lookup" in seg -> android.provider.ContactsContract.Contacts.lookupContact(cr, u)?.let { android.content.ContentUris.parseId(it) } ?: 0L
+        seg.firstOrNull() == "data" && u.authority == android.provider.ContactsContract.AUTHORITY ->
+            cr.query(u, arrayOf(android.provider.ContactsContract.Data.CONTACT_ID), null, null, null)?.use { if (it.moveToFirst()) it.getLong(0) else 0L } ?: 0L
+        else -> cr.query(u, arrayOf("_id"), null, null, null)?.use { if (it.moveToFirst()) it.getLong(0) else 0L } ?: 0L
+    }
+}.getOrDefault(0L)
+
 private val ctRadius get() = if (T.material) 14.dp else T.radius
 private val ctAcc get() = Look.accent.copy(alpha = 1f)
 
@@ -298,7 +313,7 @@ fun CtRoot() {
         val u = ctInUri
         if (u != null && ok) {
             ctInUri = null
-            val id = withContext(Dispatchers.IO) { runCatching { ctx.contentResolver.query(u, arrayOf("_id"), null, null, null)?.use { if (it.moveToFirst()) it.getLong(0) else 0L } }.getOrNull() ?: 0L }
+            val id = withContext(Dispatchers.IO) { ctIdOf(ctx, u) }
             if (id > 0) push(CtScreen.Detail(id))
         }
     }

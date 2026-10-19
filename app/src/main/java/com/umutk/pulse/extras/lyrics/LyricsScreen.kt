@@ -151,7 +151,7 @@ fun LyricsScreen(
                         line.text,
                         color = if (on) MaterialTheme.colorScheme.primary else T.sub,
                         fontSize = if (on) 22.sp else 17.sp,
-                        fontWeight = if (on) FontWeight.Bold else FontWeight.Normal,
+                        fontWeight = if (on) FontWeight.Bold else FontWeight.SemiBold,
                         textAlign = TextAlign.Center,
                         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
                     )
@@ -161,6 +161,7 @@ fun LyricsScreen(
                 rec.plainLyrics ?: tr("No lyrics", "Söz yok"),
                 color = T.text,
                 fontSize = 16.sp,
+                fontWeight = FontWeight.SemiBold,
                 modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             )
         }

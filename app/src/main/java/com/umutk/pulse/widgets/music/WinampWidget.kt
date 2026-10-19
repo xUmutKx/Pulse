@@ -12,6 +12,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Rect
 import android.graphics.Typeface
+import android.os.Bundle
 import android.widget.RemoteViews
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.toArgb
@@ -25,6 +26,7 @@ import com.umutk.pulse.extras.music.skin.WinampSkin
 import com.umutk.pulse.extras.music.skin.installedSkins
 import com.umutk.pulse.extras.music.skin.loadWinampSkin
 import java.io.File
+import kotlin.math.sqrt
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -33,11 +35,16 @@ import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 
 /** Winamp main window as a home-screen widget: skin bitmap, track title, seek bar, working transport buttons. */
-class WinampWidget : AppWidgetProvider() {
+open class WinampWidget : AppWidgetProvider() {
 
     override fun onUpdate(c: Context, m: AppWidgetManager, ids: IntArray) { watch(c); ids.forEach { m.updateAppWidget(it, build(c, it)) } }
 
     override fun onEnabled(c: Context) = watch(c)
+
+    // the window is fitted to the size, so a resize redraws it
+    override fun onAppWidgetOptionsChanged(c: Context, m: AppWidgetManager, id: Int, o: Bundle) { m.updateAppWidget(id, build(c, id)) }
+
+    override fun onDeleted(c: Context, ids: IntArray) { prefs(c).edit().apply { ids.forEach { remove("skin_$it") } }.apply() }
 
     override fun onReceive(c: Context, i: Intent) {
         when (i.action) {
@@ -46,6 +53,9 @@ class WinampWidget : AppWidgetProvider() {
             A_PAUSE -> MusicPlayerEngine.get(c).pause()
             A_STOP -> MusicPlayerEngine.get(c).player.run { pause(); seekTo(0) }
             A_NEXT -> MusicPlayerEngine.get(c).next()
+            A_SEEK -> MusicPlayerEngine.get(c).player.let { p -> if (p.duration > 0) p.seekTo(p.duration * (i.getIntExtra("seg", 0) * 2 + 1) / 32) }
+            A_SHUF -> MusicPlayerEngine.get(c).player.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
+            A_REP -> MusicPlayerEngine.get(c).player.let { it.repeatMode = when (it.repeatMode) { 0 -> 2; 2 -> 1; else -> 0 } }
             else -> return super.onReceive(c, i)
         }
         refresh(c)
@@ -57,7 +67,13 @@ class WinampWidget : AppWidgetProvider() {
         const val A_PAUSE = "com.umutk.pulse.winamp.PAUSE"
         const val A_STOP = "com.umutk.pulse.winamp.STOP"
         const val A_NEXT = "com.umutk.pulse.winamp.NEXT"
-        /** SharedPreferences key "winamp_widget": "skin_<appWidgetId>" = file name in filesDir/extras/skins, absent = drawn default. */
+        const val A_SEEK = "com.umutk.pulse.winamp.SEEK"
+        const val A_SHUF = "com.umutk.pulse.winamp.SHUF"
+        const val A_REP = "com.umutk.pulse.winamp.REP"
+        /** Height of the 4x1 strip in window pixels: title and time rows (y 0..40) over the seek bar and buttons (y 72..106). */
+        const val STRIP_H = 74
+        private val SEG = intArrayOf(R.id.wa_s0, R.id.wa_s1, R.id.wa_s2, R.id.wa_s3, R.id.wa_s4, R.id.wa_s5, R.id.wa_s6, R.id.wa_s7, R.id.wa_s8, R.id.wa_s9, R.id.wa_s10, R.id.wa_s11, R.id.wa_s12, R.id.wa_s13, R.id.wa_s14, R.id.wa_s15)
+        /** SharedPreferences "winamp_widget": "skin_<appWidgetId>" = skin file name (bundled filesDir/skins/<id>.wsz or an installed one), absent = drawn default. */
         fun prefs(c: Context) = c.getSharedPreferences("winamp_widget", Context.MODE_PRIVATE)
         fun skinDir(c: Context) = File(c.filesDir, "extras/skins")
 
@@ -72,15 +88,17 @@ class WinampWidget : AppWidgetProvider() {
 
         fun refresh(c: Context) {
             val m = AppWidgetManager.getInstance(c)
-            m.getAppWidgetIds(ComponentName(c, WinampWidget::class.java)).forEach { m.updateAppWidget(it, build(c, it)) }
+            listOf(WinampWidget::class.java, WinampWidgetCompact::class.java).forEach { k ->
+                m.getAppWidgetIds(ComponentName(c, k)).forEach { m.updateAppWidget(it, build(c, it)) }
+            }
         }
 
         private val skinCache = HashMap<String, Pair<Long, WinampSkin?>>()
 
         private fun skinFor(c: Context, id: Int): WinampSkin? {
             val name = prefs(c).getString("skin_$id", null) ?: return null
-            // skins come from the store's "skins" pack (either install location), matched by file name
-            val f = installedSkins(c).firstOrNull { it.file.name == name }?.file ?: return null
+            // bundled skins live in filesDir/skins (copied from assets by installedSkins); the list is only walked on a cache miss
+            val f = File(c.filesDir, "skins/$name").takeIf { it.isFile } ?: installedSkins(c).firstOrNull { it.file.name == name }?.file ?: return null
             val hit = skinCache[name]
             if (hit != null && hit.first == f.lastModified()) return hit.second
             val s = loadWinampSkin(f)
@@ -97,23 +115,81 @@ class WinampWidget : AppWidgetProvider() {
             val dur = e.player.duration.takeIf { it > 0 } ?: 0L
             val frac = if (dur > 0) (e.player.currentPosition.toFloat() / dur).coerceIn(0f, 1f) else 0f
             val title = st.current?.let { it.title ?: it.path.substringAfterLast('/') } ?: "Winamp"
-            val bmp = render(skinFor(c, id), title, frac, st.isPlaying, e.player.currentPosition / 1000)
-            return RemoteViews(c.packageName, R.layout.widget_winamp).apply {
+            val sk = skinFor(c, id)
+            val compact = AppWidgetManager.getInstance(c).getAppWidgetInfo(id)?.provider?.className == WinampWidgetCompact::class.java.name
+            val (bw, bh) = boxPx(c, id, compact)
+            fun draw(k: WinampSkin?) = render(k, title, frac, st.isPlaying, e.player.currentPosition / 1000, e.player.shuffleModeEnabled, e.player.repeatMode, e.player.volume, bw, bh, compact)
+            // a skin with an odd sprite size must not blank the widget: fall back to the drawn default
+            val bmp = runCatching { draw(sk) }.getOrElse { draw(null) }
+            val f = fitOf(bw, bh, WINAMP_W, if (compact) STRIP_H else WINAMP_H)
+            return RemoteViews(c.packageName, if (compact) R.layout.widget_winamp_compact else R.layout.widget_music_winamp).apply {
+                SEG.forEachIndexed { n, v -> setOnClickPendingIntent(v, WidgetUi.broadcast(c, WinampWidget::class.java, A_SEEK, 600 + n) { putExtra("seg", n) }) }
+                setOnClickPendingIntent(R.id.wa_shuf, pi(c, A_SHUF)); setOnClickPendingIntent(R.id.wa_rep, pi(c, A_REP))
                 setImageViewBitmap(R.id.wa_img, bmp)
+                // the controls are laid out over the whole widget: pad them to the drawn window so they sit on its buttons
+                setViewPadding(R.id.wa_overlay, f.x, f.y, bw - f.x - f.w, bh - f.y - f.h)
                 setOnClickPendingIntent(R.id.wa_prev, pi(c, A_PREV)); setOnClickPendingIntent(R.id.wa_play, pi(c, A_PLAY))
                 setOnClickPendingIntent(R.id.wa_pause, pi(c, A_PAUSE)); setOnClickPendingIntent(R.id.wa_stop, pi(c, A_STOP))
                 setOnClickPendingIntent(R.id.wa_next, pi(c, A_NEXT))
             }
         }
 
-        /** 275x116 main window drawn at 2x. A skin without main.bmp gets the drawn default; button cells come from cbuttons.bmp when present. */
-        fun render(skin: WinampSkin?, title: String, frac: Float, playing: Boolean, posSec: Long): Bitmap {
-            val k = 2
-            val out = Bitmap.createBitmap(WINAMP_W * k, WINAMP_H * k, Bitmap.Config.ARGB_8888)
-            val cv = Canvas(out); cv.scale(k.toFloat(), k.toFloat())
+        /** The widget's size in pixels from its options: the smallest it can be, so the window fits at any size; the provider's minimum when unknown. */
+        private fun boxPx(c: Context, id: Int, compact: Boolean): Pair<Int, Int> {
+            val o = AppWidgetManager.getInstance(c).getAppWidgetOptions(id)
+            val d = c.resources.displayMetrics.density
+            val w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).takeIf { it > 0 } ?: 250
+            val h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0).takeIf { it > 0 } ?: if (compact) 40 else 110
+            val pw = w * d; val ph = h * d
+            // RemoteViews carries bitmaps over a 1 MB binder limit; RGB_565 is 2 bytes a pixel, so keep about 350k pixels
+            val shrink = sqrt(pw * ph / 350_000f).coerceAtLeast(1f)
+            return (pw / shrink).toInt().coerceAtLeast(1) to (ph / shrink).toInt().coerceAtLeast(1)
+        }
+
+        /** The whole sw x sh window at the largest scale that fits a bw x bh box, centred; the rest is letterbox. */
+        fun fitOf(bw: Int, bh: Int, sw: Int, sh: Int): WinampFit {
+            val s = minOf(bw / sw.toFloat(), bh / sh.toFloat())
+            val w = (sw * s).toInt(); val h = (sh * s).toInt()
+            return WinampFit(s, (bw - w) / 2, (bh - h) / 2, w, h)
+        }
+
+        /** Letterbox colour: the skin's own window colour (its top-left pixel), else the drawn default. */
+        private fun skinBg(skin: WinampSkin?): Int =
+            runCatching { skin?.main?.asAndroidBitmap()?.getPixel(0, 0) }.getOrNull()?.takeIf { Color.alpha(it) == 255 } ?: Color.rgb(58, 58, 74)
+
+        /**
+         * The main window (or the 4x1 strip of it) fitted whole into a boxW x boxH bitmap, letterboxed with the skin colour.
+         * A skin without main.bmp gets the drawn default; button cells come from cbuttons.bmp when present.
+         * Also used by the config preview and the Widgets page, which pass no box size and get the window at 2x.
+         */
+        fun render(skin: WinampSkin?, title: String, frac: Float, playing: Boolean, posSec: Long, shuffle: Boolean = false, repeat: Int = 0, volume: Float = 1f,
+                   boxW: Int = WINAMP_W * 2, boxH: Int = WINAMP_H * 2, strip: Boolean = false): Bitmap {
+            val out = Bitmap.createBitmap(boxW, boxH, Bitmap.Config.RGB_565)
+            val cv = Canvas(out)
+            val f = fitOf(boxW, boxH, WINAMP_W, if (strip) STRIP_H else WINAMP_H)
+            cv.drawColor(skinBg(skin))
+            cv.translate(f.x.toFloat(), f.y.toFloat()); cv.scale(f.scale, f.scale)
+            fun paint() = paintWindow(cv, skin, title, frac, playing, posSec, shuffle, repeat, volume)
+            if (!strip) paint() else {
+                // the title and time rows, then the seek bar and buttons moved up under them (window y 72..106 lands at 40..74)
+                cv.save(); cv.clipRect(0f, 0f, WINAMP_W.toFloat(), 40f); paint(); cv.restore()
+                cv.save(); cv.translate(0f, -32f); cv.clipRect(0f, 72f, WINAMP_W.toFloat(), 106f); paint(); cv.restore()
+            }
+            return out
+        }
+
+        /** The 275x116 window in its own coordinates: skin art first, then the live parts on top. */
+        private fun paintWindow(cv: Canvas, skin: WinampSkin?, title: String, frac: Float, playing: Boolean, posSec: Long, shuffle: Boolean, repeat: Int, volume: Float) {
             val p = Paint(Paint.ANTI_ALIAS_FLAG)
             val main = skin?.main?.asAndroidBitmap()
             if (main != null) cv.drawBitmap(main, null, Rect(0, 0, WINAMP_W, WINAMP_H), p) else drawDefaultBg(cv, p)
+            // active title bar, play/pause lamp, stereo lamps: the same cells WinampMain blits
+            skin?.titlebar?.asAndroidBitmap()?.takeIf { it.width >= 27 + WINAMP_W && it.height >= 14 }?.let { cv.drawBitmap(it, Rect(27, 0, 27 + WINAMP_W, 14), Rect(0, 0, WINAMP_W, 14), p) }
+            skin?.playpaus?.asAndroidBitmap()?.takeIf { it.width >= 27 && it.height >= 9 }?.let { cv.drawBitmap(it, Rect(if (playing) 0 else 18, 0, if (playing) 9 else 27, 9), Rect(26, 28, 35, 37), p) }
+            skin?.monoster?.asAndroidBitmap()?.takeIf { it.width >= 56 && it.height >= 24 }?.let {
+                cv.drawBitmap(it, Rect(29, 12, 56, 24), Rect(212, 41, 239, 53), p)
+                cv.drawBitmap(it, Rect(0, 0, 29, 12), Rect(239, 41, 268, 53), p)
+            }
             val btn = skin?.buttons?.asAndroidBitmap()
             WinampButton.entries.forEach { b ->
                 if (btn != null) {
@@ -123,16 +199,65 @@ class WinampWidget : AppWidgetProvider() {
             }
             val vis = skin?.vis
             val fg = vis?.getOrNull(1)?.toArgb() ?: Color.rgb(0, 230, 0)
-            // title display (main.bmp's LCD area) and time
-            p.color = Color.BLACK; cv.drawRect(110f, 24f, 262f, 38f, p)
-            p.color = fg; p.typeface = Typeface.MONOSPACE; p.textSize = 9f
-            val t = "${(posSec / 60).toString().padStart(2, '0')}:${(posSec % 60).toString().padStart(2, '0')}"
-            cv.drawText(t, 112f, 33f, p)
-            cv.save(); cv.clipRect(110f, 40f, 262f, 56f); cv.drawText(title, 112f, 50f, p); cv.restore()
-            // seek bar (posbar slot)
-            p.color = Color.rgb(24, 24, 32); cv.drawRect(16f, 72f, 264f, 82f, p)
-            p.color = fg; cv.drawRect(16f, 74f, 16f + 248f * frac, 80f, p)
-            return out
+            val nums = skin?.numbers?.asAndroidBitmap()
+            val txt = skin?.text?.asAndroidBitmap()
+            val sp = Paint().apply { isFilterBitmap = false }
+            // time: numbers.bmp digits (9x13) at the classic positions, else drawn text
+            if (nums != null) {
+                val mm = (posSec / 60).coerceAtMost(99); val ss = posSec % 60
+                intArrayOf((mm / 10).toInt(), (mm % 10).toInt(), (ss / 10).toInt(), (ss % 10).toInt()).forEachIndexed { n, d ->
+                    val x = intArrayOf(48, 60, 78, 90)[n]
+                    cv.drawBitmap(nums, Rect(d * 9, 0, d * 9 + 9, 13), Rect(x, 26, x + 9, 39), sp)
+                }
+            } else {
+                p.color = fg; p.typeface = Typeface.MONOSPACE; p.textSize = 9f
+                cv.drawText("${(posSec / 60).toString().padStart(2, '0')}:${(posSec % 60).toString().padStart(2, '0')}", 50f, 36f, p)
+            }
+            // title: text.bmp (5x6) sprites, else drawn text
+            p.color = Color.BLACK; cv.drawRect(111f, 24f, 265f, 36f, p)
+            if (txt != null) {
+                var x = 111
+                title.uppercase().take(30).forEach { ch -> val (cx, cy) = textCell(ch); cv.drawBitmap(txt, Rect(cx * 5, cy * 6, cx * 5 + 5, cy * 6 + 6), Rect(x, 27, x + 5, 33), sp); x += 5 }
+            } else {
+                p.color = fg; p.typeface = Typeface.MONOSPACE; p.textSize = 9f
+                cv.save(); cv.clipRect(111f, 24f, 265f, 36f); cv.drawText(title, 112f, 33f, p); cv.restore()
+            }
+            // shuffle (164,89) and repeat (211,89): shufrep.bmp rows off 0 / on 30, else a drawn lamp
+            val sr = skin?.shufrep?.asAndroidBitmap()
+            if (sr != null) {
+                cv.drawBitmap(sr, Rect(28, if (shuffle) 30 else 0, 75, if (shuffle) 45 else 15), Rect(164, 89, 211, 104), sp)
+                cv.drawBitmap(sr, Rect(0, if (repeat != 0) 30 else 0, 28, if (repeat != 0) 45 else 15), Rect(211, 89, 239, 104), sp)
+            } else {
+                p.textSize = 8f; p.typeface = Typeface.DEFAULT_BOLD
+                p.color = if (shuffle) fg else Color.rgb(120, 120, 140); cv.drawText("SHUF", 170f, 100f, p)
+                p.color = if (repeat != 0) fg else Color.rgb(120, 120, 140); cv.drawText(if (repeat == 1) "REP1" else "REP", 215f, 100f, p)
+            }
+            // seek bar (posbar slot): skin knob (posbar.bmp x=248, 29x10) over main.bmp's groove, else a drawn bar
+            val pb = skin?.posbar?.asAndroidBitmap()
+            if (pb != null && pb.width >= 277) {
+                val kx = 16 + (219 * frac).toInt()
+                cv.drawBitmap(pb, Rect(248, 0, 277, 10), Rect(kx, 72, kx + 29, 82), sp)
+            } else {
+                p.color = Color.rgb(24, 24, 32); cv.drawRect(16f, 72f, 264f, 82f, p)
+                p.color = fg; cv.drawRect(16f, 74f, 16f + 248f * frac, 80f, p)
+            }
+            // volume: 28-frame groove (68x13 at 107,57) plus the knob, as in WinampMain
+            skin?.volume?.asAndroidBitmap()?.takeIf { it.height >= 433 }?.let { vb ->
+                val v = volume.coerceIn(0f, 1f)
+                val fr = Math.round(v * 27) * 15
+                cv.drawBitmap(vb, Rect(0, fr, 68, fr + 13), Rect(107, 57, 175, 70), sp)
+                val kx = 107 + (v * (68 - 14)).toInt()
+                cv.drawBitmap(vb, Rect(15, 422, 29, 433), Rect(kx, 58, kx + 14, 69), sp)
+            }
+        }
+
+        /** Cell (column, row) of [ch] in text.bmp; unknown characters give the blank cell. */
+        private fun textCell(ch: Char): Pair<Int, Int> {
+            val r0 = "ABCDEFGHIJKLMNOPQRSTUVWXYZ\"@ "
+            val r1 = "0123456789 .:()-'!_+\\/[]^&%.=$#"
+            r0.indexOf(ch).takeIf { it >= 0 }?.let { return it to 0 }
+            r1.indexOf(ch).takeIf { it >= 0 }?.let { return it to 1 }
+            return 28 to 0
         }
 
         private fun drawDefaultBg(cv: Canvas, p: Paint) {
@@ -159,3 +284,9 @@ class WinampWidget : AppWidgetProvider() {
         }
     }
 }
+
+/** The 4x1 variant of the Winamp widget: same receiver logic, compact strip layout (see widget_winamp_compact.xml). */
+class WinampWidgetCompact : WinampWidget()
+
+/** Where the window sits in a box: its scale, the top-left offset and the drawn size, all in box pixels. */
+data class WinampFit(val scale: Float, val x: Int, val y: Int, val w: Int, val h: Int)

@@ -130,11 +130,11 @@ val Themes = listOf(
 val MaterialAccents = listOf(0xFF1E88E5, 0xFF00ACC1, 0xFF00897B, 0xFF43A047, 0xFF7CB342,
     0xFFFFB300, 0xFFFB8C00, 0xFFF4511E, 0xFFE53935, 0xFFD81B60,
     0xFF8E24AA, 0xFF5E35B1, 0xFF3949AB, 0xFF039BE5, 0xFF26A69A,
-    0xFF9CCC65, 0xFFFFCA28, 0xFFEC407A, 0xFFAB47BC, 0xFF5C6BC0).map { Color(it) }
+    0xFF9CCC65, 0xFFFFCA28, 0xFFEC407A, 0xFFAB47BC, 0xFF5C6BC0, 0xFFFFFFFF).map { Color(it) }
 
 /** Windows accents: the classic Task Manager colours, with the wallpaper themes A-D at 7..10. */
 val WinAccents = listOf(0xFF0067C0, 0xFF00A388, 0xFF6750A4, 0xFFD13438, 0xFFE67E22, 0xFF2E7D32, 0xFFC2185B,
-    0xFF2D58C8, 0xFFEE3836, 0xFF3B828F, 0xFF3C698C).map { Color(it) }
+    0xFF2D58C8, 0xFFEE3836, 0xFF3B828F, 0xFF3C698C, 0xFFFFFFFF).map { Color(it) }
 
 /** The accent swatches for a look: pastel for Material, the Windows colours for the Windows looks. */
 fun accentsFor(material: Boolean): List<Color> = if (material) MaterialAccents else WinAccents
@@ -163,7 +163,7 @@ object Look {
     val current get() = resolved ?: theme
     val accent get() = if (current.id == "amoled" || (current.id == "material" && accentIdx == -1)) Color.White else if (current.id == "oneui" || current.id == "coloros") current.accent else (if (current.material || !current.tabs || current.id == "win10" || current.id == "win11") accentsFor(current.material).getOrNull(accentIdx) ?: current.accent else current.accent)
         // Windows 11: the accent is drawn half see-through
-        .let { if (current.id == "win11") it.copy(alpha = .5f) else it }
+        .let { if (current.id == "win11" && it != Color.White) it.copy(alpha = .5f) else it }
 }
 
 /** Text colour on an accent: black on light accents, white on dark ones. */
@@ -194,7 +194,7 @@ fun lightTwin(t: PTheme): PTheme = PTheme(t.id, t.name, false, c(0xFFF3F3F3), c(
 /** The dark twin of a light sidebar theme (Windows 11 / 10); others have none. */
 fun darkTwin(t: PTheme): PTheme? = when (t.id) {
     // Windows 11 takes the accent swatch too (PTheme.accent); the background is black (AMOLED) or dark grey
-    "win11" -> if (Opt.amoledBg) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFD0D0D0), c(0xFF2A2A2A), t.radius)
+    "win11" -> if (Opt.amoledBg) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFFFFFFF), c(0xFF2A2A2A), t.radius)
         else PTheme(t.id, t.name, true, c(0xFF202020), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFFD0D0D0), c(0xFF3A3A3A), t.radius)
     "win10" -> PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF0E0E0E), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF4CC2FF), c(0xFF2A2A2A), t.radius, tabs = true, titleName = t.titleName, glassA = t.glassA)
     else -> null

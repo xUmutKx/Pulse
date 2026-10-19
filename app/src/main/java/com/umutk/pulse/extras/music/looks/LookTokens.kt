@@ -57,7 +57,9 @@ fun musicLook(t: PTheme = Look.current): MusicLook {
         SolidColor(t.panel), t.line, t.text, FontFamily.Default)
     return when (t.id) {
         // Windows 95: grey raised bevels, navy title gradient, square corners
-        "win95" -> base.copy(frame = LookFrame.BEVEL, titleH = 18.dp, titleBrush = t.title ?: SolidColor(t.accent),
+        "win95" -> base.copy(bg = Color(0xFFC0C0C0), panel = Color(0xFFC0C0C0), text = Color.Black, sub = Color(0xFF404040),
+            accent = Color(0xFF000080), onAccent = Color.White, line = Color(0xFF808080), radius = 0.dp, dark = false,
+            frame = LookFrame.BEVEL, titleH = 20.dp, titleBrush = Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))),
             titleText = Color.White, filled = false, buttonFace = SolidColor(Color(0xFFC0C0C0)),
             buttonEdge = Color.Black, buttonText = Color.Black, font = sansFont)
         // Windows XP: Luna blue title, 3 px corners, white-to-beige button

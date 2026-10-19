@@ -32,16 +32,59 @@ fun loadWinampSkin(file: java.io.File): WinampSkin? =
         file.inputStream().use(::parseWsz).takeIf { it.fromFile }?.copy(name = file.nameWithoutExtension)
     } catch (e: IOException) { null } catch (e: SecurityException) { null }
 
-/** A skin file of the "skins" pack with its display name (pack.json en/tr, else the file name). */
-data class InstalledSkin(val name: String, val file: java.io.File)
+/** A skin file with its display name; [author] is empty when unknown. */
+data class InstalledSkin(val name: String, val file: java.io.File, val author: String = "")
+
+/** Only main.bmp of a .wsz, for picker thumbnails (stops reading at that entry). Null when missing or not decodable. */
+fun loadSkinPreview(file: java.io.File): ImageBitmap? = try {
+    ZipInputStream(file.inputStream()).use { zip ->
+        var r: ImageBitmap? = null
+        while (r == null) {
+            val e = zip.nextEntry ?: break
+            if (!e.isDirectory && e.name.substringAfterLast('/').lowercase() == "main.bmp") r = readCapped(zip)?.let { runCatching { decodeBmp(it) }.getOrNull() }
+            zip.closeEntry()
+        }
+        r
+    }
+} catch (e: IOException) { null }
 
 /**
- * Skins unpacked from the "skins" pack. The store unzips to <external files>/../extras/skins (see StoreInstaller);
- * filesDir/extras/skins is read too, so either location works. Loose .wsz files in those folders count as well.
+ * Skins bundled in assets/skins (index.json lists them), copied once to filesDir/skins so they are plain files for
+ * the widget too. A stamp file avoids re-copying; a failed copy simply leaves the list shorter.
+ */
+fun bundledSkins(context: Context): List<InstalledSkin> {
+    val dir = java.io.File(context.filesDir, "skins")
+    val raw = try { context.assets.open("skins/index.json").use { it.readBytes() } } catch (e: IOException) { return emptyList() }
+    val arr = runCatching { org.json.JSONArray(String(raw)) }.getOrNull() ?: return emptyList()
+    val stamp = java.io.File(dir, ".stamp")
+    val want = "${raw.size}:${raw.contentHashCode()}"
+    val fresh = runCatching { stamp.readText() == want }.getOrDefault(false)
+    val out = ArrayList<InstalledSkin>()
+    var ok = true
+    for (i in 0 until arr.length()) {
+        val o = arr.optJSONObject(i) ?: continue
+        val f = java.io.File(dir, o.optString("id") + ".wsz")
+        if (!fresh || !f.isFile) {
+            try {
+                dir.mkdirs()
+                context.assets.open("skins/" + f.name).use { inp -> f.outputStream().use { inp.copyTo(it) } }
+            } catch (e: IOException) { ok = false; continue }
+        }
+        out += InstalledSkin(o.optString("name").ifEmpty { f.nameWithoutExtension }, f, o.optString("author"))
+    }
+    if (!fresh && ok) runCatching { stamp.writeText(want) }
+    return out
+}
+
+/**
+ * Every skin the user can pick: the bundled ones first (sorted by name), then loose .wsz files in the optional
+ * "skins" pack folders (<external files>/../extras/skins, filesDir/extras/skins) and in <external files>/skins.
  */
 fun installedSkins(context: Context, turkish: Boolean = false): List<InstalledSkin> {
-    val roots = listOfNotNull(context.getExternalFilesDir(null)?.parentFile, context.filesDir).map { java.io.File(it, "extras/skins") }
-    val out = ArrayList<InstalledSkin>()
+    val out = ArrayList<InstalledSkin>(bundledSkins(context).sortedBy { it.name.lowercase() })
+    val ext = context.getExternalFilesDir(null)
+    val roots = listOfNotNull(ext?.parentFile, context.filesDir).map { java.io.File(it, "extras/skins") } + listOfNotNull(ext?.let { java.io.File(it, "skins") })
+    val user = ArrayList<InstalledSkin>()
     for (root in roots) {
         val names = HashMap<String, String>()
         runCatching {
@@ -53,10 +96,10 @@ fun installedSkins(context: Context, turkish: Boolean = false): List<InstalledSk
         }
         root.walkTopDown().maxDepth(2).filter { it.isFile && it.extension.lowercase() == "wsz" }.forEach { f ->
             val rel = f.relativeTo(root).path.replace('\\', '/')
-            if (out.none { it.file.name == f.name }) out += InstalledSkin(names[rel] ?: f.nameWithoutExtension, f)
+            if (out.none { it.file.name == f.name } && user.none { it.file.name == f.name }) user += InstalledSkin(names[rel] ?: f.nameWithoutExtension, f)
         }
     }
-    return out.sortedBy { it.name.lowercase() }
+    return out + user.sortedBy { it.name.lowercase() }
 }
 
 /** Reads a .wsz (zip) stream. Missing or broken entries fall back to defaults; bad content never throws. */

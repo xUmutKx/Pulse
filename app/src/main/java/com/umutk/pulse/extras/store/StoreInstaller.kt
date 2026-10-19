@@ -54,7 +54,67 @@ object StoreInstaller {
         e.apply()
     }
 
-    fun dataDir(c: Context, id: String): File = File(c.getExternalFilesDir(null)?.parentFile ?: c.filesDir, "extras/$id")
+    /** Settings: 0 GitHub (raw), 1 jsDelivr mirror of the same repo. */
+    fun source(c: Context) = prefs(c).getInt("src", 0)
+    fun setSource(c: Context, v: Int) = prefs(c).edit().putInt("src", v).putLong("checked", 0L).apply()
+
+    /** Settings: where unzipped modules live, 0 app storage on the shared volume, 1 private internal storage. */
+    fun location(c: Context) = prefs(c).getInt("loc", 0)
+
+    fun autoAll(c: Context) = prefs(c).getBoolean("auto", false)
+    fun setAutoAll(c: Context, v: Boolean) = prefs(c).edit().putBoolean("auto", v).apply()
+
+    /** Per extra: follows the global auto-update switch unless turned off here. */
+    fun autoOne(c: Context, id: String) = prefs(c).getBoolean("auto_$id", true)
+    fun setAutoOne(c: Context, id: String, v: Boolean) = prefs(c).edit().putBoolean("auto_$id", v).apply()
+
+    /** Per extra: keep the downloaded file in cache after install (default off). */
+    fun keepFile(c: Context, id: String) = prefs(c).getBoolean("keep_$id", false)
+    fun setKeepFile(c: Context, id: String, v: Boolean) = prefs(c).edit().putBoolean("keep_$id", v).apply()
+
+    /** raw.githubusercontent.com/<user>/<repo>/<ref>/<path> becomes the jsDelivr form when that source is chosen. */
+    fun resolveUrl(c: Context, url: String): String {
+        if (source(c) != 1) return url
+        val m = Regex("^https://raw\\.githubusercontent\\.com/([^/]+)/([^/]+)/([^/]+)/(.+)$").find(url) ?: return url
+        return "https://cdn.jsdelivr.net/gh/${m.groupValues[1]}/${m.groupValues[2]}@${m.groupValues[3]}/${m.groupValues[4]}"
+    }
+
+    private fun baseDir(c: Context, loc: Int) = if (loc == 1) c.filesDir else (c.getExternalFilesDir(null)?.parentFile ?: c.filesDir)
+    fun dataDir(c: Context, id: String): File = File(baseDir(c, location(c)), "extras/$id")
+
+    /** Moves every unzipped module to the chosen place; a module that fails to copy stays where it was. */
+    fun setLocation(c: Context, loc: Int) {
+        val from = File(baseDir(c, location(c)), "extras")
+        prefs(c).edit().putInt("loc", loc).apply()
+        val to = File(baseDir(c, loc), "extras")
+        if (from.canonicalPath == to.canonicalPath || !from.isDirectory) return
+        from.listFiles()?.filter { it.isDirectory }?.forEach { d ->
+            val dst = File(to, d.name)
+            if (runCatching { dst.deleteRecursively(); d.copyRecursively(dst, true) }.getOrDefault(false)) d.deleteRecursively()
+        }
+        rev.update { it + 1 }
+    }
+
+    fun cacheBytes(c: Context) = File(c.cacheDir, "installer").walkTopDown().filter { it.isFile }.sumOf { it.length() }
+
+    /** Deletes downloaded installer files (not running downloads); returns the bytes freed. */
+    fun clearCache(c: Context): Long {
+        val busy = progress.value.keys
+        var n = 0L
+        File(c.cacheDir, "installer").listFiles()?.forEach { f ->
+            if (busy.none { f.name.startsWith("store-$it.") }) { n += f.length(); f.delete() }
+        }
+        return n
+    }
+
+    /** Starts updates for extras whose switch is on. Only unzipped data modules go by themselves: an apk still needs the system installer tap. */
+    fun autoUpdate(c: Context, modules: List<ExtraModule>) {
+        if (!autoAll(c)) return
+        updates(c, modules).filter { !it.module.isApk && autoOne(c, it.id) }.forEach { download(c, it.module) }
+    }
+
+    /** Wipes one data module's files (kept installed record removed); apks are removed by the system. */
+    fun clearData(c: Context, m: ExtraModule) { if (!m.isApk) remove(c, m) }
 
     fun packageVersion(c: Context, pkg: String): String? =
         try { c.packageManager.getPackageInfo(pkg, 0).versionName.orEmpty() } catch (e: PackageManager.NameNotFoundException) { null }
@@ -110,6 +170,27 @@ object StoreInstaller {
         return a.minVersion == null || compareVersions(v, a.minVersion) >= 0
     }
 
+    private var bundledIds: Set<String>? = null
+
+    /** True when the APK ships inside Pulse as assets/extras/<id>.apk: no download, installed from the app itself. */
+    fun isBundled(c: Context, m: ExtraModule): Boolean {
+        if (!m.isApk) return false
+        val ids = bundledIds ?: (runCatching { c.assets.list("extras") }.getOrNull().orEmpty()
+            .filter { it.endsWith(".apk") }.map { it.removeSuffix(".apk") }.toSet()).also { bundledIds = it }
+        return m.id in ids
+    }
+
+    /** Copies the bundled APK to cache; null when it is older than the manifest version (then the download path runs). */
+    private fun bundledCopy(c: Context, m: ExtraModule): File? {
+        val out = File(c.cacheDir, "installer/store-${m.id}.apk")
+        out.parentFile?.mkdirs()
+        c.assets.open("extras/${m.id}.apk").use { i -> out.outputStream().use { i.copyTo(it) } }
+        val v = c.packageManager.getPackageArchiveInfo(out.path, 0)?.versionName.orEmpty()
+        if (compareVersions(v, m.surum) >= 0) return out
+        out.delete()
+        return null
+    }
+
     /** Starts a download in the background; the row shows progress and any error. */
     fun download(c: Context, m: ExtraModule) {
         val app = c.applicationContext
@@ -122,9 +203,11 @@ object StoreInstaller {
             val tmp = File(app.cacheDir, "installer/store-${m.id}.${if (m.isApk) "apk" else "zip"}")
             try {
                 tmp.parentFile?.mkdirs()
+                val b = if (isBundled(app, m)) runCatching { bundledCopy(app, m) }.getOrNull() else null
+                if (b != null) { installApk(app, m, b); rev.update { it + 1 }; return@launch }
                 fetchTo(app, m, tmp)
                 if (sha256Hex(tmp) != m.sha256) throw IOException(tr("Checksum differs, file removed", "Doğrulama tutmadı, dosya silindi"))
-                if (m.isApk) installApk(app, m, tmp) else { installData(app, m, tmp); tmp.delete() }
+                if (m.isApk) installApk(app, m, tmp) else { installData(app, m, tmp); if (!keepFile(app, m.id)) tmp.delete() }
                 rev.update { it + 1 }
             } catch (e: CancellationException) {
                 tmp.delete()
@@ -169,8 +252,8 @@ object StoreInstaller {
 
     /** The module file goes through the download manager (parallel ranges, notification, service); progress feeds the row. */
     private suspend fun fetchTo(c: Context, m: ExtraModule, out: File) {
-        require(m.url.startsWith("https://")) { "https only" }
-        Downloads.fetchFile(c, m.url, out, m.boyut) { p -> progress.update { it + (m.id to p) } }
+        require(resolveUrl(c, m.url).startsWith("https://")) { "https only" }
+        Downloads.fetchFile(c, resolveUrl(c, m.url), out, m.boyut) { p -> progress.update { it + (m.id to p) } }
         if (out.length() > m.boyut + EXTRA_LIMIT) throw IOException(tr("File is bigger than listed", "Dosya listedekinden büyük"))
     }
 

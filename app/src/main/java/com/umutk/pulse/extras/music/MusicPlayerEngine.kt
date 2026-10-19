@@ -9,8 +9,14 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Timeline
+import androidx.media3.common.Tracks
+import androidx.media3.common.audio.AudioProcessor
+import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.audio.AudioSink
+import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.umutk.pulse.extras.watchdog.QuickTileContract
@@ -37,6 +43,14 @@ class MusicPlayerEngine private constructor(context: Context) {
     private val app = context.applicationContext
 
     val player: ExoPlayer = ExoPlayer.Builder(app)
+        .setRenderersFactory(object : DefaultRenderersFactory(app) {
+            override fun buildAudioSink(context: Context, enableFloatOutput: Boolean, enableAudioTrackPlaybackParams: Boolean): AudioSink =
+                DefaultAudioSink.Builder(context)
+                    .setEnableFloatOutput(enableFloatOutput)
+                    .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+                    .setAudioProcessors(arrayOf<AudioProcessor>(AudioGain.processor, MusicLevels.processor))
+                    .build()
+        })
         .setAudioAttributes(
             AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(),
             /* handleAudioFocus = */ true,
@@ -54,7 +68,98 @@ class MusicPlayerEngine private constructor(context: Context) {
     private val binding = MediaController.Builder(app, SessionToken(app, ComponentName(app, MusicPlaybackService::class.java)))
         .buildAsync()
 
+    // ---- sound settings: pre-amp, ReplayGain, fade between tracks, sleep timer ----
+    private var rgTrackDb: Float? = null
+    private var rgAlbumDb: Float? = null
+    private var xfadeSec = 0
+    private var rgMode = 0
+    private var rgFallback = -6
+    private var preampDb = 0
+    private var sleepEndAt = 0L
+    private val _sleep = MutableStateFlow(0L)
+    /** 0 none, -1 stops after this track, else milliseconds left. */
+    val sleepLeftMs: StateFlow<Long> = _sleep.asStateFlow()
+
+    /** Re-reads [MusicSettings]; call after the settings page changed something. */
+    fun reloadSettings() {
+        xfadeSec = MusicSettings.crossfade(app)
+        rgMode = MusicSettings.replayGain(app)
+        rgFallback = MusicSettings.rgFallback(app)
+        preampDb = MusicSettings.preamp(app)
+        player.setHandleAudioBecomingNoisy(MusicSettings.pauseOnUnplug(app))
+        player.skipSilenceEnabled =MusicSettings.skipSilence(app)
+        val sp = MusicSettings.speed(app)
+        player.playbackParameters = PlaybackParameters(sp, if (MusicSettings.pitchFollows(app)) sp else 1f)
+        applyGain()
+    }
+
+    private fun applyGain() {
+        val rg = when (rgMode) {
+            1 -> rgTrackDb ?: rgAlbumDb ?: rgFallback.toFloat()
+            2 -> rgAlbumDb ?: rgTrackDb ?: rgFallback.toFloat()
+            else -> 0f
+        }
+        AudioGain.gain = Math.pow(10.0, ((preampDb + rg) / 20.0)).toFloat().coerceAtMost(4f)
+    }
+
+    private fun readReplayGain(t: Tracks) {
+        var tr: Float? = null; var al: Float? = null
+        val re = Regex("(?i)replaygain_(track|album)_gain\\D*?(-?\\d+(?:[.,]\\d+)?)")
+        for (g in t.groups) {
+            if (g.type != C.TRACK_TYPE_AUDIO) continue
+            for (i in 0 until g.length) {
+                val m = g.getTrackFormat(i).metadata ?: continue
+                for (k in 0 until m.length()) {
+                    val hit = re.find(m.get(k).toString()) ?: continue
+                    val v = hit.groupValues[2].replace(',', '.').toFloatOrNull() ?: continue
+                    if (hit.groupValues[1].equals("track", true)) tr = v else al = v
+                }
+            }
+        }
+        rgTrackDb = tr; rgAlbumDb = al
+        applyGain()
+    }
+
+    /** Stops playback after [minutes] (fading the last 10 s) or after the current track when [endOfTrack]. 0 cancels. */
+    fun setSleep(minutes: Int, endOfTrack: Boolean = false) {
+        sleepEndAt = if (minutes > 0) System.currentTimeMillis() + minutes * 60_000L else 0L
+        player.pauseAtEndOfMediaItems = endOfTrack
+        AudioGain.sleepFade = 1f
+        _sleep.value = if (endOfTrack) -1L else if (minutes > 0) minutes * 60_000L else 0L
+    }
+
+    private val ticker = object : Runnable {
+        override fun run() {
+            if (player.isPlaying) {
+                // fade at the start and end of every track
+                val d = player.duration
+                val x = minOf(xfadeSec * 1000L, if (d > 0) d / 3 else 0L)
+                AudioGain.fade = if (x <= 0 || d <= 0) 1f else {
+                    val p = player.currentPosition
+                    minOf(1f, minOf((p + 300L).toFloat() / x, (d - p).toFloat() / x)).coerceIn(0f, 1f)
+                }
+                if (sleepEndAt > 0) {
+                    val left = sleepEndAt - System.currentTimeMillis()
+                    _sleep.value = left.coerceAtLeast(0L)
+                    AudioGain.sleepFade = (left / 10_000f).coerceIn(0f, 1f)
+                    if (left <= 0) { sleepEndAt = 0; _sleep.value = 0; pause(); AudioGain.sleepFade = 1f }
+                }
+            } else AudioGain.fade = 1f
+            main2.postDelayed(this, 200L)
+        }
+    }
+    private val main2 = android.os.Handler(android.os.Looper.getMainLooper())
+
     init {
+        reloadSettings()
+        main2.post(ticker)
+        player.addListener(object : Player.Listener {
+            override fun onTracksChanged(tracks: Tracks) = readReplayGain(tracks)
+            override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_END_OF_MEDIA_ITEM) { player.pauseAtEndOfMediaItems = false; _sleep.value = 0L }
+            }
+        })
+        if (MusicSettings.countStats(app)) player.addListener(com.umutk.pulse.extras.music.stats.StatsListener(app, player))
         if (player.audioSessionId != C.AUDIO_SESSION_ID_UNSET) equalizer.attach(player.audioSessionId)
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { publish(); if (!isPlaying) saveResume(); watch(isPlaying) }
@@ -183,7 +288,8 @@ class MusicPlayerEngine private constructor(context: Context) {
     private fun Track.toMediaItem(): MediaItem = MediaItem.Builder()
         .setMediaId(path)
         .setUri(uriOf(path))
-        .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).setAlbumTitle(album).build())
+        .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).setAlbumTitle(album)
+            .also { b -> if (albumId > 0 && MusicSettings.notificationArt(app)) b.setArtworkUri(Uri.parse("content://media/external/audio/albumart/$albumId")) }.build())
         .build()
 
     private fun MediaItem.toTrack(): Track = Track(mediaId, mediaMetadata.title?.toString(), artist = mediaMetadata.artist?.toString(), album = mediaMetadata.albumTitle?.toString())

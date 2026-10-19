@@ -20,6 +20,15 @@ Looks: Windows 95, XP, 7, 10, 11, Material, AMOLED (+ One UI, ColorOS where they
 - Do not tell the user how to use something (no "long press / drag / tap" captions). Icons over words, short text.
 - English default, Turkish via `tr(en, tr)`.
 
+## Players and widgets (explicit rules, no exceptions)
+
+- Every player skin (Winamp, Poweramp, Winamp visualizer, video, music) has a home-screen widget form. A widget is never cut off:
+  it is drawn at its real size with the whole window visible (fit, never crop). If the whole window does not fit a size, add a
+  smaller variant; do not show a partial one.
+- Each Winamp skin is a widget choice in the widget picker. Searching "win" in the Pulse Widgets page must list the Winamp widgets.
+- Every player has a complete main view (the skin, not a stripped one) and a visualizer view that animates.
+- The video player searches online subtitles from inside the player, like VLC (key in settings, no hard-coded secret).
+
 ## Extra apps (Files, Photos, Calendar, Contacts, …)
 
 - Standalone launcher entries (activity-aliases) with their own look store (`FilesLook`, `PhotosPrefs`, `CalPrefs`, `CtPrefs`).
