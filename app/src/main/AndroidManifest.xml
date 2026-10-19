@@ -1150,7 +1150,7 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
         <!-- Music player (white noise and playlists inside it), video: one activity, one launcher entry each (the entry's name picks the page) -->
-        <activity android:name=".ExtraToolActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:documentLaunchMode="always"
+        <activity android:name=".ExtraToolActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:documentLaunchMode="always" android:taskAffinity="com.umutk.pulse.tools"
             android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
         <activity-alias android:name=".MusicLauncher" android:targetActivity=".ExtraToolActivity" android:exported="true" android:enabled="true" android:icon="@mipmap/ic_music" android:roundIcon="@mipmap/ic_music" android:label="Music Player">
             <intent-filter>
