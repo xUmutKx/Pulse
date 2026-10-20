@@ -4,8 +4,11 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -22,6 +25,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -40,8 +45,17 @@ import androidx.compose.foundation.layout.Arrangement
 import com.umutk.pulse.Look
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -66,9 +80,10 @@ import com.umutk.pulse.extras.music.wmp7.Wmp7Mode
 import com.umutk.pulse.extras.music.wmp7.Wmp7Now
 import com.umutk.pulse.extras.music.wmp7.Wmp7Player
 import com.umutk.pulse.extras.music.wmp7.Wmp7Skin
+import com.umutk.pulse.extras.ui.ThemeGrid
+import com.umutk.pulse.extras.ui.ThemeItem
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 /** The four looks, in switcher order. Material is the default. */
 private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), LYRICS("Lyrics") }
@@ -86,19 +101,19 @@ fun MusicHub(onBack: () -> Unit) {
     val openTool = com.umutk.pulse.LocalOpenTool.current
     val st by engine.state.collectAsState()
     val library by MusicLibrary.tracks.collectAsState()
+    // songs without a cover get one in the background, whether or not they are played (see CoverFetch.backfill)
+    LaunchedEffect(library) { CoverFetch.backfill(ctx, library) }
     var look by remember { mutableStateOf(runCatching { MusicLook.valueOf(prefs(ctx).getString("look", "")!!) }.getOrDefault(MusicLook.MATERIAL)) }
     var artBg by remember { mutableStateOf(prefs(ctx).getBoolean("artBg", false)) }
     var lyrics by remember { mutableStateOf(false) }
+    var nowPlaying by remember { mutableStateOf(false) } // Material's full-screen player is open
     var playlistsOpen by remember { mutableStateOf(false) }
     var settingsOpen by remember { mutableStateOf(false) }
     var rev by remember { mutableIntStateOf(0) }
     var noiseOpen by remember { mutableStateOf(false) }
     var onlineOpen by remember { mutableStateOf(false) }
     var spotifyOpen by remember { mutableStateOf(false) }
-    var searchOpen by remember { mutableStateOf(false) }
     var floating by remember { mutableStateOf(false) }
-    var hitResult by remember { mutableStateOf<com.umutk.pulse.extras.lyrics.LyricsResult?>(null) }
-    val hubScope = androidx.compose.runtime.rememberCoroutineScope()
     androidx.compose.runtime.LaunchedEffect(Unit) {
         when ((ctx as? android.app.Activity)?.intent?.getStringExtra(MusicPlaybackService.EXTRA_OPEN)) {
             "lyrics" -> lyrics = true
@@ -127,47 +142,35 @@ fun MusicHub(onBack: () -> Unit) {
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) engine.playQueue(uris.map { Track(it.toString()) })
     }
-    BackHandler(enabled = lyrics) { lyrics = false }
+    // registered last so it takes priority: back closes the open lyrics first, and leaves the hub only when they are closed
     BackHandler(onBack = onBack)
+    BackHandler(enabled = lyrics) { lyrics = false }
 
-    val cover = remember(st.current) { st.current?.let { trackArt(ctx, it) } }
+    val cover = rememberTrackArt(st.current)
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
-        if (artBg && cover != null) {
-            Image(cover, null, Modifier.fillMaxSize().blur(40.dp), contentScale = ContentScale.Crop)
-            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)))
-        }
-        Column(Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
-                Spacer(Modifier.weight(1f))
-                // the looks, art background, add music and playlists live on the settings page behind the gear
-                // labelled, so the white noise page is easy to find from the player
-                // Winamp has its own bar, so these two pills stay off that look
-                if (look != MusicLook.WINAMP) {
-                    Row(Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .14f)).clickable { noiseOpen = true }
-                        .padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("volume", Color.White, 18.dp)
-                        Spacer(Modifier.width(6.dp))
-                        Text(tr("White noise", "Beyaz gürültü"), color = Color.White, fontSize = 12.sp)
-                    }
-                    Spacer(Modifier.width(6.dp))
-                    Row(Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .14f)).clickable { onlineOpen = true }
-                        .padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("newfolder", Color.White, 18.dp)
-                        Spacer(Modifier.width(6.dp))
-                        Text(tr("Playlists", "Çalma listeleri"), color = Color.White, fontSize = 12.sp)
-                    }
+        // one layer: the blurred cover itself, dimmed by its alpha
+        // Poweramp draws its own backdrop on the now-playing page, so this one is for the other looks only
+        if (artBg && cover != null && look != MusicLook.POWERAMP) Image(cover, null, Modifier.fillMaxSize().blur(40.dp).alpha(.45f), contentScale = ContentScale.Crop)
+        // the Material now-playing screen and Poweramp take the whole window: no header, no inset
+        val fullNow = look == MusicLook.POWERAMP || (nowPlaying && look == MusicLook.MATERIAL)
+        Column(Modifier.fillMaxSize().padding(horizontal = if (fullNow) 0.dp else 12.dp, vertical = if (fullNow) 0.dp else 8.dp)) {
+            if (!fullNow) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
+                    Spacer(Modifier.weight(1f))
+                    // white noise and playlists are not on the player bar: they sit in the Extra apps and the library
+                    // Poweramp carries its own settings button at the right end of its tab bar
+                    if (look != MusicLook.POWERAMP) Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
                 }
-                Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
+                Spacer(Modifier.height(8.dp))
             }
-            Spacer(Modifier.height(8.dp))
             Box(Modifier.weight(1f).fillMaxWidth()) {
               androidx.compose.runtime.key(rev) {
                 when {
                     lyrics -> LyricsPanel(st.current, rememberPosition(engine, st).value.first, Modifier.fillMaxSize(), onSeek = { engine.seekTo(it) })
-                    look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg)
-                    look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx)
+                    look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it })
+                    look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx, onSettings = { settingsOpen = true })
                     look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") })
                     look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
@@ -183,36 +186,18 @@ fun MusicHub(onBack: () -> Unit) {
         if (noiseOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.whitenoise.WhiteNoiseHub { noiseOpen = false } }
         if (onlineOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.playlists.OnlinePlaylistsHub { onlineOpen = false } }
         if (spotifyOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
-        if (searchOpen) Box(Modifier.fillMaxSize().background(T.bg)) {
-            com.umutk.pulse.extras.lyrics.LyricsSearchScreen(
-                onOpen = { hit -> hubScope.launch { hitResult = com.umutk.pulse.extras.lyrics.Lyrics.forHit(ctx, hit) } },
-                onClose = { searchOpen = false },
-            )
-        }
-        hitResult?.let { r ->
-            BackHandler { hitResult = null }
-            Box(Modifier.fillMaxSize().background(Color.Black)) {
-                com.umutk.pulse.extras.lyrics.LyricsView(r, -1L, null, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp))
-                Box(Modifier.align(Alignment.TopEnd).size(44.dp).clickable { hitResult = null }, contentAlignment = Alignment.Center) { PIcon("close", Color.White, 22.dp) }
-            }
-        }
         if (playlistsOpen) PlaylistsDialog(engine, st.queue) { playlistsOpen = false }
         if (settingsOpen) {
             BackHandler { settingsOpen = false; rev++ }
             val ink = T.text
-            Column(Modifier.fillMaxSize().background(T.bg).padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
+            // with the art background on, the menu sits on a half-transparent dark layer so its white text reads over the cover
+            Column(Modifier.fillMaxSize().background(if (artBg) Color.Black.copy(alpha = .6f) else T.bg).padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { settingsOpen = false; rev++ }, contentAlignment = Alignment.Center) { PIcon("back", ink, 22.dp) }
                     Text(tr("Player settings", "Oynatıcı ayarları"), color = ink, fontSize = 18.sp, modifier = Modifier.padding(start = 8.dp))
                 }
                 Spacer(Modifier.height(12.dp))
-                Text(tr("Look", "Görünüm"), color = Look.accent, fontSize = 12.sp)
-                MusicLook.values().forEach { l ->
-                    Row(Modifier.fillMaxWidth().clickable { look = l; lyrics = false; prefs(ctx).edit().putString("look", l.name).apply() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        com.umutk.pulse.PRadio(look == l) { look = l; lyrics = false; prefs(ctx).edit().putString("look", l.name).apply() }
-                        Text(l.label, color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 8.dp))
-                    }
-                }
+                MusicThemeGallery(look, ink) { l -> look = l; lyrics = false; prefs(ctx).edit().putString("look", l.name).apply() }
                 com.umutk.pulse.ExtraLookRow(ink)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Art background", "Kapak arka planı"), color = ink, fontSize = 16.sp, modifier = Modifier.weight(1f))
@@ -224,9 +209,6 @@ fun MusicHub(onBack: () -> Unit) {
                 }
                 Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; playlistsOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("newfolder", ink, 22.dp); Text(tr("Playlists", "Çalma listeleri"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
-                }
-                Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; searchOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("book", ink, 22.dp); Text(tr("Find lyrics by text", "Sözlerle şarkı bul"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                 }
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("search", ink, 22.dp); Text(tr("Floating lyrics search", "Yüzen söz araması"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp).weight(1f))
@@ -244,9 +226,7 @@ fun MusicHub(onBack: () -> Unit) {
                 MusicSettingsSections(
                     engine, when (look) { MusicLook.MATERIAL -> SettingsFor.MATERIAL; MusicLook.POWERAMP -> SettingsFor.POWERAMP; MusicLook.WINAMP -> SettingsFor.WINAMP; else -> SettingsFor.WMP },
                     onRescan = { MusicLibrary.refresh(ctx) },
-                ) {
-                    if (look == MusicLook.WINAMP) com.umutk.pulse.extras.ui.SettingsSection("Winamp") { com.umutk.pulse.extras.music.winamp.WinampSkinSettings() }
-                }
+                )
                 Spacer(Modifier.height(24.dp))
             }
         }
@@ -254,9 +234,9 @@ fun MusicHub(onBack: () -> Unit) {
 }
 
 @Composable
-private fun PowerampPage(engine: MusicPlayerEngine, library: List<Track>, artBg: Boolean, ctx: Context) {
+private fun PowerampPage(engine: MusicPlayerEngine, library: List<Track>, artBg: Boolean, ctx: Context, onSettings: () -> Unit) {
     // skins carry their own backdrop (Album art, Glass...), the page-level art switch does not apply here
-    com.umutk.pulse.extras.music.poweramp.PowerampPlayer(engine, library, art = { trackArt(ctx, it) }, modifier = Modifier.fillMaxSize())
+    com.umutk.pulse.extras.music.poweramp.PowerampPlayer(engine, library, art = { trackArt(ctx, it) }, modifier = Modifier.fillMaxSize(), onSettings = onSettings)
 }
 
 /** Position and duration polled from the engine, which has no position flow. */
@@ -325,7 +305,7 @@ private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<
     var mode by remember { mutableStateOf(Wmp7Mode.FULL) }
     var nav by remember { mutableIntStateOf(0) }
     val navLabels = listOf(tr("Now Playing", "Çalıyor"), tr("Media Library", "Ortam Kitaplığı"), tr("Playlists", "Çalma listeleri"))
-    val skin = Wmp7Skin.Default
+    val skin = Wmp7Skin.All.getOrElse(prefs(LocalContext.current).getInt("wmp_skin", 0)) { Wmp7Skin.Default }
     Box(Modifier.fillMaxSize()) {
         Wmp7Player(
             mode = mode,
@@ -345,13 +325,100 @@ private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<
         )
         if (nav == 1 && mode == Wmp7Mode.FULL) {
             LazyColumn(Modifier.padding(start = 160.dp).fillMaxSize().background(skin.treeBg)) {
+                item { RecommendationHome(library, st.current, skin.treeText, skin.sub, skin.vizBg, skin.accent, round = false, onPlay = { engine.playQueue(library, it); nav = 0 }) }
                 itemsIndexed(library) { i, t ->
-                    Text(t.displayName(), color = skin.treeText, fontSize = 13.sp, maxLines = 1,
-                        modifier = Modifier.fillMaxWidth().clickable { engine.playQueue(library, i); nav = 0 }.padding(8.dp))
+                    val art = rememberTrackArt(t)
+                    Row(Modifier.fillMaxWidth().clickable { engine.playQueue(library, i); nav = 0 }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        if (art != null) Image(art, null, Modifier.size(24.dp), contentScale = ContentScale.Crop)
+                        Spacer(Modifier.width(8.dp))
+                        Text(t.displayName(), color = skin.treeText, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    }
                 }
             }
         }
     }
+}
+
+/** Theme families of the music picker, in gallery order. */
+private enum class ThemeFamily(val en: String, val turkish: String, val look: MusicLook) {
+    MATERIAL("Material", "Material", MusicLook.MATERIAL),
+    POWERAMP("Poweramp", "Poweramp", MusicLook.POWERAMP),
+    WINAMP("Winamp", "Winamp", MusicLook.WINAMP),
+    WMP("Windows Media Player 7", "Windows Media Player 7", MusicLook.WMP),
+    LYRICS("Lyrics", "Sözler", MusicLook.LYRICS),
+}
+
+/** Look choice: family titles on top, only the chosen family's themes below. */
+@Composable
+private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -> Unit) {
+    val ctx = LocalContext.current
+    var wmp by remember { mutableIntStateOf(prefs(ctx).getInt("wmp_skin", 0)) }
+    var family by remember { mutableStateOf(ThemeFamily.values().first { it.look == look }) }
+    val scheme = MaterialTheme.colorScheme
+    fun pick(f: ThemeFamily) { family = f; if (f.look != look) onLook(f.look) }
+    Text(tr("Look", "Görünüm"), color = Look.accent, fontSize = 12.sp)
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Bottom) {
+        ThemeFamily.values().forEach { f ->
+            val on = f == family
+            Column(Modifier.clickable { pick(f) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                familyMini(f, scheme)?.let { m ->
+                    val shape = RoundedCornerShape(5.dp)
+                    MiniLook(m, Modifier.size(44.dp, 30.dp).clip(shape)
+                        .border(if (on) BorderStroke(2.dp, Look.accent) else BorderStroke(1.dp, ink.copy(alpha = .3f)), shape))
+                }
+                Text(tr(f.en, f.turkish), color = if (on) Look.accent else ink.copy(alpha = .6f), fontSize = 14.sp, maxLines = 1,
+                    fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
+            }
+        }
+    }
+    when (family) {
+        ThemeFamily.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampSkinSettings()
+        ThemeFamily.WMP -> WmpSkinGrid(wmp) { wmp = it; prefs(ctx).edit().putInt("wmp_skin", it).apply() }
+        ThemeFamily.MATERIAL, ThemeFamily.LYRICS -> familyMini(family, scheme)?.let { m ->
+            ThemeGrid(listOf(ThemeItem(family.name, tr(family.en, family.turkish)) { MiniLook(m, Modifier.fillMaxSize()) }), family.name, onSelect = { pick(family) })
+        }
+        ThemeFamily.POWERAMP -> Unit
+    }
+}
+
+/** Colours of one miniature look: background, screen panel, accent and dim text. */
+private class MiniColors(val bg: Brush, val panel: Color, val accent: Color, val dim: Color)
+
+/** Miniature colours of a family. Poweramp has none here (it shows no sub-content). */
+private fun familyMini(f: ThemeFamily, scheme: ColorScheme): MiniColors? = when (f) {
+    ThemeFamily.MATERIAL -> MiniColors(SolidColor(scheme.surface), scheme.surfaceVariant, scheme.primary, scheme.onSurfaceVariant)
+    ThemeFamily.WINAMP -> MiniColors(SolidColor(Color(0xFF2B2B2B)), Color.Black, Color(0xFF00FF40), Color(0xFF8A8A8A))
+    ThemeFamily.WMP -> wmpMini(Wmp7Skin.Default)
+    ThemeFamily.LYRICS -> MiniColors(SolidColor(Color.Black), Color(0xFF1A1A1A), Look.accent, Color.White.copy(alpha = .5f))
+    else -> null
+}
+
+/** A Windows Media Player 7 skin's own frame, visualisation and seek colours; flat, no gradient. */
+private fun wmpMini(sk: Wmp7Skin) = MiniColors(SolidColor(sk.frame), sk.vizBg, sk.seekFill, sk.sub)
+
+/** Miniature of a look: background, screen panel with cover, text lines, seek bar and play dot. No text. */
+@Composable
+private fun MiniLook(m: MiniColors, modifier: Modifier) {
+    Canvas(modifier) {
+        val w = size.width
+        val h = size.height
+        drawRect(m.bg)
+        drawRoundRect(m.panel, Offset(w * .08f, h * .1f), Size(w * .84f, h * .58f), CornerRadius(h * .06f))
+        drawRect(m.accent.copy(alpha = .85f), Offset(w * .14f, h * .18f), Size(h * .3f, h * .3f))
+        for (i in 0 until 3) {
+            val y = h * (.24f + i * .11f)
+            drawLine(if (i == 0) m.accent else m.dim, Offset(w * .52f, y), Offset(w * .84f, y), h * .04f, StrokeCap.Round)
+        }
+        drawLine(m.dim.copy(alpha = .4f), Offset(w * .14f, h * .8f), Offset(w * .86f, h * .8f), h * .04f, StrokeCap.Round)
+        drawLine(m.accent, Offset(w * .14f, h * .8f), Offset(w * .5f, h * .8f), h * .04f, StrokeCap.Round)
+        drawCircle(m.accent, h * .07f, Offset(w * .5f, h * .92f))
+    }
+}
+
+/** The Windows Media Player 7 skins as miniature previews in the shared grid; each skin draws its own colours. */
+@Composable
+private fun WmpSkinGrid(selected: Int, onPick: (Int) -> Unit) {
+    ThemeGrid(Wmp7Skin.All.mapIndexed { i, sk -> ThemeItem("$i", sk.name) { MiniLook(wmpMini(sk), Modifier.fillMaxSize()) } }, "$selected", onSelect = { onPick(it.toInt()) })
 }
 
 /** Named playlists: save the queue, load or delete one, import and export M3U8 through the picker. */

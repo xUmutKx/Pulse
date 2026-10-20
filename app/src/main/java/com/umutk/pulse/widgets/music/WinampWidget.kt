@@ -24,6 +24,7 @@ import com.umutk.pulse.extras.music.skin.WINAMP_W
 import com.umutk.pulse.extras.music.skin.WinampButton
 import com.umutk.pulse.extras.music.skin.WinampSkin
 import com.umutk.pulse.extras.music.skin.installedSkins
+import com.umutk.pulse.extras.music.skin.skinGlyph
 import com.umutk.pulse.extras.music.skin.loadWinampSkin
 import java.io.File
 import kotlin.math.sqrt
@@ -32,6 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.drop
 import kotlinx.coroutines.flow.launchIn
+import com.umutk.pulse.widgets.TextTile
 import kotlinx.coroutines.flow.onEach
 
 /** Winamp main window as a home-screen widget: skin bitmap, track title, seek bar, working transport buttons. */
@@ -120,7 +122,8 @@ open class WinampWidget : AppWidgetProvider() {
             val (bw, bh) = boxPx(c, id, compact)
             fun draw(k: WinampSkin?) = render(k, title, frac, st.isPlaying, e.player.currentPosition / 1000, e.player.shuffleModeEnabled, e.player.repeatMode, e.player.volume, bw, bh, compact)
             // a skin with an odd sprite size must not blank the widget: fall back to the drawn default
-            val bmp = runCatching { draw(sk) }.getOrElse { draw(null) }
+            // a big widget makes a bitmap over the ~1 MB RemoteViews limit, and the whole widget then fails to load: shrink it to fit the binder
+            val bmp = TextTile.fitBinder(runCatching { draw(sk) }.getOrElse { draw(null) }, 250_000)
             val f = fitOf(bw, bh, WINAMP_W, if (compact) STRIP_H else WINAMP_H)
             return RemoteViews(c.packageName, if (compact) R.layout.widget_winamp_compact else R.layout.widget_music_winamp).apply {
                 SEG.forEachIndexed { n, v -> setOnClickPendingIntent(v, WidgetUi.broadcast(c, WinampWidget::class.java, A_SEEK, 600 + n) { putExtra("seg", n) }) }
@@ -257,7 +260,8 @@ open class WinampWidget : AppWidgetProvider() {
             val r1 = "0123456789 .:()-'!_+\\/[]^&%.=$#"
             r0.indexOf(ch).takeIf { it >= 0 }?.let { return it to 0 }
             r1.indexOf(ch).takeIf { it >= 0 }?.let { return it to 1 }
-            return 28 to 0
+            // Turkish letters and Ö: the same fold as the skin text (SkinDraw), not a blank
+            return skinGlyph(ch) ?: (28 to 0)
         }
 
         private fun drawDefaultBg(cv: Canvas, p: Paint) {

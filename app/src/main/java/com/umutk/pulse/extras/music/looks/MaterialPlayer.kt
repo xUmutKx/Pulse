@@ -49,14 +49,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.Look
 import com.umutk.pulse.PSlider
+import com.umutk.pulse.T
+import com.umutk.pulse.extras.music.CoverCarousel
+import com.umutk.pulse.extras.music.RecommendationHome
 import com.umutk.pulse.extras.music.MusicPlayerEngine
 import com.umutk.pulse.extras.music.Track
+import com.umutk.pulse.extras.music.neighbourCovers
+import com.umutk.pulse.extras.music.rememberTrackArt
 import com.umutk.pulse.extras.music.trackArt
 import com.umutk.pulse.onAccent
 import com.umutk.pulse.tr
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.withContext
 
 private val PBG = Color(0xFF0B0B0F)
 private val PANEL = Color(0xFF1A1A22)
@@ -100,16 +103,8 @@ internal fun coverColor(bm: ImageBitmap, fallback: Color): Color = runCatching {
 }.getOrDefault(fallback)
 
 @Composable
-private fun rememberArt(t: Track?): ImageBitmap? {
-    val ctx = LocalContext.current
-    return produceState<ImageBitmap?>(null, t?.path) {
-        value = if (t == null) null else withContext(Dispatchers.IO) { runCatching { trackArt(ctx, t) }.getOrNull() }
-    }.value
-}
-
-@Composable
 private fun Art(t: Track?, size: androidx.compose.ui.unit.Dp?, tint: Color, modifier: Modifier = Modifier) {
-    val bm = rememberArt(t)
+    val bm = rememberTrackArt(t)
     val m = (if (size != null) modifier.size(size) else modifier).clip(RoundedCornerShape(if (size != null && size < 80.dp) 12.dp else 32.dp))
     if (bm != null) Image(bm, null, m, contentScale = ContentScale.Crop)
     else Box(m.background(tint.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = tint, modifier = Modifier.fillMaxSize(.45f)) }
@@ -123,16 +118,19 @@ private class Lists(val ctx: android.content.Context) {
 }
 
 @Composable
-fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Modifier = Modifier, artBackground: Boolean = false) {
+fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Modifier = Modifier, artBackground: Boolean = false, onNowPlaying: (Boolean) -> Unit = {}) {
     val ctx = LocalContext.current
     val st by engine.state.collectAsState()
     val cur = st.current
-    val art = rememberArt(cur)
+    val art = rememberTrackArt(cur)
+    val (artPrev, artNext) = neighbourCovers(st.queue, st.index) { trackArt(ctx, it) }
+    // AMOLED is pure black; the other Material looks keep the deep blue-grey
+    val pbg = if (T.id == "amoled") Color.Black else PBG
     val base = Look.accent.let { if (it.luminance() < .35f) Color(0xFFB9C3FF) else it }
     // always a dark player, whatever the look or light mode; the cover colour is the accent
     val accent = remember(art, base) { art?.let { coverColor(it, base) }?.let { c -> if (c.luminance() < .3f) androidx.compose.ui.graphics.lerp(c, Color.White, .45f) else c } ?: base }
     val dyn = accent
-    val tabs = listOf(tr("Songs", "Şarkılar"), tr("Albums", "Albümler"), tr("Artists", "Sanatçılar"), tr("Playlists", "Listeler"), tr("Folders", "Klasörler"))
+    val tabs = listOf(tr("All songs", "Tüm şarkılar"),tr("Albums", "Albümler"), tr("Artists", "Sanatçılar"), tr("Playlists", "Listeler"), tr("Folders", "Klasörler"))
     var tab by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
     var group by remember { mutableStateOf<String?>(null) }
@@ -161,7 +159,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     val q = query.trim().lowercase()
     val songs = remember(library, q) { if (q.isEmpty()) library else library.filter { it.name().lowercase().contains(q) || it.folder().lowercase().contains(q) } }
 
-    Box(modifier.fillMaxSize().background(PBG)) {
+    DisposableEffect(showNow) { onNowPlaying(showNow); onDispose { onNowPlaying(false) } }
+
+    Box(modifier.fillMaxSize().background(pbg)) {
         Column(Modifier.fillMaxSize()) {
             // search
             Row(Modifier.fillMaxWidth().padding(12.dp, 8.dp).clip(RoundedCornerShape(28.dp)).background(PANEL).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -200,6 +200,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                             Icon(Icons.Rounded.Shuffle, null, tint = accent, modifier = Modifier.clickable { if (shown.isNotEmpty()) engine.playQueue(shown.shuffled()) })
                         }
                         LazyColumn(Modifier.fillMaxSize()) {
+                            if (tab == 0 && g == null && q.isEmpty()) item { RecommendationHome(library, cur, TXT, SUB, PANEL, accent, round = false, onPlay = { engine.playQueue(library, it) }) }
                             itemsIndexed(shown, key = { i, t -> "$i${t.path}" }) { i, t ->
                                 val on = cur?.path == t.path
                                 Row(Modifier.fillMaxWidth().clickable { engine.playQueue(shown, i) }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -253,12 +254,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
         }
 
         if (showNow && cur != null) {
-            val bg = PBG
-            Box(Modifier.fillMaxSize().background(bg)) {
-                if (artBackground && art != null) {
-                    Image(art, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop)
-                    Box(Modifier.fillMaxSize().background(bg.copy(alpha = .45f)))
-                } else Box(Modifier.fillMaxSize().background(dyn.copy(alpha = .22f)))
+            Box(Modifier.fillMaxSize().background(pbg)) {
+                // one layer: the blurred cover is the background when the art switch is on, nothing extra is drawn otherwise
+                if (artBackground && art != null) Image(art, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop)
                 Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.KeyboardArrowDown, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { showQueue = false; showNow = false })
@@ -282,11 +280,16 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         }
                     } else {
                         Spacer(Modifier.weight(1f))
-                        Art(cur, null, dyn, Modifier.fillMaxWidth().aspectRatio(1f))
+                        CoverCarousel(art, artPrev, artNext, st.index > 0, st.index < st.queue.lastIndex, { engine.previous() }, { engine.next() },
+                            Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(32.dp))) { a ->
+                            if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                            else Box(Modifier.fillMaxSize().background(dyn.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = dyn, modifier = Modifier.fillMaxSize(.45f)) }
+                        }
                         Spacer(Modifier.weight(1f))
                     }
                     Text(cur.name(), color = TXT, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(cur.artistName(), color = SUB, fontSize = 15.sp, maxLines = 1)
+                    com.umutk.pulse.extras.lyrics.LiveLyricsLine(cur, pos, Modifier.fillMaxWidth().padding(top = 8.dp))
                     val d = dur.coerceAtLeast(1)
                     PSlider(pos.coerceIn(0, d).toFloat(), { dragging = true; pos = it.toInt() }, 0f..d.toFloat()) { engine.seekTo(pos); dragging = false }
                     Row(Modifier.fillMaxWidth()) { Text(fmt(pos), color = SUB, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(fmt(dur), color = SUB, fontSize = 12.sp) }

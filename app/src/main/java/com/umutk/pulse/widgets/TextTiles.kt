@@ -35,6 +35,12 @@ class Tile(
  * one or two secondary lines, then a bar; wide cells put the sparkline / bars, or a ring for a plain percentage, in a right-hand panel.
  */
 object TextTile {
+    /** RemoteViews bitmaps must fit the ~1 MB binder limit, or updateAppWidget throws; scaled down (the ImageView stretches it, fitXY). shortcut: fixed pixel budget, not a per-device one. */
+    fun fitBinder(b: Bitmap, maxPx: Int = 200_000): Bitmap {
+        val s = kotlin.math.sqrt(maxPx.toFloat() / (b.width.toLong() * b.height))
+        return if (s >= 1f) b else Bitmap.createScaledBitmap(b, (b.width * s).toInt().coerceAtLeast(1), (b.height * s).toInt().coerceAtLeast(1), true)
+    }
+
     fun draw(ctx: Context, s: WidgetStyle, icon: Int, title: String, t: Tile, w: Int, h: Int, id: Int): Bitmap {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)

@@ -33,6 +33,7 @@ import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.geometry.Size
 import com.umutk.pulse.extras.ui.SettingsSection
 import com.umutk.pulse.extras.ui.SliderRow
@@ -73,14 +74,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-private val CATS = listOf("nature", "water", "fire", "city", "cozy", "noise", "instruments", "birds")
-
-private fun catName(c: String) = when (c) {
-    "all" -> tr("All", "Tümü"); "nature" -> tr("Nature", "Doğa"); "water" -> tr("Water", "Su"); "fire" -> tr("Fire", "Ateş")
-    "city" -> tr("City", "Şehir"); "cozy" -> tr("Cozy", "Rahat"); "noise" -> tr("Noise", "Gürültü")
-    "instruments" -> tr("Instruments", "Enstrüman"); "birds" -> tr("Birds", "Kuşlar"); else -> c
-}
-
 /** White noise and ambient mixer. The sound lives in [AmbientMixer] + the foreground service, so closing the page does not stop it. */
 @Composable
 fun WhiteNoiseHub(onBack: () -> Unit) {
@@ -92,7 +85,6 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
     val timerMin by NoiseTimer.minutes.collectAsState()
     var user by remember { mutableStateOf(UserPresets.load(ctx)) }
     var selected by remember { mutableStateOf<String?>(null) }
-    var cat by remember { mutableStateOf("all") }
     var name by remember { mutableStateOf("") }
     var themeId by remember { mutableStateOf(NoiseThemes.selectedId(ctx)) }
     var fade by remember { mutableStateOf(NoiseThemes.bool(ctx, "fade", true)) }
@@ -115,14 +107,11 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
     // shortcut: also fires on a configuration change; only matters when the user turned background play off
     DisposableEffect(Unit) { onDispose { if (!NoiseThemes.bool(ctx, "bg", true)) AmbientMixer.stopAll() } }
 
-    val cats = CATS.filter { c -> sounds.any { it.cat == c } }
-    val shown = sounds.filter { it.cat == cat }
-        .sortedBy { CALM_ORDER.indexOf(it.id).let { i -> if (i < 0) 99 else i } }
+    val shown = sounds.sortedBy { CALM_ORDER.indexOf(it.id).let { i -> if (i < 0) 99 else i } }
     val playing = running.isNotEmpty()
     val nameTaken = name.isBlank() || (BuiltInPresets + user).any { it.name.equals(name.trim(), true) }
     var settingsOpen by remember { mutableStateOf(false) }
-    // first the themes (water, nature, ...), then the alternatives of the one picked; the gear at the top right holds the rest
-    BackHandler(enabled = settingsOpen || cat != "all") { if (settingsOpen) settingsOpen = false else cat = "all" }
+    BackHandler(enabled = settingsOpen) { settingsOpen = false }
 
     fun apply(p: AmbientPreset) { selected = p.name; AmbientMixer.applyMix(p.levels) }
     fun saveUser(list: List<AmbientPreset>) { user = list; UserPresets.save(ctx, list) }
@@ -133,22 +122,21 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
     ) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                PIcon("back", fg, 22.dp, Modifier.clickable { if (settingsOpen) settingsOpen = false else if (cat != "all") cat = "all" else onBack() })
+                PIcon("back", fg, 22.dp, Modifier.clickable { if (settingsOpen) settingsOpen = false else onBack() })
                 Text(
-                    if (settingsOpen) tr("Settings", "Ayarlar") else if (cat == "mixes") tr("Mixes", "Karışımlar") else if (cat != "all") catName(cat) else tr("White noise", "Beyaz gürültü"),
+                    if (settingsOpen) tr("Settings", "Ayarlar") else tr("White noise", "Beyaz gürültü"),
                     color = fg, fontSize = 20.sp, modifier = Modifier.weight(1f),
                 )
                 com.umutk.pulse.ExtraLookIcon(fg)
                 com.umutk.pulse.extras.watchdog.BatteryExemptionButton()
                 PIcon(if (playing) "pause" else "play", ac, 28.dp, Modifier.clickable {
-                    val sec = if (fade) 3 else 0
-                    if (playing) AmbientMixer.stopFaded(sec)
+                    // stop is immediate (the fade setting only shapes the start); a 3 s fade-out felt like lag
+                    if (playing) AmbientMixer.stopAll()
                     else AmbientMixer.startFaded(
                         (BuiltInPresets + user).firstOrNull { it.name == selected }?.levels
-                            ?: AmbientLast.load(ctx).ifEmpty { DefaultPreset.levels }, sec
+                            ?: AmbientLast.load(ctx).ifEmpty { DefaultPreset.levels }, if (fade) 3 else 0
                     )
                 })
-                PIcon("settings", fg, 24.dp, Modifier.clickable { settingsOpen = !settingsOpen })
             }
         }
         if (settingsOpen) {
@@ -205,23 +193,11 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
                 }
             }
         }
-        } else if (cat == "all") {
-            items(cats, key = { "c-$it" }) { c ->
-                val n = sounds.count { it.cat == c }
-                val on = sounds.count { it.cat == c && it.id in running }
-                NavRow(catName(c), "$n" + if (on > 0) " · $on ▶" else "", sounds.first { it.cat == c }.id, c, look) { cat = c }
-            }
-            item { NavRow(tr("Mixes", "Karışımlar"), "${user.size + BuiltInPresets.size}", "", "mixes", look) { cat = "mixes" } }
-        } else if (cat == "mixes") {
-            items(user + BuiltInPresets, key = { "m-" + it.name }) { p ->
-                NavRow(if (p.user) p.name else tr(p.en, p.tr), if (selected == p.name) "▶" else "", "", "mixes", look) { apply(p) }
-            }
         } else {
-            if (cat == "birds") item {
-                val ids = shown.map { it.id }
-                Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("check", ac, 24.dp, Modifier.clickable { AmbientMixer.setMany(ids, true) })
-                    PIcon("close", fg, 24.dp, Modifier.clickable { AmbientMixer.setMany(ids, false) })
+            item {
+                // presets first, built-in then the user's; horizontal scroll keeps one row on a phone
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    (BuiltInPresets + user).forEach { p -> NChip(selected == p.name, if (p.user) p.name else tr(p.en, p.tr), look) { apply(p) } }
                 }
             }
             items(shown.chunked(2), key = { it.first().id }) { pair ->
@@ -230,30 +206,18 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
                     if (pair.size == 1) Box(Modifier.weight(1f)) {}
                 }
             }
+            // no gear in the top bar: the settings are reached from the bottom of the list
+            item {
+                Row(Modifier.fillMaxWidth().clickable { settingsOpen = true }.padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Settings", "Ayarlar"), color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
         }
         item { androidx.compose.foundation.layout.Spacer(Modifier.padding(bottom = 16.dp)) }
     }
 }
 
-/** One big row of the first step: icon, name, small count; no chips. */
-@Composable
-private fun NavRow(title: String, sub: String, iconId: String, cat: String, look: NoiseLook?, onClick: () -> Unit) {
-    val fg = look?.cText ?: T.text
-    val ac = look?.cAccent ?: T.accent
-    val shape: Shape = look?.rowShape ?: RoundedCornerShape(0.dp)
-    Row(
-        Modifier.fillMaxWidth().clip(shape).background(look?.rowBg(false) ?: Color.Transparent)
-            .then(if (look?.win95 == true) Modifier.bevel(raised = true) else Modifier)
-            .clickable(onClick = onClick).padding(horizontal = if (look != null) 12.dp else 0.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) { SoundIcon(iconId, ac, 26.dp, cat = cat) }
-        Text(title, color = fg, fontSize = 17.sp, modifier = Modifier.weight(1f))
-        Text(sub, color = fg.copy(alpha = .55f), fontSize = 13.sp)
-    }
-}
-
-/** Preset / category chip in the look's own shape; the app look keeps the shared [PChip]. */
+/** Preset chip in the look's own shape; the app look keeps the shared [PChip]. */
 @Composable
 private fun NChip(on: Boolean, label: String, look: NoiseLook?, onClick: () -> Unit) {
     if (look == null) { PChip(on, label, onClick); return }

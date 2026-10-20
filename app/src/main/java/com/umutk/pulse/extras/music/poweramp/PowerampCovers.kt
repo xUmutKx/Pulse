@@ -44,6 +44,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.umutk.pulse.extras.music.Track
+import com.umutk.pulse.extras.music.forgetArt
 import com.umutk.pulse.tr
 import java.io.File
 import java.net.HttpURLConnection
@@ -73,7 +74,18 @@ internal object PowerampCovers {
         val f = fileFor(c, path)
         f.parentFile?.mkdirs()
         f.writeBytes(jpg)
+        forgetArt(path)
     }
+
+    /** Marker that an online lookup for [path] found nothing; [CoverFetch] retries after a week. */
+    internal fun markMiss(c: Context, path: String) {
+        val f = fileFor(c, path).let { File(it.parentFile, it.nameWithoutExtension + ".miss") }
+        f.parentFile?.mkdirs()
+        f.writeText("")
+    }
+
+    internal fun missTime(c: Context, path: String): Long =
+        fileFor(c, path).let { File(it.parentFile, it.nameWithoutExtension + ".miss") }.takeIf { it.isFile }?.lastModified() ?: 0L
 
     fun fetch(url: String): ByteArray {
         val con = URL(url).openConnection() as HttpURLConnection

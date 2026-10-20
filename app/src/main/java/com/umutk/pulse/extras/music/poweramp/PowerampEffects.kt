@@ -30,6 +30,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.Waves
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
@@ -137,7 +138,7 @@ fun EffectsScreen(
                 Modifier.weight(1f).clip(CircleShape).background(style.panel).padding(4.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                listOf(Icons.Rounded.Equalizer to tr("Equalizer", "Ekolayzır"), Icons.Rounded.Tune to tr("Tempo and volume", "Tempo ve ses")).forEachIndexed { i, (ic, label) ->
+                listOf(Icons.Rounded.Equalizer to tr("Equalizer", "Ekolayzır"), Icons.Rounded.Tune to tr("Tempo and volume", "Tempo ve ses"), Icons.Rounded.Waves to tr("Reverb", "Yankı")).forEachIndexed { i, (ic, label) ->
                     Box(
                         Modifier.weight(1f).height(44.dp).clip(CircleShape)
                             .background(if (ui.page == i) Color.White.copy(alpha = .14f) else Color.Transparent)
@@ -157,7 +158,44 @@ fun EffectsScreen(
             }
         }
         Spacer(Modifier.height(12.dp))
-        if (ui.page == 0) BandsPage(eq, style, ui) else KnobsPage(style, ui, engine)
+        when (ui.page) {
+            0 -> BandsPage(eq, style, ui)
+            1 -> KnobsPage(style, ui, engine)
+            else -> ReverbPage(style)
+        }
+    }
+}
+
+/** Reverb knobs: mix, size, damp and pre-delay, each saved as it turns. Applied by [PowerampReverb]. */
+@Composable
+private fun ReverbPage(style: PowerampStyle) {
+    val c = LocalContext.current
+    var rv by remember { mutableStateOf(PowerampReverb.load(c)) }
+    fun turn(i: Int, x: Float) {
+        val n = rv.copyOf()
+        n[i] = x
+        rv = n
+        PowerampReverb.set(c, n)
+    }
+    val names = listOf(tr("Mix", "Karışım"), tr("Size", "Boyut"), tr("Damp", "Sönüm"), tr("Pre-delay", "Ön gecikme"))
+    Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            (0..1).forEach { i -> ReverbKnob(names[i], rv[i], { turn(i, it) }, style) }
+        }
+        Spacer(Modifier.height(20.dp))
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            (2..3).forEach { i -> ReverbKnob(names[i], rv[i], { turn(i, it) }, style) }
+        }
+    }
+}
+
+@Composable
+private fun ReverbKnob(label: String, value: Float, onChange: (Float) -> Unit, style: PowerampStyle) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Knob(value, onChange, 120.dp, style, true, label)
+        Spacer(Modifier.height(6.dp))
+        Text(label, color = style.onBackdrop, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+        Text("${(value * 100).roundToInt()}%", color = style.textDim, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
     }
 }
 

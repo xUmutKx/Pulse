@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse-drawn record: ring with centre dot (24px) -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:fillColor="#FF000000" android:fillType="evenOdd" android:pathData="M12,3a9,9 0 1 0 0,18a9,9 0 1 0 0,-18ZM12,5.5a6.5,6.5 0 1 0 0,13a6.5,6.5 0 1 0 0,-13ZM12,8.5a3.5,3.5 0 1 0 0,7a3.5,3.5 0 1 0 0,-7Z"/>
+</vector>

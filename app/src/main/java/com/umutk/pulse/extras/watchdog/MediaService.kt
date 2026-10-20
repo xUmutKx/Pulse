@@ -130,6 +130,8 @@ class MusicPlaybackService : MediaService() {
     override val notifId = 9301
     override fun onResume(last: QuickTileContract.LastPlayed?) {
         if (last?.kind != QuickTileContract.Kind.TRACK) return
+        // Only a restart after music was playing at its last state change; a paused or closed player stays silent.
+        if (!com.umutk.pulse.extras.music.Playlists.wasPlaying(this)) return
         val e = com.umutk.pulse.extras.music.MusicPlayerEngine.get(this)
         if (e.player.mediaItemCount > 0) e.play()
         else if (last.ref.isNotEmpty()) e.playQueue(listOf(com.umutk.pulse.extras.music.Track(last.ref, last.name)))
@@ -144,12 +146,12 @@ class VideoPlaybackService : MediaService() {
 class AmbientPlaybackService : MediaService() {
     override val title: String get() = tr("Ambient sound playing", "Ortam sesi çalıyor")
     override val notifId = 9303
-    override fun onResume(last: QuickTileContract.LastPlayed?) {
-        val a = com.umutk.pulse.extras.ambient.AmbientLast
-        if (a.isPlaying()) return
-        if (!a.hasLast(this)) { finish(); return }
-        a.resume(this)
-        // a mix that cannot start (packs gone, engine failed) must not leave a "playing" notification over silence
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ if (!a.isPlaying()) finish() }, 5000)
+    // No onResume: a restart after Android killed the process must never start the last mix by itself.
+    // The mix starts only from the page, the Quick panel tile or the widget (AmbientLast.toggle / AmbientMixer.load).
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val r = super.onStartCommand(intent, flags, startId)
+        // a restart with no mix playing (the watchdog, a new process) ends here, so no "playing" notification sits over silence
+        if (!com.umutk.pulse.extras.ambient.AmbientMixer.isPlaying()) finish()
+        return r
     }
 }

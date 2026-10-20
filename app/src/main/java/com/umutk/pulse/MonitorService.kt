@@ -177,6 +177,7 @@ private val DIRS = arrayOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 /** Long-pressing a tile opens Pulse on that tile's page (MainActivity handles ACTION_QS_TILE_PREFERENCES); keyed by the tile's class name. */
 fun tilePage(cls: String): String = when (cls.substringAfterLast('.')) {
     "PulseTile", "DnsTile" -> "settings"
+    "CoverTile" -> "toolkit:lock"
     "FlashlightTile" -> "toolkit:flash"
     "StopwatchTile" -> "toolkit:stopwatch"
     "ToolkitTile" -> "toolkit"

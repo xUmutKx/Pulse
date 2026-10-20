@@ -30,14 +30,9 @@ import com.umutk.pulse.PChip
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import com.umutk.pulse.extras.music.poweramp.PlayerBgPicker
-import com.umutk.pulse.extras.music.poweramp.PowerampPrefs
-import com.umutk.pulse.extras.music.poweramp.PowerampSkinTile
-import com.umutk.pulse.extras.music.poweramp.powerampSkins
 import com.umutk.pulse.extras.ui.SettingsSection
 import com.umutk.pulse.extras.ui.SliderRow
 import com.umutk.pulse.extras.ui.SwitchRow
-import com.umutk.pulse.extras.ui.ThemeGrid
-import com.umutk.pulse.extras.ui.ThemeItem
 import com.umutk.pulse.tr
 import kotlinx.coroutines.launch
 
@@ -126,10 +121,10 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     }
 
     com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
+    com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
 
     if (which == SettingsFor.POWERAMP) SettingsSection("Poweramp") {
-        var skin by remember { mutableStateOf(PowerampPrefs.skin(c)) }
-        ThemeGrid(powerampSkins.map { sk -> ThemeItem(sk.id, sk.name) { PowerampSkinTile(sk) } }, skin, { skin = it; PowerampPrefs.setSkin(c, it) })
+        // the skin gallery (families on top) lives in the music theme picker of MusicHub
         // the now-playing backdrop; the preview shows both choices (every other page is black)
         PlayerBgPicker(c)
     }

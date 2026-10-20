@@ -65,6 +65,10 @@ private val SHAPES = mapOf(
     "owl" to "M6 4 L9 6 H15 L18 4 V14 a6 7 0 0 1 -12 0 Z M9 11 a1.5 1.5 0 1 0 .01 0 Z M15 11 a1.5 1.5 0 1 0 .01 0 Z M12 13 L11 15 H13 Z",
     "bird" to "M3 15 C6 10 10 9 12 9 C13 6 16 5 18 7 L21 8 L18 9 C18 14 14 19 8 19 L11 15 Z M9 21 H14",
     "speaker" to "M4 9 H8 L13 5 V19 L8 15 H4 Z M16 9 q3 3 0 6 M18.5 6.5 q5 5.5 0 11",
+    "steam" to "M8 4 q-2 2 0 4 t0 4 M12 3 q-2 2 0 4 t0 4 M16 4 q-2 2 0 4 t0 4",
+    "heartbeat" to "M2 12 H7 L9 8 L12 17 L14 10 L15 12 H22",
+    "vinyl" to "M12 3 a9 9 0 1 0 .01 0 Z M12 10 a2 2 0 1 0 .01 0 Z",
+    "traffic" to "M3 13 L5 9 H17 L20 13 V17 H3 Z M6 17 V19 M17 17 V19",
 )
 
 private val CACHE = HashMap<String, List<Pair<Path, Boolean>>>()

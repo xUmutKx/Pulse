@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- one provider for every size: the content picks the small or the wide layout from the cell width (extras/notes/NotesWidget.kt) -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="110dp"
+    android:minHeight="56dp"
+    android:targetCellWidth="2"
+    android:targetCellHeight="1"
+    android:minResizeWidth="110dp"
+    android:minResizeHeight="56dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_notes" android:previewImage="@drawable/preview_widget_quick"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen"
+    android:widgetFeatures="reconfigurable"
+    android:configure="com.umutk.pulse.widgets.WidgetConfigActivity" />

@@ -12,6 +12,10 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.changedToUp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import kotlin.math.roundToInt
@@ -40,7 +44,8 @@ private val TEXT_ROW2 = "ÅÖÄ?* "
 
 /** Cell (column, row) of [c] in text.bmp (5x6 cells); null for characters the font does not have. */
 fun skinGlyph(c: Char): Pair<Int, Int>? {
-    val ch = c.uppercaseChar()
+    // text.bmp has no Turkish letters: use the closest plain letter instead of a blank
+    val ch = when (c) { 'ş', 'Ş' -> 'S'; 'ğ', 'Ğ' -> 'G'; 'ı', 'İ' -> 'I'; 'ü', 'Ü' -> 'U'; 'ç', 'Ç' -> 'C'; else -> c.uppercaseChar() }
     TEXT_ROW0.indexOf(ch).takeIf { it >= 0 }?.let { return it to 0 }
     TEXT_ROW1.indexOf(ch).takeIf { it >= 0 }?.let { return it to 1 }
     TEXT_ROW2.indexOf(ch).takeIf { it >= 0 }?.let { return it to 2 }
@@ -69,7 +74,15 @@ fun DrawScope.skinDigit(skin: WinampSkin, d: Int, x: Float, y: Float, u: Float) 
 }
 
 /** A touch area in skin pixels. [vertical] zones give the fraction from the top. [drag] zones keep receiving the finger while it is down; [inset] is dead space at each end for fractions. */
-class Zone(val id: Int, val x: Float, val y: Float, val w: Float, val h: Float, val drag: Boolean = false, val inset: Float = 0f, val padY: Float = 0f, val vertical: Boolean = false)
+class Zone(val id: Int, val x: Float, val y: Float, val w: Float, val h: Float, val drag: Boolean = false, val inset: Float = 0f, val padY: Float = 0f, val vertical: Boolean = false, val padX: Float = 0f)
+
+/**
+ * Gives a window drawn from sprites a spoken name and one accessibility action per control (TalkBack actions menu).
+ */
+fun Modifier.skinActions(label: String, actions: List<Pair<String, () -> Unit>>): Modifier = semantics {
+    contentDescription = label
+    customActions = actions.map { (name, act) -> CustomAccessibilityAction(name) { act(); true } }
+}
 
 /** Touch phases passed to the zone handler. */
 const val PH_DOWN = 0
@@ -95,7 +108,7 @@ fun Modifier.skinZones(
         awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = true)
             fun hit(zn: Zone, px: Float, py: Float) =
-                px / sc >= zn.x && px / sc <= zn.x + zn.w && py / sc >= zn.y - zn.padY && py / sc <= zn.y + zn.h + zn.padY
+                px / sc >= zn.x - zn.padX && px / sc <= zn.x + zn.w + zn.padX && py / sc >= zn.y - zn.padY && py / sc <= zn.y + zn.h + zn.padY
             val z = zones.firstOrNull { hit(it, down.position.x, down.position.y) } ?: return@awaitEachGesture
             fun frac(o: Offset): Float {
                 val len = (if (z.vertical) z.h else z.w) - 2 * z.inset

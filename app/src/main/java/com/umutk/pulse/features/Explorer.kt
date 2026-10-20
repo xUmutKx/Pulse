@@ -32,6 +32,7 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -239,7 +240,7 @@ private fun FilesPageInner() {
             .background(if (glass) w.bg.copy(alpha = w.glassA) else w.bg).statusBarsPadding().navigationBarsPadding()
             .then(if (w.id == "win95") Modifier.bevel(true) else Modifier)) {
             Row(Modifier.fillMaxWidth().height(if (w.id == "win95") 22.dp else 34.dp)
-                .then(if (classic) Modifier.background(w.title!!) else Modifier.background(if (glass) w.panel.copy(alpha = .4f) else w.panel))
+                .then(if (classic) Modifier.background(w.title!!) else if (w.material) Modifier.background(if (glass) w.panel.copy(alpha = .4f) else w.panel) else Modifier)
                 .padding(start = 10.dp, end = if (classic) 3.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
                 if (standalone) Spacer(Modifier.weight(1f)) else Text("Files", Modifier.weight(1f), color = ink, fontSize = 12.sp, fontWeight = if (classic) androidx.compose.ui.text.font.FontWeight.Bold else null)
                 ExCaption(w, ink, minimise, { windowed = !windowed }, close, showMin = !standalone)
@@ -349,7 +350,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     // an archive opened like a folder: the file and the folder inside it ("" = its root, "a/b/")
     var arcFile by remember { mutableStateOf<File?>(null) }
     var arcCwd by remember { mutableStateOf("") }
-    val arcAll by produceState<List<AEntry>?>(null, arcFile) {
+    // entries picked inside an open archive (their paths); copy or extract takes them out
+    var arcSel by remember { mutableStateOf(emptySet<String>()) }
+    // bumped after a cut rewrote the archive, so its entries are read again
+    var arcRev by remember { mutableStateOf(0) }
+    val arcAll by produceState<List<AEntry>?>(null, arcFile, arcRev) {
         value = arcFile?.let { f -> withContext(Dispatchers.IO) { runCatching { archiveEntries(f) }.getOrDefault(emptyList()) } }
     }
     var showHidden by remember { mutableStateOf(FilesPrefs.hidden) }
@@ -376,8 +381,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val sort = folderSort[here] ?: sortAll
     val (total, free) = remember(refresh) { exStorage(top) }
     // folders the app cannot read (/data, ...) are listed through su or Shizuku when either is there
-    val canRoot = Shell.root == true || Shell.shizuku == 2
-    LaunchedEffect(here) { if (RootFs.needsRoot(here)) withContext(Dispatchers.IO) { RootFs.ensureChecked() } }
+    // a state, not a constant: the root check below may finish after the first frame, and the drawer's root rows must appear then
+    var canRoot by remember { mutableStateOf(Shell.root == true || Shell.shizuku == 2) }
+    // the drawer's root entries (/, /data, /data/data) need the root state even when the Files app opens on a normal folder
+    LaunchedEffect(Unit) { withContext(Dispatchers.IO) { RootFs.ensureChecked() }; canRoot = Shell.root == true || Shell.shizuku == 2 }
     val viaRoot by produceState<List<File>?>(null, here, refresh, canRoot) {
         // under /data and Android/data, Android/obb the other apps' folders only list through root: Android returns just Pulse's own folder there, so a partial normal listing must not win
         val restricted = dir.path.startsWith("/data") || dir.path.contains("/Android/data") || dir.path.contains("/Android/obb")
@@ -401,7 +408,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val bookmarks = marks.filter { File(it).isDirectory }
     val picked = sel.map { File(it) }
 
-    fun go(p: String) { freq = exBump(ctx, p); arcFile = null; arcCwd = ""; here = p; sel = emptySet(); query = ""; recentView = false }
+    fun go(p: String) { freq = exBump(ctx, p); arcFile = null; arcCwd = ""; arcSel = emptySet(); here = p; sel = emptySet(); query = ""; recentView = false }
     // Back steps out of the current view first (selection, search, recents), then up one folder; only at the top does it leave the page
     androidx.activity.compose.BackHandler(enabled = resultsFor != null || searchOpen || arcFile != null || sel.isNotEmpty() || query.isNotBlank() || recentView || dir != top) {
         when {
@@ -432,13 +439,17 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     // paste = into the folder on screen; cut moves (and the clipboard empties), copy copies (the clipboard stays); name clashes get a "1-" prefix (see paste)
     val canPaste = clip?.let { c -> !(c.move && c.files.all { it.parentFile == dir }) } == true
     val doPaste: () -> Unit = {
-        clip?.let { c ->
+        if (!canPaste) note = tr("Already in this folder", "Zaten bu klasörde")
+        else clip?.let { c ->
             note = tr("Pasting…", "Yapıştırılıyor…")
             scope.launch {
                 val moved = mutableListOf<Pair<File, File>>()
-                note = withContext(Dispatchers.IO) { paste(c, dir, moved) }
+                val err = withContext(Dispatchers.IO) { paste(c, dir, moved) }
+                val n = c.files.size
+                // status line: a failure note wins, else say what happened (a copy keeps the clipboard, a cut empties it)
+                note = err.ifEmpty { if (c.move) tr("Moved $n items", "$n öğe taşındı") else tr("Pasted $n items", "$n öğe yapıştırıldı") }
                 if (moved.isNotEmpty()) undo = ExUndo(moved)
-                if (c.move) clip = null
+                if (c.move && clip === c) clip = null
                 refresh++
             }
         }
@@ -539,28 +550,78 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
         val selBar: @Composable () -> Unit = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                ExAct("close", T.sub) { sel = emptySet() }
+                SelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 24.dp) }
                 Text("${sel.size}", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 14.sp, maxLines = 1)
-                Box(Modifier.padding(horizontal = 5.dp).clickable { sel = shown.map { it.path }.toSet() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SelectAll, null, Modifier.size(20.dp), T.text) }
-                ExAct("cut", T.text) { clip = Clip(picked, true); sel = emptySet() }
-                ExAct("copy", T.text) { clip = Clip(picked, false); sel = emptySet() }
-                if (canPaste) ExAct("paste", Look.accent) { sel = emptySet(); doPaste() }
-                picked.singleOrNull()?.takeIf { !it.isDirectory }?.let { f -> ExAct("share", T.text) { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" } }
-                ExAct("delete", T.text) { askDelete(picked) }
+                SelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
+                SelSquare(T.text, { clip = Clip(picked, true); sel = emptySet() }) { ExIcon("cut", T.text, 24.dp) }
+                SelSquare(T.text, { clip = Clip(picked, false); sel = emptySet() }) { ExIcon("copy", T.text, 24.dp) }
+                if (canPaste) SelSquare(Look.accent, { sel = emptySet(); doPaste() }) { ExIcon("paste", Look.accent, 24.dp) }
+                picked.singleOrNull()?.takeIf { !it.isDirectory }?.let { f -> SelSquare(T.text, { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }) { ExIcon("share", T.text, 24.dp) } }
+                SelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
                 Box {
-                    Box(Modifier.size(36.dp).clickable { selMore = true }, contentAlignment = Alignment.Center) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 20.dp) }
+                    SelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 24.dp) }
                     ThemedMenu(selMore, { selMore = false }) {
                         ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; scope.launch { note = withContext(Dispatchers.IO) { exZip(picked, dir) }; sel = emptySet(); refresh++ } }, icon = Icons.Outlined.FolderZip)
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Rename", "Yeniden adlandır"), { selMore = false; name = f.name; dialog = "rename" to f }, icon = Icons.Outlined.DriveFileRenameOutline) }
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Properties", "Özellikler"), { selMore = false; propsOf = f }, icon = Icons.Outlined.Info) }
+                        picked.singleOrNull()?.takeIf { isArchiveFile(it) }?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
                     }
                 }
             }
         }
-        PCard {
-            // hold the path row and slide: it turns into a full-width size slider (left = smaller, right = larger) until the finger lifts
-            var sizing by remember { mutableStateOf(false) }
-            if (sel.isNotEmpty()) selBar() else Row(Modifier.fillMaxWidth().sizeDrag(ctx) { sizing = it }.sizeOverlay(sizing, T.panel, T.line, Look.accent), verticalAlignment = Alignment.CenterVertically) {
+        // hold anywhere on the card and slide: a loading-style bar along its bottom sets the item size (left = smaller, right = larger);
+        // the path and the buttons stay on screen while it runs
+        var sizing by remember { mutableStateOf(false) }
+        // copy (to the clipboard, then paste into any folder) or extract here, for the entries picked inside an archive
+        fun arcCopy(here: Boolean) {
+            val af = arcFile ?: return
+            val picks = arcSel
+            val entries = arcAll.orEmpty()
+            scope.launch {
+                val dest = if (here) dir else File(ctx.cacheDir, "arcsel/${System.nanoTime()}")
+                val files = withContext(Dispatchers.IO) { archiveExtractSel(af, picks, entries, dest) }
+                arcSel = emptySet()
+                if (here) { note = tr("Extracted ${files.size}", "${files.size} öğe çıkarıldı"); refresh++ }
+                else { clip = Clip(files, false); note = tr("Copied ${files.size}: paste in a folder", "${files.size} öğe kopyalandı: bir klasörde yapıştır") }
+            }
+        }
+        // cut: take the picks out to this folder, then rewrite the archive without them so its space comes back (zip-family only)
+        fun arcCut() {
+            val af = arcFile ?: return
+            val picks = arcSel
+            val entries = arcAll.orEmpty()
+            val expected = archivePicked(picks, entries).size
+            scope.launch {
+                val res = withContext(Dispatchers.IO) {
+                    val files = archiveExtractSel(af, picks, entries, dir)
+                    // only what was written out is removed from the archive: a partial extract removes nothing
+                    if (files.size != expected) "partial:${files.size}/$expected"
+                    else archiveRemove(af, picks)
+                }
+                arcSel = emptySet()
+                arcRev++
+                note = when {
+                    res.isEmpty() -> tr("Cut $expected to this folder", "$expected öğe bu klasöre kesildi")
+                    res.startsWith("partial") -> tr("Only some could be extracted, nothing removed (${res.substringAfter(':')})", "Bazı öğeler çıkarılamadı, hiçbiri silinmedi (${res.substringAfter(':')})")
+                    res == "apk" -> tr("APK files cannot be cut: removing entries breaks the signature", "APK'lerden kesilemez: imza bozulur")
+                    res == "unsupported" -> tr("Cut works on zip files only", "Kesme yalnızca zip dosyalarında çalışır")
+                    else -> tr("Could not rewrite the archive: $res", "Arşiv yeniden yazılamadı: $res")
+                }
+                refresh++
+            }
+        }
+        val arcBar: @Composable () -> Unit = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SelSquare(T.sub, { arcSel = emptySet() }) { ExIcon("close", T.sub, 24.dp) }
+                Text("${arcSel.size}", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 14.sp, maxLines = 1)
+                SelSquare(T.text, { arcSel = childrenOf(arcAll.orEmpty(), arcCwd).map { arcCwd + it.name }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
+                SelSquare(T.text, { arcCopy(false) }) { ExIcon("copy", T.text, 24.dp) }
+                SelSquare(T.text, { arcCopy(true) }) { ExIcon("zip", T.text, 24.dp) }
+                SelSquare(T.text, { arcCut() }) { ExIcon("cut", T.text, 24.dp) }
+            }
+        }
+        PCard(Modifier.sizeDrag(ctx) { sizing = it }.sizeOverlay(sizing, T.panel, Look.accent)) {
+            if (arcFile != null && arcSel.isNotEmpty()) arcBar() else if (sel.isNotEmpty()) selBar() else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (dir != top || arcFile != null) Box(Modifier.clickable { if (arcFile != null) { if (arcCwd.isEmpty()) arcFile = null else arcCwd = arcCwd.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" } } else go((dir.parentFile ?: top).path) }) { PIcon("chevron", T.text, 22.dp, Modifier.rotate(180f)) }
                 val cur = buildList<Triple<String, String, () -> Unit>> {
                     val inTop = dir.path == top.path || dir.path.startsWith(top.path + "/")
@@ -580,6 +641,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 val trail = if (hold[0].size >= cur.size && cur.indices.all { hold[0][it].first == cur[it].first }) hold[0] else cur
                 hold[0] = trail
                 ExCrumbs(trail.map { it.second to it.third }, cur.lastIndex, Modifier.weight(1f).padding(horizontal = 4.dp))
+                // visible size control: each tap steps the item size (the same value the slide on this row sets)
+                ExAct("zoomOut", T.sub) { FilesPrefs.icon = (FilesPrefs.icon - 1).coerceIn(0, 9); FilesPrefs.save(ctx) }
+                ExAct("zoomIn", T.sub) { FilesPrefs.icon = (FilesPrefs.icon + 1).coerceIn(0, 9); FilesPrefs.save(ctx) }
                 if (!standalone) {
                     Box {
                         ExAct(listOf("sortName", "sortSize", "sortDate")[sort / 2], if (here in folderSort) Look.accent else T.sub, if (sort % 2 == 1) 180f else 0f) { sortMenu = true }
@@ -643,20 +707,24 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                 }
                 }
-                if (grid) Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (grid) Column(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(RoundedCornerShape(20.dp)).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), horizontalAlignment = Alignment.CenterHorizontally) {
                     Column(Modifier.fillMaxWidth().combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), horizontalAlignment = Alignment.CenterHorizontally) {
                     val thumb = if (f.isDirectory) null else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, isz.dp) {
-                        if (thumb != null) Image(thumb, null, Modifier.size(isz.dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
-                        else ExIcon(if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
+                        // one rounded square for every file: the picture when there is one, the type icon on the panel colour otherwise
+                        val square = RoundedCornerShape(percent = 22)
+                        if (thumb != null) Image(thumb, null, Modifier.size(isz.dp).clip(square), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
+                        else Box(Modifier.size(isz.dp).clip(square).background(T.panel), contentAlignment = Alignment.Center) {
+                            ExIcon(if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
+                        }
                     }
                     Text(shownName, Modifier.padding(top = 4.dp), color = T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                     more()
                 }
-                else Row(Modifier.fillMaxWidth().heightIn(min = 44.dp).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), verticalAlignment = Alignment.CenterVertically) {
+                else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).heightIn(min = 44.dp).clip(RoundedCornerShape(50)).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
@@ -697,14 +765,20 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             else if (rows.isEmpty()) Text(tr("Empty", "Boş"), color = T.sub, fontSize = 13.sp)
             // shortcut: only the first 400 rows of an archive folder are drawn, a lazy list is the upgrade
             rows.take(400).forEach { r ->
-                Row(Modifier.fillMaxWidth().clickable {
-                    val p = arcCwd + r.name
-                    if (r.dir) arcCwd = "$p/" else scope.launch {
-                        val out = File(ctx.cacheDir, "arc/${System.nanoTime()}/${r.name}")
-                        val ok = withContext(Dispatchers.IO) { runCatching { archiveExtractOne(af, p, out) }.getOrDefault(false) }
-                        if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
-                    }
-                }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                val p = arcCwd + r.name
+                val picked = p in arcSel
+                // tap opens (or enters a folder); once something is picked, tap toggles, and a long press picks
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (picked) Look.accent.copy(alpha = .18f) else Color.Transparent).combinedClickable(
+                    onClick = {
+                        if (arcSel.isNotEmpty()) arcSel = if (picked) arcSel - p else arcSel + p
+                        else if (r.dir) { arcCwd = "$p/" } else scope.launch {
+                            val out = File(ctx.cacheDir, "arc/${System.nanoTime()}/${r.name}")
+                            val ok = withContext(Dispatchers.IO) { runCatching { archiveExtractOne(af, p, out) }.getOrDefault(false) }
+                            if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
+                        }
+                    },
+                    onLongClick = { arcSel = if (picked) arcSel - p else arcSel + p },
+                ).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     ExIcon(if (r.dir) "folder" else "filetypes", Look.accent, 22.dp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
@@ -715,10 +789,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 }
             }
         }
-        if (FilesPrefs.grid) {
-            val cols = listOf(6, 6, 5, 5, 4, 4, 3, 3, 2, 2)[FilesPrefs.icon.coerceIn(0, 9)]
-            shown.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                r.forEach { f -> Box(Modifier.weight(1f)) { item(f) } }
+        if (FilesPrefs.grid) BoxWithConstraints(Modifier.fillMaxWidth()) {
+            // the column count follows the icon size: a bigger icon gets fewer columns, so the gaps between the files stay small
+            val cell = (24 + FilesPrefs.icon.coerceIn(0, 9) * 5) * 3 / 2 + 24
+            val cols = (maxWidth / cell.dp).toInt().coerceAtLeast(1)
+            shown.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                r.forEach { f -> Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) { item(f) } }
                 repeat(cols - r.size) { Spacer(Modifier.weight(1f)) }
             } }
         } else shown.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shown.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
@@ -752,7 +828,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
     }
     if (recentView) RecentScreen({ openFile(it) }) { recentView = false }
-    if (arcFile == null && resultsFor == null && canPaste) clip?.let { c -> ExPasteFab(c.files.size, c.move, { doPaste() }) { clip = null } }
+    if (arcFile == null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { doPaste() }) { clip = null } }
     if (arcFile == null && resultsFor == null) ExNewFab { k -> name = ""; if (k == "folder") dialog = "newfolder" to dir else { newExt = k; dialog = "newfile" to dir } }
     if (drawer) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { drawer = false })
@@ -766,14 +842,16 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 ExDrawerRow("disk", tr("SD card", "SD kart") + " · " + File(v).name, here.startsWith(v)) { pick(v) }
             }
             if (canRoot) ExDrawerRow("folder", tr("Root (/)", "Kök (/)"), here == "/") { pick("/") }
+            if (canRoot) ExDrawerRow("folder", tr("Data (/data)", "Veri (/data)"), here == "/data") { pick("/data") }
             if (canRoot) ExDrawerRow("folder", tr("App data (/data/data)", "Uygulama verisi (/data/data)"), here == "/data/data") { pick("/data/data") }
             else ExDrawerRow("folder", tr("Root: not available", "Kök: yok"), false, dim = true) { }
-            // the usual folders of internal storage (Files settings: Standard folders)
-            if (FilesPrefs.stdFolders) { ExDrawerDivider(); ExDrawerHead(tr("Standard folders", "Standart klasörler")) }
-            if (FilesPrefs.stdFolders) listOf("DCIM", "Download", "Movies", "Music", "Pictures", "Documents").map { File(top, it).path }.filter { File(it).isDirectory }.forEach { p ->
+            // the Library: the usual folders of internal storage; each one can be switched off in Files settings (Library)
+            val lib = FilesPrefs.libFolders.filter { it !in FilesPrefs.libHidden }.map { File(top, it).path }.filter { File(it).isDirectory }
+            if (FilesPrefs.stdFolders && lib.isNotEmpty()) { ExDrawerDivider(); ExDrawerHead(tr("Library", "Kütüphane")) }
+            if (FilesPrefs.stdFolders) lib.forEach { p ->
                 ExDrawerRow("folderY", File(p).name, here == p, glyph = when (File(p).name) {
                     "DCIM" -> Icons.Outlined.PhotoCamera; "Download" -> Icons.Outlined.Download; "Pictures" -> Icons.Outlined.Image
-                    "Movies" -> Icons.Outlined.Movie; "Music" -> Icons.Outlined.MusicNote; else -> Icons.Outlined.Description }) { pick(p) }
+                    "Screenshots" -> Icons.Outlined.Image; "Movies" -> Icons.Outlined.Movie; "Music" -> Icons.Outlined.MusicNote; else -> Icons.Outlined.Description }) { pick(p) }
             }
             if (FilesPrefs.bookmarks && marks.isNotEmpty()) {
                 ExDrawerDivider(); ExDrawerHead(tr("Bookmarks", "Yer imleri"))
@@ -927,18 +1005,17 @@ private fun Modifier.sizeDrag(ctx: android.content.Context, active: (Boolean) ->
     )
 }
 
-/** While [on], the row shows a thick full-width slider (track, fill, thumb) instead of its content. */
-private fun Modifier.sizeOverlay(on: Boolean, bg: Color, track: Color, fill: Color): Modifier = drawWithContent {
-    if (!on) { drawContent(); return@drawWithContent }
+/** While [on], the whole card becomes the size bar: the part up to the item size is filled, the rest is dimmed, and a handle marks the edge. */
+private fun Modifier.sizeOverlay(on: Boolean, bg: Color, fill: Color): Modifier = drawWithContent {
+    drawContent()
+    if (!on) return@drawWithContent
     val frac = FilesPrefs.icon.coerceIn(0, 9) / 9f
-    val h = 12.dp.toPx()
+    // the same x as sizeDrag reads: the usable width sits inside the side padding
     val pad = SIZE_PAD_DP.dp.toPx()
-    val w = size.width - 2 * pad
-    val cy = size.height / 2
-    drawRect(bg)
-    drawRoundRect(track, androidx.compose.ui.geometry.Offset(pad, cy - h / 2), androidx.compose.ui.geometry.Size(w, h), androidx.compose.ui.geometry.CornerRadius(h / 2))
-    drawRoundRect(fill, androidx.compose.ui.geometry.Offset(pad, cy - h / 2), androidx.compose.ui.geometry.Size(w * frac, h), androidx.compose.ui.geometry.CornerRadius(h / 2))
-    drawCircle(fill, 13.dp.toPx(), androidx.compose.ui.geometry.Offset(pad + w * frac, cy))
+    val x = pad + (size.width - 2 * pad) * frac
+    drawRect(bg.copy(alpha = .75f))
+    drawRect(fill.copy(alpha = .3f), size = androidx.compose.ui.geometry.Size(x, size.height))
+    drawRect(fill, androidx.compose.ui.geometry.Offset(x - 2.dp.toPx(), 0f), androidx.compose.ui.geometry.Size(4.dp.toPx(), size.height))
 }
 
 /** The path as clickable segments with chevrons between; it scrolls sideways and stays at the end. */
@@ -953,6 +1030,8 @@ private fun ExCrumbs(segs: List<Pair<String, () -> Unit>>, curIdx: Int, modifier
     // scrolls by hand only when the path is longer than the room; otherwise the free space belongs to the size drag of the row
     Row(modifier.horizontalScroll(sc, enabled = sc.maxValue > 0), verticalAlignment = Alignment.CenterVertically) {
         segs.forEachIndexed { i, (n, act) ->
+            // chevron pointing right between two segments (the down chevron turned a quarter back)
+            if (i > 0) PIcon("chevron", othC, 14.dp, Modifier.rotate(-90f))
             Box(Modifier.padding(end = 2.dp).clip(RoundedCornerShape(6.dp)).clickable(onClick = act).padding(horizontal = 6.dp, vertical = 5.dp)) {
                 Text(n, color = if (i == curIdx) curC else othC, fontSize = 14.sp, fontWeight = if (i == curIdx) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1)
             }
@@ -1012,8 +1091,14 @@ private fun exBump(ctx: Context, p: String): List<String> {
 
 /** One tappable icon in a row or bar; [rot] turns it (the sort icon turns for descending). */
 @Composable
-private fun ExAct(k: String, tint: Color, rot: Float = 0f, onClick: () -> Unit) {
-    Box(Modifier.padding(horizontal = 5.dp).clickable(onClick = onClick)) { ExIcon(k, tint, 20.dp, rot) }
+private fun ExAct(k: String, tint: Color, rot: Float = 0f, size: Dp = 20.dp, onClick: () -> Unit) {
+    Box(Modifier.padding(horizontal = 5.dp).clickable(onClick = onClick)) { ExIcon(k, tint, size, rot) }
+}
+
+/** One button of the selection bar: every action sits in the same rounded square, so all of them are the same size. */
+@Composable
+private fun SelSquare(tint: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(Modifier.padding(horizontal = 2.dp).size(40.dp).clip(RoundedCornerShape(10.dp)).background(T.panel).clickable(onClick = onClick), contentAlignment = Alignment.Center) { content() }
 }
 
 /** Header glyph: Fluent on Windows 11 (the app's own icon set), the Material vector everywhere else. */
@@ -1040,11 +1125,12 @@ private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
     "star" to Icons.Filled.StarBorder, "bookmark" to Icons.Filled.BookmarkBorder, "starOn" to Icons.Filled.Star, "check" to Icons.Filled.CheckCircle,
     "sortName" to Icons.Filled.SortByAlpha, "sortSize" to Icons.Filled.DataUsage, "sortDate" to Icons.Filled.Schedule,
     "eyeOn" to Icons.Filled.Visibility, "eyeOff" to Icons.Filled.VisibilityOff, "sizes" to Icons.Filled.Straighten,
+    "zoomIn" to Icons.Filled.ZoomIn, "zoomOut" to Icons.Filled.ZoomOut, "selectAll" to Icons.Outlined.SelectAll,
     "recent" to Icons.Filled.History, "emptyFolder" to Icons.Filled.FolderOff, "bigFile" to Icons.Filled.SdStorage,
     "dupes" to Icons.Filled.FileCopy, "undo" to Icons.Filled.Undo, "home" to Icons.Filled.Home,
     "share" to Icons.Filled.Share, "openWith" to Icons.Filled.OpenWith, "zip" to Icons.Filled.FolderZip,
     "link" to Icons.Filled.Link, "save" to Icons.Filled.Save, "edit" to Icons.Filled.Edit,
-    "delete" to Icons.Filled.Delete, "document" to Icons.Filled.Description,
+    "delete" to Icons.Filled.Delete, "document" to Icons.Filled.Description, "cut" to Icons.Outlined.ContentCut,
     "search" to Icons.Filled.Search, "filter" to Icons.Filled.FilterList, "back" to Icons.Filled.ArrowBack, "close" to Icons.Filled.Close, "openFolder" to Icons.Filled.FolderOpen,
 )
 

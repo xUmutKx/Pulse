@@ -1,28 +1,5 @@
 {
   "schema": 1,
-  "moduller": [
-    {
-      "id": "fossify-messages",
-      "ad_en": "Fossify Messages",
-      "ad_tr": "Fossify Mesajlar",
-      "tur": "apk",
-      "kategori": "arac",
-      "aciklama_en": "Open-source SMS and MMS app.",
-      "aciklama_tr": "Açık kaynak SMS ve MMS uygulaması.",
-      "boyut": 6735987,
-      "surum": "1.10.1",
-      "url": "https://raw.githubusercontent.com/xUmutKx/Pulse/main/extras/apks/fossify-messages-1.10.1.apk",
-      "sha256": "af81e85e0e5442cf22d9669f43ecc42e39737389cff8fe91fd0ef58dab59703d",
-      "paket": "org.fossify.messages",
-      "imza_sha256": "affdb124d3f4720c2f98dbca9eacba0514fba4306e20a2786c861c3c0d6ff292",
-      "upstream": "https://github.com/FossifyOrg/Messages",
-      "upstream_surum": "1.10.1",
-      "kaynak_url": "https://github.com/FossifyOrg/Messages",
-      "lisans": "GPL-3.0-only",
-      "lisans_metni": "https://github.com/FossifyOrg/Messages/blob/main/LICENSE",
-      "min_pulse": 0,
-      "guncellendi": "2026-10-18T06:05:38Z"
-    }
-  ],
-  "guncellendi": "2026-10-18T06:05:38Z"
+  "moduller": [],
+  "guncellendi": "2026-10-19T00:00:00Z"
 }

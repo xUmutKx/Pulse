@@ -329,7 +329,11 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                     Text("Debloat", color = T.text, fontSize = 13.sp)
                 }
             }
-            PField(query, { query = it }, "Search", Modifier.fillMaxWidth())
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                PField(query, { query = it }, "Search", Modifier.weight(1f))
+                // one tap clears what was typed
+                if (query.isNotEmpty()) Box(Modifier.padding(start = 6.dp).size(36.dp).clickable { query = "" }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 18.dp) }
+            }
         }
         items(shown, key = { it.pkg }) { a ->
             // a tap opens the app's details; picking several apps lives in Debloat

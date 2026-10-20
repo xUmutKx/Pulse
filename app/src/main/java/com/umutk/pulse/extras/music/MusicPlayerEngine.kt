@@ -261,6 +261,7 @@ class MusicPlayerEngine private constructor(context: Context) {
     private fun watch(playing: Boolean) {
         main.removeCallbacks(beat)
         com.umutk.pulse.extras.watchdog.ServiceWatchdog.setWanted(app, anchor, playing)
+        Playlists.setPlaying(app, playing)
         if (playing) beat.run()
     }
 

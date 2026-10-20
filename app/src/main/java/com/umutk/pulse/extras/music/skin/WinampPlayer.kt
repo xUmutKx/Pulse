@@ -43,6 +43,7 @@ import com.umutk.pulse.extras.music.visual.VisState
 import com.umutk.pulse.extras.music.visual.drawVisBars
 import com.umutk.pulse.extras.music.visual.drawVisScope
 import kotlinx.coroutines.delay
+import com.umutk.pulse.tr
 import kotlin.math.roundToInt
 
 /** Zone ids of the main window. */
@@ -58,13 +59,14 @@ private const val Z_LYR = 18
 
 private val MAIN_ZONES = listOf(
     Zone(Z_SHADE, 248f, 0f, 26f, 14f),
-    *WinampButton.entries.map { Zone(it.ordinal + 1, it.x.toFloat(), it.y.toFloat(), it.w.toFloat(), SPRITE_H.toFloat(), padY = 7f) }.toTypedArray(),
+    // touch areas grow towards 40dp; earlier zones win where they overlap, so the seek bar keeps its own strip
+    *WinampButton.entries.map { Zone(it.ordinal + 1, it.x.toFloat(), it.y.toFloat(), it.w.toFloat(), SPRITE_H.toFloat(), padY = 7f, padX = 4f) }.toTypedArray(),
     Zone(Z_SEEK, 16f, 72f, 248f, 10f, drag = true, inset = 14.5f, padY = 4f),
     Zone(Z_VOL, 107f, 57f, 68f, 13f, drag = true, inset = 7f, padY = 4f),
-    Zone(Z_EQ, 219f, 58f, 23f, 12f, padY = 4f),
-    Zone(Z_PL, 242f, 58f, 23f, 12f, padY = 4f),
-    Zone(Z_SHUF, 164f, 89f, 47f, 15f, padY = 2f),
-    Zone(Z_REP, 211f, 89f, 28f, 15f, padY = 2f),
+    Zone(Z_EQ, 219f, 58f, 23f, 12f, padY = 9f, padX = 4f),
+    Zone(Z_PL, 242f, 58f, 23f, 12f, padY = 9f, padX = 4f),
+    Zone(Z_SHUF, 164f, 89f, 47f, 15f, padY = 9f),
+    Zone(Z_REP, 211f, 89f, 28f, 15f, padY = 9f, padX = 4f),
     Zone(Z_VIS, VIS_X.toFloat(), VIS_Y.toFloat(), VIS_W.toFloat(), VIS_H.toFloat()),
     Zone(Z_LYR, 196f, 0f, 38f, 14f), // title bar, free between the title and the shade key
 )
@@ -119,6 +121,23 @@ fun WinampMain(
     onLyrics: () -> Unit = {},
 ) {
     val sc = with(LocalDensity.current) { scale.dp.toPx() }
+    val transport = listOf<Pair<String, () -> Unit>>(
+        tr("Previous", "Önceki") to { onTransport(Transport.PREV) },
+        tr("Play", "Oynat") to { onTransport(Transport.PLAY) },
+        tr("Next", "Sonraki") to { onTransport(Transport.NEXT) },
+    )
+    val actions = if (shade) transport else transport + listOf(
+        tr("Pause", "Duraklat") to { onTransport(Transport.PAUSE) },
+        tr("Stop", "Durdur") to { onTransport(Transport.STOP) },
+        tr("Add music", "Müzik ekle") to { onTransport(Transport.EJECT) },
+        tr("Shuffle", "Karıştır") to onShuffle,
+        tr("Repeat", "Tekrarla") to onRepeat,
+        tr("Equalizer", "Ekolayzır") to onToggleEq,
+        tr("Playlist", "Çalma listesi") to onTogglePlaylist,
+        tr("Lyrics", "Şarkı sözleri") to onLyrics,
+        tr("Small window", "Küçük pencere") to onShade,
+        tr("Change visualizer", "Görünümü değiştir") to onVisToggle,
+    )
     var pressed by remember { mutableIntStateOf(-1) }
     var seekDrag by remember { mutableFloatStateOf(-1f) }
     var volDrag by remember { mutableFloatStateOf(-1f) }
@@ -147,6 +166,7 @@ fun WinampMain(
 
     Canvas(
         modifier.size((WINAMP_W * scale).dp, (h * scale).dp).clip(shape)
+            .skinActions(tr("Winamp player", "Winamp oynatıcı"), actions)
             .skinZones(sc, zones, { pressed = it }) { id, f, ph ->
                 when {
                     id == Z_SEEK -> when (ph) {

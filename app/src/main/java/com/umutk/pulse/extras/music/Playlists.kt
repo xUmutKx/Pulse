@@ -47,6 +47,11 @@ object Playlists {
         }
     }
 
+    /** Remembers whether music was playing at the last state change; the watchdog restart plays only then. */
+    fun setPlaying(c: Context, on: Boolean) = c.getSharedPreferences(P, Context.MODE_PRIVATE).edit().putBoolean("playing", on).apply()
+
+    fun wasPlaying(c: Context): Boolean = c.getSharedPreferences(P, Context.MODE_PRIVATE).getBoolean("playing", false)
+
     /** Restores the last queue paused at its position, only when the engine is empty. */
     fun restore(c: Context, engine: MusicPlayerEngine) {
         val f = File(c.filesDir, "resume.m3u8")

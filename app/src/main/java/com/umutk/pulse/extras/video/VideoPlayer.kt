@@ -25,6 +25,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
 import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
@@ -171,7 +172,7 @@ private val softFirst = MediaCodecSelector { mime, secure, tunneling ->
     MediaCodecSelector.DEFAULT.getDecoderInfos(mime, secure, tunneling).sortedBy { it.hardwareAccelerated }
 }
 
-private val speeds = listOf(.25f, .5f, .75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 4f)
+internal val speeds = listOf(.25f, .5f, .75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 4f)
 
 /** Plays [queue] (or just [uri]) from [index]. Gestures, tracks, subtitles, PiP, resume, background audio: see the controls. */
 @Composable
@@ -200,7 +201,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             skipSilenceEnabled = prefs.skipSilence
             pauseAtEndOfMediaItems = !prefs.autoPlay
             setSeekParameters(if (prefs.fastSeek) SeekParameters.CLOSEST_SYNC else SeekParameters.EXACT)
-            if (prefs.rememberSpeed) setPlaybackSpeed(prefs.speed)
+            setPlaybackSpeed(if (prefs.rememberSpeed) prefs.speed else prefs.defSpeed)
             prepare()
             playWhenReady = true
         }
@@ -218,7 +219,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var poke by remember { mutableIntStateOf(0) }
     var locked by remember { mutableStateOf(false) }
     var dlg by remember { mutableStateOf<String?>(null) }
-    var speed by remember { mutableFloatStateOf(if (prefs.rememberSpeed) prefs.speed else 1f) }
+    var speed by remember { mutableFloatStateOf(if (prefs.rememberSpeed) prefs.speed else prefs.defSpeed) }
     var rep by remember { mutableIntStateOf(prefs.repeat) }
     var shuffle by remember { mutableStateOf(false) }
     var bg by remember { mutableStateOf(prefs.bg) }
@@ -232,6 +233,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var ext by remember { mutableStateOf<Pair<Uri, String>?>(null) }
     val sk = skinOf(skinId)
     var zoom by remember { mutableFloatStateOf(1f) }
+    var panX by remember { mutableFloatStateOf(0f) } // two-finger pan, only while zoomed
+    var panY by remember { mutableFloatStateOf(0f) }
     var hud by remember { mutableStateOf<Pair<String, String>?>(null) } // icon key, text
     var hudStamp by remember { mutableIntStateOf(0) }
     fun say(icon: String, text: String) { hud = icon to text; hudStamp++ }
@@ -423,7 +426,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         },
     ) {
         val shape = when (aspect) { 3 -> Modifier.align(Alignment.Center).aspectRatio(16f / 9f); 4 -> Modifier.align(Alignment.Center).aspectRatio(4f / 3f); else -> Modifier.fillMaxSize() }
-        Box(shape.graphicsLayer { scaleX = zoom; scaleY = zoom }) {
+        Box(shape.graphicsLayer { scaleX = zoom; scaleY = zoom; translationX = panX; translationY = panY }) {
             AndroidView(
                 factory = { PlayerView(it).apply { useController = false; setShowBuffering(PlayerView.SHOW_BUFFERING_NEVER) } },
                 update = {
@@ -479,7 +482,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                                 if (prefs.gestZoom && !held) {
                                     mode = 4
                                     val z = ev.calculateZoom()
-                                    if (z != 1f) { zoom = (zoom * z).coerceIn(1f, 4f); say("scale", "${(zoom * 100).roundToInt()}%") }
+                                    zoom = (zoom * z).coerceIn(1f, 4f)
+                                    if (zoom == 1f) { panX = 0f; panY = 0f } else { val p = ev.calculatePan(); panX += p.x; panY += p.y }
+                                    if (z != 1f) say("scale", "${(zoom * 100).roundToInt()}%")
                                     ev.changes.forEach { it.consume() }
                                 }
                             } else if ((mode in 0..3) && !held) {
@@ -539,7 +544,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         if (!locked && shown && !inPip) {
             val fg = sk.fg; val tf = sk.topFg
             Row(
-                Modifier.align(Alignment.TopCenter).fillMaxWidth().background(sk.top).padding(horizontal = 8.dp, vertical = 4.dp),
+                // empty bar areas take the tap, so it does not reach the video and hide the bar
+                Modifier.align(Alignment.TopCenter).fillMaxWidth().background(sk.top).pointerInput(Unit) { detectTapGestures {} }.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SkinBtn(sk, onBack) { PIcon("back", tf, 24.dp) }
@@ -549,7 +555,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 SkinBtn(sk, { settings = true }) { PIcon("settings", tf, 24.dp) }
                 SkinBtn(sk, { dlg = "more" }) { com.umutk.pulse.extras.ui.TIcon("more", tf, 22.dp, sk.icons) }
             }
-            if (sk.centered) {
                 Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
                     val many = items.size > 1
                     VBtn({ if (many) player.seekToPreviousMediaItem() else player.seekTo((player.currentPosition - step).coerceAtLeast(0)); poke++ }) { if (many) com.umutk.pulse.extras.ui.TIcon("prev", Color.White, 26.dp, sk.icons) else Tag("-${prefs.dtapSec}", false, Color.White) }
@@ -558,26 +563,17 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     }
                     VBtn({ if (many) player.seekToNextMediaItem() else player.seekTo(player.currentPosition + step); poke++ }) { if (many) com.umutk.pulse.extras.ui.TIcon("next", Color.White, 26.dp, sk.icons) else Tag("+${prefs.dtapSec}", false, Color.White) }
                 }
-            }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(sk.bottom).then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(sk.bottom).pointerInput(Unit) { detectTapGestures {} }.then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(clock(pos), color = fg, fontSize = 12.sp)
                     SkinSeek(pos.toFloat(), dur.toFloat(), sk, { seeking = true; pos = it.toLong(); poke++ }, { seeking = false; player.seekTo(pos) }, Modifier.weight(1f).padding(horizontal = 8.dp))
                     Text(if (remaining) "-" + clock(dur - pos) else clock(dur), Modifier.clickable { remaining = !remaining; prefs.showRemaining = remaining }, color = fg, fontSize = 12.sp)
                 }
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = if (sk.centered) Arrangement.SpaceEvenly else Arrangement.spacedBy(2.dp)) {
-                    if (!sk.centered) {
-                        SkinBtn(sk, { if (player.isPlaying) player.pause() else player.play(); poke++ }) { com.umutk.pulse.extras.ui.TIcon(if (playing) "pause" else "play", fg, 28.dp, sk.icons) }
-                        if (items.size > 1) SkinBtn(sk, { player.seekToPreviousMediaItem(); poke++ }) { com.umutk.pulse.extras.ui.TIcon("prev", fg, 22.dp, sk.icons) }
-                        SkinBtn(sk, { player.seekTo((player.currentPosition - step).coerceAtLeast(0)); poke++ }) { Tag("-${prefs.dtapSec}", false, fg) }
-                        SkinBtn(sk, { player.seekTo(player.currentPosition + step); poke++ }) { Tag("+${prefs.dtapSec}", false, fg) }
-                        if (items.size > 1) SkinBtn(sk, { player.seekToNextMediaItem(); poke++ }) { com.umutk.pulse.extras.ui.TIcon("next", fg, 22.dp, sk.icons) }
-                        Spacer(Modifier.width(12.dp))
-                    }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     SkinBtn(sk, { locked = true; shown = true; poke++ }) { LockGlyph(fg) }
                     SkinBtn(sk, { dlg = "speed" }) { Tag(speedName(speed), speed != 1f, fg, sk.accent) }
                     SkinBtn(sk, {
-                        aspect = (aspect + 1) % 5; prefs.aspect = aspect; zoom = 1f; poke++
+                        aspect = (aspect + 1) % 5; prefs.aspect = aspect; zoom = 1f; panX = 0f; panY = 0f; poke++
                         say("scale", aspectNames()[aspect])
                     }) { PIcon("scale", fg, 24.dp) }
                     SkinBtn(sk, {
@@ -699,7 +695,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     5 -> items.getOrNull(cur)?.let { shareVideo(ctx, it) }
                     6 -> dlg = "sleep"
                     7 -> dlg = "eq"
-                    8 -> { zoom = 1f }
+                    8 -> { zoom = 1f; panX = 0f; panY = 0f }
                 }
             }
         }

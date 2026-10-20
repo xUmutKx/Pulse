@@ -51,7 +51,8 @@ object ArtCraft {
 
     fun dir(c: Context) = File(c.filesDir, "artcraft").apply { mkdirs() }
     fun shared(): File = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "ArtCraft").apply { mkdirs() }
-    fun appName(file: String) = file.removeSuffix("-release.apk").replaceFirstChar { it.uppercase() }
+    // "cadcraft-release.apk" and "cadcraft-0.9.0.apk" are both the app "Cadcraft"
+    fun appName(file: String) = file.substringBefore("-").replaceFirstChar { it.uppercase() }
     fun pkgOf(item: Item) = PKG_PREFIX + item.app.lowercase()
 
     /** Download mode: "apk" = a separate APK in Download/ArtCraft (default), "pulse" = Pulse's own download manager. */
@@ -80,7 +81,7 @@ object ArtCraft {
                     .firstOrNull { (it.optJSONArray("assets")?.length() ?: 0) > 0 } ?: throw IllegalStateException("no release with APKs")
                 val assets = rel.getJSONArray("assets")
                 val list = (0 until assets.length()).map { assets.getJSONObject(it) }
-                    .filter { it.optString("name").endsWith("-release.apk") }
+                    .filter { it.optString("name").endsWith(".apk") }
                     .map { Item(appName(it.getString("name")), it.getString("name"), it.getString("browser_download_url"), it.optLong("size")) }
                 ui {
                     items.clear(); items.addAll(list); tag = rel.optString("tag_name"); notes = rel.optString("body"); status = ""

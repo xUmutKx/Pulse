@@ -384,7 +384,7 @@ fun SettingsPage() {
     val cats = listOf(
         Cat("look", "palette", "Appearance", "Theme: ${T.name}"),
         Cat("general", "table", "General", "Start page, pages shown, units, text size"),
-        Cat("functions", "settings", tr("Functions", "İşlevler"), tr("Recycle bin, refresh rate, report, permissions", "Çöp kutusu, yenileme hızı, rapor, izinler")),
+        Cat("functions", "settings", tr("Functions", "İşlevler"), tr("Notification history, refresh rate, report, permissions", "Bildirim geçmişi, yenileme hızı, rapor, izinler")),
         Cat("monitor", "performance", "Monitor and alerts", if (Opt.ovOn || Opt.notifOn) "On" else "Floating numbers, notification, temperature / battery / memory alerts"),
         Cat("about", "info", "About", "Version, privacy, licences"),
     )
@@ -424,13 +424,13 @@ fun SettingsPage() {
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Effects.list.forEach { (id, n) -> PChip(Look.effect == id, n) { Cfg.setEffect(ctx, id) } }
                     }
-                    if (Look.effect == "blur") {
-                        Text(tr("Blur amount", "Bulanıklık"), color = T.sub, fontSize = 12.sp)
-                        PSlider(Look.blurDp / 30f, { Look.blurDp = it * 30f }, 0f..1f) { Cfg.setBlur(ctx) }
-                        Text(tr("Tint (darkness)", "Koyuluk"), color = T.sub, fontSize = 12.sp)
-                        PSlider(Look.blurTint, { Look.blurTint = it }, 0f..1f) { Cfg.setBlur(ctx) }
+                    Text(tr("Icons (Windows 11)", "İkonlar (Windows 11)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PChip(!Look.winIconLine, "Fluent") { Cfg.setWinIconLine(ctx, false) }
+                        PChip(Look.winIconLine, tr("Line", "Çizgi")) { Cfg.setWinIconLine(ctx, true) }
                     }
-                    Text("Mica: a quiet backdrop tinted only slightly by the wallpaper. Mica Alt is a touch deeper, Acrylic is more see-through with a bright edge, Glass is the most see-through.", color = T.sub, fontSize = 11.sp)
+                    Text(tr("The background is your wallpaper. The panels are glass over it: Mica has a light tint, Mica Alt a deeper one, Acrylic is brighter with a grain, Glass is the most see-through with a bright edge, Blue has a blue tint, Liquid glass is a light lens with a bright top edge. The taskbar and Start menu of the Windows 11 launcher follow this choice.",
+                        "Arka plan duvar kağıdınızdır. Paneller üzerinde cam gibidir: Mica hafif tonlu, Mica Alt daha koyu, Acrylic daha parlak ve tanelidir, Glass en saydam olanı ve parlak kenarlıdır, Blue mavi tonludur, Liquid glass üst kenarı parlak açık bir mercektir. Windows 11 başlatıcısının görev çubuğu ve Başlat menüsü bu seçimi izler."), color = T.sub, fontSize = 11.sp)
                 }
                 }
                 Text("Theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))

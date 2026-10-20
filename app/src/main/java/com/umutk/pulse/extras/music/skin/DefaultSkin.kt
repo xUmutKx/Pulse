@@ -106,8 +106,8 @@ private fun paintMain(): ImageBitmap {
     sunken(p, 12, 22, 92, 42)
     for (y in 43 until 59 step 2) for (x in 24 until 100 step 2) p.px(x, y, vis)
     sunken(p, 109, 24, 157, 12)
-    sunken(p, 109, 41, 19, 11); p.text("KBPS", 130, 43, c(0xC7CADA))
-    sunken(p, 154, 41, 14, 11); p.text("KHZ", 171, 43, c(0xC7CADA))
+    sunken(p, 109, 41, 19, 11); p.text("KBPS", 110, 44, c(0xC7CADA))  // labels inside their displays
+    sunken(p, 154, 41, 14, 11); p.text("KHZ", 155, 44, c(0xC7CADA))
     p.rect(16, 71, 248, 11, c(0x1B1D29)); p.edge(15, 70, 250, 13, LO, HI)
     // little bolt at the lower right, like the classic logo
     for (i in 0 until 9) { p.px(254 + i, 100 - i, c(0xE0A030)); p.px(255 + i, 100 - i, c(0xB87820)); p.px(254 + i, 101 - i, c(0xE0A030)) }

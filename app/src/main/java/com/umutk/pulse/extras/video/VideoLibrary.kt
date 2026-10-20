@@ -246,6 +246,7 @@ class VideoPrefs(ctx: Context) {
     var resumeOn by bool(g, "resume_on", true)
     var autoPlay by bool(g, "autoplay", true)
     var speed by flt(g, "speed", 1f)
+    var defSpeed by flt(g, "def_speed", 1f) // start speed when "Remember speed" is off
     var rememberSpeed by bool(g, "remember_speed", false)
     var lpSpeed by flt(g, "lp_speed", 2f)
     var gestSeek by bool(g, "g_seek", true)
@@ -287,7 +288,8 @@ class VideoPrefs(ctx: Context) {
     var subBg by bool(g, "sub_bg", false)
     var subBold by bool(g, "sub_bold", false)
     var subEdge by bool(g, "sub_edge", true)
-    var subEnc by str(g, "sub_enc", "UTF-8")    var subAuto by bool(g, "sub_auto", true)
+    var subEnc by str(g, "sub_enc", "UTF-8")
+    var subAuto by bool(g, "sub_auto", true)
     var subAutoSel by bool(g, "sub_autosel", true)
     /** 0 sans, 1 serif, 2 mono, 3 casual, 4 cursive */
     var subFont by int(g, "sub_font", 0)

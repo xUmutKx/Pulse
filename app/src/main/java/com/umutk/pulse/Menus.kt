@@ -23,7 +23,6 @@ import androidx.compose.material.icons.outlined.Pets
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material.icons.outlined.Check
@@ -33,8 +32,12 @@ import androidx.compose.material.icons.outlined.ExitToApp
 import androidx.compose.material.icons.outlined.FormatSize
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.InstallMobile
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Key
 import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.outlined.SystemUpdate
 import androidx.compose.material.icons.outlined.MoreVert
 import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.Refresh
@@ -88,12 +91,8 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
         )),
         MenuTop("Tools", listOf(
             MenuEntry("Toolkit", icon = Icons.Outlined.Build, key = "settings") { openTool("toolkit") },
-            MenuEntry("App lock", icon = Icons.Outlined.Lock, key = "applock") { go("applock") },
-            MenuEntry("APK installer", icon = Icons.Outlined.Download, key = "download") { openTool("installer") },
-            MenuEntry("Device troubleshoot", icon = Icons.Outlined.HealthAndSafety, key = "info") { openTool("troubleshoot") },
-            MenuEntry("Authenticator", icon = Icons.Outlined.Key, key = "users") { openTool("authenticator") },
-            MenuEntry("Network usage", icon = Icons.Outlined.DataUsage, key = "speed") { openTool("netusage") },
-            MenuEntry("Guide", icon = Icons.Outlined.MenuBook, key = "book") { openTool("guide") },
+            // the optional tools, each placed in the menu, the Extra apps card or only Settings (Settings > Tool places)
+            *ToolPlace.menuEntries(ctx, { go(it) }, { openTool(it) }).toTypedArray(),
             // the store is the last entry of the main menu; the music player, video, white noise and the standalone apps are listed inside it
             MenuEntry(EXTRA_APPS, icon = Icons.Outlined.Apps, key = "apps") { openTool("extrastore") },
         )),
@@ -110,11 +109,47 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
     }
 }
 
+/** Where each optional tool is listed: the overflow menu's Tools group ("menu"), the Extra apps card in Settings ("extra"), or only in Settings ("hidden").
+ *  Only the tools with a screen of their own (isTool) can sit in the Extra apps card; the page-based ones are menu or hidden. */
+object ToolPlace {
+    class Tool(val id: String, val en: String, val trName: String, val target: String, val isTool: Boolean, val key: String, val icon: ImageVector, val default: String)
+    val all = listOf(
+        Tool("office", "Office", "Office", "office", false, "document", Icons.Outlined.Description, "extra"),
+        Tool("download", "Download manager", "İndirme yöneticisi", "downloads", false, "download", Icons.Outlined.Download, "extra"),
+        Tool("applock", "App lock", "Uygulama kilidi", "applock", false, "applock", Icons.Outlined.Lock, "menu"),
+        Tool("health", "Health", "Sağlık", "health", false, "heart", Icons.Outlined.Favorite, "menu"),
+        Tool("installer", "APK installer", "APK yükleyici", "installer", true, "download", Icons.Outlined.SystemUpdate, "menu"),
+        Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
+        Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "menu"),
+        Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "menu"),
+        Tool("cover", "Screen cover", "Ekran kapağı", "cover", true, "lock", Icons.Outlined.Lock, "extra"),
+    )
+    private val placed = mutableStateMapOf<String, String>()
+    private var loaded = false
+    private fun prefs(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+    private fun load(c: Context) { if (loaded) return; loaded = true; all.forEach { t -> prefs(c).getString("tp_${t.id}", null)?.let { placed[t.id] = it } } }
+    fun where(c: Context, t: Tool): String { load(c); return placed[t.id] ?: t.default }
+    fun set(c: Context, t: Tool, v: String) { load(c); placed[t.id] = v; prefs(c).edit().putString("tp_${t.id}", v).apply() }
+    /** The entries of the overflow menu's Tools group for the tools placed there. */
+    fun menuEntries(c: Context, go: (String) -> Unit, open: (String) -> Unit): List<MenuEntry> =
+        all.filter { where(c, it) == "menu" }.map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
+    /** The tools placed in the Extra apps card. */
+    fun extraTools(c: Context): List<Tool> = all.filter { where(c, it) == "extra" }
+    /** The tools that already have a left-menu page (their own switch in Settings > Pages): they are not added to the side twice. */
+    fun hasPage(t: Tool) = t.target in setOf("office", "downloads", "health")
+    fun byId(id: String): Tool? = all.firstOrNull { it.id == id }
+    /** Left-menu entries for the tools placed on the side (the page-based ones use their own switch, so they are left out here). */
+    fun sidePages(): List<Pg> = all.filter { !hasPage(it) && placed[it.id] == "side" }.map { Pg("tool:${it.id}", tr(it.en, it.trName), it.key) }
+    /** Reads the saved places once, at start (MainActivity calls it), so the left menu can use them while composing. */
+    fun attach(c: Context) = load(c)
+}
+
 private val EXTRA_APPS get() = tr("Extra apps", "Ek uygulamalar")
 
 /** Class-name launch so the menu compiles before the Calendar/Contacts activities exist. */
-internal fun launchExtra(ctx: Context, cls: String) {
-    try { ctx.startActivity(Intent().setClassName(ctx, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
+// launches the target activity, not a launcher alias: a disabled alias cannot be started; [route] picks the page of ExtraToolActivity
+internal fun launchExtra(ctx: Context, cls: String, route: String? = null) {
+    try { ctx.startActivity(Intent().setClassName(ctx, cls).also { i -> route?.let { i.putExtra("route", it) } }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Exception) {}
 }
 
 @Composable
@@ -125,8 +160,8 @@ private fun Item(e: MenuEntry, close: () -> Unit) {
 /** Win11 look: one Fluent glyph per menu entry (FluentPaths), so no icon repeats in the overflow menu. */
 private val WIN11_MENU_KEY = mapOf(
     "Run new task…" to "open", "Exit" to "power", "Refresh now" to "refresh", "Widgets" to "gridView", "System font" to "edit",
-    "Toolkit" to "wrench", "App lock" to "applock", "APK installer" to "download", "Settings" to "settings", "DNS" to "globe", "Device troubleshoot" to "shieldOk",
-    "Authenticator" to "key", "Network usage" to "compare", "Guide" to "book",
+    "Toolkit" to "wrench", "App lock" to "applock", "APK installer" to "download", "Settings" to "settings", "DNS" to "globe",
+    "Authenticator" to "key", "Network usage" to "compare",
 )
 
 /** The menu bar of the classic looks: each word opens its menu. */
