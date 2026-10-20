@@ -152,6 +152,7 @@ object Look {
     var theme by mutableStateOf(Themes[0])
     var mode by mutableStateOf("system")     // system / light / dark (the classic Windows looks stay as they were)
     var effect by mutableStateOf("mica")     // none / mica / micaAlt / acrylic / tabbed (sidebar looks only)
+    var winIconLine by mutableStateOf(false) // Windows 11 icons: false = Fluent (default), true = thin line glyphs like Windows 10
     var blurDp by mutableStateOf(8f)        // "Blur" material: blur radius 0..40
     var blurTint by mutableStateOf(.2f)      // "Blur" material: darkness 0..1
     var accentIdx by mutableStateOf(-1)      // -1: the theme's own accent
@@ -173,16 +174,16 @@ fun onAccent(c: Color): Color = if (c.luminance() > .45f) Color.Black else Color
 fun fabFill(): Color = if (T.id == "amoled") Color.Black else Look.accent
 fun fabMark(): Color = if (T.id == "amoled") Color.White else onAccent(Look.accent)
 
-/** Windows 95 raised / sunken edge. */
+/** Windows 95 raised / sunken edge: 2 px, outer ring (white / black) and inner ring (light / dark grey), as the real 95 frame. */
 fun Modifier.bevel(raised: Boolean = true): Modifier = drawBehind {
-    val w = 1f * density * 1f; val s = size
-    val hi = Color.White; val sh = Color(0xFF808080); val dk = Color.Black
-    val (tl, br) = if (raised) hi to sh else sh to hi
-    fun l(a: Offset, b: Offset, col: Color) = drawLine(col, a, b, w)
-    l(Offset(0f, 0f), Offset(s.width, 0f), if (raised) hi else sh); l(Offset(0f, 0f), Offset(0f, s.height), if (raised) hi else sh)
-    l(Offset(0f, s.height - w / 2), Offset(s.width, s.height - w / 2), if (raised) dk else hi); l(Offset(s.width - w / 2, 0f), Offset(s.width - w / 2, s.height), if (raised) dk else hi)
-    l(Offset(w, w), Offset(s.width - w, w), tl); l(Offset(w, w), Offset(w, s.height - w), tl)
-    l(Offset(w, s.height - w * 1.5f), Offset(s.width - w, s.height - w * 1.5f), br); l(Offset(s.width - w * 1.5f, w), Offset(s.width - w * 1.5f, s.height - w), br)
+    val w = 1f * density; val s = size
+    fun ring(inset: Float, tl: Color, br: Color) {
+        val iw = s.width - 2 * inset; val ih = s.height - 2 * inset
+        drawRect(tl, Offset(inset, inset), Size(iw, w)); drawRect(tl, Offset(inset, inset), Size(w, ih))
+        drawRect(br, Offset(inset, s.height - inset - w), Size(iw, w)); drawRect(br, Offset(s.width - inset - w, inset), Size(w, ih))
+    }
+    if (raised) { ring(0f, Color.White, Color.Black); ring(w, Color(0xFFDFDFDF), Color(0xFF808080)) }
+    else { ring(0f, Color(0xFF808080), Color.White); ring(w, Color.Black, Color(0xFFDFDFDF)) }
 }
 
 fun Modifier.frame(t: PTheme, raised: Boolean = false): Modifier =
@@ -282,9 +283,9 @@ private fun WinDialog(w: PTheme, onDismissRequest: () -> Unit, title: (@Composab
             "xp" -> Modifier.clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).background(Color(0xFF0054E3)).padding(start = 3.dp, end = 3.dp, bottom = 3.dp)
             // Aero: a light blue glass frame around the white body
             "win7" -> Modifier.clip(RoundedCornerShape(6.dp)).background(Brush.verticalGradient(listOf(Color(0xF0C9DEF3), Color(0xE89DBDE0), Color(0xE8B4CEEB))))
-                .border(1.dp, Color(0xFF3A4A5E), RoundedCornerShape(6.dp)).padding(1.dp).border(1.dp, Color.White.copy(alpha = .55f), RoundedCornerShape(5.dp))
-                .padding(start = 6.dp, end = 6.dp, bottom = 6.dp)
-            "win10" -> Modifier.background(body).border(1.dp, Look.accent.copy(alpha = 1f))
+                .border(1.dp, Color(0xFF3A4A5E), RoundedCornerShape(6.dp)).padding(2.dp).border(2.dp, Color.White.copy(alpha = .55f), RoundedCornerShape(4.dp))
+                .padding(start = 8.dp, end = 8.dp, bottom = 8.dp)
+            "win10" -> Modifier.background(body).border(2.dp, Look.accent.copy(alpha = 1f))
             else -> Modifier.clip(RoundedCornerShape(8.dp)).background(if (id == "win11") Color.Transparent else body)
                 .border(1.dp, if (id == "win11") (if (w.dark) Color.White.copy(alpha = .14f) else Color.White.copy(alpha = .8f)) else w.line, RoundedCornerShape(8.dp))
         }

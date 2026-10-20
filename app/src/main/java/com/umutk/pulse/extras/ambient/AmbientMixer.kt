@@ -123,7 +123,8 @@ object AmbientMixer {
     /** Switches [ids] on or off together. */
     fun setMany(ids: Collection<String>, on: Boolean) = ids.forEach { setEnabled(it, on) }
 
-    fun stopAll() { scope.launch { engine?.setAllEnabled(false) } }
+    /** Stops every layer at once on the main thread; cancels a fade still running so it cannot bring the volume back. */
+    fun stopAll() { fadeJob?.cancel(); engine?.setAllEnabled(false) }
 
     private var fadeJob: Job? = null
 

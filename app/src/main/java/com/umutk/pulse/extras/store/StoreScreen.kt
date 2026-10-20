@@ -47,6 +47,8 @@ import com.umutk.pulse.PChip
 import com.umutk.pulse.PDialog
 import com.umutk.pulse.PField
 import com.umutk.pulse.LocalOpenTool
+import com.umutk.pulse.PSwitch
+import com.umutk.pulse.extras.notifhist.NotifHist
 import com.umutk.pulse.launchExtra
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.PProgress
@@ -365,16 +367,23 @@ private class BuiltinRow(val name: String, val sub: String, val icon: String, va
 
 @Composable
 private fun BuiltinRows() {
-    val open = LocalOpenTool.current
     val ctx = LocalContext.current
+    val openTool = LocalOpenTool.current
     val rows = listOf(
-        BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play") { open("music") },
-        BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image") { open("video") },
+        BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
+        BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
+        BuiltinRow(tr("White noise", "Beyaz gürültü"), tr("Calm sounds you mix and loop", "Karıştırıp döngüye aldığın sakin sesler"), "volume") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "whitenoise") },
         BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
         BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
         BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
         BuiltinRow(tr("Contacts", "Kişiler"), tr("Contacts and groups", "Kişiler ve gruplar"), "users") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
         BuiltinRow("ArtCraft", tr("Drawing", "Çizim"), "menu") { launchExtra(ctx, "com.umutk.pulse.ArtCraftActivity") },
+        BuiltinRow(tr("Messages", "Mesajlar"), tr("SMS", "SMS"), "messages") { openTool("messages") },
+        BuiltinRow(tr("Launcher", "Ana ekran"), tr("Home screen looks", "Ana ekran görünümleri"), "apps") { openTool("launcher") },
+        BuiltinRow(tr("Screen recorder", "Ekran kaydı"), tr("Record the screen", "Ekranı kaydet"), "record") { openTool("screenrec") },
+        BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
+        BuiltinRow(tr("Notes", "Notlar"), tr("Notes and lists", "Notlar ve listeler"), "notes") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "notes") },
+        BuiltinRow(tr("Weather", "Hava durumu"), tr("Forecast", "Tahmin"), "menu") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "weather") },
     )
     rows.forEach { r ->
         Row(Modifier.fillMaxWidth().clickable { r.onClick() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -385,5 +394,16 @@ private fun BuiltinRows() {
                 Text(r.sub, color = T.sub, fontSize = 12.sp)
             }
         }
+    }
+    // off by default; when on, the page is listed in the ⋮ menu
+    var notif by remember { mutableStateOf(NotifHist.enabled(ctx)) }
+    Row(Modifier.fillMaxWidth().clickable { if (notif) openTool("notifhist") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        PIcon("info", T.text, 26.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(tr("Notification history", "Bildirim geçmişi"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(tr("Saves the notifications you get", "Aldığın bildirimleri kaydeder"), color = T.sub, fontSize = 12.sp)
+        }
+        PSwitch(notif, { notif = it; NotifHist.setEnabled(ctx, it) })
     }
 }

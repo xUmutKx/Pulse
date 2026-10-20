@@ -65,8 +65,16 @@ object WidgetStyles {
     fun of(c: Context, id: Int): WidgetStyle =
         WidgetStyle.values().firstOrNull { it.name == prefs(c).getString("style_$id", null) } ?: default(c)
 
+    /** The picked default, else the look Pulse itself wears (its saved theme), so an unpicked widget matches the app. */
     fun default(c: Context): WidgetStyle =
-        WidgetStyle.values().firstOrNull { it.name == prefs(c).getString("default", null) } ?: WidgetStyle.MATERIAL
+        WidgetStyle.values().firstOrNull { it.name == prefs(c).getString("default", null) } ?: appLook(c)
+
+    /** Pulse's saved theme as a widget look; themes without a widget look (glass, iOS, ColorOS, ...) use Material. */
+    private fun appLook(c: Context): WidgetStyle = when (com.umutk.pulse.ownPrefs(c, "pulse_settings").getString("theme", "win11")) {
+        "win11" -> WidgetStyle.WIN11; "win10" -> WidgetStyle.WIN10; "win7" -> WidgetStyle.WIN7
+        "xp" -> WidgetStyle.XP; "win95" -> WidgetStyle.WIN95; "amoled" -> WidgetStyle.AMOLED
+        else -> WidgetStyle.MATERIAL
+    }
 
     fun saveDefault(c: Context, s: WidgetStyle) = prefs(c).edit().putString("default", s.name).apply()
 
@@ -124,8 +132,9 @@ object WidgetData {
             UsageWidget(), BatteryWidget(), StorageWidget(), DownloadsWidget(), MemoryWidget(),
             TempWidget(), NetworkWidget(), ClockWidget(), UptimeWidget(), StorageBarWidget(),
             RamFreeWidget(), CoresWidget(), BrightnessWidget(), WifiWidget(), SignalWidget(),
-            BatteryHealthWidget(), AppCountWidget(), LastDownloadWidget(), NextAlarmWidget(), QuickWidget(),
-        ) + HealthWidgets.all
+            WeatherWidget(), WeatherWideWidget(),
+            BatteryHealthWidget(), AppCountWidget(), LastDownloadWidget(), NextAlarmWidget(), QuickWidget(), VoiceWidget(),
+        ) + HealthWidgets.all + com.umutk.pulse.extras.notes.NotesWidget()
     }
 }
 
@@ -134,6 +143,7 @@ object WidgetData {
 
 /** The icon each text widget layout shows next to its title and value. */
 private val ICONS = mapOf(
+    R.layout.widget_notes to R.drawable.wi_notes,
     R.layout.widget_usage to R.drawable.wi_usage, R.layout.widget_battery to R.drawable.wi_battery, R.layout.widget_batthealth to R.drawable.wi_batthealth,
     R.layout.widget_storage to R.drawable.wi_storage, R.layout.widget_storagebar to R.drawable.wi_storagebar, R.layout.widget_downloads to R.drawable.wi_downloads,
     R.layout.widget_lastdl to R.drawable.wi_lastdl, R.layout.widget_memory to R.drawable.wi_memory, R.layout.widget_ramfree to R.drawable.wi_ramfree,
@@ -170,7 +180,7 @@ abstract class PulseWidget : AppWidgetProvider() {
             val tw = (sz.first * dens).toInt().coerceIn(100, 1400); val th = (sz.second * dens).toInt().coerceIn(60, 1400)
             val prev = Win11Material.forId.get(); Win11Material.forId.set(id)
             try {
-                setImageViewBitmap(R.id.tile, TextTile.draw(ctx, s, ICONS[layout] ?: 0, title, t ?: Tile(value), tw, th, id))
+                setImageViewBitmap(R.id.tile, TextTile.fitBinder(TextTile.draw(ctx, s, ICONS[layout] ?: 0, title, t ?: Tile(value), tw, th, id)))
             } finally { Win11Material.forId.set(prev) }
             setViewVisibility(R.id.tile, android.view.View.VISIBLE)
             setContentDescription(R.id.tile, "$title $value")

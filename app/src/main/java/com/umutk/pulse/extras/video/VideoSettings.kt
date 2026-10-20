@@ -117,7 +117,8 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
     val ctx = LocalContext.current
     val scroll = rememberScrollState()
     var folderDlg by remember { mutableIntStateOf(0) } // 1 exclude, 2 only these
-    var uaDlg by remember { mutableStateOf(false) }    var resetDlg by remember { mutableStateOf(false) }
+    var uaDlg by remember { mutableStateOf(false) }
+    var resetDlg by remember { mutableStateOf(false) }
     var histDlg by remember { mutableStateOf(false) }
     fun changed() { tick.intValue++; onChange() }
     val done = { changed() }
@@ -149,6 +150,7 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Sw(tr("Play next", "Sonrakini oynat"), { prefs.autoPlay }, { prefs.autoPlay = it }, done)
                 Pick(tr("Repeat", "Tekrar"), repeatNames(), { prefs.repeat }, done) { prefs.repeat = it }
                 Sw(tr("Remember speed", "Hızı hatırla"), { prefs.rememberSpeed }, { prefs.rememberSpeed = it }, done)
+                Pick(tr("Default speed", "Varsayılan hız"), speeds.map { speedName(it) }, { speeds.indexOf(prefs.defSpeed).coerceAtLeast(0) }, done) { prefs.defSpeed = speeds[it] }
                 Pick(tr("Orientation", "Yön"), orientNames(), { prefs.orient }, done) { prefs.orient = it }
                 Sw(tr("Keep screen on", "Ekran açık kalsın"), { prefs.keepAwake }, { prefs.keepAwake = it }, done)
                 Sw(tr("Fast seek", "Hızlı atlama"), { prefs.fastSeek }, { prefs.fastSeek = it }, done)

@@ -1,6 +1,11 @@
 package com.umutk.pulse.extras.lyrics
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -53,20 +58,29 @@ import java.io.File
 fun LyricsBody(rec: LyricsRecord, positionMs: Int, onSeek: ((Int) -> Unit)?, modifier: Modifier = Modifier) {
     val lines = remember(rec) { rec.syncedLyrics?.let { parseLrc(it) }.orEmpty() }
     val state = rememberLazyListState()
+    val density = LocalDensity.current
     val cur = if (lines.isEmpty()) -1 else lineIndexAt(lines, positionMs.toLong())
-    LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2)) }
+    // the current line glides to the middle of the view; the others stay grey until their turn
+    LaunchedEffect(cur) {
+        if (cur < 0) return@LaunchedEffect
+        val half = state.layoutInfo.viewportSize.height / 2 - with(density) { 24.dp.roundToPx() }
+        state.animateScrollToItem(cur, -half.coerceAtLeast(0))
+    }
     when {
         rec.instrumental -> Box(modifier, contentAlignment = Alignment.Center) { Text(tr("Instrumental", "Enstrümantal"), color = T.sub, fontSize = 17.sp) }
-        lines.isNotEmpty() -> LazyColumn(modifier, state = state) {
+        lines.isNotEmpty() -> LazyColumn(modifier, state = state, contentPadding = PaddingValues(vertical = 120.dp)) {
             itemsIndexed(lines) { i, l ->
                 val on = i == cur
-                if (l.text.isEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.extras.ui.TIcon("note", T.sub, 20.dp) } else Text(
+                val color by animateColorAsState(if (on) T.text else T.text.copy(alpha = .32f), tween(420), label = "lrc-color")
+                val size by animateFloatAsState(if (on) 24f else 17f, tween(420), label = "lrc-size")
+                if (l.text.isEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.extras.ui.TIcon("note", T.sub, 20.dp) } else Text(
                     l.text,
-                    color = if (on) MaterialTheme.colorScheme.primary else T.sub,
-                    fontSize = if (on) 22.sp else 17.sp,
+                    color = color,
+                    fontSize = size.sp,
+                    lineHeight = (size * 1.35f).sp,
                     fontWeight = if (on) FontWeight.Bold else FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth().then(if (onSeek != null) Modifier.clickable { onSeek(l.timeMs.toInt()) } else Modifier).padding(vertical = 8.dp),
+                    modifier = Modifier.fillMaxWidth().then(if (onSeek != null) Modifier.clickable { onSeek(l.timeMs.toInt()) } else Modifier).padding(vertical = 10.dp),
                 )
             }
         }
@@ -107,7 +121,8 @@ fun LyricsPanel(track: Track?, positionMs: Int, modifier: Modifier = Modifier, o
         if (track == null) return@LaunchedEffect
         val local = withContext(Dispatchers.IO) { store.load(path, artist, title) }
         if (local != null) { rec = local; saved = true; return@LaunchedEffect }
-        val side = withContext(Dispatchers.IO) { LyricsStore.sidecar(track.path, title, artist) }
+        // embedded tag, then .lrc / .txt beside the file, before anything is downloaded
+        val side = withContext(Dispatchers.IO) { Lyrics.localRecord(track.path, title, artist) }
         if (side != null) { rec = side; return@LaunchedEffect }
         online()
     }

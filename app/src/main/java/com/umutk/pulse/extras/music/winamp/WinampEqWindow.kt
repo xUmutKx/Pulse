@@ -19,8 +19,10 @@ import com.umutk.pulse.extras.music.skin.WINAMP_W
 import com.umutk.pulse.extras.music.skin.WinampSkin
 import com.umutk.pulse.extras.music.skin.Zone
 import com.umutk.pulse.extras.music.skin.blit
+import com.umutk.pulse.extras.music.skin.skinActions
 import com.umutk.pulse.extras.music.skin.skinText
 import com.umutk.pulse.extras.music.skin.skinZones
+import com.umutk.pulse.tr
 import kotlin.math.roundToInt
 
 private const val Z_CLOSE = 1
@@ -61,12 +63,14 @@ fun WinampEqWindow(
     val zones = remember(n) {
         val zw = (180f / n.coerceAtLeast(1)).coerceAtMost(26f)
         buildList {
-            add(Zone(Z_CLOSE, 250f, 0f, 25f, 14f))
-            add(Zone(Z_ON, 14f, 18f, 26f, 12f, padY = 4f))
-            add(Zone(Z_PRESETS, 217f, 18f, 44f, 12f, padY = 4f))
-            for (i in 0 until n) add(Zone(Z_BAND + i, cellX(i) + 7f - zw / 2, 38f, zw, 63f, drag = true, inset = 5.5f, padY = 6f, vertical = true))
+            add(Zone(Z_CLOSE, 250f, 0f, 25f, 14f, padY = 8f, padX = 4f))
+            add(Zone(Z_ON, 14f, 18f, 26f, 12f, padY = 9f, padX = 4f))
+            // sliders keep their 63 px drag column; the wider touch strip reaches about 40dp
+            for (i in 0 until n) add(Zone(Z_BAND + i, cellX(i) + 7f - zw / 2, 38f, zw, 63f, drag = true, inset = 5.5f, padY = 6f, vertical = true, padX = 5f))
+            add(Zone(Z_PRESETS, 217f, 18f, 44f, 12f, padY = 9f))
         }
     }
+    fun nextPreset() { if (presets.isNotEmpty()) { preset = (preset + 1) % presets.size; onPreset(preset) } }
     Canvas(
         modifier.size((WINAMP_W * dpPer).dp, (WINAMP_H * dpPer).dp)
             .skinZones(sc, zones, { pressed = it }) { id, f, ph ->
@@ -75,12 +79,17 @@ fun WinampEqWindow(
                         onBand(id - Z_BAND, (range.second - f * span).roundToInt().coerceIn(lo, range.second))
                     ph == PH_UP && id == Z_CLOSE -> onClose()
                     ph == PH_UP && id == Z_ON -> onEnabled(!enabled)
-                    ph == PH_UP && id == Z_PRESETS && presets.isNotEmpty() -> {
-                        preset = (preset + 1) % presets.size
-                        onPreset(preset)
-                    }
+                    ph == PH_UP && id == Z_PRESETS -> nextPreset()
                 }
-            },
+            }
+            .skinActions(
+                tr("Equalizer", "Ekolayzır"),
+                listOf(
+                    tr("Close", "Kapat") to onClose,
+                    tr("Equalizer on or off", "Ekolayzır açık veya kapalı") to { onEnabled(!enabled) },
+                    tr("Next preset", "Sonraki ön ayar") to ::nextPreset,
+                ),
+            ),
     ) {
         val u = size.width / WINAMP_W
         val e = skin.eq

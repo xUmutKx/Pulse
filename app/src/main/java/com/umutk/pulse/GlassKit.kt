@@ -87,6 +87,11 @@ private class GlassPosition {
 }
 
 private val LocalGlassBackdrop = compositionLocalOf<GlassBackdrop?> { null }
+private val LocalInGlassRoot = compositionLocalOf { false }
+
+/** True anywhere under a [GlassRoot], even before its blurred copy exists: glass surfaces then have a wallpaper to show. */
+@Composable
+fun inGlassRoot(): Boolean = LocalInGlassRoot.current
 
 /**
  * Root of a glass screen. Paints [wallpaper] behind [content] and prepares its blurred copy for glass surfaces inside.
@@ -107,7 +112,7 @@ fun GlassRoot(
     val backdrop = remember(size, wallpaperKey, blurDiv) {
         if (size.width <= 0 || size.height <= 0) null else makeBackdrop(size, density, direction, blurDiv, wallpaper)
     }
-    CompositionLocalProvider(LocalGlassBackdrop provides backdrop) {
+    CompositionLocalProvider(LocalGlassBackdrop provides backdrop, LocalInGlassRoot provides true) {
         Box(
             modifier
                 .onSizeChanged { size = it }

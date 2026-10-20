@@ -1,6 +1,10 @@
 package com.umutk.pulse.extras.lyrics
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -10,6 +14,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -21,21 +26,28 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
@@ -131,19 +143,53 @@ fun LyricsSheet(
     val ctx = LocalContext.current
     var res by remember { mutableStateOf<LyricsResult?>(null) }
     var busy by remember { mutableStateOf(true) }
-    BackHandler(onBack = onDismiss)
+    // the sheet rises from the bottom and sinks back the same way; y is how far it sits below its rest position, in px
+    val scope = rememberCoroutineScope()
+    val y = remember { Animatable(0f) }
+    var height by remember { mutableFloatStateOf(0f) }
+    var entered by remember { mutableStateOf(false) }
+    var closing by remember { mutableStateOf(false) }
+    fun close() {
+        if (closing) return
+        closing = true
+        scope.launch { y.animateTo(height, tween(180, easing = FastOutLinearInEasing)); onDismiss() }
+    }
+    fun settle() { scope.launch { y.animateTo(0f, tween(160, easing = FastOutSlowInEasing)) } }
+    BackHandler { close() }
+    LaunchedEffect(height) {
+        if (height > 0f && !entered) {
+            entered = true
+            y.snapTo(height)
+            y.animateTo(0f, tween(200, easing = FastOutSlowInEasing))
+        }
+    }
     LaunchedEffect(title, artist, localPath) {
         busy = true; res = null
         res = Lyrics.forTrack(ctx, title, artist, album, durationMs, localPath)
         busy = false
     }
-    Box(modifier.fillMaxSize().background(Color.Black.copy(alpha = .78f))) {
+    Box(
+        modifier.fillMaxSize()
+            .onSizeChanged { height = it.height.toFloat() }
+            // hidden until its height is known, so it does not flash at rest before it rises
+            .alpha(if (entered) 1f else 0f)
+            .offset { IntOffset(0, y.value.roundToInt()) }
+            .background(Color.Black.copy(alpha = .78f))
+            // a downward drag moves the sheet with the finger; past a quarter of its height it closes, else it springs back
+            .pointerInput(Unit) {
+                detectVerticalDragGestures(
+                    onDragEnd = { if (y.value > height * .25f) close() else settle() },
+                    onDragCancel = { settle() },
+                    onVerticalDrag = { c, d -> c.consume(); scope.launch { y.snapTo((y.value + d).coerceAtLeast(0f)) } },
+                )
+            },
+    ) {
         val r = res
         when {
             r != null -> LyricsView(r, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp))
             busy -> Box(Modifier.fillMaxSize(), Alignment.Center) { PLoader() }
             else -> Box(Modifier.fillMaxSize(), Alignment.Center) { PIcon("book", Color.White.copy(alpha = .6f), 40.dp) }
         }
-        IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) { PIcon("close", Color.White, 22.dp) }
+        IconButton(onClick = { close() }, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) { PIcon("close", Color.White, 22.dp) }
     }
 }

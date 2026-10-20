@@ -58,7 +58,8 @@ class MusicWidgetConfig : ComponentActivity() {
             MaterialTheme { Surface(Modifier.fillMaxSize()) {
                 var sel by remember { mutableStateOf(MusicWidget.prefs(this@MusicWidgetConfig).getString("theme_$id", "") ?: "") }
                 val items = remember {
-                    listOf(ThemeItem("", "System") { MiniWidget(null) }) + musicWidgetThemes.map { th -> ThemeItem(th.id, th.name) { MiniWidget(th) } }
+                    // "" is the default: the design of the music look (system colours for Material)
+                    listOf(ThemeItem("", "Look") { MiniWidget(MusicWidget.lookTheme(this@MusicWidgetConfig)) }) + musicWidgetThemes.map { th -> ThemeItem(th.id, th.name) { MiniWidget(th) } }
                 }
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
                     ThemeGrid(items, sel, { sel = it; pick(it) })

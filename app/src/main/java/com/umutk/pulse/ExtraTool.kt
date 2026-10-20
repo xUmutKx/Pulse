@@ -48,16 +48,31 @@ fun ownPrefs(c: Context, name: String, keep: (String) -> Boolean = { true }): an
     return own
 }
 
-/** The look of the music player, video player, white noise and playlists when opened from their own launcher icon: Material until the user picks another. */
+/** The look of the music player, video player, white noise and playlists when opened from their own launcher icon: AMOLED black until the user picks another. */
 object ExtraToolLook {
-    val ids = listOf("material", "win11", "win10", "win7", "xp", "win95")
+    val ids = listOf("amoled", "material", "win11", "win10", "win7", "xp", "win95")
     private fun p(c: Context) = c.getSharedPreferences("extra_tool_look", Context.MODE_PRIVATE)
-    fun get(c: Context): String = p(c).getString("look", "material")?.takeIf { it in ids } ?: "material"
+    fun get(c: Context): String = p(c).getString("look", "amoled")?.takeIf { it in ids } ?: "amoled"
     fun set(c: Context, id: String) { p(c).edit().putString("look", id).apply() }
     fun name(id: String) = when (id) {
-        "material" -> "Material"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"; "xp" -> "Windows XP"; "win95" -> "Windows 95"; else -> id
+        "amoled" -> "AMOLED"; "material" -> "Material"; "win11" -> "Windows 11"; "win10" -> "Windows 10"; "win7" -> "Windows 7"; "xp" -> "Windows XP"; "win95" -> "Windows 95"; else -> id
     }
 }
+
+/**
+ * The own look store of one newer standalone tool (Voice, Notes, Weather): Material until the user picks another.
+ * [apply] puts it on the shared Look before the first frame; AppLookGuard.leave restores Pulse's look.
+ */
+class ToolLook(private val file: String) {
+    fun get(c: Context): String = c.getSharedPreferences(file, Context.MODE_PRIVATE).getString("look", "material")?.takeIf { it in ExtraToolLook.ids } ?: "material"
+    fun set(c: Context, id: String) { c.getSharedPreferences(file, Context.MODE_PRIVATE).edit().putString("look", id).apply(); apply(c) }
+    fun apply(c: Context) {
+        Look.theme = Themes.first { it.id == get(c) }; Look.mode = "system"; Look.windowTheme = "win"; Look.dynamic = true; Look.accentIdx = -1
+    }
+}
+val VoiceLook = ToolLook("voice_look")
+val NotesLook = ToolLook("notes_look")
+val WeatherLook = ToolLook("weather_look")
 
 /** Present only inside [ExtraToolActivity]: the page can offer the look choice, inside Pulse itself it is null. */
 class ExtraLookControl(val id: String, val set: (String) -> Unit)
@@ -88,7 +103,7 @@ fun ExtraLookIcon(tint: Color = T.text) {
 }
 
 /**
- * One activity behind launcher entries (MusicLauncher, VideoLauncher). The entry it was
+ * One activity behind launcher entries (MusicLauncher, VideoLauncher, WhiteNoiseLauncher). The entry it was
  * started through picks the page, so it always knows where it was opened from. Back from the page closes it.
  */
 class ExtraToolActivity : ComponentActivity() {
@@ -96,23 +111,45 @@ class ExtraToolActivity : ComponentActivity() {
     // same process as Pulse: LookHost writes the one global Look.resolved, so this tool keeps its own across pause / resume and Pulse keeps its own (MainActivity)
     private var ownResolved: PTheme? = null
     override fun onPause() { super.onPause(); ownResolved = Look.resolved }
-    override fun onResume() { super.onResume(); Look.resolved = ownResolved }
+    override fun onResume() { enter(); super.onResume(); Look.resolved = ownResolved }
+    override fun onStop() { super.onStop(); if (toolLook != null) AppLookGuard.leave(this) }
+    override fun onDestroy() { super.onDestroy(); if (toolLook != null) AppLookGuard.leave(this) }
+
+    // Voice, Notes and Weather have their own look store; the other tools keep ExtraToolLook
+    private var toolLook: ToolLook? = null
+    private fun enter() { toolLook?.apply(this) }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Cfg / Opt are process-wide; this loads the saved ones before the first frame. The look itself is this tool's own (ExtraToolLook).
+        // Cfg / Opt are process-wide; this loads the saved ones before the first frame. The look itself is this tool's own (ExtraToolLook or a ToolLook).
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
+        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; else -> null }
+        toolLook = store
+        enter()
         setContent {
-            var look by remember { mutableStateOf(ExtraToolLook.get(this@ExtraToolActivity)) }
+            var look by remember { mutableStateOf(store?.get(this@ExtraToolActivity) ?: ExtraToolLook.get(this@ExtraToolActivity)) }
             var route by rememberSaveable { mutableStateOf(start) }
             val back: () -> Unit = { if (route != start) route = start else finish() }
-            val control = remember(look) { ExtraLookControl(look) { look = it; ExtraToolLook.set(this@ExtraToolActivity, it) } }
+            val control = remember(look) {
+                ExtraLookControl(look) { look = it; if (store != null) store.set(this@ExtraToolActivity, it) else ExtraToolLook.set(this@ExtraToolActivity, it) }
+            }
             CompositionLocalProvider(LocalExtraLook provides control) {
                 LookHost(lookId = look) { th ->
                     CompositionLocalProvider(LocalOpenTool provides { id -> if (id.isNotEmpty()) route = id else back() }) {
-                        Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
+                        // Windows 11 with a material: the wallpaper is the background, and the panels are glass over it (like the main window)
+                        if (th.id == "win11" && Look.effect != "none") {
+                            val stock = com.umutk.pulse.features.Backdrop.stock
+                            GlassRoot(wallpaperKey = Triple(th.id, com.umutk.pulse.features.Backdrop.image, stock), wallpaper = {
+                                val img = com.umutk.pulse.features.Backdrop.image
+                                if (img != null) with(com.umutk.pulse.features.Backdrop) { drawBackdrop(img) }
+                                else if (stock != null) with(com.umutk.pulse.features.Backdrop) { drawBackdrop(stock, .5f, .5f, 1f) }
+                                else drawRect(th.bg)
+                            }) {
+                                Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
+                            }
+                        } else Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
                     }
                 }
             }
@@ -124,6 +161,15 @@ class ExtraToolActivity : ComponentActivity() {
         return when {
             n.endsWith("MusicLauncher") -> "music"
             n.endsWith("VideoLauncher") -> "video"
+            n.endsWith("WhiteNoiseLauncher") -> "whitenoise"
+            n.endsWith("VoiceLauncher") -> "voice"
+            n.endsWith("NotesLauncher") -> "notes"
+            n.endsWith("WeatherLauncher") -> "weather"
+            n.endsWith("MessagesLauncher") -> "messages"
+            n.endsWith("HomeLauncher") -> "launcher"
+            n.endsWith("ScreenRecLauncher") -> "screenrec"
+            n.endsWith("NotifHistLauncher") -> "notifhist"
+            n.endsWith("ExtraStoreLauncher") -> "extrastore"
             else -> i.getStringExtra("route") ?: "music"
         }
     }

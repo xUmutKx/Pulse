@@ -17,7 +17,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -105,7 +104,7 @@ fun UpdateDialog(r: Updates.Release, onDone: () -> Unit) {
         title = { Text(tr("New update available", "Yeni güncelleme var"), color = w.text) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Image(imageResource(R.mipmap.ic_launcher), null, Modifier.size(64.dp))
+                Image(rememberLauncherLogo(), null, Modifier.size(64.dp))
                 Text("Pulse ${r.version}", color = w.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
                 r.notes.forEach { Text("•  $it", color = w.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp)) }
             }

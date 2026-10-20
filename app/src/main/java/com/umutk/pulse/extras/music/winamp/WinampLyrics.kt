@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import com.umutk.pulse.T
 import com.umutk.pulse.extras.lyrics.LyricLine
 import com.umutk.pulse.extras.lyrics.LyricsPanel
@@ -86,6 +88,7 @@ fun WinampLyricsPane(
 
     Canvas(
         modifier.size((WINAMP_W * scaleDp).dp, (PANE_H * scaleDp).dp)
+            .semantics { contentDescription = tr("Lyrics", "Şarkı sözleri") }
             .pointerInput(r, top) {
                 detectTapGestures { o ->
                     if (r == null || !r.synced) return@detectTapGestures

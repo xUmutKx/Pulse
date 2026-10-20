@@ -35,7 +35,9 @@ import com.umutk.pulse.extras.music.skin.WINAMP_W
 import com.umutk.pulse.extras.music.skin.WinampSkin
 import com.umutk.pulse.extras.music.skin.Zone
 import com.umutk.pulse.extras.music.skin.blit
+import com.umutk.pulse.extras.music.skin.skinActions
 import com.umutk.pulse.extras.music.skin.skinZones
+import com.umutk.pulse.tr
 
 private const val Z_CLOSE = 1
 private const val Z_ADD = 2
@@ -68,9 +70,9 @@ fun WinampPlaylistWindow(
     val bottom = heightSkin - 38
     val zones = remember(heightSkin) {
         listOf(
-            Zone(Z_CLOSE, 250f, 0f, 25f, 20f),
-            Zone(Z_ADD, 11f, bottom + 9f, 25f, 18f, padY = 4f),
-            Zone(Z_REM, 40f, bottom + 9f, 25f, 18f, padY = 4f),
+            Zone(Z_CLOSE, 250f, 0f, 25f, 20f, padX = 4f), // no padY: the list rows sit on top of the window below it
+            Zone(Z_ADD, 11f, bottom + 9f, 25f, 18f, padY = 6f, padX = 4f),
+            Zone(Z_REM, 40f, bottom + 9f, 25f, 18f, padY = 6f, padX = 4f),
         )
     }
     Box(modifier.size((WINAMP_W * dpPer).dp, (heightSkin * dpPer).dp)) {
@@ -81,7 +83,14 @@ fun WinampPlaylistWindow(
                     Z_ADD -> onAdd()
                     Z_REM -> if (current in tracks.indices) onRemove(current)
                 }
-            },
+            }.skinActions(
+                tr("Playlist", "Çalma listesi"),
+                listOf(
+                    tr("Close", "Kapat") to onClose,
+                    tr("Add music", "Müzik ekle") to onAdd,
+                    tr("Remove current track", "Geçerli parçayı kaldır") to { if (current in tracks.indices) onRemove(current) },
+                ),
+            ),
         ) {
             val u = size.width / WINAMP_W
             val pl = skin.pledit

@@ -118,6 +118,34 @@
    "tr": "Kahverengi gürültü",
    "file": "brown.ogg",
    "cat": "noise"
+  },
+  {
+   "id": "steam",
+   "en": "Kettle steam",
+   "tr": "Buhar",
+   "file": "steam.wav",
+   "cat": "cozy"
+  },
+  {
+   "id": "heartbeat",
+   "en": "Heartbeat",
+   "tr": "Kalp atışı",
+   "file": "heartbeat.wav",
+   "cat": "cozy"
+  },
+  {
+   "id": "vinyl",
+   "en": "Vinyl crackle",
+   "tr": "Plak çıtırtısı",
+   "file": "vinyl.wav",
+   "cat": "cozy"
+  },
+  {
+   "id": "traffic",
+   "en": "Distant traffic",
+   "tr": "Uzak trafik",
+   "file": "traffic.wav",
+   "cat": "city"
   }
  ]
 }

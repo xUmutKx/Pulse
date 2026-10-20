@@ -3,25 +3,51 @@ package com.umutk.pulse
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.background
+import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.Settings
+import android.provider.Telephony
+import android.telephony.SmsManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -49,6 +75,13 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "toolkit" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.ToolkitPage() }
         id == "extrastore" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.ui.MaxWidthBox { com.umutk.pulse.extras.store.ExtraStoreScreen(onBack = back) } }
         id == "installer" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.InstallerPage() }
+        id == "cover" -> {
+            androidx.activity.compose.BackHandler { back() }
+            Column(Modifier.fillMaxSize().background(T.bg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+                PHead(tr("Screen cover", "Ekran kapağı"))
+                com.umutk.pulse.features.CoverTool()
+            }
+        }
         id == "installer_settings" -> {
             androidx.activity.compose.BackHandler { back() }
             Column(Modifier.fillMaxSize().background(T.bg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
@@ -72,7 +105,15 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "authenticator" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AuthenticatorScreen(back) }
         id == "video" -> com.umutk.pulse.extras.video.VideoHub(back)
         id == "music" -> com.umutk.pulse.extras.music.MusicHub(back)
-        id == "whitenoise" -> com.umutk.pulse.extras.music.MusicHub(back)
+        id == "whitenoise" -> com.umutk.pulse.extras.whitenoise.WhiteNoiseHub(back)
+        id == "voice" -> com.umutk.pulse.extras.voice.VoiceHub(back)
+        id == "notes" -> com.umutk.pulse.extras.notes.NotesHub(back)
+        id == "weather" -> com.umutk.pulse.extras.weather.WeatherHub(back)
+        id == "notifhist" -> com.umutk.pulse.extras.notifhist.NotifHistoryScreen(back)
+        id == "screenrec" -> com.umutk.pulse.extras.screenrec.ScreenRecHub(back)
         id == "playlists" -> com.umutk.pulse.extras.playlists.OnlinePlaylistsHub(back)
+        id == "launcher" -> com.umutk.pulse.extras.launcher.LauncherSettings(back)
+        id == "messages" -> MessagesScreen(back)
     }
 }
+

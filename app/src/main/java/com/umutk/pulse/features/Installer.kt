@@ -250,6 +250,8 @@ object Installer {
             "manifest.json" in names -> "XAPK"
             "info.json" in names -> "APKM"
             "toc.pb" in names -> "APKS"
+            // Play bundles (.apks from a device or bundletool export) have base.apk plus split_*.apk and no toc.pb
+            "base.apk" in names && names.size > 1 -> "APKS"
             else -> "ZIP"
         }
         val files = if (type == "APK") {
@@ -352,7 +354,9 @@ object Installer {
         pending = pk
         pk.drop = drop
         if (!background) notifyInstalling(c, pk.label)
-        return when (eng) {
+        // a bundle with splits can't go through the single-APK hand-off: it always uses the session (root/Shizuku keep their own path)
+        val engine = if (eng == "none" && pk.files.size > 1) "system" else eng
+        return when (engine) {
             "root", "shizuku" -> {
                 val out = withContext(Dispatchers.IO) { Shell.run(silentCmd(pk, down, user, dex && eng == "root")) }
                 val ok = out.contains("Success")
@@ -361,18 +365,12 @@ object Installer {
             }
             "none" -> {
                 pending = null
-                if (pk.files.size > 1) {
-                    status = "Split packages need the system or root authorizer"
-                    cancelInstalling(c)
-                    false
-                } else {
-                    val uri = FileProvider.getUriForFile(c, "${c.packageName}.files", pk.files[0])
-                    c.startActivity(Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri, APK_MIME)
-                        .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
-                    status = "Opened in the system installer; its result is not reported back"
-                    cancelInstalling(c)
-                    true
-                }
+                val uri = FileProvider.getUriForFile(c, "${c.packageName}.files", pk.files[0])
+                c.startActivity(Intent(Intent.ACTION_INSTALL_PACKAGE).setDataAndType(uri, APK_MIME)
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK))
+                status = "Opened in the system installer; its result is not reported back"
+                cancelInstalling(c)
+                true
             }
             else -> {
                 val d = CompletableDeferred<Boolean>()

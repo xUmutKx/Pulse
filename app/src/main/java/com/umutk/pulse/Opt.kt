@@ -17,6 +17,7 @@ object Opt {
     var keepOn by mutableStateOf(false)
     var crt by mutableStateOf(false)         // the old-monitor filter over the app
     var signIn by mutableStateOf(false)      // on: the look's sign-in screen at start; off: Pulse opens directly
+    var splash by mutableStateOf(true)       // on: the opening animation at start; off: Pulse opens straight to its first page
     /** Old designs (default): Windows 95 / XP / 7 / 10 / 11 pop-ups drawn like the real systems. Off: the earlier, plainer menus. */
     var oldPopups by mutableStateOf(true)
     /** The same switch read as "the classic looks are drawn like the real systems" (95, XP, 7 windows, bars, controls). */
@@ -45,7 +46,7 @@ object Opt {
         lang = p.getString("lang", "auto") ?: "auto"
         amoledBg = p.getBoolean("amoledBg", true)
         hidden = p.getStringSet("hidden", emptySet()) ?: emptySet()
-        tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false); signIn = p.getBoolean("signIn", false); crt = p.getBoolean("crt", false); oldPopups = p.getBoolean("oldPopups", true); recycle = p.getBoolean("recycle", false); oldNavIcons = p.getBoolean("oldNavIcons", true); filesFull = p.getBoolean("filesFull", true)
+        tempF = p.getBoolean("tempF", false); keepOn = p.getBoolean("keepOn", false); signIn = p.getBoolean("signIn", false); splash = p.getBoolean("splash", true); crt = p.getBoolean("crt", false); oldPopups = p.getBoolean("oldPopups", true); recycle = p.getBoolean("recycle", false); oldNavIcons = p.getBoolean("oldNavIcons", true); filesFull = p.getBoolean("filesFull", true)
         fontScale = p.getFloat("fontScale", 1f); compact = p.getBoolean("compact", false);
         ovOn = p.getBoolean("ovOn", false); notifOn = p.getBoolean("notifOn", false)
         ovAlpha = p.getFloat("ovAlpha", .75f); ovSize = p.getFloat("ovSize", 11f)
@@ -54,7 +55,7 @@ object Opt {
     }
 
     fun save(c: Context) {
-        sp(c).edit().putBoolean("amoledBg", amoledBg).putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn).putBoolean("signIn", signIn).putBoolean("crt", crt).putBoolean("oldPopups", oldPopups).putBoolean("recycle", recycle).putBoolean("oldNavIcons", oldNavIcons).putBoolean("filesFull", filesFull)
+        sp(c).edit().putBoolean("amoledBg", amoledBg).putString("lang", lang).putString("start", startPage).putStringSet("hidden", hidden).putBoolean("tempF", tempF).putBoolean("keepOn", keepOn).putBoolean("signIn", signIn).putBoolean("splash", splash).putBoolean("crt", crt).putBoolean("oldPopups", oldPopups).putBoolean("recycle", recycle).putBoolean("oldNavIcons", oldNavIcons).putBoolean("filesFull", filesFull)
             .putFloat("fontScale", fontScale).putBoolean("compact", compact).putBoolean("ovOn", ovOn).putBoolean("notifOn", notifOn)
             .putFloat("ovAlpha", ovAlpha).putFloat("ovSize", ovSize).putStringSet("ovItems", ovItems)
             .putInt("alertTemp", alertTemp).putInt("alertBat", alertBat).putInt("alertRam", alertRam).apply()

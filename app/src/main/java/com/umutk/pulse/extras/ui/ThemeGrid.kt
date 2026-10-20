@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -43,10 +44,15 @@ data class ThemeItem(val id: String, val name: String, val preview: @Composable 
 @Composable
 private fun ThemeCell(it: ThemeItem, sel: Boolean, onSelect: (String) -> Unit, modifier: Modifier) {
     val shape = RoundedCornerShape(10.dp)
+    val accent = com.umutk.pulse.Look.accent
     Column(modifier.clickable { onSelect(it.id) }, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.fillMaxWidth().aspectRatio(1.4f).clip(shape)
-            .border(if (sel) BorderStroke(2.dp, com.umutk.pulse.Look.accent) else BorderStroke(1.dp, T.sub.copy(alpha = .3f)), shape)) { it.preview() }
-        Text(it.name, color = if (sel) T.text else T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+        Box(Modifier.fillMaxWidth().aspectRatio(1.4f)) {
+            Box(Modifier.fillMaxSize().clip(shape)
+                .border(if (sel) BorderStroke(3.dp, accent) else BorderStroke(1.dp, T.sub.copy(alpha = .3f)), shape)) { it.preview() }
+            // the check mark marks the chosen tile even when the accent colour is close to the preview
+            if (sel) PIcon("check", accent, 16.dp, Modifier.align(Alignment.TopEnd).padding(4.dp))
+        }
+        Text(it.name, color = if (sel) accent else T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
     }
 }
 

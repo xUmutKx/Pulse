@@ -103,6 +103,7 @@ fun GeneralSettings() {
         SwitchRow("Keep screen on", "The screen stays on while Pulse is open", Opt.keepOn) { Opt.keepOn = it; Opt.save(ctx) }
         SwitchRow(tr("Old monitor filter", "Eski monitör filtresi"), tr("Scan lines and dots, like a CRT", "CRT gibi tarama çizgileri ve noktalar"), Opt.crt) { Opt.crt = it; Opt.save(ctx) }
         SwitchRow(tr("Sign-in screen at start", "Açılışta giriş ekranı"), tr("Windows 95, XP, 7, 10 and 11 looks", "Windows 95, XP, 7, 10 ve 11 görünümleri"), Opt.signIn) { Opt.signIn = it; Opt.save(ctx) }
+        SwitchRow(tr("Opening animation", "Açılış animasyonu"), tr("The Pulse splash at start", "Başlangıçtaki Pulse açılış animasyonu"), Opt.splash) { Opt.splash = it; Opt.save(ctx) }
         SliderRow("Text size ${(Opt.fontScale * 100).toInt()}%", Opt.fontScale, .8f..1.4f, { Opt.fontScale = it }) { Opt.save(ctx) }
     }
     PCard {
@@ -114,6 +115,7 @@ fun GeneralSettings() {
         }
     }
     PCard { AppIconChooser() }
+    DataBackupCard()
     ExtraAppsCard()
     PCard {
         Text("Pages shown", color = T.sub, fontSize = 12.sp)
@@ -123,6 +125,78 @@ fun GeneralSettings() {
                 PIcon(p.icon, T.text, 18.dp); Spacer(Modifier.width(8.dp)); Text(p.label, color = T.text, fontSize = 14.sp)
             }
         }
+    }
+}
+
+/** Export and import of settings and files (DataBackup). Import replaces the same files, then Pulse restarts. */
+@Composable
+private fun DataBackupCard() {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var status by remember { mutableStateOf("") }
+    var askImport by remember { mutableStateOf<android.net.Uri?>(null) }
+    var info by remember { mutableStateOf<Pair<Int, Long>?>(null) }
+    var restored by remember { mutableStateOf<DataBackup.Restored?>(null) }
+    LaunchedEffect(Unit) { info = withContext(Dispatchers.IO) { DataBackup.summary(ctx) } }
+    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) scope.launch {
+            status = tr("Saving...", "Kaydediliyor...")
+            val n = withContext(Dispatchers.IO) { runCatching { ctx.contentResolver.openOutputStream(uri)?.use { DataBackup.export(ctx, it) } ?: -1 }.getOrDefault(-1) }
+            status = if (n >= 0) tr("Saved $n files", "$n dosya kaydedildi") else tr("Could not save", "Kaydedilemedi")
+        }
+    }
+    val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) askImport = uri }
+    PCard {
+        Text(tr("Data", "Veri"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Settings and files in one zip file.", "Ayarlar ve dosyalar tek bir zip dosyasında."), color = T.sub, fontSize = 12.sp)
+        info?.let { (n, bytes) ->
+            val size = android.text.format.Formatter.formatShortFileSize(ctx, bytes)
+            Text(tr("$n files, $size", "$n dosya, $size"), color = T.sub, fontSize = 12.sp)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PButton(tr("Export", "Dışa aktar")) { save.launch("pulse-backup.zip") }
+            PButton(tr("Import", "İçe aktar")) { open.launch(arrayOf("application/zip", "application/octet-stream")) }
+        }
+        if (status.isNotEmpty()) Text(status, color = T.sub, fontSize = 12.sp)
+    }
+    askImport?.let { uri ->
+        PDialog(
+            title = tr("Import data", "Veriyi içe aktar"),
+            text = tr("Settings and files in the backup replace the same ones here. Pulse restarts after the import.",
+                "Yedekteki ayarlar ve dosyalar, buradakilerin yerine geçer. İçe aktarmadan sonra Pulse yeniden başlar."),
+            confirm = tr("Import", "İçe aktar"),
+            onConfirm = {
+                askImport = null
+                scope.launch {
+                    status = tr("Importing...", "İçe aktarılıyor...")
+                    val r = withContext(Dispatchers.IO) { runCatching { ctx.contentResolver.openInputStream(uri)?.use { DataBackup.restore(ctx, it) } }.getOrNull() }
+                    if (r == null || r.files == 0) { status = tr("No Pulse data in this file", "Bu dosyada Pulse verisi yok"); return@launch }
+                    restored = r
+                }
+            },
+            onDismiss = { askImport = null },
+        )
+    }
+    // shown after the import; the restart happens only when the user has read the list
+    restored?.let { r ->
+        fun restart() {
+            // the running process keeps old settings in memory: start a fresh one and end this one
+            ctx.startActivity(android.content.Intent(ctx, MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK or android.content.Intent.FLAG_ACTIVITY_CLEAR_TASK))
+            android.os.Process.killProcess(android.os.Process.myPid())
+        }
+        PDialog(
+            title = tr("Data restored", "Veri geri yüklendi"),
+            text = buildString {
+                append(tr("${r.files} files restored.", "${r.files} dosya geri yüklendi."))
+                if (r.prefs.isNotEmpty()) append("\n\n" + tr("Settings", "Ayarlar") + " (${r.prefs.size}): " + r.prefs.joinToString(", "))
+                if (r.folders.isNotEmpty()) append("\n\n" + tr("Files", "Dosyalar") + " (${r.folders.size}): " + r.folders.joinToString(", "))
+                append("\n\n" + tr("Pulse restarts now.", "Pulse şimdi yeniden başlar."))
+            },
+            confirm = tr("Restart", "Yeniden başlat"),
+            onConfirm = { restart() },
+            onDismiss = { restart() },
+            info = true,
+        )
     }
 }
 
@@ -364,12 +438,9 @@ fun ThemeWallpaperRow(lookId: String) {
     val walls = com.umutk.pulse.features.wallsFor(lookId)
     if (walls.isNotEmpty()) {
         val sel = com.umutk.pulse.features.wallSel(lookId)
-        Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            walls.forEachIndexed { i, id ->
-                val on = uri == null && sel == i
-                Image(painterResource(id), null, Modifier.size(width = 96.dp, height = 60.dp).clip(RoundedCornerShape(6.dp))
-                    .border(if (on) 3.dp else 1.dp, if (on) Look.accent else T.sub, RoundedCornerShape(6.dp))
-                    .clickable { com.umutk.pulse.features.setWallSel(ctx, lookId, i); setThemeWallpaper(ctx, lookId, null); uri = null }, contentScale = ContentScale.Crop)
+        Box(Modifier.padding(vertical = 6.dp)) {
+            com.umutk.pulse.features.WallGrid(lookId, if (uri == null) sel else -1) { i ->
+                com.umutk.pulse.features.setWallSel(ctx, lookId, i); setThemeWallpaper(ctx, lookId, null); uri = null
             }
         }
     }
@@ -424,23 +495,58 @@ private fun AppIconChooser() {
     }
 }
 
-/** Settings > Functions: what Pulse does, not how it looks: the recycle bin, how often data is read, the report and the root / Shizuku access. */
+/** Settings > Functions: what Pulse does, not how it looks: notification history, how often data is read, the report and the root / Shizuku access. */
 @Composable
 fun FunctionsSettings() {
     val ctx = LocalContext.current
+    val openTool = LocalOpenTool.current
     PCard {
-        SwitchRow(tr("Recycle bin", "Çöp kutusu"), tr("Deleted files wait there; off deletes for good", "Silinen dosyalar orada bekler; kapalıyken kalıcı silinir"), Opt.recycle) { Opt.recycle = it; Opt.save(ctx) }
-        // the recycle bin page of the file manager
-        if (Opt.recycle)
-        Row(Modifier.fillMaxWidth().clickable { com.umutk.pulse.widgets.WidgetOpen.page = "recycle" }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon("recycle", T.text, 22.dp)
-            Spacer(Modifier.width(12.dp))
-            Text(tr("Open Recycle bin", "Çöp kutusunu aç"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            PIcon("chevron", T.sub, 18.dp)
+        // the same switch as the notification history page (NotifHist, prefs "notifhist"); the label opens the page while it is on
+        var notif by remember { mutableStateOf(com.umutk.pulse.extras.notifhist.NotifHist.enabled(ctx)) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PIcon("notifications", T.text, 22.dp)
+            Column(Modifier.weight(1f).padding(start = 12.dp).clickable { if (notif) openTool("notifhist") }) {
+                Text(tr("Notification history", "Bildirim geçmişi"), color = T.text, fontSize = 15.sp)
+                Text(tr("Keeps the notifications you get; off keeps none", "Aldığın bildirimleri saklar; kapalıyken hiçbiri saklanmaz"), color = T.sub, fontSize = 12.sp)
+            }
+            PSwitch(notif, { notif = it; com.umutk.pulse.extras.notifhist.NotifHist.setEnabled(ctx, it) })
         }
     }
     PCard {
         SwitchRow(tr("Files: full screen", "Dosyalar: tam ekran"), "", Opt.filesFull) { Opt.filesFull = it; Opt.save(ctx) }
+    }
+    // where App manager's Extract APK writes (default: Downloads/Pulse/extract)
+    PCard {
+        Text(tr("APK extract folder", "APK çıkarma klasörü"), color = Look.accent, fontSize = 15.sp)
+        var apkDir by remember { mutableStateOf(com.umutk.pulse.features.ApkExtract.path(ctx)) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PField(apkDir, { apkDir = it }, "/storage/emulated/0/Download/Pulse/extract", Modifier.weight(1f))
+            Box(Modifier.padding(start = 8.dp).clickable {
+                val d = java.io.File(apkDir.trim())
+                if (d.isDirectory || d.mkdirs()) com.umutk.pulse.features.ApkExtract.set(ctx, d.path)
+                else android.widget.Toast.makeText(ctx, tr("Cannot use this folder", "Bu klasör kullanılamaz"), android.widget.Toast.LENGTH_SHORT).show()
+            }) { PIcon("folder", T.text, 24.dp) }
+        }
+        Text(tr("App manager's Extract APK saves here", "App manager'ın APK çıkarma işlemi buraya kaydeder"), color = T.sub, fontSize = 12.sp)
+    }
+    PCard { com.umutk.pulse.features.CoverSettings() }
+    // where each optional tool is listed (the menu, the Extra apps card, or only here in Settings)
+    PCard {
+        Text(tr("Tool places", "Araçların yeri"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Menu: the top-right menu's Tools group. Extra apps: the Extra apps card. Settings only: not in the menu.", "Menü: sağ üstteki menünün Araçlar grubu. Ek uygulamalar: Ek uygulamalar kartı. Yalnız ayarlar: menüde yok."), color = T.sub, fontSize = 12.sp)
+        ToolPlace.all.forEach { t ->
+            val cur = ToolPlace.where(ctx, t)
+            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+                Text(tr(t.en, t.trName), color = T.text, fontSize = 14.sp)
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(cur == "menu", tr("Menu", "Menü")) { ToolPlace.set(ctx, t, "menu") }
+                    PChip(cur == "extra", tr("Extra apps", "Ek uygulamalar")) { ToolPlace.set(ctx, t, "extra") }
+                    // a tool with a page of its own has its switch in Settings > Pages, so it is not offered here twice
+                    if (!ToolPlace.hasPage(t)) PChip(cur == "side", tr("Left menu", "Sol menü")) { ToolPlace.set(ctx, t, "side") }
+                    PChip(cur == "hidden", tr("Settings only", "Yalnız ayarlar")) { ToolPlace.set(ctx, t, "hidden") }
+                }
+            }
+        }
     }
     // menus and message boxes: the current look, or Material You for every look
     PCard {
@@ -458,6 +564,18 @@ fun FunctionsSettings() {
     RootSettings()
 }
 
+/** Fresh installs only, once: the extra-app launcher aliases start switched off. Existing installs keep their state. */
+internal fun disableExtraAppsOnFreshInstall(ctx: android.content.Context) {
+    val pm = ctx.packageManager
+    val pi = pm.getPackageInfo(ctx.packageName, 0)
+    val prefs = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
+    if (pi.firstInstallTime != pi.lastUpdateTime || prefs.getBoolean("extraAppsOff", false)) return
+    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher", "MessagesLauncher", "HomeLauncher", "ScreenRecLauncher", "NotifHistLauncher", "ExtraStoreLauncher").forEach {
+        pm.setComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + it), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
+    }
+    prefs.edit().putBoolean("extraAppsOff", true).apply()
+}
+
 /** Settings > General: which of the extra apps (Files, Photos, Calendar, Contacts) show in the launcher; each is a launcher activity-alias. */
 @Composable
 private fun ExtraAppsCard() {
@@ -469,10 +587,23 @@ private fun ExtraAppsCard() {
         Triple("PhotosLauncher", R.drawable.ic_photos, tr("Photos", "Fotoğraflar")),
         Triple("CalendarLauncher", R.drawable.ic_calendar, tr("Calendar", "Takvim")),
         Triple("ContactsLauncher", R.drawable.ic_contacts, tr("Contacts", "Kişiler")),
-        Triple("ArtCraftLauncher", R.drawable.ic_files, "ArtCraft"),
+        Triple("ArtCraftLauncher", R.drawable.mat_palette, "ArtCraft"),
         Triple("MusicLauncher", R.drawable.ic_music, tr("Music player", "Müzik çalar")),
         Triple("VideoLauncher", R.drawable.ic_video, tr("Video", "Video")),
+        Triple("WhiteNoiseLauncher", R.drawable.ic_whitenoise, tr("White noise", "Beyaz gürültü")),
+        Triple("VoiceLauncher", R.drawable.mat_voice, tr("Voice recorder", "Ses kaydedici")),
+        Triple("NotesLauncher", R.drawable.mat_notes, tr("Notes", "Notlar")),
+        Triple("WeatherLauncher", R.drawable.mat_weather, tr("Weather", "Hava durumu")),
+        Triple("MessagesLauncher", R.drawable.mat_messages, tr("Messages", "Mesajlar")),
+        Triple("HomeLauncher", R.drawable.mat_apps, tr("Launcher", "Ana ekran")),
+        Triple("ScreenRecLauncher", R.drawable.mat_record, tr("Screen recorder", "Ekran kaydı")),
+        Triple("NotifHistLauncher", R.drawable.mat_notifications, tr("Notification history", "Bildirim geçmişi")),
     )
+    // Windows 11 glyph per app (FluentPaths keys; Fluent UI System Icons, MIT License, Microsoft)
+    val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
+        "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
+        "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
+        "HomeLauncher" to "extraLauncher", "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "ExtraStoreLauncher" to "extraStore")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
     val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }
@@ -485,13 +616,34 @@ private fun ExtraAppsCard() {
     }
     PCard {
         Text(tr("Extra apps", "Ek uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Row(Modifier.fillMaxWidth().clickable { openTool("extrastore") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon("download", T.text, 22.dp)
+        // only while the Launcher switch below is on: a switched-off launcher leaves no row here
+        if (state["HomeLauncher"] == true) Row(Modifier.fillMaxWidth().clickable { openTool("launcher") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("apps", T.text, 22.dp)
             Spacer(Modifier.width(12.dp))
-            Text(tr("Store", "Mağaza"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            Text(tr("Launcher", "Ana ekran"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        }
+        // the tools placed in this card (Settings > Tool places)
+        ToolPlace.extraTools(ctx).forEach { t ->
+            Row(Modifier.fillMaxWidth().clickable {
+                // a tool screen opens on top; a page-based one opens the main app on its page
+                if (t.isTool) openTool(t.target)
+                else ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("start", t.target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+            }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Office and Download manager get the black launcher tile with a white outline glyph
+                val tile = when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
+                // dark theme: black tile with the accent glyph; light theme: white tile with a black glyph
+                if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
+                    Image(painterResource(tile), null, Modifier.fillMaxSize().padding(6.dp),
+                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(if (T.dark) Look.accent else androidx.compose.ui.graphics.Color.Black))
+                } else PIcon(t.key, T.text, 22.dp)
+                Spacer(Modifier.width(12.dp))
+                Text(tr(t.en, t.trName), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            }
         }
         apps.forEach { (alias, icon, label) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Windows 11: the app's own Fluent glyph (same 22 dp size as the rows above); the other looks keep the drawable tile
+                if (T.id == "win11") PIcon(fluent.getValue(alias), T.text, 22.dp) else
                 Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
                     Image(painterResource(icon), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f })
                 }
@@ -507,6 +659,7 @@ private fun ExtraAppsCard() {
                 PSwitch(state[alias] == true, { on ->
                     pm.setComponentEnabledSetting(cn(alias), if (on) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
                     state[alias] = on
+                    rev++
                 })
             }
         }

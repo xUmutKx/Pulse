@@ -59,16 +59,20 @@ object Cfg {
         Look.theme = Themes.firstOrNull { it.id == p.getString("theme", "win11") } ?: Themes[0]
         Look.accentIdx = p.getInt("accent2", -1)
         Look.mode = p.getString("mode", "system") ?: "system"
-        Look.effect = p.getString("effect", "mica") ?: "mica"
+        // "blur" was removed from the choices; a saved one falls back to Mica
+        Look.effect = p.getString("effect", "mica")?.takeIf { it != "blur" } ?: "mica"
+        Look.winIconLine = p.getBoolean("winIconLine", false)
         Look.windowTheme = p.getString("windowTheme", "win") ?: "win"
         Look.blurDp = p.getFloat("blurDp2", 8f); Look.blurTint = p.getFloat("blurTint2", .2f)
         Look.dynamic = p.getBoolean("dynamic", true); Look.corner = p.getString("corner", "medium") ?: "medium"
         interval = p.getLong("interval", 1000L); Sampler.interval = interval
         confirmKill = p.getBoolean("confirm", true)
     }
-    fun setTheme(c: Context, id: String) { Look.theme = Themes.first { it.id == id }; sp(c).edit().putString("theme", id).apply(); com.umutk.pulse.widgets.WidgetData.refreshNow(c) }
+    // the widget redraw renders every placed widget (skin bitmaps), so it runs off the main thread: the look switch itself stays instant
+    fun setTheme(c: Context, id: String) { Look.theme = Themes.first { it.id == id }; sp(c).edit().putString("theme", id).apply(); val app = c.applicationContext; Thread { com.umutk.pulse.widgets.WidgetData.refreshNow(app) }.start() }
     fun setMode(c: Context, v: String) { Look.mode = v; sp(c).edit().putString("mode", v).apply() }
     fun setEffect(c: Context, v: String) { Look.effect = v; sp(c).edit().putString("effect", v).apply() }
+    fun setWinIconLine(c: Context, v: Boolean) { Look.winIconLine = v; sp(c).edit().putBoolean("winIconLine", v).apply() }
     fun setBlur(c: Context) { sp(c).edit().putFloat("blurDp2", Look.blurDp).putFloat("blurTint2", Look.blurTint).apply() }
     fun setWindowTheme(c: Context, v: String) { Look.windowTheme = v; sp(c).edit().putString("windowTheme", v).apply() }
     fun setAccent(c: Context, i: Int) { Look.accentIdx = i; sp(c).edit().putInt("accent2", i).apply(); com.umutk.pulse.widgets.WidgetData.refreshNow(c) }
@@ -81,9 +85,10 @@ object Cfg {
 open class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Cfg.load(this); Opt.load(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); com.umutk.pulse.features.GlassPrefs.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
+        Cfg.load(this); Opt.load(this); ToolPlace.attach(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); com.umutk.pulse.features.GlassPrefs.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
         // installer copies from an earlier run are dead weight: a fresh start clears them (a restored instance keeps its window)
         if (savedInstanceState == null) File(cacheDir, "installer").deleteRecursively()
+        disableExtraAppsOnFreshInstall(this)
         Watchdog.sync(this)
         // coming back to a process Android restarted: the saved page and scroll are restored, so the opening screen is not played again
         // a fresh start plays the opening screen again, even when the process was still alive (back out, then open)
@@ -205,6 +210,9 @@ fun effective(t: PTheme): PTheme {
     }
 }
 
+/** Windows 11 with a material: the window itself is see-through, so the wallpaper behind it shows through the glass panels. */
+private fun glassWindow(th: PTheme) = th.id == "win11" && Look.effect != "none"
+
 /** The opening screen plays once per start of the app: not on a look change, not when the app comes back from the background. */
 object SplashGate { var splashed by mutableStateOf(false) }
 
@@ -226,23 +234,15 @@ val Pages = listOf(
     Pg("health", "Health", "heart"),
     Pg("terminal", "Terminal", "run"),
 )
-private val visible get() = Pages.filter { it.id !in Opt.hidden && (it.id != "recycle" || Opt.recycle) }
+// the built-in pages (Settings > Pages) plus the optional tools placed on the side (Settings > Tool places)
+private val visible get() = Pages.filter { it.id !in Opt.hidden && (it.id != "recycle" || Opt.recycle) } + ToolPlace.sidePages()
 private val SettingsPg = Pg("settings", "Settings", "settings")
 
 @Composable
 private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
-    // Windows 11 with a picture chosen: the app background is see-through and the picture shows behind everything
-    // Windows 11 with the whole-app scope: the picture is the app background, blurred and tinted blue; the panels sit on top
-    val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
+    // Windows 11 with a material: the window is see-through, the wallpaper (GlassRoot in LookHost) is behind and each panel is glass
     // landscape notch / cutout: the shells pad the top and bottom bars only, so the sides are kept clear here
-    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
-        if (pic != null) {
-            // drawn with the crop from the background editor (position and zoom)
-            // the blurred copy is rendered once (off the main thread) when the choice changes; here it is only drawn
-            val shown = com.umutk.pulse.features.Backdrop.blurred ?: pic
-            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { with(com.umutk.pulse.features.Backdrop) { drawBackdrop(shown) } }
-            Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
-        }
+    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (glassWindow(th) || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
         val wctx = androidx.compose.ui.platform.LocalContext.current
         var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("welcomed", false)) }
         // the open page lives here, not in App: App is remounted when the theme changes dark/light, and that must not close the page
@@ -251,7 +251,8 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         // every page / tool change (store included) re-reads Pulse's own look: an extra app's apply() may have replaced the process-wide Look while Pulse was open
         val restoreLook = { Cfg.load(wctx); Opt.load(wctx) }
         // the look's sign-in screen only when the setting is on, otherwise the Pulse splash
-        if (!SplashGate.splashed && wctx !is FilesActivity) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
+        // the opening animation can be switched off in Settings: Pulse then opens straight to its first page
+        if (!SplashGate.splashed && wctx !is FilesActivity && Opt.splash) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
         else if (!welcomed) Welcome { welcomed = true }
         else key(th.dark) { App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it }) }
         if (SplashGate.splashed && welcomed && wctx !is FilesActivity) UpdatePrompt()
@@ -271,14 +272,8 @@ private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
     var sub by rememberSaveable { mutableStateOf("") }
     val back: () -> Unit = { InnerBack.steps.lastOrNull()?.invoke() ?: if (sub.isNotEmpty()) sub = "" else ctx.finish() }
     androidx.activity.compose.BackHandler { back() }
-    // Windows 11: the picture chosen in Pulse's own backdrop setting is drawn behind the Files window (same as the Pulse app)
-    val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
-    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
-        if (pic != null) {
-            val shown = com.umutk.pulse.features.Backdrop.blurred ?: pic
-            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { with(com.umutk.pulse.features.Backdrop) { drawBackdrop(shown) } }
-            Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
-        }
+    // Windows 11 with a material: the wallpaper shows behind the Files glass panels, as in the Pulse app
+    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (glassWindow(th) || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
         androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
             // below the status bar and the clock, so the back arrow and title stay reachable
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -302,7 +297,8 @@ fun LookHost(transparent: Boolean = false, lookId: String? = null, content: @Com
     val files = androidx.compose.ui.platform.LocalContext.current is FilesActivity
     val fid = if (files) com.umutk.pulse.features.FilesLook.theme.let { if (it == "amoled") "material" else it } else lookId.orEmpty()
     val base = Themes.firstOrNull { it.id == fid } ?: Look.theme
-    val th = effective(base)
+    // Files' AMOLED has no entry in Themes: it is built here, so the page, its icons and its pop-ups all come from the same look
+    val th = if (files && com.umutk.pulse.features.FilesLook.theme == "amoled") amoledWindow() else effective(base)
     // the rest of the UI reads Look.theme through T, so the resolved look is swapped in while composing
     Look.resolved = if (th !== Look.theme) th else null
     // pop-up windows take their own look: the app look, Material, or AMOLED black
@@ -320,9 +316,12 @@ fun LookHost(transparent: Boolean = false, lookId: String? = null, content: @Com
             // the installer window (transparent): nothing is drawn behind it, the app behind shows through
             if (transparent) Box(Modifier.fillMaxSize()) { content(th) }
             else Box(Modifier.fillMaxSize()) {
-                GlassRoot(wallpaperKey = th.id to Backdrop.image, wallpaper = {
+                // Windows 11: the chosen picture, or the stock wallpaper when none is chosen; the other looks keep their own
+                val stock = if (th.id == "win11") Backdrop.stock else null
+                GlassRoot(wallpaperKey = Triple(th.id, Backdrop.image, stock), wallpaper = {
                     val img = Backdrop.image
                     if (img != null) with(com.umutk.pulse.features.Backdrop) { drawBackdrop(img) }
+                    else if (stock != null) with(com.umutk.pulse.features.Backdrop) { drawBackdrop(stock, .5f, .5f, 1f) }
                     else drawRect(th.wall ?: SolidColor(th.bg))
                 }) { content(th) }
                 // the optional old-monitor filter, drawn over everything; it takes no touches
@@ -361,7 +360,12 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
     var subBack by rememberSaveable { mutableStateOf("") }
     val openSub: (String) -> Unit = { id -> subBack = if (sub == "extrastore" && id.isNotEmpty() && id != "extrastore") "extrastore" else ""; onSub(id) }
     val closeSub: () -> Unit = { val to = subBack; subBack = ""; onSub(to) }
-    val go: (String) -> Unit = { p -> subBack = ""; onSub(""); if (p != page) trail = (trail + page).takeLast(20); onPage(p) }
+    val go: (String) -> Unit = { p ->
+        // a tool placed on the left menu: a tool screen opens on top of the page, a page-based one opens its page
+        val tool = if (p.startsWith("tool:")) ToolPlace.byId(p.removePrefix("tool:")) else null
+        if (tool != null) { subBack = ""; if (tool.isTool) onSub(tool.target) else onPage(tool.target) }
+        else { subBack = ""; onSub(""); if (p != page) trail = (trail + page).takeLast(20); onPage(p) }
+    }
     val back: () -> Unit = {
         val inner = InnerBack.steps.lastOrNull()
         if (inner != null) inner()
@@ -547,10 +551,11 @@ private fun ClassicShell(page: String, go: (String) -> Unit, menus: MenuHost, bo
                 drawRect(Brush.linearGradient(0f to Color.Transparent, .38f to Color.Transparent, .44f to Color.White.copy(alpha = .22f), .5f to Color.Transparent,
                     .56f to Color.White.copy(alpha = .12f), .6f to Color.Transparent, start = Offset.Zero, end = Offset(size.width, size.width * .8f)))
             }
-            .border(1.dp, Color(0xB0000000), top6).padding(1.dp).border(1.dp, Color.White.copy(alpha = .6f), RoundedCornerShape(topStart = 5.dp, topEnd = 5.dp)).padding(1.dp)
+            .border(1.dp, Color(0xB0000000), top6).padding(2.dp).border(2.dp, Color.White.copy(alpha = .6f), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)).padding(2.dp)
         // authentic: inset so Bliss shows round the window, Luna frame darker at the edges
         axp -> Modifier.padding(horizontal = 6.dp, vertical = 10.dp).background(Brush.horizontalGradient(listOf(Color(0xFF0831D9), Color(0xFF0054E3), Color(0xFF0054E3), Color(0xFF0831D9))), top8)
-        xp -> Modifier.background(Brush.verticalGradient(listOf(Color(0xFF0054E3), Color(0xFF0831D9))), top8)
+        // the Luna frame: a thick blue border round the body (the background is drawn under the padding)
+        xp -> Modifier.background(Brush.verticalGradient(listOf(Color(0xFF0054E3), Color(0xFF0831D9))), top8).padding(horizontal = 5.dp, vertical = 0.dp)
         w95 -> Modifier.background(Color(0xFFC0C0C0)).bevel(true).padding(3.dp)
         else -> Modifier.background(t.bg)
     }
