@@ -177,11 +177,18 @@ object WeatherFmt {
         "%dh %02dm".format(m / 60, m % 60)
     }.getOrDefault("")
 
-    /** Moon phase name from the synodic month, counted from a known new moon (6 Jan 2000, 18:14 UTC). */
-    fun moon(nowMs: Long = System.currentTimeMillis()): String {
+    const val SYNODIC = 29.530588853
+
+    /** Days into the synodic month, counted from a known new moon (6 Jan 2000, 18:14 UTC). */
+    fun moonAge(nowMs: Long = System.currentTimeMillis()): Double {
         val days = (nowMs - 947182440000L) / 86_400_000.0
-        val age = ((days % 29.530588853) + 29.530588853) % 29.530588853
-        return when (((age / 29.530588853) * 8 + 0.5).toInt() % 8) {
+        return ((days % SYNODIC) + SYNODIC) % SYNODIC
+    }
+
+    /** Moon phase name for [nowMs]. */
+    fun moon(nowMs: Long = System.currentTimeMillis()): String {
+        val age = moonAge(nowMs)
+        return when (((age / SYNODIC) * 8 + 0.5).toInt() % 8) {
             0 -> tr("New moon", "Yeni ay")
             1 -> tr("Waxing crescent", "Büyüyen hilal")
             2 -> tr("First quarter", "İlk dördün")

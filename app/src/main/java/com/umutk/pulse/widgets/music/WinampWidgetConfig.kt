@@ -21,6 +21,7 @@ import androidx.compose.ui.graphics.Color
 import com.umutk.pulse.extras.ui.ThemeGrid
 import com.umutk.pulse.extras.ui.ThemeItem
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -63,7 +64,7 @@ class WinampWidgetConfig : ComponentActivity() {
             finish()
         }
         setContent {
-            MaterialTheme { Surface(Modifier.fillMaxSize()) {
+            MaterialTheme(colorScheme = darkColorScheme()) { Surface(Modifier.fillMaxSize(), color = Color.Black) {
                 var skins by remember { mutableStateOf(emptyList<InstalledSkin>()) }
                 var q by remember { mutableStateOf("") }
                 LaunchedEffect(Unit) { skins = withContext(Dispatchers.IO) { installedSkins(this@WinampWidgetConfig) } }
@@ -82,7 +83,7 @@ class WinampWidgetConfig : ComponentActivity() {
     private fun Preview(skin: InstalledSkin?, strip: Boolean) {
         val img by produceState<ImageBitmap?>(null, skin, strip) {
             value = withContext(Dispatchers.IO) {
-                val sk = skin?.let { loadWinampSkin(it.file) }
+                val sk = skin?.let { runCatching { loadWinampSkin(it.file) }.getOrNull() }
                 runCatching { WinampWidget.render(sk, "Pulse", 0.4f, true, 83, boxH = 2 * (if (strip) WinampWidget.STRIP_H else WINAMP_H), strip = strip).asImageBitmap() }.getOrNull()
             }
         }

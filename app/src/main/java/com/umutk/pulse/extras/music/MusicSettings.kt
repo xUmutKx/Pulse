@@ -12,6 +12,10 @@ import java.nio.ByteOrder
 object MusicSettings {
     private fun sp(c: Context) = c.getSharedPreferences("music_settings", Context.MODE_PRIVATE)
 
+    /** Look up album art on the internet for tracks that have none (on by default). */
+    fun onlineCovers(c: Context) = sp(c).getBoolean("online_covers", true)
+    fun setOnlineCovers(c: Context, on: Boolean) = sp(c).edit().putBoolean("online_covers", on).apply()
+
     /** Fade length at each track change in seconds, 0 = off. */
     fun crossfade(c: Context) = sp(c).getInt("xfade", 0)
     fun setCrossfade(c: Context, s: Int) = sp(c).edit().putInt("xfade", s.coerceIn(0, 12)).apply()

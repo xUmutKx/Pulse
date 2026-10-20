@@ -22,6 +22,7 @@
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.PACKAGE_USAGE_STATS" />
     <!-- storage tools (folder tree, cache cleaner, cleaner) read the whole shared storage on Android 11+; granted from the Tools page -->
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
@@ -208,6 +209,13 @@
                 <action android:name="android.intent.action.EDIT" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="vnd.android.cursor.item/contact" />
+            </intent-filter>
+            <!-- the contact "Info" button (Samsung Phone and the Contacts provider): content://com.android.contacts/... with the contact or raw contact type -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:host="com.android.contacts" android:mimeType="vnd.android.cursor.item/contact" />
+                <data android:scheme="content" android:host="com.android.contacts" android:mimeType="vnd.android.cursor.item/raw_contact" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.PICK" />
@@ -560,6 +568,8 @@
         </receiver>
         <service android:name="com.umutk.pulse.features.DownloadService" android:exported="false" android:foregroundServiceType="dataSync">
         </service>
+        <!-- compress in the background (features/ExplorerZip.kt) -->
+        <service android:name="com.umutk.pulse.features.ZipService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.InstallService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="installs that carry on in the background" />
         </service>
@@ -1263,12 +1273,6 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".HomeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/mat_apps" android:roundIcon="@drawable/mat_apps" android:label="Launcher">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity-alias>
         <activity-alias android:name=".ScreenRecLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/mat_record" android:roundIcon="@drawable/mat_record" android:label="Screen recorder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -1338,15 +1342,12 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
         <!-- Pulse Launcher: HOME app (own process, own look store) -->
+        <!-- Pulse launcher: HOME filter only, so it is in the default home app choice but not in the app drawer -->
         <activity android:name=".extras.launcher.LauncherActivity" android:process=":launcher" android:exported="true" android:label="Launcher" android:icon="@mipmap/ic_ti_default" android:roundIcon="@mipmap/ic_ti_default" android:theme="@style/Theme.Pulse" android:launchMode="singleTop" android:configChanges="orientation|screenSize|keyboardHidden|uiMode|screenLayout|smallestScreenSize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.HOME" />
                 <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <!-- Launcher settings opened from the launcher's own home screen (same process, the launcher's look) -->

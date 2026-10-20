@@ -90,7 +90,6 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             MenuEntry("System font", icon = Icons.Outlined.FormatSize, key = "details") { openTool("fonts") },
         )),
         MenuTop("Tools", listOf(
-            MenuEntry("Toolkit", icon = Icons.Outlined.Build, key = "settings") { openTool("toolkit") },
             // the optional tools, each placed in the menu, the Extra apps card or only Settings (Settings > Tool places)
             *ToolPlace.menuEntries(ctx, { go(it) }, { openTool(it) }).toTypedArray(),
             // the store is the last entry of the main menu; the music player, video, white noise and the standalone apps are listed inside it
@@ -114,14 +113,15 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
 object ToolPlace {
     class Tool(val id: String, val en: String, val trName: String, val target: String, val isTool: Boolean, val key: String, val icon: ImageVector, val default: String)
     val all = listOf(
+        Tool("toolkit", "Toolkit", "Araç kutusu", "toolkit", true, "settings", Icons.Outlined.Build, "menu"),
         Tool("office", "Office", "Office", "office", false, "document", Icons.Outlined.Description, "extra"),
         Tool("download", "Download manager", "İndirme yöneticisi", "downloads", false, "download", Icons.Outlined.Download, "extra"),
-        Tool("applock", "App lock", "Uygulama kilidi", "applock", false, "applock", Icons.Outlined.Lock, "menu"),
-        Tool("health", "Health", "Sağlık", "health", false, "heart", Icons.Outlined.Favorite, "menu"),
-        Tool("installer", "APK installer", "APK yükleyici", "installer", true, "download", Icons.Outlined.SystemUpdate, "menu"),
+        Tool("applock", "App lock", "Uygulama kilidi", "applock", false, "applock", Icons.Outlined.Lock, "extra"),
+        Tool("health", "Health", "Sağlık", "health", false, "heart", Icons.Outlined.Favorite, "extra"),
+        Tool("installer", "APK installer", "APK yükleyici", "installer", true, "download", Icons.Outlined.SystemUpdate, "extra"),
         Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
-        Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "menu"),
-        Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "menu"),
+        Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "extra"),
+        Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "extra"),
         Tool("cover", "Screen cover", "Ekran kapağı", "cover", true, "lock", Icons.Outlined.Lock, "extra"),
     )
     private val placed = mutableStateMapOf<String, String>()

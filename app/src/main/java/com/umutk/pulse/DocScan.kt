@@ -101,11 +101,8 @@ fun DocScanPage(onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
 
-    val shoot = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
-        val f = shotFile
-        shotFile = null
-        if (f == null) return@rememberLauncherForActivityResult
-        if (!ok) { f.delete(); status = tr("Cancelled", "İptal edildi"); return@rememberLauncherForActivityResult }
+    // a camera photo or a picture from the gallery: both become a page the same way
+    fun addPage(f: File) {
         busy = true
         scope.launch {
             val page = withContext(Dispatchers.IO) { runCatching { docScanEnhance(docScanDecode(f)) }.getOrNull() }
@@ -113,6 +110,29 @@ fun DocScanPage(onBack: () -> Unit) {
             busy = false
             if (page == null) status = tr("Could not read the photo", "Fotoğraf okunamadı")
             else { pages.add(page); status = tr("Page ${pages.size} added", "${pages.size}. sayfa eklendi") }
+        }
+    }
+
+    val shoot = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { ok ->
+        val f = shotFile
+        shotFile = null
+        if (f == null) return@rememberLauncherForActivityResult
+        if (!ok) { f.delete(); status = tr("Cancelled", "İptal edildi"); return@rememberLauncherForActivityResult }
+        addPage(f)
+    }
+
+    // the system picker (no storage permission needed): the picked picture is copied to the cache, then handled like a photo
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri == null || busy) return@rememberLauncherForActivityResult
+        scope.launch {
+            val f = withContext(Dispatchers.IO) {
+                runCatching {
+                    File(ctx.cacheDir, "scan-pick-${System.currentTimeMillis()}.img").also { out ->
+                        ctx.contentResolver.openInputStream(uri)?.use { i -> out.outputStream().use { i.copyTo(it) } } ?: error("cannot open")
+                    }
+                }.getOrNull()
+            }
+            if (f == null) status = tr("Could not read the picture", "Görsel okunamadı") else addPage(f)
         }
     }
 
@@ -167,6 +187,7 @@ fun DocScanPage(onBack: () -> Unit) {
             if (pages.isNotEmpty()) Text(tr("Add another page or finish?", "Başka sayfa eklensin mi, bitirilsin mi?"), color = T.sub, fontSize = 13.sp)
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PButton(if (pages.isEmpty()) tr("Scan page", "Sayfa tara") else tr("Add page", "Sayfa ekle"), Modifier.weight(1f)) { startShot() }
+                PButton(tr("From gallery", "Galeriden"), Modifier.weight(1f)) { if (!busy) pick.launch("image/*") }
                 if (pages.isNotEmpty()) PButton(tr("Finish", "Bitir"), Modifier.weight(1f)) { finished = true }
             }
         } else {

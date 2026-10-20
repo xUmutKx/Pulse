@@ -44,6 +44,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Flip
+import androidx.compose.material.icons.outlined.Tv
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -571,7 +574,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 }
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                     SkinBtn(sk, { locked = true; shown = true; poke++ }) { LockGlyph(fg) }
-                    SkinBtn(sk, { dlg = "speed" }) { Tag(speedName(speed), speed != 1f, fg, sk.accent) }
+                    SkinBtn(sk, { dlg = "speed" }) { Row(verticalAlignment = Alignment.CenterVertically) { PIcon("speed", if (speed != 1f) sk.accent else fg, 22.dp); Tag(speedName(speed), speed != 1f, fg, sk.accent) } }
                     SkinBtn(sk, {
                         aspect = (aspect + 1) % 5; prefs.aspect = aspect; zoom = 1f; panX = 0f; panY = 0f; poke++
                         say("scale", aspectNames()[aspect])
@@ -584,7 +587,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                         rep = (rep + 1) % 3; prefs.repeat = rep; poke++
                         player.repeatMode = when (rep) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF }
                         say("rotate", repeatNames()[rep])
-                    }) { Tag(when (rep) { 1 -> "R1"; 2 -> "RA"; else -> "R" }, rep != 0, fg, sk.accent) }
+                    }) { com.umutk.pulse.extras.ui.TIcon("repeat", if (rep != 0) sk.accent else fg, 22.dp, sk.icons) }
                     SkinBtn(sk, {
                         when {
                             abA < 0 -> { abA = player.currentPosition; say("rotate", "A") }
@@ -592,10 +595,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                             else -> { abA = -1L; abB = -1L; say("rotate", tr("Off", "Kapalı")) }
                         }
                         poke++
-                    }) { Tag(if (abB >= 0) "A-B" else if (abA >= 0) "A-" else "A-B", abA >= 0, fg, sk.accent) }
+                    }) { androidx.compose.material3.Icon(Icons.Outlined.Flip, null, Modifier.size(22.dp), tint = if (abA >= 0) sk.accent else fg) }
                     SkinBtn(sk, { dlg = "sleep" }) { PIcon("timer", if (sleepAt > 0 || sleepEnd) sk.accent else fg, 24.dp) }
-                    SkinBtn(sk, { dlg = "eq" }) { Tag("EQ", prefs.eqOn, fg, sk.accent) }
-                    SkinBtn(sk, { runCatching { act?.enterPictureInPictureMode(pipParams()) } }) { Tag("PiP", false, fg) }
+                    SkinBtn(sk, { runCatching { act?.enterPictureInPictureMode(pipParams()) } }) { androidx.compose.material3.Icon(Icons.Outlined.Tv, null, Modifier.size(22.dp), tint = fg) }
                 }
             }
         }

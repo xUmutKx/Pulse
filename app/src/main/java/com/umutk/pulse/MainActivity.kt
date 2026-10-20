@@ -59,8 +59,7 @@ object Cfg {
         Look.theme = Themes.firstOrNull { it.id == p.getString("theme", "win11") } ?: Themes[0]
         Look.accentIdx = p.getInt("accent2", -1)
         Look.mode = p.getString("mode", "system") ?: "system"
-        // "blur" was removed from the choices; a saved one falls back to Mica
-        Look.effect = p.getString("effect", "mica")?.takeIf { it != "blur" } ?: "mica"
+        Look.effect = p.getString("effect", "mica") ?: "mica"
         Look.winIconLine = p.getBoolean("winIconLine", false)
         Look.windowTheme = p.getString("windowTheme", "win") ?: "win"
         Look.blurDp = p.getFloat("blurDp2", 8f); Look.blurTint = p.getFloat("blurTint2", .2f)
@@ -210,9 +209,6 @@ fun effective(t: PTheme): PTheme {
     }
 }
 
-/** Windows 11 with a material: the window itself is see-through, so the wallpaper behind it shows through the glass panels. */
-private fun glassWindow(th: PTheme) = th.id == "win11" && Look.effect != "none"
-
 /** The opening screen plays once per start of the app: not on a look change, not when the app comes back from the background. */
 object SplashGate { var splashed by mutableStateOf(false) }
 
@@ -240,9 +236,18 @@ private val SettingsPg = Pg("settings", "Settings", "settings")
 
 @Composable
 private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
-    // Windows 11 with a material: the window is see-through, the wallpaper (GlassRoot in LookHost) is behind and each panel is glass
+    // Windows 11 with a picture chosen: the app background is see-through and the picture shows behind everything
+    // Windows 11 with the whole-app scope: the picture is the app background, blurred and tinted blue; the panels sit on top
+    val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
     // landscape notch / cutout: the shells pad the top and bottom bars only, so the sides are kept clear here
-    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (glassWindow(th) || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+        if (pic != null) {
+            // drawn with the crop from the background editor (position and zoom)
+            // the blurred copy is rendered once (off the main thread) when the choice changes; here it is only drawn
+            val shown = com.umutk.pulse.features.Backdrop.blurred ?: pic
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { with(com.umutk.pulse.features.Backdrop) { drawBackdrop(shown) } }
+            Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
+        }
         val wctx = androidx.compose.ui.platform.LocalContext.current
         var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("welcomed", false)) }
         // the open page lives here, not in App: App is remounted when the theme changes dark/light, and that must not close the page
@@ -272,8 +277,14 @@ private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
     var sub by rememberSaveable { mutableStateOf("") }
     val back: () -> Unit = { InnerBack.steps.lastOrNull()?.invoke() ?: if (sub.isNotEmpty()) sub = "" else ctx.finish() }
     androidx.activity.compose.BackHandler { back() }
-    // Windows 11 with a material: the wallpaper shows behind the Files glass panels, as in the Pulse app
-    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (glassWindow(th) || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+    // Windows 11: the picture chosen in Pulse's own backdrop setting is drawn behind the Files window (same as the Pulse app)
+    val pic = if (th.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off") com.umutk.pulse.features.Backdrop.image else null
+    Surface(Modifier.fillMaxSize().displayCutoutPadding(), color = if (pic != null || FilesGlass.on) androidx.compose.ui.graphics.Color.Transparent else th.bg) {
+        if (pic != null) {
+            val shown = com.umutk.pulse.features.Backdrop.blurred ?: pic
+            androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) { with(com.umutk.pulse.features.Backdrop) { drawBackdrop(shown) } }
+            Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
+        }
         androidx.compose.runtime.CompositionLocalProvider(LocalOpenTool provides { sub = it }) {
             // below the status bar and the clock, so the back arrow and title stay reachable
             Column(Modifier.fillMaxSize().statusBarsPadding()) {
@@ -316,12 +327,9 @@ fun LookHost(transparent: Boolean = false, lookId: String? = null, content: @Com
             // the installer window (transparent): nothing is drawn behind it, the app behind shows through
             if (transparent) Box(Modifier.fillMaxSize()) { content(th) }
             else Box(Modifier.fillMaxSize()) {
-                // Windows 11: the chosen picture, or the stock wallpaper when none is chosen; the other looks keep their own
-                val stock = if (th.id == "win11") Backdrop.stock else null
-                GlassRoot(wallpaperKey = Triple(th.id, Backdrop.image, stock), wallpaper = {
+                GlassRoot(wallpaperKey = th.id to Backdrop.image, wallpaper = {
                     val img = Backdrop.image
                     if (img != null) with(com.umutk.pulse.features.Backdrop) { drawBackdrop(img) }
-                    else if (stock != null) with(com.umutk.pulse.features.Backdrop) { drawBackdrop(stock, .5f, .5f, 1f) }
                     else drawRect(th.wall ?: SolidColor(th.bg))
                 }) { content(th) }
                 // the optional old-monitor filter, drawn over everything; it takes no touches
@@ -773,4 +781,6 @@ internal fun android.app.Activity.paintWindow(dark: Boolean, amoled: Boolean, th
         else -> 0xFFFEF7FF.toInt()
     }
     window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(c))
+    // AMOLED: the status bar strip is black too, not the see-through system default
+    if (amoled && dark) window.statusBarColor = 0xFF000000.toInt()
 }

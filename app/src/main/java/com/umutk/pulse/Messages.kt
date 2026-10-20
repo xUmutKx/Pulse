@@ -76,6 +76,8 @@ object MsgPrefs {
     fun blocked(c: Context): Set<String> = p(c).getStringSet("blocked", null).orEmpty().toSet()
     fun setPinned(c: Context, s: Set<String>) { p(c).edit().putStringSet("pinned", s.toSet()).apply() }
     fun setBlocked(c: Context, s: Set<String>) { p(c).edit().putStringSet("blocked", s.toSet()).apply() }
+    fun archived(c: Context): Set<String> = p(c).getStringSet("archived", null).orEmpty().toSet()
+    fun setArchived(c: Context, s: Set<String>) { p(c).edit().putStringSet("archived", s.toSet()).apply() }
     fun names(c: Context) = p(c).getBoolean("names", true)
     fun setNames(c: Context, v: Boolean) { p(c).edit().putBoolean("names", v).apply() }
     fun unreadFirst(c: Context) = p(c).getBoolean("unreadFirst", false)
@@ -135,6 +137,20 @@ fun sendSms(c: Context, to: String, body: String): Boolean = runCatching {
     sm.sendMultipartTextMessage(to, null, sm.divideMessage(body), null, null)
 }.isSuccess
 
+/** Sends the file at [uri] (with [text] as its text) as MMS. The library builds the MMS PDU; the system MMS stack sends it.
+ *  shortcut: the whole file is read into memory, and most carriers refuse MMS above about 300 KB. False when refused. */
+fun sendMms(c: Context, to: String, text: String, threadId: Long, uri: Uri): Boolean = runCatching {
+    val bytes = c.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@runCatching false
+    val mime = c.contentResolver.getType(uri) ?: "application/octet-stream"
+    val name = uri.lastPathSegment?.substringAfterLast('/') ?: "attachment"
+    val msg = com.klinker.android.send_message.Message(text, to)
+    msg.addMedia(bytes, mime, name)
+    val settings = com.klinker.android.send_message.Settings().apply { setUseSystemSending(true) }
+    com.klinker.android.send_message.Transaction(c, settings)
+        .sendNewMessage(msg, threadId.takeIf { it >= 0 } ?: com.klinker.android.send_message.Transaction.NO_THREAD_ID)
+    true
+}.getOrDefault(false)
+
 private fun timeOf(ms: Long) = java.text.DateFormat.getTimeInstance(java.text.DateFormat.SHORT).format(java.util.Date(ms))
 private fun dayKey(ms: Long) = java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(ms))
 private fun sameDay(a: Long, b: Long) = dayKey(a) == dayKey(b)
@@ -167,6 +183,7 @@ fun MessagesScreen(back: () -> Unit) {
     var unreadFirst by remember { mutableStateOf(MsgPrefs.unreadFirst(ctx)) }
     var pins by remember { mutableStateOf(MsgPrefs.pinned(ctx)) }
     var blocks by remember { mutableStateOf(MsgPrefs.blocked(ctx)) }
+    var archives by remember { mutableStateOf(MsgPrefs.archived(ctx)) }
     var open by remember { mutableStateOf<SmsThread?>(null) }
     var newMode by remember { mutableStateOf(false) }
     var settings by remember { mutableStateOf(false) }
@@ -175,6 +192,12 @@ fun MessagesScreen(back: () -> Unit) {
     var threadQuery by remember { mutableStateOf("") }
     var threadSearch by remember { mutableStateOf(false) }
     val drafts = remember { mutableStateMapOf<String, String>() }
+    // the file picked for one conversation (by address); it goes out as MMS with that conversation's text
+    val attach = remember { mutableStateMapOf<String, Uri>() }
+    var pickFor by remember { mutableStateOf("") }
+    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null && pickFor.isNotEmpty()) attach[pickFor] = uri
+    }
     var reload by remember { mutableIntStateOf(0) }
     val listState = rememberLazyListState()
     fun goBack() { if (settings) settings = false else if (newMode) newMode = false else if (open != null) open = null else back() }
@@ -199,8 +222,8 @@ fun MessagesScreen(back: () -> Unit) {
     }
     LaunchedEffect(t?.address, msgs?.size) { listState.scrollToItem(0) }
 
-    val shown = remember(threads, query, pins, blocks, unreadFirst) {
-        val all = threads.orEmpty().filter { it.address !in blocks }
+    val shown = remember(threads, query, pins, blocks, archives, unreadFirst) {
+        val all = threads.orEmpty().filter { it.address !in blocks && it.address !in archives }
         val hit = if (query.isBlank()) all else all.filter { th ->
             th.name?.contains(query, true) == true || th.address.contains(query) || th.snippet.contains(query, true) }
         hit.sortedWith(compareByDescending<SmsThread> { it.address in pins }.thenByDescending { unreadFirst && it.unread > 0 })
@@ -215,8 +238,11 @@ fun MessagesScreen(back: () -> Unit) {
     Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             MessagesIcon("back") { goBack() }
+            // a long press on the contact or number in a thread copies the number
             Text(title, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).combinedClickable(onClick = {}, onLongClick = {
+                    if (t != null && t.address.isNotEmpty()) copyText(ctx, t.address)
+                }))
             if (t != null && !settings && !newMode) {
                 if (t.address.isNotEmpty()) MessagesIcon("phone") { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(t.address)))) }
                 MessagesIcon("search") { threadSearch = !threadSearch; threadQuery = "" }
@@ -230,10 +256,11 @@ fun MessagesScreen(back: () -> Unit) {
             !granted -> MessagesEmpty(Modifier.weight(1f), tr("SMS access is needed to show your messages", "Mesajları göstermek için SMS erişimi gerekir")) {
                 PButton(tr("Allow SMS", "SMS izni ver"), compact = true) { ask.launch(MESSAGE_PERMS) }
             }
-            settings -> MessagesSettings(nameOn, unreadFirst, blocks,
+            settings -> MessagesSettings(nameOn, unreadFirst, blocks, archives,
                 onNames = { nameOn = it; MsgPrefs.setNames(ctx, it) },
                 onUnread = { unreadFirst = it; MsgPrefs.setUnreadFirst(ctx, it) },
-                onUnblock = { a -> blocks = blocks - a; MsgPrefs.setBlocked(ctx, blocks) })
+                onUnblock = { a -> blocks = blocks - a; MsgPrefs.setBlocked(ctx, blocks) },
+                onUnarchive = { a -> archives = archives - a; MsgPrefs.setArchived(ctx, archives) })
             newMode -> Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                 PField(newTo, { newTo = it }, tr("To", "Kime"), Modifier.weight(1f))
                 Spacer(Modifier.width(8.dp))
@@ -250,7 +277,10 @@ fun MessagesScreen(back: () -> Unit) {
                         PField(query, { query = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                         if (shown.isEmpty()) MessagesEmpty(Modifier.weight(1f), tr("No matches", "Eşleşme yok"))
                         else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                            items(shown, key = { it.id }) { th -> MessagesThreadRow(th, pins) { open = th } }
+                            items(shown, key = { it.id }) { th -> MessagesThreadRow(th, pins, { open = th },
+                                onPin = { pins = if (th.address in pins) pins - th.address else pins + th.address; MsgPrefs.setPinned(ctx, pins) },
+                                onArchive = { archives = archives + th.address; MsgPrefs.setArchived(ctx, archives) },
+                                onBlock = { blocks = blocks + th.address; MsgPrefs.setBlocked(ctx, blocks) }) }
                         }
                     }
                 }
@@ -278,15 +308,31 @@ fun MessagesScreen(back: () -> Unit) {
                 }
                 val draft = drafts[addr].orEmpty()
                 val parts = runCatching { smsManager(ctx).divideMessage(draft).size }.getOrDefault(1)
+                // a picked file goes as MMS with the text; without one it is a plain SMS
+                val file = attach[addr]
                 fun sendNow() {
                     val body = (drafts[addr] ?: "").trim()
-                    if (body.isEmpty() || addr.isEmpty()) return
+                    if (addr.isEmpty()) return
+                    if (file != null) {
+                        if (sendMms(ctx, addr, body, t.id, file)) { attach.remove(addr); drafts.remove(addr); reload++ }
+                        else Toast.makeText(ctx, tr("Not sent", "Gönderilemedi"), Toast.LENGTH_SHORT).show()
+                        return
+                    }
+                    if (body.isEmpty()) return
                     if (sendSms(ctx, addr, body)) { drafts.remove(addr); reload++ }
                     else Toast.makeText(ctx, tr("Not sent", "Gönderilemedi"), Toast.LENGTH_SHORT).show()
                 }
                 if (draft.isNotEmpty()) Text(tr("${draft.length} chars, $parts SMS", "${draft.length} karakter, $parts SMS"),
                     color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp))
+                if (file != null) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("attach", T.sub, 16.dp)
+                    Spacer(Modifier.width(6.dp))
+                    Text(file.lastPathSegment?.substringAfterLast('/') ?: "attachment", color = T.text, fontSize = 13.sp, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    MessagesIcon("close") { attach.remove(addr) }
+                }
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    MessagesIcon("attach") { pickFor = addr; pickFile.launch("*/*") }
                     PField(draft, { drafts[addr] = it }, tr("Message", "Mesaj"), Modifier.weight(1f), onDone = { sendNow() })
                     Spacer(Modifier.width(8.dp))
                     PButton(tr("Send", "Gönder"), compact = true) { sendNow() }
@@ -321,10 +367,14 @@ private fun MessagesAvatar(label: String) {
     }
 }
 
+/** One conversation row. A long press opens its menu: pin, archive, block. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, onOpen: () -> Unit) {
+private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, onOpen: () -> Unit, onPin: () -> Unit, onArchive: () -> Unit, onBlock: () -> Unit) {
     val label = th.name ?: th.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
-    Row(Modifier.fillMaxWidth().clickable(onClick = onOpen).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    var menu by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxWidth()) {
+    Row(Modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = { menu = true }).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         MessagesAvatar(label)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -343,6 +393,12 @@ private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, onOpen: () -> Un
                 Text("${th.unread}", color = onAccent(T.accent), fontSize = 11.sp)
             }
         }
+    }
+    ThemedMenu(menu, { menu = false }) {
+        ThemedMenuItem(if (th.address in pins) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), { menu = false; onPin() })
+        ThemedMenuItem(tr("Archive", "Arşivle"), { menu = false; onArchive() })
+        ThemedMenuItem(tr("Block", "Engelle"), { menu = false; onBlock() })
+    }
     }
 }
 
@@ -370,8 +426,8 @@ private fun MessagesItem(list: List<SmsMsg>, k: Int, ctx: Context) {
 }
 
 @Composable
-private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<String>,
-                             onNames: (Boolean) -> Unit, onUnread: (Boolean) -> Unit, onUnblock: (String) -> Unit) {
+private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<String>, archives: Set<String>,
+                             onNames: (Boolean) -> Unit, onUnread: (Boolean) -> Unit, onUnblock: (String) -> Unit, onUnarchive: (String) -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         MessagesSettingRow("users", tr("Contact names", "Kişi adları"), names, onNames)
         MessagesSettingRow("sort", tr("Unread first", "Okunmamış önce"), unreadFirst, onUnread)
@@ -383,6 +439,16 @@ private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<S
                 Spacer(Modifier.width(12.dp))
                 Text(a, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 PButton(tr("Unblock", "Engeli kaldır"), compact = true) { onUnblock(a) }
+            }
+        }
+        Text(tr("Archived", "Arşivlenen"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
+        if (archives.isEmpty()) Text(tr("None", "Yok"), color = T.sub, fontSize = 14.sp)
+        archives.sorted().forEach { a ->
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("chat", T.sub, 20.dp)
+                Spacer(Modifier.width(12.dp))
+                Text(a, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                PButton(tr("Unarchive", "Arşivden çıkar"), compact = true) { onUnarchive(a) }
             }
         }
     }

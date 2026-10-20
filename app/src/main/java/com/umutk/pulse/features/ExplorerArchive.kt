@@ -277,6 +277,38 @@ internal fun archiveRemove(f: File, paths: Set<String>): String {
     }
 }
 
+/** Puts [files] (archive path to local file, a folder as its own path with a trailing slash in the archive) into a zip-family archive by writing a new copy, as [archiveRemove] does.
+ *  A path already in the archive is replaced, with everything under it. Returns "" on success, else the reason.
+ *  shortcut: zip only; 7z and rar are not written here yet. */
+internal fun archiveAddZip(f: File, files: List<Pair<String, File>>): String {
+    if (f.extension.lowercase() in setOf("apk", "apks", "xapk", "apkm")) return "apk"
+    if (kindOf(f) != "zip") return "unsupported"
+    val names = files.map { it.first.trimEnd('/') }.toSet()
+    val tmp = File(f.parentFile, f.name + ".tmp")
+    return try {
+        ZipFile(f).use { z ->
+            ZipOutputStream(tmp.outputStream().buffered()).use { zo ->
+                z.entries().asSequence().forEach { e ->
+                    val name = e.name.trimEnd('/')
+                    if (names.any { name == it || name.startsWith("$it/") }) return@forEach
+                    zo.putNextEntry(ZipEntry(e.name))
+                    if (!e.isDirectory) z.getInputStream(e).use { it.copyTo(zo) }
+                    zo.closeEntry()
+                }
+                files.forEach { (path, src) ->
+                    if (src.isDirectory) zo.putNextEntry(ZipEntry("${path.trimEnd('/')}/"))
+                    else { zo.putNextEntry(ZipEntry(path)); src.inputStream().use { it.copyTo(zo) } }
+                    zo.closeEntry()
+                }
+            }
+        }
+        if (!f.delete() || !tmp.renameTo(f)) { tmp.delete(); "write" } else ""
+    } catch (e: Exception) {
+        tmp.delete()
+        e.message ?: "write"
+    }
+}
+
 internal fun archiveExtractOne(f: File, path: String, out: File): Boolean {
     var ok = false
     try {
@@ -664,7 +696,7 @@ object FilesPrefs {
     var alt by mutableStateOf(false)         // alternate row colours
     var radius by mutableStateOf(1)          // card corner radius: small / medium / large
     // the Library folders of internal storage (drawer), by relative path; the ones in libHidden are not shown
-    val libFolders = listOf("DCIM", "Download", "Movies", "Music", "Pictures", "Documents", "Pictures/Screenshots")
+    val libFolders = listOf("DCIM", "Download", "Movies", "Music", "Pictures", "Documents", "DCIM/Screenshots")
     var libHidden by mutableStateOf(emptySet<String>())
     private var loaded = false
     private fun sp(c: android.content.Context) = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)

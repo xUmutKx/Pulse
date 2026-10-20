@@ -54,12 +54,6 @@ object Win11Material {
         val mat = material ?: WidgetOver.material(ctx, id)
         val box = RectF(0f, 0f, w, h)
         val alpha = (WidgetOver.opacity(ctx, id).coerceIn(0f, 1f) * 255).toInt()
-        if (mat == "liquid") { // the liquid glass tile (widgets/glass), faded by the widget's opacity like the others
-            val n = c.saveLayerAlpha(box, alpha)
-            com.umutk.pulse.widgets.glass.LiquidGlass.draw(ctx, c, w, h, radius)
-            c.restoreToCount(n)
-            return
-        }
         val clip = Path().apply { addRoundRect(box, radius, radius, Path.Direction.CW) }
         c.save(); c.clipPath(clip)
         c.saveLayerAlpha(box, alpha)

@@ -158,7 +158,7 @@ class WidgetConfigActivity : ComponentActivity() {
                                 PSlider(blur.value, { blur.value = it }, 0f..1f) { apply() }
                                 if (skin != null || chosen.value == WidgetStyle.WIN11) {
                                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                        listOf("acrylic" to "Acrylic", "mica" to "Mica", "blur" to "Blur", "liquid" to "Liquid glass").forEach { (m, n) -> PChip(material.value == m, n) { material.value = m; apply() } }
+                                        listOf("acrylic" to "Acrylic", "mica" to "Mica", "blur" to "Blur").forEach { (m, n) -> PChip(material.value == m, n) { material.value = m; apply() } }
                                     }
                                     if (material.value == "blur") {
                                         Text("Tint", color = wl.text, fontSize = 14.sp)

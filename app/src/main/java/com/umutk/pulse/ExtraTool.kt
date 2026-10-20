@@ -110,7 +110,8 @@ class ExtraToolActivity : ComponentActivity() {
 
     // same process as Pulse: LookHost writes the one global Look.resolved, so this tool keeps its own across pause / resume and Pulse keeps its own (MainActivity)
     private var ownResolved: PTheme? = null
-    override fun onPause() { super.onPause(); ownResolved = Look.resolved }
+    // a tool with its own look gives Pulse's look back on pause, before Pulse resumes (on stop it would be too late and Pulse would show this look)
+    override fun onPause() { super.onPause(); ownResolved = Look.resolved; if (toolLook != null) AppLookGuard.leave(this) }
     override fun onResume() { enter(); super.onResume(); Look.resolved = ownResolved }
     override fun onStop() { super.onStop(); if (toolLook != null) AppLookGuard.leave(this) }
     override fun onDestroy() { super.onDestroy(); if (toolLook != null) AppLookGuard.leave(this) }
@@ -138,18 +139,7 @@ class ExtraToolActivity : ComponentActivity() {
             CompositionLocalProvider(LocalExtraLook provides control) {
                 LookHost(lookId = look) { th ->
                     CompositionLocalProvider(LocalOpenTool provides { id -> if (id.isNotEmpty()) route = id else back() }) {
-                        // Windows 11 with a material: the wallpaper is the background, and the panels are glass over it (like the main window)
-                        if (th.id == "win11" && Look.effect != "none") {
-                            val stock = com.umutk.pulse.features.Backdrop.stock
-                            GlassRoot(wallpaperKey = Triple(th.id, com.umutk.pulse.features.Backdrop.image, stock), wallpaper = {
-                                val img = com.umutk.pulse.features.Backdrop.image
-                                if (img != null) with(com.umutk.pulse.features.Backdrop) { drawBackdrop(img) }
-                                else if (stock != null) with(com.umutk.pulse.features.Backdrop) { drawBackdrop(stock, .5f, .5f, 1f) }
-                                else drawRect(th.bg)
-                            }) {
-                                Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
-                            }
-                        } else Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
+                        Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
                     }
                 }
             }
@@ -166,7 +156,6 @@ class ExtraToolActivity : ComponentActivity() {
             n.endsWith("NotesLauncher") -> "notes"
             n.endsWith("WeatherLauncher") -> "weather"
             n.endsWith("MessagesLauncher") -> "messages"
-            n.endsWith("HomeLauncher") -> "launcher"
             n.endsWith("ScreenRecLauncher") -> "screenrec"
             n.endsWith("NotifHistLauncher") -> "notifhist"
             n.endsWith("ExtraStoreLauncher") -> "extrastore"

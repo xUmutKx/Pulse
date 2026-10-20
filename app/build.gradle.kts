@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = 31
         targetSdk = 34
-        versionCode = 138
-        versionName = "0.10.128"
+        versionCode = 144
+        versionName = "0.10.134"
         ndk { abiFilters += "arm64-v8a" }
     }
     buildTypes {
@@ -57,6 +57,8 @@ dependencies {
     implementation("androidx.media3:media3-session:1.4.1") // MediaSessionService: background playback and media notification
     implementation("androidx.media3:media3-ui:1.4.1") // PlayerView in extras/video
     implementation("androidx.work:work-runtime-ktx:2.9.1") // ServiceWatchdog: periodic CheckWorker (extras/watchdog); 2.10 needs compileSdk 35
+    // Apache-2.0; builds the MMS PDU for attachments in Messages (Messages.kt). okhttp 2.x is left out: the system MMS stack sends it, and okio 3 is already in use
+    implementation("com.klinkerapps:android-smsmms:5.2.6") { exclude(group = "com.squareup.okhttp") }
     testImplementation("junit:junit:4.13.2") // JVM tests for extras/music (M3uParserTest)
 }
 
