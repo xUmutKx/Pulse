@@ -14,8 +14,9 @@ jobs:
           java-version: 17
       - name: Install SDK packages
         run: |
-          yes | sdkmanager --licenses > /dev/null
-          sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0"
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.9
