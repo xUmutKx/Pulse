@@ -186,7 +186,7 @@ fun WeatherHub(onBack: () -> Unit) {
             val today = f.days.firstOrNull()
             val rainSoon = f.hours.take(6).maxOfOrNull { it.rain } ?: 0
             item {
-                Column(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.fillMaxWidth().padding(top = 8.dp).background(T.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 18.dp, horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(f.place, color = sub, fontSize = 14.sp, maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         PIcon(WeatherApi.icon(f.code), fg, 64.dp)
@@ -196,6 +196,14 @@ fun WeatherHub(onBack: () -> Unit) {
                     Text(tr("Feels like %s", "Hissedilen %s").format(t(f.feels)), color = sub, fontSize = 13.sp)
                     if (today != null) {
                         Text(tr("High %s · Low %s", "En yüksek %s · En düşük %s").format(t(today.max), t(today.min)), color = sub, fontSize = 13.sp)
+                    }
+                    // a quick row under the hero: today's rain chance and the high / low, with icons so the card reads at a glance
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        if (today != null) {
+                            Row(verticalAlignment = Alignment.CenterVertically) { PIcon("cloud", sub, 18.dp); Spacer(Modifier.width(6.dp)); Text("${today.rain}%", color = fg, fontSize = 14.sp) }
+                            Row(verticalAlignment = Alignment.CenterVertically) { PIcon("history", sub, 18.dp); Spacer(Modifier.width(6.dp)); Text("${t(today.max)} / ${t(today.min)}", color = fg, fontSize = 14.sp) }
+                        }
                     }
                     Text(clock.format(Date(f.at)), color = sub, fontSize = 11.sp)
                 }
@@ -207,6 +215,15 @@ fun WeatherHub(onBack: () -> Unit) {
                         Spacer(Modifier.width(10.dp))
                         Text(tr("Rain likely in the next 6 hours", "Önümüzdeki 6 saatte yağmur bekleniyor"), color = fg, fontSize = 14.sp)
                     }
+                }
+            }
+            // the sun's path today and the moon now, drawn rather than written
+            item {
+                Column(Modifier.fillMaxWidth().background(T.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(14.dp)) {
+                    val now = System.currentTimeMillis()
+                    if (today != null) SunArc(today.sunrise, today.sunset, now, fg, sub)
+                    Spacer(Modifier.height(12.dp))
+                    MoonPhase(now, fg, sub)
                 }
             }
             item { Text(tr("Next 24 hours", "Sonraki 24 saat"), color = sub, fontSize = 13.sp) }

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Quick Settings icon of the screen cover tile: a curtain rod with two drapes (tiles need a single-colour icon) -->
+<!-- Quick Settings icon of the screen cover tile: a curtain rod with two wavy drapes that fill the icon (tiles need a single-colour icon) -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:pathData="M3,3H21V4.5H3Z" android:fillColor="#FFFFFFFF" />
-    <path android:pathData="M4,5.5H10V18.5Q7,20 4,18.5Z M14,5.5H20V18.5Q17,20 14,18.5Z" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M0.5,1.5H23.5V3.3H0.5Z" android:fillColor="#FFFFFFFF" />
+    <path android:pathData="M1.5,4H10.5V20.5Q9,23 6,20.5Q3,23 1.5,20.5Z M13.5,4H22.5V20.5Q21,23 18,20.5Q15,23 13.5,20.5Z" android:fillColor="#FFFFFFFF" />
 </vector>

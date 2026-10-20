@@ -595,7 +595,6 @@ private fun ExtraAppsCard() {
         Triple("NotesLauncher", R.drawable.mat_notes, tr("Notes", "Notlar")),
         Triple("WeatherLauncher", R.drawable.mat_weather, tr("Weather", "Hava durumu")),
         Triple("MessagesLauncher", R.drawable.mat_messages, tr("Messages", "Mesajlar")),
-        Triple("HomeLauncher", R.drawable.mat_apps, tr("Launcher", "Ana ekran")),
         Triple("ScreenRecLauncher", R.drawable.mat_record, tr("Screen recorder", "Ekran kaydı")),
         Triple("NotifHistLauncher", R.drawable.mat_notifications, tr("Notification history", "Bildirim geçmişi")),
     )
@@ -603,7 +602,7 @@ private fun ExtraAppsCard() {
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
-        "HomeLauncher" to "extraLauncher", "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "ExtraStoreLauncher" to "extraStore")
+        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "ExtraStoreLauncher" to "extraStore")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
     val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }
@@ -616,12 +615,6 @@ private fun ExtraAppsCard() {
     }
     PCard {
         Text(tr("Extra apps", "Ek uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        // only while the Launcher switch below is on: a switched-off launcher leaves no row here
-        if (state["HomeLauncher"] == true) Row(Modifier.fillMaxWidth().clickable { openTool("launcher") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon("apps", T.text, 22.dp)
-            Spacer(Modifier.width(12.dp))
-            Text(tr("Launcher", "Ana ekran"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-        }
         // the tools placed in this card (Settings > Tool places)
         ToolPlace.extraTools(ctx).forEach { t ->
             Row(Modifier.fillMaxWidth().clickable {
@@ -630,7 +623,7 @@ private fun ExtraAppsCard() {
                 else ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("start", t.target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
             }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Office and Download manager get the black launcher tile with a white outline glyph
-                val tile = when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
+                val tile = if (T.id == "win11") 0 else when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
                 // dark theme: black tile with the accent glyph; light theme: white tile with a black glyph
                 if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
                     Image(painterResource(tile), null, Modifier.fillMaxSize().padding(6.dp),

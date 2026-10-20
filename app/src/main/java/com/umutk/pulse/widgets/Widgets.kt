@@ -161,12 +161,20 @@ abstract class PulseWidget : AppWidgetProvider() {
     /** [content] for the placed widget [id], so its size and own look overrides are used. */
     fun contentFor(ctx: Context, id: Int, s: WidgetStyle): RemoteViews { textId = id; try { return content(ctx, s) } finally { textId = 0 } }
 
+    /** [contentFor], or the plain Pulse fallback when building it throws: the launcher then shows that instead of "Can't load widget". */
+    private fun safeContent(ctx: Context, id: Int): RemoteViews = try {
+        contentFor(ctx, id, WidgetStyles.of(ctx, id))
+    } catch (e: Exception) {
+        android.util.Log.e("PulseWidget", "${javaClass.simpleName} ($id) could not be built", e)
+        RemoteViews(ctx.packageName, R.layout.widget_fallback)
+    }
+
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
-        ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
+        ids.forEach { mgr.updateAppWidget(it, safeContent(ctx, it)) }
     }
 
     override fun onAppWidgetOptionsChanged(ctx: Context, mgr: AppWidgetManager, id: Int, o: android.os.Bundle?) {
-        mgr.updateAppWidget(id, contentFor(ctx, id, WidgetStyles.of(ctx, id)))
+        mgr.updateAppWidget(id, safeContent(ctx, id))
     }
 
     override fun onDeleted(ctx: Context, ids: IntArray) = WidgetStyles.remove(ctx, ids)

@@ -74,6 +74,8 @@ open class WinampWidget : AppWidgetProvider() {
         const val A_REP = "com.umutk.pulse.winamp.REP"
         /** Height of the 4x1 strip in window pixels: title and time rows (y 0..40) over the seek bar and buttons (y 72..106). */
         const val STRIP_H = 74
+        /** The original Winamp base skin. Put base-2.91.wsz in assets/skins and list it in index.json: it is then copied to filesDir/skins and used by default. */
+        const val DEFAULT_SKIN = "base-2.91.wsz"
         private val SEG = intArrayOf(R.id.wa_s0, R.id.wa_s1, R.id.wa_s2, R.id.wa_s3, R.id.wa_s4, R.id.wa_s5, R.id.wa_s6, R.id.wa_s7, R.id.wa_s8, R.id.wa_s9, R.id.wa_s10, R.id.wa_s11, R.id.wa_s12, R.id.wa_s13, R.id.wa_s14, R.id.wa_s15)
         /** SharedPreferences "winamp_widget": "skin_<appWidgetId>" = skin file name (bundled filesDir/skins/<id>.wsz or an installed one), absent = drawn default. */
         fun prefs(c: Context) = c.getSharedPreferences("winamp_widget", Context.MODE_PRIVATE)
@@ -98,12 +100,14 @@ open class WinampWidget : AppWidgetProvider() {
         private val skinCache = HashMap<String, Pair<Long, WinampSkin?>>()
 
         private fun skinFor(c: Context, id: Int): WinampSkin? {
-            val name = prefs(c).getString("skin_$id", null) ?: return null
+            // a widget without its own skin shows the original Winamp base skin; without that file the drawn default stays
+            val name = prefs(c).getString("skin_$id", null) ?: DEFAULT_SKIN
             // bundled skins live in filesDir/skins (copied from assets by installedSkins); the list is only walked on a cache miss
             val f = File(c.filesDir, "skins/$name").takeIf { it.isFile } ?: installedSkins(c).firstOrNull { it.file.name == name }?.file ?: return null
             val hit = skinCache[name]
             if (hit != null && hit.first == f.lastModified()) return hit.second
-            val s = loadWinampSkin(f)
+            // a broken skin file must not throw here: the widget would then fail to load and show "Can't load widget"
+            val s = runCatching { loadWinampSkin(f) }.getOrNull()
             skinCache[name] = f.lastModified() to s
             return s
         }
@@ -111,7 +115,16 @@ open class WinampWidget : AppWidgetProvider() {
         private fun pi(c: Context, a: String) =
             PendingIntent.getBroadcast(c, a.hashCode(), Intent(a).setComponent(ComponentName(c, WinampWidget::class.java)), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
-        fun build(c: Context, id: Int): RemoteViews {
+        /** The widget as drawn. When that fails for any reason, the default skin is drawn instead, so the launcher never shows "can't load widget". */
+        fun build(c: Context, id: Int): RemoteViews = runCatching { buildFull(c, id) }.getOrElse { err ->
+            android.util.Log.w("WinampWidget", "drawing the default skin: ${err.message}")
+            val compact = AppWidgetManager.getInstance(c).getAppWidgetInfo(id)?.provider?.className == WinampWidgetCompact::class.java.name
+            RemoteViews(c.packageName, if (compact) R.layout.widget_winamp_compact else R.layout.widget_music_winamp).apply {
+                setImageViewBitmap(R.id.wa_img, render(null, "Pulse", 0f, false, 0L, boxW = WINAMP_W, boxH = if (compact) STRIP_H else WINAMP_H, strip = compact))
+            }
+        }
+
+        private fun buildFull(c: Context, id: Int): RemoteViews {
             val e = MusicPlayerEngine.get(c)
             val st = e.state.value
             val dur = e.player.duration.takeIf { it > 0 } ?: 0L

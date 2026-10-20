@@ -103,7 +103,7 @@ internal fun TrackSheet(
                     Column(Modifier.weight(1f).padding(start = 14.dp)) {
                         Text(track.displayName(), color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         Text(
-                            listOfNotNull(track.artist?.takeIf { it.isNotBlank() }, track.album?.takeIf { it.isNotBlank() }).joinToString(" · ").ifEmpty { track.folderName() },
+                            listOfNotNull(track.artistTag(), track.album?.takeIf { it.isNotBlank() }).joinToString(" · ").ifEmpty { track.folderName() },
                             color = SheetSub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                         )
                         val year = track.year.takeIf { it > 0 }?.toString().orEmpty()
@@ -174,7 +174,7 @@ internal fun TrackSheet(
         }
         "artist", "album", "genre", "folder" -> {
             val group = when (pane) {
-                "artist" -> track.artist?.let { v -> library.filter { it.artist == v } }
+                "artist" -> track.artistTag()?.let { v -> library.filter { it.artistTag() == v } }
                 "album" -> track.album?.let { v -> library.filter { it.album == v } }
                 "genre" -> track.genre?.let { v -> library.filter { it.genre == v } }
                 else -> File(track.path).parent?.let { p -> library.filter { File(it.path).parent == p } }
@@ -182,7 +182,7 @@ internal fun TrackSheet(
             Dialog(onDismissRequest = { pane = null }) {
                 Column(Modifier.fillMaxWidth(.94f).clip(RoundedCornerShape(28.dp)).background(SheetBg).padding(16.dp)) {
                     Text(
-                        when (pane) { "artist" -> track.artist; "album" -> track.album; "genre" -> track.genre; else -> track.folderName() }
+                        when (pane) { "artist" -> track.artistTag(); "album" -> track.album; "genre" -> track.genre; else -> track.folderName() }
                             ?.takeIf { it.isNotBlank() } ?: tr("Nothing to show", "Gösterilecek bir şey yok"),
                         color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     )

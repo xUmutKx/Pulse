@@ -31,33 +31,47 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.tr
 
-// Solid colours only (no Aero gradients or glass): Win7 is opaque here.
-private val W7_WALL = Color(0xFF3F6E9E)
-private val W7_TASKBAR = Color(0xFF2B4A6B)
-private val W7_TASKBAR_HI = Color(0xFF5C7FA3)
+// Aero glass is approximated with fixed vertical gradients: no blur, no transparency over the wallpaper.
+private val W7_WALL = Brush.verticalGradient(listOf(Color(0xFF6E9CCB), Color(0xFF2F5C8C)))
+private val W7_TASKBAR = Brush.verticalGradient(listOf(Color(0xFF6A93C0), Color(0xFF3A6592), Color(0xFF2A4D76)))
+private val W7_TASKBAR_HI = Color(0xFFB9D3EE)
+private val W7_TRAY_LINE = Color(0x663C6A96)
+private val W7_SHOW_STRIP = Color(0x33FFFFFF)
+private val W7_HOT = Color(0x553E6E9E)
+private val W7_HOT_EDGE = Color(0x88A9CBEB)
 private val W7_TILE = Color(0xFF2B4A6B)
-private val W7_ORB_EDGE = Color(0xFF1B3450)
-private val W7_ORB = Color(0xFF3E7CB1)
-private val W7_ORB_HI = Color(0xFF9CC4E8)
-private val W7_MENU = Color(0xFF2B4A6B)
-private val W7_BORDER = Color(0xFF555555)
-private val W7_SEARCH = Color(0xFFF1F5FB)
-private val W7_SHUT = Color(0xFF3F6E9E)
-private val W7_LABEL = TextStyle(color = Color.White, fontSize = 12.sp, shadow = Shadow(Color.Black, Offset(1f, 1f), 1f))
+private val W7_ORB_RIM = Color(0xFF0B2A4F)
+private val W7_ORB_EDGE = Color(0xFF0E3A6E)
+private val W7_ORB = Color(0xFF2A6FB8)
+private val W7_ORB_HI = Color(0xFFA6D4F5)
+private val W7_FRAME = Brush.verticalGradient(listOf(Color(0xFF4A73A0), Color(0xFF243F63)))
+private val W7_FRAME_EDGE = Color(0xFF13263F)
+private val W7_RIGHT = Brush.verticalGradient(listOf(Color(0xFF5E86B2), Color(0xFF2E4F78)))
+private val W7_SEARCH_BG = Color(0xFFD9E4F1)
+private val W7_SEARCH_EDGE = Color(0xFF7A96B0)
+private val W7_SEP = Color(0xFFCBD8E6)
+private val W7_SHUT = Brush.verticalGradient(listOf(Color(0xFFF4F8FC), Color(0xFFD5E2F0), Color(0xFFB4C8E0)))
+private val W7_SHUT_EDGE = Color(0xFF5D7FA8)
+private val W7_FOLDER = Color(0xFFE8B84A)
+private val W7_FOLDER_FRONT = Color(0xFFFBDF7C)
+private val W7_LABEL = TextStyle(color = Color.White, fontSize = 12.sp, textAlign = TextAlign.Center, shadow = Shadow(Color.Black, Offset(1f, 1f), 1f))
 
-/** Windows 7 look: solid taskbar and Start menu, round drawn orb, app icons from LaunchApp.icon. */
+/** Windows 7 look: taskbar with a glossy orb, Start menu with the search at its foot, desktop labels with shadows. App icons come from LaunchApp.icon. */
 class Win7LauncherLook : LauncherLook {
     override val id: String = "win7"
     override val nameEn: String = "Windows 7"
@@ -78,16 +92,23 @@ class Win7LauncherLook : LauncherLook {
             Box(Modifier.fillMaxWidth().height(1.dp).background(W7_TASKBAR_HI))
             // the edge padding keeps the orb and the clock out of the rounded screen corners
             Row(Modifier.weight(1f).fillMaxWidth().padding(horizontal = edge), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.width(54.dp).fillMaxHeight().clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
+                Box(Modifier.width(46.dp).fillMaxHeight().clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
                     StartOrb()
                 }
                 state.dock.forEach { app ->
                     Box(Modifier.width(44.dp).fillMaxHeight().appTap(state, app) { state.open(app) }, contentAlignment = Alignment.Center) {
-                        LaunchAppPicture(app, 24.dp, W7_TILE, Color.White)
+                        val hot = RoundedCornerShape(3.dp)
+                        Box(Modifier.width(38.dp).height(34.dp).clip(hot).background(W7_HOT).border(1.dp, W7_HOT_EDGE, hot), contentAlignment = Alignment.Center) {
+                            LaunchAppPicture(app, 26.dp, W7_TILE, Color.White)
+                        }
                     }
                 }
                 Spacer(Modifier.weight(1f))
-                TaskbarClock(Color.White, Modifier.padding(end = 12.dp))
+                Box(Modifier.width(1.dp).fillMaxHeight(.6f).background(W7_TRAY_LINE))
+                TaskbarClock(Color.White, Modifier.padding(horizontal = 8.dp))
+                // the show-desktop strip at the far right end, as on Windows 7
+                Box(Modifier.width(1.dp).fillMaxHeight().background(W7_TRAY_LINE))
+                Box(Modifier.width(5.dp).fillMaxHeight().background(W7_SHOW_STRIP))
             }
         }
     }
@@ -98,61 +119,54 @@ class Win7LauncherLook : LauncherLook {
         var query by remember { mutableStateOf("") }
         val (pinned, all) = startLists(state, query)
         val noRipple = remember { MutableInteractionSource() }
+        val menuShape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
         // a tap outside the menu closes it; the menu swallows its own taps
         Box(modifier.clickable(interactionSource = noRipple, indication = null, onClick = onClose)) {
             Row(
                 Modifier.align(Alignment.BottomStart).padding(start = edge, bottom = taskbarHeight)
                     .fillMaxWidth(.94f).widthIn(max = 402.dp).fillMaxHeight(.75f)
-                    .background(W7_MENU).border(1.dp, W7_BORDER).padding(6.dp)
+                    .clip(menuShape).background(W7_FRAME).border(1.dp, W7_FRAME_EDGE, menuShape).padding(start = 5.dp, top = 6.dp, end = 5.dp, bottom = 5.dp)
                     .clickable(interactionSource = noRipple, indication = null) {},
             ) {
-                Column(Modifier.weight(1f).fillMaxHeight().background(Color.White).border(1.dp, Color.Black)) {
-                    Box(Modifier.fillMaxWidth().background(W7_SEARCH).padding(8.dp)) {
-                        Box(Modifier.fillMaxWidth().height(24.dp).background(Color.White).padding(horizontal = 6.dp), contentAlignment = Alignment.CenterStart) {
-                            BasicTextField(
-                                value = query, onValueChange = { query = it }, singleLine = true,
-                                textStyle = TextStyle(color = Color.Black, fontSize = 12.sp), cursorBrush = SolidColor(Color.Black),
-                                modifier = Modifier.fillMaxWidth(),
-                                decorationBox = { inner ->
-                                    if (query.isEmpty()) Text(tr("Search programs", "Program ara"), color = Color(0xFF777777), fontSize = 12.sp)
-                                    inner()
-                                },
-                            )
-                        }
-                    }
-                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(4.dp)) {
+                // programs on the left, the search box at its foot, the shut-down pair on the right
+                Column(Modifier.weight(1f).fillMaxHeight().background(Color.White)) {
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(vertical = 4.dp)) {
                         if (pinned.isNotEmpty()) {
-                            item { W7Heading(tr("Pinned", "Sabitlenenler")) }
                             items(pinned) { app -> W7Row(app, state, onClose) }
+                            item { Box(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp).height(1.dp).background(W7_SEP)) }
                         }
-                        item { W7Heading(tr("All programs", "Tüm programlar")) }
-                        items(all) { app -> W7Row(app, state, onClose) }
+                        // searching gives one flat list; otherwise the apps sit under their group folders
+                        if (query.isBlank()) groupedApps(all).forEach { (g, apps) ->
+                            item { W7Folder(tr(g.en, g.tr)) }
+                            items(apps) { app -> W7Row(app, state, onClose) }
+                        } else items(all) { app -> W7Row(app, state, onClose) }
                     }
+                    W7Search(query) { query = it }
                 }
-                Column(Modifier.width(120.dp).fillMaxHeight().padding(start = 8.dp, top = 40.dp, end = 0.dp, bottom = 8.dp)) {
+                Column(Modifier.width(128.dp).fillMaxHeight().background(W7_RIGHT).padding(start = 6.dp, top = 6.dp, end = 6.dp, bottom = 6.dp)) {
                     Spacer(Modifier.weight(1f))
                     // Split button: the caret has no power menu in an app, so both halves close the menu.
-                    Row(Modifier.fillMaxWidth().height(28.dp)) {
+                    Row(Modifier.fillMaxWidth().height(26.dp)) {
                         val left = RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp)
                         val right = RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp)
                         Box(
-                            Modifier.weight(1f).fillMaxHeight().clip(left).background(W7_SHUT).border(1.dp, W7_BORDER, left).clickable(onClick = onClose),
+                            Modifier.weight(1f).fillMaxHeight().clip(left).background(W7_SHUT).border(1.dp, W7_SHUT_EDGE, left).clickable(onClick = onClose),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Text(tr("Shut down", "Kapat"), color = Color.White, fontSize = 12.sp)
+                            Text(tr("Shut down", "Kapat"), color = Color.Black, fontSize = 12.sp)
                         }
                         Box(
-                            Modifier.width(24.dp).fillMaxHeight().clip(right).background(W7_SHUT).border(1.dp, W7_BORDER, right).clickable(onClick = onClose),
+                            Modifier.width(22.dp).fillMaxHeight().clip(right).background(W7_SHUT).border(1.dp, W7_SHUT_EDGE, right).clickable(onClick = onClose),
                             contentAlignment = Alignment.Center,
                         ) {
-                            Canvas(Modifier.size(8.dp)) {
+                            Canvas(Modifier.size(7.dp)) {
                                 val p = Path().apply {
-                                    moveTo(0f, size.height * .3f)
-                                    lineTo(size.width, size.height * .3f)
+                                    moveTo(0f, 0f)
+                                    lineTo(size.width, 0f)
                                     lineTo(size.width / 2f, size.height)
                                     close()
                                 }
-                                drawPath(p, Color.White)
+                                drawPath(p, Color.Black)
                             }
                         }
                     }
@@ -161,15 +175,66 @@ class Win7LauncherLook : LauncherLook {
         }
     }
 
+    /** Program row: 28 dp icon, 12 sp black label, 36 dp tall, as in the Windows 7 programs list. */
     @Composable
     private fun W7Row(app: LaunchApp, state: LauncherState, onClose: () -> Unit) {
         Row(
             Modifier.fillMaxWidth().height(36.dp).appTap(state, app) { state.open(app); onClose() }.padding(horizontal = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            LaunchAppPicture(app, 24.dp, W7_TILE, Color.White)
+            LaunchAppPicture(app, 28.dp, W7_TILE, Color.White)
             Spacer(Modifier.width(8.dp))
             Text(app.label, color = Color.Black, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+
+    /** Group heading as a folder row with a drawn folder, as the Windows 7 All Programs tree shows its folders. */
+    @Composable
+    private fun W7Folder(text: String) {
+        Row(Modifier.fillMaxWidth().height(32.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Canvas(Modifier.size(20.dp)) {
+                val w = size.width
+                val h = size.height
+                val back = Path().apply {
+                    moveTo(0f, h * .18f)
+                    lineTo(w * .38f, h * .18f)
+                    lineTo(w * .47f, h * .3f)
+                    lineTo(w, h * .3f)
+                    lineTo(w, h * .9f)
+                    lineTo(0f, h * .9f)
+                    close()
+                }
+                drawPath(back, W7_FOLDER)
+                drawRect(W7_FOLDER_FRONT, topLeft = Offset(0f, h * .42f), size = Size(w, h * .48f))
+            }
+            Spacer(Modifier.width(8.dp))
+            Text(text, color = Color.Black, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+
+    /** Search box at the foot of the programs pane, with a drawn magnifier. */
+    @Composable
+    private fun W7Search(query: String, onQuery: (String) -> Unit) {
+        Box(Modifier.fillMaxWidth().background(W7_SEARCH_BG).padding(6.dp)) {
+            val shape = RoundedCornerShape(3.dp)
+            Box(Modifier.fillMaxWidth().height(24.dp).clip(shape).background(Color.White).border(1.dp, W7_SEARCH_EDGE, shape)) {
+                Box(Modifier.fillMaxSize().padding(start = 6.dp, end = 22.dp), contentAlignment = Alignment.CenterStart) {
+                    BasicTextField(
+                        value = query, onValueChange = onQuery, singleLine = true,
+                        textStyle = TextStyle(color = Color.Black, fontSize = 12.sp), cursorBrush = SolidColor(Color.Black),
+                        modifier = Modifier.fillMaxWidth(),
+                        decorationBox = { inner ->
+                            if (query.isEmpty()) Text(tr("Search programs", "Program ara"), color = Color(0xFF6D6D6D), fontSize = 12.sp)
+                            inner()
+                        },
+                    )
+                }
+                Canvas(Modifier.align(Alignment.CenterEnd).padding(end = 6.dp).size(12.dp)) {
+                    val w = size.width
+                    drawCircle(Color(0xFF555555), radius = w * .34f, center = Offset(w * .6f, w * .4f), style = Stroke(width = w * .12f))
+                    drawLine(Color(0xFF555555), Offset(w * .38f, w * .62f), Offset(w * .06f, w * .94f), strokeWidth = w * .16f)
+                }
+            }
         }
     }
 
@@ -177,24 +242,25 @@ class Win7LauncherLook : LauncherLook {
     override fun IconCell(app: LaunchApp, iconDp: Int, modifier: Modifier) {
         Column(modifier.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             LaunchAppPicture(app, iconDp.dp, W7_TILE, Color.White)
-            Text(app.label, style = W7_LABEL, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+            Text(app.label, style = W7_LABEL, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
         }
     }
 
-    /** Round orb drawn with solid circles: no Aero sprite, no logo. */
+    /** Glossy round orb: radial body, a rim and a top gloss. No logo is drawn. */
     @Composable
     private fun StartOrb() {
-        Canvas(Modifier.size(34.dp)) {
+        Canvas(Modifier.size(36.dp)) {
             val c = Offset(size.width / 2f, size.height / 2f)
             val r = size.minDimension / 2f
-            drawCircle(W7_ORB_EDGE, r, c)
-            drawCircle(W7_ORB, r * .88f, c)
-            drawCircle(W7_ORB_HI, r * .42f, Offset(c.x, c.y - r * .12f))
+            drawCircle(
+                brush = Brush.radialGradient(listOf(W7_ORB_HI, W7_ORB, W7_ORB_EDGE), center = Offset(c.x - r * .25f, c.y - r * .35f), radius = r * 1.3f),
+                radius = r, center = c,
+            )
+            drawCircle(W7_ORB_RIM, radius = r - .5f, center = c, style = Stroke(width = 1f))
+            drawOval(
+                brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = .55f), Color.White.copy(alpha = 0f)), startY = c.y - r * .85f, endY = c.y),
+                topLeft = Offset(c.x - r * .7f, c.y - r * .85f), size = Size(r * 1.4f, r * .9f),
+            )
         }
-    }
-
-    @Composable
-    private fun W7Heading(text: String) {
-        Text(text, color = Color(0xFF1B3450), fontSize = 12.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 6.dp, vertical = 4.dp))
     }
 }

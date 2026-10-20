@@ -31,6 +31,7 @@ internal object CoverFetch {
     /** Looks up covers for every track that has none, one at a time in the background, and keeps them on disk.
      *  Runs only while the phone has internet; a pass that is already running is not started again. */
     fun backfill(c: Context, tracks: List<Track>) {
+        if (!MusicSettings.onlineCovers(c)) return
         if (!running.compareAndSet(false, true)) return
         scope.launch {
             try {
@@ -59,6 +60,7 @@ internal object CoverFetch {
         // the network is never used on the main thread; the cover is read again on the next pass
         if (Looper.myLooper() == Looper.getMainLooper() || t.path.startsWith("http")) return null
         PowerampCovers.saved(c, t.path)?.let { return it }
+        if (!MusicSettings.onlineCovers(c)) return null
         val miss = PowerampCovers.missTime(c, t.path)
         if (miss > 0L && System.currentTimeMillis() - miss < WEEK_MS) return null
         val term = listOfNotNull(t.artist?.takeIf { it.isNotBlank() }, t.album?.takeIf { it.isNotBlank() } ?: t.displayName())

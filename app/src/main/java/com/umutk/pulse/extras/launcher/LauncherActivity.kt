@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -120,7 +121,8 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
             LaunchApp(ri.loadLabel(pm).toString(), pkg,
                 runCatching { ri.loadIcon(pm).toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull(),
                 installed = runCatching { pm.getPackageInfo(pkg, 0).firstInstallTime }.getOrDefault(0L),
-                system = (ri.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0)
+                system = (ri.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
+                category = ri.activityInfo.applicationInfo.category)
         }
         .sortedBy { it.label.lowercase() }
 }
@@ -164,7 +166,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     }
 
     look.Background(Modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+        Row(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            look.SideDock(state, Modifier.fillMaxHeight())
+        Column(Modifier.weight(1f).fillMaxHeight()) {
             if (LauncherPrefs.clock) ClockHeader(Modifier.fillMaxWidth())
             LauncherWidgetStrip(Modifier.fillMaxWidth())
             if (look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
@@ -194,6 +198,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                 }
             }
             if (!look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
+        }
         }
         // settings and (with the dock hidden) the apps list stay reachable from the home screen
         if (!LauncherSession.startOpen) Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), contentAlignment = Alignment.TopEnd) {

@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -22,7 +23,29 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
-data class LaunchApp(val label: String, val pkg: String, val icon: ImageBitmap?, val installed: Long = 0L, val system: Boolean = false)
+data class LaunchApp(val label: String, val pkg: String, val icon: ImageBitmap?, val installed: Long = 0L, val system: Boolean = false,
+    /** The app's own store category (ApplicationInfo.CATEGORY_*), -1 when it has none. */
+    val category: Int = -1)
+
+/** Start menu groups, in the order they are listed. */
+enum class StartGroup(val en: String, val tr: String) {
+    GAMES("Games", "Oyunlar"), MEDIA("Media", "Medya"), TALK("Communication", "İletişim"), PRODUCTIVITY("Productivity", "Üretkenlik"),
+    MAPS("Maps and travel", "Harita ve seyahat"), SYSTEM("System", "Sistem"), OTHER("Other", "Diğer"),
+}
+
+/** The group of an app by its store category; a system app without one goes to System, anything else to Other. */
+fun startGroup(app: LaunchApp): StartGroup = when (app.category) {
+    ApplicationInfo.CATEGORY_GAME -> StartGroup.GAMES
+    ApplicationInfo.CATEGORY_AUDIO, ApplicationInfo.CATEGORY_VIDEO, ApplicationInfo.CATEGORY_IMAGE -> StartGroup.MEDIA
+    ApplicationInfo.CATEGORY_SOCIAL, ApplicationInfo.CATEGORY_NEWS -> StartGroup.TALK
+    ApplicationInfo.CATEGORY_PRODUCTIVITY -> StartGroup.PRODUCTIVITY
+    ApplicationInfo.CATEGORY_MAPS -> StartGroup.MAPS
+    else -> if (app.system) StartGroup.SYSTEM else StartGroup.OTHER
+}
+
+/** The apps split into their groups, in group order; empty groups are left out. */
+fun groupedApps(all: List<LaunchApp>): List<Pair<StartGroup, List<LaunchApp>>> =
+    StartGroup.values().map { g -> g to all.filter { startGroup(it) == g } }.filter { it.second.isNotEmpty() }
 
 /** [columns] is the drawer's column count; [longPress] opens the app's action sheet. */
 class LauncherState(val apps: List<LaunchApp>, val vertical: Boolean, val columns: Int, val iconDp: Int, val dock: List<LaunchApp>,
@@ -62,6 +85,8 @@ interface LauncherLook {
     @Composable fun Taskbar(state: LauncherState, modifier: Modifier)
     @Composable fun StartMenu(state: LauncherState, onClose: () -> Unit, modifier: Modifier)
     @Composable fun IconCell(app: LaunchApp, iconDp: Int, modifier: Modifier)
+    /** A dock down the side of the screen, for looks that have no taskbar. Looks with a taskbar keep the default, which draws nothing. */
+    @Composable fun SideDock(state: LauncherState, modifier: Modifier) {}
 }
 
 object LauncherLooks {
@@ -70,7 +95,10 @@ object LauncherLooks {
     // the Pulse themes are drawn by the Material look code, which reads its colours from the theme of the same id
     val all: List<LauncherLook> = listOf(
         defaultLook, MaterialLauncherLook("amoled", "AMOLED", "AMOLED", black = true),
-        Win11LauncherLook(), Win10LauncherLook(), Win7LauncherLook(), Win95LauncherLook(), XpLauncherLook(),
+        Win11LauncherLook(), Win10LauncherLook(), Win10LauncherLook("win10black", "Windows 10 Black", "Windows 10 Siyah", black = true),
+        Win7LauncherLook(), Win95LauncherLook(), XpLauncherLook(),
+        WinPhoneLauncherLook("winphone", "Windows Phone", "Windows Phone", black = false),
+        WinPhoneLauncherLook("winphone_amoled", "Windows Phone AMOLED", "Windows Phone AMOLED", black = true),
         MaterialLauncherLook("oneui", "One UI", "One UI", black = false),
         MaterialLauncherLook("coloros", "ColorOS", "ColorOS", black = false),
         MaterialLauncherLook("aurora", "Aurora", "Aurora", black = false),

@@ -61,6 +61,7 @@ private fun material(k: String): ImageVector = when (k) {
     "download" -> Icons.Outlined.Download; "delete", "recycle" -> Icons.Outlined.Delete; "folder" -> Icons.Outlined.Folder
     "filetypes" -> Icons.Outlined.PieChart; "clean" -> Icons.Outlined.CleaningServices; "chevron" -> Icons.Outlined.ExpandMore; "back" -> Icons.AutoMirrored.Outlined.ArrowBack
     "copy" -> Icons.Outlined.ContentCopy; "move" -> Icons.Outlined.DriveFileMove; "rename" -> Icons.Outlined.DriveFileRenameOutline
+    "attach" -> Icons.Outlined.AttachFile
     "newfolder" -> Icons.Outlined.CreateNewFolder; "paste" -> Icons.Outlined.ContentPaste
     "extract" -> Icons.Outlined.Archive; "view" -> Icons.Outlined.Visibility
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Straighten; "flash" -> Icons.Outlined.FlashlightOn
@@ -245,8 +246,6 @@ fun PCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
     val shape = RoundedCornerShape(if (colorOs) 20.dp else if (t.material) t.radius.coerceIn(16.dp, 28.dp) else t.radius) // M3 cards: 16 to 28 dp corners
     val fx = if (t.id == "win11") Look.effect else "none"
     val surface = when {
-        // Windows 11 with a material under the wallpaper: the card is real glass (blurred wallpaper behind it)
-        fx != "none" && inGlassRoot() -> Modifier.glassMaterial(fx, shape)
         // Material first: its glassA is for the window backdrop only; cards stay tonal with a soft elevation
         // One UI: big soft white card, no shadow, no edge; ColorOS: flat card with a hairline edge
         oneUi -> Modifier.background(t.panel, shape)

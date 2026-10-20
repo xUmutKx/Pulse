@@ -79,3 +79,17 @@ fun Track.displayName(): String = title ?: path.substringAfterLast('/').substrin
 
 /** Name of the folder that holds the file, shown as the folder chip. */
 fun Track.folderName(): String = path.substringBeforeLast('/', "").substringAfterLast('/')
+
+/**
+ * The artist: the tag, or, when the tag is blank, the part of the file name before " - " ("Artist - Title.mp3").
+ * A leading number ("01 - Title") is a track number, not an artist.
+ */
+fun Track.artistTag(): String? {
+    artist?.takeIf { it.isNotBlank() }?.let { return it }
+    val name = path.substringAfterLast('/').substringBeforeLast('.')
+    val head = name.substringBefore(" - ", "").trim()
+    return head.takeIf { it.isNotEmpty() && name.contains(" - ") && !head.all { c -> c.isDigit() } }
+}
+
+/** The engine's copy of a track has only title, artist and album; the library copy also has genre, year and composer. */
+fun Track.inLibrary(library: List<Track>): Track = library.firstOrNull { it.path == path } ?: this

@@ -58,6 +58,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -418,11 +419,17 @@ private fun FaceCard(ctx: Context, f: FaceWidget) {
 
 @Composable
 private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style: WidgetStyle) {
+    // the size the widget really has on the home screen: the plain weather one is a square, the wide one a strip, the rest 264x120
+    val real = when (w.provider) {
+        "WeatherWidget" -> DpSize(110.dp, 110.dp)
+        "WeatherWideWidget" -> DpSize(250.dp, 110.dp)
+        else -> DpSize(264.dp, 120.dp)
+    }
     // laid out at a real widget size, then scaled down as a whole so the text keeps its proportions (some blank space is fine)
-    WidgetCard(w.label, { addToHome(ctx, provider.javaClass.name) }, aspect = 2.2f) {
+    WidgetCard(w.label, { addToHome(ctx, provider.javaClass.name) }, aspect = real.width / real.height) {
       androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val k = (maxWidth / 264.dp) * 0.9f
-        Box(Modifier.requiredSize(264.dp, 120.dp).graphicsLayer { scaleX = k; scaleY = k }) {
+        val k = (maxWidth / real.width) * 0.9f
+        Box(Modifier.requiredSize(real.width, real.height).graphicsLayer { scaleX = k; scaleY = k }) {
         AndroidView(
             factory = { c -> FrameLayout(c) },
             update = { frame ->
