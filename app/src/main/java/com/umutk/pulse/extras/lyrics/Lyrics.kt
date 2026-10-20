@@ -21,6 +21,17 @@ data class LyricHit(val title: String, val artist: String, val before: String?, 
 /** Public lyrics API. Order for a track: embedded tag, sidecar .lrc/.txt, saved, disk cache, then online (LRCLIB, lyrics.ovh). */
 object Lyrics {
 
+    /** Lyrics stored with the file: the embedded tag first, then a sidecar .lrc or .txt. Null when the file has neither. */
+    fun localRecord(path: String, title: String, artist: String): LyricsRecord? {
+        val r = readEmbedded(path) ?: readSidecar(path) ?: return null
+        if (r.lines.isEmpty()) return null
+        // synced lines go back to [mm:ss.xx] text so the panel parses them the same way as a downloaded .lrc
+        val text = r.lines.joinToString("\n") { l ->
+            if (r.synced && l.timeMs >= 0) "[%02d:%02d.%02d]%s".format(l.timeMs / 60000, l.timeMs / 1000 % 60, l.timeMs / 10 % 100, l.text) else l.text
+        }
+        return if (r.synced) LyricsRecord(0, title, artist, null, false, null, text) else LyricsRecord(0, title, artist, null, false, text, null)
+    }
+
     suspend fun forTrack(ctx: Context, title: String, artist: String, album: String?, durationMs: Long, localPath: String?): LyricsResult? =
         withContext(Dispatchers.IO) {
             val app = ctx.applicationContext
@@ -55,7 +66,8 @@ object Lyrics {
         val seen = HashSet<String>()
         // device: lyrics files beside the music, then the lyrics saved from Pulse
         MusicLibrary.tracks.value.forEach { t ->
-            val text = sidecarText(t.path)?.let { stripStamps(it) } ?: return@forEach
+            // the lyrics beside the file, else the ones inside its tag (mp3 USLT / SYLT, flac)
+            val text = sidecarText(t.path)?.let { stripStamps(it) } ?: embeddedText(t.path) ?: return@forEach
             val (a, ti) = t.artist.orEmpty() to (t.title ?: t.path.substringAfterLast('/').substringBeforeLast('.'))
             if (test(ti, a, text, "file:${t.path}")) seen += "${a.lowercase()}|${ti.lowercase()}"
         }
@@ -118,6 +130,9 @@ object Lyrics {
         }
         return null
     }
+
+    private fun embeddedText(path: String): String? =
+        readEmbedded(path)?.lines?.joinToString("\n") { it.text }?.takeIf { it.isNotBlank() }
 
     private fun readEmbedded(path: String): LyricsResult? = runCatching {
         val f = File(path).takeIf { it.isFile } ?: return null

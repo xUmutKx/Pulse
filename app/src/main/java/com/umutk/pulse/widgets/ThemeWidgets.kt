@@ -33,6 +33,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 import java.util.TimeZone
+import com.umutk.pulse.widgets.glass.LiquidGlass
 import kotlin.math.cos
 import kotlin.math.min
 import kotlin.math.sin
@@ -290,6 +291,7 @@ object Skins {
         c.scale(k, k)
         val prev = Win11Material.forId.get(); Win11Material.forId.set(id)
         try {
+            liquidTile(ctx, s, id, c)
             when (s.family) {
                 SkinFamily.WIN7 -> win7(ctx, c, s, d, withText)
                 SkinFamily.WIN11 -> win11(ctx, c, s, d, withText)
@@ -300,11 +302,20 @@ object Skins {
                 SkinFamily.GLASS -> glass(c, s, d, withText, accent)
                 SkinFamily.IOS -> ios(c, s, d, withText, accent)
             }
-        } finally { Win11Material.forId.set(prev) }
+        } finally { LiquidGlass.active.set(false); Win11Material.forId.set(prev) }
         // the other families are opaque art: a per-widget opacity fades the whole bitmap (Windows 11 applies it to its tile only)
         val op = opacity(ctx, s, id)
         if (op < 1f) bmp = fade(bmp, op)
         return bmp
+    }
+
+    /** A Glass or iOS widget gets the liquid glass tile under its content unless its own material says otherwise; the skin then leaves its own tile fill out. */
+    private fun liquidTile(ctx: Context, s: Skin, id: Int, c: Canvas) {
+        // liquid is the default for these two families; a material picked for the widget itself still wins
+        val material = if (WidgetOver.materialSet(ctx, id)) WidgetOver.material(ctx, id) else "liquid"
+        val on = (s.family == SkinFamily.GLASS || s.family == SkinFamily.IOS) && material == "liquid"
+        LiquidGlass.active.set(on)
+        if (on) LiquidGlass.draw(ctx, c, s.w.toFloat(), s.h.toFloat(), min(s.w, s.h) * (if (s.family == SkinFamily.IOS) .22f else .14f))
     }
 
     /** The tile opacity of a skin: the widget's own, else its design's default (XP, 95 and AMOLED opaque, Windows 7 .85, Glass .6, iOS .9, Material .95); Windows 11 fades its tile itself. */
@@ -334,13 +345,14 @@ object Skins {
         val prev = Win11Material.forId.get(); Win11Material.forId.set(id); dialOnly.set(true)
         try {
             val d = SkinData.read(ctx)
+            liquidTile(ctx, s, id, c)
             when (s.family) {
                 SkinFamily.XP -> xp(c, s, d)
                 SkinFamily.WIN95 -> win95(c, s, d)
                 SkinFamily.GLASS -> glass(c, s, d, false, accent)
                 else -> {}
             }
-        } finally { dialOnly.set(false); Win11Material.forId.set(prev) }
+        } finally { dialOnly.set(false); LiquidGlass.active.set(false); Win11Material.forId.set(prev) }
         val op = opacity(ctx, s, id)
         return if (op < 1f) fade(b, op) else b
     }
@@ -1007,10 +1019,12 @@ object Skins {
         val a = readable(accent)
         val dim = Color.argb(70, 255, 255, 255); val soft = Color.argb(220, 255, 255, 255); val shade = Color.argb(90, 0, 0, 0)
         val card = RectF(2f, 2f, w - 2f, h - 2f)
-        c.drawRoundRect(card, r, r, paint(Color.WHITE).apply {
-            shader = LinearGradient(0f, 0f, w, h, Color.argb(80, 255, 255, 255), Color.argb(30, 255, 255, 255), Shader.TileMode.CLAMP)
-        })
-        c.drawRoundRect(card, r, r, paint(Color.argb(140, 255, 255, 255)).apply { style = Paint.Style.STROKE; strokeWidth = 3f })
+        if (!LiquidGlass.active.get()) {
+            c.drawRoundRect(card, r, r, paint(Color.WHITE).apply {
+                shader = LinearGradient(0f, 0f, w, h, Color.argb(80, 255, 255, 255), Color.argb(30, 255, 255, 255), Shader.TileMode.CLAMP)
+            })
+            c.drawRoundRect(card, r, r, paint(Color.argb(140, 255, 255, 255)).apply { style = Paint.Style.STROKE; strokeWidth = 3f })
+        }
         when (s) {
             Skin.GL_BATTERY -> {
                 text(c, "${d.bat}%", w / 2f, h * .3f, w * .17f, Color.WHITE, sansBold, shadow = Color.argb(90, 0, 0, 0))
@@ -1074,7 +1088,7 @@ object Skins {
         val a = readable(accent)
         val grey = Color.rgb(142, 142, 147); val track = Color.rgb(58, 58, 62)
         val r = min(w, h) * .22f
-        c.drawRoundRect(RectF(0f, 0f, w, h), r, r, paint(Color.rgb(28, 28, 30)))
+        if (!LiquidGlass.active.get()) c.drawRoundRect(RectF(0f, 0f, w, h), r, r, paint(Color.rgb(28, 28, 30)))
         when (s) {
             Skin.IOS_CLOCK_DATE -> if (withText) {
                 text(c, "${hh(d)}:${mm(d)}", w / 2f, h * .62f, h * .46f, Color.WHITE, medium)

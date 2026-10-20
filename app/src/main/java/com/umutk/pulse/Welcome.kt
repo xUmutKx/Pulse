@@ -14,10 +14,24 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.imageResource
+import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.core.content.ContextCompat
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+
+/**
+ * The launcher icon as a bitmap. It is an adaptive-icon XML, which Compose's painterResource and imageResource
+ * cannot load (that crashed the first start), so it is drawn through the Android Drawable instead.
+ */
+@Composable
+fun rememberLauncherLogo(): ImageBitmap {
+    val ctx = LocalContext.current
+    return remember(ctx) { ContextCompat.getDrawable(ctx, R.mipmap.ic_launcher)!!.toBitmap(288, 288).asImageBitmap() }
+}
 
 /** Shown once, after the splash, on the first start: what Pulse does, what it is built from, and its size. */
 @Composable
@@ -28,7 +42,7 @@ fun Welcome(onDone: () -> Unit) {
         onDone()
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter).padding(top = 40.dp, bottom = 24.dp)) {
-        Image(imageResource(R.mipmap.ic_launcher), null, Modifier.size(72.dp))
+        Image(rememberLauncherLogo(), null, Modifier.size(72.dp))
         Text(tr("Welcome to Pulse", "Pulse'a hoş geldin"), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 12.dp))
         Text(tr("A task manager for Android that looks like the Windows one, with tools for the rest of the phone.",
             "Windows'a benzeyen bir Android görev yöneticisi, telefonun geri kalanı için araçlarla birlikte."),

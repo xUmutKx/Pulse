@@ -354,9 +354,12 @@ fun OfficePage() {
     var browse by remember { mutableStateOf(false) }
     var newKind by remember { mutableStateOf<OfKind?>(null) }
     var nameText by remember { mutableStateOf("") }
+    var scan by remember { mutableStateOf(false) }
     BackHandler(settings) { settings = false }
     BackHandler(browse) { browse = false }
+    BackHandler(scan) { scan = false }
     if (settings) { OfficeSettingsPage { settings = false }; return }
+    if (scan) { DocScanPage { scan = false }; return }
     if (browse) {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.size(40.dp).clickable { browse = false }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
@@ -377,6 +380,7 @@ fun OfficePage() {
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton(tr("Open file", "Dosya aç"), Modifier.weight(1f), icon = Icons.Outlined.FolderOpen) { browse = true }
+            PButton(tr("Scan document", "Belge tara"), Modifier.weight(1f)) { scan = true }
         }
         val recents = OfficePrefs.recent.mapNotNull { e -> e.split('\u0001').takeIf { it.size == 3 } }
         if (recents.isNotEmpty()) PCard {

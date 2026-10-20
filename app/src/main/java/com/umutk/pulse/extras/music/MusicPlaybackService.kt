@@ -15,6 +15,7 @@ import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.umutk.pulse.extras.lyrics.LiveLyricsTicker
 import com.umutk.pulse.extras.music.notif.NotifBtn
 import com.umutk.pulse.extras.music.notif.NotifLayout
 import com.umutk.pulse.extras.music.notif.NotifOutput
@@ -31,6 +32,7 @@ class MusicPlaybackService : MediaSessionService() {
     private var session: MediaSession? = null
     private val engine get() = MusicPlayerEngine.get(this)
     private val devices by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
+    private var lyricsTicker: LiveLyricsTicker? = null
 
     private fun layout(): ImmutableList<androidx.media3.session.CommandButton> =
         NotifLayout.customLayout(this, MusicSettings.notificationButtonIds(this), engine.player)
@@ -75,6 +77,8 @@ class MusicPlaybackService : MediaSessionService() {
             NotifBtn.FAV -> p.currentMediaItem?.mediaId?.let { MusicStats.toggleFavourite(this, it) }
             NotifBtn.CLOSE -> {
                 engine.saveResume()
+                // the user closed it: the watchdog must not bring it back
+                com.umutk.pulse.extras.watchdog.ServiceWatchdog.setWanted(this, com.umutk.pulse.extras.watchdog.MusicPlaybackService::class.java, false)
                 p.stop(); p.clearMediaItems()
                 pauseAllPlayersAndStopSelf()
             }
@@ -91,7 +95,7 @@ class MusicPlaybackService : MediaSessionService() {
     }
 
     /** Opens the Music hub (the launcher alias routes to it); [open] names a sheet for the hub to show. */
-    private fun hubIntent(open: String? = null) = Intent().setClassName(packageName, "$packageName.MusicLauncher").also { i -> open?.let { i.putExtra(EXTRA_OPEN, it) } }
+    private fun hubIntent(open: String? = null) = Intent().setClassName(packageName, "$packageName.ExtraToolActivity").putExtra("route", "music").also { i -> open?.let { i.putExtra(EXTRA_OPEN, it) } }
 
     override fun onCreate() {
         super.onCreate()
@@ -101,6 +105,10 @@ class MusicPlaybackService : MediaSessionService() {
         session = MediaSession.Builder(this, engine.player).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
         engine.player.addListener(listener)
         devices.registerAudioDeviceCallback(devCb, null)
+        lyricsTicker = LiveLyricsTicker(this, engine) {
+            session?.let { onUpdateNotification(it) }
+            com.umutk.pulse.widgets.music.LyricsWidget.refresh(this)
+        }.also { it.start() }
         live = this
     }
 
@@ -109,6 +117,7 @@ class MusicPlaybackService : MediaSessionService() {
     override fun onDestroy() {
         live = null
         devices.unregisterAudioDeviceCallback(devCb)
+        lyricsTicker?.stop(); lyricsTicker = null
         runCatching { engine.player.removeListener(listener) }
         session?.release()
         session = null

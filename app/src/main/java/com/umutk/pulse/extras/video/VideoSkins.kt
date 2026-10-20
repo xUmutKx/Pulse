@@ -15,10 +15,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -37,13 +35,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.PRadio
-import com.umutk.pulse.T
 import com.umutk.pulse.bevel
 
 /**
@@ -66,18 +61,20 @@ private val scrimUp = Brush.verticalGradient(listOf(Color.Transparent, Color(0xC
 private fun solid(c: Long) = SolidColor(Color(c))
 
 private val baseSkins = listOf(
-    VSkin("next", "Next Player", Color(0xFF0F1115), Color(0xFFE3E2E6), Color(0xFFA9ADB5), Color(0xFFA8C7FA), scrim, Color.White, scrimUp, 12.dp),
+    // Next Player's Material 3 dark palette (surface, on-surface, on-surface-variant, primary) and its 20 dp control background
+    VSkin("next", "Next Player", Color(0xFF141218), Color(0xFFE6E0E9), Color(0xFFCAC4D0), Color(0xFFD0BCFF), scrim, Color(0xFFE6E0E9), scrimUp, 20.dp),
     VSkin("material", "Material You", Color(0xFF141218), Color(0xFFE6E0E9), Color(0xFFCAC4D0), Color(0xFFD0BCFF), scrim, Color.White, solid(0xF0211F26), 28.dp, centered = false, seek = 11, btn = 1),
     VSkin("wmp", "Media Player 11", Color(0xFF0B1B33), Color.White, Color(0xFF9DB8DD), Color(0xFF4FA3FF),
         Brush.verticalGradient(listOf(Color(0xFF3A74BD), Color(0xFF0B2A52))), Color.White,
         Brush.verticalGradient(listOf(Color(0xFF2B5FA3), Color(0xFF0A2347), Color(0xFF123A6E))), 8.dp, gloss = true, centered = false, seek = 1, btn = 3),
     VSkin("vlc", "VLC", Color(0xFF1B1B1B), Color.White, Color(0xFFB0B0B0), Color(0xFFFF8800), solid(0xE6000000), Color.White, solid(0xE6000000), 4.dp, centered = false, seek = 5),
     VSkin("mx", "MX Player", Color.Black, Color.White, Color(0xFFBBBBBB), Color(0xFF3F8EFC), scrim, Color.White, scrimUp, 6.dp, centered = false, seek = 3),
-    VSkin("winamp", "Winamp", Color.Black, Color(0xFF00E000), Color(0xFF008800), Color(0xFF00E000),
-        Brush.verticalGradient(listOf(Color(0xFF4A4F5C), Color(0xFF1E2028))), Color(0xFFC8D0E0),
-        Brush.verticalGradient(listOf(Color(0xFF3A3E4A), Color(0xFF1A1C24))), 0.dp, centered = false, seek = 6, btn = 6),
-    VSkin("poweramp", "Poweramp", Color.Black, Color(0xFFEEEEEE), Color(0xFF8A8A8A), Color(0xFFFF9500), SolidColor(Color.Transparent), Color(0xFFEEEEEE), scrimUp, 4.dp, seek = 4),
-    VSkin("minimal", "Minimal", Color.Black, Color.White, Color(0xFF9A9A9A), Color.White, SolidColor(Color.Transparent), Color.White, SolidColor(Color.Transparent), 0.dp, seek = 10),
+    // Winamp 2.x: dark grey-blue body, green LCD text, grey metal bevelled buttons, LED seek
+    VSkin("winamp", "Winamp", Color(0xFF1C2230), Color(0xFF00E000), Color(0xFF00A000), Color(0xFF00E000),
+        Brush.verticalGradient(listOf(Color(0xFF4A5366), Color(0xFF1E2430))), Color(0xFFC8D0E0),
+        Brush.verticalGradient(listOf(Color(0xFF353E50), Color(0xFF161B26))), 0.dp, centered = false, seek = 6, btn = 6),
+    // Poweramp: near-black charcoal body, one strong accent, tonal round buttons, bar-and-handle seek
+    VSkin("poweramp", "Poweramp", Color(0xFF161616), Color(0xFFEEEEEE), Color(0xFF8A8A8A), Color(0xFFFF9500), solid(0xFF242424), Color(0xFFEEEEEE), solid(0xFF161616), 4.dp, seek = 4, btn = 1),
     VSkin("amoled", "AMOLED", Color.Black, Color.White, Color(0xFF9A9A9A), Color.White, SolidColor(Color.Transparent), Color.White, SolidColor(Color.Transparent), 8.dp, seek = 3),
     VSkin("classic", "Windows 95", Color(0xFFC0C0C0), Color.Black, Color(0xFF404040), Color(0xFF000080),
         Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))), Color.White, SolidColor(Color(0xFFC0C0C0)), 0.dp, bevel = true, centered = false, seek = 2, btn = 2),
@@ -95,8 +92,19 @@ private val genSeek = intArrayOf(0, 3, 4, 5, 9, 10, 11, 1)
 private val genBtn = intArrayOf(0, 1, 5, 7, 3, 1, 0, 5)
 private val genRound = intArrayOf(4, 8, 14, 20, 28, 0)
 
+/**
+ * Palettes dropped from the gallery: background RGB distance < 40 and accent < 120 to an earlier kept skin,
+ * and at least 3 of 5 style picks (bar, seek, button, corner, centred) equal. Mono is AMOLED's colours, Amber is Poweramp's look.
+ * VideoWidgetLooks still reads all palettes, so widget looks are unchanged.
+ */
+private val duplicatePalettes = setOf(
+    "Slate", "Crimson", "Coffee", "Graphite", "Gold", "Neon Pink", "Rose Light", "Neon Blue",
+    "Ember", "Plum", "Storm", "Olive", "Ice", "Blood Moon", "Dusk", "Snow", "Mono", "Amber",
+)
+
 /** One skin per palette: bar style (solid, gradient, floating over the video), seek bar, button chrome and corner size cycle with the index, so neighbours differ. */
-private val generatedSkins = videoPalettes.mapIndexed { i, p ->
+private val generatedSkins = videoPalettes.mapIndexedNotNull { i, p ->
+    if (p.name in duplicatePalettes) return@mapIndexedNotNull null
     val bg = Color(p.bg); val fg = Color(p.fg); val ac = Color(p.accent)
     val style = if (p.light) i % 2 else i % 3
     val floating = style == 2
@@ -115,12 +123,14 @@ fun skinOf(id: String): VSkin = videoSkins.firstOrNull { it.id == id } ?: videoS
 
 /** Seek bar drawn per skin (see VSkin.seek): M3 round, glossy blue, bevel, thin line, Poweramp bar, VLC orange, Winamp LEDs, XP trackbar, Win7 glass, Win11 round. */
 @Composable
-fun SkinSeek(value: Float, max: Float, s: VSkin, onChange: (Float) -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier) {
+fun SkinSeek(value: Float, max: Float, s: VSkin, onChange: (Float) -> Unit, onDone: () -> Unit, modifier: Modifier = Modifier, live: Boolean = true) {
     val frac = (value / max.coerceAtLeast(1f)).coerceIn(0f, 1f)
+    // live = false (theme picker preview) has no touch handling, so taps reach the cell
+    val touch = if (!live) Modifier else Modifier
+        .pointerInput(max) { detectTapGestures { o -> onChange((o.x / size.width).coerceIn(0f, 1f) * max); onDone() } }
+        .pointerInput(max) { detectHorizontalDragGestures(onDragEnd = onDone) { c, _ -> onChange((c.position.x / size.width).coerceIn(0f, 1f) * max) } }
     Canvas(
-        modifier.height(32.dp)
-            .pointerInput(max) { detectTapGestures { o -> onChange((o.x / size.width).coerceIn(0f, 1f) * max); onDone() } }
-            .pointerInput(max) { detectHorizontalDragGestures(onDragEnd = onDone) { c, _ -> onChange((c.position.x / size.width).coerceIn(0f, 1f) * max) } },
+        modifier.height(32.dp).then(touch),
     ) {
         val w = size.width; val cy = size.height / 2; val x = w * frac
         fun track(h: Float, back: Color, front: Brush, r: Float = h / 2) {
@@ -202,7 +212,7 @@ fun SkinSeek(value: Float, max: Float, s: VSkin, onChange: (Float) -> Unit, onDo
 
 /** A control button drawn per skin (see VSkin.btn): plain, tonal circle, bevel, glass circle, outline, soft rounded, Winamp metal, flat square. */
 @Composable
-fun SkinBtn(s: VSkin, onClick: () -> Unit, size: Dp = 44.dp, content: @Composable () -> Unit) {
+fun SkinBtn(s: VSkin, onClick: (() -> Unit)?, size: Dp = 44.dp, content: @Composable () -> Unit) {
     val m = Modifier.size(size)
     val chrome = when (s.btn) {
         1 -> m.padding(2.dp).background(s.accent.copy(alpha = .22f), CircleShape)
@@ -214,7 +224,7 @@ fun SkinBtn(s: VSkin, onClick: () -> Unit, size: Dp = 44.dp, content: @Composabl
         7 -> m.padding(2.dp).background(s.fg.copy(alpha = .1f))
         else -> m
     }
-    Box(chrome.clickable(onClick = onClick), contentAlignment = Alignment.Center) { content() }
+    Box((if (onClick == null) chrome else chrome.clickable(onClick = onClick)), contentAlignment = Alignment.Center) { content() }
 }
 
 /** The skin's own picture of the controls, for the picker: top bar, transport buttons and the seek bar at 40 %. */
@@ -223,17 +233,19 @@ private fun SkinPreview(s: VSkin) {
     Column(Modifier.fillMaxWidth().background(s.bg, RoundedCornerShape(s.round.coerceAtMost(8.dp)))) {
         Box(Modifier.fillMaxWidth().height(8.dp).background(s.top))
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            SkinBtn(s, {}, 26.dp) { com.umutk.pulse.extras.ui.TIcon("prev", s.fg, 14.dp, s.icons) }
-            SkinBtn(s, {}, 30.dp) { com.umutk.pulse.extras.ui.TIcon("play", s.fg, 18.dp, s.icons) }
-            SkinBtn(s, {}, 26.dp) { com.umutk.pulse.extras.ui.TIcon("next", s.fg, 14.dp, s.icons) }
+            SkinBtn(s, null, 26.dp) { com.umutk.pulse.extras.ui.TIcon("prev", s.fg, 14.dp, s.icons) }
+            SkinBtn(s, null, 30.dp) { com.umutk.pulse.extras.ui.TIcon("play", s.fg, 18.dp, s.icons) }
+            SkinBtn(s, null, 26.dp) { com.umutk.pulse.extras.ui.TIcon("next", s.fg, 14.dp, s.icons) }
         }
-        Box(Modifier.fillMaxWidth().background(s.bottom).padding(horizontal = 6.dp)) { SkinSeek(40f, 100f, s, {}, {}, Modifier.fillMaxWidth().height(22.dp)) }
+        Box(Modifier.fillMaxWidth().background(s.bottom).padding(horizontal = 6.dp)) { SkinSeek(40f, 100f, s, {}, {}, Modifier.fillMaxWidth().height(22.dp), live = false) }
     }
 }
 
-/** Every skin as a live preview in the shared 3-per-row gallery. */
+/** Every distinct skin in one grid with its live preview. An unknown saved id shows and plays the first skin (see skinOf). */
 @Composable
 fun SkinPicker(current: String, onPick: (String) -> Unit) {
     val items = remember { videoSkins.map { s -> com.umutk.pulse.extras.ui.ThemeItem(s.id, s.name) { SkinPreview(s) } } }
-    com.umutk.pulse.extras.ui.ThemeGrid(items, current, onPick, Modifier.padding(horizontal = 12.dp))
+    // local copy so the tapped tile is marked at once; the saved preference is still the source on open
+    var sel by remember { mutableStateOf(skinOf(current).id) }
+    com.umutk.pulse.extras.ui.ThemeGrid(items, sel, { sel = it; onPick(it) }, Modifier.padding(horizontal = 12.dp))
 }

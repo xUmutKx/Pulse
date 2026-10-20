@@ -230,6 +230,53 @@ internal fun archiveExtract(f: File, dest: File): String = try {
 } catch (x: Exception) { tr("Could not extract ${f.name}", "${f.name} çıkarılamadı") }
 
 /** Writes one entry to [out]. */
+/** The entries picked in an archive ([sel] are entry paths; a picked folder brings everything under it) written into [dest].
+ *  Each file keeps its path from the picked item's parent, so a folder comes out whole with its name. Returns the files written.
+ *  shortcut: each file is read out with its own pass over the archive, a single pass per archive is the upgrade. */
+internal fun archiveExtractSel(f: File, sel: Set<String>, all: List<AEntry>, dest: File): List<File> {
+    val out = ArrayList<File>()
+    val parents = sel.associateWith { it.substringBeforeLast('/', "") }
+    all.filter { !it.dir }.forEach { e ->
+        val pick = sel.firstOrNull { e.path == it || e.path.startsWith("$it/") } ?: return@forEach
+        val want = File(dest, e.path.removePrefix(parents.getValue(pick)).trimStart('/'))
+        val parentDir = want.parentFile ?: dest
+        parentDir.mkdirs()
+        val target = uniqueFile(parentDir, want.name)
+        if (archiveExtractOne(f, e.path, target)) out += target
+    }
+    return out
+}
+
+/** The file entries covered by a pick ([sel] entry paths; a picked folder covers everything under it). */
+internal fun archivePicked(sel: Set<String>, all: List<AEntry>): List<AEntry> =
+    all.filter { e -> !e.dir && sel.any { e.path == it || e.path.startsWith("$it/") } }
+
+/** Takes [paths] (and everything under the folders among them) out of a zip-family archive by writing a new copy without them,
+ *  then replacing the old file, so the space comes back. APKs are refused: removing entries breaks their signature.
+ *  shortcut: the whole archive is rewritten once per cut, not per file. Returns "" on success, else the reason. */
+internal fun archiveRemove(f: File, paths: Set<String>): String {
+    if (f.extension.lowercase() in setOf("apk", "apks", "xapk", "apkm")) return "apk"
+    if (kindOf(f) != "zip") return "unsupported"
+    val tmp = File(f.parentFile, f.name + ".tmp")
+    return try {
+        ZipFile(f).use { z ->
+            ZipOutputStream(tmp.outputStream().buffered()).use { zo ->
+                z.entries().asSequence().forEach { e ->
+                    val name = e.name.trimEnd('/')
+                    if (paths.any { name == it || name.startsWith("$it/") }) return@forEach
+                    zo.putNextEntry(ZipEntry(e.name))
+                    if (!e.isDirectory) z.getInputStream(e).use { it.copyTo(zo) }
+                    zo.closeEntry()
+                }
+            }
+        }
+        if (!f.delete() || !tmp.renameTo(f)) { tmp.delete(); "write" } else ""
+    } catch (e: Exception) {
+        tmp.delete()
+        e.message ?: "write"
+    }
+}
+
 internal fun archiveExtractOne(f: File, path: String, out: File): Boolean {
     var ok = false
     try {
@@ -584,7 +631,7 @@ internal fun filesLook(): com.umutk.pulse.PTheme? {
     val id = FilesLook.theme
     if (id == "app") return null
     return when (id) {
-        "amoled" -> com.umutk.pulse.PTheme("amoled", "AMOLED", true, androidx.compose.ui.graphics.Color(0xFF000000), androidx.compose.ui.graphics.Color(0xFF0A0A0A), androidx.compose.ui.graphics.Color(0xFFFFFFFF),
+        "amoled" -> com.umutk.pulse.PTheme("amoled", "AMOLED", true, androidx.compose.ui.graphics.Color(0xFF000000), androidx.compose.ui.graphics.Color(0xFF000000), androidx.compose.ui.graphics.Color(0xFFFFFFFF),
             androidx.compose.ui.graphics.Color(0xFFB0B0B0), androidx.compose.ui.graphics.Color(0xFFFFFFFF), androidx.compose.ui.graphics.Color(0xFF222222), 16.dp, material = true)
         "coloros" -> com.umutk.pulse.effective(com.umutk.pulse.Themes.first { it.id == "coloros" })
         in com.umutk.pulse.winButtonLooks, "oneui" -> com.umutk.pulse.effective(com.umutk.pulse.Themes.first { it.id == id })
@@ -616,6 +663,9 @@ object FilesPrefs {
     var folderCards by mutableStateOf(false) // a card behind each folder (Material looks start without it)
     var alt by mutableStateOf(false)         // alternate row colours
     var radius by mutableStateOf(1)          // card corner radius: small / medium / large
+    // the Library folders of internal storage (drawer), by relative path; the ones in libHidden are not shown
+    val libFolders = listOf("DCIM", "Download", "Movies", "Music", "Pictures", "Documents", "Pictures/Screenshots")
+    var libHidden by mutableStateOf(emptySet<String>())
     private var loaded = false
     private fun sp(c: android.content.Context) = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     fun load(c: android.content.Context) {
@@ -628,8 +678,10 @@ object FilesPrefs {
         thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0)
         foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
         cards = p.getBoolean("ex_cards", true); folderCards = p.getBoolean("ex_fcards", false); rowSep = p.getBoolean("ex_rowsep", false); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
+        libHidden = p.getStringSet("ex_lib_off", emptySet())?.toSet() ?: emptySet()
     }
     fun save(c: android.content.Context) {
+        sp(c).edit().putStringSet("ex_lib_off", libHidden).apply()
         sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putInt("ex_icon", icon)
             .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
             .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).apply()
@@ -642,6 +694,7 @@ fun FilesSettings() {
     val ctx = LocalContext.current
     FilesLook.load(ctx); FilesPrefs.load(ctx)
     val fp = FilesPrefs
+    val openTool = com.umutk.pulse.LocalOpenTool.current
     // the chips above only change the values: store them, or the choice is lost on the next start
     androidx.compose.runtime.LaunchedEffect(fp.grid, fp.sort, fp.icon, fp.start, fp.cards, fp.folderCards, fp.rowSep) { fp.save(ctx) }
     @Composable
@@ -709,6 +762,15 @@ fun FilesSettings() {
             SwRow(tr("Show hidden files", "Gizli dosyaları göster"), "search", fp.hidden) { fp.hidden = it }
             SwRow(tr("Show file extensions", "Dosya uzantılarını göster"), "notes", fp.ext) { fp.ext = it }
             SwRow(tr("Confirm before delete", "Silmeden önce sor"), "delete", fp.confirm) { fp.confirm = it }
+            // the recycle bin switch: same Opt.recycle and "recycle" pref as before, written without Opt.save (that would write Pulse's other settings)
+            SwRow(tr("Recycle bin", "Çöp kutusu"), "recycle", com.umutk.pulse.Opt.recycle, tr("Deleted files wait there; off deletes for good", "Silinen dosyalar orada bekler; kapalıyken kalıcı silinir")) {
+                com.umutk.pulse.Opt.recycle = it; com.umutk.pulse.ownPrefs(ctx, "pulse_settings").edit().putBoolean("recycle", it).apply()
+            }
+            if (com.umutk.pulse.Opt.recycle) Row(Modifier.fillMaxWidth().clickable { openTool("recycle") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Ic("recycle")
+                Text(tr("Open Recycle bin", "Çöp kutusunu aç"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
+                PIcon("chevron", T.sub, 18.dp)
+            }
             SwRow(tr("Thumbnails", "Küçük resimler"), "image", fp.thumbs) { fp.thumbs = it }
             SwRow(tr("Previews and type badges", "Önizleme ve tür rozetleri"), "image", fp.previews) { fp.previews = it }
             SwRow(tr("Folders first", "Önce klasörler"), "folder", fp.foldersFirst) { fp.foldersFirst = it }
@@ -730,6 +792,14 @@ fun FilesSettings() {
             SwRow(tr("Standard folders", "Standart klasörler"), "folder", fp.stdFolders, tr("DCIM, Downloads, Movies… in the menu", "DCIM, İndirilenler, Filmler… menüde")) { fp.stdFolders = it }
             SwRow(tr("Bookmarks", "Yer imleri"), "bookmark", fp.bookmarks, tr("Your saved folders in the menu", "Kayıtlı klasörlerin menüde")) { fp.bookmarks = it }
             SwRow(tr("Storage info", "Depolama bilgisi"), "disk", fp.storageInfo, tr("Used and free space in the menu", "Menüde kullanılan ve boş alan")) { fp.storageInfo = it }
+            // Library: each standard folder can be shown or hidden in the menu's Library section
+            Text(tr("Library", "Kütüphane"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            fp.libFolders.forEach { rel ->
+                SwRow(File(rel).name, "folder", rel !in fp.libHidden, rel) { on ->
+                    fp.libHidden = if (on) fp.libHidden - rel else fp.libHidden + rel
+                    fp.save(ctx)
+                }
+            }
             // Manage bookmarks: the folders starred in the file manager, each with a trash icon
             var marks by remember { mutableStateOf(sp(ctx).getString("ex_marks", "").orEmpty().lines().filter { it.isNotBlank() }) }
             marks.forEach { m ->

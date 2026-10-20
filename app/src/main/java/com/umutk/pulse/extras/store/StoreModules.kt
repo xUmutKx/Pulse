@@ -20,6 +20,9 @@ const val EXTRAS_MANIFEST_URL = "https://raw.githubusercontent.com/xUmutKx/Pulse
 /** Packs whose text manifest is bundled as assets/extras/<pack>/manifest.json. */
 val BUNDLED_PACKS = listOf("ambient", "skins")
 
+/** Built into Pulse now, so never offered as a download, even when a saved or live manifest still lists them. */
+val BUILT_IN_MODULES = setOf("fossify-messages")
+
 /** One downloadable module from the manifest (doc 13). "apk" is installed, "veri" is unzipped into the app data folder. */
 data class ExtraModule(
     val id: String, val adEn: String, val adTr: String, val tur: String, val kategori: String,
@@ -135,7 +138,7 @@ object StoreCatalog {
             }
         }
         val code = runCatching { c.packageManager.getPackageInfo(c.packageName, 0).longVersionCode }.getOrDefault(Long.MAX_VALUE)
-        return all.filter { it.minPulse <= code }
+        return all.filter { it.minPulse <= code && it.id !in BUILT_IN_MODULES }
     }
 
     /** Asks GitHub with ETag, at most once a day unless [force]. Any failure keeps the saved list. */

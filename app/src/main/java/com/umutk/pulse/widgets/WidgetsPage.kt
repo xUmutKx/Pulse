@@ -11,6 +11,8 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -63,6 +65,7 @@ import com.umutk.pulse.Look
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PHead
+import com.umutk.pulse.PIcon
 import com.umutk.pulse.PSlider
 import com.umutk.pulse.R
 import com.umutk.pulse.T
@@ -70,6 +73,25 @@ import com.umutk.pulse.tr
 import com.umutk.pulse.extras.music.skin.WINAMP_H
 import com.umutk.pulse.extras.music.skin.WINAMP_W
 import com.umutk.pulse.widgets.music.WinampWidget
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import com.umutk.pulse.widgets.music.MusicWidget
+import com.umutk.pulse.widgets.music.MusicWidgetBig
+import com.umutk.pulse.widgets.music.MusicWidgetSlim
+import com.umutk.pulse.widgets.music.MusicWidgetSquare
+import com.umutk.pulse.extras.music.skin.loadSkinPreview
+import androidx.compose.ui.graphics.asAndroidBitmap
+import com.umutk.pulse.extras.music.poweramp.NeutralAccent
+import com.umutk.pulse.extras.music.poweramp.PowerampPrefs
+import com.umutk.pulse.extras.music.poweramp.powerampSkin
+import com.umutk.pulse.extras.music.skin.InstalledSkin
+import com.umutk.pulse.extras.music.skin.installedSkins
+import com.umutk.pulse.extras.music.skin.loadWinampSkin
+import com.umutk.pulse.extras.music.widgets.PowerampWidget
+import com.umutk.pulse.extras.music.widgets.WinampSkinPick
+import com.umutk.pulse.extras.music.widgets.WinampVisWidget
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -98,11 +120,15 @@ private val WIDGET_ENTRIES = listOf(
     WidgetEntry("Next alarm", "NextAlarmWidget"),
     WidgetEntry("App count", "AppCountWidget"),
     WidgetEntry("Quick", "QuickWidget"),
+    WidgetEntry("Notes", "com.umutk.pulse.extras.notes.NotesWidget"),
+    WidgetEntry("Voice recorder", "VoiceWidget"),
     WidgetEntry("Steps", "StepsWidget"),
     WidgetEntry("Distance and calories", "DistanceWidget"),
     WidgetEntry("Heart rate", "HeartWidget"),
     WidgetEntry("Activity", "ActivityWidget"),
     WidgetEntry("Steps, 7 days", "WeekStepsWidget"),
+    WidgetEntry("Weather", "WeatherWidget"),
+    WidgetEntry("Weather, wide", "WeatherWideWidget"),
 )
 
 // Skins.draw caches art in a plain HashMap, so previews are drawn one at a time
@@ -136,12 +162,18 @@ fun WidgetsPage() {
     LaunchedEffect(Unit) { only?.let { d -> styleFor(d, style)?.let { style = it; WidgetStyles.saveDefault(ctx, it) } }; WidgetPreviews.publish(ctx) }
     var tab by remember { mutableStateOf(0) }
     var query by remember { mutableStateOf("") }
+    // the Winamp group is closed until its arrow is tapped; a search always shows its matches
+    var winampOpen by remember { mutableStateOf(false) }
     val providers = remember { WidgetData.all.associateBy { it.javaClass.simpleName } }
     val classOf = remember { SkinWidgets.all.associate { it.skin to it.javaClass.simpleName } }
     val current = designOf(Look.theme.id)
     val designs = DESIGNS.sortedBy { if (it.first == current) 0 else 1 }.filter { d -> only.let { it == null || it == d.first } }
     fun hit(name: String) = query.isBlank() || name.contains(query, ignoreCase = true)
     val oldShown = WIDGET_ENTRIES.filter { hit(it.label) && it.provider in providers }
+    // every installed Winamp skin, read off the main thread; each one is a card under Music
+    val winampSkins by produceState<List<InstalledSkin>>(emptyList(), ctx) {
+        value = withContext(drawer) { runCatching { installedSkins(ctx) }.getOrDefault(emptyList()) }
+    }
 
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 12.dp),
@@ -198,12 +230,28 @@ fun WidgetsPage() {
         }
         // the Winamp widgets belong to no design: one Music header, shown while the search matches a card
         val music = mutableListOf<Pair<String, @Composable () -> Unit>>()
-        if (hit("Winamp")) music += "m_winamp" to @Composable { WinampCard(ctx, false) }
-        if (hit("Winamp 4x1")) music += "m_winamp4" to @Composable { WinampCard(ctx, true) }
-        if (music.isNotEmpty()) {
-            item(key = "h_music") { Text(tr("Music", "Müzik"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
-            items(music.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+        val winamp = mutableListOf<Pair<String, @Composable () -> Unit>>()
+        if (hit("Winamp")) winamp += "m_winamp" to @Composable { WinampCard(ctx, false) }
+        if (hit("Winamp 4x1")) winamp += "m_winamp4" to @Composable { WinampCard(ctx, true) }
+        if (hit("Winamp visualizer") || hit("Winamp")) winamp += "m_winvis" to @Composable { WinampVisCard(ctx) }
+        if (hit("Poweramp")) music += "m_poweramp" to @Composable { PowerampCard(ctx) }
+        if (hit("Music") || hit("Lyrics")) {
+            music += "m_music" to @Composable { MusicCard(ctx, "Music", "music.MusicWidget", 2f, compact = false) }
+            music += "m_music_sq" to @Composable { MusicCard(ctx, "Music 2x2", "music.MusicWidgetSquare", 1f, compact = false) }
+            music += "m_music_big" to @Composable { MusicCard(ctx, "Music 4x3", "music.MusicWidgetBig", 4f / 3f, compact = false) }
+            music += "m_music_slim" to @Composable { MusicCard(ctx, "Music bar", "music.MusicWidgetSlim", 4f, compact = true) }
+            music += "m_lyrics" to @Composable { LyricsCard(ctx) }
         }
+        winampSkins.filter { hit("Winamp") || hit(it.name) }.forEach { s -> winamp += "m_skin_${s.file.name}" to @Composable { WinampSkinCard(ctx, s) } }
+        if (music.isNotEmpty() || winamp.isNotEmpty()) {
+            item(key = "h_music") { Text(tr("Music", "Müzik"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
+        }
+        if (winamp.isNotEmpty()) {
+            val open = winampOpen || query.isNotBlank()
+            item(key = "h_winamp") { WinampHeader(winamp.size, open) { winampOpen = !winampOpen } }
+            if (open) items(winamp.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+        }
+        if (music.isNotEmpty()) items(music.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
         item { Spacer(Modifier.size(24.dp)) }
     }
 }
@@ -288,6 +336,18 @@ private fun FamilyHeader(theme: String, label: String) {
     }
 }
 
+/** Collapsible group header: title, how many widgets it holds, and a chevron that turns when open. */
+@Composable
+private fun WinampHeader(count: Int, open: Boolean, onClick: () -> Unit) {
+    val rot by animateFloatAsState(if (open) 180f else 0f, tween(200), label = "chev")
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(top = 6.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text("Winamp", Modifier.weight(1f), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text("$count", color = T.sub, fontSize = 14.sp)
+        Spacer(Modifier.size(8.dp))
+        PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = rot })
+    }
+}
+
 /** A see-through card: the preview square on top, the name and add button below. */
 @Composable
 private fun WidgetCard(label: String, onAdd: () -> Unit, aspect: Float = 1f, preview: @Composable () -> Unit) {
@@ -359,7 +419,7 @@ private fun FaceCard(ctx: Context, f: FaceWidget) {
 @Composable
 private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style: WidgetStyle) {
     // laid out at a real widget size, then scaled down as a whole so the text keeps its proportions (some blank space is fine)
-    WidgetCard(w.label, { addToHome(ctx, w.provider) }, aspect = 2.2f) {
+    WidgetCard(w.label, { addToHome(ctx, provider.javaClass.name) }, aspect = 2.2f) {
       androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         val k = (maxWidth / 264.dp) * 0.9f
         Box(Modifier.requiredSize(264.dp, 120.dp).graphicsLayer { scaleX = k; scaleY = k }) {
@@ -390,6 +450,80 @@ private fun WinampCard(ctx: Context, compact: Boolean) {
         value = withContext(drawer) { runCatching { WinampWidget.render(null, "Pulse", 0.4f, true, 83, boxH = 2 * h, strip = compact) }.getOrNull() }
     }
     WidgetCard(if (compact) "Winamp 4x1" else "Winamp", { addToHome(ctx, if (compact) "music.WinampWidgetCompact" else "music.WinampWidget") }, WINAMP_W.toFloat() / h) {
+        val b = bmp
+        if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        else Placeholder()
+    }
+}
+
+/** One installed Winamp skin: a tap pins the Winamp widget set to that skin (see WinampSkinPick). */
+@Composable
+private fun WinampSkinCard(ctx: Context, s: InstalledSkin) {
+    val bmp by produceState<Bitmap?>(null, s.file.path) {
+        // the widget's own drawing first; if that fails, the skin's main.bmp so the card never stays empty
+        value = withContext(drawer) {
+            runCatching { WinampWidget.render(loadWinampSkin(s.file), "Pulse", 0.4f, true, 83, boxH = 2 * WINAMP_H) }.getOrNull()
+                ?: loadSkinPreview(s.file)?.asAndroidBitmap()
+        }
+    }
+    WidgetCard(s.name, { if (!WinampSkinPick.pin(ctx, s.file.name, compact = false)) Toast.makeText(ctx, tr("This launcher cannot place widgets from here", "Bu başlatıcı buradan widget yerleştiremiyor"), Toast.LENGTH_LONG).show() }, WINAMP_W.toFloat() / WINAMP_H) {
+        val b = bmp
+        if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        else Placeholder()
+    }
+}
+
+/** The lyrics widget card: one lyric line under the track title, in the app's look. */
+@Composable
+private fun LyricsCard(ctx: Context) {
+    WidgetCard(tr("Lyrics", "Şarkı sözleri"), { addToHome(ctx, "music.LyricsWidget") }, 4f) {
+        Column(Modifier.fillMaxSize().padding(8.dp), verticalArrangement = Arrangement.Center) {
+            Text(tr("Track title", "Parça adı"), color = T.sub, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text("♪ " + tr("The lyric line now", "Şu anki söz satırı"), color = T.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        }
+    }
+}
+
+/** A normal music player widget card: a mock of its layout (cover, title, artist, transport), added by its provider class. */
+@Composable
+private fun MusicCard(ctx: Context, label: String, provider: String, aspect: Float, compact: Boolean) {
+    WidgetCard(label, { addToHome(ctx, provider) }, aspect) {
+        Row(Modifier.fillMaxSize().padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.fillMaxHeight().aspectRatio(1f).background(T.line, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Filled.PlayArrow, null, tint = T.sub, modifier = Modifier.size(if (compact) 14.dp else 22.dp))
+            }
+            if (!compact) Column(Modifier.weight(1f).padding(horizontal = 6.dp)) {
+                Text("Pulse", color = T.text, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(tr("Artist", "Sanatçı"), color = T.sub, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Filled.SkipPrevious, null, tint = T.text, modifier = Modifier.size(if (compact) 14.dp else 20.dp))
+            Icon(Icons.Filled.PlayArrow, null, tint = T.text, modifier = Modifier.size(if (compact) 16.dp else 24.dp))
+            Icon(Icons.Filled.SkipNext, null, tint = T.text, modifier = Modifier.size(if (compact) 14.dp else 20.dp))
+        }
+    }
+}
+
+/** The Winamp visualizer widget, drawn with sample bars. */
+@Composable
+private fun WinampVisCard(ctx: Context) {
+    val bmp by produceState<Bitmap?>(null) {
+        value = withContext(drawer) { runCatching { WinampVisWidget.render(List(24) { i -> .5f + .45f * kotlin.math.sin(i * .7f) }, "Pulse", 600, 260) }.getOrNull() }
+    }
+    WidgetCard("Winamp visualizer", { WinampSkinPick.pinWidget(ctx, WinampVisWidget::class.java) }, WinampVisWidget.W.toFloat() / WinampVisWidget.H) {
+        val b = bmp
+        if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        else Placeholder()
+    }
+}
+
+/** The Poweramp widget in the app's Poweramp skin, drawn as the widget draws it (sample title, no cover). */
+@Composable
+private fun PowerampCard(ctx: Context) {
+    val style = remember { powerampSkin(PowerampPrefs.skin(ctx)).build(NeutralAccent, Color.Black) }
+    val bmp by produceState<Bitmap?>(null, style) {
+        value = withContext(drawer) { runCatching { PowerampWidget.render(style, "Pulse", "Poweramp", 0.4f, true, 83_000L, 240_000L, null, 640, 360) }.getOrNull() }
+    }
+    WidgetCard("Poweramp", { WinampSkinPick.pinWidget(ctx, PowerampWidget::class.java) }, PowerampWidget.W.toFloat() / PowerampWidget.H) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         else Placeholder()
@@ -454,7 +588,8 @@ internal fun styleShort(s: WidgetStyle) = when (s) {
 private fun addToHome(ctx: Context, provider: String) {
     val mgr = ctx.getSystemService(AppWidgetManager::class.java)
     if (mgr != null && mgr.isRequestPinAppWidgetSupported) {
-        mgr.requestPinAppWidget(ComponentName(ctx, "com.umutk.pulse.widgets.$provider"), null, null)
+        // a full class name (Notes lives in extras/notes), else a class in widgets/
+        mgr.requestPinAppWidget(ComponentName(ctx, if (provider.startsWith("com.")) provider else "com.umutk.pulse.widgets.$provider"), null, null)
     } else {
         Toast.makeText(ctx, "This launcher cannot place widgets from here: long-press the home screen and pick Pulse", Toast.LENGTH_LONG).show()
     }

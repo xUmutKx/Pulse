@@ -1,0 +1,214 @@
+package com.umutk.pulse.extras.launcher
+
+import android.content.Context
+import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.pm.ApplicationInfo
+import android.view.RoundedCorner
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import androidx.core.graphics.drawable.toBitmap
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
+import com.umutk.pulse.AppLookGuard
+import com.umutk.pulse.Cfg
+import com.umutk.pulse.LookHost
+import com.umutk.pulse.Opt
+import com.umutk.pulse.T
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+/** Pulse Launcher: a HOME app with its own look and layout. Runs in its own process, so Pulse's Look / Cfg / Opt stay untouched. */
+class LauncherActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        Cfg.load(this); Opt.load(this)
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        // rounded corners are not part of the Compose insets, so the side inset is read from the window insets here
+        ViewCompat.setOnApplyWindowInsetsListener(window.decorView) { v, insets -> sideInsetPx = insetPx(insets); ViewCompat.onApplyWindowInsets(v, insets) }
+        @Suppress("DEPRECATION") overridePendingTransition(0, 0)
+        setContent {
+            val look = LauncherLooks.byId(LauncherPrefs.look)
+            val apps by produceState(emptyList<LaunchApp>()) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
+            BackHandler(enabled = LauncherSession.startOpen) { LauncherSession.startOpen = false }
+            val edge = with(LocalDensity.current) { sideInsetPx.toDp() }
+            LookHost(lookId = look.id) { key(look.id) { CompositionLocalProvider(LocalLauncherEdge provides edge) { LauncherRoot(look, apps) } } }
+        }
+    }
+
+    private var sideInsetPx by mutableIntStateOf(0)
+
+    /** Largest side intrusion in px: a rounded screen corner (API 31+, the minimum here) or a side display cutout. */
+    private fun insetPx(insets: WindowInsetsCompat): Int {
+        val cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
+        val platform = insets.toWindowInsets()
+        val corner = listOf(RoundedCorner.POSITION_TOP_LEFT, RoundedCorner.POSITION_TOP_RIGHT,
+            RoundedCorner.POSITION_BOTTOM_LEFT, RoundedCorner.POSITION_BOTTOM_RIGHT).maxOf { platform?.getRoundedCorner(it)?.radius ?: 0 }
+        return maxOf(cut.left, cut.right, corner)
+    }
+
+    // a home press while the launcher is already open: close the apps list and go back to the first page
+    override fun onNewIntent(intent: Intent) { super.onNewIntent(intent); LauncherSession.startOpen = false; LauncherSession.homeTick++ }
+
+    /** Reads the saved settings again on every start / resume: the Pulse process may have changed them meanwhile. */
+    private fun enter() {
+        LauncherPrefs.load(this)
+        AppLookGuard.enter({ LauncherPrefs.apply() }, { })
+        requestedOrientation = if (LauncherPrefs.lockPortrait) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT else ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            // shortcut: BEHAVIOR_SHOW_TRANSIENT_BY_SWIPE (2) written out, the constant is missing from this compile SDK's stubs
+            systemBarsBehavior = 2
+            if (LauncherPrefs.fullScreen) hide(WindowInsetsCompat.Type.statusBars()) else show(WindowInsetsCompat.Type.statusBars())
+        }
+    }
+    override fun onStart() { enter(); super.onStart() }
+    override fun onResume() { enter(); super.onResume() }
+    override fun onStop() { super.onStop(); AppLookGuard.leave(this) }
+    override fun onDestroy() { super.onDestroy(); AppLookGuard.leave(this) }
+}
+
+private const val ICON_PX = 128
+private const val PAGE_ROWS = 4
+
+/** Every launchable app except Pulse itself, one entry per package, sorted by label. */
+internal fun loadApps(ctx: Context): List<LaunchApp> {
+    val pm = ctx.packageManager
+    val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    return pm.queryIntentActivities(main, 0)
+        .filter { it.activityInfo.packageName != ctx.packageName }
+        .distinctBy { it.activityInfo.packageName }
+        .map { ri ->
+            val pkg = ri.activityInfo.packageName
+            LaunchApp(ri.loadLabel(pm).toString(), pkg,
+                runCatching { ri.loadIcon(pm).toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull(),
+                installed = runCatching { pm.getPackageInfo(pkg, 0).firstInstallTime }.getOrDefault(0L),
+                system = (ri.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0)
+        }
+        .sortedBy { it.label.lowercase() }
+}
+
+@Composable
+private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
+    val ctx = LocalContext.current
+    val edge = LocalLauncherEdge.current
+    val vertical = LauncherPrefs.vertical
+    val columns = LauncherPrefs.columns.coerceIn(2, 8)
+    val iconDp = LauncherPrefs.iconDp.coerceIn(24, 64)
+    val hidden = LauncherPrefs.hidden
+    val sort = LauncherPrefs.sort
+    val usage = LauncherPrefs.usage
+    val visible = remember(apps, hidden, sort, usage) {
+        val list = apps.filter { it.pkg !in hidden }
+        when (sort) {
+            "installed" -> list.sortedWith(compareByDescending<LaunchApp> { it.installed }.thenBy { it.label.lowercase() })
+            "opened" -> list.sortedWith(compareByDescending<LaunchApp> { usage[it.pkg] ?: 0L }.thenBy { it.label.lowercase() })
+            else -> list
+        }
+    }
+    val autoDock = remember(visible) { visible.take(3).map { it.pkg } }
+    val dock = dockApps(visible, LauncherPrefs.dock)
+    var query by remember { mutableStateOf("") }
+    LaunchedEffect(LauncherSession.startOpen) { if (!LauncherSession.startOpen) query = "" }
+    val drawer = remember(visible, query) {
+        if (query.isBlank()) visible else visible.filter { it.label.contains(query.trim(), ignoreCase = true) }
+    }
+    var actionFor by remember { mutableStateOf<LaunchApp?>(null) }
+    val open: (LaunchApp) -> Unit = { app ->
+        ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { ctx.startActivity(it); LauncherPrefs.touch(ctx, app.pkg) }
+    }
+    val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), iconDp, dock, open) { actionFor = it }
+
+    val grid = rememberLazyGridState()
+    val pages = visible.chunked(columns * PAGE_ROWS)
+    val pager = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
+    LaunchedEffect(LauncherSession.homeTick) {
+        if (LauncherSession.homeTick > 0) { grid.scrollToItem(0); pager.scrollToPage(0) }
+    }
+
+    look.Background(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            if (LauncherPrefs.clock) ClockHeader(Modifier.fillMaxWidth())
+            LauncherWidgetStrip(Modifier.fillMaxWidth())
+            if (look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
+            // a long press on an empty part of the home opens the Settings / Widgets sheet
+            Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
+                if (vertical) {
+                    LazyVerticalGrid(GridCells.Fixed(columns), Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), state = grid) {
+                        items(visible, key = { it.pkg }) { app ->
+                            look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) })
+                        }
+                    }
+                } else {
+                    // horizontal: apps flow left to right, one page per columns x PAGE_ROWS block
+                    HorizontalPager(pager, Modifier.fillMaxSize()) { p ->
+                        Column(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
+                            pages.getOrElse(p) { emptyList() }.chunked(columns).forEach { row ->
+                                Row(Modifier.fillMaxWidth()) {
+                                    row.forEach { app ->
+                                        Box(Modifier.weight(1f).appTap(state, app) { open(app) }) { look.IconCell(app, iconDp, Modifier.fillMaxWidth()) }
+                                    }
+                                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
+                                }
+                            }
+                        }
+                    }
+                    if (pages.size > 1) PageDots(pager.currentPage, pages.size, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
+                }
+            }
+            if (!look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
+        }
+        // settings and (with the dock hidden) the apps list stay reachable from the home screen
+        if (!LauncherSession.startOpen) Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), contentAlignment = Alignment.TopEnd) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!LauncherPrefs.dockShown) { HomeChip("apps") { LauncherSession.startOpen = true }; Spacer(Modifier.width(8.dp)) }
+                HomeChip("settings") { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
+            }
+        }
+        // Windows looks: the menu sits above the taskbar, which is inside the navigation-bar inset
+        if (LauncherSession.startOpen && look.ownSearch) look.StartMenu(state, { LauncherSession.startOpen = false }, Modifier.fillMaxSize().navigationBarsPadding())
+        else if (LauncherSession.startOpen) Column(Modifier.fillMaxSize().background(T.bg)) {
+            Box(Modifier.statusBarsPadding()) { DrawerSearch(query) { query = it } }
+            Box(Modifier.weight(1f).fillMaxWidth()) { look.StartMenu(state, { LauncherSession.startOpen = false }, Modifier.fillMaxSize()) }
+        }
+        HomeSheet()
+        actionFor?.let { app -> AppActionDialog(app, autoDock) { actionFor = null } }
+    }
+}

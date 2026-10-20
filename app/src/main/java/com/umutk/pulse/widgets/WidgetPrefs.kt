@@ -107,6 +107,8 @@ object WidgetOver {
     fun blur(c: Context, id: Int) = if (id > 0) p(c).getFloat("blur_$id", g(c).blur) else g(c).blur
     fun tint(c: Context, id: Int) = if (id > 0) p(c).getFloat("tint_$id", g(c).tint) else g(c).tint
     fun material(c: Context, id: Int) = (if (id > 0) p(c).getString("mat_$id", null) else null) ?: g(c).material
+    /** True when this widget has a material of its own (picked in its settings), not the global one. */
+    fun materialSet(c: Context, id: Int) = id > 0 && p(c).contains("mat_$id")
 
     /** [opacity] null = not touched: the widget keeps following the design default. */
     fun save(c: Context, id: Int, opacity: Float?, blur: Float, material: String, tint: Float) =

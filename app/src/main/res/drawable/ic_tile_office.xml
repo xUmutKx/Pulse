@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Extra app tile: Office, a flat white outline of a document with its folded corner and two text lines -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:pathData="M6,3H14L19,8V21H6Z" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6"
+        android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M14,3V8H19" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6"
+        android:strokeLineJoin="round" android:fillColor="#00000000" />
+    <path android:pathData="M9,12H16M9,15.5H16" android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6"
+        android:strokeLineCap="round" android:fillColor="#00000000" />
+</vector>

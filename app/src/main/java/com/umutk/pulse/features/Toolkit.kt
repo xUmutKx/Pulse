@@ -144,6 +144,7 @@ private val tools = listOf(
     Tool("Power menu", "Güç menüsü", "power") { PowerMenuTool() },
     Tool("Dink", "Dink", "dink") { Dink() },
     Tool("DNS", "DNS", "wifi") { DnsSettings() },
+    Tool("Screen cover", "Ekran kapağı", "lock") { CoverTool() },
 )
 
 /** The Toolkit page: a 3-column grid of tiles; a tile opens its tool, the chevron goes back. */
@@ -726,6 +727,9 @@ object TimerClock {
     }
     fun pause(c: Context) { val left = remaining(c); cancel(c); p(c).edit().remove("end").putLong("left", left).apply() }
     fun reset(c: Context) { cancel(c); p(c).edit().remove("end").remove("left").apply() }
+    /** The clock face picked on the timer screen: digits, ring, bold or tomato. */
+    fun skin(c: Context) = p(c).getString("skin", "digits") ?: "digits"
+    fun setSkin(c: Context, k: String) { p(c).edit().putString("skin", k).apply() }
 
     /** Re-arms the in-app wake-up after Pulse was restarted while a timer runs. */
     fun resume(c: Context) { p(c).getLong("end", 0L).takeIf { it > 0L }?.let { schedule(c, it) } }
@@ -775,10 +779,10 @@ object TimerClock {
 
 /** Wakes Pulse when a timer ends while the app is closed. Needs a <receiver> entry in the manifest. */
 class TimerReceiver : BroadcastReceiver() {
-    override fun onReceive(c: Context, i: Intent?) { Opt.load(c); TimerClock.check(c) }
+    override fun onReceive(c: Context, i: Intent?) { Opt.load(c); TimerClock.check(c); PomodoroClock.check(c) }
 }
 
-private fun timerText(ms: Long): String {
+internal fun timerText(ms: Long): String {
     val s = (ms + 999) / 1000 // round up, so the last second shows 00:01 (as the tile)
     return if (s >= 3600) "%d:%02d:%02d".format(s / 3600, s / 60 % 60, s % 60) else "%02d:%02d".format(s / 60, s % 60)
 }
@@ -788,9 +792,15 @@ private fun TimerTool() {
     val ctx = LocalContext.current
     // Android 13+ hides the "time's up" notification until notifications are allowed
     val askNotes = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    fun askPerm() {
+        if (Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
+            askNotes.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+    }
     var running by remember { mutableStateOf(TimerClock.running(ctx)) }
     var left by remember { mutableLongStateOf(TimerClock.remaining(ctx)) }
     var length by remember { mutableLongStateOf(TimerClock.length(ctx)) }
+    var pomo by remember { mutableStateOf(PomodoroClock.on(ctx)) }
+    var skin by remember { mutableStateOf(TimerClock.skin(ctx)) }
     LaunchedEffect(Unit) {
         TimerClock.resume(ctx)
         while (true) { TimerClock.check(ctx); running = TimerClock.running(ctx); left = TimerClock.remaining(ctx); delay(200) }
@@ -798,25 +808,27 @@ private fun TimerTool() {
     fun sync() { running = TimerClock.running(ctx); left = TimerClock.remaining(ctx); length = TimerClock.length(ctx) }
     val done = !running && left == 0L
     PCard {
-        BigValue(timerText(left), 48)
-        BarMeter(if (length > 0) left.toFloat() / length else 0f, Look.accent)
-        if (done) ToolNote(tr("Time's up", "Süre doldu"), Look.accent)
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(1, 3, 5, 10, 15, 30).forEach { m ->
-                PChip(length == m * 60_000L, tr("$m min", "$m dk")) { TimerClock.choose(ctx, m * 60_000L); sync() }
-            }
-        }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PButton(if (running) tr("Pause", "Duraklat") else if (left in 1 until length) tr("Resume", "Sürdür") else tr("Start", "Başlat"), Modifier.weight(1f)) {
-                if (running) TimerClock.pause(ctx) else {
-                    if (Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED)
-                        askNotes.launch(android.Manifest.permission.POST_NOTIFICATIONS)
-                    TimerClock.start(ctx)
-                }
-                sync()
-            }
-            PButton(tr("Reset", "Sıfırla"), Modifier.weight(1f)) { TimerClock.reset(ctx); sync() }
+            PChip(!pomo, tr("Timer", "Zamanlayıcı")) { pomo = false; PomodoroClock.setOn(ctx, false) }
+            PChip(pomo, "Pomodoro") { pomo = true; PomodoroClock.setOn(ctx, true) }
         }
+        if (pomo) PomodoroPanel(skin) { askPerm() } else {
+            TimerFace(skin, timerText(left), if (length > 0) left.toFloat() / length else 0f)
+            if (done) ToolNote(tr("Time's up", "Süre doldu"), Look.accent)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(1, 3, 5, 10, 15, 30).forEach { m ->
+                    PChip(length == m * 60_000L, tr("$m min", "$m dk")) { TimerClock.choose(ctx, m * 60_000L); sync() }
+                }
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PButton(if (running) tr("Pause", "Duraklat") else if (left in 1 until length) tr("Resume", "Sürdür") else tr("Start", "Başlat"), Modifier.weight(1f)) {
+                    if (running) TimerClock.pause(ctx) else { askPerm(); TimerClock.start(ctx) }
+                    sync()
+                }
+                PButton(tr("Reset", "Sıfırla"), Modifier.weight(1f)) { TimerClock.reset(ctx); sync() }
+            }
+        }
+        SkinRow(skin) { skin = it; TimerClock.setSkin(ctx, it) }
     }
 }
 

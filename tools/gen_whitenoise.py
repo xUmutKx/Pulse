@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Generates the white-noise loops for app/src/main/res/raw (stdlib only, run with python3 -I).
+"""Generates the extra ambient loops into app/src/main/assets/ambient (stdlib only, run with python3 -I).
 
-Mono 22050 Hz, 16-bit PCM WAV, about 12 s each. Each loop is built as a longer stream and its
-first XF seconds are equal-power crossfaded with the stream's continuation, so the end joins the start.
+Mono 22050 Hz, 16-bit PCM WAV, 12 s each, listed in that folder's pack.json. Each loop is built as a
+longer stream and its first XF seconds are equal-power crossfaded with the stream's continuation, so
+the end joins the start. LFO periods divide the loop length so the swells repeat exactly.
 """
 import math
 import os
@@ -14,10 +15,10 @@ RATE = 22050
 LOOP = int(RATE * 12.0)      # loop length in samples
 XF = int(RATE * 1.0)         # seam crossfade in samples
 TOTAL = LOOP + XF            # stream length the generators fill
-PEAK_DB = -6.0
+PEAK_DB = -3.0
 TWO_PI = 2.0 * math.pi
 HERE = os.path.dirname(os.path.abspath(__file__))
-RAW = os.path.join(HERE, "..", "app", "src", "main", "res", "raw")
+OUT = os.path.join(HERE, "..", "app", "src", "main", "assets", "ambient")
 
 
 def white(r):
@@ -61,91 +62,53 @@ def lfo(t, period, phase=0.0):
     return 0.5 + 0.5 * math.sin(TWO_PI * t / period + phase)
 
 
-def gen_white(r):
-    return white(r)
+def gen_steam(r):
+    # kettle-like hiss: 1-3 kHz band with a slow boil flutter
+    band = [a - b for a, b in zip(lowpass(white(r), 0.9), lowpass(white(r), 0.3))]
+    out = []
+    for i in range(TOTAL):
+        t = i / RATE
+        out.append(band[i] * (0.5 + 0.3 * lfo(t, 3.0) + 0.2 * lfo(t, 6.0, 0.4)))
+    return out
 
 
-def gen_rain(r):
-    hiss = [0.35 * v for v in highpass(white(r), 0.25)]
-    # droplets: short bright clicks, 60 per second on average
-    for _ in range(int(12.0 * 60)):
+def gen_heartbeat(r):
+    # soft body bed with a lub-dub at 60 bpm; beats run to 12 s so the seam carries one into the start
+    x = [0.3 * v for v in brown(r)]
+    for k in range(13):
+        s = k * RATE
+        add_burst(x, s, int(RATE * 0.25), 1.0, RATE * 0.04, r, tone_hz=55.0)
+        add_burst(x, s + int(RATE * 0.3), int(RATE * 0.2), 0.7, RATE * 0.035, r, tone_hz=60.0)
+    return x
+
+
+def gen_vinyl(r):
+    # record surface: quiet high hiss, about 40 tiny clicks per second and a few louder pops
+    hiss = [0.03 * v for v in highpass(white(r), 0.4)]
+    for _ in range(int(12.0 * 40)):
         k = r.randrange(TOTAL)
-        add_burst(hiss, k, int(RATE * 0.004), r.uniform(0.3, 1.0) ** 2, RATE * r.uniform(0.0004, 0.0012), r)
+        add_burst(hiss, k, int(RATE * 0.002), r.uniform(0.2, 1.0) ** 2, RATE * 0.0004, r)
+    for _ in range(12):
+        k = r.randrange(TOTAL)
+        add_burst(hiss, k, int(RATE * 0.02), 1.5, RATE * 0.004, r)
     return hiss
 
 
-def gen_fire(r):
-    rumble = [0.8 * v for v in brown(r)]
-    hiss = [0.05 * v for v in lowpass(white(r), 0.15)]
-    x = [a + b for a, b in zip(rumble, hiss)]
-    # crackles: about 25 per second, power-distributed amplitude, a few ms long
-    for _ in range(int(12.0 * 25)):
-        k = r.randrange(TOTAL)
-        amp = 1.4 * r.random() ** 3
-        add_burst(x, k, r.randint(40, 200), amp, r.uniform(5.0, 40.0), r)
-    return x
-
-
-def gen_wind(r):
-    rumble = lowpass(white(r), 0.012)
-    mid = [0.3 * v for v in lowpass(white(r), 0.05)]
+def gen_traffic(r):
+    # distant road: low rumble with slow swells
+    rumble = lowpass(white(r), 0.02)
     out = []
     for i in range(TOTAL):
         t = i / RATE
-        gust = 0.35 + 0.35 * lfo(t, 5.3) + 0.3 * lfo(t, 13.7, 1.3)
-        out.append((rumble[i] + mid[i]) * gust)
+        out.append(rumble[i] * (0.35 + 0.4 * lfo(t, 6.0) + 0.25 * lfo(t, 4.0, 2.0)))
     return out
-
-
-def gen_waves(r):
-    surf = lowpass(white(r), 0.04)
-    foam = [0.25 * v for v in highpass(white(r), 0.3)]
-    out = []
-    for i in range(TOTAL):
-        t = i / RATE
-        swell = 0.15 + 0.85 * lfo(t, 7.0) ** 1.5   # ~7 s swell
-        out.append((surf[i] + foam[i] * 0.4) * swell)
-    return out
-
-
-def gen_coffee(r):
-    # murmur: band-passed noise with slow random-ish level changes
-    band = [a - b for a, b in zip(lowpass(white(r), 0.15), lowpass(white(r), 0.02))]
-    x = []
-    for i in range(TOTAL):
-        t = i / RATE
-        env = 0.55 + 0.25 * lfo(t, 1.8) + 0.2 * lfo(t, 3.1, 0.7)
-        x.append(band[i] * env)
-    # soft cup clinks: a few per loop, 2.8-4.2 kHz, 30 ms decay
-    for _ in range(5):
-        k = r.randrange(TOTAL)
-        add_burst(x, k, int(RATE * 0.12), 0.35, RATE * 0.03, r, tone_hz=r.uniform(2800.0, 4200.0))
-    return x
-
-
-def gen_bell(r):
-    # 440 / 880 / 1320 Hz partials, struck every 3 s; a strike at the stream end lands on the loop start
-    partials = [(440.0, 1.0, 1.6), (880.0, 0.45, 0.9), (1320.0, 0.22, 0.55)]
-    x = [0.0] * TOTAL
-    every = int(RATE * 3.0)
-    span = int(RATE * 4.0)
-    for start in range(0, TOTAL, every):
-        for j in range(min(span, TOTAL - start)):
-            t = j / RATE
-            attack = min(1.0, t / 0.002)
-            v = sum(a * math.exp(-t / d) * math.sin(TWO_PI * f * t) for f, a, d in partials)
-            x[start + j] += 0.5 * attack * v
-    return x
 
 
 GENERATORS = [
-    ("wn_white", gen_white),
-    ("wn_coffee", gen_coffee),
-    ("wn_bell", gen_bell),
-    ("wn_rain", gen_rain),
-    ("wn_fire", gen_fire),
-    ("wn_wind", gen_wind),
-    ("wn_waves", gen_waves),
+    ("steam", gen_steam),
+    ("heartbeat", gen_heartbeat),
+    ("vinyl", gen_vinyl),
+    ("traffic", gen_traffic),
 ]
 
 
@@ -170,11 +133,11 @@ def write_wav(path, samples):
 
 
 def main():
-    os.makedirs(RAW, exist_ok=True)
+    os.makedirs(OUT, exist_ok=True)
     total = 0
     for seed, (name, gen) in enumerate(GENERATORS, start=1):
         r = random.Random(seed)
-        path = os.path.join(RAW, name + ".wav")
+        path = os.path.join(OUT, name + ".wav")
         write_wav(path, make_loop(gen(r)))
         size = os.path.getsize(path)
         total += size

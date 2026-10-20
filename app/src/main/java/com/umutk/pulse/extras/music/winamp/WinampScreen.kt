@@ -103,8 +103,9 @@ fun WinampScreen(
     var bands by remember { mutableStateOf(eq.bandLevels) }
 
     BoxWithConstraints(modifier.fillMaxSize()) {
-        val s = (maxWidth.value / WINAMP_W).coerceIn(1f, 3f)
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+        // windows fill the width inside an 8 dp gutter on each side
+        val s = ((maxWidth.value - 16f) / WINAMP_W).coerceIn(1f, 3f)
+        Column(Modifier.fillMaxSize().padding(horizontal = 8.dp).verticalScroll(rememberScrollState())) {
             WinampClassic(
                 skin = skin, track = st.current, playing = st.isPlaying, positionMs = pos, durationMs = dur,
                 levels = levels, volume = volume, wave = wave, scope = visScope,
@@ -187,5 +188,6 @@ fun WinampSkinSettings() {
     var skins by remember { mutableStateOf(emptyList<InstalledSkin>()) }
     var chosen by remember { mutableStateOf(prefs.getString("skin", "") ?: "") }
     LaunchedEffect(Unit) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
-    if (skins.isNotEmpty()) SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }
+    // the built-in Classic skin (grey-blue body, green LCD, bevelled buttons) is always the first tile
+    SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }
 }

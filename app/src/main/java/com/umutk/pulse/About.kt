@@ -84,6 +84,8 @@ fun AboutPage() {
         }
         val openTool = LocalOpenTool.current
         PButton(tr("Guide", "Kılavuz"), Modifier.fillMaxWidth()) { openTool("guide") }
+        // moved here from the top-right menu: Settings > About
+        PButton(tr("Device troubleshoot", "Cihaz sorun giderme"), Modifier.fillMaxWidth()) { openTool("troubleshoot") }
         PButton("GitHub · xUmutKx/Pulse", Modifier.fillMaxWidth()) { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/xUmutKx/Pulse")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
         // manual check: the same release lookup as the start-up one, without the 12-hour wait
         val scope = rememberCoroutineScope()

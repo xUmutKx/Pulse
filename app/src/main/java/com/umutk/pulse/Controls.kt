@@ -25,6 +25,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -71,6 +73,10 @@ fun PSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean = true) {
     val t = T
     when {
         oem -> OemSwitch(on, onChange, enabled)
+        // AMOLED: black track with a light outline and thumb, so an "on" switch is not a white block
+        t.id == "amoled" -> Switch(on, onChange, enabled = enabled, colors = SwitchDefaults.colors(
+            checkedTrackColor = Color.Black, checkedBorderColor = Color.White, checkedThumbColor = Color.White,
+            uncheckedTrackColor = Color.Black, uncheckedBorderColor = Color(0xFF9E9E9E), uncheckedThumbColor = Color(0xFF9E9E9E)))
         t.material -> Switch(on, onChange, enabled = enabled, colors = SwitchDefaults.colors(checkedTrackColor = Look.accent))
         classic -> PCheck(on, onChange, enabled)
         else -> { // Windows 10 / 11 toggle
@@ -246,14 +252,18 @@ fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointR
     if (oneUi) { OneUiSlider(value, onChange, range, onDone); return }
     // thick: a wide groove and a big thumb, drawn by this function for every look (Material included)
     if (t.material && !thick) { Slider(value, onChange, modifier = modifier, valueRange = range, onValueChangeFinished = onDone, colors = SliderDefaults.colors(thumbColor = Look.accent, activeTrackColor = Look.accent, inactiveTrackColor = Look.accent.copy(alpha = .24f))); return }
+    // the drag gestures below use pointerInput(Unit): read the latest callbacks and range through these, not the first ones
+    val curChange by rememberUpdatedState(onChange)
+    val curRange by rememberUpdatedState(range)
+    val curDone by rememberUpdatedState(onDone)
     val frac = ((value - range.start) / (range.endInclusive - range.start)).coerceIn(0f, 1f)
     val groove = if (thick) 12.dp else 4.dp
     val thumbW = if (thick) 22.dp else 11.dp
     val thumbH = if (thick) 30.dp else 21.dp
     BoxWithConstraints(modifier.fillMaxWidth().height(if (thick) 40.dp else 32.dp).pointerInput(Unit) {
-        detectTapGestures { o -> onChange(range.start + (o.x / size.width).coerceIn(0f, 1f) * (range.endInclusive - range.start)); onDone() }
+        detectTapGestures { o -> curChange(curRange.start + (o.x / size.width).coerceIn(0f, 1f) * (curRange.endInclusive - curRange.start)); curDone() }
     }.pointerInput(Unit) {
-        detectHorizontalDragGestures(onDragEnd = onDone) { c, _ -> onChange(range.start + (c.position.x / size.width).coerceIn(0f, 1f) * (range.endInclusive - range.start)) }
+        detectHorizontalDragGestures(onDragEnd = { curDone() }) { c, _ -> curChange(curRange.start + (c.position.x / size.width).coerceIn(0f, 1f) * (curRange.endInclusive - curRange.start)) }
     }, contentAlignment = Alignment.CenterStart) {
         if (win95Authentic) { // 95 trackbar: sunken 4 px groove, raised 11x21 grey thumb
             Box(Modifier.fillMaxWidth().height(groove).background(Color(0xFFC0C0C0)).bevel(false))

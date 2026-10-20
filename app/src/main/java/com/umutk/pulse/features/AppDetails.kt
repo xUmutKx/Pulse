@@ -1,6 +1,7 @@
 package com.umutk.pulse.features
 
 import com.umutk.pulse.Shell
+import com.umutk.pulse.tr
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -175,6 +176,14 @@ private fun manifestActions(ctx: Context, pkg: String): List<ActionRow> {
  * Copies the installed APK to Downloads/Pulse/extract. A split install (app bundle) goes into one .apks zip with
  * base.apk and the splits. Returns the note to show: the saved path or the reason it failed. Runs on IO.
  */
+/** Where Extract APK writes: a folder chosen in Settings, by default Downloads/Pulse/extract. */
+object ApkExtract {
+    private fun prefs(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+    fun path(c: Context): String = prefs(c).getString("apkExtractDir", null) ?: File(Downloads.defaultDir(), "Pulse/extract").path
+    fun dir(c: Context): File = File(path(c))
+    fun set(c: Context, p: String) { prefs(c).edit().putString("apkExtractDir", p).apply() }
+}
+
 internal fun extractApp(ctx: Context, pkg: String): String {
     val pm = ctx.packageManager
     val pi = pm.getPackageInfo(pkg, 0)
@@ -184,7 +193,7 @@ internal fun extractApp(ctx: Context, pkg: String): String {
     if (files.any { !it.canRead() }) return "Could not read"
     val name = listOf(ai.loadLabel(pm).toString(), pi.versionName.orEmpty())
         .filter { it.isNotBlank() }.joinToString("-").replace(Regex("[^\\p{L}\\p{N} .-]"), "_")
-    val dir = File(Downloads.defaultDir(), "Pulse/extract").apply { mkdirs() }
+    val dir = ApkExtract.dir(ctx).apply { mkdirs() }
     return try {
         val out = if (splits.isEmpty()) {
             File(dir, "$name.apk").also { files[0].copyTo(it, overwrite = true) }
@@ -251,12 +260,12 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
                     Shell.run("am force-stop $pkg")
                     note = "${d?.label ?: pkg} was stopped"
                 }
-                PButton("Extract APK") { scope.launch { note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
+                PButton("Extract APK") { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
                 if (d != null && !d.isSystem) {
                     PButton("Uninstall", danger = true) { confirmUninstall = true }
                 }
             }
-            if (note.isNotEmpty()) Text(note, color = Look.accent, fontSize = 12.sp)
+            if (note.isNotEmpty()) Text(note, color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp)
             error?.let { Text(it, color = T.sub, fontSize = 13.sp) }
         }
 

@@ -67,6 +67,8 @@ object Backdrop {
     /** Which part of the picture shows when it is cropped to the screen: "top", "center" or "bottom". */
     /** The blurred copy of [image], rendered once per choice/blur/crop change off the main thread; null = draw [image] sharp. */
     var blurred by mutableStateOf<ImageBitmap?>(null)
+    /** The Windows 11 stock wallpaper, behind the glass when no picture is chosen (decoded once in [load]). */
+    var stock by mutableStateOf<ImageBitmap?>(null)
     var align by mutableStateOf("center")
     /** The crop chosen in the editor: where the screen sits in the free room (0..1 each way) and the zoom (1 = just fills). */
     var fx by mutableStateOf(.5f)
@@ -88,6 +90,7 @@ object Backdrop {
         fy = p.getFloat("backdrop_fy", alignY())
         zoom = p.getFloat("backdrop_zoom", 1f)
         image = render(c)
+        stock = decodeRes(c, R.drawable.splash_win11_wallpaper)?.asImageBitmap()
         rebuildBlur()
     }
 

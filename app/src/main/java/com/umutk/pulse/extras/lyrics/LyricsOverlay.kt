@@ -212,7 +212,8 @@ object MiniLyrics {
         tv = null
     }
 
-    private class Playing(val key: String, val title: String, val artist: String, val album: String?, val durationMs: Long, val posMs: Long)
+    /** [path] is set for Pulse's own player: its file is read first (tag, .lrc / .txt). */
+    private class Playing(val key: String, val title: String, val artist: String, val album: String?, val durationMs: Long, val posMs: Long, val path: String? = null)
 
     private fun fromSessions(ctx: Context): Playing? {
         val sm = ctx.getSystemService(Context.MEDIA_SESSION_SERVICE) as MediaSessionManager
@@ -234,7 +235,7 @@ object MiniLyrics {
         val t = st.current ?: return null
         if (!st.isPlaying) return null
         val (a, ti) = guessArtistTitle(t)
-        return Playing("own|${t.path}", t.title ?: ti, t.artist ?: a, t.album, t.durationSec * 1000L, e.positionMs.toLong())
+        return Playing("own|${t.path}", t.title ?: ti, t.artist ?: a, t.album, t.durationSec * 1000L, e.positionMs.toLong(), t.path)
     }
 
     private suspend fun follow(ctx: Context, t: TextView) {
@@ -247,7 +248,7 @@ object MiniLyrics {
             else {
                 if (p.key != key) {
                     key = p.key; res = null; lookup?.cancel()
-                    lookup = scope.launch { res = Lyrics.forTrack(ctx, p.title, p.artist, p.album, p.durationMs, null)?.takeIf { it.synced } }
+                    lookup = scope.launch { res = Lyrics.forTrack(ctx, p.title, p.artist, p.album, p.durationMs, p.path)?.takeIf { it.synced } }
                 }
                 val r = res
                 val line = r?.lines?.lastOrNull { it.timeMs <= p.posMs }?.text?.takeIf { it.isNotBlank() }

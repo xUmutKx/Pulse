@@ -3,10 +3,11 @@ package com.umutk.pulse.extras.music.stats
 import android.content.Context
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import com.umutk.pulse.extras.music.Recommendations
 import org.json.JSONObject
 
-/** Per-track numbers. [plays] counts a track once it has been heard for 30 s (or to its end). */
-data class TrackStat(val path: String, val title: String, val artist: String, val album: String, val plays: Int, val listenMs: Long, val lastPlayed: Long)
+/** Per-track numbers. [plays] counts a track once it has been heard for 30 s (or to its end). [parts] = plays per time of day (see Recommendations.partOfDay). */
+data class TrackStat(val path: String, val title: String, val artist: String, val album: String, val plays: Int, val listenMs: Long, val lastPlayed: Long, val parts: List<Int> = emptyList())
 
 /** Play counts, listening time, last played and favourites, kept as one JSON string in prefs. */
 object MusicStats {
@@ -22,7 +23,12 @@ object MusicStats {
         val o = all.optJSONObject(path) ?: JSONObject()
         o.put("ti", title ?: path.substringAfterLast('/').substringBeforeLast('.')).put("ar", artist ?: "").put("al", album ?: "")
         o.put("ms", o.optLong("ms") + ms)
-        if (counted) o.put("n", o.optInt("n") + 1).put("last", System.currentTimeMillis())
+        if (counted) {
+            val now = System.currentTimeMillis()
+            // the play also goes into its time-of-day bucket, so recommendations can follow the hour
+            val part = Recommendations.partOfDay(java.util.Calendar.getInstance().apply { timeInMillis = now }.get(java.util.Calendar.HOUR_OF_DAY))
+            o.put("n", o.optInt("n") + 1).put("last", now).put("tod$part", o.optInt("tod$part") + 1)
+        }
         all.put(path, o)
         sp(c).edit().putString("t", all.toString()).apply()
     }
@@ -31,7 +37,7 @@ object MusicStats {
         val j = read(c)
         return j.keys().asSequence().map { p ->
             val o = j.getJSONObject(p)
-            TrackStat(p, o.optString("ti"), o.optString("ar"), o.optString("al"), o.optInt("n"), o.optLong("ms"), o.optLong("last"))
+            TrackStat(p, o.optString("ti"), o.optString("ar"), o.optString("al"), o.optInt("n"), o.optLong("ms"), o.optLong("last"), (0..3).map { o.optInt("tod$it") })
         }.toList()
     }
 
@@ -54,6 +60,16 @@ object MusicStats {
         val s = favourites(c).toMutableSet()
         if (!s.add(path)) s.remove(path)
         sp(c).edit().putStringSet("fav", s).apply()
+    }
+
+    /** Stars (1 to 5) per track path; a track without stars is absent. Stored one "stars<TAB>path" line each. */
+    fun ratings(c: Context): Map<String, Int> =
+        sp(c).getString("ratings", "").orEmpty().lines().mapNotNull { l -> l.substringBefore('\t').toIntOrNull()?.let { n -> l.substringAfter('\t') to n } }.toMap()
+
+    fun setRating(c: Context, path: String, stars: Int) {
+        val m = ratings(c).toMutableMap()
+        if (stars in 1..5) m[path] = stars else m.remove(path)
+        sp(c).edit().putString("ratings", m.entries.joinToString("\n") { "${it.value}\t${it.key}" }).apply()
     }
 }
 

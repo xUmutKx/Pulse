@@ -46,6 +46,10 @@ val T get() = Look.current
 val pageGutter get() = if (T.material) 16.dp else 12.dp
 
 private fun material(k: String): ImageVector = when (k) {
+    "add" -> Icons.Outlined.Add; "pin" -> Icons.Outlined.PushPin; "lock" -> Icons.Outlined.Lock; "unlock" -> Icons.Outlined.LockOpen
+    "undo" -> Icons.Outlined.Undo; "restore" -> Icons.Outlined.Restore; "share" -> Icons.Outlined.Share; "newfile" -> Icons.Outlined.NoteAdd
+    "image" -> Icons.Outlined.Image; "bell" -> Icons.Outlined.Notifications; "calendar" -> Icons.Outlined.CalendarMonth; "save" -> Icons.Outlined.Save
+    "edit" -> Icons.Outlined.Edit; "record" -> Icons.Outlined.FiberManualRecord; "mic" -> Icons.Outlined.Mic; "speak" -> Icons.Outlined.VolumeUp
     "processes" -> Icons.Outlined.Apps; "apps" -> Icons.Outlined.Apps; "performance" -> Icons.Outlined.ShowChart; "history" -> Icons.Outlined.History
     "startup" -> Icons.Outlined.RocketLaunch; "users" -> Icons.Outlined.People; "details" -> Icons.Outlined.FormatListBulleted
     "services" -> Icons.Outlined.Extension; "settings" -> Icons.Outlined.Settings; "menu" -> Icons.Rounded.Menu
@@ -79,15 +83,16 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     val ctx = LocalContext.current
     // App lock: the Windows 11 / One UI / ColorOS / classic packs have their own padlock; the tile with a padlock is for the vector looks
     val k = if (k0 == "applock" && T.id in setOf("win11", "oneui", "coloros", "win95", "xp", "win7")) "lock" else k0
-    if (k == "office") { OfSuiteLogo(size, modifier, tint); return }
+    // Material / AMOLED use the flat line icon (mat_office.xml below); the other looks keep their own Office logo
+    if (k == "office" && T.id !in setOf("material", "amoled")) { OfSuiteLogo(size, modifier, tint); return }
     if (k == "applock") { com.umutk.pulse.applock.AppLockIcon(tint, size, modifier); return }
+    // Windows 11: the Fluent picture by default; the thin line glyphs (the Windows 10 set) when the Settings switch says so
+    val fluent = T.id == "win11" && !T.material && !Look.winIconLine
     if (k == "recycle" && !T.material) {
-        // Windows 11: the real Fluent recycle bin picture
-        if (T.id == "win11") ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
+        if (fluent) ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
         BinIcon(tint, size, modifier); return
     }
-    // Windows 11: the Fluency PNG pack (one distinct icon per key) first, FluentPaths vectors only for a key without a PNG
-    if (T.id == "win11" && !T.material) ThemeIcons.bitmap(ctx, "win11", k)?.let { Image(it, null, modifier.size(size)); return }
+    if (fluent) ThemeIcons.bitmap(ctx, "win11", k)?.let { Image(it, null, modifier.size(size)); return }
     // the bin is always the plain bin icon, never the Fluent glyph that has a cross in it
     if (k == "delete" && !T.material) { BinIcon(tint, size, modifier); return }
     // One UI / ColorOS: own black-glyph PNG packs (Phosphor light / duotone), tinted
@@ -240,6 +245,8 @@ fun PCard(modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> 
     val shape = RoundedCornerShape(if (colorOs) 20.dp else if (t.material) t.radius.coerceIn(16.dp, 28.dp) else t.radius) // M3 cards: 16 to 28 dp corners
     val fx = if (t.id == "win11") Look.effect else "none"
     val surface = when {
+        // Windows 11 with a material under the wallpaper: the card is real glass (blurred wallpaper behind it)
+        fx != "none" && inGlassRoot() -> Modifier.glassMaterial(fx, shape)
         // Material first: its glassA is for the window backdrop only; cards stay tonal with a soft elevation
         // One UI: big soft white card, no shadow, no edge; ColorOS: flat card with a hairline edge
         oneUi -> Modifier.background(t.panel, shape)

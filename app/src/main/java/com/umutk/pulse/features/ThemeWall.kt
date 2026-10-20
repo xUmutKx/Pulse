@@ -31,10 +31,10 @@ fun setThemeWallpaper(c: Context, lookId: String, uri: String?) {
 
 /** The stock pictures of each look's era; index 0 is the look's default. Windows 11 keeps its own A-D packs (Backdrop). */
 fun wallsFor(lookId: String): List<Int> = when (lookId) {
-    "xp" -> listOf(R.drawable.splash_xp_bliss, R.drawable.wall_xp_2, R.drawable.wall_xp_3, R.drawable.wall_xp_4, R.drawable.wall_xp_5, R.drawable.wall_xp_6, R.drawable.wall_xp_7, R.drawable.wall_xp_8)
-    "win7" -> listOf(R.drawable.splash_win7_wallpaper, R.drawable.wall_w7_2, R.drawable.wall_w7_3, R.drawable.wall_w7_4, R.drawable.wall_w7_5, R.drawable.wall_w7_6, R.drawable.wall_w7_7, R.drawable.wall_w7_8, R.drawable.wall_w7_9, R.drawable.wall_w7_10, R.drawable.wall_w7_11)
+    "xp" -> listOf(R.drawable.splash_xp_bliss, R.drawable.wall_xp_2, R.drawable.wall_xp_3, R.drawable.wall_xp_4, R.drawable.wall_xp_5, R.drawable.wall_xp_6, R.drawable.wall_xp_7, R.drawable.wall_xp_8, R.drawable.wall_grass)
+    "win7" -> listOf(R.drawable.splash_win7_wallpaper, R.drawable.wall_w7_2, R.drawable.wall_w7_3, R.drawable.wall_w7_4, R.drawable.wall_w7_5, R.drawable.wall_w7_6, R.drawable.wall_w7_7, R.drawable.wall_w7_8, R.drawable.wall_w7_9, R.drawable.wall_w7_10, R.drawable.wall_w7_11, R.drawable.wall_grass)
     "win95" -> listOf(R.drawable.wall_w95_0, R.drawable.wall_w95_1, R.drawable.wall_w95_2, R.drawable.wall_w95_3)
-    "win10" -> listOf(R.drawable.wall_w10_1, R.drawable.wall_w10_2, R.drawable.wall_w10_3, R.drawable.wall_w10_4, R.drawable.wall_w10_5)
+    "win10" -> listOf(R.drawable.wall_w10_1, R.drawable.wall_w10_2, R.drawable.wall_w10_3, R.drawable.wall_w10_4, R.drawable.wall_w10_5, R.drawable.wall_grass)
     else -> emptyList()
 }
 

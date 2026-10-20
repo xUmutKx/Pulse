@@ -60,9 +60,9 @@ class VideoWidget : AppWidgetProvider() {
                 setProgressBar(R.id.vw_prog, 1000, prog, false)
                 setColorStateList(R.id.vw_prog, "setProgressTintList", ColorStateList.valueOf(p.accent.toInt()))
                 setInt(R.id.vw_resume, "setColorFilter", if (p.light) android.graphics.Color.WHITE else p.bg.toInt()); setInt(R.id.vw_lib, "setColorFilter", p.fg.toInt())
-                setOnClickPendingIntent(R.id.vw_resume, if (last != null) WidgetUi.launch(c, "com.umutk.pulse.VideoLauncher", 81, "resume_video" to last.uri) else WidgetUi.launch(c, "com.umutk.pulse.VideoLauncher", 82))
-                setOnClickPendingIntent(R.id.vw_thumb, WidgetUi.launch(c, "com.umutk.pulse.VideoLauncher", 82))
-                setOnClickPendingIntent(R.id.vw_lib, WidgetUi.launch(c, "com.umutk.pulse.VideoLauncher", 82))
+                setOnClickPendingIntent(R.id.vw_resume, if (last != null) WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 81, "route" to "video", "resume_video" to last.uri) else WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 82, "route" to "video"))
+                setOnClickPendingIntent(R.id.vw_thumb, WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 82, "route" to "video"))
+                setOnClickPendingIntent(R.id.vw_lib, WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 82, "route" to "video"))
             }
         }
     }

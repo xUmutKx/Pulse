@@ -11,6 +11,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -21,6 +23,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -32,7 +35,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
-import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Pause
@@ -62,6 +64,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -71,6 +74,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.material.icons.rounded.Subject
@@ -82,6 +87,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
@@ -97,14 +106,16 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import com.umutk.pulse.Look
 import com.umutk.pulse.T
-import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.window.Dialog
+import java.io.File
 import kotlin.math.atan2
+import com.umutk.pulse.extras.music.CoverCarousel
+import com.umutk.pulse.extras.music.rememberTrackArt
 import com.umutk.pulse.extras.music.Track
 import com.umutk.pulse.tr
 import android.content.Context
@@ -158,9 +169,10 @@ fun PowerampTabBar(
     val iw by animateFloatAsState(rect?.second ?: 0f, label = "dock-w")
     val ia by animateFloatAsState(if (selected != null && style.tabs != PowerampTabs.FLAT) 1f else 0f, label = "dock-a")
     val ic by animateColorAsState(if (under) style.accent else style.accent.copy(alpha = .18f), label = "dock-c")
+    // the bar is exactly the 48 dp tab row (no inset), so the tabs' measured x and the indicator share one origin
     val indY = with(dens) { (if (under) 45.dp else 0.dp).roundToPx() }
     val indH = if (under) 3.dp else 48.dp
-    Box(base.padding(horizontal = 8.dp, vertical = 4.dp)) {
+    Box(base) {
         Box(
             Modifier.offset { IntOffset(ix.roundToInt(), indY) }.width(with(dens) { iw.toDp() }).height(indH)
                 .alpha(ia).clip(CircleShape).background(ic),
@@ -187,7 +199,7 @@ fun PowerampTabBar(
 }
 
 /**
- * Now playing: square cover on a plain background, title and artist chips with previous/next beside them,
+ * Now playing: square cover over its own blurred copy filling the page, title and artist chips with previous/next beside them,
  * mode row (equalizer, sleep timer, count, repeat, shuffle), one play button, seek bar and a volume bar at the bottom edge.
  */
 @Composable
@@ -196,6 +208,8 @@ fun NowPlayingScreen(
     index: Int,
     total: Int,
     art: ImageBitmap?,
+    artPrev: ImageBitmap?,
+    artNext: ImageBitmap?,
     playing: Boolean,
     positionMs: Int,
     durationMs: Int,
@@ -210,6 +224,8 @@ fun NowPlayingScreen(
     onShuffle: () -> Unit = {},
     onRepeat: () -> Unit = {},
     onOpenEffects: () -> Unit = {},
+    rating: Int = 0,
+    onRate: ((Int) -> Unit)? = null,
     favourite: Boolean = false,
     onFavourite: (() -> Unit)? = null,
     sleepMinutes: Int = 0,
@@ -219,6 +235,7 @@ fun NowPlayingScreen(
     onFindArt: (() -> Unit)? = null,
     lyricsOpen: Boolean = false,
     onSeekMs: ((Int) -> Unit)? = null,
+    onPullDown: (() -> Unit)? = null,
 ) {
     val fg = style.onBackdrop
     fun IV(n: String) = com.umutk.pulse.extras.ui.IconSet.vec(n, style.icons)
@@ -227,13 +244,28 @@ fun NowPlayingScreen(
     val rawProgress = if (durationMs > 0) (shownMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
     // eases the bar between the position polls; a drag follows the finger directly
     val animProgress by animateFloatAsState(rawProgress, label = "seek")
-    val (vol, setVol) = rememberVolume()
+    // the real loudness of the track, decoded once off the main thread; null while it loads (the wave stays flat)
+    val ctx = LocalContext.current
+    val peaks by produceState<FloatArray?>(null, track?.path) { value = null; value = track?.let { t -> withContext(Dispatchers.IO) { TrackPeaks.load(ctx, t.path) } } }
+    // the lyrics button shows only when the track has lyrics on the device, unless the player setting keeps it always
+    val hasLyrics by produceState(false, track?.path) {
+        value = false
+        value = track?.let { t ->
+            withContext(Dispatchers.IO) {
+                val artist = t.artist.orEmpty(); val title = t.displayName()
+                com.umutk.pulse.extras.lyrics.Lyrics.localRecord(t.path, title, artist) != null ||
+                    com.umutk.pulse.extras.lyrics.LyricsStore(ctx).load(t.path, artist, title) != null
+            }
+        } ?: false
+    }
+    // the blurred backdrop is drawn once by PowerampApp, edge to edge; this page draws no second copy
     BoxWithConstraints(modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 13.dp, vertical = 13.dp)) {
             // square cover, the biggest element; the lyrics sheet opens over it. An upward swipe opens lyrics; a downward
             // one does nothing. Vertical drags are consumed here so the page neither scrolls nor closes from the cover.
+            // up on the cover opens the lyrics, down goes back to the page the user came from (the carousel reads the drag)
             val lyricsNow by rememberUpdatedState(onLyrics)
-            val slop = with(LocalDensity.current) { 72.dp.toPx() }
+            val pullNow by rememberUpdatedState(onPullDown)
             // the cover's band across the window is excluded from the system back gesture, so a downward drag that starts
             // near a screen edge stays on the cover instead of going back out of the player
             val view = LocalView.current
@@ -243,99 +275,115 @@ fun NowPlayingScreen(
                     .onGloballyPositioned { c ->
                         val b = c.boundsInWindow()
                         view.systemGestureExclusionRects = listOf(android.graphics.Rect(0, b.top.roundToInt(), view.width, b.bottom.roundToInt()))
-                    }
-                    .pointerInput(Unit) {
-                        var startY = 0f
-                        var sum = 0f
-                        detectVerticalDragGestures(
-                            onDragStart = { startY = it.y; sum = 0f },
-                            onDragEnd = { if (startY > size.height * .55f && sum < -slop) lyricsNow?.invoke() },
-                            onDragCancel = { sum = 0f },
-                            onVerticalDrag = { c, d -> c.consume(); sum += d },
-                        )
                     },
                 contentAlignment = Alignment.Center,
             ) {
-                Crossfade(art, Modifier.fillMaxSize(), label = "cover") { a ->
+                // swipe left or right to change track: the neighbour cover slides in from the side of the drag
+                CoverCarousel(
+                    art, artPrev, artNext, index > 0, index < total - 1, onPrev, onNext, Modifier.fillMaxSize(),
+                    onSwipeUp = { if (!lyricsOpen) lyricsNow?.invoke() },
+                    onSwipeDown = { pullNow?.invoke() },
+                ) { a ->
                     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(96.dp))
                     }
                 }
-                if (track != null) TrackMenu(favourite, onFavourite, onEditTags, onFindArt, style, Modifier.align(Alignment.BottomEnd).padding(8.dp))
+                if (track != null) {
+                    RatingStar(rating, onRate, favourite, onFavourite, style, Modifier.align(Alignment.BottomStart).padding(start = 4.dp, bottom = 2.dp))
+                    TrackMenu(track, onEditTags, onFindArt, onLyrics, style, Modifier.align(Alignment.BottomEnd).padding(end = 2.dp, bottom = 2.dp))
+                    if (onLyrics != null && !lyricsOpen && (hasLyrics || PowerampPrefs.lyricsAlways(ctx))) LyricsIcon(onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
+                }
                 if (lyricsOpen && track != null) com.umutk.pulse.extras.lyrics.LyricsSheet(
                     track.displayName(), track.artist.orEmpty(), track.album, durationMs.toLong(), track.path.takeIf { !it.contains("://") }, positionMs.toLong(),
                     onDismiss = { onLyrics?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
                 )
             }
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(20.dp))
             // title and artist; favourite and lyrics sit flat beside them
+            // title and artist sit in their own rounded chips, the way the reference player shows them
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
+                Column(Modifier.weight(1f).padding(start = 1.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     if (track != null) {
+                        // both chips share one shape and inset, so the title and artist read as a matched pair
+                        val chipShape = RoundedCornerShape(12.dp)
                         Text(
                             track.displayName(), color = fg, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = if (onEditTags != null) Modifier.clickable(onClick = onEditTags) else Modifier,
+                            modifier = (if (onEditTags != null) Modifier.clickable(onClick = onEditTags) else Modifier)
+                                .clip(chipShape).background(style.panel).padding(horizontal = 14.dp, vertical = 3.dp),
                         )
-                        Text(
-                            listOfNotNull(track.artist?.takeIf { it.isNotBlank() }, track.album?.takeIf { it.isNotBlank() }).joinToString(" - ").ifEmpty { track.folderName() },
-                            color = style.textDim, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        // artist and album only; no folder name here, so a blank tag shows no chip rather than "Audio"
+                        val sub = listOfNotNull(track.artist?.takeIf { it.isNotBlank() }, track.album?.takeIf { it.isNotBlank() }).joinToString(" - ")
+                        if (sub.isNotEmpty()) Text(
+                            sub,
+                            color = style.textDim, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clip(chipShape).background(style.panel).padding(horizontal = 14.dp, vertical = 3.dp),
                         )
                     }
                 }
-                if (onLyrics != null && track != null && !lyricsOpen) LyricsPill(onLyrics)
             }
-            Spacer(Modifier.height(12.dp))
-            // transport: play sits on the centre axis, previous and next on either side; shuffle and repeat at the ends
-            Box(Modifier.fillMaxWidth().height(96.dp)) {
-                Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Round(IV("prev"), tr("Previous", "Önceki"), 48.dp, 28.dp, fg, null, CircleShape, onPrev)
-                    val plain = style.buttons == PowerampButtons.PLAIN
+            Spacer(Modifier.height(19.dp))
+            // mode row as pills: equalizer, sleep timer, track count centred, repeat and shuffle at the ends
+            var sleepOpen by remember { mutableStateOf(false) }
+            Row(Modifier.fillMaxWidth().padding(start = 1.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                FlatBtn(Icons.Rounded.Equalizer, tr("Equalizer", "Ekolayzır"), false, style, 65.dp, onOpenEffects)
+                Spacer(Modifier.width(4.5.dp))
+                FlatBtn(Icons.Rounded.Timer, tr("Sleep timer", "Uyku zamanlayıcı"), sleepMinutes != 0, style) { sleepOpen = true }
+                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                    Text(
+                        if (sleepMinutes > 0) "$sleepMinutes min" else if (sleepMinutes < 0) tr("Track end", "Parça sonu") else "${index + 1} / $total",
+                        color = if (sleepMinutes != 0) style.accent else style.textDim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.clip(CircleShape).background(style.panel).padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
+                FlatBtn(IV("repeat"), tr("Repeat", "Tekrar"), repeatMode != Player.REPEAT_MODE_OFF, style, onClick = onRepeat)
+                Spacer(Modifier.width(4.5.dp))
+                FlatBtn(IV("shuffle"), tr("Shuffle", "Karıştır"), shuffle, style, onClick = onShuffle)
+            }
+            if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
+            Spacer(Modifier.height(48.dp))
+            // transport: play sits on the centre axis, previous and next on either side, over a tall waveform
+            BoxWithConstraints(Modifier.fillMaxWidth().height(142.5.dp)) {
+                // the waveform sits in the same row, behind the buttons: it shows on both sides of play
+                val seekAt: () -> Float = { if (drag != null) rawProgress else animProgress }
+                val waveMod = Modifier.align(Alignment.Center).requiredWidth(maxWidth).height(142.5.dp)
+                if (style.seek == PowerampSeek.WAVE) WaveWindow(
+                    progress = seekAt, durationMs = durationMs.toLong(), peaks = peaks, style = style, modifier = waveMod,
+                    onScrub = { drag = it },
+                    onCommit = { f -> drag = null; if (durationMs > 0) onSeek((f * durationMs).roundToInt()) },
+                ) else SeekBar(
+                    progress = seekAt,
+                    seed = track?.path?.hashCode() ?: 0,
+                    style = style,
+                    modifier = waveMod,
+                    onScrub = { drag = it },
+                    onCommit = { f -> drag = null; if (durationMs > 0) onSeek((f * durationMs).roundToInt()) },
+                )
+                Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // every transport button sits on a solid black disc, as in the reference player
+                    Round(IV("prev"), tr("Previous", "Önceki"), 70.dp, 38.dp, fg, Color.Black, CircleShape, onPrev)
                     Round(
                         IV(if (playing) "pause" else "play"),
                         if (playing) tr("Pause", "Duraklat") else tr("Play", "Oynat"),
-                        68.dp, if (plain) 50.dp else 34.dp,
-                        if (plain) fg else style.onAccent, if (plain) null else style.accent,
-                        when (style.buttons) {
-                            PowerampButtons.SOFT -> RoundedCornerShape(24.dp)
-                            PowerampButtons.SQUARE -> RoundedCornerShape(10.dp)
-                            else -> CircleShape
-                        },
-                        onPlayPause,
+                        116.dp, 52.dp, fg, Color.Black, CircleShape, onPlayPause,
                     )
-                    Round(IV("next"), tr("Next", "Sonraki"), 48.dp, 28.dp, fg, null, CircleShape, onNext)
+                    Round(IV("next"), tr("Next", "Sonraki"), 70.dp, 38.dp, fg, Color.Black, CircleShape, onNext)
                 }
-                Box(Modifier.align(Alignment.CenterStart)) { FlatBtn(IV("shuffle"), tr("Shuffle", "Karıştır"), shuffle, style, onShuffle) }
-                Box(Modifier.align(Alignment.CenterEnd)) { FlatBtn(IV("repeat"), tr("Repeat", "Tekrar"), repeatMode != Player.REPEAT_MODE_OFF, style, onRepeat) }
             }
-            // waveform and time sit directly under play, on the same centre axis
-            SeekBar(
-                progress = { if (drag != null) rawProgress else animProgress },
-                seed = track?.path?.hashCode() ?: 0,
-                style = style,
-                modifier = Modifier.fillMaxWidth().height(40.dp),
-                onScrub = { drag = it },
-                onCommit = { f -> drag = null; if (durationMs > 0) onSeek((f * durationMs).roundToInt()) },
-            )
-            Text(
-                "${formatMs(shownMs)} / ${formatMs(durationMs)}",
-                color = style.textDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth(),
-            )
-            Spacer(Modifier.height(12.dp))
-            // secondary: sleep timer (opens the knob), the track count and the equalizer
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                var sleepOpen by remember { mutableStateOf(false) }
-                FlatBtn(Icons.Rounded.Bedtime, tr("Sleep timer", "Uyku zamanlayıcı"), sleepMinutes != 0, style) { sleepOpen = true }
-                Text(
-                    if (sleepMinutes > 0) "$sleepMinutes min" else if (sleepMinutes < 0) tr("Track end", "Parça sonu") else "${index + 1} / $total",
-                    color = if (sleepMinutes != 0) style.accent else style.textDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold,
-                )
-                FlatBtn(Icons.Rounded.Equalizer, tr("Equalizer", "Ekolayzır"), false, style, onOpenEffects)
-                if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
+            // elapsed time on the left edge, total on the right, like the reference player
+            // elapsed time and total sit at the seek bar's two ends, on the same edges
+            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(formatMs(shownMs), color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(formatMs(durationMs), color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
-            Spacer(Modifier.height(8.dp))
-            VolumeBar(vol, setVol, style, Modifier.fillMaxWidth().height(28.dp))
+            Spacer(Modifier.height(28.dp))
+            // the folder the track sits in, as a small chip under the transport
+            // the artist as a small chip under the transport; the folder name only when the artist tag is blank
+            if (track != null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                Box(Modifier.clip(CircleShape).background(style.panel).height(19.dp).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) {
+                    Text(track.artist?.takeIf { it.isNotBlank() } ?: track.folderName(), color = style.textDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
             Spacer(Modifier.height(8.dp))
         }
     }
@@ -404,14 +452,14 @@ internal fun SeekBar(
             }
             else -> {
                 // waveform: fewer, thicker bars so each one reads at a glance
-                val n = if (style.seek == PowerampSeek.WAVE) 40 else 32
+                val n = if (style.seek == PowerampSeek.WAVE) 46 else 32
                 val slot = size.width / n
                 for (i in 0 until n) {
                     val h = (if (style.seek == PowerampSeek.WAVE) heights[i] else .55f) * size.height
                     val x = slot * (i + .5f)
                     drawLine(
                         if ((i + .5f) / n <= p) style.accent else off,
-                        Offset(x, cy - h / 2), Offset(x, cy + h / 2), slot * (if (style.seek == PowerampSeek.WAVE) .95f else .55f),
+                        Offset(x, cy - h / 2), Offset(x, cy + h / 2), if (style.seek == PowerampSeek.WAVE) 6.dp.toPx() else slot * .55f,
                         if (style.seek == PowerampSeek.WAVE) StrokeCap.Round else StrokeCap.Butt,
                     )
                 }
@@ -420,14 +468,82 @@ internal fun SeekBar(
     }
 }
 
+/** Length of the wave on screen: the part of the track around the playhead, which stays in the middle. */
+private const val WAVE_WINDOW_MS = 36_000L
+
+/** Waveform of the part of the track around the playhead: [WAVE_WINDOW_MS] of audio, the bars are the real loudness there.
+ *  Drag sideways to move through the track; the wave follows the finger. */
 @Composable
-private fun FlatBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, onClick: () -> Unit) {
+internal fun WaveWindow(
+    progress: () -> Float,
+    durationMs: Long,
+    peaks: FloatArray?,
+    style: PowerampStyle,
+    modifier: Modifier,
+    onScrub: (Float) -> Unit,
+    onCommit: (Float) -> Unit,
+) {
+    val scrub by rememberUpdatedState(onScrub)
+    val commit by rememberUpdatedState(onCommit)
+    Canvas(
+        modifier.pointerInput(durationMs) {
+            awaitEachGesture {
+                val d = awaitFirstDown()
+                val dur = durationMs.coerceAtLeast(1L).toFloat()
+                val startMs = progress() * dur
+                var f = startMs / dur
+                drag(d.id) {
+                    // dragging left moves forward, as with a finger on a tape
+                    val ms = startMs - (it.position.x - d.position.x) / size.width * WAVE_WINDOW_MS
+                    f = (ms / dur).coerceIn(0f, 1f)
+                    scrub(f); it.consume()
+                }
+                commit(f)
+            }
+        },
+    ) {
+        val off = style.textDim.copy(alpha = .35f)
+        val cy = size.height / 2
+        val dur = durationMs.coerceAtLeast(1L).toFloat()
+        val nowMs = progress() * dur
+        val n = 46
+        val slot = size.width / n
+        val step = WAVE_WINDOW_MS.toFloat() / n
+        val startMs = nowMs - WAVE_WINDOW_MS / 2f
+        for (i in 0 until n) {
+            val from = startMs + i * step
+            val mid = from + step / 2
+            // loudest bucket inside this bar's slice of time; outside the track it stays flat
+            val amp = peakIn(peaks, from, from + step)
+            val h = (.12f + .88f * amp) * size.height
+            val x = slot * (i + .5f)
+            drawLine(if (mid <= nowMs) style.accent else off, Offset(x, cy - h / 2), Offset(x, cy + h / 2), 6.dp.toPx(), StrokeCap.Round)
+        }
+        // the playhead sits on the centre line
+        drawLine(style.accent, Offset(size.width / 2, 0f), Offset(size.width / 2, size.height), 2.dp.toPx())
+    }
+}
+
+/** Largest peak between two times in ms; 0 outside the decoded track. */
+private fun peakIn(peaks: FloatArray?, fromMs: Float, toMs: Float): Float {
+    if (peaks == null || toMs < 0f) return 0f
+    val b = TrackPeaks.BUCKET_MS
+    val from = maxOf(0, (fromMs / b).toInt())
+    val to = minOf(peaks.size - 1, (toMs / b).toInt())
+    var m = 0f
+    for (i in from..to) if (peaks[i] > m) m = peaks[i]
+    return m
+}
+
+@Composable
+private fun FlatBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, width: Dp = 68.dp, onClick: () -> Unit) {
+    // a pill with the panel fill, like the mode buttons in the reference
     Box(
-        Modifier.size(40.dp).clip(CircleShape)
+        Modifier.width(width).height(36.dp).clip(CircleShape).background(style.panel)
             .semantics { contentDescription = label; role = Role.Button }
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Icon(icon, null, tint = if (active) style.accent else style.textDim, modifier = Modifier.size(20.dp)) }
+    ) { Icon(icon, null, tint = if (active) style.accent else style.textDim, modifier = Modifier.size(24.dp)) }
 }
 
 @Composable
@@ -474,48 +590,181 @@ fun PlayerBgPicker(c: Context) {
             }
         }
     }
+    if (art) {
+        Spacer(Modifier.height(14.dp))
+        Text(tr("Where the cover shows", "Kapak nerede görünsün"), color = T.sub, fontSize = 12.sp)
+        listOf(
+            "now" to tr("Now playing", "Şimdi çalıyor"), "library" to tr("Library", "Kütüphane"), "search" to tr("Search", "Arama"),
+            "effects" to tr("Effects", "Efektler"), "queue" to tr("Queue", "Kuyruk"),
+        ).forEach { (key, label) -> ArtPageRow(c, key, label) }
+    }
+    Spacer(Modifier.height(14.dp))
+    LyricsButtonRow(c)
 }
 
-/** Lyrics button: a light pill with dark ink, so it reads on any cover or backdrop. */
+/** One page of the art background: a small preview of the page (blurred cover or black) and a switch for it. */
 @Composable
-private fun LyricsPill(onClick: () -> Unit) {
-    Row(
-        Modifier.clip(RoundedCornerShape(50)).background(Color.White.copy(alpha = .85f)).clickable(onClick = onClick)
-            .padding(horizontal = 10.dp, vertical = 5.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Rounded.Subject, null, tint = Color.Black, modifier = Modifier.size(15.dp))
-        Spacer(Modifier.width(5.dp))
-        Text(tr("Lyrics", "Sözler"), color = Color.Black, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+private fun ArtPageRow(c: Context, key: String, label: String) {
+    var on by remember(key) { mutableStateOf(PowerampPrefs.artPage(c, key)) }
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        ArtPagePreview(key, on)
+        Spacer(Modifier.width(12.dp))
+        Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        com.umutk.pulse.PSwitch(on, { on = it; PowerampPrefs.setArtPage(c, key, it) })
     }
 }
 
-/** Three dots at the cover's bottom-right: find album art online, edit tags, favourite. */
+/** A stand-in for the page: the blurred cover is a colour wash behind its layout, black when the page is left out. */
+@Composable
+private fun ArtPagePreview(key: String, on: Boolean) {
+    val shape = RoundedCornerShape(10.dp)
+    val dot = Color.White.copy(alpha = .35f)
+    Box(Modifier.width(54.dp).aspectRatio(9f / 16f).clip(shape).background(Color.Black).border(1.dp, T.line, shape)) {
+        if (on) Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color(0xFF3B5BDB), Color(0xFFE8590C)))))
+        Column(Modifier.fillMaxSize().padding(5.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            when (key) {
+                "now" -> {
+                    Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(3.dp)).background(Color(0xFF1B1B2A)))
+                    Box(Modifier.fillMaxWidth(.6f).height(3.dp).clip(CircleShape).background(dot))
+                }
+                "search" -> {
+                    Box(Modifier.fillMaxWidth().height(7.dp).clip(CircleShape).background(dot))
+                    repeat(5) { Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(dot)) }
+                }
+                "effects" -> repeat(3) { Box(Modifier.fillMaxWidth().height(5.dp).clip(CircleShape).background(dot)) }
+                else -> repeat(5) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(9.dp).clip(RoundedCornerShape(2.dp)).background(dot))
+                        Spacer(Modifier.width(3.dp))
+                        Box(Modifier.weight(1f).height(4.dp).clip(CircleShape).background(dot))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Lyrics button rule: off = the button shows only for tracks with lyrics; on = always. */
+@Composable
+private fun LyricsButtonRow(c: Context) {
+    var always by remember { mutableStateOf(PowerampPrefs.lyricsAlways(c)) }
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(tr("Lyrics button always shown", "Sözler düğmesi her zaman görünsün"), color = T.text, fontSize = 15.sp)
+            Text(tr("Off: only on tracks that have lyrics", "Kapalı: yalnızca sözü olan şarkılarda"), color = T.sub, fontSize = 12.sp)
+        }
+        com.umutk.pulse.PSwitch(always, { always = it; PowerampPrefs.setLyricsAlways(c, it) })
+    }
+}
+
+/** Lyrics button: an icon-only disc on the cover's bottom-right, same size and style as the three dots beside it. */
+@Composable
+private fun LyricsIcon(onClick: () -> Unit, modifier: Modifier) {
+    Box(modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.Subject, tr("Lyrics", "Sözler"), tint = Color.White, modifier = Modifier.size(20.dp))
+    }
+}
+
+/** Three dots on the cover: opens a centred panel with the cover, title and artist, and the track's actions. */
 @Composable
 private fun TrackMenu(
-    favourite: Boolean, onFavourite: (() -> Unit)?, onEditTags: (() -> Unit)?, onFindArt: (() -> Unit)?, style: PowerampStyle, modifier: Modifier,
+    track: Track, onEditTags: (() -> Unit)?, onFindArt: (() -> Unit)?, onLyrics: (() -> Unit)?, style: PowerampStyle, modifier: Modifier,
 ) {
     var open by remember { mutableStateOf(false) }
-    Box(modifier) {
-        Box(Modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).clickable { open = true }, contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.MoreVert, tr("More", "Daha fazla"), tint = Color.White, modifier = Modifier.size(20.dp))
-        }
-        DropdownMenu(expanded = open, onDismissRequest = { open = false }, containerColor = style.panel) {
-            if (onFindArt != null) DropdownMenuItem(
-                text = { Text(tr("Find album art online", "Albüm kapağını internetten ara"), color = style.onBackdrop) },
-                onClick = { open = false; onFindArt() },
-            )
-            if (onEditTags != null) DropdownMenuItem(
-                text = { Text(tr("Edit tags", "Etiketleri düzenle"), color = style.onBackdrop) },
-                onClick = { open = false; onEditTags() },
-            )
-            if (onFavourite != null) DropdownMenuItem(
-                text = { Text(if (favourite) tr("Remove favourite", "Favoriden çıkar") else tr("Favourite", "Favori"), color = if (favourite) style.accent else style.onBackdrop) },
-                onClick = { open = false; onFavourite() },
-            )
+    var info by remember { mutableStateOf(false) }
+    val art = rememberTrackArt(track)
+    Box(modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).clickable { open = true }, contentAlignment = Alignment.Center) {
+        Icon(Icons.Rounded.MoreVert, tr("More", "Daha fazla"), tint = Color.White, modifier = Modifier.size(20.dp))
+    }
+    if (open) TrackSheet(track, art, onDismiss = { open = false }, onLyrics = onLyrics, onFindArt = onFindArt, onInfo = { info = true })
+    if (info) AudioInfoDialog(track, style) { info = false }
+}
+
+@Composable
+private fun TrackAction(icon: ImageVector, label: String, style: PowerampStyle, onClick: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(onClick = onClick).padding(horizontal = 8.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(icon, null, tint = style.onBackdrop, modifier = Modifier.size(22.dp))
+        Spacer(Modifier.width(14.dp))
+        Text(label, color = style.onBackdrop, fontSize = 15.sp)
+    }
+}
+
+/** Poweramp's Audio Info: the tags, length, folder, file name and size of the track. */
+@Composable
+private fun AudioInfoDialog(track: Track, style: PowerampStyle, onClose: () -> Unit) {
+    val size = remember(track.path) { if (track.path.contains("://")) -1L else File(track.path).length() }
+    val rows = listOfNotNull(
+        tr("Title", "Başlık") to track.displayName(),
+        track.artist?.takeIf { it.isNotBlank() }?.let { tr("Artist", "Sanatçı") to it },
+        track.album?.takeIf { it.isNotBlank() }?.let { tr("Album", "Albüm") to it },
+        track.genre?.takeIf { it.isNotBlank() }?.let { tr("Genre", "Tür") to it },
+        track.composer?.takeIf { it.isNotBlank() }?.let { tr("Composer", "Besteci") to it },
+        track.year.takeIf { it > 0 }?.let { tr("Year", "Yıl") to it.toString() },
+        track.durationSec.takeIf { it >= 0 }?.let { tr("Length", "Süre") to formatMs(it * 1000) },
+        tr("Folder", "Klasör") to track.folderName(),
+        tr("File", "Dosya") to track.path.substringAfterLast('/'),
+        size.takeIf { it >= 0 }?.let { tr("Size", "Boyut") to "%.1f MB".format(it / 1048576.0) },
+    )
+    Dialog(onDismissRequest = onClose) {
+        Column(
+            Modifier.fillMaxWidth(.92f).clip(RoundedCornerShape(22.dp)).background(style.panel).padding(16.dp),
+        ) {
+            Text(tr("Audio info", "Ses bilgisi"), color = style.onBackdrop, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+            Spacer(Modifier.height(10.dp))
+            rows.forEach { (k, v) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(k, color = style.textDim, fontSize = 14.sp, modifier = Modifier.padding(end = 12.dp))
+                    Text(v, color = style.onBackdrop, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            Box(Modifier.align(Alignment.End).clip(CircleShape).background(style.accent).clickable(onClick = onClose).padding(horizontal = 18.dp, vertical = 8.dp)) {
+                Text(tr("Close", "Kapat"), color = style.onAccent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }
+
+/**
+ * Star at the cover's bottom-left: a tap toggles the favourite. A long press opens a row of five and a slide along it
+ * picks the rating, which is saved when the finger lifts.
+ */
+@Composable
+private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean, onFavourite: (() -> Unit)?, style: PowerampStyle, modifier: Modifier) {
+    var picking by remember { mutableStateOf(false) }
+    var preview by remember { mutableStateOf<Int?>(null) }
+    val cellPx = with(LocalDensity.current) { 30.dp.toPx() }
+    val shown = preview ?: rating
+    Box(
+        modifier.height(36.dp).then(if (picking) Modifier.width(158.dp) else Modifier.width(36.dp))
+            .clip(RoundedCornerShape(18.dp)).background(Color.Black.copy(alpha = .5f))
+            // a tap toggles the favourite; holding opens the five stars, and a slide along them picks the rating
+            .pointerInput(onFavourite) { detectTapGestures(onTap = { onFavourite?.invoke() }) }
+            .pointerInput(onRate) {
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { picking = true; preview = starAt(it.x, cellPx) },
+                    onDrag = { c, _ -> c.consume(); preview = starAt(c.position.x, cellPx) },
+                    onDragEnd = { picking = false; preview?.let { onRate?.invoke(it) }; preview = null },
+                    onDragCancel = { picking = false; preview = null },
+                )
+            },
+        contentAlignment = Alignment.Center,
+    ) {
+        if (picking) Row(verticalAlignment = Alignment.CenterVertically) {
+            repeat(5) { i ->
+                Icon(if (i < shown) Icons.Rounded.Star else Icons.Rounded.StarBorder, null, tint = style.accent, modifier = Modifier.size(30.dp))
+            }
+        } else {
+            Icon(if (favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favourite", "Favori"), tint = if (favourite) style.accent else Color.White, modifier = Modifier.size(20.dp))
+        }
+    }
+}
+
+/** The star (1 to 5) under a finger at [x] in a row of 30dp cells. */
+private fun starAt(x: Float, cellPx: Float): Int = (x / cellPx).toInt().plus(1).coerceIn(1, 5)
 
 /** Sleep timer as a floating panel: a dial for 0 to 120 minutes, and quick end of track / off. */
 @Composable
@@ -542,7 +791,7 @@ private fun SleepDialog(current: Int, style: PowerampStyle, onSet: (Int, Boolean
 @Composable
 private fun SleepChip(label: String, filled: Boolean, style: PowerampStyle, onClick: () -> Unit) {
     Box(
-        Modifier.clip(RoundedCornerShape(50)).background(if (filled) style.accent else Color(0xFF2A2A2A)).clickable(onClick = onClick)
+        Modifier.clip(RoundedCornerShape(50)).background(if (filled) style.accent else style.chip).clickable(onClick = onClick)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) { Text(label, color = if (filled) style.onAccent else Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold) }
 }
