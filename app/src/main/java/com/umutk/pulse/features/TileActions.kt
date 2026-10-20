@@ -26,13 +26,13 @@ object TileActions {
     }
     private fun bg(work: () -> Unit) = Thread(work).start()
 
-    /** Collapses the shade, captures the screen to Pictures/Screenshots and adds it to the gallery. */
+    /** Collapses the shade, captures the screen to DCIM/Screenshots and adds it to the gallery. */
     fun screenshot(c: Context, onDone: (Boolean) -> Unit = {}): Boolean {
         if (!mayShell()) return false
         val app = c.applicationContext
         bg {
-            val f = "/sdcard/Pictures/Screenshots/pulse_${System.currentTimeMillis()}.png"
-            val ok = waitShell() && Shell.run("cmd statusbar collapse; sleep 0.7; mkdir -p /sdcard/Pictures/Screenshots && screencap -p $f && [ -s $f ] && echo OK").contains("OK")
+            val f = "/sdcard/DCIM/Screenshots/pulse_${System.currentTimeMillis()}.png"
+            val ok = waitShell() && Shell.run("cmd statusbar collapse; sleep 0.7; mkdir -p /sdcard/DCIM/Screenshots && screencap -p $f && [ -s $f ] && echo OK").contains("OK")
             if (ok) {
                 prefs(app).edit().putLong("shot_last", System.currentTimeMillis()).remove("shot_uri").apply()
                 // the gallery's own uri for the shot, so the Toolkit screen can open it without file access

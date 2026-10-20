@@ -8,8 +8,11 @@ import android.os.Looper
 import android.util.LruCache
 import com.umutk.pulse.extras.music.poweramp.PowerampCovers
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animate
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -124,17 +127,26 @@ fun CoverCarousel(
 ) {
     // one plain value follows the finger; the settle is a single eased tween (a spring overshoots and rocks back and forth)
     var slide by remember { mutableFloatStateOf(0f) }
+    // a vertical drag only nudges the cover: it follows the finger a little and springs back with a bounce
+    var pull by remember { mutableFloatStateOf(0f) }
     var settle by remember { mutableStateOf<Job?>(null) }
+    // after a swipe the cover that slid in stays on screen until the new track's own art arrives, so the old one never pops back
+    var carried by remember { mutableStateOf<ImageBitmap?>(null) }
+    var carrying by remember { mutableStateOf(false) }
+    LaunchedEffect(art) { carrying = false; carried = null }
     val scope = rememberCoroutineScope()
     var width by remember { mutableFloatStateOf(0f) }
     val prevNow by rememberUpdatedState(onPrev)
     val nextNow by rememberUpdatedState(onNext)
+    val prevArtNow by rememberUpdatedState(prevArt)
+    val nextArtNow by rememberUpdatedState(nextArt)
     val canPrev by rememberUpdatedState(hasPrev)
     val canNext by rememberUpdatedState(hasNext)
     val upNow by rememberUpdatedState(onSwipeUp)
     val downNow by rememberUpdatedState(onSwipeDown)
     val slop = with(LocalDensity.current) { 12.dp.toPx() }
     val reach = with(LocalDensity.current) { 72.dp.toPx() }
+    val ctx = LocalContext.current
     Box(
         modifier.clipToBounds().onSizeChanged { width = it.width.toFloat() }.pointerInput(Unit) {
             // one drag, one axis: the first real movement decides between sideways (the carousel) and up or down (the page)
@@ -143,24 +155,36 @@ fun CoverCarousel(
             var totalY = 0f
             var vertical = false
             var axisSet = false
+            var sideways = true // CoverGestures: off means a sideways drag does nothing
             detectDragGestures(
                 // a new drag stops a settle still running and carries on from where the cover is
-                onDragStart = { settle?.cancel(); startSlide = slide; totalX = 0f; totalY = 0f; vertical = false; axisSet = false },
+                onDragStart = { settle?.cancel(); startSlide = slide; totalX = 0f; totalY = 0f; vertical = false; axisSet = false; sideways = CoverGestures.swipeChangesTrack(ctx) },
                 onDragEnd = {
                     if (vertical) {
                         if (totalY < -reach) upNow?.invoke() else if (totalY > reach) downNow?.invoke()
+                        settle = scope.launch { animate(pull, 0f, animationSpec = spring(dampingRatio = .4f, stiffness = Spring.StiffnessMedium)) { v, _ -> pull = v } }
                     } else {
                         val w = size.width.toFloat()
                         val sum = totalX
                         // dir: 1 = next track (slides in from the right), -1 = previous (from the left), 0 = snap back
-                        val dir = if (abs(sum) < w * .2f) 0 else if (sum < 0 && canNext) 1 else if (sum > 0 && canPrev) -1 else 0
+                        val dir = if (!sideways || abs(sum) < w * .2f) 0 else if (sum < 0 && canNext) 1 else if (sum > 0 && canPrev) -1 else 0
                         settle = scope.launch {
                             animate(slide, if (dir == 0) 0f else -dir * w, animationSpec = tween(220, easing = FastOutSlowInEasing)) { v, _ -> slide = v }
-                            if (dir != 0) { if (dir > 0) nextNow() else prevNow(); slide = 0f }
+                            if (dir != 0) {
+                                carried = if (dir > 0) nextArtNow else prevArtNow
+                                carrying = true
+                                if (dir > 0) nextNow() else prevNow()
+                                slide = 0f
+                            }
                         }
                     }
                 },
-                onDragCancel = { if (!vertical) settle = scope.launch { animate(slide, 0f, animationSpec = tween(180)) { v, _ -> slide = v } } },
+                onDragCancel = {
+                    settle = scope.launch {
+                        if (vertical) animate(pull, 0f, animationSpec = spring(dampingRatio = .4f, stiffness = Spring.StiffnessMedium)) { v, _ -> pull = v }
+                        else animate(slide, 0f, animationSpec = tween(180)) { v, _ -> slide = v }
+                    }
+                },
                 onDrag = { c, d ->
                     c.consume()
                     totalX += d.x; totalY += d.y
@@ -168,13 +192,14 @@ fun CoverCarousel(
                         axisSet = true
                         vertical = abs(totalY) > abs(totalX)
                     }
-                    if (axisSet && !vertical) slide = startSlide + totalX
+                    if (axisSet && !vertical && sideways) slide = startSlide + totalX
+                    if (axisSet && vertical) pull = (totalY * .3f).coerceIn(-reach * .5f, reach * .5f)
                 },
             )
         },
     ) {
         if (hasPrev) Box(Modifier.fillMaxSize().offset { IntOffset((slide - width).roundToInt(), 0) }) { slot(prevArt) }
         if (hasNext) Box(Modifier.fillMaxSize().offset { IntOffset((slide + width).roundToInt(), 0) }) { slot(nextArt) }
-        Box(Modifier.fillMaxSize().offset { IntOffset(slide.roundToInt(), 0) }) { slot(art) }
+        Box(Modifier.fillMaxSize().offset { IntOffset(slide.roundToInt(), pull.roundToInt()) }) { slot(if (carrying) carried else art) }
     }
 }

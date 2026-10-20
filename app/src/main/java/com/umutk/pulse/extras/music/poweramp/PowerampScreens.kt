@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.material3.Icon
@@ -244,9 +245,7 @@ fun NowPlayingScreen(
     val rawProgress = if (durationMs > 0) (shownMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
     // eases the bar between the position polls; a drag follows the finger directly
     val animProgress by animateFloatAsState(rawProgress, label = "seek")
-    // the real loudness of the track, decoded once off the main thread; null while it loads (the wave stays flat)
     val ctx = LocalContext.current
-    val peaks by produceState<FloatArray?>(null, track?.path) { value = null; value = track?.let { t -> withContext(Dispatchers.IO) { TrackPeaks.load(ctx, t.path) } } }
     // the lyrics button shows only when the track has lyrics on the device, unless the player setting keeps it always
     val hasLyrics by produceState(false, track?.path) {
         value = false
@@ -300,6 +299,9 @@ fun NowPlayingScreen(
                 )
             }
             Spacer(Modifier.height(20.dp))
+            // the artist / album line's long press runs the action picked in settings (PowerampLineAction)
+            val effectsNow by rememberUpdatedState(onOpenEffects)
+            var sleepOpen by remember { mutableStateOf(false) }
             // title and artist; favourite and lyrics sit flat beside them
             // title and artist sit in their own rounded chips, the way the reference player shows them
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -307,24 +309,35 @@ fun NowPlayingScreen(
                     if (track != null) {
                         // both chips share one shape and inset, so the title and artist read as a matched pair
                         val chipShape = RoundedCornerShape(12.dp)
+                        // darker than the panel so the text reads on any backdrop; each chip wraps its own text
+                        val chipFill = Color.Black.copy(alpha = .6f)
                         Text(
-                            track.displayName(), color = fg, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            track.displayName(), color = fg, fontSize = 26.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = (if (onEditTags != null) Modifier.clickable(onClick = onEditTags) else Modifier)
-                                .clip(chipShape).background(style.panel).padding(horizontal = 14.dp, vertical = 3.dp),
+                                .clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                         // artist and album only; no folder name here, so a blank tag shows no chip rather than "Audio"
-                        val sub = listOfNotNull(track.artist?.takeIf { it.isNotBlank() }, track.album?.takeIf { it.isNotBlank() }).joinToString(" - ")
+                        val sub = listOfNotNull(track.artistTag(), track.album?.takeIf { it.isNotBlank() }).joinToString(" - ")
                         if (sub.isNotEmpty()) Text(
                             sub,
-                            color = style.textDim, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.clip(chipShape).background(style.panel).padding(horizontal = 14.dp, vertical = 3.dp),
+                            color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp)
+                                .pointerInput(Unit) {
+                                    detectTapGestures(onLongPress = {
+                                        when (PowerampLineAction.longPress(ctx)) {
+                                            LineChoice.NONE -> Unit
+                                            LineChoice.LYRICS -> lyricsNow?.invoke()
+                                            LineChoice.EQUALIZER -> effectsNow()
+                                            LineChoice.SLEEP -> { sleepOpen = true }
+                                        }
+                                    })
+                                },
                         )
                     }
                 }
             }
             Spacer(Modifier.height(19.dp))
             // mode row as pills: equalizer, sleep timer, track count centred, repeat and shuffle at the ends
-            var sleepOpen by remember { mutableStateOf(false) }
             Row(Modifier.fillMaxWidth().padding(start = 1.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 FlatBtn(Icons.Rounded.Equalizer, tr("Equalizer", "Ekolayzır"), false, style, 65.dp, onOpenEffects)
                 Spacer(Modifier.width(4.5.dp))
@@ -332,7 +345,8 @@ fun NowPlayingScreen(
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Text(
                         if (sleepMinutes > 0) "$sleepMinutes min" else if (sleepMinutes < 0) tr("Track end", "Parça sonu") else "${index + 1} / $total",
-                        color = if (sleepMinutes != 0) style.accent else style.textDim, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                        color = if (sleepMinutes != 0) style.accent else style.textDim, fontSize = 11.sp, fontWeight = FontWeight.SemiBold,
+                        maxLines = 1, softWrap = false, // "1234 / 5678" stays on one line
                         modifier = Modifier.clip(CircleShape).background(style.panel).padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
@@ -343,15 +357,11 @@ fun NowPlayingScreen(
             if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
             Spacer(Modifier.height(48.dp))
             // transport: play sits on the centre axis, previous and next on either side, over a tall waveform
-            BoxWithConstraints(Modifier.fillMaxWidth().height(142.5.dp)) {
+            BoxWithConstraints(Modifier.fillMaxWidth().height(TRANSPORT_H)) {
                 // the waveform sits in the same row, behind the buttons: it shows on both sides of play
                 val seekAt: () -> Float = { if (drag != null) rawProgress else animProgress }
-                val waveMod = Modifier.align(Alignment.Center).requiredWidth(maxWidth).height(142.5.dp)
-                if (style.seek == PowerampSeek.WAVE) WaveWindow(
-                    progress = seekAt, durationMs = durationMs.toLong(), peaks = peaks, style = style, modifier = waveMod,
-                    onScrub = { drag = it },
-                    onCommit = { f -> drag = null; if (durationMs > 0) onSeek((f * durationMs).roundToInt()) },
-                ) else SeekBar(
+                val waveMod = Modifier.align(Alignment.Center).requiredWidth(maxWidth).height(WAVE_H)
+                SeekBar(
                     progress = seekAt,
                     seed = track?.path?.hashCode() ?: 0,
                     style = style,
@@ -365,7 +375,7 @@ fun NowPlayingScreen(
                     Round(
                         IV(if (playing) "pause" else "play"),
                         if (playing) tr("Pause", "Duraklat") else tr("Play", "Oynat"),
-                        116.dp, 52.dp, fg, Color.Black, CircleShape, onPlayPause,
+                        84.dp, 40.dp, fg, Color.Black, CircleShape, onPlayPause,
                     )
                     Round(IV("next"), tr("Next", "Sonraki"), 70.dp, 38.dp, fg, Color.Black, CircleShape, onNext)
                 }
@@ -381,7 +391,7 @@ fun NowPlayingScreen(
             // the artist as a small chip under the transport; the folder name only when the artist tag is blank
             if (track != null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 Box(Modifier.clip(CircleShape).background(style.panel).height(19.dp).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) {
-                    Text(track.artist?.takeIf { it.isNotBlank() } ?: track.folderName(), color = style.textDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(track.artistTag() ?: track.folderName(), color = style.textDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
             Spacer(Modifier.height(8.dp))
@@ -452,14 +462,14 @@ internal fun SeekBar(
             }
             else -> {
                 // waveform: fewer, thicker bars so each one reads at a glance
-                val n = if (style.seek == PowerampSeek.WAVE) 46 else 32
+                val n = if (style.seek == PowerampSeek.WAVE) 40 else 32
                 val slot = size.width / n
                 for (i in 0 until n) {
                     val h = (if (style.seek == PowerampSeek.WAVE) heights[i] else .55f) * size.height
                     val x = slot * (i + .5f)
                     drawLine(
                         if ((i + .5f) / n <= p) style.accent else off,
-                        Offset(x, cy - h / 2), Offset(x, cy + h / 2), if (style.seek == PowerampSeek.WAVE) 6.dp.toPx() else slot * .55f,
+                        Offset(x, cy - h / 2), Offset(x, cy + h / 2), slot * (if (style.seek == PowerampSeek.WAVE) .95f else .55f),
                         if (style.seek == PowerampSeek.WAVE) StrokeCap.Round else StrokeCap.Butt,
                     )
                 }
@@ -468,72 +478,9 @@ internal fun SeekBar(
     }
 }
 
-/** Length of the wave on screen: the part of the track around the playhead, which stays in the middle. */
-private const val WAVE_WINDOW_MS = 36_000L
-
-/** Waveform of the part of the track around the playhead: [WAVE_WINDOW_MS] of audio, the bars are the real loudness there.
- *  Drag sideways to move through the track; the wave follows the finger. */
-@Composable
-internal fun WaveWindow(
-    progress: () -> Float,
-    durationMs: Long,
-    peaks: FloatArray?,
-    style: PowerampStyle,
-    modifier: Modifier,
-    onScrub: (Float) -> Unit,
-    onCommit: (Float) -> Unit,
-) {
-    val scrub by rememberUpdatedState(onScrub)
-    val commit by rememberUpdatedState(onCommit)
-    Canvas(
-        modifier.pointerInput(durationMs) {
-            awaitEachGesture {
-                val d = awaitFirstDown()
-                val dur = durationMs.coerceAtLeast(1L).toFloat()
-                val startMs = progress() * dur
-                var f = startMs / dur
-                drag(d.id) {
-                    // dragging left moves forward, as with a finger on a tape
-                    val ms = startMs - (it.position.x - d.position.x) / size.width * WAVE_WINDOW_MS
-                    f = (ms / dur).coerceIn(0f, 1f)
-                    scrub(f); it.consume()
-                }
-                commit(f)
-            }
-        },
-    ) {
-        val off = style.textDim.copy(alpha = .35f)
-        val cy = size.height / 2
-        val dur = durationMs.coerceAtLeast(1L).toFloat()
-        val nowMs = progress() * dur
-        val n = 46
-        val slot = size.width / n
-        val step = WAVE_WINDOW_MS.toFloat() / n
-        val startMs = nowMs - WAVE_WINDOW_MS / 2f
-        for (i in 0 until n) {
-            val from = startMs + i * step
-            val mid = from + step / 2
-            // loudest bucket inside this bar's slice of time; outside the track it stays flat
-            val amp = peakIn(peaks, from, from + step)
-            val h = (.12f + .88f * amp) * size.height
-            val x = slot * (i + .5f)
-            drawLine(if (mid <= nowMs) style.accent else off, Offset(x, cy - h / 2), Offset(x, cy + h / 2), 6.dp.toPx(), StrokeCap.Round)
-        }
-        // the playhead sits on the centre line
-        drawLine(style.accent, Offset(size.width / 2, 0f), Offset(size.width / 2, size.height), 2.dp.toPx())
-    }
-}
-
-/** Largest peak between two times in ms; 0 outside the decoded track. */
-private fun peakIn(peaks: FloatArray?, fromMs: Float, toMs: Float): Float {
-    if (peaks == null || toMs < 0f) return 0f
-    val b = TrackPeaks.BUCKET_MS
-    val from = maxOf(0, (fromMs / b).toInt())
-    val to = minOf(peaks.size - 1, (toMs / b).toInt())
-    var m = 0f
-    for (i in from..to) if (peaks[i] > m) m = peaks[i]
-    return m
-}
+/** Height of the transport row (buttons over the bars) and of the bars inside it. */
+private val TRANSPORT_H = 96.dp
+private val WAVE_H = 64.dp
 
 @Composable
 private fun FlatBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, width: Dp = 68.dp, onClick: () -> Unit) {
@@ -737,19 +684,27 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
     var picking by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<Int?>(null) }
     val cellPx = with(LocalDensity.current) { 30.dp.toPx() }
+    val slop = LocalViewConfiguration.current.touchSlop
     val shown = preview ?: rating
     Box(
         modifier.height(36.dp).then(if (picking) Modifier.width(158.dp) else Modifier.width(36.dp))
             .clip(RoundedCornerShape(18.dp)).background(Color.Black.copy(alpha = .5f))
-            // a tap toggles the favourite; holding opens the five stars, and a slide along them picks the rating
-            .pointerInput(onFavourite) { detectTapGestures(onTap = { onFavourite?.invoke() }) }
-            .pointerInput(onRate) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = { picking = true; preview = starAt(it.x, cellPx) },
-                    onDrag = { c, _ -> c.consume(); preview = starAt(c.position.x, cellPx) },
-                    onDragEnd = { picking = false; preview?.let { onRate?.invoke(it) }; preview = null },
-                    onDragCancel = { picking = false; preview = null },
-                )
+            // no wait: the five stars open on touch and a slide along them picks the rating; a tap without a slide toggles the favourite
+            .pointerInput(onRate, onFavourite) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    picking = true; preview = starAt(down.position.x, cellPx)
+                    var moved = false
+                    while (true) {
+                        val ch = awaitPointerEvent().changes.first()
+                        if (!ch.pressed) break
+                        if (!moved && (ch.position - down.position).getDistance() > slop) moved = true
+                        if (moved) { ch.consume(); preview = starAt(ch.position.x, cellPx) }
+                    }
+                    picking = false
+                    if (moved) preview?.let { onRate?.invoke(it) } else onFavourite?.invoke()
+                    preview = null
+                }
             },
         contentAlignment = Alignment.Center,
     ) {

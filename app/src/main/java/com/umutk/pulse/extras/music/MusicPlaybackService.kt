@@ -1,12 +1,15 @@
 package com.umutk.pulse.extras.music
 
 import android.app.PendingIntent
+import android.bluetooth.BluetoothDevice
 import android.content.Context
 import android.content.Intent
+import android.content.IntentFilter
 import android.media.AudioDeviceCallback
 import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.os.Bundle
+import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
@@ -33,6 +36,7 @@ class MusicPlaybackService : MediaSessionService() {
     private val engine get() = MusicPlayerEngine.get(this)
     private val devices by lazy { getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     private var lyricsTicker: LiveLyricsTicker? = null
+    private val btAutoplay = BluetoothAutoplayReceiver()
 
     private fun layout(): ImmutableList<androidx.media3.session.CommandButton> =
         NotifLayout.customLayout(this, MusicSettings.notificationButtonIds(this), engine.player)
@@ -105,6 +109,7 @@ class MusicPlaybackService : MediaSessionService() {
         session = MediaSession.Builder(this, engine.player).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
         engine.player.addListener(listener)
         devices.registerAudioDeviceCallback(devCb, null)
+        ContextCompat.registerReceiver(this, btAutoplay, IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED), ContextCompat.RECEIVER_NOT_EXPORTED)
         lyricsTicker = LiveLyricsTicker(this, engine) {
             session?.let { onUpdateNotification(it) }
             com.umutk.pulse.widgets.music.LyricsWidget.refresh(this)
@@ -117,6 +122,7 @@ class MusicPlaybackService : MediaSessionService() {
     override fun onDestroy() {
         live = null
         devices.unregisterAudioDeviceCallback(devCb)
+        runCatching { unregisterReceiver(btAutoplay) }
         lyricsTicker?.stop(); lyricsTicker = null
         runCatching { engine.player.removeListener(listener) }
         session?.release()

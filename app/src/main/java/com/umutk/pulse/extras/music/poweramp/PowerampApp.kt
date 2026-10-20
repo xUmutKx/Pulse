@@ -78,7 +78,9 @@ fun PowerampApp(
     onSettings: (() -> Unit)? = null,
 ) {
     val st by engine.state.collectAsState()
-    val track = st.current
+    // the player's copy has no genre or year, so the page and the song menu use the library's copy of the same file
+    val libTracks by com.umutk.pulse.extras.music.MusicLibrary.tracks.collectAsState()
+    val track = remember(st.current, libTracks) { st.current?.inLibrary(libTracks) }
     // Null means the now-playing screen. A tab opens its list, and the mini bar or a second tap goes back.
     var tab by remember { mutableStateOf<PowerampTab?>(null) }
     // the page the user was on last: a downward swipe on the cover goes back to it
@@ -117,7 +119,7 @@ fun PowerampApp(
         while (true) {
             pos = engine.positionMs
             dur = engine.durationMs
-            delay(if (st.isPlaying) 250L else 1000L)
+            delay(if (st.isPlaying) 120L else 1000L)
         }
     }
 

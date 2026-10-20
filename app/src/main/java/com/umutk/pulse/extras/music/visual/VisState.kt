@@ -8,15 +8,15 @@ const val VIS_X = 24
 const val VIS_Y = 43
 const val VIS_W = 76
 const val VIS_H = 16
-const val VIS_BAR_W = 3
+const val VIS_BAR_W = 5
 const val VIS_GAP = 1
 
-/** Bars that fit the vis area: a 3 px bar every 4 px (19 for the classic 76 px area). */
+/** Bars that fit the vis area: a 5 px bar every 6 px (12 for the classic 76 px area, about two thirds of the old 19). */
 const val VIS_BARS = (VIS_W + VIS_GAP) / (VIS_BAR_W + VIS_GAP)
 
 /**
- * Winamp-style analyser state, advanced once per frame by [step] in frame time. Bars rise in about 20 ms and fall with a
- * 0.2 s time constant. Each peak cap holds about 0.5 s, then drops slowly. [scope] is the waveform: 0..1, 0.5 is the centre.
+ * Winamp-style analyser state, advanced once per frame by [step] in frame time. Bars rise in about 8 ms and fall with a
+ * 0.12 s time constant. Each peak cap holds about 0.5 s, then drops slowly. [scope] is the waveform: 0..1, 0.5 is the centre.
  * The caller redraws only when [step] returns true, so the window never recomposes for the vis.
  */
 class VisState {
@@ -30,8 +30,8 @@ class VisState {
     fun step(bars: List<Float>, wave: List<Float>, now: Long): Boolean {
         val dt = if (last == 0L) 1f / 60 else ((now - last) / 1e9f).coerceIn(0f, 0.1f)
         last = now
-        val rise = 1f - exp(-dt / 0.02f)
-        val fall = exp(-dt / 0.2f)
+        val rise = 1f - exp(-dt / 0.008f)
+        val fall = exp(-dt / 0.12f)
         var changed = false
         for (i in 0 until VIS_BARS) {
             val target = bars.getOrElse(i) { 0f }.coerceIn(0f, 1f)

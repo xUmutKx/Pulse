@@ -137,7 +137,8 @@ object MusicLevels {
                 val db = 20f * (ln(m / (N / 4f) + 1e-6f) / 2.302585f)
                 // tilt: music falls ~3 dB per octave, lift highs so the right side moves too
                 val v = ((db + 60f + b * 0.6f) / 60f).coerceIn(0f, 1f)
-                smooth[b] = if (v > smooth[b]) smooth[b] + (v - smooth[b]) * .7f else smooth[b] * .88f
+                // rises almost at once and falls quicker than before, so the bars follow the beat instead of trailing it
+                smooth[b] = if (v > smooth[b]) smooth[b] + (v - smooth[b]) * .92f else smooth[b] * .8f
                 out[b] = smooth[b]
             }
             // waveform: one point per column, taken from the same 1024 mono samples the FFT used
@@ -177,7 +178,7 @@ fun rememberLevels(n: Int = 24): State<List<Float>> {
         var last = 0L
         while (true) {
             androidx.compose.runtime.withFrameNanos { t ->
-                if (t - last >= 33_000_000L) {
+                if (t - last >= 16_000_000L) {
                     last = t
                     val src = MusicLevels.snapshot()
                     state.value = List(n) { i ->

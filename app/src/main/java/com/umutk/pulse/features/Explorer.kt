@@ -59,6 +59,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.draw.shadow
@@ -138,8 +139,6 @@ import java.io.File
 import java.security.MessageDigest
 import java.text.DateFormat
 import java.util.Date
-import java.util.zip.ZipEntry
-import java.util.zip.ZipOutputStream
 
 /** Files cut or copied with the copy and move icons, waiting for the paste icon. */
 private class Clip(val files: List<File>, val move: Boolean)
@@ -308,9 +307,13 @@ private fun ExCaption(w: com.umutk.pulse.PTheme, ink: Color, onMin: () -> Unit, 
     }
 }
 
+/** Result of a cut out of an archive: the top-level files now in the clipboard folder (null when nothing was cut) and the reason it failed ("" on success). */
+private class CutResult(val tops: List<File>?, val reason: String)
+
 /** The file manager on shared storage: browse, search, select, sort, open, share, zip, bookmarks, properties, finders and undo. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
+
 private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: () -> Unit) {
     val ctx = LocalContext.current
     val standalone = ctx is com.umutk.pulse.FilesActivity
@@ -366,6 +369,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var found by remember { mutableStateOf<List<File>?>(null) }
     // files waiting for the delete confirm box; the box calls deleteNow
     var bulk by remember { mutableStateOf<List<File>?>(null) }
+    // files waiting for the compress box; the box starts a background zip (ExplorerZip.kt)
+    var zipAsk by remember { mutableStateOf<List<File>?>(null) }
     // the bin (when on) keeps the files and Undo brings them back
     val deleteNow: (List<File>) -> Unit = { files ->
         sel = emptySet()
@@ -550,18 +555,18 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
         val selBar: @Composable () -> Unit = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                SelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 24.dp) }
-                Text("${sel.size}", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 14.sp, maxLines = 1)
-                SelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
-                SelSquare(T.text, { clip = Clip(picked, true); sel = emptySet() }) { ExIcon("cut", T.text, 24.dp) }
-                SelSquare(T.text, { clip = Clip(picked, false); sel = emptySet() }) { ExIcon("copy", T.text, 24.dp) }
-                if (canPaste) SelSquare(Look.accent, { sel = emptySet(); doPaste() }) { ExIcon("paste", Look.accent, 24.dp) }
-                picked.singleOrNull()?.takeIf { !it.isDirectory }?.let { f -> SelSquare(T.text, { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }) { ExIcon("share", T.text, 24.dp) } }
-                SelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
+                DenseSelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 17.dp) }
+                Text("${sel.size}", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 11.sp, maxLines = 1)
+                DenseSelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 17.dp) }
+                DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }) { ExIcon("cut", T.text, 17.dp) }
+                DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }) { ExIcon("copy", T.text, 17.dp) }
+                if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }) { ExIcon("paste", Look.accent, 17.dp) }
+                picked.singleOrNull()?.takeIf { !it.isDirectory }?.let { f -> DenseSelSquare(T.text, { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }) { ExIcon("share", T.text, 17.dp) } }
+                DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 17.dp) }
                 Box {
-                    SelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 24.dp) }
+                    DenseSelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 17.dp) }
                     ThemedMenu(selMore, { selMore = false }) {
-                        ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; scope.launch { note = withContext(Dispatchers.IO) { exZip(picked, dir) }; sel = emptySet(); refresh++ } }, icon = Icons.Outlined.FolderZip)
+                        ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; zipAsk = picked }, icon = Icons.Outlined.FolderZip)
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Rename", "Yeniden adlandır"), { selMore = false; name = f.name; dialog = "rename" to f }, icon = Icons.Outlined.DriveFileRenameOutline) }
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Properties", "Özellikler"), { selMore = false; propsOf = f }, icon = Icons.Outlined.Info) }
                         picked.singleOrNull()?.takeIf { isArchiveFile(it) }?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
@@ -585,29 +590,58 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 else { clip = Clip(files, false); note = tr("Copied ${files.size}: paste in a folder", "${files.size} öğe kopyalandı: bir klasörde yapıştır") }
             }
         }
-        // cut: take the picks out to this folder, then rewrite the archive without them so its space comes back (zip-family only)
+        // cut: the picks go to the clipboard as a move (paste them in a folder or an archive), and leave the archive
+        // so its space comes back (zip-family only)
         fun arcCut() {
             val af = arcFile ?: return
             val picks = arcSel
             val entries = arcAll.orEmpty()
             val expected = archivePicked(picks, entries).size
             scope.launch {
-                val res = withContext(Dispatchers.IO) {
-                    val files = archiveExtractSel(af, picks, entries, dir)
+                val dest = File(ctx.filesDir, "arcclip/${System.nanoTime()}")
+                // shortcut: the clipboard keeps the top-level picks only; same-named picks from two folders collide in dest
+                val done = withContext(Dispatchers.IO) {
+                    val files = archiveExtractSel(af, picks, entries, dest)
                     // only what was written out is removed from the archive: a partial extract removes nothing
-                    if (files.size != expected) "partial:${files.size}/$expected"
-                    else archiveRemove(af, picks)
+                    val r = if (files.size != expected) "partial:${files.size}/$expected" else archiveRemove(af, picks)
+                    var tops: List<File>? = null
+                    if (r.isEmpty()) tops = picks.map { p -> File(dest, p.removePrefix(p.substringBeforeLast('/', "")).trimStart('/')) }.filter { it.exists() }.distinct()
+                    else dest.deleteRecursively()
+                    CutResult(tops, r)
                 }
+                val tops = done.tops
+                val res = done.reason
                 arcSel = emptySet()
                 arcRev++
                 note = when {
-                    res.isEmpty() -> tr("Cut $expected to this folder", "$expected öğe bu klasöre kesildi")
+                    res.isEmpty() -> { clip = Clip(tops.orEmpty(), true); tr("Cut $expected: paste in a folder or archive", "$expected öğe kesildi: klasöre ya da arşive yapıştır") }
                     res.startsWith("partial") -> tr("Only some could be extracted, nothing removed (${res.substringAfter(':')})", "Bazı öğeler çıkarılamadı, hiçbiri silinmedi (${res.substringAfter(':')})")
                     res == "apk" -> tr("APK files cannot be cut: removing entries breaks the signature", "APK'lerden kesilemez: imza bozulur")
                     res == "unsupported" -> tr("Cut works on zip files only", "Kesme yalnızca zip dosyalarında çalışır")
                     else -> tr("Could not rewrite the archive: $res", "Arşiv yeniden yazılamadı: $res")
                 }
                 refresh++
+            }
+        }
+        // paste the clipboard into the archive folder on screen (a cut from a folder takes the originals out after it lands)
+        fun arcPaste() {
+            val af = arcFile ?: return
+            val c = clip ?: return
+            val entries = c.files.flatMap { f ->
+                val base = f.parentFile
+                if (base == null) emptyList() else f.walkTopDown().map { e -> (arcCwd + e.relativeTo(base).path.replace(File.separatorChar, '/')) to e }.toList()
+            }
+            scope.launch {
+                val res = withContext(Dispatchers.IO) { archiveAddZip(af, entries) }
+                note = when (res) {
+                    "" -> tr("Pasted ${c.files.size} items", "${c.files.size} öğe yapıştırıldı")
+                    "unsupported" -> tr("Paste into an archive works on zip files only", "Arşive yapıştırma yalnızca zip dosyalarında çalışır")
+                    else -> tr("Could not paste: $res", "Yapıştırılamadı: $res")
+                }
+                if (res.isEmpty()) {
+                    if (c.move) { withContext(Dispatchers.IO) { c.files.forEach { it.deleteRecursively() } }; clip = null }
+                    arcRev++
+                }
             }
         }
         val arcBar: @Composable () -> Unit = {
@@ -641,9 +675,6 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 val trail = if (hold[0].size >= cur.size && cur.indices.all { hold[0][it].first == cur[it].first }) hold[0] else cur
                 hold[0] = trail
                 ExCrumbs(trail.map { it.second to it.third }, cur.lastIndex, Modifier.weight(1f).padding(horizontal = 4.dp))
-                // visible size control: each tap steps the item size (the same value the slide on this row sets)
-                ExAct("zoomOut", T.sub) { FilesPrefs.icon = (FilesPrefs.icon - 1).coerceIn(0, 9); FilesPrefs.save(ctx) }
-                ExAct("zoomIn", T.sub) { FilesPrefs.icon = (FilesPrefs.icon + 1).coerceIn(0, 9); FilesPrefs.save(ctx) }
                 if (!standalone) {
                     Box {
                         ExAct(listOf("sortName", "sortSize", "sortDate")[sort / 2], if (here in folderSort) Look.accent else T.sub, if (sort % 2 == 1) 180f else 0f) { sortMenu = true }
@@ -661,12 +692,19 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                     ExAct(if (dir.path in marks) "starOn" else "star", if (dir.path in marks) Look.accent else T.sub) { mark(dir.path) }
                     ExAct("home", T.text) { go(top.path) }
-                    if (canPaste) ExAct("paste", Look.accent) { doPaste() }
                 }
+                // paste sits outside the standalone check, so the Files app shows it too; inside an archive it writes into the archive
+                if (arcFile != null) { if (clip != null) ExAct("paste", Look.accent) { arcPaste() } }
+                else if (canPaste) ExAct("paste", Look.accent) { doPaste() }
             }
         }
+        // compressions still running (they go on when this screen closes) and the result of the last one
+        val zipJobs by ZipJobs.jobs.collectAsState()
+        val zipEnd by ZipJobs.last.collectAsState()
+        LaunchedEffect(zipEnd) { if (zipEnd.isNotEmpty()) { note = zipEnd; ZipJobs.clearLast(); refresh++ } }
+        zipJobs.forEach { ZipProgressLine(it) }
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
-        if (shown.isEmpty() && arcFile == null) Text(if (recentView) "No recent files" else if (RootFs.needsRoot(here) && !canRoot) tr("Root is needed to list this folder", "Bu klasörü listelemek için root gerekir") else "No files here", color = T.sub, fontSize = 13.sp)
+        if (shown.isEmpty() && arcFile == null) Text(if (recentView) "No recent files" else if (RootFs.needsRoot(here) && (!canRoot || Shell.root != true)) tr("Root is needed to list this folder", "Bu klasörü listelemek için root gerekir") else "No files here", color = T.sub, fontSize = 13.sp)
         val item: @Composable (File) -> Unit = { f ->
             val grid = FilesPrefs.grid
             val isz = (24 + FilesPrefs.icon.coerceIn(0, 9) * 5).let { if (grid) it * 3 / 2 else it }
@@ -689,7 +727,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         if (canPaste) add(Triple("Paste", "paste", { doPaste() }))
                         add(Triple("Delete", "delete", { askDelete(listOf(f)) }))
                         add(Triple("Rename", "rename", { name = f.name; dialog = "rename" to f }))
-                        add(Triple("Compress", "zip", { scope.launch { note = withContext(Dispatchers.IO) { exZip(listOf(f), dir) }; refresh++ } }))
+                        add(Triple("Compress", "zip", { zipAsk = listOf(f) }))
                         if (!f.isDirectory) add(Triple("Share", "share", { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }))
                         add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
                         if (f.isDirectory) {
@@ -707,7 +745,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                 }
                 }
-                if (grid) Column(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(RoundedCornerShape(20.dp)).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (grid) Column(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), horizontalAlignment = Alignment.CenterHorizontally) {
                     Column(Modifier.fillMaxWidth().combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -724,7 +762,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                     more()
                 }
-                else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).heightIn(min = 44.dp).clip(RoundedCornerShape(50)).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), verticalAlignment = Alignment.CenterVertically) {
+                else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).heightIn(min = 44.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
@@ -768,7 +806,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 val p = arcCwd + r.name
                 val picked = p in arcSel
                 // tap opens (or enters a folder); once something is picked, tap toggles, and a long press picks
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(if (picked) Look.accent.copy(alpha = .18f) else Color.Transparent).combinedClickable(
+                Row(Modifier.fillMaxWidth().clip(SEL_SHAPE).background(if (picked) Look.accent.copy(alpha = .18f) else Color.Transparent).combinedClickable(
                     onClick = {
                         if (arcSel.isNotEmpty()) arcSel = if (picked) arcSel - p else arcSel + p
                         else if (r.dir) { arcCwd = "$p/" } else scope.launch {
@@ -790,12 +828,14 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             }
         }
         if (FilesPrefs.grid) BoxWithConstraints(Modifier.fillMaxWidth()) {
-            // the column count follows the icon size: a bigger icon gets fewer columns, so the gaps between the files stay small
-            val cell = (24 + FilesPrefs.icon.coerceIn(0, 9) * 5) * 3 / 2 + 24
-            val cols = (maxWidth / cell.dp).toInt().coerceAtLeast(1)
-            shown.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                r.forEach { f -> Box(Modifier.weight(1f), contentAlignment = Alignment.TopCenter) { item(f) } }
-                repeat(cols - r.size) { Spacer(Modifier.weight(1f)) }
+            // a tile is its icon plus a little room for the name; the gap between tiles is the same small one at every size,
+            // so a bigger icon only means fewer columns, and the cells share the width evenly
+            val gap = 4.dp
+            val tile = ((24 + FilesPrefs.icon.coerceIn(0, 9) * 5) * 3 / 2 + 8).dp
+            val cols = ((maxWidth + gap) / (tile + gap)).toInt().coerceAtLeast(1)
+            val cell = (maxWidth - gap * (cols - 1)) / cols
+            shown.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                r.forEach { f -> Box(Modifier.width(cell), contentAlignment = Alignment.TopCenter) { item(f) } }
             } }
         } else shown.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shown.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
         Spacer(Modifier.height(88.dp))
@@ -842,7 +882,6 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 ExDrawerRow("disk", tr("SD card", "SD kart") + " · " + File(v).name, here.startsWith(v)) { pick(v) }
             }
             if (canRoot) ExDrawerRow("folder", tr("Root (/)", "Kök (/)"), here == "/") { pick("/") }
-            if (canRoot) ExDrawerRow("folder", tr("Data (/data)", "Veri (/data)"), here == "/data") { pick("/data") }
             if (canRoot) ExDrawerRow("folder", tr("App data (/data/data)", "Uygulama verisi (/data/data)"), here == "/data/data") { pick("/data/data") }
             else ExDrawerRow("folder", tr("Root: not available", "Kök: yok"), false, dim = true) { }
             // the Library: the usual folders of internal storage; each one can be switched off in Files settings (Library)
@@ -942,6 +981,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             dismissButton = { TextButton({ bulk = null }) { Text(tr("Cancel", "İptal")) } }, iconKey = if (Opt.recycle) "recycle" else "close")
     }
 
+    zipAsk?.let { files ->
+        ZipAskDialog(files, { zipAsk = null }) { name, kind -> zipAsk = null; ZipJobs.start(ctx, files, name, dir, kind) }
+    }
+
     apkAsk?.let { a -> ApkInfo(a, { apkAsk = null }) { arcFile = a; arcCwd = ""; apkAsk = null } }
     dialog?.let { (kind, f) ->
         WinAlert(onDismissRequest = { dialog = null },
@@ -989,6 +1032,9 @@ private fun newFileSplit(typed: String, chosen: String): Pair<String, String> {
 }
 
 private const val SIZE_PAD_DP = 16
+
+/** The outline of a selected item, in the list, the grid and inside archives: rounded corners, never a half circle. */
+private val SEL_SHAPE = RoundedCornerShape(16.dp)
 
 /** Press and hold the row, then slide: the finger position sets the item size live (0 at the left edge, 9 at the right); saved on release. */
 private fun Modifier.sizeDrag(ctx: android.content.Context, active: (Boolean) -> Unit): Modifier = pointerInput(Unit) {
@@ -1091,7 +1137,7 @@ private fun exBump(ctx: Context, p: String): List<String> {
 
 /** One tappable icon in a row or bar; [rot] turns it (the sort icon turns for descending). */
 @Composable
-private fun ExAct(k: String, tint: Color, rot: Float = 0f, size: Dp = 20.dp, onClick: () -> Unit) {
+private fun ExAct(k: String, tint: Color, rot: Float = 0f, size: Dp = 23.dp, onClick: () -> Unit) {
     Box(Modifier.padding(horizontal = 5.dp).clickable(onClick = onClick)) { ExIcon(k, tint, size, rot) }
 }
 
@@ -1099,6 +1145,12 @@ private fun ExAct(k: String, tint: Color, rot: Float = 0f, size: Dp = 20.dp, onC
 @Composable
 private fun SelSquare(tint: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
     Box(Modifier.padding(horizontal = 2.dp).size(40.dp).clip(RoundedCornerShape(10.dp)).background(T.panel).clickable(onClick = onClick), contentAlignment = Alignment.Center) { content() }
+}
+
+/** Selection bar button: a little smaller than [SelSquare] and with no gap between neighbours. */
+@Composable
+private fun DenseSelSquare(tint: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
+    Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(T.panel).clickable(onClick = onClick), contentAlignment = Alignment.Center) { content() }
 }
 
 /** Header glyph: Fluent on Windows 11 (the app's own icon set), the Material vector everywhere else. */
@@ -1260,7 +1312,7 @@ private fun exFinder(kind: String, dir: File): List<File> = when (kind) {
 private fun exRel(f: File, top: File): String = (f.parentFile?.path ?: top.path).removePrefix(top.path).ifEmpty { "/" }
 
 /** KB under 1 MB, MB under 1 GB, GB above. */
-private fun exSize(b: Long): String {
+internal fun exSize(b: Long): String {
     val bin = FilesPrefs.binary; val k = if (bin) 1024.0 else 1000.0; val u = if (bin) listOf("KiB", "MiB", "GiB") else listOf("KB", "MB", "GB")
     return when {
         b < k * k -> "%.0f %s".format(b / k, u[0])
@@ -1319,28 +1371,6 @@ private fun exUndo(u: ExUndo): String {
     var failed = 0
     for ((now, was) in u.moves) if (was.exists() || !now.renameTo(was)) failed++
     return if (failed == 0) "" else "$failed could not be put back"
-}
-
-/** Zips [files] into [dir]: one item gives its own name, several give "Archive". Returns a note on failure. */
-private fun exZip(files: List<File>, dir: File): String {
-    val base = if (files.size == 1) files[0].name else "Archive"
-    var target = File(dir, "$base.zip")
-    var n = 1
-    while (target.exists()) target = File(dir, "$base ($n).zip").also { n++ }
-    return runCatching {
-        ZipOutputStream(target.outputStream().buffered()).use { zos ->
-            for (f in files) {
-                val root = f.parentFile ?: dir
-                f.walkTopDown().forEach { e ->
-                    val rel = e.relativeTo(root).path.replace(File.separatorChar, '/')
-                    if (e.isDirectory) zos.putNextEntry(ZipEntry("$rel/")) else zos.putNextEntry(ZipEntry(rel))
-                    if (e.isFile) e.inputStream().use { it.copyTo(zos) }
-                    zos.closeEntry()
-                }
-            }
-        }
-        ""
-    }.getOrElse { target.delete(); "Could not zip" }
 }
 
 /** Sends [f] to a chooser: Share sends it, Open with opens it. Returns false when the file cannot be handed over. */

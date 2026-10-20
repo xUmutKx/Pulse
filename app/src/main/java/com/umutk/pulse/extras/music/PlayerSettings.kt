@@ -1,5 +1,10 @@
 package com.umutk.pulse.extras.music
 
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -29,7 +34,10 @@ import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
+import com.umutk.pulse.SetPickDialog
+import com.umutk.pulse.extras.music.poweramp.LineChoice
 import com.umutk.pulse.extras.music.poweramp.PlayerBgPicker
+import com.umutk.pulse.extras.music.poweramp.PowerampLineAction
 import com.umutk.pulse.extras.ui.SettingsSection
 import com.umutk.pulse.extras.ui.SliderRow
 import com.umutk.pulse.extras.ui.SwitchRow
@@ -103,8 +111,23 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var stats by remember { mutableStateOf(MusicSettings.countStats(c)) }
     var nArt by remember { mutableStateOf(MusicSettings.notificationArt(c)) }
     var lyricsFont by remember { mutableIntStateOf(MusicSettings.lyricsFont(c)) }
+    var coverSwipe by remember { mutableStateOf(CoverGestures.swipeChangesTrack(c)) }
+    var onlineCovers by remember { mutableStateOf(MusicSettings.onlineCovers(c)) }
+    var btAuto by remember { mutableStateOf(BluetoothAutoplay.enabled(c)) }
+    val askBt = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     SettingsSection(tr("Playback", "Çalma")) {
         SwitchRow(tr("Resume last queue", "Son kuyruğa devam"), resume) { resume = it; MusicSettings.setResume(c, it) }
+        SwitchRow(tr("Swipe cover to change track", "Kapakta kaydırarak parça değiştir"), coverSwipe) { coverSwipe = it; CoverGestures.setSwipeChangesTrack(c, it) }
+        SwitchRow(tr("Download missing album art", "Eksik albüm kapaklarını internetten indir"), onlineCovers) {
+            onlineCovers = it; MusicSettings.setOnlineCovers(c, it)
+            // turning it on looks for the covers that are missing now, not only after the next library scan
+            if (it) CoverFetch.backfill(c, MusicLibrary.tracks.value)
+        }
+        SwitchRow(tr("Play when Bluetooth audio connects", "Bluetooth ses cihazı bağlanınca çal"), btAuto) {
+            btAuto = it; BluetoothAutoplay.setEnabled(c, it)
+            // the receiver lives in the music service, so the switch starts it; BLUETOOTH_CONNECT is needed to read the device class
+            if (it) { askBt.launch(Manifest.permission.BLUETOOTH_CONNECT); runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
+        }
         SwitchRow(tr("Keep screen on", "Ekranı açık tut"), screenOn) { screenOn = it; MusicSettings.setKeepScreenOn(c, it) }
         SwitchRow(tr("Count plays", "Çalmaları say"), stats) { stats = it; MusicSettings.setCountStats(c, it) }
         SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) }
@@ -127,6 +150,20 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         // the skin gallery (families on top) lives in the music theme picker of MusicHub
         // the now-playing backdrop; the preview shows both choices (every other page is black)
         PlayerBgPicker(c)
+        PowerampLineRow(c)
     }
     extra()
+}
+
+/** Full-width row: what a long press on the artist / album line of the Poweramp page does. A radio dialog picks it. */
+@Composable
+private fun PowerampLineRow(c: Context) {
+    var cur by remember { mutableStateOf(PowerampLineAction.longPress(c)) }
+    var open by remember { mutableStateOf(false) }
+    val title = tr("Long press on artist line", "Sanatçı satırına uzun basınca")
+    Row(Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        Text(cur.label(), color = T.sub, fontSize = 14.sp)
+    }
+    if (open) SetPickDialog(title, LineChoice.entries.map { it to it.label() }, cur, { cur = it; PowerampLineAction.setLongPress(c, it) }, { open = false })
 }

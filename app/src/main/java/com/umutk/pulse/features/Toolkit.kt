@@ -510,7 +510,7 @@ private fun ScreenshotTool() {
             }
         }
         if (failed) ToolNote(tr("Screenshot failed", "Ekran görüntüsü alınamadı"), warn)
-        if (last > 0) InfoRows(listOf(tr("Last", "Son") to android.text.format.DateFormat.getTimeFormat(ctx).format(java.util.Date(last)), tr("Folder", "Klasör") to "Pictures/Screenshots"))
+        if (last > 0) InfoRows(listOf(tr("Last", "Son") to android.text.format.DateFormat.getTimeFormat(ctx).format(java.util.Date(last)), tr("Folder", "Klasör") to "DCIM/Screenshots"))
         // the uri arrives from the media scan a moment after the shot
         val uri = polled(500) { prefs(ctx).getString("shot_uri", null) }
         if (uri != null && !busy) PButton(tr("Open", "Aç"), Modifier.fillMaxWidth()) {
