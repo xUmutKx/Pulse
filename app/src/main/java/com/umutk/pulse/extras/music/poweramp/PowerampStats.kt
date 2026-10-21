@@ -59,6 +59,11 @@ internal fun StatsPage(style: PowerampStyle) {
     val recent = remember(rev) { MusicStats.recent(c, 10) }
     val artists = remember(rev) { MusicStats.top(c, true, 5) }
     val albums = remember(rev) { MusicStats.top(c, false, 5) }
+    // the songs that were given stars, best rated first
+    val rated = remember(rev) {
+        val byPath = com.umutk.pulse.extras.music.MusicLibrary.tracks.value.associateBy { it.path }
+        MusicStats.ratings(c).entries.sortedByDescending { it.value }.mapNotNull { (path, n) -> byPath[path]?.let { it to n } }.take(20)
+    }
     @Composable fun head(t: String) = Text(t, color = style.textDim, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
     @Composable fun line(l: String, r: String) = Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(l, color = fg, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
@@ -74,6 +79,10 @@ internal fun StatsPage(style: PowerampStyle) {
         most.forEach { line(it.title, "${it.plays}") }
         head(tr("Recently played", "Son çalınan"))
         recent.forEach { line(it.title, it.artist) }
+        if (rated.isNotEmpty()) {
+            head(tr("Starred songs", "Yıldızlı şarkılar"))
+            rated.forEach { (t, n) -> line(t.displayName(), "★".repeat(n)) }
+        }
         head(tr("Top artists", "Sanatçılar"))
         artists.forEach { line(it.first, "${it.second}") }
         head(tr("Top albums", "Albümler"))

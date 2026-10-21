@@ -10,6 +10,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -116,14 +117,33 @@ private const val PAGE_ROWS = 4
 /** The looks that are a Windows desktop: their home screen holds the desktop shortcuts. */
 private val WINDOWS_LOOKS = setOf("win11", "win10", "win10black", "win7", "win95", "xp")
 
-/** The desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint and the command prompt. Drawn through the look's own icon set. */
+/** The desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint, the command prompt and the Task Manager. Drawn through the look's own icon set. */
 private fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("This PC", "Bu bilgisayar"), "pulse:pc", null, iconKey = "phone"),
     LaunchApp(tr("Recycle Bin", "Geri Dönüşüm Kutusu"), "pulse:recycle", null, iconKey = "recycle"),
     LaunchApp(tr("File Explorer", "Dosya Gezgini"), "pulse:files", null, iconKey = "folder"),
     LaunchApp(tr("Paint", "Paint"), "pulse:paint", null, iconKey = "palette"),
     LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
+    LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
 )
+
+/**
+ * The desktop: icons run down the left edge and start a new column when the screen is full, like a real Windows desktop.
+ */
+@Composable
+private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<LaunchApp>, iconDp: Int, edge: androidx.compose.ui.unit.Dp, open: (LaunchApp) -> Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
+        val cell = (iconDp + 48).dp
+        val perColumn = (maxHeight / cell).toInt().coerceAtLeast(1)
+        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            items.chunked(perColumn).forEach { col ->
+                Column {
+                    col.forEach { app -> look.IconCell(app, iconDp, Modifier.width(88.dp).appTap(state, app) { open(app) }) }
+                }
+            }
+        }
+    }
+}
 
 /** What a desktop shortcut opens: Pulse's own pages and apps. */
 private fun openDesktopItem(ctx: Context, id: String) {
@@ -132,6 +152,7 @@ private fun openDesktopItem(ctx: Context, id: String) {
         "pulse:recycle" -> Intent(ctx, MainActivity::class.java).putExtra("start", "recycle")
         "pulse:files" -> Intent(ctx, FilesActivity::class.java)
         "pulse:paint" -> Intent(ctx, ArtCraftActivity::class.java)
+        "pulse:taskmgr" -> Intent(ctx, MainActivity::class.java).putExtra("start", "processes")
         else -> Intent(ctx, MainActivity::class.java).putExtra("start", "terminal")
     }
     runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -207,7 +228,8 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             if (look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
             // a long press on an empty part of the home opens the Settings / Widgets sheet
             Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
-                if (vertical) {
+                if (desktop && !LauncherPrefs.homeApps) DesktopIcons(look, state, shortcuts, iconDp, edge, open)
+                else if (vertical) {
                     LazyVerticalGrid(GridCells.Fixed(columns), Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), state = grid) {
                         items(home, key = { it.pkg }) { app ->
                             look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) })
@@ -237,6 +259,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         if (!LauncherSession.startOpen) Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), contentAlignment = Alignment.TopEnd) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!LauncherPrefs.dockShown) { HomeChip("apps") { LauncherSession.startOpen = true }; Spacer(Modifier.width(8.dp)) }
+                if (!desktop) { HomeChip("processes") { openDesktopItem(ctx, "pulse:taskmgr") }; Spacer(Modifier.width(8.dp)) }
                 HomeChip("settings") { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
             }
         }
