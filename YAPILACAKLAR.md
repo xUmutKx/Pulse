@@ -870,3 +870,5 @@ Screen recorder feature list (55 candidates)
 - Winamp widget: queue restored when a widget starts the process, live 1 s redraw, ARGB 900k px crisp scaling; Material player: draggable sheet, lyrics over cover, level bars, top actions; Notepad grey in Win11; filled Fluent icons in Apps card; Store entry removed from Apps menu. derlenmedi
 
 - Poweramp seek drag works around the bars (+48 dp touch area); rated songs keep their filled stars on the cover pill. derlenmedi
+
+- Release builds are signed with the fixed ci/pulse.keystore (CI used a new random debug key per run, so APKs never installed over the old app). Bump 0.10.149. derlenmedi
