@@ -130,7 +130,7 @@ class CoverService : Service() {
         val flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON   // AOD-like: the screen stays on while the cover is up
         fun params(w: Int, h: Int, f: Int, fmt: Int) = WindowManager.LayoutParams(w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, f, fmt).apply {
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-            if (br < 100) screenBrightness = br / 100f
+            if (br > 0) screenBrightness = br / 100f
         }
         if (hole == null) wm?.addView(v, params(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, flags, PixelFormat.OPAQUE))
         else {
