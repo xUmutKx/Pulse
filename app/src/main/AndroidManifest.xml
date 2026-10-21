@@ -570,6 +570,7 @@
         </service>
         <!-- compress in the background (features/ExplorerZip.kt) -->
         <service android:name="com.umutk.pulse.features.ZipService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <service android:name="com.umutk.pulse.features.FileOpService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.InstallService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="installs that carry on in the background" />
         </service>
