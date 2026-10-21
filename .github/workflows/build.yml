@@ -22,7 +22,7 @@ jobs:
           gradle-version: 8.9
       - name: Build release APK
         shell: bash
-        run: set -o pipefail; gradle assembleRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon 2>&1 | tee build.log
+        run: set -o pipefail; gradle assembleRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon 2>&1 | tee build.log
       - name: Compile errors as annotations
         if: failure()
         run: |
