@@ -87,24 +87,28 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     // Material / AMOLED use the flat line icon (mat_office.xml below); the other looks keep their own Office logo
     if (k == "office" && T.id !in setOf("material", "amoled")) { OfSuiteLogo(size, modifier, tint); return }
     if (k == "applock") { com.umutk.pulse.applock.AppLockIcon(tint, size, modifier); return }
-    // Windows 11: the Fluent picture by default; the thin line glyphs (the Windows 10 set) when the Settings switch says so
-    val fluent = T.id == "win11" && !T.material && !Look.winIconLine
-    // Windows 11 Fluent style: the coloured filled Fluent glyph of the key (the Line choice keeps the thin glyphs)
-    // the tools and extra apps of the menus and Settings wear the colour Fluent picture of their own (fc_*.png), else the filled Fluent glyph, never the thin outline
-    if (fluent && !Look.winIconLine && (k.startsWith("tool_") || k.startsWith("extra"))) {
+    // Windows 11: every icon group has its own style (IconStyle): original, Fluent colour or line
+    val cat = if (k.startsWith("tool_")) IconCat.TOOLS else if (k.startsWith("extra")) IconCat.APPS else IconCat.MENU
+    val st = if (T.id == "win11" && !T.material) IconStyle.of(cat) else "original"
+    val fluent = T.id == "win11" && !T.material && st != "line"
+    val colour = st == "colour"
+    // the tools and extra apps wear the colour Fluent picture of their own (fc_*.png), else the filled Fluent glyph, never the thin outline
+    if (fluent && (k.startsWith("tool_") || k.startsWith("extra"))) {
         val n = FC_NAMED[k] ?: k.removePrefix("tool_")
         val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }
         if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return }
         if (FluentFilled.map.containsKey(k)) { FluentColorGlyph2(k, size, modifier); return }
     }
-    // the left-menu pages wear the colour Fluent pictures (res/drawable-nodpi/fc_*.png)
-    if (fluent && Look.winIconColor) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
-    if (fluent && Look.winIconColor) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
+    // Fluent colour: the colour pictures of the pages, then the coloured glyph
+    if (fluent && colour) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
+    if (fluent && colour) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
     if (k == "recycle" && !T.material) {
         if (fluent) ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
         BinIcon(tint, size, modifier); return
     }
     if (fluent) ThemeIcons.bitmap(ctx, "win11", k)?.let { Image(it, null, modifier.size(size)); return }
+    // no picture in the old pack: the new Fluent glyph
+    if (fluent && FluentColor.map.containsKey(k)) { FluentColorGlyph(k, tint, size, modifier); return }
     // the bin is always the plain bin icon, never the Fluent glyph that has a cross in it
     if (k == "delete" && !T.material) { BinIcon(tint, size, modifier); return }
     // One UI / ColorOS: own black-glyph PNG packs (Phosphor light / duotone), tinted
@@ -394,5 +398,28 @@ private fun FluentColorGlyph2(key: String, size: androidx.compose.ui.unit.Dp, mo
     val c = FluentFilled.color(key)
     androidx.compose.foundation.Canvas(modifier.size(size)) {
         this.scale(this.size.width / 24f, pivot = androidx.compose.ui.geometry.Offset.Zero) { paths.forEach { drawPath(it, c) } }
+    }
+}
+
+/** The icon groups of the Windows 11 look; each has its own style (Settings > Look > Icons). */
+enum class IconCat(val id: String, val en: String, val trName: String) {
+    MENU("menu", "Menus, pages and buttons", "Menüler, sayfalar ve düğmeler"),
+    APPS("apps", "Apps", "Uygulamalar"),
+    TOOLS("tools", "Tools", "Araçlar"),
+    SCREENS("screens", "Icons inside screens", "Ekranların içindeki ikonlar"),
+}
+
+/**
+ * "original": the icon the old app had (the Windows 11 icon pack) wherever there is one, the new Fluent glyph where the old app had none;
+ * "colour": the Fluent colour pictures; "line": thin outline glyphs. Apps and tools never had a pack icon, so they start with the colour pictures.
+ */
+object IconStyle {
+    val map = androidx.compose.runtime.mutableStateMapOf<String, String>()
+    fun load(sp: android.content.SharedPreferences) { IconCat.entries.forEach { c -> sp.getString("icon_${c.id}", null)?.let { map[c.id] = it } } }
+    fun of(c: IconCat): String = map[c.id] ?: if (Look.winIconLine) "line" else if (c == IconCat.APPS || c == IconCat.TOOLS || Look.winIconColor) "colour" else "original"
+    fun choices(c: IconCat): List<Triple<String, String, String>> = when (c) {
+        IconCat.APPS, IconCat.TOOLS -> listOf(Triple("colour", "Fluent colour", "Renkli Fluent"), Triple("line", "Line", "Çizgi"))
+        IconCat.SCREENS -> listOf(Triple("original", "Fluent", "Fluent"), Triple("line", "Line", "Çizgi"))
+        else -> listOf(Triple("original", "Original", "Orijinal"), Triple("colour", "Fluent colour", "Renkli Fluent"), Triple("line", "Line", "Çizgi"))
     }
 }

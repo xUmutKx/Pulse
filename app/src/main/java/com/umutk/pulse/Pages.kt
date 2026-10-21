@@ -424,12 +424,20 @@ fun SettingsPage() {
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Effects.list.forEach { (id, n) -> PChip(Look.effect == id, n) { Cfg.setEffect(ctx, id) } }
                     }
+                    // one collapsed row per icon group; open a group to pick its style
                     Text(tr("Icons (Windows 11)", "İkonlar (Windows 11)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        // Fluent (the original set, default), Fluent colour (the coloured pictures), Line (thin glyphs like Windows 10)
-                        PChip(!Look.winIconLine && !Look.winIconColor, "Fluent") { Cfg.setWinIconLine(ctx, false); Cfg.setWinIconColor(ctx, false) }
-                        PChip(!Look.winIconLine && Look.winIconColor, tr("Fluent colour", "Renkli Fluent")) { Cfg.setWinIconLine(ctx, false); Cfg.setWinIconColor(ctx, true) }
-                        PChip(Look.winIconLine, tr("Line", "Çizgi")) { Cfg.setWinIconLine(ctx, true); Cfg.setWinIconColor(ctx, false) }
+                    var iconOpen by remember { mutableStateOf<String?>(null) }
+                    IconCat.entries.forEach { cat ->
+                        val cur = IconStyle.of(cat)
+                        val curName = IconStyle.choices(cat).firstOrNull { it.first == cur }?.let { tr(it.second, it.third) } ?: ""
+                        Row(Modifier.fillMaxWidth().clickable { iconOpen = if (iconOpen == cat.id) null else cat.id }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(tr(cat.en, cat.trName), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            Text(curName, color = T.sub, fontSize = 12.sp)
+                            PIcon("chevron", T.sub, 18.dp, Modifier.padding(start = 6.dp).graphicsLayer { rotationZ = if (iconOpen == cat.id) 180f else 0f })
+                        }
+                        if (iconOpen == cat.id) Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            IconStyle.choices(cat).forEach { (id, en, trn) -> PChip(cur == id, tr(en, trn)) { Cfg.setIconStyle(ctx, cat, id) } }
+                        }
                     }
                     if (Look.effect == "blur") {
                         Text(tr("Blur amount", "Bulanıklık"), color = T.sub, fontSize = 12.sp)
