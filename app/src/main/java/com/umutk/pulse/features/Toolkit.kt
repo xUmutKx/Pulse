@@ -170,7 +170,7 @@ fun ToolkitPage() {
                 row.forEachIndexed { c, t ->
                     PCard(Modifier.weight(1f).clip(RoundedCornerShape(T.radius)).clickable { open = r * 3 + c }) {
                         PIcon(t.icon, Look.accent, 28.dp, Modifier.align(Alignment.CenterHorizontally))
-                        Text(tr(t.label, t.trLabel), Modifier.fillMaxWidth(), color = T.text, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 2)
+                        Text(tr(t.label, t.trLabel), Modifier.fillMaxWidth(), color = T.text, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 2, minLines = 2)
                     }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
