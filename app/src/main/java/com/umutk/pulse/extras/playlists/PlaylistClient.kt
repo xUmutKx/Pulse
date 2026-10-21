@@ -28,7 +28,7 @@ object PlaylistClient {
 
     private fun get(url: String): String {
         val c = URL(url).openConnection() as HttpURLConnection
-        c.connectTimeout = 8000; c.readTimeout = 12000
+        c.connectTimeout = 5000; c.readTimeout = 10000
         c.setRequestProperty("User-Agent", "Mozilla/5.0 (Android) Pulse")
         try {
             if (c.responseCode !in 200..299) error("HTTP ${c.responseCode}")
@@ -64,21 +64,65 @@ object PlaylistClient {
         if (id.isEmpty()) null else PItem(o.optString("title"), o.optString("uploaderName").removeSuffix(" - Topic"), o.optInt("duration", -1), o.optString("thumbnail").ifEmpty { null }, id)
     }
 
-    suspend fun youtubePlaylist(id: String): PList {
-        val o = api("/playlists/$id")
-        return PList(o.optString("name", "Playlist"), items(o.optJSONArray("relatedStreams") ?: JSONArray()), "https://www.youtube.com/playlist?list=$id")
-        // shortcut: only the first page (about 100 songs), no "nextpage" paging; add /nextpage/playlists/$id if long lists matter
+    // ---- Invidious: the second source, used when no Piped instance answers (public instances of both come and go) ----
+    private val INV_FALLBACK = listOf("https://inv.nadeko.net", "https://yewtu.be", "https://invidious.nerdvpn.de")
+    private var invInstances: List<String>? = null
+
+    private suspend fun invs(): List<String> {
+        invInstances?.let { return it }
+        val live = runCatching {
+            val a = JSONArray(withContext(Dispatchers.IO) { get("https://api.invidious.io/instances.json?sort_by=type,health") })
+            (0 until a.length()).mapNotNull { i ->
+                val o = a.getJSONArray(i).getJSONObject(1)
+                if (o.optBoolean("api") && o.optString("type") == "https") o.optString("uri").trimEnd('/').takeIf { it.startsWith("https://") } else null
+            }.take(6)
+        }.getOrDefault(emptyList())
+        return (live + INV_FALLBACK).distinct().also { invInstances = it }
     }
 
-    suspend fun searchSongs(q: String): PList =
+    /** The text of [path] from the first Invidious instance that answers. */
+    private suspend fun invText(path: String): String = withContext(Dispatchers.IO) {
+        var last: Throwable? = null
+        for (base in invs()) {
+            try { return@withContext get(base + path) } catch (e: Exception) { last = e }
+        }
+        throw last ?: IllegalStateException("no instance")
+    }
+
+    private fun invItems(a: JSONArray): List<PItem> = (0 until a.length()).mapNotNull {
+        val o = a.getJSONObject(it)
+        val id = o.optString("videoId")
+        if (id.isEmpty()) null else PItem(o.optString("title"), o.optString("author").removeSuffix(" - Topic"), o.optInt("lengthSeconds", -1),
+            o.optJSONArray("videoThumbnails")?.optJSONObject(0)?.optString("url")?.ifEmpty { null } ?: "https://i.ytimg.com/vi/$id/mqdefault.jpg", id)
+    }
+
+    suspend fun youtubePlaylist(id: String): PList = try {
+        val o = api("/playlists/$id")
+        PList(o.optString("name", "Playlist"), items(o.optJSONArray("relatedStreams") ?: JSONArray()), "https://www.youtube.com/playlist?list=$id")
+        // shortcut: only the first page (about 100 songs), no "nextpage" paging; add /nextpage/playlists/$id if long lists matter
+    } catch (e: Exception) {
+        val o = JSONObject(invText("/api/v1/playlists/$id"))
+        PList(o.optString("title", "Playlist"), invItems(o.optJSONArray("videos") ?: JSONArray()), "https://www.youtube.com/playlist?list=$id")
+    }
+
+    suspend fun searchSongs(q: String): PList = try {
         PList(q, items(api("/search?q=${enc(q)}&filter=music_songs").optJSONArray("items") ?: JSONArray()))
+    } catch (e: Exception) {
+        PList(q, invItems(JSONArray(invText("/api/v1/search?q=${enc(q)}&type=video"))))
+    }
 
     /** Playlist ids found by a text search, as (id, name). */
-    suspend fun searchPlaylists(q: String): List<Pair<String, String>> {
-        val a = api("/search?q=${enc(q)}&filter=playlists").optJSONArray("items") ?: return emptyList()
-        return (0 until a.length()).map { a.getJSONObject(it) }.mapNotNull {
+    suspend fun searchPlaylists(q: String): List<Pair<String, String>> = try {
+        val a = api("/search?q=${enc(q)}&filter=playlists").optJSONArray("items") ?: JSONArray()
+        (0 until a.length()).map { a.getJSONObject(it) }.mapNotNull {
             val id = it.optString("url").substringAfter("list=", "")
             if (id.isEmpty()) null else id to it.optString("name")
+        }
+    } catch (e: Exception) {
+        val a = JSONArray(invText("/api/v1/search?q=${enc(q)}&type=playlist"))
+        (0 until a.length()).map { a.getJSONObject(it) }.mapNotNull {
+            val id = it.optString("playlistId")
+            if (id.isEmpty()) null else id to it.optString("title")
         }
     }
 
@@ -109,6 +153,11 @@ object PlaylistClient {
         val a = api("/streams/$videoId").getJSONArray("audioStreams")
         val l = (0 until a.length()).map { a.getJSONObject(it) }
         (l.filter { it.optString("mimeType").contains("mp4") }.maxByOrNull { it.optInt("bitrate") } ?: l.maxByOrNull { it.optInt("bitrate") })?.optString("url")
+    }.getOrNull() ?: runCatching {
+        // Invidious: the audio-only formats; local=true makes the instance proxy the stream, so the link works without a YouTube session
+        val a = JSONObject(invText("/api/v1/videos/$videoId?local=true")).getJSONArray("adaptiveFormats")
+        val l = (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("type").startsWith("audio/") && it.optString("url").isNotEmpty() }
+        (l.filter { it.optString("type").contains("mp4") }.maxByOrNull { it.optString("bitrate").toIntOrNull() ?: 0 } ?: l.maxByOrNull { it.optString("bitrate").toIntOrNull() ?: 0 })?.optString("url")
     }.getOrNull()
 
     suspend fun audioUrls(list: List<PItem>): List<Pair<PItem, String>> = coroutineScope {

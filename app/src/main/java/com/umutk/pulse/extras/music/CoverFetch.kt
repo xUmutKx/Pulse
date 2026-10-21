@@ -50,6 +50,15 @@ internal object CoverFetch {
         }
     }
 
+    private fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+
+    /** Two names that are the same apart from case, punctuation and an added "(Deluxe)" or "- Single" part. */
+    private fun sameWork(found: String, wanted: String): Boolean {
+        val a = norm(found.substringBefore('(').substringBefore(" - "))
+        val b = norm(wanted.substringBefore('(').substringBefore(" - "))
+        return a.isNotEmpty() && b.isNotEmpty() && (a == b || a.contains(b) || b.contains(a))
+    }
+
     private fun online(c: Context): Boolean {
         val cm = c.getSystemService(ConnectivityManager::class.java) ?: return false
         val caps = cm.getNetworkCapabilities(cm.activeNetwork) ?: return false
@@ -63,12 +72,15 @@ internal object CoverFetch {
         if (!MusicSettings.onlineCovers(c)) return null
         val miss = PowerampCovers.missTime(c, t.path)
         if (miss > 0L && System.currentTimeMillis() - miss < WEEK_MS) return null
-        val term = listOfNotNull(t.artist?.takeIf { it.isNotBlank() }, t.album?.takeIf { it.isNotBlank() } ?: t.displayName())
-            .joinToString(" ").trim()
+        val artist = t.artist?.takeIf { it.isNotBlank() && it != "<unknown>" }
+        val album = t.album?.takeIf { it.isNotBlank() && it != "<unknown>" }
+        val name = album ?: t.displayName()
+        val term = listOfNotNull(artist, name).joinToString(" ").trim()
         if (term.isEmpty()) return null
         synchronized(lock) {
             PowerampCovers.saved(c, t.path)?.let { return it }
-            val hit = PowerampCovers.search(term, "album").firstOrNull()
+            // a cover is only taken when the result is the same album (or the same song when the album is unknown) by the same artist: no cover is better than a wrong one
+            val hit = PowerampCovers.search(term, if (album != null) "album" else "song").firstOrNull { sameWork(it.name, name) && (artist == null || sameWork(it.artist, artist)) }
             if (hit == null) {
                 PowerampCovers.markMiss(c, t.path)
                 return null

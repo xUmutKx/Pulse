@@ -135,8 +135,8 @@ private fun groupKey(t: Track, kind: Int): String? = when (kind) {
     0 -> t.album.tagOrNull() ?: t.folderName().takeIf { it.isNotBlank() } ?: tr("Unknown album", "Bilinmeyen albüm")
     1 -> t.shownArtist()
     2 -> t.genre.tagOrNull() ?: tr("Unknown genre", "Bilinmeyen tür")
-    3 -> t.year.takeIf { it > 0 }?.toString()
-    else -> t.composer.tagOrNull()
+    3 -> t.year.takeIf { it > 0 }?.toString() ?: tr("No year", "Yıl yok")
+    else -> t.composer.tagOrNull() ?: tr("No composer", "Besteci yok")
 }
 
 private fun String?.tagOrNull(): String? = this?.trim()?.takeIf { it.isNotEmpty() && !it.equals("<unknown>", true) }
@@ -251,7 +251,7 @@ fun LibraryScreen(
             is Lib.Cat -> {
                 val groups = remember(tracks, n.kind) {
                     tracks.mapNotNull { t -> groupKey(t, n.kind)?.let { it to t } }.groupBy({ it.first }, { it.second })
-                        .toList().let { if (n.kind == 3) it.sortedByDescending { g -> g.first } else it.sortedBy { g -> g.first.lowercase() } }
+                        .toList().let { if (n.kind == 3) it.sortedByDescending { g -> g.first.toIntOrNull() ?: 0 } else it.sortedBy { g -> g.first.lowercase() } }
                 }
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
                     itemsIndexed(groups) { _, (name, list) -> CatRow(catIcons[n.kind], Color(0xFF6E8BE8), name, style, count = list.size, art = list.firstOrNull()) { node = Lib.Group(n.kind, name) } }
@@ -358,6 +358,11 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
 @Composable
 private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit) {
     val songs = remember(items) { items.map { it.value } }
+    // an empty page says so instead of staying blank
+    if (items.isEmpty()) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("No songs here", "Burada şarkı yok"), color = style.textDim, fontSize = 15.sp) }
+        return
+    }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
         if (items.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
