@@ -395,7 +395,8 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val groups = (listOfNotNull("File".takeIf { fileOps != null }) + (tabs ?: acts.map { it.group }).filter { it != "Quick" && it != "File" }).distinct()
     var tab by remember(groups) { mutableStateOf(if ("Home" in groups) "Home" else groups.firstOrNull { it != "File" } ?: "") }
     var open by remember { mutableStateOf(true) }
-    val tabInk = if (t.dark) Color.White.copy(alpha = .75f).compositeOver(brand) else brand
+    // the 365 window is dark grey with white text and icons, in the light and the dark look alike
+    val tabInk = Color.White
     val below = ofBelow(t)   // solid grey: translucent layers over the black window left dark text on black
     // text and icons always follow the strip they sit on: white on a dark strip, near-black on a light one
     val ink = ofInkOn(below)
@@ -412,7 +413,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             groups.forEach { g ->
                 val sel = g == tab
                 Box(Modifier.clickable { if (g == "File") fileOpen = true else if (sel) open = !open else { tab = g; open = true } }.padding(horizontal = 12.dp, vertical = 9.dp)) {
-                    Text(g, fontSize = 13.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal, color = if (sel) tabInk else ink)
+                    Text(g, fontSize = 13.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal, color = if (sel) tabInk else ink.copy(alpha = .78f))
                     if (sel) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(2.dp).background(tabInk))
                 }
             }
@@ -455,7 +456,7 @@ val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 
 
 /** Colour of everything under the brand title bar: white, or near-black in the dark looks. Looks that have their own surfaces keep the ribbon colour. */
-internal fun ofBelow(t: OfTheme) = if (t.base == "365") (if (t.dark) Color(0xFF2B2B2B) else Color(0xFFF3F3F3)) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
+internal fun ofBelow(t: OfTheme) = if (t.base == "365") Color(0xFF2B2B2B) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
 
 /** Opaque colours of the system status bar (top) and navigation bar (bottom): exactly what the chrome shows in the title bar and in the bottom-most (status) bar, translucent layers composited over the canvas. */
 fun ofBars(t: OfTheme): Pair<Color, Color> {
