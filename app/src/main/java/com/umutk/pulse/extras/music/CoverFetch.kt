@@ -52,11 +52,25 @@ internal object CoverFetch {
 
     private fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
 
+    /** Words that are not part of a name: a compilation, a remaster, a video tag, a track number. They only misdirect the search. */
+    private val NOISE = Regex("(?i)\\b(no\\.?\\s*1|number\\s*one|greatest\\s+hits|best\\s+of|the\\s+best|classics?|hits|collection|essentials?|anthology|remaster(ed)?(\\s+\\d{4})?|deluxe(\\s+edition)?|official\\s+(music\\s+)?(video|audio)|lyrics?|hd|hq|mp3|feat\\.?|ft\\.?)\\b")
+
+    /** A name as the tags give it, without the noise: "01 - Song (Remastered 2011) [HD]" becomes "Song". */
+    private fun clean(s: String): String = s.replace(Regex("^\\s*\\d{1,3}\\s*[-._)]\\s*"), "").replace(Regex("[\\[(].*?[\\])]"), " ").replace(NOISE, " ")
+        .replace(Regex("[_]+"), " ").replace(Regex("\\s+"), " ").trim(' ', '-', '.', ',')
+
+    /** An album name that is a compilation / hits package, not one record: a search by it finds some other album, so the song is searched instead. */
+    private fun generic(album: String) = NOISE.containsMatchIn(album) || album.length < 3 || album.lowercase() in setOf("unknown", "various", "various artists", "music", "download", "downloads")
+
     /** Two names that are the same apart from case, punctuation and an added "(Deluxe)" or "- Single" part. */
     private fun sameWork(found: String, wanted: String): Boolean {
-        val a = norm(found.substringBefore('(').substringBefore(" - "))
-        val b = norm(wanted.substringBefore('(').substringBefore(" - "))
-        return a.isNotEmpty() && b.isNotEmpty() && (a == b || a.contains(b) || b.contains(a))
+        val a = norm(clean(found).substringBefore(" - "))
+        val b = norm(clean(wanted).substringBefore(" - "))
+        if (a.isEmpty() || b.isEmpty()) return false
+        // a short name must match whole: "love" is inside a hundred other names
+        if (a == b) return true
+        if (minOf(a.length, b.length) < 6) return false
+        return a.contains(b) || b.contains(a)
     }
 
     private fun online(c: Context): Boolean {
@@ -72,9 +86,11 @@ internal object CoverFetch {
         if (!MusicSettings.onlineCovers(c)) return null
         val miss = PowerampCovers.missTime(c, t.path)
         if (miss > 0L && System.currentTimeMillis() - miss < WEEK_MS) return null
-        val artist = t.artist?.takeIf { it.isNotBlank() && it != "<unknown>" }
-        val album = t.album?.takeIf { it.isNotBlank() && it != "<unknown>" }
-        val name = album ?: t.displayName()
+        val artist = t.artist?.takeIf { it.isNotBlank() && it != "<unknown>" }?.let { clean(it).ifBlank { null } }
+        // the album only when it is one record; a compilation ("No.1 Classics") or the folder name is no album, the song is searched then
+        val album = t.album?.takeIf { it.isNotBlank() && it != "<unknown>" && !generic(it) }?.let { clean(it).ifBlank { null } }
+        val song = clean(t.displayName()).ifBlank { null }
+        val name = album ?: song ?: return null
         val term = listOfNotNull(artist, name).joinToString(" ").trim()
         if (term.isEmpty()) return null
         synchronized(lock) {

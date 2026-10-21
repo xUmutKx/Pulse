@@ -629,7 +629,7 @@ private fun ExtraAppsCard() {
             Column(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                     // Windows 11: the Fluent vector of the tool, one glyph per tool (the PNG pack is bypassed, it has black glyphs)
-                    val toolColor = if (T.id == "win11" && !Look.winIconLine) fluentColorRes(ctx, t.id) else 0
+                    val toolColor = if (T.id == "win11" && !Look.winIconLine) fluentColorRes(ctx, if (t.id == "extrastore") "store" else t.id) else 0
                     if (toolColor != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(toolColor), null, Modifier.size(30.dp)) }
                     else if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", FluentFilled.color("tool_${t.id}"), 24.dp) } else {
                         // Office and Download manager get the black launcher tile with a white outline glyph (dark: accent glyph)
@@ -676,8 +676,7 @@ private fun PlaceChoice(selected: String, options: List<Pair<String, String>>, o
     Row(Modifier.fillMaxWidth().padding(start = 48.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.CenterVertically) {
         options.forEach { (value, icon) ->
             Column(Modifier.clickable { onPick(value) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                if (T.id == "win11" && FluentFilled.map.containsKey(icon)) FluentGlyph(icon, if (selected == value) Look.accent else T.sub, 22.dp)
-                else PIcon(icon, if (selected == value) Look.accent else T.sub, 22.dp)
+                PIcon(icon, if (selected == value) Look.accent else T.sub, 22.dp)
                 Spacer(Modifier.height(4.dp))
                 PRadio(selected == value) { onPick(value) }
             }
