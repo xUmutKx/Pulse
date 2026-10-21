@@ -44,6 +44,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -763,7 +764,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
                 if (x == null) return
                 val (txt, num) = xShow(book, ev, x, r, c)
                 if (txt.isEmpty()) return
-                tp.typeface = faces[(if (s.bold) 1 else 0) + (if (s.italic) 2 else 0)]; tp.color = if (s.color != 0) s.color else if (hd && tb!!.look.head != 0) tb.look.headInk else if (dk && s.fill == 0) OfficePrefs.pageFg else Color.Black.toArgb()
+                tp.typeface = faces[(if (s.bold) 1 else 0) + (if (s.italic) 2 else 0)]; tp.color = if (s.color != 0) (if (dk && s.fill == 0 && Color(s.color).luminance() < .3f) OfficePrefs.pageFg else s.color) else if (hd && tb!!.look.head != 0) tb.look.headInk else if (dk && s.fill == 0) OfficePrefs.pageFg else Color.Black.toArgb()
                 tp.textSize = (13f * d * z * ((s.fsz.toFloatOrNull() ?: 11f) / 11f)).coerceIn(6f * d, 90f * d); tp.isUnderlineText = s.underline; tp.isStrikeThruText = s.strike
                 val base = tp.textSize * .35f
                 val w = tp.measureText(txt); val pad = 3f * d
