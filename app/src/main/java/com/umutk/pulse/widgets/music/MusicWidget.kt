@@ -39,7 +39,7 @@ open class MusicWidget : AppWidgetProvider() {
     override fun onDeleted(c: Context, ids: IntArray) { prefs(c).edit().apply { ids.forEach { remove("theme_$it") } }.apply() }
 
     override fun onReceive(c: Context, i: Intent) {
-        val e = MusicPlayerEngine.get(c)
+        val e = MusicPlayerEngine.ready(c)
         when (i.action) {
             A_PREV -> e.previous()
             A_TOGGLE -> e.togglePlayPause()
@@ -100,7 +100,7 @@ open class MusicWidget : AppWidgetProvider() {
         private fun watch(c: Context) {
             if (job?.isActive == true) return
             val app = c.applicationContext
-            job = MusicPlayerEngine.get(app).state.drop(1).onEach { refresh(app) }.launchIn(CoroutineScope(Dispatchers.Main))
+            job = MusicPlayerEngine.ready(app).state.drop(1).onEach { refresh(app) }.launchIn(CoroutineScope(Dispatchers.Main))
         }
 
         fun refresh(c: Context) {
@@ -110,7 +110,7 @@ open class MusicWidget : AppWidgetProvider() {
 
         fun build(c: Context, id: Int): RemoteViews {
             val kind = AppWidgetManager.getInstance(c).getAppWidgetInfo(id)?.provider?.className
-            val e = MusicPlayerEngine.get(c)
+            val e = MusicPlayerEngine.ready(c)
             val st = e.state.value
             val t = st.current
             val look = lookTheme(c)

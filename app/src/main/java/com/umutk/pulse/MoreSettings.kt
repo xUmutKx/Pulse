@@ -648,7 +648,7 @@ private fun ExtraAppsCard() {
         // the app's own pages: shown in the left menu or hidden
         Pages.forEach { p ->
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon(p.icon, T.text, 22.dp) }
+                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", T.text, 24.dp) else PIcon(p.icon, T.text, 22.dp) }
                 Spacer(Modifier.width(12.dp))
                 Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
                 PSwitch(p.id !in Opt.hidden, { on -> Opt.hidden = if (on) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) })
@@ -663,7 +663,8 @@ private fun PlaceChoice(selected: String, options: List<Pair<String, String>>, o
     Row(Modifier.fillMaxWidth().padding(start = 48.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.CenterVertically) {
         options.forEach { (value, icon) ->
             Column(Modifier.clickable { onPick(value) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                PIcon(icon, if (selected == value) Look.accent else T.sub, 22.dp)
+                if (T.id == "win11" && FluentFilled.map.containsKey(icon)) FluentGlyph(icon, if (selected == value) Look.accent else T.sub, 22.dp)
+                else PIcon(icon, if (selected == value) Look.accent else T.sub, 22.dp)
                 Spacer(Modifier.height(4.dp))
                 PRadio(selected == value) { onPick(value) }
             }
@@ -674,7 +675,7 @@ private fun PlaceChoice(selected: String, options: List<Pair<String, String>>, o
 /** A Fluent vector glyph straight from FluentPaths (Windows 11 tool icons; the PNG pack is not used here). */
 @Composable
 private fun FluentGlyph(k: String, tint: androidx.compose.ui.graphics.Color, size: androidx.compose.ui.unit.Dp) {
-    val paths = remember(k) { (FluentPaths.map[k] ?: FluentPaths.map["info"]!!).map { PathParser().parsePathString(it).toPath() } }
+    val paths = remember(k) { (FluentFilled.map[k] ?: FluentPaths.map[k] ?: FluentPaths.map["info"]!!).map { PathParser().parsePathString(it).toPath() } }
     Canvas(Modifier.size(size)) {
         scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
     }
