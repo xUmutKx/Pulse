@@ -16,7 +16,7 @@ import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Pattern
 import androidx.compose.material.icons.outlined.Dialpad
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip

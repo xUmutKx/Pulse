@@ -18,7 +18,7 @@ import androidx.compose.material.icons.filled.FilterList
 import com.umutk.pulse.PCheck
 import com.umutk.pulse.onAccent
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack

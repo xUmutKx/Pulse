@@ -35,7 +35,7 @@ import androidx.compose.material.icons.outlined.Share
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment

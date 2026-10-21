@@ -23,7 +23,7 @@ import androidx.compose.material.icons.filled.Memory
 import androidx.compose.material.icons.filled.Storage
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material3.Card
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable

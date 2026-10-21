@@ -52,7 +52,7 @@ import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
@@ -157,7 +157,11 @@ private const val EX_SORT_ALL = "ex_sort_all"
 private const val EX_SORT_DIRS = "ex_sort_dirs"
 
 /** Set by an intent that opens a folder (Pulse chosen as the file manager): Files then opens full screen. */
-object FilesLaunch { var full by mutableStateOf(false) }
+object FilesLaunch {
+    var full by mutableStateOf(false)
+    /** An archive another app asked Pulse to open (Open with Pulse on a zip): the explorer browses it like a folder. */
+    var archive by mutableStateOf<File?>(null)
+}
 
 /** When set, tapping a file hands it to this callback instead of opening it (the Office "Open file" picker). */
 val LocalFilePick = androidx.compose.runtime.staticCompositionLocalOf<((File) -> Unit)?> { null }
@@ -357,6 +361,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var arcSel by remember { mutableStateOf(emptySet<String>()) }
     // bumped after a cut rewrote the archive, so its entries are read again
     var arcRev by remember { mutableStateOf(0) }
+    val wantedArc = FilesLaunch.archive
+    LaunchedEffect(wantedArc) { if (wantedArc != null) { arcFile = wantedArc; arcCwd = ""; arcSel = emptySet(); FilesLaunch.archive = null } }
     val arcAll by produceState<List<AEntry>?>(null, arcFile, arcRev) {
         value = arcFile?.let { f -> withContext(Dispatchers.IO) { runCatching { archiveEntries(f) }.getOrDefault(emptyList()) } }
     }
