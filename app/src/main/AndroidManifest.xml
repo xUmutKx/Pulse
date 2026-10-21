@@ -150,6 +150,27 @@
                 <data android:mimeType="resource/folder" />
                 <data android:mimeType="vnd.android.document/directory" />
             </intent-filter>
+            <!-- zip and other archives opened from any app: Pulse Files browses them -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:mimeType="application/zip" />
+                <data android:mimeType="application/x-zip-compressed" />
+                <data android:mimeType="application/x-compressed" />
+                <data android:mimeType="application/java-archive" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="file" />
+                <data android:scheme="content" />
+                <data android:host="*" />
+                <data android:mimeType="*/*" />
+                <data android:pathPattern=".*\\.zip" />
+                <data android:pathPattern=".*\\..*\\.zip" />
+            </intent-filter>
         </activity>
         <activity-alias android:name=".FilesLauncher" android:enabled="false" android:targetActivity=".FilesActivity" android:exported="true" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:label="@string/files_name">
             <intent-filter>
