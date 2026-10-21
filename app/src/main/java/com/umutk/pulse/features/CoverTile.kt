@@ -55,8 +55,8 @@ object CoverStore {
     /** Where the clock block sits: 0..8, rows top / middle / bottom, columns left / centre / right (4 = the middle of the screen). */
     fun pos(c: Context) = prefs(c).getInt("pos", 4).coerceIn(0, 8)
     fun setPos(c: Context, p: Int) = prefs(c).edit().putInt("pos", p).apply()
-    /** Brightness of the screen while the cover is up, 5..100 (100 = leave the system's). */
-    fun bright(c: Context) = prefs(c).getInt("bright", 100).coerceIn(5, 100)
+    /** Brightness of the screen while the cover is up, 5..100 (100 = the panel's maximum); -1 = never set, the system's own. */
+    fun bright(c: Context) = prefs(c).getInt("bright", -1).let { if (it < 0) -1 else it.coerceIn(5, 100) }
     fun setBright(c: Context, v: Int) = prefs(c).edit().putInt("bright", v).apply()
     /** The part of the screen the cover leaves open, in percent of the screen: left, top, right, bottom; null = the cover is closed everywhere. */
     fun hole(c: Context): IntArray? = prefs(c).getString("hole", null)?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 4 }?.toIntArray()
@@ -137,7 +137,7 @@ fun CoverSettings() {
         PSwitch(battery, { battery = it; CoverStore.setBattery(ctx, it) })
     }
     // brightness while the cover is up
-    var bright by remember { mutableIntStateOf(CoverStore.bright(ctx)) }
+    var bright by remember { mutableIntStateOf(CoverStore.bright(ctx).let { if (it < 0) 100 else it }) }
     Text(tr("Brightness", "Parlaklık"), color = T.sub, fontSize = 12.sp)
     com.umutk.pulse.PSlider(bright.toFloat(), { bright = it.toInt().coerceIn(5, 100); CoverStore.setBright(ctx, bright) }, 5f..100f) {}
     // an open window in the cover: drag its edges

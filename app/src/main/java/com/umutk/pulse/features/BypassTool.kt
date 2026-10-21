@@ -28,22 +28,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-/** A free tool for reaching blocked sites: [what] says in a few words what it does. */
-private class Bypass(val name: String, val enName: String, val trName: String, val url: String)
-
-private val BYPASS = listOf(
-    Bypass("ByeDPI", "DPI bypass on the phone (a local VPN, no server)", "Telefonda DPI aşma (yerel VPN, sunucu yok)", "https://github.com/dovecoteescapee/ByeDPIAndroid/releases"),
-    Bypass("Cloudflare WARP (1.1.1.1)", "Free VPN, also reaches many DPI-blocked sites", "Ücretsiz VPN, DPI ile engellenen çoğu siteye de ulaşır", "https://play.google.com/store/apps/details?id=com.cloudflare.onedotonedotonedotone"),
-    Bypass("Proton VPN", "Free plan, no data limit, no ads", "Ücretsiz plan, veri sınırı ve reklam yok", "https://protonvpn.com/download-android"),
-    Bypass("Psiphon", "Free, built to get past censorship", "Ücretsiz, sansürü aşmak için yapıldı", "https://psiphon.ca/en/download.html"),
-    Bypass("Orbot (Tor)", "Tor network for the whole phone", "Tüm telefon için Tor ağı", "https://guardianproject.info/apps/org.torproject.android/"),
-    Bypass("Intra", "Blocks DNS tampering with encrypted DNS", "Şifreli DNS ile DNS engelini aşar", "https://getintra.org/"),
-    Bypass("Windscribe", "Free plan with a monthly data allowance", "Aylık veri hakkı olan ücretsiz plan", "https://windscribe.com/download"),
-)
-
 private val DNS_HOSTS = listOf("Cloudflare" to "one.one.one.one", "Google" to "dns.google", "AdGuard" to "dns.adguard-dns.com", "Quad9" to "dns.quad9.net")
 
-/** Toolkit tool: encrypted DNS in one tap (it beats DNS blocks only), and the free VPN / DPI-bypass apps worth installing. */
+/** Toolkit tool: encrypted DNS in one tap (it beats DNS blocks only) and the TTL of outgoing packets. */
 @Composable
 fun BypassTool() {
     val ctx = LocalContext.current
@@ -65,21 +52,45 @@ fun BypassTool() {
             }
         }
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
-        Text(tr("Beats blocks that work on the site name (DNS). A block that reads the traffic (DPI) needs one of the apps below.", "Site adı (DNS) üzerinden yapılan engelleri aşar. Trafiği okuyan engeller (DPI) için aşağıdaki uygulamalardan biri gerekir."), color = T.sub, fontSize = 12.sp)
+        Text(tr("Beats blocks that work on the site name (DNS). Blocks that read the traffic (DPI) are not beaten by it.", "Site adı (DNS) üzerinden yapılan engelleri aşar. Trafiği okuyan engelleri (DPI) aşamaz."), color = T.sub, fontSize = 12.sp)
+    }
+    TtlCard()
+}
+
+/** The TTL of outgoing packets (IPv4 default TTL) through root: 65 makes tethered traffic look like it comes from the phone itself. */
+@Composable
+private fun TtlCard() {
+    val scope = rememberCoroutineScope()
+    var cur by remember { mutableStateOf<String?>(null) }
+    var note by remember { mutableStateOf("") }
+    var custom by remember { mutableStateOf("") }
+    fun sh(c: String) = if (com.umutk.pulse.Shell.root == true) com.umutk.pulse.Shell.runRoot(c) else com.umutk.pulse.Shell.run(c)
+    fun read() { scope.launch { cur = withContext(Dispatchers.IO) { sh("cat /proc/sys/net/ipv4/ip_default_ttl").trim().takeIf { it.toIntOrNull() != null } } } }
+    androidx.compose.runtime.LaunchedEffect(Unit) { read() }
+    fun set(v: Int) {
+        scope.launch {
+            note = tr("Switching…", "Değiştiriliyor…")
+            val out = withContext(Dispatchers.IO) {
+                // the default for new packets, plus a mangle rule for the traffic that is routed through the phone (tethering)
+                sh("sysctl -w net.ipv4.ip_default_ttl=$v; echo $v > /proc/sys/net/ipv4/ip_default_ttl; " +
+                    "iptables -t mangle -D POSTROUTING -j TTL --ttl-set $v 2>/dev/null; iptables -t mangle -A POSTROUTING -j TTL --ttl-set $v 2>/dev/null; " +
+                    "cat /proc/sys/net/ipv4/ip_default_ttl")
+            }
+            read()
+            note = if (out.trim().lines().lastOrNull() == v.toString()) tr("TTL is $v", "TTL $v oldu") else tr("The phone did not take it. Root is needed.", "Telefon kabul etmedi. Root gerekir.")
+        }
     }
     PCard {
-        Text(tr("Free VPN and DPI-bypass apps", "Ücretsiz VPN ve DPI aşma uygulamaları"), color = T.text, fontSize = 15.sp)
-        Column {
-            BYPASS.forEach { b ->
-                Row(Modifier.fillMaxWidth().clickable { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(b.url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("globe", T.text, 20.dp)
-                    Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                        Text(b.name, color = T.text, fontSize = 14.sp)
-                        Text(tr(b.enName, b.trName), color = T.sub, fontSize = 12.sp)
-                    }
-                    PIcon("share", T.sub, 16.dp)
-                }
-            }
+        Text("TTL", color = T.text, fontSize = 15.sp)
+        Text(tr("Now", "Şimdi") + ": " + (cur ?: "?"), color = T.sub, fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+            listOf(64, 65, 128).forEach { v -> PChip(cur == v.toString(), "$v") { set(v) } }
         }
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.umutk.pulse.PField(custom, { custom = it.filter(Char::isDigit).take(3) }, tr("Other value", "Başka değer"), Modifier.weight(1f))
+            com.umutk.pulse.PButton(tr("Set", "Uygula")) { custom.toIntOrNull()?.takeIf { it in 1..255 }?.let { set(it) } }
+        }
+        if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
+        Text(tr("Resets when the phone restarts.", "Telefon yeniden başlayınca sıfırlanır."), color = T.sub, fontSize = 12.sp)
     }
 }
