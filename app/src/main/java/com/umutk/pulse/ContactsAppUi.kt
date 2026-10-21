@@ -690,7 +690,6 @@ private fun CtDetailScreen(id: Long, groups: List<CtGroup>, onBack: () -> Unit, 
             // 40 dp targets: six icons plus the back button fit a 360 dp phone with room to spare, the bin stays on the right
             val bs = Modifier.size(40.dp)
             CtIcon(if (c.starred) Icons.Outlined.Star else Icons.Outlined.StarOutline, if (c.starred) ctAcc else T.text, bs) { scope.launch { withContext(Dispatchers.IO) { ctSetStar(ctx, id, !c.starred) }; rev++; onChanged() } }
-            CtIcon(Icons.Outlined.Info, modifier = bs) { go(Intent(Intent.ACTION_VIEW, android.content.ContentUris.withAppendedId(android.provider.ContactsContract.Contacts.CONTENT_URI, id))) }
             CtIcon(Icons.Outlined.Tune, modifier = bs) { onCustom(id) }
             CtIcon(Icons.Outlined.Edit, modifier = bs) { onEdit(id) }
             CtIcon(Icons.Outlined.Share, modifier = bs) {

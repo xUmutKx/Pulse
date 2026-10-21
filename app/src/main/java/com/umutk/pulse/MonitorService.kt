@@ -399,7 +399,23 @@ class TimerTile : ToolkitTile() {
         "%02d:%02d".format(s / 60, s % 60)
     }
 }
-class CalculatorTile : ToolkitTile() { override val start: String get() = "toolkit:calc"; override val trName: String get() = "Hesap makinesi" }
+class CalculatorTile : ToolkitTile() { override val start: String get() = "calculator"; override val trName: String get() = "Hesap makinesi" }
+/** Network type tile (5G only, LTE only ...): a tap switches to the next mode picked in the Toolkit, as root; without root it opens the screen. */
+class NetModeTile : ToolkitTile() {
+    override val start: String get() = "toolkit:globe"
+    override val trName: String get() = "Ağ türü"
+    override val refreshMs: Long get() = 3000L
+    private var busy = false
+    override fun subtitleFor(values: FloatArray?): String? = if (busy) "…" else com.umutk.pulse.features.NetMode.current(this)?.let { com.umutk.pulse.features.NetMode.label(it) }
+    override fun active(): Boolean = com.umutk.pulse.features.NetMode.current(this) in setOf(23, 24)
+    override fun act(): Boolean {
+        if (busy) return false
+        if (Shell.root != true) { openPulse(start); return false }
+        busy = true
+        com.umutk.pulse.features.NetMode.apply(this, com.umutk.pulse.features.NetMode.next(this)) { ok -> busy = false; paint(); if (!ok) openPulse(start) }
+        return true
+    }
+}
 class FinderTile : ToolkitTile() { override val start: String get() = "toolkit:search"; override val trName: String get() = "Bulucu" }
 class DinkTile : ToolkitTile() { override val start: String get() = "toolkit:dink"; override val trName: String get() = "Dink" }
 class ScaleTile : ToolkitTile() {

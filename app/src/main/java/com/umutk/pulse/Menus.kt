@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Person
@@ -174,6 +175,7 @@ object AppPlace {
         App("CalendarLauncher", "Calendar", "Takvim", "calendar", Icons.Outlined.CalendarMonth) { c, _ -> launchExtra(c, "com.umutk.pulse.CalendarActivity") },
         App("ContactsLauncher", "Contacts", "Kişiler", "person", Icons.Outlined.Person) { c, _ -> launchExtra(c, "com.umutk.pulse.ContactsActivity") },
         App("PaintLauncher", "Paint", "Paint", "palette", Icons.Outlined.Brush) { c, _ -> launchExtra(c, TOOL, "paint") },
+        App("CalculatorLauncher", "Calculator", "Hesap makinesi", "calc", Icons.Outlined.Calculate) { c, _ -> launchExtra(c, TOOL, "calculator") },
         App("ArtCraftLauncher", "ArtCraft", "ArtCraft", "palette", Icons.Outlined.Palette) { c, _ -> launchExtra(c, "com.umutk.pulse.ArtCraftActivity") },
         App("MusicLauncher", "Music player", "Müzik çalar", "music", Icons.Outlined.MusicNote) { c, _ -> launchExtra(c, TOOL, "music") },
         App("VideoLauncher", "Video", "Video", "video", Icons.Outlined.Videocam) { c, _ -> launchExtra(c, TOOL, "video") },
