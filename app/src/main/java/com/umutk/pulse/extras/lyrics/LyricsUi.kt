@@ -167,10 +167,14 @@ fun LyricsSheet(
     }
     // when the last timed line is over, the lyrics step aside and the cover shows again
     val lastMs = res?.takeIf { it.synced }?.lines?.lastOrNull { it.timeMs >= 0 }?.timeMs
-    LaunchedEffect(lastMs != null && positionMs > lastMs + 6000) { if (lastMs != null && positionMs > lastMs + 6000 && !closing) close() }
+    // only when the song really ran through the lyrics while they were open: opening them past the last line must not close them again
+    var wasBefore by remember { mutableStateOf(false) }
+    LaunchedEffect(lastMs, positionMs <= (lastMs ?: 0L)) { if (lastMs != null && positionMs <= lastMs) wasBefore = true }
+    LaunchedEffect(lastMs != null && positionMs > lastMs + 6000) { if (lastMs != null && wasBefore && positionMs > lastMs + 6000 && !closing) close() }
     LaunchedEffect(title, artist, localPath) {
         busy = true; res = null
-        res = Lyrics.forTrack(ctx, title, artist, album, durationMs, localPath)
+        // the notification finds lyrics under the file's own title with no artist; the same second try here
+        res = Lyrics.forTrack(ctx, title, artist, album, durationMs, localPath) ?: Lyrics.forTrack(ctx, title.substringAfter(" - "), "", album, durationMs, localPath)
         busy = false
     }
     Box(

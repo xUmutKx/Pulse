@@ -70,6 +70,22 @@ object LiveLyrics {
         return synced
     }
 
+    /**
+     * [s] in Unicode "mathematical sans-serif bold" letters and digits: notifications ignore bold spans on many phones, but never these letters.
+     * Accented letters keep their accent as a combining mark; letters with no bold form stay plain.
+     */
+    fun bold(s: String): String {
+        val d = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
+        val sb = StringBuilder()
+        for (ch in d) when (ch) {
+            in 'A'..'Z' -> sb.appendCodePoint(0x1D5D4 + (ch - 'A'))
+            in 'a'..'z' -> sb.appendCodePoint(0x1D5EE + (ch - 'a'))
+            in '0'..'9' -> sb.appendCodePoint(0x1D7EC + (ch - '0'))
+            else -> sb.append(ch)
+        }
+        return java.text.Normalizer.normalize(sb.toString(), java.text.Normalizer.Form.NFC)
+    }
+
     /** Line at [posMs] with the lines before and after it; null before the first line. */
     fun lineAt(r: LyricsResult?, posMs: Int): Triple<String?, String, String?>? {
         val lines = r?.lines ?: return null
@@ -127,7 +143,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         } else null
         if (line != LiveLyrics.currentLine) {
             LiveLyrics.currentLine = line
-            LiveLyrics.notifLine = if (LiveLyrics.notification(ctx)) line else null
+            LiveLyrics.notifLine = if (LiveLyrics.notification(ctx)) line?.let { LiveLyrics.bold(it) } else null
             changed()
         }
     }
@@ -140,15 +156,12 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
 
     private fun postNote(t: Track, trio: Triple<String?, String, String?>?) {
         val body = trio?.second?.takeIf { it.isNotBlank() } ?: return clearNote()
-        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, trio.second, trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
+        // the current line in bold letters behind a text-style arrow (no emoji picture), the neighbours plain
+        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "\u25B6\uFE0E " + LiveLyrics.bold(trio.second), trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
         if (text == noteText) return
         noteText = text
-        // the current line in bold, the neighbours plain
-        val bold = android.text.SpannableString(text).apply {
-            val at = (trio.first?.takeIf { it.isNotBlank() }?.length?.plus(1)) ?: 0
-            setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), at, at + trio.second.length, 0)
-        }
-        val boldLine = android.text.SpannableString(trio.second).apply { setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, trio.second.length, 0) }
+        val bold = text
+        val boldLine = LiveLyrics.bold(trio.second)
         nm.createNotificationChannel(android.app.NotificationChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music)

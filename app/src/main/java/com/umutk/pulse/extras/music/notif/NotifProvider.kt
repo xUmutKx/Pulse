@@ -26,7 +26,7 @@ class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
     ): MediaNotification {
         val m = base.createNotification(session, customLayout, actionFactory, callback)
         val line = LiveLyrics.notifLine ?: return m
-        return MediaNotification(m.notificationId, Notification.Builder.recoverBuilder(ctx, m.notification).setContentText(android.text.SpannableString(line).apply { setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, line.length, 0) }).build())
+        return MediaNotification(m.notificationId, Notification.Builder.recoverBuilder(ctx, m.notification).setContentText(line).build())
     }
 
     override fun handleCustomCommand(session: MediaSession, action: String, extras: Bundle) = base.handleCustomCommand(session, action, extras)
