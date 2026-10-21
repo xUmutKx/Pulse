@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import com.umutk.pulse.extras.music.shownArtist
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateDpAsState
@@ -250,6 +252,7 @@ fun NowPlayingScreen(
     lyricsOpen: Boolean = false,
     onSeekMs: ((Int) -> Unit)? = null,
     onPullDown: (() -> Unit)? = null,
+    suggestions: (@Composable () -> Unit)? = null,
 ) {
     val fg = style.onBackdrop
     fun IV(n: String) = com.umutk.pulse.extras.ui.IconSet.vec(n, style.icons)
@@ -283,7 +286,8 @@ fun NowPlayingScreen(
             val view = LocalView.current
             DisposableEffect(view) { onDispose { view.systemGestureExclusionRects = emptyList() } }
             Box(
-                Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(style.artCorner.coerceAtMost(24.dp))).background(style.panel)
+                // not clipped here: each cover is clipped itself, so one pulled up or down can leave the square
+                Modifier.fillMaxWidth().aspectRatio(1f)
                     .onGloballyPositioned { c ->
                         val b = c.boundsInWindow()
                         view.systemGestureExclusionRects = listOf(android.graphics.Rect(0, b.top.roundToInt(), view.width, b.bottom.roundToInt()))
@@ -296,7 +300,7 @@ fun NowPlayingScreen(
                     onSwipeUp = { if (!lyricsOpen) lyricsNow?.invoke() },
                     onSwipeDown = { pullNow?.invoke() },
                 ) { a ->
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))).background(style.panel), contentAlignment = Alignment.Center) {
                         if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(96.dp))
                     }
@@ -410,14 +414,26 @@ fun NowPlayingScreen(
                 Text(formatMs(durationMs), color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(28.dp))
-            // the folder the track sits in, as a small chip under the transport
-            // the artist as a small chip under the transport; the folder name only when the artist tag is blank
+            // a small chip under the transport; what it says is picked in the player settings (the sound quality of the file by default)
             if (track != null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                val which = remember { PowerampBottomLabel.get(ctx) }
+                val quality by produceState("", track.path, which) {
+                    value = if (which == BottomLabel.QUALITY) withContext(Dispatchers.IO) { com.umutk.pulse.extras.music.AudioQuality.describe(ctx, track) } else ""
+                }
+                val text = when (which) {
+                    BottomLabel.QUALITY -> quality.ifEmpty { track.shownArtist() }
+                    BottomLabel.ARTIST -> track.shownArtist()
+                    BottomLabel.ALBUM -> track.album?.takeIf { it.isNotBlank() } ?: track.folderName()
+                    BottomLabel.TITLE -> track.displayName()
+                    BottomLabel.FOLDER -> track.folderName()
+                }
                 Box(Modifier.clip(CircleShape).background(style.panel).height(19.dp).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) {
-                    Text(track.artistTag() ?: track.folderName(), color = style.textDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    Text(text, color = style.textDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
             Spacer(Modifier.height(8.dp))
+            // suggested songs and artists, back at the bottom of the page
+            suggestions?.invoke()
         }
     }
 }
