@@ -75,7 +75,7 @@ class MusicWidgetConfig : ComponentActivity() {
             setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
         }
         setContent {
-            MaterialTheme(colorScheme = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()) {
+            MaterialTheme(colorScheme = darkColorScheme()) {
                 var sel by remember { mutableStateOf(prefs.getString("theme_$id", "") ?: "") }
                 var alpha by remember { mutableStateOf(prefs.getInt("alpha_$id", 100)) }
                 var o by remember { mutableStateOf(WidgetOptions.of(this@MusicWidgetConfig, id)) }
@@ -90,7 +90,7 @@ class MusicWidgetConfig : ComponentActivity() {
                 Box(Modifier.fillMaxSize().clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { finish() }, contentAlignment = Alignment.BottomCenter) {
                     Surface(
                         Modifier.fillMaxWidth().fillMaxHeight(.82f).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) {},
-                        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp), color = MaterialTheme.colorScheme.surface.copy(alpha = .97f), shadowElevation = 12.dp,
+                        shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp), color = Color(0xF2141416), shadowElevation = 12.dp,
                     ) {
                         Column(Modifier.fillMaxSize().padding(14.dp)) {
                             Box(Modifier.align(Alignment.CenterHorizontally).width(36.dp).height(4.dp).clip(CircleShape).background(MaterialTheme.colorScheme.outline.copy(alpha = .5f)))
@@ -130,6 +130,7 @@ class MusicWidgetConfig : ComponentActivity() {
                                 Group("shown", tr("Controls", "Düğmeler")) {
                                     Flag(tr("Progress bar", "İlerleme çubuğu"), o.progress) { v -> put { it.putBoolean("prog_$id", v) } }
                                     Flag(tr("Previous and next", "Önceki ve sonraki"), o.skip) { v -> put { it.putBoolean("skip_$id", v) } }
+                                    Flag(tr("Shuffle and repeat", "Karıştır ve tekrarla"), o.modes ?: false) { v -> put { it.putBoolean("modes_$id", v) } }
                                     Text(tr("Accent colour", "Vurgu rengi"), color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                         listOf(0, 0xFF6750A4.toInt(), 0xFF0078D4.toInt(), 0xFFE74856.toInt(), 0xFF13A10E.toInt(), 0xFFFF8C00.toInt(), 0xFFE3008C.toInt(), 0xFFFFFFFF.toInt()).forEach { c ->

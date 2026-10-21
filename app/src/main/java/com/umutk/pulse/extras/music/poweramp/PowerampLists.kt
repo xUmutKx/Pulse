@@ -73,6 +73,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
@@ -434,6 +435,10 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
         lyricHits = Lyrics.searchByText(ctx, query)
         lyricsBusy = false
     }
+    // the search page opens with the keyboard up
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    LaunchedEffect(Unit) { delay(120); runCatching { focus.requestFocus(); keyboard?.show() } }
     Box(modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(
@@ -448,7 +453,7 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                 singleLine = true,
                 textStyle = TextStyle(color = fg, fontSize = 17.sp),
                 cursorBrush = SolidColor(style.accent),
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.weight(1f).focusRequester(focus),
             )
             if (query.isNotEmpty()) {
                 // a 40 dp touch target around the 22 dp glyph

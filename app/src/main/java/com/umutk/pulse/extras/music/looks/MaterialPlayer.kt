@@ -343,14 +343,13 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     Text(cur.artistName(), color = SUB, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 // shuffle and repeat with their state (a lit icon, "1" for repeat one), previous, a round play button on the cover colour, next
-                Icon(Icons.Rounded.Shuffle, null, tint = if (shuffle) dyn else SUB, modifier = Modifier.size(34.dp).clickable { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }.padding(7.dp))
+                ShuffleButton(engine, shuffle, dyn, SUB, 34.dp, 7.dp) { shuffle = it }
                 Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { engine.previous() }.padding(5.dp))
                 Box(Modifier.padding(horizontal = 2.dp).size(42.dp).clip(CircleShape).background(dyn).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
                     Crossfade(st.isPlaying, animationSpec = tween(160), label = "miniPlay") { p -> Icon(if (p) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(26.dp)) }
                 }
                 Icon(Icons.Rounded.SkipNext, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { engine.next() }.padding(5.dp))
-                Icon(if (repeat == 1) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, null, tint = if (repeat != 0) dyn else SUB,
-                    modifier = Modifier.size(34.dp).clickable { repeat = when (repeat) { 0 -> 2; 2 -> 1; else -> 0 }; engine.player.repeatMode = repeat }.padding(7.dp))
+                RepeatButton(engine, repeat, dyn, SUB, 34.dp, 7.dp) { repeat = it }
             }
         }
 
@@ -425,7 +424,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     PSlider(pos.coerceIn(0, d).toFloat(), { dragging = true; pos = it.toInt() }, 0f..d.toFloat()) { engine.seekTo(pos); dragging = false }
                     Row(Modifier.fillMaxWidth()) { Text(fmt(pos), color = SUB, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(fmt(dur), color = SUB, fontSize = 12.sp) }
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Shuffle, null, tint = if (shuffle) dyn else SUB, modifier = Modifier.size(44.dp).clickable { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }.padding(10.dp))
+                        ShuffleButton(engine, shuffle, dyn, SUB, 44.dp, 10.dp) { shuffle = it }
                         Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(48.dp).clickable { engine.previous() }.padding(8.dp))
                         // the play button squeezes under the finger and springs back
                         val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
@@ -438,8 +437,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                             }
                         }
                         Icon(Icons.Rounded.SkipNext, null, tint = TXT, modifier = Modifier.size(48.dp).clickable { engine.next() }.padding(8.dp))
-                        Icon(if (repeat == 1) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, null, tint = if (repeat != 0) dyn else SUB,
-                            modifier = Modifier.size(44.dp).clickable { repeat = when (repeat) { 0 -> 2; 2 -> 1; else -> 0 }; engine.player.repeatMode = repeat }.padding(10.dp))
+                        RepeatButton(engine, repeat, dyn, SUB, 44.dp, 10.dp) { repeat = it }
                     }
                 }
             }
