@@ -91,8 +91,8 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     val fluent = T.id == "win11" && !T.material && !Look.winIconLine
     // Windows 11 Fluent style: the coloured filled Fluent glyph of the key (the Line choice keeps the thin glyphs)
     // the left-menu pages wear the colour Fluent pictures (res/drawable-nodpi/fc_*.png)
-    if (fluent) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
-    if (fluent) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
+    if (fluent && Look.winIconColor) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
+    if (fluent && Look.winIconColor) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
     if (k == "recycle" && !T.material) {
         if (fluent) ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
         BinIcon(tint, size, modifier); return

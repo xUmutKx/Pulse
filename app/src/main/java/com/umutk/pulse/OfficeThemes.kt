@@ -318,7 +318,7 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
             Row(Modifier.fillMaxWidth().then(if (is17) Modifier.background(below) else Modifier).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
                 groups.forEach { g ->
                     val sel = g == tab && g != "File"
-                    val tInk = if (is17) (if (t.dark) Color(0xFFEDEDED) else Color(0xFF262626)) else pal.tabInk
+                    val tInk = if (is17) (if (t.dark) Color(0xFFEDEDED) else Color(0xFF262626)) else ofInkOn(pal.titleBg)
                     val tSel = if (is17) (if (t.dark) Color.White else brand) else pal.tabSelInk
                     val shape = if (t.base == "365") RoundedCornerShape(8.dp) else if (is17) RectangleShape else RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)
                     val file = (t.base == "2013" || is17) && g == "File"
@@ -338,8 +338,8 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
                         Column(Modifier.padding(horizontal = 2.dp).widthIn(min = 54.dp).clip(RoundedCornerShape(if (t.base == "365") 8.dp else 2.dp))
                             .background(if (a.on) pal.accent.copy(alpha = .18f) else Color.Transparent).alpha(if (a.enabled) 1f else .4f)
                             .clickable(enabled = a.enabled, onClick = a.click).padding(horizontal = 6.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            OfActIcon(t, a, 22.dp, pal.ink)
-                            Text(a.label, color = pal.ink, fontSize = 10.sp, maxLines = 1)
+                            OfActIcon(t, a, 22.dp, ofInkOn(if (is17) below else pal.ribbonBg))
+                            Text(a.label, color = ofInkOn(if (is17) below else pal.ribbonBg), fontSize = 10.sp, maxLines = 1)
                         }
                     }
                 }
@@ -397,7 +397,8 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     var open by remember { mutableStateOf(true) }
     val tabInk = if (t.dark) Color.White.copy(alpha = .75f).compositeOver(brand) else brand
     val below = ofBelow(t)   // solid grey: translucent layers over the black window left dark text on black
-    val ink = if (t.dark) Color(0xFFF3F2F1) else Color(0xFF201F1E)
+    // text and icons always follow the strip they sit on: white on a dark strip, near-black on a light one
+    val ink = ofInkOn(below)
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
@@ -411,7 +412,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             groups.forEach { g ->
                 val sel = g == tab
                 Box(Modifier.clickable { if (g == "File") fileOpen = true else if (sel) open = !open else { tab = g; open = true } }.padding(horizontal = 12.dp, vertical = 9.dp)) {
-                    Text(g, fontSize = 13.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal, color = if (sel) tabInk else pal.tabInk)
+                    Text(g, fontSize = 13.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal, color = if (sel) tabInk else ink)
                     if (sel) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(2.dp).background(tabInk))
                 }
             }
@@ -422,15 +423,15 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             acts.filter { it.group == tab }.forEach { a ->
                 Column(Modifier.padding(horizontal = 1.dp).widthIn(min = 46.dp).clip(RoundedCornerShape(4.dp)).background(if (a.on) brand.copy(alpha = .18f) else Color.Transparent)
                     .alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click).padding(horizontal = 5.dp, vertical = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(a.icon, null, Modifier.size(20.dp), if (a.on) tabInk else pal.ink)
-                    Text(a.label, color = pal.ink, fontSize = 9.sp, maxLines = 1)
+                    Icon(a.icon, null, Modifier.size(20.dp), if (a.on) tabInk else ink)
+                    Text(a.label, color = ink, fontSize = 9.sp, maxLines = 1)
                 }
             }
         }
         extra?.invoke()
         Box(Modifier.weight(1f).fillMaxWidth().background(pal.canvas), content = content)
         Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(status, color = pal.statusInk, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(status, color = ink.copy(alpha = .75f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
@@ -454,7 +455,7 @@ val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 
 
 /** Colour of everything under the brand title bar: white, or near-black in the dark looks. Looks that have their own surfaces keep the ribbon colour. */
-private fun ofBelow(t: OfTheme) = if (t.base == "365") (if (t.dark) Color(0xFF2B2B2B) else Color(0xFFF3F3F3)) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
+internal fun ofBelow(t: OfTheme) = if (t.base == "365") (if (t.dark) Color(0xFF2B2B2B) else Color(0xFFF3F3F3)) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
 
 /** Opaque colours of the system status bar (top) and navigation bar (bottom): exactly what the chrome shows in the title bar and in the bottom-most (status) bar, translucent layers composited over the canvas. */
 fun ofBars(t: OfTheme): Pair<Color, Color> {
@@ -820,3 +821,6 @@ private fun OfDefaultAppCard() {
         }
     }
 }
+
+/** Readable text colour on [bg]: white on dark, near-black on light. */
+fun ofInkOn(bg: Color): Color = if (bg.luminance() < .5f) Color(0xFFF3F2F1) else Color(0xFF201F1E)

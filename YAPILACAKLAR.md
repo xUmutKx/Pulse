@@ -884,3 +884,5 @@ Screen recorder feature list (55 candidates)
 - Colour Fluent pictures (Fluent UI colour set, PNG) for every app, tool and page in Settings > Apps and the left menu; tapping an app name opens it; Poweramp now playing without suggestions and without scrolling; Material player: colour fades, title slides by direction, art crossfade, play squeeze; removed stray Python wheels from the source folder; 0.10.154. derlenmedi
 
 - Storage walk (folder tree, file types) saved to filesDir/storage_scan.bin and reused at every start; only Refresh walks again; root view picked by a folder that lists with content (isolated mount namespaces showed app data as empty stubs); 0.10.155. derlenmedi
+
+- Icons back to the 0.10.151 Fluent set by default; coloured Fluent is now its own choice (Fluent / Fluent colour / Line); standalone apps leave the top-right menu by default (Extra apps lists them); Office strips pick their ink from the strip colour (no black on black); installer streams APKs into a pm session through cat (pm could not open the private cache), Shizuku copies to shared storage first, a zip of several apps becomes one install per app; 0.10.156. derlenmedi

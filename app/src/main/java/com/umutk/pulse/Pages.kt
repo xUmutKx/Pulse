@@ -426,8 +426,10 @@ fun SettingsPage() {
                     }
                     Text(tr("Icons (Windows 11)", "İkonlar (Windows 11)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PChip(!Look.winIconLine, tr("Fluent colour", "Renkli Fluent")) { Cfg.setWinIconLine(ctx, false) }
-                        PChip(Look.winIconLine, tr("Line", "Çizgi")) { Cfg.setWinIconLine(ctx, true) }
+                        // Fluent (the original set, default), Fluent colour (the coloured pictures), Line (thin glyphs like Windows 10)
+                        PChip(!Look.winIconLine && !Look.winIconColor, "Fluent") { Cfg.setWinIconLine(ctx, false); Cfg.setWinIconColor(ctx, false) }
+                        PChip(!Look.winIconLine && Look.winIconColor, tr("Fluent colour", "Renkli Fluent")) { Cfg.setWinIconLine(ctx, false); Cfg.setWinIconColor(ctx, true) }
+                        PChip(Look.winIconLine, tr("Line", "Çizgi")) { Cfg.setWinIconLine(ctx, true); Cfg.setWinIconColor(ctx, false) }
                     }
                     if (Look.effect == "blur") {
                         Text(tr("Blur amount", "Bulanıklık"), color = T.sub, fontSize = 12.sp)
