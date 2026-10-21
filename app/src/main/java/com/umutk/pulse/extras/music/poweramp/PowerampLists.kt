@@ -1,5 +1,9 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Shuffle
+import com.umutk.pulse.extras.music.shownArtist
+
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -124,9 +128,16 @@ private sealed interface Lib {
 
 private val quickNames get() = listOf(tr("Most played", "En çok çalınan"), tr("Recently played", "Son çalınan"), tr("Last added", "Son eklenen"))
 
+/** The group of [t] in category [kind]. Albums, artists and genres never drop a track: without a tag it falls back to the folder, the shown artist or "Unknown". */
 private fun groupKey(t: Track, kind: Int): String? = when (kind) {
-    0 -> t.album; 1 -> t.artist; 2 -> t.genre; 3 -> t.year.takeIf { it > 0 }?.toString(); else -> t.composer
-}?.takeIf { it.isNotBlank() }
+    0 -> t.album.tagOrNull() ?: t.folderName().takeIf { it.isNotBlank() } ?: tr("Unknown album", "Bilinmeyen albüm")
+    1 -> t.shownArtist()
+    2 -> t.genre.tagOrNull() ?: tr("Unknown genre", "Bilinmeyen tür")
+    3 -> t.year.takeIf { it > 0 }?.toString()
+    else -> t.composer.tagOrNull()
+}
+
+private fun String?.tagOrNull(): String? = this?.trim()?.takeIf { it.isNotEmpty() && !it.equals("<unknown>", true) }
 
 private val catNames get() = listOf(tr("Albums", "Albümler"), tr("Artists", "Sanatçılar"), tr("Genres", "Türler"), tr("Years", "Yıllar"), tr("Composers", "Besteciler"))
 private val catIcons = listOf(Icons.Rounded.Album, Icons.Rounded.Person, Icons.Rounded.Piano, Icons.Rounded.Event, Icons.Rounded.Edit)
@@ -215,6 +226,7 @@ fun LibraryScreen(
         when (val n = node) {
             Lib.Root -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
                 val cats = listOf(
+                    Triple(Icons.Rounded.LibraryMusic, Color(0xFF5B8DD9), Lib.Songs to tr("All songs", "Tüm şarkılar")),
                     Triple(Icons.Rounded.TrendingUp, Color(0xFFD9695B), Lib.Quick(0) to quickNames[0]),
                     Triple(Icons.Rounded.History, Color(0xFF5BA0D9), Lib.Quick(1) to quickNames[1]),
                     Triple(Icons.Rounded.NewReleases, Color(0xFF6BC08A), Lib.Quick(2) to quickNames[2]),
@@ -242,7 +254,7 @@ fun LibraryScreen(
                     itemsIndexed(groups) { _, (name, list) -> CatRow(catIcons[n.kind], Color(0xFF6E8BE8), name, style, count = list.size, art = list.firstOrNull()) { node = Lib.Group(n.kind, name) } }
                 }
             }
-            is Lib.Group -> SongList(tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }, current, style, onPlay)
+            is Lib.Group -> SongList(tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }, current, style, onPlay, onPlayTracks)
             Lib.Songs -> {
                 val items = remember(tracks, sortBy) {
                     val l = tracks.withIndex().toList()
@@ -254,7 +266,7 @@ fun LibraryScreen(
                         else -> l
                     }
                 }
-                SongList(items, current, style, onPlay)
+                SongList(items, current, style, onPlay, onPlayTracks)
             }
             Lib.Stats -> StatsPage(style)
             Lib.More -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
@@ -268,7 +280,7 @@ fun LibraryScreen(
             Lib.Playlists -> PlaylistsPage(queue, style) { node = Lib.Playlist(it) }
             is Lib.Playlist -> {
                 val l = remember(n.name) { com.umutk.pulse.extras.music.Playlists.load(ctx, n.name) }
-                SongList(l.withIndex().toList(), current, style) { onPlayTracks(l, it) }
+                SongList(l.withIndex().toList(), current, style, { onPlayTracks(l, it) }, onPlayTracks)
             }
             is Lib.Quick -> {
                 val ix = remember(n.kind, tracks) {
@@ -280,11 +292,11 @@ fun LibraryScreen(
                         else -> tracks.withIndex().filter { it.value.dateAdded > 0 }.sortedByDescending { it.value.dateAdded }.take(100)
                     }
                 }
-                SongList(ix, current, style, onPlay)
+                SongList(ix, current, style, onPlay, onPlayTracks)
             }
             Lib.Favs -> {
                 val fav = remember { com.umutk.pulse.extras.music.stats.MusicStats.favourites(ctx) }
-                SongList(tracks.withIndex().filter { it.value.path in fav }, current, style, onPlay)
+                SongList(tracks.withIndex().filter { it.value.path in fav }, current, style, onPlay, onPlayTracks)
             }
             Lib.Folders -> {
                 val groups = remember(tracks) { tracks.groupBy { it.folderName() }.toList().sortedBy { it.first.lowercase() } }
@@ -294,7 +306,7 @@ fun LibraryScreen(
                     }
                 }
             }
-            is Lib.Folder -> SongList(tracks.withIndex().filter { it.value.folderName() == n.name }, current, style, onPlay)
+            is Lib.Folder -> SongList(tracks.withIndex().filter { it.value.folderName() == n.name }, current, style, onPlay, onPlayTracks)
             is Lib.Tree -> {
                 val dirs = remember(tracks, n.dir) {
                     tracks.map { dirOf(it.path) }.filter { it.startsWith(n.dir + "/") }
@@ -328,11 +340,28 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
     }
 }
 
+/** A list of songs: icons on top play it in its order or shuffled; a tapped song starts this list from that song. */
 @Composable
-private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit) {
+private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit) {
+    val songs = remember(items) { items.map { it.value } }
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
-        itemsIndexed(items) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) }
+        if (items.isNotEmpty()) item {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
+                ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
+            }
+        }
+        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }) }
     }
+}
+
+@Composable
+private fun ListAction(icon: ImageVector, label: String, style: PowerampStyle, onClick: () -> Unit) {
+    Box(
+        Modifier.size(40.dp).clip(CircleShape).background(style.accent).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Icon(icon, label, tint = style.onAccent, modifier = Modifier.size(24.dp)) }
 }
 
 @Composable

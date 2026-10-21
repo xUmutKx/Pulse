@@ -2,7 +2,7 @@
 
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
 
-Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK is about 11 MB.
+Pulse needs Android 12 or newer, and it is built for arm64 phones only.
 
 ### Features
 
@@ -47,7 +47,7 @@ Pulse needs Android 10 or newer, and it is built for arm64 phones only. The APK 
 
 #### Widgets and gadgets
 
-Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery and drive; XP and 95 classics; Windows 11 tiles that follow your accent colour; Material You, AMOLED, glass and iOS-style tiles.
+Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery and drive; XP and 95 classics; Windows 11 tiles that follow your accent colour; Material You, AMOLED, glass and iOS-style tiles. Music widgets include Winamp with its real skins, and searching "win" in the Widgets page lists them.
 
 <p>
 <img src="docs/screenshots/win7-gadgets.png" width="32%" alt="Windows 7 gadget clocks">
@@ -71,15 +71,41 @@ Lock any app behind a pattern, PIN or password, with optional fingerprint. The l
 
 One player with four looks: Material, Poweramp, Winamp and Windows Media Player, plus a Lyrics look.
 
+- **Library**: every song on the phone, including ones that came from downloads or messengers. Albums, artists and genres group the songs, and a song without tags still lands in a group (its folder, or "Unknown"). Every artist always has a name: the tag, the "Artist - Title" part of the file name, the folder, or "Unknown artist".
+- **Play and Shuffle** icons sit on top of every song list (all songs, an album, an artist, a folder, a playlist). Play starts the list in order, Shuffle starts the same songs in a random order. Tapping a song plays that list from the song.
+- **Search**: type and it looks through songs, artists and albums, and, from three letters on, through lyrics too, with no extra switch. A lyrics hit shows the matching line with the line above and the line below.
+- **Cover gestures**: swipe sideways and the cover swings on an arc with a slight tilt. Pull it up or down and it follows your finger out of its frame; a long pull sends it across the page and opens the previous screen.
+- **Waveform seek bar** (Poweramp): it shows about half a minute of the song around the play position, scrolls with the music, and you drag it to seek.
+- **Sound quality** under the buttons: the file's format, sample rate, bit depth and bitrate. Settings can show the artist, album, song name or folder there instead.
+- **Suggestions**: songs and artists you may want next, under the now-playing page and in the library.
+- **Widgets**: Winamp (4×2 and 4×1, drawn with the real skin; the default skin is used at once), Poweramp and a plain player widget.
+
 - **Poweramp**: now-playing page with the album cover as a full-screen backdrop (or plain black, your choice in settings). Play sits in the centre with previous and next beside it; the waveform and time sit under it. The lyrics button and a three-dot menu (favourite, edit tags) sit beside the title. Sleep timer is a floating rotary dial from 0 to 120 minutes, with end of track and off.
 - **Album cover**: the three-dot button on the cover searches the internet for album art (iTunes catalogue, no account needed) and saves the picked image for that track. Tags (title, artist, album) can be edited from the same menu.
 - **Winamp**: the classic skin with lyrics drawn inside the skin's title bar. Skins are picked in a three-row strip with previews; the visualizer bars fall back slowly like the original.
 - **White noise** and **playlists** open from buttons at the top of the player, not as separate apps.
 - **Lyrics** are searched by song or by text, and the look shows them in bold.
 
-#### Extra apps store
+#### Apps
 
-Everything extra lives in one place: the **Extra apps** store in the top-right menu. It lists the standalone apps (Files, Photos, Calendar, Contacts, ArtCraft). Store modules are downloaded only when you choose them. The store has a back arrow.
+Settings has one **Apps** card for everything optional: the standalone apps, the tools and the pages. Each tool picks where it shows (the top-right menu, the **Apps** group of that menu, the left menu, or only Settings) with one radio per place. The top-right menu has an **Apps** group that lists the tools you placed there, and the store.
+
+- **Files**: a file manager with its own look, zip, 7z and rar archives (browse and extract; compress to zip or 7z; paste into a zip), a folder tree, large and duplicate file finders, and root browsing of `/data/data`, where every installed app shows its own icon.
+- **Photos**, **Calendar**, **Contacts**: standalone apps that can be set as the default for their links.
+- **Messages**: SMS and MMS, with attachments.
+- **Notes**: lists and drawing with a Paint-style toolbar. **Voice recorder**, **Screen recorder** and **Notification history**.
+- **Weather**: forecast, a sun arc from sunrise to sunset, the moon phase and alerts.
+- **White noise**: a mixer of ambient sounds and bird songs, each with its own level, with presets you can save.
+- **ArtCraft**: a drawing app.
+- Each of them has its own launcher entry and its own look. It never changes the look of the main Pulse app. They start without an opening animation.
+
+#### Office
+
+**Word**, **Excel** and **PowerPoint** open and edit documents. Each window is drawn in the look you pick, from Windows 95 and 2003 menus to the flat 2013 and 365 ribbons, with a Home ribbon, a zoom bar and a status bar.
+
+#### Launcher
+
+Pulse can be your home screen, and the looks of the launcher match the app's looks. The home screen is a desktop, not a wall of icons. The Windows looks show desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint and Command Prompt, drawn in that look's own icons. The other looks keep the home clean, with a clock, widgets and a dock. Apps are in the apps list, grouped by category (games, media, communication, productivity, maps, system and other). A setting brings the app grid back on the home screen.
 
 #### Video player and subtitles
 
