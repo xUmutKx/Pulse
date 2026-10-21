@@ -137,13 +137,17 @@ fun WidgetPreview(info: AppWidgetProviderInfo, id: Int, modifier: Modifier = Mod
 fun WidgetPickDialog(onPick: (AppWidgetProviderInfo) -> Unit, onDismiss: () -> Unit) {
     val ctx = LocalContext.current
     val w = LocalWindowLook.current
-    val providers = remember { AppWidgetManager.getInstance(ctx).installedProviders }
+    // Pulse's own widgets come first: they are drawn in the look of the launcher (Windows 7 gadgets, XP, 95, 10, 11, Material, AMOLED)
+    val (own, others) = remember { AppWidgetManager.getInstance(ctx).installedProviders.partition { it.provider.packageName == ctx.packageName } }
     WinAlert(
         onDismissRequest = onDismiss,
         title = { Text(tr("Widgets", "Widget'lar"), color = w.text) },
         text = {
             LazyColumn(Modifier.heightIn(max = 420.dp), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
-                items(providers, key = { it.provider.flattenToString() }) { info -> WidgetPickRow(info) { onPick(info) } }
+                if (own.isNotEmpty()) item(key = "h_own") { Text(tr("Pulse widgets", "Pulse widget'ları"), color = w.sub, modifier = Modifier.padding(vertical = 6.dp)) }
+                items(own, key = { it.provider.flattenToString() }) { info -> WidgetPickRow(info) { onPick(info) } }
+                if (others.isNotEmpty()) item(key = "h_other") { Text(tr("Other apps", "Diğer uygulamalar"), color = w.sub, modifier = Modifier.padding(vertical = 6.dp)) }
+                items(others, key = { it.provider.flattenToString() }) { info -> WidgetPickRow(info) { onPick(info) } }
             }
         },
         confirmButton = { PButton(tr("Close", "Kapat"), onClick = onDismiss) },

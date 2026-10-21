@@ -938,3 +938,5 @@ Screen recorder feature list (55 candidates)
 - Equalizer: when the system effect cannot be created a five-band equalizer inside the player (SoftEq) takes over; lyrics search is fuzzy (clean title, each artist of a comma list, best look-alike among results); White noise: the "Stream" loop removed; 0.10.182. derlenmedi
 
 - Music settings: load a .poweramp-backup (playlists, ratings, play counts, album_art covers by "artist - title", optional MP3 APIC writing); Files: unknown file types ask how to open (archive / text / image / another app); notification-access and accessibility entries get clear names; 0.10.183. derlenmedi
+
+- Launcher widget picker lists Pulse's own themed widgets first; 0.10.184. derlenmedi
