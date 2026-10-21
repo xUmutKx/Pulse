@@ -16,6 +16,11 @@ class Equalizer {
     private var savedLevels: ShortArray? = null
     private var savedEnabled = true
 
+    /** True when the system equalizer cannot be created and [SoftEq] (inside the player) does the work. */
+    var soft = false
+        private set
+    private var softLevels = IntArray(5)
+
     private var bass: BassBoost? = null
     private var virt: Virtualizer? = null
     private var bassStrength = 0
@@ -28,7 +33,7 @@ class Equalizer {
 
     /** Current band levels in millibels (empty when unsupported). */
     val bandLevels: List<Int>
-        get() = eq?.let { e -> (0 until e.numberOfBands.toInt()).map { e.getBandLevel(it.toShort()).toInt() } }.orEmpty()
+        get() = if (soft) softLevels.toList() else eq?.let { e -> (0 until e.numberOfBands.toInt()).map { e.getBandLevel(it.toShort()).toInt() } }.orEmpty()
 
     val enabled: Boolean get() = savedEnabled
 
@@ -62,18 +67,18 @@ class Equalizer {
         virtStrength = p.getInt("virt", 0)
     }
 
-    val isSupported: Boolean get() = eq != null
+    val isSupported: Boolean get() = eq != null || soft
 
     /** Band centre frequencies in Hz, empty when unsupported. */
     val centerFrequenciesHz: List<Int>
-        get() = eq?.let { e -> (0 until e.numberOfBands.toInt()).map { e.getCenterFreq(it.toShort()) / 1000 } }.orEmpty()
+        get() = if (soft) SoftEq.FREQS else eq?.let { e -> (0 until e.numberOfBands.toInt()).map { e.getCenterFreq(it.toShort()) / 1000 } }.orEmpty()
 
     /** Band level range in millibels, (min, max). (0, 0) when unsupported. */
     val levelRange: Pair<Int, Int>
-        get() = eq?.bandLevelRange?.let { it[0].toInt() to it[1].toInt() } ?: (0 to 0)
+        get() = if (soft) (-1500 to 1500) else eq?.bandLevelRange?.let { it[0].toInt() to it[1].toInt() } ?: (0 to 0)
 
     val presetNames: List<String>
-        get() = eq?.let { e -> (0 until e.numberOfPresets.toInt()).map { e.getPresetName(it.toShort()) } }.orEmpty()
+        get() = if (soft) SoftEq.PRESETS.map { it.first } else eq?.let { e -> (0 until e.numberOfPresets.toInt()).map { e.getPresetName(it.toShort()) } }.orEmpty()
 
     /** Why the last attach failed (shown instead of an empty page); empty while it works. */
     var lastError = ""
@@ -98,6 +103,14 @@ class Equalizer {
             // some phones refuse an effect on a player's own session: the global output mix (session 0) still takes it
             runCatching { build(0) }.onSuccess { lastError = "" }.getOrNull()
         }
+        // no system equalizer at all: the one inside the player takes over, with the saved levels
+        soft = eq == null
+        SoftEq.active = soft
+        if (soft) {
+            lastError = ""
+            softLevels = IntArray(5) { savedLevels?.getOrNull(it)?.toInt() ?: 0 }
+            SoftEq.setLevelsMb(softLevels); SoftEq.enabled = savedEnabled
+        }
         bass = runCatching { BassBoost(0, audioSessionId).also { it.enabled = true } }.getOrNull()
         virt = runCatching { Virtualizer(0, audioSessionId).also { it.enabled = true } }.getOrNull()
         setBassBoost(bassStrength)
@@ -106,11 +119,18 @@ class Equalizer {
 
     fun setEnabled(enabled: Boolean) {
         savedEnabled = enabled
+        SoftEq.enabled = enabled
         eq?.enabled = enabled
         runCatching { bass?.enabled = enabled; virt?.enabled = enabled }
     }
 
     fun setBandLevel(band: Int, levelMb: Int) {
+        if (soft) {
+            if (band !in 0 until 5) return
+            softLevels[band] = levelMb.coerceIn(-1500, 1500); currentPreset = -1
+            savedLevels = ShortArray(5) { softLevels[it].toShort() }
+            SoftEq.setLevelsMb(softLevels); return
+        }
         val e = eq ?: return
         if (band !in 0 until e.numberOfBands.toInt()) return
         val (min, max) = levelRange
@@ -123,6 +143,12 @@ class Equalizer {
     }
 
     fun usePreset(index: Int) {
+        if (soft) {
+            val p = SoftEq.PRESETS.getOrNull(index) ?: return
+            softLevels = p.second.copyOf(); currentPreset = index
+            savedLevels = ShortArray(5) { softLevels[it].toShort() }
+            SoftEq.setLevelsMb(softLevels); return
+        }
         val e = eq ?: return
         if (index !in 0 until e.numberOfPresets.toInt()) return
         e.usePreset(index.toShort())
@@ -132,6 +158,7 @@ class Equalizer {
     }
 
     fun release() {
+        SoftEq.active = false; soft = false
         eq?.release()
         eq = null
         bass?.release(); bass = null

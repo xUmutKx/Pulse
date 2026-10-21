@@ -45,11 +45,7 @@ object Lyrics {
             if (missed(app, key)) return@withContext null
             val client = LrclibClient(LyricsCache(File(app.cacheDir, "lyrics")))
             val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
-            val asked = runCatching {
-                if (artist.isNotBlank()) client.get(title, artist, album, sec)?.takeIf { it.hasLyrics }?.let { it to "lrclib" } else null
-                    ?: client.search("$artist $title".trim()).let { l -> l.firstOrNull { it.hasLyrics && it.syncedLyrics != null } ?: l.firstOrNull { it.hasLyrics } }?.let { it to "lrclib" }
-                    ?: if (artist.isNotBlank()) ovhLyrics(artist, title)?.let { it to "ovh" } else null
-            }
+            val asked = runCatching { smartFind(client, title, artist, album, sec)?.let { it to (if (it.second) "ovh" else "lrclib") }?.let { it.first.first to it.second } }
             // a network error is not "no lyrics": nothing is remembered then; an answer without lyrics is remembered
             val rec = asked.getOrNull() ?: return@withContext null.also { if (asked.isSuccess) markMiss(app, key) }
             val r = toResult(rec.first, rec.second) ?: return@withContext null
@@ -60,6 +56,60 @@ object Lyrics {
     /** The lyrics as .lrc text: stamped lines when they are synced, plain lines otherwise. */
     private fun lrcText(r: LyricsResult) = r.lines.joinToString("\n") { l ->
         if (r.synced && l.timeMs >= 0) "[%02d:%02d.%02d]%s".format(l.timeMs / 60000, l.timeMs / 1000 % 60, l.timeMs / 10 % 100, l.text) else l.text
+    }
+
+    // ---- fuzzy lookup: spelling, several artists, decorations in the title ----
+
+    private fun fold(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}+"), "").lowercase().replace('ı', 'i')
+        .filter { it.isLetterOrDigit() }
+
+    /** The title without "(feat. ..)", "[..]", "- Remastered", "- Live" and similar tails. */
+    private fun cleanTitle(t: String): String = t.replace(Regex("[\\(\\[][^\\)\\]]*[\\)\\]]"), " ").replace(Regex("(?i)\\s+-\\s+(remaster\\w*|live|radio edit|mono|stereo|version).*$"), "")
+        .replace(Regex("(?i)\\s(feat\\.?|ft\\.?|featuring)\\s.*$"), "").trim()
+
+    /** "A, B & C feat. D" -> A, B, C, D. */
+    private fun splitArtists(a: String): List<String> = a.split(Regex("(?i)\\s*(,|&|;|/|\\bfeat\\.?\\b|\\bft\\.?\\b|\\band\\b|\\bve\\b| x )\\s*")).map { it.trim() }.filter { it.length > 1 }
+
+    /** 0..1: how alike two names are (edit distance on letters and digits only). */
+    private fun alike(a: String, b: String): Float {
+        val x = fold(a); val y = fold(b)
+        if (x.isEmpty() || y.isEmpty()) return 0f
+        if (x == y) return 1f
+        if (x.contains(y) || y.contains(x)) return .85f
+        val d = Array(x.length + 1) { IntArray(y.length + 1) }
+        for (i in 0..x.length) d[i][0] = i
+        for (j in 0..y.length) d[0][j] = j
+        for (i in 1..x.length) for (j in 1..y.length) d[i][j] = minOf(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + if (x[i - 1] == y[j - 1]) 0 else 1)
+        return 1f - d[x.length][y.length].toFloat() / maxOf(x.length, y.length)
+    }
+
+    /**
+     * The best hit for a song, trying in turn: the names as they are, the clean title with each artist alone, the title alone, then the best look-alike
+     * among the search results (title and artist compared by spelling). Returns the record and whether it came from lyrics.ovh.
+     */
+    private suspend fun smartFind(client: LrclibClient, title: String, artist: String, album: String?, sec: Int?): Pair<LyricsRecord, Boolean>? {
+        val titles = listOf(title, cleanTitle(title)).filter { it.isNotBlank() }.distinct()
+        val artists = (listOf(artist) + splitArtists(artist)).filter { it.isNotBlank() }.distinct()
+        for (t in titles) for (a in artists) client.get(t, a, album, sec)?.takeIf { it.hasLyrics }?.let { return it to false }
+        // searches: artist + title, then the title alone; the results are ranked by how alike they are
+        val pool = LinkedHashMap<Long, LyricsRecord>()
+        val queries = buildList {
+            for (t in titles) { for (a in artists.take(3)) add("$a $t"); add(t) }
+        }.distinct().take(6)
+        for (q in queries) {
+            client.search(q.trim()).filter { it.hasLyrics }.forEach { pool.putIfAbsent(it.id, it) }
+            if (pool.size >= 8) break
+        }
+        val wantArtists = (listOf(artist) + splitArtists(artist)).filter { it.isNotBlank() }
+        val best = pool.values.map { r ->
+            val ts = titles.maxOf { alike(it, r.trackName) }
+            val ars = if (wantArtists.isEmpty()) .5f else wantArtists.maxOf { a -> maxOf(alike(a, r.artistName), splitArtists(r.artistName).maxOfOrNull { alike(a, it) } ?: 0f) }
+            val dur = 0f
+            r to (ts * 0.65f + ars * 0.35f + dur + if (r.syncedLyrics != null) .03f else 0f)
+        }.maxByOrNull { it.second }
+        if (best != null && best.second >= .62f) return best.first to false
+        for (a in artists) for (t in titles) ovhLyrics(a, t)?.let { return it to true }
+        return null
     }
 
     /** Writes [r] as a .lrc next to the song (synced or not), unless one is there already. True when a file was written. */

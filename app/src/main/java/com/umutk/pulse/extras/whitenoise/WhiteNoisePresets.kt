@@ -7,17 +7,17 @@ import org.json.JSONObject
 class AmbientPreset(val name: String, val en: String, val tr: String, val levels: Map<String, Int>, val user: Boolean = false)
 
 /** Calm sounds first; ids are the built-in loops plus the standard pack ids (a missing one is skipped when applied). */
-val CALM_ORDER = listOf("rain", "waves", "wind", "dere", "damlama", "orman", "bell", "white", "coffee", "fire", "steam", "heartbeat", "vinyl", "traffic")
+val CALM_ORDER = listOf("rain", "waves", "wind", "damlama", "orman", "bell", "white", "coffee", "fire", "steam", "heartbeat", "vinyl", "traffic")
 
 private fun p(en: String, tr: String, vararg l: Pair<String, Int>) = AmbientPreset(en, en, tr, mapOf(*l))
 
 val BuiltInPresets = listOf(
-    p("Calm", "Sakin", "rain" to 25, "waves" to 30, "wind" to 15, "dere" to 20),
+    p("Calm", "Sakin", "rain" to 25, "waves" to 30, "wind" to 15),
     p("Gentle rain", "Hafif yağmur", "rain" to 40, "damlama" to 20, "wind" to 10),
     p("Seaside", "Sahil", "waves" to 55, "wind" to 20),
-    p("Riverside", "Nehir kenarı", "dere" to 45, "orman" to 30, "wind" to 15),
+    p("Waterfall", "Şelale", "selale" to 40, "orman" to 20, "wind" to 10),
     p("Sleep", "Uyku", "rain" to 30, "white" to 30, "damlama" to 15),
-    p("Meditation", "Meditasyon", "bell" to 35, "wind" to 20, "dere" to 25),
+    p("Meditation", "Meditasyon", "bell" to 35, "wind" to 20),
     p("Night forest", "Gece ormanı", "orman" to 45, "wind" to 20, "damlama" to 10),
     p("Focus", "Odak", "coffee" to 25, "rain" to 20, "white" to 15),
     p("Rainforest", "Yağmur ormanı", "rain" to 45, "orman" to 45, "damlama" to 25),
