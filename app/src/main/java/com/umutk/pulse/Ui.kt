@@ -393,6 +393,6 @@ private fun FluentColorGlyph2(key: String, size: androidx.compose.ui.unit.Dp, mo
     val paths = remember(key) { raw.map { androidx.compose.ui.graphics.vector.PathParser().parsePathString(it).toPath() } }
     val c = FluentFilled.color(key)
     androidx.compose.foundation.Canvas(modifier.size(size)) {
-        withTransform({ scale(this.size.width / 24f, this.size.width / 24f, pivot = androidx.compose.ui.geometry.Offset.Zero) }) { paths.forEach { drawPath(it, c) } }
+        this.scale(this.size.width / 24f, pivot = androidx.compose.ui.geometry.Offset.Zero) { paths.forEach { drawPath(it, c) } }
     }
 }
