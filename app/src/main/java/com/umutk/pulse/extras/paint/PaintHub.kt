@@ -25,6 +25,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.text.font.FontWeight
+import com.umutk.pulse.OfKind
+import com.umutk.pulse.OfPal
+import com.umutk.pulse.ThemedMenu
+import com.umutk.pulse.ThemedMenuItem
+import com.umutk.pulse.ofPal
+import com.umutk.pulse.ofResolveId
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -187,7 +196,13 @@ private fun floodFill(bmp: Bitmap, sx: Int, sy: Int, fill: Int) {
     bmp.setPixels(px, 0, w, 0, 0, w, h)
 }
 
-/** Paint: a sheet to draw on, a tool box, the classic palette, undo, open and save. Drawn in the look chosen for this app. */
+/** What the menus and buttons of every look do. */
+private class PaintActions(val new: () -> Unit, val open: () -> Unit, val save: () -> Unit, val undo: () -> Unit, val exit: () -> Unit)
+
+private val CLASSIC_BASES = setOf("95", "2003")
+private val WINDOWS_BASES = setOf("95", "2003", "2013", "2017", "365")
+
+/** Paint. The Windows looks get a real Paint window (95 and XP: title bar, menu bar, tool box, colour box, status bar; 7, 10 and 11: File button, tabs and a ribbon); the other looks a plain tool strip. */
 @Composable
 fun PaintHub(back: () -> Unit) {
     val ctx = LocalContext.current
@@ -210,51 +225,188 @@ fun PaintHub(back: () -> Unit) {
         }.isSuccess
         Toast.makeText(ctx, if (ok) "Pictures/Paint/$name" else tr("Could not save", "Kaydedilemedi"), Toast.LENGTH_SHORT).show()
     }
+    val act = PaintActions({ st.clear() }, { pick.launch("image/*") }, { save() }, { st.undo() }, back)
+    val base = ofResolveId("app").removeSuffix("d")
+    if (base in WINDOWS_BASES) WindowsPaint(st, base, act) else PlainPaint(st, act)
+}
+
+@Composable
+private fun PlainPaint(st: PaintState, act: PaintActions) {
     Column(Modifier.fillMaxSize().background(T.bg)) {
-        // title and file actions
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.exit() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text("Paint", color = T.text, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(start = 4.dp))
             ExtraLookIcon()
-            Box(Modifier.size(44.dp).clickable { st.undo() }, contentAlignment = Alignment.Center) { PIcon("undo", T.text, 22.dp) }
-            Box(Modifier.size(44.dp).clickable { st.clear() }, contentAlignment = Alignment.Center) { PIcon("newfile", T.text, 22.dp) }
-            Box(Modifier.size(44.dp).clickable { pick.launch("image/*") }, contentAlignment = Alignment.Center) { PIcon("folder", T.text, 22.dp) }
-            Box(Modifier.size(44.dp).clickable { save() }, contentAlignment = Alignment.Center) { PIcon("save", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.undo() }, contentAlignment = Alignment.Center) { PIcon("undo", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.new() }, contentAlignment = Alignment.Center) { PIcon("newfile", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.open() }, contentAlignment = Alignment.Center) { PIcon("folder", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.save() }, contentAlignment = Alignment.Center) { PIcon("save", T.text, 22.dp) }
         }
-        // the tool box
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            PaintTool.entries.forEach { t ->
-                val on = st.tool == t
-                Box(
-                    Modifier.size(42.dp).background(if (on) Look.accent.copy(alpha = .22f) else T.panel).frame(T, raised = !on).clickable { st.tool = t },
-                    contentAlignment = Alignment.Center,
-                ) { ToolGlyph(t, if (on) Look.accent else T.text) }
-            }
+            PaintTool.entries.forEach { t -> ToolButton(st, t, 42.dp) }
         }
-        // line width
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("${st.size.toInt()}", color = T.sub, fontSize = 13.sp, modifier = Modifier.width(28.dp))
             PSlider(st.size, { st.size = it }, 1f..40f, modifier = Modifier.weight(1f)) { }
         }
-        // the sheet
         SheetView(st, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp))
-        // colours: the current one, then the 28 of the classic palette
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).background(Color(st.color)).frame(T))
             Spacer(Modifier.width(8.dp))
-            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                PALETTE.chunked(14).forEach { row ->
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        row.forEach { c ->
-                            Box(Modifier.weight(1f).height(20.dp).background(Color(c)).frame(T).clickable { st.color = c })
-                        }
-                    }
-                }
+            PaletteGrid(st, Modifier.weight(1f), 20.dp)
+        }
+    }
+}
+
+@Composable
+private fun ToolButton(st: PaintState, t: PaintTool, side: androidx.compose.ui.unit.Dp) {
+    val on = st.tool == t
+    Box(
+        Modifier.size(side).background(if (on) Look.accent.copy(alpha = .22f) else T.panel).frame(T, raised = !on).clickable { st.tool = t },
+        contentAlignment = Alignment.Center,
+    ) { ToolGlyph(t, if (on) Look.accent else T.text) }
+}
+
+/** The 28 classic colours in two rows; a tap picks the colour. */
+@Composable
+private fun PaletteGrid(st: PaintState, modifier: Modifier, cell: androidx.compose.ui.unit.Dp) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        PALETTE.chunked(14).forEach { row ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                row.forEach { c -> Box(Modifier.weight(1f).height(cell).background(Color(c)).frame(T).clickable { st.color = c }) }
             }
         }
     }
 }
 
+/** A menu bar word (File, Edit, ...) with its drop-down. */
+@Composable
+private fun MenuWord(label: String, ink: Color, items: List<Pair<String, () -> Unit>>) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Text(label, color = ink, fontSize = 13.sp, modifier = Modifier.clickable { open = true }.padding(horizontal = 9.dp, vertical = 5.dp))
+        ThemedMenu(open, { open = false }) { items.forEach { (l, f) -> ThemedMenuItem(l, { open = false; f() }) } }
+    }
+}
+
+private val WIDTHS = listOf(1f, 2f, 4f, 8f, 16f, 32f)
+
+/** The Paint window of the Windows looks. */
+@Composable
+private fun WindowsPaint(st: PaintState, base: String, act: PaintActions) {
+    val pal = ofPal("app", OfKind.WORD)
+    val classic = base in CLASSIC_BASES
+    val ctx = LocalContext.current
+    var tab by remember { mutableStateOf("Home") }
+    val fileItems = listOf(tr("New", "Yeni") to act.new, tr("Open…", "Aç…") to act.open, tr("Save", "Kaydet") to act.save, tr("Exit", "Çıkış") to act.exit)
+    val editItems = listOf(tr("Undo", "Geri al") to act.undo, tr("Clear Image", "Resmi temizle") to act.new)
+    val widthItems = WIDTHS.map { w -> "${w.toInt()} px" to { st.size = w } }
+    val colorItems = listOf("Black" to 0, "White" to 14, "Red" to 16, "Yellow" to 17, "Green" to 18, "Blue" to 20).map { (n, i) -> n to { st.color = PALETTE[i] } }
+    val status = if (classic) tr("For Help, click Help Topics on the Help Menu.", "Yardım için Yardım menüsünden Yardım Konuları'na tıklayın.") else "${W} × ${H} px"
+    Column(Modifier.fillMaxSize().background(if (classic) pal.ribbonBg else pal.canvas)) {
+        // title bar
+        val band = when (base) {
+            "95" -> Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0)))
+            "2003" -> Brush.horizontalGradient(listOf(Color(0xFF0058EE), Color(0xFF3A93FF)))
+            else -> Brush.horizontalGradient(listOf(pal.titleBg, pal.titleBg))
+        }
+        Row(Modifier.fillMaxWidth().height(if (classic) 28.dp else 36.dp).background(band).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("palette", pal.titleInk, 18.dp)
+            Spacer(Modifier.width(6.dp))
+            Text(tr("untitled - Paint", "adsız - Paint"), color = pal.titleInk, fontSize = 13.sp, fontWeight = if (classic) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f), maxLines = 1)
+            ExtraLookIcon(pal.titleInk)
+            Box(
+                Modifier.size(22.dp).then(if (base == "95") Modifier.background(Color(0xFFC0C0C0)).frame(T, raised = true) else if (base == "2003") Modifier.background(Color(0xFFD9543C)) else Modifier)
+                    .clickable { act.exit() },
+                contentAlignment = Alignment.Center,
+            ) { PIcon("close", if (base == "95") Color.Black else pal.titleInk, 14.dp) }
+        }
+        if (classic) {
+            // menu bar: File Edit View Image Colors Help
+            Row(Modifier.fillMaxWidth().background(pal.ribbonBg).padding(horizontal = 2.dp)) {
+                MenuWord(tr("File", "Dosya"), pal.ink, fileItems)
+                MenuWord(tr("Edit", "Düzen"), pal.ink, editItems)
+                MenuWord(tr("View", "Görünüm"), pal.ink, widthItems)
+                MenuWord(tr("Image", "Resim"), pal.ink, listOf(tr("Clear Image", "Resmi temizle") to act.new))
+                MenuWord(tr("Colors", "Renkler"), pal.ink, colorItems)
+                MenuWord(tr("Help", "Yardım"), pal.ink, listOf(tr("About Paint", "Paint hakkında") to { Toast.makeText(ctx, "Paint — Pulse", Toast.LENGTH_SHORT).show() }))
+            }
+        } else {
+            // File button and the tabs
+            Row(Modifier.fillMaxWidth().background(pal.tabBg), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.background(pal.accent)) { MenuWord(tr("File", "Dosya"), Color.White, fileItems) }
+                listOf("Home" to tr("Home", "Giriş"), "View" to tr("View", "Görünüm")).forEach { (id, label) ->
+                    val sel = tab == id
+                    Text(label, color = if (sel) pal.tabSelInk else pal.tabInk, fontSize = 13.sp, fontWeight = if (sel) FontWeight.SemiBold else FontWeight.Normal,
+                        modifier = Modifier.clickable { tab = id }.padding(horizontal = 14.dp, vertical = 8.dp))
+                }
+            }
+            // the ribbon
+            Row(Modifier.fillMaxWidth().background(pal.ribbonBg).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (tab == "Home") {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row { PaintTool.entries.take(5).forEach { ToolButton(st, it, 34.dp) } }
+                        Text(tr("Tools", "Araçlar"), color = pal.ink, fontSize = 10.sp)
+                    }
+                    Box(Modifier.padding(horizontal = 6.dp).width(1.dp).height(52.dp).background(pal.line))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row { PaintTool.entries.drop(5).forEach { ToolButton(st, it, 34.dp) } }
+                        Text(tr("Shapes", "Şekiller"), color = pal.ink, fontSize = 10.sp)
+                    }
+                    Box(Modifier.padding(horizontal = 6.dp).width(1.dp).height(52.dp).background(pal.line))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(34.dp).background(Color(st.color)).frame(T))
+                            Spacer(Modifier.width(6.dp))
+                            PaletteGrid(st, Modifier.width(260.dp), 17.dp)
+                        }
+                        Text(tr("Colors", "Renkler"), color = pal.ink, fontSize = 10.sp)
+                    }
+                } else {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row { WIDTHS.forEach { w ->
+                            Box(Modifier.padding(horizontal = 2.dp).size(width = 44.dp, height = 34.dp).background(if (st.size == w) pal.accent.copy(alpha = .22f) else Color.Transparent).clickable { st.size = w }, contentAlignment = Alignment.Center) {
+                                Text("${w.toInt()}", color = pal.ink, fontSize = 12.sp)
+                            }
+                        } }
+                        Text(tr("Size", "Boyut"), color = pal.ink, fontSize = 10.sp)
+                    }
+                }
+            }
+        }
+        // work area: the classic window has its tool box on the left and a grey workspace
+        Row(Modifier.weight(1f).fillMaxWidth()) {
+            if (classic) {
+                Column(Modifier.width(62.dp).fillMaxHeight().background(pal.ribbonBg).padding(4.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    PaintTool.entries.chunked(2).forEach { pair -> Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { pair.forEach { ToolButton(st, it, 26.dp) } } }
+                    Spacer(Modifier.height(6.dp))
+                    // line width, as the classic tool options box
+                    Column(Modifier.fillMaxWidth().background(pal.paper).frame(T), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                        WIDTHS.take(5).forEach { w ->
+                            Box(Modifier.fillMaxWidth().height(10.dp).background(if (st.size == w) pal.accent.copy(alpha = .35f) else Color.Transparent).clickable { st.size = w }, contentAlignment = Alignment.Center) {
+                                Box(Modifier.fillMaxWidth(.8f).height(max(1, (w / 4f).toInt()).dp).background(Color.Black))
+                            }
+                        }
+                    }
+                }
+            }
+            SheetView(st, Modifier.weight(1f).fillMaxHeight().padding(if (classic) 3.dp else 8.dp))
+        }
+        if (classic) {
+            // the colour box: the current colour, then the palette
+            Row(Modifier.fillMaxWidth().background(pal.ribbonBg).padding(horizontal = 4.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(36.dp).background(Color(st.color)).frame(T))
+                Spacer(Modifier.width(6.dp))
+                PaletteGrid(st, Modifier.weight(1f), 18.dp)
+            }
+        }
+        // status bar
+        Row(Modifier.fillMaxWidth().background(pal.statusBg).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(status, color = pal.statusInk, fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
+            if (classic) Text("${W} × ${H}", color = pal.statusInk, fontSize = 12.sp)
+        }
+    }
+}
 
 /** The sheet, fitted into the space and centred; touches are turned into picture pixels. */
 @Composable
