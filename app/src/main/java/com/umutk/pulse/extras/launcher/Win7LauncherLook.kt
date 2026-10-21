@@ -246,7 +246,7 @@ class Win7LauncherLook : LauncherLook {
         }
     }
 
-    /** Glossy round orb: radial body, a rim and a top gloss. No logo is drawn. */
+    /** Glossy round orb: radial body, a rim, the Windows flag in four panes and a top gloss. */
     @Composable
     private fun StartOrb() {
         Canvas(Modifier.size(36.dp)) {
@@ -257,6 +257,10 @@ class Win7LauncherLook : LauncherLook {
                 radius = r, center = c,
             )
             drawCircle(W7_ORB_RIM, radius = r - .5f, center = c, style = Stroke(width = 1f))
+            // the flag: four waving panes in red, green, blue and yellow
+            val u = r * .17f; val g = r * .05f; val x0 = c.x - u * 2 - g / 2; val y0 = c.y - u * 2 - g / 2
+            fun pane(i: Int, j: Int, col: Color) = drawRect(col, Offset(x0 + i * (u * 2 + g) + (if (j == 1) u * .0f else 0f), y0 + j * (u * 2 + g) + i * u * .12f), Size(u * 2, u * 2))
+            pane(0, 0, Color(0xFFF25022)); pane(1, 0, Color(0xFF7FBA00)); pane(0, 1, Color(0xFF00A4EF)); pane(1, 1, Color(0xFFFFB900))
             drawOval(
                 brush = Brush.verticalGradient(listOf(Color.White.copy(alpha = .55f), Color.White.copy(alpha = 0f)), startY = c.y - r * .85f, endY = c.y),
                 topLeft = Offset(c.x - r * .7f, c.y - r * .85f), size = Size(r * 1.4f, r * .9f),

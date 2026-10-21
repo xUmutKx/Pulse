@@ -59,7 +59,7 @@ class ScreenRecActivity : ComponentActivity() {
             // wait for the Quick Settings shade to slide away, take the picture, then close
             android.os.Handler(mainLooper).postDelayed({
                 if (!ScreenShot.possible()) { android.widget.Toast.makeText(this, tr("Needs root or Shizuku", "Root veya Shizuku gerekir"), android.widget.Toast.LENGTH_LONG).show(); finish() }
-                else ScreenShot.take(this) { p -> android.widget.Toast.makeText(this, if (p != null) tr("Screenshot saved", "Ekran görüntüsü kaydedildi") else tr("Could not take the screenshot", "Ekran görüntüsü alınamadı"), android.widget.Toast.LENGTH_SHORT).show(); finish() }
+                else ScreenShot.take(this) { p -> android.widget.Toast.makeText(this, if (p != null && p.startsWith("blank:")) tr("Saved, but the app blocks it (black)", "Kaydedildi ama uygulama engelliyor (siyah)") else if (p != null) tr("Screenshot saved", "Ekran görüntüsü kaydedildi") else tr("Could not take the screenshot", "Ekran görüntüsü alınamadı"), android.widget.Toast.LENGTH_SHORT).show(); finish() }
             }, 700)
             return
         }

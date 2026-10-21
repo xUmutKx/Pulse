@@ -134,10 +134,21 @@ object Lyrics {
 
     private fun readSidecar(path: String): LyricsResult? {
         for (e in listOf("lrc", "txt")) {
-            val t = sidecarFile(path, e)?.let { runCatching { it.readText() }.getOrNull() } ?: continue
+            val t = sidecarFile(path, e)?.let { runCatching { it.readText() }.getOrNull() } ?: rootSidecar(path, e) ?: continue
             fromText(t, e)?.let { return it }
         }
         return null
+    }
+
+    /** When the app may not read the folder (no all-files access), root lists it and reads the same-name file. */
+    private fun rootSidecar(path: String, ext: String): String? {
+        if (com.umutk.pulse.Shell.root != true) return null
+        val song = File(path)
+        val want = norm(song.name.substringBeforeLast('.'))
+        val names = com.umutk.pulse.Shell.runRoot("ls -1 '${song.parent}' 2>/dev/null").lines()
+        val hit = names.firstOrNull { it.endsWith(".$ext", true) && norm(it.substringBeforeLast('.')) == want } ?: return null
+        val out = com.umutk.pulse.Shell.runRoot("cat '${song.parent}/${hit.replace("'", "'\\''")}'")
+        return out.takeIf { it.isNotBlank() && it.length < 1_000_000 }
     }
 
     private fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
