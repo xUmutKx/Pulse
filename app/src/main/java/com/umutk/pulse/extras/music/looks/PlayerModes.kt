@@ -22,13 +22,47 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import com.umutk.pulse.extras.music.MusicLibrary
 import com.umutk.pulse.extras.music.MusicPlayerEngine
 import com.umutk.pulse.tr
 
+/** The queue order before the last shuffle, so switching shuffle off puts it back. */
+private var orderBefore: List<MediaItem>? = null
+
+/** Shuffles the queue once into a fixed order (the playing song stays where it is), instead of a random pick at every skip. */
+fun MusicPlayerEngine.shuffleQueueOnce() {
+    val p = player
+    val n = p.mediaItemCount
+    if (n < 2) return
+    val all = List(n) { p.getMediaItemAt(it) }
+    val cur = p.currentMediaItemIndex
+    orderBefore = all
+    val rest = all.filterIndexed { i, _ -> i != cur }.shuffled()
+    p.shuffleModeEnabled = false
+    p.removeMediaItems(cur + 1, n)
+    p.removeMediaItems(0, cur)
+    p.addMediaItems(rest)
+}
+
+/** Puts the queue back in the order it had before [shuffleQueueOnce]. */
+fun MusicPlayerEngine.restoreQueueOrder() {
+    val p = player
+    val was = orderBefore ?: return
+    orderBefore = null
+    val cur = p.currentMediaItemIndex
+    val now = p.getMediaItemAt(cur).mediaId
+    val at = was.indexOfFirst { it.mediaId == now }
+    if (at < 0) return
+    p.removeMediaItems(cur + 1, p.mediaItemCount)
+    p.removeMediaItems(0, cur)
+    p.addMediaItems(0, was.subList(0, at))
+    p.addMediaItems(was.subList(at + 1, was.size))
+}
+
 /**
- * Shuffle button. A tap switches shuffle on the queue on or off; a long press offers the choices:
+ * Shuffle button. A tap shuffles the queue once into a fixed order, or puts the old order back; a long press offers the choices:
  * shuffle the queue, play all songs shuffled, off.
  */
 @OptIn(ExperimentalFoundationApi::class)
@@ -37,15 +71,15 @@ fun ShuffleButton(engine: MusicPlayerEngine, on: Boolean, lit: Color, dim: Color
     var menu by remember { mutableStateOf(false) }
     Box {
         Icon(Icons.Rounded.Shuffle, null, tint = if (on) lit else dim, modifier = Modifier.size(size)
-            .combinedClickable(onLongClick = { menu = true }) { engine.player.shuffleModeEnabled = !on; onChange(!on) }.padding(pad))
+            .combinedClickable(onLongClick = { menu = true }) { if (on) engine.restoreQueueOrder() else engine.shuffleQueueOnce(); onChange(!on) }.padding(pad))
         DropdownMenu(menu, { menu = false }) {
-            DropdownMenuItem({ Text(tr("Shuffle the queue", "Sırayı karıştır")) }, { menu = false; engine.player.shuffleModeEnabled = true; onChange(true) })
+            DropdownMenuItem({ Text(tr("Shuffle the queue", "Sırayı karıştır")) }, { menu = false; engine.restoreQueueOrder(); engine.shuffleQueueOnce(); onChange(true) })
             DropdownMenuItem({ Text(tr("All songs, shuffled", "Tüm şarkılar, karışık")) }, {
                 menu = false
                 val all = MusicLibrary.tracks.value
-                if (all.isNotEmpty()) { engine.player.shuffleModeEnabled = true; engine.playQueue(all.shuffled(), 0); onChange(true) }
+                if (all.isNotEmpty()) { engine.player.shuffleModeEnabled = false; engine.playQueue(all.shuffled(), 0); onChange(true) }
             })
-            DropdownMenuItem({ Text(tr("Off", "Kapalı")) }, { menu = false; engine.player.shuffleModeEnabled = false; onChange(false) })
+            DropdownMenuItem({ Text(tr("Off", "Kapalı")) }, { menu = false; engine.restoreQueueOrder(); engine.player.shuffleModeEnabled = false; onChange(false) })
         }
     }
 }
