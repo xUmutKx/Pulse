@@ -46,6 +46,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.tr
 
+private val W7_WINDOW = WinSkin("7", Brush.verticalGradient(listOf(Color(0xFFC4D8EE), Color(0xFF9DBBE0))), Color.Black, Color(0xFF7B9EC8), 5.dp, 7.dp,
+    Color.White, Color(0xFFEEF3FA), Color.White, Color.Black, Color(0xFF6D6D6D), Color(0xFFCDE5FA), Color.Black, Color(0xFF7DA2CE))
+
+
 // Aero glass is approximated with fixed vertical gradients: no blur, no transparency over the wallpaper.
 private val W7_WALL = Brush.verticalGradient(listOf(Color(0xFF6E9CCB), Color(0xFF2F5C8C)))
 private val W7_TASKBAR = Brush.verticalGradient(listOf(Color(0xFF6A93C0), Color(0xFF3A6592), Color(0xFF2A4D76)))
@@ -115,64 +119,7 @@ class Win7LauncherLook : LauncherLook {
 
     @Composable
     override fun StartMenu(state: LauncherState, onClose: () -> Unit, modifier: Modifier) {
-        val edge = LocalLauncherEdge.current
-        var query by remember { mutableStateOf("") }
-        val (pinned, all) = startLists(state, query)
-        val noRipple = remember { MutableInteractionSource() }
-        val menuShape = RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp)
-        // a tap outside the menu closes it; the menu swallows its own taps
-        Box(modifier.clickable(interactionSource = noRipple, indication = null, onClick = onClose)) {
-            Row(
-                Modifier.align(Alignment.BottomStart).padding(start = edge, bottom = taskbarHeight)
-                    .fillMaxWidth(.94f).widthIn(max = 402.dp).fillMaxHeight(.75f)
-                    .clip(menuShape).background(W7_FRAME).border(1.dp, W7_FRAME_EDGE, menuShape).padding(start = 5.dp, top = 6.dp, end = 5.dp, bottom = 5.dp)
-                    .clickable(interactionSource = noRipple, indication = null) {},
-            ) {
-                // programs on the left, the search box at its foot, the shut-down pair on the right
-                Column(Modifier.weight(1f).fillMaxHeight().background(Color.White)) {
-                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(vertical = 4.dp)) {
-                        if (pinned.isNotEmpty()) {
-                            items(pinned) { app -> W7Row(app, state, onClose) }
-                            item { Box(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 3.dp).height(1.dp).background(W7_SEP)) }
-                        }
-                        // searching gives one flat list; otherwise the apps sit under their group folders
-                        if (query.isBlank()) groupedApps(all).forEach { (g, apps) ->
-                            item { W7Folder(tr(g.en, g.tr)) }
-                            items(apps) { app -> W7Row(app, state, onClose) }
-                        } else items(all) { app -> W7Row(app, state, onClose) }
-                    }
-                    W7Search(query) { query = it }
-                }
-                Column(Modifier.width(128.dp).fillMaxHeight().background(W7_RIGHT).padding(start = 6.dp, top = 6.dp, end = 6.dp, bottom = 6.dp)) {
-                    Spacer(Modifier.weight(1f))
-                    // Split button: the caret has no power menu in an app, so both halves close the menu.
-                    Row(Modifier.fillMaxWidth().height(26.dp)) {
-                        val left = RoundedCornerShape(topStart = 3.dp, bottomStart = 3.dp)
-                        val right = RoundedCornerShape(topEnd = 3.dp, bottomEnd = 3.dp)
-                        Box(
-                            Modifier.weight(1f).fillMaxHeight().clip(left).background(W7_SHUT).border(1.dp, W7_SHUT_EDGE, left).clickable(onClick = onClose),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Text(tr("Shut down", "Kapat"), color = Color.Black, fontSize = 12.sp)
-                        }
-                        Box(
-                            Modifier.width(22.dp).fillMaxHeight().clip(right).background(W7_SHUT).border(1.dp, W7_SHUT_EDGE, right).clickable(onClick = onClose),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Canvas(Modifier.size(7.dp)) {
-                                val p = Path().apply {
-                                    moveTo(0f, 0f)
-                                    lineTo(size.width, 0f)
-                                    lineTo(size.width / 2f, size.height)
-                                    close()
-                                }
-                                drawPath(p, Color.Black)
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        LauncherWindow(W7_WINDOW, state, onClose, taskbarHeight, modifier)
     }
 
     /** Program row: 28 dp icon, 12 sp black label, 36 dp tall, as in the Windows 7 programs list. */
