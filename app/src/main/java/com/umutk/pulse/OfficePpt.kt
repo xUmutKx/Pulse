@@ -100,10 +100,7 @@ import kotlin.math.roundToInt
 /** The PowerPoint window in the look chosen for it. */
 @Composable
 fun PptChrome(theme: OfTheme, title: String, acts: List<OAct>, status: String, onBack: () -> Unit, content: @Composable BoxScope.() -> Unit) =
-    // the Home tab gets the Word-style ribbon (OfficeRibbon.kt) instead of the plain button row
-    CompositionLocalProvider(LocalOfRibbon provides mapOf("Home" to pptHome(theme, acts))) {
-        OfChromeBasic(theme, title, acts, status, onBack, content)
-    }
+    OfChromeBasic(theme, title, acts, status, onBack, content)
 
 @Composable
 fun OfPptScreen(doc: OfDoc, theme: OfTheme) {

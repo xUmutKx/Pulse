@@ -471,7 +471,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
         }
         }
     }
-    CompositionLocalProvider(LocalOfRibbon provides mapOf("Home" to excelHome(t, acts)), LocalContentColor provides pal.ink) {
+    CompositionLocalProvider(LocalOfRibbon provides mapOf("Home" to ribbon), LocalContentColor provides pal.ink) {
     if (st.present) XPresent(st, book, sh, ev, t) else ExcelChrome(t, doc.name + if (doc.dirty) " *" else "", acts, status, doc.close) {
         Column(Modifier.fillMaxSize()) {
             // formula bar
