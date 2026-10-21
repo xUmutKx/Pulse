@@ -1,5 +1,12 @@
 package com.umutk.pulse.extras.music
 
+import androidx.compose.animation.core.FastOutLinearInEasing
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.drawscope.clipRect
+import androidx.compose.ui.graphics.graphicsLayer
+import kotlinx.coroutines.delay
+
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.media.MediaMetadataRetriever
@@ -147,6 +154,7 @@ fun CoverCarousel(
     LaunchedEffect(art) { carrying = false; carried = null }
     val scope = rememberCoroutineScope()
     var width by remember { mutableFloatStateOf(0f) }
+    var height by remember { mutableFloatStateOf(0f) }
     val prevNow by rememberUpdatedState(onPrev)
     val nextNow by rememberUpdatedState(onNext)
     val prevArtNow by rememberUpdatedState(prevArt)
@@ -159,7 +167,9 @@ fun CoverCarousel(
     val reach = with(LocalDensity.current) { 72.dp.toPx() }
     val ctx = LocalContext.current
     Box(
-        modifier.clipToBounds().onSizeChanged { width = it.width.toFloat() }.pointerInput(Unit) {
+        // clipped at the two sides only: the neighbour covers stay out of sight, but a cover pulled up or down may leave the frame and cross the page
+        modifier.drawWithContent { clipRect(0f, -size.height * 8f, size.width, size.height * 9f) { this@drawWithContent.drawContent() } }
+            .onSizeChanged { width = it.width.toFloat(); height = it.height.toFloat() }.pointerInput(Unit) {
             // one drag, one axis: the first real movement decides between sideways (the carousel) and up or down (the page)
             var startSlide = 0f
             var totalX = 0f
@@ -172,8 +182,17 @@ fun CoverCarousel(
                 onDragStart = { settle?.cancel(); startSlide = slide; totalX = 0f; totalY = 0f; vertical = false; axisSet = false; sideways = CoverGestures.swipeChangesTrack(ctx) },
                 onDragEnd = {
                     if (vertical) {
-                        if (totalY < -reach) upNow?.invoke() else if (totalY > reach) downNow?.invoke()
-                        settle = scope.launch { animate(pull, 0f, animationSpec = spring(dampingRatio = .4f, stiffness = Spring.StiffnessMedium)) { v, _ -> pull = v } }
+                        // a long pull with an action behind it sends the cover across the whole page, then runs the action (the previous screen opens); a short one springs back
+                        val dirY = if (totalY < -reach && upNow != null) -1 else if (totalY > reach && downNow != null) 1 else 0
+                        settle = scope.launch {
+                            if (dirY != 0) {
+                                animate(pull, dirY * size.height * 3.2f, animationSpec = tween(240, easing = FastOutLinearInEasing)) { v, _ -> pull = v }
+                                if (dirY < 0) upNow?.invoke() else downNow?.invoke()
+                                // if the page is still there (the lyrics opened over it) the cover comes back; a closed page takes this scope with it
+                                delay(400)
+                            }
+                            animate(pull, 0f, animationSpec = spring(dampingRatio = .6f, stiffness = Spring.StiffnessLow)) { v, _ -> pull = v }
+                        }
                     } else {
                         val w = size.width.toFloat()
                         val sum = totalX
@@ -204,13 +223,22 @@ fun CoverCarousel(
                         vertical = abs(totalY) > abs(totalX)
                     }
                     if (axisSet && !vertical && sideways) slide = startSlide + totalX
-                    if (axisSet && vertical) pull = (totalY * .3f).coerceIn(-reach * .5f, reach * .5f)
+                    if (axisSet && vertical) pull = totalY
                 },
             )
         },
     ) {
-        if (hasPrev) Box(Modifier.fillMaxSize().offset { IntOffset((slide - width).roundToInt(), 0) }) { slot(prevArt) }
-        if (hasNext) Box(Modifier.fillMaxSize().offset { IntOffset((slide + width).roundToInt(), 0) }) { slot(nextArt) }
-        Box(Modifier.fillMaxSize().offset { IntOffset(slide.roundToInt(), pull.roundToInt()) }) { slot(if (carrying) carried else art) }
+        // the covers sit on a wheel whose middle is far below them: sliding turns the wheel, so each cover swings along an arc and tilts up to about 20 degrees
+        val wheel = 3f
+        val step = if (height > 0f) width / (wheel * height) else 0f
+        fun Modifier.onWheel(index: Int, lift: Boolean = false) = graphicsLayer {
+            val a = (if (height > 0f) slide / (wheel * height) else 0f) + index * step
+            rotationZ = Math.toDegrees(a.toDouble()).toFloat()
+            transformOrigin = TransformOrigin(.5f, .5f + wheel)
+            if (lift) translationY = pull
+        }
+        if (hasPrev) Box(Modifier.fillMaxSize().onWheel(-1)) { slot(prevArt) }
+        if (hasNext) Box(Modifier.fillMaxSize().onWheel(1)) { slot(nextArt) }
+        Box(Modifier.fillMaxSize().onWheel(0, lift = true)) { slot(if (carrying) carried else art) }
     }
 }
