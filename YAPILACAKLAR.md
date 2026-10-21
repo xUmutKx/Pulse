@@ -866,3 +866,5 @@ Screen recorder feature list (55 candidates)
 - [self-grant] SelfGrant: root/Shizuku varken Pulse kendine POST_NOTIFICATIONS, READ_MEDIA_* (pm grant) ve bir kez/surum: tum dosyalar, ustte goster, kullanim erisimi, bilinmeyen kaynak, sistem ayarlari yazma (appops allow) verir; kamera/konum/rehber/SMS'e dokunmaz. Root yoksa bildirim izni ilk acilista bir kez sorulur. [txt-everywhere] ofOpenUri: dosya URI'li metin dosyalari (txt, json, md...) her yoldan metin duzenleyicide (Windows looklarinda Not Defteri) acilir. derlenmedi
 
 - Build OOM (Kotlin daemon 1.5 GB) -> CI now passes -Xmx6g; added termux-build.sh. derlenmedi
+
+- Winamp widget: queue restored when a widget starts the process, live 1 s redraw, ARGB 900k px crisp scaling; Material player: draggable sheet, lyrics over cover, level bars, top actions; Notepad grey in Win11; filled Fluent icons in Apps card; Store entry removed from Apps menu. derlenmedi

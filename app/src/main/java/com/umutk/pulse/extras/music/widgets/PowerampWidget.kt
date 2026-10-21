@@ -47,7 +47,7 @@ class PowerampWidget : AppWidgetProvider() {
     override fun onAppWidgetOptionsChanged(c: Context, m: AppWidgetManager, id: Int, o: Bundle) { m.updateAppWidget(id, build(c, id)) }
 
     override fun onReceive(c: Context, i: Intent) {
-        val e = MusicPlayerEngine.get(c)
+        val e = MusicPlayerEngine.ready(c)
         when (i.action) {
             A_PREV -> e.previous()
             A_TOGGLE -> e.togglePlayPause()
@@ -81,7 +81,7 @@ class PowerampWidget : AppWidgetProvider() {
 
         fun build(c: Context, id: Int): RemoteViews {
             val (bw, bh) = boxPx(c, id)
-            val e = MusicPlayerEngine.get(c)
+            val e = MusicPlayerEngine.ready(c)
             val st = e.state.value
             val dur = e.player.duration.takeIf { it > 0 } ?: 0L
             val frac = if (dur > 0) (e.player.currentPosition.toFloat() / dur).coerceIn(0f, 1f) else 0f
@@ -123,7 +123,7 @@ class PowerampWidget : AppWidgetProvider() {
                 .takeIf { it > 0 } ?: 110
             val pw = w * d; val ph = h * d
             // RemoteViews carries bitmaps over a 1 MB binder limit; RGB_565 is 2 bytes a pixel, so keep about 350k pixels
-            val shrink = kotlin.math.sqrt(pw * ph / 350_000f).coerceAtLeast(1f)
+            val shrink = kotlin.math.sqrt(pw * ph / 900_000f).coerceAtLeast(1f)
             return (pw / shrink).toInt().coerceAtLeast(1) to (ph / shrink).toInt().coerceAtLeast(1)
         }
 
@@ -135,7 +135,7 @@ class PowerampWidget : AppWidgetProvider() {
             style: PowerampStyle, title: String, artist: String, frac: Float, playing: Boolean,
             posMs: Long, durMs: Long, cover: Bitmap?, bw: Int, bh: Int,
         ): Bitmap {
-            val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.RGB_565)
+            val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
             val f = fit(bw, bh)
             cv.drawColor(style.solid.toArgb())

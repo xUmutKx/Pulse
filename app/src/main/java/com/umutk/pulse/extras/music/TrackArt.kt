@@ -147,6 +147,9 @@ fun CoverCarousel(
     // a vertical drag is for the page, not the carousel: up calls onSwipeUp, down calls onSwipeDown (both optional)
     onSwipeUp: (() -> Unit)? = null,
     onSwipeDown: (() -> Unit)? = null,
+    // when set, a vertical drag moves the whole page instead (dy per move, then the release): the cover itself stays put
+    onPageDrag: ((Float) -> Unit)? = null,
+    onPageRelease: (() -> Unit)? = null,
     slot: @Composable (ImageBitmap?) -> Unit,
 ) {
     // one plain value follows the finger; the settle is a single eased tween (a spring overshoots and rocks back and forth)
@@ -169,6 +172,8 @@ fun CoverCarousel(
     val canNext by rememberUpdatedState(hasNext)
     val upNow by rememberUpdatedState(onSwipeUp)
     val downNow by rememberUpdatedState(onSwipeDown)
+    val pageDragNow by rememberUpdatedState(onPageDrag)
+    val pageReleaseNow by rememberUpdatedState(onPageRelease)
     val slop = with(LocalDensity.current) { 12.dp.toPx() }
     val reach = with(LocalDensity.current) { 72.dp.toPx() }
     val ctx = LocalContext.current
@@ -187,7 +192,8 @@ fun CoverCarousel(
                 // a new drag stops a settle still running and carries on from where the cover is
                 onDragStart = { settle?.cancel(); startSlide = slide; totalX = 0f; totalY = 0f; vertical = false; axisSet = false; sideways = CoverGestures.swipeChangesTrack(ctx) },
                 onDragEnd = {
-                    if (vertical) {
+                    if (vertical && pageDragNow != null) pageReleaseNow?.invoke()
+                    else if (vertical) {
                         // a long pull with an action behind it sends the cover across the whole page, then runs the action (the previous screen opens); a short one springs back
                         val dirY = if (totalY < -reach && upNow != null) -1 else if (totalY > reach && downNow != null) 1 else 0
                         settle = scope.launch {
@@ -216,7 +222,8 @@ fun CoverCarousel(
                     }
                 },
                 onDragCancel = {
-                    settle = scope.launch {
+                    if (vertical && pageDragNow != null) pageReleaseNow?.invoke()
+                    else settle = scope.launch {
                         if (vertical) animate(pull, 0f, animationSpec = spring(dampingRatio = .4f, stiffness = Spring.StiffnessMedium)) { v, _ -> pull = v }
                         else animate(slide, 0f, animationSpec = tween(180)) { v, _ -> slide = v }
                     }
@@ -229,7 +236,7 @@ fun CoverCarousel(
                         vertical = abs(totalY) > abs(totalX)
                     }
                     if (axisSet && !vertical && sideways) slide = startSlide + totalX
-                    if (axisSet && vertical) pull = totalY
+                    if (axisSet && vertical) { val pd = pageDragNow; if (pd != null) pd(d.y) else pull = totalY }
                 },
             )
         },

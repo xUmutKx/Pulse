@@ -282,6 +282,9 @@ class MusicPlayerEngine private constructor(context: Context) {
         fun get(context: Context): MusicPlayerEngine =
             instance ?: synchronized(this) { instance ?: MusicPlayerEngine(context).also { instance = it } }
 
+        /** The engine with the last queue loaded when the process was started by a widget or tile, so their buttons and title work without opening the app. */
+        fun ready(context: Context): MusicPlayerEngine = get(context).also { Playlists.restore(context.applicationContext, it) }
+
         private fun uriOf(path: String): Uri =
             if (path.contains("://")) Uri.parse(path) else Uri.fromFile(File(path))
     }
