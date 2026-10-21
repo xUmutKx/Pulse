@@ -140,7 +140,11 @@ open class MusicWidget : AppWidgetProvider() {
                 }
                 setProgressBar(R.id.mw_prog, 1000, prog, false)
                 if (layout != R.layout.widget_music_slim && art != null) { setImageViewBitmap(R.id.mw_art, art); setViewPadding(R.id.mw_art, 0, 0, 0, 0) }
-                setImageViewResource(R.id.mw_play, if (st.isPlaying) R.drawable.widget_music_pause else R.drawable.widget_music_play)
+                // Material transport glyphs by default; the Windows 11 widget theme takes the Fluent ones
+                val fluent = th?.id == "look_win11" || th?.id == "win11"
+                setImageViewResource(R.id.mw_play, if (st.isPlaying) (if (fluent) R.drawable.widget_music_pause_fluent else R.drawable.widget_music_pause) else (if (fluent) R.drawable.widget_music_play_fluent else R.drawable.widget_music_play))
+                setImageViewResource(R.id.mw_prev, if (fluent) R.drawable.widget_music_prev_fluent else R.drawable.widget_music_prev)
+                setImageViewResource(R.id.mw_next, if (fluent) R.drawable.widget_music_next_fluent else R.drawable.widget_music_next)
                 setInt(R.id.mw_play, "setColorFilter", onAccent)
                 setInt(R.id.mw_prev, "setColorFilter", text); setInt(R.id.mw_next, "setColorFilter", text)
                 val vis = if (compact) View.GONE else View.VISIBLE
