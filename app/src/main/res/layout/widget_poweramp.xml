@@ -2,9 +2,15 @@
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent" android:layout_height="match_parent">
     <ImageView android:id="@+id/pa_img" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
+    <LinearLayout android:id="@+id/pa_mid" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal">
+        <ImageView android:id="@+id/pa_loop" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
+        <ImageView android:id="@+id/pa_shuf" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
+    </LinearLayout>
     <LinearLayout android:id="@+id/pa_overlay" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="horizontal">
         <ImageView android:id="@+id/pa_prev" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
+        <ImageView android:id="@+id/pa_rew" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
         <ImageView android:id="@+id/pa_play" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
+        <ImageView android:id="@+id/pa_ff" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
         <ImageView android:id="@+id/pa_next" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" />
     </LinearLayout>
 </FrameLayout>

@@ -248,9 +248,14 @@ fun WidgetsPage() {
             item(key = "h_music") { Text(tr("Music", "Müzik"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
         }
         if (winamp.isNotEmpty()) {
+            // the three Winamp widgets (window, 4x1 strip, visualizer) are always shown; the skins fold under the arrow
             val open = winampOpen || query.isNotBlank()
-            item(key = "h_winamp") { WinampHeader(winamp.size, open) { winampOpen = !winampOpen } }
-            if (open) items(winamp.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+            item(key = "h_winamp") { Text("Winamp", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) }
+            items(winamp.take(3).chunked(2), key = { "w_" + it.first().first }) { pair -> PairRow(pair) { it.second() } }
+            if (winamp.size > 3) {
+                item(key = "h_winamp_skins") { WinampHeader(winamp.size - 3, open) { winampOpen = !winampOpen } }
+                if (open) items(winamp.drop(3).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+            }
         }
         if (music.isNotEmpty()) items(music.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
         item { Spacer(Modifier.size(24.dp)) }
@@ -342,7 +347,7 @@ private fun FamilyHeader(theme: String, label: String) {
 private fun WinampHeader(count: Int, open: Boolean, onClick: () -> Unit) {
     val rot by animateFloatAsState(if (open) 180f else 0f, tween(200), label = "chev")
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(top = 6.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text("Winamp", Modifier.weight(1f), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Skins", "Skinler"), Modifier.weight(1f), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         Text("$count", color = T.sub, fontSize = 14.sp)
         Spacer(Modifier.size(8.dp))
         PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = rot })
@@ -528,7 +533,7 @@ private fun WinampVisCard(ctx: Context) {
 private fun PowerampCard(ctx: Context) {
     val style = remember { powerampSkin(PowerampPrefs.skin(ctx)).build(NeutralAccent, Color.Black) }
     val bmp by produceState<Bitmap?>(null, style) {
-        value = withContext(drawer) { runCatching { PowerampWidget.render(style, "Pulse", "Poweramp", 0.4f, true, 83_000L, 240_000L, null, 640, 360) }.getOrNull() }
+        value = withContext(drawer) { runCatching { PowerampWidget.render(style, "Pulse", "Poweramp", "Underground Years", 0.4f, true, 83_000L, 240_000L, null, 4, 2322, true, 2, 640, 400) }.getOrNull() }
     }
     WidgetCard("Poweramp", { WinampSkinPick.pinWidget(ctx, PowerampWidget::class.java) }, PowerampWidget.W.toFloat() / PowerampWidget.H) {
         val b = bmp

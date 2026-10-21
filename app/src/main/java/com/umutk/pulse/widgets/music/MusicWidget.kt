@@ -177,7 +177,11 @@ open class MusicWidget : AppWidgetProvider() {
                 setOnClickPendingIntent(R.id.mw_prev, WidgetUi.broadcast(c, MusicWidget::class.java, A_PREV))
                 setOnClickPendingIntent(R.id.mw_play, WidgetUi.broadcast(c, MusicWidget::class.java, A_TOGGLE))
                 setOnClickPendingIntent(R.id.mw_next, WidgetUi.broadcast(c, MusicWidget::class.java, A_NEXT))
-                if (layout == R.layout.widget_music_big) {
+                // shuffle and repeat: shown on the big widget unless switched off, and on the others when switched on
+                val modes = o.modes ?: (layout == R.layout.widget_music_big)
+                if (layout == R.layout.widget_music_tall || layout == R.layout.widget_music_square || layout == R.layout.widget_music_big) {
+                    val mv = if (modes) View.VISIBLE else View.GONE
+                    setViewVisibility(R.id.mw_shuf, mv); setViewVisibility(R.id.mw_rep, mv)
                     val sh = e.player.shuffleModeEnabled; val rp = e.player.repeatMode != 0
                     setInt(R.id.mw_shuf, "setColorFilter", if (sh) accent else sub); setInt(R.id.mw_rep, "setColorFilter", if (rp) accent else sub)
                     setOnClickPendingIntent(R.id.mw_shuf, WidgetUi.broadcast(c, MusicWidget::class.java, A_SHUF))
@@ -210,13 +214,14 @@ class MusicWidgetBig : MusicWidget()
 class MusicWidgetSlim : MusicWidget()
 
 /** The per-widget looks of the music widgets (SharedPreferences "music_widget", keys "<name>_<appWidgetId>"). */
-class WidgetOptions(val shape: String, val text: Int, val art: Boolean, val artSize: Int, val right: Boolean, val artist: Boolean, val progress: Boolean, val skip: Boolean, val accent: Int) {
+class WidgetOptions(val shape: String, val text: Int, val art: Boolean, val artSize: Int, val right: Boolean, val artist: Boolean, val progress: Boolean, val skip: Boolean, val accent: Int, val modes: Boolean? = null) {
     companion object {
         fun of(c: Context, id: Int): WidgetOptions {
             val p = MusicWidget.prefs(c)
             return WidgetOptions(p.getString("shape_$id", "") ?: "", p.getInt("text_$id", 100), p.getBoolean("art_$id", true), p.getInt("artsize_$id", 100), p.getBoolean("right_$id", false),
-                p.getBoolean("artist_$id", true), p.getBoolean("prog_$id", true), p.getBoolean("skip_$id", true), p.getInt("accent_$id", 0))
+                p.getBoolean("artist_$id", true), p.getBoolean("prog_$id", true), p.getBoolean("skip_$id", true), p.getInt("accent_$id", 0),
+                if (p.contains("modes_$id")) p.getBoolean("modes_$id", false) else null)
         }
-        fun clear(c: Context, id: Int) { MusicWidget.prefs(c).edit().apply { listOf("shape", "text", "art", "artsize", "right", "artist", "prog", "skip", "accent", "alpha").forEach { remove("${it}_$id") } }.apply() }
+        fun clear(c: Context, id: Int) { MusicWidget.prefs(c).edit().apply { listOf("shape", "text", "art", "artsize", "right", "artist", "prog", "skip", "accent", "alpha", "modes").forEach { remove("${it}_$id") } }.apply() }
     }
 }

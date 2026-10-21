@@ -102,17 +102,21 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     // the one shared walk of the storage (see StorageScan): the folder on screen, its children sorted by size
     val snap by StorageScan.snap.collectAsState()
     val scanned by StorageScan.scanned.collectAsState()
+    val taken by StorageScan.taken.collectAsState()
     // the system root "/" is never walked whole (it never ends: /proc, /sys): each folder is measured on its own through root with du, once, and kept
     val sysRoot = root.path == "/"
     var rootRev by remember { mutableStateOf(0) }
     LaunchedEffect(root) { if (!sysRoot) StorageScan.ensure(root) }
     LaunchedEffect(dir) { lastDir = dir }
-    val rootRows by produceState<List<TreeNode>?>(if (sysRoot) RootDu.cached(dir) else null, dir, rootRev) {
-        if (sysRoot) value = RootDu.cached(dir) ?: withContext(Dispatchers.IO) { RootDu.measure(dir) }
+    // the other apps' folders (Android/data, Android/obb) are not in the storage walk below their first level: with root or Shizuku each one is measured when opened
+    val rootOk = com.umutk.pulse.Shell.root == true || com.umutk.pulse.Shell.shizuku == 2
+    val viaRoot = sysRoot || (rootOk && (dir.path.contains("/Android/data") || dir.path.contains("/Android/obb")))
+    val rootRows by produceState<List<TreeNode>?>(if (viaRoot) RootDu.cached(dir) else null, dir, rootRev, viaRoot) {
+        if (viaRoot) value = RootDu.cached(dir) ?: withContext(Dispatchers.IO) { RootDu.measure(dir) }
     }
-    val loading = if (sysRoot) rootRows == null else snap?.root != root.path
-    val rows = remember(snap, dir, rootRows) {
-        if (sysRoot) return@remember rootRows.orEmpty()
+    val loading = if (viaRoot) rootRows == null else snap?.root != root.path
+    val rows = remember(snap, dir, rootRows, viaRoot) {
+        if (viaRoot) return@remember rootRows.orEmpty()
         val s = snap?.takeIf { it.root == root.path }
         s?.childrenOf(dir)?.map { TreeNode(it, s.sizeOf(it)) }?.sortedByDescending { it.size }.orEmpty()
     }
@@ -156,12 +160,12 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             }) {
                 Icon(if (grid) Icons.Filled.List else Icons.Filled.Apps, contentDescription = if (grid) "List" else "Tiles")
             }
-            IconButton(onClick = { if (sysRoot) { RootDu.forget(dir); rootRev++ } else StorageScan.rescan(root) }) {
+            IconButton(onClick = { if (viaRoot) { RootDu.forget(dir); rootRev++ } else StorageScan.rescan(root) }) {
                 Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
             }
         }
         Text(
-            dir.path,
+            dir.path + if (!viaRoot && taken > 0L) "  ·  " + tr("measured ${((System.currentTimeMillis() - taken) / 60000).coerceAtLeast(0)} min ago", "${((System.currentTimeMillis() - taken) / 60000).coerceAtLeast(0)} dk önce ölçüldü") else "",
             style = MaterialTheme.typography.bodySmall,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -176,13 +180,13 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
         if (loading) {
             com.umutk.pulse.Busy(modifier = Modifier.padding(top = 8.dp))
             Text(
-                "Measuring… ${scanned} files",
+                if (scanned < 0) tr("Reading the saved scan…", "Kayıtlı tarama okunuyor…") else "Measuring… ${scanned} files",
                 style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.padding(top = 4.dp),
             )
         } else if (rows.isEmpty()) {
             Text(
-                if (dir.isDirectory || sysRoot) "Empty folder" else "This folder cannot be read",
+                if (dir.isDirectory || viaRoot) "Empty folder" else "This folder cannot be read",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 16.dp),
             )
@@ -199,7 +203,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             text = { Text("Folders are deleted with everything in them.") },
             confirmButton = { TextButton(onClick = {
                 val paths = sel; askDelete = false; sel = emptySet()
-                scope.launch(Dispatchers.IO) { paths.forEach { File(it).deleteRecursively() }; if (sysRoot) { RootDu.forget(dir); rootRev++ } else StorageScan.rescan(root) }
+                scope.launch(Dispatchers.IO) { paths.forEach { File(it).deleteRecursively() }; if (viaRoot) { RootDu.forget(dir); rootRev++ } else StorageScan.rescan(root) }
             }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Cancel") } },
         )
