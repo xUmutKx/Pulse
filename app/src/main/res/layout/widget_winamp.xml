@@ -3,16 +3,16 @@
     android:layout_width="match_parent" android:layout_height="match_parent">
     <ImageView android:id="@+id/wa_img" android:layout_width="match_parent" android:layout_height="match_parent" android:scaleType="fitXY" />
     <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
-        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="88" />
+        <ImageView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="88" />
         <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="18" android:orientation="horizontal">
-            <View android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="16" />
-            <View android:id="@+id/wa_prev" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="23" />
-            <View android:id="@+id/wa_play" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="23" />
-            <View android:id="@+id/wa_pause" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="23" />
-            <View android:id="@+id/wa_stop" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="23" />
-            <View android:id="@+id/wa_next" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="22" />
-            <View android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="145" />
+            <ImageView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="16" />
+            <ImageView android:id="@+id/wa_prev" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="23" />
+            <ImageView android:id="@+id/wa_play" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="23" />
+            <ImageView android:id="@+id/wa_pause" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="23" />
+            <ImageView android:id="@+id/wa_stop" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="23" />
+            <ImageView android:id="@+id/wa_next" android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="22" />
+            <ImageView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="145" />
         </LinearLayout>
-        <View android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" />
+        <ImageView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="10" />
     </LinearLayout>
 </FrameLayout>
