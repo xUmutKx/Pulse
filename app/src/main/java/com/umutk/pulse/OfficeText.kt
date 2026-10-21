@@ -20,6 +20,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Save
 import androidx.compose.material.icons.outlined.SaveAs
+import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.TextSnippet
 import com.umutk.pulse.Icon
 import androidx.compose.material3.Text
@@ -75,20 +76,28 @@ class OfficeTextActivity : ComponentActivity() {
                 fun save() { runCatching { f.writeText(text) }.onSuccess { saved = text; Toast.makeText(this, tr("Saved", "Kaydedildi"), Toast.LENGTH_SHORT).show() }.onFailure { Toast.makeText(this, "Could not save: ${it.message}", Toast.LENGTH_LONG).show() } }
                 BackHandler { if (text != saved) save(); finish() }
                 val base = ofResolveId("app").removeSuffix("d")
+                // AMOLED black for the text editor, kept for every file (View > Black in Notepad, the moon button in the plain editor)
+                val tp = getSharedPreferences("text_editor", MODE_PRIVATE)
+                var black by remember { mutableStateOf(tp.getBoolean("black", T.id == "amoled")) }
+                val flip = { black = !black; tp.edit().putBoolean("black", black).apply() }
+                val pg = if (black) androidx.compose.ui.graphics.Color.Black else T.bg
+                val pink = if (black) androidx.compose.ui.graphics.Color.White else T.text
                 if (base in NOTEPAD_BASES) NotepadWindow(
                     f.name, base, text, { text = it }, text != saved, { save() }, { saveAs = true },
                     if (!f.extension.equals("txt", true)) ({ txtSave = true }) else null, { if (text != saved) save(); finish() },
-                ) else Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
+                    black, flip,
+                ) else Column(Modifier.fillMaxSize().background(pg).statusBarsPadding().navigationBarsPadding().imePadding()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(40.dp).clickable { if (text != saved) save(); finish() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), T.text) }
-                        Text(f.name + if (text != saved) " •" else "", color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
+                        Box(Modifier.size(40.dp).clickable { if (text != saved) save(); finish() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), pink) }
+                        Text(f.name + if (text != saved) " •" else "", color = pink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
                         // Save first (it writes the open file), then Save as; "as TXT" only for files that are not .txt already, so no two buttons do the same
                         Box(Modifier.size(40.dp).clickable { save() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Save, null, Modifier.size(22.dp), Look.accent) }
-                        Box(Modifier.size(40.dp).clickable { saveAs = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SaveAs, null, Modifier.size(22.dp), T.text) }
-                        if (!f.extension.equals("txt", true)) Box(Modifier.size(40.dp).clickable { txtSave = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.TextSnippet, null, Modifier.size(22.dp), T.text) }
+                        Box(Modifier.size(40.dp).clickable { saveAs = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SaveAs, null, Modifier.size(22.dp), pink) }
+                        Box(Modifier.size(40.dp).clickable { flip() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.DarkMode, null, Modifier.size(22.dp), if (black) Look.accent else pink) }
+                        if (!f.extension.equals("txt", true)) Box(Modifier.size(40.dp).clickable { txtSave = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.TextSnippet, null, Modifier.size(22.dp), pink) }
                     }
                     BasicTextField(text, { text = it }, Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
-                        textStyle = TextStyle(color = T.text, fontSize = 14.sp, fontFamily = FontFamily.Monospace), cursorBrush = SolidColor(Look.accent))
+                        textStyle = TextStyle(color = pink, fontSize = 14.sp, fontFamily = FontFamily.Monospace), cursorBrush = SolidColor(Look.accent))
                 }
                 if (saveAs) OfSaveAsDialog(f.name, (listOf(f.extension.lowercase()) + OF_TEXT_EXTS + "tsv").filter { it.isNotEmpty() }.distinct(), f.parentFile, { saveAs = false }) { d ->
                     saveAs = false
@@ -123,10 +132,12 @@ private fun NpMenu(label: String, ink: androidx.compose.ui.graphics.Color, items
 private fun NotepadWindow(
     name: String, base: String, text: String, onText: (String) -> Unit, modified: Boolean,
     save: () -> Unit, saveAs: () -> Unit, saveTxt: (() -> Unit)?, exit: () -> Unit,
+    black: Boolean, onBlack: () -> Unit,
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val pal = ofPal("app", OfKind.WORD)
-    val classic = base == "95" || base == "2003"
+    // AMOLED black (View menu) flattens every look to black bars and a black page
+    val classic = (base == "95" || base == "2003") && !black
     var tf by remember { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(text)) }
     var wrap by remember { mutableStateOf(true) }
     var statusOn by remember { mutableStateOf(base != "95") }
@@ -166,18 +177,25 @@ private fun NotepadWindow(
         tr("Larger font", "Yazıyı büyüt") to { size = (size + 2).coerceAtMost(32) },
         tr("Smaller font", "Yazıyı küçült") to { size = (size - 2).coerceAtLeast(8) },
     )
-    val viewItems = listOf((if (statusOn) "✓ " else "") + tr("Status Bar", "Durum Çubuğu") to { statusOn = !statusOn })
+    val viewItems = listOf(
+        (if (statusOn) "✓ " else "") + tr("Status Bar", "Durum Çubuğu") to { statusOn = !statusOn },
+        (if (black) "✓ " else "") + tr("Black (AMOLED)", "Siyah (AMOLED)") to onBlack,
+    )
     val helpItems = listOf(tr("About Notepad", "Not Defteri Hakkında") to { Toast.makeText(ctx, "Notepad — Pulse", Toast.LENGTH_SHORT).show() })
     val band = when (base) {
         "95" -> androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.Color(0xFF000080), androidx.compose.ui.graphics.Color(0xFF1084D0)))
         "2003" -> androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(androidx.compose.ui.graphics.Color(0xFF0058EE), androidx.compose.ui.graphics.Color(0xFF3A93FF)))
         else -> androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(pal.titleBg, pal.titleBg))
     }
-    val paperLight = pal.paper.luminance() > .5f
-    // Windows 11's Notepad is the system grey, not the white Office paper
-    val win11 = T.id == "win11"
-    val paper = if (win11) (if (paperLight) androidx.compose.ui.graphics.Color(0xFFF3F3F3) else androidx.compose.ui.graphics.Color(0xFF202020)) else pal.paper
-    val titleInk = if (win11) pal.ink else pal.titleInk
+    // Windows 11's Notepad is the system grey (light or dark with the look), not the white Office paper; AMOLED is pure black.
+    // Every text colour is taken from the colour it sits on, so no part can end up the same colour as its text.
+    val win11 = T.id == "win11" || black
+    val paper = when { black -> androidx.compose.ui.graphics.Color.Black; T.id == "win11" -> if (T.dark) androidx.compose.ui.graphics.Color(0xFF202020) else androidx.compose.ui.graphics.Color(0xFFF3F3F3); else -> pal.paper }
+    val paperLight = paper.luminance() > .5f
+    val ink = ofInkOn(paper)
+    val menuBg = if (classic) pal.ribbonBg else paper
+    val menuInk = ofInkOn(menuBg)
+    val titleInk = if (win11) ink else ofInkOn(if (classic) androidx.compose.ui.graphics.Color(0xFF000080) else pal.titleBg)
     Column(Modifier.fillMaxSize().background(if (classic) pal.ribbonBg else paper).statusBarsPadding().navigationBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().height(if (classic) 28.dp else 34.dp).background(if (win11) androidx.compose.ui.graphics.SolidColor(paper) else band).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon(if (T.id == "win11") "notepad" else "document", titleInk, 18.dp)
@@ -189,18 +207,18 @@ private fun NotepadWindow(
                 contentAlignment = Alignment.Center,
             ) { PIcon("close", if (base == "95") androidx.compose.ui.graphics.Color.Black else titleInk, 14.dp) }
         }
-        Row(Modifier.fillMaxWidth().background(if (classic) pal.ribbonBg else paper).padding(horizontal = 2.dp)) {
-            NpMenu(tr("File", "Dosya"), pal.ink, fileItems)
-            NpMenu(tr("Edit", "Düzen"), pal.ink, editItems)
-            NpMenu(tr("Format", "Biçim"), pal.ink, formatItems)
-            NpMenu(tr("View", "Görünüm"), pal.ink, viewItems)
-            NpMenu(tr("Help", "Yardım"), pal.ink, helpItems)
+        Row(Modifier.fillMaxWidth().background(menuBg).padding(horizontal = 2.dp)) {
+            NpMenu(tr("File", "Dosya"), menuInk, fileItems)
+            NpMenu(tr("Edit", "Düzen"), menuInk, editItems)
+            NpMenu(tr("Format", "Biçim"), menuInk, formatItems)
+            NpMenu(tr("View", "Görünüm"), menuInk, viewItems)
+            NpMenu(tr("Help", "Yardım"), menuInk, helpItems)
         }
         Box(Modifier.weight(1f).fillMaxWidth().background(paper).then(if (classic) Modifier.frame(T) else Modifier)) {
             BasicTextField(
                 tf, { change(it) },
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).then(if (wrap) Modifier else Modifier.horizontalScroll(rememberScrollState())).padding(4.dp),
-                textStyle = TextStyle(color = if (paperLight) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White, fontSize = size.sp, fontFamily = FontFamily.Monospace),
+                textStyle = TextStyle(color = ink, fontSize = size.sp, fontFamily = FontFamily.Monospace),
                 cursorBrush = SolidColor(if (paperLight) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White),
             )
         }
@@ -209,8 +227,8 @@ private fun NotepadWindow(
             val ln = before.count { it == '\n' } + 1
             val col = before.length - (before.lastIndexOf('\n') + 1) + 1
             Row(Modifier.fillMaxWidth().background(if (win11) paper else pal.statusBg).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Ln $ln, Col $col", "Satır $ln, Sütun $col"), color = if (win11) pal.ink else pal.statusInk, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text("${tf.text.length} " + tr("chars", "karakter") + "   100%   UTF-8", color = if (win11) pal.ink else pal.statusInk, fontSize = 12.sp)
+                Text(tr("Ln $ln, Col $col", "Satır $ln, Sütun $col"), color = if (win11) ink else pal.statusInk, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text("${tf.text.length} " + tr("chars", "karakter") + "   100%   UTF-8", color = if (win11) ink else pal.statusInk, fontSize = 12.sp)
             }
         }
     }

@@ -886,3 +886,5 @@ Screen recorder feature list (55 candidates)
 - Storage walk (folder tree, file types) saved to filesDir/storage_scan.bin and reused at every start; only Refresh walks again; root view picked by a folder that lists with content (isolated mount namespaces showed app data as empty stubs); 0.10.155. derlenmedi
 
 - Icons back to the 0.10.151 Fluent set by default; coloured Fluent is now its own choice (Fluent / Fluent colour / Line); standalone apps leave the top-right menu by default (Extra apps lists them); Office strips pick their ink from the strip colour (no black on black); installer streams APKs into a pm session through cat (pm could not open the private cache), Shizuku copies to shared storage first, a zip of several apps becomes one install per app; 0.10.156. derlenmedi
+
+- Windows 11: Material icons with a twin in the coloured Win11 pack (assets/icons/win11) draw that picture; text editor AMOLED black (View > Black in Notepad, moon button in the plain editor, remembered); Notepad inks taken from the colour under them; 0.10.157. derlenmedi
