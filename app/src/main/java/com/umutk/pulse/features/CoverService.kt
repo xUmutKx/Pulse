@@ -45,6 +45,7 @@ import java.util.Locale
 class CoverService : Service() {
     private var wm: WindowManager? = null
     private var root: FrameLayout? = null
+    private val bands = ArrayList<View>()
     private var clock: TextView? = null
     private var date: TextView? = null
     private var battery: TextView? = null
@@ -104,6 +105,13 @@ class CoverService : Service() {
                 "small" -> line(40f)
                 else -> line(72f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
             }
+            // a 12-hour time with AM/PM must not wrap into two lines: one line, shrinking to fit the screen width
+            if (style != "stacked") clock?.let { c ->
+                c.maxLines = 1; c.setHorizontallyScrolling(false)
+                val sw = resources.displayMetrics.widthPixels - 2 * (40 * resources.displayMetrics.density).toInt()
+                c.layoutParams = LinearLayout.LayoutParams(sw, LinearLayout.LayoutParams.WRAP_CONTENT)
+                androidx.core.widget.TextViewCompat.setAutoSizeTextTypeUniformWithConfiguration(c, 20, when (style) { "bold" -> 80; "digital" -> 64; "small" -> 40; else -> 72 }, 2, TypedValue.COMPLEX_UNIT_SP)
+            }
             column.addView(clock)
         }
         if (CoverStore.date(this)) { date = line(18f); column.addView(date) }
@@ -116,12 +124,33 @@ class CoverService : Service() {
         val m = (40 * resources.displayMetrics.density).toInt()
         if (column.childCount > 0) v.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, gv).apply { setMargins(m, m * 2, m, m * 2) })
         wm = getSystemService(WindowManager::class.java)
+        val hole = CoverStore.hole(this)
+        val br = CoverStore.bright(this)
         // no FLAG_NOT_TOUCHABLE: the cover takes every touch; the status and navigation bars sit under the overlay layer
-        wm?.addView(v, WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or
-                WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON, PixelFormat.OPAQUE)   // AOD-like: the screen stays on while the cover is up
-            .apply { layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES })
+        val flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON   // AOD-like: the screen stays on while the cover is up
+        fun params(w: Int, h: Int, f: Int, fmt: Int) = WindowManager.LayoutParams(w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, f, fmt).apply {
+            layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            if (br < 100) screenBrightness = br / 100f
+        }
+        if (hole == null) wm?.addView(v, params(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, flags, PixelFormat.OPAQUE))
+        else {
+            // an open window: four black bands around it, so touches inside the hole reach the apps below; the clock floats in a layer of its own
+            val b = wm!!.currentWindowMetrics.bounds
+            val sw = b.width(); val sh = b.height()
+            val l = hole[0] * sw / 100; val t = hole[1] * sh / 100; val r = hole[2] * sw / 100; val bt = hole[3] * sh / 100
+            v.removeView(column)
+            v.setBackgroundColor(Color.TRANSPARENT)
+            fun band(x: Int, y: Int, w: Int, h: Int) {
+                if (w <= 0 || h <= 0) return
+                val band = object : FrameLayout(this) { override fun dispatchTouchEvent(ev: MotionEvent): Boolean { gestures.onTouchEvent(ev); return super.dispatchTouchEvent(ev) } }
+                band.setBackgroundColor(Color.BLACK)
+                wm?.addView(band, params(w, h, flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.OPAQUE).apply { gravity = Gravity.TOP or Gravity.START; this.x = x; this.y = y })
+                bands.add(band)
+            }
+            band(0, 0, sw, t); band(0, bt, sw, sh - bt); band(0, t, l, bt - t); band(r, t, sw - r, bt - t)
+            if (column.childCount > 0) v.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, gv).apply { setMargins(m, m * 2, m, m * 2) })
+            wm?.addView(v, params(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, flags or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, PixelFormat.TRANSLUCENT))
+        }
         root = v
         running = true
         tick.run()
@@ -135,6 +164,7 @@ class CoverService : Service() {
         main.removeCallbacks(tick)
         root?.let { runCatching { wm?.removeViewImmediate(it) } }
         root = null
+        bands.forEach { b -> runCatching { wm?.removeViewImmediate(b) } }; bands.clear()
         super.onDestroy()
     }
 
