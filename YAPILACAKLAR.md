@@ -930,3 +930,5 @@ Screen recorder feature list (55 candidates)
 - Player: swipe up opens the lyrics (it used to slide the player away), lyrics of this and the next two songs looked up in the background, seek bar glides between ticks; Toolkit tiles all the same height; 0.10.178. derlenmedi
 
 - Toolkit "DNS and TTL": VPN app list removed, TTL setter (root); screen cover brightness slider reaches the panel maximum (unset = system); 0.10.179. derlenmedi
+
+- Lyrics sheet: "Searching for lyrics…", when none is found artist/song fields and Search again; setting "Save found lyrics as .lrc beside the song"; 0.10.180. derlenmedi
