@@ -890,3 +890,5 @@ Screen recorder feature list (55 candidates)
 - Windows 11: Material icons with a twin in the coloured Win11 pack (assets/icons/win11) draw that picture; text editor AMOLED black (View > Black in Notepad, moon button in the plain editor, remembered); Notepad inks taken from the colour under them; 0.10.157. derlenmedi
 
 - Music widget transport back to the Material glyphs (Fluent only with the Windows 11 widget theme); /data/data list read once, app icons load off the main thread; Folder tree at "/" measures each folder with du through root (no endless walk); Winamp and visualizer widgets fill the widget edge to edge; Windows 11 Settings > Apps uses the colour Fluent pictures by default; 0.10.158. derlenmedi
+
+- Cover search ignores compilation names and tag noise (No.1, Classics, Remastered ...), short names must match whole; Excel dark pages: dark cell text switches to the page text colour; Settings > Apps place icons use the Windows 11 pack; 0.10.159. derlenmedi
