@@ -847,6 +847,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         } else shown.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shown.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
         Spacer(Modifier.height(88.dp))
         }
+        // inside an archive the paste button writes into the archive (the bar's paste can be pushed out of view by its other buttons)
+        if (arcFile != null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { arcPaste() }) { clip = null } }
     }
     if (arcFile == null && resultsFor == null) ExSearchBar(searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = "" })
     resultsFor?.let { q ->
@@ -876,8 +878,6 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
     if (recentView) RecentScreen({ openFile(it) }) { recentView = false }
     if (arcFile == null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { doPaste() }) { clip = null } }
-    // inside an archive the same button writes into the archive (the bar's paste can be pushed out of view by its other buttons)
-    if (arcFile != null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { arcPaste() }) { clip = null } }
     if (arcFile == null && resultsFor == null) ExNewFab { k -> name = ""; if (k == "folder") dialog = "newfolder" to dir else { newExt = k; dialog = "newfile" to dir } }
     if (drawer) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { drawer = false })

@@ -1,8 +1,6 @@
 package com.umutk.pulse.extras.music.notif
 
 import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.content.Context
 import android.os.Bundle
 import androidx.media3.common.Player
@@ -14,16 +12,13 @@ import com.google.common.collect.ImmutableList
 import com.umutk.pulse.R
 import com.umutk.pulse.extras.lyrics.LiveLyrics
 import com.umutk.pulse.extras.music.MusicSettings
-import com.umutk.pulse.tr
 
 /**
  * Default Media3 notification (title, artist, cover, progress, lock screen) with the buttons the user picked, in the user's order.
  * When live lyrics for the notification are on, its text line is the current lyric line ([LiveLyrics.notifLine]).
  */
 class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
-    private val base = Buttons(ctx).apply { setSmallIcon(R.drawable.ic_notif_music); setChannelId(MusicChannel.ID) }
-
-    init { MusicChannel.ensure(ctx) }
+    private val base = Buttons(ctx).apply { setSmallIcon(R.drawable.ic_notif_music) }
 
     override fun createNotification(
         session: MediaSession, customLayout: ImmutableList<CommandButton>, actionFactory: MediaNotification.ActionFactory,
@@ -53,15 +48,5 @@ class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
             }.take(NotifBtn.MAX)
             return ImmutableList.copyOf(out)
         }
-    }
-}
-
-/** The music player's notification channel: created once, low importance so track changes do not sound. */
-object MusicChannel {
-    const val ID = "pulse_music"
-
-    fun ensure(ctx: Context) {
-        val nm = ctx.getSystemService(NotificationManager::class.java)
-        if (nm.getNotificationChannel(ID) == null) nm.createNotificationChannel(NotificationChannel(ID, tr("Music", "Müzik"), NotificationManager.IMPORTANCE_LOW))
     }
 }

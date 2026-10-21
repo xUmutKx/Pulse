@@ -289,6 +289,7 @@ private fun PictureView(file: File, onClose: () -> Unit) {
 }
 
 /** Square tiles: a thumbnail or icon, the name and the size. Same tap and pick rules as the list. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun TreeTiles(rows: List<TreeNode>, sel: Set<String>, onTap: (TreeNode) -> Unit, onToggle: (String) -> Unit) {
     LazyVerticalGrid(
