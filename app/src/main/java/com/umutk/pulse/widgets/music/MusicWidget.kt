@@ -1,5 +1,7 @@
 package com.umutk.pulse.widgets.music
 
+import com.umutk.pulse.extras.music.shownArtist
+
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.res.ColorStateList
@@ -121,7 +123,7 @@ open class MusicWidget : AppWidgetProvider() {
             val accent = th?.accent ?: WidgetUi.accent(c); val onAccent = th?.onAccent ?: WidgetUi.onAccent(c)
             fun v(layout: Int, compact: Boolean) = RemoteViews(c.packageName, layout).apply {
                 setTextViewText(R.id.mw_title, t?.title ?: t?.path?.substringAfterLast('/') ?: look?.name ?: "Pulse Music")
-                setTextViewText(R.id.mw_artist, t?.artist ?: "")
+                setTextViewText(R.id.mw_artist, t?.shownArtist() ?: "")
                 setTextColor(R.id.mw_title, text); setTextColor(R.id.mw_artist, sub)
                 if (th != null) {
                     setInt(R.id.mw_root, "setBackgroundResource", when (th.shape) { WidgetShape.ROUND -> R.drawable.widget_music_bg; WidgetShape.SHARP -> R.drawable.widget_music_bg_sharp; WidgetShape.PILL -> R.drawable.widget_music_bg_pill; WidgetShape.BEVEL -> R.drawable.widget_music_bg_w95 })

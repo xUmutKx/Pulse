@@ -121,15 +121,6 @@ fun GeneralSettings() {
     PCard { AppIconChooser() }
     DataBackupCard()
     ExtraAppsCard()
-    PCard {
-        Text("Pages shown", color = T.sub, fontSize = 12.sp)
-        Pages.forEach { p ->
-            Row(Modifier.fillMaxWidth().clickable { Opt.hidden = if (p.id in Opt.hidden) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) }, verticalAlignment = Alignment.CenterVertically) {
-                PCheck(p.id !in Opt.hidden, { Opt.hidden = if (it) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) })
-                PIcon(p.icon, T.text, 18.dp); Spacer(Modifier.width(8.dp)); Text(p.label, color = T.text, fontSize = 14.sp)
-            }
-        }
-    }
 }
 
 /** Export and import of settings and files (DataBackup). Import replaces the same files, then Pulse restarts. */
@@ -601,7 +592,7 @@ private fun ExtraAppsCard() {
         onDispose { lo?.lifecycle?.removeObserver(ob) }
     }
     PCard {
-        Text(tr("Extra apps", "Ek uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Text(tr("Apps", "Uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         apps.forEach { (alias, icon, label) ->
             // every row of this card has the same height and the same 36 dp icon slot
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -644,13 +635,36 @@ private fun ExtraAppsCard() {
                     PIcon("chevron", T.sub, 20.dp, Modifier.clickable { open = !open }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (open) 180f else 0f })
                     PSwitch(shownHere, { on -> ToolPlace.set(ctx, t, if (on) "extra" else "hidden"); rev++ })
                 }
-                if (open) Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PChip(cur == "menu", tr("Menu", "Menü")) { ToolPlace.set(ctx, t, "menu") }
-                    PChip(cur == "extra", tr("Extra apps", "Ek uygulamalar")) { ToolPlace.set(ctx, t, "extra") }
-                    // a tool with a page of its own has its switch in Settings > Pages, so it is not offered here twice
-                    if (!ToolPlace.hasPage(t)) PChip(cur == "side", tr("Left menu", "Sol menü")) { ToolPlace.set(ctx, t, "side") }
-                    PChip(cur == "hidden", tr("Settings only", "Yalnız ayarlar")) { ToolPlace.set(ctx, t, "hidden") }
-                }
+                // where it shows, one radio per place with the place's icon: the overflow menu, the Apps group, the left menu, nowhere (Settings only)
+                if (open) PlaceChoice(cur, buildList {
+                    add("menu" to "more"); add("extra" to "apps")
+                    // a tool with a page of its own has its switch with the pages below, so the left menu is not offered twice
+                    if (!ToolPlace.hasPage(t)) add("side" to "menu")
+                    add("hidden" to "eyeOff")
+                }) { ToolPlace.set(ctx, t, it); rev++ }
+            }
+        }
+        // the app's own pages: shown in the left menu or hidden
+        Pages.forEach { p ->
+            Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon(p.icon, T.text, 22.dp) }
+                Spacer(Modifier.width(12.dp))
+                Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                PSwitch(p.id !in Opt.hidden, { on -> Opt.hidden = if (on) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) })
+            }
+        }
+    }
+}
+
+/** One radio per place, each under that place's icon; [options] are (value, icon key). */
+@Composable
+private fun PlaceChoice(selected: String, options: List<Pair<String, String>>, onPick: (String) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(start = 48.dp, bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(22.dp), verticalAlignment = Alignment.CenterVertically) {
+        options.forEach { (value, icon) ->
+            Column(Modifier.clickable { onPick(value) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                PIcon(icon, if (selected == value) Look.accent else T.sub, 22.dp)
+                Spacer(Modifier.height(4.dp))
+                PRadio(selected == value) { onPick(value) }
             }
         }
     }

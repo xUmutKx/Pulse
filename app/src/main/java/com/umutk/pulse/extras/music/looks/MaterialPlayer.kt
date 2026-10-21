@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.looks
 
+import com.umutk.pulse.extras.music.shownArtist
+
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
@@ -85,7 +87,7 @@ private val PANEL = Color(0xFF1A1A22)
 private val TXT = Color(0xFFF2F2F7)
 private val SUB = Color(0xFFA0A0B0)
 private fun Track.name() = title?.takeIf { it.isNotBlank() } ?: path.substringAfterLast('/').substringBeforeLast('.')
-private fun Track.artistName() = artist?.takeIf { it.isNotBlank() } ?: tr("Unknown artist", "Bilinmeyen sanatçı")
+private fun Track.artistName() = shownArtist()
 private fun Track.folder() = path.substringBeforeLast('/', "")
 private fun Track.albumName() = album?.takeIf { it.isNotBlank() } ?: folder().substringAfterLast('/').ifEmpty { tr("Unknown album", "Bilinmeyen albüm") }
 private fun fmt(ms: Int): String { val s = ms / 1000; return "%d:%02d".format(s / 60, s % 60) }

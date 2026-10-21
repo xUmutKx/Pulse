@@ -310,7 +310,7 @@ private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<
         Wmp7Player(
             mode = mode,
             skin = skin,
-            now = Wmp7Now(st.current?.displayName().orEmpty(), st.current?.artist.orEmpty(), st.isPlaying, pos, dur, rememberLevels(16).value),
+            now = Wmp7Now(st.current?.displayName().orEmpty(), st.current?.shownArtist().orEmpty(), st.isPlaying, pos, dur, rememberLevels(16).value),
             menus = listOf(tr("File", "Dosya"), tr("View", "Görünüm"), tr("Play", "Yürüt")),
             nav = navLabels,
             navSelected = nav,
