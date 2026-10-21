@@ -600,7 +600,7 @@ private fun ExtraAppsCard() {
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Windows 11: the app's own Fluent glyph (the real Fluent System Icons path); the other looks keep the drawable tile
                 // the colour Fluent picture of the app (Fluent UI System Icons, colour set); Windows 11 with the Line icon style keeps the thin glyph
-                val colorIcon = if (T.id == "win11" && !Look.winIconLine) fluentColorRes(ctx, FC_APP[alias] ?: "") else 0
+                val colorIcon = if (T.id == "win11" && IconStyle.of(IconCat.APPS) != "line") fluentColorRes(ctx, FC_APP[alias] ?: "") else 0
                 if (T.id == "win11" && colorIcon == 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent.getValue(alias), FluentFilled.color(fluent.getValue(alias)), 24.dp) }
                 else if (colorIcon != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(colorIcon), null, Modifier.size(30.dp)) }
                 else Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
@@ -629,7 +629,7 @@ private fun ExtraAppsCard() {
             Column(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                     // Windows 11: the Fluent vector of the tool, one glyph per tool (the PNG pack is bypassed, it has black glyphs)
-                    val toolColor = if (T.id == "win11" && !Look.winIconLine) fluentColorRes(ctx, if (t.id == "extrastore") "store" else t.id) else 0
+                    val toolColor = if (T.id == "win11" && IconStyle.of(IconCat.TOOLS) != "line") fluentColorRes(ctx, if (t.id == "extrastore") "store" else t.id) else 0
                     if (toolColor != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(toolColor), null, Modifier.size(30.dp)) }
                     else if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", FluentFilled.color("tool_${t.id}"), 24.dp) } else {
                         // Office and Download manager get the black launcher tile with a white outline glyph (dark: accent glyph)
@@ -660,7 +660,7 @@ private fun ExtraAppsCard() {
         // the app's own pages: shown in the left menu or hidden
         Pages.forEach { p ->
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                val pageColor = if (T.id == "win11" && !Look.winIconLine) fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
+                val pageColor = if (T.id == "win11" && IconStyle.of(IconCat.MENU) == "colour") fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
                 Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (pageColor != 0) Image(painterResource(pageColor), null, Modifier.size(30.dp)) else if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }
                 Spacer(Modifier.width(12.dp))
                 Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
@@ -688,7 +688,7 @@ private fun PlaceChoice(selected: String, options: List<Pair<String, String>>, o
 @Composable
 private fun FluentGlyph(k: String, tint: androidx.compose.ui.graphics.Color, size: androidx.compose.ui.unit.Dp) {
     // the Line icon style (Settings > Look) keeps the thin glyphs in the text colour; Fluent colour draws the filled glyph in its colour
-    val line = Look.winIconLine
+    val line = IconStyle.of(IconCat.APPS) == "line" || IconStyle.of(IconCat.TOOLS) == "line"
     val paths = remember(k, line) { ((if (line) null else FluentFilled.map[k]) ?: FluentPaths.map[k] ?: FluentPaths.map["info"]!!).map { PathParser().parsePathString(it).toPath() } }
     val ink = if (line) T.text else tint
     Canvas(Modifier.size(size)) {

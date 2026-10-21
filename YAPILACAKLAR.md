@@ -896,3 +896,5 @@ Screen recorder feature list (55 candidates)
 - Files: a long folder (/data/data) is composed in slices of 60 every 50 ms and skips the per-row item count under /data; 0.10.160. derlenmedi
 
 - Top-right Apps menu lists the switched-on apps again plus the tools (Toolkit moved there, empty Tools group hidden), Fluent colour pictures for tool/app menu icons; Notes transparent background setting (default on); Scan document: page cut-out with perspective straightening, colour / grey / B&W looks, paper shadow; Storage by type: tap opens the file, tighter rows, bigger cards; 0.10.161. derlenmedi
+
+- Icons: four groups (menus/pages/buttons, apps, tools, icons inside screens) each with its own style in Settings > Look (collapsed rows); original = old Windows 11 pack where it has the icon, new Fluent glyph where not; everything merged to main; 0.10.162. derlenmedi
