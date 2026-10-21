@@ -9,6 +9,10 @@ import java.security.SecureRandom
 object NotesPrefs {
     private fun sp(c: Context) = c.getSharedPreferences("notes_prefs", Context.MODE_PRIVATE)
 
+    /** See-through page backgrounds (the look behind shows through). On by default. */
+    fun transparent(c: Context) = sp(c).getBoolean("transparent", true)
+    fun setTransparent(c: Context, on: Boolean) = sp(c).edit().putBoolean("transparent", on).apply()
+
     enum class Sort(val en: String, val tr: String) { UPDATED("Last edited", "Son düzenleme"), CREATED("Created", "Oluşturulma"), TITLE("Title", "Başlık") }
 
     /** Paper colours for the editor surface; AUTO keeps the look's own panel colour. */
