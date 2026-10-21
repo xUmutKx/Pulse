@@ -377,31 +377,33 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
     val status = stat + "    " + (st.zoom * 100).toInt() + "%"
 
     // Word-style stacked Home ribbon (same cells / chips / groups; ink always comes from the look's palette)
+    // the ribbon's ink comes from the strip it is drawn on (light or dark), so it can never be black on black
+    val rInk = ofInkOn(if (t.base == "365" || t.base == "2017") ofBelow(t) else pal.ribbonBg)
     val ribbon: @Composable () -> Unit = {
         @Composable fun Cell(icon: ImageVector, label: String, on: Boolean = false, en: Boolean = ed, bar: Color? = null, badge: ImageVector? = null, click: () -> Unit) {
             Box(Modifier.size(28.dp).clip(RoundedCornerShape(3.dp)).background(if (on) pal.accent.copy(alpha = .22f) else Color.Transparent).alpha(if (en) 1f else .4f)
                 .clickable(enabled = en, onClick = click), contentAlignment = Alignment.Center) {
-                Icon(icon, label, Modifier.size(19.dp), pal.ink)
-                if (badge != null) Icon(badge, null, Modifier.align(Alignment.BottomEnd).padding(1.dp).size(10.dp), pal.ink)
+                Icon(icon, label, Modifier.size(19.dp), rInk)
+                if (badge != null) Icon(badge, null, Modifier.align(Alignment.BottomEnd).padding(1.dp).size(10.dp), rInk)
                 if (bar != null) Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp).width(15.dp).height(3.dp).background(bar))
             }
         }
         @Composable fun Chip(text: String, w: androidx.compose.ui.unit.Dp, click: () -> Unit) {
             Row(Modifier.height(26.dp).width(w).clip(RoundedCornerShape(3.dp)).border(1.dp, pal.line, RoundedCornerShape(3.dp)).alpha(if (ed) 1f else .4f)
                 .clickable(enabled = ed, onClick = click).padding(start = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(text, color = pal.ink, fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                Icon(Icons.Outlined.ArrowDropDown, null, Modifier.size(16.dp), pal.ink)
+                Text(text, color = rInk, fontSize = 12.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                Icon(Icons.Outlined.ArrowDropDown, null, Modifier.size(16.dp), rInk)
             }
         }
         @Composable fun Group(cap: String, sep: Boolean = true, body: @Composable ColumnScope.() -> Unit) {
             if (sep) Box(Modifier.padding(horizontal = 5.dp).width(1.dp).height(66.dp).background(pal.line))
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp), content = body)
-                Text(cap, color = pal.ink.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1)
+                Text(cap, color = rInk.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1)
             }
         }
         val fmtName = X_FORMATS.firstOrNull { it.second == aSt.fmt }?.first ?: aSt.fmt
-        CompositionLocalProvider(LocalContentColor provides pal.ink) {
+        CompositionLocalProvider(LocalContentColor provides rInk) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.Top) {
             Group(tr("Edit", "Düzenle"), sep = false) {
                 Row { Cell(Icons.Outlined.Undo, tr("Undo", "Geri al"), en = ed && hist.undo.isNotEmpty()) { undo() }; Cell(Icons.Outlined.Redo, tr("Redo", "Yinele"), en = ed && hist.redo.isNotEmpty()) { redo() }; Cell(Icons.Outlined.Search, tr("Find", "Bul"), en = true) { dlg = "find" } }
@@ -414,7 +416,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
                     Cell(Icons.Outlined.FormatItalic, tr("Italic", "İtalik"), aSt.italic) { val v = !aSt.italic; style { it.copy(italic = v, fontId = -1) } }
                     Cell(Icons.Outlined.FormatUnderlined, tr("Underline", "Altı çizili"), aSt.underline) { val v = !aSt.underline; style { it.copy(underline = v, fontId = -1) } }
                     Cell(Icons.Outlined.FormatStrikethrough, tr("Strikethrough", "Üstü çizili"), aSt.strike) { val v = !aSt.strike; style { it.copy(strike = v, fontId = -1) } }
-                    Cell(Icons.Outlined.FormatColorText, tr("Font colour", "Yazı rengi"), bar = if (aSt.color != 0) Color(aSt.color) else pal.ink) { dlg = "color" }
+                    Cell(Icons.Outlined.FormatColorText, tr("Font colour", "Yazı rengi"), bar = if (aSt.color != 0) Color(aSt.color) else rInk) { dlg = "color" }
                     Cell(Icons.Outlined.FormatColorFill, tr("Fill colour", "Dolgu rengi"), bar = if (aSt.fill != 0) Color(aSt.fill) else Color.Transparent) { dlg = "fill" }
                     Cell(Icons.Outlined.BorderAll, tr("Borders", "Kenarlık")) { dlg = "border" }
                 }

@@ -152,6 +152,7 @@ object Look {
     var theme by mutableStateOf(Themes[0])
     var mode by mutableStateOf("system")     // system / light / dark (the classic Windows looks stay as they were)
     var effect by mutableStateOf("mica")     // none / mica / micaAlt / acrylic / tabbed (sidebar looks only)
+    var winIconColor by mutableStateOf(false) // Windows 11 icons: true = the coloured Fluent pictures (opt-in); false keeps the original Fluent set
     var winIconLine by mutableStateOf(false) // Windows 11 icons: false = Fluent (default), true = thin line glyphs like Windows 10
     var blurDp by mutableStateOf(8f)        // "Blur" material: blur radius 0..40
     var blurTint by mutableStateOf(.2f)      // "Blur" material: darkness 0..1
