@@ -396,11 +396,12 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     var tab by remember(groups) { mutableStateOf(if ("Home" in groups) "Home" else groups.firstOrNull { it != "File" } ?: "") }
     var open by remember { mutableStateOf(true) }
     val tabInk = if (t.dark) Color.White.copy(alpha = .75f).compositeOver(brand) else brand
-    val below = ofBelow(t).let { if (t.base == "365") it.copy(alpha = .8f) else it }   // Win11 Mica: the window behind shows through
-    OfMicaBlur(t.base == "365")
+    val below = ofBelow(t)   // solid grey: translucent layers over the black window left dark text on black
+    val ink = if (t.dark) Color(0xFFF3F2F1) else Color(0xFF201F1E)
+    androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
     Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
-        Row(Modifier.fillMaxWidth().background(if (t.base == "365") brand.copy(alpha = .9f) else brand).statusBarsPadding().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().background(brand).statusBarsPadding().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), Color.White) }
             OfTile(t.kind, 22.dp, true); Spacer(Modifier.width(8.dp))
             OfTitle(title, Color.White)
@@ -427,12 +428,13 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             }
         }
         extra?.invoke()
-        Box(Modifier.weight(1f).fillMaxWidth().background(if (t.base == "365") pal.canvas.copy(alpha = .9f) else pal.canvas), content = content)
+        Box(Modifier.weight(1f).fillMaxWidth().background(pal.canvas), content = content)
         Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, color = pal.statusInk, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
+    }
     }
 }
 
@@ -452,16 +454,13 @@ val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 
 
 /** Colour of everything under the brand title bar: white, or near-black in the dark looks. Looks that have their own surfaces keep the ribbon colour. */
-private fun ofBelow(t: OfTheme) = if (t.base == "365" || t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
+private fun ofBelow(t: OfTheme) = if (t.base == "365") (if (t.dark) Color(0xFF2B2B2B) else Color(0xFFF3F3F3)) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
 
 /** Opaque colours of the system status bar (top) and navigation bar (bottom): exactly what the chrome shows in the title bar and in the bottom-most (status) bar, translucent layers composited over the canvas. */
 fun ofBars(t: OfTheme): Pair<Color, Color> {
     val pal = t.pal
     return when {
-        t.base == "365" -> { // Mica: below@.8 over canvas, title brand@.9 over that, status bar below@.8 over that again
-            val under = ofBelow(t).copy(alpha = .8f).compositeOver(pal.canvas)
-            t.kind.brand.copy(alpha = .9f).compositeOver(under) to ofBelow(t).copy(alpha = .8f).compositeOver(under)
-        }
+        t.base == "365" -> t.kind.brand to ofBelow(t) // opaque: a see-through layer over the black window made dark ink vanish
         t.base == "2017" -> t.kind.brand to ofBelow(t)
         t.classic -> pal.ribbonBg to pal.statusBg
         else -> pal.titleBg to pal.statusBg
