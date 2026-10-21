@@ -106,7 +106,8 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         scope.launch {
             while (isActive) {
                 runCatching { tick() }
-                delay(2_000L)
+                // a line must reach the notification as it is sung: twice a second while playing
+                delay(if (engine.state.value.isPlaying) 500L else 2_000L)
             }
         }
     }
@@ -118,11 +119,11 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         val wanted = LiveLyrics.notification(ctx) || LiveLyrics.separate(ctx) || com.umutk.pulse.widgets.music.LyricsWidget.placed(ctx)
         // the separate lyrics notification: the line with its neighbours, replaced as the song moves
         if (LiveLyrics.separate(ctx) && st.isPlaying && st.current != null) {
-            val trio = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, st.current!!), engine.positionMs)
+            val trio = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, st.current!!), engine.positionMs + AHEAD_MS)
             postNote(st.current!!, trio)
         } else clearNote()
         val line = if (wanted && st.isPlaying) {
-            st.current?.let { LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, it), engine.positionMs) }?.second?.takeIf { it.isNotBlank() }
+            st.current?.let { LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, it), engine.positionMs + AHEAD_MS) }?.second?.takeIf { it.isNotBlank() }
         } else null
         if (line != LiveLyrics.currentLine) {
             LiveLyrics.currentLine = line
@@ -131,18 +132,27 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         }
     }
 
+    /** The notification is drawn a moment after the tick: the lines are taken a little early so they do not trail the voice. */
+    private val AHEAD_MS = 700
+
     private val nm get() = ctx.getSystemService(android.app.NotificationManager::class.java)
     private var noteText: String? = null
 
     private fun postNote(t: Track, trio: Triple<String?, String, String?>?) {
         val body = trio?.second?.takeIf { it.isNotBlank() } ?: return clearNote()
-        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "▶ " + trio.second, trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
+        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, trio.second, trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
         if (text == noteText) return
         noteText = text
+        // the current line in bold, the neighbours plain
+        val bold = android.text.SpannableString(text).apply {
+            val at = (trio.first?.takeIf { it.isNotBlank() }?.length?.plus(1)) ?: 0
+            setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), at, at + trio.second.length, 0)
+        }
+        val boldLine = android.text.SpannableString(trio.second).apply { setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, trio.second.length, 0) }
         nm.createNotificationChannel(android.app.NotificationChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music)
-            .setContentTitle(t.title ?: t.path.substringAfterLast('/')).setContentText(trio.second).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(text))
+            .setContentTitle(t.title ?: t.path.substringAfterLast('/')).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT).build())
     }
 
