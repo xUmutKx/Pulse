@@ -1,5 +1,7 @@
 package com.umutk.pulse.features
 
+import androidx.compose.ui.zIndex
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.graphics.ImageDecoder
@@ -568,7 +570,31 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             }
         }
         }
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        val exScroll = rememberScrollState()
+        // pull the list down from its top to reload it: the drag is counted here, a release past the line refreshes
+        var pull by remember { mutableFloatStateOf(0f) }
+        val pullLine = with(androidx.compose.ui.platform.LocalDensity.current) { 72.dp.toPx() }
+        val pullConn = remember {
+            object : androidx.compose.ui.input.nestedscroll.NestedScrollConnection {
+                override fun onPreScroll(available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                    if (pull > 0f && available.y < 0f) { val d = maxOf(available.y, -pull); pull += d; return androidx.compose.ui.geometry.Offset(0f, d) }
+                    return androidx.compose.ui.geometry.Offset.Zero
+                }
+                override fun onPostScroll(consumed: androidx.compose.ui.geometry.Offset, available: androidx.compose.ui.geometry.Offset, source: androidx.compose.ui.input.nestedscroll.NestedScrollSource): androidx.compose.ui.geometry.Offset {
+                    if (source == androidx.compose.ui.input.nestedscroll.NestedScrollSource.UserInput && available.y > 0f) { pull = (pull + available.y * .5f).coerceAtMost(pullLine * 1.5f); return androidx.compose.ui.geometry.Offset(0f, available.y) }
+                    return androidx.compose.ui.geometry.Offset.Zero
+                }
+                override suspend fun onPreFling(available: androidx.compose.ui.unit.Velocity): androidx.compose.ui.unit.Velocity {
+                    if (pull >= pullLine) { AppDataFolders.forget(); refresh++ }
+                    pull = 0f
+                    return androidx.compose.ui.unit.Velocity.Zero
+                }
+            }
+        }
+        if (pull > 0f) Box(Modifier.fillMaxWidth().height(with(androidx.compose.ui.platform.LocalDensity.current) { pull.toDp() }), contentAlignment = Alignment.Center) {
+            Icon(Icons.Outlined.Refresh, null, Modifier.size(22.dp).graphicsLayer { rotationZ = pull / pullLine * 270f; alpha = (pull / pullLine).coerceIn(0f, 1f) }, Look.accent)
+        }
+        Column(Modifier.weight(1f).fillMaxWidth().nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
@@ -674,7 +700,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 SelSquare(T.text, { arcCut() }) { ExIcon("cut", T.text, 24.dp) }
             }
         }
-        PCard(Modifier.sizeDrag(ctx) { sizing = it }.sizeOverlay(sizing, T.panel, Look.accent)) {
+        PCard(Modifier.then(if (sel.isNotEmpty() || arcSel.isNotEmpty()) Modifier.zIndex(1f).graphicsLayer { translationY = exScroll.value.toFloat() } else Modifier).sizeDrag(ctx) { sizing = it }.sizeOverlay(sizing, T.panel, Look.accent)) {
             if (arcFile != null && arcSel.isNotEmpty()) arcBar() else if (sel.isNotEmpty()) selBar() else Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 if (dir != top || arcFile != null) Box(Modifier.clickable { if (arcFile != null) { if (arcCwd.isEmpty()) arcFile = null else arcCwd = arcCwd.trimEnd('/').substringBeforeLast('/', "").let { if (it.isEmpty()) "" else "$it/" } } else go((dir.parentFile ?: top).path) }) { PIcon("chevron", T.text, 22.dp, Modifier.rotate(180f)) }
                 val cur = buildList<Triple<String, String, () -> Unit>> {
