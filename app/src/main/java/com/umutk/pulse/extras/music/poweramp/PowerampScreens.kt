@@ -576,9 +576,9 @@ private fun waveHeight(seed: Int, k: Int): Float {
 
 /** Height of the transport row (buttons over the bars) and of the bars inside it. */
 private val TRANSPORT_H = 96.dp
-private val WAVE_H = 64.dp
+private val WAVE_H = 116.dp
 /** Extra height around the bars that also takes the seek drag (the bars keep their size). */
-private val SEEK_EXTRA = 48.dp
+private val SEEK_EXTRA = 56.dp
 
 /** Thin bars that fill the button height and move with the live level while playing, and sit at their low stop when paused. Taps go to [onClick]. */
 @Composable
