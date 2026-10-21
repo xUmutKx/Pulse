@@ -48,7 +48,7 @@ class MusicPlayerEngine private constructor(context: Context) {
                 DefaultAudioSink.Builder(context)
                     .setEnableFloatOutput(enableFloatOutput)
                     .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
-                    .setAudioProcessors(arrayOf<AudioProcessor>(AudioGain.processor, MusicLevels.processor))
+                    .setAudioProcessors(arrayOf<AudioProcessor>(AudioGain.processor, SoftEq.processor, MusicLevels.processor))
                     .build()
         })
         .setAudioAttributes(
