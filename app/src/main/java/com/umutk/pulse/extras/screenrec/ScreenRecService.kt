@@ -133,7 +133,7 @@ class ScreenRecService : Service() {
     /** A still picture of the screen while the video runs (screencap, so it needs root or Shizuku). */
     private fun grabFrame() {
         if (!ScreenShot.possible()) { Toast.makeText(this, tr("Needs root or Shizuku", "Root veya Shizuku gerekir"), Toast.LENGTH_SHORT).show(); return }
-        ScreenShot.take(this) { p -> Toast.makeText(this, if (p != null) tr("Picture saved", "Görüntü kaydedildi") else tr("Could not take the picture", "Görüntü alınamadı"), Toast.LENGTH_SHORT).show() }
+        ScreenShot.take(this) { p -> Toast.makeText(this, if (p != null && p.startsWith("blank:")) tr("Saved, but the app blocks it (black)", "Kaydedildi ama uygulama engelliyor (siyah)") else if (p != null) tr("Picture saved", "Görüntü kaydedildi") else tr("Could not take the picture", "Görüntü alınamadı"), Toast.LENGTH_SHORT).show() }
     }
 
     /** "Show touches" for the length of the recording; the old value comes back afterwards. */
