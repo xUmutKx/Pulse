@@ -34,7 +34,7 @@ Android 12 or newer, arm64. Root and Shizuku are optional and unlock more (silen
 
 - It is a hobby project that grew a lot, so expect rough edges. Bug reports and ideas are very welcome.
 - Release builds are signed with a debug key for now.
-- The code has no licence file yet.
+- The code is under GPL-3.0 (LICENSE file in the repo).
 
 **Link**
 

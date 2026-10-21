@@ -1,5 +1,12 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import androidx.compose.foundation.lazy.grid.items as gridItems
+
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.ViewList
+
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -102,21 +109,36 @@ private fun Big(v: String, label: String, style: PowerampStyle) {
     }
 }
 
+private class PlEntry(val name: String, val file: com.umutk.pulse.extras.music.M3uFiles.Found?)
+
 /**
- * Saved playlists: save the current queue as a new one, rename, delete; a tap opens it, [onOpen] shows its tracks.
+ * Playlists: the ones saved in Pulse (save the queue as a new one, rename, delete) and the .m3u / .m3u8 files found on the phone.
+ * They show as a list or as a grid of square covers (the button at the top right switches); a tap opens one:
+ * [onOpen] for a saved one, [onOpenFile] for a playlist file.
  */
 @Composable
-internal fun PlaylistsPage(queue: List<Track>, style: PowerampStyle, onOpen: (String) -> Unit) {
+internal fun PlaylistsPage(queue: List<Track>, style: PowerampStyle, onOpenFile: (com.umutk.pulse.extras.music.M3uFiles.Found) -> Unit, onOpen: (String) -> Unit) {
     val c = LocalContext.current
     var rev by remember { mutableIntStateOf(0) }
     var edit by remember { mutableStateOf<String?>(null) } // "" = new, else the name being renamed
     var text by remember { mutableStateOf("") }
+    val prefs = remember { c.getSharedPreferences("pulse_poweramp", android.content.Context.MODE_PRIVATE) }
+    var grid by remember { mutableStateOf(prefs.getBoolean("playlist_grid", false)) }
     val names = remember(rev) { Playlists.names(c) }
+    val files by androidx.compose.runtime.produceState(emptyList<com.umutk.pulse.extras.music.M3uFiles.Found>(), rev) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.umutk.pulse.extras.music.M3uFiles.scan(c) }
+    }
+    val entries = names.map { PlEntry(it, null) } + files.map { PlEntry(it.name, it) }
     val fg = style.onBackdrop
+    fun open(e: PlEntry) { if (e.file != null) onOpenFile(e.file) else onOpen(e.name) }
     Column(Modifier.fillMaxSize()) {
         if (edit == null) {
-            IconButton(onClick = { edit = ""; text = "" }, modifier = Modifier.padding(start = 8.dp)) {
-                Icon(Icons.Rounded.Add, tr("New from queue", "Kuyruktan yeni"), tint = fg)
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(onClick = { edit = ""; text = "" }) { Icon(Icons.Rounded.Add, tr("New from queue", "Kuyruktan yeni"), tint = fg) }
+                Spacer(Modifier.weight(1f))
+                IconButton(onClick = { grid = !grid; prefs.edit().putBoolean("playlist_grid", grid).apply() }) {
+                    Icon(if (grid) Icons.Rounded.ViewList else Icons.Rounded.GridView, tr("List or grid", "Liste veya kare"), tint = fg)
+                }
             }
         } else {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp).clip(CircleShape).background(style.chip).padding(start = 16.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -132,14 +154,47 @@ internal fun PlaylistsPage(queue: List<Track>, style: PowerampStyle, onOpen: (St
                 IconButton(onClick = { edit = null }) { Icon(Icons.Rounded.Close, tr("Cancel", "Vazgeç"), tint = style.textDim) }
             }
         }
-        androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
-            items(names) { n ->
-                Row(Modifier.fillMaxWidth().clickable { onOpen(n) }.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(n, color = fg, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    IconButton(onClick = { edit = n; text = n }, modifier = Modifier.size(44.dp)) { Icon(Icons.Rounded.Edit, tr("Rename", "Yeniden adlandır"), tint = style.textDim) }
-                    IconButton(onClick = { Playlists.delete(c, n); rev++ }, modifier = Modifier.size(44.dp)) { Icon(Icons.Rounded.Delete, tr("Delete", "Sil"), tint = style.textDim) }
+        if (grid) androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+            androidx.compose.foundation.lazy.grid.GridCells.Fixed(2), Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            gridItems(entries) { e -> PlaylistCard(e, style) { open(e) } }
+        } else androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
+            items(entries) { e ->
+                Row(Modifier.fillMaxWidth().clickable { open(e) }.padding(start = 16.dp, end = 4.dp, top = 4.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(e.name, color = fg, fontSize = 17.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    // a playlist file is only read, so it has no rename or delete
+                    if (e.file == null) {
+                        IconButton(onClick = { edit = e.name; text = e.name }, modifier = Modifier.size(44.dp)) { Icon(Icons.Rounded.Edit, tr("Rename", "Yeniden adlandır"), tint = style.textDim) }
+                        IconButton(onClick = { Playlists.delete(c, e.name); rev++ }, modifier = Modifier.size(44.dp)) { Icon(Icons.Rounded.Delete, tr("Delete", "Sil"), tint = style.textDim) }
+                    } else Text("m3u", color = style.textDim, fontSize = 12.sp, modifier = Modifier.padding(end = 12.dp))
                 }
             }
         }
     }
 }
+
+/** One playlist as a square tile: the cover of its first song, the name along the bottom. */
+@Composable
+private fun PlaylistCard(e: PlEntry, style: PowerampStyle, onClick: () -> Unit) {
+    val c = LocalContext.current
+    val first by androidx.compose.runtime.produceState<Track?>(null, e.name, e.file?.path) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            if (e.file == null) Playlists.load(c, e.name).firstOrNull()
+            else com.umutk.pulse.extras.music.M3uFiles.load(e.file.path, com.umutk.pulse.extras.music.MusicLibrary.tracks.value).firstOrNull()
+        }
+    }
+    val art = com.umutk.pulse.extras.music.rememberTrackArt(first)
+    androidx.compose.foundation.layout.Box(
+        Modifier.fillMaxWidth().aspectRatio(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)).background(style.chip).clickable(onClick = onClick),
+    ) {
+        if (art != null) androidx.compose.foundation.Image(art, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        else Icon(Icons.Rounded.QueueMusic, null, tint = style.textDim, modifier = Modifier.align(Alignment.Center).size(48.dp))
+        Text(
+            e.name, color = androidx.compose.ui.graphics.Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .55f)).padding(horizontal = 8.dp, vertical = 6.dp),
+        )
+    }
+}
+
+private fun Modifier.aspectRatio(1f): Modifier = this.then(Modifier.aspectRatio(1f))

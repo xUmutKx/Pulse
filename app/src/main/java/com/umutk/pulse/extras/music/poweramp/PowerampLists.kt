@@ -119,6 +119,8 @@ private sealed interface Lib {
     class Quick(val kind: Int) : Lib
     object Playlists : Lib
     class Playlist(val name: String) : Lib
+    /** A playlist file (.m3u / .m3u8) found on the phone. */
+    class M3u(val path: String, val name: String) : Lib
     class Folder(val name: String) : Lib
     class Tree(val dir: String) : Lib
     /** kind 0 albums, 1 artists, 2 genres, 3 years, 4 composers: the list of groups. */
@@ -180,7 +182,7 @@ fun LibraryScreen(
         node = when (val n = node) {
             is Lib.Tree -> if (n.dir.length > root.length) Lib.Tree(dirOf(n.dir)) else Lib.Root
             is Lib.Folder -> Lib.Folders
-            is Lib.Playlist -> Lib.Playlists
+            is Lib.Playlist, is Lib.M3u -> Lib.Playlists
             is Lib.Group -> Lib.Cat(n.kind)
             else -> Lib.Root
         }
@@ -198,6 +200,7 @@ fun LibraryScreen(
         Lib.OnlinePlaylists -> tr("Online playlists", "Çevrimiçi çalma listeleri")
         Lib.Playlists -> tr("Playlists", "Çalma listeleri")
         is Lib.Playlist -> n.name
+        is Lib.M3u -> n.name
         is Lib.Cat -> catNames[n.kind]
         is Lib.Group -> n.key
         is Lib.Folder -> n.name
@@ -277,7 +280,13 @@ fun LibraryScreen(
                 itemsIndexed(hidden) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
             }
             Lib.WhiteNoise, Lib.AllSounds, Lib.OnlinePlaylists -> Unit // shown above
-            Lib.Playlists -> PlaylistsPage(queue, style) { node = Lib.Playlist(it) }
+            Lib.Playlists -> PlaylistsPage(queue, style, onOpenFile = { node = Lib.M3u(it.path, it.name) }, onOpen = { node = Lib.Playlist(it) })
+            is Lib.M3u -> {
+                val l by androidx.compose.runtime.produceState(emptyList<Track>(), n.path) {
+                    value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.umutk.pulse.extras.music.M3uFiles.load(n.path, tracks) }
+                }
+                SongList(l.withIndex().toList(), current, style, { onPlayTracks(l, it) }, onPlayTracks)
+            }
             is Lib.Playlist -> {
                 val l = remember(n.name) { com.umutk.pulse.extras.music.Playlists.load(ctx, n.name) }
                 SongList(l.withIndex().toList(), current, style, { onPlayTracks(l, it) }, onPlayTracks)
