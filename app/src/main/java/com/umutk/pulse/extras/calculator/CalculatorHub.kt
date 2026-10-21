@@ -30,6 +30,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -157,4 +158,4 @@ private fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: ()
     ) { Text(k, color = ink, fontSize = if (mem) 14.sp else 20.sp, fontWeight = if (digit) FontWeight.SemiBold else FontWeight.Normal) }
 }
 
-private fun Color.compositeOverBg(): Color = androidx.compose.ui.graphics.compositeOver(this, T.panel)
+private fun Color.compositeOverBg(): Color = compositeOver(T.panel)

@@ -201,9 +201,18 @@ private fun ReverbKnob(label: String, value: Float, onChange: (Float) -> Unit, s
 
 @Composable
 private fun BandsPage(eq: Equalizer, style: PowerampStyle, ui: EqState) {
+    val ctxEq = androidx.compose.ui.platform.LocalContext.current
     if (!eq.isSupported) {
-        Box(Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.Block, null, tint = style.textDim, modifier = Modifier.size(48.dp))
+        // not an empty page: the reason, and a button that tries to bind the equalizer to the player again
+        val engine = remember { com.umutk.pulse.extras.music.MusicPlayerEngine.get(ctxEq) }
+        var tried by remember { mutableStateOf(0) }
+        Column(Modifier.fillMaxWidth().height(220.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+            Icon(Icons.Rounded.Block, null, tint = style.textDim, modifier = Modifier.size(40.dp))
+            Spacer(Modifier.height(8.dp))
+            Text(eq.lastError.ifEmpty { tr("The equalizer is not attached to the player yet", "Ekolayzır henüz oynatıcıya bağlanmadı") }, color = style.textDim, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Spacer(Modifier.height(10.dp))
+            Text(tr("Try again", "Tekrar dene") + if (tried > 0) " ($tried)" else "", color = style.accent, fontSize = 15.sp, fontWeight = FontWeight.Bold,
+                modifier = Modifier.clickable { tried++; eq.attach(engine.player.audioSessionId); engine.player.audioSessionId.let { id -> if (!eq.isSupported) eq.attach(id) } }.padding(10.dp))
         }
         return
     }
