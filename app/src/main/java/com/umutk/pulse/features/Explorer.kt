@@ -390,13 +390,16 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var canRoot by remember { mutableStateOf(Shell.root == true || Shell.shizuku == 2) }
     // the drawer's root entries (/, /data, /data/data) need the root state even when the Files app opens on a normal folder
     LaunchedEffect(Unit) { withContext(Dispatchers.IO) { RootFs.ensureChecked() }; canRoot = Shell.root == true || Shell.shizuku == 2 }
+    // why a root listing came back empty (root cannot see the folder, su refused), shown where "No files here" would be
+    var rootErr by remember { mutableStateOf("") }
     val viaRoot by produceState<List<File>?>(null, here, refresh, canRoot) {
+        rootErr = ""
         // under /data and Android/data, Android/obb the other apps' folders only list through root: Android returns just Pulse's own folder there, so a partial normal listing must not win
         val restricted = dir.path.startsWith("/data") || dir.path.contains("/Android/data") || dir.path.contains("/Android/obb")
         // /data/data lists every installed app from PackageManager (root's ls shows only a few of them there)
         value = when {
             canRoot && dir.path == "/data/data" -> withContext(Dispatchers.IO) { AppDataFolders.list(ctx).map { RootFile(it.path, true) } }
-            canRoot && (dir.listFiles() == null || restricted) -> withContext(Dispatchers.IO) { exRootList(dir) }
+            canRoot && (dir.listFiles() == null || restricted) -> withContext(Dispatchers.IO) { exRootList(dir) { rootErr = it } }
             else -> null
         }
     }
@@ -711,7 +714,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         LaunchedEffect(zipEnd) { if (zipEnd.isNotEmpty()) { note = zipEnd; ZipJobs.clearLast(); refresh++ } }
         zipJobs.forEach { ZipProgressLine(it) }
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
-        if (shown.isEmpty() && arcFile == null) Text(if (recentView) "No recent files" else if (RootFs.needsRoot(here) && (!canRoot || Shell.root != true)) tr("Root is needed to list this folder", "Bu klasörü listelemek için root gerekir") else "No files here", color = T.sub, fontSize = 13.sp)
+        if (shown.isEmpty() && arcFile == null) Text(if (recentView) "No recent files" else if (RootFs.needsRoot(here) && (!canRoot || Shell.root != true)) tr("Root is needed to list this folder", "Bu klasörü listelemek için root gerekir") else if (rootErr.isNotEmpty()) rootErr else "No files here", color = T.sub, fontSize = 13.sp)
         val item: @Composable (File) -> Unit = { f ->
             val grid = FilesPrefs.grid
             val isz = (24 + FilesPrefs.icon.coerceIn(0, 9) * 5).let { if (grid) it * 3 / 2 else it }
@@ -1134,8 +1137,11 @@ private class RootFile(path: String, private val dir: Boolean) : File(path) {
     override fun lastModified() = 0L
 }
 
-private fun exRootList(dir: File): List<File> =
-    (RootFs.list(dir) as? RootFs.Result.Ok)?.entries?.map { RootFile(File(dir, it.name).path, it.dir) }.orEmpty()
+private fun exRootList(dir: File, onError: (String) -> Unit = {}): List<File> = when (val r = RootFs.list(dir)) {
+    is RootFs.Result.Ok -> r.entries.map { RootFile(File(dir, it.name).path, it.dir) }
+    is RootFs.Result.Failed -> { onError(r.msg); emptyList() }
+    RootFs.Result.NoRoot -> emptyList()
+}
 
 /** Counts one more visit to [p] ("path|count" lines) and returns the list. */
 private fun exBump(ctx: Context, p: String): List<String> {
