@@ -117,7 +117,7 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
     fun saveUser(list: List<AmbientPreset>) { user = list; UserPresets.save(ctx, list) }
 
     LazyColumn(
-        Modifier.fillMaxSize().then(if (look != null) Modifier.background(look.brush) else Modifier.background(T.bg)).padding(horizontal = pageGutter),
+        Modifier.fillMaxSize().then(if (look != null) Modifier.background(look.brush) else Modifier.background(com.umutk.pulse.pageBg)).padding(horizontal = pageGutter),
         verticalArrangement = Arrangement.spacedBy(if (look != null) 8.dp else 12.dp),
     ) {
         item {
@@ -142,7 +142,7 @@ fun WhiteNoiseHub(onBack: () -> Unit) {
         if (settingsOpen) {
         item {
             // own opaque panel so the app-look controls stay readable on any theme background
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(T.bg).padding(horizontal = 14.dp)) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(com.umutk.pulse.pageBg).padding(horizontal = 14.dp)) {
                 SettingsSection(tr("Settings", "Ayarlar")) {
                     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         PIcon("clock", T.text, 22.dp)

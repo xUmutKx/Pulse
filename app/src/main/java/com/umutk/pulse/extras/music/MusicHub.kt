@@ -183,9 +183,9 @@ fun MusicHub(onBack: () -> Unit) {
                 }
             }
         }
-        if (noiseOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.whitenoise.WhiteNoiseHub { noiseOpen = false } }
-        if (onlineOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.playlists.OnlinePlaylistsHub { onlineOpen = false } }
-        if (spotifyOpen) Box(Modifier.fillMaxSize().background(T.bg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
+        if (noiseOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.whitenoise.WhiteNoiseHub { noiseOpen = false } }
+        if (onlineOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.playlists.OnlinePlaylistsHub { onlineOpen = false } }
+        if (spotifyOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
         if (playlistsOpen) PlaylistsDialog(engine, st.queue) { playlistsOpen = false }
         if (settingsOpen) {
             BackHandler { settingsOpen = false; rev++ }

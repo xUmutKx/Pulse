@@ -75,7 +75,7 @@ fun LauncherSettings(back: () -> Unit) {
     fun save() = LauncherPrefs.save(ctx)
     val cur = LauncherLooks.byId(LauncherPrefs.look)
     val isHome = isDefaultHome(ctx)
-    Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding()
+    Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).statusBarsPadding().navigationBarsPadding()
         .verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }

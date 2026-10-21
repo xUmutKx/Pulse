@@ -586,6 +586,7 @@ private fun ExtraAppsCard() {
     fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
     val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }
     var rev by remember { mutableIntStateOf(0) }
+    var placeOpen by remember { mutableStateOf<String?>(null) }
     DisposableEffect(ctx) {
         val lo = ctx as? androidx.lifecycle.LifecycleOwner
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) rev++ }
@@ -604,12 +605,15 @@ private fun ExtraAppsCard() {
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                // the chevron folds where the app is listed inside Pulse (top-right menu, left menu, Settings only); the switch is its home-screen icon
+                PIcon("chevron", T.sub, 20.dp, Modifier.clickable { placeOpen = if (placeOpen == alias) null else alias }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (placeOpen == alias) 180f else 0f })
                 PSwitch(state[alias] == true, { on ->
                     pm.setComponentEnabledSetting(cn(alias), if (on) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
                     state[alias] = on
                     rev++
                 })
             }
+            if (placeOpen == alias) PlaceChoice(AppPlace.where(alias), listOf("menu" to "more", "side" to "menu", "hidden" to "eyeOff")) { AppPlace.set(ctx, alias, it); rev++ }
         }
         // the optional tools: the switch shows one in this card; the chevron folds the four places (menu, this card, left menu, Settings only)
         ToolPlace.all.forEach { t ->

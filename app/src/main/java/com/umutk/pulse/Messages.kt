@@ -235,7 +235,7 @@ fun MessagesScreen(back: () -> Unit) {
         else -> tr("Messages", "Mesajlar")
     }
 
-    Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).statusBarsPadding().navigationBarsPadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             MessagesIcon("back") { goBack() }
             // a long press on the contact or number in a thread copies the number

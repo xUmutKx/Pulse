@@ -164,33 +164,43 @@ object ToolPlace {
     /** Left-menu entries for the tools placed on the side (the page-based ones use their own switch, so they are left out here). */
     fun sidePages(): List<Pg> = all.filter { !hasPage(it) && placed[it.id] == "side" }.map { Pg("tool:${it.id}", tr(it.en, it.trName), it.key) }
     /** Reads the saved places once, at start (MainActivity calls it), so the left menu can use them while composing. */
-    fun attach(c: Context) = load(c)
+    fun attach(c: Context) { load(c); AppPlace.load(c) }
 }
 
-/** The standalone apps (Settings > Apps) that are shown, as menu entries: each opens its own window. */
-private fun builtinApps(ctx: Context, openTool: (String) -> Unit): List<MenuEntry> {
-    val pm = ctx.packageManager
-    fun on(alias: String) = pm.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.$alias")) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
-    val tool = "com.umutk.pulse.ExtraToolActivity"
-    fun e(alias: String, en: String, trName: String, key: String, icon: ImageVector, run: () -> Unit) = if (on(alias)) MenuEntry(tr(en, trName), icon = icon, key = key, onClick = run) else null
-    return listOfNotNull(
-        e("FilesLauncher", "Files", "Dosyalar", "extraFiles", Icons.Outlined.Folder) { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
-        e("PhotosLauncher", "Photos", "Fotoğraflar", "extraPhotos", Icons.Outlined.Image) { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
-        e("CalendarLauncher", "Calendar", "Takvim", "extraCalendar", Icons.Outlined.CalendarMonth) { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
-        e("ContactsLauncher", "Contacts", "Kişiler", "extraContacts", Icons.Outlined.Person) { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
-        e("PaintLauncher", "Paint", "Paint", "extraPaint", Icons.Outlined.Brush) { launchExtra(ctx, tool, "paint") },
-        e("ArtCraftLauncher", "ArtCraft", "ArtCraft", "extraArtCraft", Icons.Outlined.Palette) { launchExtra(ctx, "com.umutk.pulse.ArtCraftActivity") },
-        e("MusicLauncher", "Music player", "Müzik çalar", "extraMusic", Icons.Outlined.MusicNote) { launchExtra(ctx, tool, "music") },
-        e("VideoLauncher", "Video", "Video", "extraVideo", Icons.Outlined.Videocam) { launchExtra(ctx, tool, "video") },
-        e("WhiteNoiseLauncher", "White noise", "Beyaz gürültü", "extraWhiteNoise", Icons.Outlined.Waves) { launchExtra(ctx, tool, "whitenoise") },
-        e("VoiceLauncher", "Voice recorder", "Ses kaydedici", "extraVoice", Icons.Outlined.Mic) { launchExtra(ctx, tool, "voice") },
-        e("NotesLauncher", "Notes", "Notlar", "extraNotes", Icons.Outlined.Notes) { launchExtra(ctx, tool, "notes") },
-        e("WeatherLauncher", "Weather", "Hava durumu", "extraWeather", Icons.Outlined.WbSunny) { launchExtra(ctx, tool, "weather") },
-        e("MessagesLauncher", "Messages", "Mesajlar", "extraMessages", Icons.Outlined.Message) { openTool("messages") },
-        e("ScreenRecLauncher", "Screen recorder", "Ekran kaydı", "extraScreenRec", Icons.Outlined.FiberManualRecord) { openTool("screenrec") },
-        e("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "extraNotifHist", Icons.Outlined.Notifications) { openTool("notifhist") },
+/** The standalone apps of Settings > Apps, and where each one is listed: the top-right Apps menu, the left menu, or nowhere (Settings only). */
+object AppPlace {
+    class App(val alias: String, val en: String, val trName: String, val key: String, val icon: ImageVector, val run: (Context, (String) -> Unit) -> Unit)
+    private const val TOOL = "com.umutk.pulse.ExtraToolActivity"
+    val all = listOf(
+        App("FilesLauncher", "Files", "Dosyalar", "folder", Icons.Outlined.Folder) { c, _ -> launchExtra(c, "com.umutk.pulse.FilesActivity") },
+        App("PhotosLauncher", "Photos", "Fotoğraflar", "image", Icons.Outlined.Image) { c, _ -> launchExtra(c, "com.umutk.pulse.ImageViewActivity") },
+        App("CalendarLauncher", "Calendar", "Takvim", "calendar", Icons.Outlined.CalendarMonth) { c, _ -> launchExtra(c, "com.umutk.pulse.CalendarActivity") },
+        App("ContactsLauncher", "Contacts", "Kişiler", "person", Icons.Outlined.Person) { c, _ -> launchExtra(c, "com.umutk.pulse.ContactsActivity") },
+        App("PaintLauncher", "Paint", "Paint", "palette", Icons.Outlined.Brush) { c, _ -> launchExtra(c, TOOL, "paint") },
+        App("ArtCraftLauncher", "ArtCraft", "ArtCraft", "palette", Icons.Outlined.Palette) { c, _ -> launchExtra(c, "com.umutk.pulse.ArtCraftActivity") },
+        App("MusicLauncher", "Music player", "Müzik çalar", "music", Icons.Outlined.MusicNote) { c, _ -> launchExtra(c, TOOL, "music") },
+        App("VideoLauncher", "Video", "Video", "video", Icons.Outlined.Videocam) { c, _ -> launchExtra(c, TOOL, "video") },
+        App("WhiteNoiseLauncher", "White noise", "Beyaz gürültü", "volume", Icons.Outlined.Waves) { c, _ -> launchExtra(c, TOOL, "whitenoise") },
+        App("VoiceLauncher", "Voice recorder", "Ses kaydedici", "voice", Icons.Outlined.Mic) { c, _ -> launchExtra(c, TOOL, "voice") },
+        App("NotesLauncher", "Notes", "Notlar", "notes", Icons.Outlined.Notes) { c, _ -> launchExtra(c, TOOL, "notes") },
+        App("WeatherLauncher", "Weather", "Hava durumu", "weather", Icons.Outlined.WbSunny) { c, _ -> launchExtra(c, TOOL, "weather") },
+        App("MessagesLauncher", "Messages", "Mesajlar", "chat", Icons.Outlined.Message) { _, o -> o("messages") },
+        App("ScreenRecLauncher", "Screen recorder", "Ekran kaydı", "record", Icons.Outlined.FiberManualRecord) { _, o -> o("screenrec") },
+        App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "bell", Icons.Outlined.Notifications) { _, o -> o("notifhist") },
     )
+    private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
+    private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
+    fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, "menu") ?: "menu" } }
+    fun where(alias: String): String = placed[alias] ?: "menu"
+    fun set(c: Context, alias: String, place: String) { placed[alias] = place; sp(c).edit().putString(alias, place).apply() }
+    fun byAlias(alias: String) = all.firstOrNull { it.alias == alias }
+    /** Left-menu entries of the apps placed there; "open:<alias>" starts the app instead of switching the page. */
+    fun sidePages(): List<Pg> = all.filter { where(it.alias) == "side" }.map { Pg("open:${it.alias}", tr(it.en, it.trName), it.key) }
 }
+
+/** The standalone apps placed in the top-right Apps menu, as menu entries: each opens its own window. */
+private fun builtinApps(ctx: Context, openTool: (String) -> Unit): List<MenuEntry> =
+    AppPlace.all.filter { AppPlace.where(it.alias) == "menu" }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
 
 private val EXTRA_APPS get() = tr("Apps", "Uygulamalar")
 

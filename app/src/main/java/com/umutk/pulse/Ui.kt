@@ -361,3 +361,6 @@ fun ProfilePhotoRow() {
         }
     }
 }
+
+/** Page background: Windows 11 shows the Mica / picture behind its pages, so the page itself is see-through there; every other look paints its own colour. */
+val pageBg: Color get() = if (T.id == "win11") Color.Transparent else T.bg

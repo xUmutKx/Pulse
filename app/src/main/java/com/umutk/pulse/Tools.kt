@@ -77,21 +77,21 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "installer" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.InstallerPage() }
         id == "cover" -> {
             androidx.activity.compose.BackHandler { back() }
-            Column(Modifier.fillMaxSize().background(T.bg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+            Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
                 PHead(tr("Screen cover", "Ekran kapağı"))
                 com.umutk.pulse.features.CoverTool()
             }
         }
         id == "installer_settings" -> {
             androidx.activity.compose.BackHandler { back() }
-            Column(Modifier.fillMaxSize().background(T.bg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+            Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
                 PHead("Installer")
                 InstallWindowSettings()
             }
         }
         id == "files_settings" -> {
             androidx.activity.compose.BackHandler { back() }
-            Column(Modifier.fillMaxSize().background(T.bg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
+            Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).verticalScroll(rememberScrollState()).padding(horizontal = 12.dp)) {
                 PHead("Files")
                 com.umutk.pulse.features.FilesSettings()
             }
