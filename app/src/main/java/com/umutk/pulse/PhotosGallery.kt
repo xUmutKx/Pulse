@@ -472,6 +472,7 @@ private fun PhotosSettings(onClose: () -> Unit) {
         }
         val sc = rememberScrollState()
         Column(Modifier.weight(1f).verticalScroll(sc).padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            com.umutk.pulse.ExtraDefaultRow("PhotosLauncher")
             SetSection(tr("Look", "Görünüm"), ic(Icons.Outlined.Palette), true) {
                 SetRow(ic(Icons.Outlined.Palette), tr("Look", "Görünüm"), looks.first { it.first == PhotosPrefs.look }.second, { dlg = "look" })
             }

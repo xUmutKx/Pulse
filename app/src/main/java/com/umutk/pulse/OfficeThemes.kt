@@ -529,7 +529,7 @@ private fun OfFileLayer(t: OfTheme, items: List<OAct>, backstage: Boolean, onClo
 }
 
 @Composable
-private fun OfActIcon(t: OfTheme, a: OAct, size: Dp, tint: Color) {
+internal fun OfActIcon(t: OfTheme, a: OAct, size: Dp, tint: Color) {
     val ctx = LocalContext.current
     val bmp = if (t.classic && a.png != null) ThemeIcons.bitmap(ctx, if (t.base == "95") "win95" else "xp", a.png) else null
     if (bmp != null) Image(bmp, null, Modifier.size(size)) else Icon(a.icon, null, Modifier.size(size), tint)

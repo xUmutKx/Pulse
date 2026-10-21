@@ -850,3 +850,4 @@ Screen recorder feature list (55 candidates)
 - [contacts-default] Contacts varsayılan yapılamıyor; düzeltilsin.
 - [main-dns-buttons] Ana uygulamada DNS için görünen varsayılan düğmeler kaldırılsın.
 - [winamp-widget] Winamp widget eklendi ama widget ekranında gösterilmiyor; düzeltilsin.
+- [widget-preview-fix] 16 widget XML'lerinde android:previewImage eklenmişti ama karşılık gelen preview_widget_* çizimleri yok (aapt hatası olurdu). Bu eklemeler geri alındı; xml klasörü HEAD ile aynı. Gerçek önizlemeler (widget boyutunda, tam pencere) ayrıca üretilecek. derlenmedi

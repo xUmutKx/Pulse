@@ -1108,6 +1108,7 @@ private fun CtSettings(onBack: () -> Unit, onImport: () -> Unit, onExport: () ->
         CtTopBar(ctr("Settings", "Ayarlar"), onBack)
         val setSc = rememberScrollState()
         Column(Modifier.weight(1f).verticalScroll(setSc).navigationBarsPadding().padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            com.umutk.pulse.ExtraDefaultRow("ContactsLauncher")
             val sec: @Composable (String, androidx.compose.ui.graphics.vector.ImageVector, Boolean, @Composable ColumnScope.() -> Unit) -> Unit = { t, v, o, c -> SetSection(t, { CtGlyph(v, null) }, o, c) }
             val ig: (androidx.compose.ui.graphics.vector.ImageVector) -> (@Composable () -> Unit) = { v -> { CtGlyph(v, null, tint = T.sub) } }
             val lookNames = mapOf("material" to "Material", "oneui" to "Samsung", "coloros" to "ColorOS", "win11" to "Windows 11", "win10" to "Windows 10", "win7" to "Windows 7", "xp" to "Windows XP", "win95" to "Windows 95")

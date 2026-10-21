@@ -18,7 +18,9 @@ import com.umutk.pulse.extras.music.MusicSettings
  * When live lyrics for the notification are on, its text line is the current lyric line ([LiveLyrics.notifLine]).
  */
 class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
-    private val base = Buttons(ctx).apply { setSmallIcon(R.drawable.ic_notif_music) }
+    private val base = Buttons(ctx).apply { setSmallIcon(R.drawable.ic_notif_music); setChannelId(MusicChannel.ID) }
+
+    init { MusicChannel.ensure(ctx) }
 
     override fun createNotification(
         session: MediaSession, customLayout: ImmutableList<CommandButton>, actionFactory: MediaNotification.ActionFactory,

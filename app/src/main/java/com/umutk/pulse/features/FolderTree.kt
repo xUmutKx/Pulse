@@ -25,6 +25,18 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.List
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.window.Dialog
+import android.graphics.BitmapFactory
+import android.content.Context
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Folder
@@ -110,6 +122,19 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     var askDelete by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     fun toggleSel(p: String) { sel = if (p in sel) sel - p else sel + p }
+    // tap: a folder opens, a picture opens big, a file does nothing; while something is picked a tap toggles it
+    var preview by remember { mutableStateOf<File?>(null) }
+    fun tap(node: TreeNode) {
+        when {
+            sel.isNotEmpty() -> toggleSel(node.file.path)
+            node.file.isDirectory -> dir = node.file
+            isPicture(node.file) -> preview = node.file
+        }
+    }
+    // list or square tiles, remembered for the next visit
+    val prefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("p", Context.MODE_PRIVATE)
+    var grid by remember { mutableStateOf(prefs.getBoolean("tree_grid", false)) }
+    preview?.let { f -> PictureView(f) { preview = null } }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -118,6 +143,12 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             }
             Text("Folder tree", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.weight(1f))
+            IconButton(onClick = {
+                grid = !grid
+                prefs.edit().putBoolean("tree_grid", grid).apply()
+            }) {
+                Icon(if (grid) Icons.Filled.List else Icons.Filled.Apps, contentDescription = if (grid) "List" else "Tiles")
+            }
             IconButton(onClick = { StorageScan.rescan(root) }) {
                 Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
             }
@@ -166,7 +197,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Cancel") } },
         )
 
-        LazyColumn(
+        if (grid) TreeTiles(rows, sel, ::tap, ::toggleSel) else LazyColumn(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -180,7 +211,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
                         .fillMaxWidth()
                         .background(if (picked) MaterialTheme.colorScheme.primary.copy(alpha = .12f) else Color.Transparent)
                         .combinedClickable(
-                            onClick = { if (sel.isNotEmpty()) toggleSel(node.file.path) else if (isDir) dir = node.file },
+                            onClick = { tap(node) },
                             onLongClick = { toggleSel(node.file.path) },
                         )
                         .padding(vertical = 6.dp),
@@ -222,6 +253,8 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
 fun FolderTreeScreen(root: File, onBack: () -> Unit) {
     // with root (or Shizuku) the tree can also start at the system root "/"; the chip switches between the two
     var base by remember(root) { mutableStateOf(root) }
+    // this screen can open before the app checked for root, so the check runs here too (it sets Shell.root)
+    LaunchedEffect(Unit) { if (com.umutk.pulse.Shell.root != true) withContext(Dispatchers.IO) { com.umutk.pulse.Shell.detectRoot() } }
     val canRoot = com.umutk.pulse.Shell.root == true || com.umutk.pulse.Shell.shizuku == 2
     CompositionLocalProvider(LocalContentColor provides com.umutk.pulse.T.text) {
         Column(Modifier.fillMaxSize()) {
@@ -230,6 +263,60 @@ fun FolderTreeScreen(root: File, onBack: () -> Unit) {
                     { Text(if (base.path == "/") tr("Storage", "Dahili depolama") else tr("Root (/)", "Kök (/)")) })
             }
             Box(Modifier.weight(1f).fillMaxWidth()) { key(base) { FolderTreeContent(base, onBack) } }
+        }
+    }
+}
+
+private val pictureExt = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic")
+
+private fun isPicture(f: File): Boolean = f.isFile && f.extension.lowercase() in pictureExt
+
+/** Full-screen picture, decoded at half size; tap anywhere to close. */
+@Composable
+private fun PictureView(file: File, onClose: () -> Unit) {
+    val bmp by produceState<ImageBitmap?>(null, file) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { BitmapFactory.decodeFile(file.path, BitmapFactory.Options().apply { inSampleSize = 2 })?.asImageBitmap() }.getOrNull()
+        }
+    }
+    Dialog(onDismissRequest = onClose) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .92f)).clickable(onClick = onClose), contentAlignment = Alignment.Center) {
+            val b = bmp
+            if (b != null) Image(b, file.name, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+            else com.umutk.pulse.Busy()
+        }
+    }
+}
+
+/** Square tiles: a thumbnail or icon, the name and the size. Same tap and pick rules as the list. */
+@Composable
+private fun TreeTiles(rows: List<TreeNode>, sel: Set<String>, onTap: (TreeNode) -> Unit, onToggle: (String) -> Unit) {
+    LazyVerticalGrid(
+        columns = GridCells.Adaptive(104.dp),
+        modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        gridItems(rows, key = { it.file.path }) { node ->
+            val isDir = node.file.isDirectory
+            val picked = node.file.path in sel
+            val thumb = if (isDir) null else exThumb(node.file)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .background(if (picked) MaterialTheme.colorScheme.primary.copy(alpha = .12f) else Color.Transparent)
+                    .combinedClickable(onClick = { onTap(node) }, onLongClick = { onToggle(node.file.path) })
+                    .padding(6.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                if (thumb != null) Image(thumb, null, Modifier.size(72.dp).clip(RoundedCornerShape(8.dp)), contentScale = ContentScale.Crop)
+                else Icon(
+                    if (picked) Icons.Filled.CheckCircle else if (isDir) Icons.Filled.Folder else Icons.Filled.InsertDriveFile,
+                    contentDescription = null,
+                    modifier = Modifier.size(56.dp),
+                )
+                Text(node.file.name, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                Text(formatSize(node.size), style = MaterialTheme.typography.labelSmall)
+            }
         }
     }
 }
