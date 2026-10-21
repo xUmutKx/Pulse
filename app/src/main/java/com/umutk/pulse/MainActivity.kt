@@ -115,7 +115,18 @@ open class MainActivity : ComponentActivity() {
         // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready
         if (android.os.Environment.isExternalStorageManager()) com.umutk.pulse.features.StorageScan.ensure(android.os.Environment.getExternalStorageDirectory())
         Shell.refreshShizuku()
-        if (Shell.root != true) Thread { Shell.detectRoot() }.start()
+        // with root the permissions Pulse needs (notifications first) are granted by Pulse itself, once root is known
+        val app = applicationContext
+        Thread {
+            if (Shell.root != true) Shell.detectRoot()
+            SelfGrant.run(app)
+            // no root: the notification permission is asked once (Android 13+), so the progress notifications can show
+            val sp = getSharedPreferences("p", MODE_PRIVATE)
+            if (android.os.Build.VERSION.SDK_INT >= 33 && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED && !sp.getBoolean("asked_notif", false)) {
+                sp.edit().putBoolean("asked_notif", true).apply()
+                runOnUiThread { runCatching { requestPermissions(arrayOf(android.Manifest.permission.POST_NOTIFICATIONS), 71) } }
+            }
+        }.start()
     }
 
     override fun onNewIntent(intent: Intent) {
