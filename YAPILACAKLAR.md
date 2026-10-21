@@ -932,3 +932,5 @@ Screen recorder feature list (55 candidates)
 - Toolkit "DNS and TTL": VPN app list removed, TTL setter (root); screen cover brightness slider reaches the panel maximum (unset = system); 0.10.179. derlenmedi
 
 - Lyrics sheet: "Searching for lyrics…", when none is found artist/song fields and Search again; setting "Save found lyrics as .lrc beside the song"; 0.10.180. derlenmedi
+
+- Lyrics: plain lyrics are saved as .lrc too, saving the .lrc file is on by default, optional MP3 tag (USLT) writing as a switch; 0.10.181. derlenmedi

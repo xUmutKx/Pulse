@@ -57,15 +57,73 @@ object Lyrics {
             r
         }
 
-    /** Writes [r] as a .lrc (or a .txt for unsynced lyrics) next to the song, unless one is there already. True when a file was written. */
+    /** The lyrics as .lrc text: stamped lines when they are synced, plain lines otherwise. */
+    private fun lrcText(r: LyricsResult) = r.lines.joinToString("\n") { l ->
+        if (r.synced && l.timeMs >= 0) "[%02d:%02d.%02d]%s".format(l.timeMs / 60000, l.timeMs / 1000 % 60, l.timeMs / 10 % 100, l.text) else l.text
+    }
+
+    /** Writes [r] as a .lrc next to the song (synced or not), unless one is there already. True when a file was written. */
     fun saveSidecar(path: String, r: LyricsResult): Boolean = runCatching {
-        val base = path.substringBeforeLast('.')
-        val ext = if (r.synced) "lrc" else "txt"
-        val f = File("$base.$ext")
-        if (f.exists() || sidecarFile(path, ext) != null) return@runCatching false
-        val text = r.lines.joinToString("\n") { l -> if (r.synced && l.timeMs >= 0) "[%02d:%02d.%02d]%s".format(l.timeMs / 60000, l.timeMs / 1000 % 60, l.timeMs / 10 % 100, l.text) else l.text }
-        f.writeText(text)
+        val f = File(path.substringBeforeLast('.') + ".lrc")
+        if (f.exists() || sidecarFile(path, "lrc") != null) return@runCatching false
+        f.writeText(lrcText(r))
         dirNames.remove(f.parent)
+        true
+    }.getOrDefault(false)
+
+    /**
+     * Puts the lyrics into an MP3's ID3v2 tag (a USLT frame), keeping every other frame. The file is rewritten through a temp copy and swapped in only when
+     * the copy is complete. Only plain ID3v2.3 / 2.4 tags are touched (no unsynchronisation, no extended header); anything else returns false and leaves the file alone.
+     */
+    fun embedMp3(path: String, r: LyricsResult): Boolean = runCatching {
+        val f = File(path)
+        if (!f.extension.equals("mp3", true) || !f.canWrite()) return@runCatching false
+        val text = lrcText(r)
+        val head = ByteArray(10)
+        val old: ByteArray; val oldLen: Int; val ver: Int
+        f.inputStream().use { i ->
+            val n = i.read(head)
+            if (n == 10 && head[0] == 'I'.code.toByte() && head[1] == 'D'.code.toByte() && head[2] == '3'.code.toByte()) {
+                ver = head[3].toInt()
+                if ((ver != 3 && ver != 4) || (head[5].toInt() and 0xC0) != 0) return@runCatching false   // unsynchronised or extended header
+                oldLen = (head[6].toInt() shl 21) or (head[7].toInt() shl 14) or (head[8].toInt() shl 7) or head[9].toInt()
+                old = ByteArray(oldLen); var got = 0
+                while (got < oldLen) { val k = i.read(old, got, oldLen - got); if (k < 0) return@runCatching false; got += k }
+            } else { ver = 3; old = ByteArray(0); oldLen = -1 }
+        }
+        fun size4(v: Int, sync: Boolean) = if (sync) byteArrayOf((v shr 21 and 127).toByte(), (v shr 14 and 127).toByte(), (v shr 7 and 127).toByte(), (v and 127).toByte())
+            else byteArrayOf((v shr 24).toByte(), (v shr 16).toByte(), (v shr 8).toByte(), v.toByte())
+        val out = java.io.ByteArrayOutputStream()
+        // the old frames except any USLT; padding (zero ids) is dropped
+        var p = 0
+        while (p + 10 <= old.size && old[p].toInt() != 0) {
+            val id = String(old, p, 4, Charsets.ISO_8859_1)
+            val sz = if (ver == 4) (old[p + 4].toInt() shl 21) or (old[p + 5].toInt() shl 14) or (old[p + 6].toInt() shl 7) or old[p + 7].toInt()
+                else ((old[p + 4].toInt() and 255) shl 24) or ((old[p + 5].toInt() and 255) shl 16) or ((old[p + 6].toInt() and 255) shl 8) or (old[p + 7].toInt() and 255)
+            if (sz < 0 || p + 10 + sz > old.size) return@runCatching false
+            if (id != "USLT") out.write(old, p, 10 + sz)
+            p += 10 + sz
+        }
+        // USLT: UTF-16 with a byte order mark, language "eng", empty description, the text
+        val body = java.io.ByteArrayOutputStream().apply {
+            write(1); write("eng".toByteArray(Charsets.ISO_8859_1))
+            write(byteArrayOf(0xFF.toByte(), 0xFE.toByte(), 0, 0))
+            write(byteArrayOf(0xFF.toByte(), 0xFE.toByte())); write(text.toByteArray(Charsets.UTF_16LE))
+            write(byteArrayOf(0, 0))
+        }.toByteArray()
+        out.write("USLT".toByteArray(Charsets.ISO_8859_1)); out.write(size4(body.size, ver == 4)); out.write(byteArrayOf(0, 0)); out.write(body)
+        val frames = out.toByteArray()
+        val tmp = File(f.parentFile, f.name + ".tmp")
+        tmp.outputStream().buffered().use { o ->
+            o.write(byteArrayOf('I'.code.toByte(), 'D'.code.toByte(), '3'.code.toByte(), ver.toByte(), 0, 0)); o.write(size4(frames.size, true)); o.write(frames)
+            f.inputStream().buffered().use { i ->
+                if (oldLen >= 0) i.skip(10L + oldLen) // the old tag
+                i.copyTo(o)
+            }
+        }
+        // swap only a copy that is at least as long as the audio it carries
+        if (tmp.length() < f.length() - (if (oldLen >= 0) 10 + oldLen else 0)) { tmp.delete(); return@runCatching false }
+        if (!tmp.renameTo(f)) { f.delete(); tmp.renameTo(f) }
         true
     }.getOrDefault(false)
 
