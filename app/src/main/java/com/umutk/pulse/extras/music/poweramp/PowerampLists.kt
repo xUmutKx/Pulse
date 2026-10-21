@@ -360,7 +360,6 @@ private fun CatRow(icon: ImageVector, color: Color, label: String, style: Powera
 @Composable
 fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, modifier: Modifier = Modifier) {
     var query by remember { mutableStateOf("") }
-    var lyricsOn by remember { mutableStateOf(false) }
     var lyricHits by remember { mutableStateOf<List<LyricHit>>(emptyList()) }
     var lyricsBusy by remember { mutableStateOf(false) }
     var lyricsOpen by remember { mutableStateOf<LyricsResult?>(null) }
@@ -369,12 +368,19 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
     val fg = style.onBackdrop
     val hits = remember(query, library) {
         library.withIndex().filter { (_, t) ->
-            query.isBlank() || t.displayName().contains(query, true) || t.path.contains(query, true)
+            query.isBlank() || t.displayName().contains(query, true) || t.artist.orEmpty().contains(query, true) ||
+                t.album.orEmpty().contains(query, true) || t.path.contains(query, true)
         }
     }
-    LaunchedEffect(query, lyricsOn) {
+    // albums whose name matches: one row each, playing starts at the album's first track
+    val albumHits = remember(query, library) {
+        if (query.isBlank()) emptyList() else library.withIndex().filter { (_, t) -> t.album.orEmpty().contains(query, true) && t.album.orEmpty().isNotBlank() }
+            .groupBy { it.value.album.orEmpty() }.map { (name, ts) -> Triple(name, ts.first().index, ts.size) }
+    }
+    // the lyrics are searched while the text is typed: no extra switch
+    LaunchedEffect(query) {
         lyricHits = emptyList()
-        if (!lyricsOn || query.trim().length < 3) { lyricsBusy = false; return@LaunchedEffect }
+        if (query.trim().length < 3) { lyricsBusy = false; return@LaunchedEffect }
         delay(600)
         lyricsBusy = true
         lyricHits = Lyrics.searchByText(ctx, query)
@@ -406,25 +412,37 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                 ) { Icon(Icons.Rounded.Close, null, tint = style.textDim, modifier = Modifier.size(22.dp)) }
             }
         }
-        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Search by lyrics", "Sözlerde ara"), color = if (lyricsOn) style.onAccent else style.onBackdrop, fontSize = 14.sp, maxLines = 1,
-                fontWeight = if (lyricsOn) FontWeight.SemiBold else FontWeight.Normal,
-                modifier = Modifier.clip(CircleShape).background(if (lyricsOn) style.accent else style.chip).clickable { lyricsOn = !lyricsOn }.padding(horizontal = 14.dp, vertical = 7.dp))
-            if (lyricsBusy) CircularProgressIndicator(Modifier.padding(start = 12.dp).size(18.dp), color = style.accent, strokeWidth = 2.dp)
-        }
         Spacer(Modifier.height(8.dp))
-        if (lyricsOn) LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        // songs, then albums, then the lyrics that contain the text (the line above and the line below the match come with each hit)
+        LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            if (query.isNotBlank() && hits.isNotEmpty()) item { SearchHeader(tr("Songs", "Şarkılar"), style) }
+            itemsIndexed(hits) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) }
+            if (albumHits.isNotEmpty()) {
+                item { SearchHeader(tr("Albums", "Albümler"), style) }
+                itemsIndexed(albumHits) { _, (name, first, n) ->
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { onPlay(first) }.padding(horizontal = 6.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(name, color = fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text("$n", color = style.textDim, fontSize = 13.sp)
+                    }
+                }
+            }
+            if (lyricHits.isNotEmpty() || lyricsBusy) item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    SearchHeader(tr("Lyrics", "Sözler"), style)
+                    if (lyricsBusy) CircularProgressIndicator(Modifier.padding(start = 12.dp, top = 8.dp).size(16.dp), color = style.accent, strokeWidth = 2.dp)
+                }
+            }
             itemsIndexed(lyricHits) { _, h ->
                 Column(
-                    Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(style.chip)
+                    Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp)).background(style.chip)
                         .clickable { scope.launch { lyricsOpen = Lyrics.forHit(ctx, h) } }.padding(horizontal = 14.dp, vertical = 10.dp),
                 ) {
                     Text(listOf(h.artist, h.title).filter { it.isNotBlank() }.joinToString(" - "), color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    h.before?.takeIf { it.isNotBlank() }?.let { Text(it, color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Text(h.line, color = style.accent, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    h.after?.takeIf { it.isNotBlank() }?.let { Text(it, color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }
-        } else LazyColumn(Modifier.fillMaxSize()) {
-            itemsIndexed(hits) { _, (i, t) -> TrackRow(t, t == current, style, onClick = { onPlay(i) }) }
         }
     }
     // the opened lyrics fill the search page, close icon top right (same as the lyrics search)
@@ -436,6 +454,11 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
         }
     }
     }
+}
+
+@Composable
+private fun SearchHeader(text: String, style: PowerampStyle) {
+    Text(text.uppercase(), color = style.accent, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp, top = 12.dp, bottom = 4.dp))
 }
 
 private val rowHeight = 64.dp

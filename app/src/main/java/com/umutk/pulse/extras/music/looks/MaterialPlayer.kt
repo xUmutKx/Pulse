@@ -321,11 +321,12 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     } else {
                         Spacer(Modifier.weight(1f))
                         CoverCarousel(art, artPrev, artNext, st.index > 0, st.index < st.queue.lastIndex, { engine.previous() }, { engine.next() },
-                            Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }.clip(RoundedCornerShape(32.dp)),
-                            // like Poweramp: swipe up opens the queue, swipe down closes the player
-                            onSwipeUp = { showQueue = true }, onSwipeDown = { showQueue = false; showNow = false }) { a ->
-                            if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                            else Box(Modifier.fillMaxSize().background(dyn.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = dyn, modifier = Modifier.fillMaxSize(.45f)) }
+                            // not clipped here: each cover is clipped itself, so a pulled cover can leave the square
+                            Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale },
+                            // a pull up or down sends the cover across the page and the previous screen opens
+                            onSwipeUp = { showQueue = false; showNow = false }, onSwipeDown = { showQueue = false; showNow = false }) { a ->
+                            if (a != null) Image(a, null, Modifier.fillMaxSize().clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop)
+                            else Box(Modifier.fillMaxSize().clip(RoundedCornerShape(4.dp)).background(dyn.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = dyn, modifier = Modifier.fillMaxSize(.45f)) }
                         }
                         Spacer(Modifier.weight(1f))
                     }

@@ -151,6 +151,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         // the now-playing backdrop; the preview shows both choices (every other page is black)
         PlayerBgPicker(c)
         PowerampLineRow(c)
+        com.umutk.pulse.extras.music.poweramp.BottomLabelPicker(c)
     }
     extra()
 }

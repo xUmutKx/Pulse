@@ -184,6 +184,7 @@ fun PowerampApp(
                             onSleepSet = { m, end -> engine.setSleep(m, end) },
                             onLyrics = { lyricsOpen = !lyricsOpen },
                             onPullDown = { tab = lastTab ?: PowerampTab.LIBRARY },
+                            suggestions = { com.umutk.pulse.extras.music.RecommendationHome(library, track, style.onBackdrop, style.textDim, style.chip, style.accent, round = true, onPlay = { engine.playQueue(library, it) }) },
                             lyricsOpen = lyricsOpen,
                             onEditTags = { tagEdit = true },
                             onFindArt = { artOpen = true },
