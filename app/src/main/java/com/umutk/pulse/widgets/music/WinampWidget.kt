@@ -70,7 +70,7 @@ open class WinampWidget : AppWidgetProvider() {
         /** Height of the 4x1 strip in window pixels: title and time rows (y 0..40) over the seek bar and buttons (y 72..106). */
         const val STRIP_H = 74
         /** Skin a widget shows until the user picks one: a bundled skin from assets/skins (listed in index.json), so the widget is drawn with real Winamp sprites. The original base-2.91.wsz could not be fetched. */
-        const val DEFAULT_SKIN = "classic-ebony.wsz"
+        const val DEFAULT_SKIN = "base-2.91.wsz"
         private val SEG = intArrayOf(R.id.wa_s0, R.id.wa_s1, R.id.wa_s2, R.id.wa_s3, R.id.wa_s4, R.id.wa_s5, R.id.wa_s6, R.id.wa_s7, R.id.wa_s8, R.id.wa_s9, R.id.wa_s10, R.id.wa_s11, R.id.wa_s12, R.id.wa_s13, R.id.wa_s14, R.id.wa_s15)
         /** SharedPreferences "winamp_widget": "skin_<appWidgetId>" = skin file name (bundled filesDir/skins/<id>.wsz or an installed one), absent = drawn default. */
         fun prefs(c: Context) = c.getSharedPreferences("winamp_widget", Context.MODE_PRIVATE)

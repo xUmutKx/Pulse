@@ -898,3 +898,5 @@ Screen recorder feature list (55 candidates)
 - Top-right Apps menu lists the switched-on apps again plus the tools (Toolkit moved there, empty Tools group hidden), Fluent colour pictures for tool/app menu icons; Notes transparent background setting (default on); Scan document: page cut-out with perspective straightening, colour / grey / B&W looks, paper shadow; Storage by type: tap opens the file, tighter rows, bigger cards; 0.10.161. derlenmedi
 
 - Icons: four groups (menus/pages/buttons, apps, tools, icons inside screens) each with its own style in Settings > Look (collapsed rows); original = old Windows 11 pack where it has the icon, new Fluent glyph where not; everything merged to main; 0.10.162. derlenmedi
+
+- Calculator extra app (Windows 11 look default, classic keys in 7/XP/95), network type tool + Quick Settings tile (root: 5G only / LTE / auto cycle), contacts info button removed, installer: zip entries share via FileProvider cache paths, original Winamp base-2.91 skin as default, music widget settings sheet (transparent window, live preview, shape, text size, cover size/side, controls, accent, opacity); 0.10.163. derlenmedi

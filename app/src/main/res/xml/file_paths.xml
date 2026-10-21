@@ -4,6 +4,10 @@
     <external-path name="shared" path="." />
     <!-- installer copies of picked APKs (see features/Installer.kt) -->
     <cache-path name="installer" path="installer/" />
+    <!-- one entry taken out of an archive (Files > zip > APK > Install) and anything else Pulse puts in its cache -->
+    <cache-path name="arc" path="arc/" />
+    <cache-path name="cache" path="." />
+    <external-cache-path name="ext_cache" path="." />
     <!-- Contacts call backgrounds (shared via ACTION_SEND) -->
     <files-path name="callbg" path="callbg/" />
     <!-- ArtCraft APKs downloaded to the app's own storage (install through the system installer) -->

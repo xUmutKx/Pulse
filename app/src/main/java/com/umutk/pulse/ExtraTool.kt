@@ -78,6 +78,8 @@ val VoiceLook = ToolLook("voice_look")
 val NotesLook = ToolLook("notes_look", "amoled")
 val WeatherLook = ToolLook("weather_look")
 val PaintLook = ToolLook("paint_look")
+// the calculator opens in the Windows 11 look until another is picked
+val CalculatorLook = ToolLook("calculator_look", "win11")
 
 /** Present only inside [ExtraToolActivity]: the page can offer the look choice, inside Pulse itself it is null. */
 class ExtraLookControl(val id: String, val set: (String) -> Unit)
@@ -131,7 +133,7 @@ class ExtraToolActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
-        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; else -> null }
+        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; else -> null }
         toolLook = store
         enter()
         setContent {
@@ -161,6 +163,7 @@ class ExtraToolActivity : ComponentActivity() {
             n.endsWith("NotesLauncher") -> "notes"
             n.endsWith("WeatherLauncher") -> "weather"
             n.endsWith("PaintLauncher") -> "paint"
+            n.endsWith("CalculatorLauncher") -> "calculator"
             n.endsWith("MessagesLauncher") -> "messages"
             n.endsWith("ScreenRecLauncher") -> "screenrec"
             n.endsWith("NotifHistLauncher") -> "notifhist"
