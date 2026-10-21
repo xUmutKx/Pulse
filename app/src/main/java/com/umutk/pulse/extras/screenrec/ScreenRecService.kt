@@ -37,6 +37,8 @@ class ScreenRecService : Service() {
     private var recorder: MediaRecorder? = null
     private var pfd: ParcelFileDescriptor? = null
     private var uri: Uri? = null
+    private var overlay: CaptureOverlay? = null
+    private var touchesWas: String? = null
     private val main = Handler(Looper.getMainLooper())
     private val autoStop = Runnable { stopRecording() }
 
@@ -70,6 +72,8 @@ class ScreenRecService : Service() {
             state = RecState.RUNNING
             if (cfg.limitMin > 0) main.postDelayed(autoStop, cfg.limitMin * 60_000L)
             updateNotification()
+            if (ScreenRecPrefs.touches(this)) showTouches(true)
+            if (ScreenRecPrefs.floating(this)) overlay = CaptureOverlay(this, { if (state == RecState.RUNNING) pauseRecording() else resumeRecording() }, { stopRecording() }, { grabFrame() }).also { it.show() }
         } catch (e: Exception) {
             Toast.makeText(this, tr("Recording could not start", "Kayıt başlatılamadı"), Toast.LENGTH_LONG).show()
             stopRecording()
@@ -113,6 +117,7 @@ class ScreenRecService : Service() {
         runCatching { recorder?.pause() }
         accum += SystemClock.elapsedRealtime() - runStart
         state = RecState.PAUSED
+        overlay?.setPaused(true)
         updateNotification()
     }
 
@@ -121,7 +126,29 @@ class ScreenRecService : Service() {
         runCatching { recorder?.resume() }
         runStart = SystemClock.elapsedRealtime()
         state = RecState.RUNNING
+        overlay?.setPaused(false)
         updateNotification()
+    }
+
+    /** A still picture of the screen while the video runs (screencap, so it needs root or Shizuku). */
+    private fun grabFrame() {
+        if (!ScreenShot.possible()) { Toast.makeText(this, tr("Needs root or Shizuku", "Root veya Shizuku gerekir"), Toast.LENGTH_SHORT).show(); return }
+        ScreenShot.take(this) { p -> Toast.makeText(this, if (p != null) tr("Picture saved", "Görüntü kaydedildi") else tr("Could not take the picture", "Görüntü alınamadı"), Toast.LENGTH_SHORT).show() }
+    }
+
+    /** "Show touches" for the length of the recording; the old value comes back afterwards. */
+    private fun showTouches(on: Boolean) {
+        Thread {
+            if (on) {
+                touchesWas = com.umutk.pulse.Shell.run("settings get system show_touches").trim().ifEmpty { "0" }
+                val c = "settings put system show_touches 1"
+                if (com.umutk.pulse.Shell.root == true) com.umutk.pulse.Shell.runRoot(c) else com.umutk.pulse.Shell.run(c)
+            } else {
+                val c = "settings put system show_touches ${touchesWas ?: "0"}"
+                if (com.umutk.pulse.Shell.root == true) com.umutk.pulse.Shell.runRoot(c) else com.umutk.pulse.Shell.run(c)
+                touchesWas = null
+            }
+        }.start()
     }
 
     /** Idempotent: the projection's onStop calls it too. A row that never recorded is deleted, a finished one is published. */
@@ -129,6 +156,8 @@ class ScreenRecService : Service() {
         val wasRunning = state != RecState.IDLE
         if (state == RecState.RUNNING) accum += SystemClock.elapsedRealtime() - runStart
         state = RecState.IDLE
+        overlay?.hide(); overlay = null
+        if (touchesWas != null) showTouches(false)
         main.removeCallbacks(autoStop)
         val u = uri; uri = null
         val p = projection; projection = null

@@ -175,6 +175,11 @@ open class MainActivity : ComponentActivity() {
                     com.umutk.pulse.features.TileActions.setRotation(this, if (auto) -1 else 0)
                     finish(); return
                 }
+                if (it.className.endsWith("ScreenRecTile")) {
+                    // long press on the screenshot / record tile: the video recorder
+                    startActivity(Intent().setComponent(android.content.ComponentName(this, "com.umutk.pulse.ExtraToolActivity")).putExtra("route", "screenrec"))
+                    finish(); return
+                }
                 com.umutk.pulse.widgets.WidgetOpen.page = tilePage(it.className)
             }
         // Pulse chosen as the file manager: a folder VIEW opens Files full screen
