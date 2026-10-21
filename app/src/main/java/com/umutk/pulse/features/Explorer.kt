@@ -132,6 +132,7 @@ import androidx.compose.material.icons.outlined.Description
 import com.umutk.pulse.Shell
 import com.umutk.pulse.files.root.RootFs
 import com.umutk.pulse.T
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -423,6 +424,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         query.isNotBlank() -> listing.filter { it.name.contains(query.trim(), ignoreCase = true) }.filter { exFilterOk(it, filtDir[here] ?: filtAll) }
         else -> listing.filter { exFilterOk(it, filtDir[here] ?: filtAll) }
     }
+    // a long folder (an app data folder holds hundreds of entries) is composed in slices of 60, one slice every 50 ms, so it opens at once and the rest fills in
+    val sliceFor by produceState(60, here, shown.size) { value = 60; while (value < shown.size) { delay(50); value += 60 } }
+    val shownNow = if (shown.size <= 80) shown else shown.take(sliceFor)
     val filt = filtDir[here] ?: filtAll
     val bookmarks = marks.filter { File(it).isDirectory }
     val picked = sel.map { File(it) }
@@ -799,7 +803,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         val sub = when {
                             found != null -> exRel(f, top)
                             !f.isDirectory && showSizes -> exSize(f.length()) + "  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
-                            f.isDirectory && standalone && showSizes -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            f.isDirectory && standalone && showSizes && !f.path.startsWith("/data") -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
                             else -> ""
                         }
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = (11 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -856,10 +860,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             val tile = ((24 + FilesPrefs.icon.coerceIn(0, 9) * 5) * 3 / 2 + 8).dp
             val cols = ((maxWidth + gap) / (tile + gap)).toInt().coerceAtLeast(1)
             val cell = (maxWidth - gap * (cols - 1)) / cols
-            shown.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+            shownNow.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 r.forEach { f -> Box(Modifier.width(cell), contentAlignment = Alignment.TopCenter) { item(f) } }
             } }
-        } else shown.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shown.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
+        } else shownNow.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shownNow.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
         Spacer(Modifier.height(88.dp))
         }
     }
