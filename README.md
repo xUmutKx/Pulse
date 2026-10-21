@@ -213,4 +213,4 @@ The APK is written to `app/build/outputs/apk/release/`. Release builds are curre
 - **Windows XP icon pack** by Matt Pettit (CC0 1.0, public domain dedication). The XP theme's Apps, Download, Heart, Phone and Startup icons come from it, resized to 48 px. The licence text is in `app/src/main/assets/licenses/xp-icons-LICENSE.txt`.
 - **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
 
-Pulse's own code has no licence file yet.
+Pulse's own code is licensed under the **GNU General Public License v3.0** (see [LICENSE](LICENSE)). Copyright (C) 2026 xUmutKx. The third-party parts above keep their own licences. GPL-3.0 also fits the bundled Universal Debloater list, which is GPL-3.0.
