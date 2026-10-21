@@ -179,6 +179,7 @@ fun CalSettings(cals: List<CalCal>, onClose: () -> Unit, onChange: () -> Unit) {
     Scaffold(topBar = { CalBar(title = { Text(ct("Settings")) }, nav = { IconButton(onClose) { CalIc("back", Icons.AutoMirrored.Outlined.ArrowBack, ct("Cancel")) } }) }) { pad ->
         val sc = rememberScrollState()
         Column(Modifier.padding(pad).padding(horizontal = 16.dp).verticalScroll(sc), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            com.umutk.pulse.ExtraDefaultRow("CalendarLauncher")
             @Composable fun Sec(t: String, key: String, v: androidx.compose.ui.graphics.vector.ImageVector, open: Boolean = false, c: @Composable ColumnScope.() -> Unit) =
                 SetSection(ct(t), { CalIc(key, v, tint = MaterialTheme.colorScheme.primary) }, open, c)
             Sec("Look", "palette", Icons.Outlined.Palette, true) {

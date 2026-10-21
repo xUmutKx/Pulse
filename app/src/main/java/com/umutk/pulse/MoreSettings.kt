@@ -611,13 +611,6 @@ private fun ExtraAppsCard() {
                 }
                 Spacer(Modifier.width(12.dp))
                 Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                // "make default" only exists for the four apps that handle a system link (files, pictures, events, contacts)
-                if (alias in setOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher")) {
-                    val isDef = remember(rev) { extraIsDefault(ctx, alias) }
-                    Box(Modifier.padding(end = 10.dp).size(30.dp).clip(CircleShape).background(if (isDef) T.text else androidx.compose.ui.graphics.Color.Transparent)
-                        .border(1.dp, T.text.copy(alpha = .6f), CircleShape).clickable { extraSetDefault(ctx, alias) { rev++ } },
-                        contentAlignment = Alignment.Center) { PIcon("check", if (isDef) T.bg else T.text, 16.dp) }
-                }
                 PSwitch(state[alias] == true, { on ->
                     pm.setComponentEnabledSetting(cn(alias), if (on) android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED else android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
                     state[alias] = on
@@ -679,7 +672,7 @@ private fun extraProbe(alias: String): Pair<Intent, List<String>> = when (alias)
     else -> Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse("content://com.android.contacts/contacts/1"), "vnd.android.cursor.item/contact") to listOf("ContactsActivity")
 }
 
-private fun extraIsDefault(ctx: android.content.Context, alias: String): Boolean = try {
+internal fun extraIsDefault(ctx: android.content.Context, alias: String): Boolean = try {
     val (i, names) = extraProbe(alias)
     val ai = ctx.packageManager.resolveActivity(i, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)?.activityInfo
     ai != null && ai.packageName == ctx.packageName && names.any { ai.name.endsWith(it) }
@@ -691,7 +684,7 @@ private fun extraRole(alias: String) = when (alias) {
 }
 
 /** With root/Shizuku: add Pulse as the role holder. Otherwise (or when that did not stick) the system "Open with" sheet is shown, where "Always" makes the choice. */
-private fun extraSetDefault(ctx: android.content.Context, alias: String, done: () -> Unit) {
+internal fun extraSetDefault(ctx: android.content.Context, alias: String, done: () -> Unit) {
     Thread {
         val h = android.os.Handler(android.os.Looper.getMainLooper())
         try {
@@ -716,4 +709,18 @@ private fun extraSetDefault(ctx: android.content.Context, alias: String, done: (
             h.post { try { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } catch (_: Throwable) {} }
         } catch (_: Throwable) {}
     }.start()
+}
+
+/** "Default app" row for a settings page of one of the four apps that handle a system link (files, pictures, events, contacts). */
+@Composable
+internal fun ExtraDefaultRow(alias: String) {
+    val ctx = LocalContext.current
+    var rev by remember { mutableStateOf(0) }
+    val isDef = remember(rev) { extraIsDefault(ctx, alias) }
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(tr("Default app", "Varsayılan uygulama"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        Text(if (isDef) tr("Yes", "Evet") else tr("No", "Hayır"), color = T.sub, fontSize = 13.sp)
+        Spacer(Modifier.width(10.dp))
+        PButton(tr("Make default", "Varsayılan yap")) { extraSetDefault(ctx, alias) { rev++ } }
+    }
 }

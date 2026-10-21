@@ -393,7 +393,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val viaRoot by produceState<List<File>?>(null, here, refresh, canRoot) {
         // under /data and Android/data, Android/obb the other apps' folders only list through root: Android returns just Pulse's own folder there, so a partial normal listing must not win
         val restricted = dir.path.startsWith("/data") || dir.path.contains("/Android/data") || dir.path.contains("/Android/obb")
-        value = if (canRoot && (dir.listFiles() == null || restricted)) withContext(Dispatchers.IO) { exRootList(dir) } else null
+        // /data/data lists every installed app from PackageManager (root's ls shows only a few of them there)
+        value = when {
+            canRoot && dir.path == "/data/data" -> withContext(Dispatchers.IO) { AppDataFolders.list(ctx).map { RootFile(it.path, true) } }
+            canRoot && (dir.listFiles() == null || restricted) -> withContext(Dispatchers.IO) { exRootList(dir) }
+            else -> null
+        }
     }
     val listing = remember(here, refresh, showHidden, sort, viaRoot) {
         exSort((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort)
@@ -749,7 +754,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     Column(Modifier.fillMaxWidth().combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), horizontalAlignment = Alignment.CenterHorizontally) {
-                    val thumb = if (f.isDirectory) null else (exThumb(f) ?: exPreview(f))
+                    // an app's data folder shows that app's icon; other folders keep the folder icon
+                    val thumb = if (f.isDirectory) AppDataFolders.icon(f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, isz.dp) {
                         // one rounded square for every file: the picture when there is one, the type icon on the panel colour otherwise
                         val square = RoundedCornerShape(percent = 22)
@@ -766,7 +772,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
-                    val thumb = if (f.isDirectory) null else (exThumb(f) ?: exPreview(f))
+                    // an app's data folder shows that app's icon; other folders keep the folder icon
+                    val thumb = if (f.isDirectory) AppDataFolders.icon(f.path) else (exThumb(f) ?: exPreview(f))
                     ExBadged(f, maxOf(isz, 40).dp) {
                         if (thumb != null) Image(thumb, null, Modifier.size(maxOf(isz, 40).dp).clip(RoundedCornerShape(6.dp)), contentScale = ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.High)
                         else ExIcon(if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
@@ -869,6 +876,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
     if (recentView) RecentScreen({ openFile(it) }) { recentView = false }
     if (arcFile == null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { doPaste() }) { clip = null } }
+    // inside an archive the same button writes into the archive (the bar's paste can be pushed out of view by its other buttons)
+    if (arcFile != null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { arcPaste() }) { clip = null } }
     if (arcFile == null && resultsFor == null) ExNewFab { k -> name = ""; if (k == "folder") dialog = "newfolder" to dir else { newExt = k; dialog = "newfile" to dir } }
     if (drawer) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .45f)).clickable(indication = null, interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }) { drawer = false })

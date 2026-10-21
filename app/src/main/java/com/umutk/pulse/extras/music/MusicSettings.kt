@@ -13,7 +13,7 @@ object MusicSettings {
     private fun sp(c: Context) = c.getSharedPreferences("music_settings", Context.MODE_PRIVATE)
 
     /** Look up album art on the internet for tracks that have none (on by default). */
-    fun onlineCovers(c: Context) = sp(c).getBoolean("online_covers", true)
+    fun onlineCovers(c: Context) = sp(c).getBoolean("online_covers", false)
     fun setOnlineCovers(c: Context, on: Boolean) = sp(c).edit().putBoolean("online_covers", on).apply()
 
     /** Fade length at each track change in seconds, 0 = off. */

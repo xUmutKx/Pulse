@@ -169,6 +169,12 @@ fun PowerampApp(
                                     else -> Player.REPEAT_MODE_OFF
                                 }
                             },
+                            onRepeatMode = { engine.player.repeatMode = it },
+                            // the whole library from the first track; shuffled starts it in a random order
+                            onPlayAll = { shuffled ->
+                                engine.player.shuffleModeEnabled = shuffled
+                                engine.playQueue(library, 0)
+                            },
                             onOpenEffects = { tab = PowerampTab.EFFECTS },
                             rating = track?.let { ratings[it.path] } ?: 0,
                             onRate = { r -> track?.let { MusicStats.setRating(ctx, it.path, r); ratings = MusicStats.ratings(ctx) } },
