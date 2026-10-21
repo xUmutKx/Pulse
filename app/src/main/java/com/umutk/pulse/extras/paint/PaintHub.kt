@@ -237,10 +237,10 @@ private fun PlainPaint(st: PaintState, act: PaintActions) {
             Box(Modifier.size(44.dp).clickable { act.exit() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text("Paint", color = T.text, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(start = 4.dp))
             ExtraLookIcon()
-            Box(Modifier.size(44.dp).clickable { act.undo() }, contentAlignment = Alignment.Center) { PIcon("undo", T.text, 22.dp) }
-            Box(Modifier.size(44.dp).clickable { act.new() }, contentAlignment = Alignment.Center) { PIcon("newfile", T.text, 22.dp) }
-            Box(Modifier.size(44.dp).clickable { act.open() }, contentAlignment = Alignment.Center) { PIcon("folder", T.text, 22.dp) }
-            Box(Modifier.size(44.dp).clickable { act.save() }, contentAlignment = Alignment.Center) { PIcon("save", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.undo() }, contentAlignment = Alignment.Center) { PIcon(if (T.id == "win11") "paint_undo" else "undo", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.new() }, contentAlignment = Alignment.Center) { PIcon(if (T.id == "win11") "paint_new" else "newfile", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.open() }, contentAlignment = Alignment.Center) { PIcon(if (T.id == "win11") "paint_open" else "folder", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { act.save() }, contentAlignment = Alignment.Center) { PIcon(if (T.id == "win11") "paint_save" else "save", T.text, 22.dp) }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             PaintTool.entries.forEach { t -> ToolButton(st, t, 42.dp) }
@@ -453,6 +453,15 @@ private fun SheetView(st: PaintState, modifier: Modifier) {
 /** One tool's glyph, drawn flat in the given colour. */
 @Composable
 private fun ToolGlyph(t: PaintTool, tint: Color) {
+    // Windows 11: the real Fluent icon of the tool
+    if (T.id == "win11") {
+        val key = when (t) {
+            PaintTool.PENCIL -> "paint_pencil"; PaintTool.BRUSH -> "paint_brush"; PaintTool.ERASER -> "paint_eraser"; PaintTool.FILL -> "paint_fill"
+            PaintTool.PICK -> "paint_pick"; PaintTool.LINE -> "paint_line"; PaintTool.RECT -> "paint_rect"; PaintTool.ELLIPSE -> "paint_ellipse"
+        }
+        PIcon(key, tint, 22.dp)
+        return
+    }
     Canvas(Modifier.size(24.dp)) {
         val u = size.minDimension / 24f
         val st = Stroke(2f * u)

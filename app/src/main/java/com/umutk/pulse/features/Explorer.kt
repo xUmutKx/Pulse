@@ -375,7 +375,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val deleteNow: (List<File>) -> Unit = { files ->
         sel = emptySet()
         scope.launch {
-            val u = withContext(Dispatchers.IO) { if (Opt.recycle) exTrash(top, files) else { files.forEach { it.deleteRecursively() }; null } }
+            val u = withContext(Dispatchers.IO) { if (Opt.recycle) exTrash(top, files) else { FileJobs.deleteTracked(ctx, files); null } }
             undo = u
             note = if (u == null && Opt.recycle) "Could not delete" else ""
             refresh++
@@ -457,7 +457,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             note = tr("Pasting…", "Yapıştırılıyor…")
             scope.launch {
                 val moved = mutableListOf<Pair<File, File>>()
-                val err = withContext(Dispatchers.IO) { paste(c, dir, moved) }
+                val err = withContext(Dispatchers.IO) { paste(ctx, c, dir, moved) }
                 val n = c.files.size
                 // status line: a failure note wins, else say what happened (a copy keeps the clipboard, a cut empties it)
                 note = err.ifEmpty { if (c.move) tr("Moved $n items", "$n öğe taşındı") else tr("Pasted $n items", "$n öğe yapıştırıldı") }
@@ -1436,18 +1436,27 @@ private fun exHash(f: File): Pair<String, String> {
 private fun ByteArray.hex(): String = joinToString("") { "%02x".format(it) }
 
 /** Copies or moves the clipped files into [dir]; a name already there gets a number. Each rename goes into [moved] for Undo. Returns a note when something failed. */
-private fun paste(c: Clip, dir: File, moved: MutableList<Pair<File, File>>): String {
+private fun paste(ctx: Context, c: Clip, dir: File, moved: MutableList<Pair<File, File>>): String {
     var failed = 0
+    // a real copy of 2 MB or more (also a move across storage) shows its progress in a notification that stays when Pulse goes to the background
+    val total by lazy { c.files.sumOf { FileJobs.treeSize(it) } }
+    var job: FileJob? = null
     for (src in c.files) {
         var target = File(dir, src.name)
         var n = 1
         while (target.exists()) target = File(dir, "$n-${src.name}").also { n++ }
         val ok = runCatching {
             if (c.move && src.renameTo(target)) { moved += (target to src); true }
-            else { src.copyRecursively(target, overwrite = false); if (c.move) src.deleteRecursively(); true }
+            else {
+                if (job == null && total >= 2L * 1024 * 1024) job = FileJobs.begin(ctx, if (c.move) tr("Moving", "Taşınıyor") else tr("Copying", "Kopyalanıyor"), total)
+                FileJobs.copyTree(src, target, job)
+                if (c.move && job?.cancelled != true) src.deleteRecursively()
+                true
+            }
         }.getOrDefault(false)
         if (!ok) failed++
     }
+    job?.let { FileJobs.end(ctx, it, if (it.cancelled) tr("Cancelled", "İptal edildi") else if (failed == 0) tr("Done: ${c.files.size} items", "Bitti: ${c.files.size} öğe") else tr("$failed could not be copied", "$failed öğe kopyalanamadı")) }
     return if (failed == 0) "" else "$failed could not be pasted"
 }
 
