@@ -926,3 +926,5 @@ Screen recorder feature list (55 candidates)
 - Lyrics notification: lines taken 0.7 s ahead and refreshed twice a second (the collapsed one trailed), current line in bold in both notifications; 0.10.175. derlenmedi
 
 - Lyrics notification: bold through Unicode bold letters, arrow back (text style); lyrics sheet: second lookup like the notification, no auto close when opened past the last line; calculator round keys stay round; Files selection bar buttons all the same size; 0.10.176. derlenmedi
+
+- Player: swipe up opens the lyrics (it used to slide the player away), lyrics of this and the next two songs looked up in the background, seek bar glides between ticks; Toolkit tiles all the same height; 0.10.178. derlenmedi

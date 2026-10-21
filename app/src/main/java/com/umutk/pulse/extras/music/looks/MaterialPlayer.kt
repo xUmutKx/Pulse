@@ -237,13 +237,33 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     var sheetOn by remember { mutableStateOf(false) }
     var showLyrics by remember { mutableStateOf(false) }
     LaunchedEffect(cur?.path) { showLyrics = false }
-    fun pageDrag(dy: Float) { scope.launch { sheetY.snapTo(sheetY.value + dy) } }
+    // a drag down moves the whole player and closes it past a fifth of the screen; a drag up opens the lyrics instead (the player stays put)
+    var upAcc by remember { mutableFloatStateOf(0f) }
+    fun pageDrag(dy: Float) {
+        if (dy < 0f) upAcc += -dy else upAcc = (upAcc - dy).coerceAtLeast(0f)
+        scope.launch { sheetY.snapTo((sheetY.value + dy).coerceAtLeast(0f)) }
+    }
     fun pageRelease() {
+        val up = upAcc; upAcc = 0f
         scope.launch {
-            if (abs(sheetY.value) > rootH * .22f) {
-                sheetY.animateTo(if (sheetY.value > 0f) rootH else -rootH, tween(200, easing = FastOutSlowInEasing))
+            if (sheetY.value > rootH * .22f) {
+                sheetY.animateTo(rootH, tween(200, easing = FastOutSlowInEasing))
                 showQueue = false; showNow = false
-            } else sheetY.animateTo(0f, spring(dampingRatio = .75f, stiffness = Spring.StiffnessMedium))
+            } else {
+                if (up > rootH * .06f && sheetY.value < 1f) { showQueue = false; showLyrics = true }
+                sheetY.animateTo(0f, spring(dampingRatio = .75f, stiffness = Spring.StiffnessMedium))
+            }
+        }
+    }
+    // the lyrics of this song and the next two are looked up in the background, so the sheet opens with them in place
+    val prefetchCtx = androidx.compose.ui.platform.LocalContext.current
+    LaunchedEffect(cur?.path, st.queue.size) {
+        val i = st.index
+        listOfNotNull(cur, st.queue.getOrNull(i + 1), st.queue.getOrNull(i + 2)).forEach { t ->
+            runCatching {
+                com.umutk.pulse.extras.lyrics.Lyrics.forTrack(prefetchCtx, t.name(), t.artistName(), t.album, t.durationSec * 1000L, t.path.takeIf { !it.contains("://") })
+                    ?: com.umutk.pulse.extras.lyrics.Lyrics.forTrack(prefetchCtx, t.name().substringAfter(" - "), "", t.album, t.durationSec * 1000L, t.path.takeIf { !it.contains("://") })
+            }
         }
     }
 
@@ -421,7 +441,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     }
                     com.umutk.pulse.extras.lyrics.LiveLyricsLine(cur, pos, Modifier.fillMaxWidth().padding(top = 8.dp))
                     val d = dur.coerceAtLeast(1)
-                    PSlider(pos.coerceIn(0, d).toFloat(), { dragging = true; pos = it.toInt() }, 0f..d.toFloat()) { engine.seekTo(pos); dragging = false }
+                    // the position arrives every 400 ms: glide between the ticks instead of jumping
+                    val glide by androidx.compose.animation.core.animateFloatAsState(pos.toFloat(), tween(420, easing = androidx.compose.animation.core.LinearEasing), label = "seekGlide")
+                    PSlider((if (dragging) pos.toFloat() else glide).coerceIn(0f, d.toFloat()), { dragging = true; pos = it.toInt() }, 0f..d.toFloat()) { engine.seekTo(pos); dragging = false }
                     Row(Modifier.fillMaxWidth()) { Text(fmt(pos), color = SUB, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(fmt(dur), color = SUB, fontSize = 12.sp) }
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         ShuffleButton(engine, shuffle, dyn, SUB, 44.dp, 10.dp) { shuffle = it }
