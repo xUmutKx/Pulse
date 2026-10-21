@@ -218,7 +218,7 @@ private fun Item(e: MenuEntry, close: () -> Unit) {
 /** The Windows 11 icon key of a tool or app entry, found by its (English or Turkish) name. */
 private fun win11KeyOf(e: MenuEntry): String =
     ToolPlace.all.firstOrNull { tr(it.en, it.trName) == e.label }?.let { "tool_${it.id}" }
-        ?: AppPlace.all.firstOrNull { tr(it.en, it.trName) == e.label }?.let { AppPlace.win11Key(it.alias) } ?: e.key
+        ?: AppPlace.all.firstOrNull { tr(it.en, it.trName) == e.label }?.let { AppPlace.win11Key(it.alias) } ?: e.key.orEmpty()
 
 /** Win11 look: one Fluent glyph per menu entry (FluentPaths), so no icon repeats in the overflow menu. */
 private val WIN11_MENU_KEY = mapOf(
