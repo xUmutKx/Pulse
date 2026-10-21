@@ -197,4 +197,3 @@ private fun PlaylistCard(e: PlEntry, style: PowerampStyle, onClick: () -> Unit) 
     }
 }
 
-private fun Modifier.aspectRatio(1f): Modifier = this.then(Modifier.aspectRatio(1f))
