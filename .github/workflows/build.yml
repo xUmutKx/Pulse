@@ -21,7 +21,11 @@ jobs:
         with:
           gradle-version: 8.9
       - name: Build release APK
-        run: gradle assembleRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon
+        shell: bash
+        run: set -o pipefail; gradle assembleRelease -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon 2>&1 | tee build.log
+      - name: Compile errors as annotations
+        if: failure()
+        run: grep -E '^e: |What went wrong' -A1 build.log | grep -v '^--$' | head -30 | while IFS= read -r line; do echo "::error::${line}"; done
       - uses: actions/upload-artifact@v4
         with:
           name: pulse-release-apk
