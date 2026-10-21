@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
@@ -54,6 +55,10 @@ import androidx.compose.ui.unit.sp
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 import java.util.Calendar
+
+private val W95_WINDOW = WinSkin("95", Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))), Color.White, Color(0xFFC0C0C0), 3.dp, 0.dp,
+    Color.White, Color(0xFFC0C0C0), Color.White, Color.Black, Color(0xFF404040), Color(0xFF000080), Color.White, Color(0xFF808080))
+
 
 /** Windows 95 look: grey #C0C0C0 faces, 1 px bevel rings (2 px per frame), navy title bars and selection, the vertical Start banner. Opaque, no gradients. */
 class Win95LauncherLook : LauncherLook {
@@ -125,79 +130,7 @@ class Win95LauncherLook : LauncherLook {
 
     @Composable
     override fun StartMenu(state: LauncherState, onClose: () -> Unit, modifier: Modifier) {
-        val edge = LocalLauncherEdge.current
-        val ctx = LocalContext.current
-        var query by remember { mutableStateOf("") }
-        var folder by remember { mutableStateOf<StartGroup?>(null) }
-        val (pinned, all) = startLists(state, query)
-        val searching = query.isNotBlank()
-        val groups: List<Pair<StartGroup, List<LaunchApp>>> = if (searching) emptyList() else groupedApps(all)
-        val noRipple = remember { MutableInteractionSource() }
-        // a tap outside the menu closes it; the menu swallows its own taps
-        BoxWithConstraints(modifier.clickable(interactionSource = noRipple, indication = null, onClick = onClose)) {
-            val menuH = (maxHeight - taskbarHeight - 2.dp).coerceAtMost(440.dp)
-            Row(
-                Modifier.align(Alignment.BottomStart).padding(start = edge, bottom = taskbarHeight)
-                    .width(240.dp).height(menuH)
-                    .clickable(interactionSource = noRipple, indication = null) {}
-                    .w95Bevel(raised = true)
-                    .padding(3.dp),
-            ) {
-                W95Banner(Modifier.width(24.dp).fillMaxHeight())
-                Column(Modifier.weight(1f).fillMaxHeight()) {
-                    if (searching) W95TitleBar(
-                        title = tr("Find", "Bul"),
-                        icon = { Canvas(Modifier.size(12.dp)) { drawMagnifier(Color.White) } },
-                        onClose = { query = "" },
-                    )
-                    // search: a sunken white field with a magnifier
-                    Box(
-                        Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 3.dp).height(22.dp).w95Bevel(raised = false, fill = Color.White),
-                    ) {
-                        Row(Modifier.fillMaxSize().padding(horizontal = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Canvas(Modifier.size(12.dp)) { drawMagnifier(W95.Black) }
-                            Spacer(Modifier.width(5.dp))
-                            BasicTextField(
-                                value = query, onValueChange = { query = it }, singleLine = true,
-                                textStyle = TextStyle(color = W95.Black, fontSize = 11.sp), cursorBrush = SolidColor(W95.Black),
-                                modifier = Modifier.weight(1f),
-                            )
-                        }
-                    }
-                    LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-                        if (searching) {
-                            items(all, key = { it.pkg }) { app -> W95App(app, state, onClose) }
-                        } else {
-                            if (pinned.isNotEmpty()) {
-                                items(pinned, key = { "pin-" + it.pkg }) { app -> W95App(app, state, onClose) }
-                                item(key = "pin-sep") { W95Sep() }
-                            }
-                            // the apps by store group: a folder opens inline, one at a time
-                            groups.forEach { (g, apps) ->
-                                item(key = "group-" + g.name) {
-                                    W95Item(
-                                        label = tr(g.en, g.tr),
-                                        tap = Modifier.w95Click { folder = if (folder == g) null else g },
-                                        selected = folder == g,
-                                        arrow = true,
-                                        icon = { W95Folder() },
-                                    )
-                                }
-                                if (folder == g) items(apps, key = { it.pkg }) { app -> W95App(app, state, onClose, indent = 16.dp) }
-                            }
-                            item(key = "exit-sep") { W95Sep() }
-                            item(key = "settings") {
-                                W95Item(
-                                    label = tr("Settings", "Ayarlar"),
-                                    tap = Modifier.w95Click { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)); onClose() },
-                                    icon = { Canvas(Modifier.size(20.dp)) { drawGear(W95.Black, W95.Face) } },
-                                )
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        LauncherWindow(W95_WINDOW, state, onClose, taskbarHeight, modifier)
     }
 
     @Composable
