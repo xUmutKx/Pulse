@@ -245,7 +245,7 @@ fun NotesHub(onBack: () -> Unit) {
         }
     }
 
-    Box(Modifier.fillMaxSize().background(T.bg)) {
+    Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) {
         when (val s = screen) {
             is NScreen.Edit -> {
                 val n = notes.firstOrNull { it.id == s.id }

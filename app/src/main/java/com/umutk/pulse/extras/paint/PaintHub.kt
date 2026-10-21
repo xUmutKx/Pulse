@@ -232,7 +232,7 @@ fun PaintHub(back: () -> Unit) {
 
 @Composable
 private fun PlainPaint(st: PaintState, act: PaintActions) {
-    Column(Modifier.fillMaxSize().background(T.bg)) {
+    Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clickable { act.exit() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text("Paint", color = T.text, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(start = 4.dp))

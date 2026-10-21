@@ -242,7 +242,7 @@ val Pages = listOf(
     Pg("terminal", "Terminal", "run"),
 )
 // the built-in pages (Settings > Pages) plus the optional tools placed on the side (Settings > Tool places)
-private val visible get() = Pages.filter { it.id !in Opt.hidden && (it.id != "recycle" || Opt.recycle) } + ToolPlace.sidePages()
+private val visible get() = Pages.filter { it.id !in Opt.hidden && (it.id != "recycle" || Opt.recycle) } + ToolPlace.sidePages() + AppPlace.sidePages()
 private val SettingsPg = Pg("settings", "Settings", "settings")
 
 @Composable
@@ -384,7 +384,10 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
     val go: (String) -> Unit = { p ->
         // a tool placed on the left menu: a tool screen opens on top of the page, a page-based one opens its page
         val tool = if (p.startsWith("tool:")) ToolPlace.byId(p.removePrefix("tool:")) else null
-        if (tool != null) { subBack = ""; if (tool.isTool) onSub(tool.target) else onPage(tool.target) }
+        // a standalone app placed on the left menu starts its own window
+        val app = if (p.startsWith("open:")) AppPlace.byAlias(p.removePrefix("open:")) else null
+        if (app != null) app.run(ctx, openSub)
+        else if (tool != null) { subBack = ""; if (tool.isTool) onSub(tool.target) else onPage(tool.target) }
         else { subBack = ""; onSub(""); if (p != page) trail = (trail + page).takeLast(20); onPage(p) }
     }
     val back: () -> Unit = {
@@ -411,7 +414,7 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
         }
     }
     // tools that draw no back arrow of their own get the shared one; so does every page but the start page
-    val bar = (sub.isEmpty() && (page != start || ctx is FilesActivity)) || sub in setOf("toolkit", "installer", "installer_settings", "files_settings", "ram", "dns", "fonts", "guide") || InnerBack.steps.isNotEmpty()
+    val bar = (sub.isEmpty() && (page != start || ctx is FilesActivity)) || sub in setOf("toolkit", "installer", "installer_settings", "files_settings", "ram", "dns", "fonts", "guide", "cover") || InnerBack.steps.isNotEmpty()
     val body: @Composable () -> Unit = { Column(Modifier.fillMaxSize()) {
         if (bar) Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
@@ -437,7 +440,7 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
 
 /** The title next to the back arrow for the tools that open on top of a page (their own big heading is gone). */
 private val SUB_TITLES = mapOf(
-    "toolkit" to ("Toolkit" to "Araç kutusu"), "installer" to ("Installer" to "Yükleyici"), "installer_settings" to ("Installer" to "Yükleyici"),
+    "toolkit" to ("Toolkit" to "Araç kutusu"), "cover" to ("Screen cover" to "Ekran kapağı"), "installer" to ("Installer" to "Yükleyici"), "installer_settings" to ("Installer" to "Yükleyici"),
     "files_settings" to ("Files" to "Dosyalar"), "ram" to ("RAM" to "RAM"), "dns" to ("DNS" to "DNS"), "fonts" to ("System font" to "Sistem yazı tipi"),
     "guide" to ("Guide" to "Kılavuz"),
 )

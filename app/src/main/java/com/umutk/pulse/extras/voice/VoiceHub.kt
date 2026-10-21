@@ -283,7 +283,7 @@ fun VoiceHub(onBack: () -> Unit) {
         rows += r
     }
 
-    LazyColumn(Modifier.fillMaxSize().background(T.bg).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 PIcon("back", fg, 22.dp, Modifier.clickable { leave() })

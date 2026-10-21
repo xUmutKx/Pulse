@@ -130,7 +130,7 @@ fun WeatherHub(onBack: () -> Unit) {
     val sub = T.sub
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     fun t(v: Double) = WeatherFmt.temp(v, imp)
-    LazyColumn(Modifier.fillMaxSize().background(T.bg).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PIcon("back", fg, 22.dp, Modifier.clickable { if (searching) searching = false else onBack() })

@@ -167,7 +167,7 @@ fun OnlinePlaylistsHub(onBack: () -> Unit) {
         }
     }
 
-    Column(Modifier.fillMaxSize().background(T.bg).padding(horizontal = 12.dp)) {
+    Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = 12.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = { if (list != null) { list = null; found = emptyList() } else onBack() }) { PIcon("back", T.text, 22.dp) }
             com.umutk.pulse.ExtraLookIcon()
