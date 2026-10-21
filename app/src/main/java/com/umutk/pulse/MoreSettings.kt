@@ -603,9 +603,10 @@ private fun ExtraAppsCard() {
     PCard {
         Text(tr("Extra apps", "Ek uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         apps.forEach { (alias, icon, label) ->
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                // Windows 11: the app's own Fluent glyph (same 22 dp size as the rows above); the other looks keep the drawable tile
-                if (T.id == "win11") PIcon(fluent.getValue(alias), T.text, 22.dp) else
+            // every row of this card has the same height and the same 36 dp icon slot
+            Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+                // Windows 11: the app's own Fluent glyph (the real Fluent System Icons path); the other looks keep the drawable tile
+                if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent.getValue(alias), T.text, 24.dp) } else
                 Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
                     Image(painterResource(icon), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f })
                 }
@@ -624,15 +625,15 @@ private fun ExtraAppsCard() {
             val cur = ToolPlace.where(ctx, t)
             val shownHere = cur == "extra"
             Column(Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    // Windows 11: the Fluent vector of the tool (the PNG pack is bypassed, it has black glyphs)
-                    if (T.id == "win11") FluentGlyph(t.key, T.text, 22.dp) else {
+                Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Windows 11: the Fluent vector of the tool, one glyph per tool (the PNG pack is bypassed, it has black glyphs)
+                    if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", T.text, 24.dp) } else {
                         // Office and Download manager get the black launcher tile with a white outline glyph (dark: accent glyph)
                         val tile = when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
                         if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
                             Image(painterResource(tile), null, Modifier.fillMaxSize().padding(6.dp),
                                 colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(if (T.dark) Look.accent else androidx.compose.ui.graphics.Color.Black))
-                        } else PIcon(t.key, T.text, 22.dp)
+                        } else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon(t.key, T.text, 22.dp) }
                     }
                     Spacer(Modifier.width(12.dp))
                     Text(tr(t.en, t.trName), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable(enabled = shownHere) {
