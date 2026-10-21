@@ -62,6 +62,7 @@ object Cfg {
         Look.effect = p.getString("effect", "mica") ?: "mica"
         Look.winIconLine = p.getBoolean("winIconLine", false)
         Look.winIconColor = p.getBoolean("winIconColor", false)
+        IconStyle.load(p)
         Look.windowTheme = p.getString("windowTheme", "win") ?: "win"
         Look.blurDp = p.getFloat("blurDp2", 8f); Look.blurTint = p.getFloat("blurTint2", .2f)
         Look.dynamic = p.getBoolean("dynamic", true); Look.corner = p.getString("corner", "medium") ?: "medium"
@@ -73,6 +74,7 @@ object Cfg {
     fun setMode(c: Context, v: String) { Look.mode = v; sp(c).edit().putString("mode", v).apply() }
     fun setEffect(c: Context, v: String) { Look.effect = v; sp(c).edit().putString("effect", v).apply() }
     fun setWinIconLine(c: Context, v: Boolean) { Look.winIconLine = v; sp(c).edit().putBoolean("winIconLine", v).apply() }
+    fun setIconStyle(c: Context, cat: IconCat, v: String) { IconStyle.map[cat.id] = v; sp(c).edit().putString("icon_${cat.id}", v).apply() }
     fun setWinIconColor(c: Context, v: Boolean) { Look.winIconColor = v; sp(c).edit().putBoolean("winIconColor", v).apply() }
     fun setBlur(c: Context) { sp(c).edit().putFloat("blurDp2", Look.blurDp).putFloat("blurTint2", Look.blurTint).apply() }
     fun setWindowTheme(c: Context, v: String) { Look.windowTheme = v; sp(c).edit().putString("windowTheme", v).apply() }
