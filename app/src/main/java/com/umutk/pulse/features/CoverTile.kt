@@ -1,5 +1,7 @@
 package com.umutk.pulse.features
 
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -53,6 +55,12 @@ object CoverStore {
     /** Where the clock block sits: 0..8, rows top / middle / bottom, columns left / centre / right (4 = the middle of the screen). */
     fun pos(c: Context) = prefs(c).getInt("pos", 4).coerceIn(0, 8)
     fun setPos(c: Context, p: Int) = prefs(c).edit().putInt("pos", p).apply()
+    /** Brightness of the screen while the cover is up, 5..100 (100 = leave the system's). */
+    fun bright(c: Context) = prefs(c).getInt("bright", 100).coerceIn(5, 100)
+    fun setBright(c: Context, v: Int) = prefs(c).edit().putInt("bright", v).apply()
+    /** The part of the screen the cover leaves open, in percent of the screen: left, top, right, bottom; null = the cover is closed everywhere. */
+    fun hole(c: Context): IntArray? = prefs(c).getString("hole", null)?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 4 }?.toIntArray()
+    fun setHole(c: Context, h: IntArray?) = prefs(c).edit().apply { if (h == null) remove("hole") else putString("hole", h.joinToString(",")) }.apply()
     val CLOCK_STYLES = listOf("light", "bold", "digital", "serif", "stacked", "small")
 }
 
@@ -128,6 +136,17 @@ fun CoverSettings() {
         Text(tr("Battery", "Pil"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
         PSwitch(battery, { battery = it; CoverStore.setBattery(ctx, it) })
     }
+    // brightness while the cover is up
+    var bright by remember { mutableIntStateOf(CoverStore.bright(ctx)) }
+    Text(tr("Brightness", "Parlaklık"), color = T.sub, fontSize = 12.sp)
+    com.umutk.pulse.PSlider(bright.toFloat(), { bright = it.toInt().coerceIn(5, 100); CoverStore.setBright(ctx, bright) }, 5f..100f) {}
+    // an open window in the cover: drag its edges
+    var hole by remember { mutableStateOf(CoverStore.hole(ctx)) }
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(tr("Leave an area open", "Bir alanı açık bırak"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+        PSwitch(hole != null, { on -> hole = if (on) intArrayOf(10, 55, 90, 90) else null; CoverStore.setHole(ctx, hole) })
+    }
+    hole?.let { h -> CoverHoleEditor(h) { n -> hole = n; CoverStore.setHole(ctx, n) } }
     if (clock) {
         // clock designs, each shown as it looks on the black cover
         var style by remember { mutableStateOf(CoverStore.style(ctx)) }
@@ -175,5 +194,51 @@ private fun CoverClockSample(style: String, k: Float) {
         else -> Triple(FontFamily.SansSerif, FontWeight.Light, 32)
     }
     Text(if (style == "stacked") "12\n45" else "12:45", color = Color.White, fontFamily = family, fontWeight = weight, fontSize = (sp * k).sp,
-        lineHeight = (sp * k * 1.02f).sp, textAlign = TextAlign.Center, maxLines = 2)
+        lineHeight = (sp * k * 1.02f).sp, textAlign = TextAlign.Center, maxLines = if (style == "stacked") 2 else 1, softWrap = style == "stacked")
+}
+
+
+/** A small screen with the open window drawn as a frame; grab an edge or a corner to resize it, the middle to move it. */
+@Composable
+private fun CoverHoleEditor(h: IntArray, onChange: (IntArray) -> Unit) {
+    val cur by rememberUpdatedState(h)
+    val accent = com.umutk.pulse.Look.accent
+    Box(Modifier.width(140.dp).height(260.dp).clip(RoundedCornerShape(16.dp)).background(Color.Black).border(1.dp, Color(0xFF333333), RoundedCornerShape(16.dp))
+        .pointerInput(Unit) {
+            var grab = 0   // bits: 1 left, 2 top, 4 right, 8 bottom, 16 = move all
+            var last = androidx.compose.ui.geometry.Offset.Zero
+            detectDragGestures(onDragStart = { o ->
+                last = o
+                val a = cur; val w = size.width.toFloat(); val hh = size.height.toFloat(); val slop = 28.dp.toPx()
+                val l = a[0] / 100f * w; val t = a[1] / 100f * hh; val r = a[2] / 100f * w; val b = a[3] / 100f * hh
+                grab = 0
+                if (o.y in (t - slop)..(b + slop) && kotlin.math.abs(o.x - l) < slop) grab = grab or 1
+                if (o.x in (l - slop)..(r + slop) && kotlin.math.abs(o.y - t) < slop) grab = grab or 2
+                if (o.y in (t - slop)..(b + slop) && kotlin.math.abs(o.x - r) < slop) grab = grab or 4
+                if (o.x in (l - slop)..(r + slop) && kotlin.math.abs(o.y - b) < slop) grab = grab or 8
+                if (grab == 0 && o.x in l..r && o.y in t..b) grab = 16
+            }) { ch, _ ->
+                ch.consume()
+                val d = ch.position - last; last = ch.position
+                val a = cur.copyOf(); val dx = (d.x / size.width * 100).toInt().let { if (it == 0) (if (d.x > 0.5f) 1 else if (d.x < -0.5f) -1 else 0) else it }
+                val dy = (d.y / size.height * 100).toInt().let { if (it == 0) (if (d.y > 0.5f) 1 else if (d.y < -0.5f) -1 else 0) else it }
+                if (grab and 16 != 0) {
+                    val w = a[2] - a[0]; val hh = a[3] - a[1]
+                    a[0] = (a[0] + dx).coerceIn(0, 100 - w); a[2] = a[0] + w; a[1] = (a[1] + dy).coerceIn(0, 100 - hh); a[3] = a[1] + hh
+                } else {
+                    if (grab and 1 != 0) a[0] = (a[0] + dx).coerceIn(0, a[2] - 10)
+                    if (grab and 2 != 0) a[1] = (a[1] + dy).coerceIn(0, a[3] - 10)
+                    if (grab and 4 != 0) a[2] = (a[2] + dx).coerceIn(a[0] + 10, 100)
+                    if (grab and 8 != 0) a[3] = (a[3] + dy).coerceIn(a[1] + 10, 100)
+                }
+                onChange(a)
+            }
+        }) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxSize()) {
+            val r = androidx.compose.ui.geometry.Rect(h[0] / 100f * size.width, h[1] / 100f * size.height, h[2] / 100f * size.width, h[3] / 100f * size.height)
+            drawRect(Color(0xFF1E1E1E), r.topLeft, r.size)
+            drawRect(accent, r.topLeft, r.size, style = androidx.compose.ui.graphics.drawscope.Stroke(3.dp.toPx()))
+            listOf(r.topLeft, r.topRight, r.bottomLeft, r.bottomRight).forEach { drawCircle(accent, 6.dp.toPx(), it) }
+        }
+    }
 }
