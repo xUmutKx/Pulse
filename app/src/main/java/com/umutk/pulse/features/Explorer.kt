@@ -718,6 +718,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         val item: @Composable (File) -> Unit = { f ->
             val grid = FilesPrefs.grid
             val isz = (24 + FilesPrefs.icon.coerceIn(0, 9) * 5).let { if (grid) it * 3 / 2 else it }
+            // the names grow with the icons (list rows, and the tiles of the grid)
+            val ts = (isz / 40f).coerceIn(1f, 1.5f)
+            val tsg = (isz / 60f).coerceIn(1f, 1.6f)
             val shownName = if (!FilesPrefs.ext && !f.isDirectory) f.nameWithoutExtension.ifEmpty { f.name } else f.name
             val isMark = f.path in marks
             val isPicked = f.path in sel
@@ -769,11 +772,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             ExIcon(if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
                         }
                     }
-                    Text(shownName, Modifier.padding(top = 4.dp), color = T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(shownName, Modifier.padding(top = 4.dp), color = T.text, fontSize = (12 * tsg).sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                     more()
                 }
-                else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).heightIn(min = 44.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), verticalAlignment = Alignment.CenterVertically) {
+                // the pick pill is thicker than the row's content (4 dp above and below it); the gaps between rows stay small
+                else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 4.dp).heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
@@ -785,14 +789,14 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
-                        Text(shownName, color = T.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(shownName, color = T.text, fontSize = (16 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val sub = when {
                             found != null -> exRel(f, top)
                             !f.isDirectory && showSizes -> exSize(f.length()) + "  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
                             f.isDirectory && standalone && showSizes -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
                             else -> ""
                         }
-                        if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = (11 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
                 more()
@@ -803,8 +807,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 if (FilesPrefs.cards) {
                     val base = if (FilesLook.theme == "amoled") Color(0xFF0A0A0A) else T.panel
                     val bgc = if (FilesPrefs.alt && shown.indexOf(f) % 2 == 1) T.text.copy(alpha = .05f).compositeOver(base) else base
-                    Box(Modifier.fillMaxWidth().padding(vertical = 1.dp).clip(RoundedCornerShape(listOf(8, 14, 22)[FilesPrefs.radius.coerceIn(0, 2)].dp)).background(bgc).padding(horizontal = 10.dp, vertical = 4.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
-                } else Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
+                    Box(Modifier.fillMaxWidth().padding(vertical = 1.dp).clip(RoundedCornerShape(listOf(8, 14, 22)[FilesPrefs.radius.coerceIn(0, 2)].dp)).background(bgc).padding(horizontal = 10.dp, vertical = 2.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
+                } else Box(Modifier.fillMaxWidth().padding(vertical = 1.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
             } else if (f.isDirectory && (FilesPrefs.folderCards || !T.material)) PCard(Modifier.fillMaxWidth()) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } } else Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
         }
         arcFile?.let { af ->

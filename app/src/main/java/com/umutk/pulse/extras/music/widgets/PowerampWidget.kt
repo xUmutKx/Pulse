@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.widgets
 
+import com.umutk.pulse.extras.music.shownArtist
+
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
@@ -86,7 +88,7 @@ class PowerampWidget : AppWidgetProvider() {
             val cover = st.current?.let { trackArt(c, it)?.asAndroidBitmap() }
             val title = st.current?.let { it.title ?: it.path.substringAfterLast('/') } ?: ""
             val style = powerampSkin(PowerampPrefs.skin(c)).build(NeutralAccent, Color.Black)
-            val bmp = render(style, title, st.current?.artist.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover, bw, bh)
+            val bmp = render(style, title, st.current?.shownArtist().orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover, bw, bh)
             val f = fit(bw, bh)
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {
                 setImageViewBitmap(R.id.pa_img, bmp)
