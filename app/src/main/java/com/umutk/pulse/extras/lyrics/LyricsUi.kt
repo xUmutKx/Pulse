@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.lyrics
 
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Dispatchers
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.FastOutLinearInEasing
@@ -171,11 +174,21 @@ fun LyricsSheet(
     var wasBefore by remember { mutableStateOf(false) }
     LaunchedEffect(lastMs, positionMs <= (lastMs ?: 0L)) { if (lastMs != null && positionMs <= lastMs) wasBefore = true }
     LaunchedEffect(lastMs != null && positionMs > lastMs + 6000) { if (lastMs != null && wasBefore && positionMs > lastMs + 6000 && !closing) close() }
-    LaunchedEffect(title, artist, localPath) {
+    // the names the search uses; the fields below the "No lyrics" note change them
+    var qTitle by remember(title) { mutableStateOf(title) }
+    var qArtist by remember(artist) { mutableStateOf(artist) }
+    var attempt by remember { mutableIntStateOf(0) }
+    LaunchedEffect(title, artist, localPath, attempt) {
         busy = true; res = null
-        // the notification finds lyrics under the file's own title with no artist; the same second try here
-        res = Lyrics.forTrack(ctx, title, artist, album, durationMs, localPath) ?: Lyrics.forTrack(ctx, title.substringAfter(" - "), "", album, durationMs, localPath)
+        val r = if (attempt == 0) {
+            // the notification finds lyrics under the file's own title with no artist; the same second try here
+            Lyrics.forTrack(ctx, title, artist, album, durationMs, localPath) ?: Lyrics.forTrack(ctx, title.substringAfter(" - "), "", album, durationMs, localPath)
+        } else Lyrics.forTrack(ctx, qTitle, qArtist, album, durationMs, null)
+        res = r
         busy = false
+        // found online: written beside the song when the settings say so
+        if (r != null && localPath != null && r.source in setOf("lrclib", "ovh", "cache") && LiveLyrics.saveLrc(ctx))
+            withContext(Dispatchers.IO) { Lyrics.saveSidecar(localPath, r) }
     }
     Box(
         modifier.fillMaxSize()
@@ -196,10 +209,23 @@ fun LyricsSheet(
         val r = res
         when {
             r != null -> LyricsView(r, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp))
-            busy -> Box(Modifier.fillMaxSize(), Alignment.Center) { PLoader() }
-            else -> Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
+            busy -> Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
+                PLoader()
+                Text(tr("Searching for lyrics…", "Sözler aranıyor…"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
+            }
+            else -> Column(Modifier.fillMaxSize().padding(horizontal = 28.dp), Arrangement.Center, Alignment.CenterHorizontally) {
                 PIcon("book", Color.White.copy(alpha = .6f), 40.dp)
-                Text(tr("No lyrics", "Söz yok"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+                Text(tr("No lyrics found", "Söz bulunamadı"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
+                // another spelling of the song or the artist, then search again
+                @Composable fun field(v: String, hint: String, on: (String) -> Unit) = androidx.compose.foundation.text.BasicTextField(
+                    v, on, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).background(Color.White.copy(alpha = .1f), androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(horizontal = 12.dp, vertical = 10.dp),
+                    decorationBox = { inner -> if (v.isEmpty()) Text(hint, color = Color.White.copy(alpha = .4f), fontSize = 15.sp); inner() })
+                field(qArtist, tr("Artist", "Sanatçı")) { qArtist = it }
+                field(qTitle, tr("Song", "Şarkı")) { qTitle = it }
+                Text(tr("Search again", "Tekrar ara"), color = Color.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)
+                    .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 9.dp))
             }
         }
         IconButton(onClick = { close() }, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) { PIcon("close", Color.White, 22.dp) }

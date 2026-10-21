@@ -57,6 +57,18 @@ object Lyrics {
             r
         }
 
+    /** Writes [r] as a .lrc (or a .txt for unsynced lyrics) next to the song, unless one is there already. True when a file was written. */
+    fun saveSidecar(path: String, r: LyricsResult): Boolean = runCatching {
+        val base = path.substringBeforeLast('.')
+        val ext = if (r.synced) "lrc" else "txt"
+        val f = File("$base.$ext")
+        if (f.exists() || sidecarFile(path, ext) != null) return@runCatching false
+        val text = r.lines.joinToString("\n") { l -> if (r.synced && l.timeMs >= 0) "[%02d:%02d.%02d]%s".format(l.timeMs / 60000, l.timeMs / 1000 % 60, l.timeMs / 10 % 100, l.text) else l.text }
+        f.writeText(text)
+        dirNames.remove(f.parent)
+        true
+    }.getOrDefault(false)
+
     /** Reads the lyrics that are on the phone once, in the background, so the first lyrics search is instant (see [LyricsIndex]). */
     suspend fun warmIndex(ctx: Context, tracks: List<com.umutk.pulse.extras.music.Track>) {
         runCatching { LyricsIndex.ensure(ctx.applicationContext, tracks) { p -> sidecarText(p)?.let { stripStamps(it) } ?: embeddedText(p) } }
