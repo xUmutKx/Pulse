@@ -914,3 +914,5 @@ Screen recorder feature list (55 candidates)
 - Network type: 3G/2G/LTE modes also set the phone service allowed-types bitmask (cmd phone), not only the old setting; Excel/Office: content area and grid clipped to their bounds (top chrome was painted over); Screenshot/record tile: tap = screencap screenshot as root (reads FLAG_SECURE windows), long press = recorder page; recorder: show touches, floating pause/stop/pen/grab-frame bar; 0.10.169. derlenmedi
 
 - Files: cut / copy / paste buttons of the selection bar 1.75x bigger; cutting out of an APK/zip no longer refused for the signature; 0.10.170. derlenmedi
+
+- Files: cut/copy/paste bar pinned at the top while items are picked; pull down to refresh; Poweramp waveform taller so it shows beyond the transport buttons; Material player cover corners 24dp; 0.10.171. derlenmedi
