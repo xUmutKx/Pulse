@@ -137,7 +137,7 @@ class OfficeViewActivity : ComponentActivity() {
     private fun fileOps(d: OfDoc, k: OfKind) = OfFileOps(d.name, { d.dirty }, { share(d) }, { pickOther.launch(arrayOf("*/*")) },
         { try { ofOpen(this, ofCreate(k, "${k.app} ${tr("document", "belge")}")) } catch (e: Exception) { Toast.makeText(this, "Could not create: ${e.message ?: e.javaClass.simpleName}", Toast.LENGTH_LONG).show() } },
         if (k == OfKind.PDF) ({ print(d) }) else null, { info(d, k) }, { trig -> saveAsTrigger = trig },
-        saveTxt = if (k == OfKind.WORD) ({ txtAsk = true }) else null)
+        saveTxt = if (k == OfKind.WORD && !name.endsWith(".txt", true)) ({ txtAsk = true }) else null)
 
     /** writes the screen's plain text to [f] on a worker thread; the result is a toast */
     private fun saveTxt(f: File) {
