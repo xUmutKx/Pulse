@@ -62,12 +62,32 @@ object NetMode {
         return list.getOrNull(list.indexOf(cur) + 1) ?: list.first()
     }
 
+    private fun bit(type: Int) = 1L shl (type - 1)
+    private val g2 = bit(1) or bit(2) or bit(16) or bit(4) or bit(7)
+    private val g3 = bit(3) or bit(8) or bit(9) or bit(10) or bit(15) or bit(17) or bit(5) or bit(6) or bit(12) or bit(14)
+    private val lte = bit(13) or bit(19)
+    private val nr = bit(20)
+
+    /** The allowed-network-types bitmask (TelephonyManager.NETWORK_TYPE_BITMASK_*) of a mode; newer phones follow this and not the old setting. */
+    fun mask(mode: Int): Long = when (mode) {
+        23 -> nr
+        24 -> nr or lte
+        11 -> lte
+        9 -> lte or g3 or g2
+        2 -> g3
+        1 -> g2
+        else -> nr or lte or g3 or g2
+    }
+
     /** Writes the mode for every SIM slot as root and, when asked, flips airplane mode so the radio re-reads it. [done] runs on the main thread. */
     fun apply(c: Context, mode: Int, done: (Boolean) -> Unit) {
         val app = c.applicationContext
         val air = viaAirplane(app)
         Thread {
-            val cmd = "for k in preferred_network_mode preferred_network_mode1 preferred_network_mode2; do settings put global \$k $mode; done" +
+            // the phone service takes the allowed types directly (Android 13+); older phones only read the global setting above
+            val m = mask(mode)
+            val cmd = "for k in preferred_network_mode preferred_network_mode1 preferred_network_mode2; do settings put global \$k $mode; done; " +
+                "for s in 0 1; do cmd phone set-allowed-network-types-for-users -s \$s $m; done; cmd phone set-allowed-network-types-for-users $m" +
                 (if (air) "; cmd connectivity airplane-mode enable; sleep 1; cmd connectivity airplane-mode disable" else "") + "; echo __OK"
             val out = if (Shell.root == true) Shell.runRoot(cmd) else Shell.run(cmd)
             val ok = out.contains("__OK") && current(app) == mode

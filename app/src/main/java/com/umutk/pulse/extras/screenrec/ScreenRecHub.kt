@@ -186,6 +186,10 @@ fun ScreenRecHub(back: () -> Unit) {
         Spacer(Modifier.height(16.dp))
         Text(tr("Settings", "Ayarlar"), color = T.sub, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 4.dp))
         SettingSwitch("volume", tr("Microphone", "Mikrofon"), mic) { mic = it; ScreenRecPrefs.setMic(ctx, it) }
+        var touches by remember { mutableStateOf(ScreenRecPrefs.touches(ctx)) }
+        var floating by remember { mutableStateOf(ScreenRecPrefs.floating(ctx)) }
+        SettingSwitch("sensors", tr("Show touches", "Dokunuşları göster"), touches) { touches = it; ScreenRecPrefs.setTouches(ctx, it) }
+        SettingSwitch("sensors", tr("Floating controls and pen", "Yüzen kontroller ve kalem"), floating) { floating = it; ScreenRecPrefs.setFloating(ctx, it) }
         SettingSwitch("stopwatch", tr("Countdown before start", "Başlamadan geri sayım"), countdownOn) { countdownOn = it; ScreenRecPrefs.setCountdown(ctx, it) }
         SettingChoice("image", tr("Quality", "Kalite"), qualityName(quality)) { dlg = "quality" }
         SettingChoice("sensors", tr("Frame rate", "Kare hızı"), "$fps fps") { dlg = "fps" }
