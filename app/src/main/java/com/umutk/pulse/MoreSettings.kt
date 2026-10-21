@@ -675,9 +675,12 @@ private fun PlaceChoice(selected: String, options: List<Pair<String, String>>, o
 /** A Fluent vector glyph straight from FluentPaths (Windows 11 tool icons; the PNG pack is not used here). */
 @Composable
 private fun FluentGlyph(k: String, tint: androidx.compose.ui.graphics.Color, size: androidx.compose.ui.unit.Dp) {
-    val paths = remember(k) { (FluentFilled.map[k] ?: FluentPaths.map[k] ?: FluentPaths.map["info"]!!).map { PathParser().parsePathString(it).toPath() } }
+    // the Line icon style (Settings > Look) keeps the thin glyphs in the text colour; Fluent colour draws the filled glyph in its colour
+    val line = Look.winIconLine
+    val paths = remember(k, line) { ((if (line) null else FluentFilled.map[k]) ?: FluentPaths.map[k] ?: FluentPaths.map["info"]!!).map { PathParser().parsePathString(it).toPath() } }
+    val ink = if (line) T.text else tint
     Canvas(Modifier.size(size)) {
-        scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
+        scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, ink) } }
     }
 }
 
