@@ -266,7 +266,7 @@ fun DocScanPage(onBack: () -> Unit) {
             val shown by produceState<Bitmap?>(null, last, mode) { value = last?.let { withContext(Dispatchers.Default) { shape(it) } } }
             // the page sits on a soft shadow with rounded corners, like paper on a desk
             shown?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxWidth().heightIn(max = 460.dp).padding(6.dp).shadow(6.dp, androidx.compose.foundation.shape.RoundedCornerShape(4.dp)).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)), contentScale = ContentScale.Fit) }
-            else Text(tr("No pages yet", "Henüz sayfa yok"), color = T.sub, fontSize = 13.sp)
+            if (last == null) Text(tr("No pages yet", "Henüz sayfa yok"), color = T.sub, fontSize = 13.sp)
             if (pages.isNotEmpty()) Text(tr("${pages.size} page(s)", "${pages.size} sayfa"), color = T.sub, fontSize = 12.sp)
             if (busy) Text(tr("Working...", "İşleniyor..."), color = T.sub, fontSize = 12.sp)
             if (status.isNotEmpty()) Text(status, color = T.text, fontSize = 13.sp)
