@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.winamp
 
+import com.umutk.pulse.extras.music.shownArtist
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
