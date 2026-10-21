@@ -156,13 +156,8 @@ open class WinampWidget : AppWidgetProvider() {
         }
 
         /** Where [render] puts the window in a boxW x boxH bitmap: x, y, width, height (whole-pixel enlargement, centred). */
-        fun drawnRect(boxW: Int, boxH: Int, winH: Int): IntArray {
-            val f = fitOf(boxW, boxH, WINAMP_W, winH)
-            if (f.scale < 1f) return intArrayOf(f.x, f.y, f.w, f.h)
-            val k = kotlin.math.floor(f.scale).toInt().coerceIn(1, 12)
-            val w = WINAMP_W * k; val h = winH * k
-            return intArrayOf((boxW - w) / 2, (boxH - h) / 2, w, h)
-        }
+        @Suppress("UNUSED_PARAMETER")
+        fun drawnRect(boxW: Int, boxH: Int, winH: Int): IntArray = intArrayOf(0, 0, boxW, boxH)
 
         private fun boxPx(c: Context, id: Int, compact: Boolean): Pair<Int, Int> {
             val (pw, ph) = viewPx(c, id, compact)
@@ -190,7 +185,6 @@ open class WinampWidget : AppWidgetProvider() {
         fun render(skin: WinampSkin?, title: String, frac: Float, playing: Boolean, posSec: Long, shuffle: Boolean = false, repeat: Int = 0, volume: Float = 1f,
                    boxW: Int = WINAMP_W * 2, boxH: Int = WINAMP_H * 2, strip: Boolean = false): Bitmap {
             val out = Bitmap.createBitmap(boxW, boxH, Bitmap.Config.ARGB_8888)
-            val f = fitOf(boxW, boxH, WINAMP_W, if (strip) STRIP_H else WINAMP_H)
             val winH = if (strip) STRIP_H else WINAMP_H
             // the window is painted at its real 275-pixel size, enlarged by whole steps without smoothing (sharp skin pixels) and then
             // fitted to the box with smoothing, so the sprites stay crisp at any widget size
@@ -202,13 +196,9 @@ open class WinampWidget : AppWidgetProvider() {
                 wc.save(); wc.clipRect(0f, 0f, WINAMP_W.toFloat(), 40f); paint(); wc.restore()
                 wc.save(); wc.translate(0f, -32f); wc.clipRect(0f, 72f, WINAMP_W.toFloat(), 106f); paint(); wc.restore()
             }
-            // whole-pixel enlargement only: every skin pixel becomes a k x k block, so nothing is smeared; the rest of the box stays see-through
-            val k = kotlin.math.floor(f.scale).toInt().coerceIn(1, 12)
+            // the window fills the whole widget edge to edge, no empty band around it; the skin pixels are enlarged without smoothing
             val cv = Canvas(out)
-            if (f.scale < 1f) { cv.drawBitmap(win, null, Rect(f.x, f.y, f.x + f.w, f.y + f.h), Paint(Paint.FILTER_BITMAP_FLAG)); return out }
-            val big = if (k > 1) Bitmap.createScaledBitmap(win, WINAMP_W * k, winH * k, false) else win
-            val x = (boxW - big.width) / 2; val y = (boxH - big.height) / 2
-            cv.drawBitmap(big, x.toFloat(), y.toFloat(), null)
+            cv.drawBitmap(win, null, Rect(0, 0, boxW, boxH), Paint().apply { isFilterBitmap = boxW < WINAMP_W })
             return out
         }
 
