@@ -900,3 +900,5 @@ Screen recorder feature list (55 candidates)
 - Icons: four groups (menus/pages/buttons, apps, tools, icons inside screens) each with its own style in Settings > Look (collapsed rows); original = old Windows 11 pack where it has the icon, new Fluent glyph where not; everything merged to main; 0.10.162. derlenmedi
 
 - Calculator extra app (Windows 11 look default, classic keys in 7/XP/95), network type tool + Quick Settings tile (root: 5G only / LTE / auto cycle), contacts info button removed, installer: zip entries share via FileProvider cache paths, original Winamp base-2.91 skin as default, music widget settings sheet (transparent window, live preview, shape, text size, cover size/side, controls, accent, opacity); 0.10.163. derlenmedi
+
+- Equalizer: attach falls back to the global mix, keeps a working equalizer when the session id is unset, shows the reason and a Try again button instead of a bare block icon; 0.10.164. derlenmedi

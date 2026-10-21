@@ -75,20 +75,28 @@ class Equalizer {
     val presetNames: List<String>
         get() = eq?.let { e -> (0 until e.numberOfPresets.toInt()).map { e.getPresetName(it.toShort()) } }.orEmpty()
 
+    /** Why the last attach failed (shown instead of an empty page); empty while it works. */
+    var lastError = ""
+        private set
+
+    private fun build(session: Int): PlatformEqualizer = PlatformEqualizer(0, session).also { e ->
+        // Saved levels may come from a device with a different band count.
+        savedLevels?.take(e.numberOfBands.toInt())?.forEachIndexed { band, level -> e.setBandLevel(band.toShort(), level) }
+        e.enabled = savedEnabled
+    }
+
     /** Binds to the audio session. Call again with the new id after the player is recreated. */
     fun attach(audioSessionId: Int) {
+        // a session that is not there yet (0 / unset) is not a reason to drop a working equalizer
+        if (audioSessionId <= 0 && eq != null) return
         release()
+        lastError = ""
         eq = try {
-            PlatformEqualizer(0, audioSessionId).also { e ->
-                // Saved levels may come from a device with a different band count.
-                savedLevels?.take(e.numberOfBands.toInt())?.forEachIndexed { band, level ->
-                    e.setBandLevel(band.toShort(), level)
-                }
-                e.enabled = savedEnabled
-            }
-        } catch (e: RuntimeException) {
-            // Unsupported device or invalid session: stay in the no-op state.
-            null
+            build(audioSessionId)
+        } catch (e: Throwable) {
+            lastError = e.message ?: e.javaClass.simpleName
+            // some phones refuse an effect on a player's own session: the global output mix (session 0) still takes it
+            runCatching { build(0) }.onSuccess { lastError = "" }.getOrNull()
         }
         bass = runCatching { BassBoost(0, audioSessionId).also { it.enabled = true } }.getOrNull()
         virt = runCatching { Virtualizer(0, audioSessionId).also { it.enabled = true } }.getOrNull()
