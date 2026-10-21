@@ -59,8 +59,8 @@ Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery a
 
 #### Files and install
 
-- **Files**: a file explorer with a trash folder. Deleted files go to `.pulse_trash` until the next delete, so Undo can bring them back. Each file has its menu on the right, with the three dots stacked.
-- **Installer**: installs APK, APKS, APKM, XAPK and zip bundles. Modes are dialog, background, auto and silent. Silent install uses root or Shizuku. The installer detects Xposed modules and has an LSPosed button. You can require biometrics before each install. The install window has three looks (Windows 11, Material or AMOLED black) and three loading styles: round, rounded bar, or wave. The loader is always white.
+- **Files**: a file explorer. Zip files opened from any other app can be opened with Pulse and browse like a folder. The folder tree and the file-type breakdown measure the storage once and keep the result between runs; only Refresh measures again. A folder of hundreds of entries (`/data/data`) fills in smoothly. A trash folder: Deleted files go to `.pulse_trash` until the next delete, so Undo can bring them back. Each file has its menu on the right, with the three dots stacked.
+- **Installer**: installs APK, APKS, APKM, XAPK and zip bundles; a zip with several different apps becomes one install per app, and root or Shizuku installs stream the files into the system installer. Modes are dialog, background, auto and silent. Silent install uses root or Shizuku. The installer detects Xposed modules and has an LSPosed button. You can require biometrics before each install. The install window has three looks (Windows 11, Material or AMOLED black) and three loading styles: round, rounded bar, or wave. The loader is always white.
 - **Downloads**: several connections for files the server can split, and downloads keep running in the background. Paste a link, or share a link from your browser to Pulse.
 
 #### App lock
@@ -77,11 +77,13 @@ One player with four looks: Material, Poweramp, Winamp and Windows Media Player,
 - **Library**: every song on the phone, including ones that came from downloads or messengers. Albums, artists and genres group the songs, and a song without tags still lands in a group (its folder, or "Unknown"). Every artist always has a name: the tag, the "Artist - Title" part of the file name, the folder, or "Unknown artist".
 - **Play and Shuffle** icons sit on top of every song list (all songs, an album, an artist, a folder, a playlist). Play starts the list in order, Shuffle starts the same songs in a random order. Tapping a song plays that list from the song.
 - **Search**: type and it looks through songs, artists and albums, and, from three letters on, through lyrics too, with no extra switch. A lyrics hit shows the matching line with the line above and the line below.
+- **Covers**: a cover lookup ignores compilation names ("No.1 Classics", "Greatest Hits") and tag noise (Remastered, feat., track numbers), searches the song instead, and a short name must match exactly.
 - **Cover gestures**: swipe sideways and the cover swings on an arc with a slight tilt. Pull it up or down and it follows your finger out of its frame; a long pull sends it across the page and opens the previous screen.
-- **Waveform seek bar** (Poweramp): it shows about half a minute of the song around the play position, scrolls with the music, and you drag it to seek.
+- **Waveform seek bar** (Poweramp): it shows about half a minute of the song around the play position, scrolls with the music, and you can drag it from anywhere around it (a taller touch area than the bars). A rated song keeps its stars on the cover.
 - **Sound quality** under the buttons: the file's format, sample rate, bit depth and bitrate. Settings can show the artist, album, song name or folder there instead.
 - **Suggestions**: songs and artists you may want next, under the now-playing page and in the library.
-- **Widgets**: Winamp (4×2 and 4×1, drawn with the real skin; the default skin is used at once), Poweramp and a plain player widget.
+- **Widgets**: Winamp (4×2 and 4×1, drawn with the real skin edge to edge; the default skin is used at once), a Winamp visualizer, Poweramp and a plain player widget with its own opacity setting. They work from a cold start (the last queue is loaded when a widget starts the app), the time and seek knob move every second, and tapping the Poweramp widget opens the player.
+- **Material look**: the now-playing page is a sheet that follows your finger and shows the library underneath, lyrics open on top of the cover, live level bars sit under the cover, the title slides in from the side the track came from, and the cover colour fades into the next one.
 
 - **Poweramp**: now-playing page with the album cover as a full-screen backdrop (or plain black, your choice in settings). Play sits in the centre with previous and next beside it; the waveform and time sit under it. The lyrics button and a three-dot menu (favourite, edit tags) sit beside the title. Sleep timer is a floating rotary dial from 0 to 120 minutes, with end of track and off.
 - **Album cover**: the three-dot button on the cover searches the internet for album art (iTunes catalogue, no account needed) and saves the picked image for that track. Tags (title, artist, album) can be edited from the same menu.
@@ -91,12 +93,12 @@ One player with four looks: Material, Poweramp, Winamp and Windows Media Player,
 
 #### Apps
 
-Settings has one **Apps** card for everything optional: the standalone apps, the tools and the pages. Each tool picks where it shows (the top-right menu, the **Apps** group of that menu, the left menu, or only Settings) with one radio per place. The top-right menu has an **Apps** group that lists the tools you placed there, and the store.
+Settings has one **Apps** card for everything optional: the standalone apps, the tools and the pages. Each row has a switch (the app's home-screen icon, or whether the tool shows) and a chevron that folds **where it is listed inside Pulse**: the top-right menu, the left menu, or only Settings, one radio per place with that place's icon. Tap an app's name to open it. The top-right menu has an **Apps** group with the tools you placed there and an **Extra apps** entry that lists every standalone app in one place.
 
 - **Files**: a file manager with its own look, zip, 7z and rar archives (browse and extract; compress to zip or 7z; paste into a zip), a folder tree, large and duplicate file finders, and root browsing of `/data/data`, where every installed app shows its own icon.
 - **Photos**, **Calendar**, **Contacts**: standalone apps that can be set as the default for their links.
 - **Messages**: SMS and MMS, with attachments.
-- **Notes**: lists and drawing with a Paint-style toolbar. **Voice recorder**, **Screen recorder** and **Notification history**.
+- **Notes**: lists and drawing with a Paint-style toolbar, black (AMOLED) by default. **Voice recorder**, **Screen recorder** and **Notification history**.
 - **Weather**: forecast, a sun arc from sunrise to sunset, the moon phase and alerts.
 - **White noise**: a mixer of ambient sounds and bird songs, each with its own level, with presets you can save.
 - **Paint**: a drawing app in the style of MS Paint: pencil, brush, eraser, fill, colour picker, line, rectangle and ellipse, the classic 28 colours, a line width, undo, opening a picture and saving to `Pictures/Paint`.
@@ -105,7 +107,7 @@ Settings has one **Apps** card for everything optional: the standalone apps, the
 
 #### Office
 
-**Word**, **Excel** and **PowerPoint** open and edit documents. Each window is drawn in the look you pick, from Windows 95 and 2003 menus to the flat 2013 and 365 ribbons, with a Home ribbon, a zoom bar and a status bar.
+**Word**, **Excel** and **PowerPoint** open and edit documents. Each window is drawn in the look you pick, from Windows 95 and 2003 menus to the flat 2013 and 365 ribbons, with a Home ribbon, a zoom bar and a status bar. The 365 window is solid grey (light or dark) and every text and icon colour is picked from the strip it sits on. Text files open in a Notepad-style editor drawn per look (grey in Windows 11), with a black AMOLED option that is remembered.
 
 #### Launcher
 
@@ -126,13 +128,14 @@ Pulse checks GitHub for a newer release at most every 12 hours. When one exists,
 - **Network usage**: data use per app, split into mobile and Wi-Fi.
 - **DNS**: Private DNS as Auto, Off or Manual with a host name. Needs root or Shizuku.
 - **Watchdog**: every 15 minutes it restarts the monitor and any running downloads that Android has stopped.
+- **Screen cover**: a black overlay that keeps a clock, date, battery and your own text, like an always-on display. Six clock styles with previews and nine positions on the screen.
 - **Cache cleaner**, **folder sizes**, **type breakdown** and **temperature graph**, from the Tools page. Pie charts draw each slice flush against the next.
 
 ### Themes
 
 Pulse has these looks, each with its own title bar, buttons and window edge:
 
-- **Windows 11**, with a dark version. Dialogs are see-through, with the accent colour as a 1 px edge.
+- **Windows 11**, with a dark version. Dialogs are see-through, with the accent colour as a 1 px edge. Pages are see-through over the backdrop. Icons come in three styles (Settings > Look): **Fluent** (the coloured Windows 11 pack, default), **Fluent colour** (Fluent UI colour pictures for apps, tools and pages) and **Line** (thin glyphs). Material icons used in code have a pack picture or a Fluent glyph in this look.
 - **Windows 10**, with a dark version
 - **Windows 7**, with an Aero style glass title bar and glossy buttons
 - **Windows XP**, with the Luna blue title bar
@@ -207,11 +210,11 @@ You need JDK 17 or newer and the Android SDK with platform 34. Put the SDK path 
 gradle :app:assembleRelease
 ```
 
-The APK is written to `app/build/outputs/apk/release/`. Release builds are currently signed with the debug key, so change the signing config before you publish one.
+The APK is written to `app/build/outputs/apk/release/`. Every build (GitHub Actions and the Termux script `termux-build.sh`) is signed with the fixed key in `ci/pulse.keystore`, so a new APK installs over the previous one. The key is public because the repository is (see `ci/README.md`); use your own for anything you publish.
 
 ### Licences
 
-- **Microsoft Fluent System Icons** (MIT). The icons in the Windows themes are outlines taken from them by `tools/fetch_icons.py` into `FluentPaths.kt`.
+- **Microsoft Fluent System Icons** (MIT). The icons in the Windows themes are outlines taken from them by `tools/fetch_icons.py` into `FluentPaths.kt`; the filled and colour glyphs (`FluentFilled.kt`, `FluentMat.kt`, `FluentColor.kt`, `res/drawable-nodpi/fc_*.png`) come from the same set.
 - **Universal Android Debloater package list** (GPL-3.0, Universal-Debloater-Alliance). The debloater downloads it from GitHub; a copy is bundled in `app/src/main/assets/debloat/uad_lists.json`.
 - **Shizuku API** (MIT, copyright RikkaW). The licence text is in `app/src/main/assets/licenses/`.
 - **Windows XP icon pack** by Matt Pettit (CC0 1.0, public domain dedication). The XP theme's Apps, Download, Heart, Phone and Startup icons come from it, resized to 48 px. The licence text is in `app/src/main/assets/licenses/xp-icons-LICENSE.txt`.
