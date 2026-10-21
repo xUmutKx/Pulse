@@ -599,12 +599,18 @@ private fun ExtraAppsCard() {
             // every row of this card has the same height and the same 36 dp icon slot
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Windows 11: the app's own Fluent glyph (the real Fluent System Icons path); the other looks keep the drawable tile
-                if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent.getValue(alias), FluentFilled.color(fluent.getValue(alias)), 24.dp) } else
-                Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
+                // the colour Fluent picture of the app (Fluent UI System Icons, colour set); Windows 11 with the Line icon style keeps the thin glyph
+                val colorIcon = fluentColorRes(ctx, FC_APP[alias] ?: "")
+                if (T.id == "win11" && Look.winIconLine) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent.getValue(alias), T.text, 24.dp) }
+                else if (colorIcon != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(colorIcon), null, Modifier.size(30.dp)) }
+                else Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
                     Image(painterResource(icon), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f })
                 }
                 Spacer(Modifier.width(12.dp))
-                Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                // a tap on the name opens the app
+                Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable {
+                    if (alias == "ExtraStoreLauncher") openTool("extrastore") else AppPlace.byAlias(alias)?.run(ctx, openTool)
+                }.padding(vertical = 14.dp))
                 // the chevron folds where the app is listed inside Pulse (top-right menu, left menu, Settings only); the switch is its home-screen icon
                 PIcon("chevron", T.sub, 20.dp, Modifier.clickable { placeOpen = if (placeOpen == alias) null else alias }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (placeOpen == alias) 180f else 0f })
                 PSwitch(state[alias] == true, { on ->
@@ -623,7 +629,9 @@ private fun ExtraAppsCard() {
             Column(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                     // Windows 11: the Fluent vector of the tool, one glyph per tool (the PNG pack is bypassed, it has black glyphs)
-                    if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", FluentFilled.color("tool_${t.id}"), 24.dp) } else {
+                    val toolColor = fluentColorRes(ctx, t.id)
+                    if (toolColor != 0 && !(T.id == "win11" && Look.winIconLine)) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(toolColor), null, Modifier.size(30.dp)) }
+                    else if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", FluentFilled.color("tool_${t.id}"), 24.dp) } else {
                         // Office and Download manager get the black launcher tile with a white outline glyph (dark: accent glyph)
                         val tile = when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
                         if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
@@ -652,7 +660,8 @@ private fun ExtraAppsCard() {
         // the app's own pages: shown in the left menu or hidden
         Pages.forEach { p ->
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }
+                val pageColor = fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id)
+                Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (pageColor != 0 && !(T.id == "win11" && Look.winIconLine)) Image(painterResource(pageColor), null, Modifier.size(30.dp)) else if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }
                 Spacer(Modifier.width(12.dp))
                 Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
                 PSwitch(p.id !in Opt.hidden, { on -> Opt.hidden = if (on) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) })
@@ -748,3 +757,12 @@ internal fun ExtraDefaultRow(alias: String) {
         PButton(tr("Make default", "Varsayılan yap")) { extraSetDefault(ctx, alias) { rev++ } }
     }
 }
+
+/** Colour Fluent picture res/drawable-nodpi/fc_<key>.png (Fluent UI System Icons colour set, MIT, rendered at 144 px); 0 when there is none. */
+internal fun fluentColorRes(ctx: android.content.Context, key: String): Int =
+    if (key.isEmpty()) 0 else ctx.resources.getIdentifier("fc_$key", "drawable", ctx.packageName)
+
+private val FC_APP = mapOf("FilesLauncher" to "files", "PhotosLauncher" to "photos", "CalendarLauncher" to "calendar", "ContactsLauncher" to "contacts", "PaintLauncher" to "paint",
+    "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes",
+    "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "ExtraStoreLauncher" to "store")
+private val FC_PAGE = mapOf("downloads" to "download", "files" to "files")

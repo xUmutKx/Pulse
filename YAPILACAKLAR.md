@@ -880,3 +880,5 @@ Screen recorder feature list (55 candidates)
 - Win11 "Fluent colour" icon style draws coloured filled Fluent glyphs everywhere PIcon is used (Line keeps thin glyphs), Extra apps entry in the top-right Apps menu, screen cover clock styles with previews and 9 positions, 0.10.152. derlenmedi
 
 - Each standalone app in Settings > Apps has its place (top-right menu, left menu, Settings only); Windows 11 tool and extra-app pages are see-through (pageBg); Screen cover gets the back arrow bar; 0.10.153. derlenmedi
+
+- Colour Fluent pictures (Fluent UI colour set, PNG) for every app, tool and page in Settings > Apps and the left menu; tapping an app name opens it; Poweramp now playing without suggestions and without scrolling; Material player: colour fades, title slides by direction, art crossfade, play squeeze; removed stray Python wheels from the source folder; 0.10.154. derlenmedi
