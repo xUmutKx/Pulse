@@ -60,6 +60,10 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+private val XP_WINDOW = WinSkin("xp", Brush.horizontalGradient(listOf(Color(0xFF0058EE), Color(0xFF3A93FF), Color(0xFF0058EE))), Color.White, Color(0xFF0831D9), 3.dp, 7.dp,
+    Color.White, Color(0xFFD6DFF7), Color.White, Color(0xFF1B1B1B), Color(0xFF5A6A9A), Color(0xFF316AC5), Color.White, Color(0xFF7F9DB9))
+
+
 /** Windows XP (Luna) look: Luna gradients as Compose brushes, the Start button, flag, tray and icons drawn with Path and Canvas. */
 class XpLauncherLook : LauncherLook {
     override val id: String = "xp"
@@ -137,49 +141,7 @@ class XpLauncherLook : LauncherLook {
 
     @Composable
     override fun StartMenu(state: LauncherState, onClose: () -> Unit, modifier: Modifier) {
-        val edge = LocalLauncherEdge.current
-        val ctx = LocalContext.current
-        var query by remember { mutableStateOf("") }
-        val (pinned, all) = startLists(state, query)
-        val noRipple = remember { MutableInteractionSource() }
-        // a tap outside the menu closes it; the menu swallows its own taps
-        Box(modifier.clickable(interactionSource = noRipple, indication = null, onClick = onClose)) {
-            Column(
-                Modifier.align(Alignment.BottomStart).padding(start = edge, bottom = taskbarHeight)
-                    .widthIn(max = 360.dp).fillMaxWidth(.88f).fillMaxHeight(.72f)
-                    .clip(RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)).background(frame)
-                    .padding(start = 3.dp, end = 3.dp, top = 3.dp)
-                    .clickable(interactionSource = noRipple, indication = null) {},
-            ) {
-                Row(Modifier.fillMaxWidth().height(56.dp).background(headerBrush).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    XpAvatar(Modifier.size(44.dp))
-                    Spacer(Modifier.width(10.dp))
-                    Text(userName, style = TextStyle(color = onBlue, fontSize = 15.sp, fontWeight = FontWeight.Bold, shadow = Shadow(Color(0x99000000), Offset(1f, 1f), 1f)))
-                }
-                Row(Modifier.weight(1f).fillMaxWidth()) {
-                    Column(Modifier.weight(1f).fillMaxHeight().background(menuLeft).padding(6.dp)) {
-                        XpSearch(query) { query = it }
-                        Spacer(Modifier.height(6.dp))
-                        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                            if (pinned.isNotEmpty()) {
-                                items(pinned, key = { "p_${it.pkg}" }) { app -> XpRow(app, state, onClose) }
-                                item(key = "sep") { XpSeparator() }
-                            }
-                            groupedApps(all).forEach { (group, apps) ->
-                                item(key = "g_${group.name}") { XpHeading(tr(group.en, group.tr)) }
-                                items(apps, key = { "a_${it.pkg}" }) { app -> XpRow(app, state, onClose) }
-                            }
-                        }
-                    }
-                    Column(Modifier.width(124.dp).fillMaxHeight().background(menuRight).padding(horizontal = 6.dp, vertical = 8.dp)) {
-                        XpLink(
-                            label = tr("Control Panel", "Denetim Masası"),
-                            onClick = { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)); onClose() },
-                        )
-                    }
-                }
-            }
-        }
+        LauncherWindow(XP_WINDOW, state, onClose, taskbarHeight, modifier)
     }
 
     @Composable

@@ -920,3 +920,5 @@ Screen recorder feature list (55 candidates)
 - Calculator colour Fluent picture; Toolkit "DPI bypass and free VPNs" (encrypted DNS presets + free VPN list); Screen cover: brightness slider, open window with draggable edges (four bands), clock on one line; 0.10.172. derlenmedi
 
 - Screenshot: when screencap comes out black (secure window) the other root ways are tried (each display id, the plain binary) and the result says if the app still blocks it; lyrics: root reads same-name .lrc/.txt when the folder is not readable; Windows 7 launcher orb draws the Windows flag; 0.10.173. derlenmedi
+
+- Launcher: the apps list of Windows 7, XP and 95 is an Explorer-style window (title bar with caption buttons, address bar with search, group navigation pane, icon grid, status line); 0.10.174. derlenmedi
