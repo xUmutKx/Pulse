@@ -130,8 +130,6 @@ open class MusicWidget : AppWidgetProvider() {
                     if (layout != R.layout.widget_music_slim) setColorStateList(R.id.mw_art, "setBackgroundTintList", ColorStateList.valueOf(th.accent and 0x00FFFFFF or 0x55000000))
                 }
                 setProgressBar(R.id.mw_prog, 1000, prog, false)
-                setColorStateList(R.id.mw_prog, "setProgressTintList", ColorStateList.valueOf(accent))
-                setColorStateList(R.id.mw_prog, "setProgressBackgroundTintList", ColorStateList.valueOf(sub and 0x55FFFFFF))
                 if (layout != R.layout.widget_music_slim && art != null) { setImageViewBitmap(R.id.mw_art, art); setViewPadding(R.id.mw_art, 0, 0, 0, 0) }
                 setImageViewResource(R.id.mw_play, if (st.isPlaying) R.drawable.widget_music_pause else R.drawable.widget_music_play)
                 setInt(R.id.mw_play, "setColorFilter", onAccent)

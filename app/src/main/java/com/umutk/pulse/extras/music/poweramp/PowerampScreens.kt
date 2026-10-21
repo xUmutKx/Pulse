@@ -1,7 +1,13 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.LocalIndication
@@ -118,6 +124,11 @@ import kotlin.math.atan2
 import com.umutk.pulse.extras.music.CoverCarousel
 import com.umutk.pulse.extras.music.rememberTrackArt
 import com.umutk.pulse.extras.music.Track
+import com.umutk.pulse.extras.music.MusicLevels
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.geometry.CornerRadius
+import kotlinx.coroutines.delay
 import com.umutk.pulse.tr
 import android.content.Context
 import androidx.compose.foundation.border
@@ -224,6 +235,8 @@ fun NowPlayingScreen(
     repeatMode: Int = Player.REPEAT_MODE_OFF,
     onShuffle: () -> Unit = {},
     onRepeat: () -> Unit = {},
+    onRepeatMode: ((Int) -> Unit)? = null,
+    onPlayAll: ((shuffled: Boolean) -> Unit)? = null,
     onOpenEffects: () -> Unit = {},
     rating: Int = 0,
     onRate: ((Int) -> Unit)? = null,
@@ -339,7 +352,7 @@ fun NowPlayingScreen(
             Spacer(Modifier.height(19.dp))
             // mode row as pills: equalizer, sleep timer, track count centred, repeat and shuffle at the ends
             Row(Modifier.fillMaxWidth().padding(start = 1.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                FlatBtn(Icons.Rounded.Equalizer, tr("Equalizer", "Ekolayzır"), false, style, 65.dp, onOpenEffects)
+                LiveBarsBtn(playing, tr("Equalizer", "Ekolayzır"), style, 65.dp, onOpenEffects)
                 Spacer(Modifier.width(4.5.dp))
                 FlatBtn(Icons.Rounded.Timer, tr("Sleep timer", "Uyku zamanlayıcı"), sleepMinutes != 0, style) { sleepOpen = true }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -350,9 +363,17 @@ fun NowPlayingScreen(
                         modifier = Modifier.clip(CircleShape).background(style.panel).padding(horizontal = 8.dp, vertical = 2.dp),
                     )
                 }
-                FlatBtn(IV("repeat"), tr("Repeat", "Tekrar"), repeatMode != Player.REPEAT_MODE_OFF, style, onClick = onRepeat)
+                ModeMenuBtn(IV("repeat"), tr("Repeat", "Tekrar"), repeatMode != Player.REPEAT_MODE_OFF, style, onClick = onRepeat, items = listOf(
+                    ModeItem(tr("Repeat off", "Tekrar kapalı"), repeatMode == Player.REPEAT_MODE_OFF) { onRepeatMode?.invoke(Player.REPEAT_MODE_OFF) },
+                    ModeItem(tr("Repeat all", "Tümünü tekrarla"), repeatMode == Player.REPEAT_MODE_ALL) { onRepeatMode?.invoke(Player.REPEAT_MODE_ALL) },
+                    ModeItem(tr("Repeat one", "Tek parçayı tekrarla"), repeatMode == Player.REPEAT_MODE_ONE) { onRepeatMode?.invoke(Player.REPEAT_MODE_ONE) },
+                ))
                 Spacer(Modifier.width(4.5.dp))
-                FlatBtn(IV("shuffle"), tr("Shuffle", "Karıştır"), shuffle, style, onClick = onShuffle)
+                ModeMenuBtn(IV("shuffle"), tr("Shuffle", "Karıştır"), shuffle, style, onClick = onShuffle, items = listOf(
+                    ModeItem(tr("Play all", "Hepsini çal"), false) { onPlayAll?.invoke(false) },
+                    ModeItem(tr("Play all shuffled", "Hepsini karışık çal"), false) { onPlayAll?.invoke(true) },
+                    ModeItem(tr("Shuffle on", "Karıştır açık"), shuffle, onShuffle),
+                ))
             }
             if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
             Spacer(Modifier.height(48.dp))
@@ -481,6 +502,62 @@ internal fun SeekBar(
 /** Height of the transport row (buttons over the bars) and of the bars inside it. */
 private val TRANSPORT_H = 96.dp
 private val WAVE_H = 64.dp
+
+/** Thin bars that fill the button height and move with the live level while playing, and sit at their low stop when paused. Taps go to [onClick]. */
+@Composable
+private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, width: Dp, onClick: () -> Unit) {
+    val n = 12
+    var levels by remember { mutableStateOf(List(n) { 0f }) }
+    LaunchedEffect(playing) {
+        while (playing) {
+            val s = MusicLevels.snapshot()
+            levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, (g + 1) * MusicLevels.BANDS / n).average().toFloat() }
+            delay(50)
+        }
+        levels = List(n) { 0f }
+    }
+    Box(
+        Modifier.width(width).height(36.dp).clip(CircleShape).background(style.panel)
+            .semantics { contentDescription = label; role = Role.Button }
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.size(24.dp)) {
+            val slot = size.width / n
+            val bw = slot * 0.5f
+            val tint = if (playing) style.accent else style.textDim
+            levels.forEachIndexed { i, v ->
+                val h = size.height * (0.08f + 0.92f * v.coerceIn(0f, 1f))
+                drawRoundRect(tint, Offset(i * slot + (slot - bw) / 2, size.height - h), Size(bw, h), CornerRadius(bw / 2))
+            }
+        }
+    }
+}
+
+private class ModeItem(val label: String, val checked: Boolean, val action: () -> Unit)
+
+/** Tap runs [onClick]; hold opens [items] in a menu that animates open. A checked item shows a tick. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ModeMenuBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, onClick: () -> Unit, items: List<ModeItem>) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        Box(
+            Modifier.width(68.dp).height(36.dp).clip(CircleShape).background(style.panel)
+                .semantics { contentDescription = label; role = Role.Button }
+                .combinedClickable(onClick = onClick, onLongClick = { open = true }),
+            contentAlignment = Alignment.Center,
+        ) { Icon(icon, null, tint = if (active) style.accent else style.textDim, modifier = Modifier.size(24.dp)) }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            items.forEach { item ->
+                DropdownMenuItem(
+                    text = { Text((if (item.checked) "✓  " else "    ") + item.label, color = if (item.checked) style.accent else style.text) },
+                    onClick = { open = false; item.action() },
+                )
+            }
+        }
+    }
+}
 
 @Composable
 private fun FlatBtn(icon: ImageVector, label: String, active: Boolean, style: PowerampStyle, width: Dp = 68.dp, onClick: () -> Unit) {
@@ -686,8 +763,10 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
     val cellPx = with(LocalDensity.current) { 30.dp.toPx() }
     val slop = LocalViewConfiguration.current.touchSlop
     val shown = preview ?: rating
+    // the pill grows sideways, the stars slide in from the left and the star slides out to the right
+    val width by animateDpAsState(if (picking) 158.dp else 36.dp, label = "ratingWidth")
     Box(
-        modifier.height(36.dp).then(if (picking) Modifier.width(158.dp) else Modifier.width(36.dp))
+        modifier.height(36.dp).width(width)
             .clip(RoundedCornerShape(18.dp)).background(Color.Black.copy(alpha = .5f))
             // no wait: the five stars open on touch and a slide along them picks the rating; a tap without a slide toggles the favourite
             .pointerInput(onRate, onFavourite) {
@@ -708,11 +787,22 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
             },
         contentAlignment = Alignment.Center,
     ) {
-        if (picking) Row(verticalAlignment = Alignment.CenterVertically) {
-            repeat(5) { i ->
-                Icon(if (i < shown) Icons.Rounded.Star else Icons.Rounded.StarBorder, null, tint = style.accent, modifier = Modifier.size(30.dp))
+        AnimatedVisibility(
+            visible = picking,
+            enter = slideInHorizontally { -it / 2 } + fadeIn(),
+            exit = slideOutHorizontally { -it / 2 } + fadeOut(),
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                repeat(5) { i ->
+                    Icon(if (i < shown) Icons.Rounded.Star else Icons.Rounded.StarBorder, null, tint = style.accent, modifier = Modifier.size(30.dp))
+                }
             }
-        } else {
+        }
+        AnimatedVisibility(
+            visible = !picking,
+            enter = slideInHorizontally { it / 2 } + fadeIn(),
+            exit = slideOutHorizontally { it / 2 } + fadeOut(),
+        ) {
             Icon(if (favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favourite", "Favori"), tint = if (favourite) style.accent else Color.White, modifier = Modifier.size(20.dp))
         }
     }
