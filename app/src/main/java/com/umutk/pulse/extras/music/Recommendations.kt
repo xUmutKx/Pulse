@@ -9,6 +9,8 @@ sealed interface Pick {
     data class Playlist(val name: String) : Pick
     data class Time(val part: Int) : Pick
     data class Energy(val high: Boolean) : Pick
+    /** A personal mix for a mood: energetic, chill, focus, happy, or daily (see [Recommendations.moods]). */
+    data class Mood(val mood: String) : Pick
 }
 
 data class PickSection(val pick: Pick, val tracks: List<Track>)
@@ -53,42 +55,83 @@ object Recommendations {
     }
 
     /**
-     * Daily picks, empty sections left out: the top artist, the most played playlist, what is usually played at this
-     * time of day, and the played tracks grouped by genre energy (genres without a known energy are skipped).
+     * Daily picks, empty sections left out: the top artist (or, before anything was played, the artists with the most songs),
+     * the most played playlist, what is usually played at this time of day, and the personal mixes by mood.
      */
-    fun picks(library: List<Track>, stats: List<TrackStat>, playlists: Map<String, List<String>>, today: Today): List<PickSection> {
+    fun picks(
+        library: List<Track>, stats: List<TrackStat>, playlists: Map<String, List<String>>, today: Today,
+        ratings: Map<String, Int> = emptyMap(), favourites: Set<String> = emptySet(),
+    ): List<PickSection> {
         val byPath = library.associateBy { it.path }
         val played = stats.filter { it.plays > 0 && it.path in byPath }
-        if (played.isEmpty()) return emptyList()
         val seed = java.util.Random(today.dayKey)
         fun pick(list: List<Track>) = list.distinctBy { it.path }.shuffled(seed).take(SECTION_SIZE)
         val out = mutableListOf<PickSection>()
 
-        played.filter { it.artist.isNotBlank() }.groupBy { it.artist }
-            .mapValues { e -> e.value.sumOf { it.plays } }.maxByOrNull { it.value }?.let { (artist, _) ->
-                out += PickSection(Pick.Artist(artist), pick(library.filter { it.artist == artist }))
-            }
+        if (played.isNotEmpty()) {
+            played.filter { it.artist.isNotBlank() }.groupBy { it.artist }
+                .mapValues { e -> e.value.sumOf { it.plays } }.maxByOrNull { it.value }?.let { (artist, _) ->
+                    out += PickSection(Pick.Artist(artist), pick(library.filter { it.artist == artist }))
+                }
 
-        val playCount = played.associate { it.path to it.plays }
-        playlists.mapValues { (_, paths) -> paths.sumOf { playCount[it] ?: 0 } }
-            .filterValues { it > 0 }.maxByOrNull { it.value }?.let { (name, _) ->
-                out += PickSection(Pick.Playlist(name), pick(playlists.getValue(name).mapNotNull { byPath[it] }))
-            }
+            val playCount = played.associate { it.path to it.plays }
+            playlists.mapValues { (_, paths) -> paths.sumOf { playCount[it] ?: 0 } }
+                .filterValues { it > 0 }.maxByOrNull { it.value }?.let { (name, _) ->
+                    out += PickSection(Pick.Playlist(name), pick(playlists.getValue(name).mapNotNull { byPath[it] }))
+                }
 
-        val part = partOfDay(today.hour)
-        val timed = played.filter { it.parts.getOrElse(part) { 0 } > 0 }.sortedByDescending { it.parts.getOrElse(part) { 0 } }
-        if (timed.isNotEmpty()) out += PickSection(Pick.Time(part), timed.take(SECTION_SIZE).mapNotNull { byPath[it.path] })
-
-        val byEnergy = played.mapNotNull { s -> energyOf(byPath[s.path]?.genre)?.let { it to byPath.getValue(s.path) } }
-            .groupBy({ it.first }, { it.second })
-        for (high in listOf(true, false)) {
-            byEnergy[high]?.let { out += PickSection(Pick.Energy(high), pick(it)) }
+            val part = partOfDay(today.hour)
+            val timed = played.filter { it.parts.getOrElse(part) { 0 } > 0 }.sortedByDescending { it.parts.getOrElse(part) { 0 } }
+            if (timed.isNotEmpty()) out += PickSection(Pick.Time(part), timed.take(SECTION_SIZE).mapNotNull { byPath[it.path] })
+        } else {
+            // nothing played yet: the artists with the most songs on the phone
+            library.filter { !it.artist.isNullOrBlank() && it.artist != "<unknown>" }.groupBy { it.artist.orEmpty() }.entries
+                .sortedByDescending { it.value.size }.filter { it.value.size >= 3 }.take(2)
+                .forEach { (artist, tracks) -> out += PickSection(Pick.Artist(artist), pick(tracks)) }
         }
+        out += moods(library, stats, ratings, favourites, today)
         return out
     }
 
     private val highWords = listOf("rock", "metal", "punk", "dance", "electro", "edm", "techno", "house", "trance", "hip", "rap", "drum", "dubstep", "hardcore", "party", "workout")
     private val lowWords = listOf("ambient", "classical", "sleep", "soundtrack", "new age", "lounge", "acoustic", "jazz", "folk", "piano", "chill", "meditation", "relax")
+
+    private val moodWords: Map<String, List<String>> by lazy {
+        mapOf(
+            "energetic" to highWords + listOf("drum and bass", "dnb", "club", "gym"),
+            "chill" to lowWords + listOf("lofi", "lo-fi", "downtempo", "easy listening"),
+            "focus" to listOf("classical", "piano", "ambient", "instrumental", "soundtrack", "score", "study", "meditation"),
+            "happy" to listOf("pop", "disco", "funk", "reggae", "latin", "dance", "summer", "happy"),
+        )
+    }
+
+    /** The moods a track fits, from its genre tag and title; empty when they say nothing. A track can fit more than one. */
+    fun moodsOf(t: Track): List<String> {
+        val text = ((t.genre ?: "") + " " + (t.title ?: "")).lowercase()
+        return moodWords.filter { (_, words) -> words.any { it in text } }.keys.toList()
+    }
+
+    /**
+     * Personal mixes by mood. Each is ranked by what this person played, rated and starred, then shuffled with a seed that
+     * changes daily; the order of the mixes follows the time of day (lively by day, calm in the evening). The daily mix
+     * is always there, so the list is never empty.
+     */
+    fun moods(library: List<Track>, stats: List<TrackStat>, ratings: Map<String, Int>, favourites: Set<String>, today: Today): List<PickSection> {
+        val plays = stats.associate { it.path to it.plays }
+        fun score(t: Track) = (plays[t.path] ?: 0) + (ratings[t.path] ?: 0) * 2 + if (t.path in favourites) 3 else 0
+        fun mix(tracks: List<Track>, key: String): List<Track> {
+            val rnd = java.util.Random(today.dayKey + key.hashCode())
+            return tracks.shuffled(rnd).sortedByDescending { score(it) }.take(SECTION_SIZE * 3).shuffled(rnd).take(SECTION_SIZE)
+        }
+        val out = mutableListOf<PickSection>()
+        val order = if (partOfDay(today.hour) >= 2) listOf("chill", "focus", "happy", "energetic") else listOf("energetic", "happy", "focus", "chill")
+        for (m in order) {
+            val tracks = library.filter { m in moodsOf(it) }
+            if (tracks.size >= 3) out += PickSection(Pick.Mood(m), mix(tracks, m))
+        }
+        if (library.size >= 3) out += PickSection(Pick.Mood("daily"), mix(library, "daily"))
+        return out
+    }
 
     /** Energy from the genre tag: true high, false calm, null when the genre says nothing. */
     fun energyOf(genre: String?): Boolean? {

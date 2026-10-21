@@ -60,7 +60,7 @@ fun RecommendationHome(
     }
     val sections = remember(library, stats) {
         val lists = Playlists.names(ctx).associateWith { n -> Playlists.load(ctx, n).map { it.path } }
-        Recommendations.picks(library, stats, lists, today)
+        Recommendations.picks(library, stats, lists, today, MusicStats.ratings(ctx), MusicStats.favourites(ctx))
     }
     fun play(t: Track) = onPlay(library.indexOfFirst { it.path == t.path })
     val tileShape = if (round) CircleShape else RoundedCornerShape(12.dp)
@@ -100,6 +100,13 @@ private fun title(p: Pick): String = when (p) {
         else -> tr("Night picks", "Gece seçimleri")
     }
     is Pick.Energy -> if (p.high) tr("High energy", "Yüksek enerji") else tr("Calm", "Sakin")
+    is Pick.Mood -> when (p.mood) {
+        "energetic" -> tr("Energetic mix", "Enerjik mix")
+        "chill" -> tr("Chill mix", "Sakin mix")
+        "focus" -> tr("Focus mix", "Odak mix")
+        "happy" -> tr("Happy mix", "Neşeli mix")
+        else -> tr("Daily mix", "Günlük mix")
+    }
 }
 
 @Composable
