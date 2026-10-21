@@ -113,6 +113,7 @@ open class MainActivity : ComponentActivity() {
         if (this !is FilesActivity) { Cfg.load(this); Opt.load(this) }
         Look.resolved = pulseResolved
         // Folder tree and File types read the same walk of the storage: start it at launch so they open with the numbers ready
+        com.umutk.pulse.features.StorageScan.dir = filesDir
         if (android.os.Environment.isExternalStorageManager()) com.umutk.pulse.features.StorageScan.ensure(android.os.Environment.getExternalStorageDirectory())
         Shell.refreshShizuku()
         // with root the permissions Pulse needs (notifications first) are granted by Pulse itself, once root is known

@@ -24,6 +24,7 @@ object StorageScan {
         private val sizes: Map<String, Long>,
         private val kids: Map<String, List<File>>,
     ) {
+        internal fun parts() = sizes to kids
         /** Bytes under a folder, or the size of a file. Folders the walk skips (app-private data) count as 0. */
         fun sizeOf(f: File): Long = if (f.isDirectory) sizes[f.path] ?: 0L else f.length()
 
@@ -57,14 +58,22 @@ object StorageScan {
     private val running = AtomicBoolean(false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
-    /** Walks [root] unless it is already walked, or being walked now. */
-    fun ensure(root: File) {
+    /** Where the last walk is kept between runs (set once from MainActivity: filesDir); null keeps it in memory only. */
+    @Volatile var dir: File? = null
+    private fun store() = dir?.let { File(it, "storage_scan.bin") }
+
+    /** Walks [root] unless it is already walked, or being walked now. A walk saved by an earlier run is used as it is: only Refresh walks again. */
+    fun ensure(root: File, fresh: Boolean = false) {
         if (snapFlow.value?.root == root.path) return
         if (!running.compareAndSet(false, true)) return
         scope.launch {
             try {
+                val saved = if (fresh) null else runCatching { load(root) }.getOrNull()
+                if (saved != null) { snapFlow.value = saved; return@launch }
                 scannedFlow.value = 0L
-                snapFlow.value = walk(root)
+                val s = walk(root)
+                snapFlow.value = s
+                runCatching { save(s) }
             } finally {
                 running.set(false)
             }
@@ -74,13 +83,45 @@ object StorageScan {
     /** Takes a deleted file out of the walk (call it after the delete, with the size it had). */
     fun forget(f: File, len: Long) {
         val s = snapFlow.value ?: return
-        snapFlow.value = s.without(f, len)
+        val n = s.without(f, len)
+        snapFlow.value = n
+        scope.launch { runCatching { save(n) } }
     }
 
     /** Throws the result away and walks [root] again. */
     fun rescan(root: File) {
         snapFlow.value = null
-        ensure(root)
+        ensure(root, fresh = true)
+    }
+
+    // ---- the saved walk: gzip of root, kinds, folder sizes and folder children (names only) ----
+    private fun save(s: Snapshot) {
+        val f = store() ?: return
+        val tmp = File(f.path + ".tmp")
+        java.io.DataOutputStream(java.io.BufferedOutputStream(java.util.zip.GZIPOutputStream(tmp.outputStream()), 1 shl 16)).use { o ->
+            o.writeInt(1); o.writeUTF(s.root)
+            o.writeInt(s.kinds.size)
+            s.kinds.forEach { k -> o.writeUTF(k.kind.name); o.writeLong(k.bytes); o.writeInt(k.count); o.writeInt(k.largest.size); k.largest.forEach { l -> o.writeUTF(l.file.path); o.writeLong(l.size); o.writeLong(l.modified) } }
+            val (sizes, kids) = s.parts()
+            o.writeInt(sizes.size); sizes.forEach { (p, v) -> o.writeUTF(p); o.writeLong(v) }
+            o.writeInt(kids.size); kids.forEach { (p, l) -> o.writeUTF(p); o.writeInt(l.size); l.forEach { c -> o.writeUTF(c.name) } }
+        }
+        tmp.renameTo(f)
+    }
+
+    private fun load(root: File): Snapshot? {
+        val f = store()?.takeIf { it.isFile } ?: return null
+        java.io.DataInputStream(java.io.BufferedInputStream(java.util.zip.GZIPInputStream(f.inputStream()), 1 shl 16)).use { i ->
+            if (i.readInt() != 1) return null
+            val r = i.readUTF(); if (r != root.path) return null
+            val kinds = List(i.readInt()) {
+                val k = FileKind.valueOf(i.readUTF()); val b = i.readLong(); val c = i.readInt()
+                KindSummary(k, b, c, List(i.readInt()) { LargeFile(File(i.readUTF()), i.readLong(), i.readLong()) })
+            }
+            val sizes = HashMap<String, Long>(); repeat(i.readInt()) { sizes[i.readUTF()] = i.readLong() }
+            val kids = HashMap<String, List<File>>(); repeat(i.readInt()) { val p = i.readUTF(); val d = File(p); kids[p] = List(i.readInt()) { File(d, i.readUTF()) } }
+            return Snapshot(r, kinds, sizes, kids)
+        }
     }
 
     /** Sizes the children of Android/data or Android/obb with one `du` through root or Shizuku; 0 when neither is granted. */

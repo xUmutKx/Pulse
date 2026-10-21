@@ -88,10 +88,15 @@ object Shell {
     fun rootSee(paths: List<String>, why: StringBuilder? = null): Pair<Int, String>? {
         for (m in listOf(rootMode) + (0 until ROOT_MODES).filter { it != rootMode }) {
             for (p in paths) {
-                val r = runRoot("[ -e '$p' ] && echo __YES", m)
+                // the folder must list with something in it: an isolated mount view shows an app's data folder as an empty stub, which "exists" but hides every file
+                val r = runRoot("[ -d '$p' ] && [ -n \"\$(ls -A '$p' 2>/dev/null | head -n 1)\" ] && echo __YES || { [ -f '$p' ] && echo __YES; }", m)
                 if (r.contains("__YES")) { rootMode = m; return m to p }
             }
             why?.append(modeNames[m])?.append(if (runRoot("id -u", m).trim().endsWith("0")) ": folder not visible; " else ": refused; ")
+        }
+        // a folder that is really empty: the first view that sees it at all
+        for (m in listOf(rootMode) + (0 until ROOT_MODES).filter { it != rootMode }) for (p in paths) {
+            if (runRoot("[ -e '$p' ] && echo __YES", m).contains("__YES")) return m to p
         }
         return null
     }
