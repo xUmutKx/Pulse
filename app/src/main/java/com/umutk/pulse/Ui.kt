@@ -89,6 +89,8 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     if (k == "applock") { com.umutk.pulse.applock.AppLockIcon(tint, size, modifier); return }
     // Windows 11: the Fluent picture by default; the thin line glyphs (the Windows 10 set) when the Settings switch says so
     val fluent = T.id == "win11" && !T.material && !Look.winIconLine
+    // Windows 11 Fluent style: the coloured filled Fluent glyph of the key (the Line choice keeps the thin glyphs)
+    if (fluent) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
     if (k == "recycle" && !T.material) {
         if (fluent) ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
         BinIcon(tint, size, modifier); return

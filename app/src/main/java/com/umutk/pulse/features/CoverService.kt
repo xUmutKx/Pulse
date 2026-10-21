@@ -48,13 +48,14 @@ class CoverService : Service() {
     private var clock: TextView? = null
     private var date: TextView? = null
     private var battery: TextView? = null
+    private var style = "light"
     private val timeFormat by lazy { android.text.format.DateFormat.getTimeFormat(this) }
     private val datePattern by lazy { android.text.format.DateFormat.getBestDateTimePattern(Locale.getDefault(), "EEEE d MMMM") }
     private val main = Handler(Looper.getMainLooper())
     private val tick = object : Runnable {
         override fun run() {
             val now = Date()
-            clock?.text = timeFormat.format(now)
+            clock?.text = if (style == "stacked") android.text.format.DateFormat.format(if (android.text.format.DateFormat.is24HourFormat(this@CoverService)) "HH\nmm" else "hh\nmm", now) else timeFormat.format(now)
             date?.text = android.text.format.DateFormat.format(datePattern, now)
             battery?.text = batteryText()
             main.postDelayed(this, 60_000L - System.currentTimeMillis() % 60_000L) // wakes at the next minute
@@ -93,13 +94,27 @@ class CoverService : Service() {
         val column = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; gravity = Gravity.CENTER_HORIZONTAL }
         fun line(sp: Float) = TextView(this).apply { setTextColor(Color.WHITE); setTextSize(TypedValue.COMPLEX_UNIT_SP, sp); gravity = Gravity.CENTER }
         if (CoverStore.clock(this)) {
-            clock = line(72f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
+            // the design picked in the settings (the previews there use the same faces)
+            style = CoverStore.style(this)
+            clock = when (style) {
+                "bold" -> line(80f).apply { typeface = Typeface.create("sans-serif-black", Typeface.NORMAL) }
+                "digital" -> line(64f).apply { typeface = Typeface.MONOSPACE }
+                "serif" -> line(72f).apply { typeface = Typeface.SERIF }
+                "stacked" -> line(96f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL); setLineSpacing(0f, .9f) }
+                "small" -> line(40f)
+                else -> line(72f).apply { typeface = Typeface.create("sans-serif-light", Typeface.NORMAL) }
+            }
             column.addView(clock)
         }
         if (CoverStore.date(this)) { date = line(18f); column.addView(date) }
         if (CoverStore.battery(this)) { battery = line(16f); column.addView(battery) }
         CoverStore.text(this).takeIf { it.isNotBlank() }?.let { column.addView(line(16f).apply { text = it }) }
-        if (column.childCount > 0) v.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.CENTER))
+        // the block sits where the settings put it: 3 x 3 spots, rows top / middle / bottom, columns left / centre / right
+        val pos = CoverStore.pos(this)
+        val gv = (when (pos / 3) { 0 -> Gravity.TOP; 2 -> Gravity.BOTTOM; else -> Gravity.CENTER_VERTICAL }) or (when (pos % 3) { 0 -> Gravity.START; 2 -> Gravity.END; else -> Gravity.CENTER_HORIZONTAL })
+        column.gravity = when (pos % 3) { 0 -> Gravity.START; 2 -> Gravity.END; else -> Gravity.CENTER_HORIZONTAL }
+        val m = (40 * resources.displayMetrics.density).toInt()
+        if (column.childCount > 0) v.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, gv).apply { setMargins(m, m * 2, m, m * 2) })
         wm = getSystemService(WindowManager::class.java)
         // no FLAG_NOT_TOUCHABLE: the cover takes every touch; the status and navigation bars sit under the overlay layer
         wm?.addView(v, WindowManager.LayoutParams(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT,

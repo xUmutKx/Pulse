@@ -9,6 +9,17 @@ import android.provider.Settings
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -36,6 +47,13 @@ object CoverStore {
     fun setDate(c: Context, on: Boolean) = prefs(c).edit().putBoolean("date", on).apply()
     fun setBattery(c: Context, on: Boolean) = prefs(c).edit().putBoolean("battery", on).apply()
     fun setText(c: Context, s: String) = prefs(c).edit().putString("text", s).apply()
+    /** Clock design: one of [CLOCK_STYLES]. */
+    fun style(c: Context) = prefs(c).getString("style", "light")?.takeIf { it in CLOCK_STYLES } ?: "light"
+    fun setStyle(c: Context, s: String) = prefs(c).edit().putString("style", s).apply()
+    /** Where the clock block sits: 0..8, rows top / middle / bottom, columns left / centre / right (4 = the middle of the screen). */
+    fun pos(c: Context) = prefs(c).getInt("pos", 4).coerceIn(0, 8)
+    fun setPos(c: Context, p: Int) = prefs(c).edit().putInt("pos", p).apply()
+    val CLOCK_STYLES = listOf("light", "bold", "digital", "serif", "stacked", "small")
 }
 
 /** Quick Settings tile for the screen cover (CoverService). Without the overlay permission a tap opens that permission page instead. */
@@ -110,6 +128,52 @@ fun CoverSettings() {
         Text(tr("Battery", "Pil"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
         PSwitch(battery, { battery = it; CoverStore.setBattery(ctx, it) })
     }
+    if (clock) {
+        // clock designs, each shown as it looks on the black cover
+        var style by remember { mutableStateOf(CoverStore.style(ctx)) }
+        var pos by remember { mutableIntStateOf(CoverStore.pos(ctx)) }
+        Text(tr("Clock style", "Saat stili"), color = T.sub, fontSize = 12.sp)
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            CoverStore.CLOCK_STYLES.forEach { id ->
+                val on = id == style
+                Box(Modifier.width(96.dp).height(150.dp).clip(RoundedCornerShape(14.dp)).background(Color.Black)
+                    .border(if (on) 3.dp else 1.dp, if (on) com.umutk.pulse.Look.accent else Color(0xFF333333), RoundedCornerShape(14.dp))
+                    .clickable { style = id; CoverStore.setStyle(ctx, id) }, contentAlignment = Alignment.Center) { CoverClockSample(id, 1f) }
+            }
+        }
+        // where the clock sits: tap a spot on the small screen
+        Text(tr("Clock position", "Saatin yeri"), color = T.sub, fontSize = 12.sp)
+        Box(Modifier.width(120.dp).height(220.dp).clip(RoundedCornerShape(16.dp)).background(Color.Black).border(1.dp, Color(0xFF333333), RoundedCornerShape(16.dp))) {
+            Column(Modifier.fillMaxSize().padding(6.dp)) {
+                repeat(3) { r ->
+                    Row(Modifier.weight(1f).fillMaxWidth()) {
+                        repeat(3) { col ->
+                            val i = r * 3 + col
+                            Box(Modifier.weight(1f).fillMaxHeight().clickable { pos = i; CoverStore.setPos(ctx, i) }, contentAlignment = Alignment.Center) {
+                                if (i == pos) CoverClockSample(style, .38f)
+                                else Box(Modifier.size(8.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFF444444)))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
     Text(tr("Own text", "Kendi yazın"), color = T.text, fontSize = 15.sp)
     PField(text, { text = it; CoverStore.setText(ctx, it) }, tr("Shown under the clock", "Saatin altında görünür"))
+}
+
+/** The clock of one cover design, at [k] of its preview size (the cover itself draws it in CoverService with the same faces). */
+@Composable
+private fun CoverClockSample(style: String, k: Float) {
+    val (family, weight, sp) = when (style) {
+        "bold" -> Triple(FontFamily.SansSerif, FontWeight.Black, 34)
+        "digital" -> Triple(FontFamily.Monospace, FontWeight.Normal, 28)
+        "serif" -> Triple(FontFamily.Serif, FontWeight.Normal, 32)
+        "stacked" -> Triple(FontFamily.SansSerif, FontWeight.Light, 38)
+        "small" -> Triple(FontFamily.SansSerif, FontWeight.Normal, 18)
+        else -> Triple(FontFamily.SansSerif, FontWeight.Light, 32)
+    }
+    Text(if (style == "stacked") "12\n45" else "12:45", color = Color.White, fontFamily = family, fontWeight = weight, fontSize = (sp * k).sp,
+        lineHeight = (sp * k * 1.02f).sp, textAlign = TextAlign.Center, maxLines = 2)
 }
