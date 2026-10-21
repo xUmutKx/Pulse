@@ -27,6 +27,10 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.foundation.layout.*
 import com.umutk.pulse.features.DnsSettings
 import com.umutk.pulse.features.GlassPreview
@@ -530,24 +534,6 @@ fun FunctionsSettings() {
         Text(tr("App manager's Extract APK saves here", "App manager'ın APK çıkarma işlemi buraya kaydeder"), color = T.sub, fontSize = 12.sp)
     }
     PCard { com.umutk.pulse.features.CoverSettings() }
-    // where each optional tool is listed (the menu, the Extra apps card, or only here in Settings)
-    PCard {
-        Text(tr("Tool places", "Araçların yeri"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        Text(tr("Menu: the top-right menu's Tools group. Extra apps: the Extra apps card. Settings only: not in the menu.", "Menü: sağ üstteki menünün Araçlar grubu. Ek uygulamalar: Ek uygulamalar kartı. Yalnız ayarlar: menüde yok."), color = T.sub, fontSize = 12.sp)
-        ToolPlace.all.forEach { t ->
-            val cur = ToolPlace.where(ctx, t)
-            Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                Text(tr(t.en, t.trName), color = T.text, fontSize = 14.sp)
-                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    PChip(cur == "menu", tr("Menu", "Menü")) { ToolPlace.set(ctx, t, "menu") }
-                    PChip(cur == "extra", tr("Extra apps", "Ek uygulamalar")) { ToolPlace.set(ctx, t, "extra") }
-                    // a tool with a page of its own has its switch in Settings > Pages, so it is not offered here twice
-                    if (!ToolPlace.hasPage(t)) PChip(cur == "side", tr("Left menu", "Sol menü")) { ToolPlace.set(ctx, t, "side") }
-                    PChip(cur == "hidden", tr("Settings only", "Yalnız ayarlar")) { ToolPlace.set(ctx, t, "hidden") }
-                }
-            }
-        }
-    }
     // menus and message boxes: the current look, or Material You for every look
     PCard {
         Text(tr("Pop-up windows", "Açılır pencereler"), color = T.sub, fontSize = 12.sp)
@@ -570,8 +556,9 @@ internal fun disableExtraAppsOnFreshInstall(ctx: android.content.Context) {
     val pi = pm.getPackageInfo(ctx.packageName, 0)
     val prefs = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     if (pi.firstInstallTime != pi.lastUpdateTime || prefs.getBoolean("extraAppsOff", false)) return
-    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher", "MessagesLauncher", "HomeLauncher", "ScreenRecLauncher", "NotifHistLauncher", "ExtraStoreLauncher").forEach {
-        pm.setComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + it), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP)
+    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher", "NotifHistLauncher", "ExtraStoreLauncher").forEach {
+        // a missing alias throws on startup, so one bad name must not stop the rest (or the app)
+        runCatching { pm.setComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + it), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP) }
     }
     prefs.edit().putBoolean("extraAppsOff", true).apply()
 }
@@ -615,24 +602,6 @@ private fun ExtraAppsCard() {
     }
     PCard {
         Text(tr("Extra apps", "Ek uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        // the tools placed in this card (Settings > Tool places)
-        ToolPlace.extraTools(ctx).forEach { t ->
-            Row(Modifier.fillMaxWidth().clickable {
-                // a tool screen opens on top; a page-based one opens the main app on its page
-                if (t.isTool) openTool(t.target)
-                else ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("start", t.target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
-            }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                // Office and Download manager get the black launcher tile with a white outline glyph
-                val tile = if (T.id == "win11") 0 else when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
-                // dark theme: black tile with the accent glyph; light theme: white tile with a black glyph
-                if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
-                    Image(painterResource(tile), null, Modifier.fillMaxSize().padding(6.dp),
-                        colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(if (T.dark) Look.accent else androidx.compose.ui.graphics.Color.Black))
-                } else PIcon(t.key, T.text, 22.dp)
-                Spacer(Modifier.width(12.dp))
-                Text(tr(t.en, t.trName), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-            }
-        }
         apps.forEach { (alias, icon, label) ->
             Row(verticalAlignment = Alignment.CenterVertically) {
                 // Windows 11: the app's own Fluent glyph (same 22 dp size as the rows above); the other looks keep the drawable tile
@@ -656,6 +625,49 @@ private fun ExtraAppsCard() {
                 })
             }
         }
+        // the optional tools: the switch shows one in this card; the chevron folds the four places (menu, this card, left menu, Settings only)
+        ToolPlace.all.forEach { t ->
+            var open by remember(t.id) { mutableStateOf(false) }
+            val cur = ToolPlace.where(ctx, t)
+            val shownHere = cur == "extra"
+            Column(Modifier.fillMaxWidth()) {
+                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    // Windows 11: the Fluent vector of the tool (the PNG pack is bypassed, it has black glyphs)
+                    if (T.id == "win11") FluentGlyph(t.key, T.text, 22.dp) else {
+                        // Office and Download manager get the black launcher tile with a white outline glyph (dark: accent glyph)
+                        val tile = when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
+                        if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
+                            Image(painterResource(tile), null, Modifier.fillMaxSize().padding(6.dp),
+                                colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(if (T.dark) Look.accent else androidx.compose.ui.graphics.Color.Black))
+                        } else PIcon(t.key, T.text, 22.dp)
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text(tr(t.en, t.trName), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable(enabled = shownHere) {
+                        // a tool screen opens on top; a page-based one opens the main app on its page
+                        if (t.isTool) openTool(t.target)
+                        else ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("start", t.target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
+                    })
+                    PIcon("chevron", T.sub, 20.dp, Modifier.clickable { open = !open }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (open) 180f else 0f })
+                    PSwitch(shownHere, { on -> ToolPlace.set(ctx, t, if (on) "extra" else "hidden"); rev++ })
+                }
+                if (open) Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(cur == "menu", tr("Menu", "Menü")) { ToolPlace.set(ctx, t, "menu") }
+                    PChip(cur == "extra", tr("Extra apps", "Ek uygulamalar")) { ToolPlace.set(ctx, t, "extra") }
+                    // a tool with a page of its own has its switch in Settings > Pages, so it is not offered here twice
+                    if (!ToolPlace.hasPage(t)) PChip(cur == "side", tr("Left menu", "Sol menü")) { ToolPlace.set(ctx, t, "side") }
+                    PChip(cur == "hidden", tr("Settings only", "Yalnız ayarlar")) { ToolPlace.set(ctx, t, "hidden") }
+                }
+            }
+        }
+    }
+}
+
+/** A Fluent vector glyph straight from FluentPaths (Windows 11 tool icons; the PNG pack is not used here). */
+@Composable
+private fun FluentGlyph(k: String, tint: androidx.compose.ui.graphics.Color, size: androidx.compose.ui.unit.Dp) {
+    val paths = remember(k) { (FluentPaths.map[k] ?: FluentPaths.map["info"]!!).map { PathParser().parsePathString(it).toPath() } }
+    Canvas(Modifier.size(size)) {
+        scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
     }
 }
 

@@ -132,17 +132,12 @@ object Shell {
     }
 
     private var watching = false
-    private var shizukuAsked = false
 
-    /** Keeps [shizuku] current; called from MainActivity. */
+    /** Keeps [shizuku] current; called from MainActivity. Never asks for permission by itself: only the Shizuku button does. */
     fun watchShizuku() {
         if (watching) return
         watching = true
-        Shizuku.addBinderReceivedListenerSticky {
-            refreshShizuku()
-            // Shizuku lists only the apps that have asked for permission: ask once per start, so Pulse shows up in its list
-            if (shizuku == 1 && !shizukuAsked) { shizukuAsked = true; runCatching { Shizuku.requestPermission(1) } }
-        }
+        Shizuku.addBinderReceivedListenerSticky { refreshShizuku() }
         Shizuku.addBinderDeadListener { refreshShizuku() }
         Shizuku.addRequestPermissionResultListener { _, result ->
             shizukuMsg = if (result == PackageManager.PERMISSION_GRANTED) tr("Shizuku permission granted.", "Shizuku izni verildi.") else tr("Shizuku permission denied.", "Shizuku izni reddedildi.")
