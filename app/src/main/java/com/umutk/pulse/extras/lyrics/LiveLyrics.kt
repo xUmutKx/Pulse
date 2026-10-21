@@ -47,7 +47,9 @@ object LiveLyrics {
     // a notification of its own for the lyrics, beside the media one (off by default)
     fun separate(c: Context) = prefs(c).getBoolean("separate", false)
     /** Lyrics found online are written as a .lrc beside the song. */
-    fun saveLrc(c: Context) = prefs(c).getBoolean("save_lrc", false)
+    fun saveLrc(c: Context) = prefs(c).getBoolean("save_lrc", true)
+    /** Also written into the MP3's tag; this rewrites the song file, so it is off until asked for. */
+    fun embed(c: Context) = prefs(c).getBoolean("embed_tag", false)
     fun set(c: Context, key: String, on: Boolean) = prefs(c).edit().putBoolean(key, on).apply()
 
     /** The line the notification shows now; null hides it. Read by [com.umutk.pulse.extras.music.notif.NotifProvider]. */
@@ -200,7 +202,9 @@ fun LiveLyricsSettingsSection() {
         // a second notification of its own: the current line with the one before and after it
         var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
         var save by remember { mutableStateOf(LiveLyrics.saveLrc(c)) }
-        SwitchRow(tr("Save found lyrics as .lrc beside the song", "Bulunan sözleri şarkının yanına .lrc olarak kaydet"), save) { save = it; LiveLyrics.set(c, "save_lrc", it) }
+        SwitchRow(tr("Save found lyrics as a .lrc file beside the song", "Bulunan sözleri şarkının yanına .lrc dosyası olarak kaydet"), save) { save = it; LiveLyrics.set(c, "save_lrc", it) }
+        var emb by remember { mutableStateOf(LiveLyrics.embed(c)) }
+        SwitchRow(tr("Also write into the song's tag (MP3, rewrites the file)", "Şarkının etiketine de yaz (MP3, dosyayı yeniden yazar)"), emb) { emb = it; LiveLyrics.set(c, "embed_tag", it) }
         SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
     }
 }
