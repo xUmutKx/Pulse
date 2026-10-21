@@ -33,7 +33,7 @@ class WinampVisWidget : AppWidgetProvider() {
 
     override fun onReceive(c: Context, i: Intent) {
         when (i.action) {
-            A_TOGGLE -> MusicPlayerEngine.get(c).togglePlayPause()
+            A_TOGGLE -> MusicPlayerEngine.ready(c).togglePlayPause()
             else -> return super.onReceive(c, i)
         }
         refresh(c)
@@ -71,7 +71,7 @@ class WinampVisWidget : AppWidgetProvider() {
 
         fun build(c: Context, id: Int): RemoteViews {
             val (bw, bh) = boxPx(c, id)
-            val e = MusicPlayerEngine.get(c)
+            val e = MusicPlayerEngine.ready(c)
             val st = e.state.value
             val title = st.current?.let { it.title ?: it.path.substringAfterLast('/') } ?: ""
             val bmp = render(MusicLevels.snapshot(), title, bw, bh)
@@ -92,7 +92,7 @@ class WinampVisWidget : AppWidgetProvider() {
                 .takeIf { it > 0 } ?: 110
             val pw = w * d; val ph = h * d
             // RemoteViews bitmaps are limited by the binder: about 350k pixels of RGB_565 at most
-            val shrink = kotlin.math.sqrt(pw * ph / 350_000f).coerceAtLeast(1f)
+            val shrink = kotlin.math.sqrt(pw * ph / 900_000f).coerceAtLeast(1f)
             return (pw / shrink).toInt().coerceAtLeast(1) to (ph / shrink).toInt().coerceAtLeast(1)
         }
 
@@ -101,7 +101,7 @@ class WinampVisWidget : AppWidgetProvider() {
          * to 19 bars). The picker passes a sample curve.
          */
         fun render(levels: List<Float>, title: String, bw: Int, bh: Int): Bitmap {
-            val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.RGB_565)
+            val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
             val s = minOf(bw / W.toFloat(), bh / H.toFloat())
             cv.drawColor(0xFF000000.toInt())

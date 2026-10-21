@@ -173,25 +173,29 @@ private fun NotepadWindow(
         else -> androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(pal.titleBg, pal.titleBg))
     }
     val paperLight = pal.paper.luminance() > .5f
-    Column(Modifier.fillMaxSize().background(if (classic) pal.ribbonBg else pal.paper).statusBarsPadding().navigationBarsPadding().imePadding()) {
-        Row(Modifier.fillMaxWidth().height(if (classic) 28.dp else 34.dp).background(band).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon(if (T.id == "win11") "notepad" else "document", pal.titleInk, 18.dp)
+    // Windows 11's Notepad is the system grey, not the white Office paper
+    val win11 = T.id == "win11"
+    val paper = if (win11) (if (paperLight) androidx.compose.ui.graphics.Color(0xFFF3F3F3) else androidx.compose.ui.graphics.Color(0xFF202020)) else pal.paper
+    val titleInk = if (win11) pal.ink else pal.titleInk
+    Column(Modifier.fillMaxSize().background(if (classic) pal.ribbonBg else paper).statusBarsPadding().navigationBarsPadding().imePadding()) {
+        Row(Modifier.fillMaxWidth().height(if (classic) 28.dp else 34.dp).background(if (win11) androidx.compose.ui.graphics.SolidColor(paper) else band).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon(if (T.id == "win11") "notepad" else "document", titleInk, 18.dp)
             Spacer(Modifier.width(6.dp))
-            Text((if (modified) "*" else "") + name + " - Notepad", color = pal.titleInk, fontSize = 13.sp, fontWeight = if (classic) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f), maxLines = 1)
+            Text((if (modified) "*" else "") + name + " - Notepad", color = titleInk, fontSize = 13.sp, fontWeight = if (classic) FontWeight.Bold else FontWeight.Normal, modifier = Modifier.weight(1f), maxLines = 1)
             Box(
                 Modifier.size(22.dp).then(if (base == "95") Modifier.background(androidx.compose.ui.graphics.Color(0xFFC0C0C0)).frame(T, raised = true) else if (base == "2003") Modifier.background(androidx.compose.ui.graphics.Color(0xFFD9543C)) else Modifier)
                     .clickable { exit() },
                 contentAlignment = Alignment.Center,
-            ) { PIcon("close", if (base == "95") androidx.compose.ui.graphics.Color.Black else pal.titleInk, 14.dp) }
+            ) { PIcon("close", if (base == "95") androidx.compose.ui.graphics.Color.Black else titleInk, 14.dp) }
         }
-        Row(Modifier.fillMaxWidth().background(if (classic) pal.ribbonBg else pal.paper).padding(horizontal = 2.dp)) {
+        Row(Modifier.fillMaxWidth().background(if (classic) pal.ribbonBg else paper).padding(horizontal = 2.dp)) {
             NpMenu(tr("File", "Dosya"), pal.ink, fileItems)
             NpMenu(tr("Edit", "Düzen"), pal.ink, editItems)
             NpMenu(tr("Format", "Biçim"), pal.ink, formatItems)
             NpMenu(tr("View", "Görünüm"), pal.ink, viewItems)
             NpMenu(tr("Help", "Yardım"), pal.ink, helpItems)
         }
-        Box(Modifier.weight(1f).fillMaxWidth().background(pal.paper).then(if (classic) Modifier.frame(T) else Modifier)) {
+        Box(Modifier.weight(1f).fillMaxWidth().background(paper).then(if (classic) Modifier.frame(T) else Modifier)) {
             BasicTextField(
                 tf, { change(it) },
                 Modifier.fillMaxSize().verticalScroll(rememberScrollState()).then(if (wrap) Modifier else Modifier.horizontalScroll(rememberScrollState())).padding(4.dp),
@@ -203,9 +207,9 @@ private fun NotepadWindow(
             val before = tf.text.substring(0, tf.selection.start.coerceIn(0, tf.text.length))
             val ln = before.count { it == '\n' } + 1
             val col = before.length - (before.lastIndexOf('\n') + 1) + 1
-            Row(Modifier.fillMaxWidth().background(pal.statusBg).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Ln $ln, Col $col", "Satır $ln, Sütun $col"), color = pal.statusInk, fontSize = 12.sp, modifier = Modifier.weight(1f))
-                Text("${tf.text.length} " + tr("chars", "karakter") + "   100%   UTF-8", color = pal.statusInk, fontSize = 12.sp)
+            Row(Modifier.fillMaxWidth().background(if (win11) paper else pal.statusBg).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Ln $ln, Col $col", "Satır $ln, Sütun $col"), color = if (win11) pal.ink else pal.statusInk, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                Text("${tf.text.length} " + tr("chars", "karakter") + "   100%   UTF-8", color = if (win11) pal.ink else pal.statusInk, fontSize = 12.sp)
             }
         }
     }

@@ -1,10 +1,20 @@
 package com.umutk.pulse.extras.music.looks
 
 import com.umutk.pulse.extras.music.shownArtist
+import com.umutk.pulse.extras.music.MusicLevels
 
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.unit.IntOffset
+import kotlin.math.abs
+import kotlin.math.roundToInt
+import kotlinx.coroutines.launch
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -150,6 +160,34 @@ private class Lists(val ctx: android.content.Context) {
     fun delete(name: String) = sp.edit().remove(name).apply()
 }
 
+/** A round top-bar button; [label] shows beside it (minutes left on the sleep timer). */
+@Composable
+private fun TopAction(icon: androidx.compose.ui.graphics.vector.ImageVector, on: Boolean, accent: Color, label: String? = null, onClick: () -> Unit) {
+    Row(Modifier.padding(start = 4.dp).clip(RoundedCornerShape(50)).background(if (on) accent.copy(alpha = .22f) else Color.Transparent).clickable(onClick = onClick)
+        .padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, tint = if (on) accent else TXT, modifier = Modifier.size(22.dp))
+        if (label != null) { Spacer(Modifier.width(4.dp)); Text(label, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Medium) }
+    }
+}
+
+/** Live level bars from the audio that is playing; they fall flat when it pauses. */
+@Composable
+private fun LevelBars(playing: Boolean, color: Color, modifier: Modifier = Modifier) {
+    var levels by remember { mutableStateOf(List(MusicLevels.BANDS) { 0f }) }
+    LaunchedEffect(playing) {
+        while (true) { levels = if (playing) MusicLevels.snapshot() else List(MusicLevels.BANDS) { 0f }; if (!playing) break; delay(60) }
+    }
+    androidx.compose.foundation.Canvas(modifier) {
+        val n = levels.size
+        val gap = 3.dp.toPx()
+        val w = (size.width - gap * (n - 1)) / n
+        levels.forEachIndexed { i, v ->
+            val h = (size.height * v.coerceIn(0f, 1f)).coerceAtLeast(3.dp.toPx())
+            drawRoundRect(color.copy(alpha = .85f), androidx.compose.ui.geometry.Offset(i * (w + gap), size.height - h), androidx.compose.ui.geometry.Size(w, h), androidx.compose.ui.geometry.CornerRadius(w / 2))
+        }
+    }
+}
+
 @Composable
 fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Modifier = Modifier, artBackground: Boolean = false, onNowPlaying: (Boolean) -> Unit = {}) {
     val ctx = LocalContext.current
@@ -187,6 +225,22 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
         while (sleepLeft > 0) { delay(60_000); sleepLeft--; if (sleepLeft == 0) engine.pause() }
     }
 
+    val scope = rememberCoroutineScope()
+    val sheetY = remember { Animatable(0f) }
+    var rootH by remember { mutableFloatStateOf(0f) }
+    var sheetOn by remember { mutableStateOf(false) }
+    var showLyrics by remember { mutableStateOf(false) }
+    LaunchedEffect(cur?.path) { showLyrics = false }
+    fun pageDrag(dy: Float) { scope.launch { sheetY.snapTo(sheetY.value + dy) } }
+    fun pageRelease() {
+        scope.launch {
+            if (abs(sheetY.value) > rootH * .22f) {
+                sheetY.animateTo(if (sheetY.value > 0f) rootH else -rootH, tween(200, easing = FastOutSlowInEasing))
+                showQueue = false; showNow = false
+            } else sheetY.animateTo(0f, spring(dampingRatio = .75f, stiffness = Spring.StiffnessMedium))
+        }
+    }
+
     BackHandler(showNow || group != null) { if (showQueue) showQueue = false else if (showNow) showNow = false else group = null }
 
     val q = query.trim().lowercase()
@@ -194,7 +248,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
 
     DisposableEffect(showNow) { onNowPlaying(showNow); onDispose { onNowPlaying(false) } }
 
-    Box(modifier.fillMaxSize().background(pbg)) {
+    Box(modifier.fillMaxSize().background(pbg).onSizeChanged { rootH = it.height.toFloat() }) {
         Column(Modifier.fillMaxSize()) {
             // search
             Row(Modifier.fillMaxWidth().padding(12.dp, 8.dp).clip(RoundedCornerShape(28.dp)).background(PANEL).padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -287,23 +341,27 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
             }
         }
 
-        // the player slides up from the bottom and back down when it closes
-        AnimatedVisibility(showNow && cur != null,
-            enter = slideInVertically(tween(340, easing = FastOutSlowInEasing)) { it / 3 } + fadeIn(tween(240)),
-            exit = slideOutVertically(tween(260, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(200))) {
-            val cur = cur ?: return@AnimatedVisibility
+        // the player is a sheet over the library: it rises from the bottom, follows the finger on any vertical drag and the library shows underneath
+        val visible = showNow && cur != null
+        LaunchedEffect(visible) {
+            if (visible) { sheetY.snapTo(if (rootH > 0f) rootH else 3000f); sheetOn = true; sheetY.animateTo(0f, tween(340, easing = FastOutSlowInEasing)) }
+            else if (sheetOn) { sheetY.animateTo(rootH.coerceAtLeast(1f), tween(260, easing = FastOutSlowInEasing)); sheetOn = false }
+        }
+        if (sheetOn) {
+            val cur = cur ?: return@Box
             // the cover breathes out while playing and settles smaller when paused
             val coverScale by animateFloatAsState(if (st.isPlaying) 1f else .88f, spring(dampingRatio = .55f, stiffness = Spring.StiffnessLow), label = "cover")
-            Box(Modifier.fillMaxSize().background(pbg)) {
+            Box(Modifier.fillMaxSize().offset { IntOffset(0, sheetY.value.roundToInt()) }.background(pbg)
+                .pointerInput(Unit) { detectVerticalDragGestures(onDragEnd = { pageRelease() }, onDragCancel = { pageRelease() }, onVerticalDrag = { c, d -> c.consume(); pageDrag(d) }) }) {
                 // one layer: the blurred cover is the background when the art switch is on, nothing extra is drawn otherwise
                 if (artBackground && art != null) Image(art, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop)
                 Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.KeyboardArrowDown, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { showQueue = false; showNow = false })
                         Spacer(Modifier.weight(1f))
-                        Icon(Icons.Rounded.Bedtime, null, tint = if (sleepLeft > 0) dyn else TXT, modifier = Modifier.clickable { sleepLeft = when (sleepLeft) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 } }.padding(6.dp))
-                        if (sleepLeft > 0) Text("$sleepLeft", color = dyn, fontSize = 13.sp)
-                        Icon(Icons.Rounded.QueueMusic, null, tint = if (showQueue) dyn else TXT, modifier = Modifier.clickable { showQueue = !showQueue }.padding(6.dp))
+                        TopAction(Icons.Rounded.Subject, showLyrics, dyn) { showQueue = false; showLyrics = !showLyrics }
+                        TopAction(Icons.Rounded.Bedtime, sleepLeft > 0, dyn, if (sleepLeft > 0) "$sleepLeft" else null) { sleepLeft = when (sleepLeft) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 } }
+                        TopAction(Icons.Rounded.QueueMusic, showQueue, dyn) { showLyrics = false; showQueue = !showQueue }
                     }
                     if (showQueue) {
                         val qs = st.queue
@@ -320,15 +378,20 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         }
                     } else {
                         Spacer(Modifier.weight(1f))
+                        Box(Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }) {
                         CoverCarousel(art, artPrev, artNext, st.index > 0, st.index < st.queue.lastIndex, { engine.previous() }, { engine.next() },
-                            // not clipped here: each cover is clipped itself, so a pulled cover can leave the square
-                            Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale },
-                            // a pull up or down sends the cover across the page and the previous screen opens
-                            onSwipeUp = { showQueue = false; showNow = false }, onSwipeDown = { showQueue = false; showNow = false }) { a ->
+                            Modifier.fillMaxSize(),
+                            // a vertical drag on the cover moves the whole player, like anywhere else on it
+                            onPageDrag = { pageDrag(it) }, onPageRelease = { pageRelease() }) { a ->
                             if (a != null) Image(a, null, Modifier.fillMaxSize().clip(RoundedCornerShape(4.dp)), contentScale = ContentScale.Crop)
                             else Box(Modifier.fillMaxSize().clip(RoundedCornerShape(4.dp)).background(dyn.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = dyn, modifier = Modifier.fillMaxSize(.45f)) }
                         }
+                        // the lyrics sit on top of the cover, in its place
+                        if (showLyrics) com.umutk.pulse.extras.lyrics.LyricsSheet(cur.name(), cur.artistName(), cur.album, dur.toLong(), cur.path.takeIf { !it.contains("://") }, pos.toLong(),
+                            onDismiss = { showLyrics = false }, onSeek = { ms -> engine.seekTo(ms.toInt()); pos = ms.toInt() }, modifier = Modifier.clip(RoundedCornerShape(4.dp)))
+                        }
                         Spacer(Modifier.weight(1f))
+                        LevelBars(st.isPlaying, dyn, Modifier.fillMaxWidth().height(28.dp).padding(bottom = 6.dp))
                     }
                     Text(cur.name(), color = TXT, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(cur.artistName(), color = SUB, fontSize = 15.sp, maxLines = 1)

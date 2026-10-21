@@ -96,7 +96,6 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
         // the tools placed under Extra apps (Settings > Extra apps: download manager, Office, App lock, ...); the store ends the group, the music player, video, white noise and the standalone apps are listed inside it
         MenuTop(EXTRA_APPS, listOf(
             *ToolPlace.extraEntries(ctx, { go(it) }, { openTool(it) }).toTypedArray(),
-            MenuEntry(tr("Store", "Mağaza"), icon = Icons.Outlined.Apps, key = "apps") { openTool("extrastore") },
         )),
     )
     return MenuHost(tops) {
