@@ -138,17 +138,17 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 3.dp)
+                        .padding(vertical = 1.dp)
                         .background(T.panel, RoundedCornerShape(T.radius))
                         .clickable { selected = if (isOpen) null else s.kind }
-                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                        .padding(horizontal = 16.dp, vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.kind.label, color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-                        Text("${s.count} files", color = T.sub, fontSize = 12.sp)
+                        Text(s.kind.label, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("${s.count} files", color = T.sub, fontSize = 13.sp)
                     }
-                    Text(tbFormatBytes(s.bytes), color = T.text, fontSize = 14.sp)
+                    Text(tbFormatBytes(s.bytes), color = T.text, fontSize = 16.sp)
                 }
             }
 
@@ -166,12 +166,14 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                     item { Text("No files of this type", color = T.sub, fontSize = 13.sp) }
                 }
                 items(s.largest, key = { it.file.path }) { f ->
-                    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                    // a tap opens the file in the viewer or app that handles it
+                    val ctx = androidx.compose.ui.platform.LocalContext.current
+                    Column(Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable { tbOpen(ctx, f.file) }.padding(vertical = 8.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
                                 f.file.name,
                                 color = T.text,
-                                fontSize = 13.sp,
+                                fontSize = 15.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.weight(1f),
@@ -205,6 +207,17 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
         )
+    }
+}
+
+/** Opens a file from the list like Files does: pictures, Office files and text in Pulse's own viewers, anything else through the system. */
+private fun tbOpen(ctx: android.content.Context, f: File) {
+    val e = f.extension.lowercase()
+    when {
+        e in com.umutk.pulse.IMG_EXTS -> com.umutk.pulse.imgOpen(ctx, f)
+        e in com.umutk.pulse.OF_EXTS -> com.umutk.pulse.ofOpen(ctx, f)
+        com.umutk.pulse.ofIsText(f) -> com.umutk.pulse.ofOpenText(ctx, f)
+        else -> com.umutk.pulse.features.Downloads.openFile(ctx, f)
     }
 }
 
