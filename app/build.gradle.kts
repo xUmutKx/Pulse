@@ -11,16 +11,23 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = 31
         targetSdk = 34
-        versionCode = 158
-        versionName = "0.10.148"
+        versionCode = 159
+        versionName = "0.10.149"
         ndk { abiFilters += "arm64-v8a" }
+    }
+    // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
+    signingConfigs {
+        create("pulse") {
+            storeFile = rootProject.file("ci/pulse.keystore")
+            storePassword = "pulsepulse"; keyAlias = "pulse"; keyPassword = "pulsepulse"
+        }
     }
     buildTypes {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("pulse")
         }
     }
     compileOptions {
