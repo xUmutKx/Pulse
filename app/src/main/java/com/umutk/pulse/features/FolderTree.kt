@@ -76,7 +76,7 @@ import java.nio.file.Files
 import java.util.concurrent.atomic.AtomicLong
 
 /** One child of the folder on screen, with the size of everything under it. */
-private class TreeNode(val file: File, val size: Long)
+private class TreeNode(val file: File, val size: Long, val isDir: Boolean = file.isDirectory)
 
 private fun formatSize(b: Long): String = when {
     b >= 1L shl 30 -> "%.1f GB".format(b / 1073741824.0)
@@ -102,10 +102,17 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     // the one shared walk of the storage (see StorageScan): the folder on screen, its children sorted by size
     val snap by StorageScan.snap.collectAsState()
     val scanned by StorageScan.scanned.collectAsState()
-    LaunchedEffect(root) { StorageScan.ensure(root) }
+    // the system root "/" is never walked whole (it never ends: /proc, /sys): each folder is measured on its own through root with du, once, and kept
+    val sysRoot = root.path == "/"
+    var rootRev by remember { mutableStateOf(0) }
+    LaunchedEffect(root) { if (!sysRoot) StorageScan.ensure(root) }
     LaunchedEffect(dir) { lastDir = dir }
-    val loading = snap?.root != root.path
-    val rows = remember(snap, dir) {
+    val rootRows by produceState<List<TreeNode>?>(if (sysRoot) RootDu.cached(dir) else null, dir, rootRev) {
+        if (sysRoot) value = RootDu.cached(dir) ?: withContext(Dispatchers.IO) { RootDu.measure(dir) }
+    }
+    val loading = if (sysRoot) rootRows == null else snap?.root != root.path
+    val rows = remember(snap, dir, rootRows) {
+        if (sysRoot) return@remember rootRows.orEmpty()
         val s = snap?.takeIf { it.root == root.path }
         s?.childrenOf(dir)?.map { TreeNode(it, s.sizeOf(it)) }?.sortedByDescending { it.size }.orEmpty()
     }
@@ -127,7 +134,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     fun tap(node: TreeNode) {
         when {
             sel.isNotEmpty() -> toggleSel(node.file.path)
-            node.file.isDirectory -> dir = node.file
+            node.isDir -> dir = node.file
             isPicture(node.file) -> preview = node.file
         }
     }
@@ -149,7 +156,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             }) {
                 Icon(if (grid) Icons.Filled.List else Icons.Filled.Apps, contentDescription = if (grid) "List" else "Tiles")
             }
-            IconButton(onClick = { StorageScan.rescan(root) }) {
+            IconButton(onClick = { if (sysRoot) { RootDu.forget(dir); rootRev++ } else StorageScan.rescan(root) }) {
                 Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
             }
         }
@@ -175,7 +182,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             )
         } else if (rows.isEmpty()) {
             Text(
-                if (dir.isDirectory) "Empty folder" else "This folder cannot be read",
+                if (dir.isDirectory || sysRoot) "Empty folder" else "This folder cannot be read",
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 16.dp),
             )
@@ -192,7 +199,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             text = { Text("Folders are deleted with everything in them.") },
             confirmButton = { TextButton(onClick = {
                 val paths = sel; askDelete = false; sel = emptySet()
-                scope.launch(Dispatchers.IO) { paths.forEach { File(it).deleteRecursively() }; StorageScan.rescan(root) }
+                scope.launch(Dispatchers.IO) { paths.forEach { File(it).deleteRecursively() }; if (sysRoot) { RootDu.forget(dir); rootRev++ } else StorageScan.rescan(root) }
             }) { Text("Delete") } },
             dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Cancel") } },
         )
@@ -202,7 +209,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             items(rows, key = { it.file.path }) { node ->
-                val isDir = node.file.isDirectory
+                val isDir = node.isDir
                 val share = if (total > 0) node.size.toFloat() / total else 0f
                 val picked = node.file.path in sel
                 val thumb = if (isDir) null else exThumb(node.file)
@@ -298,7 +305,7 @@ private fun TreeTiles(rows: List<TreeNode>, sel: Set<String>, onTap: (TreeNode) 
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         gridItems(rows, key = { it.file.path }) { node ->
-            val isDir = node.file.isDirectory
+            val isDir = node.isDir
             val picked = node.file.path in sel
             val thumb = if (isDir) null else exThumb(node.file)
             Column(
@@ -319,5 +326,26 @@ private fun TreeTiles(rows: List<TreeNode>, sel: Set<String>, onTap: (TreeNode) 
                 Text(formatSize(node.size), style = MaterialTheme.typography.labelSmall)
             }
         }
+    }
+}
+
+/** Folder sizes under the system root, measured one folder at a time through root (`du` on one file system) and kept for the run. */
+private object RootDu {
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, List<TreeNode>>()
+    fun cached(d: File): List<TreeNode>? = cache[d.path]
+    fun forget(d: File) { cache.remove(d.path) }
+    fun measure(d: File): List<TreeNode> {
+        val q = d.path.replace("'", "'\\''")
+        val p = if (d.path == "/") "" else d.path
+        // the folders (ls -p marks them with /), then the size of every entry on this file system (du -x: /proc, /sys and other mounts stay 0)
+        val out = com.umutk.pulse.Shell.run("ls -1Ap -- '$q' 2>/dev/null; echo __DU; du -xakd 1 -- '$q' 2>/dev/null")
+        val (ls, du) = out.split("__DU").let { (it.getOrNull(0) ?: "") to (it.getOrNull(1) ?: "") }
+        val dirs = ls.lines().filter { it.endsWith("/") }.map { it.dropLast(1) }.toSet()
+        val sizes = HashMap<String, Long>()
+        du.lines().forEach { l -> val t = l.indexOf('\t'); if (t > 0) l.substring(0, t).trim().toLongOrNull()?.let { sizes[l.substring(t + 1).trim()] = it * 1024 } }
+        val names = ls.lines().filter { it.isNotBlank() }.map { it.removeSuffix("/") }
+        val list = names.map { n -> val f = File("$p/$n"); TreeNode(f, sizes[f.path] ?: 0L, n in dirs) }.sortedByDescending { it.size }
+        cache[d.path] = list
+        return list
     }
 }

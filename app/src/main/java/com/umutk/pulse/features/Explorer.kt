@@ -531,7 +531,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     sep()
                     row(if (dir.path in marks) tr("Remove bookmark", "Yer imini kaldır") else tr("Add bookmark", "Yer imi ekle"), if (dir.path in marks) Icons.Outlined.Star else Icons.Outlined.StarBorder) { mark(dir.path) }
                     row(tr("Home", "Ana klasör"), Icons.Outlined.Home) { go(top.path) }
-                    row(tr("Refresh", "Yenile"), Icons.Outlined.Refresh) { refresh++ }
+                    row(tr("Refresh", "Yenile"), Icons.Outlined.Refresh) { AppDataFolders.forget(); refresh++ }
                     row(tr("Properties", "Özellikler"), Icons.Outlined.Info) { propsOf = dir }
                     undo?.let { u -> row(tr("Undo", "Geri al"), Icons.Outlined.Undo) { scope.launch { note = withContext(Dispatchers.IO) { exUndo(u) }; undo = null; refresh++ } } }
                     sep()

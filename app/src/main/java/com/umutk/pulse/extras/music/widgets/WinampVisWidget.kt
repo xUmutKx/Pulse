@@ -103,9 +103,8 @@ class WinampVisWidget : AppWidgetProvider() {
         fun render(levels: List<Float>, title: String, bw: Int, bh: Int): Bitmap {
             val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
-            val s = minOf(bw / W.toFloat(), bh / H.toFloat())
-            cv.drawColor(0xFF000000.toInt())
-            cv.translate((bw - W * s) / 2f, (bh - H * s) / 2f); cv.scale(s, s)
+            // the window fills the whole widget edge to edge (stretched on its two axes), no black band around it
+            cv.scale(bw / W.toFloat(), bh / H.toFloat())
             val p = Paint(Paint.ANTI_ALIAS_FLAG)
             p.color = BG; cv.drawRect(0f, 0f, W.toFloat(), H.toFloat(), p)
 
