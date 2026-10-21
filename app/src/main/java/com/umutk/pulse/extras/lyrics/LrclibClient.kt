@@ -61,8 +61,8 @@ class LrclibClient(private val cache: LyricsCache) {
         try {
             c.setRequestProperty("User-Agent", USER_AGENT)
             c.setRequestProperty("Accept", "application/json")
-            c.connectTimeout = 10_000
-            c.readTimeout = 15_000
+            c.connectTimeout = 6_000
+            c.readTimeout = 8_000
             val code = c.responseCode
             val body = if (code in 200..299) c.inputStream.bufferedReader(Charsets.UTF_8).use { it.readText() } else ""
             return Triple(code, body, c.getHeaderField("Retry-After")?.toLongOrNull() ?: 1L)

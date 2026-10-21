@@ -52,13 +52,15 @@ import com.umutk.pulse.PCard
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.PLoader
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 
 /** Lyric lines: synced ones follow [positionMs] (pass -1 for no highlight) and tap seeks when [onSeek] is set; unsynced ones just scroll. */
 @Composable
-fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?, modifier: Modifier = Modifier) {
+fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?, modifier: Modifier = Modifier, mark: String = "") {
     val state = rememberLazyListState()
     val cur = if (result.synced && positionMs >= 0) result.lines.indexOfLast { it.timeMs <= positionMs } else -1
     LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2)) }
@@ -66,7 +68,7 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
         itemsIndexed(result.lines) { i, l ->
             val on = i == cur
             if (l.text.isEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.extras.ui.TIcon("note", T.sub, 20.dp) } else Text(
-                l.text,
+                lyricMarked(l.text, mark, MaterialTheme.colorScheme.primary),
                 color = if (on) MaterialTheme.colorScheme.primary else T.sub,
                 fontSize = if (on) 22.sp else 17.sp,
                 fontWeight = if (on) FontWeight.Bold else FontWeight.SemiBold,
@@ -163,6 +165,9 @@ fun LyricsSheet(
             y.animateTo(0f, tween(200, easing = FastOutSlowInEasing))
         }
     }
+    // when the last timed line is over, the lyrics step aside and the cover shows again
+    val lastMs = res?.takeIf { it.synced }?.lines?.lastOrNull { it.timeMs >= 0 }?.timeMs
+    LaunchedEffect(lastMs != null && positionMs > lastMs + 6000) { if (lastMs != null && positionMs > lastMs + 6000 && !closing) close() }
     LaunchedEffect(title, artist, localPath) {
         busy = true; res = null
         res = Lyrics.forTrack(ctx, title, artist, album, durationMs, localPath)
@@ -174,7 +179,7 @@ fun LyricsSheet(
             // hidden until its height is known, so it does not flash at rest before it rises
             .alpha(if (entered) 1f else 0f)
             .offset { IntOffset(0, y.value.roundToInt()) }
-            .background(Color.Black.copy(alpha = .78f))
+            .background(Color.Black.copy(alpha = .92f))
             // a downward drag moves the sheet with the finger; past a quarter of its height it closes, else it springs back
             .pointerInput(Unit) {
                 detectVerticalDragGestures(
@@ -188,8 +193,28 @@ fun LyricsSheet(
         when {
             r != null -> LyricsView(r, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp))
             busy -> Box(Modifier.fillMaxSize(), Alignment.Center) { PLoader() }
-            else -> Box(Modifier.fillMaxSize(), Alignment.Center) { PIcon("book", Color.White.copy(alpha = .6f), 40.dp) }
+            else -> Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
+                PIcon("book", Color.White.copy(alpha = .6f), 40.dp)
+                Text(tr("No lyrics", "Söz yok"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+            }
         }
         IconButton(onClick = { close() }, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) { PIcon("close", Color.White, 22.dp) }
+    }
+}
+
+/** [text] with every word of [query] (words of 2+ letters, split on spaces and commas) in bold on a tinted background; the text itself when there is no query. */
+fun lyricMarked(text: String, query: String, accent: androidx.compose.ui.graphics.Color): androidx.compose.ui.text.AnnotatedString {
+    val words = query.lowercase().split(' ', ',').map { it.trim() }.filter { it.length >= 2 }.distinct()
+    if (words.isEmpty()) return androidx.compose.ui.text.AnnotatedString(text)
+    val low = text.lowercase()
+    val hit = BooleanArray(text.length)
+    words.forEach { w -> var i = low.indexOf(w); while (i >= 0) { for (k in i until minOf(i + w.length, hit.size)) hit[k] = true; i = low.indexOf(w, i + w.length) } }
+    return androidx.compose.ui.text.buildAnnotatedString {
+        var i = 0
+        while (i < text.length) {
+            var j = i; while (j < text.length && hit[j] == hit[i]) j++
+            if (hit[i]) withStyle(androidx.compose.ui.text.SpanStyle(fontWeight = FontWeight.ExtraBold, background = accent.copy(alpha = .35f), color = androidx.compose.ui.graphics.Color.White)) { append(text.substring(i, j)) } else append(text.substring(i, j))
+            i = j
+        }
     }
 }

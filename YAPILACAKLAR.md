@@ -904,3 +904,5 @@ Screen recorder feature list (55 candidates)
 - Equalizer: attach falls back to the global mix, keeps a working equalizer when the session id is unset, shows the reason and a Try again button instead of a bare block icon; 0.10.164. derlenmedi
 
 - Office 365 window (Word, Excel, PowerPoint, PDF): dark grey strips with white text and icons in the light and dark look; 0.10.165. derlenmedi
+
+- Music: artist shown everywhere (Winamp "Artist - Title", Poweramp chips, online tags on by default); separate lyrics notification option; lyrics index read once (LyricsIndex) + 3-day miss cache + shorter timeouts; lyrics sheet darker, closes to the cover after the last line; search words highlighted; covers cached in memory (no stale/other covers while swiping, neighbours only while dragging); Material mini player with shuffle, repeat and a round play button; 0.10.166. derlenmedi

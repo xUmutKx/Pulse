@@ -41,17 +41,26 @@ object Lyrics {
             }
             val key = "t|${artist.trim().lowercase()}|${title.trim().lowercase()}"
             cacheGet(app, key)?.let { return@withContext it }
+            // a song that had no lyrics online is not asked again for three days
+            if (missed(app, key)) return@withContext null
             val client = LrclibClient(LyricsCache(File(app.cacheDir, "lyrics")))
             val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
-            val rec = runCatching {
+            val asked = runCatching {
                 if (artist.isNotBlank()) client.get(title, artist, album, sec)?.takeIf { it.hasLyrics }?.let { it to "lrclib" } else null
                     ?: client.search("$artist $title".trim()).let { l -> l.firstOrNull { it.hasLyrics && it.syncedLyrics != null } ?: l.firstOrNull { it.hasLyrics } }?.let { it to "lrclib" }
                     ?: if (artist.isNotBlank()) ovhLyrics(artist, title)?.let { it to "ovh" } else null
-            }.getOrNull() ?: return@withContext null // shortcut: a network error looks like "not found", nothing is cached then
+            }
+            // a network error is not "no lyrics": nothing is remembered then; an answer without lyrics is remembered
+            val rec = asked.getOrNull() ?: return@withContext null.also { if (asked.isSuccess) markMiss(app, key) }
             val r = toResult(rec.first, rec.second) ?: return@withContext null
             cachePut(app, key, rec.first.syncedLyrics ?: rec.first.plainLyrics.orEmpty(), rec.second)
             r
         }
+
+    /** Reads the lyrics that are on the phone once, in the background, so the first lyrics search is instant (see [LyricsIndex]). */
+    suspend fun warmIndex(ctx: Context, tracks: List<com.umutk.pulse.extras.music.Track>) {
+        runCatching { LyricsIndex.ensure(ctx.applicationContext, tracks) { p -> sidecarText(p)?.let { stripStamps(it) } ?: embeddedText(p) } }
+    }
 
     /** Songs whose lyrics contain [query] (LrcLrc rules: plain text is a phrase, commas are AND, words under 3 letters are ignored). */
     suspend fun searchByText(ctx: Context, query: String): List<LyricHit> = withContext(Dispatchers.IO) {
@@ -65,9 +74,11 @@ object Lyrics {
         }
         val seen = HashSet<String>()
         // device: lyrics files beside the music, then the lyrics saved from Pulse
-        MusicLibrary.tracks.value.forEach { t ->
-            // the lyrics beside the file, else the ones inside its tag (mp3 USLT / SYLT, flac)
-            val text = sidecarText(t.path)?.let { stripStamps(it) } ?: embeddedText(t.path) ?: return@forEach
+        // read once for the whole library (LyricsIndex), so a search does not open every song file again
+        val tracks = MusicLibrary.tracks.value
+        val idx = LyricsIndex.ensure(app, tracks) { p -> sidecarText(p)?.let { stripStamps(it) } ?: embeddedText(p) }
+        tracks.forEach { t ->
+            val text = idx[t.path]?.takeIf { it.isNotEmpty() } ?: return@forEach
             val (a, ti) = t.artist.orEmpty() to (t.title ?: t.path.substringAfterLast('/').substringBeforeLast('.'))
             if (test(ti, a, text, "file:${t.path}")) seen += "${a.lowercase()}|${ti.lowercase()}"
         }
@@ -154,6 +165,10 @@ object Lyrics {
         val t = cacheFile(c, key).takeIf { it.isFile }?.readText() ?: return null
         fromText(t.substringAfter('\n'), "cache")
     }.getOrNull()
+
+    private fun missPrefs(c: Context) = c.getSharedPreferences("lyrics_miss", Context.MODE_PRIVATE)
+    private fun missed(c: Context, key: String) = System.currentTimeMillis() - missPrefs(c).getLong(sha(key), 0L) < 3L * 24 * 3600 * 1000
+    private fun markMiss(c: Context, key: String) = missPrefs(c).edit().putLong(sha(key), System.currentTimeMillis()).apply()
 
     private fun cachePut(c: Context, key: String, text: String, source: String) {
         if (text.isNotBlank()) runCatching { cacheFile(c, key).writeText(source + "\n" + text) }

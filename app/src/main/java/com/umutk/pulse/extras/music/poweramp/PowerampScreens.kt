@@ -336,7 +336,7 @@ fun NowPlayingScreen(
                                 .clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                         // artist and album only; no folder name here, so a blank tag shows no chip rather than "Audio"
-                        val sub = listOfNotNull(track.artistTag(), track.album?.takeIf { it.isNotBlank() }).joinToString(" - ")
+                        val sub = listOfNotNull(track.shownArtist(), track.album?.takeIf { it.isNotBlank() }).joinToString(" - ")
                         if (sub.isNotEmpty()) Text(
                             sub,
                             color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,

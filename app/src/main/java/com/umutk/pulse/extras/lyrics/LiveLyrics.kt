@@ -44,6 +44,8 @@ object LiveLyrics {
     fun floating(c: Context) = prefs(c).getBoolean("floating", false)
     // on by default: the current lyric line is the notification text whenever the track has synced lyrics
     fun notification(c: Context) = prefs(c).getBoolean("notification", true)
+    // a notification of its own for the lyrics, beside the media one (off by default)
+    fun separate(c: Context) = prefs(c).getBoolean("separate", false)
     fun set(c: Context, key: String, on: Boolean) = prefs(c).edit().putBoolean(key, on).apply()
 
     /** The line the notification shows now; null hides it. Read by [com.umutk.pulse.extras.music.notif.NotifProvider]. */
@@ -113,7 +115,12 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         if (LiveLyrics.floating(ctx) && !MiniLyrics.running && Settings.canDrawOverlays(ctx)) MiniLyrics.start(ctx)
         val st = engine.state.value
         // lyrics are looked up only while a notification or the lyrics widget shows them
-        val wanted = LiveLyrics.notification(ctx) || com.umutk.pulse.widgets.music.LyricsWidget.placed(ctx)
+        val wanted = LiveLyrics.notification(ctx) || LiveLyrics.separate(ctx) || com.umutk.pulse.widgets.music.LyricsWidget.placed(ctx)
+        // the separate lyrics notification: the line with its neighbours, replaced as the song moves
+        if (LiveLyrics.separate(ctx) && st.isPlaying && st.current != null) {
+            val trio = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, st.current!!), engine.positionMs)
+            postNote(st.current!!, trio)
+        } else clearNote()
         val line = if (wanted && st.isPlaying) {
             st.current?.let { LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, it), engine.positionMs) }?.second?.takeIf { it.isNotBlank() }
         } else null
@@ -124,7 +131,25 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         }
     }
 
+    private val nm get() = ctx.getSystemService(android.app.NotificationManager::class.java)
+    private var noteText: String? = null
+
+    private fun postNote(t: Track, trio: Triple<String?, String, String?>?) {
+        val body = trio?.second?.takeIf { it.isNotBlank() } ?: return clearNote()
+        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "▶ " + trio.second, trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
+        if (text == noteText) return
+        noteText = text
+        nm.createNotificationChannel(android.app.NotificationChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
+        val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music)
+            .setContentTitle(t.title ?: t.path.substringAfterLast('/')).setContentText(trio.second).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(text))
+            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT).build())
+    }
+
+    private fun clearNote() { if (noteText != null) { noteText = null; nm.cancel(4106) } }
+
     fun stop() {
+        clearNote()
         scope.cancel()
         MiniLyrics.stop(ctx)
         LiveLyrics.notifLine = null
@@ -147,5 +172,8 @@ fun LiveLyricsSettingsSection() {
             if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)
         }
         SwitchRow(tr("Show in notification", "Bildirimde göster"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
+        // a second notification of its own: the current line with the one before and after it
+        var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
+        SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
     }
 }

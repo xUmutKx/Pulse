@@ -16,7 +16,7 @@ object MusicSettings {
     fun onlineCovers(c: Context) = sp(c).getBoolean("online_covers", false)
     fun setOnlineCovers(c: Context, on: Boolean) = sp(c).edit().putBoolean("online_covers", on).apply()
     /** Fills the artist, album, genre and year a song is missing from the internet (OnlineTags). */
-    fun onlineTags(c: Context) = sp(c).getBoolean("online_tags", false)
+    fun onlineTags(c: Context) = sp(c).getBoolean("online_tags", true)
     fun setOnlineTags(c: Context, on: Boolean) = sp(c).edit().putBoolean("online_tags", on).apply()
 
     /** Fade length at each track change in seconds, 0 = off. */

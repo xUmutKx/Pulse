@@ -104,8 +104,13 @@ fun WinampShade(
     )
 }
 
-internal fun trackLabel(t: Track?): String =
-    t?.let { it.title ?: it.path.substringAfterLast('/').substringBeforeLast('.') } ?: "PULSE"
+internal fun trackLabel(t: Track?): String {
+    if (t == null) return "PULSE"
+    val title = t.title ?: t.path.substringAfterLast('/').substringBeforeLast('.')
+    // like the real Winamp: "Artist - Title" (a title that already carries the artist stays as it is)
+    val artist = t.shownArtist()
+    return if (title.contains(" - ") || artist == com.umutk.pulse.tr("Unknown artist", "Bilinmeyen sanatçı")) title else "$artist - $title"
+}
 
 internal fun formatTime(ms: Int): String {
     val sec = ms.coerceAtLeast(0) / 1000
