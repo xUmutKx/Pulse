@@ -882,3 +882,5 @@ Screen recorder feature list (55 candidates)
 - Each standalone app in Settings > Apps has its place (top-right menu, left menu, Settings only); Windows 11 tool and extra-app pages are see-through (pageBg); Screen cover gets the back arrow bar; 0.10.153. derlenmedi
 
 - Colour Fluent pictures (Fluent UI colour set, PNG) for every app, tool and page in Settings > Apps and the left menu; tapping an app name opens it; Poweramp now playing without suggestions and without scrolling; Material player: colour fades, title slides by direction, art crossfade, play squeeze; removed stray Python wheels from the source folder; 0.10.154. derlenmedi
+
+- Storage walk (folder tree, file types) saved to filesDir/storage_scan.bin and reused at every start; only Refresh walks again; root view picked by a folder that lists with content (isolated mount namespaces showed app data as empty stubs); 0.10.155. derlenmedi
