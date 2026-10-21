@@ -7,8 +7,8 @@
     android:minResizeWidth="180dp"
     android:minResizeHeight="40dp"
     android:updatePeriodMillis="1800000"
-    android:initialLayout="@layout/widget_winamp_compact"
+    android:initialLayout="@layout/widget_winamp_compact" android:previewImage="@drawable/preview_widget_winamp_compact"
     android:resizeMode="horizontal"
     android:widgetCategory="home_screen"
-    android:widgetFeatures="reconfigurable"
+    android:widgetFeatures="reconfigurable|configuration_optional"
     android:configure="com.umutk.pulse.widgets.music.WinampWidgetConfig" />
