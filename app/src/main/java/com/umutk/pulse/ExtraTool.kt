@@ -63,15 +63,19 @@ object ExtraToolLook {
  * The own look store of one newer standalone tool (Voice, Notes, Weather): Material until the user picks another.
  * [apply] puts it on the shared Look before the first frame; AppLookGuard.leave restores Pulse's look.
  */
-class ToolLook(private val file: String) {
-    fun get(c: Context): String = c.getSharedPreferences(file, Context.MODE_PRIVATE).getString("look", "material")?.takeIf { it in ExtraToolLook.ids } ?: "material"
+class ToolLook(private val file: String, private val default: String = "material") {
+    fun get(c: Context): String = c.getSharedPreferences(file, Context.MODE_PRIVATE).getString("look", default)?.takeIf { it in ExtraToolLook.ids } ?: default
     fun set(c: Context, id: String) { c.getSharedPreferences(file, Context.MODE_PRIVATE).edit().putString("look", id).apply(); apply(c) }
     fun apply(c: Context) {
-        Look.theme = Themes.first { it.id == get(c) }; Look.mode = "system"; Look.windowTheme = "win"; Look.dynamic = true; Look.accentIdx = -1
+        // AMOLED is not one of Themes: Material underneath, dark, with the black windows (LookHost draws the black page)
+        val id = get(c)
+        Look.theme = Themes.firstOrNull { it.id == id } ?: Themes.first { it.id == "material" }
+        Look.mode = if (id == "amoled") "dark" else "system"; Look.windowTheme = if (id == "amoled") "amoled" else "win"; Look.dynamic = id != "amoled"; Look.accentIdx = -1
     }
 }
 val VoiceLook = ToolLook("voice_look")
-val NotesLook = ToolLook("notes_look")
+// Notes opens black (AMOLED) until another look is picked
+val NotesLook = ToolLook("notes_look", "amoled")
 val WeatherLook = ToolLook("weather_look")
 val PaintLook = ToolLook("paint_look")
 

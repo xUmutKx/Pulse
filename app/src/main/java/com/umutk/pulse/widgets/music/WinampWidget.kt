@@ -128,13 +128,17 @@ open class WinampWidget : AppWidgetProvider() {
             // a skin with an odd sprite size must not blank the widget: fall back to the drawn default
             // a big widget makes a bitmap over the ~1 MB RemoteViews limit, and the whole widget then fails to load: shrink it to fit the binder
             val bmp = TextTile.fitBinder(runCatching { draw(sk) }.getOrElse { draw(null) }, 900_000)
-            val f = fitOf(bw, bh, WINAMP_W, if (compact) STRIP_H else WINAMP_H)
+            // the window as drawn in the bitmap, scaled to the view's real pixels (the bitmap may be smaller than the view), so the touch areas sit on its buttons
+            val r = drawnRect(bw, bh, if (compact) STRIP_H else WINAMP_H)
+            val vs = viewPx(c, id, compact).first / bw
+            val px = (r[0] * vs).toInt(); val py = (r[1] * vs).toInt(); val pw = (r[2] * vs).toInt(); val ph = (r[3] * vs).toInt()
+            val vw = (bw * vs).toInt(); val vh = (bh * vs).toInt()
             return RemoteViews(c.packageName, if (compact) R.layout.widget_winamp_compact else R.layout.widget_music_winamp).apply {
                 SEG.forEachIndexed { n, v -> setOnClickPendingIntent(v, WidgetUi.broadcast(c, WinampWidget::class.java, A_SEEK, 600 + n) { putExtra("seg", n) }) }
                 setOnClickPendingIntent(R.id.wa_shuf, pi(c, A_SHUF)); setOnClickPendingIntent(R.id.wa_rep, pi(c, A_REP))
                 setImageViewBitmap(R.id.wa_img, bmp)
                 // the controls are laid out over the whole widget: pad them to the drawn window so they sit on its buttons
-                setViewPadding(R.id.wa_overlay, f.x, f.y, bw - f.x - f.w, bh - f.y - f.h)
+                setViewPadding(R.id.wa_overlay, px, py, (vw - px - pw).coerceAtLeast(0), (vh - py - ph).coerceAtLeast(0))
                 setOnClickPendingIntent(R.id.wa_prev, pi(c, A_PREV)); setOnClickPendingIntent(R.id.wa_play, pi(c, A_PLAY))
                 setOnClickPendingIntent(R.id.wa_pause, pi(c, A_PAUSE)); setOnClickPendingIntent(R.id.wa_stop, pi(c, A_STOP))
                 setOnClickPendingIntent(R.id.wa_next, pi(c, A_NEXT))
@@ -142,12 +146,26 @@ open class WinampWidget : AppWidgetProvider() {
         }
 
         /** The widget's size in pixels from its options: the smallest it can be, so the window fits at any size; the provider's minimum when unknown. */
-        private fun boxPx(c: Context, id: Int, compact: Boolean): Pair<Int, Int> {
+        /** The widget's size on screen in pixels (its smallest reported size). */
+        private fun viewPx(c: Context, id: Int, compact: Boolean): Pair<Float, Float> {
             val o = AppWidgetManager.getInstance(c).getAppWidgetOptions(id)
             val d = c.resources.displayMetrics.density
             val w = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0).takeIf { it > 0 } ?: 250
             val h = o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0).takeIf { it > 0 } ?: if (compact) 40 else 110
-            val pw = w * d; val ph = h * d
+            return w * d to h * d
+        }
+
+        /** Where [render] puts the window in a boxW x boxH bitmap: x, y, width, height (whole-pixel enlargement, centred). */
+        fun drawnRect(boxW: Int, boxH: Int, winH: Int): IntArray {
+            val f = fitOf(boxW, boxH, WINAMP_W, winH)
+            if (f.scale < 1f) return intArrayOf(f.x, f.y, f.w, f.h)
+            val k = kotlin.math.floor(f.scale).toInt().coerceIn(1, 12)
+            val w = WINAMP_W * k; val h = winH * k
+            return intArrayOf((boxW - w) / 2, (boxH - h) / 2, w, h)
+        }
+
+        private fun boxPx(c: Context, id: Int, compact: Boolean): Pair<Int, Int> {
+            val (pw, ph) = viewPx(c, id, compact)
             // RemoteViews bitmaps count against a per-update memory budget (about 1.5 screens); ARGB at 900k pixels stays far below it
             val shrink = sqrt(pw * ph / 900_000f).coerceAtLeast(1f)
             return (pw / shrink).toInt().coerceAtLeast(1) to (ph / shrink).toInt().coerceAtLeast(1)
@@ -184,11 +202,13 @@ open class WinampWidget : AppWidgetProvider() {
                 wc.save(); wc.clipRect(0f, 0f, WINAMP_W.toFloat(), 40f); paint(); wc.restore()
                 wc.save(); wc.translate(0f, -32f); wc.clipRect(0f, 72f, WINAMP_W.toFloat(), 106f); paint(); wc.restore()
             }
-            val k = Math.round(f.scale).coerceIn(1, 8)
-            val big = if (k > 1) Bitmap.createScaledBitmap(win, WINAMP_W * k, winH * k, false) else win
+            // whole-pixel enlargement only: every skin pixel becomes a k x k block, so nothing is smeared; the rest of the box stays see-through
+            val k = kotlin.math.floor(f.scale).toInt().coerceIn(1, 12)
             val cv = Canvas(out)
-            cv.drawColor(skinBg(skin))
-            cv.drawBitmap(big, null, Rect(f.x, f.y, f.x + f.w, f.y + f.h), Paint(Paint.FILTER_BITMAP_FLAG))
+            if (f.scale < 1f) { cv.drawBitmap(win, null, Rect(f.x, f.y, f.x + f.w, f.y + f.h), Paint(Paint.FILTER_BITMAP_FLAG)); return out }
+            val big = if (k > 1) Bitmap.createScaledBitmap(win, WINAMP_W * k, winH * k, false) else win
+            val x = (boxW - big.width) / 2; val y = (boxH - big.height) / 2
+            cv.drawBitmap(big, x.toFloat(), y.toFloat(), null)
             return out
         }
 

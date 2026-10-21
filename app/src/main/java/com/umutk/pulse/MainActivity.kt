@@ -320,7 +320,8 @@ fun LookHost(transparent: Boolean = false, lookId: String? = null, content: @Com
     val fid = if (files) com.umutk.pulse.features.FilesLook.theme.let { if (it == "amoled") "material" else it } else lookId.orEmpty()
     val base = Themes.firstOrNull { it.id == fid } ?: Look.theme
     // Files' AMOLED has no entry in Themes: it is built here, so the page, its icons and its pop-ups all come from the same look
-    val th = if (files && com.umutk.pulse.features.FilesLook.theme == "amoled") amoledWindow() else effective(base)
+    // an extra app (or the text editor) asked for AMOLED: it has no entry in Themes either, so it is built here too
+    val th = if ((files && com.umutk.pulse.features.FilesLook.theme == "amoled") || (!files && lookId == "amoled")) amoledWindow() else effective(base)
     // the rest of the UI reads Look.theme through T, so the resolved look is swapped in while composing
     Look.resolved = if (th !== Look.theme) th else null
     // pop-up windows take their own look: the app look, Material, or AMOLED black

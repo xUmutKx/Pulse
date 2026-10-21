@@ -313,6 +313,8 @@ fun NowPlayingScreen(
                 if (lyricsOpen && track != null) com.umutk.pulse.extras.lyrics.LyricsSheet(
                     track.displayName(), track.artist.orEmpty(), track.album, durationMs.toLong(), track.path.takeIf { !it.contains("://") }, positionMs.toLong(),
                     onDismiss = { onLyrics?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
+                    // kept inside the cover square: while it rises it must not slide over the controls under the cover
+                    modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))),
                 )
             }
             Spacer(Modifier.height(20.dp))

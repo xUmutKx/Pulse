@@ -19,7 +19,7 @@ internal object WidgetUi {
 
     fun launch(c: Context, cls: String, code: Int, vararg extra: Pair<String, String>): PendingIntent =
         PendingIntent.getActivity(
-            c, code, Intent().setClassName(c, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK).also { i -> extra.forEach { i.putExtra(it.first, it.second) } },
+            c, code, Intent().setClassName(c, cls).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION).also { i -> extra.forEach { i.putExtra(it.first, it.second) } },
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
 
