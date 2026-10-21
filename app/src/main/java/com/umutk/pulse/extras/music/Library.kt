@@ -62,7 +62,8 @@ object MusicLibrary {
         try {
             c.contentResolver.query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, cols,
-                "${MediaStore.Audio.Media.IS_MUSIC} != 0 AND ${MediaStore.Audio.Media.DURATION} > $minMs", null,
+                // IS_MUSIC alone drops songs that came from downloads or messengers (they are not flagged): anything over a minute that is not a ringtone, alert or recording counts too
+                "(${MediaStore.Audio.Media.IS_MUSIC} != 0 OR (${MediaStore.Audio.Media.IS_RINGTONE} = 0 AND ${MediaStore.Audio.Media.IS_NOTIFICATION} = 0 AND ${MediaStore.Audio.Media.IS_ALARM} = 0 AND ${MediaStore.Audio.Media.IS_RECORDING} = 0 AND ${MediaStore.Audio.Media.DURATION} > 60000)) AND ${MediaStore.Audio.Media.DURATION} > $minMs", null,
                 "${MediaStore.Audio.Media.ARTIST} COLLATE NOCASE, ${MediaStore.Audio.Media.ALBUM} COLLATE NOCASE, ${MediaStore.Audio.Media.TRACK}",
             )?.use { q ->
                 while (q.moveToNext()) {

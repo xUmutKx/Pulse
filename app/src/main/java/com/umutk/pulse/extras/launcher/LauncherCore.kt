@@ -25,7 +25,9 @@ import androidx.compose.ui.unit.sp
 
 data class LaunchApp(val label: String, val pkg: String, val icon: ImageBitmap?, val installed: Long = 0L, val system: Boolean = false,
     /** The app's own store category (ApplicationInfo.CATEGORY_*), -1 when it has none. */
-    val category: Int = -1)
+    val category: Int = -1,
+    /** A PIcon key for the entries that are not apps (the desktop shortcuts): drawn in the look's own icon set, so every look has them. */
+    val iconKey: String? = null)
 
 /** Start menu groups, in the order they are listed. */
 enum class StartGroup(val en: String, val tr: String) {
@@ -116,6 +118,9 @@ fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modif
     val shape = RoundedCornerShape(size * .28f)
     val bmp = app.icon
     if (bmp != null) Image(bmp, null, modifier.size(size).clip(shape))
+    else if (app.iconKey != null) Box(modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
+        com.umutk.pulse.PIcon(app.iconKey, letter, size * .7f)
+    }
     else Box(modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
         Text(app.label.take(1).uppercase(), color = letter, fontSize = (size.value * .45f).sp)
     }
