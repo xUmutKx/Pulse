@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.winamp
 
+import com.umutk.pulse.extras.music.shownArtist
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.umutk.pulse.extras.music.Track
