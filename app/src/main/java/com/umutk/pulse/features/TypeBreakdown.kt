@@ -107,7 +107,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             // the same loading bar and count as the folder tree
             Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
                 com.umutk.pulse.Busy()
-                Text("Measuring… $scanned files", color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(if (scanned < 0) com.umutk.pulse.tr("Reading the saved scan…", "Kayıtlı tarama okunuyor…") else "Measuring… $scanned files", color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
             }
             return@Column
         }

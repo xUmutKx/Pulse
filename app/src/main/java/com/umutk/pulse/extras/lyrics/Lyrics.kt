@@ -129,15 +129,50 @@ object Lyrics {
     private fun stripStamps(t: String) = t.lines().filterNot { tagRe.matches(it) }.joinToString("\n") { it.replace(stampRe, "").trim() }
 
     private fun sidecarText(path: String): String? {
-        val base = path.substringBeforeLast('.')
-        return listOf("lrc", "txt").firstNotNullOfOrNull { e -> File("$base.$e").takeIf { it.isFile && it.length() < 1_000_000 }?.let { f -> runCatching { f.readText() }.getOrNull() }?.takeIf { it.isNotBlank() } }
+        return listOf("lrc", "txt").firstNotNullOfOrNull { e -> sidecarFile(path, e)?.let { f -> runCatching { f.readText() }.getOrNull() }?.takeIf { it.isNotBlank() } }
     }
 
     private fun readSidecar(path: String): LyricsResult? {
-        val base = path.substringBeforeLast('.')
         for (e in listOf("lrc", "txt")) {
-            val t = File("$base.$e").takeIf { it.isFile && it.length() < 1_000_000 }?.let { runCatching { it.readText() }.getOrNull() } ?: continue
+            val t = sidecarFile(path, e)?.let { runCatching { it.readText() }.getOrNull() } ?: continue
             fromText(t, e)?.let { return it }
+        }
+        return null
+    }
+
+    private fun norm(s: String) = s.lowercase().filter { it.isLetterOrDigit() }
+
+    /** Folders other than the song's own where lyrics files are usually kept. */
+    private val lyricDirs = listOf("Lyrics", "lyrics", "Music/Lyrics", "Music/lyrics", "Download/Lyrics", "Download", "Documents/Lyrics", "Documents", "LRC", "Music")
+
+    private val dirNames = HashMap<String, Pair<Long, List<File>>>()
+
+    private fun filesIn(dir: File): List<File> {
+        val now = System.currentTimeMillis()
+        synchronized(dirNames) {
+            dirNames[dir.path]?.takeIf { now - it.first < 60_000 }?.let { return it.second }
+            val l = dir.listFiles()?.filter { it.isFile }.orEmpty()
+            dirNames[dir.path] = now to l
+            return l
+        }
+    }
+
+    /**
+     * The lyrics file of a song: same name next to it (any letter case, spaces and dashes ignored), then the usual
+     * lyrics folders by the same rule. Only files below 1 MB count.
+     */
+    private fun sidecarFile(path: String, ext: String): File? {
+        val song = File(path)
+        val base = song.name.substringBeforeLast('.')
+        val want = norm(base)
+        fun ok(f: File) = f.length() < 1_000_000 && f.extension.equals(ext, true)
+        File(song.parentFile, "$base.$ext").takeIf { it.isFile && it.length() < 1_000_000 }?.let { return it }
+        song.parentFile?.let { d -> filesIn(d).firstOrNull { ok(it) && norm(it.name.substringBeforeLast('.')) == want }?.let { return it } }
+        val root = android.os.Environment.getExternalStorageDirectory()
+        for (d in lyricDirs) {
+            val dir = File(root, d)
+            if (dir.path == song.parent) continue
+            filesIn(dir).firstOrNull { ok(it) && norm(it.name.substringBeforeLast('.')) == want }?.let { return it }
         }
         return null
     }

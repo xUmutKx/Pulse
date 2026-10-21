@@ -55,6 +55,9 @@ object StorageScan {
     private val scannedFlow = MutableStateFlow(0L)
     /** Files measured so far in the walk that is running, for the progress line. */
     val scanned: StateFlow<Long> = scannedFlow.asStateFlow()
+    /** When the walk on screen was made (ms); the screens show its age, so a saved copy from an earlier run is recognised as one. */
+    private val takenFlow = MutableStateFlow(0L)
+    val taken: StateFlow<Long> = takenFlow.asStateFlow()
     private val running = AtomicBoolean(false)
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -68,10 +71,13 @@ object StorageScan {
         if (!running.compareAndSet(false, true)) return
         scope.launch {
             try {
+                // -1 = reading the saved copy, not measuring
+                scannedFlow.value = -1L
                 val saved = if (fresh) null else runCatching { load(root) }.getOrNull()
-                if (saved != null) { snapFlow.value = saved; return@launch }
+                if (saved != null) { takenFlow.value = store()?.lastModified() ?: System.currentTimeMillis(); snapFlow.value = saved; return@launch }
                 scannedFlow.value = 0L
                 val s = walk(root)
+                takenFlow.value = System.currentTimeMillis()
                 snapFlow.value = s
                 runCatching { save(s) }
             } finally {

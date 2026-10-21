@@ -2,6 +2,7 @@ package com.umutk.pulse.extras.calculator
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -102,6 +103,8 @@ fun CalculatorHub(back: () -> Unit) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text(tr("Calculator", "Hesap makinesi"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             Box(Modifier.size(40.dp).clickable { showHistory = !showHistory }, contentAlignment = Alignment.Center) { PIcon("history", if (showHistory) Look.accent else T.text, 22.dp) }
+            // the look of the calculator (Windows 11 / 10 / 7 / XP / 95, Material, AMOLED) is chosen here
+            com.umutk.pulse.ExtraLookIcon(T.text)
         }
         if (showHistory) {
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
@@ -124,7 +127,7 @@ fun CalculatorHub(back: () -> Unit) {
         ) else listOf(
             listOf("MC", "MR", "M+", "M−"), listOf("%", "CE", "C", "⌫"), listOf("1/x", "x²", "√", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("±", "0", ".", "="),
         )
-        val gap = if (classic) 4.dp else if (T.id == "win10") 2.dp else 3.dp
+        val gap = if (classic) 4.dp else if (T.id == "win10") 2.dp else if (T.id == "amoled" || T.id == "material") 8.dp else 3.dp
         Column(Modifier.weight(1f).fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
             rows.forEach { row ->
                 Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -136,26 +139,53 @@ fun CalculatorHub(back: () -> Unit) {
     }
 }
 
-/** One key in the look of the window: classic raised grey, Windows 10 flat square, Windows 11 / Material rounded. */
+/** One key in the look of the window: every Windows look has its own key, Material and AMOLED have round ones. */
 @Composable
 private fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: () -> Unit) {
     val equals = k == "="
     val digit = k.length == 1 && (k[0].isDigit() || k == "." || k == "±")
+    val op = k in setOf("÷", "×", "−", "+")
     val mem = k.startsWith("M")
     val acc = Look.accent
-    val shape = when { classic -> RoundedCornerShape(0.dp); T.id == "win10" -> RoundedCornerShape(0.dp); T.id == "win11" -> RoundedCornerShape(5.dp); else -> RoundedCornerShape(50) }
-    val fill = when {
-        classic -> T.panel
-        equals -> acc
-        digit -> T.text.copy(alpha = .10f).compositeOverBg()
-        mem -> Color.Transparent
-        else -> T.text.copy(alpha = .05f).compositeOverBg()
+    val id = T.id
+    val round = id == "amoled" || id == "material"
+    val shape: androidx.compose.ui.graphics.Shape = when {
+        round -> androidx.compose.foundation.shape.CircleShape
+        id == "win11" -> RoundedCornerShape(6.dp)
+        id == "win7" || id == "xp" -> RoundedCornerShape(3.dp)
+        else -> RoundedCornerShape(0.dp)
     }
-    val ink = when { equals -> com.umutk.pulse.onAccent(acc); classic && k in "÷×−+" -> Color(0xFFB00000); classic && k in setOf("C", "CE", "⌫") -> Color(0xFFB00000); mem && !classic -> T.sub; else -> if (classic) Color.Black else T.text }
+    // fill: a brush for the glossy Windows 7 and XP keys, a colour for the rest
+    val brush: androidx.compose.ui.graphics.Brush = when (id) {
+        "win7" -> androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFE9EEF5), Color(0xFFD3DCE8), Color(0xFFE1E8F1)))
+        "xp" -> androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFFFFFFFF), Color(0xFFF5F4EA), Color(0xFFECE9D8), Color(0xFFD6D0C0)))
+        else -> {
+            val c = when {
+                id == "win95" -> Color(0xFFC0C0C0)
+                id == "amoled" -> when { equals -> acc; op -> Color(0xFF2A2A2A); digit -> Color(0xFF151515); else -> Color(0xFF0B0B0B) }
+                equals -> acc
+                digit -> T.text.copy(alpha = .10f).compositeOver(T.panel)
+                mem -> Color.Transparent
+                else -> T.text.copy(alpha = .05f).compositeOver(T.panel)
+            }
+            androidx.compose.ui.graphics.SolidColor(c)
+        }
+    }
+    val ink = when {
+        equals -> com.umutk.pulse.onAccent(acc)
+        id == "win95" || id == "win7" -> if (op || k in setOf("C", "CE", "⌫")) Color(0xFFB00000) else if (mem) Color(0xFFB00000) else Color.Black
+        id == "xp" -> if (op || k in setOf("C", "CE", "⌫", "±") || mem) Color(0xFFCC0000) else Color(0xFF0A246A)
+        id == "amoled" -> if (op) Color(0xFFFFB74D) else if (mem) Color(0xFF9E9E9E) else Color.White
+        mem -> T.sub
+        else -> T.text
+    }
+    val border = when (id) { "win7" -> Color(0xFF8C99AD); "xp" -> Color(0xFF003C74); "amoled" -> Color(0xFF2A2A2A); else -> null }
     Box(
-        modifier.fillMaxWidth().then(if (classic) Modifier.background(fill).frame(T, raised = true) else Modifier.clip(shape).background(fill)).clickable(onClick = onClick),
+        modifier.fillMaxWidth().clip(shape).background(brush)
+            .then(if (id == "win95") Modifier.frame(T, raised = true) else if (border != null) Modifier.border(1.dp, border, shape) else Modifier)
+            .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(k, color = ink, fontSize = if (mem) 14.sp else 20.sp, fontWeight = if (digit) FontWeight.SemiBold else FontWeight.Normal) }
+    ) { Text(k, color = ink, fontSize = if (mem) 14.sp else 20.sp, fontWeight = if (digit || id == "xp") FontWeight.SemiBold else FontWeight.Normal) }
 }
 
 private fun Color.compositeOverBg(): Color = compositeOver(T.panel)
