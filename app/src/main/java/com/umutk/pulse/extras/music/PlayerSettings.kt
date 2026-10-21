@@ -106,6 +106,28 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         }
     }
 
+    // a Poweramp backup: playlists, ratings, play counts and the cover pictures come in by themselves
+    var embedCovers by remember { mutableStateOf(false) }
+    var importNote by remember { mutableStateOf("") }
+    val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            importNote = tr("Reading the backup…", "Yedek okunuyor…")
+            val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.run(c, uri, MusicLibrary.tracks.value, embedCovers) } }
+            importNote = r.getOrNull()?.let { x ->
+                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") + (if (x.missing > 0) ", ${x.missing} songs not found" else ""),
+                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") + (if (x.missing > 0) ", ${x.missing} şarkı bulunamadı" else ""))
+            } ?: tr("The backup could not be read", "Yedek okunamadı")
+        }
+    }
+    SettingsSection(tr("Poweramp backup", "Poweramp yedeği")) {
+        SwitchRow(tr("Write covers into the songs too (MP3)", "Kapakları şarkıların kendisine de yaz (MP3)"), embedCovers) { embedCovers = it }
+        Row(Modifier.fillMaxWidth().clickable { pickBackup.launch(arrayOf("*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("download", T.text, 22.dp)
+            Text(tr("Load a .poweramp-backup", ".poweramp-backup yükle"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        }
+        if (importNote.isNotEmpty()) Text(importNote, color = T.sub, fontSize = 12.sp)
+    }
+
     var resume by remember { mutableStateOf(MusicSettings.resume(c)) }
     var screenOn by remember { mutableStateOf(MusicSettings.keepScreenOn(c)) }
     var stats by remember { mutableStateOf(MusicSettings.countStats(c)) }

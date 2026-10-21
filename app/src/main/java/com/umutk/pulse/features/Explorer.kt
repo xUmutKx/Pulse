@@ -332,6 +332,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var refresh by remember { mutableIntStateOf(0) }
     var dialog by remember { mutableStateOf<Pair<String, File>?>(null) }
     var apkAsk by remember { mutableStateOf<File?>(null) }
+    // a file whose type nobody knows: asked how to open it
+    var openAsAsk by remember { mutableStateOf<File?>(null) }
     var name by remember { mutableStateOf("") }
     var newExt by remember { mutableStateOf("docx") }
     val filePick = LocalFilePick.current
@@ -455,6 +457,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpen(ctx, f, if (ctx is com.umutk.pulse.FilesActivity) "material" else null); return }
         if (f.extension.lowercase() in com.umutk.pulse.IMG_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f); return }
         if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
+        if (fileMime(f) == "*/*") { openAsAsk = f; return }
         recents = exAddRecent(ctx, f)
         if (FilesPrefs.openAsk && exHandOver(ctx, f, false)) return
         Downloads.openFile(ctx, f)
@@ -1039,6 +1042,18 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         ZipAskDialog(files, { zipAsk = null }) { name, kind -> zipAsk = null; ZipJobs.start(ctx, files, name, dir, kind) }
     }
 
+    openAsAsk?.let { f ->
+        WinAlert(onDismissRequest = { openAsAsk = null },
+            title = { Text(tr("Open as", "Şu olarak aç")) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(f.name, fontSize = 12.sp, maxLines = 2)
+                PButton(tr("Archive", "Arşiv"), Modifier.fillMaxWidth()) { openAsAsk = null; arcFile = f; arcCwd = ""; sel = emptySet() }
+                PButton(tr("Text", "Metin"), Modifier.fillMaxWidth()) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
+                PButton(tr("Image", "Resim"), Modifier.fillMaxWidth()) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
+                PButton(tr("Another app…", "Başka uygulama…"), Modifier.fillMaxWidth()) { openAsAsk = null; if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }
+            } },
+            confirmButton = {}, dismissButton = { PButton(tr("Cancel", "İptal")) { openAsAsk = null } })
+    }
     apkAsk?.let { a -> ApkInfo(a, { apkAsk = null }) { arcFile = a; arcCwd = ""; apkAsk = null } }
     dialog?.let { (kind, f) ->
         WinAlert(onDismissRequest = { dialog = null },
