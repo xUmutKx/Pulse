@@ -874,3 +874,5 @@ Screen recorder feature list (55 candidates)
 - Release builds are signed with the fixed ci/pulse.keystore (CI used a new random debug key per run, so APKs never installed over the old app). Bump 0.10.149. derlenmedi
 
 - Office 365 chrome solid grey (translucent layers over a black window hid dark text), Apps menu lists the standalone apps again, coloured Fluent icons in Settings > Apps, 0.10.150. derlenmedi
+
+- Winamp widget whole-pixel scaling, see-through letterbox, touch areas in screen pixels (were in bitmap pixels); music widget opacity setting, Fluent transport glyphs, prev/next wrap; Poweramp widget opens the player (no animation), lyrics clipped to the cover; AMOLED look works in LookHost for extra apps and the text editor (was falling back to the global look), Notes default AMOLED; 0.10.151. derlenmedi

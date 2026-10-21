@@ -41,9 +41,10 @@ open class MusicWidget : AppWidgetProvider() {
     override fun onReceive(c: Context, i: Intent) {
         val e = MusicPlayerEngine.ready(c)
         when (i.action) {
-            A_PREV -> e.previous()
+            // previous: the track before (or the start of this one past 3 s); next wraps to the first track at the end
+            A_PREV -> e.player.let { if (it.currentPosition > 3000 || !it.hasPreviousMediaItem()) it.seekTo(0) else it.seekToPreviousMediaItem() }
             A_TOGGLE -> e.togglePlayPause()
-            A_NEXT -> e.next()
+            A_NEXT -> e.player.let { if (it.hasNextMediaItem()) it.seekToNextMediaItem() else if (it.mediaItemCount > 0) it.seekToDefaultPosition(0) }
             A_SHUF -> e.player.let { it.shuffleModeEnabled = !it.shuffleModeEnabled }
             A_REP -> e.player.let { it.repeatMode = when (it.repeatMode) { 0 -> 2; 2 -> 1; else -> 0 } }
             else -> return super.onReceive(c, i)
@@ -130,6 +131,12 @@ open class MusicWidget : AppWidgetProvider() {
                     setColorStateList(R.id.mw_root, "setBackgroundTintList", if (th.shape == WidgetShape.BEVEL) null else ColorStateList.valueOf(th.bg))
                     setColorStateList(R.id.mw_play, "setBackgroundTintList", ColorStateList.valueOf(th.accent))
                     if (layout != R.layout.widget_music_slim) setColorStateList(R.id.mw_art, "setBackgroundTintList", ColorStateList.valueOf(th.accent and 0x00FFFFFF or 0x55000000))
+                }
+                // background opacity picked in the widget's settings (100 = solid, 0 = see-through)
+                val alpha = prefs(c).getInt("alpha_$id", 100)
+                if (alpha < 100 && th?.shape != WidgetShape.BEVEL) {
+                    val bg = th?.bg ?: if (WidgetUi.dark(c)) 0xFF2B2930.toInt() else 0xFFF3EDF7.toInt()
+                    setColorStateList(R.id.mw_root, "setBackgroundTintList", ColorStateList.valueOf((bg and 0x00FFFFFF) or ((alpha * 255 / 100) shl 24)))
                 }
                 setProgressBar(R.id.mw_prog, 1000, prog, false)
                 if (layout != R.layout.widget_music_slim && art != null) { setImageViewBitmap(R.id.mw_art, art); setViewPadding(R.id.mw_art, 0, 0, 0, 0) }
