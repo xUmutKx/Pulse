@@ -187,8 +187,10 @@ fun LyricsSheet(
         res = r
         busy = false
         // found online: written beside the song when the settings say so
-        if (r != null && localPath != null && r.source in setOf("lrclib", "ovh", "cache") && LiveLyrics.saveLrc(ctx))
-            withContext(Dispatchers.IO) { Lyrics.saveSidecar(localPath, r) }
+        if (r != null && localPath != null && r.source in setOf("lrclib", "ovh", "cache")) withContext(Dispatchers.IO) {
+            if (LiveLyrics.saveLrc(ctx)) Lyrics.saveSidecar(localPath, r)
+            if (LiveLyrics.embed(ctx)) Lyrics.embedMp3(localPath, r)
+        }
     }
     Box(
         modifier.fillMaxSize()
