@@ -135,7 +135,7 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
         }
     }
     BackHandler(onBack = onClose)
-    Column(Modifier.fillMaxSize().background(T.bg)) {
+    Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             VBtn(onClose) { PIcon("back", T.text, 24.dp) }
             Text(tr("Player", "Oynatıcı"), color = T.text, fontSize = 18.sp)
