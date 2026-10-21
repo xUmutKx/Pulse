@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import com.umutk.pulse.extras.music.shownArtist
+
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -66,9 +68,7 @@ fun PowerampMiniBar(
             Spacer(Modifier.width(10.dp))
             Column(Modifier.weight(1f)) {
                 Text(track.displayName(), color = style.text, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                track.artist?.takeIf { it.isNotBlank() }?.let {
-                    Text(it, color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
+                Text(track.shownArtist(), color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
         }
         Box(

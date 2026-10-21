@@ -389,6 +389,8 @@ fun NowPlayingScreen(
                     modifier = waveMod,
                     onScrub = { drag = it },
                     onCommit = { f -> drag = null; if (durationMs > 0) onSeek((f * durationMs).roundToInt()) },
+                    // about half a minute of the song is visible; short tracks and unknown lengths show the whole wave
+                    windowFrac = if (durationMs > 60_000) 30_000f / durationMs else 1f,
                 )
                 Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     // every transport button sits on a solid black disc, as in the reference player
@@ -451,7 +453,10 @@ internal fun SeekBar(
     modifier: Modifier,
     onScrub: (Float) -> Unit,
     onCommit: (Float) -> Unit,
+    // the share of the track the wave shows at once; below 1 the wave scrolls past a fixed play position (drag it to seek)
+    windowFrac: Float = 1f,
 ) {
+    val progressNow by rememberUpdatedState(progress)
     val heights = remember(seed) {
         val r = Random(seed)
         var h = .5f
@@ -459,14 +464,33 @@ internal fun SeekBar(
     }
     val scrub by rememberUpdatedState(onScrub)
     val commit by rememberUpdatedState(onCommit)
+    val windowed = style.seek == PowerampSeek.WAVE && windowFrac < .999f
     Canvas(
-        modifier.pointerInput(Unit) {
+        modifier.pointerInput(windowed, windowFrac) {
             awaitEachGesture {
                 val d = awaitFirstDown()
-                var f = (d.position.x / size.width).coerceIn(0f, 1f)
-                scrub(f)
-                drag(d.id) { f = (it.position.x / size.width).coerceIn(0f, 1f); scrub(f); it.consume() }
-                commit(f)
+                if (windowed) {
+                    // the wave moves with the finger: dragging left plays on, dragging right goes back; a tap jumps to the tapped bar
+                    val barFrac = windowFrac / WAVE_BARS
+                    val slotPx = size.width / WAVE_BARS.toFloat()
+                    val p0 = progressNow()
+                    var total = 0f
+                    var moved = false
+                    var f = p0
+                    drag(d.id) {
+                        total += it.position.x - it.previousPosition.x
+                        if (kotlin.math.abs(total) > viewConfiguration.touchSlop) moved = true
+                        if (moved) { f = (p0 - total / slotPx * barFrac).coerceIn(0f, 1f); scrub(f) }
+                        it.consume()
+                    }
+                    if (!moved) f = (p0 + (d.position.x - size.width / 2f) / slotPx * barFrac).coerceIn(0f, 1f)
+                    commit(f)
+                } else {
+                    var f = (d.position.x / size.width).coerceIn(0f, 1f)
+                    scrub(f)
+                    drag(d.id) { f = (it.position.x / size.width).coerceIn(0f, 1f); scrub(f); it.consume() }
+                    commit(f)
+                }
             }
         },
     ) {
@@ -474,6 +498,24 @@ internal fun SeekBar(
         val cy = size.height / 2
         // read in the draw phase so the eased value does not recompose the screen
         val p = progress()
+        if (windowed) {
+            // a short stretch of the track around the play position: the bars scroll past the centre as the song plays, and fade out towards both ends
+            val slot = size.width / WAVE_BARS
+            val barFrac = windowFrac / WAVE_BARS
+            val cx = size.width / 2f
+            val centre = p / barFrac
+            val first = kotlin.math.floor(centre - WAVE_BARS / 2f).toInt() - 1
+            for (k in first..first + WAVE_BARS + 2) {
+                if (k < 0 || k * barFrac >= 1f) continue
+                val x = cx + (k + .5f - centre) * slot
+                if (x < -slot || x > size.width + slot) continue
+                val h = waveHeight(seed, k) * size.height
+                val edge = (kotlin.math.abs(x - cx) / cx).coerceIn(0f, 1f)
+                val c = if (x <= cx) style.accent else off
+                drawLine(c.copy(alpha = c.alpha * (1f - edge * edge * edge * .85f)), Offset(x, cy - h / 2), Offset(x, cy + h / 2), slot * .7f, StrokeCap.Round)
+            }
+            return@Canvas
+        }
         when (style.seek) {
             PowerampSeek.LINE -> {
                 val t = 4.dp.toPx()
@@ -497,6 +539,17 @@ internal fun SeekBar(
             }
         }
     }
+}
+
+/** How many bars the scrolling wave shows at once. */
+private const val WAVE_BARS = 40
+
+/** Height (0.2..1) of bar [k] of the scrolling wave: a smooth, repeatable pattern per track, so the same stretch always looks the same. */
+private fun waveHeight(seed: Int, k: Int): Float {
+    val a = kotlin.math.sin(k * .53f + (seed and 0xFF))
+    val b = kotlin.math.sin(k * 1.37f + ((seed shr 8) and 0xFF))
+    val c = kotlin.math.sin(k * .19f + ((seed shr 16) and 0xFF))
+    return (.28f + .72f * kotlin.math.abs(a * .5f + b * .3f + c * .2f)).coerceIn(.2f, 1f)
 }
 
 /** Height of the transport row (buttons over the bars) and of the bars inside it. */

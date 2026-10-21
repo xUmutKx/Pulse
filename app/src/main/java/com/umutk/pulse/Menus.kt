@@ -150,7 +150,7 @@ object ToolPlace {
     fun attach(c: Context) = load(c)
 }
 
-private val EXTRA_APPS get() = tr("Extra apps", "Ek uygulamalar")
+private val EXTRA_APPS get() = tr("Apps", "Uygulamalar")
 
 /** Class-name launch so the menu compiles before the Calendar/Contacts activities exist. */
 // launches the target activity, not a launcher alias: a disabled alias cannot be started; [route] picks the page of ExtraToolActivity
