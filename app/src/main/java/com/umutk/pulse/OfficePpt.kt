@@ -9,7 +9,12 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.ArrowDownward
@@ -100,7 +105,25 @@ import kotlin.math.roundToInt
 /** The PowerPoint window in the look chosen for it. */
 @Composable
 fun PptChrome(theme: OfTheme, title: String, acts: List<OAct>, status: String, onBack: () -> Unit, content: @Composable BoxScope.() -> Unit) =
-    OfChromeBasic(theme, title, acts, status, onBack, content)
+    // the Home tab gets the Word-style ribbon instead of the plain button row
+    CompositionLocalProvider(LocalOfRibbon provides mapOf("Home" to pptHome(theme, acts))) {
+        OfChromeBasic(theme, title, acts, status, onBack, content)
+    }
+
+/** The PowerPoint Home tab in the Word style: one row of icon cells with a caption under each, scrolling sideways. */
+fun pptHome(theme: OfTheme, acts: List<OAct>): @Composable () -> Unit = {
+    val pal = theme.pal
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 4.dp)) {
+        acts.filter { it.group == "Home" }.forEach { a ->
+            Column(Modifier.width(56.dp).clip(RoundedCornerShape(3.dp))
+                .background(if (a.on) pal.accent.copy(alpha = .22f) else Color.Transparent).alpha(if (a.enabled) 1f else .4f)
+                .clickable(enabled = a.enabled, onClick = a.click).padding(vertical = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Icon(a.icon, a.label, Modifier.size(19.dp), pal.ink)
+                Text(a.label, color = pal.ink, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
 
 @Composable
 fun OfPptScreen(doc: OfDoc, theme: OfTheme) {
