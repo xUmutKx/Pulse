@@ -2,7 +2,26 @@ package com.umutk.pulse.extras.music.looks
 
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -110,6 +129,18 @@ private fun Art(t: Track?, size: androidx.compose.ui.unit.Dp?, tint: Color, modi
     else Box(m.background(tint.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = tint, modifier = Modifier.fillMaxSize(.45f)) }
 }
 
+/** Three bars that bounce while the current track plays and rest low when it is paused. */
+@Composable
+private fun PlayingBars(color: Color, playing: Boolean) {
+    val inf = rememberInfiniteTransition(label = "bars")
+    Row(Modifier.padding(horizontal = 6.dp).size(width = 18.dp, height = 16.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
+        listOf(380, 520, 450).forEachIndexed { i, ms ->
+            val h by inf.animateFloat(.25f, 1f, infiniteRepeatable(tween(ms, easing = LinearEasing), RepeatMode.Reverse), label = "bar$i")
+            Box(Modifier.width(4.dp).fillMaxHeight(if (playing) h else .25f).background(color, RoundedCornerShape(1.dp)))
+        }
+    }
+}
+
 private class Lists(val ctx: android.content.Context) {
     private val sp = ctx.getSharedPreferences("pulse_mp_playlists", 0)
     fun all(): Map<String, List<String>> = sp.all.mapValues { (it.value as? String).orEmpty().split('\n').filter { p -> p.isNotEmpty() } }
@@ -210,6 +241,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                                         Text(t.name(), color = if (on) accent else TXT, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         Text(t.albumName(), color = SUB, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                     }
+                                    if (on) PlayingBars(accent, st.isPlaying)
                                     Icon(Icons.Rounded.PlaylistAdd, null, tint = SUB, modifier = Modifier.clickable { engine.addToQueue(t) }.padding(6.dp))
                                 }
                             }
@@ -253,7 +285,13 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
             }
         }
 
-        if (showNow && cur != null) {
+        // the player slides up from the bottom and back down when it closes
+        AnimatedVisibility(showNow && cur != null,
+            enter = slideInVertically(tween(340, easing = FastOutSlowInEasing)) { it / 3 } + fadeIn(tween(240)),
+            exit = slideOutVertically(tween(260, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(200))) {
+            val cur = cur ?: return@AnimatedVisibility
+            // the cover breathes out while playing and settles smaller when paused
+            val coverScale by animateFloatAsState(if (st.isPlaying) 1f else .88f, spring(dampingRatio = .55f, stiffness = Spring.StiffnessLow), label = "cover")
             Box(Modifier.fillMaxSize().background(pbg)) {
                 // one layer: the blurred cover is the background when the art switch is on, nothing extra is drawn otherwise
                 if (artBackground && art != null) Image(art, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop)
@@ -281,7 +319,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     } else {
                         Spacer(Modifier.weight(1f))
                         CoverCarousel(art, artPrev, artNext, st.index > 0, st.index < st.queue.lastIndex, { engine.previous() }, { engine.next() },
-                            Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(32.dp))) { a ->
+                            Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }.clip(RoundedCornerShape(32.dp)),
+                            // like Poweramp: swipe up opens the queue, swipe down closes the player
+                            onSwipeUp = { showQueue = true }, onSwipeDown = { showQueue = false; showNow = false }) { a ->
                             if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                             else Box(Modifier.fillMaxSize().background(dyn.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = dyn, modifier = Modifier.fillMaxSize(.45f)) }
                         }
@@ -297,7 +337,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         Icon(Icons.Rounded.Shuffle, null, tint = if (shuffle) dyn else SUB, modifier = Modifier.size(44.dp).clickable { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }.padding(10.dp))
                         Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(48.dp).clickable { engine.previous() }.padding(8.dp))
                         Box(Modifier.size(68.dp).clip(CircleShape).background(dyn).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
-                            Icon(if (st.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(36.dp))
+                            Crossfade(st.isPlaying, animationSpec = tween(180), label = "playPause") { playing ->
+                                Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(36.dp))
+                            }
                         }
                         Icon(Icons.Rounded.SkipNext, null, tint = TXT, modifier = Modifier.size(48.dp).clickable { engine.next() }.padding(8.dp))
                         Icon(if (repeat == 1) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, null, tint = if (repeat != 0) dyn else SUB,
