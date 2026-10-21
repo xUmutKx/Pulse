@@ -3,6 +3,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish this build as a GitHub release (tag v<versionName>)"
+        type: boolean
+        default: false
+permissions:
+  contents: write
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,3 +38,11 @@ jobs:
         with:
           name: pulse-release-apk
           path: app/build/outputs/apk/release/app-release.apk
+      - name: Publish the release
+        if: github.event_name == 'workflow_dispatch' && inputs.release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
+          cp app/build/outputs/apk/release/app-release.apk "Pulse-$VER.apk"
+          gh release create "v$VER" "Pulse-$VER.apk" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
