@@ -382,15 +382,16 @@ fun NowPlayingScreen(
             if (sleepOpen && onSleepSet != null) SleepDialog(sleepMinutes, style, onSleepSet) { sleepOpen = false }
             Spacer(Modifier.height(48.dp))
             // transport: play sits on the centre axis, previous and next on either side, over a tall waveform
-            BoxWithConstraints(Modifier.fillMaxWidth().height(TRANSPORT_H)) {
+            BoxWithConstraints(Modifier.fillMaxWidth().height(TRANSPORT_H + SEEK_EXTRA)) {
                 // the waveform sits in the same row, behind the buttons: it shows on both sides of play
                 val seekAt: () -> Float = { if (drag != null) rawProgress else animProgress }
-                val waveMod = Modifier.align(Alignment.Center).requiredWidth(maxWidth).height(WAVE_H)
+                val waveMod = Modifier.align(Alignment.Center).requiredWidth(maxWidth).fillMaxHeight()
                 SeekBar(
                     progress = seekAt,
                     seed = track?.path?.hashCode() ?: 0,
                     style = style,
                     modifier = waveMod,
+                    drawHeight = WAVE_H,
                     onScrub = { drag = it },
                     onCommit = { f -> drag = null; if (durationMs > 0) onSeek((f * durationMs).roundToInt()) },
                     // about half a minute of the song is visible; short tracks and unknown lengths show the whole wave
@@ -413,7 +414,7 @@ fun NowPlayingScreen(
                 Text(formatMs(shownMs), color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Text(formatMs(durationMs), color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
-            Spacer(Modifier.height(28.dp))
+            Spacer(Modifier.height(8.dp))
             // a small chip under the transport; what it says is picked in the player settings (the sound quality of the file by default)
             if (track != null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
                 val which = remember { PowerampBottomLabel.get(ctx) }
@@ -471,6 +472,8 @@ internal fun SeekBar(
     onCommit: (Float) -> Unit,
     // the share of the track the wave shows at once; below 1 the wave scrolls past a fixed play position (drag it to seek)
     windowFrac: Float = 1f,
+    // the bars are drawn this tall while the touch area is the whole (taller) modifier, so a drag beside the bars still seeks
+    drawHeight: androidx.compose.ui.unit.Dp? = null,
 ) {
     val progressNow by rememberUpdatedState(progress)
     val heights = remember(seed) {
@@ -512,6 +515,7 @@ internal fun SeekBar(
     ) {
         val off = style.textDim.copy(alpha = .35f)
         val cy = size.height / 2
+        val barsH = drawHeight?.toPx() ?: size.height
         // read in the draw phase so the eased value does not recompose the screen
         val p = progress()
         if (windowed) {
@@ -525,7 +529,7 @@ internal fun SeekBar(
                 if (k < 0 || k * barFrac >= 1f) continue
                 val x = cx + (k + .5f - centre) * slot
                 if (x < -slot || x > size.width + slot) continue
-                val h = waveHeight(seed, k) * size.height
+                val h = waveHeight(seed, k) * barsH
                 val edge = (kotlin.math.abs(x - cx) / cx).coerceIn(0f, 1f)
                 val c = if (x <= cx) style.accent else off
                 drawLine(c.copy(alpha = c.alpha * (1f - edge * edge * edge * .85f)), Offset(x, cy - h / 2), Offset(x, cy + h / 2), slot * .7f, StrokeCap.Round)
@@ -544,7 +548,7 @@ internal fun SeekBar(
                 val n = if (style.seek == PowerampSeek.WAVE) 40 else 32
                 val slot = size.width / n
                 for (i in 0 until n) {
-                    val h = (if (style.seek == PowerampSeek.WAVE) heights[i] else .55f) * size.height
+                    val h = (if (style.seek == PowerampSeek.WAVE) heights[i] else .55f) * barsH
                     val x = slot * (i + .5f)
                     drawLine(
                         if ((i + .5f) / n <= p) style.accent else off,
@@ -571,6 +575,8 @@ private fun waveHeight(seed: Int, k: Int): Float {
 /** Height of the transport row (buttons over the bars) and of the bars inside it. */
 private val TRANSPORT_H = 96.dp
 private val WAVE_H = 64.dp
+/** Extra height around the bars that also takes the seek drag (the bars keep their size). */
+private val SEEK_EXTRA = 48.dp
 
 /** Thin bars that fill the button height and move with the live level while playing, and sit at their low stop when paused. Taps go to [onClick]. */
 @Composable
@@ -833,7 +839,8 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
     val slop = LocalViewConfiguration.current.touchSlop
     val shown = preview ?: rating
     // the pill grows sideways, the stars slide in from the left and the star slides out to the right
-    val width by animateDpAsState(if (picking) 158.dp else 36.dp, label = "ratingWidth")
+    // a rated song keeps its stars on show (filled, as many as it was given); an unrated one is the single favourite star
+    val width by animateDpAsState(if (picking) 158.dp else if (rating > 0) (rating * 17 + 14).dp else 36.dp, label = "ratingWidth")
     Box(
         modifier.height(36.dp).width(width)
             .clip(RoundedCornerShape(18.dp)).background(Color.Black.copy(alpha = .5f))
@@ -872,7 +879,8 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
             enter = slideInHorizontally { it / 2 } + fadeIn(),
             exit = slideOutHorizontally { it / 2 } + fadeOut(),
         ) {
-            Icon(if (favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favourite", "Favori"), tint = if (favourite) style.accent else Color.White, modifier = Modifier.size(20.dp))
+            if (rating > 0) Row(verticalAlignment = Alignment.CenterVertically) { repeat(rating.coerceAtMost(5)) { Icon(Icons.Rounded.Star, null, tint = style.accent, modifier = Modifier.size(17.dp)) } }
+            else Icon(if (favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favourite", "Favori"), tint = if (favourite) style.accent else Color.White, modifier = Modifier.size(20.dp))
         }
     }
 }

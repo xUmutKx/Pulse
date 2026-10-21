@@ -868,3 +868,5 @@ Screen recorder feature list (55 candidates)
 - Build OOM (Kotlin daemon 1.5 GB) -> CI now passes -Xmx6g; added termux-build.sh. derlenmedi
 
 - Winamp widget: queue restored when a widget starts the process, live 1 s redraw, ARGB 900k px crisp scaling; Material player: draggable sheet, lyrics over cover, level bars, top actions; Notepad grey in Win11; filled Fluent icons in Apps card; Store entry removed from Apps menu. derlenmedi
+
+- Poweramp seek drag works around the bars (+48 dp touch area); rated songs keep their filled stars on the cover pill. derlenmedi
