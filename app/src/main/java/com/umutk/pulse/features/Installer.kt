@@ -234,7 +234,7 @@ object Installer {
         val ok = ArrayList<Picked>()
         val bad = ArrayList<String>()
         for (u in uris) {
-            try { ok += inspect(c, u) } catch (e: Exception) { bad += "${u.lastPathSegment.orEmpty().substringAfterLast('/')}: ${e.message.orEmpty()}" }
+            try { ok += splitApps(c, inspect(c, u), u) } catch (e: Exception) { bad += "${u.lastPathSegment.orEmpty().substringAfterLast('/')}: ${e.message.orEmpty()}" }
         }
         return ok to bad.joinToString("; ")
     }
@@ -260,7 +260,23 @@ object Installer {
             listOf(apk)
         } else unpack(raw, dir)
         val hint = if (type == "XAPK") xapkPackage(raw) else null
+        return fromFiles(c, type, files, hint, uri)
+    }
+
+    /** A plain zip that holds several different apps (not the splits of one): each app becomes its own install. */
+    private fun splitApps(c: Context, p: Picked, uri: Uri): List<Picked> {
+        if (p.type != "ZIP" || p.parts.size < 2) return listOf(p)
+        val pm = c.packageManager
+        val byPkg = p.parts.groupBy { f -> pm.getPackageArchiveInfo(f.path, 0)?.packageName ?: "" }
+        if (byPkg.size < 2) return listOf(p)
+        return byPkg.filterKeys { it.isNotEmpty() }.values.map { fs -> fromFiles(c, if (fs.size > 1) "ZIP" else "APK", fs, null, uri) }
+    }
+
+    /** Reads the package info of [files] (the base first, found by name or size) into one install. */
+    private fun fromFiles(c: Context, type: String, files: List<File>, hint: String?, uri: Uri): Picked {
+        // splits are named split_*.apk or config.*.apk; the base is base.apk, "<package>.apk", or the one APK that is not a split
         val base = files.firstOrNull { it.name.startsWith("base") || (hint != null && it.name == "$hint.apk") }
+            ?: files.filterNot { it.name.startsWith("split_") || it.name.startsWith("config.") }.maxByOrNull { it.length() }
             ?: files.maxByOrNull { it.length() } ?: throw IOException("No APK inside")
         val pm = c.packageManager
         val info = pm.getPackageArchiveInfo(base.path, PackageManager.GET_SIGNING_CERTIFICATES) ?: throw IOException("Not a readable package")
@@ -319,6 +335,27 @@ object Installer {
     fun silentCmd(p: Picked, down: Boolean, user: Int, dex: Boolean = false) =
         "pm install -r" + (if (down) " -d" else "") + InstallShow.srcPkg?.let { " -d -i $it --install-reason 0" }.orEmpty() + (if (dex) " --force-dex-opt" else "") + " --user $user" + p.files.joinToString("") { " '${it.path}'" }
 
+    /**
+     * The same install as a pm session fed through stdin: `pm install <path>` makes the system open the path itself, and the system
+     * may not read Pulse's private cache (SELinux), so the install failed without a clear reason. `cat` runs as root (or shell)
+     * and hands every APK over a pipe. Shizuku runs as shell, which cannot read the private cache either: the files are first
+     * copied to Pulse's folder on shared storage.
+     */
+    fun silentScript(c: Context, p: Picked, down: Boolean, user: Int): String {
+        val files = if (Shell.root == true) p.files else {
+            val d = File(c.externalCacheDir ?: c.cacheDir, "install").apply { deleteRecursively(); mkdirs() }
+            p.files.map { f -> File(d, f.name).also { f.copyTo(it, true) } }
+        }
+        fun q(s: String) = "'" + s.replace("'", "'\\''") + "'"
+        val create = "pm install-create -r" + (if (down) " -d" else "") + InstallShow.srcPkg?.let { " -i $it --install-reason 0" }.orEmpty() + " --user $user"
+        val sb = StringBuilder()
+        sb.append("S=$(").append(create).append(" | sed -n 's/.*\\[\\([0-9]*\\)\\].*/\\1/p'); ")
+        sb.append("[ -z \"\$S\" ] && { echo 'Failure: no install session'; exit 1; }; ")
+        files.forEachIndexed { n, f -> sb.append("cat ${q(f.path)} | pm install-write -S ${f.length()} \$S ${n}_${q(f.name)} - >/dev/null || { pm install-abandon \$S; echo 'Failure: could not write ${f.name}'; exit 1; }; ") }
+        sb.append("pm install-commit \$S")
+        return sb.toString()
+    }
+
     /** Root/Shizuku: makes the installed [pkg] report [src] as its installer. Returns "" on success, else the error. */
     fun setSource(pkg: String, src: String): String {
         if (!PKG_RE.matches(pkg) || !PKG_RE.matches(src)) return "Bad package name"
@@ -358,7 +395,7 @@ object Installer {
         val engine = if (eng == "none" && pk.files.size > 1) "system" else eng
         return when (engine) {
             "root", "shizuku" -> {
-                val out = withContext(Dispatchers.IO) { Shell.run(silentCmd(pk, down, user, dex && eng == "root")) }
+                val out = withContext(Dispatchers.IO) { Shell.run(silentScript(c, pk, down, user)) }
                 val ok = out.contains("Success")
                 finish(c, ok, out.trim())
                 ok

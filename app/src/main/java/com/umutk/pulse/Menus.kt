@@ -190,8 +190,9 @@ object AppPlace {
     )
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
-    fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, "menu") ?: "menu" } }
-    fun where(alias: String): String = placed[alias] ?: "menu"
+    // by default the apps live only in the Extra apps list (top-right menu > Extra apps); Settings > Apps can put one in the menu or on the left
+    fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, "hidden") ?: "hidden" } }
+    fun where(alias: String): String = placed[alias] ?: "hidden"
     fun set(c: Context, alias: String, place: String) { placed[alias] = place; sp(c).edit().putString(alias, place).apply() }
     fun byAlias(alias: String) = all.firstOrNull { it.alias == alias }
     /** Left-menu entries of the apps placed there; "open:<alias>" starts the app instead of switching the page. */
