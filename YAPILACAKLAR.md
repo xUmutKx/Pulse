@@ -934,3 +934,5 @@ Screen recorder feature list (55 candidates)
 - Lyrics sheet: "Searching for lyrics…", when none is found artist/song fields and Search again; setting "Save found lyrics as .lrc beside the song"; 0.10.180. derlenmedi
 
 - Lyrics: plain lyrics are saved as .lrc too, saving the .lrc file is on by default, optional MP3 tag (USLT) writing as a switch; 0.10.181. derlenmedi
+
+- Equalizer: when the system effect cannot be created a five-band equalizer inside the player (SoftEq) takes over; lyrics search is fuzzy (clean title, each artist of a comma list, best look-alike among results); White noise: the "Stream" loop removed; 0.10.182. derlenmedi
