@@ -252,10 +252,10 @@ internal fun archivePicked(sel: Set<String>, all: List<AEntry>): List<AEntry> =
     all.filter { e -> !e.dir && sel.any { e.path == it || e.path.startsWith("$it/") } }
 
 /** Takes [paths] (and everything under the folders among them) out of a zip-family archive by writing a new copy without them,
- *  then replacing the old file, so the space comes back. APKs are refused: removing entries breaks their signature.
+ *  then replacing the old file, so the space comes back. An APK loses its signature this way; that is accepted.
  *  shortcut: the whole archive is rewritten once per cut, not per file. Returns "" on success, else the reason. */
 internal fun archiveRemove(f: File, paths: Set<String>): String {
-    if (f.extension.lowercase() in setOf("apk", "apks", "xapk", "apkm")) return "apk"
+    // an APK loses its signature when entries leave it; that is accepted
     if (kindOf(f) != "zip") return "unsupported"
     val tmp = File(f.parentFile, f.name + ".tmp")
     return try {
