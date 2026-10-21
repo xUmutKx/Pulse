@@ -131,7 +131,15 @@ fun CalculatorHub(back: () -> Unit) {
         Column(Modifier.weight(1f).fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
             rows.forEach { row ->
                 Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    row.forEach { k -> CalcKey(k, Modifier.weight(1f), classic) { press(k) } }
+                    row.forEach { k ->
+                        if (T.id == "amoled" || T.id == "material") {
+                            // round keys stay round: a square as big as the cell allows, centred (a stretched circle is a thin pill)
+                            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                                val side = minOf(maxWidth, maxHeight)
+                                CalcKey(k, Modifier.size(side), classic) { press(k) }
+                            }
+                        } else CalcKey(k, Modifier.weight(1f), classic) { press(k) }
+                    }
                 }
             }
         }
