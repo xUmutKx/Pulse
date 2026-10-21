@@ -25,6 +25,9 @@ object MusicLibrary {
 
     private fun cacheFile(c: Context) = File(c.filesDir, "music_library.tsv")
 
+    /** Applies the saved tags (edits and the ones found online) to the loaded list again, so new tags show without a rescan. */
+    fun reapplyTags(c: Context) { _tracks.value = MusicTags.apply(c.applicationContext, _tracks.value) }
+
     /** Loads the cache (if nothing is loaded yet), then rescans when permitted. */
     suspend fun refresh(c: Context) = withContext(Dispatchers.IO) {
         val app = c.applicationContext

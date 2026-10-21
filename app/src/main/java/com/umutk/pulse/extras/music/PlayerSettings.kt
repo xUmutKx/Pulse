@@ -113,6 +113,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var lyricsFont by remember { mutableIntStateOf(MusicSettings.lyricsFont(c)) }
     var coverSwipe by remember { mutableStateOf(CoverGestures.swipeChangesTrack(c)) }
     var onlineCovers by remember { mutableStateOf(MusicSettings.onlineCovers(c)) }
+    var onlineTags by remember { mutableStateOf(MusicSettings.onlineTags(c)) }
     var btAuto by remember { mutableStateOf(BluetoothAutoplay.enabled(c)) }
     val askBt = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     SettingsSection(tr("Playback", "Çalma")) {
@@ -122,6 +123,10 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             onlineCovers = it; MusicSettings.setOnlineCovers(c, it)
             // turning it on looks for the covers that are missing now, not only after the next library scan
             if (it) CoverFetch.backfill(c, MusicLibrary.tracks.value)
+        }
+        SwitchRow(tr("Download missing tags (album, genre, year)", "Eksik etiketleri indir (albüm, tür, yıl)"), onlineTags) {
+            onlineTags = it; MusicSettings.setOnlineTags(c, it)
+            if (it) OnlineTags.backfill(c, MusicLibrary.tracks.value)
         }
         SwitchRow(tr("Play when Bluetooth audio connects", "Bluetooth ses cihazı bağlanınca çal"), btAuto) {
             btAuto = it; BluetoothAutoplay.setEnabled(c, it)
