@@ -90,6 +90,8 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     // Windows 11: the Fluent picture by default; the thin line glyphs (the Windows 10 set) when the Settings switch says so
     val fluent = T.id == "win11" && !T.material && !Look.winIconLine
     // Windows 11 Fluent style: the coloured filled Fluent glyph of the key (the Line choice keeps the thin glyphs)
+    // the left-menu pages wear the colour Fluent pictures (res/drawable-nodpi/fc_*.png)
+    if (fluent) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
     if (fluent) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
     if (k == "recycle" && !T.material) {
         if (fluent) ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
@@ -364,3 +366,8 @@ fun ProfilePhotoRow() {
 
 /** Page background: Windows 11 shows the Mica / picture behind its pages, so the page itself is see-through there; every other look paints its own colour. */
 val pageBg: Color get() = if (T.id == "win11") Color.Transparent else T.bg
+
+/** PIcon keys of the left-menu pages and their colour Fluent picture. */
+private val FC_PIC = mapOf("processes" to "processes", "performance" to "performance", "history" to "history", "startup" to "startup", "details" to "details",
+    "services" to "services", "apps" to "apps", "download" to "download", "folder" to "files", "office" to "office", "recycle" to "recycle", "phone" to "device",
+    "heart" to "health", "run" to "terminal", "settings" to "settings")

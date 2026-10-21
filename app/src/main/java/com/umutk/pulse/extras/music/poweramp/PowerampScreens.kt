@@ -275,7 +275,7 @@ fun NowPlayingScreen(
     }
     // the blurred backdrop is drawn once by PowerampApp, edge to edge; this page draws no second copy
     BoxWithConstraints(modifier.fillMaxSize()) {
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 13.dp, vertical = 13.dp)) {
+        Column(Modifier.fillMaxSize().padding(horizontal = 13.dp, vertical = 13.dp)) {
             // square cover, the biggest element; the lyrics sheet opens over it. An upward swipe opens lyrics; a downward
             // one does nothing. Vertical drags are consumed here so the page neither scrolls nor closes from the cover.
             // up on the cover opens the lyrics, down goes back to the page the user came from (the carousel reads the drag)

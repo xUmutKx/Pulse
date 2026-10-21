@@ -6,6 +6,11 @@ import com.umutk.pulse.extras.music.MusicLevels
 import android.graphics.Bitmap
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
+import androidx.compose.runtime.SideEffect
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.animation.core.Animatable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.offset
@@ -200,7 +205,8 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     val base = Look.accent.let { if (it.luminance() < .35f) Color(0xFFB9C3FF) else it }
     // always a dark player, whatever the look or light mode; the cover colour is the accent
     val accent = remember(art, base) { art?.let { coverColor(it, base) }?.let { c -> if (c.luminance() < .3f) androidx.compose.ui.graphics.lerp(c, Color.White, .45f) else c } ?: base }
-    val dyn = accent
+    // the cover colour flows into the next one instead of jumping
+    val dyn by androidx.compose.animation.animateColorAsState(accent, tween(700), label = "dyn")
     val tabs = listOf(tr("All songs", "Tüm şarkılar"),tr("Albums", "Albümler"), tr("Artists", "Sanatçılar"), tr("Playlists", "Listeler"), tr("Folders", "Klasörler"))
     var tab by remember { mutableIntStateOf(0) }
     var query by remember { mutableStateOf("") }
@@ -354,7 +360,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
             Box(Modifier.fillMaxSize().offset { IntOffset(0, sheetY.value.roundToInt()) }.background(pbg)
                 .pointerInput(Unit) { detectVerticalDragGestures(onDragEnd = { pageRelease() }, onDragCancel = { pageRelease() }, onVerticalDrag = { c, d -> c.consume(); pageDrag(d) }) }) {
                 // one layer: the blurred cover is the background when the art switch is on, nothing extra is drawn otherwise
-                if (artBackground && art != null) Image(art, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop)
+                if (artBackground) Crossfade(art, animationSpec = tween(600), label = "bg") { a -> if (a != null) Image(a, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop) }
                 Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.KeyboardArrowDown, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { showQueue = false; showNow = false })
@@ -393,8 +399,20 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         Spacer(Modifier.weight(1f))
                         LevelBars(st.isPlaying, dyn, Modifier.fillMaxWidth().height(28.dp).padding(bottom = 6.dp))
                     }
-                    Text(cur.name(), color = TXT, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    Text(cur.artistName(), color = SUB, fontSize = 15.sp, maxLines = 1)
+                    // title and artist slide in from the side the track came from (next from the right, previous from the left), like Poweramp
+                    var lastIndex by remember { mutableIntStateOf(st.index) }
+                    val forward = st.index >= lastIndex
+                    SideEffect { lastIndex = st.index }
+                    androidx.compose.animation.AnimatedContent(cur, transitionSpec = {
+                        val d = if (forward) 1 else -1
+                        (slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { it / 3 * d } + fadeIn(tween(260))) togetherWith
+                            (slideOutHorizontally(tween(260, easing = FastOutSlowInEasing)) { -it / 3 * d } + fadeOut(tween(180)))
+                    }, contentKey = { it.path }, label = "title") { t ->
+                        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(t.name(), color = TXT, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(t.artistName(), color = SUB, fontSize = 15.sp, maxLines = 1)
+                        }
+                    }
                     com.umutk.pulse.extras.lyrics.LiveLyricsLine(cur, pos, Modifier.fillMaxWidth().padding(top = 8.dp))
                     val d = dur.coerceAtLeast(1)
                     PSlider(pos.coerceIn(0, d).toFloat(), { dragging = true; pos = it.toInt() }, 0f..d.toFloat()) { engine.seekTo(pos); dragging = false }
@@ -402,7 +420,12 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Shuffle, null, tint = if (shuffle) dyn else SUB, modifier = Modifier.size(44.dp).clickable { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }.padding(10.dp))
                         Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(48.dp).clickable { engine.previous() }.padding(8.dp))
-                        Box(Modifier.size(68.dp).clip(CircleShape).background(dyn).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
+                        // the play button squeezes under the finger and springs back
+                        val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+                        val pressed by press.collectIsPressedAsState()
+                        val squeeze by animateFloatAsState(if (pressed) .88f else 1f, spring(dampingRatio = .45f, stiffness = Spring.StiffnessMedium), label = "squeeze")
+                        Box(Modifier.size(68.dp).graphicsLayer { scaleX = squeeze; scaleY = squeeze }.clip(CircleShape).background(dyn)
+                            .clickable(press, androidx.compose.material3.ripple()) { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
                             Crossfade(st.isPlaying, animationSpec = tween(180), label = "playPause") { playing ->
                                 Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(36.dp))
                             }
