@@ -71,6 +71,9 @@ Lock any app behind a pattern, PIN or password, with optional fingerprint. The l
 
 One player with four looks: Material, Poweramp, Winamp and Windows Media Player, plus a Lyrics look.
 
+- **Playlists**: the ones saved in Pulse and the `.m3u` / `.m3u8` files found on the phone, as a list or as a grid of square covers. Online playlists (YouTube links and searches, Spotify links) use public Piped servers and fall back to Invidious; such servers come and go, so they may fail on some days.
+- **Mixes**: personal mixes by mood (energetic, chill, focus, happy) and a daily mix, ranked by what you played, rated and starred. Missing tags (genre, year, album) can be downloaded from the internet.
+
 - **Library**: every song on the phone, including ones that came from downloads or messengers. Albums, artists and genres group the songs, and a song without tags still lands in a group (its folder, or "Unknown"). Every artist always has a name: the tag, the "Artist - Title" part of the file name, the folder, or "Unknown artist".
 - **Play and Shuffle** icons sit on top of every song list (all songs, an album, an artist, a folder, a playlist). Play starts the list in order, Shuffle starts the same songs in a random order. Tapping a song plays that list from the song.
 - **Search**: type and it looks through songs, artists and albums, and, from three letters on, through lyrics too, with no extra switch. A lyrics hit shows the matching line with the line above and the line below.
@@ -96,7 +99,8 @@ Settings has one **Apps** card for everything optional: the standalone apps, the
 - **Notes**: lists and drawing with a Paint-style toolbar. **Voice recorder**, **Screen recorder** and **Notification history**.
 - **Weather**: forecast, a sun arc from sunrise to sunset, the moon phase and alerts.
 - **White noise**: a mixer of ambient sounds and bird songs, each with its own level, with presets you can save.
-- **ArtCraft**: a drawing app.
+- **Paint**: a drawing app in the style of MS Paint: pencil, brush, eraser, fill, colour picker, line, rectangle and ellipse, the classic 28 colours, a line width, undo, opening a picture and saving to `Pictures/Paint`.
+- **ArtCraft**: a launcher for the APKs of the ArtCraft project (download, install, update).
 - Each of them has its own launcher entry and its own look. It never changes the look of the main Pulse app. They start without an opening animation.
 
 #### Office

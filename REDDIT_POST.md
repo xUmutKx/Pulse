@@ -21,8 +21,8 @@ Pulse started as a Windows-style task manager for Android: live CPU, memory, sto
 - **Music player** with four looks: Material, Poweramp, Winamp (real skins, with lyrics inside the skin) and Windows Media Player. Library, shuffle, search through songs and lyrics, a waveform seek bar that scrolls with the music, sound quality under the buttons, lyrics, white noise and bird sounds.
 - **Video player** that searches subtitles online, like VLC.
 - **Office**: Word, Excel and PowerPoint windows drawn like the old (95 / 2003) and the new (2013 / 365) Office.
-- **Launcher**: Pulse can be your home screen. In the Windows looks it is a desktop with This PC, Recycle Bin, File Explorer, Paint and Command Prompt; apps are grouped by category in the apps list.
-- **Extra apps**: Photos, Calendar, Contacts, Messages, Notes, Weather, Voice and Screen recorder, notification history, a drawing app. Each is its own launcher entry with its own look.
+- **Launcher**: Pulse can be your home screen. In the Windows looks it is a desktop with This PC, Recycle Bin, File Explorer, Paint, Command Prompt and Task Manager; apps are grouped by category in the apps list.
+- **Extra apps**: Photos, Calendar, Contacts, Messages, Notes, Weather, Voice and Screen recorder, notification history, and a Paint app in the style of MS Paint. Each is its own launcher entry with its own look.
 - **Widgets** in every look: Windows 7 gadget clocks, CPU meter, XP and 95 classics, Winamp widgets with real skins, Material You and AMOLED tiles.
 - **Tools**: app lock, authenticator, toolkit (compass, level, lux meter and more), terminal, network usage per app, DNS switch, cache cleaner, health page.
 

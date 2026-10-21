@@ -73,6 +73,7 @@ class ToolLook(private val file: String) {
 val VoiceLook = ToolLook("voice_look")
 val NotesLook = ToolLook("notes_look")
 val WeatherLook = ToolLook("weather_look")
+val PaintLook = ToolLook("paint_look")
 
 /** Present only inside [ExtraToolActivity]: the page can offer the look choice, inside Pulse itself it is null. */
 class ExtraLookControl(val id: String, val set: (String) -> Unit)
@@ -126,7 +127,7 @@ class ExtraToolActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
-        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; else -> null }
+        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; else -> null }
         toolLook = store
         enter()
         setContent {
@@ -155,6 +156,7 @@ class ExtraToolActivity : ComponentActivity() {
             n.endsWith("VoiceLauncher") -> "voice"
             n.endsWith("NotesLauncher") -> "notes"
             n.endsWith("WeatherLauncher") -> "weather"
+            n.endsWith("PaintLauncher") -> "paint"
             n.endsWith("MessagesLauncher") -> "messages"
             n.endsWith("ScreenRecLauncher") -> "screenrec"
             n.endsWith("NotifHistLauncher") -> "notifhist"

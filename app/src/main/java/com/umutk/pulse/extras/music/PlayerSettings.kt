@@ -143,6 +143,12 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 PChip(false, l) { if (m < 0) engine.setSleep(0, true) else engine.setSleep(m) }
             }
         }
+        Row(Modifier.clickable {
+            val n = com.umutk.pulse.extras.music.poweramp.PowerampCovers.clearAll(c)
+            android.widget.Toast.makeText(c, tr("$n covers cleared", "$n kapak silindi"), android.widget.Toast.LENGTH_SHORT).show()
+        }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("trash", T.sub, 22.dp); Text(tr("Clear saved covers", "Kaydedilen kapakları temizle"), color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 10.dp))
+        }
         Row(Modifier.clickable { com.umutk.pulse.extras.music.stats.MusicStats.clear(c) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("history", T.sub, 22.dp); Text(tr("Reset statistics", "İstatistikleri sıfırla"), color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 10.dp))
         }
