@@ -577,9 +577,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 DenseSelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 17.dp) }
                 Text("${sel.size}", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 11.sp, maxLines = 1)
                 DenseSelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 17.dp) }
-                DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }) { ExIcon("cut", T.text, 17.dp) }
-                DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }) { ExIcon("copy", T.text, 17.dp) }
-                if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }) { ExIcon("paste", Look.accent, 17.dp) }
+                DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }, big = true) { ExIcon("cut", T.text, 30.dp) }
+                DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }, big = true) { ExIcon("copy", T.text, 30.dp) }
+                if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }, big = true) { ExIcon("paste", Look.accent, 30.dp) }
                 picked.singleOrNull()?.takeIf { !it.isDirectory }?.let { f -> DenseSelSquare(T.text, { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }) { ExIcon("share", T.text, 17.dp) } }
                 DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 17.dp) }
                 Box {
@@ -1180,8 +1180,8 @@ private fun SelSquare(tint: Color, onClick: () -> Unit, content: @Composable () 
 
 /** Selection bar button: a little smaller than [SelSquare] and with no gap between neighbours. */
 @Composable
-private fun DenseSelSquare(tint: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
-    Box(Modifier.size(30.dp).clip(RoundedCornerShape(8.dp)).background(T.panel).clickable(onClick = onClick), contentAlignment = Alignment.Center) { content() }
+private fun DenseSelSquare(tint: Color, onClick: () -> Unit, big: Boolean = false, content: @Composable () -> Unit) {
+    Box(Modifier.size(if (big) 52.dp else 30.dp).clip(RoundedCornerShape(8.dp)).background(T.panel).clickable(onClick = onClick), contentAlignment = Alignment.Center) { content() }
 }
 
 /** Header glyph: Fluent on Windows 11 (the app's own icon set), the Material vector everywhere else. */
