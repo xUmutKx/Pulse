@@ -103,10 +103,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             MenuEntry("Widgets", icon = Icons.Outlined.Widgets, key = "apps") { go("widgets") },
             MenuEntry("System font", icon = Icons.Outlined.FormatSize, key = "details") { openTool("fonts") },
         )),
-        MenuTop("Tools", listOf(
-            // the optional tools, each placed in the menu, the Extra apps card or only Settings (Settings > Tool places)
-            *ToolPlace.menuEntries(ctx, { go(it) }, { openTool(it) }).toTypedArray(),
-        )),
+        *(ToolPlace.menuEntries(ctx, { go(it) }, { openTool(it) }).takeIf { it.isNotEmpty() }?.let { listOf(MenuTop("Tools", it)) } ?: emptyList()).toTypedArray(),
         // the tools placed under Extra apps (Settings > Extra apps: download manager, Office, App lock, ...); the store ends the group, the music player, video, white noise and the standalone apps are listed inside it
         MenuTop(EXTRA_APPS, listOf(
             *ToolPlace.extraEntries(ctx, { go(it) }, { openTool(it) }).toTypedArray(),
@@ -133,7 +130,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
 object ToolPlace {
     class Tool(val id: String, val en: String, val trName: String, val target: String, val isTool: Boolean, val key: String, val icon: ImageVector, val default: String)
     val all = listOf(
-        Tool("toolkit", "Toolkit", "Araç kutusu", "toolkit", true, "settings", Icons.Outlined.Build, "menu"),
+        Tool("toolkit", "Toolkit", "Araç kutusu", "toolkit", true, "settings", Icons.Outlined.Build, "extra"),
         Tool("office", "Office", "Office", "office", false, "document", Icons.Outlined.Description, "extra"),
         Tool("download", "Download manager", "İndirme yöneticisi", "downloads", false, "download", Icons.Outlined.Download, "extra"),
         Tool("applock", "App lock", "Uygulama kilidi", "applock", false, "applock", Icons.Outlined.Lock, "extra"),
@@ -190,18 +187,20 @@ object AppPlace {
     )
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
-    // by default the apps live only in the Extra apps list (top-right menu > Extra apps); Settings > Apps can put one in the menu or on the left
-    fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, "hidden") ?: "hidden" } }
-    fun where(alias: String): String = placed[alias] ?: "hidden"
+    // an app that is switched on in Settings > Apps is listed in the top-right Apps menu; the chevron there can move it to the left menu or hide it
+    fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, "menu") ?: "menu" } }
+    fun where(alias: String): String = placed[alias] ?: "menu"
     fun set(c: Context, alias: String, place: String) { placed[alias] = place; sp(c).edit().putString(alias, place).apply() }
     fun byAlias(alias: String) = all.firstOrNull { it.alias == alias }
+    /** The key of the app's Windows 11 picture (FluentFilled / fc_*). */
+    fun win11Key(alias: String) = "extra" + alias.removeSuffix("Launcher")
     /** Left-menu entries of the apps placed there; "open:<alias>" starts the app instead of switching the page. */
     fun sidePages(): List<Pg> = all.filter { where(it.alias) == "side" }.map { Pg("open:${it.alias}", tr(it.en, it.trName), it.key) }
 }
 
 /** The standalone apps placed in the top-right Apps menu, as menu entries: each opens its own window. */
 private fun builtinApps(ctx: Context, openTool: (String) -> Unit): List<MenuEntry> =
-    AppPlace.all.filter { AppPlace.where(it.alias) == "menu" }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
+    AppPlace.all.filter { a -> AppPlace.where(a.alias) == "menu" && ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
 
 private val EXTRA_APPS get() = tr("Apps", "Uygulamalar")
 
@@ -213,8 +212,13 @@ internal fun launchExtra(ctx: Context, cls: String, route: String? = null) {
 
 @Composable
 private fun Item(e: MenuEntry, close: () -> Unit) {
-    ThemedMenuItem(e.label, { close(); e.onClick() }, iconKey = if (T.id == "win11" && !T.material) WIN11_MENU_KEY[e.label] ?: e.key else e.key, icon = e.icon, checked = e.checked)
+    ThemedMenuItem(e.label, { close(); e.onClick() }, iconKey = if (T.id == "win11" && !T.material) WIN11_MENU_KEY[e.label] ?: win11KeyOf(e) else e.key, icon = e.icon, checked = e.checked)
 }
+
+/** The Windows 11 icon key of a tool or app entry, found by its (English or Turkish) name. */
+private fun win11KeyOf(e: MenuEntry): String =
+    ToolPlace.all.firstOrNull { tr(it.en, it.trName) == e.label }?.let { "tool_${it.id}" }
+        ?: AppPlace.all.firstOrNull { tr(it.en, it.trName) == e.label }?.let { AppPlace.win11Key(it.alias) } ?: e.key
 
 /** Win11 look: one Fluent glyph per menu entry (FluentPaths), so no icon repeats in the overflow menu. */
 private val WIN11_MENU_KEY = mapOf(

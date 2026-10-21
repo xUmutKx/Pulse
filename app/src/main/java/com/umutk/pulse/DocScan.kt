@@ -18,6 +18,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -55,6 +57,85 @@ fun docScanEnhance(src: Bitmap): Bitmap {
     val lut = IntArray(256) { v -> ((v - lo) * 255 / (hi - lo)).coerceIn(0, 255) }
     val out = IntArray(px.size) { i -> val g = lut[gray[i]]; (0xFF shl 24) or (g shl 16) or (g shl 8) or g }
     return Bitmap.createBitmap(out, w, h, Bitmap.Config.ARGB_8888)
+}
+
+/** Colour scan: one levels stretch on the brightness (paper goes white, ink dark) applied to all three channels, so colours stay true, then a little more colour. */
+fun docScanColor(src: Bitmap): Bitmap {
+    val w = src.width; val h = src.height
+    val px = IntArray(w * h).also { src.getPixels(it, 0, w, 0, 0, w, h) }
+    val hist = IntArray(256)
+    for (c in px) hist[((c shr 16 and 0xFF) * 299 + (c shr 8 and 0xFF) * 587 + (c and 0xFF) * 114) / 1000]++
+    fun level(p: Double): Int { var acc = 0; val cut = px.size * p; for (v in 0..255) { acc += hist[v]; if (acc >= cut) return v }; return 255 }
+    val lo = level(0.02); val hi = level(0.97).coerceAtLeast(lo + 1)
+    val lut = IntArray(256) { v -> ((v - lo) * 255 / (hi - lo)).coerceIn(0, 255) }
+    val out = IntArray(px.size) { i ->
+        val c = px[i]
+        val r = lut[c shr 16 and 0xFF]; val g = lut[c shr 8 and 0xFF]; val b = lut[c and 0xFF]
+        val l = (r * 299 + g * 587 + b * 114) / 1000
+        fun sat(v: Int) = (l + (v - l) * 1.18f).toInt().coerceIn(0, 255)
+        (0xFF shl 24) or (sat(r) shl 16) or (sat(g) shl 8) or sat(b)
+    }
+    return Bitmap.createBitmap(out, w, h, Bitmap.Config.ARGB_8888)
+}
+
+/** Black and white scan: the stretched grey, pushed to clean white paper and solid ink. */
+fun docScanBw(src: Bitmap): Bitmap {
+    val g = docScanEnhance(src)
+    val w = g.width; val h = g.height
+    val px = IntArray(w * h).also { g.getPixels(it, 0, w, 0, 0, w, h) }
+    for (i in px.indices) { val v = px[i] and 0xFF; val o = if (v > 175) 255 else if (v < 95) 0 else (v - 95) * 255 / 80; px[i] = (0xFF shl 24) or (o shl 16) or (o shl 8) or o }
+    return Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888)
+}
+
+/**
+ * Finds the page in the photo and straightens it: the bright paper area is cut out from a small copy (a brightness threshold, the biggest connected
+ * region), its four corners are the extremes along both diagonals, and a perspective warp turns that quadrilateral into a flat rectangle.
+ * A photo where no clear page is found (the page fills the frame, or sits on a light table) is returned as it is.
+ */
+fun docScanCrop(src: Bitmap): Bitmap {
+    val sc = 360f / maxOf(src.width, src.height)
+    if (sc >= 1f) return src
+    val sw = (src.width * sc).toInt().coerceAtLeast(8); val sh = (src.height * sc).toInt().coerceAtLeast(8)
+    val small = Bitmap.createScaledBitmap(src, sw, sh, true)
+    val px = IntArray(sw * sh).also { small.getPixels(it, 0, sw, 0, 0, sw, sh) }
+    val lum = IntArray(px.size) { i -> val c = px[i]; ((c shr 16 and 0xFF) * 299 + (c shr 8 and 0xFF) * 587 + (c and 0xFF) * 114) / 1000 }
+    // Otsu threshold
+    val hist = IntArray(256).also { hh -> lum.forEach { hh[it]++ } }
+    var sum = 0L; for (v in 0..255) sum += v.toLong() * hist[v]
+    var wB = 0L; var sB = 0L; var best = 0.0; var thr = 128
+    for (v in 0..255) { wB += hist[v]; if (wB == 0L) continue; val wF = lum.size - wB; if (wF == 0L) break; sB += v.toLong() * hist[v]
+        val mB = sB.toDouble() / wB; val mF = (sum - sB).toDouble() / wF; val bt = wB.toDouble() * wF * (mB - mF) * (mB - mF); if (bt > best) { best = bt; thr = v } }
+    // biggest connected bright region (4-neighbour flood fill)
+    val seen = BooleanArray(px.size); var bestRegion = IntArray(0)
+    val stack = IntArray(px.size)
+    for (start in px.indices) {
+        if (seen[start] || lum[start] <= thr) continue
+        var sp = 0; stack[sp++] = start; seen[start] = true; val region = ArrayList<Int>()
+        while (sp > 0) {
+            val i = stack[--sp]; region.add(i); val x = i % sw; val y = i / sw
+            if (x > 0 && !seen[i - 1] && lum[i - 1] > thr) { seen[i - 1] = true; stack[sp++] = i - 1 }
+            if (x < sw - 1 && !seen[i + 1] && lum[i + 1] > thr) { seen[i + 1] = true; stack[sp++] = i + 1 }
+            if (y > 0 && !seen[i - sw] && lum[i - sw] > thr) { seen[i - sw] = true; stack[sp++] = i - sw }
+            if (y < sh - 1 && !seen[i + sw] && lum[i + sw] > thr) { seen[i + sw] = true; stack[sp++] = i + sw }
+        }
+        if (region.size > bestRegion.size) bestRegion = region.toIntArray()
+    }
+    val frac = bestRegion.size.toFloat() / px.size
+    if (frac < .2f || frac > .96f) return src
+    var tl = 0; var br = 0; var tr = 0; var bl = 0
+    var mnS = Int.MAX_VALUE; var mxS = Int.MIN_VALUE; var mnD = Int.MAX_VALUE; var mxD = Int.MIN_VALUE
+    for (i in bestRegion) { val x = i % sw; val y = i / sw; val s = x + y; val d = x - y
+        if (s < mnS) { mnS = s; tl = i }; if (s > mxS) { mxS = s; br = i }; if (d > mxD) { mxD = d; tr = i }; if (d < mnD) { mnD = d; bl = i } }
+    fun pt(i: Int) = floatArrayOf((i % sw) / sc, (i / sw) / sc)
+    val a = pt(tl); val b = pt(tr); val c = pt(br); val d = pt(bl)
+    fun dist(p: FloatArray, q: FloatArray) = kotlin.math.hypot((p[0] - q[0]).toDouble(), (p[1] - q[1]).toDouble()).toFloat()
+    val ow = ((dist(a, b) + dist(d, c)) / 2f).toInt(); val oh = ((dist(a, d) + dist(b, c)) / 2f).toInt()
+    if (ow < 200 || oh < 200) return src
+    val out = Bitmap.createBitmap(ow, oh, Bitmap.Config.ARGB_8888)
+    val m = android.graphics.Matrix()
+    m.setPolyToPoly(floatArrayOf(a[0], a[1], b[0], b[1], c[0], c[1], d[0], d[1]), 0, floatArrayOf(0f, 0f, ow.toFloat(), 0f, ow.toFloat(), oh.toFloat(), 0f, oh.toFloat()), 0, 4)
+    android.graphics.Canvas(out).drawBitmap(src, m, android.graphics.Paint(android.graphics.Paint.FILTER_BITMAP_FLAG))
+    return out
 }
 
 /** One PDF page per scan, each page sized to its bitmap (pixels as points). */
@@ -100,12 +181,16 @@ fun DocScanPage(onBack: () -> Unit) {
     var finished by remember { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
+    // the pages are kept as the straightened photo; the look (colour, grey, black and white) is applied to the preview and when saving
+    var mode by remember { mutableIntStateOf(0) }
+    var autoCrop by remember { mutableStateOf(true) }
+    fun shape(b: Bitmap): Bitmap = when (mode) { 0 -> docScanColor(b); 1 -> docScanEnhance(b); else -> docScanBw(b) }
 
     // a camera photo or a picture from the gallery: both become a page the same way
     fun addPage(f: File) {
         busy = true
         scope.launch {
-            val page = withContext(Dispatchers.IO) { runCatching { docScanEnhance(docScanDecode(f)) }.getOrNull() }
+            val page = withContext(Dispatchers.IO) { runCatching { docScanDecode(f).let { if (autoCrop) docScanCrop(it) else it } }.getOrNull() }
             f.delete()
             busy = false
             if (page == null) status = tr("Could not read the photo", "Fotoğraf okunamadı")
@@ -149,11 +234,12 @@ fun DocScanPage(onBack: () -> Unit) {
     }
 
     fun save(pdf: Boolean) {
-        val list = pages.toList()
-        val last = list.lastOrNull() ?: return
-        if (busy) return
+        val raw = pages.toList()
+        if (raw.isEmpty() || busy) return
         busy = true
         scope.launch {
+            val list = withContext(Dispatchers.Default) { raw.map { shape(it) } }
+            val last = list.last()
             val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
             val name = "scan-$stamp.${if (pdf) "pdf" else "png"}"
             status = try {
@@ -177,11 +263,22 @@ fun DocScanPage(onBack: () -> Unit) {
         }
         PCard {
             val last = pages.lastOrNull()
-            if (last != null) Image(last.asImageBitmap(), null, Modifier.fillMaxWidth().heightIn(max = 460.dp), contentScale = ContentScale.Fit)
+            val shown by produceState<Bitmap?>(null, last, mode) { value = last?.let { withContext(Dispatchers.Default) { shape(it) } } }
+            // the page sits on a soft shadow with rounded corners, like paper on a desk
+            shown?.let { Image(it.asImageBitmap(), null, Modifier.fillMaxWidth().heightIn(max = 460.dp).padding(6.dp).shadow(6.dp, androidx.compose.foundation.shape.RoundedCornerShape(4.dp)).clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp)), contentScale = ContentScale.Fit) }
             else Text(tr("No pages yet", "Henüz sayfa yok"), color = T.sub, fontSize = 13.sp)
             if (pages.isNotEmpty()) Text(tr("${pages.size} page(s)", "${pages.size} sayfa"), color = T.sub, fontSize = 12.sp)
             if (busy) Text(tr("Working...", "İşleniyor..."), color = T.sub, fontSize = 12.sp)
             if (status.isNotEmpty()) Text(status, color = T.text, fontSize = 13.sp)
+        }
+        // how the page looks, and whether the page is cut out of the photo
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PChip(mode == 0, tr("Colour", "Renkli")) { mode = 0 }
+            PChip(mode == 1, tr("Grey", "Gri")) { mode = 1 }
+            PChip(mode == 2, tr("Black & white", "Siyah beyaz")) { mode = 2 }
+            Spacer(Modifier.weight(1f))
+            Text(tr("Crop to page", "Sayfayı kırp"), color = T.sub, fontSize = 12.sp)
+            PSwitch(autoCrop, { autoCrop = it })
         }
         if (!finished) {
             if (pages.isNotEmpty()) Text(tr("Add another page or finish?", "Başka sayfa eklensin mi, bitirilsin mi?"), color = T.sub, fontSize = 13.sp)

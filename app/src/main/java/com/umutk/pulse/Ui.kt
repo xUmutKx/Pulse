@@ -90,6 +90,13 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     // Windows 11: the Fluent picture by default; the thin line glyphs (the Windows 10 set) when the Settings switch says so
     val fluent = T.id == "win11" && !T.material && !Look.winIconLine
     // Windows 11 Fluent style: the coloured filled Fluent glyph of the key (the Line choice keeps the thin glyphs)
+    // the tools and extra apps of the menus and Settings wear the colour Fluent picture of their own (fc_*.png), else the filled Fluent glyph, never the thin outline
+    if (fluent && !Look.winIconLine && (k.startsWith("tool_") || k.startsWith("extra"))) {
+        val n = FC_NAMED[k] ?: k.removePrefix("tool_")
+        val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }
+        if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return }
+        if (FluentFilled.map.containsKey(k)) { FluentColorGlyph2(k, size, modifier); return }
+    }
     // the left-menu pages wear the colour Fluent pictures (res/drawable-nodpi/fc_*.png)
     if (fluent && Look.winIconColor) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
     if (fluent && Look.winIconColor) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
@@ -365,9 +372,27 @@ fun ProfilePhotoRow() {
 }
 
 /** Page background: Windows 11 shows the Mica / picture behind its pages, so the page itself is see-through there; every other look paints its own colour. */
-val pageBg: Color get() = if (T.id == "win11") Color.Transparent else T.bg
+val pageBg: Color get() = if (T.id == "win11" || PageBg.transparent) Color.Transparent else T.bg
+
+/** A screen that asked for see-through pages (Notes): every page background of that screen is transparent in any look. */
+object PageBg { var transparent by androidx.compose.runtime.mutableStateOf(false) }
 
 /** PIcon keys of the left-menu pages and their colour Fluent picture. */
 private val FC_PIC = mapOf("processes" to "processes", "performance" to "performance", "history" to "history", "startup" to "startup", "details" to "details",
     "services" to "services", "apps" to "apps", "download" to "download", "folder" to "files", "office" to "office", "recycle" to "recycle", "phone" to "device",
     "heart" to "health", "run" to "terminal", "settings" to "settings")
+
+private val FC_NAMED = mapOf("extraFiles" to "files", "extraPhotos" to "photos", "extraCalendar" to "calendar", "extraContacts" to "contacts", "extraPaint" to "paint", "extraArtCraft" to "artcraft",
+    "extraMusic" to "music", "extraVideo" to "video", "extraWhiteNoise" to "whitenoise", "extraVoice" to "voice", "extraNotes" to "notes", "extraWeather" to "weather", "extraMessages" to "messages",
+    "extraLauncher" to "launcher", "extraScreenRec" to "screenrec", "extraNotifHist" to "notifhist", "extraStore" to "store")
+
+/** The filled Fluent glyph of a [FluentFilled] key, in its own colour. */
+@androidx.compose.runtime.Composable
+private fun FluentColorGlyph2(key: String, size: androidx.compose.ui.unit.Dp, modifier: Modifier) {
+    val raw = FluentFilled.map[key] ?: return
+    val paths = remember(key) { raw.map { androidx.compose.ui.graphics.vector.PathParser().parsePathString(it).toPath() } }
+    val c = FluentFilled.color(key)
+    androidx.compose.foundation.Canvas(modifier.size(size)) {
+        androidx.compose.ui.graphics.drawscope.scale(this.size.width / 24f, pivot = androidx.compose.ui.geometry.Offset.Zero) { paths.forEach { drawPath(it, c) } }
+    }
+}
