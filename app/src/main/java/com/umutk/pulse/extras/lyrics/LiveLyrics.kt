@@ -46,6 +46,8 @@ object LiveLyrics {
     fun notification(c: Context) = prefs(c).getBoolean("notification", true)
     // a notification of its own for the lyrics, beside the media one (off by default)
     fun separate(c: Context) = prefs(c).getBoolean("separate", false)
+    /** Lyrics found online are written as a .lrc beside the song. */
+    fun saveLrc(c: Context) = prefs(c).getBoolean("save_lrc", false)
     fun set(c: Context, key: String, on: Boolean) = prefs(c).edit().putBoolean(key, on).apply()
 
     /** The line the notification shows now; null hides it. Read by [com.umutk.pulse.extras.music.notif.NotifProvider]. */
@@ -197,6 +199,8 @@ fun LiveLyricsSettingsSection() {
         SwitchRow(tr("Show in notification", "Bildirimde göster"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
         // a second notification of its own: the current line with the one before and after it
         var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
+        var save by remember { mutableStateOf(LiveLyrics.saveLrc(c)) }
+        SwitchRow(tr("Save found lyrics as .lrc beside the song", "Bulunan sözleri şarkının yanına .lrc olarak kaydet"), save) { save = it; LiveLyrics.set(c, "save_lrc", it) }
         SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
     }
 }
