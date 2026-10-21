@@ -362,7 +362,8 @@ private val CappedPages = setOf("settings", "files", "widgets")
 private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (String) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     // the pages visited, so the back arrow and the back gesture return to the previous one
-    var trail by rememberSaveable { mutableStateOf(listOf<String>()) }
+    // not saved across a recreate: a List cannot go into the saved state bundle (the history restarts empty)
+    var trail by remember { mutableStateOf(listOf<String>()) }
     val start = if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes"
     // a tool opened from the Extra apps store returns to the store, not to the page behind it
     var subBack by rememberSaveable { mutableStateOf("") }

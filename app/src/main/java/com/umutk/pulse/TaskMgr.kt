@@ -75,8 +75,8 @@ fun ProcessesPage() {
     var q by remember { mutableStateOf("") }
     var sort by remember { mutableStateOf("mem") }
     var ask by remember { mutableStateOf<PRow?>(null) }
-    var expanded by rememberSaveable { mutableStateOf(setOf<String>()) }
-    var collapsed by rememberSaveable { mutableStateOf(setOf<String>()) }
+    var expanded by remember { mutableStateOf(setOf<String>()) }
+    var collapsed by remember { mutableStateOf(setOf<String>()) }
     val scope = rememberCoroutineScope()
     var net by remember { mutableStateOf<Map<Int, Float>>(emptyMap()) }     // uid -> bytes/s
     var sizes by remember { mutableStateOf<Map<Int, Long>>(emptyMap()) }   // uid -> app + data bytes

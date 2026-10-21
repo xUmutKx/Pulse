@@ -39,6 +39,9 @@ fun Welcome(onDone: () -> Unit) {
     val ctx = LocalContext.current
     fun finish() {
         ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putBoolean("welcomed", true).apply()
+        // the one Shizuku question: only when it runs and Pulse has no root to fall back on; never on later starts
+        Shell.refreshShizuku()
+        if (Shell.root != true && Shell.shizuku == 1) Shell.askShizuku(ctx)
         onDone()
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter).padding(top = 40.dp, bottom = 24.dp)) {
