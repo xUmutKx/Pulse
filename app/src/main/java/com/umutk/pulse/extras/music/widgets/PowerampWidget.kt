@@ -93,10 +93,13 @@ class PowerampWidget : AppWidgetProvider() {
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {
                 setImageViewBitmap(R.id.pa_img, bmp)
                 // the transport row sits under the drawn buttons: pad the overlay to the fitted window
+                val k = lastShrink
                 setViewPadding(
                     R.id.pa_overlay,
-                    f.x, f.y + (BTN_TOP * f.h).toInt(), bw - f.x - f.w, bh - f.y - (BTN_BOTTOM * f.h).toInt(),
+                    (f.x * k).toInt(), ((f.y + BTN_TOP * f.h) * k).toInt(), ((bw - f.x - f.w) * k).toInt(), ((bh - f.y - BTN_BOTTOM * f.h) * k).toInt(),
                 )
+                // a tap anywhere else opens the player, straight on the now playing page and without an opening animation
+                setOnClickPendingIntent(R.id.pa_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 72, "route" to "music"))
                 setOnClickPendingIntent(R.id.pa_prev, pi(c, A_PREV))
                 setOnClickPendingIntent(R.id.pa_play, pi(c, A_TOGGLE))
                 setOnClickPendingIntent(R.id.pa_next, pi(c, A_NEXT))
@@ -113,6 +116,9 @@ class PowerampWidget : AppWidgetProvider() {
         data class Fit(val scale: Float, val x: Int, val y: Int, val w: Int, val h: Int)
 
         /** The widget's box in pixels from its options: portrait uses the narrow width and the tall height, landscape the reverse. */
+        /** How much smaller the bitmap is than the widget on screen (set by [boxPx]); the touch padding is in screen pixels. */
+        private var lastShrink = 1f
+
         private fun boxPx(c: Context, id: Int): Pair<Int, Int> {
             val o = AppWidgetManager.getInstance(c).getAppWidgetOptions(id)
             val d = c.resources.displayMetrics.density
@@ -124,6 +130,7 @@ class PowerampWidget : AppWidgetProvider() {
             val pw = w * d; val ph = h * d
             // RemoteViews carries bitmaps over a 1 MB binder limit; RGB_565 is 2 bytes a pixel, so keep about 350k pixels
             val shrink = kotlin.math.sqrt(pw * ph / 900_000f).coerceAtLeast(1f)
+            lastShrink = shrink
             return (pw / shrink).toInt().coerceAtLeast(1) to (ph / shrink).toInt().coerceAtLeast(1)
         }
 

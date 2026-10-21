@@ -8,6 +8,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.outlined.Opacity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,7 +63,24 @@ class MusicWidgetConfig : ComponentActivity() {
                     // "" is the default: the design of the music look (system colours for Material)
                     listOf(ThemeItem("", "Look") { MiniWidget(MusicWidget.lookTheme(this@MusicWidgetConfig)) }) + musicWidgetThemes.map { th -> ThemeItem(th.id, th.name) { MiniWidget(th) } }
                 }
+                var alpha by remember { mutableStateOf(MusicWidget.prefs(this@MusicWidgetConfig).getInt("alpha_$id", 100)) }
                 Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+                    // background opacity: solid down to see-through; the placed widget redraws at once
+                    Row(Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Opacity, null, Modifier.size(24.dp))
+                        listOf(100, 75, 50, 25, 0).forEach { a ->
+                            Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(10.dp))
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = if (alpha == a) 1f else .12f))
+                                .clickable {
+                                    alpha = a
+                                    MusicWidget.prefs(this@MusicWidgetConfig).edit().putInt("alpha_$id", a).apply()
+                                    AppWidgetManager.getInstance(this@MusicWidgetConfig).updateAppWidget(id, MusicWidget.build(this@MusicWidgetConfig, id))
+                                    setResult(Activity.RESULT_OK, Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, id))
+                                }, contentAlignment = Alignment.Center) {
+                                androidx.compose.material3.Text("$a%", color = if (alpha == a) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface)
+                            }
+                        }
+                    }
                     ThemeGrid(items, sel, { sel = it; pick(it) })
                 }
             } }

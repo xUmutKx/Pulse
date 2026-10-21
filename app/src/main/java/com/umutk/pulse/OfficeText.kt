@@ -49,7 +49,8 @@ fun ofCreateText(ext: String, base: String): File {
 }
 
 fun ofOpenText(ctx: Context, f: File) {
-    val i = Intent(ctx, OfficeTextActivity::class.java).putExtra("path", f.path)
+    // the editor wears the look of the window it was opened from (Files' own look, AMOLED included)
+    val i = Intent(ctx, OfficeTextActivity::class.java).putExtra("path", f.path).putExtra("look", T.id)
     if (ctx !is android.app.Activity) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try { ctx.startActivity(i) } catch (e: Exception) { Toast.makeText(ctx, "Could not open: ${e.message ?: e.javaClass.simpleName}", Toast.LENGTH_LONG).show() }
 }
@@ -66,7 +67,7 @@ class OfficeTextActivity : ComponentActivity() {
         OfficePrefs.addRecent(this, Uri.fromFile(f).toString(), f.name, OfKind.WORD)
         val first = runCatching { f.readText() }.getOrDefault("")
         setContent {
-            LookHost(transparent = false) {
+            LookHost(transparent = false, lookId = intent.getStringExtra("look")) {
                 var text by remember { mutableStateOf(first) }
                 var saved by remember { mutableStateOf(first) }
                 var saveAs by remember { mutableStateOf(false) }
