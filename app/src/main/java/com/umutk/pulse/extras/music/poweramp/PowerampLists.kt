@@ -487,7 +487,7 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                 ) {
                     Text(listOf(h.artist, h.title).filter { it.isNotBlank() }.joinToString(" - "), color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     h.before?.takeIf { it.isNotBlank() }?.let { Text(it, color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
-                    Text(h.line, color = style.accent, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(com.umutk.pulse.extras.lyrics.lyricMarked(h.line, query, style.accent), color = fg, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     h.after?.takeIf { it.isNotBlank() }?.let { Text(it, color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                 }
             }
@@ -497,7 +497,7 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
     lyricsOpen?.let { r ->
         BackHandler { lyricsOpen = null }
         Box(Modifier.fillMaxSize().background(Color.Black)) {
-            LyricsView(r, -1L, null, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp))
+            LyricsView(r, -1L, null, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp), mark = query)
             Box(Modifier.align(Alignment.TopEnd).size(44.dp).clickable { lyricsOpen = null }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, null, tint = Color.White, modifier = Modifier.size(22.dp)) }
         }
     }

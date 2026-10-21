@@ -148,7 +148,7 @@ fun LyricsLookPage(engine: MusicPlayerEngine, st: PlaybackState, modifier: Modif
     val t = st.current
     Column(modifier.fillMaxSize().background(T.bg).padding(horizontal = 16.dp, vertical = 12.dp)) {
         Text(trackLabel(t), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        t?.artist?.takeIf { it.isNotBlank() }?.let { Text(it, color = T.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        t?.shownArtist()?.let { Text(it, color = T.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
         LyricsPanel(t, pos, Modifier.fillMaxSize().padding(top = 8.dp), onSeek = { engine.seekTo(it) })
     }
 }

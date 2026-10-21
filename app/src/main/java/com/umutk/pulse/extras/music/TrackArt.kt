@@ -110,23 +110,37 @@ internal fun trackArtLocal(ctx: Context, track: Track): ImageBitmap? {
 }
 
 /** Cover of [t] as composable state; null while loading or when the track has none. The local cover comes first, the online search only after it found nothing. */
+/** Decoded covers kept in memory by path, so a track change shows the cover at once instead of the previous one while the new one loads. */
+private val artMem = object : LinkedHashMap<String, ImageBitmap>(16, .75f, true) { override fun removeEldestEntry(e: MutableMap.MutableEntry<String, ImageBitmap>?) = size > 30 }
+@Synchronized private fun artCached(path: String?): ImageBitmap? = path?.let { artMem[it] }
+@Synchronized private fun artKeep(path: String, b: ImageBitmap) { artMem[path] = b }
+
+/** The cover of [t]: the one in memory at once, else read off the main thread (saved and embedded art first, then the internet). Never the cover of the previous track. */
 @Composable
 fun rememberTrackArt(t: Track?): ImageBitmap? {
     val ctx = LocalContext.current
-    return produceState<ImageBitmap?>(null, t?.path) {
-        if (t == null) { value = null; return@produceState }
-        value = withContext(Dispatchers.IO) { runCatching { trackArtLocal(ctx, t) }.getOrNull() }
-        if (value == null) value = withContext(Dispatchers.IO) { runCatching { trackArt(ctx, t) }.getOrNull() }
+    return produceState<ImageBitmap?>(artCached(t?.path), t?.path) {
+        // the state outlives a key change: reset it to this track's own cover (or none) before anything is loaded
+        value = artCached(t?.path)
+        if (t == null || value != null) return@produceState
+        value = withContext(Dispatchers.IO) { runCatching { trackArtLocal(ctx, t) }.getOrNull() }?.also { artKeep(t.path, it) }
+        if (value == null) value = withContext(Dispatchers.IO) { runCatching { trackArt(ctx, t) }.getOrNull() }?.also { artKeep(t.path, it) }
     }.value
 }
 
-/** Covers of the queue neighbours of [index], read off the main thread, for [CoverCarousel]. */
+/** Covers of the queue neighbours of [index], read off the main thread, for [CoverCarousel]. Each is its own track's cover, never a stale one. */
 @Composable
 fun neighbourCovers(queue: List<Track>, index: Int, cover: (Track) -> ImageBitmap?): Pair<ImageBitmap?, ImageBitmap?> {
     val prev = queue.getOrNull(index - 1)
     val next = queue.getOrNull(index + 1)
-    val p = produceState<ImageBitmap?>(null, prev?.path) { value = prev?.let { t -> withContext(Dispatchers.IO) { runCatching { cover(t) }.getOrNull() } } }.value
-    val n = produceState<ImageBitmap?>(null, next?.path) { value = next?.let { t -> withContext(Dispatchers.IO) { runCatching { cover(t) }.getOrNull() } } }.value
+    val p = produceState<ImageBitmap?>(artCached(prev?.path), prev?.path) {
+        value = artCached(prev?.path)
+        if (prev != null && value == null) value = withContext(Dispatchers.IO) { runCatching { cover(prev) }.getOrNull() }?.also { artKeep(prev.path, it) }
+    }.value
+    val n = produceState<ImageBitmap?>(artCached(next?.path), next?.path) {
+        value = artCached(next?.path)
+        if (next != null && value == null) value = withContext(Dispatchers.IO) { runCatching { cover(next) }.getOrNull() }?.also { artKeep(next.path, it) }
+    }.value
     return p to n
 }
 
@@ -250,8 +264,9 @@ fun CoverCarousel(
             transformOrigin = TransformOrigin(.5f, .5f + wheel)
             if (lift) translationY = pull
         }
-        if (hasPrev) Box(Modifier.fillMaxSize().onWheel(-1)) { slot(prevArt) }
-        if (hasNext) Box(Modifier.fillMaxSize().onWheel(1)) { slot(nextArt) }
+        // a neighbour exists on screen only while the cover is being swiped toward it: at rest its tilted corner must never peek in
+        if (hasPrev && slide > 0.5f) Box(Modifier.fillMaxSize().onWheel(-1)) { slot(prevArt) }
+        if (hasNext && slide < -0.5f) Box(Modifier.fillMaxSize().onWheel(1)) { slot(nextArt) }
         Box(Modifier.fillMaxSize().onWheel(0, lift = true)) { slot(if (carrying) carried else art) }
     }
 }

@@ -342,8 +342,15 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     Text(cur.name(), color = TXT, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(cur.artistName(), color = SUB, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Icon(if (st.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = TXT, modifier = Modifier.size(40.dp).clickable { engine.togglePlayPause() }.padding(6.dp))
-                Icon(Icons.Rounded.SkipNext, null, tint = TXT, modifier = Modifier.size(40.dp).clickable { engine.next() }.padding(6.dp))
+                // shuffle and repeat with their state (a lit icon, "1" for repeat one), previous, a round play button on the cover colour, next
+                Icon(Icons.Rounded.Shuffle, null, tint = if (shuffle) dyn else SUB, modifier = Modifier.size(34.dp).clickable { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle }.padding(7.dp))
+                Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { engine.previous() }.padding(5.dp))
+                Box(Modifier.padding(horizontal = 2.dp).size(42.dp).clip(CircleShape).background(dyn).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
+                    Crossfade(st.isPlaying, animationSpec = tween(160), label = "miniPlay") { p -> Icon(if (p) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(26.dp)) }
+                }
+                Icon(Icons.Rounded.SkipNext, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { engine.next() }.padding(5.dp))
+                Icon(if (repeat == 1) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat, null, tint = if (repeat != 0) dyn else SUB,
+                    modifier = Modifier.size(34.dp).clickable { repeat = when (repeat) { 0 -> 2; 2 -> 1; else -> 0 }; engine.player.repeatMode = repeat }.padding(7.dp))
             }
         }
 
