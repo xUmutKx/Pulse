@@ -876,3 +876,5 @@ Screen recorder feature list (55 candidates)
 - Office 365 chrome solid grey (translucent layers over a black window hid dark text), Apps menu lists the standalone apps again, coloured Fluent icons in Settings > Apps, 0.10.150. derlenmedi
 
 - Winamp widget whole-pixel scaling, see-through letterbox, touch areas in screen pixels (were in bitmap pixels); music widget opacity setting, Fluent transport glyphs, prev/next wrap; Poweramp widget opens the player (no animation), lyrics clipped to the cover; AMOLED look works in LookHost for extra apps and the text editor (was falling back to the global look), Notes default AMOLED; 0.10.151. derlenmedi
+
+- Win11 "Fluent colour" icon style draws coloured filled Fluent glyphs everywhere PIcon is used (Line keeps thin glyphs), Extra apps entry in the top-right Apps menu, screen cover clock styles with previews and 9 positions, 0.10.152. derlenmedi

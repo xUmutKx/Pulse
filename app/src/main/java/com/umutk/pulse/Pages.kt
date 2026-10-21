@@ -426,7 +426,7 @@ fun SettingsPage() {
                     }
                     Text(tr("Icons (Windows 11)", "İkonlar (Windows 11)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PChip(!Look.winIconLine, "Fluent") { Cfg.setWinIconLine(ctx, false) }
+                        PChip(!Look.winIconLine, tr("Fluent colour", "Renkli Fluent")) { Cfg.setWinIconLine(ctx, false) }
                         PChip(Look.winIconLine, tr("Line", "Çizgi")) { Cfg.setWinIconLine(ctx, true) }
                     }
                     if (Look.effect == "blur") {

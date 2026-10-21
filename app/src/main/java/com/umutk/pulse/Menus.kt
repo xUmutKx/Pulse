@@ -112,6 +112,8 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             *ToolPlace.extraEntries(ctx, { go(it) }, { openTool(it) }).toTypedArray(),
             // the standalone apps that are switched on in Settings > Apps open from here too
             *builtinApps(ctx) { openTool(it) }.toTypedArray(),
+            // every extra app, the ones switched off included, in one list
+            MenuEntry(tr("Extra apps", "Ekstra uygulamalar"), icon = Icons.Outlined.Apps, key = "extraStore") { openTool("extrastore") },
         )),
     )
     return MenuHost(tops) {

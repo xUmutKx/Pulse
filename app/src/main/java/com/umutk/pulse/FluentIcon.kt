@@ -29,7 +29,7 @@ val LocalFluentIcons = compositionLocalOf<Boolean?> { null }
  */
 @Composable
 fun Icon(imageVector: ImageVector, contentDescription: String?, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current) {
-    val on = LocalFluentIcons.current ?: (T.id == "win11")
+    val on = LocalFluentIcons.current ?: (T.id == "win11" && !Look.winIconLine)
     val key = imageVector.name.substringAfterLast('.')
     val raw = if (on) FluentMat.map[key] else null
     if (raw == null) { androidx.compose.material3.Icon(imageVector, contentDescription, modifier, tint); return }
