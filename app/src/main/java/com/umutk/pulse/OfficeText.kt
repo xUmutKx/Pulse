@@ -67,15 +67,16 @@ class OfficeTextActivity : ComponentActivity() {
                 var saved by remember { mutableStateOf(first) }
                 var saveAs by remember { mutableStateOf(false) }
                 var txtSave by remember { mutableStateOf(false) }
-                fun save() { runCatching { f.writeText(text) }.onSuccess { saved = text }.onFailure { Toast.makeText(this, "Could not save: ${it.message}", Toast.LENGTH_LONG).show() } }
+                fun save() { runCatching { f.writeText(text) }.onSuccess { saved = text; Toast.makeText(this, tr("Saved", "Kaydedildi"), Toast.LENGTH_SHORT).show() }.onFailure { Toast.makeText(this, "Could not save: ${it.message}", Toast.LENGTH_LONG).show() } }
                 BackHandler { if (text != saved) save(); finish() }
                 Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(40.dp).clickable { if (text != saved) save(); finish() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), T.text) }
                         Text(f.name + if (text != saved) " •" else "", color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.weight(1f))
-                        Box(Modifier.size(40.dp).clickable { txtSave = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.TextSnippet, null, Modifier.size(22.dp), T.text) }
-                        Box(Modifier.size(40.dp).clickable { saveAs = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SaveAs, null, Modifier.size(22.dp), T.text) }
+                        // Save first (it writes the open file), then Save as; "as TXT" only for files that are not .txt already, so no two buttons do the same
                         Box(Modifier.size(40.dp).clickable { save() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Save, null, Modifier.size(22.dp), Look.accent) }
+                        Box(Modifier.size(40.dp).clickable { saveAs = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SaveAs, null, Modifier.size(22.dp), T.text) }
+                        if (!f.extension.equals("txt", true)) Box(Modifier.size(40.dp).clickable { txtSave = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.TextSnippet, null, Modifier.size(22.dp), T.text) }
                     }
                     if (saveAs) OfSaveAsDialog(f.name, (listOf(f.extension.lowercase()) + OF_TEXT_EXTS + "tsv").filter { it.isNotEmpty() }.distinct(), f.parentFile, { saveAs = false }) { d ->
                         saveAs = false
