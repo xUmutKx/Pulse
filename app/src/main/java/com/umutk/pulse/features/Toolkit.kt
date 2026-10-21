@@ -135,6 +135,7 @@ private val tools = listOf(
     Tool("Stopwatch", "Kronometre", "stopwatch") { StopwatchTool() },
     Tool("Timer", "Zamanlayıcı", "timer") { TimerTool() },
     Tool("Network type", "Ağ türü", "globe") { NetworkModeTool() },
+    Tool("DPI bypass and free VPNs", "DPI aşma ve ücretsiz VPN", "globe") { BypassTool() },
     Tool("Screen scale", "Ekran ölçeği", "scale") { ScreenScaleTool() },
     Tool("Finder", "Bulucu", "search") { FinderTool() },
     Tool("Screen rotation", "Ekran yönü", "rotate") { RotationTool() },

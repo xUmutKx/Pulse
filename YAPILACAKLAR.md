@@ -916,3 +916,5 @@ Screen recorder feature list (55 candidates)
 - Files: cut / copy / paste buttons of the selection bar 1.75x bigger; cutting out of an APK/zip no longer refused for the signature; 0.10.170. derlenmedi
 
 - Files: cut/copy/paste bar pinned at the top while items are picked; pull down to refresh; Poweramp waveform taller so it shows beyond the transport buttons; Material player cover corners 24dp; 0.10.171. derlenmedi
+
+- Calculator colour Fluent picture; Toolkit "DPI bypass and free VPNs" (encrypted DNS presets + free VPN list); Screen cover: brightness slider, open window with draggable edges (four bands), clock on one line; 0.10.172. derlenmedi
