@@ -928,3 +928,5 @@ Screen recorder feature list (55 candidates)
 - Lyrics notification: bold through Unicode bold letters, arrow back (text style); lyrics sheet: second lookup like the notification, no auto close when opened past the last line; calculator round keys stay round; Files selection bar buttons all the same size; 0.10.176. derlenmedi
 
 - Player: swipe up opens the lyrics (it used to slide the player away), lyrics of this and the next two songs looked up in the background, seek bar glides between ticks; Toolkit tiles all the same height; 0.10.178. derlenmedi
+
+- Toolkit "DNS and TTL": VPN app list removed, TTL setter (root); screen cover brightness slider reaches the panel maximum (unset = system); 0.10.179. derlenmedi
