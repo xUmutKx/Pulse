@@ -33,7 +33,7 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.foundation.background
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -230,13 +230,16 @@ class OfficeViewActivity : ComponentActivity() {
         val d = doc; val e = err
         BackHandler(true) { requestClose() }
         // the window is see-through (Theme.Pulse.Office) so the 365 / 2017 splash floats over wherever the file was opened from: everything after it paints its own canvas
-        if (!splashDone || (d == null && e == null)) OfSplash(t, name)
-        else Box(Modifier.fillMaxSize().background(t.pal.canvas)) {
-            when {
-                e != null -> OfChromeBasic(t, name, emptyList(), "", { finish() }) { OfErrorCard(t, e) }
-                d != null -> CompositionLocalProvider(LocalOfFile provides remember(d, k) { fileOps(d, k) }) { when (k) {
-                    OfKind.WORD -> OfWordScreen(d, t); OfKind.EXCEL -> OfExcelScreen(d, t); OfKind.PPT -> OfPptScreen(d, t); OfKind.PDF -> OfPdfScreen(d, t)
-                } }
+        // the Microsoft 365 window draws its icons as Fluent glyphs, the other Office looks keep their own
+        CompositionLocalProvider(LocalFluentIcons provides (t.base == "365")) {
+            if (!splashDone || (d == null && e == null)) OfSplash(t, name)
+            else Box(Modifier.fillMaxSize().background(t.pal.canvas)) {
+                when {
+                    e != null -> OfChromeBasic(t, name, emptyList(), "", { finish() }) { OfErrorCard(t, e) }
+                    d != null -> CompositionLocalProvider(LocalOfFile provides remember(d, k) { fileOps(d, k) }) { when (k) {
+                        OfKind.WORD -> OfWordScreen(d, t); OfKind.EXCEL -> OfExcelScreen(d, t); OfKind.PPT -> OfPptScreen(d, t); OfKind.PDF -> OfPdfScreen(d, t)
+                    } }
+                }
             }
         }
         // system status / navigation bars wear the chrome colours of the current look (Window APIs; edge-to-edge devices also get the drawn strips)

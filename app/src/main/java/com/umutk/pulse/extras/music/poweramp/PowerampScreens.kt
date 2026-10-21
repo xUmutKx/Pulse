@@ -60,7 +60,7 @@ import androidx.compose.material.icons.rounded.StarBorder
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.material.icons.rounded.Timer
 import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text

@@ -17,7 +17,7 @@ import com.umutk.pulse.WinAlert
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
 import com.umutk.pulse.PLoader
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme

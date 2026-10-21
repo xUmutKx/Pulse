@@ -23,7 +23,7 @@ import com.umutk.pulse.WinAlert
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.graphics.Color
 import com.umutk.pulse.PLoader
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text

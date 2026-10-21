@@ -5,7 +5,7 @@ import androidx.compose.foundation.Image
 import com.umutk.pulse.features.ThemeIcons
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.size

@@ -58,7 +58,7 @@ import androidx.compose.material.icons.rounded.GraphicEq
 import com.umutk.pulse.extras.playlists.OnlinePlaylistsHub
 import com.umutk.pulse.extras.whitenoise.WhiteNoiseHub
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
+import com.umutk.pulse.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable

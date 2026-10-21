@@ -32,6 +32,22 @@ class FilesActivity : MainActivity() {
         if (android.os.Build.VERSION.SDK_INT >= 31) window.setBackgroundBlurRadius(if (on && getSystemService(android.view.WindowManager::class.java).isCrossWindowBlurEnabled) 40 else 0)
     }
 
+    /** A zip (or another archive) opened from outside: a file path is used as it is, a content Uri is copied to the cache first. */
+    private fun archiveFrom(i: android.content.Intent?) {
+        val u = i?.data ?: return
+        if (i.action != android.content.Intent.ACTION_VIEW) return
+        val name = if (u.scheme == "file") u.lastPathSegment.orEmpty() else runCatching {
+            contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null }
+        }.getOrNull() ?: u.lastPathSegment.orEmpty().substringAfterLast('/')
+        Thread {
+            val f = if (u.scheme == "file") u.path?.let { java.io.File(it) } else runCatching {
+                val d = java.io.File(cacheDir, "opened").apply { mkdirs() }
+                java.io.File(d, name.ifEmpty { "archive.zip" }).also { out -> contentResolver.openInputStream(u)?.use { ins -> out.outputStream().use { ins.copyTo(it) } } }
+            }.getOrNull()
+            if (f != null && f.isFile) runOnUiThread { com.umutk.pulse.features.FilesLaunch.archive = f }
+        }.start()
+    }
+
     // opaque theme (manifest) by default: a translucent launch window can open "behind" on some launchers; only the glass looks switch to the see-through one
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         FilesLook.load(this)
@@ -41,6 +57,7 @@ class FilesActivity : MainActivity() {
 
     // the Files look (default Material) is put in place before the first composition, so the app look never shows first
     override fun beforeContent() {
+        archiveFrom(intent)
         applyLook()
         glass = FilesLook.theme == "win11"; FilesGlass.on = glass
         @Suppress("DEPRECATION") overridePendingTransition(0, 0)
@@ -51,7 +68,7 @@ class FilesActivity : MainActivity() {
     // every start path re-applies the Files look before the first frame (Pulse's onCreate / viewers' Cfg.load reset the global Look)
     private fun refresh() { applyLook(); setGlass(FilesLook.theme == "win11"); paint() }
     override fun onStart() { refresh(); super.onStart() }
-    override fun onNewIntent(intent: android.content.Intent) { refresh(); super.onNewIntent(intent) }
+    override fun onNewIntent(intent: android.content.Intent) { refresh(); archiveFrom(intent); super.onNewIntent(intent) }
     override fun onResume() { refresh(); super.onResume() }
 
     // the look is process-wide: give Pulse its own back as soon as Files is not on screen
