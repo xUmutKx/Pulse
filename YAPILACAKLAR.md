@@ -872,3 +872,5 @@ Screen recorder feature list (55 candidates)
 - Poweramp seek drag works around the bars (+48 dp touch area); rated songs keep their filled stars on the cover pill. derlenmedi
 
 - Release builds are signed with the fixed ci/pulse.keystore (CI used a new random debug key per run, so APKs never installed over the old app). Bump 0.10.149. derlenmedi
+
+- Office 365 chrome solid grey (translucent layers over a black window hid dark text), Apps menu lists the standalone apps again, coloured Fluent icons in Settings > Apps, 0.10.150. derlenmedi
