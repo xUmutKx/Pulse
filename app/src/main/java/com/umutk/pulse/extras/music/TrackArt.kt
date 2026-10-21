@@ -87,12 +87,23 @@ internal fun embeddedArt(ctx: Context, key: String): ImageBitmap? {
     }?.asImageBitmap()
 }
 
-/** Cover of [t] as composable state; null while loading or when the track has none. */
+/** Cover of [track] without the online lookup: the cache, a cover the user picked, or the embedded picture. Quick, so a new track shows its cover at once. */
+internal fun trackArtLocal(ctx: Context, track: Track): ImageBitmap? {
+    val key = track.path
+    ArtCache.map.get(key)?.let { return it }
+    val bmp = PowerampCovers.saved(ctx, key) ?: embeddedArt(ctx, key)
+    if (bmp != null) ArtCache.map.put(key, bmp)
+    return bmp
+}
+
+/** Cover of [t] as composable state; null while loading or when the track has none. The local cover comes first, the online search only after it found nothing. */
 @Composable
 fun rememberTrackArt(t: Track?): ImageBitmap? {
     val ctx = LocalContext.current
     return produceState<ImageBitmap?>(null, t?.path) {
-        value = if (t == null) null else withContext(Dispatchers.IO) { runCatching { trackArt(ctx, t) }.getOrNull() }
+        if (t == null) { value = null; return@produceState }
+        value = withContext(Dispatchers.IO) { runCatching { trackArtLocal(ctx, t) }.getOrNull() }
+        if (value == null) value = withContext(Dispatchers.IO) { runCatching { trackArt(ctx, t) }.getOrNull() }
     }.value
 }
 
