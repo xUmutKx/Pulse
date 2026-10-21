@@ -26,7 +26,7 @@ jobs:
       - name: Compile errors as annotations
         if: failure()
         run: |
-          grep -E '^e: |What went wrong' -A1 build.log | grep -v '^--$' | head -30 | while IFS= read -r line; do echo "::error::${line}"; done
+          grep -E '^e: |What went wrong|error:|AAPT|FAILED|Execution failed|Manifest merger' -A3 build.log | grep -v '^--$' | head -45 | while IFS= read -r line; do echo "::error::${line}"; done
       - uses: actions/upload-artifact@v4
         with:
           name: pulse-release-apk
