@@ -29,6 +29,7 @@ import com.umutk.pulse.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -502,7 +503,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
                     Icon(Icons.Outlined.Close, null, Modifier.clickable { text = xRaw(sh.cells[xKey(st.r, st.c)]) }.padding(6.dp).size(20.dp), pal.ink)
                 }
             }
-            Box(Modifier.weight(1f).fillMaxWidth()) {
+            Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
                 XGrid(st, book, sh, ev, t, onPic = { sh.picsDirty = true; doc.dirty = true; st.ver++ })
                 st.menu?.let { o ->
                     val mbg = if (t.dark) Color(0xFF2B2B2B) else Color.White; val mi = if (t.dark) Color.White else Color.Black
@@ -665,7 +666,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
     }
     fun cellOf(o: Offset) = ((o.y - hdrH + st.gy) / rowH).toInt().coerceIn(0, nRows - 1) to colAt(o.x - hdrW + st.gx).coerceIn(0, nCols - 1)
 
-    Canvas(Modifier.fillMaxSize().onSizeChanged { vp = it }
+    Canvas(Modifier.fillMaxSize().clipToBounds().onSizeChanged { vp = it }
         .ofPinch { f -> val n = (st.zoom * f).coerceIn(.4f, 3f); val k = n / st.zoom; st.zoom = n; st.gx = (st.gx * k).coerceIn(0f, lim[0] * k); st.gy = (st.gy * k).coerceIn(0f, lim[1] * k) }
         .then(if (ro) Modifier else Modifier.pointerInput(colX, rowH) {
             fun tap(o: Offset) {

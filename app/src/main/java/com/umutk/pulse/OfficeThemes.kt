@@ -347,7 +347,7 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
             if (t.base == "365") Box(Modifier.padding(horizontal = 8.dp, vertical = 4.dp).fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(pal.ribbonBg)) { ribbon() }
             else Box(Modifier.fillMaxWidth().background(if (is17) below else pal.ribbonBg).then(if (t.base == "2013" || is17) Modifier.border(1.dp, pal.line) else Modifier)) { ribbon() }
         }
-        Box(Modifier.weight(1f).fillMaxWidth().background(pal.canvas), content = content)
+        Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
         // status bar
         Row(Modifier.fillMaxWidth().height(24.dp).background(if (is17) below else pal.statusBg).then(if (t.base == "95") Modifier.bevel(true) else if (t.base == "2003") Modifier.border(1.dp, pal.line) else Modifier).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, color = if (is17) (if (t.dark) Color(0xFFC8C6C4) else Color(0xFF605E5C)) else pal.statusInk, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -430,7 +430,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             }
         }
         extra?.invoke()
-        Box(Modifier.weight(1f).fillMaxWidth().background(pal.canvas), content = content)
+        Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
         Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, color = ink.copy(alpha = .75f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }

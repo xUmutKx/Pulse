@@ -55,6 +55,14 @@ class ScreenRecActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Cfg.load(this); Opt.load(this)
+        if (savedInstanceState == null && intent.getBooleanExtra("shot", false)) {
+            // wait for the Quick Settings shade to slide away, take the picture, then close
+            android.os.Handler(mainLooper).postDelayed({
+                if (!ScreenShot.possible()) { android.widget.Toast.makeText(this, tr("Needs root or Shizuku", "Root veya Shizuku gerekir"), android.widget.Toast.LENGTH_LONG).show(); finish() }
+                else ScreenShot.take(this) { p -> android.widget.Toast.makeText(this, if (p != null) tr("Screenshot saved", "Ekran görüntüsü kaydedildi") else tr("Could not take the screenshot", "Ekran görüntüsü alınamadı"), android.widget.Toast.LENGTH_SHORT).show(); finish() }
+            }, 700)
+            return
+        }
         if (savedInstanceState == null && intent.getBooleanExtra("auto", false) && !ScreenRecService.running) begin()
         setContent { LookHost(transparent = true) { Panel() } }
     }

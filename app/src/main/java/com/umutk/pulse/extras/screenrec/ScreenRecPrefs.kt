@@ -32,6 +32,11 @@ object ScreenRecPrefs {
     fun countdown(ctx: Context) = prefs(ctx).getBoolean("countdown", true)
     fun setCountdown(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean("countdown", on).apply()
 
+    fun touches(ctx: Context) = prefs(ctx).getBoolean("touches", false)
+    fun setTouches(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean("touches", on).apply()
+    fun floating(ctx: Context) = prefs(ctx).getBoolean("floating", true)
+    fun setFloating(ctx: Context, on: Boolean) = prefs(ctx).edit().putBoolean("floating", on).apply()
+
     fun config(ctx: Context) = RecConfig(mic(ctx), quality(ctx), fps(ctx), limit(ctx))
 }
 

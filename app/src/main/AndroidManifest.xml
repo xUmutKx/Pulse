@@ -604,7 +604,7 @@
         </service>
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecService" android:exported="false" android:foregroundServiceType="mediaProjection" />
         <activity android:name="com.umutk.pulse.extras.screenrec.ScreenRecActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:launchMode="singleTop" />
-        <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecTile" android:exported="true" android:label="Screen recorder" android:icon="@drawable/ic_qs_pulse"
+        <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecTile" android:exported="true" android:label="Screenshot / record" android:icon="@drawable/ic_qs_pulse"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
