@@ -92,8 +92,11 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
         MenuTop("Tools", listOf(
             // the optional tools, each placed in the menu, the Extra apps card or only Settings (Settings > Tool places)
             *ToolPlace.menuEntries(ctx, { go(it) }, { openTool(it) }).toTypedArray(),
-            // the store is the last entry of the main menu; the music player, video, white noise and the standalone apps are listed inside it
-            MenuEntry(EXTRA_APPS, icon = Icons.Outlined.Apps, key = "apps") { openTool("extrastore") },
+        )),
+        // the tools placed under Extra apps (Settings > Extra apps: download manager, Office, App lock, ...); the store ends the group, the music player, video, white noise and the standalone apps are listed inside it
+        MenuTop(EXTRA_APPS, listOf(
+            *ToolPlace.extraEntries(ctx, { go(it) }, { openTool(it) }).toTypedArray(),
+            MenuEntry(tr("Store", "Mağaza"), icon = Icons.Outlined.Apps, key = "apps") { openTool("extrastore") },
         )),
     )
     return MenuHost(tops) {
@@ -135,6 +138,9 @@ object ToolPlace {
         all.filter { where(c, it) == "menu" }.map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
     /** The tools placed in the Extra apps card. */
     fun extraTools(c: Context): List<Tool> = all.filter { where(c, it) == "extra" }
+    /** The entries of the overflow menu's Extra apps group: the same tools as the Extra apps card. */
+    fun extraEntries(c: Context, go: (String) -> Unit, open: (String) -> Unit): List<MenuEntry> =
+        extraTools(c).map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
     /** The tools that already have a left-menu page (their own switch in Settings > Pages): they are not added to the side twice. */
     fun hasPage(t: Tool) = t.target in setOf("office", "downloads", "health")
     fun byId(id: String): Tool? = all.firstOrNull { it.id == id }
@@ -160,8 +166,9 @@ private fun Item(e: MenuEntry, close: () -> Unit) {
 /** Win11 look: one Fluent glyph per menu entry (FluentPaths), so no icon repeats in the overflow menu. */
 private val WIN11_MENU_KEY = mapOf(
     "Run new task…" to "open", "Exit" to "power", "Refresh now" to "refresh", "Widgets" to "gridView", "System font" to "edit",
-    "Toolkit" to "wrench", "App lock" to "applock", "APK installer" to "download", "Settings" to "settings", "DNS" to "globe",
-    "Authenticator" to "key", "Network usage" to "compare",
+    "Toolkit" to "tool_toolkit", "Office" to "tool_office", "Download manager" to "tool_download", "App lock" to "tool_applock", "Health" to "tool_health",
+    "APK installer" to "tool_installer", "Device troubleshoot" to "tool_troubleshoot", "Authenticator" to "tool_authenticator", "Network usage" to "tool_netusage",
+    "Screen cover" to "tool_cover", "Store" to "extraStore", "Settings" to "settings", "DNS" to "globe",
 )
 
 /** The menu bar of the classic looks: each word opens its menu. */
