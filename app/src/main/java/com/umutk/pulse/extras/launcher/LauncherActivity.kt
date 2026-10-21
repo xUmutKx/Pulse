@@ -51,7 +51,7 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.umutk.pulse.AppLookGuard
-import com.umutk.pulse.ArtCraftActivity
+import com.umutk.pulse.ExtraToolActivity
 import com.umutk.pulse.FilesActivity
 import com.umutk.pulse.MainActivity
 import com.umutk.pulse.tr
@@ -145,13 +145,26 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
     }
 }
 
+/**
+ * Starts an app, in a window when asked: a window in the middle of the screen, four fifths wide and seven tenths high.
+ * That needs the system's freeform windows (developer option or desktop mode); without them the bounds are ignored and the app opens full screen.
+ */
+private fun startApp(ctx: Context, intent: Intent, windowed: Boolean) {
+    if (!windowed) { ctx.startActivity(intent); return }
+    val dm = ctx.resources.displayMetrics
+    val w = (dm.widthPixels * .8f).toInt(); val h = (dm.heightPixels * .7f).toInt()
+    val left = (dm.widthPixels - w) / 2; val top = (dm.heightPixels - h) / 3
+    val options = android.app.ActivityOptions.makeBasic().setLaunchBounds(android.graphics.Rect(left, top, left + w, top + h))
+    runCatching { ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options.toBundle()) }.onFailure { ctx.startActivity(intent) }
+}
+
 /** What a desktop shortcut opens: Pulse's own pages and apps. */
 private fun openDesktopItem(ctx: Context, id: String) {
     val i = when (id) {
         "pulse:pc" -> Intent(ctx, MainActivity::class.java).putExtra("start", "device")
         "pulse:recycle" -> Intent(ctx, MainActivity::class.java).putExtra("start", "recycle")
         "pulse:files" -> Intent(ctx, FilesActivity::class.java)
-        "pulse:paint" -> Intent(ctx, ArtCraftActivity::class.java)
+        "pulse:paint" -> Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "paint")
         "pulse:taskmgr" -> Intent(ctx, MainActivity::class.java).putExtra("start", "processes")
         else -> Intent(ctx, MainActivity::class.java).putExtra("start", "terminal")
     }
@@ -204,7 +217,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     var actionFor by remember { mutableStateOf<LaunchApp?>(null) }
     val open: (LaunchApp) -> Unit = { app ->
         if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg)
-        else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { ctx.startActivity(it); LauncherPrefs.touch(ctx, app.pkg) }
+        else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
     }
     val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), iconDp, dock, open) { if (!it.pkg.startsWith("pulse:")) actionFor = it }
 

@@ -58,8 +58,8 @@ import org.json.JSONObject
 
 /** Album art the user picked online. Saved per track in the files dir and read before the embedded cover. */
 internal object PowerampCovers {
-    /** One search result: a 100 px thumbnail and the 600 px artwork. */
-    class Hit(val thumb: String, val big: String)
+    /** One search result: a 100 px thumbnail and the 600 px artwork, with the artist and the album or song name it belongs to (to check a match). */
+    class Hit(val thumb: String, val big: String, val artist: String = "", val name: String = "")
 
     private fun fileFor(c: Context, path: String): File {
         val hash = MessageDigest.getInstance("SHA-1").digest(path.toByteArray()).joinToString("") { "%02x".format(it) }
@@ -75,6 +75,15 @@ internal object PowerampCovers {
         f.parentFile?.mkdirs()
         f.writeBytes(jpg)
         forgetArt(path)
+    }
+
+    /** Deletes every saved cover (the ones picked and the ones downloaded) and the "found nothing" marks; the embedded pictures stay. Returns how many files went. */
+    fun clearAll(c: Context): Int {
+        val dir = File(c.filesDir, "covers")
+        val n = dir.listFiles()?.size ?: 0
+        dir.deleteRecursively()
+        com.umutk.pulse.extras.music.forgetAllArt()
+        return n
     }
 
     /** Marker that an online lookup for [path] found nothing; [CoverFetch] retries after a week. */
@@ -108,8 +117,9 @@ internal object PowerampCovers {
         val url = "https://itunes.apple.com/search?term=${URLEncoder.encode(term, "UTF-8")}&entity=$entity&limit=10"
         val res = JSONObject(String(fetch(url))).getJSONArray("results")
         (0 until res.length()).mapNotNull { i ->
-            res.getJSONObject(i).optString("artworkUrl100").takeIf { it.isNotBlank() }
-                ?.let { Hit(it, it.replace("100x100bb", "600x600bb")) }
+            val o = res.getJSONObject(i)
+            o.optString("artworkUrl100").takeIf { it.isNotBlank() }
+                ?.let { Hit(it, it.replace("100x100bb", "600x600bb"), o.optString("artistName"), if (entity == "song") o.optString("trackName") else o.optString("collectionName")) }
         }
     }.getOrDefault(emptyList())
 }

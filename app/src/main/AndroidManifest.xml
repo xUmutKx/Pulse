@@ -1260,6 +1260,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".PaintLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/mat_palette" android:roundIcon="@drawable/mat_palette" android:label="Paint">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".WeatherLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/ic_whitenoise" android:roundIcon="@drawable/ic_whitenoise" android:label="Weather">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

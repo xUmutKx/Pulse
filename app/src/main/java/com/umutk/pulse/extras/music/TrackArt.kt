@@ -73,6 +73,12 @@ internal fun forgetArt(path: String) {
     synchronized(ArtCache.none) { ArtCache.none -= path }
 }
 
+/** Forgets every cached cover and every "no cover" mark (after the saved covers were cleared). */
+internal fun forgetAllArt() {
+    ArtCache.map.evictAll()
+    synchronized(ArtCache.none) { ArtCache.none.clear() }
+}
+
 internal fun embeddedArt(ctx: Context, key: String): ImageBitmap? {
     return try {
         val r = MediaMetadataRetriever()

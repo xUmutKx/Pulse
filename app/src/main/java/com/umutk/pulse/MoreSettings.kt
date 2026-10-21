@@ -547,7 +547,7 @@ internal fun disableExtraAppsOnFreshInstall(ctx: android.content.Context) {
     val pi = pm.getPackageInfo(ctx.packageName, 0)
     val prefs = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     if (pi.firstInstallTime != pi.lastUpdateTime || prefs.getBoolean("extraAppsOff", false)) return
-    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher", "NotifHistLauncher", "ExtraStoreLauncher").forEach {
+    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "PaintLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher", "NotifHistLauncher", "ExtraStoreLauncher").forEach {
         // a missing alias throws on startup, so one bad name must not stop the rest (or the app)
         runCatching { pm.setComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + it), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP) }
     }
@@ -565,6 +565,7 @@ private fun ExtraAppsCard() {
         Triple("PhotosLauncher", R.drawable.ic_photos, tr("Photos", "Fotoğraflar")),
         Triple("CalendarLauncher", R.drawable.ic_calendar, tr("Calendar", "Takvim")),
         Triple("ContactsLauncher", R.drawable.ic_contacts, tr("Contacts", "Kişiler")),
+        Triple("PaintLauncher", R.drawable.mat_palette, "Paint"),
         Triple("ArtCraftLauncher", R.drawable.mat_palette, "ArtCraft"),
         Triple("MusicLauncher", R.drawable.ic_music, tr("Music player", "Müzik çalar")),
         Triple("VideoLauncher", R.drawable.ic_video, tr("Video", "Video")),
@@ -578,7 +579,7 @@ private fun ExtraAppsCard() {
     )
     // Windows 11 glyph per app (FluentPaths keys; Fluent UI System Icons, MIT License, Microsoft)
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
-        "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
+        "PaintLauncher" to "extraPaint", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
         "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "ExtraStoreLauncher" to "extraStore")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
