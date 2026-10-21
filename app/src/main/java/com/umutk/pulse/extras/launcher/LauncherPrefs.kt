@@ -27,6 +27,8 @@ object LauncherPrefs {
     var sort by mutableStateOf("name")
     var hidden by mutableStateOf<Set<String>>(emptySet())
     var clock by mutableStateOf(false)
+    /** Off (the default): the home screen shows no app grid. Windows looks show the desktop shortcuts, the other looks the clock, widgets and dock; the apps are in the apps list. */
+    var homeApps by mutableStateOf(false)
     var lockPortrait by mutableStateOf(false)
     var fullScreen by mutableStateOf(false)
     /** Package -> time of the last launch; only filled while [sort] is "opened". */
@@ -64,6 +66,7 @@ object LauncherPrefs {
         sort = p.getProperty("sort") ?: "name"
         hidden = list(p.getProperty("hidden")).toSet()
         clock = p.getProperty("clock") == "true"
+        homeApps = p.getProperty("homeApps") == "true"
         lockPortrait = p.getProperty("lockPortrait") == "true"
         fullScreen = p.getProperty("fullScreen") == "true"
         usage = p.stringPropertyNames().filter { it.startsWith(USE) }
@@ -79,7 +82,7 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
-        p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString())
+        p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("homeApps", homeApps.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
         walls.forEach { (lookId, i) -> p.setProperty(WALL + lookId, i.toString()) }
@@ -98,7 +101,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); clock = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); clock = false; homeApps = false; lockPortrait = false; fullScreen = false
         usage = emptyMap(); walls = emptyMap()
         save(c)
     }

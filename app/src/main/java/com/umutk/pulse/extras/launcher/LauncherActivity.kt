@@ -50,6 +50,10 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.umutk.pulse.AppLookGuard
+import com.umutk.pulse.ArtCraftActivity
+import com.umutk.pulse.FilesActivity
+import com.umutk.pulse.MainActivity
+import com.umutk.pulse.tr
 import com.umutk.pulse.Cfg
 import com.umutk.pulse.LookHost
 import com.umutk.pulse.Opt
@@ -109,6 +113,30 @@ class LauncherActivity : ComponentActivity() {
 private const val ICON_PX = 128
 private const val PAGE_ROWS = 4
 
+/** The looks that are a Windows desktop: their home screen holds the desktop shortcuts. */
+private val WINDOWS_LOOKS = setOf("win11", "win10", "win10black", "win7", "win95", "xp")
+
+/** The desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint and the command prompt. Drawn through the look's own icon set. */
+private fun desktopItems(): List<LaunchApp> = listOf(
+    LaunchApp(tr("This PC", "Bu bilgisayar"), "pulse:pc", null, iconKey = "phone"),
+    LaunchApp(tr("Recycle Bin", "Geri Dönüşüm Kutusu"), "pulse:recycle", null, iconKey = "recycle"),
+    LaunchApp(tr("File Explorer", "Dosya Gezgini"), "pulse:files", null, iconKey = "folder"),
+    LaunchApp(tr("Paint", "Paint"), "pulse:paint", null, iconKey = "palette"),
+    LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
+)
+
+/** What a desktop shortcut opens: Pulse's own pages and apps. */
+private fun openDesktopItem(ctx: Context, id: String) {
+    val i = when (id) {
+        "pulse:pc" -> Intent(ctx, MainActivity::class.java).putExtra("start", "device")
+        "pulse:recycle" -> Intent(ctx, MainActivity::class.java).putExtra("start", "recycle")
+        "pulse:files" -> Intent(ctx, FilesActivity::class.java)
+        "pulse:paint" -> Intent(ctx, ArtCraftActivity::class.java)
+        else -> Intent(ctx, MainActivity::class.java).putExtra("start", "terminal")
+    }
+    runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
 /** Every launchable app except Pulse itself, one entry per package, sorted by label. */
 internal fun loadApps(ctx: Context): List<LaunchApp> {
     val pm = ctx.packageManager
@@ -154,12 +182,17 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     }
     var actionFor by remember { mutableStateOf<LaunchApp?>(null) }
     val open: (LaunchApp) -> Unit = { app ->
-        ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { ctx.startActivity(it); LauncherPrefs.touch(ctx, app.pkg) }
+        if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg)
+        else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { ctx.startActivity(it); LauncherPrefs.touch(ctx, app.pkg) }
     }
-    val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), iconDp, dock, open) { actionFor = it }
+    val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), iconDp, dock, open) { if (!it.pkg.startsWith("pulse:")) actionFor = it }
 
+    // the home screen is a desktop, not an app grid: the Windows looks show the desktop shortcuts, the others show no icons (the apps list holds every app); a setting brings the app grid back
+    val desktop = look.id in WINDOWS_LOOKS
+    val shortcuts = remember(desktop) { if (desktop) desktopItems() else emptyList() }
+    val home = if (LauncherPrefs.homeApps) visible else shortcuts
     val grid = rememberLazyGridState()
-    val pages = visible.chunked(columns * PAGE_ROWS)
+    val pages = home.chunked(columns * PAGE_ROWS)
     val pager = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
     LaunchedEffect(LauncherSession.homeTick) {
         if (LauncherSession.homeTick > 0) { grid.scrollToItem(0); pager.scrollToPage(0) }
@@ -176,7 +209,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
                 if (vertical) {
                     LazyVerticalGrid(GridCells.Fixed(columns), Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), state = grid) {
-                        items(visible, key = { it.pkg }) { app ->
+                        items(home, key = { it.pkg }) { app ->
                             look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) })
                         }
                     }
