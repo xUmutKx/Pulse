@@ -71,7 +71,7 @@ fun WinampScreen(
     val prefs = remember { ctx.getSharedPreferences("winamp_look", android.content.Context.MODE_PRIVATE) }
     val turkish = tr("en", "tr") == "tr"
     var skins by remember { mutableStateOf(emptyList<com.umutk.pulse.extras.music.skin.InstalledSkin>()) }
-    var chosen by remember { mutableStateOf(prefs.getString("skin", "") ?: "") }
+    var chosen by remember { mutableStateOf(prefs.getString("skin", "")?.ifEmpty { "base-2.91.wsz" } ?: "base-2.91.wsz") }
     var skin by remember { mutableStateOf<WinampSkin>(DefaultWinampSkin) }
     LaunchedEffect(Unit) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
     LaunchedEffect(chosen, skins) {
@@ -186,7 +186,7 @@ fun WinampSkinSettings() {
     val prefs = remember { ctx.getSharedPreferences("winamp_look", android.content.Context.MODE_PRIVATE) }
     val turkish = tr("en", "tr") == "tr"
     var skins by remember { mutableStateOf(emptyList<InstalledSkin>()) }
-    var chosen by remember { mutableStateOf(prefs.getString("skin", "") ?: "") }
+    var chosen by remember { mutableStateOf(prefs.getString("skin", "")?.ifEmpty { "base-2.91.wsz" } ?: "base-2.91.wsz") }
     LaunchedEffect(Unit) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
     // the built-in Classic skin (grey-blue body, green LCD, bevelled buttons) is always the first tile
     SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }

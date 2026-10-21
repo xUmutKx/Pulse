@@ -36,7 +36,7 @@ open class MusicWidget : AppWidgetProvider() {
 
     override fun onEnabled(c: Context) = watch(c)
 
-    override fun onDeleted(c: Context, ids: IntArray) { prefs(c).edit().apply { ids.forEach { remove("theme_$it") } }.apply() }
+    override fun onDeleted(c: Context, ids: IntArray) { prefs(c).edit().apply { ids.forEach { remove("theme_$it") } }.apply(); ids.forEach { WidgetOptions.clear(c, it) } }
 
     override fun onReceive(c: Context, i: Intent) {
         val e = MusicPlayerEngine.ready(c)
@@ -138,6 +138,29 @@ open class MusicWidget : AppWidgetProvider() {
                     val bg = th?.bg ?: if (WidgetUi.dark(c)) 0xFF2B2930.toInt() else 0xFFF3EDF7.toInt()
                     setColorStateList(R.id.mw_root, "setBackgroundTintList", ColorStateList.valueOf((bg and 0x00FFFFFF) or ((alpha * 255 / 100) shl 24)))
                 }
+                // the looks picked in the widget's settings: shape, text size, cover (shown, size, side), what else is shown, accent colour
+                val o = WidgetOptions.of(c, id)
+                val slim = layout == R.layout.widget_music_slim
+                when (o.shape) {
+                    "round" -> setInt(R.id.mw_root, "setBackgroundResource", R.drawable.widget_music_bg)
+                    "sharp" -> setInt(R.id.mw_root, "setBackgroundResource", R.drawable.widget_music_bg_sharp)
+                    "pill" -> setInt(R.id.mw_root, "setBackgroundResource", R.drawable.widget_music_bg_pill)
+                }
+                if (o.accent != 0) { setColorStateList(R.id.mw_play, "setBackgroundTintList", ColorStateList.valueOf(o.accent)); setProgressBar(R.id.mw_prog, 1000, prog, false) }
+                val base = when (layout) { R.layout.widget_music_big -> 20f; R.layout.widget_music_tall, R.layout.widget_music_square -> 16f; else -> 14f }
+                setTextViewTextSize(R.id.mw_title, android.util.TypedValue.COMPLEX_UNIT_SP, base * o.text / 100f)
+                setTextViewTextSize(R.id.mw_artist, android.util.TypedValue.COMPLEX_UNIT_SP, (base - 2f) * o.text / 100f)
+                if (!slim) {
+                    if (!o.art) setViewVisibility(R.id.mw_art, View.GONE)
+                    else if (layout == R.layout.widget_music_row || layout == R.layout.widget_music_tall) {
+                        val side = (if (layout == R.layout.widget_music_row) 56f else 72f) * o.artSize / 100f
+                        setViewLayoutWidth(R.id.mw_art, side, android.util.TypedValue.COMPLEX_UNIT_DIP); setViewLayoutHeight(R.id.mw_art, side, android.util.TypedValue.COMPLEX_UNIT_DIP)
+                    }
+                }
+                // the cover on the right: the row is laid out right to left
+                if (o.right && layout == R.layout.widget_music_row) setInt(R.id.mw_root, "setLayoutDirection", View.LAYOUT_DIRECTION_RTL)
+                if (!o.artist) setViewVisibility(R.id.mw_artist, View.GONE)
+                if (!o.progress) setViewVisibility(R.id.mw_prog, View.GONE)
                 setProgressBar(R.id.mw_prog, 1000, prog, false)
                 if (layout != R.layout.widget_music_slim && art != null) { setImageViewBitmap(R.id.mw_art, art); setViewPadding(R.id.mw_art, 0, 0, 0, 0) }
                 // Material transport glyphs by default; the Windows 11 widget theme takes the Fluent ones
@@ -148,7 +171,8 @@ open class MusicWidget : AppWidgetProvider() {
                 setInt(R.id.mw_play, "setColorFilter", onAccent)
                 setInt(R.id.mw_prev, "setColorFilter", text); setInt(R.id.mw_next, "setColorFilter", text)
                 val vis = if (compact) View.GONE else View.VISIBLE
-                setViewVisibility(R.id.mw_prev, vis); setViewVisibility(R.id.mw_next, vis)
+                val showSkip = WidgetOptions.of(c, id).skip
+                setViewVisibility(R.id.mw_prev, if (showSkip) vis else View.GONE); setViewVisibility(R.id.mw_next, if (showSkip) vis else View.GONE)
                 if (compact) { setViewVisibility(R.id.mw_prog, View.GONE); setViewVisibility(R.id.mw_artist, View.GONE) }
                 setOnClickPendingIntent(R.id.mw_prev, WidgetUi.broadcast(c, MusicWidget::class.java, A_PREV))
                 setOnClickPendingIntent(R.id.mw_play, WidgetUi.broadcast(c, MusicWidget::class.java, A_TOGGLE))
@@ -184,3 +208,15 @@ class MusicWidgetBig : MusicWidget()
 
 /** 4x1 strip without a cover: text, progress and transport. */
 class MusicWidgetSlim : MusicWidget()
+
+/** The per-widget looks of the music widgets (SharedPreferences "music_widget", keys "<name>_<appWidgetId>"). */
+class WidgetOptions(val shape: String, val text: Int, val art: Boolean, val artSize: Int, val right: Boolean, val artist: Boolean, val progress: Boolean, val skip: Boolean, val accent: Int) {
+    companion object {
+        fun of(c: Context, id: Int): WidgetOptions {
+            val p = MusicWidget.prefs(c)
+            return WidgetOptions(p.getString("shape_$id", "") ?: "", p.getInt("text_$id", 100), p.getBoolean("art_$id", true), p.getInt("artsize_$id", 100), p.getBoolean("right_$id", false),
+                p.getBoolean("artist_$id", true), p.getBoolean("prog_$id", true), p.getBoolean("skip_$id", true), p.getInt("accent_$id", 0))
+        }
+        fun clear(c: Context, id: Int) { MusicWidget.prefs(c).edit().apply { listOf("shape", "text", "art", "artsize", "right", "artist", "prog", "skip", "accent", "alpha").forEach { remove("${it}_$id") } }.apply() }
+    }
+}

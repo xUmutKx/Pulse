@@ -1,5 +1,13 @@
 [
   {
+    "id": "base-2.91",
+    "name": "Winamp base (2.91)",
+    "author": "Nullsoft",
+    "source": "https://github.com/captbaritone/webamp/tree/master/packages/webamp/assets/skins",
+    "licence": "the original Winamp 2.91 base skin, as shipped with Webamp (MIT)",
+    "bytes": 102133
+  },
+  {
     "id": "174760-pioneer",
     "name": "174760-Pioneer",
     "author": "",

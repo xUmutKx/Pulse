@@ -134,7 +134,7 @@ private val tools = listOf(
     Tool("Sound mode", "Ses modu", "vibrate") { SoundModeTool() },
     Tool("Stopwatch", "Kronometre", "stopwatch") { StopwatchTool() },
     Tool("Timer", "Zamanlayıcı", "timer") { TimerTool() },
-    Tool("Calculator", "Hesap makinesi", "calc") { CalculatorTool() },
+    Tool("Network type", "Ağ türü", "globe") { NetworkModeTool() },
     Tool("Screen scale", "Ekran ölçeği", "scale") { ScreenScaleTool() },
     Tool("Finder", "Bulucu", "search") { FinderTool() },
     Tool("Screen rotation", "Ekran yönü", "rotate") { RotationTool() },
