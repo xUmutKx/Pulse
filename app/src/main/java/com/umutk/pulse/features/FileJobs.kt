@@ -63,7 +63,7 @@ object FileJobs {
         nm.createNotificationChannel(NotificationChannel(FJ_CH_END, tr("Finished file operations", "Biten dosya işlemleri"), NotificationManager.IMPORTANCE_DEFAULT))
         val open = PendingIntent.getActivity(c, job.id, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         nm.notify(FJ_ID_END + job.id, NotificationCompat.Builder(c, FJ_CH_END).setSmallIcon(android.R.drawable.stat_sys_download_done)
-            .setContentTitle(job.title).setContentText(text).setAutoCancel(true).setContentIntent(open).build())
+            .setContentTitle(job.title).setContentText(text).setAutoCancel(true).setSilent(true).setTimeoutAfter(4000L).setContentIntent(open).build())
     }
 
     /** The bytes of a file or of everything under a folder. */
