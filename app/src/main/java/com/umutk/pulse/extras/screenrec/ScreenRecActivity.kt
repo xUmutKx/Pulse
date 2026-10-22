@@ -108,7 +108,16 @@ class ScreenRecActivity : ComponentActivity() {
                     Text(if (mic) tr("On", "Açık") else tr("Off", "Kapalı"), color = T.sub, fontSize = 14.sp)
                 }
                 Spacer(Modifier.height(16.dp))
-                if (!recording) PButton(text = tr("Start", "Başlat"), modifier = Modifier.fillMaxWidth()) { begin() }
+                // the popup of the tile's long press: a picture or a video from the same place
+                if (!recording) PButton(text = tr("Screenshot", "Ekran görüntüsü"), modifier = Modifier.fillMaxWidth()) {
+                    window.decorView.visibility = android.view.View.INVISIBLE
+                    android.os.Handler(mainLooper).postDelayed({
+                        if (!ScreenShot.possible()) { android.widget.Toast.makeText(this@ScreenRecActivity, tr("Turn on the \"Pulse · Screen cover layer\" accessibility service, or use root", "Erişilebilirlik'te \"Pulse · Screen cover layer\" açın ya da root kullanın"), android.widget.Toast.LENGTH_LONG).show(); finish() }
+                        else ScreenShot.take(this@ScreenRecActivity) { p -> android.widget.Toast.makeText(this@ScreenRecActivity, if (p != null && p.startsWith("blank:")) tr("Saved, but the app blocks it (black)", "Kaydedildi ama uygulama engelliyor (siyah)") else if (p != null) tr("Screenshot saved", "Ekran görüntüsü kaydedildi") else tr("Could not take the screenshot", "Ekran görüntüsü alınamadı"), android.widget.Toast.LENGTH_SHORT).show(); finish() }
+                    }, 350)
+                }
+                if (!recording) Spacer(Modifier.height(8.dp))
+                if (!recording) PButton(text = tr("Start recording", "Kaydı başlat"), modifier = Modifier.fillMaxWidth()) { begin() }
                 else Row(verticalAlignment = Alignment.CenterVertically) {
                     PButton(text = if (recState == RecState.PAUSED) tr("Resume", "Devam") else tr("Pause", "Duraklat"), modifier = Modifier.weight(1f)) {
                         if (recState == RecState.PAUSED) ScreenRecService.resume(this@ScreenRecActivity) else ScreenRecService.pause(this@ScreenRecActivity)

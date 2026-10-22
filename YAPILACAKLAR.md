@@ -1044,3 +1044,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.235 derlenmedi: 0.10.234 derleme düzeltmesi (importlar).
 
 - 0.10.236 derlenmedi: ekran kapağı için Gelişmiş mod (StandBy tarzı): sayfalar (dijital/analog saat, tarihli saat, takvim, pil, çalan şarkı, ikili sayfalar), yazı tipi, renk, 24 saat, saniye, ekran koruma kayması, gece kırmızı modu, elle tetik (hızlı ayar kutucuğu StandBy) ve şarjda otomatik tetik; Temel/Gelişmiş geçiş kapak ayarında.
+
+- 0.10.237 derlenmedi: sistemde açma/paylaşma listesinde "Pulse · Save to…" (bir dosyayı ad+klasör seçip kopya kaydet); ekran görüntüsü/kayıt kutucuğu kamera+köşe simgesi, basılı tutma küçük popup (görüntü + kayıt), ekran görüntüleri DCIM/Screenshots, root yoksa erişilebilirlik ile ekran görüntüsü; ana Ayarlar yuvarlak renkli kategori listesi.
