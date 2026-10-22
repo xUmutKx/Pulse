@@ -292,6 +292,17 @@ fun NowPlayingScreen(
     androidx.compose.runtime.LaunchedEffect(pageY) { onPageOffset?.invoke(pageY) }
     BoxWithConstraints(modifier.fillMaxSize().graphicsLayer { translationY = pageY }) {
         val pageH = with(androidx.compose.ui.platform.LocalDensity.current) { maxHeight.toPx() }
+        // the setting "full screen lyrics": the lyrics take the whole page, cover / title / artist across the top
+        val fullLyrics = remember { com.umutk.pulse.extras.music.MusicSettings.lyricsFull(ctx) }
+        Box(Modifier.fillMaxSize().zIndex(20f)) {
+            com.umutk.pulse.extras.lyrics.PlayerLyrics(
+                visible = fullLyrics && lyricsOpen && track != null,
+                title = track?.displayName().orEmpty(), artist = track?.artist.orEmpty(), album = track?.album, durationMs = durationMs.toLong(),
+                localPath = track?.path?.takeIf { !it.contains("://") }, positionMs = positionMs.toLong(),
+                onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
+                modifier = Modifier.fillMaxSize(), full = true, art = art,
+            )
+        }
         Column(Modifier.fillMaxSize().padding(horizontal = 13.dp, vertical = 13.dp)) {
             // square cover, the biggest element; the lyrics sheet opens over it. An upward swipe opens lyrics; a downward
             // one does nothing. Vertical drags are consumed here so the page neither scrolls nor closes from the cover.
@@ -346,7 +357,7 @@ fun NowPlayingScreen(
                 // the lyrics lie over the cover square, above the star, the menu and the lyrics button
                 Box(Modifier.fillMaxSize().zIndex(10f)) {
                     com.umutk.pulse.extras.lyrics.PlayerLyrics(
-                        visible = lyricsOpen && track != null,
+                        visible = lyricsOpen && track != null && !fullLyrics,
                         title = track?.displayName().orEmpty(), artist = track?.artist.orEmpty(), album = track?.album, durationMs = durationMs.toLong(),
                         localPath = track?.path?.takeIf { !it.contains("://") }, positionMs = positionMs.toLong(),
                         onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },

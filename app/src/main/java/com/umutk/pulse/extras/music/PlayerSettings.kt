@@ -201,6 +201,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         }
         if (cat == "library") SwitchRow(tr("Count plays", "Çalmaları say"), stats) { stats = it; MusicSettings.setCountStats(c, it) }
         if (cat == "look") SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) }
+        if (cat == "look") { var lf by remember { mutableStateOf(MusicSettings.lyricsFull(c)) }; SwitchRow(tr("Full screen lyrics", "Tam ekran sözler"), lf) { lf = it; MusicSettings.setLyricsFull(c, it) } }
         if (cat == "look") SliderRow("${tr("Lyrics size", "Söz boyutu")}  $lyricsFont", lyricsFont.toFloat(), 12f..30f) { lyricsFont = it.toInt(); MusicSettings.setLyricsFont(c, lyricsFont) }
         if (cat == "audio") Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("timer", T.sub, 22.dp)

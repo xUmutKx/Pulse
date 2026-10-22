@@ -86,6 +86,9 @@ object MusicSettings {
     fun setKeepScreenOn(c: Context, on: Boolean) = sp(c).edit().putBoolean("screenOn", on).apply()
 
     /** Poweramp: art as a full-width square. */
+    /** Lyrics over the whole player page (cover, title and artist across the top) instead of only over the cover square. */
+    fun lyricsFull(c: Context) = sp(c).getBoolean("lyricsFull", false)
+    fun setLyricsFull(c: Context, on: Boolean) = sp(c).edit().putBoolean("lyricsFull", on).apply()
     fun lyricsFont(c: Context) = sp(c).getInt("lyricsFont", 18)
     fun setLyricsFont(c: Context, v: Int) = sp(c).edit().putInt("lyricsFont", v.coerceIn(12, 30)).apply()
 }
