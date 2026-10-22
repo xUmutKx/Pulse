@@ -64,6 +64,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.snapshotFlow
+import androidx.compose.runtime.SideEffect
+import androidx.compose.foundation.gestures.detectDragGestures
+import kotlinx.coroutines.flow.first
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.draw.alpha
 import androidx.compose.runtime.mutableFloatStateOf
@@ -435,7 +438,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val bookmarks = marks.filter { File(it).isDirectory }
     val picked = sel.map { File(it) }
 
-    fun go(p: String) { freq = exBump(ctx, p); arcFile = null; arcCwd = ""; arcSel = emptySet(); here = p; sel = emptySet(); query = ""; recentView = false }
+    fun go(p: String) { ExScroll.live?.let { ExScroll.memo[here] = it.value }; freq = exBump(ctx, p); arcFile = null; arcCwd = ""; arcSel = emptySet(); here = p; sel = emptySet(); query = ""; recentView = false }
     // Back steps out of the current view first (selection, search, recents), then up one folder; only at the top does it leave the page
     androidx.activity.compose.BackHandler(enabled = resultsFor != null || searchOpen || arcFile != null || sel.isNotEmpty() || query.isNotBlank() || recentView || dir != top) {
         when {
@@ -596,7 +599,14 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (pull > 0f) Box(Modifier.fillMaxWidth().height(with(androidx.compose.ui.platform.LocalDensity.current) { pull.toDp() }), contentAlignment = Alignment.Center) {
             Icon(Icons.Outlined.Refresh, null, Modifier.size(22.dp).graphicsLayer { rotationZ = pull / pullLine * 270f; alpha = (pull / pullLine).coerceIn(0f, 1f) }, Look.accent)
         }
-        Column(Modifier.weight(1f).fillMaxWidth().nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+        // the folder you left keeps its place: coming back lands where you were
+        SideEffect { ExScroll.live = exScroll }
+        LaunchedEffect(here) {
+            val want = ExScroll.memo[here] ?: 0
+            if (want > 0) { kotlinx.coroutines.withTimeoutOrNull(1500) { snapshotFlow { exScroll.maxValue }.first { it >= want } }; exScroll.scrollTo(want.coerceAtMost(exScroll.maxValue)) } else exScroll.scrollTo(0)
+        }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+        Column(Modifier.fillMaxSize().nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
@@ -658,6 +668,17 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 }
                 val tops = done.tops
                 val res = done.reason
+                // the archive cannot lose entries (apk, 7z, rar, a failed rewrite): the picks are taken out into this folder instead,
+                // and the compress box opens with them so they can go back into a new archive
+                if (res.isNotEmpty() && !res.startsWith("partial")) {
+                    val out = withContext(Dispatchers.IO) { archiveExtractSel(af, picks, entries, dir) }
+                    arcSel = emptySet()
+                    val topFiles = picks.map { p -> File(dir, p.removePrefix(p.substringBeforeLast('/', "")).trimStart('/')) }.filter { it.exists() }.distinct()
+                    note = tr("Cannot cut from this archive: ${out.size} extracted here instead", "Bu arşivden kesilemiyor: ${out.size} öğe bunun yerine buraya çıkarıldı")
+                    if (topFiles.isNotEmpty()) zipAsk = topFiles
+                    refresh++
+                    return@launch
+                }
                 arcSel = emptySet()
                 arcRev++
                 note = when {
@@ -893,6 +914,28 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             } }
         } else shownNow.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shownNow.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
         Spacer(Modifier.height(88.dp))
+        }
+        // a thin handle on the right edge: drag it to run through a long list quickly
+        val fsScope = rememberCoroutineScope()
+        BoxWithConstraints(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(28.dp)) {
+            val track = constraints.maxHeight.toFloat()
+            if (exScroll.maxValue > track * 2) {
+                val thumbH = 56.dp
+                val thumbPx = with(androidx.compose.ui.platform.LocalDensity.current) { thumbH.toPx() }
+                val frac = exScroll.value.toFloat() / exScroll.maxValue
+                Box(Modifier.offset { androidx.compose.ui.unit.IntOffset(0, ((track - thumbPx) * frac).toInt()) }.align(Alignment.TopEnd).width(28.dp).height(thumbH)
+                    .pointerInput(Unit) {
+                        detectDragGestures { c, drag ->
+                            c.consume()
+                            val room = (track - thumbPx).coerceAtLeast(1f)
+                            val f2 = (exScroll.value.toFloat() / exScroll.maxValue + drag.y / room).coerceIn(0f, 1f)
+                            fsScope.launch { exScroll.scrollTo((f2 * exScroll.maxValue).toInt()) }
+                        }
+                    }, contentAlignment = Alignment.CenterEnd) {
+                    Box(Modifier.padding(end = 3.dp).width(5.dp).height(thumbH).clip(androidx.compose.foundation.shape.RoundedCornerShape(3.dp)).background(Look.accent.copy(alpha = .65f)))
+                }
+            }
+        }
         }
     }
     if (arcFile == null && resultsFor == null) ExSearchBar(searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = "" })
@@ -1750,3 +1793,9 @@ private fun androidx.compose.foundation.layout.BoxScope.ExNewFab(pick: (String) 
     }
 }
 
+
+/** Where each folder was scrolled to when it was left, so going back (or opening it again) continues from there. */
+object ExScroll {
+    val memo = HashMap<String, Int>()
+    var live: androidx.compose.foundation.ScrollState? = null
+}
