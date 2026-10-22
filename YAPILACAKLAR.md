@@ -964,3 +964,5 @@ Screen recorder feature list (55 candidates)
 - A link shared to Pulse opens a small window over the sharing app (Material sheet or Windows dialog box, own look) instead of the app; Settings > Pages in Windows 11 uses the colour Fluent pictures unless the line style is chosen; 0.10.195. derlenmedi
 
 - Installer: option to leave out the CPU splits of other ABIs in bundles (a single APK cannot be cut without re-signing); install window buttons follow the window look (text buttons in Material); 0.10.196. derlenmedi
+
+- Long press on the Screen cover tile opens its settings page; 0.10.197. derlenmedi
