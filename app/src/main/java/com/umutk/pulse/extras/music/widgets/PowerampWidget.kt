@@ -78,7 +78,7 @@ class PowerampWidget : AppWidgetProvider() {
         private const val BTN_BOTTOM = 0.98f
 
         /** The starry sky behind the widget can be switched off (plain black) in the music settings. */
-        fun stars(c: Context) = c.getSharedPreferences("music_widgets", Context.MODE_PRIVATE).getBoolean("pa_stars", true)
+        fun stars(c: Context) = WidgetOpts.bg(c) == "stars"
         private val loop = LiveLoop(1000) { refresh(it) }
 
         fun refresh(c: Context) {
@@ -100,7 +100,7 @@ class PowerampWidget : AppWidgetProvider() {
             val style = powerampSkin(PowerampPrefs.skin(c)).build(NeutralAccent, Color.Black)
             val bmp = render(
                 style, title, st.current?.shownArtist().orEmpty(), st.current?.album.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover,
-                st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh, stars(c),
+                st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c),
             )
             val f = fit(bw, bh)
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {
@@ -166,11 +166,12 @@ class PowerampWidget : AppWidgetProvider() {
         fun render(
             style: PowerampStyle, title: String, artist: String, album: String, frac: Float, playing: Boolean,
             posMs: Long, durMs: Long, cover: Bitmap?, index: Int, total: Int, shuffle: Boolean, repeat: Int, bw: Int, bh: Int, stars: Boolean = true,
+            bg: String = if (stars) "stars" else "black", artPct: Int = 100,
         ): Bitmap {
             val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
             val f = fit(bw, bh)
-            cv.drawColor(Color.Black.toArgb())
+            if (bg != "none") cv.drawColor(Color.Black.toArgb())
             cv.translate(f.x.toFloat(), f.y.toFloat()); cv.scale(f.scale, f.scale)
             val p = Paint(Paint.ANTI_ALIAS_FLAG)
             val dim = 0xFFA8A8A8.toInt()
@@ -179,7 +180,7 @@ class PowerampWidget : AppWidgetProvider() {
             // starfield: fixed seed, so the sky does not flicker between redraws
             val rnd = java.util.Random(11)
             p.color = android.graphics.Color.WHITE
-            for (n in 0 until (if (stars) 90 else 0)) {
+            for (n in 0 until (if (bg == "stars") 90 else 0)) {
                 val x = rnd.nextFloat() * W; val y = rnd.nextFloat() * H
                 p.alpha = 40 + rnd.nextInt(180)
                 cv.drawCircle(x, y, 0.4f + rnd.nextFloat() * 0.9f, p)
@@ -187,7 +188,9 @@ class PowerampWidget : AppWidgetProvider() {
             p.alpha = 255
 
             // cover: rounded, centre-cropped to a square; a note disc when the track has none
-            val art = RectF(12f, 12f, 138f, 138f)
+            // the cover keeps its centre and takes the chosen share of its square
+            val half = 63f * artPct.coerceIn(30, 100) / 100f
+            val art = RectF(75f - half, 75f - half, 75f + half, 75f + half)
             cv.save()
             cv.clipPath(Path().apply { addRoundRect(art, 16f, 16f, Path.Direction.CW) })
             if (cover != null) {

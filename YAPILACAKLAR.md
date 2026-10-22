@@ -1030,3 +1030,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.228 derlenmedi: yedek yalnızca ayarlar + küçük kullanıcı verisi (çalma listeleri, notlar, profil...), kopyala/kes dosyaları ve kapaklar girmez; Ayarlar > Uygulamalar kataloglara ayrıldı, her uygulamaya ana ekrana ekle (raptiye).
 
 - 0.10.229 derlenmedi: yeni ekstra uygulama LocalSend (v2 protokolü: çoklu yayın + alt ağ taraması ile cihaz bulma, dosya gönder/al, kabul penceresi; Material varsayılan, AMOLED/Windows seçilebilir).
+
+- 0.10.230 derlenmedi: Mix yapıcı (ana sayfa altı: ruh hali, kaynak, adet); Poweramp/Windows oynatıcı widget: arka plan şeffaf/siyah/yıldızlı + kapak boyutu (varsayılan %75); müzik widget önizlemeleri düz beyaz; geçici kopyalar (arşiv kes/kopyala) ayarlanabilir süre sonra (1 saat) silinir.
