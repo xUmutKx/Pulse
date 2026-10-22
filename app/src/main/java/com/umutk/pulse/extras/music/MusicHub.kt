@@ -190,19 +190,31 @@ fun MusicHub(onBack: () -> Unit) {
         if (settingsOpen) {
             BackHandler { settingsOpen = false; rev++ }
             val ink = T.text
+            var inCat by remember { mutableStateOf(false) }
             // with the art background on, the menu sits on a half-transparent dark layer so its white text reads over the cover
             Column(Modifier.fillMaxSize().background(if (artBg) Color.Black.copy(alpha = .6f) else T.bg).padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
+                if (!inCat) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { settingsOpen = false; rev++ }, contentAlignment = Alignment.Center) { PIcon("back", ink, 22.dp) }
                     Text(tr("Player settings", "Oynatıcı ayarları"), color = ink, fontSize = 18.sp, modifier = Modifier.padding(start = 8.dp))
                 }
-                Spacer(Modifier.height(12.dp))
+                }
+                if (!inCat) Spacer(Modifier.height(12.dp))
+                MusicSettingsSections(
+                    engine, when (look) { MusicLook.MATERIAL -> SettingsFor.MATERIAL; MusicLook.POWERAMP -> SettingsFor.POWERAMP; MusicLook.WINAMP -> SettingsFor.WINAMP; else -> SettingsFor.WMP },
+                    onRescan = { MusicLibrary.refresh(ctx) },
+                    onCat = { inCat = it },
+                    catContent = { c ->
+                        // the page of each category begins with what used to sit loose above the list
+                        if (c == "look") {
                 MusicThemeGallery(look, ink) { l -> look = l; lyrics = false; prefs(ctx).edit().putString("look", l.name).apply() }
                 com.umutk.pulse.ExtraLookRow(ink)
                 Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Art background", "Kapak arka planı"), color = ink, fontSize = 16.sp, modifier = Modifier.weight(1f))
                     com.umutk.pulse.PSwitch(artBg, { artBg = it; prefs(ctx).edit().putBoolean("artBg", it).apply() })
                 }
+                        }
+                        if (c == "library") {
                 Text(tr("Music", "Müzik"), color = Look.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
                 Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; pick.launch(arrayOf("audio/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("folder", ink, 22.dp); Text(tr("Add music", "Müzik ekle"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
@@ -220,12 +232,13 @@ fun MusicHub(onBack: () -> Unit) {
                 if (!granted) Row(Modifier.fillMaxWidth().clickable { askPermission.launch(MusicLibrary.permission) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("search", ink, 22.dp); Text(tr("Scan the phone's music", "Telefondaki müziği tara"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                 }
+                        }
+                        if (c == "misc") {
                 Text(tr("Background", "Arka plan"), color = Look.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
                 com.umutk.pulse.extras.watchdog.BatteryExemptionButton()
                 Spacer(Modifier.height(8.dp))
-                MusicSettingsSections(
-                    engine, when (look) { MusicLook.MATERIAL -> SettingsFor.MATERIAL; MusicLook.POWERAMP -> SettingsFor.POWERAMP; MusicLook.WINAMP -> SettingsFor.WINAMP; else -> SettingsFor.WMP },
-                    onRescan = { MusicLibrary.refresh(ctx) },
+                        }
+                    },
                 )
                 Spacer(Modifier.height(24.dp))
             }

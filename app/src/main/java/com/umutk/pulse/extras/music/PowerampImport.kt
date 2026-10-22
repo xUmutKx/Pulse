@@ -14,7 +14,7 @@ import java.util.zip.ZipInputStream
  * The settings file of the backup is encrypted by Poweramp and is not read.
  */
 object PowerampImport {
-    class Result(val playlists: Int, val ratings: Int, val plays: Int, val covers: Int, val embedded: Int, val missing: Int)
+    class Result(val playlists: Int, val ratings: Int, val plays: Int, val covers: Int, val embedded: Int, val missing: Int, val missingNames: List<String> = emptyList())
 
     private fun nfc(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFC)
 
@@ -89,6 +89,11 @@ object PowerampImport {
             byRel[rel] = t
             byName.getOrPut(nfc(File(t.path).name).lowercase()) { ArrayList() } += t
             byStem.getOrPut(fold(File(t.path).nameWithoutExtension)) { ArrayList() } += t
+            // a bare file name from an old playlist may be the title, or "artist - title", of a song stored under another file name
+            t.title?.takeIf { it.isNotBlank() }?.let { ti ->
+                byStem.getOrPut(fold(ti)) { ArrayList() } += t
+                if (!t.artist.isNullOrBlank()) byStem.getOrPut(fold(t.artist + ti)) { ArrayList() } += t
+            }
         }
         // the same file name in several folders: the one whose folder name is also the backup's folder name wins
         fun pick(c: List<Track>?, p: String): Track? {
@@ -105,6 +110,7 @@ object PowerampImport {
             return pick(byStem[fold(p.substringAfterLast('/').substringBeforeLast('.'))], p)
         }
         var playlists = 0; var ratings = 0; var plays = 0; var missing = 0
+        val missingNames = ArrayList<String>()
         db?.let { f ->
             val d = SQLiteDatabase.openDatabase(f.path, null, if (live) SQLiteDatabase.OPEN_READWRITE else SQLiteDatabase.OPEN_READONLY)
             try {
@@ -130,7 +136,7 @@ object PowerampImport {
                         val id = pl.getLong(0); val name = pl.getString(1).substringBefore(" (Imported").trim().ifBlank { "Poweramp $id" }
                         val list = ArrayList<Track>()
                         d.rawQuery("select path from tracks where playlist_id = ? order by _id", arrayOf(id.toString())).use { c ->
-                            while (c.moveToNext()) { val p = c.getString(0); if (p.startsWith("http")) continue; find(p)?.let { list += it } ?: run { missing++ } }
+                            while (c.moveToNext()) { val p = c.getString(0); if (p.startsWith("http")) continue; find(p)?.let { list += it } ?: run { missing++; if (missingNames.size < 3) missingNames += p.substringAfterLast('/') } }
                         }
                         if (list.isNotEmpty()) { Playlists.save(ctx, name, list); playlists++ }
                     }
@@ -164,6 +170,64 @@ object PowerampImport {
             if (embed && Id3Frames.putFrame(t.path, "APIC", Id3Frames.coverBody(bytes))) embedded++
         }
         work.deleteRecursively()
-        return Result(playlists, ratings, plays, covers, embedded, missing)
+        return Result(playlists, ratings, plays, covers, embedded, missing, missingNames)
+    }
+
+    private fun paPath(p: String): String = when {
+        p.startsWith("/storage/emulated/0/") -> "primary/" + p.removePrefix("/storage/emulated/0/")
+        p.startsWith("/storage/") -> p.removePrefix("/storage/")
+        else -> p
+    }
+
+    private fun paType(p: String) = when (p.substringAfterLast('.', "").lowercase()) { "m4a", "mp4", "aac" -> 2; "opus" -> 18; else -> 0 }
+
+    /**
+     * Writes a Poweramp backup (.poweramp-backup, a zip) to [uri]: the lists-export database in Poweramp's own layout (playlists, and every rated or played
+     * song with its rating and play count), so Poweramp's restore reads it. Poweramp's settings-export is encrypted and is not written.
+     * Returns (playlists, songs with a rating or plays). Blocking: call off the main thread.
+     */
+    fun export(ctx: Context, uri: Uri): Pair<Int, Int> {
+        val work = File(ctx.cacheDir, "pa_export").apply { deleteRecursively(); mkdirs() }
+        val dbFile = File(work, "lists-export")
+        val d = SQLiteDatabase.openOrCreateDatabase(dbFile, null)
+        var lists = 0; var rows = 0
+        try {
+            d.execSQL("CREATE TABLE android_metadata (locale TEXT)")
+            d.execSQL("INSERT INTO android_metadata VALUES ('en_US')")
+            d.execSQL("CREATE TABLE playlists (_id INTEGER PRIMARY KEY, name TEXT NOT NULL,keep_list_pos INTEGER NOT NULL,keep_track_pos INTEGER NOT NULL)")
+            d.execSQL("CREATE TABLE tracks (_id INTEGER PRIMARY KEY, playlist_id INTEGER,path TEXT NOT NULL, readable_name TEXT, file_type INTEGER, cue_offset_ms INTEGER, rating INTEGER, played_at INTEGER, played_fully_at INTEGER, played_times INTEGER, last_pos INTEGER, export_type INTEGER NOT NULL, preset_id INTEGER, total_played_times INTEGER)")
+            val now = System.currentTimeMillis()
+            d.beginTransaction()
+            try {
+                Playlists.names(ctx).forEachIndexed { i, name ->
+                    val id = i + 1L
+                    d.execSQL("INSERT INTO playlists (_id, name, keep_list_pos, keep_track_pos) VALUES (?, ?, 0, 0)", arrayOf<Any>(id, name))
+                    Playlists.load(ctx, name).forEach { t ->
+                        d.execSQL("INSERT INTO tracks (playlist_id, path, readable_name, file_type, cue_offset_ms, rating, played_at, played_fully_at, played_times, last_pos, export_type, total_played_times) VALUES (?, ?, ?, ?, 0, 0, ?, 0, 0, 0, 1, 0)",
+                            arrayOf<Any>(id, paPath(t.path), t.title ?: File(t.path).nameWithoutExtension, paType(t.path), now))
+                    }
+                    lists++
+                }
+                val ratings = MusicStats.ratings(ctx)
+                val stats = MusicStats.all(ctx).associateBy { it.path }
+                (ratings.keys + stats.keys).toSet().forEach { p ->
+                    val r = ratings[p] ?: 0; val st = stats[p]; val n = st?.plays ?: 0
+                    if (r == 0 && n == 0) return@forEach
+                    val at = st?.lastPlayed ?: now
+                    d.execSQL("INSERT INTO tracks (playlist_id, path, readable_name, file_type, cue_offset_ms, rating, played_at, played_fully_at, played_times, last_pos, export_type, total_played_times) VALUES (NULL, ?, ?, ?, 0, ?, ?, ?, ?, 0, 3, ?)",
+                        arrayOf<Any>(paPath(p), st?.title?.takeIf { it.isNotBlank() } ?: File(p).nameWithoutExtension, paType(p), r, at, at, n, n))
+                    rows++
+                }
+                d.setTransactionSuccessful()
+            } finally { d.endTransaction() }
+            d.version = 1031
+        } finally { d.close() }
+        ctx.contentResolver.openOutputStream(uri)?.use { out ->
+            java.util.zip.ZipOutputStream(out.buffered()).use { z ->
+                z.putNextEntry(java.util.zip.ZipEntry("lists-export")); dbFile.inputStream().use { it.copyTo(z) }; z.closeEntry()
+            }
+        }
+        work.deleteRecursively()
+        return lists to rows
     }
 }

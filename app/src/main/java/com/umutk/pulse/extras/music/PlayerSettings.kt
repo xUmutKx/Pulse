@@ -52,14 +52,16 @@ enum class SettingsFor { MATERIAL, POWERAMP, WINAMP, WMP }
  * (Poweramp: skin gallery, Winamp: skin strip). Every change is saved at once and pushed to the engine.
  */
 @Composable
-fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onRescan: suspend () -> Unit, extra: @Composable () -> Unit = {}) {
+fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onRescan: suspend () -> Unit, extra: @Composable () -> Unit = {}, onCat: (Boolean) -> Unit = {}, catContent: @Composable (String) -> Unit = {}) {
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
     // the settings are grouped like Poweramp's: a list of categories with icons, each opening its own rows
     var cat by remember { mutableStateOf("") }
     androidx.activity.compose.BackHandler(cat.isNotEmpty()) { cat = "" }
+    androidx.compose.runtime.LaunchedEffect(cat) { onCat(cat.isNotEmpty()) }
     if (cat.isEmpty()) { SettingsIndex(which) { cat = it }; extra(); return }
     SettingsCategoryHeader(cat) { cat = "" }
+    catContent(cat)
     fun push() = engine.reloadSettings()
     var preamp by remember { mutableIntStateOf(MusicSettings.preamp(c)) }
     var rg by remember { mutableIntStateOf(MusicSettings.replayGain(c)) }
@@ -120,9 +122,16 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first, then load the backup", "Kütüphane boş: önce müziği tara, sonra yedeği yükle"); return@launch }
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.run(c, uri, MusicLibrary.tracks.value, embedCovers) } }
             importNote = r.getOrNull()?.let { x ->
-                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") + (if (x.missing > 0) ", ${x.missing} songs not found" else ""),
-                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") + (if (x.missing > 0) ", ${x.missing} şarkı bulunamadı" else ""))
+                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") + (if (x.missing > 0) ", ${x.missing} songs not found" + x.missingNames.joinToString(", ", " (e.g. ", ")") else ""),
+                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") + (if (x.missing > 0) ", ${x.missing} şarkı bulunamadı" + x.missingNames.joinToString(", ", " (örn. ", ")") else ""))
             } ?: tr("The backup could not be read", "Yedek okunamadı")
+        }
+    }
+    val exportBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+        if (uri != null) scope.launch {
+            importNote = tr("Writing the backup…", "Yedek yazılıyor…")
+            val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.export(c, uri) } }
+            importNote = r.getOrNull()?.let { (l, n) -> tr("Saved: $l playlists, $n songs with a rating or plays", "Kaydedildi: $l çalma listesi, puanlı ya da dinlenmiş $n şarkı") } ?: tr("The backup could not be written", "Yedek yazılamadı")
         }
     }
     if (cat == "art") SettingsSection(tr("Poweramp backup", "Poweramp yedeği")) {
@@ -130,6 +139,10 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         Row(Modifier.fillMaxWidth().clickable { pickBackup.launch(arrayOf("*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("download", T.text, 22.dp)
             Text(tr("Load a .poweramp-backup", ".poweramp-backup yükle"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        }
+        Row(Modifier.fillMaxWidth().clickable { exportBackup.launch("Pulse-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) + ".poweramp-backup") }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("save", T.text, 22.dp)
+            Text(tr("Save a .poweramp-backup", ".poweramp-backup olarak kaydet"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
         }
         // straight from the installed Poweramp (root): all the ratings and play counts and the album_art pictures, no backup file needed
         Row(Modifier.fillMaxWidth().clickable {
