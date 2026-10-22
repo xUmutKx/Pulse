@@ -560,7 +560,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         } else Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(36.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { ExGlyph(Icons.Outlined.Menu, "menu", T.text, 24.dp) }
             Spacer(Modifier.weight(1f))
-            ExToolbar { onTab(it) }
+            // tap: the folder sizes of the whole storage; hold: the same tree, opened in the folder you are in
+            ExToolbar({ onTab(it) }) { k -> if (k == "tree") openTreeAt(dir); onTab(k) }
             val openTool = com.umutk.pulse.LocalOpenTool.current
             if (!full) Box(Modifier.size(36.dp).clickable(onClick = onToggleFull), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.OpenInFull, null, Modifier.size(20.dp), T.sub) }
         }
@@ -1696,7 +1697,8 @@ private fun FluentGlyph(k: String, tint: Color, size: androidx.compose.ui.unit.D
 
 /** The file tools in the header: Windows 95 gets a flat grey bar of raised buttons, Windows 7 a light glossy command bar; the other looks keep plain icons. */
 @Composable
-private fun ExToolbar(onTab: (String) -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun ExToolbar(onTab: (String) -> Unit, onLong: (String) -> Unit) {
     val tools = listOf("tree" to "sizes", "types" to "filetypes", "cache" to "clean")
     val t = T
     val barMod = when (t.id) {
@@ -1710,13 +1712,13 @@ private fun ExToolbar(onTab: (String) -> Unit) {
                 "win95" -> {
                     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
                     val down by src.collectIsPressedAsState()
-                    Box(Modifier.padding(horizontal = 1.dp).size(26.dp).background(Color(0xFFC0C0C0)).bevel(!down).clickable(src, null) { onTab(k) }, contentAlignment = Alignment.Center) { FluentGlyph(icon, Color.Black, 16.dp) }
+                    Box(Modifier.padding(horizontal = 1.dp).size(26.dp).background(Color(0xFFC0C0C0)).bevel(!down).combinedClickable(src, null, onClick = { onTab(k) }, onLongClick = { onLong(k) }), contentAlignment = Alignment.Center) { FluentGlyph(icon, Color.Black, 16.dp) }
                 }
                 "win7" -> {
                     if (i > 0) Box(Modifier.width(1.dp).height(18.dp).background(Color(0xFFC9D5E6)))
-                    Box(Modifier.size(width = 30.dp, height = 26.dp).clickable { onTab(k) }, contentAlignment = Alignment.Center) { FluentGlyph(icon, Color(0xFF2B4F86), 16.dp) }
+                    Box(Modifier.size(width = 30.dp, height = 26.dp).combinedClickable(onClick = { onTab(k) }, onLongClick = { onLong(k) }), contentAlignment = Alignment.Center) { FluentGlyph(icon, Color(0xFF2B4F86), 16.dp) }
                 }
-                else -> Box(Modifier.size(36.dp).clickable { onTab(k) }, contentAlignment = Alignment.Center) { FluentGlyph(icon, t.text, 22.dp) }
+                else -> Box(Modifier.size(36.dp).combinedClickable(onClick = { onTab(k) }, onLongClick = { onLong(k) }), contentAlignment = Alignment.Center) { FluentGlyph(icon, t.text, 22.dp) }
             }
         }
     }

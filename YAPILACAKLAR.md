@@ -1006,3 +1006,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.216 derlenmedi: Win11 launcher düz koyu siyah; masaüstü saati taşınır/kaldırılır widget kartı; basılı tutma menüsü parmağın sağında/solunda küçük popup (boş alan dahil); akıllı karıştırma (ruh hali/enerji/puana göre, az-çok rastgele ayarı); söz bildirimi: harf atlamayan kalın + tüm satır.
 
 - 0.10.217 derlenmedi: Dosyalar: sağ kenarda hızlı kaydırma tutamacı, Android/data-obb-media klasörlerinde uygulama simgesi, klasörden çıkıp dönünce kaldığın konum, arşivden kesilemezse çıkar + yeniden sıkıştır kutusu.
+
+- 0.10.218 derlenmedi: Dosyalar: klasör boyutları simgesine basılı tutunca ağaç içinde bulunulan klasörde açılır.
