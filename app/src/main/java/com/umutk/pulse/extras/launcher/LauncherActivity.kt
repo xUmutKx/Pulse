@@ -194,7 +194,7 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
             "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
             "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
             "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
-            "pulse:apps" -> "page:apps" to tr("Programs", "Programlar")
+            "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); "pulse:files" -> "page:files" to tr("File Explorer", "Dosya Gezgini")
             "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire")
             "pulse:freecell" -> "game:freecell" to tr("FreeCell", "FreeCell"); "pulse:games" -> "game:hub" to tr("Games", "Oyunlar"); else -> null }
         if (r != null) {
@@ -289,7 +289,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             look.SideDock(state, Modifier.fillMaxHeight())
         Column(Modifier.weight(1f).fillMaxHeight()) {
             if (LauncherPrefs.clock) ClockHeader(Modifier.fillMaxWidth())
-            LauncherWidgetStrip(Modifier.fillMaxWidth())
+            if (!(desktop && !LauncherPrefs.homeApps)) LauncherWidgetStrip(Modifier.fillMaxWidth())
             if (look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
             // a long press on an empty part of the home opens the Settings / Widgets sheet
             Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
@@ -297,6 +297,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                     DesktopIcons(look, state, shortcuts, iconDp, edge, open)
                     // the clock gadget of the desktop, in the look's own style, top right
                     DesktopClock(look.id, Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = maxOf(14.dp, edge)))
+                    DesktopWidgetLayer()
                 }
                 else if (vertical) {
                     LazyVerticalGrid(GridCells.Fixed(columns), Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), state = grid) {
@@ -325,16 +326,17 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         }
         }
         // settings and (with the dock hidden) the apps list stay reachable from the home screen
-        if (!LauncherSession.startOpen) Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), contentAlignment = Alignment.TopEnd) {
+        if (!LauncherSession.startOpen && (LauncherPrefs.topChips || !LauncherPrefs.dockShown)) Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), contentAlignment = Alignment.TopEnd) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!LauncherPrefs.dockShown) { HomeChip("apps") { LauncherSession.startOpen = true }; Spacer(Modifier.width(8.dp)) }
-                if (!desktop) { HomeChip("processes") { openDesktopItem(ctx, "pulse:taskmgr", look.id) }; Spacer(Modifier.width(8.dp)) }
-                HomeChip("settings") { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
+                if (LauncherPrefs.topChips && !desktop) { HomeChip("processes") { openDesktopItem(ctx, "pulse:taskmgr", look.id) }; Spacer(Modifier.width(8.dp)) }
+                if (LauncherPrefs.topChips) HomeChip("settings") { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
             }
         }
         if (desktop) Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             DesktopWindowLayer(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp)
         }
+        if (desktop) ClockFlyout(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp)
         // Windows 10 Mobile looks: the action center comes down from the top edge
         if (look.id.startsWith("winphone")) Box(Modifier.fillMaxSize()) {
             ActionCenterHandle(Modifier.align(Alignment.TopStart))

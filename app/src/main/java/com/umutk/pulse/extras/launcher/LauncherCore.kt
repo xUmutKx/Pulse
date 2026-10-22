@@ -57,9 +57,9 @@ class LauncherState(val apps: List<LaunchApp>, val vertical: Boolean, val column
 fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Modifier =
     pointerInput(app.pkg) { detectTapGestures(onTap = { onTap() }, onLongPress = { state.longPress(app) }) }
 
-/** Dock = the chosen packages that are installed (max 5), or the first 3 installed apps when none is chosen. */
+/** Dock = the chosen packages that are installed (max 5); none until the user pins some. */
 fun dockApps(apps: List<LaunchApp>, pkgs: List<String>): List<LaunchApp> =
-    pkgs.take(5).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }.ifEmpty { apps.take(3) }
+    pkgs.take(5).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }
 
 /** Side inset of the screen (rounded corners or a side cutout) in dp. Bars and menus keep their content clear of it; set by LauncherActivity. */
 val LocalLauncherEdge = compositionLocalOf { 0.dp }
@@ -70,6 +70,8 @@ fun startLists(state: LauncherState, query: String): Pair<List<LaunchApp>, List<
 
 /** The start menu is opened from a look's taskbar and closed by the activity (the taskbar has no callback in the look API). */
 object LauncherSession {
+    /** The clock flyout (calendar and, in Windows 10 / 11, the quick tiles) is open; the taskbar clock sets it. */
+    var clockOpen by mutableStateOf(false)
     var startOpen by mutableStateOf(false)
     /** Bumped on every home press, so the pages scroll back to the first one. */
     var homeTick by mutableStateOf(0)
@@ -97,17 +99,12 @@ object LauncherLooks {
     // the Pulse themes are drawn by the Material look code, which reads its colours from the theme of the same id
     val all: List<LauncherLook> = listOf(
         defaultLook, MaterialLauncherLook("amoled", "AMOLED", "AMOLED", black = true),
-        Win11LauncherLook(), Win10LauncherLook(), Win10LauncherLook("win10black", "Windows 10 Black", "Windows 10 Siyah", black = true),
+        Win11LauncherLook(), Win10LauncherLook(),
         Win7LauncherLook(), Win95LauncherLook(), XpLauncherLook(),
         WinPhoneLauncherLook("winphone", "Windows Phone", "Windows Phone", black = false),
         WinPhoneLauncherLook("winphone_amoled", "Windows Phone AMOLED", "Windows Phone AMOLED", black = true),
         MaterialLauncherLook("oneui", "One UI", "One UI", black = false),
         MaterialLauncherLook("coloros", "ColorOS", "ColorOS", black = false),
-        MaterialLauncherLook("aurora", "Aurora", "Aurora", black = false),
-        MaterialLauncherLook("sakura", "Sakura", "Sakura", black = false),
-        MaterialLauncherLook("ocean", "Ocean", "Okyanus", black = false),
-        MaterialLauncherLook("ember", "Ember", "Kor", black = false),
-        MaterialLauncherLook("frost", "Frost", "Buz", black = false),
     )
     fun byId(id: String): LauncherLook = all.firstOrNull { it.id == id } ?: defaultLook
 }

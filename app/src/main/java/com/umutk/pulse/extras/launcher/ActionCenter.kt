@@ -63,11 +63,11 @@ object ActionCenter {
     var torch by mutableStateOf(false)
 }
 
-private class QTile(val icon: ImageVector, val en: String, val trName: String, val run: (Context) -> Unit)
+internal class QTile(val icon: ImageVector, val en: String, val trName: String, val run: (Context) -> Unit)
 
 private fun settings(a: String): (Context) -> Unit = { c -> runCatching { c.startActivity(Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
 
-private val QUICK = listOf(
+internal val QUICK = listOf(
     QTile(Icons.Outlined.SignalCellularAlt, "Cellular", "Hücresel", settings(Settings.ACTION_WIRELESS_SETTINGS)),
     QTile(Icons.Outlined.WifiTethering, "Mobile hotspot", "Mobil erişim noktası", settings("android.settings.TETHER_SETTINGS")),
     QTile(Icons.Outlined.NightsStay, "Quiet hours", "Sessiz saatler", settings(Settings.ACTION_SOUND_SETTINGS)),

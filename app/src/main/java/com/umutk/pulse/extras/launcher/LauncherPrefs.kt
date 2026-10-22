@@ -43,6 +43,10 @@ object LauncherPrefs {
     val DESKTOP_DEFAULT = setOf("pulse:pc", "pulse:recycle", "pulse:files")
 
     /** The desktop shortcuts that show on the Windows desktops: This PC, Recycle Bin and File Explorer until others are switched on in the settings. */
+    /** The round buttons at the top right of the home screen (apps, task manager, settings); off by default: the settings are in the long press menu. */
+    var topChips by mutableStateOf(false)
+    /** Where each widget sits on the Windows desktops: "x,y,w,h" in dp, by widget id. */
+    var widgetPos by mutableStateOf<Map<Int, String>>(emptyMap())
     var desktopOn by mutableStateOf(DESKTOP_DEFAULT)
 
     fun wallIndex(look: String): Int = walls[look] ?: 0
@@ -71,6 +75,7 @@ object LauncherPrefs {
         drawerColumns = p.getProperty("drawerColumns")?.toIntOrNull() ?: 5
         sort = p.getProperty("sort") ?: "name"
         hidden = list(p.getProperty("hidden")).toSet()
+        topChips = p.getProperty("topChips") == "true"
         desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
         clock = p.getProperty("clock") == "true"
         homeApps = p.getProperty("homeApps") == "true"
@@ -80,6 +85,7 @@ object LauncherPrefs {
         usage = p.stringPropertyNames().filter { it.startsWith(USE) }
             .associate { it.removePrefix(USE) to (p.getProperty(it).toLongOrNull() ?: 0L) }
         widgets = p.getProperty("widgets").orEmpty().split(';').filter { it.isNotBlank() }
+        widgetPos = p.stringPropertyNames().filter { it.startsWith("wpos.") }.mapNotNull { k -> k.removePrefix("wpos.").toIntOrNull()?.let { it to p.getProperty(k) } }.toMap()
         walls = p.stringPropertyNames().filter { it.startsWith(WALL) }
             .associate { it.removePrefix(WALL) to (p.getProperty(it).toIntOrNull() ?: 0) }
     }
@@ -90,9 +96,10 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
-        p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
+        widgetPos.forEach { (id, v) -> p.setProperty("wpos.$id", v) }
         walls.forEach { (lookId, i) -> p.setProperty(WALL + lookId, i.toString()) }
         p.setProperty("widgets", widgets.joinToString(";"))
         val f = file(c); val tmp = File(f.path + ".tmp")
@@ -109,7 +116,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; clock = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; clock = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         usage = emptyMap(); walls = emptyMap()
         save(c)
     }

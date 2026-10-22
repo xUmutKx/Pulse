@@ -53,6 +53,14 @@ fun HomeSheet() {
                 HomeSheetState.sheet = false
                 ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
             }
+            SheetEntry("light", tr("Display settings", "Ekran ayarları")) {
+                HomeSheetState.sheet = false
+                ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
+            }
+            SheetEntry("palette", tr("Personalize", "Kişiselleştir")) {
+                HomeSheetState.sheet = false
+                ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
+            }
             SheetEntry("gridView", tr("Widgets", "Widget'lar")) {
                 HomeSheetState.sheet = false
                 HomeSheetState.widgets = true
