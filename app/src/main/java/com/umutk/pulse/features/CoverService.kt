@@ -227,10 +227,31 @@ private class BellView(c: Context) : View(c) {
  * It reads nothing: no events, no window content. The cover uses it while this service is switched on in Accessibility settings.
  */
 class CoverAccessibilityService : android.accessibilityservice.AccessibilityService() {
-    override fun onServiceConnected() { instance = this }
+    // the automatic trigger of the advanced cover: this service stays alive, so it can watch the charger and the screen's direction
+    private val power = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) { autoCheck() }
+    }
+
+    /** Starts the advanced cover when the phone charges (and, if asked, lies sideways); closes it again once the trigger no longer holds. */
+    private fun autoCheck() {
+        if (!StandByPrefs.autoCharge(this)) return
+        val charging = registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0)?.let { it != 0 } == true
+        val sideways = !StandByPrefs.sideways(this) || resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        if (charging && sideways) { if (!StandBy.showing) StandBy.show(this, auto = true) }
+        else if (StandBy.showing && StandBy.autoStarted) StandBy.hide(this)
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { super.onConfigurationChanged(newConfig); autoCheck() }
+
+    override fun onServiceConnected() {
+        instance = this
+        runCatching {
+            registerReceiver(power, android.content.IntentFilter().apply { addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED); addAction(Intent.ACTION_SCREEN_ON) })
+        }
+    }
     override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {}
     override fun onInterrupt() {}
-    override fun onUnbind(intent: Intent?): Boolean { if (instance === this) instance = null; return super.onUnbind(intent) }
+    override fun onUnbind(intent: Intent?): Boolean { if (instance === this) instance = null; runCatching { unregisterReceiver(power) }; return super.onUnbind(intent) }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
     companion object { @Volatile var instance: CoverAccessibilityService? = null }
 }
