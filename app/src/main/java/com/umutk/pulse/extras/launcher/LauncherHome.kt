@@ -1,5 +1,11 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.border
 import android.content.Context
@@ -80,8 +86,29 @@ fun HomeChip(icon: String, onClick: () -> Unit) {
 }
 
 /** Long press on empty home space opens the home sheet; the grid below still gets its taps and drags. */
-fun Modifier.homeLongPress(onLong: () -> Unit): Modifier =
-    pointerInput(onLong) { detectTapGestures(onLongPress = { onLong() }) }
+fun Modifier.homeLongPress(onLong: () -> Unit): Modifier = composed {
+    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    onGloballyPositioned { origin = it.positionInRoot() }.pointerInput(onLong) { detectTapGestures(onLongPress = { LauncherSession.pressAt = origin + it; onLong() }) }
+}
+
+/** A small menu beside the finger, like a right-click menu: to the right of the press, or to its left when there is no room. */
+@Composable
+fun ContextPopup(menuW: androidx.compose.ui.unit.Dp, menuH: androidx.compose.ui.unit.Dp, onDismiss: () -> Unit, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    val w = LocalWindowLook.current
+    val d = androidx.compose.ui.platform.LocalDensity.current.density
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    val at = LauncherSession.pressAt
+    val sw = cfg.screenWidthDp * d; val sh = cfg.screenHeightDp * d
+    val mw = menuW.value * d; val mh = menuH.value * d; val gap = 10f * d
+    val x = (if (at.x + gap + mw <= sw) at.x + gap else at.x - gap - mw).coerceIn(0f, (sw - mw).coerceAtLeast(0f))
+    val y = (at.y - mh / 3f).coerceIn(0f, (sh - mh).coerceAtLeast(0f))
+    androidx.compose.ui.window.Popup(
+        alignment = Alignment.TopStart, offset = androidx.compose.ui.unit.IntOffset(x.toInt(), y.toInt()), onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Column(Modifier.width(menuW).shadow(8.dp).background(w.panel).border(1.dp, w.line).padding(horizontal = 14.dp, vertical = 6.dp), content = content)
+    }
+}
 
 /** Search field at the top of the apps list; it filters the names, nothing else is read. */
 @Composable
@@ -114,36 +141,25 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     val w = LocalWindowLook.current
     val pinned = app.pkg in LauncherPrefs.dock
     fun act(f: () -> Unit) { f(); onDismiss() }
-    val d = androidx.compose.ui.platform.LocalDensity.current
-    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
-    val menuW = 230.dp; val menuH = 200.dp
-    val at = LauncherSession.pressAt
-    val x = at.x.coerceIn(0f, (cfg.screenWidthDp.dp - menuW).coerceAtLeast(0.dp).value * d.density)
-    val y = at.y.coerceIn(0f, (cfg.screenHeightDp.dp - menuH).coerceAtLeast(0.dp).value * d.density)
-    androidx.compose.ui.window.Popup(
-        alignment = Alignment.TopStart, offset = androidx.compose.ui.unit.IntOffset(x.toInt(), y.toInt()), onDismissRequest = onDismiss,
-        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
-    ) {
-        Column(Modifier.width(menuW).shadow(8.dp).background(w.panel).border(1.dp, w.line).padding(horizontal = 14.dp, vertical = 6.dp)) {
-            Text(app.label, color = w.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(vertical = 6.dp))
-            ActionRow("info", tr("App info", "Uygulama bilgisi"), w.text) {
-                act { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", app.pkg, null))) }
-            }
-            if (!app.system) ActionRow("trash", tr("Uninstall", "Kaldır"), w.text) {
-                act { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.fromParts("package", app.pkg, null))) }
-            }
-            ActionRow("eyeOff", tr("Hide from launcher", "Ana ekranda gizle"), w.text) {
-                act { LauncherPrefs.hidden = LauncherPrefs.hidden + app.pkg; LauncherPrefs.save(ctx) }
-            }
-            ActionRow("pin", if (pinned) tr("Unpin from dock", "Dock'tan çıkar") else tr("Pin to dock", "Dock'a sabitle"), w.text) {
-                act { togglePin(ctx, app.pkg, auto) }
-            }
+    ContextPopup(230.dp, 200.dp, onDismiss) {
+        Text(app.label, color = w.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(vertical = 6.dp))
+        ActionRow("info", tr("App info", "Uygulama bilgisi"), w.text) {
+            act { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", app.pkg, null))) }
+        }
+        if (!app.system) ActionRow("trash", tr("Uninstall", "Kaldır"), w.text) {
+            act { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.fromParts("package", app.pkg, null))) }
+        }
+        ActionRow("eyeOff", tr("Hide from launcher", "Ana ekranda gizle"), w.text) {
+            act { LauncherPrefs.hidden = LauncherPrefs.hidden + app.pkg; LauncherPrefs.save(ctx) }
+        }
+        ActionRow("pin", if (pinned) tr("Unpin from dock", "Dock'tan çıkar") else tr("Pin to dock", "Dock'a sabitle"), w.text) {
+            act { togglePin(ctx, app.pkg, auto) }
         }
     }
 }
 
 @Composable
-private fun ActionRow(icon: String, label: String, tint: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
+internal fun ActionRow(icon: String, label: String, tint: androidx.compose.ui.graphics.Color, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         PIcon(icon, tint, 22.dp)
         Spacer(Modifier.width(12.dp))

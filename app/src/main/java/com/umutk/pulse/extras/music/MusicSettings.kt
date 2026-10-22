@@ -75,6 +75,13 @@ object MusicSettings {
     fun resume(c: Context) = sp(c).getBoolean("resume", true)
     fun setResume(c: Context, on: Boolean) = sp(c).edit().putBoolean("resume", on).apply()
 
+    /** The shuffle follows mood, energy and ratings (on) or is plain chance (off). */
+    fun smartShuffle(c: Context) = sp(c).getBoolean("smartShuffle", true)
+    fun setSmartShuffle(c: Context, on: Boolean) = sp(c).edit().putBoolean("smartShuffle", on).apply()
+    /** 0 = follows the taste closely, 100 = nearly plain chance. */
+    fun shuffleRandomness(c: Context) = sp(c).getInt("shuffleRandom", 35)
+    fun setShuffleRandomness(c: Context, v: Int) = sp(c).edit().putInt("shuffleRandom", v.coerceIn(0, 100)).apply()
+
     fun keepScreenOn(c: Context) = sp(c).getBoolean("screenOn", false)
     fun setKeepScreenOn(c: Context, on: Boolean) = sp(c).edit().putBoolean("screenOn", on).apply()
 

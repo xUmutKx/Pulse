@@ -177,6 +177,12 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             if (it) { askBt.launch(Manifest.permission.BLUETOOTH_CONNECT); runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
         }
         if (cat == "misc") SwitchRow(tr("Keep screen on", "Ekranı açık tut"), screenOn) { screenOn = it; MusicSettings.setKeepScreenOn(c, it) }
+        if (cat == "misc") {
+            var smart by remember { mutableStateOf(MusicSettings.smartShuffle(c)) }
+            var rand by remember { mutableFloatStateOf(MusicSettings.shuffleRandomness(c).toFloat()) }
+            SwitchRow(tr("Smart shuffle", "Akıllı karıştırma"), smart) { smart = it; MusicSettings.setSmartShuffle(c, it) }
+            if (smart) SliderRow(tr("Less random  ·  More random", "Daha az rastgele  ·  Daha rastgele") + "  ${rand.toInt()}%", rand / 100f, 0f..1f) { rand = it * 100f; MusicSettings.setShuffleRandomness(c, rand.toInt()) }
+        }
         if (cat == "library") SwitchRow(tr("Count plays", "Çalmaları say"), stats) { stats = it; MusicSettings.setCountStats(c, it) }
         if (cat == "look") SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) }
         if (cat == "look") SliderRow("${tr("Lyrics size", "Söz boyutu")}  $lyricsFont", lyricsFont.toFloat(), 12f..30f) { lyricsFont = it.toInt(); MusicSettings.setLyricsFont(c, lyricsFont) }

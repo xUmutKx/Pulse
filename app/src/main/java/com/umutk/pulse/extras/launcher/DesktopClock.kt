@@ -1,5 +1,10 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
@@ -66,10 +71,33 @@ fun DesktopClock(lookId: String, modifier: Modifier = Modifier) {
                 Text(time, color = Color(0xFF00FF00), fontSize = 24.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
             }
         }
-        else -> Column(modifier.padding(4.dp), horizontalAlignment = Alignment.End) {
-            val sh = TextStyle(shadow = Shadow(Color(0x99000000), Offset(0f, 2f), 8f))
-            Text(time, color = Color.White, fontSize = 52.sp, fontWeight = FontWeight.Light, style = sh)
-            Text(date, color = Color.White, fontSize = 14.sp, style = sh)
+        // Windows 10 / 11: the clock widget, a dark rounded card with the time and the date (not bare text on the picture)
+        else -> Column(modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xE6202020)).padding(horizontal = 18.dp, vertical = 12.dp), horizontalAlignment = Alignment.Start) {
+            Text(time, color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Light)
+            Text(date, color = Color(0xFFB8B8B8), fontSize = 13.sp)
         }
+    }
+}
+
+
+/** The desktop clock as a widget of its own: moved by its grip, taken off by the cross (the launcher settings bring it back). */
+@Composable
+fun MovableDesktopClock(lookId: String) {
+    if (!LauncherPrefs.desktopClock) return
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val d = androidx.compose.ui.platform.LocalDensity.current.density
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+    // first place: the top right corner, as the old clock sat
+    val first = (maxWidth.value - 190f).coerceAtLeast(0f)
+    fun pos(): FloatArray = LauncherPrefs.widgetPos[-1]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 }?.toFloatArray() ?: floatArrayOf(first, 10f)
+    val p = pos()
+    androidx.compose.foundation.layout.Box(Modifier.offset(p[0].dp, p[1].dp)) {
+        DesktopClock(lookId)
+        fun dot(m: Modifier) = m.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0x99000000))
+        androidx.compose.foundation.layout.Box(dot(Modifier.align(Alignment.TopStart).pointerInput(Unit) {
+            detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = pos(); LauncherPrefs.widgetPos = LauncherPrefs.widgetPos + (-1 to "${(q[0] + drag.x / d).coerceAtLeast(0f)},${(q[1] + drag.y / d).coerceAtLeast(0f)}") }
+        }), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("gridView", Color.White, 12.dp) }
+        androidx.compose.foundation.layout.Box(dot(Modifier.align(Alignment.TopEnd).clickable { LauncherPrefs.desktopClock = false; LauncherPrefs.save(ctx) }), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("close", Color.White, 12.dp) }
+    }
     }
 }
