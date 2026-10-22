@@ -4,6 +4,7 @@ import com.umutk.pulse.PButton
 import androidx.compose.foundation.lazy.items
 import com.umutk.pulse.WinAlert
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.ui.draw.rotate
 import androidx.compose.material3.TextButton
 import android.app.Notification
