@@ -22,6 +22,7 @@ import android.widget.RemoteViews
 import androidx.compose.ui.graphics.asAndroidBitmap
 import com.umutk.pulse.R
 import com.umutk.pulse.extras.music.MusicPlayerEngine
+import com.umutk.pulse.extras.music.artistFor
 import com.umutk.pulse.extras.music.shownArtist
 import com.umutk.pulse.extras.music.trackArt
 import com.umutk.pulse.widgets.WidgetStyle
@@ -91,7 +92,7 @@ class WindowsPlayerWidget : AppWidgetProvider() {
             val frac = if (dur > 0) (e.player.currentPosition.toFloat() / dur).coerceIn(0f, 1f) else 0f
             val cover = st.current?.let { runCatching { trackArt(c, it)?.asAndroidBitmap() }.getOrNull() }
             val title = st.current?.let { it.title ?: it.path.substringAfterLast('/') } ?: ""
-            val bmp = render(WidgetStyles.of(c, id), title, st.current?.shownArtist().orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover, bw, bh, WidgetOpts.bg(c) != "none", WidgetOpts.artPct(c))
+            val bmp = render(WidgetStyles.of(c, id), title, st.current?.artistFor(c).orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover, bw, bh, WidgetOpts.bg(c) != "none", WidgetOpts.artPct(c))
             val f = fit(bw, bh)
             return RemoteViews(c.packageName, R.layout.widget_winplayer).apply {
                 setImageViewBitmap(R.id.wp_img, bmp)

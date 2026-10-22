@@ -1050,3 +1050,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.238 derlenmedi: müzik ayarları tam ekran sayfa (kategorili); launcher ayarları kategori listesi + tam sayfalar; launcher Ekstralar: çift dokunuşla kilit, aşağı kaydır bildirim, yukarı kaydır uygulamalar, simge şekli, günlük duvar kağıdı, karartma, bulanıklık, 24 saat, tarih biçimi, saniye, ekran açık, titreşim, arama klavyesi, düzen kilidi, ayar dışa/içe aktar (15 özellik).
 
 - 0.10.239 derlenmedi: 0.10.238 derleme düzeltmesi (importlar).
+
+- 0.10.240 derlenmedi: Bluetooth otomatik çalma artık oynatıcı kapalıyken de (manifest alıcısı + servis başlatma); widget sanatçısı: etiket/kütüphaneden okunur, "Bilinmeyen sanatçı" yerine gerçek ad.

@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.widgets
 
+import com.umutk.pulse.extras.music.artistFor
 import com.umutk.pulse.extras.music.shownArtist
 
 import android.app.PendingIntent
@@ -99,7 +100,7 @@ class PowerampWidget : AppWidgetProvider() {
             val title = st.current?.let { it.title ?: it.path.substringAfterLast('/') } ?: ""
             val style = powerampSkin(PowerampPrefs.skin(c)).build(NeutralAccent, Color.Black)
             val bmp = render(
-                style, title, st.current?.shownArtist().orEmpty(), st.current?.album.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover,
+                style, title, st.current?.artistFor(c).orEmpty(), st.current?.album.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover,
                 st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c),
             )
             val f = fit(bw, bh)

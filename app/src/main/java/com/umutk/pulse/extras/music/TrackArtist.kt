@@ -19,3 +19,26 @@ fun Track.shownArtist(): String {
     }
     return tr("Unknown artist", "Bilinmeyen sanatçı")
 }
+
+private val tagArtists = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+/**
+ * [shownArtist] with the file's own tag as a last resort before "Unknown artist": the track the player holds may carry no artist (a widget, a restored queue),
+ * while the file and the library know it. Read once per file and kept.
+ */
+fun Track.artistFor(ctx: android.content.Context): String {
+    val plain = artist?.trim()?.takeIf { it.isNotEmpty() && !it.equals("<unknown>", true) && !it.equals("unknown", true) }
+    if (plain != null) return plain
+    // the scanned library has it
+    MusicLibrary.tracks.value.firstOrNull { it.path == path }?.artist?.trim()?.takeIf { it.isNotEmpty() && !it.equals("<unknown>", true) && !it.equals("unknown", true) }?.let { return it }
+    tagArtists[path]?.let { if (it.isNotEmpty()) return it }
+    if (!path.contains("://") && !tagArtists.containsKey(path)) {
+        val a = runCatching {
+            val r = android.media.MediaMetadataRetriever()
+            try { r.setDataSource(path); (r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ARTIST) ?: r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_ALBUMARTIST)).orEmpty().trim() } finally { r.release() }
+        }.getOrDefault("")
+        tagArtists[path] = a
+        if (a.isNotEmpty()) return a
+    }
+    return shownArtist()
+}
