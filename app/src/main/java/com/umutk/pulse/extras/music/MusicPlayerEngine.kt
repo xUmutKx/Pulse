@@ -152,6 +152,14 @@ class MusicPlayerEngine private constructor(context: Context) {
 
     init {
         reloadSettings()
+        // shuffle and repeat survive a restart and an update: restored here, saved on every change
+        val modes = app.getSharedPreferences("music_modes", Context.MODE_PRIVATE)
+        player.shuffleModeEnabled = modes.getBoolean("shuffle", false)
+        player.repeatMode = modes.getInt("repeat", Player.REPEAT_MODE_OFF)
+        player.addListener(object : Player.Listener {
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { modes.edit().putBoolean("shuffle", shuffleModeEnabled).apply() }
+            override fun onRepeatModeChanged(repeatMode: Int) { modes.edit().putInt("repeat", repeatMode).apply() }
+        })
         main2.post(ticker)
         player.addListener(object : Player.Listener {
             override fun onTracksChanged(tracks: Tracks) = readReplayGain(tracks)
