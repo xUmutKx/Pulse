@@ -71,7 +71,7 @@ class CoverTile : TileService() {
     private fun paint(on: Boolean) {
         qsTile?.apply {
             label = tr("Screen cover", "Ekran kapağı")
-            val allowed = Settings.canDrawOverlays(this@CoverTile)
+            val allowed = Settings.canDrawOverlays(this@CoverTile) || CoverAccessibilityService.instance != null
             state = if (allowed && on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             subtitle = when { !allowed -> tr("Tap to allow overlay", "İzin vermek için dokun"); on -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
             updateTile()
@@ -79,7 +79,7 @@ class CoverTile : TileService() {
     }
 
     override fun onClick() {
-        if (!Settings.canDrawOverlays(this)) { openOverlayPermission(); return }
+        if (!Settings.canDrawOverlays(this) && CoverAccessibilityService.instance == null) { openOverlayPermission(); return }
         if (CoverService.running) { CoverService.stop(this); paint(false) } else { CoverService.start(this); paint(true) }
     }
 
@@ -100,7 +100,7 @@ fun CoverTool() {
         Text(tr("Screen cover", "Ekran kapağı"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
         PSwitch(running, { want ->
             when {
-                !Settings.canDrawOverlays(ctx) -> ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                !Settings.canDrawOverlays(ctx) && CoverAccessibilityService.instance == null -> ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 want -> CoverService.start(ctx)
                 else -> CoverService.stop(ctx)
             }
@@ -119,9 +119,17 @@ fun CoverSettings() {
     var text by remember { mutableStateOf(CoverStore.text(ctx)) }
     Text(tr("Screen cover", "Ekran kapağı"), color = T.text, fontSize = 15.sp)
     Text(tr("A black cover over the whole screen", "Tüm ekranı kaplayan siyah bir kapak"), color = T.sub, fontSize = 12.sp)
-    if (!Settings.canDrawOverlays(ctx)) {
+    if (!Settings.canDrawOverlays(ctx) && CoverAccessibilityService.instance == null) {
         Text(tr("Needs the 'display over other apps' permission.", "'Diğer uygulamaların üstünde göster' izni gerekir."), color = T.sub, fontSize = 12.sp)
         PButton(tr("Allow", "İzin ver")) { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    }
+    // the topmost layer: an accessibility overlay, above the bars and the keyboard
+    val layerOn = CoverAccessibilityService.instance != null
+    Row(Modifier.fillMaxWidth().clickable { ctx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(tr("Cover above everything", "Her şeyin üstünde kapak"), color = T.text, fontSize = 15.sp)
+            Text(if (layerOn) tr("On: drawn as the topmost layer", "Açık: en üst katman olarak çizilir") else tr("Off: switch on \"Pulse · Screen cover layer\" in Accessibility", "Kapalı: Erişilebilirlik'te \"Pulse · Screen cover layer\" açılmalı"), color = T.sub, fontSize = 12.sp)
+        }
     }
     Text(tr("Stays visible on the cover", "Kapakta görünür kalanlar"), color = T.sub, fontSize = 12.sp)
     Row(verticalAlignment = Alignment.CenterVertically) {

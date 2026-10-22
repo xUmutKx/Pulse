@@ -85,7 +85,9 @@ class CoverService : Service() {
             .setContentText(tr("Screen cover is on", "Ekran kapağı açık")).setOngoing(true).build()
         // startForeground first: the service was started as a foreground service and must not stop without it
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID, n)
-        if (!Settings.canDrawOverlays(this)) { stopSelf(); return }
+        // the accessibility service, when it is on, draws the cover above everything (bars, keyboard, other overlays); otherwise the overlay permission is needed
+        val acc = CoverAccessibilityService.instance
+        if (acc == null && !Settings.canDrawOverlays(this)) { stopSelf(); return }
 
         val v = object : FrameLayout(this) {
             override fun dispatchTouchEvent(ev: MotionEvent): Boolean { gestures.onTouchEvent(ev); return super.dispatchTouchEvent(ev) }
@@ -123,12 +125,13 @@ class CoverService : Service() {
         column.gravity = when (pos % 3) { 0 -> Gravity.START; 2 -> Gravity.END; else -> Gravity.CENTER_HORIZONTAL }
         val m = (40 * resources.displayMetrics.density).toInt()
         if (column.childCount > 0) v.addView(column, FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, gv).apply { setMargins(m, m * 2, m, m * 2) })
-        wm = getSystemService(WindowManager::class.java)
+        wm = (acc ?: this).getSystemService(WindowManager::class.java)
+        val layerType = if (acc != null) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         val hole = CoverStore.hole(this)
         val br = CoverStore.bright(this)
         // no FLAG_NOT_TOUCHABLE: the cover takes every touch; the status and navigation bars sit under the overlay layer
         val flags = WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON   // AOD-like: the screen stays on while the cover is up
-        fun params(w: Int, h: Int, f: Int, fmt: Int) = WindowManager.LayoutParams(w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY, f, fmt).apply {
+        fun params(w: Int, h: Int, f: Int, fmt: Int) = WindowManager.LayoutParams(w, h, layerType, f, fmt).apply {
             layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             if (br > 0) screenBrightness = br / 100f
         }
@@ -209,4 +212,18 @@ private class BellView(c: Context) : View(c) {
     private val path = Path().apply { FluentPaths.map.getValue("notifications").forEach { d -> PathParser.createPathFromPathData(d)?.let { addPath(it) } } }
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.WHITE }
     override fun onDraw(canvas: Canvas) { canvas.scale(width / 24f, height / 24f); canvas.drawPath(path, paint) }
+}
+
+
+/**
+ * Lets the screen cover draw as an accessibility overlay, the topmost layer there is: above the status and navigation bars, the keyboard and other overlays.
+ * It reads nothing: no events, no window content. The cover uses it while this service is switched on in Accessibility settings.
+ */
+class CoverAccessibilityService : android.accessibilityservice.AccessibilityService() {
+    override fun onServiceConnected() { instance = this }
+    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {}
+    override fun onInterrupt() {}
+    override fun onUnbind(intent: Intent?): Boolean { if (instance === this) instance = null; return super.onUnbind(intent) }
+    override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
+    companion object { @Volatile var instance: CoverAccessibilityService? = null }
 }
