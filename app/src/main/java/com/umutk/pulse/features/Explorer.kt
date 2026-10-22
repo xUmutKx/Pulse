@@ -458,7 +458,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (isArchiveFile(f)) { arcFile = f; arcCwd = ""; sel = emptySet(); return }
         if (FilesPrefs.openAsk) { recents = exAddRecent(ctx, f); if (exHandOver(ctx, f, false)) return }
         if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpen(ctx, f, if (ctx is com.umutk.pulse.FilesActivity) "material" else null); return }
-        if (f.extension.lowercase() in com.umutk.pulse.IMG_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f); return }
+        if (f.extension.lowercase() in com.umutk.pulse.IMG_EXTS || f.extension.lowercase() in setOf("heic", "heif", "avif")) {
+            recents = exAddRecent(ctx, f)
+            if (!exOpenInGallery(ctx, f)) com.umutk.pulse.imgOpen(ctx, f)
+            return
+        }
         if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
         if (fileMime(f) == "*/*") { openAsAsk = f; return }
         recents = exAddRecent(ctx, f)
@@ -1496,7 +1500,20 @@ private fun exHandOver(ctx: Context, f: File, share: Boolean): Boolean = runCatc
     val i = if (share) Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri) else Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
     i.clipData = ClipData.newRawUri("", uri)
     i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-    ctx.startActivity(Intent.createChooser(i, f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    // Open with is the system's own "Just once / Always" picker (no chooser wrapper); Share keeps the chooser
+    if (share) ctx.startActivity(Intent.createChooser(i, f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    else ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+}.isSuccess
+
+/** Pictures (HEIC included) go straight to Samsung Gallery when it is there, else to whatever the phone opens them with; false when nothing took it. */
+private fun exOpenInGallery(ctx: Context, f: File): Boolean = runCatching {
+    val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+    val i = Intent(Intent.ACTION_VIEW).setDataAndType(uri, fileMime(f).takeIf { it != "*/*" } ?: "image/*")
+    i.clipData = ClipData.newRawUri("", uri)
+    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    val samsung = "com.sec.android.gallery3d"
+    val has = runCatching { ctx.packageManager.getPackageInfo(samsung, 0); true }.getOrDefault(false)
+    ctx.startActivity(if (has) i.setPackage(samsung) else i)
 }.isSuccess
 
 private fun exCopy(ctx: Context, text: String) {

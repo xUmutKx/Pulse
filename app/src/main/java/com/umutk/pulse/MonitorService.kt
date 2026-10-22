@@ -55,8 +55,8 @@ class MonitorService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Opt.load(this)
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CH, "Monitor", NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(NotificationChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH))
+        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Monitor", NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH))
         val n = build("Pulse monitor is running")
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID, n)
         if (job == null) job = scope.launch { loop() }

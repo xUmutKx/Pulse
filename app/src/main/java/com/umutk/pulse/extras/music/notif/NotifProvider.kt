@@ -34,7 +34,9 @@ class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
 
     override fun handleCustomCommand(session: MediaSession, action: String, extras: Bundle) = base.handleCustomCommand(session, action, extras)
 
-    private class Buttons(private val ctx: Context) : DefaultMediaNotificationProvider(ctx) {
+    private class Buttons(private val ctx: Context) : DefaultMediaNotificationProvider(
+        ctx, DefaultMediaNotificationProvider.NotificationIdProvider { DefaultMediaNotificationProvider.DEFAULT_NOTIFICATION_ID }, QUIET_CHANNEL.also { ensureQuiet(ctx) }, R.string.app_name,
+    ) {
         override fun getMediaButtons(
             session: MediaSession, playerCommands: Player.Commands, customLayout: ImmutableList<CommandButton>, showPauseButton: Boolean,
         ): ImmutableList<CommandButton> {
@@ -52,4 +54,11 @@ class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
             return ImmutableList.copyOf(out)
         }
     }
+}
+
+/** The media notification's own channel, made here so it carries no icon badge (the library's default channel does). */
+private const val QUIET_CHANNEL = "pulse_media_quiet"
+private fun ensureQuiet(ctx: Context) {
+    ctx.getSystemService(android.app.NotificationManager::class.java)
+        .createNotificationChannel(com.umutk.pulse.QuietChannel(QUIET_CHANNEL, ctx.getString(R.string.app_name), android.app.NotificationManager.IMPORTANCE_LOW))
 }
