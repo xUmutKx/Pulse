@@ -249,11 +249,11 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
         val up = upAcc; upAcc = 0f
         scope.launch {
             if (sheetY.value > rootH * .22f) {
-                sheetY.animateTo(rootH, tween(200, easing = FastOutSlowInEasing))
+                sheetY.animateTo(rootH, tween(330, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f)))
                 showQueue = false; showNow = false
             } else {
                 if (up > rootH * .06f && sheetY.value < 1f) { showQueue = false; showLyrics = true }
-                sheetY.animateTo(0f, spring(dampingRatio = .75f, stiffness = Spring.StiffnessMedium))
+                sheetY.animateTo(0f, spring(dampingRatio = .8f, stiffness = Spring.StiffnessLow))
             }
         }
     }
@@ -368,7 +368,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                 ShuffleButton(engine, shuffle, dyn, SUB, 34.dp, 7.dp) { shuffle = it; modesPrefs.edit().putBoolean("queue_shuffled", it).apply() }
                 Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { engine.previous() }.padding(5.dp))
                 Box(Modifier.padding(horizontal = 2.dp).size(42.dp).clip(CircleShape).background(dyn).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
-                    Crossfade(st.isPlaying, animationSpec = tween(160), label = "miniPlay") { p -> Icon(if (p) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(26.dp)) }
+                    Crossfade(st.isPlaying, animationSpec = tween(260), label = "miniPlay") { p -> Icon(if (p) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(26.dp)) }
                 }
                 Icon(Icons.Rounded.SkipNext, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { engine.next() }.padding(5.dp))
                 RepeatButton(engine, repeat, dyn, SUB, 34.dp, 7.dp) { repeat = it }
@@ -378,8 +378,8 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
         // the player is a sheet over the library: it rises from the bottom, follows the finger on any vertical drag and the library shows underneath
         val visible = showNow && cur != null
         LaunchedEffect(visible) {
-            if (visible) { sheetY.snapTo(if (rootH > 0f) rootH else 3000f); sheetOn = true; sheetY.animateTo(0f, tween(340, easing = FastOutSlowInEasing)) }
-            else if (sheetOn) { sheetY.animateTo(rootH.coerceAtLeast(1f), tween(260, easing = FastOutSlowInEasing)); sheetOn = false }
+            if (visible) { sheetY.snapTo(if (rootH > 0f) rootH else 3000f); sheetOn = true; sheetY.animateTo(0f, tween(520, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) }
+            else if (sheetOn) { sheetY.animateTo(rootH.coerceAtLeast(1f), tween(380, easing = FastOutSlowInEasing)); sheetOn = false }
         }
         if (sheetOn) {
             val cur = cur ?: return@Box
@@ -433,8 +433,8 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     SideEffect { lastIndex = st.index }
                     androidx.compose.animation.AnimatedContent(cur, transitionSpec = {
                         val d = if (forward) 1 else -1
-                        (slideInHorizontally(tween(320, easing = FastOutSlowInEasing)) { it / 3 * d } + fadeIn(tween(260))) togetherWith
-                            (slideOutHorizontally(tween(260, easing = FastOutSlowInEasing)) { -it / 3 * d } + fadeOut(tween(180)))
+                        (slideInHorizontally(tween(520, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { it / 3 * d } + fadeIn(tween(420))) togetherWith
+                            (slideOutHorizontally(tween(380, easing = FastOutSlowInEasing)) { -it / 3 * d } + fadeOut(tween(280)))
                     }, contentKey = { it.path }, label = "title") { t ->
                         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(t.name(), color = TXT, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
@@ -456,7 +456,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         val squeeze by animateFloatAsState(if (pressed) .88f else 1f, spring(dampingRatio = .45f, stiffness = Spring.StiffnessMedium), label = "squeeze")
                         Box(Modifier.size(68.dp).graphicsLayer { scaleX = squeeze; scaleY = squeeze }.clip(CircleShape).background(dyn)
                             .clickable(press, androidx.compose.material3.ripple()) { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
-                            Crossfade(st.isPlaying, animationSpec = tween(180), label = "playPause") { playing ->
+                            Crossfade(st.isPlaying, animationSpec = tween(300), label = "playPause") { playing ->
                                 Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(36.dp))
                             }
                         }

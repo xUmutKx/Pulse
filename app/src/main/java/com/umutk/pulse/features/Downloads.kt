@@ -1,5 +1,7 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.PButton
+import androidx.compose.foundation.lazy.items
 import com.umutk.pulse.WinAlert
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.ui.draw.rotate
@@ -910,6 +912,10 @@ private fun DownloadsContent() {
     val ctx = LocalContext.current
     val list by Downloads.tasks.collectAsState()
     var link by remember { mutableStateOf("") }
+    var finding by remember { mutableStateOf(false) }
+    var findNote by remember { mutableStateOf("") }
+    var found by remember { mutableStateOf<List<String>?>(null) }
+    val findScope = androidx.compose.runtime.rememberCoroutineScope()
     val openTool = com.umutk.pulse.LocalOpenTool.current
     var cat by remember { mutableStateOf("All") }
     var sort by remember { mutableStateOf(0) }
@@ -957,10 +963,38 @@ private fun DownloadsContent() {
         PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 PField(link, { link = it }, "https://", Modifier.weight(1f))
-                Box(Modifier.padding(start = 8.dp).clickable { if (link.startsWith("http")) { Downloads.add(ctx, link.trim()); link = "" } }) {
-                    PIcon("download", T.text, 24.dp)
+                Box(Modifier.padding(start = 8.dp).clickable(enabled = !finding) {
+                    if (link.startsWith("http")) {
+                        val u = link.trim(); finding = true; findNote = ""
+                        findScope.launch {
+                            // a file starts at once; a web page is read for its download links
+                            when (val r = LinkFinder.find(u)) {
+                                is LinkFinder.Result.Direct -> { Downloads.add(ctx, u); link = "" }
+                                is LinkFinder.Result.Found -> found = r.links
+                                is LinkFinder.Result.None -> findNote = tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı")
+                                is LinkFinder.Result.Failed -> { findNote = r.why; Downloads.add(ctx, u); link = "" }
+                            }
+                            finding = false
+                        }
+                    }
+                }) {
+                    if (finding) androidx.compose.material3.CircularProgressIndicator(Modifier.size(22.dp), color = T.text, strokeWidth = 2.dp) else PIcon("download", T.text, 24.dp)
                 }
             }
+        }
+        if (findNote.isNotEmpty()) Text(findNote, color = T.sub, fontSize = 12.sp)
+        found?.let { links ->
+            WinAlert(onDismissRequest = { found = null },
+                title = { Text(tr("Download links", "İndirme bağlantıları")) },
+                text = { androidx.compose.foundation.lazy.LazyColumn(Modifier.heightIn(max = 360.dp)) {
+                    items(links, key = { it }) { l ->
+                        Column(Modifier.fillMaxWidth().clickable { found = null; link = ""; Downloads.add(ctx, l) }.padding(vertical = 8.dp)) {
+                            Text(Uri.decode(l.substringBefore('?').substringAfterLast('/')).ifBlank { l }, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            Text(Uri.parse(l).host.orEmpty(), color = T.sub, fontSize = 11.sp, maxLines = 1)
+                        }
+                    }
+                } },
+                confirmButton = {}, dismissButton = { PButton(tr("Cancel", "İptal")) { found = null } })
         }
         if (list.isEmpty()) Text("No downloads", color = T.sub, fontSize = 13.sp)
         list.filter { cat == "All" || category(it.file) == cat }.sortedWith(order).forEach { DownloadRow(it) }

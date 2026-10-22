@@ -315,11 +315,11 @@ fun NowPlayingScreen(
                         val up = upAcc; upAcc = 0f
                         pageScope.launch {
                             if (pageY > pageH * .22f) {
-                                androidx.compose.animation.core.animate(pageY, pageH, animationSpec = androidx.compose.animation.core.tween(200)) { v, _ -> pageY = v }
+                                androidx.compose.animation.core.animate(pageY, pageH, animationSpec = androidx.compose.animation.core.tween(330, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { v, _ -> pageY = v }
                                 pullNow?.invoke(); pageY = 0f
                             } else {
                                 if (up > pageH * .06f && pageY < 1f && !lyricsOpen) lyricsNow?.invoke()
-                                androidx.compose.animation.core.animate(pageY, 0f, animationSpec = androidx.compose.animation.core.tween(180)) { v, _ -> pageY = v }
+                                androidx.compose.animation.core.animate(pageY, 0f, animationSpec = androidx.compose.animation.core.tween(320, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { v, _ -> pageY = v }
                             }
                         }
                     },
