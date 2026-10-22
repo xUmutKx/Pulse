@@ -319,6 +319,7 @@ fun InstallWindowSettings() {
         SwitchRow("Status", "Show New, Identical, Upgrade, Downgrade", InstallShow.chip) { InstallShow.set(ctx, "inst_chip", it) }
         SwitchRow("SDK versions", "Min and target SDK of the APK. Off by default", InstallShow.sdk) { InstallShow.set(ctx, "inst_sdk", it) }
         SwitchRow("Certificate", "The signing certificate fingerprint. Off by default", InstallShow.cert) { InstallShow.set(ctx, "inst_cert", it) }
+        SwitchRow(tr("Other CPU files", "Diğer işlemci dosyaları"), tr("Leave out the splits of CPUs this phone does not use (v7, x86 on an arm64 phone): less space", "Bu telefonun kullanmadığı işlemcilerin parçalarını (arm64'te v7, x86) dışarıda bırak: daha az yer"), InstallShow.libs) { InstallShow.set(ctx, "inst_libs", it) }
     }
     Downloads.load(ctx)
     PCard {

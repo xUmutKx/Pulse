@@ -99,7 +99,7 @@ class Picked(
     val icon: Bitmap?, val src: String?,
 ) {
     /** What gets installed: the base first, then the splits that are ticked. */
-    var files by mutableStateOf(parts)
+    var files by mutableStateOf(if (InstallShow.libs) Installer.keepDevice(parts) else parts)
     /** Set for the install that runs: [Installer.dropSource] removes [src] after success. */
     var drop = false
     /** Set when the APK carries Xposed meta-data: the install result offers the LSPosed button. */
@@ -264,6 +264,18 @@ object Installer {
     }
 
     /** A plain zip that holds several different apps (not the splits of one): each app becomes its own install. */
+    /**
+     * The parts of a bundle without the CPU splits the phone does not use: the one for its first ABI stays (arm64-v8a on most phones), the others (v7, x86) go.
+     * A bundle with no split for that ABI is left whole. A single APK cannot be cut down: changing it would break its signature.
+     */
+    fun keepDevice(parts: List<File>): List<File> {
+        val rx = Regex("(?:^|[._-])(arm64_v8a|armeabi_v7a|x86_64|x86)(?:\\.|$)")
+        fun abi(f: File) = rx.find(f.name.lowercase().replace('-', '_'))?.groupValues?.get(1)
+        val main = android.os.Build.SUPPORTED_ABIS.firstOrNull()?.lowercase()?.replace('-', '_') ?: return parts
+        if (parts.none { abi(it) == main }) return parts
+        return parts.filter { abi(it) == null || abi(it) == main }
+    }
+
     private fun splitApps(c: Context, p: Picked, uri: Uri): List<Picked> {
         if (p.type != "ZIP" || p.parts.size < 2) return listOf(p)
         val pm = c.packageManager
@@ -860,15 +872,23 @@ private fun InstallWindow(
             if (busy) Text("Working...", color = t.sub, fontSize = 13.sp)
             else Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (!pk.mismatch) when (kind) {
-                    "Downgrade" -> PButton("Downgrade", onClick = onDowngrade)
-                    "Identical" -> PButton("Reinstall", onClick = onInstall)
-                    else -> PButton("Install", onClick = onInstall)
+                    "Downgrade" -> InstButton("Downgrade", onClick = onDowngrade)
+                    "Identical" -> InstButton("Reinstall", onClick = onInstall)
+                    else -> InstButton("Install", onClick = onInstall)
                 }
-                if (kind == "Downgrade" && refused && root) PButton("Remove and restore data", danger = true, onClick = onRestore)
-                if (pk.mismatch && root) PButton("Remove and restore data", danger = true, onClick = onRestore)
-                if (pk.mismatch && !root && uninstOk) PButton("Uninstall and install", danger = true, onClick = onUninstall)
+                if (kind == "Downgrade" && refused && root) InstButton("Remove and restore data", danger = true, onClick = onRestore)
+                if (pk.mismatch && root) InstButton("Remove and restore data", danger = true, onClick = onRestore)
+                if (pk.mismatch && !root && uninstOk) InstButton("Uninstall and install", danger = true, onClick = onUninstall)
             }
         },
-        dismissButton = { PButton("Cancel", onClick = onCancel) },
+        dismissButton = { InstButton("Cancel", onClick = onCancel) },
     )
+}
+
+/** A button of the install window in the look of the window: the Windows push buttons in the Windows looks, a plain text button in Material, AMOLED and the others (the app's own look can be another one). */
+@Composable
+private fun InstButton(text: String, danger: Boolean = false, onClick: () -> Unit) {
+    val t = LocalWindowLook.current
+    if (t.id in winButtonLooks) PButton(text, danger = danger, onClick = onClick)
+    else androidx.compose.material3.TextButton(onClick) { Text(text, color = if (danger) Color(0xFFC42B1C) else t.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
 }
