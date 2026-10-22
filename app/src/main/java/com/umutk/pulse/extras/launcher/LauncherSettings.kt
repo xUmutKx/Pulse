@@ -270,7 +270,7 @@ private fun AppCheckDialog(title: String, initial: List<String>, max: Int, onDis
 
 /** A little picture of a launcher look's home screen: its wallpaper colours, its taskbar or dock, a few icons. */
 @Composable
-private fun LookPicture(id: String, modifier: Modifier) {
+internal fun LookPicture(id: String, modifier: Modifier) {
     val bg: Brush; val bar: Color?; val tiles: List<Color>
     when {
         id == "win11" -> { bg = Brush.verticalGradient(listOf(Color(0xFF1B2A6B), Color(0xFFB0306E))); bar = Color(0xCC202020); tiles = listOf(Color(0xFF0078D4), Color(0xFF8764B8)) }

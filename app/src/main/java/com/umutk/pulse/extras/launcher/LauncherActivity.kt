@@ -126,6 +126,8 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
     LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
     LaunchApp(tr("Control Panel", "Denetim Masası"), "pulse:settings", null, iconKey = "settings"),
+    LaunchApp(tr("Store", "Mağaza"), "pulse:store", null, iconKey = "download"),
+    LaunchApp(tr("Control Center", "Denetim Merkezi"), "pulse:control", null, iconKey = "performance"),
     LaunchApp(tr("Performance", "Performans"), "pulse:perf", null, iconKey = "performance"),
     LaunchApp(tr("Services", "Hizmetler"), "pulse:services", null, iconKey = "services"),
     LaunchApp(tr("Startup apps", "Başlangıç uygulamaları"), "pulse:startup", null, iconKey = "startup"),
@@ -194,8 +196,9 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
             "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
             "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
             "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
-            "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); "pulse:files" -> "page:files" to tr("File Explorer", "Dosya Gezgini")
+            "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); "pulse:files" -> "page:filestabs" to tr("File Explorer", "Dosya Gezgini")
             "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire")
+            "pulse:store" -> "store:launcher" to tr("Store", "Mağaza"); "pulse:control" -> "controlcenter" to tr("Control Center", "Denetim Merkezi")
             "pulse:freecell" -> "game:freecell" to tr("FreeCell", "FreeCell"); "pulse:games" -> "game:hub" to tr("Games", "Oyunlar"); else -> null }
         if (r != null) {
             // a window of the desktop itself: dragged, several at once, the launcher stays behind

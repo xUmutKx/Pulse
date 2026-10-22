@@ -27,10 +27,10 @@ import com.umutk.pulse.T
 import com.umutk.pulse.tr
 
 /** One Control Panel entry: what it is called in Windows, what it shows, and the Pulse page behind it. */
-private class CpItem(val icon: String, val en: String, val trName: String, val enDesc: String, val trDesc: String, val route: String)
-private class CpGroup(val en: String, val trName: String, val items: List<CpItem>)
+internal class CpItem(val icon: String, val en: String, val trName: String, val enDesc: String, val trDesc: String, val route: String)
+internal class CpGroup(val en: String, val trName: String, val items: List<CpItem>)
 
-private val CONTROL_PANEL = listOf(
+internal val CONTROL_PANEL = listOf(
     CpGroup("System and Security", "Sistem ve Güvenlik", listOf(
         CpItem("phone", "System", "Sistem", "Device, processor, memory, Android version", "Aygıt, işlemci, bellek, Android sürümü", "page:device"),
         CpItem("heart", "Security and Maintenance", "Güvenlik ve Bakım", "Device health and battery wear", "Aygıt sağlığı ve pil aşınması", "health"),

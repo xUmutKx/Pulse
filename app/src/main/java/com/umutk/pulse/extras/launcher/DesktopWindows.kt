@@ -13,12 +13,15 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -82,7 +85,7 @@ object DesktopWindows {
 fun DesktopWindowLayer(lookId: String, bottom: Dp) {
     val skin = remember(lookId) { frameSkin(lookId) }
     BoxWithConstraints(Modifier.fillMaxSize().padding(bottom = bottom)) {
-        DesktopWindows.list.filter { !it.min }.sortedBy { it.z }.forEach { w -> key(w.id) { DesktopWindowFrame(w, skin, maxWidth, maxHeight) } }
+        DesktopWindows.list.filter { !it.min }.sortedBy { it.z }.forEach { w -> key(w.id) { DesktopWindowFrame(w, skin, lookId, maxWidth, maxHeight) } }
         // the minimised windows wait as small chips along the bottom, just above the taskbar
         val mins = DesktopWindows.list.filter { it.min }
         if (mins.isNotEmpty()) Row(Modifier.align(Alignment.BottomStart).padding(start = 6.dp, bottom = 4.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -103,16 +106,27 @@ private fun glass(skin: WinSkin, c: androidx.compose.ui.graphics.Color) = when (
 }
 
 @Composable
-private fun DesktopWindowFrame(w: DWin, skin: WinSkin, areaW: Dp, areaH: Dp) {
+private fun DesktopWindowFrame(w: DWin, skin: WinSkin, lookId: String, areaW: Dp, areaH: Dp) {
     val d = LocalDensity.current.density
     val fw = if (w.max) areaW else if (w.wDp > 0f) w.wDp.dp.coerceIn(160.dp, areaW) else (areaW - 20.dp).coerceAtMost(areaW * .94f)
     val fh = if (w.max) areaH else if (w.hDp > 0f) w.hDp.dp.coerceIn(120.dp, areaH) else areaH * .64f
     val shape = RoundedCornerShape(if (w.max) 0.dp else skin.corner)
-    Column(
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val blurred = skin.kind == "11" || skin.kind == "7"
+    // the real blur: the desktop picture, blurred, sits behind the see-through frame at the spot where the window is (Mica / Aero)
+    val wall = remember(lookId, land) { if (blurred) wallpaperRes(lookId, land)?.let { r -> android.graphics.BitmapFactory.decodeResource(ctx.resources, r, android.graphics.BitmapFactory.Options().apply { inSampleSize = 4 })?.asImageBitmap() } else null }
+    Box(
         Modifier.offset(if (w.max) 0.dp else w.x.dp, if (w.max) 0.dp else w.y.dp).size(fw, fh)
             // a touch anywhere on the window brings it to the front, without taking the touch from what is inside
             .pointerInput(w.id) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false); DesktopWindows.front(w) } }
-            .clip(shape).background(glass(skin, skin.frame)).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier).padding(skin.frameWidth),
+            .clip(shape).clipToBounds(),
+    ) {
+    if (wall != null) androidx.compose.foundation.Image(wall, null,
+        Modifier.requiredSize(areaW, areaH).offset(if (w.max) 0.dp else (-w.x).dp, if (w.max) 0.dp else (-w.y).dp).blur(if (skin.kind == "11") 28.dp else 16.dp),
+        contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+    Column(
+        Modifier.fillMaxSize().background(glass(skin, skin.frame)).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier).padding(skin.frameWidth),
     ) {
         Row(
             Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title, alpha = when (skin.kind) { "11" -> .82f; "7" -> .72f; else -> 1f }).padding(start = 8.dp)
@@ -147,5 +161,6 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, areaW: Dp, areaH: Dp) {
                 }
             }
         }
+    }
     }
 }
