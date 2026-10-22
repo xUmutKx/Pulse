@@ -183,6 +183,13 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
 
     if (cat == "look") com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
     if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
+    if (cat == "misc") SettingsSection(tr("Widgets", "Widget'lar")) {
+        var stars by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.PowerampWidget.stars(c)) }
+        SwitchRow(tr("Poweramp widget: starry background", "Poweramp widget: yıldızlı arka plan"), stars) {
+            stars = it; c.getSharedPreferences("music_widgets", Context.MODE_PRIVATE).edit().putBoolean("pa_stars", it).apply()
+            com.umutk.pulse.extras.music.widgets.PowerampWidget.refresh(c)
+        }
+    }
 
     if (which == SettingsFor.POWERAMP && cat == "background") SettingsSection("Poweramp") {
         // the skin gallery (families on top) lives in the music theme picker of MusicHub

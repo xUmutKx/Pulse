@@ -77,6 +77,8 @@ class PowerampWidget : AppWidgetProvider() {
         private const val BTN_TOP = 0.74f
         private const val BTN_BOTTOM = 0.98f
 
+        /** The starry sky behind the widget can be switched off (plain black) in the music settings. */
+        fun stars(c: Context) = c.getSharedPreferences("music_widgets", Context.MODE_PRIVATE).getBoolean("pa_stars", true)
         private val loop = LiveLoop(1000) { refresh(it) }
 
         fun refresh(c: Context) {
@@ -98,7 +100,7 @@ class PowerampWidget : AppWidgetProvider() {
             val style = powerampSkin(PowerampPrefs.skin(c)).build(NeutralAccent, Color.Black)
             val bmp = render(
                 style, title, st.current?.shownArtist().orEmpty(), st.current?.album.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover,
-                st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh,
+                st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh, stars(c),
             )
             val f = fit(bw, bh)
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {
@@ -163,7 +165,7 @@ class PowerampWidget : AppWidgetProvider() {
          */
         fun render(
             style: PowerampStyle, title: String, artist: String, album: String, frac: Float, playing: Boolean,
-            posMs: Long, durMs: Long, cover: Bitmap?, index: Int, total: Int, shuffle: Boolean, repeat: Int, bw: Int, bh: Int,
+            posMs: Long, durMs: Long, cover: Bitmap?, index: Int, total: Int, shuffle: Boolean, repeat: Int, bw: Int, bh: Int, stars: Boolean = true,
         ): Bitmap {
             val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
@@ -177,7 +179,7 @@ class PowerampWidget : AppWidgetProvider() {
             // starfield: fixed seed, so the sky does not flicker between redraws
             val rnd = java.util.Random(11)
             p.color = android.graphics.Color.WHITE
-            for (n in 0 until 90) {
+            for (n in 0 until (if (stars) 90 else 0)) {
                 val x = rnd.nextFloat() * W; val y = rnd.nextFloat() * H
                 p.alpha = 40 + rnd.nextInt(180)
                 cv.drawCircle(x, y, 0.4f + rnd.nextFloat() * 0.9f, p)

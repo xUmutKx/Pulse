@@ -974,3 +974,5 @@ Screen recorder feature list (55 candidates)
 - Phone wallpapers for Windows 11 (18), Windows 10 (10 + 2), 7 and XP (portrait, 960 wide, 3 MB), rotated screens use the desktop ones, also as Pulse background (Win11 pack17-34); launcher: desktop windows are draggable and several at once over the launcher, desktop icons chosen in settings (This PC, Recycle Bin, File Explorer by default, Pulse apps addable), lyrics back over the cover, smaller counter pill; 0.10.200. derlenmedi
 
 - Windows 10 Mobile launcher: action center (quick tiles, Collapse, no notifications) pulled down from the top edge; Poweramp now playing shows the library underneath while it is pulled down; 0.10.201. derlenmedi
+
+- Launcher: Win10 Black and colour themes removed, look picker with pictures, no default dock apps, top-right buttons optional, windows minimise to chips and resize, widgets movable/resizable/removable on the Windows desktops, clock flyout (calendar, quick tiles, volume), File Explorer as a window, orientation-specific wallpapers, Poweramp widget stars switch, lyrics button always on the Poweramp cover; 0.10.202. derlenmedi

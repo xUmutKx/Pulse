@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.clickable
 import android.app.WallpaperManager
 import android.content.Context
 import android.graphics.BitmapFactory
@@ -36,6 +37,8 @@ fun wallpaperRes(lookId: String, landscape: Boolean = false): Int? {
     var i = LauncherPrefs.wallIndex(lookId).coerceIn(0, all.lastIndex)
     // a phone picture is tall: a rotated screen takes the first desktop picture of the look instead
     if (landscape && com.umutk.pulse.features.isMobileWall(lookId, i)) i = all.indices.firstOrNull { !com.umutk.pulse.features.isMobileWall(lookId, it) } ?: i
+    // a desktop picture is wide: a portrait screen takes the first phone picture instead
+    else if (!landscape && !com.umutk.pulse.features.isMobileWall(lookId, i)) i = all.indices.firstOrNull { com.umutk.pulse.features.isMobileWall(lookId, it) } ?: i
     return all[i]
 }
 
@@ -65,7 +68,7 @@ fun TaskbarClock(color: Color, modifier: Modifier = Modifier) {
     LaunchedEffect(Unit) { while (true) { delay(15_000L); now = System.currentTimeMillis() } }
     val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now))
     val date = SimpleDateFormat("dd/MM/yy", Locale.getDefault()).format(Date(now))
-    Text("$time\n$date", color = color, fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.End, modifier = modifier)
+    Text("$time\n$date", color = color, fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.End, modifier = modifier.clickable { LauncherSession.clockOpen = !LauncherSession.clockOpen })
 }
 
 /** Sets the look's picture as the phone wallpaper. False when there is no picture or the system refuses. */
