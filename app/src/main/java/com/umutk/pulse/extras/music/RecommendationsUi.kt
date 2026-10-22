@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -51,6 +52,8 @@ fun RecommendationHome(
     round: Boolean,
     onPlay: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    // a tap on a suggestion makes that group the queue (the album-like row it sits in); without it the track plays from the library
+    onQueue: ((List<Track>, Int) -> Unit)? = null,
 ) {
     val ctx = LocalContext.current
     val today = remember(library) { Recommendations.today() }
@@ -78,16 +81,23 @@ fun RecommendationHome(
         }
         sections.forEach { s ->
             androidx.compose.material3.Text(
-                title(s.pick), color = ink, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                rowTitle(s), color = ink, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
                 overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
             )
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(s.tracks) { t ->
-                    Tile(t, current?.path == t.path, ink, dim, tile, accent, tileShape, Modifier.width(96.dp)) { play(t) }
+                itemsIndexed(s.tracks) { i, t ->
+                    Tile(t, current?.path == t.path, ink, dim, tile, accent, tileShape, Modifier.width(96.dp)) { if (onQueue != null) onQueue(s.tracks, i) else play(t) }
                 }
             }
         }
     }
+}
+
+/** A mood mix is shown by the album most of its songs come from, like an album suggestion; the other rows keep their names. */
+private fun rowTitle(s: PickSection): String {
+    if (s.pick !is Pick.Mood) return title(s.pick)
+    val album = s.tracks.mapNotNull { it.album?.takeIf { a -> a.isNotBlank() } }.groupingBy { it }.eachCount().maxByOrNull { it.value }
+    return if (album != null && album.value >= 2) album.key else title(s.pick)
 }
 
 private fun title(p: Pick): String = when (p) {

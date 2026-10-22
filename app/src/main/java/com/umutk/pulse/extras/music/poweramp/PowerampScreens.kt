@@ -612,8 +612,11 @@ private val SEEK_EXTRA = 56.dp
 
 /** Thin bars that fill the button height and move with the live level while playing, and sit at their low stop when paused. Taps go to [onClick]. */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, width: Dp, onClick: () -> Unit) {
     val n = 12
+    var big by remember { mutableStateOf(false) }
+    if (big) FullVisualizer(playing, style) { big = false }
     var levels by remember { mutableStateOf(List(n) { 0f }) }
     LaunchedEffect(playing) {
         while (playing) {
@@ -626,7 +629,7 @@ private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, w
     Box(
         Modifier.width(width).height(36.dp).clip(CircleShape).background(style.panel)
             .semantics { contentDescription = label; role = Role.Button }
-            .clickable(onClick = onClick),
+            .combinedClickable(onClick = onClick, onLongClick = { big = true }),
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.size(24.dp)) {
@@ -636,6 +639,38 @@ private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, w
             levels.forEachIndexed { i, v ->
                 val h = size.height * (0.08f + 0.92f * v.coerceIn(0f, 1f))
                 drawRoundRect(tint, Offset(i * slot + (slot - bw) / 2, size.height - h), Size(bw, h), CornerRadius(bw / 2))
+            }
+        }
+    }
+}
+
+/** Full-screen visualisation opened by holding the bars button: mirrored live bands on the player backdrop; a tap closes it. */
+@Composable
+private fun FullVisualizer(playing: Boolean, style: PowerampStyle, onDismiss: () -> Unit) {
+    val n = 48
+    var levels by remember { mutableStateOf(List(n) { 0f }) }
+    LaunchedEffect(playing) {
+        while (playing) {
+            val s = MusicLevels.snapshot()
+            levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, ((g + 1) * MusicLevels.BANDS / n).coerceAtLeast(g * MusicLevels.BANDS / n + 1)).average().toFloat() }
+            delay(33)
+        }
+        levels = List(n) { 0f }
+    }
+    androidx.compose.ui.window.Dialog(
+        onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .94f)).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.fillMaxWidth().height(300.dp).padding(horizontal = 16.dp)) {
+                val slot = size.width / n
+                val bw = slot * 0.62f
+                val mid = size.height / 2
+                levels.forEachIndexed { i, v ->
+                    val h = (size.height / 2) * (0.03f + 0.97f * v.coerceIn(0f, 1f))
+                    val c = androidx.compose.ui.graphics.lerp(style.accent, Color.White, v.coerceIn(0f, 1f) * .6f)
+                    drawRoundRect(c, Offset(i * slot + (slot - bw) / 2, mid - h), Size(bw, h * 2), CornerRadius(bw / 2))
+                }
             }
         }
     }
