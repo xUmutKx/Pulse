@@ -123,6 +123,11 @@ val Themes = listOf(
         glassA = .5f, wall = Brush.linearGradient(listOf(c(0xFF3A1206), c(0xFF8A2E12), c(0xFF2A0B1E)))),
     PTheme("frost", "Frost", false, c(0xFFE9EEF5), c(0xFFFFFFFF), c(0xFF1C2433), c(0xFF5B6678), c(0xFF4F6DDB), c(0xFFD0D8E6), 14.dp,
         glassA = .6f, wall = Brush.linearGradient(listOf(c(0xFFDDE7F5), c(0xFFB8C9E8), c(0xFFE5D9F2)))),
+    // separate copies of the Windows 11 look with their own Mica / Acrylic glass: they read no effect setting (see glassTwin)
+    PTheme("mica2", "Mica (new)", true, c(0xFF1C1C20), c(0xFF2B2B30), c(0xFFFFFFFF), c(0xFFB4B4BC), c(0xFF60CDFF), c(0xFF3C3C44), 8.dp,
+        glassA = .8f, wall = Brush.linearGradient(listOf(c(0xFF1B2433), c(0xFF2A2236), c(0xFF1A2B30)))),
+    PTheme("acrylic2", "Acrylic (new)", true, c(0xFF14161C), c(0xFF262A36), c(0xFFFFFFFF), c(0xFFB8BECC), c(0xFF60CDFF), c(0xFF4A5064), 8.dp,
+        glassA = .56f, wall = Brush.linearGradient(listOf(c(0xFF123B5E), c(0xFF4B2C73), c(0xFF0F5560)))),
     amoledWindow(),   // the app's own AMOLED black (pure black background, grey panels)
 )
 
@@ -189,6 +194,15 @@ fun Modifier.bevel(raised: Boolean = true): Modifier = drawBehind {
 
 fun Modifier.frame(t: PTheme, raised: Boolean = false): Modifier =
     if (t.bevel) bevel(raised) else if (t.tabs) border(1.dp, t.line) else this
+
+/** Light / dark colours of the Mica and Acrylic copies: Mica is calm and mostly opaque, Acrylic more see-through with a brighter edge. */
+fun glassTwin(t: PTheme, dark: Boolean): PTheme {
+    val acr = t.id == "acrylic2"
+    return if (dark) t
+    else PTheme(t.id, t.name, false, c(0xFFF3F3F6), c(0xFFFFFFFF), c(0xFF000000), c(0xFF5C5C66), c(0xFF0067C0), c(0xFFD9D9E0), t.radius,
+        glassA = if (acr) .6f else .82f,
+        wall = Brush.linearGradient(if (acr) listOf(c(0xFFBFD8F2), c(0xFFDCCBF2), c(0xFFBFE8E8)) else listOf(c(0xFFE6EAF2), c(0xFFEDE6F2), c(0xFFE3EEEF))))
+}
 
 /** The light twin of Windows 11: the base look is the dark one, so the light mode needs its own colours. */
 fun lightTwin(t: PTheme): PTheme = PTheme(t.id, t.name, false, c(0xFFF3F3F3), c(0xFFFFFFFF), c(0xFF000000), c(0xFF5C5C5C), c(0xFF0067C0), c(0xFFE5E5E5), t.radius, glassA = t.glassA)

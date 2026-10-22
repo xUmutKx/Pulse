@@ -29,7 +29,7 @@ val LocalFluentIcons = compositionLocalOf<Boolean?> { null }
  */
 @Composable
 fun Icon(imageVector: ImageVector, contentDescription: String?, modifier: Modifier = Modifier, tint: Color = LocalContentColor.current) {
-    val on = LocalFluentIcons.current ?: (T.id == "win11" && IconStyle.of(IconCat.SCREENS) != "line")
+    val on = LocalFluentIcons.current ?: (T.id in setOf("win11", "mica2", "acrylic2") && IconStyle.of(IconCat.SCREENS) != "line")
     val key = imageVector.name.substringAfterLast('.')
     // the Windows 11 icon pack (the coloured Fluency pictures, assets/icons/win11) first, so these icons match the rest of the look
     if (on) MAT_PACK[key]?.let { k ->

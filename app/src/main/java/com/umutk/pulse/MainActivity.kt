@@ -204,6 +204,7 @@ open class MainActivity : ComponentActivity() {
 fun effective(t: PTheme): PTheme {
     val sysDark = androidx.compose.foundation.isSystemInDarkTheme()
     val dark = when (Look.mode) { "dark" -> true; "light" -> false; else -> sysDark }
+    if (t.id == "mica2" || t.id == "acrylic2") return glassTwin(t, dark)
     if (!t.material) return if (dark) darkTwin(t) ?: t else if (t.id == "win11") lightTwin(t) else t
     if (t.id == "oneui" || t.id == "coloros") {
         val one = t.id == "oneui"
