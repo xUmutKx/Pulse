@@ -1036,3 +1036,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.231 derlenmedi: 0.10.230 derleme düzeltmesi (horizontalScroll importu).
 
 - 0.10.232 derlenmedi: Win7 tarzı Not gadget (masaüstü, klavyeyle yazılır, çevrilir/renk); YouTube/YT Music çalma listesi doğrudan YouTube sayfasından okunur (Piped/Invidious ölse de), ayarlarda ayrı satır.
+
+- 0.10.233 derlenmedi: klasör boyutlarında 3. görünüm (disk haritası: alanı boyutuyla orantılı bloklar), düğme 3 görünümü döndürür; müzik ayar kategorileri yuvarlak renkli simgeler; ana ekrana eklenen kısayollar uygulamanın kendi simgesiyle; bilinmeyen dosyada ve menüde Farklı kaydet.

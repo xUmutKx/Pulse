@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
 import android.Manifest
 import android.content.Context
@@ -246,6 +248,11 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
 /** One category of the music settings: icon, name, what is inside. */
 private class SetCat(val key: String, val icon: String, val en: String, val trName: String, val enSub: String, val trSub: String)
 
+/** The round background colour of each category's icon, as Poweramp's settings list colours its groups. */
+private fun catColor(key: String) = when (key) {
+    "look" -> 0xFF7E57C2; "audio" -> 0xFF1E88E5; "background" -> 0xFF26A69A; "art" -> 0xFFEF6C00; "library" -> 0xFF43A047; "bt" -> 0xFF3949AB; else -> 0xFF6D4C41
+}.let { androidx.compose.ui.graphics.Color(it) }
+
 private fun settingCats(which: SettingsFor) = listOfNotNull(
     SetCat("look", "palette", "Look and Feel", "Görünüm", "Player interface, lyrics, notifications", "Oynatıcı arayüzü, sözler, bildirimler"),
     SetCat("audio", "volume", "Audio", "Ses", "Crossfade, replay gain, speed, sleep timer", "Geçiş, ReplayGain, hız, uyku zamanlayıcı"),
@@ -261,7 +268,7 @@ private fun SettingsIndex(which: SettingsFor, pick: (String) -> Unit) {
     Column(Modifier.fillMaxWidth()) {
         settingCats(which).forEach { k ->
             Row(Modifier.fillMaxWidth().clickable { pick(k.key) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                PIcon(k.icon, com.umutk.pulse.Look.accent, 28.dp)
+                Box(Modifier.size(42.dp).clip(androidx.compose.foundation.shape.CircleShape).background(catColor(k.key)), contentAlignment = Alignment.Center) { PIcon(k.icon, androidx.compose.ui.graphics.Color.White, 24.dp) }
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(tr(k.en, k.trName), color = T.text, fontSize = 16.sp)
                     Text(tr(k.enSub, k.trSub), color = T.sub, fontSize = 12.sp)
@@ -277,7 +284,7 @@ private fun SettingsCategoryHeader(key: String, back: () -> Unit) {
     val k = settingCats(SettingsFor.POWERAMP).firstOrNull { it.key == key }
     Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(40.dp).clickable(onClick = back), contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
-        if (k != null) { PIcon(k.icon, com.umutk.pulse.Look.accent, 22.dp); Text(tr(k.en, k.trName), color = T.text, fontSize = 17.sp, modifier = Modifier.padding(start = 10.dp)) }
+        if (k != null) { Box(Modifier.size(30.dp).clip(androidx.compose.foundation.shape.CircleShape).background(catColor(k.key)), contentAlignment = Alignment.Center) { PIcon(k.icon, androidx.compose.ui.graphics.Color.White, 18.dp) }; Text(tr(k.en, k.trName), color = T.text, fontSize = 17.sp, modifier = Modifier.padding(start = 10.dp)) }
     }
 }
 

@@ -611,7 +611,13 @@ private fun ExtraAppsCard() {
             alias in routeOf -> Intent(Intent.ACTION_MAIN).setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", routeOf.getValue(alias))
             else -> Intent(Intent.ACTION_MAIN).setComponent(android.content.ComponentName(ctx, "com.umutk.pulse." + alias)).addCategory(Intent.CATEGORY_LAUNCHER)
         }
-        sm.requestPinShortcut(android.content.pm.ShortcutInfo.Builder(ctx, "app_$alias").setShortLabel(label).setIcon(android.graphics.drawable.Icon.createWithResource(ctx, icon)).setIntent(i).build(), null)
+        // the app's own launcher picture (the adaptive icon), so every shortcut on the home screen looks like its app, not like Pulse
+        val mip = mapOf("FilesLauncher" to "ic_files", "PhotosLauncher" to "ic_photos", "CalendarLauncher" to "ic_calendar", "ContactsLauncher" to "ic_contacts", "MusicLauncher" to "ic_music", "VideoLauncher" to "ic_video",
+            "PaintLauncher" to "ic_ad_paint", "CalculatorLauncher" to "ic_ad_calc", "ArtCraftLauncher" to "ic_ad_artcraft", "WhiteNoiseLauncher" to "ic_ad_noise", "VoiceLauncher" to "ic_ad_voice", "NotesLauncher" to "ic_ad_notes",
+            "WeatherLauncher" to "ic_ad_weather", "MessagesLauncher" to "ic_ad_messages", "ScreenRecLauncher" to "ic_ad_record", "NotifHistLauncher" to "ic_ad_notif", "LocalSendLauncher" to "ic_ad_localsend", "ExtraStoreLauncher" to "ic_ad_extras")
+        val res = mip[alias]?.let { ctx.resources.getIdentifier(it, "mipmap", ctx.packageName) } ?: 0
+        val ic = if (res != 0) android.graphics.drawable.Icon.createWithResource(ctx, res) else android.graphics.drawable.Icon.createWithResource(ctx, icon)
+        sm.requestPinShortcut(android.content.pm.ShortcutInfo.Builder(ctx, "app_$alias").setShortLabel(label).setIcon(ic).setIntent(i).build(), null)
     }
     // Windows 11 glyph per app (FluentPaths keys; Fluent UI System Icons, MIT License, Microsoft)
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
