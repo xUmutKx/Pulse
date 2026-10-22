@@ -61,8 +61,9 @@ class LauncherState(val apps: List<LaunchApp>, val vertical: Boolean, val column
 fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Modifier = composed {
     // where the finger is in the window, so the long-press menu opens right there like a context menu
     var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    val view = androidx.compose.ui.platform.LocalView.current
     onGloballyPositioned { origin = it.positionInRoot() }
-        .pointerInput(app.pkg) { detectTapGestures(onTap = { onTap() }, onLongPress = { LauncherSession.pressAt = origin + it; state.longPress(app) }) }
+        .pointerInput(app.pkg) { detectTapGestures(onTap = { onTap() }, onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; state.longPress(app) }) }
 }
 
 /** Dock = the chosen packages that are installed (max 5); none until the user pins some. */
@@ -122,7 +123,7 @@ object LauncherLooks {
 /** App picture from the launcher icon, or a letter tile when the icon could not be read. Clipped to a squircle. */
 @Composable
 fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modifier: Modifier = Modifier) {
-    val shape = RoundedCornerShape(size * .28f)
+    val shape = when (LauncherPrefs.iconShape) { "circle" -> androidx.compose.foundation.shape.CircleShape; "square" -> RoundedCornerShape(size * .06f); "rounded" -> RoundedCornerShape(size * .16f); else -> RoundedCornerShape(size * .28f) }
     val bmp = app.icon
     if (bmp != null) Image(bmp, null, modifier.size(size).clip(shape))
     else if (app.iconKey != null) Box(modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
