@@ -130,6 +130,8 @@ private fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("Services", "Hizmetler"), "pulse:services", null, iconKey = "services"),
     LaunchApp(tr("Startup apps", "Başlangıç uygulamaları"), "pulse:startup", null, iconKey = "startup"),
     LaunchApp(tr("Programs", "Programlar"), "pulse:apps", null, iconKey = "apps"),
+    LaunchApp(tr("Minesweeper", "Mayın Tarlası"), "pulse:mines", null, iconKey = "gridView"),
+    LaunchApp(tr("Solitaire", "Solitaire"), "pulse:solitaire", null, iconKey = "heart"),
 )
 
 /**
@@ -171,7 +173,8 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
             "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
             "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
             "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
-            "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); else -> null }
+            "pulse:apps" -> "page:apps" to tr("Programs", "Programlar")
+            "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire"); else -> null }
         if (r != null) {
             runCatching { ctx.startActivity(Intent(ctx, com.umutk.pulse.FramedToolActivity::class.java).putExtra("route", r.first).putExtra("frame", lookId).putExtra("title", r.second).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             return
@@ -188,6 +191,8 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
         "pulse:services" -> Intent(ctx, MainActivity::class.java).putExtra("start", "services")
         "pulse:startup" -> Intent(ctx, MainActivity::class.java).putExtra("start", "startup")
         "pulse:apps" -> Intent(ctx, MainActivity::class.java).putExtra("start", "apps")
+        "pulse:mines" -> Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "game:minesweeper")
+        "pulse:solitaire" -> Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "game:solitaire")
         else -> Intent(ctx, MainActivity::class.java).putExtra("start", "terminal")
     }
     runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
