@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music
 
+import androidx.compose.foundation.horizontalScroll
 import android.Manifest
 import android.content.Context
 import android.content.Intent
