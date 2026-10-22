@@ -16,8 +16,8 @@ object BluetoothAutoplay {
 }
 
 /**
- * Registered by [MusicPlaybackService] while it runs. Implicit ACL broadcasts are not delivered to manifest receivers
- * on API 26+, so this is not declared in the manifest. Needs BLUETOOTH_CONNECT to read the device class.
+ * Declared in the manifest (the ACL connect broadcast is one of the few implicit ones Android still delivers to a manifest receiver) and also registered by
+ * [MusicPlaybackService] while it runs. Needs BLUETOOTH_CONNECT to read the device class.
  */
 class BluetoothAutoplayReceiver : BroadcastReceiver() {
     override fun onReceive(ctx: Context, intent: Intent) {
@@ -25,6 +25,8 @@ class BluetoothAutoplayReceiver : BroadcastReceiver() {
         val device = intent.device() ?: return
         // headphones, speakers and car kits only; keyboards, watches and the like are ignored
         if (runCatching { device.bluetoothClass?.hasService(BluetoothClass.Service.AUDIO) }.getOrNull() != true) return
+        // the receiver is declared in the manifest as well, so it also runs when the player is not: the playback service is started first
+        runCatching { androidx.core.content.ContextCompat.startForegroundService(ctx, Intent(ctx, MusicPlaybackService::class.java)) }
         val engine = MusicPlayerEngine.get(ctx)
         Playlists.restore(ctx, engine) // empty queue: nothing to play, the restore only fills it when a last queue exists
         engine.play()
