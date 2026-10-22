@@ -984,3 +984,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.205 derlenmedi: Pulse a ayrı "Mica (new)" ve "Acrylic (new)" görünümleri (Win11 kopyası, efekt ayarını okumaz, duvar kağıdı bulanık cam, açık/koyu).
 
 - 0.10.206 derlenmedi: ekstra uygulamaların başlatıcı ikonları ayrı (siyah zemin, beyaz çizgi); ekran kapağı çift dokunuşla kapanınca hızlı ayar kutucuğu da kapanır.
+
+- 0.10.207 derlenmedi: masaüstü pencerelerinde gerçek bulanık Mica/Aero zemin, Mağaza penceresi, sekmeli Dosya Gezgini, Denetim Merkezi (parlaklık/ses/hızlı kutular), Windows Phone Ayarlar sayfası.
