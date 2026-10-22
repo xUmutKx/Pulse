@@ -1020,3 +1020,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.223 derlenmedi: kapak kaydırmada komşu kapaklar çalma sırasını (karıştırma dahil) gösterir; düz ve hızlı kayma (eğik çark kalktı).
 
 - 0.10.224 derlenmedi: söz bildirimi vurgusu ayarı (başlık altı çizili / ince satır, açılınca kalın / hep kalın).
+
+- 0.10.225 derlenmedi: Poweramp yedeği: başlık/sanatçı ile eşleşme + bulunamayanlardan örnek ad, .poweramp-backup dışa aktarma (aynı lists-export şeması); müzik ayarları: ilk sayfa yalnızca kategoriler, kategori tam sayfa + sol üstte geri; kapağı çekerken kütüphane yumuşak belirir.

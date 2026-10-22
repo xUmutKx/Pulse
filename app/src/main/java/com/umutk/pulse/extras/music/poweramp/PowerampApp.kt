@@ -38,6 +38,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -147,8 +148,11 @@ fun PowerampApp(
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Box(Modifier.weight(1f)) {
                 // while the now playing page is pulled down, the screen it came from shows underneath
-                if (tab == null && pullShown > 0f) LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
-                Crossfade(tab, label = "poweramp-tab") { t ->
+                // it fades in as the page is pulled (no pop), and the hand-over after the pull needs no second fade of the same screen
+                if (tab == null && pullShown > 0f) Box(Modifier.graphicsLayer { alpha = (pullShown / 260f).coerceIn(0f, 1f) }) {
+                    LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
+                }
+                Crossfade(tab, animationSpec = androidx.compose.animation.core.tween(if (pullShown > 0f) 0 else 300), label = "poweramp-tab") { t ->
                     when (t) {
                         null -> NowPlayingScreen(
                             track = track,
