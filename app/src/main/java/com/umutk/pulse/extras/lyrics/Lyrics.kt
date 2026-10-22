@@ -4,6 +4,7 @@ import android.content.Context
 import com.umutk.pulse.extras.music.MusicLibrary
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.RandomAccessFile
@@ -202,7 +203,24 @@ object Lyrics {
         val key = query.trim().lowercase()
         // the same phrase is not searched again (the online part is slow): kept for ten minutes
         searchMemo[key]?.takeIf { System.currentTimeMillis() - it.first < 10 * 60_000L }?.let { return it.second }
-        return searchByTextNow(ctx, query).also { if (it.isNotEmpty()) searchMemo[key] = System.currentTimeMillis() to it }
+        // kept on disk too (a day): the same phrase after a restart is answered at once, not searched again
+        diskMemo(ctx, key)?.let { searchMemo[key] = System.currentTimeMillis() to it; return it }
+        return searchByTextNow(ctx, query).also { if (it.isNotEmpty()) { searchMemo[key] = System.currentTimeMillis() to it; saveMemo(ctx, key, it) } }
+    }
+
+    private fun memoFile(c: Context, key: String) = File(c.cacheDir, "lyrics-search/" + sha(key) + ".json")
+
+    private fun diskMemo(c: Context, key: String): List<LyricHit>? = runCatching {
+        val f = memoFile(c, key).takeIf { it.isFile && System.currentTimeMillis() - it.lastModified() < 24 * 3600_000L } ?: return null
+        val a = JSONArray(f.readText())
+        List(a.length()) { i -> a.getJSONObject(i).let { o -> LyricHit(o.getString("t"), o.getString("a"), o.optString("b").ifEmpty { null }, o.getString("l"), o.optString("n").ifEmpty { null }, o.getString("i")) } }
+    }.getOrNull()
+
+    private fun saveMemo(c: Context, key: String, hits: List<LyricHit>) {
+        runCatching {
+            val a = JSONArray(); hits.forEach { h -> a.put(JSONObject().put("t", h.title).put("a", h.artist).put("b", h.before.orEmpty()).put("l", h.line).put("n", h.after.orEmpty()).put("i", h.id)) }
+            memoFile(c, key).apply { parentFile?.mkdirs() }.writeText(a.toString())
+        }
     }
 
     private val searchMemo = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<LyricHit>>>()

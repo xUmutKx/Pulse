@@ -94,7 +94,10 @@ private fun formatSize(b: Long): String = when {
 private var lastDir: File? = null
 
 /** The next tree screen opens in [d] (when it lies inside the storage it shows). */
-fun openTreeAt(d: File) { lastDir = d }
+fun openTreeAt(d: File) { lastDir = d; directStart = d }
+
+/** Set by [openTreeAt]: the screen that opens next leaves in one Back from its start folder, not by climbing every parent up to the storage root. */
+private var directStart: File? = null
 
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -125,8 +128,13 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     }
 
     val atRoot = dir == root
+    val direct = remember { directStart.also { directStart = null } }
     fun up() {
-        if (atRoot) onBack() else dir = dir.parentFile ?: root
+        when {
+            atRoot -> onBack()
+            direct != null && (dir == direct || !dir.path.startsWith(direct.path)) -> onBack()
+            else -> dir = dir.parentFile ?: root
+        }
     }
     BackHandler { up() }
 
