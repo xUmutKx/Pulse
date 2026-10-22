@@ -337,6 +337,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var apkAsk by remember { mutableStateOf<File?>(null) }
     // a file whose type nobody knows: asked how to open it
     var openAsAsk by remember { mutableStateOf<File?>(null) }
+    var saveAsFile by remember { mutableStateOf<File?>(null) }
     var name by remember { mutableStateOf("") }
     var newExt by remember { mutableStateOf("docx") }
     val filePick = LocalFilePick.current
@@ -807,6 +808,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         add(Triple("Rename", "rename", { name = f.name; dialog = "rename" to f }))
                         add(Triple("Compress", "zip", { zipAsk = listOf(f) }))
                         if (!f.isDirectory) add(Triple("Share", "share", { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }))
+                        if (!f.isDirectory) add(Triple("Save as", "copy", { saveAsFile = f }))
                         add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
                         if (f.isDirectory) {
                             add(Triple(if (f.path in marks) "Remove bookmark" else "Add bookmark", "bookmark", { mark(f.path) }))
@@ -1098,9 +1100,31 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 PButton(tr("Archive", "Arşiv"), Modifier.fillMaxWidth()) { openAsAsk = null; arcFile = f; arcCwd = ""; sel = emptySet() }
                 PButton(tr("Text", "Metin"), Modifier.fillMaxWidth()) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
                 PButton(tr("Image", "Resim"), Modifier.fillMaxWidth()) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
+                PButton(tr("Save as…", "Farklı kaydet…"), Modifier.fillMaxWidth()) { openAsAsk = null; saveAsFile = f }
                 PButton(tr("Another app…", "Başka uygulama…"), Modifier.fillMaxWidth()) { openAsAsk = null; if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }
             } },
             confirmButton = {}, dismissButton = { PButton(tr("Cancel", "İptal")) { openAsAsk = null } })
+    }
+    // Save as: a copy under a name and in a folder the user picks (the file may have no known type to open it with)
+    saveAsFile?.let { f ->
+        var newName by remember(f) { mutableStateOf(f.name) }
+        val roots = listOf(dir, File(top, "Download"), File(top, "Documents"), File(top, "DCIM"), File(top, "Pictures"), File(top, "Music")).filter { it.isDirectory }.distinctBy { it.path }
+        var target by remember(f) { mutableStateOf(roots.first()) }
+        WinAlert(onDismissRequest = { saveAsFile = null }, title = { Text(tr("Save as", "Farklı kaydet")) },
+            text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PField(newName, { newName = it }, tr("Name", "Ad"), Modifier.fillMaxWidth())
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    roots.forEach { d -> PChip(target.path == d.path, if (d.path == dir.path) tr("Here", "Burası") else d.name) { target = d } }
+                }
+            } },
+            confirmButton = { TextButton({
+                val clean = newName.trim().ifEmpty { f.name }.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+                var out = File(target, clean); var n = 2
+                while (out.exists()) out = File(target, clean.substringBeforeLast('.', clean) + " ($n)" + clean.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" }.also { n++ })
+                saveAsFile = null
+                scope.launch { note = withContext(Dispatchers.IO) { runCatching { f.copyTo(out); tr("Saved ${out.name}", "${out.name} kaydedildi") }.getOrElse { tr("Could not save", "Kaydedilemedi") } }; refresh++ }
+            }) { Text(tr("Save", "Kaydet")) } },
+            dismissButton = { TextButton({ saveAsFile = null }) { Text(tr("Cancel", "İptal")) } })
     }
     apkAsk?.let { a -> ApkInfo(a, { apkAsk = null }) { arcFile = a; arcCwd = ""; apkAsk = null } }
     dialog?.let { (kind, f) ->
