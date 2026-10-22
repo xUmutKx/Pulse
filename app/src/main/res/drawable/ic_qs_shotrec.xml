@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- screenshot + screen recording tile: the four corner brackets of a capture frame around a camera lens -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="2" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M3,8V4a1,1 0 0 1 1,-1h4 M16,3h4a1,1 0 0 1 1,1v4 M21,16v4a1,1 0 0 1 -1,1h-4 M8,21H4a1,1 0 0 1 -1,-1v-4" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.8" android:pathData="M8,9.5h8v5h-8z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,10.8m-1.5,0a1.5,1.5 0 1 1 3,0a1.5,1.5 0 1 1 -3,0" />
+</vector>

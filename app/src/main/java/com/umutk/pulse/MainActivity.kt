@@ -170,7 +170,7 @@ open class MainActivity : ComponentActivity() {
             IntentCompat.getParcelableExtra(i, Intent.EXTRA_COMPONENT_NAME, android.content.ComponentName::class.java)?.let {
                 if (it.className.endsWith("ScreenRecTile")) {
                     // long press on the screenshot / record tile: the video recorder
-                    startActivity(Intent().setComponent(android.content.ComponentName(this, "com.umutk.pulse.ExtraToolActivity")).putExtra("route", "screenrec"))
+                    startActivity(Intent(this, com.umutk.pulse.extras.screenrec.ScreenRecActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     finish(); return
                 }
                 com.umutk.pulse.widgets.WidgetOpen.page = tilePage(it.className)

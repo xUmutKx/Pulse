@@ -6,4 +6,5 @@
     android:accessibilityFlags="flagDefault"
     android:notificationTimeout="0"
     android:canRetrieveWindowContent="false"
+    android:canTakeScreenshot="true"
     android:description="@string/cover_service_desc" />
