@@ -75,7 +75,7 @@ object IconSet {
         "win95", "classic", "winamp" -> IconStyle.PIXEL
         "xp", "win7", "wmp", "vlc", "coloros" -> IconStyle.ROUNDED
         "win10", "flat", "poweramp" -> IconStyle.SHARP
-        "win11", "amoled", "minimal", "oneui" -> IconStyle.LINE
+        "win11", "mica2", "acrylic2", "amoled", "minimal", "oneui" -> IconStyle.LINE
         else -> IconStyle.FILLED
     }
 

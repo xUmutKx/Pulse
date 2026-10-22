@@ -980,3 +980,5 @@ Screen recorder feature list (55 candidates)
 - Fix: Arrangement import in the launcher settings; 0.10.203. derlenmedi
 
 - 0.10.204 derlenmedi: önerilerden çalma sırası (albüm/şarkı), çubuk tuşuna basılı tutunca tam ekran görselleştirme, bildirim düğmesi önizleme kartı, Win11 Mica / Win7 Aero saydam pencere çerçevesi.
+
+- 0.10.205 derlenmedi: Pulse a ayrı "Mica (new)" ve "Acrylic (new)" görünümleri (Win11 kopyası, efekt ayarını okumaz, duvar kağıdı bulanık cam, açık/koyu).
