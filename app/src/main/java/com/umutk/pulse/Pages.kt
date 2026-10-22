@@ -465,6 +465,7 @@ fun SettingsPage() {
                 Text("Windows", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                 ThemeRow(byId("win11", "win10")); ThemeRow(byId("win7", "xp"))
                 ThemeRow(byId("win95"), center = true)
+                ThemeRow(byId("mica2", "acrylic2"))
                 Row(Modifier.fillMaxWidth().clickable { ThemeFold.open = !ThemeFold.open }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Other colors", "Diğer renkler"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = if (ThemeFold.open) 180f else 0f })
