@@ -130,8 +130,10 @@ private fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("Services", "Hizmetler"), "pulse:services", null, iconKey = "services"),
     LaunchApp(tr("Startup apps", "Başlangıç uygulamaları"), "pulse:startup", null, iconKey = "startup"),
     LaunchApp(tr("Programs", "Programlar"), "pulse:apps", null, iconKey = "apps"),
+    LaunchApp(tr("Games", "Oyunlar"), "pulse:games", null, iconKey = "gridView"),
     LaunchApp(tr("Minesweeper", "Mayın Tarlası"), "pulse:mines", null, iconKey = "gridView"),
     LaunchApp(tr("Solitaire", "Solitaire"), "pulse:solitaire", null, iconKey = "heart"),
+    LaunchApp(tr("FreeCell", "FreeCell"), "pulse:freecell", null, iconKey = "heart"),
 )
 
 /**
@@ -174,7 +176,8 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
             "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
             "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
             "pulse:apps" -> "page:apps" to tr("Programs", "Programlar")
-            "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire"); else -> null }
+            "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire")
+            "pulse:freecell" -> "game:freecell" to tr("FreeCell", "FreeCell"); "pulse:games" -> "game:hub" to tr("Games", "Oyunlar"); else -> null }
         if (r != null) {
             runCatching { ctx.startActivity(Intent(ctx, com.umutk.pulse.FramedToolActivity::class.java).putExtra("route", r.first).putExtra("frame", lookId).putExtra("title", r.second).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             return
@@ -193,6 +196,8 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
         "pulse:apps" -> Intent(ctx, MainActivity::class.java).putExtra("start", "apps")
         "pulse:mines" -> Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "game:minesweeper")
         "pulse:solitaire" -> Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "game:solitaire")
+        "pulse:freecell" -> Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "game:freecell")
+        "pulse:games" -> Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "game:hub")
         else -> Intent(ctx, MainActivity::class.java).putExtra("start", "terminal")
     }
     runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -268,7 +273,11 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             if (look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
             // a long press on an empty part of the home opens the Settings / Widgets sheet
             Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
-                if (desktop && !LauncherPrefs.homeApps) DesktopIcons(look, state, shortcuts, iconDp, edge, open)
+                if (desktop && !LauncherPrefs.homeApps) {
+                    DesktopIcons(look, state, shortcuts, iconDp, edge, open)
+                    // the clock gadget of the desktop, in the look's own style, top right
+                    DesktopClock(look.id, Modifier.align(Alignment.TopEnd).padding(top = 10.dp, end = maxOf(14.dp, edge)))
+                }
                 else if (vertical) {
                     LazyVerticalGrid(GridCells.Fixed(columns), Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), state = grid) {
                         items(home, key = { it.pkg }) { app ->

@@ -268,3 +268,112 @@ private fun CardSlot(card: Card?, w: Dp, h: Dp, back: Boolean = false, hint: Str
         }
     }
 }
+
+// ---- FreeCell ---------------------------------------------------------------------------------------------------
+
+private class FcDeal {
+    val cells = arrayOfNulls<Card>(4)
+    val found = List(4) { ArrayDeque<Card>() }
+    val tab = List(8) { ArrayDeque<Card>() }
+    init {
+        val deck = (0 until 52).map { Card(it % 13, it / 13, true) }.shuffled()
+        deck.forEachIndexed { i, c -> tab[i % 8].addLast(c) }
+    }
+    val won get() = found.all { it.size == 13 }
+    fun canFound(c: Card) = found[c.suit].size == c.rank
+    fun canTab(c: Card, col: Int): Boolean { val t = tab[col].lastOrNull(); return t == null || (t.rank == c.rank + 1 && t.red != c.red) }
+    /** How many cards may travel at once: one more than the free cells, doubled for each empty column (not counting the target). */
+    fun movable(target: Int): Int = (cells.count { it == null } + 1) * (1 shl tab.indices.count { it != target && tab[it].isEmpty() })
+}
+
+/** FreeCell: tap a card (a run of cards from a column), then a cell, a foundation or a column; a tap on a picked card sends it up when it fits. */
+@Composable
+fun FreeCellGame() {
+    var deal by remember { mutableStateOf(FcDeal()) }
+    var tick by remember { mutableIntStateOf(0) }
+    var pick by remember { mutableStateOf<Pair<Int, Int>?>(null) }   // column (or -1 - cell index) and first card
+    tick.let {}
+    val classic = T.id == "win95" || T.id == "xp" || T.id == "win7"
+    val table = if (classic) Color(0xFF008000) else T.bg
+    fun cardsOf(p: Pair<Int, Int>): List<Card> = if (p.first < 0) listOfNotNull(deal.cells[-1 - p.first]) else deal.tab[p.first].toList().drop(p.second)
+    fun take(p: Pair<Int, Int>) { if (p.first < 0) deal.cells[-1 - p.first] = null else repeat(deal.tab[p.first].size - p.second) { deal.tab[p.first].removeLast() } }
+    fun toFound(p: Pair<Int, Int>): Boolean { val cs = cardsOf(p); if (cs.size != 1 || !deal.canFound(cs[0])) return false; take(p); deal.found[cs[0].suit].addLast(cs[0]); return true }
+    fun toCell(p: Pair<Int, Int>, i: Int): Boolean { val cs = cardsOf(p); if (cs.size != 1 || deal.cells[i] != null) return false; take(p); deal.cells[i] = cs[0]; return true }
+    fun toCol(p: Pair<Int, Int>, col: Int): Boolean {
+        if (p.first == col) return false
+        val cs = cardsOf(p)
+        if (cs.isEmpty() || cs.size > deal.movable(col) || !deal.canTab(cs[0], col)) return false
+        // the run must be a proper sequence: descending ranks in alternating colours
+        for (k in 1 until cs.size) if (!(cs[k - 1].rank == cs[k].rank + 1 && cs[k - 1].red != cs[k].red)) return false
+        take(p); cs.forEach { deal.tab[col].addLast(it) }; return true
+    }
+    Column(Modifier.fillMaxSize().background(table).padding(6.dp)) {
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val w = (maxWidth - 5.dp * 7) / 8
+            val h = w * 1.45f
+            Column {
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    for (i in 0 until 4) CardSlot(deal.cells[i], w, h, selected = pick?.first == -1 - i) {
+                        val p = pick; val c = deal.cells[i]
+                        when { p != null && c == null -> { toCell(p, i); pick = null }; p != null && p.first == -1 - i -> { toFound(p); pick = null }; c != null -> pick = -1 - i to 0 }
+                        tick++
+                    }
+                    for (f in 0 until 4) CardSlot(deal.found[f].lastOrNull(), w, h, hint = listOf("♠", "♥", "♦", "♣")[f], selected = false) { pick?.let { p -> toFound(p) }; pick = null; tick++ }
+                }
+                Spacer(Modifier.height(10.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    for (c in 0 until 8) {
+                        val col = deal.tab[c]
+                        Box(Modifier.width(w).height(h + (col.size.coerceAtLeast(1) * 24).dp + 120.dp).clickable { val p = pick; if (p != null && col.isEmpty()) { toCol(p, c); pick = null; tick++ } }) {
+                            if (col.isEmpty()) CardSlot(null, w, h, selected = false) {}
+                            col.forEachIndexed { i, card ->
+                                Box(Modifier.offset(y = (i * 24).dp)) {
+                                    CardSlot(card, w, h, selected = pick?.first == c && (pick?.second ?: 99) <= i) {
+                                        val p = pick
+                                        when {
+                                            p == null -> pick = c to i
+                                            p.first == c && p.second == i -> { toFound(p); pick = null }
+                                            else -> pick = if (toCol(p, c)) null else c to i
+                                        }
+                                        tick++
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (deal.won) tr("You win!", "Kazandınız!") else "", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Text(tr("New game", "Yeni oyun"), color = if (classic) Color.White else T.accent, fontSize = 14.sp, modifier = Modifier.clickable { deal = FcDeal(); pick = null; tick++ }.padding(8.dp))
+        }
+    }
+}
+
+// ---- Game hub -------------------------------------------------------------------------------------------------
+
+/** The Games folder: every game of the launcher in one window; a tap opens it in the same window. */
+@Composable
+fun GameHub() {
+    val open = com.umutk.pulse.LocalOpenTool.current
+    val games = listOf(
+        Triple("game:minesweeper", tr("Minesweeper", "Mayın Tarlası"), tr("Clear the board without a mine", "Mayına basmadan tahtayı temizle")),
+        Triple("game:solitaire", tr("Solitaire", "Solitaire"), tr("Klondike, draw one", "Klondike, tek kart çek")),
+        Triple("game:freecell", tr("FreeCell", "FreeCell"), tr("Every deal can be won", "Her dağıtım kazanılabilir")),
+    )
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp)) {
+        Text(tr("Games", "Oyunlar"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp))
+        games.forEach { (id, name, sub) ->
+            Row(Modifier.fillMaxWidth().clickable { open(id) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(T.panel), contentAlignment = Alignment.Center) {
+                    Text(when (id) { "game:minesweeper" -> "✸"; "game:solitaire" -> "♠"; else -> "♥" }, fontSize = 24.sp, color = if (id == "game:solitaire") T.text else Color(0xFFD02020))
+                }
+                Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                    Text(name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    Text(sub, color = T.sub, fontSize = 12.sp)
+                }
+            }
+        }
+    }
+}
