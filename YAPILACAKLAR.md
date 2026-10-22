@@ -992,3 +992,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.209 derlenmedi: indirme silme onayı; Windows Phone simge/kutucuk ayarı (varsayılan düz simge) + uzun basınca parmağın yerinde açılan menü; Win11 masaüstü penceresi koyu Mica; sözler: DNS engelinde DNS-over-HTTPS yedeği + hata satırı.
 
 - 0.10.210 derlenmedi: 0.10.209 derleme düzeltmesi (FramedWindow virgül).
+
+- 0.10.211 derlenmedi: sözler önce cihazdaki .lrc/.txt (adı şarkıya benzeyen veya başlığı içeren dosya dahil) sonra internet; öneri mix satırlarının yanında çal tuşu.

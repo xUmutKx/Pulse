@@ -38,10 +38,9 @@ object Lyrics {
     suspend fun forTrack(ctx: Context, title: String, artist: String, album: String?, durationMs: Long, localPath: String?): LyricsResult? =
         withContext(Dispatchers.IO) {
             val app = ctx.applicationContext
-            if (localPath != null) {
-                (readEmbedded(localPath) ?: readSidecar(localPath) ?: LyricsStore(app).load(localPath, artist, title)?.let { toResult(it, "saved") })
-                    ?.let { return@withContext it }
-            }
+            // the phone first: the tag, a lyrics file named like the song, then any lyrics file that carries the song's title; the net comes after
+            ((localPath?.let { readEmbedded(it) }) ?: readSidecar(localPath.orEmpty(), title) ?: localPath?.let { LyricsStore(app).load(it, artist, title)?.let { r -> toResult(r, "saved") } })
+                ?.let { return@withContext it }
             val key = "t|${artist.trim().lowercase()}|${title.trim().lowercase()}"
             cacheGet(app, key)?.let { return@withContext it }
             // a song that had no lyrics online is not asked again for three days
@@ -268,9 +267,9 @@ object Lyrics {
         return listOf("lrc", "txt").firstNotNullOfOrNull { e -> sidecarFile(path, e)?.let { f -> runCatching { f.readText() }.getOrNull() }?.takeIf { it.isNotBlank() } }
     }
 
-    private fun readSidecar(path: String): LyricsResult? {
+    private fun readSidecar(path: String, title: String? = null): LyricsResult? {
         for (e in listOf("lrc", "txt")) {
-            val t = sidecarFile(path, e)?.let { runCatching { it.readText() }.getOrNull() } ?: rootSidecar(path, e) ?: continue
+            val t = sidecarFile(path, e, title)?.let { runCatching { it.readText() }.getOrNull() } ?: rootSidecar(path, e) ?: continue
             fromText(t, e)?.let { return it }
         }
         return null
@@ -278,6 +277,7 @@ object Lyrics {
 
     /** When the app may not read the folder (no all-files access), root lists it and reads the same-name file. */
     private fun rootSidecar(path: String, ext: String): String? {
+        if (path.isEmpty()) return null
         if (com.umutk.pulse.Shell.root != true) return null
         val song = File(path)
         val want = norm(song.name.substringBeforeLast('.'))
@@ -308,7 +308,7 @@ object Lyrics {
      * The lyrics file of a song: same name next to it (any letter case, spaces and dashes ignored), then the usual
      * lyrics folders by the same rule. Only files below 1 MB count.
      */
-    private fun sidecarFile(path: String, ext: String): File? {
+    private fun sidecarFile(path: String, ext: String, title: String? = null): File? {
         val song = File(path)
         val base = song.name.substringBeforeLast('.')
         val want = norm(base)
@@ -320,6 +320,12 @@ object Lyrics {
             val dir = File(root, d)
             if (dir.path == song.parent) continue
             filesIn(dir).firstOrNull { ok(it) && norm(it.name.substringBeforeLast('.')) == want }?.let { return it }
+        }
+        // no file named like the song: one whose name holds the song's title ("Artist - Title.lrc"), next to the song or in the usual folders
+        val t = title?.let { norm(it) }?.takeIf { it.length >= 3 }
+        if (t != null) {
+            val dirs = listOfNotNull(song.parentFile?.takeIf { path.isNotEmpty() }) + lyricDirs.map { File(root, it) }
+            for (dir in dirs) filesIn(dir).firstOrNull { ok(it) && norm(it.name.substringBeforeLast('.')).let { n -> n == t || n.endsWith(t) || n.startsWith(t) } }?.let { return it }
         }
         return null
     }
