@@ -791,6 +791,9 @@ fun FilesSettings() {
             Chips(tr("Order", "Düzen"), "sort", listOf(tr("Ascending", "Artan"), tr("Descending", "Azalan")), fp.sort % 2) { fp.sort = fp.sort / 2 * 2 + it }
             Chips(tr("View", "Görünüm"), "gridView", listOf(tr("List", "Liste"), tr("Grid", "Izgara")), if (fp.grid) 1 else 0) { fp.grid = it == 1 }
             Chips(tr("Icon size", "Simge boyutu"), "image", listOf(tr("Tiny", "En küçük"), tr("Small", "Küçük"), tr("Medium", "Orta"), tr("Large", "Büyük"), tr("Huge", "En büyük")), fp.icon / 2) { fp.icon = it * 2 + 1 }
+            // files taken out of an archive for a copy or cut wait in the app's data until they are pasted; this is how long
+            val ttl = listOf(15 to "15 min", 60 to "1 h", 360 to "6 h", 1440 to "1 day", 0 to tr("Never", "Hiç"))
+            Chips(tr("Delete temporary copies after", "Geçici kopyalar şu süre sonra silinsin"), "delete", ttl.map { it.second }, ttl.indexOfFirst { it.first == TempCopies.minutes(ctx) }.coerceAtLeast(1)) { TempCopies.setMinutes(ctx, ttl[it].first) }
             SwRow(tr("Show hidden files", "Gizli dosyaları göster"), "search", fp.hidden) { fp.hidden = it }
             SwRow(tr("Show file extensions", "Dosya uzantılarını göster"), "notes", fp.ext) { fp.ext = it }
             SwRow(tr("Confirm before delete", "Silmeden önce sor"), "delete", fp.confirm) { fp.confirm = it }
@@ -867,4 +870,19 @@ private fun FilesPickRow(k: String, title: String, opts: List<String>, sel: Int,
             }
         } },
         confirmButton = { TextButton({ open = false }) { Text(tr("Close", "Kapat")) } })
+}
+
+
+/** The files an archive cut / copy writes into the app's data (arcclip) and cache (arcsel) so they can be pasted later: swept after a time the user sets (an hour at first). */
+object TempCopies {
+    fun minutes(c: android.content.Context): Int = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getInt("tmp_copy_min", 60)
+    fun setMinutes(c: android.content.Context, m: Int) { c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putInt("tmp_copy_min", m).apply(); sweep(c) }
+    /** Deletes the temporary copy folders older than the chosen time. Cheap: call it whenever the app or Files opens. */
+    fun sweep(c: android.content.Context) {
+        val m = minutes(c); if (m <= 0) return
+        val limit = System.currentTimeMillis() - m * 60_000L
+        listOf(java.io.File(c.filesDir, "arcclip"), java.io.File(c.cacheDir, "arcsel"), java.io.File(c.cacheDir, "pa_import"), java.io.File(c.cacheDir, "restore")).forEach { root ->
+            root.listFiles()?.filter { it.lastModified() < limit }?.forEach { runCatching { it.deleteRecursively() } }
+        }
+    }
 }

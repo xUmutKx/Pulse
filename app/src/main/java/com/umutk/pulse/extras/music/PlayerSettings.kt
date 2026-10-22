@@ -219,10 +219,17 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     if (cat == "look") com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
     if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
     if (cat == "misc") SettingsSection(tr("Widgets", "Widget'lar")) {
-        var stars by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.PowerampWidget.stars(c)) }
-        SwitchRow(tr("Poweramp widget: starry background", "Poweramp widget: yıldızlı arka plan"), stars) {
-            stars = it; c.getSharedPreferences("music_widgets", Context.MODE_PRIVATE).edit().putBoolean("pa_stars", it).apply()
-            com.umutk.pulse.extras.music.widgets.PowerampWidget.refresh(c)
+        var bgMode by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.bg(c)) }
+        var artPct by remember { mutableFloatStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.artPct(c).toFloat()) }
+        Text(tr("Widget background", "Widget arka planı"), color = T.sub, fontSize = 12.sp)
+        Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("none" to tr("Transparent", "Şeffaf"), "black" to tr("Black", "Siyah"), "stars" to tr("Starry (Poweramp)", "Yıldızlı (Poweramp)")).forEach { (k, n) ->
+                com.umutk.pulse.PChip(bgMode == k, n) { bgMode = k; com.umutk.pulse.extras.music.widgets.WidgetOpts.setBg(c, k); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c) }
+            }
+        }
+        SliderRow(tr("Cover size", "Kapak boyutu") + "  ${artPct.toInt()}%", (artPct - 30f) / 70f, 0f..1f) {
+            artPct = 30f + it * 70f
+            com.umutk.pulse.extras.music.widgets.WidgetOpts.setArtPct(c, artPct.toInt()); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c)
         }
     }
 

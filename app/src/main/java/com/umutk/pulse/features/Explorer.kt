@@ -606,6 +606,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
         // the folder you left keeps its place: coming back lands where you were
         SideEffect { ExScroll.live = exScroll }
+        LaunchedEffect(Unit) { withContext(Dispatchers.IO) { TempCopies.sweep(ctx) } }
         LaunchedEffect(here) {
             val want = ExScroll.memo[here] ?: 0
             if (want > 0) { kotlinx.coroutines.withTimeoutOrNull(1500) { snapshotFlow { exScroll.maxValue }.first { it >= want } }; exScroll.scrollTo(want.coerceAtMost(exScroll.maxValue)) } else exScroll.scrollTo(0)
