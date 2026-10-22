@@ -950,3 +950,5 @@ Screen recorder feature list (55 candidates)
 - Launcher: framed windows open centred and the middle caption button grows them to full screen; Minesweeper and Solitaire drawn in the look of the theme; music settings in Poweramp-style categories with icons; lyrics page shows what the lookup saw when nothing is found; 0.10.188. derlenmedi
 
 - Files: the top-right settings button is gone (Settings stays in the menu, sections collapsed), gaps between files and folders cut to a third; 0.10.189. derlenmedi
+
+- Poweramp now playing: lyrics open and close by their own calls (the menu entry opened and shut it), a vertical drag on the cover moves the whole page (down closes, up opens lyrics); Widgets search finds the Windows media player and shows Winamp skins that match; 0.10.190. derlenmedi
