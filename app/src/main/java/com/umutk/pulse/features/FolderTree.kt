@@ -1,5 +1,10 @@
 package com.umutk.pulse.features
 
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.material.icons.filled.GridView
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
@@ -155,7 +160,9 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     }
     // list or square tiles, remembered for the next visit
     val prefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("p", Context.MODE_PRIVATE)
-    var grid by remember { mutableStateOf(prefs.getBoolean("tree_grid", false)) }
+    // 0 list, 1 square tiles, 2 the disk map (blocks as big as the folders); the button cycles them
+    var mode by remember { mutableStateOf(prefs.getInt("tree_mode", if (prefs.getBoolean("tree_grid", false)) 1 else 0).coerceIn(0, 2)) }
+    val grid = mode == 1
     preview?.let { f -> PictureView(f) { preview = null } }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
@@ -166,10 +173,10 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             Text("Folder tree", style = MaterialTheme.typography.titleLarge)
             Spacer(Modifier.weight(1f))
             IconButton(onClick = {
-                grid = !grid
-                prefs.edit().putBoolean("tree_grid", grid).apply()
+                mode = (mode + 1) % 3
+                prefs.edit().putInt("tree_mode", mode).apply()
             }) {
-                Icon(if (grid) Icons.Filled.List else Icons.Filled.Apps, contentDescription = if (grid) "List" else "Tiles")
+                Icon(when (mode) { 0 -> Icons.Filled.Apps; 1 -> Icons.Filled.GridView; else -> Icons.Filled.List }, contentDescription = if (mode == 0) "Tiles" else if (mode == 1) "Disk map" else "List")
             }
             IconButton(onClick = { if (viaRoot) { RootDu.forget(dir); rootRev++ } else StorageScan.rescan(root) }) {
                 Icon(Icons.Filled.Refresh, contentDescription = "Refresh")
@@ -219,7 +226,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             dismissButton = { TextButton(onClick = { askDelete = false }) { Text("Cancel") } },
         )
 
-        if (grid) TreeTiles(rows, sel, ::tap, ::toggleSel) else LazyColumn(
+        if (mode == 2) TreeMap(rows, sel, ::tap, ::toggleSel) else if (grid) TreeTiles(rows, sel, ::tap, ::toggleSel) else LazyColumn(
             Modifier.fillMaxWidth().padding(top = 8.dp),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
@@ -363,4 +370,64 @@ private object RootDu {
         cache[d.path] = list
         return list
     }
+}
+
+
+/** The disk map: every item is a block whose area is its share of the folder, packed so the blocks stay close to squares (squarified treemap). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
+private fun ColumnScope.TreeMap(rows: List<TreeNode>, sel: Set<String>, onTap: (TreeNode) -> Unit, onToggle: (String) -> Unit) {
+    val items = remember(rows) { rows.filter { it.size > 0 }.sortedByDescending { it.size }.take(80) }
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp)) {
+        val w = maxWidth.value; val h = maxHeight.value
+        val cells = remember(items, w, h) { squarify(items, w, h) }
+        cells.forEach { (node, r) ->
+            val picked = node.file.path in sel
+            val hue = ((node.file.name.hashCode() and 0x7fffffff) % 360).toFloat()
+            val base = Color.hsv(hue, if (node.isDir) .55f else .3f, if (node.isDir) .62f else .78f)
+            Box(
+                Modifier.offset(r[0].dp, r[1].dp).size(r[2].dp, r[3].dp).padding(1.dp)
+                    .background(if (picked) MaterialTheme.colorScheme.primary else base)
+                    .combinedClickable(onClick = { onTap(node) }, onLongClick = { onToggle(node.file.path) }),
+            ) {
+                if (r[2] > 54f && r[3] > 30f) Column(Modifier.padding(4.dp)) {
+                    Text(node.file.name, color = Color.White, fontSize = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (r[3] > 46f) Text(formatSize(node.size), color = Color.White.copy(alpha = .8f), fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+/** Squarified treemap layout of [items] (sorted, biggest first) in a w x h box: each result is (item, [x, y, width, height]). */
+private fun squarify(items: List<TreeNode>, w: Float, h: Float): List<Pair<TreeNode, FloatArray>> {
+    val total = items.sumOf { it.size }.toDouble().coerceAtLeast(1.0)
+    val area = items.map { (it.size / total * w * h).toFloat() }
+    val out = ArrayList<Pair<TreeNode, FloatArray>>()
+    var x = 0f; var y = 0f; var rw = w; var rh = h
+    var i = 0
+    fun worst(row: List<Float>, side: Float): Float {
+        val s = row.sum(); if (s <= 0f || side <= 0f) return Float.MAX_VALUE
+        return maxOf(side * side * row.max() / (s * s), s * s / (side * side * row.min()))
+    }
+    while (i < items.size) {
+        val side = minOf(rw, rh)
+        val row = ArrayList<Float>(); var j = i
+        while (j < items.size) {
+            val next = row + area[j]
+            if (row.isNotEmpty() && worst(next, side) > worst(row, side)) break
+            row.add(area[j]); j++
+        }
+        val s = row.sum()
+        val thick = if (side > 0f) s / side else 0f
+        var off = 0f
+        for (k in i until j) {
+            val len = if (thick > 0f) area[k] / thick else 0f
+            if (rw >= rh) out += items[k] to floatArrayOf(x, y + off, thick, len) else out += items[k] to floatArrayOf(x + off, y, len, thick)
+            off += len
+        }
+        if (rw >= rh) { x += thick; rw -= thick } else { y += thick; rh -= thick }
+        i = j
+    }
+    return out
 }
