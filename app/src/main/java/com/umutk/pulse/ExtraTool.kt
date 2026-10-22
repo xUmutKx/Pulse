@@ -113,7 +113,7 @@ fun ExtraLookIcon(tint: Color = T.text) {
  * One activity behind launcher entries (MusicLauncher, VideoLauncher, WhiteNoiseLauncher). The entry it was
  * started through picks the page, so it always knows where it was opened from. Back from the page closes it.
  */
-class ExtraToolActivity : ComponentActivity() {
+open class ExtraToolActivity : ComponentActivity() {
 
     // same process as Pulse: LookHost writes the one global Look.resolved, so this tool keeps its own across pause / resume and Pulse keeps its own (MainActivity)
     private var ownResolved: PTheme? = null
@@ -144,9 +144,15 @@ class ExtraToolActivity : ComponentActivity() {
                 ExtraLookControl(look) { look = it; if (store != null) store.set(this@ExtraToolActivity, it) else ExtraToolLook.set(this@ExtraToolActivity, it) }
             }
             CompositionLocalProvider(LocalExtraLook provides control) {
-                LookHost(lookId = look) { th ->
+                // started from the launcher in a Windows look: the page sits in that look's window, with the same look inside
+                val frame = intent.getStringExtra("frame")
+                val shown = if (frame != null && frame.removeSuffix("black") in ExtraToolLook.ids) frame.removeSuffix("black") else look
+                LookHost(lookId = shown) { th ->
                     CompositionLocalProvider(LocalOpenTool provides { id -> if (id.isNotEmpty()) route = id else back() }) {
-                        Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
+                        if (frame != null) com.umutk.pulse.extras.launcher.FramedWindow(frame, intent.getStringExtra("title") ?: route.substringAfter(':').replaceFirstChar { it.uppercase() }, { finish() }) {
+                            Box(Modifier.fillMaxSize().background(th.bg)) { SubScreen(route, back) }
+                        }
+                        else Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
                     }
                 }
             }
@@ -172,3 +178,6 @@ class ExtraToolActivity : ComponentActivity() {
         }
     }
 }
+
+/** The tool activity in a see-through window: the launcher's framed Pulse windows (see FramedWindow). */
+class FramedToolActivity : ExtraToolActivity()

@@ -602,6 +602,7 @@
         <service android:name="com.umutk.pulse.features.CoverService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="screen cover overlay (black screen over other apps)" />
         </service>
+        <activity android:name="com.umutk.pulse.FramedToolActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecService" android:exported="false" android:foregroundServiceType="mediaProjection" />
         <activity android:name="com.umutk.pulse.extras.screenrec.ScreenRecActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:launchMode="singleTop" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecTile" android:exported="true" android:label="Screenshot / record" android:icon="@drawable/ic_qs_pulse"

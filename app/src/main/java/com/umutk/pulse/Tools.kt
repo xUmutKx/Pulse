@@ -116,6 +116,19 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "playlists" -> com.umutk.pulse.extras.playlists.OnlinePlaylistsHub(back)
         id == "launcher" -> com.umutk.pulse.extras.launcher.LauncherSettings(back)
         id == "messages" -> MessagesScreen(back)
+        // Pulse's own pages (Task Manager, This PC ...), for the launcher's windows
+        id == "page:processes" -> ProcessesPage()
+        id == "page:performance" -> PerformancePage()
+        id == "page:history" -> HistoryPage()
+        id == "page:startup" -> StartupPage()
+        id == "page:details" -> DetailsPage()
+        id == "page:services" -> ServicesPage()
+        id == "page:apps" -> AppsPage()
+        id == "page:device" -> DeviceModule()
+        id == "page:settings" -> SettingsPage()
+        id == "page:recycle" -> com.umutk.pulse.features.RecycleBinPage()
+        id == "page:terminal" -> com.umutk.pulse.features.TerminalPage()
+        id == "page:files" -> com.umutk.pulse.features.FilesPage()
     }
 }
 

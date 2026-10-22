@@ -60,7 +60,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-private val XP_WINDOW = WinSkin("xp", Brush.horizontalGradient(listOf(Color(0xFF0058EE), Color(0xFF3A93FF), Color(0xFF0058EE))), Color.White, Color(0xFF0831D9), 3.dp, 7.dp,
+internal val XP_WINDOW = WinSkin("xp", Brush.horizontalGradient(listOf(Color(0xFF0058EE), Color(0xFF3A93FF), Color(0xFF0058EE))), Color.White, Color(0xFF0831D9), 3.dp, 7.dp,
     Color.White, Color(0xFFD6DFF7), Color.White, Color(0xFF1B1B1B), Color(0xFF5A6A9A), Color(0xFF316AC5), Color.White, Color(0xFF7F9DB9))
 
 
