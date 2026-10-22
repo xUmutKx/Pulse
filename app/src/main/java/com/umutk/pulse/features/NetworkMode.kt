@@ -79,6 +79,9 @@ object NetMode {
         else -> nr or lte or g3 or g2
     }
 
+    /** What the phone answered to the last change: the commands' own output and the values read back, so a refusal can be seen. */
+    @Volatile var lastDiag = ""
+
     /** Writes the mode for every SIM slot as root and, when asked, flips airplane mode so the radio re-reads it. [done] runs on the main thread. */
     fun apply(c: Context, mode: Int, done: (Boolean) -> Unit) {
         val app = c.applicationContext
@@ -91,6 +94,10 @@ object NetMode {
                 (if (air) "; cmd connectivity airplane-mode enable; sleep 1; cmd connectivity airplane-mode disable" else "") + "; echo __OK"
             val out = if (Shell.root == true) Shell.runRoot(cmd) else Shell.run(cmd)
             val ok = out.contains("__OK") && current(app) == mode
+            // read back what the phone really holds now
+            val back = (if (Shell.root == true) Shell.runRoot("echo sdk=\$(getprop ro.build.version.sdk); echo setting=\$(settings get global preferred_network_mode); echo allowed=\$(cmd phone get-allowed-network-types-for-users 2>&1 | head -3); echo net=\$(getprop gsm.network.type)")
+                else Shell.run("echo setting=\$(settings get global preferred_network_mode); echo allowed=\$(cmd phone get-allowed-network-types-for-users 2>&1 | head -3); echo net=\$(getprop gsm.network.type)")).trim()
+            lastDiag = "want mode $mode, mask $m\n" + out.trim().lines().filter { it != "__OK" }.takeLast(8).joinToString("\n") + "\n" + back
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(ok) }
         }.start()
     }
@@ -108,6 +115,7 @@ fun NetworkModeTool() {
         Text(tr("Network type", "Ağ türü") + ": " + (cur?.let { NetMode.label(it) } ?: tr("not readable", "okunamıyor")), color = T.text, fontSize = 15.sp)
         if (Shell.root != true && !Shell.shizukuOk()) Text(tr("Needs root", "Root gerekir"), color = T.sub, fontSize = 12.sp)
         if (status.isNotEmpty()) Text(status, color = T.sub, fontSize = 12.sp)
+        if (NetMode.lastDiag.isNotEmpty() && status.isNotEmpty() && status != tr("Switching…", "Değiştiriliyor…")) Text(NetMode.lastDiag, color = T.sub, fontSize = 10.sp, fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace)
     }
     PCard {
         NetMode.all.forEach { m ->

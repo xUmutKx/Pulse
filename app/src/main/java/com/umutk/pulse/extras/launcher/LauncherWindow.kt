@@ -48,6 +48,11 @@ import androidx.compose.ui.unit.sp
 import com.umutk.pulse.bevel
 import com.umutk.pulse.tr
 
+/** "Log off": leaves the launcher's desktop for the rest of Pulse (the app itself). */
+internal fun logOff(ctx: android.content.Context) {
+    runCatching { ctx.startActivity(android.content.Intent(ctx, com.umutk.pulse.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
 /** How one Windows look paints the apps window: the title bar, the frame and the panes. [kind] picks the caption buttons: "7", "xp" or "95". */
 class WinSkin(
     val kind: String, val title: Brush, val titleInk: Color, val frame: Color, val frameWidth: Dp, val corner: Dp,
@@ -114,8 +119,14 @@ fun LauncherWindow(skin: WinSkin, state: LauncherState, onClose: () -> Unit, tas
                 }
             }
             // status line
-            Row(Modifier.fillMaxWidth().background(skin.nav).padding(horizontal = 8.dp, vertical = 3.dp)) {
-                Text("${shown.size} " + tr("items", "öğe"), color = skin.ink, fontSize = 11.sp)
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            Row(Modifier.fillMaxWidth().background(skin.nav).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${shown.size} " + tr("items", "öğe"), color = skin.ink, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                // the way out of the desktop into the rest of Pulse
+                Row(Modifier.clickable { onClose(); logOff(ctx) }.padding(horizontal = 6.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    com.umutk.pulse.PIcon("power", skin.ink, 14.dp); Spacer(Modifier.width(4.dp))
+                    Text(tr("Log off", "Oturumu kapat"), color = skin.ink, fontSize = 11.sp)
+                }
             }
         }
     }

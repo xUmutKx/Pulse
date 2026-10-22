@@ -214,6 +214,13 @@ class Win11LauncherLook : LauncherLook {
                                 }
                             }
                         }
+                        // the foot of the menu: the way out of the desktop into the rest of Pulse
+                        val logCtx = androidx.compose.ui.platform.LocalContext.current
+                        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.End) {
+                            Row(Modifier.clip(shape).clickable { onClose(); logOff(logCtx) }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                com.umutk.pulse.PIcon("power", fg, 18.dp); Spacer(Modifier.width(8.dp)); Text(tr("Log off", "Oturumu kapat"), color = fg, fontSize = 13.sp)
+                            }
+                        }
                     }
                 }
             }

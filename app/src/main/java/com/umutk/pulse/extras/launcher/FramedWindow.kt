@@ -52,7 +52,7 @@ internal fun frameSkin(look: String): WinSkin = when (look) {
  * Any caption button, or a tap on the desktop around the window, closes it.
  */
 @Composable
-fun FramedWindow(look: String, title: String, onClose: () -> Unit, content: @Composable () -> Unit) {
+fun FramedWindow(look: String, title: String, onClose: () -> Unit, onBack: (() -> Unit)? = null, content: @Composable () -> Unit) {
     val skin = remember(look) { frameSkin(look) }
     val none = remember { MutableInteractionSource() }
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)).clickable(interactionSource = none, indication = null, onClick = onClose)) {
@@ -62,6 +62,8 @@ fun FramedWindow(look: String, title: String, onClose: () -> Unit, content: @Com
                 .padding(skin.frameWidth).clickable(interactionSource = none, indication = null) {},
         ) {
             Row(Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title).padding(start = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                // inside a page of the window (a Control Panel item) a back arrow leads to where it came from
+                if (onBack != null) Box(Modifier.size(28.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", skin.titleInk, 16.dp) }
                 Text(title, color = skin.titleInk, fontSize = 13.sp, fontWeight = if (skin.kind == "xp" || skin.kind == "95") FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Caption(skin, 0, onClose); Caption(skin, 1, onClose); Caption(skin, 2, onClose)

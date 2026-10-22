@@ -241,7 +241,7 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     val d = details
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            PButton("Back") { onBack() }
+            Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
             PHead(d?.label ?: pkg, d?.version ?: "")
             Text(pkg, color = T.sub, fontSize = 12.sp)
             Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {

@@ -149,7 +149,7 @@ open class ExtraToolActivity : ComponentActivity() {
                 val shown = if (frame != null && frame.removeSuffix("black") in ExtraToolLook.ids) frame.removeSuffix("black") else look
                 LookHost(lookId = shown) { th ->
                     CompositionLocalProvider(LocalOpenTool provides { id -> if (id.isNotEmpty()) route = id else back() }) {
-                        if (frame != null) com.umutk.pulse.extras.launcher.FramedWindow(frame, intent.getStringExtra("title") ?: route.substringAfter(':').replaceFirstChar { it.uppercase() }, { finish() }) {
+                        if (frame != null) com.umutk.pulse.extras.launcher.FramedWindow(frame, intent.getStringExtra("title") ?: route.substringAfter(':').replaceFirstChar { it.uppercase() }, { finish() }, if (route != start) back else null) {
                             Box(Modifier.fillMaxSize().background(th.bg)) { SubScreen(route, back) }
                         }
                         else Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
