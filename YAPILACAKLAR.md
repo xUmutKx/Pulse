@@ -956,3 +956,5 @@ Screen recorder feature list (55 candidates)
 - Launcher desktop: a clock gadget per Windows look (round Aero gadget for 7, Luna panel, 95 digital, light digits for 10/11), Windows 11 wallpaper from the app's own pictures, Games hub with FreeCell; 0.10.191. derlenmedi
 
 - Music: shuffle and repeat are saved and come back after a restart or an update (and the fixed-order shuffle flag); lyrics widget line in bold letters; 0.10.192. derlenmedi
+
+- Poweramp lyrics: sheet is a layer over the whole page, the lyrics button also for songs whose lyrics were found online, no grey diagnostic line; 0.10.193. derlenmedi
