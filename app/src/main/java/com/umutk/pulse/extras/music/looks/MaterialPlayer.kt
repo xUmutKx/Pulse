@@ -199,7 +199,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     val st by engine.state.collectAsState()
     val cur = st.current
     val art = rememberTrackArt(cur)
-    val (artPrev, artNext) = neighbourCovers(st.queue, st.index) { trackArt(ctx, it) }
+    val prevIdx = remember(st.index, st.queue, engine.player.shuffleModeEnabled, engine.player.repeatMode) { engine.player.previousMediaItemIndex }
+    val nextIdx = remember(st.index, st.queue, engine.player.shuffleModeEnabled, engine.player.repeatMode) { engine.player.nextMediaItemIndex }
+    val (artPrev, artNext) = neighbourCovers(st.queue, prevIdx, nextIdx) { trackArt(ctx, it) }
     // AMOLED is pure black; the other Material looks keep the deep blue-grey
     val pbg = if (T.id == "amoled") Color.Black else PBG
     val base = Look.accent.let { if (it.luminance() < .35f) Color(0xFFB9C3FF) else it }
@@ -413,7 +415,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     } else {
                         Spacer(Modifier.weight(1f))
                         Box(Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }) {
-                        CoverCarousel(art, artPrev, artNext, st.index > 0, st.index < st.queue.lastIndex, { engine.previous() }, { engine.next() },
+                        CoverCarousel(art, artPrev, artNext, prevIdx >= 0, nextIdx >= 0, { engine.previous() }, { engine.next() },
                             Modifier.fillMaxSize(),
                             // a vertical drag on the cover moves the whole player, like anywhere else on it
                             onPageDrag = { pageDrag(it) }, onPageRelease = { pageRelease() }) { a ->

@@ -251,6 +251,8 @@ fun NowPlayingScreen(
     onLyrics: (() -> Unit)? = null,
     // closing the lyrics is its own call: the open button and the sheet no longer share one toggle (a double tap used to open and shut it at once)
     onLyricsDismiss: (() -> Unit)? = null,
+    hasPrev: Boolean = index > 0,
+    hasNext: Boolean = index < total - 1,
     // how far the page is pulled down (px), so the app can show the screen it came from underneath
     onPageOffset: ((Float) -> Unit)? = null,
     onEditTags: (() -> Unit)? = null,
@@ -312,7 +314,7 @@ fun NowPlayingScreen(
             ) {
                 // swipe left or right to change track: the neighbour cover slides in from the side of the drag
                 CoverCarousel(
-                    art, artPrev, artNext, index > 0, index < total - 1, onPrev, onNext, Modifier.fillMaxSize(),
+                    art, artPrev, artNext, hasPrev, hasNext, onPrev, onNext, Modifier.fillMaxSize(),
                     onPageDrag = { dy ->
                         if (dy < 0f) upAcc += -dy else upAcc = (upAcc - dy).coerceAtLeast(0f)
                         pageY = (pageY + dy).coerceAtLeast(0f)
