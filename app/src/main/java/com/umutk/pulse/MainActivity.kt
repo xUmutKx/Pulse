@@ -415,7 +415,7 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
     LaunchedEffect(Downloads.wanted) { if (Downloads.wanted) { go("downloads"); Downloads.wanted = false } }
     LaunchedEffect(com.umutk.pulse.widgets.WidgetOpen.page) {
         val p = com.umutk.pulse.widgets.WidgetOpen.page
-        if (p.isNotEmpty()) { if (p == "toolkit" || p.startsWith("toolkit:")) { com.umutk.pulse.features.ToolkitOpen.tool = p.substringAfter(":", ""); onSub("toolkit") } else if (p == SettingsPg.id || Pages.any { it.id == p }) go(p) else if (p == "installer_settings" || p == "calculator") onSub(p); com.umutk.pulse.widgets.WidgetOpen.page = "" }
+        if (p.isNotEmpty()) { if (p == "toolkit" || p.startsWith("toolkit:")) { com.umutk.pulse.features.ToolkitOpen.tool = p.substringAfter(":", ""); onSub("toolkit") } else if (p == SettingsPg.id || Pages.any { it.id == p }) go(p) else if (p == "installer_settings" || p == "calculator" || p == "cover") onSub(p); com.umutk.pulse.widgets.WidgetOpen.page = "" }
     }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) {
