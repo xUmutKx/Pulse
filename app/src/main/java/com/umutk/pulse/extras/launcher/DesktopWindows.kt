@@ -95,6 +95,13 @@ fun DesktopWindowLayer(lookId: String, bottom: Dp) {
     }
 }
 
+/** Mica on Windows 11 and Aero glass on Windows 7: the frame and title let the desktop show through, the body stays opaque. */
+private fun glass(skin: WinSkin, c: androidx.compose.ui.graphics.Color) = when (skin.kind) {
+    "11" -> c.copy(alpha = .82f)
+    "7" -> c.copy(alpha = .72f)
+    else -> c
+}
+
 @Composable
 private fun DesktopWindowFrame(w: DWin, skin: WinSkin, areaW: Dp, areaH: Dp) {
     val d = LocalDensity.current.density
@@ -105,10 +112,10 @@ private fun DesktopWindowFrame(w: DWin, skin: WinSkin, areaW: Dp, areaH: Dp) {
         Modifier.offset(if (w.max) 0.dp else w.x.dp, if (w.max) 0.dp else w.y.dp).size(fw, fh)
             // a touch anywhere on the window brings it to the front, without taking the touch from what is inside
             .pointerInput(w.id) { awaitEachGesture { awaitFirstDown(requireUnconsumed = false); DesktopWindows.front(w) } }
-            .clip(shape).background(skin.frame).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier).padding(skin.frameWidth),
+            .clip(shape).background(glass(skin, skin.frame)).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier).padding(skin.frameWidth),
     ) {
         Row(
-            Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title).padding(start = 8.dp)
+            Modifier.fillMaxWidth().height(if (skin.kind == "95") 20.dp else if (skin.kind == "7" || skin.kind == "xp") 30.dp else 36.dp).background(skin.title, alpha = when (skin.kind) { "11" -> .82f; "7" -> .72f; else -> 1f }).padding(start = 8.dp)
                 .pointerInput(w.id) {
                     detectDragGestures { c, drag ->
                         c.consume()

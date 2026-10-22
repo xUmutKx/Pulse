@@ -11,6 +11,12 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import com.umutk.pulse.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -52,6 +58,7 @@ fun NotificationSettingsSection() {
     SettingsSection(tr("Notification", "Bildirim")) {
         if (!allowed) SwitchRow(tr("Show notification", "Bildirimi göster"), false) { if (it) ask.launch(Manifest.permission.POST_NOTIFICATIONS) }
         SwitchRow(tr("Pause on unplug", "Çıkarınca duraklat"), unplug) { unplug = it; MusicSettings.setPauseOnUnplug(c, it) }
+        NotifPreview(ids)
         val rest = NotifBtn.values().filter { it.id !in ids }
         ids.mapNotNull { NotifBtn.of(it) }.forEachIndexed { i, b ->
             Row(Modifier.fillMaxWidth().alpha(if (i < NotifBtn.MAX) 1f else .4f), verticalAlignment = Alignment.CenterVertically) {
@@ -76,5 +83,50 @@ fun NotificationSettingsSection() {
 private fun Arrow(icon: Int, on: Boolean, onClick: () -> Unit) {
     Box(Modifier.size(36.dp).alpha(if (on) 1f else .25f).clickable(enabled = on, onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(painterResource(icon), null, tint = T.text, modifier = Modifier.size(22.dp))
+    }
+}
+
+/** A sample media notification that shows the enabled buttons (the first [NotifBtn.MAX]); the toggle buttons react to taps. */
+@Composable
+private fun NotifPreview(ids: List<String>) {
+    var playing by remember { mutableStateOf(true) }
+    var shuffle by remember { mutableStateOf(false) }
+    var repeat by remember { mutableStateOf(0) }
+    var fav by remember { mutableStateOf(false) }
+    val shown = ids.mapNotNull { NotifBtn.of(it) }.take(NotifBtn.MAX)
+    Column(
+        Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(16.dp)).background(T.sub.copy(alpha = .16f)).padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(T.sub.copy(alpha = .35f)))
+            Column(Modifier.padding(start = 12.dp)) {
+                Text(tr("Song title", "Şarkı adı"), color = T.text, fontSize = 15.sp)
+                Text(tr("Artist", "Sanatçı"), color = T.sub, fontSize = 13.sp)
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            shown.forEach { b ->
+                val icon = when (b) {
+                    NotifBtn.PLAY -> if (playing) R.drawable.ic_notif_pause else R.drawable.ic_notif_play
+                    NotifBtn.SHUFFLE -> if (shuffle) R.drawable.ic_notif_shuffle else R.drawable.ic_notif_shuffle_off
+                    NotifBtn.REPEAT -> when (repeat) { 1 -> R.drawable.ic_notif_repeat; 2 -> R.drawable.ic_notif_repeat_one; else -> R.drawable.ic_notif_repeat_off }
+                    NotifBtn.FAV -> if (fav) R.drawable.ic_notif_heart_on else R.drawable.ic_notif_heart
+                    else -> b.icon
+                }
+                Box(
+                    Modifier.size(44.dp).clip(RoundedCornerShape(22.dp)).clickable {
+                        when (b) {
+                            NotifBtn.PLAY -> playing = !playing
+                            NotifBtn.SHUFFLE -> shuffle = !shuffle
+                            NotifBtn.REPEAT -> repeat = (repeat + 1) % 3
+                            NotifBtn.FAV -> fav = !fav
+                            else -> Unit
+                        }
+                    },
+                    contentAlignment = Alignment.Center,
+                ) { Icon(painterResource(icon), null, tint = T.text, modifier = Modifier.size(24.dp)) }
+            }
+        }
     }
 }

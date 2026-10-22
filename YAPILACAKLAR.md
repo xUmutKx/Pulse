@@ -978,3 +978,5 @@ Screen recorder feature list (55 candidates)
 - Launcher: Win10 Black and colour themes removed, look picker with pictures, no default dock apps, top-right buttons optional, windows minimise to chips and resize, widgets movable/resizable/removable on the Windows desktops, clock flyout (calendar, quick tiles, volume), File Explorer as a window, orientation-specific wallpapers, Poweramp widget stars switch, lyrics button always on the Poweramp cover; 0.10.202. derlenmedi
 
 - Fix: Arrangement import in the launcher settings; 0.10.203. derlenmedi
+
+- 0.10.204 derlenmedi: önerilerden çalma sırası (albüm/şarkı), çubuk tuşuna basılı tutunca tam ekran görselleştirme, bildirim düğmesi önizleme kartı, Win11 Mica / Win7 Aero saydam pencere çerçevesi.
