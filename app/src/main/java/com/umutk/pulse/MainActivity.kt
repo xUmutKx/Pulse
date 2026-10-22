@@ -168,13 +168,6 @@ open class MainActivity : ComponentActivity() {
         // a long-pressed Quick Settings tile: open the page of that tile instead of the app info screen
         if (i?.action == android.service.quicksettings.TileService.ACTION_QS_TILE_PREFERENCES)
             IntentCompat.getParcelableExtra(i, Intent.EXTRA_COMPONENT_NAME, android.content.ComponentName::class.java)?.let {
-                if (it.className.endsWith("RotationTile")) {
-                    // long press: 0° normally, automatic when a tap came just before
-                    val p = getSharedPreferences("p", MODE_PRIVATE); val now = System.currentTimeMillis()
-                    val auto = now - p.getLong("rot_tap", 0L) < 3000
-                    com.umutk.pulse.features.TileActions.setRotation(this, if (auto) -1 else 0)
-                    finish(); return
-                }
                 if (it.className.endsWith("ScreenRecTile")) {
                     // long press on the screenshot / record tile: the video recorder
                     startActivity(Intent().setComponent(android.content.ComponentName(this, "com.umutk.pulse.ExtraToolActivity")).putExtra("route", "screenrec"))
