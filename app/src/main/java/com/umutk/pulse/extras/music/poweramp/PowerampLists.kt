@@ -486,14 +486,22 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
                 }
             }
             itemsIndexed(lyricHits) { _, h ->
-                Column(
+                // the song's cover beside the hit (device songs; online hits have no file)
+                val hitTrack = remember(h.id) { h.id.takeIf { it.startsWith("file:") }?.removePrefix("file:")?.let { p -> library.firstOrNull { it.path == p } } }
+                val hitArt = rememberTrackArt(hitTrack)
+                Row(
                     Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(12.dp)).background(style.chip)
-                        .clickable { scope.launch { lyricsOpen = Lyrics.forHit(ctx, h) } }.padding(horizontal = 14.dp, vertical = 10.dp),
+                        .clickable { scope.launch { lyricsOpen = Lyrics.forHit(ctx, h) } }.padding(horizontal = 10.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
+                if (hitArt != null) Image(hitArt, null, Modifier.padding(end = 10.dp).size(48.dp).clip(RoundedCornerShape(8.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                else Box(Modifier.padding(end = 10.dp).size(48.dp).clip(RoundedCornerShape(8.dp)).background(style.panel), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(22.dp)) }
+                Column(Modifier.weight(1f)) {
                     Text(listOf(h.artist, h.title).filter { it.isNotBlank() }.joinToString(" - "), color = fg, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     h.before?.takeIf { it.isNotBlank() }?.let { Text(it, color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
                     Text(com.umutk.pulse.extras.lyrics.lyricMarked(h.line, query, style.accent), color = fg, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     h.after?.takeIf { it.isNotBlank() }?.let { Text(it, color = style.textDim, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                }
                 }
             }
         }

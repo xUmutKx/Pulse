@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.lyrics
 
+import androidx.compose.ui.graphics.asAndroidBitmap
 import android.content.Context
 import android.provider.Settings
 import androidx.compose.foundation.layout.Column
@@ -157,6 +158,8 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
 
     private val nm get() = ctx.getSystemService(android.app.NotificationManager::class.java)
     private var noteText: String? = null
+    private var artFor: String? = null
+    private var art: android.graphics.Bitmap? = null
 
     private fun postNote(t: Track, trio: Triple<String?, String, String?>?) {
         val body = trio?.second?.takeIf { it.isNotBlank() } ?: return clearNote()
@@ -168,7 +171,9 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         val boldLine = LiveLyrics.bold(trio.second)
         nm.createNotificationChannel(android.app.NotificationChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music)
+        // the album cover beside the text, read once per song (this runs on the lyrics tick, not on the main thread)
+        if (artFor != t.path) { artFor = t.path; art = runCatching { (com.umutk.pulse.extras.music.trackArtLocal(ctx, t) ?: com.umutk.pulse.extras.music.trackArt(ctx, t))?.asAndroidBitmap() }.getOrNull() }
+        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
             .setContentTitle(t.title ?: t.path.substringAfterLast('/')).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT).build())
     }

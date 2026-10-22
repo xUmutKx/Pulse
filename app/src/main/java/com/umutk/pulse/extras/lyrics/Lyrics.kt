@@ -198,7 +198,16 @@ object Lyrics {
     }
 
     /** Songs whose lyrics contain [query] (LrcLrc rules: plain text is a phrase, commas are AND, words under 3 letters are ignored). */
-    suspend fun searchByText(ctx: Context, query: String): List<LyricHit> = withContext(Dispatchers.IO) {
+    suspend fun searchByText(ctx: Context, query: String): List<LyricHit> {
+        val key = query.trim().lowercase()
+        // the same phrase is not searched again (the online part is slow): kept for ten minutes
+        searchMemo[key]?.takeIf { System.currentTimeMillis() - it.first < 10 * 60_000L }?.let { return it.second }
+        return searchByTextNow(ctx, query).also { if (it.isNotEmpty()) searchMemo[key] = System.currentTimeMillis() to it }
+    }
+
+    private val searchMemo = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<LyricHit>>>()
+
+    private suspend fun searchByTextNow(ctx: Context, query: String): List<LyricHit> = withContext(Dispatchers.IO) {
         val app = ctx.applicationContext
         val q = LyricsSearchLogic.parse(query)
         if (q.isEmpty()) return@withContext emptyList()

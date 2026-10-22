@@ -998,3 +998,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.212 derlenmedi: Poweramp yedeği: aynı adlı dosyalarda klasörle eşleştirme, uzantı değişmiş şarkıları bulma, boş kütüphane uyarısı.
 
 - 0.10.213 derlenmedi: dosya işlemi bildirimleri 4 sn sonra kendiliğinden gider; Poweramp tarzı animasyonlar: durunca küçülen/yaylanan kapak, yumuşak inen çubuklar, büyüyüp renklenen/uzaklaştıkça sönen söz satırları.
+
+- 0.10.214 derlenmedi: söz sayfasında satırlar beyaz (koyu zeminde tema grisi görünmüyordu: asıl neden); söz araması 10 dk hatırlanır, sonuçta albüm kapağı; söz bildiriminde albüm kapağı.
