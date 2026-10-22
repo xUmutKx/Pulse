@@ -559,7 +559,6 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             Spacer(Modifier.weight(1f))
             ExToolbar { onTab(it) }
             val openTool = com.umutk.pulse.LocalOpenTool.current
-            Box(Modifier.size(36.dp).clickable { openTool("files_settings") }, contentAlignment = Alignment.Center) { PIcon("settings", T.sub, 20.dp) }
             if (!full) Box(Modifier.size(36.dp).clickable(onClick = onToggleFull), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.OpenInFull, null, Modifier.size(20.dp), T.sub) }
         }
         // clipboard cue: stays while navigating between folders
@@ -597,7 +596,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (pull > 0f) Box(Modifier.fillMaxWidth().height(with(androidx.compose.ui.platform.LocalDensity.current) { pull.toDp() }), contentAlignment = Alignment.Center) {
             Icon(Icons.Outlined.Refresh, null, Modifier.size(22.dp).graphicsLayer { rotationZ = pull / pullLine * 270f; alpha = (pull / pullLine).coerceIn(0f, 1f) }, Look.accent)
         }
-        Column(Modifier.weight(1f).fillMaxWidth().nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Column(Modifier.weight(1f).fillMaxWidth().nestedScroll(pullConn).verticalScroll(exScroll).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
         if (bookmarks.isNotEmpty()) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             bookmarks.forEach { p -> PChip(here == p, if (p == top.path) "Storage" else File(p).name) { go(p) } }
         }
