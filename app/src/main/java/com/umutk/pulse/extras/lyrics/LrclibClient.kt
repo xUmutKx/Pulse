@@ -56,8 +56,34 @@ class LrclibClient(private val cache: LyricsCache) {
         throw IOException("LRCLIB busy")
     }
 
-    private fun request(url: String): Triple<Int, String, Long> {
-        val c = URL(url).openConnection() as HttpURLConnection
+    /** The normal request; when the name cannot be reached (blocked or broken DNS) the same request is retried to the address a DNS-over-HTTPS server gives. */
+    private fun request(url: String): Triple<Int, String, Long> =
+        try { requestOn(url, null) } catch (e: IOException) {
+            val host = URL(url).host
+            val ip = DohResolver.resolve(host) ?: throw IOException("${e.javaClass.simpleName}: ${e.message}; DNS-over-HTTPS found no address")
+            Lyrics.lastError = null
+            try { requestOn(url, ip) } catch (e2: IOException) { throw IOException("${e2.javaClass.simpleName}: ${e2.message} (via $ip)") }
+        }
+
+    private fun requestOn(url: String, ip: String?): Triple<Int, String, Long> {
+        val real = URL(url)
+        val c = (if (ip == null) real else URL(real.protocol, ip, real.port, real.file)).openConnection() as HttpURLConnection
+        if (ip != null && c is javax.net.ssl.HttpsURLConnection) {
+            val host = real.host
+            val base = javax.net.ssl.SSLSocketFactory.getDefault() as javax.net.ssl.SSLSocketFactory
+            // the TLS name (SNI) and the certificate check stay the real host name
+            c.sslSocketFactory = object : javax.net.ssl.SSLSocketFactory() {
+                override fun getDefaultCipherSuites(): Array<String> = base.defaultCipherSuites
+                override fun getSupportedCipherSuites(): Array<String> = base.supportedCipherSuites
+                override fun createSocket(s: java.net.Socket, h: String?, port: Int, auto: Boolean): java.net.Socket = base.createSocket(s, host, port, auto)
+                override fun createSocket(h: String?, port: Int): java.net.Socket = base.createSocket(host, port)
+                override fun createSocket(h: String?, port: Int, la: java.net.InetAddress?, lp: Int): java.net.Socket = base.createSocket(host, port, la, lp)
+                override fun createSocket(a: java.net.InetAddress?, port: Int): java.net.Socket = base.createSocket(a, port)
+                override fun createSocket(a: java.net.InetAddress?, port: Int, la: java.net.InetAddress?, lp: Int): java.net.Socket = base.createSocket(a, port, la, lp)
+            }
+            c.hostnameVerifier = javax.net.ssl.HostnameVerifier { _, session -> javax.net.ssl.HttpsURLConnection.getDefaultHostnameVerifier().verify(host, session) }
+            c.setRequestProperty("Host", host)
+        }
         try {
             c.setRequestProperty("User-Agent", USER_AGENT)
             c.setRequestProperty("Accept", "application/json")
@@ -93,4 +119,26 @@ class LyricsCache(private val dir: File) {
 
     private fun name(key: String) =
         MessageDigest.getInstance("SHA-256").digest(key.toByteArray()).joinToString("") { "%02x".format(it) } + ".json"
+}
+
+/** Looks a host up over HTTPS (Cloudflare, then Google, by address) for the networks whose own DNS does not answer for it. */
+object DohResolver {
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
+    fun resolve(host: String): String? {
+        cache[host]?.let { return it }
+        val servers = listOf("https://1.1.1.1/dns-query?name=$host&type=A", "https://8.8.8.8/resolve?name=$host&type=A")
+        for (u in servers) {
+            val ip = runCatching {
+                val c = URL(u).openConnection() as HttpURLConnection
+                try {
+                    c.setRequestProperty("Accept", "application/dns-json"); c.connectTimeout = 4_000; c.readTimeout = 4_000
+                    val answers = JSONObject(c.inputStream.bufferedReader().use { it.readText() }).optJSONArray("Answer") ?: return@runCatching null
+                    (0 until answers.length()).map { answers.getJSONObject(it) }.firstOrNull { it.optInt("type") == 1 }?.optString("data")
+                } finally { c.disconnect() }
+            }.getOrNull()
+            if (!ip.isNullOrBlank()) { cache[host] = ip; return ip }
+        }
+        return null
+    }
 }
