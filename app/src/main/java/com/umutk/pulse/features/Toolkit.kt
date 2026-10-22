@@ -764,7 +764,7 @@ object TimerClock {
     private fun notifyDone(c: Context) {
         val nm = c.getSystemService(NotificationManager::class.java)
         val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        nm.createNotificationChannel(NotificationChannel("timer", tr("Timer", "Zamanlayıcı"), NotificationManager.IMPORTANCE_HIGH).apply {
+        nm.createNotificationChannel(com.umutk.pulse.QuietChannel("timer", tr("Timer", "Zamanlayıcı"), NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(sound, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
             enableVibration(true)
         })

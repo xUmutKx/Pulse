@@ -103,12 +103,19 @@ object FloatingLyricsSearch {
         val v = ComposeView(app).apply {
             setViewTreeLifecycleOwner(o)
             setViewTreeSavedStateRegistryOwner(o)
+            // a window above other apps has no activity behind it, and the search screen's back handling asks for one: it gets a dispatcher of its own (without it the app crashed)
+            val back = object : androidx.activity.OnBackPressedDispatcherOwner {
+                override val lifecycle: Lifecycle get() = o.lifecycle
+                override val onBackPressedDispatcher = androidx.activity.OnBackPressedDispatcher()
+            }
             setContent {
-                MaterialTheme(colorScheme = darkColorScheme()) {
-                    FloatingBody(
-                        onDrag = { dx, dy -> lp.x += dx.toInt(); lp.y += dy.toInt(); runCatching { wm.updateViewLayout(this, lp) } },
-                        onClose = { hide(app) },
-                    )
+                androidx.compose.runtime.CompositionLocalProvider(androidx.activity.compose.LocalOnBackPressedDispatcherOwner provides back) {
+                    MaterialTheme(colorScheme = darkColorScheme()) {
+                        FloatingBody(
+                            onDrag = { dx, dy -> lp.x += dx.toInt(); lp.y += dy.toInt(); runCatching { wm.updateViewLayout(this, lp) } },
+                            onClose = { hide(app) },
+                        )
+                    }
                 }
             }
         }
