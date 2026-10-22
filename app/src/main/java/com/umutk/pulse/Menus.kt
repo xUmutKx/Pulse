@@ -18,6 +18,7 @@ import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material.icons.outlined.MusicNote
@@ -185,6 +186,7 @@ object AppPlace {
         App("WeatherLauncher", "Weather", "Hava durumu", "weather", Icons.Outlined.WbSunny) { c, _ -> launchExtra(c, TOOL, "weather") },
         App("MessagesLauncher", "Messages", "Mesajlar", "chat", Icons.Outlined.Message) { _, o -> o("messages") },
         App("ScreenRecLauncher", "Screen recorder", "Ekran kaydı", "record", Icons.Outlined.FiberManualRecord) { _, o -> o("screenrec") },
+        App("LocalSendLauncher", "LocalSend", "LocalSend", "wifi", Icons.Outlined.Wifi) { _, o -> o("localsend") },
         App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "bell", Icons.Outlined.Notifications) { _, o -> o("notifhist") },
     )
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()

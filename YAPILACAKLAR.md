@@ -1028,3 +1028,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.227 derlenmedi: albüm kapağı aramasında sanatçı/albüm alanları + daha geniş yedek aramalar; klasör boyutu ağacı basılı tutuş açılışında tek geri ile çıkar; söz araması sonuçları diskte hatırlanır.
 
 - 0.10.228 derlenmedi: yedek yalnızca ayarlar + küçük kullanıcı verisi (çalma listeleri, notlar, profil...), kopyala/kes dosyaları ve kapaklar girmez; Ayarlar > Uygulamalar kataloglara ayrıldı, her uygulamaya ana ekrana ekle (raptiye).
+
+- 0.10.229 derlenmedi: yeni ekstra uygulama LocalSend (v2 protokolü: çoklu yayın + alt ağ taraması ile cihaz bulma, dosya gönder/al, kabul penceresi; Material varsayılan, AMOLED/Windows seçilebilir).
