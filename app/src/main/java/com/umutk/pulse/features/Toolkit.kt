@@ -146,6 +146,7 @@ private val tools = listOf(
     Tool("Dink", "Dink", "dink") { Dink() },
     Tool("DNS", "DNS", "wifi") { DnsSettings() },
     Tool("Screen cover", "Ekran kapağı", "lock") { CoverTool() },
+    Tool("Floating timer", "Yüzen sayaç", "pin") { FloatingTimerTool() },
 )
 
 /** The Toolkit page: a 3-column grid of tiles; a tile opens its tool, the chevron goes back. */

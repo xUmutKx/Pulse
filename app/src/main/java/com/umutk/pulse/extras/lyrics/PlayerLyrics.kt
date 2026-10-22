@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.lyrics
 
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutLinearInEasing
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -49,6 +51,8 @@ import kotlinx.coroutines.withContext
 fun PlayerLyrics(
     visible: Boolean, title: String, artist: String, album: String?, durationMs: Long, localPath: String?, positionMs: Long,
     onDismiss: () -> Unit, onSeek: ((Long) -> Unit)?, modifier: Modifier = Modifier,
+    // the whole-screen form: the cover, title and artist across the top, the lyrics under them
+    full: Boolean = false, art: androidx.compose.ui.graphics.ImageBitmap? = null,
 ) {
     AnimatedVisibility(
         visible, modifier,
@@ -75,6 +79,18 @@ fun PlayerLyrics(
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .94f)).pointerInput(Unit) { detectTapGestures { } }) {
             val (busy, res) = state
             when {
+                res != null && full -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(56.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = .12f))) {
+                            art?.let { androidx.compose.foundation.Image(it, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
+                        }
+                        Column(Modifier.weight(1f).padding(start = 12.dp, end = 40.dp)) {
+                            Text(title, color = Color.White, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(artist, color = Color.White.copy(alpha = .7f), fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                    }
+                    LyricsView(res, positionMs, onSeek, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), onDark = true)
+                }
                 res != null -> LyricsView(res, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp), onDark = true)
                 busy -> Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
                     PLoader()

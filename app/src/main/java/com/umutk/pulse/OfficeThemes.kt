@@ -1,5 +1,6 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.gestures.awaitFirstDown
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -245,6 +246,34 @@ fun ofKindOf(name: String, mime: String? = null): OfKind? {
 // Chrome
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * With the phone turned sideways the title bar, tabs, ribbon and status bar take most of the screen: they hide, a tap on the page brings them back and
+ * they go again after 2 seconds. Returns (hidden now, the tap-watching modifier for the window). Switch in Office settings; on at first.
+ */
+@Composable
+fun ofAutoHide(): Pair<Boolean, Modifier> {
+    val ctx = LocalContext.current
+    val on = remember { ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("of_autohide", true) }
+    val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    var shown by remember { mutableStateOf(false) }
+    var bump by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    LaunchedEffect(bump, shown) { if (shown) { kotlinx.coroutines.delay(2000); shown = false } }
+    val mod = if (on && land) Modifier.pointerInput(Unit) {
+        // watches without taking the touch: a press and release that barely moved is a tap
+        androidx.compose.foundation.gestures.awaitEachGesture {
+            val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            var moved = false
+            while (true) {
+                val e = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                val c = e.changes.firstOrNull() ?: break
+                if ((c.position - down.position).getDistance() > 30f) moved = true
+                if (!c.pressed) { if (!moved) { shown = true; bump++ }; break }
+            }
+        }
+    } else Modifier
+    return (on && land && !shown) to mod
+}
+
 /** Optional own ribbon body per tab name (modern looks only); the Word screen provides its stacked Home ribbon through it. */
 val LocalOfRibbon = compositionLocalOf<Map<String, @Composable () -> Unit>> { emptyMap() }
 
@@ -270,10 +299,11 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     val groups = (listOfNotNull("File".takeIf { fileOps != null }) + acts.map { it.group }.filter { it != "Quick" }).distinct()
     var tab by remember(groups) { mutableStateOf(if ("Home" in groups) "Home" else groups.firstOrNull { it != "File" } ?: "") }
     var menu by remember { mutableStateOf("") }
-    Box(Modifier.fillMaxSize()) {
+    val (hid, tapWatch) = ofAutoHide()
+    Box(Modifier.fillMaxSize().then(tapWatch)) {
     Column(Modifier.fillMaxSize().background(if (t.classic) pal.ribbonBg else if (is17) below else pal.titleBg).then(if (is17) Modifier.navigationBarsPadding() else Modifier.systemBarsPadding())) {
         // title bar
-        if (t.classic) {
+        if (!hid) if (t.classic) {
             val band = if (t.base == "95") Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))) else Brush.horizontalGradient(listOf(Color(0xFF0058EE), Color(0xFF3A93FF)))
             Row(Modifier.fillMaxWidth().height(30.dp).background(band).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 OfLogo(t.kind, 18.dp); Spacer(Modifier.width(6.dp))
@@ -349,7 +379,7 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
         }
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
         // status bar
-        Row(Modifier.fillMaxWidth().height(24.dp).background(if (is17) below else pal.statusBg).then(if (t.base == "95") Modifier.bevel(true) else if (t.base == "2003") Modifier.border(1.dp, pal.line) else Modifier).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (!hid) Row(Modifier.fillMaxWidth().height(24.dp).background(if (is17) below else pal.statusBg).then(if (t.base == "95") Modifier.bevel(true) else if (t.base == "2003") Modifier.border(1.dp, pal.line) else Modifier).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, color = if (is17) (if (t.dark) Color(0xFFC8C6C4) else Color(0xFF605E5C)) else pal.statusInk, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -400,9 +430,11 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val below = ofBelow(t)   // solid grey: translucent layers over the black window left dark text on black
     // text and icons always follow the strip they sit on: white on a dark strip, near-black on a light one
     val ink = ofInkOn(below)
+    val (hid, tapWatch) = ofAutoHide()
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
-    Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize().then(tapWatch)) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
+        if (!hid) Column {
         Row(Modifier.fillMaxWidth().background(brand).statusBarsPadding().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), Color.White) }
             OfTile(t.kind, 22.dp, true); Spacer(Modifier.width(8.dp))
@@ -430,8 +462,9 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             }
         }
         extra?.invoke()
+        }
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
-        Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (!hid) Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, color = ink.copy(alpha = .75f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -738,6 +771,16 @@ fun OfficeSettings() {
         Text(tr("All apps", "Tüm uygulamalar"), color = T.sub, fontSize = 12.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             OF_PICK_IDS.forEach { id -> OfPreview(id, OfKind.WORD, OfKind.values().all { OfficePrefs.themeFor(it) == id }) { OfficePrefs.applyAll(ctx, id) } }
+        }
+    }
+    PCard {
+        var auto by remember { mutableStateOf(ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("of_autohide", true)) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Hide the bars sideways", "Yan çevirince çubukları gizle"), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                Text(tr("A tap shows them for 2 seconds", "Dokununca 2 saniye görünür"), color = T.sub, fontSize = 12.sp)
+            }
+            PSwitch(auto, { auto = it; ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putBoolean("of_autohide", it).apply() })
         }
     }
     PCard {
