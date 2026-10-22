@@ -93,6 +93,9 @@ private fun formatSize(b: Long): String = when {
 /** Folder the user was last in. `remember` is dropped when the screen leaves composition, so this outlives it. */
 private var lastDir: File? = null
 
+/** The next tree screen opens in [d] (when it lies inside the storage it shows). */
+fun openTreeAt(d: File) { lastDir = d }
+
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun FolderTreeContent(root: File, onBack: () -> Unit) {
