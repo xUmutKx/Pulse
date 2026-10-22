@@ -944,3 +944,5 @@ Screen recorder feature list (55 candidates)
 - Launcher (Windows looks): This PC, Recycle Bin, Paint, Task Manager and Command Prompt open as framed windows (title bar, caption buttons, frame in the look of 95/XP/7/10/11) over the launcher; FramedToolActivity; 0.10.185. derlenmedi
 
 - Launcher desktop: Control Panel, Performance, Services, Startup apps and Programs shortcuts (framed windows in the Windows looks); 0.10.186. derlenmedi
+
+- Windows media player widget (95 CD Player, XP, 7 Aero, flat cards); network type shows the phone's answer; Back icons in App details / Leftovers / Permission audit; launcher Log off (windows, Win10 rail, Win11 menu); Control Panel with 17 items in 5 groups opened from the launcher; 0.10.187. derlenmedi

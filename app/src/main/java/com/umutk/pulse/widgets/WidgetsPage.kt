@@ -236,6 +236,7 @@ fun WidgetsPage() {
         if (hit("Winamp 4x1")) winamp += "m_winamp4" to @Composable { WinampCard(ctx, true) }
         if (hit("Winamp visualizer") || hit("Winamp")) winamp += "m_winvis" to @Composable { WinampVisCard(ctx) }
         if (hit("Poweramp")) music += "m_poweramp" to @Composable { PowerampCard(ctx) }
+        if (hit("Windows media player") || hit("CD player") || hit("Aero")) music += "m_winplayer" to @Composable { WinPlayerCard(ctx) }
         if (hit("Music") || hit("Lyrics")) {
             music += "m_music" to @Composable { MusicCard(ctx, "Music", "music.MusicWidget", 2f, compact = false) }
             music += "m_music_sq" to @Composable { MusicCard(ctx, "Music 2x2", "music.MusicWidgetSquare", 1f, compact = false) }
@@ -536,6 +537,20 @@ private fun PowerampCard(ctx: Context) {
         value = withContext(drawer) { runCatching { PowerampWidget.render(style, "Pulse", "Poweramp", "Underground Years", 0.4f, true, 83_000L, 240_000L, null, 4, 2322, true, 2, 640, 400) }.getOrNull() }
     }
     WidgetCard("Poweramp", { WinampSkinPick.pinWidget(ctx, PowerampWidget::class.java) }, PowerampWidget.W.toFloat() / PowerampWidget.H) {
+        val b = bmp
+        if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        else Placeholder()
+    }
+}
+
+/** The Windows media player widget in the look the Widgets page uses (95 CD Player, XP, 7 Aero, flat), drawn as the widget draws it. */
+@Composable
+private fun WinPlayerCard(ctx: Context) {
+    val style = remember { com.umutk.pulse.widgets.WidgetStyles.default(ctx) }
+    val bmp by produceState<Bitmap?>(null, style) {
+        value = withContext(drawer) { runCatching { com.umutk.pulse.extras.music.widgets.WindowsPlayerWidget.render(style, "Track name", "Artist name", 0.4f, true, 83_000L, 240_000L, null, 640, 300) }.getOrNull() }
+    }
+    WidgetCard(tr("Windows media player", "Windows medya oynatıcı"), { WinampSkinPick.pinWidget(ctx, com.umutk.pulse.extras.music.widgets.WindowsPlayerWidget::class.java) }, com.umutk.pulse.extras.music.widgets.WindowsPlayerWidget.W.toFloat() / com.umutk.pulse.extras.music.widgets.WindowsPlayerWidget.H) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         else Placeholder()
