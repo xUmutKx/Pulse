@@ -970,3 +970,5 @@ Screen recorder feature list (55 candidates)
 - Fix: size import in Downloads; 0.10.198. derlenmedi
 
 - Screen cover can be drawn as an accessibility overlay (topmost layer, above bars and keyboard) when "Pulse · Screen cover layer" is on; backup branch backup-2026-10-22 of 0.10.198; 0.10.199. derlenmedi
+
+- Phone wallpapers for Windows 11 (18), Windows 10 (10 + 2), 7 and XP (portrait, 960 wide, 3 MB), rotated screens use the desktop ones, also as Pulse background (Win11 pack17-34); launcher: desktop windows are draggable and several at once over the launcher, desktop icons chosen in settings (This PC, Recycle Bin, File Explorer by default, Pulse apps addable), lyrics back over the cover, smaller counter pill; 0.10.200. derlenmedi

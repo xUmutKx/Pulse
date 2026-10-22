@@ -30,18 +30,21 @@ import java.util.Locale
 import kotlinx.coroutines.delay
 
 /** The stock picture this look's wallpaper shows: the launcher's pick for the look, else its first picture. */
-fun wallpaperRes(lookId: String): Int? {
-    // Windows 11 has no stock picture list of its own: its launcher uses the app's own Windows 11 wallpapers (the glowing disc first)
-    val all = if (lookId == "win11") listOf(com.umutk.pulse.R.drawable.win11_wall_2, com.umutk.pulse.R.drawable.win11_wall_1, com.umutk.pulse.R.drawable.win11_wall_3, com.umutk.pulse.R.drawable.win11_wall_4,
-        com.umutk.pulse.R.drawable.win11_wall_5, com.umutk.pulse.R.drawable.win11_wall_9, com.umutk.pulse.R.drawable.win11_wall_13) else wallsFor(lookId)
-    return all.getOrNull(LauncherPrefs.wallIndex(lookId)) ?: all.firstOrNull()
+fun wallpaperRes(lookId: String, landscape: Boolean = false): Int? {
+    val all = wallsFor(lookId)
+    if (all.isEmpty()) return null
+    var i = LauncherPrefs.wallIndex(lookId).coerceIn(0, all.lastIndex)
+    // a phone picture is tall: a rotated screen takes the first desktop picture of the look instead
+    if (landscape && com.umutk.pulse.features.isMobileWall(lookId, i)) i = all.indices.firstOrNull { !com.umutk.pulse.features.isMobileWall(lookId, it) } ?: i
+    return all[i]
 }
 
 /** The look's wallpaper behind the launcher, or [fallback] when the look has no stock picture. */
 @Composable
 fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val ctx = LocalContext.current
-    val res = wallpaperRes(lookId)
+    val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val res = wallpaperRes(lookId, land)
     val bmp = remember(res) { res?.let { BitmapFactory.decodeResource(ctx.resources, it, BitmapFactory.Options().apply { inSampleSize = 2 })?.asImageBitmap() } }
     Box(modifier.fillMaxSize()) {
         if (bmp != null) Image(bmp, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)

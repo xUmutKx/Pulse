@@ -110,6 +110,14 @@ fun LauncherSettings(back: () -> Unit) {
                 }
             }
         }
+        // the Windows desktops: which shortcuts sit on the desktop (system icons and Pulse's own apps)
+        if (cur.id in setOf("win11", "win10", "win10black", "win7", "win95", "xp")) SettingsSection(tr("Desktop icons", "Masaüstü simgeleri")) {
+            desktopItems().forEach { it ->
+                SwitchLine(it.iconKey ?: "apps", it.label, it.pkg in LauncherPrefs.desktopOn) { on ->
+                    LauncherPrefs.desktopOn = if (on) LauncherPrefs.desktopOn + it.pkg else LauncherPrefs.desktopOn - it.pkg; save()
+                }
+            }
+        }
         SettingsSection(tr("Home screen", "Ana ekran")) {
             SwitchLine("clock", tr("Clock and date", "Saat ve tarih"), LauncherPrefs.clock) { LauncherPrefs.clock = it; save() }
             SwitchLine("apps", tr("Apps on the home screen", "Ana ekranda uygulamalar"), LauncherPrefs.homeApps) { LauncherPrefs.homeApps = it; save() }

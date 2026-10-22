@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 import com.umutk.pulse.extras.music.shownArtist
 
@@ -334,6 +335,14 @@ fun NowPlayingScreen(
                     TrackMenu(track, onEditTags, onFindArt, onLyrics, style, Modifier.align(Alignment.BottomEnd).padding(end = 2.dp, bottom = 2.dp))
                     if (onLyrics != null && !lyricsOpen && (hasLyrics || PowerampPrefs.lyricsAlways(ctx))) LyricsIcon(onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
                 }
+                // the lyrics lie over the cover square, above the star, the menu and the lyrics button
+                if (lyricsOpen && track != null) Box(Modifier.fillMaxSize().zIndex(10f)) {
+                    com.umutk.pulse.extras.lyrics.LyricsSheet(
+                        track.displayName(), track.artist.orEmpty(), track.album, durationMs.toLong(), track.path.takeIf { !it.contains("://") }, positionMs.toLong(),
+                        onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
+                        modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))),
+                    )
+                }
             }
             Spacer(Modifier.height(20.dp))
             // the artist / album line's long press runs the action picked in settings (PowerampLineAction)
@@ -448,20 +457,14 @@ fun NowPlayingScreen(
                     BottomLabel.TITLE -> track.displayName()
                     BottomLabel.FOLDER -> track.folderName()
                 }
-                Box(Modifier.clip(CircleShape).background(style.panel).height(19.dp).padding(horizontal = 7.dp), contentAlignment = Alignment.Center) {
-                    Text(text, color = style.textDim, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Box(Modifier.clip(CircleShape).background(style.panel).height(14.dp).padding(horizontal = 5.dp), contentAlignment = Alignment.Center) {
+                    Text(text, color = style.textDim, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
                 }
             }
             Spacer(Modifier.height(8.dp))
             // suggested songs and artists, back at the bottom of the page
             suggestions?.invoke()
         }
-        if (lyricsOpen && track != null) com.umutk.pulse.extras.lyrics.LyricsSheet(
-                track.displayName(), track.artist.orEmpty(), track.album, durationMs.toLong(), track.path.takeIf { !it.contains("://") }, positionMs.toLong(),
-                onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
-                // a layer over the whole page, on top of the cover and the controls
-                modifier = Modifier.fillMaxSize(),
-            )
     }
 }
 

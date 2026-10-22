@@ -77,7 +77,8 @@ object Backdrop {
     private var custom: String? = null
     private const val PREFS = "p"
     /** The 16 bundled Windows 11 wallpapers (from the uploaded pack), named pack1..pack16 in the settings. */
-    private val PACK = intArrayOf(R.drawable.win11_wall_1, R.drawable.win11_wall_2, R.drawable.win11_wall_3, R.drawable.win11_wall_4, R.drawable.win11_wall_5, R.drawable.win11_wall_6, R.drawable.win11_wall_7, R.drawable.win11_wall_8, R.drawable.win11_wall_9, R.drawable.win11_wall_10, R.drawable.win11_wall_11, R.drawable.win11_wall_12, R.drawable.win11_wall_13, R.drawable.win11_wall_14, R.drawable.win11_wall_15, R.drawable.win11_wall_16)
+    private val PACK = intArrayOf(R.drawable.win11_wall_1, R.drawable.win11_wall_2, R.drawable.win11_wall_3, R.drawable.win11_wall_4, R.drawable.win11_wall_5, R.drawable.win11_wall_6, R.drawable.win11_wall_7, R.drawable.win11_wall_8, R.drawable.win11_wall_9, R.drawable.win11_wall_10, R.drawable.win11_wall_11, R.drawable.win11_wall_12, R.drawable.win11_wall_13, R.drawable.win11_wall_14, R.drawable.win11_wall_15, R.drawable.win11_wall_16,
+        R.drawable.mw11_1, R.drawable.mw11_2, R.drawable.mw11_3, R.drawable.mw11_4, R.drawable.mw11_5, R.drawable.mw11_6, R.drawable.mw11_7, R.drawable.mw11_8, R.drawable.mw11_9, R.drawable.mw11_10, R.drawable.mw11_11, R.drawable.mw11_12, R.drawable.mw11_13, R.drawable.mw11_14, R.drawable.mw11_15, R.drawable.mw11_16, R.drawable.mw11_17, R.drawable.mw11_18)
 
     fun load(c: Context) {
         val p = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
