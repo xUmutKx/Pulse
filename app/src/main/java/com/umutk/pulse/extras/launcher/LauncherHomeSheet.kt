@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import com.umutk.pulse.ExtraToolActivity
 import android.content.Intent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -51,7 +52,9 @@ fun HomeSheet() {
             horizontalArrangement = Arrangement.SpaceEvenly) {
             SheetEntry("settings", tr("Settings", "Ayarlar")) {
                 HomeSheetState.sheet = false
-                ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
+                // Windows 10 Mobile's Settings page for the phone looks
+                if (LauncherPrefs.look.startsWith("winphone")) ctx.startActivity(Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "wpsettings"))
+                else ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
             }
             SheetEntry("light", tr("Display settings", "Ekran ayarları")) {
                 HomeSheetState.sheet = false
