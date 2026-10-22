@@ -322,10 +322,10 @@ fun NowPlayingScreen(
                         pageScope.launch {
                             if (pageY > pageH * .22f) {
                                 androidx.compose.animation.core.animate(pageY, pageH, animationSpec = androidx.compose.animation.core.tween(330, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { v, _ -> pageY = v }
-                                pullNow?.invoke(); pageY = 0f
+                                pullNow?.invoke()
                             } else {
                                 if (up > pageH * .06f && pageY < 1f && !lyricsOpen) lyricsNow?.invoke()
-                                androidx.compose.animation.core.animate(pageY, 0f, animationSpec = androidx.compose.animation.core.tween(320, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { v, _ -> pageY = v }
+                                androidx.compose.animation.core.animate(pageY, 0f, animationSpec = androidx.compose.animation.core.spring(dampingRatio = .82f, stiffness = 220f)) { v, _ -> pageY = v }
                             }
                         }
                     },
@@ -341,9 +341,11 @@ fun NowPlayingScreen(
                     if (onLyrics != null && !lyricsOpen) LyricsIcon(onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
                 }
                 // the lyrics lie over the cover square, above the star, the menu and the lyrics button
-                if (lyricsOpen && track != null) Box(Modifier.fillMaxSize().zIndex(10f)) {
-                    com.umutk.pulse.extras.lyrics.LyricsSheet(
-                        track.displayName(), track.artist.orEmpty(), track.album, durationMs.toLong(), track.path.takeIf { !it.contains("://") }, positionMs.toLong(),
+                Box(Modifier.fillMaxSize().zIndex(10f)) {
+                    com.umutk.pulse.extras.lyrics.PlayerLyrics(
+                        visible = lyricsOpen && track != null,
+                        title = track?.displayName().orEmpty(), artist = track?.artist.orEmpty(), album = track?.album, durationMs = durationMs.toLong(),
+                        localPath = track?.path?.takeIf { !it.contains("://") }, positionMs = positionMs.toLong(),
                         onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
                         modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))),
                     )
