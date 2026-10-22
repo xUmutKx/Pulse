@@ -40,17 +40,28 @@ object PowerampImport {
             }
         }
         // library indexes: the folder path below the storage root, then the bare file name
+        val byStem = HashMap<String, MutableList<Track>>()
         val byRel = HashMap<String, Track>(); val byName = HashMap<String, MutableList<Track>>()
         library.forEach { t ->
             val rel = t.path.substringAfter("/storage/", t.path).substringAfter('/').lowercase()   // "emulated/0/Music/..." -> "0/Music/..."
             byRel[t.path.lowercase().substringAfter("/0/")] = t
             byRel[rel] = t
             byName.getOrPut(File(t.path).name.lowercase()) { ArrayList() } += t
+            byStem.getOrPut(fold(File(t.path).nameWithoutExtension)) { ArrayList() } += t
+        }
+        // the same file name in several folders: the one whose folder name is also the backup's folder name wins
+        fun pick(c: List<Track>?, p: String): Track? {
+            if (c.isNullOrEmpty()) return null
+            if (c.size == 1) return c[0]
+            val dir = fold(p.substringBeforeLast('/', "").substringAfterLast('/'))
+            return c.firstOrNull { fold(File(it.path).parentFile?.name.orEmpty()) == dir }
         }
         fun find(p: String): Track? {
             val rel = p.substringAfter('/').lowercase()   // "primary/Music/Audio/X.m4a" -> "music/audio/x.m4a"
             byRel[rel]?.let { return it }
-            return byName[p.substringAfterLast('/').lowercase()]?.singleOrNull()
+            pick(byName[p.substringAfterLast('/').lowercase()], p)?.let { return it }
+            // the song was converted or renamed (x.m4a -> x.mp3): the name without its extension
+            return pick(byStem[fold(p.substringAfterLast('/').substringBeforeLast('.'))], p)
         }
         var playlists = 0; var ratings = 0; var plays = 0; var missing = 0
         db?.let { f ->
