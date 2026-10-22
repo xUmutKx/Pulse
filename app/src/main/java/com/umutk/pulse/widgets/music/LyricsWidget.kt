@@ -39,7 +39,8 @@ class LyricsWidget : AppWidgetProvider() {
             val line = LiveLyrics.currentLine
             return RemoteViews(c.packageName, R.layout.widget_lyrics).apply {
                 setTextViewText(R.id.lw_title, track?.displayName() ?: "Pulse")
-                setTextViewText(R.id.lw_line, line ?: tr("No synced lyrics", "Senkron söz yok"))
+                // bold through bold letters: a widget's font may have no bold weight of its own
+                setTextViewText(R.id.lw_line, line?.let { LiveLyrics.bold(it) } ?: tr("No synced lyrics", "Senkron söz yok"))
                 setTextColor(R.id.lw_title, sub)
                 setTextColor(R.id.lw_line, text)
                 if (th != null) {

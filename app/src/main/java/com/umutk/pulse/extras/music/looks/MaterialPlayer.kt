@@ -219,7 +219,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     var pos by remember { mutableIntStateOf(0) }
     var dur by remember { mutableIntStateOf(0) }
     var dragging by remember { mutableStateOf(false) }
-    var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }
+    val modesPrefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("music_modes", android.content.Context.MODE_PRIVATE)
+    // "shuffled" also covers a queue that was shuffled once into a fixed order, which the player itself does not know
+    var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled || modesPrefs.getBoolean("queue_shuffled", false)) }
     var repeat by remember { mutableIntStateOf(engine.player.repeatMode) }
     LaunchedEffect(st.isPlaying, st.current) {
         while (true) { if (!dragging) pos = engine.positionMs; dur = engine.durationMs; if (!st.isPlaying) break; delay(400) }
@@ -363,7 +365,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     Text(cur.artistName(), color = SUB, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
                 // shuffle and repeat with their state (a lit icon, "1" for repeat one), previous, a round play button on the cover colour, next
-                ShuffleButton(engine, shuffle, dyn, SUB, 34.dp, 7.dp) { shuffle = it }
+                ShuffleButton(engine, shuffle, dyn, SUB, 34.dp, 7.dp) { shuffle = it; modesPrefs.edit().putBoolean("queue_shuffled", it).apply() }
                 Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { engine.previous() }.padding(5.dp))
                 Box(Modifier.padding(horizontal = 2.dp).size(42.dp).clip(CircleShape).background(dyn).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
                     Crossfade(st.isPlaying, animationSpec = tween(160), label = "miniPlay") { p -> Icon(if (p) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = onAccent(dyn), modifier = Modifier.size(26.dp)) }
@@ -446,7 +448,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     PSlider((if (dragging) pos.toFloat() else glide).coerceIn(0f, d.toFloat()), { dragging = true; pos = it.toInt() }, 0f..d.toFloat()) { engine.seekTo(pos); dragging = false }
                     Row(Modifier.fillMaxWidth()) { Text(fmt(pos), color = SUB, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(fmt(dur), color = SUB, fontSize = 12.sp) }
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        ShuffleButton(engine, shuffle, dyn, SUB, 44.dp, 10.dp) { shuffle = it }
+                        ShuffleButton(engine, shuffle, dyn, SUB, 44.dp, 10.dp) { shuffle = it; modesPrefs.edit().putBoolean("queue_shuffled", it).apply() }
                         Icon(Icons.Rounded.SkipPrevious, null, tint = TXT, modifier = Modifier.size(48.dp).clickable { engine.previous() }.padding(8.dp))
                         // the play button squeezes under the finger and springs back
                         val press = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
