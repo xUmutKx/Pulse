@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import kotlinx.coroutines.launch
 import com.umutk.pulse.extras.music.shownArtist
 
 import androidx.compose.animation.AnimatedVisibility
@@ -247,6 +248,8 @@ fun NowPlayingScreen(
     sleepMinutes: Int = 0,
     onSleepSet: ((minutes: Int, endOfTrack: Boolean) -> Unit)? = null,
     onLyrics: (() -> Unit)? = null,
+    // closing the lyrics is its own call: the open button and the sheet no longer share one toggle (a double tap used to open and shut it at once)
+    onLyricsDismiss: (() -> Unit)? = null,
     onEditTags: (() -> Unit)? = null,
     onFindArt: (() -> Unit)? = null,
     lyricsOpen: Boolean = false,
@@ -274,7 +277,12 @@ fun NowPlayingScreen(
         } ?: false
     }
     // the blurred backdrop is drawn once by PowerampApp, edge to edge; this page draws no second copy
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    // a vertical drag on the cover moves the whole page with the finger: down closes it past a fifth of the screen, up opens the lyrics
+    val pageScope = androidx.compose.runtime.rememberCoroutineScope()
+    var pageY by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    var upAcc by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    BoxWithConstraints(modifier.fillMaxSize().graphicsLayer { translationY = pageY }) {
+        val pageH = with(androidx.compose.ui.platform.LocalDensity.current) { maxHeight.toPx() }
         Column(Modifier.fillMaxSize().padding(horizontal = 13.dp, vertical = 13.dp)) {
             // square cover, the biggest element; the lyrics sheet opens over it. An upward swipe opens lyrics; a downward
             // one does nothing. Vertical drags are consumed here so the page neither scrolls nor closes from the cover.
@@ -297,8 +305,22 @@ fun NowPlayingScreen(
                 // swipe left or right to change track: the neighbour cover slides in from the side of the drag
                 CoverCarousel(
                     art, artPrev, artNext, index > 0, index < total - 1, onPrev, onNext, Modifier.fillMaxSize(),
-                    onSwipeUp = { if (!lyricsOpen) lyricsNow?.invoke() },
-                    onSwipeDown = { pullNow?.invoke() },
+                    onPageDrag = { dy ->
+                        if (dy < 0f) upAcc += -dy else upAcc = (upAcc - dy).coerceAtLeast(0f)
+                        pageY = (pageY + dy).coerceAtLeast(0f)
+                    },
+                    onPageRelease = {
+                        val up = upAcc; upAcc = 0f
+                        pageScope.launch {
+                            if (pageY > pageH * .22f) {
+                                androidx.compose.animation.core.animate(pageY, pageH, animationSpec = androidx.compose.animation.core.tween(200)) { v, _ -> pageY = v }
+                                pullNow?.invoke(); pageY = 0f
+                            } else {
+                                if (up > pageH * .06f && pageY < 1f && !lyricsOpen) lyricsNow?.invoke()
+                                androidx.compose.animation.core.animate(pageY, 0f, animationSpec = androidx.compose.animation.core.tween(180)) { v, _ -> pageY = v }
+                            }
+                        }
+                    },
                 ) { a ->
                     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))).background(style.panel), contentAlignment = Alignment.Center) {
                         if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
@@ -312,7 +334,7 @@ fun NowPlayingScreen(
                 }
                 if (lyricsOpen && track != null) com.umutk.pulse.extras.lyrics.LyricsSheet(
                     track.displayName(), track.artist.orEmpty(), track.album, durationMs.toLong(), track.path.takeIf { !it.contains("://") }, positionMs.toLong(),
-                    onDismiss = { onLyrics?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
+                    onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
                     // kept inside the cover square: while it rises it must not slide over the controls under the cover
                     modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))),
                 )
