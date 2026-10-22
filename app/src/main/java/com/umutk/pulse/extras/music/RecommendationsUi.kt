@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -80,10 +81,17 @@ fun RecommendationHome(
             }
         }
         sections.forEach { s ->
-            androidx.compose.material3.Text(
-                rowTitle(s), color = ink, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 20.dp, bottom = 8.dp),
-            )
+            Row(Modifier.fillMaxWidth().padding(top = 20.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                androidx.compose.material3.Text(
+                    rowTitle(s), color = ink, fontSize = 18.sp, fontWeight = FontWeight.Bold, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false),
+                )
+                // plays the whole row from its first song
+                Box(Modifier.padding(start = 10.dp).size(32.dp).clip(CircleShape).background(tile)
+                    .clickable { if (onQueue != null) onQueue(s.tracks, 0) else s.tracks.firstOrNull()?.let { play(it) } }, contentAlignment = Alignment.Center) {
+                    PIcon("play", accent, 18.dp)
+                }
+            }
             LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 itemsIndexed(s.tracks) { i, t ->
                     Tile(t, current?.path == t.path, ink, dim, tile, accent, tileShape, Modifier.width(96.dp)) { if (onQueue != null) onQueue(s.tracks, i) else play(t) }
