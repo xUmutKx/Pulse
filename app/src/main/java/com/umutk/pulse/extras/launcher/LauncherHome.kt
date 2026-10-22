@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
@@ -101,7 +102,7 @@ fun Modifier.homeLongPress(onLong: () -> Unit): Modifier = composed {
         .pointerInput(Unit) {
             // a long swipe on the home: down opens the notification shade, up opens the apps list (each is a setting)
             var total = 0f
-            androidx.compose.foundation.gestures.detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = {
+            detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = {
                 if (total > 140f && LauncherPrefs.swipeDownShade) globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
                 else if (total < -140f && LauncherPrefs.swipeUpApps) LauncherSession.startOpen = true
             }) { _, d -> total += d }
