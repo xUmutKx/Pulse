@@ -38,7 +38,7 @@ import com.umutk.pulse.tr
 fun WallThumb(resId: Int, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val ctx = LocalContext.current
     val img = remember(resId) {
-        runCatching { BitmapFactory.decodeResource(ctx.resources, resId, BitmapFactory.Options().apply { inSampleSize = 8 }) }.getOrNull()?.asImageBitmap()
+        runCatching { BitmapFactory.decodeResource(ctx.resources, resId, BitmapFactory.Options().apply { inSampleSize = 16; inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 }) }.getOrNull()?.asImageBitmap()
     }
     val shape = RoundedCornerShape(if (T.bevel) 0.dp else 6.dp)
     Box(modifier.then(if (T.bevel) Modifier.background(T.bg).bevel(!selected).padding(3.dp) else Modifier)) {
