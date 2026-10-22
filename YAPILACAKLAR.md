@@ -1024,3 +1024,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.225 derlenmedi: Poweramp yedeği: başlık/sanatçı ile eşleşme + bulunamayanlardan örnek ad, .poweramp-backup dışa aktarma (aynı lists-export şeması); müzik ayarları: ilk sayfa yalnızca kategoriler, kategori tam sayfa + sol üstte geri; kapağı çekerken kütüphane yumuşak belirir.
 
 - 0.10.226 derlenmedi: yüzen söz araması çökmesi (geri tuşu sahibi yoktu); bildirim kanallarında rozet yok; resimler (HEIC dahil) doğrudan Samsung Galeri ile, Birlikte aç sistemin "Bir kez/Her zaman" seçicisiyle; görselleştirme basılı tutunca 6 stil menüsü (varsayılan üstte).
+
+- 0.10.227 derlenmedi: albüm kapağı aramasında sanatçı/albüm alanları + daha geniş yedek aramalar; klasör boyutu ağacı basılı tutuş açılışında tek geri ile çıkar; söz araması sonuçları diskte hatırlanır.
