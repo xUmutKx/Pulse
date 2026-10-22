@@ -22,11 +22,9 @@ object DataBackup {
     /** shared_prefs files that never leave the phone: Spotify login tokens and the app-lock PIN hash. */
     private val SKIP_PREFS = setOf("spotify.xml", "applock.xml")
 
-    /** Top-level files/ entries left out: rebuilt caches, downloaded packs, app-data copies and the TOTP store (Keystore-bound, unreadable after a restore). */
-    private val SKIP_FILES = setOf(
-        "restore", "extras", "store", "covers", "skins", "holidays",
-        "lyrics-cache", "lyrics-hits", "music_library.tsv", "totp.bin",
-    )
+    /** The only files/ entries the backup carries: small user data. Everything else (covers, skins, pictures, call backgrounds, copied files, caches, downloaded packs, big attachments) stays out, so the zip is a few hundred KB, not hundreds of MB. */
+    private val KEEP_FILES = setOf("playlists", "profile.jpg", "uad_lists.json", "lyrics-saved", "notes/notes.json")
+    private fun keepFile(rel: String) = KEEP_FILES.any { rel == it || rel.startsWith("$it/") } || rel.startsWith("resume.")
 
     /** What a restore put back, for the message shown after import. */
     class Restored(val files: Int, val prefs: List<String>, val folders: List<String>)
@@ -39,8 +37,7 @@ object DataBackup {
         val prefs = pd.walkTopDown().filter { it.isFile && it.name !in SKIP_PREFS }
             .map { PREFS + it.relativeTo(pd).invariantSeparatorsPath to it }
         val fd = ctx.filesDir
-        val files = fd.listFiles().orEmpty().filter { it.name !in SKIP_FILES }
-            .flatMap { top -> top.walkTopDown().filter { it.isFile }.toList() }
+        val files = fd.walkTopDown().filter { it.isFile && keepFile(it.relativeTo(fd).invariantSeparatorsPath) }
             .map { FILES + it.relativeTo(fd).invariantSeparatorsPath to it }
         return prefs.toList() + files
     }

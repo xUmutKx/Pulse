@@ -591,6 +591,27 @@ private fun ExtraAppsCard() {
         Triple("ScreenRecLauncher", R.drawable.mat_record, tr("Screen recorder", "Ekran kaydı")),
         Triple("NotifHistLauncher", R.drawable.mat_notifications, tr("Notification history", "Bildirim geçmişi")),
     )
+    // the apps in catalogs: a heading before each group
+    val catalog = listOf(
+        (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "VoiceLauncher"),
+        (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher"),
+        (tr("Tools and life", "Araçlar ve günlük")) to listOf("CalculatorLauncher", "WeatherLauncher", "CalendarLauncher", "ContactsLauncher"),
+        (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher"),
+    )
+    val routeOf = mapOf("MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "PaintLauncher" to "paint",
+        "CalculatorLauncher" to "calculator", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist")
+    val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity")
+    /** Asks the launcher to put this app on the home screen; the shortcut opens the app directly, whether or not its app-drawer icon is switched on. */
+    fun pinToHome(alias: String, label: String, icon: Int) {
+        val sm = ctx.getSystemService(android.content.pm.ShortcutManager::class.java) ?: return
+        if (!sm.isRequestPinShortcutSupported) return
+        val i = when {
+            alias in ownActivity -> Intent(Intent.ACTION_MAIN).setClassName(ctx, "com.umutk.pulse." + ownActivity.getValue(alias))
+            alias in routeOf -> Intent(Intent.ACTION_MAIN).setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", routeOf.getValue(alias))
+            else -> Intent(Intent.ACTION_MAIN).setComponent(android.content.ComponentName(ctx, "com.umutk.pulse." + alias)).addCategory(Intent.CATEGORY_LAUNCHER)
+        }
+        sm.requestPinShortcut(android.content.pm.ShortcutInfo.Builder(ctx, "app_$alias").setShortLabel(label).setIcon(android.graphics.drawable.Icon.createWithResource(ctx, icon)).setIntent(i).build(), null)
+    }
     // Windows 11 glyph per app (FluentPaths keys; Fluent UI System Icons, MIT License, Microsoft)
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "PaintLauncher" to "extraPaint", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
@@ -609,7 +630,9 @@ private fun ExtraAppsCard() {
     }
     PCard {
         Text(tr("Apps", "Uygulamalar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        apps.forEach { (alias, icon, label) ->
+        catalog.forEach { (heading, members) ->
+        Text(heading, color = Look.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+        apps.filter { it.first in members }.forEach { (alias, icon, label) ->
             // every row of this card has the same height and the same 36 dp icon slot
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                 // Windows 11: the app's own Fluent glyph (the real Fluent System Icons path); the other looks keep the drawable tile
@@ -625,6 +648,8 @@ private fun ExtraAppsCard() {
                 Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable {
                     if (alias == "ExtraStoreLauncher") openTool("extrastore") else AppPlace.byAlias(alias)?.run(ctx, openTool)
                 }.padding(vertical = 14.dp))
+                // the pin puts the app on the home screen of the phone
+                PIcon("pin", T.sub, 20.dp, Modifier.clickable { pinToHome(alias, label, icon) }.padding(horizontal = 6.dp))
                 // the chevron folds where the app is listed inside Pulse (top-right menu, left menu, Settings only); the switch is its home-screen icon
                 PIcon("chevron", T.sub, 20.dp, Modifier.clickable { placeOpen = if (placeOpen == alias) null else alias }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (placeOpen == alias) 180f else 0f })
                 PSwitch(state[alias] == true, { on ->
@@ -634,6 +659,7 @@ private fun ExtraAppsCard() {
                 })
             }
             if (placeOpen == alias) PlaceChoice(AppPlace.where(alias), listOf("menu" to "more", "side" to "menu", "hidden" to "eyeOff")) { AppPlace.set(ctx, alias, it); rev++ }
+        }
         }
         // the optional tools: the switch shows one in this card; the chevron folds the four places (menu, this card, left menu, Settings only)
         ToolPlace.all.forEach { t ->
