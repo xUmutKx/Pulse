@@ -156,6 +156,7 @@ class CoverService : Service() {
         }
         root = v
         running = true
+        refreshTile()
         tick.run()
     }
 
@@ -164,11 +165,17 @@ class CoverService : Service() {
 
     override fun onDestroy() {
         running = false
+        refreshTile()
         main.removeCallbacks(tick)
         root?.let { runCatching { wm?.removeViewImmediate(it) } }
         root = null
         bands.forEach { b -> runCatching { wm?.removeViewImmediate(b) } }; bands.clear()
         super.onDestroy()
+    }
+
+    /** Closed from the cover itself (double tap): the quick settings tile re-reads the state instead of staying lit. */
+    private fun refreshTile() {
+        runCatching { android.service.quicksettings.TileService.requestListeningState(this, ComponentName(this, CoverTile::class.java)) }
     }
 
     private fun statusBarHeight(): Int {
