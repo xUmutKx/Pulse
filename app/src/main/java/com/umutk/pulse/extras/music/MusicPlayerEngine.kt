@@ -157,7 +157,7 @@ class MusicPlayerEngine private constructor(context: Context) {
         player.shuffleModeEnabled = modes.getBoolean("shuffle", false)
         player.repeatMode = modes.getInt("repeat", Player.REPEAT_MODE_OFF)
         player.addListener(object : Player.Listener {
-            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { modes.edit().putBoolean("shuffle", shuffleModeEnabled).apply() }
+            override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) { modes.edit().putBoolean("shuffle", shuffleModeEnabled).apply(); if (shuffleModeEnabled) applySmartShuffle() }
             override fun onRepeatModeChanged(repeatMode: Int) { modes.edit().putInt("repeat", repeatMode).apply() }
         })
         main2.post(ticker)
@@ -197,8 +197,18 @@ class MusicPlayerEngine private constructor(context: Context) {
     /** Replaces the queue and starts playing [startIndex]. */
     fun playQueue(list: List<Track>, startIndex: Int = 0) {
         player.setMediaItems(list.map { it.toMediaItem() }, startIndex.coerceIn(0, maxOf(list.lastIndex, 0)), C.TIME_UNSET)
+        applySmartShuffle(list, startIndex.coerceIn(0, maxOf(list.lastIndex, 0)))
         player.prepare()
         player.play()
+    }
+
+    /** With the smart shuffle on (Settings > Misc) the shuffled order follows mood, energy and your ratings instead of pure chance. */
+    fun applySmartShuffle(list: List<Track> = queue(), start: Int = player.currentMediaItemIndex) {
+        if (!player.shuffleModeEnabled || !MusicSettings.smartShuffle(app) || list.size < 3 || list.size != player.mediaItemCount) return
+        runCatching {
+            val order = SmartShuffle.order(app, list, start.coerceIn(0, list.lastIndex), MusicSettings.shuffleRandomness(app) / 100f)
+            player.setShuffleOrder(androidx.media3.exoplayer.source.ShuffleOrder.DefaultShuffleOrder(order, System.nanoTime()))
+        }
     }
 
     /** Loads a queue without playing (resume after a restart). */

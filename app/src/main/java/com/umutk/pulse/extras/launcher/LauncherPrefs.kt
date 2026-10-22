@@ -27,6 +27,8 @@ object LauncherPrefs {
     var sort by mutableStateOf("name")
     var hidden by mutableStateOf<Set<String>>(emptySet())
     var clock by mutableStateOf(false)
+    /** The clock widget on the Windows desktops (on at first; the cross on it turns it off). */
+    var desktopClock by mutableStateOf(true)
     /** Off (the default): the home screen shows no app grid. Windows looks show the desktop shortcuts, the other looks the clock, widgets and dock; the apps are in the apps list. */
     var homeApps by mutableStateOf(false)
     /** Apps open in a window of their own on the Windows looks (the system's freeform windows); without that mode they open full screen as usual. */
@@ -81,6 +83,7 @@ object LauncherPrefs {
         phoneTiles = p.getProperty("phoneTiles") == "true"
         desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
         clock = p.getProperty("clock") == "true"
+        desktopClock = p.getProperty("desktopClock") != "false"
         homeApps = p.getProperty("homeApps") == "true"
         windowed = p.getProperty("windowed") == "true"
         lockPortrait = p.getProperty("lockPortrait") == "true"
@@ -99,7 +102,7 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
-        p.setProperty("phoneTiles", phoneTiles.toString()); p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("phoneTiles", phoneTiles.toString()); p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
         widgetPos.forEach { (id, v) -> p.setProperty("wpos.$id", v) }
@@ -119,7 +122,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = false; clock = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = false; clock = false; desktopClock = true; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         usage = emptyMap(); walls = emptyMap()
         save(c)
     }

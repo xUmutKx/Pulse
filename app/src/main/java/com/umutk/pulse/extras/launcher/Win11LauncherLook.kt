@@ -72,9 +72,9 @@ class Win11LauncherLook : LauncherLook {
     override val ownSearch: Boolean = true
 
     // Follows the Pulse theme (T.bg is light or dark); the wallpaper is fixed.
-    private fun dark(): Boolean = T.bg.luminance() < .5f
-    private fun taskbarFill(): Color = if (dark()) Color(0xCC1C1C1C) else Color(0xCCF3F3F3)
-    private fun flyoutFill(): Color = if (dark()) Color(0xE6202020) else Color(0xE6F3F3F3)
+    private fun dark(): Boolean = true
+    private fun taskbarFill(): Color = if (dark()) Color(0xFF0E0E0E) else Color(0xFFF3F3F3)
+    private fun flyoutFill(): Color = if (dark()) Color(0xFF151515) else Color(0xFFF3F3F3)
     private fun fg(): Color = if (dark()) Color.White else Color(0xFF1B1B1B)
     private fun tile(): Color = if (dark()) Color(0xFF3A3A3A) else Color(0xFFE0E0E0)
     private fun field(): Color = if (dark()) Color(0x26FFFFFF) else Color(0x14000000)
@@ -82,8 +82,8 @@ class Win11LauncherLook : LauncherLook {
     // the window material from Settings > Appearance (Mica, Mica Alt, Acrylic, Glass); "none" keeps the flat fills above
     @Composable
     private fun glass(modifier: Modifier, flat: Color, shape: androidx.compose.ui.graphics.Shape? = null): Modifier =
-        if (Look.effect == "none") modifier.background(flat, shape ?: RectangleShape)
-        else modifier.backdrop(Look.effect).let { if (shape != null) it.layer(Look.effect, shape) else it }
+        // the launcher's taskbar and menus are plain near-black, not a see-through grey
+        modifier.background(flat, shape ?: RectangleShape)
 
     @Composable
     override fun Background(modifier: Modifier, content: @Composable () -> Unit) {
