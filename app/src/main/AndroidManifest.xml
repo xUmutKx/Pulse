@@ -97,11 +97,6 @@
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
-                <data android:mimeType="text/plain" />
-            </intent-filter>
-            <intent-filter>
-                <action android:name="android.intent.action.SEND" />
-                <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/vnd.android.package-archive" />
             </intent-filter>
         </activity>
@@ -602,6 +597,14 @@
         <service android:name="com.umutk.pulse.features.CoverService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="screen cover overlay (black screen over other apps)" />
         </service>
+        <!-- a link shared to Pulse: a small window over the sharing app (sheet or Windows dialog box) instead of opening Pulse -->
+        <activity android:name="com.umutk.pulse.features.ShareDownloadActivity" android:exported="true" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" android:label="Pulse download">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
         <activity android:name="com.umutk.pulse.FramedToolActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecService" android:exported="false" android:foregroundServiceType="mediaProjection" />
         <activity android:name="com.umutk.pulse.extras.screenrec.ScreenRecActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:launchMode="singleTop" />
