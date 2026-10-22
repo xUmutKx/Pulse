@@ -247,7 +247,7 @@ fun LibraryScreen(
                 )
                 itemsIndexed(cats) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
                 // the suggestions sit at the bottom of the library, under the categories
-                item { RecommendationHome(tracks, current, style.onBackdrop, style.textDim, style.chip, style.accent, round = true, onPlay = onPlay) }
+                item { RecommendationHome(tracks, current, style.onBackdrop, style.textDim, style.chip, style.accent, round = true, onPlay = onPlay, onQueue = onPlayTracks) }
             }
             is Lib.Cat -> {
                 val groups = remember(tracks, n.kind) {

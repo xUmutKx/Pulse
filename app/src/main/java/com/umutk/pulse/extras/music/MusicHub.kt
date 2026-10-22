@@ -325,7 +325,7 @@ private fun WmpPage(engine: MusicPlayerEngine, st: PlaybackState, library: List<
         )
         if (nav == 1 && mode == Wmp7Mode.FULL) {
             LazyColumn(Modifier.padding(start = 160.dp).fillMaxSize().background(skin.treeBg)) {
-                item { RecommendationHome(library, st.current, skin.treeText, skin.sub, skin.vizBg, skin.accent, round = false, onPlay = { engine.playQueue(library, it); nav = 0 }) }
+                item { RecommendationHome(library, st.current, skin.treeText, skin.sub, skin.vizBg, skin.accent, round = false, onPlay = { engine.playQueue(library, it); nav = 0 }, onQueue = { l, i -> engine.playQueue(l, i); nav = 0 }) }
                 itemsIndexed(library) { i, t ->
                     val art = rememberTrackArt(t)
                     Row(Modifier.fillMaxWidth().clickable { engine.playQueue(library, i); nav = 0 }.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {

@@ -315,7 +315,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                             Icon(Icons.Rounded.Shuffle, null, tint = accent, modifier = Modifier.clickable { if (shown.isNotEmpty()) engine.playQueue(shown.shuffled()) })
                         }
                         LazyColumn(Modifier.fillMaxSize()) {
-                            if (tab == 0 && g == null && q.isEmpty()) item { RecommendationHome(library, cur, TXT, SUB, PANEL, accent, round = false, onPlay = { engine.playQueue(library, it) }) }
+                            if (tab == 0 && g == null && q.isEmpty()) item { RecommendationHome(library, cur, TXT, SUB, PANEL, accent, round = false, onPlay = { engine.playQueue(library, it) }, onQueue = { l, i -> engine.playQueue(l, i) }) }
                             itemsIndexed(shown, key = { i, t -> "$i${t.path}" }) { i, t ->
                                 val on = cur?.path == t.path
                                 Row(Modifier.fillMaxWidth().clickable { engine.playQueue(shown, i) }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
