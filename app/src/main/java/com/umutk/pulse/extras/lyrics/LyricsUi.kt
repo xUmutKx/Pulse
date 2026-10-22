@@ -226,9 +226,6 @@ fun LyricsSheet(
                     decorationBox = { inner -> if (v.isEmpty()) Text(hint, color = Color.White.copy(alpha = .4f), fontSize = 15.sp); inner() })
                 field(qArtist, tr("Artist", "Sanatçı")) { qArtist = it }
                 field(qTitle, tr("Song", "Şarkı")) { qTitle = it }
-                // what the lookup saw, so a miss can be traced (short, grey)
-                val seen = remember(localPath, attempt) { runCatching { Lyrics.diag(localPath) }.getOrDefault("") }
-                if (seen.isNotEmpty()) Text(seen, color = Color.White.copy(alpha = .35f), fontSize = 10.sp, modifier = Modifier.padding(top = 10.dp))
                 Text(tr("Search again", "Tekrar ara"), color = Color.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)
                     .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 9.dp))
             }

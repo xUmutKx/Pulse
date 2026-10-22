@@ -272,7 +272,9 @@ fun NowPlayingScreen(
             withContext(Dispatchers.IO) {
                 val artist = t.artist.orEmpty(); val title = t.displayName()
                 com.umutk.pulse.extras.lyrics.Lyrics.localRecord(t.path, title, artist) != null ||
-                    com.umutk.pulse.extras.lyrics.LyricsStore(ctx).load(t.path, artist, title) != null
+                    com.umutk.pulse.extras.lyrics.LyricsStore(ctx).load(t.path, artist, title) != null ||
+                    // found online before (or now, once): the button belongs to every song that has lyrics somewhere
+                    runCatching { com.umutk.pulse.extras.lyrics.Lyrics.forTrack(ctx, title, artist, t.album, t.durationSec * 1000L, t.path.takeIf { !it.contains("://") }) }.getOrNull() != null
             }
         } ?: false
     }
@@ -332,12 +334,6 @@ fun NowPlayingScreen(
                     TrackMenu(track, onEditTags, onFindArt, onLyrics, style, Modifier.align(Alignment.BottomEnd).padding(end = 2.dp, bottom = 2.dp))
                     if (onLyrics != null && !lyricsOpen && (hasLyrics || PowerampPrefs.lyricsAlways(ctx))) LyricsIcon(onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
                 }
-                if (lyricsOpen && track != null) com.umutk.pulse.extras.lyrics.LyricsSheet(
-                    track.displayName(), track.artist.orEmpty(), track.album, durationMs.toLong(), track.path.takeIf { !it.contains("://") }, positionMs.toLong(),
-                    onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
-                    // kept inside the cover square: while it rises it must not slide over the controls under the cover
-                    modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))),
-                )
             }
             Spacer(Modifier.height(20.dp))
             // the artist / album line's long press runs the action picked in settings (PowerampLineAction)
@@ -460,6 +456,12 @@ fun NowPlayingScreen(
             // suggested songs and artists, back at the bottom of the page
             suggestions?.invoke()
         }
+        if (lyricsOpen && track != null) com.umutk.pulse.extras.lyrics.LyricsSheet(
+                track.displayName(), track.artist.orEmpty(), track.album, durationMs.toLong(), track.path.takeIf { !it.contains("://") }, positionMs.toLong(),
+                onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
+                // a layer over the whole page, on top of the cover and the controls
+                modifier = Modifier.fillMaxSize(),
+            )
     }
 }
 
