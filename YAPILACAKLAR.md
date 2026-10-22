@@ -1014,3 +1014,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.220 derlenmedi: metin düzenleyicide Kaydet ve Farklı kaydet dışındaki iki simge (karanlık mod, TXT olarak kaydet) kaldırıldı.
 
 - 0.10.221 derlenmedi: söz gösterimi baştan yazıldı (PlayerLyrics: AnimatedVisibility, ölçüm/offset yok, önce cihazdaki sözler); kapağı aşağı çekip bırakınca ışınlanma giderildi, geri dönüş yaylı.
+
+- 0.10.222 derlenmedi: söz bildirimindeki ok emoji değil düz karakter (►).

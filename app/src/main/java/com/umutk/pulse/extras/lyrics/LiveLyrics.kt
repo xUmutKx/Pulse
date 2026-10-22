@@ -164,7 +164,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
     private fun postNote(t: Track, trio: Triple<String?, String, String?>?) {
         val body = trio?.second?.takeIf { it.isNotBlank() } ?: return clearNote()
         // the current line in bold letters behind a text-style arrow (no emoji picture), the neighbours plain
-        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "\u25B6\uFE0E " + LiveLyrics.bold(trio.second), trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
+        val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "\u25BA " + LiveLyrics.bold(trio.second), trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
         if (text == noteText) return
         noteText = text
         // the whole current line is also set in a real bold style, which covers the letters the Unicode bold cannot (ç ş ğ ı ...) on phones that keep spans
