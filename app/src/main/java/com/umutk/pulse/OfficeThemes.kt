@@ -1,5 +1,6 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import android.app.Activity
 import android.content.Context
@@ -260,7 +261,7 @@ fun ofAutoHide(): Pair<Boolean, Modifier> {
     LaunchedEffect(bump, shown) { if (shown) { kotlinx.coroutines.delay(2000); shown = false } }
     val mod = if (on && land) Modifier.pointerInput(Unit) {
         // watches without taking the touch: a press and release that barely moved is a tap
-        androidx.compose.foundation.gestures.awaitEachGesture {
+        awaitEachGesture {
             val down = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
             var moved = false
             while (true) {

@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.lyrics
 
+import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
