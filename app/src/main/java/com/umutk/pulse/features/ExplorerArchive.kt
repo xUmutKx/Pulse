@@ -750,7 +750,7 @@ fun FilesSettings() {
     val top = android.os.Environment.getExternalStorageDirectory().path
     val folders = listOf("" to tr("Storage", "Depolama")) + listOf("DCIM", "Download", "Documents", "Pictures", "Music", "Movies").filter { java.io.File(top, it).isDirectory }.map { "$top/$it" to it }
     com.umutk.pulse.PCard {
-        Sec(tr("Look", "Görünüm"), "palette", true) {
+        Sec(tr("Look", "Görünüm"), "palette") {
         val looks = listOf("app" to tr("App theme", "Uygulama teması"), "material" to "Material You", "amoled" to "AMOLED black", "coloros" to "ColorOS", "win11" to "Windows 11",
             "win10" to "Windows 10", "win7" to "Windows 7", "xp" to "Windows XP", "win95" to "Windows 95", "oneui" to "One UI")
         FilesPickRow("palette", tr("Look", "Görünüm"), looks.map { it.second }, looks.indexOfFirst { it.first == FilesLook.theme }.coerceAtLeast(0),
