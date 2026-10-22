@@ -19,6 +19,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
@@ -285,40 +286,35 @@ fun BackdropSettings() {
             }
         }
         if (editing) com.umutk.pulse.features.BackdropEditor { editing = false }
-        // the 16 bundled pictures in four themes: A (1-4), B (5-8), C (9-12), D (13-16); a theme title sets its accent and first picture
-        listOf("A" to 1, "B" to 5, "C" to 9, "D" to 13).forEachIndexed { g, (theme, first) ->
-            Text("Theme $theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.clickable {
-                Cfg.setAccent(ctx, 7 + g)
-                scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$first") }
-            }.padding(top = 6.dp))
+        // the bundled pictures: the wide ones (1-16) and the phone ones (17-34); small previews, decoded off the main thread
+        Text(tr("Wallpapers", "Duvar kağıtları"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+        (1..16).chunked(4).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                (first until first + 4).forEach { i ->
-                    val res = remember(i) { ctx.resources.getIdentifier("win11_wall_$i", "drawable", ctx.packageName) }
-                    val picked = bd.mode == "pack$i"
-                    Box(Modifier.weight(1f).aspectRatio(1.6f).clip(RoundedCornerShape(8.dp))
-                        .border(if (picked) 3.dp else 1.dp, if (picked) Look.accent else T.line, RoundedCornerShape(8.dp))
-                        .clickable { scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$i") } }) {
-                        if (res != 0) Image(painterResource(res), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                    }
-                }
+                row.forEach { i -> BackdropThumb("win11_wall_$i", 1.6f, bd.mode == "pack$i", Modifier.weight(1f)) { scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$i") } } }
             }
         }
-        // the phone pictures (portrait): pack17..pack34
         Text(tr("Phone pictures", "Telefon resimleri"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
         (1..18).chunked(6).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { n ->
-                    val i = 16 + n
-                    val res = remember(n) { ctx.resources.getIdentifier("mw11_$n", "drawable", ctx.packageName) }
-                    val picked = bd.mode == "pack$i"
-                    Box(Modifier.weight(1f).aspectRatio(.55f).clip(RoundedCornerShape(8.dp))
-                        .border(if (picked) 3.dp else 1.dp, if (picked) Look.accent else T.line, RoundedCornerShape(8.dp))
-                        .clickable { scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$i") } }) {
-                        if (res != 0) Image(painterResource(res), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                    }
-                }
+                row.forEach { n -> BackdropThumb("mw11_$n", .55f, bd.mode == "pack${16 + n}", Modifier.weight(1f)) { scope.launch(Dispatchers.IO) { bd.set(ctx, "pack${16 + n}") } } }
             }
         }
+    }
+}
+
+/** A low-quality preview of a bundled picture: decoded at 1/16 size on a background thread, so the page scrolls smoothly. */
+@Composable
+private fun BackdropThumb(name: String, aspect: Float, picked: Boolean, modifier: Modifier, onClick: () -> Unit) {
+    val ctx = LocalContext.current
+    val img by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, name) {
+        value = withContext(Dispatchers.IO) {
+            val res = ctx.resources.getIdentifier(name, "drawable", ctx.packageName)
+            if (res == 0) null else runCatching { android.graphics.BitmapFactory.decodeResource(ctx.resources, res, android.graphics.BitmapFactory.Options().apply { inSampleSize = 16; inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 })?.asImageBitmap() }.getOrNull()
+        }
+    }
+    Box(modifier.aspectRatio(aspect).clip(RoundedCornerShape(8.dp)).background(T.panel)
+        .border(if (picked) 3.dp else 1.dp, if (picked) Look.accent else T.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick)) {
+        img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
     }
 }
 
