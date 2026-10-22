@@ -96,6 +96,7 @@ fun PowerampApp(
     var favourites by remember { mutableStateOf(MusicStats.favourites(ctx)) }
     val sleepLeft by engine.sleepLeftMs.collectAsState()
     var lyricsOpen by remember { mutableStateOf(false) }
+    var pullShown by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     var tagEdit by remember { mutableStateOf(false) }
     var artOpen by remember { mutableStateOf(false) }
     var coverRev by remember { mutableIntStateOf(0) }
@@ -142,6 +143,8 @@ fun PowerampApp(
         if (artBg && PowerampPrefs.artPage(ctx, pageKey)) cover?.let { Image(it, null, Modifier.fillMaxSize().blur(40.dp), contentScale = ContentScale.Crop) }
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) {
             Box(Modifier.weight(1f)) {
+                // while the now playing page is pulled down, the screen it came from shows underneath
+                if (tab == null && pullShown > 0f) LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
                 Crossfade(tab, label = "poweramp-tab") { t ->
                     when (t) {
                         null -> NowPlayingScreen(
@@ -184,6 +187,7 @@ fun PowerampApp(
                             onSleepSet = { m, end -> engine.setSleep(m, end) },
                             onLyrics = { lyricsOpen = true },
                             onLyricsDismiss = { lyricsOpen = false },
+                            onPageOffset = { pullShown = it },
                             onPullDown = { tab = lastTab ?: PowerampTab.LIBRARY },
                             // no suggestions under the player: the now playing page is one screen and does not scroll
                             lyricsOpen = lyricsOpen,
