@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.lyrics
 
+import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.graphics.asAndroidBitmap
 import android.content.Context
 import android.provider.Settings
@@ -51,6 +53,14 @@ object LiveLyrics {
     fun saveLrc(c: Context) = prefs(c).getBoolean("save_lrc", true)
     /** Also written into the MP3's tag; this rewrites the song file, so it is off until asked for. */
     fun embed(c: Context) = prefs(c).getBoolean("embed_tag", false)
+    /** How the notification tells the song's title from the lyric line: "underline" (title underlined, line bold), "thin" (the one-line view shows the line plain, the open view bold), "bold" (both bold). */
+    fun emphasis(c: Context) = prefs(c).getString("emphasis", "underline") ?: "underline"
+    fun setEmphasis(c: Context, v: String) = prefs(c).edit().putString("emphasis", v).apply()
+    /** The line as the one-line (collapsed) notification text. */
+    fun collapsed(c: Context, line: String) = if (emphasis(c) == "thin") line else bold(line)
+    /** The song title as the notification shows it: underlined when that is the chosen emphasis. */
+    fun titled(c: Context, title: CharSequence): CharSequence =
+        if (emphasis(c) != "underline") title else android.text.SpannableString(title).also { it.setSpan(android.text.style.UnderlineSpan(), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
     fun set(c: Context, key: String, on: Boolean) = prefs(c).edit().putBoolean(key, on).apply()
 
     /** The line the notification shows now; null hides it. Read by [com.umutk.pulse.extras.music.notif.NotifProvider]. */
@@ -148,7 +158,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         } else null
         if (line != LiveLyrics.currentLine) {
             LiveLyrics.currentLine = line
-            LiveLyrics.notifLine = if (LiveLyrics.notification(ctx)) line?.let { LiveLyrics.bold(it) } else null
+            LiveLyrics.notifLine = if (LiveLyrics.notification(ctx)) line?.let { LiveLyrics.collapsed(ctx, it) } else null
             changed()
         }
     }
@@ -172,13 +182,13 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
             val st = text.indexOf(LiveLyrics.bold(trio.second)).takeIf { it >= 0 }
             if (st != null) sp.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, st + LiveLyrics.bold(trio.second).length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
-        val boldLine = android.text.SpannableString(LiveLyrics.bold(trio.second)).also { it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
+        val boldLine = android.text.SpannableString(LiveLyrics.collapsed(ctx, trio.second)).also { it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
         nm.createNotificationChannel(android.app.NotificationChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         // the album cover beside the text, read once per song (this runs on the lyrics tick, not on the main thread)
         if (artFor != t.path) { artFor = t.path; art = runCatching { (com.umutk.pulse.extras.music.trackArtLocal(ctx, t) ?: com.umutk.pulse.extras.music.trackArt(ctx, t))?.asAndroidBitmap() }.getOrNull() }
         nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
-            .setContentTitle(t.title ?: t.path.substringAfterLast('/')).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
+            .setContentTitle(LiveLyrics.titled(ctx, t.title ?: t.path.substringAfterLast('/'))).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT).build())
     }
 
@@ -214,6 +224,13 @@ fun LiveLyricsSettingsSection() {
         SwitchRow(tr("Save found lyrics as a .lrc file beside the song", "Bulunan sözleri şarkının yanına .lrc dosyası olarak kaydet"), save) { save = it; LiveLyrics.set(c, "save_lrc", it) }
         var emb by remember { mutableStateOf(LiveLyrics.embed(c)) }
         SwitchRow(tr("Also write into the song's tag (MP3, rewrites the file)", "Şarkının etiketine de yaz (MP3, dosyayı yeniden yazar)"), emb) { emb = it; LiveLyrics.set(c, "embed_tag", it) }
+        // how the title and the lyric line differ in the notification
+        var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
+        androidx.compose.foundation.layout.Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+            listOf("underline" to tr("Underlined title", "Başlık altı çizili"), "thin" to tr("Thin line, bold when open", "İnce satır, açılınca kalın"), "bold" to tr("Always bold", "Hep kalın")).forEach { (k, n) ->
+                com.umutk.pulse.PChip(emph == k, n) { emph = k; LiveLyrics.setEmphasis(c, k); com.umutk.pulse.extras.music.MusicPlaybackService.relayout() }
+            }
+        }
         SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
     }
 }
