@@ -335,6 +335,11 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         if (desktop) Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             DesktopWindowLayer(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp)
         }
+        // Windows 10 Mobile looks: the action center comes down from the top edge
+        if (look.id.startsWith("winphone")) Box(Modifier.fillMaxSize()) {
+            ActionCenterHandle(Modifier.align(Alignment.TopStart))
+            ActionCenterPanel()
+        }
         // Windows looks: the menu sits above the taskbar, which is inside the navigation-bar inset
         if (LauncherSession.startOpen && look.ownSearch) look.StartMenu(state, { LauncherSession.startOpen = false }, Modifier.fillMaxSize().navigationBarsPadding())
         else if (LauncherSession.startOpen) Column(Modifier.fillMaxSize().background(T.bg)) {

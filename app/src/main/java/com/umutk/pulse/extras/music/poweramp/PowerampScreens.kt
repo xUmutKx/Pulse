@@ -251,6 +251,8 @@ fun NowPlayingScreen(
     onLyrics: (() -> Unit)? = null,
     // closing the lyrics is its own call: the open button and the sheet no longer share one toggle (a double tap used to open and shut it at once)
     onLyricsDismiss: (() -> Unit)? = null,
+    // how far the page is pulled down (px), so the app can show the screen it came from underneath
+    onPageOffset: ((Float) -> Unit)? = null,
     onEditTags: (() -> Unit)? = null,
     onFindArt: (() -> Unit)? = null,
     lyricsOpen: Boolean = false,
@@ -284,6 +286,7 @@ fun NowPlayingScreen(
     val pageScope = androidx.compose.runtime.rememberCoroutineScope()
     var pageY by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
     var upAcc by remember { androidx.compose.runtime.mutableFloatStateOf(0f) }
+    androidx.compose.runtime.LaunchedEffect(pageY) { onPageOffset?.invoke(pageY) }
     BoxWithConstraints(modifier.fillMaxSize().graphicsLayer { translationY = pageY }) {
         val pageH = with(androidx.compose.ui.platform.LocalDensity.current) { maxHeight.toPx() }
         Column(Modifier.fillMaxSize().padding(horizontal = 13.dp, vertical = 13.dp)) {
