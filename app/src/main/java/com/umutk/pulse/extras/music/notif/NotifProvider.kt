@@ -26,7 +26,10 @@ class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
     ): MediaNotification {
         val m = base.createNotification(session, customLayout, actionFactory, callback)
         val line = LiveLyrics.notifLine ?: return m
-        return MediaNotification(m.notificationId, Notification.Builder.recoverBuilder(ctx, m.notification).setContentText(line).build())
+        val b = Notification.Builder.recoverBuilder(ctx, m.notification).setContentText(line)
+        // the song title is underlined when that is the emphasis chosen, so it cannot be taken for the lyric line
+        m.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.let { b.setContentTitle(LiveLyrics.titled(ctx, it)) }
+        return MediaNotification(m.notificationId, b.build())
     }
 
     override fun handleCustomCommand(session: MediaSession, action: String, extras: Bundle) = base.handleCustomCommand(session, action, extras)
