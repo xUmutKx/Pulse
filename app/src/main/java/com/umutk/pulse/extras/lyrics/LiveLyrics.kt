@@ -80,15 +80,15 @@ object LiveLyrics {
      * Accented letters keep their accent as a combining mark; letters with no bold form stay plain.
      */
     fun bold(s: String): String {
-        val d = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD)
         val sb = StringBuilder()
-        for (ch in d) when (ch) {
+        // only the plain letters and digits change; every other letter (ç ş ğ ı ö ü, Cyrillic, ...) stays exactly as written, so no letter is dropped or its mark misplaced
+        for (ch in s) when (ch) {
             in 'A'..'Z' -> sb.appendCodePoint(0x1D5D4 + (ch - 'A'))
             in 'a'..'z' -> sb.appendCodePoint(0x1D5EE + (ch - 'a'))
             in '0'..'9' -> sb.appendCodePoint(0x1D7EC + (ch - '0'))
             else -> sb.append(ch)
         }
-        return java.text.Normalizer.normalize(sb.toString(), java.text.Normalizer.Form.NFC)
+        return sb.toString()
     }
 
     /** Line at [posMs] with the lines before and after it; null before the first line. */
@@ -167,8 +167,12 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "\u25B6\uFE0E " + LiveLyrics.bold(trio.second), trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
         if (text == noteText) return
         noteText = text
-        val bold = text
-        val boldLine = LiveLyrics.bold(trio.second)
+        // the whole current line is also set in a real bold style, which covers the letters the Unicode bold cannot (ç ş ğ ı ...) on phones that keep spans
+        val bold = android.text.SpannableStringBuilder(text).also { sp ->
+            val st = text.indexOf(LiveLyrics.bold(trio.second)).takeIf { it >= 0 }
+            if (st != null) sp.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, st + LiveLyrics.bold(trio.second).length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        }
+        val boldLine = android.text.SpannableString(LiveLyrics.bold(trio.second)).also { it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
         nm.createNotificationChannel(android.app.NotificationChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         // the album cover beside the text, read once per song (this runs on the lyrics tick, not on the main thread)

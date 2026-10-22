@@ -46,29 +46,17 @@ object HomeSheetState {
 fun HomeSheet() {
     val ctx = LocalContext.current
     val addWidget = rememberWidgetAdd { }
-    if (HomeSheetState.sheet) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)).clickable { HomeSheetState.sheet = false }) {
-        Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(T.panel).frame(T)
-            .navigationBarsPadding().clickable { }.padding(horizontal = 16.dp, vertical = 20.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly) {
-            SheetEntry("settings", tr("Settings", "Ayarlar")) {
-                HomeSheetState.sheet = false
-                // Windows 10 Mobile's Settings page for the phone looks
-                if (LauncherPrefs.look.startsWith("winphone")) ctx.startActivity(Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "wpsettings"))
-                else ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
-            }
-            SheetEntry("light", tr("Display settings", "Ekran ayarları")) {
-                HomeSheetState.sheet = false
-                ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
-            }
-            SheetEntry("palette", tr("Personalize", "Kişiselleştir")) {
-                HomeSheetState.sheet = false
-                ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
-            }
-            SheetEntry("gridView", tr("Widgets", "Widget'lar")) {
-                HomeSheetState.sheet = false
-                HomeSheetState.widgets = true
-            }
+    if (HomeSheetState.sheet) ContextPopup(220.dp, 190.dp, onDismiss = { HomeSheetState.sheet = false }) {
+        val w = com.umutk.pulse.LocalWindowLook.current
+        ActionRow("settings", tr("Settings", "Ayarlar"), w.text) {
+            HomeSheetState.sheet = false
+            // Windows 10 Mobile's Settings page for the phone looks
+            if (LauncherPrefs.look.startsWith("winphone")) ctx.startActivity(Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "wpsettings"))
+            else ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java))
         }
+        ActionRow("light", tr("Display settings", "Ekran ayarları"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
+        ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
+        ActionRow("gridView", tr("Widgets", "Widget'lar"), w.text) { HomeSheetState.sheet = false; HomeSheetState.widgets = true }
     }
     if (HomeSheetState.widgets) WidgetPickDialog(
         onPick = { HomeSheetState.widgets = false; addWidget(it) },
