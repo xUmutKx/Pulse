@@ -131,6 +131,21 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             PIcon("download", T.text, 22.dp)
             Text(tr("Load a .poweramp-backup", ".poweramp-backup yükle"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
         }
+        // straight from the installed Poweramp (root): all the ratings and play counts and the album_art pictures, no backup file needed
+        Row(Modifier.fillMaxWidth().clickable {
+            scope.launch {
+                if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first", "Kütüphane boş: önce müziği tara"); return@launch }
+                importNote = tr("Reading Poweramp…", "Poweramp okunuyor…")
+                val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.direct(c, MusicLibrary.tracks.value, embedCovers) } }
+                importNote = r.getOrNull()?.let { x ->
+                    tr("${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (x.missing > 0) ", ${x.missing} songs not found" else ""),
+                        "${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (x.missing > 0) ", ${x.missing} şarkı bulunamadı" else ""))
+                } ?: tr("Poweramp's data could not be read (needs root and Poweramp installed)", "Poweramp verisi okunamadı (root ve Poweramp gerekir)")
+            }
+        }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("phone", T.text, 22.dp)
+            Text(tr("Import from Poweramp (root)", "Poweramp'tan doğrudan al (root)"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        }
         if (importNote.isNotEmpty()) Text(importNote, color = T.sub, fontSize = 12.sp)
     }
 
