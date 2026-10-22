@@ -1008,3 +1008,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.217 derlenmedi: Dosyalar: sağ kenarda hızlı kaydırma tutamacı, Android/data-obb-media klasörlerinde uygulama simgesi, klasörden çıkıp dönünce kaldığın konum, arşivden kesilemezse çıkar + yeniden sıkıştır kutusu.
 
 - 0.10.218 derlenmedi: Dosyalar: klasör boyutları simgesine basılı tutunca ağaç içinde bulunulan klasörde açılır.
+
+- 0.10.219 derlenmedi: hızlı ayar kutucuklarına basılı tutunca: DNS kendi Toolkit DNS aracını, Ekran yönü kendi aracını açar (launcher/ayarlar açılmaz, ekran yönü artık sessizce kapanıp launchera düşmez).
