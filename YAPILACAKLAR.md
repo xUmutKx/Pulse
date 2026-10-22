@@ -940,3 +940,5 @@ Screen recorder feature list (55 candidates)
 - Music settings: load a .poweramp-backup (playlists, ratings, play counts, album_art covers by "artist - title", optional MP3 APIC writing); Files: unknown file types ask how to open (archive / text / image / another app); notification-access and accessibility entries get clear names; 0.10.183. derlenmedi
 
 - Launcher widget picker lists Pulse's own themed widgets first; 0.10.184. derlenmedi
+
+- Launcher (Windows looks): This PC, Recycle Bin, Paint, Task Manager and Command Prompt open as framed windows (title bar, caption buttons, frame in the look of 95/XP/7/10/11) over the launcher; FramedToolActivity; 0.10.185. derlenmedi
