@@ -60,14 +60,12 @@ private fun DesktopWidget(w: PlacedWidget, index: Int, info: android.appwidget.A
             modifier = Modifier.fillMaxSize(),
         )
         fun dot(m: Modifier) = m.size(24.dp).clip(CircleShape).background(Color(0x99000000))
-        // move
-        Box(dot(Modifier.align(Alignment.TopStart).pointerInput(w.id) {
+        // move, remove and resize are off while the layout is locked
+        if (!LauncherPrefs.lockLayout) Box(dot(Modifier.align(Alignment.TopStart).pointerInput(w.id) {
             detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = posOf(w.id, index, info.minWidth, info.minHeight); put(q[0] + drag.x / d, (q[1] + drag.y / d).coerceAtLeast(0f), q[2], q[3]) }
         }), contentAlignment = Alignment.Center) { PIcon("gridView", Color.White, 14.dp) }
-        // remove
-        Box(dot(Modifier.align(Alignment.TopEnd).clickable { removeWidget(ctx, w.id) }), contentAlignment = Alignment.Center) { PIcon("close", Color.White, 14.dp) }
-        // resize
-        Box(dot(Modifier.align(Alignment.BottomEnd).pointerInput(w.id) {
+        if (!LauncherPrefs.lockLayout) Box(dot(Modifier.align(Alignment.TopEnd).clickable { removeWidget(ctx, w.id) }), contentAlignment = Alignment.Center) { PIcon("close", Color.White, 14.dp) }
+        if (!LauncherPrefs.lockLayout) Box(dot(Modifier.align(Alignment.BottomEnd).pointerInput(w.id) {
             detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = posOf(w.id, index, info.minWidth, info.minHeight); put(q[0], q[1], (q[2] + drag.x / d).coerceAtLeast(80f), (q[3] + drag.y / d).coerceAtLeast(60f)) }
         }), contentAlignment = Alignment.Center) { PIcon("scale", Color.White, 14.dp) }
     }

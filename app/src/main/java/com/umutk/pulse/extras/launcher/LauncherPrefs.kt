@@ -51,6 +51,32 @@ object LauncherPrefs {
     var topChips by mutableStateOf(false)
     /** Windows Phone looks: true = coloured live tiles, false (default) = plain icons with the name under them. */
     var phoneTiles by mutableStateOf(false)
+    // ---- more things to set (Launcher settings > Extras) ----
+    /** Double tap on an empty part of the home locks the screen. */
+    var gestureLock by mutableStateOf(false)
+    /** Swipe down on the home opens the notification shade. */
+    var swipeDownShade by mutableStateOf(false)
+    /** Swipe up on the home opens the apps list. */
+    var swipeUpApps by mutableStateOf(false)
+    /** Shape of the app pictures: squircle (default), circle, rounded, square. */
+    var iconShape by mutableStateOf("squircle")
+    /** Wallpaper: darkening 0..70 percent, blur 0..24 dp, and a different stock picture each day. */
+    var wallDim by mutableStateOf(0)
+    var wallBlur by mutableStateOf(0)
+    var wallDaily by mutableStateOf(false)
+    /** The screen stays on while the home is shown. */
+    var keepOn by mutableStateOf(false)
+    /** A short tick on a long press. */
+    var haptic by mutableStateOf(true)
+    /** The apps list opens with the keyboard on its search field. */
+    var searchFocus by mutableStateOf(false)
+    /** The taskbar clock: 24-hour or 12-hour, and the date as dmy / mdy / ymd. */
+    var clock24 by mutableStateOf(true)
+    var dateFmt by mutableStateOf("dmy")
+    /** The desktop clock card shows seconds. */
+    var clockSeconds by mutableStateOf(false)
+    /** The desktop gadgets (clock, notes, widgets) cannot be moved or removed by accident. */
+    var lockLayout by mutableStateOf(false)
     /** Where each widget sits on the Windows desktops: "x,y,w,h" in dp, by widget id. */
     var widgetPos by mutableStateOf<Map<Int, String>>(emptyMap())
     var desktopOn by mutableStateOf(DESKTOP_DEFAULT)
@@ -83,6 +109,10 @@ object LauncherPrefs {
         hidden = list(p.getProperty("hidden")).toSet()
         topChips = p.getProperty("topChips") == "true"
         phoneTiles = p.getProperty("phoneTiles") == "true"
+        gestureLock = p.getProperty("gestureLock") == "true"; swipeDownShade = p.getProperty("swipeDownShade") == "true"; swipeUpApps = p.getProperty("swipeUpApps") == "true"
+        iconShape = p.getProperty("iconShape") ?: "squircle"; wallDim = p.getProperty("wallDim")?.toIntOrNull() ?: 0; wallBlur = p.getProperty("wallBlur")?.toIntOrNull() ?: 0
+        wallDaily = p.getProperty("wallDaily") == "true"; keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
+        clock24 = p.getProperty("clock24") != "false"; dateFmt = p.getProperty("dateFmt") ?: "dmy"; clockSeconds = p.getProperty("clockSeconds") == "true"; lockLayout = p.getProperty("lockLayout") == "true"
         desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
         clock = p.getProperty("clock") == "true"
         desktopClock = p.getProperty("desktopClock") != "false"
@@ -105,6 +135,10 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
+        p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
+        p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("wallDaily", wallDaily.toString())
+        p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
+        p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
         p.setProperty("phoneTiles", phoneTiles.toString()); p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
@@ -126,9 +160,24 @@ object LauncherPrefs {
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
         drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = false; clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; wallDaily = false; keepOn = false; haptic = true; searchFocus = false
+        clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
         usage = emptyMap(); walls = emptyMap()
         save(c)
     }
+
+    /** Copies the launcher's settings file to Download/PulseLauncher.properties (the other way: [importSettings]). */
+    fun exportSettings(c: Context): Boolean = runCatching {
+        save(c)
+        val out = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "PulseLauncher.properties")
+        file(c).copyTo(out, overwrite = true); true
+    }.getOrDefault(false)
+
+    fun importSettings(c: Context): Boolean = runCatching {
+        val src = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "PulseLauncher.properties")
+        if (!src.isFile) return false
+        src.copyTo(file(c), overwrite = true); load(c); true
+    }.getOrDefault(false)
 
     /** Puts the launcher's look on the shared Look before the first frame (AppLookGuard.leave restores Pulse's). */
     fun apply() {

@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -88,7 +89,28 @@ fun HomeChip(icon: String, onClick: () -> Unit) {
 /** Long press on empty home space opens the home sheet; the grid below still gets its taps and drags. */
 fun Modifier.homeLongPress(onLong: () -> Unit): Modifier = composed {
     var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
-    onGloballyPositioned { origin = it.positionInRoot() }.pointerInput(onLong) { detectTapGestures(onLongPress = { LauncherSession.pressAt = origin + it; onLong() }) }
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val view = androidx.compose.ui.platform.LocalView.current
+    onGloballyPositioned { origin = it.positionInRoot() }
+        .pointerInput(onLong) {
+            detectTapGestures(
+                onLongPress = { if (LauncherPrefs.haptic) view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS); LauncherSession.pressAt = origin + it; onLong() },
+                onDoubleTap = { if (LauncherPrefs.gestureLock) globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN) },
+            )
+        }
+        .pointerInput(Unit) {
+            // a long swipe on the home: down opens the notification shade, up opens the apps list (each is a setting)
+            var total = 0f
+            androidx.compose.foundation.gestures.detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = {
+                if (total > 140f && LauncherPrefs.swipeDownShade) globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+                else if (total < -140f && LauncherPrefs.swipeUpApps) LauncherSession.startOpen = true
+            }) { _, d -> total += d }
+        }
+}
+
+/** Asks Pulse's accessibility service (it lives in the main process, the launcher is a process of its own) to do a system action: lock the screen, open the shade. */
+fun globalAction(ctx: Context, action: Int) {
+    ctx.sendBroadcast(Intent("com.umutk.pulse.action.GLOBAL").setPackage(ctx.packageName).putExtra("g", action))
 }
 
 /** A small menu beside the finger, like a right-click menu: to the right of the press, or to its left when there is no room. */
@@ -117,8 +139,10 @@ fun DrawerSearch(query: String, onChange: (String) -> Unit) {
         verticalAlignment = Alignment.CenterVertically) {
         PIcon("search", T.sub, 20.dp)
         Spacer(Modifier.width(8.dp))
+        val fr = remember { androidx.compose.ui.focus.FocusRequester() }
+        androidx.compose.runtime.LaunchedEffect(Unit) { if (LauncherPrefs.searchFocus) runCatching { fr.requestFocus() } }
         BasicTextField(query, onChange, singleLine = true, textStyle = TextStyle(color = T.text, fontSize = 15.sp),
-            cursorBrush = SolidColor(Look.accent), modifier = Modifier.weight(1f),
+            cursorBrush = SolidColor(Look.accent), modifier = Modifier.weight(1f).focusRequester(fr),
             decorationBox = { inner ->
                 if (query.isEmpty()) Text(tr("Search apps", "Uygulama ara"), color = T.sub, fontSize = 15.sp)
                 inner()

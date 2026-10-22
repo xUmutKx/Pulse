@@ -66,12 +66,12 @@ fun MovableDesktopNote() {
             val showBack = turn > 90f
             Column(Modifier.fillMaxSize().graphicsLayer { if (showBack) rotationY = 180f }.clip(RoundedCornerShape(3.dp)).background(base)) {
                 // the top bar moves the note; "i" turns it over, the cross takes it off the desktop
-                Row(Modifier.fillMaxWidth().height(26.dp).background(Color.Black.copy(alpha = .08f)).pointerInput(Unit) {
-                    detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = pos(); LauncherPrefs.widgetPos = LauncherPrefs.widgetPos + (-2 to "${(q[0] + drag.x / d).coerceAtLeast(0f)},${(q[1] + drag.y / d).coerceAtLeast(0f)}") }
+                Row(Modifier.fillMaxWidth().height(26.dp).background(Color.Black.copy(alpha = .08f)).pointerInput(LauncherPrefs.lockLayout) {
+                    if (!LauncherPrefs.lockLayout) detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = pos(); LauncherPrefs.widgetPos = LauncherPrefs.widgetPos + (-2 to "${(q[0] + drag.x / d).coerceAtLeast(0f)},${(q[1] + drag.y / d).coerceAtLeast(0f)}") }
                 }, verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.weight(1f))
                     Box(Modifier.size(26.dp).clickable { back = !back }, contentAlignment = Alignment.Center) { Text("i", color = Color(0xFF444444), fontSize = 14.sp) }
-                    Box(Modifier.size(26.dp).clickable { LauncherPrefs.desktopNote = false; LauncherPrefs.save(ctx) }, contentAlignment = Alignment.Center) { PIcon("close", Color(0xFF444444), 14.dp) }
+                    if (!LauncherPrefs.lockLayout) Box(Modifier.size(26.dp).clickable { LauncherPrefs.desktopNote = false; LauncherPrefs.save(ctx) }, contentAlignment = Alignment.Center) { PIcon("close", Color(0xFF444444), 14.dp) }
                 }
                 if (!showBack) BasicTextField(
                     text, { text = it; prefs.edit().putString("text", it).apply() },

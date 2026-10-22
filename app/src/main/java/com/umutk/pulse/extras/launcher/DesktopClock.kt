@@ -45,7 +45,7 @@ import kotlin.math.sin
 fun DesktopClock(lookId: String, modifier: Modifier = Modifier) {
     val now by produceState(System.currentTimeMillis()) { while (true) { delay(1000); value = System.currentTimeMillis() } }
     val d = Date(now)
-    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(d)
+    val time = SimpleDateFormat(if (LauncherPrefs.clock24) (if (LauncherPrefs.clockSeconds) "HH:mm:ss" else "HH:mm") else (if (LauncherPrefs.clockSeconds) "h:mm:ss a" else "h:mm a"), Locale.getDefault()).format(d)
     val date = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(d)
     when (lookId) {
         "win7" -> {
@@ -94,10 +94,10 @@ fun MovableDesktopClock(lookId: String) {
     androidx.compose.foundation.layout.Box(Modifier.offset(p[0].dp, p[1].dp)) {
         DesktopClock(lookId)
         fun dot(m: Modifier) = m.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0x99000000))
-        androidx.compose.foundation.layout.Box(dot(Modifier.align(Alignment.TopStart).pointerInput(Unit) {
+        if (!LauncherPrefs.lockLayout) androidx.compose.foundation.layout.Box(dot(Modifier.align(Alignment.TopStart).pointerInput(Unit) {
             detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = pos(); LauncherPrefs.widgetPos = LauncherPrefs.widgetPos + (-1 to "${(q[0] + drag.x / d).coerceAtLeast(0f)},${(q[1] + drag.y / d).coerceAtLeast(0f)}") }
         }), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("gridView", Color.White, 12.dp) }
-        androidx.compose.foundation.layout.Box(dot(Modifier.align(Alignment.TopEnd).clickable { LauncherPrefs.desktopClock = false; LauncherPrefs.save(ctx) }), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("close", Color.White, 12.dp) }
+        if (!LauncherPrefs.lockLayout) androidx.compose.foundation.layout.Box(dot(Modifier.align(Alignment.TopEnd).clickable { LauncherPrefs.desktopClock = false; LauncherPrefs.save(ctx) }), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("close", Color.White, 12.dp) }
     }
     }
 }
