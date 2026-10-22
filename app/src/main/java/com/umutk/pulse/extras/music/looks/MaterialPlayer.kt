@@ -421,8 +421,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                             else Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).background(dyn.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = dyn, modifier = Modifier.fillMaxSize(.45f)) }
                         }
                         // the lyrics sit on top of the cover, in its place
-                        if (showLyrics) com.umutk.pulse.extras.lyrics.LyricsSheet(cur.name(), cur.artistName(), cur.album, dur.toLong(), cur.path.takeIf { !it.contains("://") }, pos.toLong(),
-                            onDismiss = { showLyrics = false }, onSeek = { ms -> engine.seekTo(ms.toInt()); pos = ms.toInt() }, modifier = Modifier.clip(RoundedCornerShape(24.dp)))
+                        com.umutk.pulse.extras.lyrics.PlayerLyrics(visible = showLyrics, title = cur.name(), artist = cur.artistName(), album = cur.album, durationMs = dur.toLong(),
+                            localPath = cur.path.takeIf { !it.contains("://") }, positionMs = pos.toLong(), onDismiss = { showLyrics = false },
+                            onSeek = { ms -> engine.seekTo(ms.toInt()); pos = ms.toInt() }, modifier = Modifier.clip(RoundedCornerShape(24.dp)))
                         }
                         Spacer(Modifier.weight(1f))
                         LevelBars(st.isPlaying, dyn, Modifier.fillMaxWidth().height(28.dp).padding(bottom = 6.dp))
