@@ -23,8 +23,8 @@ object AppDataFolders {
 
     /** The app's icon when [path] is one of these folders, null for any other folder (and until it has loaded). */
     fun icon(ctx: Context, path: String): ImageBitmap? {
-        if (!path.startsWith(ROOT)) return null
-        val pkg = path.removePrefix(ROOT)
+        // /data/data/<pkg>, and the app folders of shared storage: Android/data/<pkg>, Android/obb/<pkg>, Android/media/<pkg>
+        val pkg = if (path.startsWith(ROOT)) path.removePrefix(ROOT) else Regex(".*/Android/(?:data|obb|media)/([^/]+)$").matchEntire(path)?.groupValues?.get(1) ?: return null
         if (pkg.isEmpty() || pkg.contains('/')) return null
         icons[pkg]?.let { return it }
         if (asked.putIfAbsent(pkg, true) == null) {

@@ -1004,3 +1004,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.215 derlenmedi: Poweramp: kendi veritabanından (root) tüm puan ve dinlenme sayıları + album_art resimleri; yedek eşleşmesinde Unicode (ü/ı vb.) düzeltmesi.
 
 - 0.10.216 derlenmedi: Win11 launcher düz koyu siyah; masaüstü saati taşınır/kaldırılır widget kartı; basılı tutma menüsü parmağın sağında/solunda küçük popup (boş alan dahil); akıllı karıştırma (ruh hali/enerji/puana göre, az-çok rastgele ayarı); söz bildirimi: harf atlamayan kalın + tüm satır.
+
+- 0.10.217 derlenmedi: Dosyalar: sağ kenarda hızlı kaydırma tutamacı, Android/data-obb-media klasörlerinde uygulama simgesi, klasörden çıkıp dönünce kaldığın konum, arşivden kesilemezse çıkar + yeniden sıkıştır kutusu.
