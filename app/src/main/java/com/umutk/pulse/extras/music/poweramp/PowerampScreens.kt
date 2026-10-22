@@ -336,7 +336,7 @@ fun NowPlayingScreen(
                 if (track != null) {
                     RatingStar(rating, onRate, favourite, onFavourite, style, Modifier.align(Alignment.BottomStart).padding(start = 4.dp, bottom = 2.dp))
                     TrackMenu(track, onEditTags, onFindArt, onLyrics, style, Modifier.align(Alignment.BottomEnd).padding(end = 2.dp, bottom = 2.dp))
-                    if (onLyrics != null && !lyricsOpen && (hasLyrics || PowerampPrefs.lyricsAlways(ctx))) LyricsIcon(onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
+                    if (onLyrics != null && !lyricsOpen) LyricsIcon(onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
                 }
                 // the lyrics lie over the cover square, above the star, the menu and the lyrics button
                 if (lyricsOpen && track != null) Box(Modifier.fillMaxSize().zIndex(10f)) {

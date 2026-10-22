@@ -1,5 +1,15 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.border
+import androidx.compose.foundation.Canvas
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
@@ -119,6 +129,7 @@ fun LauncherSettings(back: () -> Unit) {
             }
         }
         SettingsSection(tr("Home screen", "Ana ekran")) {
+            SwitchLine("settings", tr("Buttons at the top right", "Sağ üstteki düğmeler"), LauncherPrefs.topChips) { LauncherPrefs.topChips = it; save() }
             SwitchLine("clock", tr("Clock and date", "Saat ve tarih"), LauncherPrefs.clock) { LauncherPrefs.clock = it; save() }
             SwitchLine("apps", tr("Apps on the home screen", "Ana ekranda uygulamalar"), LauncherPrefs.homeApps) { LauncherPrefs.homeApps = it; save() }
             SwitchLine("gridView", tr("Open apps in windows", "Uygulamaları pencerede aç"), LauncherPrefs.windowed) { LauncherPrefs.windowed = it; save() }
@@ -151,11 +162,27 @@ fun LauncherSettings(back: () -> Unit) {
             ValueRow("restore", tr("Reset launcher", "Ana ekranı sıfırla"), "") { askReset = true }
         }
     }
-    if (pickLook) PickDialog(tr("Look", "Görünüm"),
-        LauncherLooks.all.map { tr(it.nameEn, it.nameTr) to (it.id == LauncherPrefs.look) },
-        onDismiss = { pickLook = false }) { i ->
-        LauncherPrefs.look = LauncherLooks.all[i].id; save(); pickLook = false
-    }
+    if (pickLook) com.umutk.pulse.WinAlert(onDismissRequest = { pickLook = false },
+        title = { Text(tr("Look", "Görünüm")) },
+        text = {
+            // every look as a small picture of its home screen, three to a row
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LauncherLooks.all.chunked(3).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        row.forEach { l ->
+                            val sel = l.id == LauncherPrefs.look
+                            Column(Modifier.weight(1f).clickable { LauncherPrefs.look = l.id; save(); pickLook = false }
+                                .border(if (sel) 2.dp else 1.dp, if (sel) com.umutk.pulse.Look.accent else T.line, RoundedCornerShape(8.dp)).padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                LookPicture(l.id, Modifier.fillMaxWidth().aspectRatio(.62f))
+                                Text(tr(l.nameEn, l.nameTr), color = T.text, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
+                            }
+                        }
+                        repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                    }
+                }
+            }
+        },
+        confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { pickLook = false } })
     if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; addWidget(it) }, onDismiss = { pickWidget = false })
     if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false
@@ -237,4 +264,32 @@ private fun AppCheckDialog(title: String, initial: List<String>, max: Int, onDis
         confirmButton = { PButton(tr("OK", "Tamam")) { onOk(picked.toList()) } },
         dismissButton = { PButton(tr("Cancel", "İptal"), onClick = onDismiss) },
     )
+}
+
+
+/** A little picture of a launcher look's home screen: its wallpaper colours, its taskbar or dock, a few icons. */
+@Composable
+private fun LookPicture(id: String, modifier: Modifier) {
+    val bg: Brush; val bar: Color?; val tiles: List<Color>
+    when {
+        id == "win11" -> { bg = Brush.verticalGradient(listOf(Color(0xFF1B2A6B), Color(0xFFB0306E))); bar = Color(0xCC202020); tiles = listOf(Color(0xFF0078D4), Color(0xFF8764B8)) }
+        id.startsWith("win10") -> { bg = Brush.verticalGradient(listOf(Color(0xFF0A5FB4), Color(0xFF53B0F0))); bar = Color(0xFF101010); tiles = listOf(Color(0xFF0078D7), Color(0xFF00B294)) }
+        id == "win7" -> { bg = Brush.verticalGradient(listOf(Color(0xFF6E9CCB), Color(0xFF2F5C8C))); bar = Color(0xFF3A6592); tiles = listOf(Color(0xFF9BC3E8), Color(0xFFFFFFFF)) }
+        id == "xp" -> { bg = Brush.verticalGradient(listOf(Color(0xFF3A93FF), Color(0xFF4CA32C))); bar = Color(0xFF0831D9); tiles = listOf(Color(0xFFFFFFFF), Color(0xFFD6E6FF)) }
+        id == "win95" -> { bg = SolidColor(Color(0xFF008080)); bar = Color(0xFFC0C0C0); tiles = listOf(Color(0xFFC0C0C0), Color(0xFFFFFF00)) }
+        id.startsWith("winphone") -> { bg = SolidColor(Color.Black); bar = null; tiles = listOf(Color(0xFF0078D7), Color(0xFFE51400), Color(0xFF60A917), Color(0xFFF0A30A)) }
+        id == "amoled" -> { bg = SolidColor(Color.Black); bar = Color(0xFF2B2B2B); tiles = listOf(Color.White, Color(0xFF777777)) }
+        else -> { bg = Brush.verticalGradient(listOf(Color(0xFFF3EDF7), Color(0xFFD0BCFF))); bar = Color(0xFFE8DEF8); tiles = listOf(Color(0xFF6750A4), Color(0xFFB3A0E0)) }
+    }
+    Canvas(modifier.clip(RoundedCornerShape(4.dp))) {
+        drawRect(bg)
+        val phone = id.startsWith("winphone")
+        if (phone) {
+            val s = size.width / 2.3f; val g = size.width * .04f
+            tiles.forEachIndexed { i, c -> drawRect(c, Offset(g + (i % 2) * (s + g), g + (i / 2) * (s + g)), Size(s, s)) }
+        } else {
+            tiles.forEachIndexed { i, c -> drawRect(c.copy(alpha = .9f), Offset(size.width * .1f, size.height * (.08f + i * .14f)), Size(size.width * .16f, size.width * .16f)) }
+        }
+        bar?.let { drawRect(it, Offset(0f, size.height * .9f), Size(size.width, size.height * .1f)) }
+    }
 }
