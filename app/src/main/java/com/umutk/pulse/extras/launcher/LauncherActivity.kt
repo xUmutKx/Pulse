@@ -125,6 +125,11 @@ private fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("Paint", "Paint"), "pulse:paint", null, iconKey = "palette"),
     LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
     LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
+    LaunchApp(tr("Control Panel", "Denetim Masası"), "pulse:settings", null, iconKey = "settings"),
+    LaunchApp(tr("Performance", "Performans"), "pulse:perf", null, iconKey = "performance"),
+    LaunchApp(tr("Services", "Hizmetler"), "pulse:services", null, iconKey = "services"),
+    LaunchApp(tr("Startup apps", "Başlangıç uygulamaları"), "pulse:startup", null, iconKey = "startup"),
+    LaunchApp(tr("Programs", "Programlar"), "pulse:apps", null, iconKey = "apps"),
 )
 
 /**
@@ -163,7 +168,10 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     // Windows looks show Pulse's own pages in a window of that Windows
     if (lookId in WINDOWS_LOOKS) {
         val r = when (id) { "pulse:pc" -> "page:device" to tr("This PC", "Bu bilgisayar"); "pulse:recycle" -> "page:recycle" to tr("Recycle Bin", "Geri Dönüşüm Kutusu")
-            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi"); else -> null }
+            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
+            "pulse:settings" -> "page:settings" to tr("Control Panel", "Denetim Masası"); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
+            "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
+            "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); else -> null }
         if (r != null) {
             runCatching { ctx.startActivity(Intent(ctx, com.umutk.pulse.FramedToolActivity::class.java).putExtra("route", r.first).putExtra("frame", lookId).putExtra("title", r.second).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             return
@@ -175,6 +183,11 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
         "pulse:files" -> Intent(ctx, FilesActivity::class.java)
         "pulse:paint" -> Intent(ctx, ExtraToolActivity::class.java).putExtra("route", "paint")
         "pulse:taskmgr" -> Intent(ctx, MainActivity::class.java).putExtra("start", "processes")
+        "pulse:settings" -> Intent(ctx, MainActivity::class.java).putExtra("start", "settings")
+        "pulse:perf" -> Intent(ctx, MainActivity::class.java).putExtra("start", "performance")
+        "pulse:services" -> Intent(ctx, MainActivity::class.java).putExtra("start", "services")
+        "pulse:startup" -> Intent(ctx, MainActivity::class.java).putExtra("start", "startup")
+        "pulse:apps" -> Intent(ctx, MainActivity::class.java).putExtra("start", "apps")
         else -> Intent(ctx, MainActivity::class.java).putExtra("start", "terminal")
     }
     runCatching { ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }

@@ -942,3 +942,5 @@ Screen recorder feature list (55 candidates)
 - Launcher widget picker lists Pulse's own themed widgets first; 0.10.184. derlenmedi
 
 - Launcher (Windows looks): This PC, Recycle Bin, Paint, Task Manager and Command Prompt open as framed windows (title bar, caption buttons, frame in the look of 95/XP/7/10/11) over the launcher; FramedToolActivity; 0.10.185. derlenmedi
+
+- Launcher desktop: Control Panel, Performance, Services, Startup apps and Programs shortcuts (framed windows in the Windows looks); 0.10.186. derlenmedi
