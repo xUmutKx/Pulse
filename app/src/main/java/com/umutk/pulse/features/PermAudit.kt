@@ -1,5 +1,6 @@
 package com.umutk.pulse.features
 
+import androidx.compose.foundation.layout.Box
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -138,7 +139,7 @@ fun PermAuditScreen(onOpen: (String) -> Unit, onBack: () -> Unit) {
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        PButton("Back") { if (selected != null) selected = null else onBack() }
+        Box(Modifier.size(40.dp).clickable { if (selected != null) selected = null else onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
         Spacer(Modifier.size(12.dp))
 
         when {

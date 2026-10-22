@@ -1240,6 +1240,12 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_poweramp_info" />
         </receiver>
+        <receiver android:name="com.umutk.pulse.extras.music.widgets.WindowsPlayerWidget" android:label="Windows media player" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_winplayer_info" />
+        </receiver>
         <receiver android:name="com.umutk.pulse.extras.music.widgets.WinampSkinPicked" android:exported="false" />
         <receiver android:name="com.umutk.pulse.extras.music.widgets.WinampVisWidget" android:label="Winamp visualizer" android:exported="false">
             <intent-filter>

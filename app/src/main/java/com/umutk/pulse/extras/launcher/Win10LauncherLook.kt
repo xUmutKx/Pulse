@@ -228,6 +228,8 @@ class Win10LauncherLook(
                 Modifier.size(48.dp).clickable { ctx.startActivity(Intent(AndroidSettings.ACTION_SETTINGS)); onClose() },
                 contentAlignment = Alignment.Center
             ) { Canvas(Modifier.size(16.dp)) { gearIcon(fg, bg) } }
+            // log off: leaves the desktop for the rest of Pulse
+            Box(Modifier.size(48.dp).clickable { onClose(); logOff(ctx) }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("power", fg, 20.dp) }
         }
     }
 
