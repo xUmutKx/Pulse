@@ -101,7 +101,7 @@ internal fun embeddedArt(ctx: Context, key: String): ImageBitmap? {
 }
 
 /** Cover of [track] without the online lookup: the cache, a cover the user picked, or the embedded picture. Quick, so a new track shows its cover at once. */
-internal fun trackArtLocal(ctx: Context, track: Track): ImageBitmap? {
+fun trackArtLocal(ctx: Context, track: Track): ImageBitmap? {
     val key = track.path
     ArtCache.map.get(key)?.let { return it }
     val bmp = PowerampCovers.saved(ctx, key) ?: embeddedArt(ctx, key)
