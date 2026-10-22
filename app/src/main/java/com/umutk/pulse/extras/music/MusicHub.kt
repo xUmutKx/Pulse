@@ -229,6 +229,9 @@ fun MusicHub(onBack: () -> Unit) {
                 Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; spotifyOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("heart", ink, 22.dp); Text("Spotify", color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                 }
+                Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; onlineOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("play", ink, 22.dp); Text(tr("YouTube / YT Music playlist", "YouTube / YT Music çalma listesi"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                }
                 if (!granted) Row(Modifier.fillMaxWidth().clickable { askPermission.launch(MusicLibrary.permission) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("search", ink, 22.dp); Text(tr("Scan the phone's music", "Telefondaki müziği tara"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                 }
