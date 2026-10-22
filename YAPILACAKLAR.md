@@ -952,3 +952,5 @@ Screen recorder feature list (55 candidates)
 - Files: the top-right settings button is gone (Settings stays in the menu, sections collapsed), gaps between files and folders cut to a third; 0.10.189. derlenmedi
 
 - Poweramp now playing: lyrics open and close by their own calls (the menu entry opened and shut it), a vertical drag on the cover moves the whole page (down closes, up opens lyrics); Widgets search finds the Windows media player and shows Winamp skins that match; 0.10.190. derlenmedi
+
+- Launcher desktop: a clock gadget per Windows look (round Aero gadget for 7, Luna panel, 95 digital, light digits for 10/11), Windows 11 wallpaper from the app's own pictures, Games hub with FreeCell; 0.10.191. derlenmedi

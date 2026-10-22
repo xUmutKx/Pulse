@@ -31,7 +31,9 @@ import kotlinx.coroutines.delay
 
 /** The stock picture this look's wallpaper shows: the launcher's pick for the look, else its first picture. */
 fun wallpaperRes(lookId: String): Int? {
-    val all = wallsFor(lookId)
+    // Windows 11 has no stock picture list of its own: its launcher uses the app's own Windows 11 wallpapers (the glowing disc first)
+    val all = if (lookId == "win11") listOf(com.umutk.pulse.R.drawable.win11_wall_2, com.umutk.pulse.R.drawable.win11_wall_1, com.umutk.pulse.R.drawable.win11_wall_3, com.umutk.pulse.R.drawable.win11_wall_4,
+        com.umutk.pulse.R.drawable.win11_wall_5, com.umutk.pulse.R.drawable.win11_wall_9, com.umutk.pulse.R.drawable.win11_wall_13) else wallsFor(lookId)
     return all.getOrNull(LauncherPrefs.wallIndex(lookId)) ?: all.firstOrNull()
 }
 
