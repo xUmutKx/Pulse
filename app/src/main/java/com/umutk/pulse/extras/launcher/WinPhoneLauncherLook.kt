@@ -129,6 +129,14 @@ class WinPhoneLauncherLook(
      */
     @Composable
     override fun IconCell(app: LaunchApp, iconDp: Int, modifier: Modifier) {
+        // plain icons with the name under them, unless the live tiles are switched on in the launcher settings
+        if (!LauncherPrefs.phoneTiles) {
+            Column(modifier.padding(vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                LaunchAppPicture(app, iconDp.dp, wpTile(app), Color.White)
+                Text(app.label, color = Color.White, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+            }
+            return
+        }
         Box(modifier.aspectRatio(1f).padding(3.dp).background(wpTile(app))) {
             BoxWithConstraints(Modifier.fillMaxSize().padding(10.dp)) {
                 // read the width here, in the box's own scope, and pass it down

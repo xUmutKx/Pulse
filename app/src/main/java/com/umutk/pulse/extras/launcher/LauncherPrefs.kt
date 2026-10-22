@@ -45,6 +45,8 @@ object LauncherPrefs {
     /** The desktop shortcuts that show on the Windows desktops: This PC, Recycle Bin and File Explorer until others are switched on in the settings. */
     /** The round buttons at the top right of the home screen (apps, task manager, settings); off by default: the settings are in the long press menu. */
     var topChips by mutableStateOf(false)
+    /** Windows Phone looks: true = coloured live tiles, false (default) = plain icons with the name under them. */
+    var phoneTiles by mutableStateOf(false)
     /** Where each widget sits on the Windows desktops: "x,y,w,h" in dp, by widget id. */
     var widgetPos by mutableStateOf<Map<Int, String>>(emptyMap())
     var desktopOn by mutableStateOf(DESKTOP_DEFAULT)
@@ -76,6 +78,7 @@ object LauncherPrefs {
         sort = p.getProperty("sort") ?: "name"
         hidden = list(p.getProperty("hidden")).toSet()
         topChips = p.getProperty("topChips") == "true"
+        phoneTiles = p.getProperty("phoneTiles") == "true"
         desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
         clock = p.getProperty("clock") == "true"
         homeApps = p.getProperty("homeApps") == "true"
@@ -96,7 +99,7 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
-        p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("phoneTiles", phoneTiles.toString()); p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
         widgetPos.forEach { (id, v) -> p.setProperty("wpos.$id", v) }
@@ -116,7 +119,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; clock = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = false; clock = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         usage = emptyMap(); walls = emptyMap()
         save(c)
     }
@@ -124,5 +127,7 @@ object LauncherPrefs {
     /** Puts the launcher's look on the shared Look before the first frame (AppLookGuard.leave restores Pulse's). */
     fun apply() {
         Look.theme = Themes.firstOrNull { it.id == look } ?: Themes.first { it.id == "material" }
+        // the Windows 11 desktop is dark (Mica), so the pages inside its windows are dark too
+        if (look == "win11") Look.mode = "dark"
     }
 }

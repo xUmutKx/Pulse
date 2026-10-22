@@ -988,3 +988,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.207 derlenmedi: masaüstü pencerelerinde gerçek bulanık Mica/Aero zemin, Mağaza penceresi, sekmeli Dosya Gezgini, Denetim Merkezi (parlaklık/ses/hızlı kutular), Windows Phone Ayarlar sayfası.
 
 - 0.10.208 derlenmedi: ayarlarda Tema A-D duvar kağıtları kaldırıldı, yatay + telefon resimleri tek listede; küçük önizlemeler arka planda düşük kalitede çözülüyor (kasma azalır).
+
+- 0.10.209 derlenmedi: indirme silme onayı; Windows Phone simge/kutucuk ayarı (varsayılan düz simge) + uzun basınca parmağın yerinde açılan menü; Win11 masaüstü penceresi koyu Mica; sözler: DNS engelinde DNS-over-HTTPS yedeği + hata satırı.

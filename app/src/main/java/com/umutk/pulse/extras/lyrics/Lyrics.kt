@@ -32,6 +32,9 @@ object Lyrics {
         return if (r.synced) LyricsRecord(0, title, artist, null, false, null, text) else LyricsRecord(0, title, artist, null, false, text, null)
     }
 
+    /** Why the last online lookup failed (network error), or null when it got an answer. Shown under "No lyrics" so a blocked network is not mistaken for a missing song. */
+    @Volatile var lastError: String? = null
+
     suspend fun forTrack(ctx: Context, title: String, artist: String, album: String?, durationMs: Long, localPath: String?): LyricsResult? =
         withContext(Dispatchers.IO) {
             val app = ctx.applicationContext
@@ -47,6 +50,7 @@ object Lyrics {
             val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
             val asked = runCatching { smartFind(client, title, artist, album, sec)?.let { it to (if (it.second) "ovh" else "lrclib") }?.let { it.first.first to it.second } }
             // a network error is not "no lyrics": nothing is remembered then; an answer without lyrics is remembered
+            lastError = asked.exceptionOrNull()?.let { "${it.javaClass.simpleName}: ${it.message}" }
             val rec = asked.getOrNull() ?: return@withContext null.also { if (asked.isSuccess) markMiss(app, key) }
             val r = toResult(rec.first, rec.second) ?: return@withContext null
             cachePut(app, key, rec.first.syncedLyrics ?: rec.first.plainLyrics.orEmpty(), rec.second)

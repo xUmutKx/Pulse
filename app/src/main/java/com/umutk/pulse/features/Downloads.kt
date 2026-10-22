@@ -1030,7 +1030,13 @@ private fun DownloadRow(t: DlTask) {
             Box(Modifier.padding(start = 8.dp).clickable { pick = true }) { PIcon("folder", T.sub, 22.dp) }
             if (pick) FolderPicker(File(Downloads.dirPath)) { pick = false }
             Spacer(Modifier.width(12.dp))
-            Box(Modifier.clickable { Downloads.remove(t) }) { PIcon("delete", T.sub, 22.dp) }
+            var confirmDel by remember { mutableStateOf(false) }
+            Box(Modifier.clickable { confirmDel = true }) { PIcon("delete", T.sub, 22.dp) }
+            if (confirmDel) WinAlert(onDismissRequest = { confirmDel = false }, warn = true,
+                title = { Text(tr("Delete download", "İndirmeyi sil")) },
+                text = { Text(t.file.name) },
+                confirmButton = { Text(tr("Delete", "Sil"), Modifier.clickable { confirmDel = false; Downloads.remove(t) }.padding(8.dp)) },
+                dismissButton = { Text(tr("Cancel", "Vazgeç"), Modifier.clickable { confirmDel = false }.padding(8.dp)) })
         }
         if (st == DlState.RUNNING || st == DlState.PAUSED) BarMeter(if (total > 0) done.toFloat() / total else 0f, T.text, Modifier.padding(top = 6.dp), h = 6.dp)
     }
