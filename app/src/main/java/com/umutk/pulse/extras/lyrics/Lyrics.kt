@@ -53,6 +53,18 @@ object Lyrics {
             r
         }
 
+    /** What the lyrics lookup sees for [path], as a few short lines: the song file, the same-name .lrc / .txt and whether the folder can be read. */
+    fun diag(path: String?): String {
+        if (path == null) return "no file path (online stream)"
+        val f = File(path)
+        val dir = f.parentFile
+        val lrc = sidecarFile(path, "lrc"); val txt = sidecarFile(path, "txt")
+        return "file: ${f.name} (${if (f.isFile) "readable" else "not readable"})\n" +
+            "folder listed: ${dir?.list()?.size ?: "no"} files\n" +
+            "lrc: ${lrc?.name ?: "none"}  txt: ${txt?.name ?: "none"}\n" +
+            "tag lyrics: ${if (runCatching { readEmbedded(path) }.getOrNull() != null) "yes" else "none"}  root: ${com.umutk.pulse.Shell.root == true}"
+    }
+
     /** The lyrics as .lrc text: stamped lines when they are synced, plain lines otherwise. */
     private fun lrcText(r: LyricsResult) = r.lines.joinToString("\n") { l ->
         if (r.synced && l.timeMs >= 0) "[%02d:%02d.%02d]%s".format(l.timeMs / 60000, l.timeMs / 1000 % 60, l.timeMs / 10 % 100, l.text) else l.text

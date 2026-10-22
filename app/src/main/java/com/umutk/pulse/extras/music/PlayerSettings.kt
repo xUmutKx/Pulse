@@ -55,6 +55,11 @@ enum class SettingsFor { MATERIAL, POWERAMP, WINAMP, WMP }
 fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onRescan: suspend () -> Unit, extra: @Composable () -> Unit = {}) {
     val c = LocalContext.current
     val scope = rememberCoroutineScope()
+    // the settings are grouped like Poweramp's: a list of categories with icons, each opening its own rows
+    var cat by remember { mutableStateOf("") }
+    androidx.activity.compose.BackHandler(cat.isNotEmpty()) { cat = "" }
+    if (cat.isEmpty()) { SettingsIndex(which) { cat = it }; extra(); return }
+    SettingsCategoryHeader(cat) { cat = "" }
     fun push() = engine.reloadSettings()
     var preamp by remember { mutableIntStateOf(MusicSettings.preamp(c)) }
     var rg by remember { mutableIntStateOf(MusicSettings.replayGain(c)) }
@@ -66,7 +71,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var bass by remember { mutableIntStateOf(engine.equalizer.bassBoost) }
     var virt by remember { mutableIntStateOf(engine.equalizer.virtualizer) }
 
-    SettingsSection(tr("Sound", "Ses")) {
+    if (cat == "audio") SettingsSection(tr("Sound", "Ses")) {
         SliderRow("${tr("Pre-amp", "Ön yükseltici")}  ${if (preamp > 0) "+" else ""}$preamp dB", preamp.toFloat(), -12f..12f) { preamp = it.toInt(); MusicSettings.setPreamp(c, preamp); push() }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(tr("Off", "Kapalı"), "ReplayGain", tr("Album", "Albüm")).forEachIndexed { i, l -> PChip(rg == i, l) { rg = i; MusicSettings.setReplayGain(c, i); push() } }
@@ -84,7 +89,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var hidden by remember { mutableStateOf(MusicSettings.showHidden(c)) }
     var excluded by remember { mutableStateOf(MusicSettings.excluded(c).sorted()) }
     var newDir by remember { mutableStateOf("") }
-    SettingsSection(tr("Library", "Kütüphane")) {
+    if (cat == "library") SettingsSection(tr("Library", "Kütüphane")) {
         SliderRow("${tr("Shortest track", "En kısa parça")}  $minSec s", minSec.toFloat(), 0f..120f) { minSec = it.toInt(); MusicSettings.setMinSeconds(c, minSec) }
         SwitchRow(tr("Hidden folders", "Gizli klasörler"), hidden) { hidden = it; MusicSettings.setShowHidden(c, it) }
         excluded.forEach { d ->
@@ -119,7 +124,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             } ?: tr("The backup could not be read", "Yedek okunamadı")
         }
     }
-    SettingsSection(tr("Poweramp backup", "Poweramp yedeği")) {
+    if (cat == "art") SettingsSection(tr("Poweramp backup", "Poweramp yedeği")) {
         SwitchRow(tr("Write covers into the songs too (MP3)", "Kapakları şarkıların kendisine de yaz (MP3)"), embedCovers) { embedCovers = it }
         Row(Modifier.fillMaxWidth().clickable { pickBackup.launch(arrayOf("*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("download", T.text, 22.dp)
@@ -138,55 +143,92 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var onlineTags by remember { mutableStateOf(MusicSettings.onlineTags(c)) }
     var btAuto by remember { mutableStateOf(BluetoothAutoplay.enabled(c)) }
     val askBt = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    SettingsSection(tr("Playback", "Çalma")) {
-        SwitchRow(tr("Resume last queue", "Son kuyruğa devam"), resume) { resume = it; MusicSettings.setResume(c, it) }
-        SwitchRow(tr("Swipe cover to change track", "Kapakta kaydırarak parça değiştir"), coverSwipe) { coverSwipe = it; CoverGestures.setSwipeChangesTrack(c, it) }
-        SwitchRow(tr("Download missing album art", "Eksik albüm kapaklarını internetten indir"), onlineCovers) {
+    if (cat in setOf("library", "look", "art", "bt", "misc", "audio")) SettingsSection(tr("Playback", "Çalma")) {
+        if (cat == "library") SwitchRow(tr("Resume last queue", "Son kuyruğa devam"), resume) { resume = it; MusicSettings.setResume(c, it) }
+        if (cat == "look") SwitchRow(tr("Swipe cover to change track", "Kapakta kaydırarak parça değiştir"), coverSwipe) { coverSwipe = it; CoverGestures.setSwipeChangesTrack(c, it) }
+        if (cat == "art") SwitchRow(tr("Download missing album art", "Eksik albüm kapaklarını internetten indir"), onlineCovers) {
             onlineCovers = it; MusicSettings.setOnlineCovers(c, it)
             // turning it on looks for the covers that are missing now, not only after the next library scan
             if (it) CoverFetch.backfill(c, MusicLibrary.tracks.value)
         }
-        SwitchRow(tr("Download missing tags (album, genre, year)", "Eksik etiketleri indir (albüm, tür, yıl)"), onlineTags) {
+        if (cat == "art") SwitchRow(tr("Download missing tags (album, genre, year)", "Eksik etiketleri indir (albüm, tür, yıl)"), onlineTags) {
             onlineTags = it; MusicSettings.setOnlineTags(c, it)
             if (it) OnlineTags.backfill(c, MusicLibrary.tracks.value)
         }
-        SwitchRow(tr("Play when Bluetooth audio connects", "Bluetooth ses cihazı bağlanınca çal"), btAuto) {
+        if (cat == "bt") SwitchRow(tr("Play when Bluetooth audio connects", "Bluetooth ses cihazı bağlanınca çal"), btAuto) {
             btAuto = it; BluetoothAutoplay.setEnabled(c, it)
             // the receiver lives in the music service, so the switch starts it; BLUETOOTH_CONNECT is needed to read the device class
             if (it) { askBt.launch(Manifest.permission.BLUETOOTH_CONNECT); runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
         }
-        SwitchRow(tr("Keep screen on", "Ekranı açık tut"), screenOn) { screenOn = it; MusicSettings.setKeepScreenOn(c, it) }
-        SwitchRow(tr("Count plays", "Çalmaları say"), stats) { stats = it; MusicSettings.setCountStats(c, it) }
-        SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) }
-        SliderRow("${tr("Lyrics size", "Söz boyutu")}  $lyricsFont", lyricsFont.toFloat(), 12f..30f) { lyricsFont = it.toInt(); MusicSettings.setLyricsFont(c, lyricsFont) }
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (cat == "misc") SwitchRow(tr("Keep screen on", "Ekranı açık tut"), screenOn) { screenOn = it; MusicSettings.setKeepScreenOn(c, it) }
+        if (cat == "library") SwitchRow(tr("Count plays", "Çalmaları say"), stats) { stats = it; MusicSettings.setCountStats(c, it) }
+        if (cat == "look") SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) }
+        if (cat == "look") SliderRow("${tr("Lyrics size", "Söz boyutu")}  $lyricsFont", lyricsFont.toFloat(), 12f..30f) { lyricsFont = it.toInt(); MusicSettings.setLyricsFont(c, lyricsFont) }
+        if (cat == "audio") Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("timer", T.sub, 22.dp)
             listOf(0 to tr("Off", "Kapalı"), 15 to "15", 30 to "30", 60 to "60", -1 to tr("Track end", "Parça sonu")).forEach { (m, l) ->
                 PChip(false, l) { if (m < 0) engine.setSleep(0, true) else engine.setSleep(m) }
             }
         }
-        Row(Modifier.clickable {
+        if (cat == "art") Row(Modifier.clickable {
             val n = com.umutk.pulse.extras.music.poweramp.PowerampCovers.clearAll(c)
             android.widget.Toast.makeText(c, tr("$n covers cleared", "$n kapak silindi"), android.widget.Toast.LENGTH_SHORT).show()
         }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("trash", T.sub, 22.dp); Text(tr("Clear saved covers", "Kaydedilen kapakları temizle"), color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 10.dp))
         }
-        Row(Modifier.clickable { com.umutk.pulse.extras.music.stats.MusicStats.clear(c) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (cat == "library") Row(Modifier.clickable { com.umutk.pulse.extras.music.stats.MusicStats.clear(c) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("history", T.sub, 22.dp); Text(tr("Reset statistics", "İstatistikleri sıfırla"), color = T.text, fontSize = 15.sp, modifier = Modifier.padding(start = 10.dp))
         }
     }
 
-    com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
-    com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
+    if (cat == "look") com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
+    if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
 
-    if (which == SettingsFor.POWERAMP) SettingsSection("Poweramp") {
+    if (which == SettingsFor.POWERAMP && cat == "background") SettingsSection("Poweramp") {
         // the skin gallery (families on top) lives in the music theme picker of MusicHub
         // the now-playing backdrop; the preview shows both choices (every other page is black)
         PlayerBgPicker(c)
         PowerampLineRow(c)
         com.umutk.pulse.extras.music.poweramp.BottomLabelPicker(c)
     }
-    extra()
+}
+
+/** One category of the music settings: icon, name, what is inside. */
+private class SetCat(val key: String, val icon: String, val en: String, val trName: String, val enSub: String, val trSub: String)
+
+private fun settingCats(which: SettingsFor) = listOfNotNull(
+    SetCat("look", "palette", "Look and Feel", "Görünüm", "Player interface, lyrics, notifications", "Oynatıcı arayüzü, sözler, bildirimler"),
+    SetCat("audio", "volume", "Audio", "Ses", "Crossfade, replay gain, speed, sleep timer", "Geçiş, ReplayGain, hız, uyku zamanlayıcı"),
+    SetCat("background", "image", "Background", "Arka plan", "Now playing backdrop, details", "Çalan şarkı arka planı, ayrıntılar").takeIf { which == SettingsFor.POWERAMP },
+    SetCat("art", "image", "Album Art", "Albüm kapağı", "Download, cache cleanup, Poweramp backup", "İndirme, önbellek temizliği, Poweramp yedeği"),
+    SetCat("library", "folder", "Library", "Kütüphane", "Rescan, music folders, queue, statistics", "Yeniden tara, müzik klasörleri, kuyruk, istatistik"),
+    SetCat("bt", "sensors", "Headset/Bluetooth", "Kulaklık/Bluetooth", "Play when a Bluetooth device connects", "Bluetooth cihaz bağlanınca çal"),
+    SetCat("misc", "settings", "Misc", "Çeşitli", "Screen, live lyrics, other tweaks", "Ekran, canlı sözler, diğer ayarlar"),
+)
+
+@Composable
+private fun SettingsIndex(which: SettingsFor, pick: (String) -> Unit) {
+    Column(Modifier.fillMaxWidth()) {
+        settingCats(which).forEach { k ->
+            Row(Modifier.fillMaxWidth().clickable { pick(k.key) }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon(k.icon, com.umutk.pulse.Look.accent, 28.dp)
+                Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                    Text(tr(k.en, k.trName), color = T.text, fontSize = 16.sp)
+                    Text(tr(k.enSub, k.trSub), color = T.sub, fontSize = 12.sp)
+                }
+                PIcon("chevron", T.sub, 16.dp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SettingsCategoryHeader(key: String, back: () -> Unit) {
+    val k = settingCats(SettingsFor.POWERAMP).firstOrNull { it.key == key }
+    Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(40.dp).clickable(onClick = back), contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
+        if (k != null) { PIcon(k.icon, com.umutk.pulse.Look.accent, 22.dp); Text(tr(k.en, k.trName), color = T.text, fontSize = 17.sp, modifier = Modifier.padding(start = 10.dp)) }
+    }
 }
 
 /** Full-width row: what a long press on the artist / album line of the Poweramp page does. A radio dialog picks it. */
