@@ -129,7 +129,10 @@ fun PowerampApp(
     val cover by produceState<ImageBitmap?>(null, track?.path, coverRev) {
         value = track?.let { t -> withContext(Dispatchers.IO) { runCatching { PowerampCovers.saved(ctx, t.path) ?: art(t) }.getOrNull() } }
     }
-    val (artPrev, artNext) = neighbourCovers(st.queue, st.index) { t -> PowerampCovers.saved(ctx, t.path) ?: art(t) }
+    // the neighbours follow the player's own order, so a shuffled queue slides in the song that really plays next
+    val prevIdx = remember(st.index, st.queue, shuffle, repeat) { engine.player.previousMediaItemIndex }
+    val nextIdx = remember(st.index, st.queue, shuffle, repeat) { engine.player.nextMediaItemIndex }
+    val (artPrev, artNext) = neighbourCovers(st.queue, prevIdx, nextIdx) { t -> PowerampCovers.saved(ctx, t.path) ?: art(t) }
 
     // every page is pure black, edges included; the skin's colours stay as accents and text
     val style = remember(skinStyle) { skinStyle.copy(backdrop = PowerampBackdrop.BLACK, solid = Color.Black, gradientTo = null) }
@@ -154,6 +157,8 @@ fun PowerampApp(
                             art = cover,
                             artPrev = artPrev,
                             artNext = artNext,
+                            hasPrev = prevIdx >= 0,
+                            hasNext = nextIdx >= 0,
                             playing = st.isPlaying,
                             positionMs = pos,
                             durationMs = dur,

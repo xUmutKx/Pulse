@@ -130,9 +130,10 @@ fun rememberTrackArt(t: Track?): ImageBitmap? {
 
 /** Covers of the queue neighbours of [index], read off the main thread, for [CoverCarousel]. Each is its own track's cover, never a stale one. */
 @Composable
-fun neighbourCovers(queue: List<Track>, index: Int, cover: (Track) -> ImageBitmap?): Pair<ImageBitmap?, ImageBitmap?> {
-    val prev = queue.getOrNull(index - 1)
-    val next = queue.getOrNull(index + 1)
+fun neighbourCovers(queue: List<Track>, prevIndex: Int, nextIndex: Int, cover: (Track) -> ImageBitmap?): Pair<ImageBitmap?, ImageBitmap?> {
+    // the songs the player really goes to (a shuffled queue is not read in list order); -1 = none
+    val prev = queue.getOrNull(prevIndex)
+    val next = queue.getOrNull(nextIndex)
     val p = produceState<ImageBitmap?>(artCached(prev?.path), prev?.path) {
         value = artCached(prev?.path)
         if (prev != null && value == null) value = withContext(Dispatchers.IO) { runCatching { cover(prev) }.getOrNull() }?.also { artKeep(prev.path, it) }
@@ -225,7 +226,7 @@ fun CoverCarousel(
                         // dir: 1 = next track (slides in from the right), -1 = previous (from the left), 0 = snap back
                         val dir = if (!sideways || abs(sum) < w * .2f) 0 else if (sum < 0 && canNext) 1 else if (sum > 0 && canPrev) -1 else 0
                         settle = scope.launch {
-                            animate(slide, if (dir == 0) 0f else -dir * w, animationSpec = tween(360, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { v, _ -> slide = v }
+                            animate(slide, if (dir == 0) 0f else -dir * w, animationSpec = tween(240, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { v, _ -> slide = v }
                             if (dir != 0) {
                                 carried = if (dir > 0) nextArtNow else prevArtNow
                                 carrying = true
@@ -255,13 +256,11 @@ fun CoverCarousel(
             )
         },
     ) {
-        // the covers sit on a wheel whose middle is far below them: sliding turns the wheel, so each cover swings along an arc and tilts up to about 20 degrees
-        val wheel = 3f
-        val step = if (height > 0f) width / (wheel * height) else 0f
+        // a flat slide, as Poweramp does it: the covers sit side by side with a small gap and move with the finger; the one leaving shrinks a touch
         fun Modifier.onWheel(index: Int, lift: Boolean = false) = graphicsLayer {
-            val a = (if (height > 0f) slide / (wheel * height) else 0f) + index * step
-            rotationZ = Math.toDegrees(a.toDouble()).toFloat()
-            transformOrigin = TransformOrigin(.5f, .5f + wheel)
+            translationX = slide + index * width * 1.04f
+            val k = if (width > 0f) (1f - kotlin.math.abs(translationX) / width * .06f).coerceIn(.9f, 1f) else 1f
+            scaleX = k; scaleY = k
             if (lift) translationY = pull
         }
         // a neighbour exists on screen only while the cover is being swiped toward it: at rest its tilted corner must never peek in

@@ -1016,3 +1016,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.221 derlenmedi: söz gösterimi baştan yazıldı (PlayerLyrics: AnimatedVisibility, ölçüm/offset yok, önce cihazdaki sözler); kapağı aşağı çekip bırakınca ışınlanma giderildi, geri dönüş yaylı.
 
 - 0.10.222 derlenmedi: söz bildirimindeki ok emoji değil düz karakter (►).
+
+- 0.10.223 derlenmedi: kapak kaydırmada komşu kapaklar çalma sırasını (karıştırma dahil) gösterir; düz ve hızlı kayma (eğik çark kalktı).
