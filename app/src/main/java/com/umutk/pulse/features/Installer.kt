@@ -136,7 +136,7 @@ private const val NOTE_ID = 2001
 private const val CH_INST = "installs"
 /** Silent channel for the install progress and result notifications. */
 private const val CH_QUIET = "installer_quiet"
-private fun quietChannel(c: Context) = c.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CH_QUIET, "Installer", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
+private fun quietChannel(c: Context) = c.getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH_QUIET, "Installer", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
 private const val ID_INST = 2002
 private const val ID_BUSY = 2003
 private const val APK_MIME = "application/vnd.android.package-archive"
@@ -463,7 +463,7 @@ object Installer {
     /** A module installed: the notification opens LSPosed so it can be turned on. */
     private fun notifyModule(c: Context, label: String) {
         val i = lsposedIntent(c) ?: return
-        c.getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CH, "Installer", NotificationManager.IMPORTANCE_DEFAULT))
+        c.getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Installer", NotificationManager.IMPORTANCE_DEFAULT))
         val open = PendingIntent.getActivity(c, 1, i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
         val n = NotificationCompat.Builder(c, CH).setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle("$label installed").setContentText("Turn it on in LSPosed").setAutoCancel(true)
@@ -499,7 +499,7 @@ class InstallService : Service() {
     override fun onBind(i: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CH_INST, "Installs", NotificationManager.IMPORTANCE_LOW))
+        getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH_INST, "Installs", NotificationManager.IMPORTANCE_LOW))
         val n = NotificationCompat.Builder(this, CH_INST).setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("Installing").setOngoing(true).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID_INST, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID_INST, n)

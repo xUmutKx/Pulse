@@ -188,7 +188,7 @@ class ScreenRecService : Service() {
 
     /** Status, live timer (counts only while recording) and the pause/resume and stop actions. */
     private fun notification(): Notification {
-        getSystemService(NotificationManager::class.java).createNotificationChannel(NotificationChannel(CHANNEL, tr("Screen recording", "Ekran kaydı"), NotificationManager.IMPORTANCE_LOW))
+        getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CHANNEL, tr("Screen recording", "Ekran kaydı"), NotificationManager.IMPORTANCE_LOW))
         val paused = state == RecState.PAUSED
         val icon = Icon.createWithResource(this, R.drawable.ic_qs_pulse)
         val pauseIntent = PendingIntent.getService(this, 1, Intent(this, ScreenRecService::class.java).setAction(if (paused) ACTION_RESUME else ACTION_PAUSE), PendingIntent.FLAG_IMMUTABLE)

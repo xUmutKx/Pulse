@@ -99,6 +99,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -622,7 +623,10 @@ private val SEEK_EXTRA = 56.dp
 private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, width: Dp, onClick: () -> Unit) {
     val n = 12
     var big by remember { mutableStateOf(false) }
-    if (big) FullVisualizer(playing, style) { big = false }
+    var menu by remember { mutableStateOf(false) }
+    val vctx = LocalContext.current
+    var visMode by remember { mutableIntStateOf(vctx.getSharedPreferences("poweramp_vis", android.content.Context.MODE_PRIVATE).getInt("mode", 0).coerceIn(0, VIS_MODES.lastIndex)) }
+    if (big) FullVisualizer(playing, style, visMode) { big = false }
     var levels by remember { mutableStateOf(List(n) { 0f }) }
     LaunchedEffect(playing) {
         while (playing) {
@@ -636,9 +640,22 @@ private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, w
     Box(
         Modifier.width(width).height(36.dp).clip(CircleShape).background(style.panel)
             .semantics { contentDescription = label; role = Role.Button }
-            .combinedClickable(onClick = onClick, onLongClick = { big = true }),
+            .combinedClickable(onClick = onClick, onLongClick = { menu = true }),
         contentAlignment = Alignment.Center,
     ) {
+        // hold: the visualisations to pick from, the default on top; the pick opens full screen and is remembered
+        DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            VIS_MODES.forEachIndexed { i, (e1, t1) ->
+                DropdownMenuItem(
+                    text = { Text(tr(e1, t1), color = if (i == visMode) style.accent else Color.Unspecified) },
+                    onClick = {
+                        menu = false; visMode = i
+                        vctx.getSharedPreferences("poweramp_vis", android.content.Context.MODE_PRIVATE).edit().putInt("mode", i).apply()
+                        big = true
+                    },
+                )
+            }
+        }
         Canvas(Modifier.size(24.dp)) {
             val slot = size.width / n
             val bw = slot * 0.5f
@@ -651,9 +668,15 @@ private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, w
     }
 }
 
-/** Full-screen visualisation opened by holding the bars button: mirrored live bands on the player backdrop; a tap closes it. */
+/** The visualisations of the hold menu; the first is the default and stays on top. */
+private val VIS_MODES = listOf(
+    "Mirrored bars" to "Aynalı çubuklar", "Bars" to "Çubuklar", "Wave line" to "Dalga çizgisi",
+    "Circle" to "Daire", "Dots" to "Noktalar", "Mountain" to "Dağ",
+)
+
+/** Full-screen visualisation: live bands drawn in the picked style on the dark player backdrop; a tap closes it. */
 @Composable
-private fun FullVisualizer(playing: Boolean, style: PowerampStyle, onDismiss: () -> Unit) {
+private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, onDismiss: () -> Unit) {
     val n = 48
     var levels by remember { mutableStateOf(List(n) { 0f }) }
     LaunchedEffect(playing) {
@@ -670,14 +693,57 @@ private fun FullVisualizer(playing: Boolean, style: PowerampStyle, onDismiss: ()
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .94f)).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
-            Canvas(Modifier.fillMaxWidth().height(300.dp).padding(horizontal = 16.dp)) {
+            Canvas(Modifier.fillMaxWidth().height(if (mode == 3) 340.dp else 300.dp).padding(horizontal = 16.dp)) {
                 val slot = size.width / n
-                val bw = slot * 0.62f
-                val mid = size.height / 2
-                levels.forEachIndexed { i, v ->
-                    val h = (size.height / 2) * (0.03f + 0.97f * v.coerceIn(0f, 1f))
-                    val c = androidx.compose.ui.graphics.lerp(style.accent, Color.White, v.coerceIn(0f, 1f) * .6f)
-                    drawRoundRect(c, Offset(i * slot + (slot - bw) / 2, mid - h), Size(bw, h * 2), CornerRadius(bw / 2))
+                fun tint(v: Float) = androidx.compose.ui.graphics.lerp(style.accent, Color.White, v.coerceIn(0f, 1f) * .6f)
+                when (mode) {
+                    1 -> { // bars standing on the floor
+                        val bw = slot * 0.62f
+                        levels.forEachIndexed { i, v ->
+                            val h = size.height * (0.03f + 0.97f * v.coerceIn(0f, 1f))
+                            drawRoundRect(tint(v), Offset(i * slot + (slot - bw) / 2, size.height - h), Size(bw, h), CornerRadius(bw / 2))
+                        }
+                    }
+                    2 -> { // a line through the bands, mirrored around the middle
+                        val mid = size.height / 2
+                        val up = androidx.compose.ui.graphics.Path(); val down = androidx.compose.ui.graphics.Path()
+                        levels.forEachIndexed { i, v ->
+                            val x = i * slot + slot / 2; val h = (size.height / 2) * (0.04f + 0.96f * v.coerceIn(0f, 1f))
+                            if (i == 0) { up.moveTo(x, mid - h); down.moveTo(x, mid + h) } else { up.lineTo(x, mid - h); down.lineTo(x, mid + h) }
+                        }
+                        drawPath(up, style.accent, style = Stroke(4f, cap = StrokeCap.Round)); drawPath(down, style.accent.copy(alpha = .55f), style = Stroke(4f, cap = StrokeCap.Round))
+                    }
+                    3 -> { // bars around a circle
+                        val c = center; val r0 = size.minDimension * .22f; val rMax = size.minDimension * .5f - r0
+                        levels.forEachIndexed { i, v ->
+                            val a = (i.toFloat() / n) * 2f * Math.PI.toFloat() - Math.PI.toFloat() / 2f
+                            val len = rMax * (0.05f + 0.95f * v.coerceIn(0f, 1f))
+                            val dx = kotlin.math.cos(a); val dy = kotlin.math.sin(a)
+                            drawLine(tint(v), Offset(c.x + dx * r0, c.y + dy * r0), Offset(c.x + dx * (r0 + len), c.y + dy * (r0 + len)), 6f, StrokeCap.Round)
+                        }
+                    }
+                    4 -> { // columns of dots, as many lit as the band is loud
+                        val rows = 10; val rh = size.height / rows
+                        levels.forEachIndexed { i, v ->
+                            val lit = (v.coerceIn(0f, 1f) * rows).toInt()
+                            for (r in 0 until rows) drawCircle(if (r < lit) tint(v) else Color.White.copy(alpha = .08f), slot * .22f, Offset(i * slot + slot / 2, size.height - r * rh - rh / 2))
+                        }
+                    }
+                    5 -> { // a filled mountain
+                        val p = androidx.compose.ui.graphics.Path()
+                        p.moveTo(0f, size.height)
+                        levels.forEachIndexed { i, v -> p.lineTo(i * slot + slot / 2, size.height * (1f - (0.04f + 0.96f * v.coerceIn(0f, 1f)))) }
+                        p.lineTo(size.width, size.height); p.close()
+                        drawPath(p, androidx.compose.ui.graphics.Brush.verticalGradient(listOf(style.accent, style.accent.copy(alpha = .1f))))
+                    }
+                    else -> { // mirrored bars, the default
+                        val bw = slot * 0.62f
+                        val mid = size.height / 2
+                        levels.forEachIndexed { i, v ->
+                            val h = (size.height / 2) * (0.03f + 0.97f * v.coerceIn(0f, 1f))
+                            drawRoundRect(tint(v), Offset(i * slot + (slot - bw) / 2, mid - h), Size(bw, h * 2), CornerRadius(bw / 2))
+                        }
+                    }
                 }
             }
         }

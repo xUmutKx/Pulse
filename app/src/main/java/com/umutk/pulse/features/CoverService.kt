@@ -80,7 +80,7 @@ class CoverService : Service() {
     override fun onCreate() {
         super.onCreate()
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(CH, "Screen cover", NotificationManager.IMPORTANCE_MIN))
+        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Screen cover", NotificationManager.IMPORTANCE_MIN))
         val n = NotificationCompat.Builder(this, CH).setSmallIcon(R.drawable.ic_qs_pulse).setContentTitle("Pulse")
             .setContentText(tr("Screen cover is on", "Ekran kapağı açık")).setOngoing(true).build()
         // startForeground first: the service was started as a foreground service and must not stop without it

@@ -60,7 +60,7 @@ object FileJobs {
         list -= job
         val c = ctx.applicationContext
         val nm = c.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(FJ_CH_END, tr("Finished file operations", "Biten dosya işlemleri"), NotificationManager.IMPORTANCE_DEFAULT))
+        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(FJ_CH_END, tr("Finished file operations", "Biten dosya işlemleri"), NotificationManager.IMPORTANCE_DEFAULT))
         val open = PendingIntent.getActivity(c, job.id, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         nm.notify(FJ_ID_END + job.id, NotificationCompat.Builder(c, FJ_CH_END).setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle(job.title).setContentText(text).setAutoCancel(true).setSilent(true).setTimeoutAfter(4000L).setContentIntent(open).build())
@@ -113,7 +113,7 @@ class FileOpService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         lastId = startId
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel(FJ_CH_RUN, tr("File operations", "Dosya işlemleri"), NotificationManager.IMPORTANCE_LOW))
+        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(FJ_CH_RUN, tr("File operations", "Dosya işlemleri"), NotificationManager.IMPORTANCE_LOW))
         if (intent?.action == FJ_ACT_CANCEL) FileJobs.cancelAll()
         val fg = runCatching {
             if (Build.VERSION.SDK_INT >= 34) startForeground(FJ_ID_RUN, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(FJ_ID_RUN, note())
