@@ -661,7 +661,7 @@ private fun ExtraAppsCard() {
         // the app's own pages: shown in the left menu or hidden
         Pages.forEach { p ->
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                val pageColor = if (T.id == "win11" && IconStyle.of(IconCat.MENU) == "colour") fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
+                val pageColor = if (T.id == "win11" && IconStyle.of(IconCat.MENU) != "line") fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
                 Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (pageColor != 0) Image(painterResource(pageColor), null, Modifier.size(30.dp)) else if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }
                 Spacer(Modifier.width(12.dp))
                 Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
