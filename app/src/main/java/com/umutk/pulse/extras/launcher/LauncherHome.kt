@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.ui.draw.shadow
+import androidx.compose.foundation.border
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -105,34 +107,39 @@ fun togglePin(ctx: Context, pkg: String, auto: List<String>) {
     LauncherPrefs.save(ctx)
 }
 
-/** The action sheet of one app (long press): info, uninstall for user apps, hide, pin to the dock. */
+/** The menu of one app (long press): info, uninstall for user apps, hide, pin to the dock. A small popup at the finger, like a right-click menu. */
 @Composable
 fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val w = LocalWindowLook.current
     val pinned = app.pkg in LauncherPrefs.dock
     fun act(f: () -> Unit) { f(); onDismiss() }
-    WinAlert(
-        onDismissRequest = onDismiss,
-        title = { Text(app.label, color = w.text, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        text = {
-            Column(Modifier.fillMaxWidth()) {
-                ActionRow("info", tr("App info", "Uygulama bilgisi"), w.text) {
-                    act { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", app.pkg, null))) }
-                }
-                if (!app.system) ActionRow("trash", tr("Uninstall", "Kaldır"), w.text) {
-                    act { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.fromParts("package", app.pkg, null))) }
-                }
-                ActionRow("eyeOff", tr("Hide from launcher", "Ana ekranda gizle"), w.text) {
-                    act { LauncherPrefs.hidden = LauncherPrefs.hidden + app.pkg; LauncherPrefs.save(ctx) }
-                }
-                ActionRow("pin", if (pinned) tr("Unpin from dock", "Dock'tan çıkar") else tr("Pin to dock", "Dock'a sabitle"), w.text) {
-                    act { togglePin(ctx, app.pkg, auto) }
-                }
+    val d = androidx.compose.ui.platform.LocalDensity.current
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    val menuW = 230.dp; val menuH = 200.dp
+    val at = LauncherSession.pressAt
+    val x = at.x.coerceIn(0f, (cfg.screenWidthDp.dp - menuW).coerceAtLeast(0.dp).value * d.density)
+    val y = at.y.coerceIn(0f, (cfg.screenHeightDp.dp - menuH).coerceAtLeast(0.dp).value * d.density)
+    androidx.compose.ui.window.Popup(
+        alignment = Alignment.TopStart, offset = androidx.compose.ui.unit.IntOffset(x.toInt(), y.toInt()), onDismissRequest = onDismiss,
+        properties = androidx.compose.ui.window.PopupProperties(focusable = true),
+    ) {
+        Column(Modifier.width(menuW).shadow(8.dp).background(w.panel).border(1.dp, w.line).padding(horizontal = 14.dp, vertical = 6.dp)) {
+            Text(app.label, color = w.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(vertical = 6.dp))
+            ActionRow("info", tr("App info", "Uygulama bilgisi"), w.text) {
+                act { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", app.pkg, null))) }
             }
-        },
-        confirmButton = { PButton(tr("Close", "Kapat"), onClick = onDismiss) },
-    )
+            if (!app.system) ActionRow("trash", tr("Uninstall", "Kaldır"), w.text) {
+                act { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.fromParts("package", app.pkg, null))) }
+            }
+            ActionRow("eyeOff", tr("Hide from launcher", "Ana ekranda gizle"), w.text) {
+                act { LauncherPrefs.hidden = LauncherPrefs.hidden + app.pkg; LauncherPrefs.save(ctx) }
+            }
+            ActionRow("pin", if (pinned) tr("Unpin from dock", "Dock'tan çıkar") else tr("Pin to dock", "Dock'a sabitle"), w.text) {
+                act { togglePin(ctx, app.pkg, auto) }
+            }
+        }
+    }
 }
 
 @Composable

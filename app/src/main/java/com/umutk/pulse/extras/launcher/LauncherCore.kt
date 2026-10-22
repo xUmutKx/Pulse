@@ -1,5 +1,9 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.runtime.remember
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.composed
 import android.content.pm.ApplicationInfo
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -54,8 +58,12 @@ class LauncherState(val apps: List<LaunchApp>, val vertical: Boolean, val column
     val open: (LaunchApp) -> Unit, val longPress: (LaunchApp) -> Unit)
 
 /** A tap opens the app, a long press asks for its action sheet. Used by every look's icons, dock and drawer. */
-fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Modifier =
-    pointerInput(app.pkg) { detectTapGestures(onTap = { onTap() }, onLongPress = { state.longPress(app) }) }
+fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Modifier = composed {
+    // where the finger is in the window, so the long-press menu opens right there like a context menu
+    var origin by remember { mutableStateOf(androidx.compose.ui.geometry.Offset.Zero) }
+    onGloballyPositioned { origin = it.positionInRoot() }
+        .pointerInput(app.pkg) { detectTapGestures(onTap = { onTap() }, onLongPress = { LauncherSession.pressAt = origin + it; state.longPress(app) }) }
+}
 
 /** Dock = the chosen packages that are installed (max 5); none until the user pins some. */
 fun dockApps(apps: List<LaunchApp>, pkgs: List<String>): List<LaunchApp> =
@@ -70,6 +78,8 @@ fun startLists(state: LauncherState, query: String): Pair<List<LaunchApp>, List<
 
 /** The start menu is opened from a look's taskbar and closed by the activity (the taskbar has no callback in the look API). */
 object LauncherSession {
+    /** Window position of the last long press on an app (px). */
+    var pressAt = androidx.compose.ui.geometry.Offset.Zero
     /** The clock flyout (calendar and, in Windows 10 / 11, the quick tiles) is open; the taskbar clock sets it. */
     var clockOpen by mutableStateOf(false)
     var startOpen by mutableStateOf(false)

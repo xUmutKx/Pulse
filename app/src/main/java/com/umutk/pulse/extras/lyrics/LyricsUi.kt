@@ -217,7 +217,8 @@ fun LyricsSheet(
             }
             else -> Column(Modifier.fillMaxSize().padding(horizontal = 28.dp), Arrangement.Center, Alignment.CenterHorizontally) {
                 PIcon("book", Color.White.copy(alpha = .6f), 40.dp)
-                Text(tr("No lyrics found", "Söz bulunamadı"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp, bottom = 12.dp))
+                Text(tr("No lyrics found", "Söz bulunamadı"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp, bottom = if (Lyrics.lastError == null) 12.dp else 2.dp))
+                Lyrics.lastError?.let { Text(tr("Network: ", "Ağ: ") + it, color = Color.White.copy(alpha = .5f), fontSize = 11.sp, modifier = Modifier.padding(bottom = 12.dp)) }
                 // another spelling of the song or the artist, then search again
                 @Composable fun field(v: String, hint: String, on: (String) -> Unit) = androidx.compose.foundation.text.BasicTextField(
                     v, on, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
