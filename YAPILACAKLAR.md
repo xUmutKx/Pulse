@@ -1034,3 +1034,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.230 derlenmedi: Mix yapıcı (ana sayfa altı: ruh hali, kaynak, adet); Poweramp/Windows oynatıcı widget: arka plan şeffaf/siyah/yıldızlı + kapak boyutu (varsayılan %75); müzik widget önizlemeleri düz beyaz; geçici kopyalar (arşiv kes/kopyala) ayarlanabilir süre sonra (1 saat) silinir.
 
 - 0.10.231 derlenmedi: 0.10.230 derleme düzeltmesi (horizontalScroll importu).
+
+- 0.10.232 derlenmedi: Win7 tarzı Not gadget (masaüstü, klavyeyle yazılır, çevrilir/renk); YouTube/YT Music çalma listesi doğrudan YouTube sayfasından okunur (Piped/Invidious ölse de), ayarlarda ayrı satır.
