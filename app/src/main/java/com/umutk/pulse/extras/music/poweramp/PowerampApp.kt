@@ -182,7 +182,8 @@ fun PowerampApp(
                             onFavourite = { track?.let { MusicStats.toggleFavourite(ctx, it.path); favourites = MusicStats.favourites(ctx) } },
                             sleepMinutes = if (sleepLeft < 0) -1 else ((sleepLeft + 59_999L) / 60_000L).toInt(),
                             onSleepSet = { m, end -> engine.setSleep(m, end) },
-                            onLyrics = { lyricsOpen = !lyricsOpen },
+                            onLyrics = { lyricsOpen = true },
+                            onLyricsDismiss = { lyricsOpen = false },
                             onPullDown = { tab = lastTab ?: PowerampTab.LIBRARY },
                             // no suggestions under the player: the now playing page is one screen and does not scroll
                             lyricsOpen = lyricsOpen,

@@ -236,7 +236,7 @@ fun WidgetsPage() {
         if (hit("Winamp 4x1")) winamp += "m_winamp4" to @Composable { WinampCard(ctx, true) }
         if (hit("Winamp visualizer") || hit("Winamp")) winamp += "m_winvis" to @Composable { WinampVisCard(ctx) }
         if (hit("Poweramp")) music += "m_poweramp" to @Composable { PowerampCard(ctx) }
-        if (hit("Windows media player") || hit("CD player") || hit("Aero")) music += "m_winplayer" to @Composable { WinPlayerCard(ctx) }
+        if (hit("Windows media player CD Player Aero Luna XP Windows 7 Windows 95 Windows 10 Windows 11 WMP medya oynatıcı")) music += "m_winplayer" to @Composable { WinPlayerCard(ctx) }
         if (hit("Music") || hit("Lyrics")) {
             music += "m_music" to @Composable { MusicCard(ctx, "Music", "music.MusicWidget", 2f, compact = false) }
             music += "m_music_sq" to @Composable { MusicCard(ctx, "Music 2x2", "music.MusicWidgetSquare", 1f, compact = false) }
@@ -244,18 +244,20 @@ fun WidgetsPage() {
             music += "m_music_slim" to @Composable { MusicCard(ctx, "Music bar", "music.MusicWidgetSlim", 4f, compact = true) }
             music += "m_lyrics" to @Composable { LyricsCard(ctx) }
         }
-        winampSkins.filter { hit("Winamp") || hit(it.name) }.forEach { s -> winamp += "m_skin_${s.file.name}" to @Composable { WinampSkinCard(ctx, s) } }
-        if (music.isNotEmpty() || winamp.isNotEmpty()) {
+        // the skins are kept apart from the three Winamp widgets: a search shows the skins that match, opened
+        val skinCards = mutableListOf<Pair<String, @Composable () -> Unit>>()
+        winampSkins.filter { hit("Winamp") || hit(it.name) }.forEach { s -> skinCards += "m_skin_${s.file.name}" to @Composable { WinampSkinCard(ctx, s) } }
+        if (music.isNotEmpty() || winamp.isNotEmpty() || skinCards.isNotEmpty()) {
             item(key = "h_music") { Text(tr("Music", "Müzik"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
         }
-        if (winamp.isNotEmpty()) {
-            // the three Winamp widgets (window, 4x1 strip, visualizer) are always shown; the skins fold under the arrow
+        if (winamp.isNotEmpty() || skinCards.isNotEmpty()) {
+            // the three Winamp widgets (window, 4x1 strip, visualizer) are always shown; the skins fold under the arrow, and a search opens them
             val open = winampOpen || query.isNotBlank()
             item(key = "h_winamp") { Text("Winamp", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) }
-            items(winamp.take(3).chunked(2), key = { "w_" + it.first().first }) { pair -> PairRow(pair) { it.second() } }
-            if (winamp.size > 3) {
-                item(key = "h_winamp_skins") { WinampHeader(winamp.size - 3, open) { winampOpen = !winampOpen } }
-                if (open) items(winamp.drop(3).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+            if (winamp.isNotEmpty()) items(winamp.chunked(2), key = { "w_" + it.first().first }) { pair -> PairRow(pair) { it.second() } }
+            if (skinCards.isNotEmpty()) {
+                item(key = "h_winamp_skins") { WinampHeader(skinCards.size, open) { winampOpen = !winampOpen } }
+                if (open) items(skinCards.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
             }
         }
         if (music.isNotEmpty()) items(music.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
