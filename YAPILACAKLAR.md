@@ -976,3 +976,5 @@ Screen recorder feature list (55 candidates)
 - Windows 10 Mobile launcher: action center (quick tiles, Collapse, no notifications) pulled down from the top edge; Poweramp now playing shows the library underneath while it is pulled down; 0.10.201. derlenmedi
 
 - Launcher: Win10 Black and colour themes removed, look picker with pictures, no default dock apps, top-right buttons optional, windows minimise to chips and resize, widgets movable/resizable/removable on the Windows desktops, clock flyout (calendar, quick tiles, volume), File Explorer as a window, orientation-specific wallpapers, Poweramp widget stars switch, lyrics button always on the Poweramp cover; 0.10.202. derlenmedi
+
+- Fix: Arrangement import in the launcher settings; 0.10.203. derlenmedi
