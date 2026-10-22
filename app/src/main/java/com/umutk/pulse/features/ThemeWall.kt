@@ -30,13 +30,30 @@ fun setThemeWallpaper(c: Context, lookId: String, uri: String?) {
 }
 
 /** The stock pictures of each look's era; index 0 is the look's default. Windows 11 keeps its own A-D packs (Backdrop). */
-fun wallsFor(lookId: String): List<Int> = when (lookId) {
+private fun desktopWalls(lookId: String): List<Int> = when (lookId) {
     "xp" -> listOf(R.drawable.splash_xp_bliss, R.drawable.wall_xp_2, R.drawable.wall_xp_3, R.drawable.wall_xp_4, R.drawable.wall_xp_5, R.drawable.wall_xp_6, R.drawable.wall_xp_7, R.drawable.wall_xp_8, R.drawable.wall_grass)
     "win7" -> listOf(R.drawable.splash_win7_wallpaper, R.drawable.wall_w7_2, R.drawable.wall_w7_3, R.drawable.wall_w7_4, R.drawable.wall_w7_5, R.drawable.wall_w7_6, R.drawable.wall_w7_7, R.drawable.wall_w7_8, R.drawable.wall_w7_9, R.drawable.wall_w7_10, R.drawable.wall_w7_11, R.drawable.wall_grass)
     "win95" -> listOf(R.drawable.wall_w95_0, R.drawable.wall_w95_1, R.drawable.wall_w95_2, R.drawable.wall_w95_3)
+    "win11" -> listOf(R.drawable.win11_wall_1, R.drawable.win11_wall_2, R.drawable.win11_wall_3, R.drawable.win11_wall_4, R.drawable.win11_wall_5, R.drawable.win11_wall_6, R.drawable.win11_wall_7, R.drawable.win11_wall_8,
+        R.drawable.win11_wall_9, R.drawable.win11_wall_10, R.drawable.win11_wall_11, R.drawable.win11_wall_12, R.drawable.win11_wall_13, R.drawable.win11_wall_14, R.drawable.win11_wall_15, R.drawable.win11_wall_16)
     "win10" -> listOf(R.drawable.wall_w10_1, R.drawable.wall_w10_2, R.drawable.wall_w10_3, R.drawable.wall_w10_4, R.drawable.wall_w10_5, R.drawable.wall_grass)
     else -> emptyList()
 }
+
+/** Portrait phone pictures added to the looks that have them (1080 wide at most; the desktop ones above stay for a rotated screen). */
+private fun mobileWalls(lookId: String): List<Int> = when (lookId) {
+    "win11" -> listOf(R.drawable.mw11_1, R.drawable.mw11_2, R.drawable.mw11_3, R.drawable.mw11_4, R.drawable.mw11_5, R.drawable.mw11_6, R.drawable.mw11_7, R.drawable.mw11_8, R.drawable.mw11_9, R.drawable.mw11_10, R.drawable.mw11_11, R.drawable.mw11_12, R.drawable.mw11_13, R.drawable.mw11_14, R.drawable.mw11_15, R.drawable.mw11_16, R.drawable.mw11_17, R.drawable.mw11_18)
+    "win10" -> listOf(R.drawable.mw10_1, R.drawable.mw10_2, R.drawable.mw10_3, R.drawable.mw10_4, R.drawable.mw10_5, R.drawable.mw10_6, R.drawable.mw10_7, R.drawable.mw10_8, R.drawable.mw10_9, R.drawable.mw10_10, R.drawable.mwx_dune, R.drawable.mwx_coaster)
+    "win7" -> listOf(R.drawable.mwx_w7logo)
+    "xp" -> listOf(R.drawable.mwx_bliss)
+    else -> emptyList()
+}
+
+/** Every stock picture of a look. Windows 11 lists its phone pictures first (its default is portrait); the others keep the desktop picture first. */
+fun wallsFor(lookId: String): List<Int> = if (lookId == "win11") mobileWalls(lookId) + desktopWalls(lookId) else desktopWalls(lookId) + mobileWalls(lookId)
+
+/** True when picture [i] of [wallsFor] is a portrait phone picture (a rotated screen uses a desktop one instead). */
+fun isMobileWall(lookId: String, i: Int): Boolean = if (lookId == "win11") i < mobileWalls(lookId).size else i >= desktopWalls(lookId).size
 
 /** Index of the picked stock picture in wallsFor(lookId); observable so the picker and the window update at once. */
 object WallSel { val idx = mutableStateMapOf<String, Int>() }

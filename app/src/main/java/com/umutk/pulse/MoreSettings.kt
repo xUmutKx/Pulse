@@ -303,6 +303,22 @@ fun BackdropSettings() {
                 }
             }
         }
+        // the phone pictures (portrait): pack17..pack34
+        Text(tr("Phone pictures", "Telefon resimleri"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+        (1..18).chunked(6).forEach { row ->
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                row.forEach { n ->
+                    val i = 16 + n
+                    val res = remember(n) { ctx.resources.getIdentifier("mw11_$n", "drawable", ctx.packageName) }
+                    val picked = bd.mode == "pack$i"
+                    Box(Modifier.weight(1f).aspectRatio(.55f).clip(RoundedCornerShape(8.dp))
+                        .border(if (picked) 3.dp else 1.dp, if (picked) Look.accent else T.line, RoundedCornerShape(8.dp))
+                        .clickable { scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$i") } }) {
+                        if (res != 0) Image(painterResource(res), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                    }
+                }
+            }
+        }
     }
 }
 

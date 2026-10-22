@@ -118,7 +118,7 @@ private const val PAGE_ROWS = 4
 private val WINDOWS_LOOKS = setOf("win11", "win10", "win10black", "win7", "win95", "xp")
 
 /** The desktop shortcuts: This PC, Recycle Bin, File Explorer, Paint, the command prompt and the Task Manager. Drawn through the look's own icon set. */
-private fun desktopItems(): List<LaunchApp> = listOf(
+internal fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("This PC", "Bu bilgisayar"), "pulse:pc", null, iconKey = "phone"),
     LaunchApp(tr("Recycle Bin", "Geri Dönüşüm Kutusu"), "pulse:recycle", null, iconKey = "recycle"),
     LaunchApp(tr("File Explorer", "Dosya Gezgini"), "pulse:files", null, iconKey = "folder"),
@@ -134,6 +134,18 @@ private fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("Minesweeper", "Mayın Tarlası"), "pulse:mines", null, iconKey = "gridView"),
     LaunchApp(tr("Solitaire", "Solitaire"), "pulse:solitaire", null, iconKey = "heart"),
     LaunchApp(tr("FreeCell", "FreeCell"), "pulse:freecell", null, iconKey = "heart"),
+    // Pulse's own apps, off until they are switched on in the launcher settings
+    LaunchApp(tr("Music player", "Müzik çalar"), "pulse:x:music", null, iconKey = "music"),
+    LaunchApp(tr("Video", "Video"), "pulse:x:video", null, iconKey = "video"),
+    LaunchApp(tr("Notes", "Notlar"), "pulse:x:notes", null, iconKey = "notes"),
+    LaunchApp(tr("Weather", "Hava durumu"), "pulse:x:weather", null, iconKey = "weather"),
+    LaunchApp(tr("Calculator", "Hesap makinesi"), "pulse:x:calculator", null, iconKey = "calc"),
+    LaunchApp(tr("Voice recorder", "Ses kaydedici"), "pulse:x:voice", null, iconKey = "voice"),
+    LaunchApp(tr("White noise", "Beyaz gürültü"), "pulse:x:whitenoise", null, iconKey = "volume"),
+    LaunchApp(tr("Screen recorder", "Ekran kaydı"), "pulse:x:screenrec", null, iconKey = "record"),
+    LaunchApp(tr("Notification history", "Bildirim geçmişi"), "pulse:x:notifhist", null, iconKey = "bell"),
+    LaunchApp(tr("Messages", "Mesajlar"), "pulse:x:messages", null, iconKey = "chat"),
+    LaunchApp(tr("Toolkit", "Araç kutusu"), "pulse:x:toolkit", null, iconKey = "settings"),
 )
 
 /**
@@ -170,6 +182,13 @@ private fun startApp(ctx: Context, intent: Intent, windowed: Boolean) {
 /** What a desktop shortcut opens: Pulse's own pages and apps. */
 private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     // Windows looks show Pulse's own pages in a window of that Windows
+    if (id.startsWith("pulse:x:")) {
+        val route = id.removePrefix("pulse:x:")
+        val title = desktopItems().firstOrNull { it.pkg == id }?.label ?: route
+        if (lookId in WINDOWS_LOOKS) DesktopWindows.open(route, title)
+        else runCatching { ctx.startActivity(Intent(ctx, ExtraToolActivity::class.java).putExtra("route", route).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        return
+    }
     if (lookId in WINDOWS_LOOKS) {
         val r = when (id) { "pulse:pc" -> "page:device" to tr("This PC", "Bu bilgisayar"); "pulse:recycle" -> "page:recycle" to tr("Recycle Bin", "Geri Dönüşüm Kutusu")
             "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
@@ -179,7 +198,8 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
             "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire")
             "pulse:freecell" -> "game:freecell" to tr("FreeCell", "FreeCell"); "pulse:games" -> "game:hub" to tr("Games", "Oyunlar"); else -> null }
         if (r != null) {
-            runCatching { ctx.startActivity(Intent(ctx, com.umutk.pulse.FramedToolActivity::class.java).putExtra("route", r.first).putExtra("frame", lookId).putExtra("title", r.second).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            // a window of the desktop itself: dragged, several at once, the launcher stays behind
+            DesktopWindows.open(r.first, r.second)
             return
         }
     }
@@ -255,7 +275,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
 
     // the home screen is a desktop, not an app grid: the Windows looks show the desktop shortcuts, the others show no icons (the apps list holds every app); a setting brings the app grid back
     val desktop = look.id in WINDOWS_LOOKS
-    val shortcuts = remember(desktop) { if (desktop) desktopItems() else emptyList() }
+    val shortcuts = remember(desktop, LauncherPrefs.desktopOn) { if (desktop) desktopItems().filter { it.pkg in LauncherPrefs.desktopOn } else emptyList() }
     val home = if (LauncherPrefs.homeApps) visible else shortcuts
     val grid = rememberLazyGridState()
     val pages = home.chunked(columns * PAGE_ROWS)
@@ -311,6 +331,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                 if (!desktop) { HomeChip("processes") { openDesktopItem(ctx, "pulse:taskmgr", look.id) }; Spacer(Modifier.width(8.dp)) }
                 HomeChip("settings") { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
             }
+        }
+        if (desktop) Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+            DesktopWindowLayer(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp)
         }
         // Windows looks: the menu sits above the taskbar, which is inside the navigation-bar inset
         if (LauncherSession.startOpen && look.ownSearch) look.StartMenu(state, { LauncherSession.startOpen = false }, Modifier.fillMaxSize().navigationBarsPadding())

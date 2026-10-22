@@ -40,6 +40,10 @@ object LauncherPrefs {
     /** Widgets on the home screen, one "id|package|class" each (see LauncherWidgets). */
     var widgets by mutableStateOf<List<String>>(emptyList())
     private const val WALL = "wall."
+    val DESKTOP_DEFAULT = setOf("pulse:pc", "pulse:recycle", "pulse:files")
+
+    /** The desktop shortcuts that show on the Windows desktops: This PC, Recycle Bin and File Explorer until others are switched on in the settings. */
+    var desktopOn by mutableStateOf(DESKTOP_DEFAULT)
 
     fun wallIndex(look: String): Int = walls[look] ?: 0
     fun setWallIndex(look: String, i: Int) { walls = walls + (look to i) }
@@ -67,6 +71,7 @@ object LauncherPrefs {
         drawerColumns = p.getProperty("drawerColumns")?.toIntOrNull() ?: 5
         sort = p.getProperty("sort") ?: "name"
         hidden = list(p.getProperty("hidden")).toSet()
+        desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
         clock = p.getProperty("clock") == "true"
         homeApps = p.getProperty("homeApps") == "true"
         windowed = p.getProperty("windowed") == "true"
@@ -85,7 +90,7 @@ object LauncherPrefs {
         p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
-        p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
         walls.forEach { (lookId, i) -> p.setProperty(WALL + lookId, i.toString()) }
@@ -104,7 +109,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); clock = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; clock = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         usage = emptyMap(); walls = emptyMap()
         save(c)
     }
