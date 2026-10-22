@@ -994,3 +994,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.210 derlenmedi: 0.10.209 derleme düzeltmesi (FramedWindow virgül).
 
 - 0.10.211 derlenmedi: sözler önce cihazdaki .lrc/.txt (adı şarkıya benzeyen veya başlığı içeren dosya dahil) sonra internet; öneri mix satırlarının yanında çal tuşu.
+
+- 0.10.212 derlenmedi: Poweramp yedeği: aynı adlı dosyalarda klasörle eşleştirme, uzantı değişmiş şarkıları bulma, boş kütüphane uyarısı.
