@@ -1010,3 +1010,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.218 derlenmedi: Dosyalar: klasör boyutları simgesine basılı tutunca ağaç içinde bulunulan klasörde açılır.
 
 - 0.10.219 derlenmedi: hızlı ayar kutucuklarına basılı tutunca: DNS kendi Toolkit DNS aracını, Ekran yönü kendi aracını açar (launcher/ayarlar açılmaz, ekran yönü artık sessizce kapanıp launchera düşmez).
+
+- 0.10.220 derlenmedi: metin düzenleyicide Kaydet ve Farklı kaydet dışındaki iki simge (karanlık mod, TXT olarak kaydet) kaldırıldı.
