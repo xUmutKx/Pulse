@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import androidx.compose.runtime.mutableIntStateOf
 import android.content.Context
 import android.graphics.BitmapFactory
 import android.widget.Toast
@@ -130,11 +131,22 @@ internal fun CoverArtDialog(track: Track, style: PowerampStyle, onSaved: () -> U
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val album = track.album?.takeIf { it.isNotBlank() }
-    val term = listOfNotNull(track.artist?.takeIf { it.isNotBlank() }, album ?: track.displayName()).joinToString(" ")
+    // the names the search uses; the fields under "No results" change them for another try
+    var qArtist by remember { mutableStateOf(track.artist.orEmpty()) }
+    var qName by remember { mutableStateOf(album ?: track.displayName()) }
+    var attempt by remember { mutableIntStateOf(0) }
     var hits by remember { mutableStateOf<List<PowerampCovers.Hit>?>(null) }
     var saving by remember { mutableStateOf(false) }
-    LaunchedEffect(track.path) {
-        hits = withContext(Dispatchers.IO) { PowerampCovers.search(term, if (album != null) "album" else "song") }
+    LaunchedEffect(track.path, attempt) {
+        hits = null
+        hits = withContext(Dispatchers.IO) {
+            val entity = if (album != null && attempt == 0) "album" else "song"
+            // narrowest first, then wider: artist and name, the name alone, the artist and the song title, the song title alone
+            listOf(listOf(qArtist, qName), listOf(qName), listOf(qArtist, track.displayName()), listOf(track.displayName()))
+                .map { it.filter { w -> w.isNotBlank() }.joinToString(" ") }.filter { it.isNotBlank() }.distinct()
+                .firstNotNullOfOrNull { t -> PowerampCovers.search(t, entity).takeIf { it.isNotEmpty() } ?: PowerampCovers.search(t, if (entity == "album") "song" else "album").takeIf { it.isNotEmpty() } }
+                .orEmpty()
+        }
     }
     Dialog(onDismissRequest = { if (!saving) onClose() }) {
         Column(
@@ -148,8 +160,17 @@ internal fun CoverArtDialog(track: Track, style: PowerampStyle, onSaved: () -> U
                 list == null || saving -> Box(Modifier.fillMaxWidth().height(160.dp), Alignment.Center) {
                     CircularProgressIndicator(Modifier.size(28.dp), color = style.accent, strokeWidth = 2.dp)
                 }
-                list.isEmpty() -> Box(Modifier.fillMaxWidth().height(120.dp), Alignment.Center) {
-                    Text(tr("No results", "Sonuç yok"), color = style.textDim, fontSize = 14.sp)
+                list.isEmpty() -> Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(tr("No results", "Sonuç yok"), color = style.textDim, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
+                    @Composable fun field(v: String, hint: String, on: (String) -> Unit) = androidx.compose.foundation.text.BasicTextField(
+                        v, on, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 15.sp),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = .1f)).padding(horizontal = 12.dp, vertical = 10.dp),
+                        decorationBox = { inner -> if (v.isEmpty()) Text(hint, color = Color.White.copy(alpha = .4f), fontSize = 15.sp); inner() })
+                    field(qArtist, tr("Artist", "Sanatçı")) { qArtist = it }
+                    field(qName, tr("Album or song", "Albüm ya da şarkı")) { qName = it }
+                    Text(tr("Search again", "Tekrar ara"), color = Color.Black, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp)
+                        .clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 9.dp))
                 }
                 else -> Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     list.chunked(3).forEach { row ->
