@@ -159,7 +159,16 @@ private fun startApp(ctx: Context, intent: Intent, windowed: Boolean) {
 }
 
 /** What a desktop shortcut opens: Pulse's own pages and apps. */
-private fun openDesktopItem(ctx: Context, id: String) {
+private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
+    // Windows looks show Pulse's own pages in a window of that Windows
+    if (lookId in WINDOWS_LOOKS) {
+        val r = when (id) { "pulse:pc" -> "page:device" to tr("This PC", "Bu bilgisayar"); "pulse:recycle" -> "page:recycle" to tr("Recycle Bin", "Geri Dönüşüm Kutusu")
+            "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi"); else -> null }
+        if (r != null) {
+            runCatching { ctx.startActivity(Intent(ctx, com.umutk.pulse.FramedToolActivity::class.java).putExtra("route", r.first).putExtra("frame", lookId).putExtra("title", r.second).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            return
+        }
+    }
     val i = when (id) {
         "pulse:pc" -> Intent(ctx, MainActivity::class.java).putExtra("start", "device")
         "pulse:recycle" -> Intent(ctx, MainActivity::class.java).putExtra("start", "recycle")
@@ -216,7 +225,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     }
     var actionFor by remember { mutableStateOf<LaunchApp?>(null) }
     val open: (LaunchApp) -> Unit = { app ->
-        if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg)
+        if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
         else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
     }
     val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), iconDp, dock, open) { if (!it.pkg.startsWith("pulse:")) actionFor = it }
@@ -272,7 +281,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         if (!LauncherSession.startOpen) Box(Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), contentAlignment = Alignment.TopEnd) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (!LauncherPrefs.dockShown) { HomeChip("apps") { LauncherSession.startOpen = true }; Spacer(Modifier.width(8.dp)) }
-                if (!desktop) { HomeChip("processes") { openDesktopItem(ctx, "pulse:taskmgr") }; Spacer(Modifier.width(8.dp)) }
+                if (!desktop) { HomeChip("processes") { openDesktopItem(ctx, "pulse:taskmgr", look.id) }; Spacer(Modifier.width(8.dp)) }
                 HomeChip("settings") { ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
             }
         }

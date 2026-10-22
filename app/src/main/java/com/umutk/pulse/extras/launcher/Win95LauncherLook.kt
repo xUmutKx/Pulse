@@ -56,7 +56,7 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 import java.util.Calendar
 
-private val W95_WINDOW = WinSkin("95", Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))), Color.White, Color(0xFFC0C0C0), 3.dp, 0.dp,
+internal val W95_WINDOW = WinSkin("95", Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))), Color.White, Color(0xFFC0C0C0), 3.dp, 0.dp,
     Color.White, Color(0xFFC0C0C0), Color.White, Color.Black, Color(0xFF404040), Color(0xFF000080), Color.White, Color(0xFF808080))
 
 

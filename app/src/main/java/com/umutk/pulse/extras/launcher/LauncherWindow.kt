@@ -133,7 +133,21 @@ private fun NavRow(skin: WinSkin, label: String, n: Int, on: Boolean, click: () 
 
 /** Caption button: 0 minimise, 1 maximise, 2 close, drawn as the look draws them. */
 @Composable
-private fun Caption(skin: WinSkin, i: Int, onClick: () -> Unit) {
+internal fun Caption(skin: WinSkin, i: Int, onClick: () -> Unit) {
+    if (skin.kind == "10" || skin.kind == "11" || skin.kind == "mat") {
+        // flat looks: a plain glyph, the close button turns red under the finger
+        Box(Modifier.size(if (skin.kind == "mat") 36.dp else 44.dp, if (skin.kind == "mat") 36.dp else 30.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+            Canvas(Modifier.size(10.dp)) {
+                val s = size.width; val t = s * .12f
+                when (i) {
+                    0 -> drawLine(skin.titleInk, Offset(0f, s * .5f), Offset(s, s * .5f), t * 1.6f)
+                    1 -> drawRect(skin.titleInk, Offset(0f, 0f), androidx.compose.ui.geometry.Size(s, s), style = androidx.compose.ui.graphics.drawscope.Stroke(t * 1.4f))
+                    else -> { drawLine(skin.titleInk, Offset(0f, 0f), Offset(s, s), t * 1.5f); drawLine(skin.titleInk, Offset(s, 0f), Offset(0f, s), t * 1.5f) }
+                }
+            }
+        }
+        return
+    }
     val xp = skin.kind == "xp"; val w95 = skin.kind == "95"
     val w = if (w95) 16.dp else if (xp) 22.dp else if (i == 2) 42.dp else 26.dp
     val h = if (w95) 14.dp else if (xp) 22.dp else 20.dp
