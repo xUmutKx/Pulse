@@ -948,3 +948,5 @@ Screen recorder feature list (55 candidates)
 - Windows media player widget (95 CD Player, XP, 7 Aero, flat cards); network type shows the phone's answer; Back icons in App details / Leftovers / Permission audit; launcher Log off (windows, Win10 rail, Win11 menu); Control Panel with 17 items in 5 groups opened from the launcher; 0.10.187. derlenmedi
 
 - Launcher: framed windows open centred and the middle caption button grows them to full screen; Minesweeper and Solitaire drawn in the look of the theme; music settings in Poweramp-style categories with icons; lyrics page shows what the lookup saw when nothing is found; 0.10.188. derlenmedi
+
+- Files: the top-right settings button is gone (Settings stays in the menu, sections collapsed), gaps between files and folders cut to a third; 0.10.189. derlenmedi
