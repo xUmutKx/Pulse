@@ -966,3 +966,5 @@ Screen recorder feature list (55 candidates)
 - Installer: option to leave out the CPU splits of other ABIs in bundles (a single APK cannot be cut without re-signing); install window buttons follow the window look (text buttons in Material); 0.10.196. derlenmedi
 
 - Long press on the Screen cover tile opens its settings page; 0.10.197. derlenmedi
+
+- Fix: size import in Downloads; 0.10.198. derlenmedi
