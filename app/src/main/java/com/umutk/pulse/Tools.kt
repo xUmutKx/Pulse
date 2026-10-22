@@ -117,6 +117,8 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "launcher" -> com.umutk.pulse.extras.launcher.LauncherSettings(back)
         id == "messages" -> MessagesScreen(back)
         // Pulse's own pages (Task Manager, This PC ...), for the launcher's windows
+        id == "game:minesweeper" -> com.umutk.pulse.extras.launcher.MinesweeperGame()
+        id == "game:solitaire" -> com.umutk.pulse.extras.launcher.SolitaireGame()
         id == "controlpanel" -> com.umutk.pulse.extras.launcher.ControlPanelHome()
         id == "page:processes" -> ProcessesPage()
         id == "page:performance" -> PerformancePage()

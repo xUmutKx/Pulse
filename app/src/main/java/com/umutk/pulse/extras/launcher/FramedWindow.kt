@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -55,9 +57,13 @@ internal fun frameSkin(look: String): WinSkin = when (look) {
 fun FramedWindow(look: String, title: String, onClose: () -> Unit, onBack: (() -> Unit)? = null, content: @Composable () -> Unit) {
     val skin = remember(look) { frameSkin(look) }
     val none = remember { MutableInteractionSource() }
+    // the window opens in the middle of the screen; the middle caption button grows it to the whole screen and back
+    var maxed by remember { androidx.compose.runtime.mutableStateOf(false) }
+    val kw by androidx.compose.animation.core.animateFloatAsState(if (maxed) 1f else .88f, androidx.compose.animation.core.tween(220), label = "winW")
+    val kh by androidx.compose.animation.core.animateFloatAsState(if (maxed) 1f else .7f, androidx.compose.animation.core.tween(220), label = "winH")
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .28f)).clickable(interactionSource = none, indication = null, onClick = onClose)) {
         Column(
-            Modifier.align(Alignment.Center).statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 14.dp).fillMaxSize()
+            Modifier.align(Alignment.Center).statusBarsPadding().navigationBarsPadding().padding(horizontal = 10.dp, vertical = 14.dp).fillMaxWidth(kw).fillMaxHeight(kh)
                 .clip(RoundedCornerShape(skin.corner)).background(skin.frame).then(if (skin.kind == "95") Modifier.bevel(true) else Modifier)
                 .padding(skin.frameWidth).clickable(interactionSource = none, indication = null) {},
         ) {
@@ -66,7 +72,7 @@ fun FramedWindow(look: String, title: String, onClose: () -> Unit, onBack: (() -
                 if (onBack != null) Box(Modifier.size(28.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", skin.titleInk, 16.dp) }
                 Text(title, color = skin.titleInk, fontSize = 13.sp, fontWeight = if (skin.kind == "xp" || skin.kind == "95") FontWeight.Bold else FontWeight.Normal,
                     maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                Caption(skin, 0, onClose); Caption(skin, 1, onClose); Caption(skin, 2, onClose)
+                Caption(skin, 0, onClose); Caption(skin, 1) { maxed = !maxed }; Caption(skin, 2, onClose)
             }
             Box(Modifier.weight(1f).fillMaxWidth().background(skin.body)) { content() }
         }
