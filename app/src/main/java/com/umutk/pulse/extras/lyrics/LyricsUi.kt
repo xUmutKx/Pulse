@@ -157,15 +157,15 @@ fun LyricsSheet(
     fun close() {
         if (closing) return
         closing = true
-        scope.launch { y.animateTo(height, tween(180, easing = FastOutLinearInEasing)); onDismiss() }
+        scope.launch { y.animateTo(height, tween(300, easing = FastOutLinearInEasing)); onDismiss() }
     }
-    fun settle() { scope.launch { y.animateTo(0f, tween(160, easing = FastOutSlowInEasing)) } }
+    fun settle() { scope.launch { y.animateTo(0f, tween(280, easing = FastOutSlowInEasing)) } }
     BackHandler { close() }
     LaunchedEffect(height) {
         if (height > 0f && !entered) {
             entered = true
             y.snapTo(height)
-            y.animateTo(0f, tween(200, easing = FastOutSlowInEasing))
+            y.animateTo(0f, tween(420, easing = FastOutSlowInEasing))
         }
     }
     // when the last timed line is over, the lyrics step aside and the cover shows again

@@ -958,3 +958,5 @@ Screen recorder feature list (55 candidates)
 - Music: shuffle and repeat are saved and come back after a restart or an update (and the fixed-order shuffle flag); lyrics widget line in bold letters; 0.10.192. derlenmedi
 
 - Poweramp lyrics: sheet is a layer over the whole page, the lyrics button also for songs whose lyrics were found online, no grey diagnostic line; 0.10.193. derlenmedi
+
+- Player animations slower and softer (sheet, title slide, cover settle, lyrics sheet); Downloads: a web page link is read for its download links (plain fetch, no WebView) and the files found are listed; 0.10.194. derlenmedi
