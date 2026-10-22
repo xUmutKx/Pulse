@@ -93,8 +93,6 @@ class OfficeTextActivity : ComponentActivity() {
                         // Save first (it writes the open file), then Save as; "as TXT" only for files that are not .txt already, so no two buttons do the same
                         Box(Modifier.size(40.dp).clickable { save() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.Save, null, Modifier.size(22.dp), Look.accent) }
                         Box(Modifier.size(40.dp).clickable { saveAs = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.SaveAs, null, Modifier.size(22.dp), pink) }
-                        Box(Modifier.size(40.dp).clickable { flip() }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.DarkMode, null, Modifier.size(22.dp), if (black) Look.accent else pink) }
-                        if (!f.extension.equals("txt", true)) Box(Modifier.size(40.dp).clickable { txtSave = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.TextSnippet, null, Modifier.size(22.dp), pink) }
                     }
                     BasicTextField(text, { text = it }, Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp),
                         textStyle = TextStyle(color = pink, fontSize = 14.sp, fontFamily = FontFamily.Monospace), cursorBrush = SolidColor(Look.accent))
