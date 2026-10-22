@@ -66,7 +66,7 @@ object CoverStore {
 
 /** Quick Settings tile for the screen cover (CoverService). Without the overlay permission a tap opens that permission page instead. */
 class CoverTile : TileService() {
-    override fun onStartListening() = paint(CoverService.running)
+    override fun onStartListening() = paint(CoverService.running || StandBy.showing)
 
     private fun paint(on: Boolean) {
         qsTile?.apply {
@@ -80,6 +80,8 @@ class CoverTile : TileService() {
 
     override fun onClick() {
         if (!Settings.canDrawOverlays(this) && CoverAccessibilityService.instance == null) { openOverlayPermission(); return }
+        // the advanced (StandBy) cover is a window of its own; the basic one is the black foreground service
+        if (StandByPrefs.advanced(this)) { StandBy.toggle(this); paint(StandBy.showing); return }
         if (CoverService.running) { CoverService.stop(this); paint(false) } else { CoverService.start(this); paint(true) }
     }
 
@@ -95,14 +97,14 @@ class CoverTile : TileService() {
 @Composable
 fun CoverTool() {
     val ctx = LocalContext.current
-    val running by produceState(CoverService.running) { while (true) { value = CoverService.running; delay(500) } }
+    val running by produceState(CoverService.running || StandBy.showing) { while (true) { value = CoverService.running || StandBy.showing; delay(500) } }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(tr("Screen cover", "Ekran kapağı"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
         PSwitch(running, { want ->
             when {
                 !Settings.canDrawOverlays(ctx) && CoverAccessibilityService.instance == null -> ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                want -> CoverService.start(ctx)
-                else -> CoverService.stop(ctx)
+                want -> if (StandByPrefs.advanced(ctx)) StandBy.show(ctx) else CoverService.start(ctx)
+                else -> { CoverService.stop(ctx); StandBy.hide(ctx) }
             }
         })
     }
@@ -119,6 +121,7 @@ fun CoverSettings() {
     var text by remember { mutableStateOf(CoverStore.text(ctx)) }
     Text(tr("Screen cover", "Ekran kapağı"), color = T.text, fontSize = 15.sp)
     Text(tr("A black cover over the whole screen", "Tüm ekranı kaplayan siyah bir kapak"), color = T.sub, fontSize = 12.sp)
+    StandBySettings()
     if (!Settings.canDrawOverlays(ctx) && CoverAccessibilityService.instance == null) {
         Text(tr("Needs the 'display over other apps' permission.", "'Diğer uygulamaların üstünde göster' izni gerekir."), color = T.sub, fontSize = 12.sp)
         PButton(tr("Allow", "İzin ver")) { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
