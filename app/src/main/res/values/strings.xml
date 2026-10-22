@@ -3,4 +3,5 @@
     <string name="photos_name">Photos</string>
     <string name="files_name">Files</string>
     <string name="contacts_name">Contacts</string>
+    <string name="cover_service_desc">Lets the Pulse screen cover draw above everything, including the status bar and the keyboard. It reads nothing from the screen.</string>
 </resources>

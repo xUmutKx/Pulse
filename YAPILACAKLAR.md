@@ -968,3 +968,5 @@ Screen recorder feature list (55 candidates)
 - Long press on the Screen cover tile opens its settings page; 0.10.197. derlenmedi
 
 - Fix: size import in Downloads; 0.10.198. derlenmedi
+
+- Screen cover can be drawn as an accessibility overlay (topmost layer, above bars and keyboard) when "Pulse · Screen cover layer" is on; backup branch backup-2026-10-22 of 0.10.198; 0.10.199. derlenmedi
