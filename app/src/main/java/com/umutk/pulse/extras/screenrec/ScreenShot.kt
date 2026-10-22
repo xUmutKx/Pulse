@@ -16,7 +16,7 @@ import java.util.Locale
  */
 object ScreenShot {
     /** Whether a screenshot can be taken at all: root or Shizuku is needed. */
-    fun possible(): Boolean = Shell.root == true || Shell.shizukuOk()
+    fun possible(): Boolean = Shell.root == true || Shell.shizukuOk() || com.umutk.pulse.features.CoverAccessibilityService.instance != null
 
     /** True when the picture is (almost) all black: the sign that a secure window was blanked. */
     private fun blank(path: String): Boolean {
@@ -28,12 +28,14 @@ object ScreenShot {
         return lit < n / 200
     }
 
-    /** Saves Pictures/Screenshots/Pulse_<time>.png; [done] gets the path, or null when it failed, on the main thread.
+    /** Saves DCIM/Screenshots/Pulse_<time>.png; [done] gets the path, or null when it failed, on the main thread.
      *  A secure window can come out black: the other ways root has are tried one after the other (each physical display, then the raw buffer). */
     fun take(c: Context, done: (String?) -> Unit) {
         val app = c.applicationContext
+        // without root or Shizuku the accessibility layer takes the picture (the system's own screenshot call; a secure window comes out black there)
+        if (Shell.root != true && !Shell.shizukuOk()) { com.umutk.pulse.features.CoverAccessibilityService.instance?.let { accShot(app, it, done); return } }
         Thread {
-            val dir = "/sdcard/Pictures/Screenshots"
+            val dir = "/sdcard/DCIM/Screenshots"
             val path = "$dir/Pulse_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".png"
             fun sh(cmd: String) = if (Shell.root == true) Shell.runRoot(cmd) else Shell.run(cmd)
             sh("mkdir -p '$dir'")
@@ -54,5 +56,30 @@ object ScreenShot {
             if (any) MediaScannerConnection.scanFile(app, arrayOf(path), arrayOf("image/png"), null)
             Handler(Looper.getMainLooper()).post { done(if (ok) path else if (any) "blank:$path" else null) }
         }.start()
+    }
+
+    /** Screenshot through the accessibility service (Android 11+): saved like the root ones. */
+    private fun accShot(app: Context, acc: android.accessibilityservice.AccessibilityService, done: (String?) -> Unit) {
+        val main = Handler(Looper.getMainLooper())
+        runCatching {
+            acc.takeScreenshot(android.view.Display.DEFAULT_DISPLAY, app.mainExecutor, object : android.accessibilityservice.AccessibilityService.TakeScreenshotCallback {
+                override fun onSuccess(r: android.accessibilityservice.AccessibilityService.ScreenshotResult) {
+                    Thread {
+                        val path = runCatching {
+                            val hb = r.hardwareBuffer
+                            val bmp = android.graphics.Bitmap.wrapHardwareBuffer(hb, r.colorSpace)?.copy(android.graphics.Bitmap.Config.ARGB_8888, false)
+                            hb.close()
+                            val dir = File("/sdcard/DCIM/Screenshots").apply { mkdirs() }
+                            val f = File(dir, "Pulse_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".png")
+                            f.outputStream().use { o -> bmp?.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, o) }
+                            MediaScannerConnection.scanFile(app, arrayOf(f.path), arrayOf("image/png"), null)
+                            if (f.length() > 0) f.path else null
+                        }.getOrNull()
+                        main.post { done(path) }
+                    }.start()
+                }
+                override fun onFailure(errorCode: Int) { main.post { done(null) } }
+            })
+        }.onFailure { main.post { done(null) } }
     }
 }

@@ -610,8 +610,22 @@
         </activity>
         <activity android:name="com.umutk.pulse.FramedToolActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecService" android:exported="false" android:foregroundServiceType="mediaProjection" />
+        <!-- "Pulse · Save to…": any file another app opens or shares can be saved as a copy under a name and in a folder of the user's choice -->
+        <activity android:name="com.umutk.pulse.features.SaveToActivity" android:exported="true" android:label="Pulse · Save to…" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" android:mimeType="*/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
         <activity android:name="com.umutk.pulse.extras.screenrec.ScreenRecActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:launchMode="singleTop" />
-        <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecTile" android:exported="true" android:label="Screenshot / record" android:icon="@drawable/ic_qs_pulse"
+        <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecTile" android:exported="true" android:label="Screenshot / record" android:icon="@drawable/ic_qs_shotrec"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
