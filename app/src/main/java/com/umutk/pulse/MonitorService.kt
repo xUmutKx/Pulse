@@ -179,7 +179,7 @@ fun tilePage(cls: String): String = when (cls.substringAfterLast('.')) {
     "PulseTile" -> "settings"
     "DnsTile" -> "toolkit:wifi"   // the DNS tool of the Toolkit
     "RotationTile" -> "toolkit:rotate"
-    "CoverTile" -> "cover"
+    "CoverTile", "StandByTile" -> "cover"
     "FlashlightTile" -> "toolkit:flash"
     "StopwatchTile" -> "toolkit:stopwatch"
     "ToolkitTile" -> "toolkit"

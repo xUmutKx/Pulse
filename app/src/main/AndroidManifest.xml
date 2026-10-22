@@ -642,6 +642,12 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
+        <!-- the advanced screen cover (features/StandBy): the manual trigger -->
+        <service android:name="com.umutk.pulse.features.StandByTile" android:exported="true" android:label="StandBy" android:icon="@drawable/ic_qs_cover"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
+        </service>
         <service android:name=".FlashlightTile" android:exported="true" android:label="Flashlight" android:icon="@drawable/ic_qs_flashlight"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
