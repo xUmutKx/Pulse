@@ -300,6 +300,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                     DesktopIcons(look, state, shortcuts, iconDp, edge, open)
                     // the clock gadget of the desktop, in the look's own style, top right
                     MovableDesktopClock(look.id)
+                    MovableDesktopNote()
                     DesktopWidgetLayer()
                 }
                 else if (vertical) {

@@ -38,6 +38,68 @@ object PlaylistClient {
 
     private fun enc(s: String) = URLEncoder.encode(s, "UTF-8")
 
+    // ---- YouTube itself: the pages are read directly, so a dead public Piped / Invidious instance no longer stops a playlist link ----
+    private fun getYt(url: String): String {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.connectTimeout = 6000; c.readTimeout = 12000
+        c.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Mobile Safari/537.36")
+        c.setRequestProperty("Accept-Language", "en-US,en;q=0.9")
+        c.setRequestProperty("Cookie", "CONSENT=PENDING+987; SOCS=CAESEwgDEgk0ODE3Nzk3MjQaAmVuIAEaBgiA_LyaBg")
+        try { if (c.responseCode !in 200..299) error("HTTP ${c.responseCode}"); return c.inputStream.bufferedReader().readText() } finally { c.disconnect() }
+    }
+
+    private fun initialData(html: String): JSONObject {
+        val raw = html.substringAfter("var ytInitialData = ", "").substringBefore(";</script>").ifEmpty { error("no data") }
+        return JSONObject(raw)
+    }
+
+    /** Every object stored under [key] anywhere in [node]. */
+    private fun collect(node: Any?, key: String, out: MutableList<JSONObject>) {
+        when (node) {
+            is JSONObject -> node.keys().forEach { k -> val v = node.opt(k); if (k == key && v is JSONObject) out += v else collect(v, key, out) }
+            is JSONArray -> for (i in 0 until node.length()) collect(node.opt(i), key, out)
+        }
+    }
+
+    private fun runsText(o: JSONObject?): String = o?.optJSONArray("runs")?.optJSONObject(0)?.optString("text") ?: o?.optString("simpleText").orEmpty()
+
+    private fun ytPlaylist(id: String): PList {
+        val d = initialData(getYt("https://www.youtube.com/playlist?list=$id"))
+        val rows = ArrayList<JSONObject>(); collect(d, "playlistVideoRenderer", rows)
+        if (rows.isEmpty()) error("empty")
+        val name = d.optJSONObject("metadata")?.optJSONObject("playlistMetadataRenderer")?.optString("title") ?: "Playlist"
+        return PList(name, rows.mapNotNull { r ->
+            val vid = r.optString("videoId").ifEmpty { return@mapNotNull null }
+            PItem(runsText(r.optJSONObject("title")), runsText(r.optJSONObject("shortBylineText")).removeSuffix(" - Topic"), r.optString("lengthSeconds").toIntOrNull() ?: -1, "https://i.ytimg.com/vi/$vid/mqdefault.jpg", vid)
+        }, "https://www.youtube.com/playlist?list=$id")
+    }
+
+    private fun ytSearch(q: String): PList {
+        val d = initialData(getYt("https://www.youtube.com/results?search_query=${enc(q)}"))
+        val rows = ArrayList<JSONObject>(); collect(d, "videoRenderer", rows)
+        if (rows.isEmpty()) error("empty")
+        return PList(q, rows.mapNotNull { r ->
+            val vid = r.optString("videoId").ifEmpty { return@mapNotNull null }
+            val len = runsText(r.optJSONObject("lengthText")).split(':').mapNotNull { it.toIntOrNull() }.fold(0) { a, n -> a * 60 + n }
+            PItem(runsText(r.optJSONObject("title")), runsText(r.optJSONObject("ownerText")).removeSuffix(" - Topic"), len, "https://i.ytimg.com/vi/$vid/mqdefault.jpg", vid)
+        })
+    }
+
+    /** Direct audio link from YouTube's own player endpoint as the Android app asks for it; null when it will not give one. */
+    private fun ytAudio(videoId: String): String? = runCatching {
+        val c = URL("https://www.youtube.com/youtubei/v1/player?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w").openConnection() as HttpURLConnection
+        try {
+            c.requestMethod = "POST"; c.doOutput = true; c.connectTimeout = 6000; c.readTimeout = 12000
+            c.setRequestProperty("Content-Type", "application/json"); c.setRequestProperty("User-Agent", "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip")
+            val body = JSONObject().put("videoId", videoId).put("contentCheckOk", true).put("racyCheckOk", true)
+                .put("context", JSONObject().put("client", JSONObject().put("clientName", "ANDROID").put("clientVersion", "19.09.37").put("androidSdkVersion", 30).put("hl", "en").put("gl", "US")))
+            c.outputStream.use { it.write(body.toString().toByteArray()) }
+            val a = JSONObject(c.inputStream.bufferedReader().readText()).getJSONObject("streamingData").getJSONArray("adaptiveFormats")
+            (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("mimeType").startsWith("audio/mp4") && it.optString("url").isNotEmpty() }
+                .maxByOrNull { it.optInt("bitrate") }?.optString("url")
+        } finally { c.disconnect() }
+    }.getOrNull()
+
     private suspend fun apis(): List<String> {
         instances?.let { return it }
         val live = runCatching {
@@ -96,7 +158,7 @@ object PlaylistClient {
             o.optJSONArray("videoThumbnails")?.optJSONObject(0)?.optString("url")?.ifEmpty { null } ?: "https://i.ytimg.com/vi/$id/mqdefault.jpg", id)
     }
 
-    suspend fun youtubePlaylist(id: String): PList = try {
+    suspend fun youtubePlaylist(id: String): PList = runCatching { withContext(Dispatchers.IO) { ytPlaylist(id) } }.getOrNull() ?: try {
         val o = api("/playlists/$id")
         PList(o.optString("name", "Playlist"), items(o.optJSONArray("relatedStreams") ?: JSONArray()), "https://www.youtube.com/playlist?list=$id")
         // shortcut: only the first page (about 100 songs), no "nextpage" paging; add /nextpage/playlists/$id if long lists matter
@@ -105,7 +167,7 @@ object PlaylistClient {
         PList(o.optString("title", "Playlist"), invItems(o.optJSONArray("videos") ?: JSONArray()), "https://www.youtube.com/playlist?list=$id")
     }
 
-    suspend fun searchSongs(q: String): PList = try {
+    suspend fun searchSongs(q: String): PList = runCatching { withContext(Dispatchers.IO) { ytSearch(q) } }.getOrNull() ?: try {
         PList(q, items(api("/search?q=${enc(q)}&filter=music_songs").optJSONArray("items") ?: JSONArray()))
     } catch (e: Exception) {
         PList(q, invItems(JSONArray(invText("/api/v1/search?q=${enc(q)}&type=video"))))
@@ -149,7 +211,7 @@ object PlaylistClient {
     }
 
     /** Direct audio URL (Piped proxy, MP4/AAC preferred because ExoPlayer plays it everywhere). */
-    suspend fun audioUrl(videoId: String): String? = runCatching {
+    suspend fun audioUrl(videoId: String): String? = withContext(Dispatchers.IO) { ytAudio(videoId) } ?: runCatching {
         val a = api("/streams/$videoId").getJSONArray("audioStreams")
         val l = (0 until a.length()).map { a.getJSONObject(it) }
         (l.filter { it.optString("mimeType").contains("mp4") }.maxByOrNull { it.optInt("bitrate") } ?: l.maxByOrNull { it.optInt("bitrate") })?.optString("url")

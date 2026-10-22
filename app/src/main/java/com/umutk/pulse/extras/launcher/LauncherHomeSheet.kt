@@ -46,7 +46,7 @@ object HomeSheetState {
 fun HomeSheet() {
     val ctx = LocalContext.current
     val addWidget = rememberWidgetAdd { }
-    if (HomeSheetState.sheet) ContextPopup(220.dp, 190.dp, onDismiss = { HomeSheetState.sheet = false }) {
+    if (HomeSheetState.sheet) ContextPopup(220.dp, 240.dp, onDismiss = { HomeSheetState.sheet = false }) {
         val w = com.umutk.pulse.LocalWindowLook.current
         ActionRow("settings", tr("Settings", "Ayarlar"), w.text) {
             HomeSheetState.sheet = false
@@ -56,6 +56,7 @@ fun HomeSheet() {
         }
         ActionRow("light", tr("Display settings", "Ekran ayarları"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
         ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
+        if (LauncherPrefs.look in setOf("win11", "win10", "win7", "xp", "win95")) ActionRow("notes", tr("Notes gadget", "Not gadget'ı"), w.text) { HomeSheetState.sheet = false; LauncherPrefs.desktopNote = !LauncherPrefs.desktopNote; LauncherPrefs.save(ctx) }
         ActionRow("gridView", tr("Widgets", "Widget'lar"), w.text) { HomeSheetState.sheet = false; HomeSheetState.widgets = true }
     }
     if (HomeSheetState.widgets) WidgetPickDialog(
