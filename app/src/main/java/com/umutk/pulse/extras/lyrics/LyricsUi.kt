@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.lyrics
 
+import androidx.compose.ui.graphics.graphicsLayer
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.Dispatchers
 import androidx.compose.runtime.mutableIntStateOf
@@ -66,20 +67,28 @@ import kotlinx.coroutines.delay
 fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?, modifier: Modifier = Modifier, mark: String = "") {
     val state = rememberLazyListState()
     val cur = if (result.synced && positionMs >= 0) result.lines.indexOfLast { it.timeMs <= positionMs } else -1
-    LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2)) }
+    LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2), 0) }
     LazyColumn(modifier, state = state) {
         itemsIndexed(result.lines) { i, l ->
             val on = i == cur
-            if (l.text.isEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.extras.ui.TIcon("note", T.sub, 20.dp) } else Text(
-                lyricMarked(l.text, mark, MaterialTheme.colorScheme.primary),
-                color = if (on) MaterialTheme.colorScheme.primary else T.sub,
-                fontSize = if (on) 22.sp else 17.sp,
-                fontWeight = if (on) FontWeight.Bold else FontWeight.SemiBold,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth()
-                    .then(if (onSeek != null && result.synced) Modifier.clickable { onSeek(l.timeMs) } else Modifier)
-                    .padding(vertical = 8.dp),
-            )
+            if (l.text.isEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.extras.ui.TIcon("note", T.sub, 20.dp) } else {
+                // the line being sung grows and takes the accent, the others fade with their distance from it (all eased, none jumps)
+                val scale by androidx.compose.animation.core.animateFloatAsState(if (on) 1.18f else 1f, androidx.compose.animation.core.tween(300), label = "lyScale")
+                val tone by androidx.compose.animation.animateColorAsState(if (on) MaterialTheme.colorScheme.primary else T.sub, androidx.compose.animation.core.tween(300), label = "lyTone")
+                val dist = if (cur < 0) 0 else kotlin.math.abs(i - cur)
+                val fade by androidx.compose.animation.core.animateFloatAsState(if (cur < 0 || on) 1f else (1f - .13f * dist).coerceAtLeast(.35f), androidx.compose.animation.core.tween(300), label = "lyFade")
+                Text(
+                    lyricMarked(l.text, mark, MaterialTheme.colorScheme.primary),
+                    color = tone,
+                    fontSize = 18.sp,
+                    fontWeight = if (on) FontWeight.Bold else FontWeight.SemiBold,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                        .then(if (onSeek != null && result.synced) Modifier.clickable { onSeek(l.timeMs) } else Modifier)
+                        .padding(vertical = 8.dp)
+                        .graphicsLayer { scaleX = scale; scaleY = scale; alpha = fade },
+                )
+            }
         }
     }
 }
