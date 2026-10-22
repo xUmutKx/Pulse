@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music
 
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -187,12 +189,13 @@ fun MusicHub(onBack: () -> Unit) {
         if (onlineOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.playlists.OnlinePlaylistsHub { onlineOpen = false } }
         if (spotifyOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
         if (playlistsOpen) PlaylistsDialog(engine, st.queue) { playlistsOpen = false }
-        if (settingsOpen) {
-            BackHandler { settingsOpen = false; rev++ }
+        // the settings are a full-screen page of their own (a dialog without the usual width limit), not a panel inside the player
+        if (settingsOpen) androidx.compose.ui.window.Dialog(onDismissRequest = { settingsOpen = false; rev++ },
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
             val ink = T.text
             var inCat by remember { mutableStateOf(false) }
             // with the art background on, the menu sits on a half-transparent dark layer so its white text reads over the cover
-            Column(Modifier.fillMaxSize().background(if (artBg) Color.Black.copy(alpha = .6f) else T.bg).padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
+            Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
                 if (!inCat) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { settingsOpen = false; rev++ }, contentAlignment = Alignment.Center) { PIcon("back", ink, 22.dp) }

@@ -229,7 +229,11 @@ private class BellView(c: Context) : View(c) {
 class CoverAccessibilityService : android.accessibilityservice.AccessibilityService() {
     // the automatic trigger of the advanced cover: this service stays alive, so it can watch the charger and the screen's direction
     private val power = object : android.content.BroadcastReceiver() {
-        override fun onReceive(c: Context, i: Intent) { autoCheck() }
+        override fun onReceive(c: Context, i: Intent) {
+            // the launcher (another process) asks for a system action: lock the screen, open the notification shade
+            if (i.action == "com.umutk.pulse.action.GLOBAL") { performGlobalAction(i.getIntExtra("g", 0)); return }
+            autoCheck()
+        }
     }
 
     /** Starts the advanced cover when the phone charges (and, if asked, lies sideways); closes it again once the trigger no longer holds. */
@@ -246,7 +250,7 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
     override fun onServiceConnected() {
         instance = this
         runCatching {
-            registerReceiver(power, android.content.IntentFilter().apply { addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED); addAction(Intent.ACTION_SCREEN_ON) })
+            registerReceiver(power, android.content.IntentFilter().apply { addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED); addAction(Intent.ACTION_SCREEN_ON); addAction("com.umutk.pulse.action.GLOBAL") }, Context.RECEIVER_NOT_EXPORTED)
         }
     }
     override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {}

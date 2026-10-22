@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.clickable
 import android.app.WallpaperManager
 import android.content.Context
@@ -34,7 +35,8 @@ import kotlinx.coroutines.delay
 fun wallpaperRes(lookId: String, landscape: Boolean = false): Int? {
     val all = wallsFor(lookId)
     if (all.isEmpty()) return null
-    var i = LauncherPrefs.wallIndex(lookId).coerceIn(0, all.lastIndex)
+    // "a different wallpaper every day": the day of the year picks the picture
+    var i = (if (LauncherPrefs.wallDaily) java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR) % all.size else LauncherPrefs.wallIndex(lookId)).coerceIn(0, all.lastIndex)
     // a phone picture is tall: a rotated screen takes the first desktop picture of the look instead
     if (landscape && com.umutk.pulse.features.isMobileWall(lookId, i)) i = all.indices.firstOrNull { !com.umutk.pulse.features.isMobileWall(lookId, it) } ?: i
     // a desktop picture is wide: a portrait screen takes the first phone picture instead
@@ -50,8 +52,9 @@ fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modi
     val res = wallpaperRes(lookId, land)
     val bmp = remember(res) { res?.let { BitmapFactory.decodeResource(ctx.resources, it, BitmapFactory.Options().apply { inSampleSize = 2 })?.asImageBitmap() } }
     Box(modifier.fillMaxSize()) {
-        if (bmp != null) Image(bmp, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        if (bmp != null) Image(bmp, null, Modifier.fillMaxSize().then(if (LauncherPrefs.wallBlur > 0) Modifier.blur(LauncherPrefs.wallBlur.dp) else Modifier), contentScale = ContentScale.Crop)
         else Box(Modifier.fillMaxSize().background(fallback))
+        if (LauncherPrefs.wallDim > 0) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = LauncherPrefs.wallDim / 100f)))
         content()
     }
 }
@@ -66,8 +69,8 @@ fun LauncherWallpaper(lookId: String, fallback: Color, modifier: Modifier = Modi
 fun TaskbarClock(color: Color, modifier: Modifier = Modifier) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(Unit) { while (true) { delay(15_000L); now = System.currentTimeMillis() } }
-    val time = SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(now))
-    val date = SimpleDateFormat("dd/MM/yy", Locale.getDefault()).format(Date(now))
+    val time = SimpleDateFormat(if (LauncherPrefs.clock24) "HH:mm" else "h:mm a", Locale.getDefault()).format(Date(now))
+    val date = SimpleDateFormat(when (LauncherPrefs.dateFmt) { "mdy" -> "MM/dd/yy"; "ymd" -> "yyyy-MM-dd"; else -> "dd/MM/yy" }, Locale.getDefault()).format(Date(now))
     Text("$time\n$date", color = color, fontSize = 12.sp, lineHeight = 14.sp, textAlign = TextAlign.End, modifier = modifier.clickable { LauncherSession.clockOpen = !LauncherSession.clockOpen })
 }
 

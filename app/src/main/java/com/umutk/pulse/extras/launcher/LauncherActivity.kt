@@ -266,6 +266,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val dock = dockApps(visible, LauncherPrefs.dock)
     var query by remember { mutableStateOf("") }
     LaunchedEffect(LauncherSession.startOpen) { if (!LauncherSession.startOpen) query = "" }
+    // "keep the screen on at home"
+    val hostActivity = LocalContext.current as? android.app.Activity
+    androidx.compose.runtime.SideEffect { hostActivity?.window?.let { w -> if (LauncherPrefs.keepOn) w.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
     val drawer = remember(visible, query) {
         if (query.isBlank()) visible else visible.filter { it.label.contains(query.trim(), ignoreCase = true) }
     }
