@@ -212,7 +212,7 @@ fun CoverCarousel(
                         val dirY = if (totalY < -reach && upNow != null) -1 else if (totalY > reach && downNow != null) 1 else 0
                         settle = scope.launch {
                             if (dirY != 0) {
-                                animate(pull, dirY * size.height * 3.2f, animationSpec = tween(240, easing = FastOutLinearInEasing)) { v, _ -> pull = v }
+                                animate(pull, dirY * size.height * 3.2f, animationSpec = tween(360, easing = FastOutLinearInEasing)) { v, _ -> pull = v }
                                 if (dirY < 0) upNow?.invoke() else downNow?.invoke()
                                 // if the page is still there (the lyrics opened over it) the cover comes back; a closed page takes this scope with it
                                 delay(400)
@@ -225,7 +225,7 @@ fun CoverCarousel(
                         // dir: 1 = next track (slides in from the right), -1 = previous (from the left), 0 = snap back
                         val dir = if (!sideways || abs(sum) < w * .2f) 0 else if (sum < 0 && canNext) 1 else if (sum > 0 && canPrev) -1 else 0
                         settle = scope.launch {
-                            animate(slide, if (dir == 0) 0f else -dir * w, animationSpec = tween(220, easing = FastOutSlowInEasing)) { v, _ -> slide = v }
+                            animate(slide, if (dir == 0) 0f else -dir * w, animationSpec = tween(360, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { v, _ -> slide = v }
                             if (dir != 0) {
                                 carried = if (dir > 0) nextArtNow else prevArtNow
                                 carrying = true
@@ -238,8 +238,8 @@ fun CoverCarousel(
                 onDragCancel = {
                     if (vertical && pageDragNow != null) pageReleaseNow?.invoke()
                     else settle = scope.launch {
-                        if (vertical) animate(pull, 0f, animationSpec = spring(dampingRatio = .4f, stiffness = Spring.StiffnessMedium)) { v, _ -> pull = v }
-                        else animate(slide, 0f, animationSpec = tween(180)) { v, _ -> slide = v }
+                        if (vertical) animate(pull, 0f, animationSpec = spring(dampingRatio = .55f, stiffness = Spring.StiffnessLow)) { v, _ -> pull = v }
+                        else animate(slide, 0f, animationSpec = tween(300, easing = androidx.compose.animation.core.CubicBezierEasing(.2f, 0f, 0f, 1f))) { v, _ -> slide = v }
                     }
                 },
                 onDrag = { c, d ->
