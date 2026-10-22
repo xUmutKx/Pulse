@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.music
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -98,6 +100,7 @@ fun RecommendationHome(
                 }
             }
         }
+        MixMaker(library, ink, dim, tile, accent) { l -> if (onQueue != null) onQueue(l, 0) else l.firstOrNull()?.let { play(it) } }
     }
 }
 
@@ -149,5 +152,59 @@ private fun Tile(
             t.displayName(), color = if (playing) accent else ink, fontSize = 13.sp, maxLines = 1,
             overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
         )
+    }
+}
+
+
+/** The moods the mix maker offers; the keys are the ones [Recommendations.moodsOf] returns. */
+private val MIX_MOODS = listOf("energetic" to ("Energetic" to "Enerjik"), "chill" to ("Chill" to "Sakin"), "focus" to ("Focus" to "Odak"), "happy" to ("Happy" to "Neşeli"))
+private val MIX_SOURCES = listOf("all" to ("Everything" to "Hepsi"), "fav" to ("Favourites" to "Favoriler"), "top" to ("Most played" to "En çok çalınan"), "fresh" to ("Not heard lately" to "Uzun süredir dinlenmeyen"))
+
+/** The mix maker at the bottom of the home: pick moods, where the songs come from and how many, and a queue is made and played. */
+@Composable
+private fun MixMaker(library: List<Track>, ink: Color, dim: Color, tile: Color, accent: Color, onMake: (List<Track>) -> Unit) {
+    val ctx = LocalContext.current
+    var moods by remember { androidx.compose.runtime.mutableStateOf(setOf<String>()) }
+    var source by remember { androidx.compose.runtime.mutableStateOf("all") }
+    var count by remember { androidx.compose.runtime.mutableIntStateOf(30) }
+    var note by remember { androidx.compose.runtime.mutableStateOf("") }
+    @Composable fun chip(on: Boolean, label: String, click: () -> Unit) = androidx.compose.material3.Text(
+        label, color = if (on) Color.Black else ink, fontSize = 13.sp, maxLines = 1,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(if (on) accent else tile).clickable(onClick = click).padding(horizontal = 14.dp, vertical = 8.dp),
+    )
+    Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        androidx.compose.material3.Text(tr("Mix maker", "Mix yapıcı"), color = ink, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+        androidx.compose.material3.Text(tr("Mood (none = any)", "Ruh hali (seçme = hepsi)"), color = dim, fontSize = 12.sp)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(MIX_MOODS) { (k, n) -> chip(k in moods, tr(n.first, n.second)) { moods = if (k in moods) moods - k else moods + k } }
+        }
+        androidx.compose.material3.Text(tr("Songs from", "Şarkılar"), color = dim, fontSize = 12.sp)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            items(MIX_SOURCES) { (k, n) -> chip(source == k, tr(n.first, n.second)) { source = k } }
+        }
+        androidx.compose.material3.Text(tr("How many", "Kaç şarkı"), color = dim, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(15, 30, 60).forEach { n -> chip(count == n, "$n") { count = n } } }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.Text(tr("Make mix", "Mix yap"), color = Color.Black, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clip(RoundedCornerShape(50)).background(accent).clickable {
+                    val stats = MusicStats.all(ctx).associateBy { it.path }
+                    val fav = MusicStats.favourites(ctx)
+                    var pool = library.filter { t -> moods.isEmpty() || Recommendations.moodsOf(t).any { it in moods } }
+                    pool = when (source) {
+                        "fav" -> pool.filter { it.path in fav }
+                        "top" -> pool.sortedByDescending { stats[it.path]?.plays ?: 0 }.take(maxOf(count * 3, 40))
+                        "fresh" -> pool.sortedBy { stats[it.path]?.lastPlayed ?: 0L }.take(maxOf(count * 3, 40))
+                        else -> pool
+                    }
+                    if (pool.size < 2) { note = tr("Too few songs match: loosen the mood or the source", "Çok az şarkı uyuyor: ruh halini ya da kaynağı gevşet") }
+                    else {
+                        // the queue follows the smart shuffle: songs that suit each other, not a dice roll
+                        val order = SmartShuffle.order(ctx, pool, java.util.Random().nextInt(pool.size), .45f)
+                        note = ""
+                        onMake(order.map { pool[it] }.take(count))
+                    }
+                }.padding(horizontal = 22.dp, vertical = 10.dp))
+            if (note.isNotEmpty()) androidx.compose.material3.Text(note, color = dim, fontSize = 12.sp, modifier = Modifier.padding(start = 12.dp))
+        }
     }
 }

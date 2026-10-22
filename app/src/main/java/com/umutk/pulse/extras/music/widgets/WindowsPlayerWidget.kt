@@ -91,7 +91,7 @@ class WindowsPlayerWidget : AppWidgetProvider() {
             val frac = if (dur > 0) (e.player.currentPosition.toFloat() / dur).coerceIn(0f, 1f) else 0f
             val cover = st.current?.let { runCatching { trackArt(c, it)?.asAndroidBitmap() }.getOrNull() }
             val title = st.current?.let { it.title ?: it.path.substringAfterLast('/') } ?: ""
-            val bmp = render(WidgetStyles.of(c, id), title, st.current?.shownArtist().orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover, bw, bh)
+            val bmp = render(WidgetStyles.of(c, id), title, st.current?.shownArtist().orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover, bw, bh, WidgetOpts.bg(c) != "none", WidgetOpts.artPct(c))
             val f = fit(bw, bh)
             return RemoteViews(c.packageName, R.layout.widget_winplayer).apply {
                 setImageViewBitmap(R.id.wp_img, bmp)
@@ -145,7 +145,7 @@ class WindowsPlayerWidget : AppWidgetProvider() {
             cv.drawPath(Path().apply { moveTo(cx[2] - u, cy - u); lineTo(cx[2] + u - 2.5f * scale, cy); lineTo(cx[2] - u, cy + u); close() }, p)
         }
 
-        fun render(style: WidgetStyle, title: String, artist: String, frac: Float, playing: Boolean, posMs: Long, durMs: Long, cover: Bitmap?, bw: Int, bh: Int): Bitmap {
+        fun render(style: WidgetStyle, title: String, artist: String, frac: Float, playing: Boolean, posMs: Long, durMs: Long, cover: Bitmap?, bw: Int, bh: Int, card: Boolean = true, artPct: Int = 100): Bitmap {
             val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
             val f = fit(bw, bh)
@@ -228,8 +228,10 @@ class WindowsPlayerWidget : AppWidgetProvider() {
                     val sub = if (dark || style == WidgetStyle.WIN10) 0xFFB0B0B0.toInt() else 0xFF49454F.toInt()
                     val accent = when (style) { WidgetStyle.WIN11, WidgetStyle.WIN11_DARK, WidgetStyle.WIN10 -> 0xFF0078D4.toInt(); WidgetStyle.AMOLED -> 0xFFFFFFFF.toInt(); else -> 0xFF6750A4.toInt() }
                     val corner = if (style == WidgetStyle.WIN10) 0f else if (style == WidgetStyle.WIN11 || style == WidgetStyle.WIN11_DARK) 12f else 22f
-                    p.color = bg; cv.drawRoundRect(RectF(0f, 0f, W.toFloat(), H.toFloat()), corner, corner, p)
-                    val art = RectF(12f, 12f, 92f, 92f); coverInto(cv, cover, art, accent and 0x00FFFFFF or 0x55000000, if (corner > 0f) 10f else 0f)
+                    // the card can be taken away (transparent widget); then the text and buttons sit straight on the wallpaper in the look's text colour
+                    if (card) { p.color = bg; cv.drawRoundRect(RectF(0f, 0f, W.toFloat(), H.toFloat()), corner, corner, p) }
+                    val half = 40f * artPct.coerceIn(30, 100) / 100f
+                    val art = RectF(52f - half, 52f - half, 52f + half, 52f + half); coverInto(cv, cover, art, accent and 0x00FFFFFF or 0x55000000, if (corner > 0f) 10f else 0f)
                     text(cv, title, 104f, 34f, 16f, ink, W - 116f, bold = true)
                     text(cv, artist, 104f, 54f, 13f, sub, W - 116f)
                     p.color = sub and 0x00FFFFFF or 0x44000000; cv.drawRoundRect(RectF(104f, 76f, W - 12f, 80f), 2f, 2f, p)
