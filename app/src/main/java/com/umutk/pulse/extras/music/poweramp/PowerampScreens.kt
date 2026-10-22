@@ -299,9 +299,11 @@ fun NowPlayingScreen(
             // near a screen edge stays on the cover instead of going back out of the player
             val view = LocalView.current
             DisposableEffect(view) { onDispose { view.systemGestureExclusionRects = emptyList() } }
+            // the cover settles a little smaller when the music is paused and springs back when it plays
+            val coverScale by animateFloatAsState(if (playing) 1f else .9f, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f), label = "coverScale")
             Box(
                 // not clipped here: each cover is clipped itself, so one pulled up or down can leave the square
-                Modifier.fillMaxWidth().aspectRatio(1f)
+                Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }
                     .onGloballyPositioned { c ->
                         val b = c.boundsInWindow()
                         view.systemGestureExclusionRects = listOf(android.graphics.Rect(0, b.top.roundToInt(), view.width, b.bottom.roundToInt()))
@@ -621,7 +623,8 @@ private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, w
     LaunchedEffect(playing) {
         while (playing) {
             val s = MusicLevels.snapshot()
-            levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, (g + 1) * MusicLevels.BANDS / n).average().toFloat() }
+            val prev = levels
+            levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, (g + 1) * MusicLevels.BANDS / n).average().toFloat().let { v -> maxOf(v, prev[g] * .82f) } }
             delay(50)
         }
         levels = List(n) { 0f }
@@ -652,7 +655,8 @@ private fun FullVisualizer(playing: Boolean, style: PowerampStyle, onDismiss: ()
     LaunchedEffect(playing) {
         while (playing) {
             val s = MusicLevels.snapshot()
-            levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, ((g + 1) * MusicLevels.BANDS / n).coerceAtLeast(g * MusicLevels.BANDS / n + 1)).average().toFloat() }
+            val prev = levels
+            levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, ((g + 1) * MusicLevels.BANDS / n).coerceAtLeast(g * MusicLevels.BANDS / n + 1)).average().toFloat().let { v -> maxOf(v, prev[g] * .86f) } }
             delay(33)
         }
         levels = List(n) { 0f }

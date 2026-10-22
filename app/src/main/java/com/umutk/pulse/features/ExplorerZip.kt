@@ -180,7 +180,7 @@ private fun notifyEnd(c: Context, job: ZipJob, st: ZipState) {
     val open = PendingIntent.getActivity(c, job.id, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     val icon = if (st == ZipState.DONE) android.R.drawable.stat_sys_download_done else android.R.drawable.stat_notify_error
     nm.notify(ZC_ID_END + job.id, NotificationCompat.Builder(c, ZC_CH_END).setSmallIcon(icon)
-        .setContentTitle(job.name).setContentText(endText(job, st)).setAutoCancel(true).setContentIntent(open).build())
+        .setContentTitle(job.name).setContentText(endText(job, st)).setAutoCancel(true).setSilent(true).setTimeoutAfter(4000L).setContentIntent(open).build())
 }
 
 /** Keeps the process alive while a compression runs, and shows its progress in one notification. */
