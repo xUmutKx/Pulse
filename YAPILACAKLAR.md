@@ -1048,3 +1048,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.237 derlenmedi: sistemde açma/paylaşma listesinde "Pulse · Save to…" (bir dosyayı ad+klasör seçip kopya kaydet); ekran görüntüsü/kayıt kutucuğu kamera+köşe simgesi, basılı tutma küçük popup (görüntü + kayıt), ekran görüntüleri DCIM/Screenshots, root yoksa erişilebilirlik ile ekran görüntüsü; ana Ayarlar yuvarlak renkli kategori listesi.
 
 - 0.10.238 derlenmedi: müzik ayarları tam ekran sayfa (kategorili); launcher ayarları kategori listesi + tam sayfalar; launcher Ekstralar: çift dokunuşla kilit, aşağı kaydır bildirim, yukarı kaydır uygulamalar, simge şekli, günlük duvar kağıdı, karartma, bulanıklık, 24 saat, tarih biçimi, saniye, ekran açık, titreşim, arama klavyesi, düzen kilidi, ayar dışa/içe aktar (15 özellik).
+
+- 0.10.239 derlenmedi: 0.10.238 derleme düzeltmesi (importlar).
