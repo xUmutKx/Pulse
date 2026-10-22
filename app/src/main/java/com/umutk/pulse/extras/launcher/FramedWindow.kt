@@ -46,7 +46,7 @@ internal fun frameSkin(look: String): WinSkin = when (look) {
         Color.White, Color(0xFFF2F2F2), Color.White, Color(0xFF1A1A1A), Color(0xFF666666), Color(0xFFCCE4F7), Color(0xFF1A1A1A), Color(0xFF0078D7))
     // dark Mica: near-black grey, so the blurred picture behind never turns the window white
     "win11" -> WinSkin("11", SolidColor(Color(0xFF202020)), Color.White, Color(0xFF202020), 1.dp, 10.dp,
-        Color(0xFF1C1C1C), Color(0xFF202020), Color(0xFF2B2B2B), Color.White, Color(0xFFB0B0B0), Color(0xFF3A3A3A), Color.White, Color(0xFF505050)),
+        Color(0xFF1C1C1C), Color(0xFF202020), Color(0xFF2B2B2B), Color.White, Color(0xFFB0B0B0), Color(0xFF3A3A3A), Color.White, Color(0xFF505050))
     else -> WinSkin("mat", SolidColor(Color(0xFF1E1E22)), Color.White, Color(0xFF2B2B30), 0.dp, 24.dp,
         Color(0xFF121214), Color(0xFF1E1E22), Color(0xFF26262B), Color.White, Color(0xFFAAAAAA), Color(0xFF34343A), Color.White, Color(0xFF3A3A40))
 }
