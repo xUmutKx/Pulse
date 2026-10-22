@@ -1018,3 +1018,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.222 derlenmedi: söz bildirimindeki ok emoji değil düz karakter (►).
 
 - 0.10.223 derlenmedi: kapak kaydırmada komşu kapaklar çalma sırasını (karıştırma dahil) gösterir; düz ve hızlı kayma (eğik çark kalktı).
+
+- 0.10.224 derlenmedi: söz bildirimi vurgusu ayarı (başlık altı çizili / ince satır, açılınca kalın / hep kalın).
