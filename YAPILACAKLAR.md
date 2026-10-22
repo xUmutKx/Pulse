@@ -962,3 +962,5 @@ Screen recorder feature list (55 candidates)
 - Player animations slower and softer (sheet, title slide, cover settle, lyrics sheet); Downloads: a web page link is read for its download links (plain fetch, no WebView) and the files found are listed; 0.10.194. derlenmedi
 
 - A link shared to Pulse opens a small window over the sharing app (Material sheet or Windows dialog box, own look) instead of the app; Settings > Pages in Windows 11 uses the colour Fluent pictures unless the line style is chosen; 0.10.195. derlenmedi
+
+- Installer: option to leave out the CPU splits of other ABIs in bundles (a single APK cannot be cut without re-signing); install window buttons follow the window look (text buttons in Material); 0.10.196. derlenmedi
