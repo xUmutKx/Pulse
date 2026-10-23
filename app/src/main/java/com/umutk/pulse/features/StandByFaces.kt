@@ -106,11 +106,26 @@ internal fun SegmentedFace(ctx: Context, ink: Color, tick: Long, wide: Boolean) 
     val txt = c.hh + colon + c.mm + (if (sec) colon + c.ss else "")
     val ghost = txt.map { if (it == ':' || it == ' ') ':' else '8' }.joinToString("")
     val f = clockFont(if (wide) "seg7b" else "seg7")
+    val line = TextStyle(drawStyle = if (StandByPrefs.outline(ctx)) Stroke(width = 4f) else Fill)
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val size = min(maxWidth.value / (txt.length * f.adv), maxHeight.value * .8f).coerceAtLeast(24f)
-        Box(contentAlignment = Alignment.Center) {
-            Text(ghost, color = ink.copy(alpha = .1f), fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false)
-            Text(txt, color = ink, fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false)
+        if (maxHeight > maxWidth * 1.1f) {
+            // an upright phone: hours over minutes (over seconds)
+            val parts = listOf(c.hh, c.mm) + (if (sec) listOf(c.ss) else emptyList())
+            val size = min(maxWidth.value / (2 * f.adv), maxHeight.value / parts.size * .78f).coerceAtLeast(24f)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                parts.forEach { t ->
+                    Box(contentAlignment = Alignment.Center) {
+                        Text("88", color = ink.copy(alpha = .1f), fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false)
+                        Text(t, color = ink, fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false, style = line)
+                    }
+                }
+            }
+        } else {
+            val size = min(maxWidth.value / (txt.length * f.adv), maxHeight.value * .8f).coerceAtLeast(24f)
+            Box(contentAlignment = Alignment.Center) {
+                Text(ghost, color = ink.copy(alpha = .1f), fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false)
+                Text(txt, color = ink, fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false, style = line)
+            }
         }
     }
 }
@@ -172,10 +187,16 @@ internal fun RetroFlipFace(ctx: Context, tick: Long, idx: Int) {
     val c = clk(ctx, tick)
     val bg = if (st.glow.size > 1) Brush.radialGradient(st.glow) else SolidColor(st.bg)
     val sec = StandByPrefs.seconds(ctx)
-    Row(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).background(bg).padding(18.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-        FlipCard(c.hh, st, Modifier.weight(1f).fillMaxHeight())
-        FlipCard(c.mm, st, Modifier.weight(1f).fillMaxHeight())
-        if (sec) FlipCard(c.ss, st, Modifier.weight(.6f).fillMaxHeight())
+    BoxWithConstraints(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).background(bg).padding(18.dp)) {
+        if (maxHeight > maxWidth * 1.1f) Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            FlipCard(c.hh, st, Modifier.weight(1f).fillMaxWidth())
+            FlipCard(c.mm, st, Modifier.weight(1f).fillMaxWidth())
+            if (sec) FlipCard(c.ss, st, Modifier.weight(.5f).fillMaxWidth())
+        } else Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            FlipCard(c.hh, st, Modifier.weight(1f).fillMaxHeight())
+            FlipCard(c.mm, st, Modifier.weight(1f).fillMaxHeight())
+            if (sec) FlipCard(c.ss, st, Modifier.weight(.6f).fillMaxHeight())
+        }
     }
 }
 
@@ -187,10 +208,12 @@ internal fun NeonFace(ctx: Context, ink: Color, tick: Long) {
     val txt = c.hh + (if (tick % 2 == 0L) ":" else " ") + c.mm
     val f = clockFont("tilt")
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        val size = min(maxWidth.value / (txt.length * f.adv), maxHeight.value * .6f).coerceAtLeast(24f)
+        val portrait = maxHeight > maxWidth * 1.1f
+        val parts = if (portrait) listOf(c.hh, c.mm) else listOf(txt)
+        val size = if (portrait) min(maxWidth.value / (2 * f.adv), maxHeight.value / 2 * .75f).coerceAtLeast(24f) else min(maxWidth.value / (txt.length * f.adv), maxHeight.value * .6f).coerceAtLeast(24f)
         Box(contentAlignment = Alignment.Center) {
-            Text(txt, color = ink.copy(alpha = .55f), fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false, style = TextStyle(shadow = Shadow(ink, Offset.Zero, 90f)))
-            Text(txt, color = Color.White.copy(alpha = .9f).compositeOver2(ink), fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false, style = TextStyle(shadow = Shadow(ink, Offset.Zero, 24f)))
+            Column(horizontalAlignment = Alignment.CenterHorizontally) { parts.forEach { Text(it, color = ink.copy(alpha = .55f), fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false, style = TextStyle(shadow = Shadow(ink, Offset.Zero, 90f))) } }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) { parts.forEach { Text(it, color = Color.White.copy(alpha = .9f).compositeOver2(ink), fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false, style = TextStyle(shadow = Shadow(ink, Offset.Zero, 24f))) } }
         }
     }
 }
@@ -228,8 +251,9 @@ internal fun MatrixFace(ctx: Context, tick: Long) {
         }
         val f = clockFont("kode")
         BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            val size = min(maxWidth.value / (5 * f.adv), maxHeight.value * .4f).coerceAtLeast(24f)
-            Text(c.hh + ":" + c.mm, color = green, fontSize = size.sp, fontFamily = f.family, maxLines = 1, softWrap = false,
+            val portrait = maxHeight > maxWidth * 1.1f
+            val size = if (portrait) min(maxWidth.value / (2 * f.adv), maxHeight.value * .22f).coerceAtLeast(24f) else min(maxWidth.value / (5 * f.adv), maxHeight.value * .4f).coerceAtLeast(24f)
+            Text(if (portrait) c.hh + "\n" + c.mm else c.hh + ":" + c.mm, color = green, fontSize = size.sp, fontFamily = f.family, maxLines = if (portrait) 2 else 1, softWrap = false, textAlign = TextAlign.Center, lineHeight = (size * 1.05f).sp,
                 style = TextStyle(shadow = Shadow(green, Offset.Zero, 30f)), modifier = Modifier.background(Color.Black.copy(alpha = .55f)).padding(horizontal = 12.dp))
         }
     }
@@ -248,15 +272,22 @@ internal fun PixelFace(ctx: Context, ink: Color, tick: Long) {
     val digits = (("%02d".format(c.hh.toInt())) + c.mm).map { it - '0' }
     val colonOn = tick % 2 == 0L
     Canvas(Modifier.fillMaxSize()) {
-        val colsTotal = 17; val rows = 5
-        val cell = min(size.width / colsTotal, size.height / (rows * 1.6f))
+        val portrait = size.height > size.width * 1.1f
+        // wide: HH : MM on one line (17 x 5 cells); upright: HH over MM (7 x 11 cells)
+        val colsTotal = if (portrait) 7 else 17; val rows = if (portrait) 11 else 5
+        val cell = min(size.width / colsTotal, size.height / (rows * (if (portrait) 1.15f else 1.6f)))
         val x0 = (size.width - cell * colsTotal) / 2f; val y0 = (size.height - cell * rows) / 2f
         fun px(col: Int, row: Int, on: Boolean) = drawRoundRect(if (on) ink else ink.copy(alpha = .07f), Offset(x0 + col * cell + cell * .06f, y0 + row * cell + cell * .06f), Size(cell * .88f, cell * .88f), CornerRadius(cell * .12f))
-        var col = 0
-        fun digit(d: Int) { val g = PIXEL_DIGITS[d]; for (r in 0 until 5) for (cc in 0 until 3) px(col + cc, r, g[r * 3 + cc] == '1'); col += 4 }
-        digit(digits[0]); digit(digits[1])
-        px(col, 1, colonOn); px(col, 3, colonOn); col += 2
-        digit(digits[2]); digit(digits[3])
+        fun digit(d: Int, col: Int, row: Int) { val g = PIXEL_DIGITS[d]; for (r in 0 until 5) for (cc in 0 until 3) px(col + cc, row + r, g[r * 3 + cc] == '1') }
+        if (portrait) {
+            digit(digits[0], 0, 0); digit(digits[1], 4, 0)
+            digit(digits[2], 0, 6); digit(digits[3], 4, 6)
+            px(3, 5, colonOn)
+        } else {
+            digit(digits[0], 0, 0); digit(digits[1], 4, 0)
+            px(8, 1, colonOn); px(8, 3, colonOn)
+            digit(digits[2], 10, 0); digit(digits[3], 14, 0)
+        }
     }
 }
 
@@ -458,24 +489,23 @@ internal fun ClockOfClocksFace(ctx: Context, ink: Color, tick: Long) {
     val c = clk(ctx, tick)
     val digits = (("%02d".format(c.hh.toInt())) + c.mm).map { it - '0' }
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        // 8 columns of clocks (4 digits of 2) and 3 rows
-        val cell = min(maxWidth / 9, maxHeight / 3.4f)
-        Row(horizontalArrangement = Arrangement.spacedBy(cell * .25f)) {
-            digits.chunked(2).forEach { pair ->
-                Row(horizontalArrangement = Arrangement.spacedBy(cell * .25f)) {
-                    pair.forEach { d ->
-                        Column {
-                            for (row in 0 until 3) Row {
-                                for (col in 0 until 2) {
-                                    val (a, b) = CLOCK_DIGITS[d][row * 2 + col]
-                                    MiniClock(a, b, ink, Modifier.size(cell))
-                                }
-                            }
+        val portrait = maxHeight > maxWidth * 1.1f
+        // wide: 4 digits in a row (8 clocks across, 3 down); upright: the hours over the minutes (4 across, 6 down)
+        val cell = if (portrait) min(maxWidth / 5, maxHeight / 7.2f) else min(maxWidth / 9, maxHeight / 3.4f)
+        @Composable fun pair(a: Int, b: Int) = Row(horizontalArrangement = Arrangement.spacedBy(cell * .25f)) {
+            listOf(a, b).forEach { d ->
+                Column {
+                    for (row in 0 until 3) Row {
+                        for (col in 0 until 2) {
+                            val (x, y) = CLOCK_DIGITS[d][row * 2 + col]
+                            MiniClock(x, y, ink, Modifier.size(cell))
                         }
                     }
                 }
             }
         }
+        if (portrait) Column(verticalArrangement = Arrangement.spacedBy(cell * .4f), horizontalAlignment = Alignment.CenterHorizontally) { pair(digits[0], digits[1]); pair(digits[2], digits[3]) }
+        else Row(horizontalArrangement = Arrangement.spacedBy(cell * .25f)) { pair(digits[0], digits[1]); pair(digits[2], digits[3]) }
     }
 }
 

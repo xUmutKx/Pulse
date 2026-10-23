@@ -1070,3 +1070,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.248 derlenmedi: yedek yüklenince "telefonda yok" mesajı kalktı; Favoriler yıldıza göre (çok yıldız önce, sonra ada göre); Ses bilgisi penceresinde ve parça menüsünde "Düzenle / Etiketleri düzenle"; YouTube anahtarı kaynak koddan kalktı (sayfadan okunur).
 
 - 0.10.249 derlenmedi: 0.10.248 derleme düzeltmesi (Edit ikonu importu); gelişmiş kapakta: Apple stili (Inter) font, kendi font dosyam (örn. SF Pro), yalnız kenar çizgisi (içi boş rakam), elle karıştırılan renk; gelişmiş modda temel kapağa ait düğmeler gizlendi; Poweramp yedeği ayarlarda Kütüphane altına taşındı, doğrudan içe aktarma veritabanı sütunlarını okuyarak çalışır ve hata nedenini yazar.
+
+- 0.10.250 derlenmedi: gelişmiş kapakta telefon dikeyken saat sayfaları düzeltildi: dijital, segmentli, neon, matrix, piksel, çevirmeli, saatlerden saat yatay yerine saat üstte dakika altta dizilir ve ekranı doldurur.
