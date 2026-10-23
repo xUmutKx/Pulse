@@ -146,6 +146,9 @@ object StandByPrefs {
     /** Automatic trigger: start by itself while the phone charges. */
     fun autoCharge(c: Context) = p(c).getBoolean("autoCharge", false)
     fun setAutoCharge(c: Context, v: Boolean) = p(c).edit().putBoolean("autoCharge", v).apply()
+    /** How big the clock and the widgets are on the cover, in percent. */
+    fun size(c: Context) = p(c).getInt("size", 100)
+    fun setSize(c: Context, v: Int) = p(c).edit().putInt("size", v).apply()
     /** Automatic trigger: start after this many seconds without a touch (0 = off). */
     fun idleSec(c: Context) = p(c).getInt("idleSec", 0)
     fun setIdleSec(c: Context, v: Int) = p(c).edit().putInt("idleSec", v).apply()
@@ -261,6 +264,13 @@ private fun StandByUi(ctx: Context, onClose: () -> Unit) {
 
 @Composable
 internal fun PageView(ctx: Context, id: String, ink: Color, tick: Long) {
+    // the size of everything on the cover (50 to 130 %)
+    val k = StandByPrefs.size(ctx) / 100f
+    Box(Modifier.fillMaxSize().graphicsLayer { scaleX = k; scaleY = k }) { PageViewBody(ctx, id, ink, tick) }
+}
+
+@Composable
+private fun PageViewBody(ctx: Context, id: String, ink: Color, tick: Long) {
     if (id.startsWith("duo_")) {
         val land = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val (a, b) = when (id) {
@@ -621,6 +631,8 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
         else -> Column {
             sw(tr("24-hour clock", "24 saatlik saat"), h24) { h24 = it; StandByPrefs.setH24(ctx, it); rev++ }
             sw(tr("Show seconds", "Saniyeleri göster"), sec) { sec = it; StandByPrefs.setSeconds(ctx, it); rev++ }
+            Text("${tr("Size", "Boyut")}: ${StandByPrefs.size(ctx)}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            com.umutk.pulse.PSlider((StandByPrefs.size(ctx) - 40) / 100f, { StandByPrefs.setSize(ctx, 40 + (it * 100).toInt()); rev++ }, 0f..1f, onDone = {})
             sw(tr("Move a little to protect the screen", "Ekranı korumak için hafif kay"), drift) { drift = it; StandByPrefs.setDrift(ctx, it) }
             sw(tr("Night mode: dim red from 22:00 to 06:00", "Gece modu: 22:00-06:00 arası loş kırmızı"), night) { night = it; StandByPrefs.setNight(ctx, it) }
             Text(tr("Triggers", "Tetikleyiciler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))

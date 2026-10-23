@@ -75,6 +75,8 @@ private val ZIP_EXT = setOf("zip", "apk", "jar", "xapk", "apks", "apkm", "aar")
 
 private fun kindOf(f: File): String {
     val n = f.name.lowercase()
+    // the volumes of a split archive: the first one stands for the whole (the others are not archives of their own)
+    if (Regex("""\.\d{3}$""").containsMatchIn(n)) return if (n.endsWith(".001")) kindOf(File(f.parentFile, f.name.dropLast(4))) else ""
     return when {
         n.endsWith(".tar.gz") || n.endsWith(".tgz") -> "tgz"
         n.endsWith(".tar") -> "tar"
@@ -173,7 +175,28 @@ private fun tarWalk(input: InputStream, body: (AEntry, () -> InputStream) -> Uni
 }
 
 /** Calls [body] for every entry; the stream lambda may be used once (tar entries come in order). Throws on unreadable or unsupported files. */
+/** The volumes name.ext.001, .002, ... joined into one file of the temporary folder (named name.ext so its type is known). */
+private fun joinVolumes(first: File): File {
+    val base = first.name.dropLast(4)
+    val out = File(System.getProperty("java.io.tmpdir") ?: first.parent, "vol_" + System.nanoTime() + "_" + base)
+    out.outputStream().buffered(256 * 1024).use { o ->
+        var i = 1
+        while (true) {
+            val part = File(first.parentFile, base + "." + i.toString().padStart(3, '0'))
+            if (!part.exists()) break
+            part.inputStream().use { it.copyTo(o) }
+            i++
+        }
+    }
+    return out
+}
+
 private fun walk(f: File, body: (AEntry, () -> InputStream) -> Unit) {
+    if (f.name.lowercase().endsWith(".001")) {
+        val joined = joinVolumes(f)
+        try { walk(joined, body) } finally { joined.delete() }
+        return
+    }
     when (kindOf(f)) {
         "zip" -> ZipFile(f).use { z ->
             for (e in z.entries().toList()) {

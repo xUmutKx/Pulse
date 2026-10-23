@@ -1103,7 +1103,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
 
     zipAsk?.let { files ->
-        ZipAskDialog(files, { zipAsk = null }) { name, kind -> zipAsk = null; ZipJobs.start(ctx, files, name, dir, kind) }
+        ZipAskDialog(files, { zipAsk = null }) { name, kind, bytes -> zipAsk = null; ZipJobs.start(ctx, files, name, dir, kind, bytes) }
     }
 
     openAsAsk?.let { f ->
