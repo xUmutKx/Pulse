@@ -274,7 +274,15 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         // the opening animation can be switched off in Settings: Pulse then opens straight to its first page
         if (!SplashGate.splashed && wctx !is FilesActivity && Opt.splash) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
         else if (!welcomed) Welcome { welcomed = true }
-        else key(th.dark) { App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it }) }
+        else key(th.dark) {
+            // tablets and landscape: the pages are phone lists, so on a wide screen they keep a readable width in the middle instead of stretching edge to edge
+            val wdp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+                androidx.compose.foundation.layout.Box(if (wdp > 900) Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()) {
+                    App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it })
+                }
+            }
+        }
         if (SplashGate.splashed && welcomed && wctx !is FilesActivity) UpdatePrompt()
     }
 }
