@@ -9,10 +9,10 @@ android {
     compileSdk = 34
     defaultConfig {
         applicationId = "com.umutk.pulse"
-        minSdk = 26
+        minSdk = 21
         targetSdk = 34
-        versionCode = 292
-        versionName = "0.10.282"
+        versionCode = 294
+        versionName = "0.10.284"
         ndk { abiFilters += "arm64-v8a" }
         resourceConfigurations += listOf("en", "tr")
     }
@@ -36,6 +36,7 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+    lint { checkOnly += setOf("NewApi"); abortOnError = false; textReport = true; textOutput = file("lint-newapi.txt"); checkReleaseBuilds = false }
     buildFeatures { compose = true; aidl = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }

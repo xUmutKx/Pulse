@@ -324,12 +324,15 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     // "keep the screen on at home"
     val hostActivity = LocalContext.current as? android.app.Activity
     androidx.compose.runtime.SideEffect { hostActivity?.window?.let { w -> if (LauncherPrefs.keepOn) w.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) else w.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) } }
-    val drawer = remember(visible, query) {
-        if (query.isBlank()) visible else visible.filter { it.label.contains(query.trim(), ignoreCase = true) }
+    val folderRows = LauncherPrefs.folders
+    val drawerBase = remember(visible, folderRows) { LauncherFolders.fold(visible) }
+    val drawer = remember(drawerBase, visible, query) {
+        if (query.isBlank()) drawerBase else visible.filter { it.label.contains(query.trim(), ignoreCase = true) }
     }
     var actionFor by remember { mutableStateOf<LaunchApp?>(null) }
     val open: (LaunchApp) -> Unit = { app ->
-        if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
+        if (isFolder(app)) FolderUi.open = app.pkg.removePrefix(FOLDER_PREFIX)
+        else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
         else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
     }
     val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), iconDp, dock, open) { if (!it.pkg.startsWith("pulse:")) actionFor = it }
@@ -407,6 +410,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         // the Windows Phone glance page; "all apps" on it opens the apps list
         if (LauncherSession.feedOpen && look.id.startsWith("winphone")) WinPhoneFeed({ LauncherSession.feedOpen = false; LauncherSession.startOpen = true }) { LauncherSession.feedOpen = false }
         HomeSheet()
+        FolderDialogs(visible, open) { actionFor = it }
         if (LauncherSession.searchOpen) QuickSearch(state) { LauncherSession.searchOpen = false }
         actionFor?.let { app -> AppActionDialog(app, autoDock) { actionFor = null } }
     }

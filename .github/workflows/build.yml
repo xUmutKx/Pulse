@@ -30,6 +30,13 @@ jobs:
       - name: Build release APK
         shell: bash
         run: set -o pipefail; gradle assembleRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon 2>&1 | tee build.log
+      - name: NewApi lint (minSdk 21 check)
+        if: always()
+        continue-on-error: true
+        run: |
+          gradle :app:lintRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g' -Pkotlin.daemon.jvmargs=-Xmx6g --no-daemon > lint.log 2>&1 || true
+          grep -E 'Error:|Call requires API|requires API level' app/lint-newapi.txt 2>/dev/null | head -80 | while IFS= read -r l; do echo "::warning::${l}"; done
+          grep -c "Call requires" app/lint-newapi.txt || true
       - name: Compile errors as annotations
         if: failure()
         run: |
