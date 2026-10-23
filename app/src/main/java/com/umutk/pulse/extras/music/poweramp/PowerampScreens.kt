@@ -114,6 +114,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.Player
 import com.umutk.pulse.Look
@@ -317,7 +318,12 @@ fun NowPlayingScreen(
             val coverScale by animateFloatAsState(if (playing) 1f else .9f, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f), label = "coverScale")
             Box(
                 // not clipped here: each cover is clipped itself, so one pulled up or down can leave the square
-                Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }
+                // the cover reaches out over the page margin on both sides, so it sits close to the screen edges
+                Modifier.layout { m, c ->
+                    val e = 8.dp.roundToPx()
+                    val p = m.measure(c.copy(minWidth = c.maxWidth + 2 * e, maxWidth = c.maxWidth + 2 * e, minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
+                    layout(c.maxWidth, p.height) { p.place(-e, 0) }
+                }.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }
                     .onGloballyPositioned { c ->
                         val b = c.boundsInWindow()
                         view.systemGestureExclusionRects = listOf(android.graphics.Rect(0, b.top.roundToInt(), view.width, b.bottom.roundToInt()))

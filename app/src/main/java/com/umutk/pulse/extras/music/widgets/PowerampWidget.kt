@@ -101,7 +101,7 @@ class PowerampWidget : AppWidgetProvider() {
             val style = powerampSkin(PowerampPrefs.skin(c)).build(NeutralAccent, Color.Black)
             val bmp = render(
                 style, title, st.current?.artistFor(c).orEmpty(), st.current?.album.orEmpty(), frac, st.isPlaying, e.player.currentPosition, dur, cover,
-                st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c),
+                st.index, st.queue.size, e.player.shuffleModeEnabled, e.player.repeatMode, bw, bh, stars(c), WidgetOpts.bg(c), WidgetOpts.artPct(c), WidgetOpts.corners(c), WidgetOpts.artShadow(c), WidgetOpts.artCircle(c),
             )
             val f = fit(bw, bh)
             return RemoteViews(c.packageName, R.layout.widget_poweramp).apply {
@@ -167,12 +167,16 @@ class PowerampWidget : AppWidgetProvider() {
         fun render(
             style: PowerampStyle, title: String, artist: String, album: String, frac: Float, playing: Boolean,
             posMs: Long, durMs: Long, cover: Bitmap?, index: Int, total: Int, shuffle: Boolean, repeat: Int, bw: Int, bh: Int, stars: Boolean = true,
-            bg: String = if (stars) "stars" else "black", artPct: Int = 100,
+            bg: String = if (stars) "stars" else "black", artPct: Int = 100, corners: Int = 1, artShadow: Boolean = false, artCircle: Boolean = false,
         ): Bitmap {
             val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
             val f = fit(bw, bh)
-            if (bg != "none") cv.drawColor(Color.Black.toArgb())
+            // the corners of the black or starry background (transparent has none to round)
+            if (bg != "none") {
+                val r = listOf(0f, 26f, 60f)[corners.coerceIn(0, 2)] * f.scale
+                cv.drawRoundRect(RectF(0f, 0f, bw.toFloat(), bh.toFloat()), r, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = Color.Black.toArgb() })
+            }
             cv.translate(f.x.toFloat(), f.y.toFloat()); cv.scale(f.scale, f.scale)
             val p = Paint(Paint.ANTI_ALIAS_FLAG)
             val dim = 0xFFA8A8A8.toInt()
@@ -192,8 +196,10 @@ class PowerampWidget : AppWidgetProvider() {
             // the cover keeps its centre and takes the chosen share of its square
             val half = 63f * artPct.coerceIn(30, 100) / 100f
             val art = RectF(75f - half, 75f - half, 75f + half, 75f + half)
+            val rad = if (artCircle) half else listOf(0f, 16f, half * .5f)[corners.coerceIn(0, 2)]
+            if (artShadow) cv.drawRoundRect(art, rad, rad, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.BLACK; setShadowLayer(12f, 0f, 5f, 0xB0000000.toInt()) })
             cv.save()
-            cv.clipPath(Path().apply { addRoundRect(art, 16f, 16f, Path.Direction.CW) })
+            cv.clipPath(Path().apply { addRoundRect(art, rad, rad, Path.Direction.CW) })
             if (cover != null) {
                 val side = minOf(cover.width, cover.height)
                 val src = android.graphics.Rect((cover.width - side) / 2, (cover.height - side) / 2, (cover.width + side) / 2, (cover.height + side) / 2)

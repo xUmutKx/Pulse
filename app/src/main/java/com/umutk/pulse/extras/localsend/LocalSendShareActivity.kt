@@ -65,7 +65,7 @@ class LocalSendShareActivity : ComponentActivity() {
         setContent { LookHost(transparent = true) { Panel(list) } }
     }
 
-    override fun onDestroy() { super.onDestroy(); LocalSendEngine.stop(); AppLookGuard.leave(this) }
+    override fun onDestroy() { super.onDestroy(); if (LocalSendEngine.busy.isEmpty()) LocalSendEngine.stop(); AppLookGuard.leave(this) }
 
     @Composable
     private fun Panel(list: List<Uri>) {
@@ -97,9 +97,12 @@ class LocalSendShareActivity : ComponentActivity() {
 
     private fun send(p: Peer, list: List<Uri>) {
         val app = applicationContext
+        val main = android.os.Handler(android.os.Looper.getMainLooper())
         Thread {
             val r = LocalSendEngine.send(app, p, list)
-            runOnUiThread { android.widget.Toast.makeText(this, r.ifBlank { tr("Sent", "Gönderildi") }, android.widget.Toast.LENGTH_LONG).show(); finish() }
+            main.post { android.widget.Toast.makeText(app, r.ifBlank { tr("Sent", "Gönderildi") }, android.widget.Toast.LENGTH_LONG).show() }
         }.start()
+        // with the bubble the sheet can go at once and the transfer stays in sight; without it the sheet waits for the end
+        if (LocalSendBubble.show(app)) finish() else Thread { var n = 0; while (LocalSendEngine.busy.isEmpty() && n++ < 100) Thread.sleep(50); while (LocalSendEngine.busy.isNotEmpty()) Thread.sleep(200); runOnUiThread { finish() } }.start()
     }
 }
