@@ -670,6 +670,9 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
+        <receiver android:name="com.umutk.pulse.extras.buds.BudsAutoStart" android:exported="true">
+            <intent-filter><action android:name="android.bluetooth.device.action.ACL_CONNECTED" /></intent-filter>
+        </receiver>
         <service android:name="com.umutk.pulse.extras.buds.BudsService" android:exported="false" android:foregroundServiceType="connectedDevice" />
         <!-- internet speed test tile (extras/speedtest): a tap starts it, the ring turns while it measures, the result sits under the name -->
         <service android:name="com.umutk.pulse.extras.speedtest.SpeedTestTile" android:exported="true" android:label="Speed test" android:icon="@drawable/ic_qs_speed"

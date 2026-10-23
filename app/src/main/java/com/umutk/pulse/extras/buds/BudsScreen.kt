@@ -81,6 +81,8 @@ fun BudsScreen(back: () -> Unit) {
     }
     // the only pair is picked at once, and the link is opened when the screen opens
     LaunchedEffect(devices) { if (address == null && devices.size == 1) { address = devices[0].first; BudsPrefs.setAddress(ctx, address) } }
+    // without "stay connected" the link (and its notification) only lives while this screen is open
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { if (!BudsPrefs.keepOn(ctx)) BudsService.stop(ctx) } }
     LaunchedEffect(address, granted) { if (address != null && granted && !BudsLink.state.value.connected) BudsService.start(ctx) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {

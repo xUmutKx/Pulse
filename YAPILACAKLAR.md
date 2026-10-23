@@ -1129,3 +1129,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.311: tüm uygulama NewApi taraması: tek bulgu (Html.fromHtml, API 24) HtmlCompat ile düzeltildi
 - 0.10.312: derlenmedi — Dosyalar ana sayfasından zip/apk açınca dış uygulamaya gitmez, Gözat sekmesi o klasörde açılır ve arşiv içinde gösterilir
 - 0.10.313: derlenmedi — hızlı ayarlar: kutucuk animasyonu art arda basılınca kare resmini asıl simge sanıyordu (DNS simgesi bozuluyordu), düzeltildi
+- 0.10.314: derlenmedi — Buds: bildirim yalnız ekran açıkken ya da "arka planda bağlı kal" açıkken; kulaklık yokken servis kapanır, bağlanınca (ACL) yeniden açılır
