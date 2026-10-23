@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.keyboard
 
+import androidx.core.content.ContextCompat
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
@@ -107,6 +108,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        st.inline = emptyList()
         // the settings may have changed the language since the last field
         KeyboardPrefs.load(this)
         val primary = KeyboardPrefs.langList().first()
@@ -135,6 +137,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onFinishInput() {
         super.onFinishInput()
+        st.inline = emptyList()
         lastEmail?.let { e -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(e) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != e }).take(5).joinToString("\n")).apply() } }
         lastEmail = null
         word.clear(); lastCorrection = null
@@ -270,6 +273,34 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         st.lang = l[(l.indexOf(st.lang) + 1).mod(l.size)]
         scope.launch(Dispatchers.IO) { KeyboardDictionary.load(this@PulseKeyboardService, st.lang); withContext(Dispatchers.Main) { updateSuggestions() } }
+    }
+
+    // ---- autofill inside the bar (Android 11+): the password manager's suggestions, drawn by the system -----------------------------------------------
+
+    @androidx.annotation.RequiresApi(30)
+    override fun onCreateInlineSuggestionsRequest(uiExtras: android.os.Bundle): android.view.inputmethod.InlineSuggestionsRequest? {
+        val d = resources.displayMetrics.density
+        val styles = androidx.autofill.inline.UiVersions.newStylesBuilder().addStyle(androidx.autofill.inline.v1.InlineSuggestionUi.newStyleBuilder().build()).build()
+        val spec = android.widget.inline.InlinePresentationSpec.Builder(android.util.Size((100 * d).toInt(), (38 * d).toInt()), android.util.Size((260 * d).toInt(), (42 * d).toInt())).setStyle(styles).build()
+        return android.view.inputmethod.InlineSuggestionsRequest.Builder(listOf(spec)).setMaxSuggestionCount(4).build()
+    }
+
+    @androidx.annotation.RequiresApi(30)
+    override fun onInlineSuggestionsResponse(response: android.view.inputmethod.InlineSuggestionsResponse): Boolean {
+        val list = response.inlineSuggestions
+        if (list.isEmpty()) { st.inline = emptyList(); return false }
+        val d = resources.displayMetrics.density
+        val size = android.util.Size((260 * d).toInt(), (42 * d).toInt())
+        val views = arrayOfNulls<android.view.View>(list.size)
+        var left = list.size
+        val main = ContextCompat.getMainExecutor(this)
+        list.forEachIndexed { i, sug ->
+            sug.inflate(this, size, main) { v ->
+                views[i] = v
+                if (--left == 0) st.inline = views.filterNotNull()
+            }
+        }
+        return true
     }
 
     override fun slotLong(i: Int) {

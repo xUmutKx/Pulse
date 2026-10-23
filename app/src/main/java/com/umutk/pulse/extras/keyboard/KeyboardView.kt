@@ -219,6 +219,15 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                     BarIcon(th, toolIcon(th, id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
                 }
             }
+        } else if (st.inline.isNotEmpty()) {
+            // a password manager has something for this field (login, password, card): its own suggestions take the bar
+            Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                st.inline.forEach { v ->
+                    androidx.compose.ui.viewinterop.AndroidView(factory = { c ->
+                        android.widget.FrameLayout(c).also { f -> (v.parent as? android.view.ViewGroup)?.removeView(v); f.addView(v) }
+                    })
+                }
+            }
         } else {
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 st.slots.forEachIndexed { i, s ->
