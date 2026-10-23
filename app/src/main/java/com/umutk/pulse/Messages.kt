@@ -36,6 +36,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -56,6 +58,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -63,6 +68,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import com.umutk.pulse.extras.messages.MsgCore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -101,7 +107,10 @@ object MsgPrefs {
     fun setUnreadFirst(c: Context, v: Boolean) { p(c).edit().putBoolean("unreadFirst", v).apply() }
 }
 
-private val MESSAGE_PERMS = arrayOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.READ_CONTACTS)
+private val MESSAGE_PERMS = buildList {
+    add(Manifest.permission.READ_SMS); add(Manifest.permission.SEND_SMS); add(Manifest.permission.RECEIVE_SMS); add(Manifest.permission.READ_CONTACTS)
+    if (android.os.Build.VERSION.SDK_INT >= 33) add(Manifest.permission.POST_NOTIFICATIONS)
+}.toTypedArray()
 private fun granted(c: Context, perm: String) = ContextCompat.checkSelfPermission(c, perm) == PackageManager.PERMISSION_GRANTED
 /** Reading and sending need READ_SMS and SEND_SMS; RECEIVE_SMS is not required to show the list. */
 fun hasSmsPermissions(c: Context) = granted(c, Manifest.permission.READ_SMS) && granted(c, Manifest.permission.SEND_SMS)
@@ -127,8 +136,17 @@ fun loadSmsThreads(c: Context, withNames: Boolean): List<SmsThread> {
             out[tid] = SmsThread(tid, addr, name, cur.getString(2).orEmpty(), cur.getLong(3))
         }
     }
+    // a picture message can be the newest of a thread
+    for (m in MsgCore.newestMms(c)) {
+        val old = out[m.id]
+        if (old == null || m.date > old.date) {
+            val addr = old?.address?.ifEmpty { null } ?: m.address
+            val name = old?.name ?: if (canNames && addr.isNotEmpty()) names.getOrPut(addr) { contactName(c, addr) } else null
+            out[m.id] = SmsThread(m.id, addr, name, m.snippet, m.date)
+        }
+    }
     out.values.forEach { it.unread = unread[it.id] ?: 0 }
-    return out.values.toList()
+    return out.values.sortedByDescending { it.date }
 }
 
 internal fun contactName(c: Context, address: String): String? = runCatching {
@@ -145,13 +163,16 @@ fun loadSmsThread(c: Context, tid: Long, address: String): List<SmsMsg> {
         arrayOf(if (byThread) tid.toString() else address), "${Telephony.Sms.DATE} ASC")?.use { cur ->
         while (cur.moveToNext()) out += SmsMsg(cur.getString(0).orEmpty(), cur.getInt(1) != Telephony.Sms.MESSAGE_TYPE_INBOX, cur.getLong(2))
     }
+    if (byThread) out += MsgCore.loadMms(c, tid)
+    out.sortBy { it.date }
     return out
 }
 
-/** Sends through the system SMS stack, which also stores the sent message in the provider. False when the send is refused. */
+/** Sends through the system SMS stack. The system stores the message, except when Pulse is the default SMS app (then Pulse does). False when the send is refused. */
 fun sendSms(c: Context, to: String, body: String): Boolean = runCatching {
     val sm = smsManager(c)
     sm.sendMultipartTextMessage(to, null, sm.divideMessage(body), null, null)
+    MsgCore.storeSent(c, to, body)
 }.isSuccess
 
 /** Sends the file at [uri] (with [text] as its text) as MMS. The library builds the MMS PDU; the system MMS stack sends it.
@@ -201,14 +222,27 @@ fun MessagesScreen(back: () -> Unit) {
     var pins by remember { mutableStateOf(MsgPrefs.pinned(ctx)) }
     var blocks by remember { mutableStateOf(MsgPrefs.blocked(ctx)) }
     var archives by remember { mutableStateOf(MsgPrefs.archived(ctx)) }
-    var open by remember { mutableStateOf<SmsThread?>(null) }
+    val startIntent = remember { MsgCore.activityOf(ctx)?.intent }
+    var open by remember { mutableStateOf<SmsThread?>(MsgCore.addressOf(startIntent)?.let { SmsThread(-1L, it, null, "", 0L) }) }
     var newMode by remember { mutableStateOf(false) }
     var settings by remember { mutableStateOf(false) }
     var newTo by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
     var threadQuery by remember { mutableStateOf("") }
     var threadSearch by remember { mutableStateOf(false) }
-    val drafts = remember { mutableStateMapOf<String, String>() }
+    val drafts = remember { mutableStateMapOf<String, String>().also { d ->
+        val a = MsgCore.addressOf(startIntent); val t0 = MsgCore.draftOf(startIntent)
+        if (a != null && t0 != null) d[a] = t0
+    } }
+    var numMenu by remember { mutableStateOf<String?>(null) }
+    var isDefault by remember { mutableStateOf(MsgCore.isDefault(ctx)) }
+    var notifyOn by remember { mutableStateOf(MsgPrefs.notify(ctx)) }
+    var showText by remember { mutableStateOf(MsgPrefs.showText(ctx)) }
+    var autoCopy by remember { mutableStateOf(MsgPrefs.autoCopy(ctx)) }
+    var bubbleOn by remember { mutableStateOf(MsgPrefs.bubbles(ctx)) }
+    var soundOn by remember { mutableStateOf(MsgPrefs.sound(ctx)) }
+    var vibOn by remember { mutableStateOf(MsgPrefs.vibrate(ctx)) }
+    val askDefault = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { isDefault = MsgCore.isDefault(ctx) }
     // the file picked for one conversation (by address); it goes out as MMS with that conversation's text
     val attach = remember { mutableStateMapOf<String, Uri>() }
     var pickFor by remember { mutableStateOf("") }
@@ -256,10 +290,15 @@ fun MessagesScreen(back: () -> Unit) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             MessagesIcon("back") { goBack() }
             // a long press on the contact or number in a thread copies the number
-            Text(title, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
-                overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).combinedClickable(onClick = {}, onLongClick = {
-                    if (t != null && t.address.isNotEmpty()) copyText(ctx, t.address)
-                }))
+            Box(Modifier.weight(1f)) {
+                Text(title, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
+                    overflow = TextOverflow.Ellipsis, modifier = Modifier.combinedClickable(onClick = {
+                        if (t != null && !settings && !newMode && t.address.isNotEmpty()) numMenu = t.address
+                    }, onLongClick = {
+                        if (t != null && t.address.isNotEmpty()) copyText(ctx, t.address)
+                    }))
+                if (t != null && !settings && !newMode) MsgNumberMenu(numMenu != null && numMenu == t.address, { numMenu = null }, t.address, ctx)
+            }
             if (t != null && !settings && !newMode) {
                 if (t.address.isNotEmpty()) MessagesIcon("phone") { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(t.address)))) }
                 MessagesIcon("search") { threadSearch = !threadSearch; threadQuery = "" }
@@ -274,6 +313,13 @@ fun MessagesScreen(back: () -> Unit) {
                 PButton(tr("Allow SMS", "SMS izni ver"), compact = true) { ask.launch(MESSAGE_PERMS) }
             }
             settings -> MessagesSettings(nameOn, unreadFirst, blocks, archives,
+                isDefault, { runCatching { askDefault.launch(MsgCore.defaultRequest(ctx)) } },
+                listOf(notifyOn, showText, autoCopy, bubbleOn, soundOn, vibOn),
+                { k, v -> when (k) {
+                    0 -> { notifyOn = v; MsgPrefs.setNotify(ctx, v) }; 1 -> { showText = v; MsgPrefs.setShowText(ctx, v) }
+                    2 -> { autoCopy = v; MsgPrefs.setAutoCopy(ctx, v) }; 3 -> { bubbleOn = v; MsgPrefs.setBubbles(ctx, v) }
+                    4 -> { soundOn = v; MsgPrefs.setSound(ctx, v) }; else -> { vibOn = v; MsgPrefs.setVibrate(ctx, v) }
+                } },
                 onNames = { nameOn = it; MsgPrefs.setNames(ctx, it) },
                 onUnread = { unreadFirst = it; MsgPrefs.setUnreadFirst(ctx, it) },
                 onUnblock = { a -> blocks = blocks - a; MsgPrefs.setBlocked(ctx, blocks) },
@@ -424,6 +470,8 @@ private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, onOpen: () -> Un
 @Composable
 private fun MessagesItem(list: List<SmsMsg>, k: Int, ctx: Context) {
     val m = list[k]
+    var menu by remember { mutableStateOf(false) }
+    var num by remember { mutableStateOf<String?>(null) }
     val newDay = k == 0 || !sameDay(list[k - 1].date, m.date)
     Column(Modifier.fillMaxWidth()) {
         if (newDay) Text(dayLabel(m.date), color = T.sub, fontSize = 12.sp, textAlign = TextAlign.Center,
@@ -432,9 +480,17 @@ private fun MessagesItem(list: List<SmsMsg>, k: Int, ctx: Context) {
             Column(horizontalAlignment = if (m.sent) Alignment.End else Alignment.Start) {
                 Box(Modifier.widthIn(max = 280.dp).clip(RoundedCornerShape(16.dp))
                     .background(if (m.sent) T.accent else T.panel)
-                    .combinedClickable(onClick = {}, onLongClick = { copyText(ctx, m.body) })
+                    .combinedClickable(onClick = {}, onLongClick = { menu = true })
                     .padding(horizontal = 12.dp, vertical = 8.dp)) {
-                    Text(m.body, color = if (m.sent) onAccent(T.accent) else T.text, fontSize = 15.sp)
+                    Column {
+                        m.images.forEach { u -> MsgPicture(u, ctx); Spacer(Modifier.height(4.dp)) }
+                        if (m.body.isNotEmpty()) MsgLinkedText(m.body, if (m.sent) onAccent(T.accent) else T.text, if (m.sent) onAccent(T.accent) else T.accent, onLong = { menu = true }) { num = it }
+                    }
+                    ThemedMenu(menu, { menu = false }) {
+                        ThemedMenuItem(tr("Copy", "Kopyala"), { menu = false; copyText(ctx, m.body) }, iconKey = "copy")
+                        MsgCore.otp(m.body)?.let { code -> ThemedMenuItem(tr("Copy code $code", "$code kodunu kopyala"), { menu = false; copyText(ctx, code) }, iconKey = "copy") }
+                    }
+                    if (num != null) MsgNumberMenu(true, { num = null }, num!!, ctx)
                 }
                 Text(timeOf(m.date), color = T.sub, fontSize = 11.sp)
             }
@@ -444,8 +500,25 @@ private fun MessagesItem(list: List<SmsMsg>, k: Int, ctx: Context) {
 
 @Composable
 private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<String>, archives: Set<String>,
+                             isDefault: Boolean, onDefault: () -> Unit, notif: List<Boolean>, onNotif: (Int, Boolean) -> Unit,
                              onNames: (Boolean) -> Unit, onUnread: (Boolean) -> Unit, onUnblock: (String) -> Unit, onUnarchive: (String) -> Unit) {
-    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
+    Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) {
+        Row(Modifier.fillMaxWidth().clickable(enabled = !isDefault, onClick = onDefault).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("chat", T.text, 22.dp)
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(tr("Default SMS app", "Varsayılan SMS uygulaması"), color = T.text, fontSize = 16.sp)
+                Text(if (isDefault) tr("Pulse receives and stores your messages", "Mesajları Pulse alır ve saklar")
+                    else tr("Another app is the default; Pulse still notifies", "Başka uygulama varsayılan; Pulse yine bildirir"), color = T.sub, fontSize = 12.sp)
+            }
+            if (!isDefault) PButton(tr("Set", "Yap"), compact = true) { onDefault() }
+        }
+        MessagesSettingRow("bell", tr("Notifications", "Bildirimler"), notif[0]) { onNotif(0, it) }
+        MessagesSettingRow("eyeOn", tr("Show message text", "Mesaj metnini göster"), notif[1]) { onNotif(1, it) }
+        MessagesSettingRow("copy", tr("Copy verification codes", "Doğrulama kodunu kopyala"), notif[2]) { onNotif(2, it) }
+        MessagesSettingRow("chat", tr("Chat bubbles", "Sohbet balonları"), notif[3]) { onNotif(3, it) }
+        MessagesSettingRow("volume", tr("Sound", "Ses"), notif[4]) { onNotif(4, it) }
+        MessagesSettingRow("vibrate", tr("Vibrate", "Titreşim"), notif[5]) { onNotif(5, it) }
         MessagesSettingRow("users", tr("Contact names", "Kişi adları"), names, onNames)
         MessagesSettingRow("sort", tr("Unread first", "Okunmamış önce"), unreadFirst, onUnread)
         Text(tr("Blocked numbers", "Engellenen numaralar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
@@ -479,4 +552,72 @@ private fun MessagesSettingRow(icon: String, title: String, on: Boolean, onChang
         Text(title, color = T.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
         PSwitch(on, onChange)
     }
+}
+
+
+/** The menu of a phone number: open its contact (or add one), call, copy. */
+@Composable
+private fun MsgNumberMenu(open: Boolean, onDismiss: () -> Unit, number: String, ctx: Context) {
+    ThemedMenu(open, onDismiss) {
+        val known = remember(number) { contactName(ctx, number) != null }
+        ThemedMenuItem(if (known) tr("Open contact", "Kişiyi aç") else tr("Add contact", "Kişi ekle"), {
+            onDismiss()
+            val i = if (known) {
+                val c = ctx.contentResolver.query(Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(number)),
+                    arrayOf(ContactsContract.PhoneLookup._ID, ContactsContract.PhoneLookup.LOOKUP_KEY), null, null, null)?.use { if (it.moveToFirst()) it.getLong(0) to it.getString(1) else null }
+                Intent(Intent.ACTION_VIEW, if (c != null) ContactsContract.Contacts.getLookupUri(c.first, c.second) else ContactsContract.Contacts.CONTENT_URI)
+            } else Intent(Intent.ACTION_INSERT_OR_EDIT).setType(ContactsContract.Contacts.CONTENT_ITEM_TYPE).putExtra(ContactsContract.Intents.Insert.PHONE, number)
+            runCatching { ctx.startActivity(i) }
+        }, iconKey = "person")
+        ThemedMenuItem(tr("Call", "Ara"), { onDismiss(); runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number)))) } }, iconKey = "phone")
+        ThemedMenuItem(tr("Copy", "Kopyala"), { onDismiss(); copyText(ctx, number) }, iconKey = "copy")
+    }
+}
+
+/** Message text whose phone numbers open the number menu and whose links open in the browser. */
+@Composable
+private fun MsgLinkedText(body: String, color: androidx.compose.ui.graphics.Color, link: androidx.compose.ui.graphics.Color, onLong: () -> Unit, onNumber: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val links = remember(body) { MsgCore.links(body) }
+    val text = remember(body, color, link) {
+        androidx.compose.ui.text.buildAnnotatedString {
+            append(body)
+            addStyle(androidx.compose.ui.text.SpanStyle(color = color), 0, body.length)
+            links.forEach { (a, b, _) -> addStyle(androidx.compose.ui.text.SpanStyle(color = link, textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline), a, b) }
+        }
+    }
+    var layout by remember { mutableStateOf<androidx.compose.ui.text.TextLayoutResult?>(null) }
+    Text(text, fontSize = 15.sp, onTextLayout = { layout = it }, modifier = Modifier.androidx_pointer(links, body, ctx, onLong, onNumber) { layout })
+}
+
+private fun Modifier.androidx_pointer(links: List<Triple<Int, Int, String>>, body: String, ctx: Context, onLong: () -> Unit, onNumber: (String) -> Unit,
+                                      layout: () -> androidx.compose.ui.text.TextLayoutResult?): Modifier =
+    this.pointerInput(links, body) {
+        detectTapGestures(onLongPress = { onLong() }, onTap = { pos ->
+            val off = layout()?.getOffsetForPosition(pos) ?: return@detectTapGestures
+            val hit = links.firstOrNull { off >= it.first && off < it.second } ?: return@detectTapGestures
+            val v = body.substring(hit.first, hit.second)
+            if (hit.third == "tel") onNumber(v.trim())
+            else runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(if (v.startsWith("http", true)) v else "https://$v"))) }
+        })
+    }
+
+/** A picture of an MMS, decoded small; tapping opens it in a viewer. */
+@Composable
+private fun MsgPicture(uri: Uri, ctx: Context) {
+    val bmp by produceState<android.graphics.Bitmap?>(null, uri) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                ctx.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, o) }
+                var ss = 1; while (o.outWidth / ss > 900) ss *= 2
+                ctx.contentResolver.openInputStream(uri)?.use { android.graphics.BitmapFactory.decodeStream(it, null, android.graphics.BitmapFactory.Options().apply { inSampleSize = ss }) }
+            }.getOrNull()
+        }
+    }
+    val b = bmp
+    if (b != null) androidx.compose.foundation.Image(b.asImageBitmap(), null, Modifier.widthIn(max = 240.dp).clip(RoundedCornerShape(10.dp))
+        .clickable { runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW).setDataAndType(uri, "image/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)) } },
+        contentScale = androidx.compose.ui.layout.ContentScale.FillWidth)
+    else Box(Modifier.size(120.dp).clip(RoundedCornerShape(10.dp)).background(T.sub.copy(alpha = .2f)))
 }
