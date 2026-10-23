@@ -87,6 +87,7 @@ class MusicPlayerEngine private constructor(context: Context) {
         rgFallback = MusicSettings.rgFallback(app)
         preampDb = MusicSettings.preamp(app)
         player.setHandleAudioBecomingNoisy(MusicSettings.pauseOnUnplug(app))
+        player.setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MUSIC).build(), MusicSettings.audioFocus(app))
         player.skipSilenceEnabled =MusicSettings.skipSilence(app)
         val sp = MusicSettings.speed(app)
         player.playbackParameters = PlaybackParameters(sp, if (MusicSettings.pitchFollows(app)) sp else 1f)

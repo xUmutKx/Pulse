@@ -68,6 +68,18 @@ object MusicSettings {
     fun pauseOnUnplug(c: Context) = sp(c).getBoolean("unplug", true)
     fun setPauseOnUnplug(c: Context, on: Boolean) = sp(c).edit().putBoolean("unplug", on).apply()
 
+    fun resumeWired(c: Context) = sp(c).getBoolean("resumeWired", false)
+    fun setResumeWired(c: Context, on: Boolean) = sp(c).edit().putBoolean("resumeWired", on).apply()
+
+    fun pauseUsbDac(c: Context) = sp(c).getBoolean("pauseUsb", false)
+    fun setPauseUsbDac(c: Context, on: Boolean) = sp(c).edit().putBoolean("pauseUsb", on).apply()
+
+    fun respondButtons(c: Context) = sp(c).getBoolean("buttons", true)
+    fun setRespondButtons(c: Context, on: Boolean) = sp(c).edit().putBoolean("buttons", on).apply()
+
+    fun audioFocus(c: Context) = sp(c).getBoolean("focus", true)
+    fun setAudioFocus(c: Context, on: Boolean) = sp(c).edit().putBoolean("focus", on).apply()
+
     fun countStats(c: Context) = sp(c).getBoolean("stats", true)
     fun setCountStats(c: Context, on: Boolean) = sp(c).edit().putBoolean("stats", on).apply()
 
