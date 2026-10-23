@@ -76,8 +76,9 @@ object MsgNotifier {
     /** An incoming message from [address]: copies its code when the setting is on and shows the notification. */
     fun incoming(c: Context, address: String, body: String) {
         val code = if (MsgPrefs.autoCopy(c)) MsgCore.otp(body) else null
+        val muted = address in MsgPrefs.muted(c)
         if (code != null) copy(c, code)
-        if (!MsgPrefs.notify(c) || !canPost(c)) return
+        if (muted || !MsgPrefs.notify(c) || !canPost(c)) return
         val name = contactName(c, address) ?: address
         val ch = ensureChannel(c)
         val text = if (MsgPrefs.showText(c)) body else tr("New message", "Yeni mesaj")

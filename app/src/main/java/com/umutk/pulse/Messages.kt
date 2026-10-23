@@ -103,6 +103,15 @@ object MsgPrefs {
     fun setSound(c: Context, v: Boolean) { p(c).edit().putBoolean("sound", v).apply() }
     fun vibrate(c: Context) = p(c).getBoolean("vibrate", true)
     fun setVibrate(c: Context, v: Boolean) { p(c).edit().putBoolean("vibrate", v).apply() }
+    /** Text added to the end of every message sent from here (empty: none). */
+    fun signature(c: Context) = p(c).getString("signature", "") ?: ""
+    fun setSignature(c: Context, v: String) { p(c).edit().putString("signature", v).apply() }
+    /** Seconds a message waits before it goes out, so it can still be taken back (0: at once). */
+    fun sendDelay(c: Context) = p(c).getInt("sendDelay", 0)
+    fun setSendDelay(c: Context, v: Int) { p(c).edit().putInt("sendDelay", v).apply() }
+    /** Conversations (by number) whose messages make no notification. */
+    fun muted(c: Context): Set<String> = p(c).getStringSet("muted", null).orEmpty().toSet()
+    fun setMuted(c: Context, s: Set<String>) { p(c).edit().putStringSet("muted", s.toSet()).apply() }
     fun unreadFirst(c: Context) = p(c).getBoolean("unreadFirst", false)
     fun setUnreadFirst(c: Context, v: Boolean) { p(c).edit().putBoolean("unreadFirst", v).apply() }
 }
@@ -235,6 +244,11 @@ fun MessagesScreen(back: () -> Unit) {
         if (a != null && t0 != null) d[a] = t0
     } }
     var numMenu by remember { mutableStateOf<String?>(null) }
+    var sigText by remember { mutableStateOf(MsgPrefs.signature(ctx)) }
+    var delaySec by remember { mutableIntStateOf(MsgPrefs.sendDelay(ctx)) }
+    var muted by remember { mutableStateOf(MsgPrefs.muted(ctx)) }
+    // a message waiting to go out: (number, text, seconds left); Undo puts the text back in the box
+    var queued by remember { mutableStateOf<Triple<String, String, Int>?>(null) }
     var isDefault by remember { mutableStateOf(MsgCore.isDefault(ctx)) }
     var notifyOn by remember { mutableStateOf(MsgPrefs.notify(ctx)) }
     var showText by remember { mutableStateOf(MsgPrefs.showText(ctx)) }
@@ -314,7 +328,8 @@ fun MessagesScreen(back: () -> Unit) {
             }
             settings -> MessagesSettings(nameOn, unreadFirst, blocks, archives,
                 isDefault, { runCatching { askDefault.launch(MsgCore.defaultRequest(ctx)) } },
-                listOf(notifyOn, showText, autoCopy, bubbleOn, soundOn, vibOn),
+                listOf(notifyOn, showText, autoCopy, bubbleOn, soundOn, vibOn), sigText, { sigText = it; MsgPrefs.setSignature(ctx, it) },
+                delaySec, { delaySec = it; MsgPrefs.setSendDelay(ctx, it) },
                 { k, v -> when (k) {
                     0 -> { notifyOn = v; MsgPrefs.setNotify(ctx, v) }; 1 -> { showText = v; MsgPrefs.setShowText(ctx, v) }
                     2 -> { autoCopy = v; MsgPrefs.setAutoCopy(ctx, v) }; 3 -> { bubbleOn = v; MsgPrefs.setBubbles(ctx, v) }
@@ -357,6 +372,10 @@ fun MessagesScreen(back: () -> Unit) {
                         pins = if (pinned) pins - addr else pins + addr; MsgPrefs.setPinned(ctx, pins)
                     }
                     Spacer(Modifier.width(8.dp))
+                    PButton(if (addr in muted) tr("Unmute", "Sesi aç") else tr("Mute", "Sessize al"), compact = true) {
+                        muted = if (addr in muted) muted - addr else muted + addr; MsgPrefs.setMuted(ctx, muted)
+                    }
+                    Spacer(Modifier.width(8.dp))
                     PButton(if (blocked) tr("Unblock", "Engeli kaldır") else tr("Block", "Engelle"), compact = true) {
                         blocks = if (blocked) blocks - addr else blocks + addr; MsgPrefs.setBlocked(ctx, blocks)
                         if (!blocked) open = null
@@ -382,8 +401,23 @@ fun MessagesScreen(back: () -> Unit) {
                         return
                     }
                     if (body.isEmpty()) return
-                    if (sendSms(ctx, addr, body)) { drafts.remove(addr); reload++ }
+                    val full = if (sigText.isBlank()) body else body + "\n" + sigText.trim()
+                    if (delaySec > 0) { queued = Triple(addr, full, delaySec); drafts.remove(addr); return }
+                    if (sendSms(ctx, addr, full)) { drafts.remove(addr); reload++ }
                     else Toast.makeText(ctx, tr("Not sent", "Gönderilemedi"), Toast.LENGTH_SHORT).show()
+                }
+                queued?.let { q ->
+                    LaunchedEffect(q.first, q.second, q.third) {
+                        kotlinx.coroutines.delay(1000)
+                        if (q.third <= 1) {
+                            if (sendSms(ctx, q.first, q.second)) reload++ else Toast.makeText(ctx, tr("Not sent", "Gönderilemedi"), Toast.LENGTH_SHORT).show()
+                            queued = null
+                        } else queued = q.copy(third = q.third - 1)
+                    }
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Sending in ${q.third}…", "${q.third} sn sonra gidiyor…"), color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
+                        PButton(tr("Undo", "Geri al"), compact = true) { drafts[q.first] = q.second.removeSuffix("\n" + sigText.trim()); queued = null }
+                    }
                 }
                 if (draft.isNotEmpty()) Text(tr("${draft.length} chars, $parts SMS", "${draft.length} karakter, $parts SMS"),
                     color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 16.dp))
@@ -500,7 +534,7 @@ private fun MessagesItem(list: List<SmsMsg>, k: Int, ctx: Context) {
 
 @Composable
 private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<String>, archives: Set<String>,
-                             isDefault: Boolean, onDefault: () -> Unit, notif: List<Boolean>, onNotif: (Int, Boolean) -> Unit,
+                             isDefault: Boolean, onDefault: () -> Unit, notif: List<Boolean>, sig: String, onSig: (String) -> Unit, delay: Int, onDelay: (Int) -> Unit, onNotif: (Int, Boolean) -> Unit,
                              onNames: (Boolean) -> Unit, onUnread: (Boolean) -> Unit, onUnblock: (String) -> Unit, onUnarchive: (String) -> Unit) {
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp).verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth().clickable(enabled = !isDefault, onClick = onDefault).padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -519,6 +553,10 @@ private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<S
         MessagesSettingRow("chat", tr("Chat bubbles", "Sohbet balonları"), notif[3]) { onNotif(3, it) }
         MessagesSettingRow("volume", tr("Sound", "Ses"), notif[4]) { onNotif(4, it) }
         MessagesSettingRow("vibrate", tr("Vibrate", "Titreşim"), notif[5]) { onNotif(5, it) }
+        Text(tr("Signature", "İmza"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+        PField(sig, onSig, tr("Added to every message", "Her mesajın sonuna eklenir"), Modifier.fillMaxWidth())
+        Text(tr("Undo time before sending", "Göndermeden önce geri alma süresi"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp, bottom = 4.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(0, 3, 5, 10).forEach { v -> PChip(delay == v, if (v == 0) tr("Off", "Kapalı") else "$v s") { onDelay(v) } } }
         MessagesSettingRow("users", tr("Contact names", "Kişi adları"), names, onNames)
         MessagesSettingRow("sort", tr("Unread first", "Okunmamış önce"), unreadFirst, onUnread)
         Text(tr("Blocked numbers", "Engellenen numaralar"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 16.dp, bottom = 4.dp))
