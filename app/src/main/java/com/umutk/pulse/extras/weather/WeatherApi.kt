@@ -266,7 +266,7 @@ object WeatherStore {
 suspend fun deviceLocation(c: Context): Location? {
     if (ContextCompat.checkSelfPermission(c, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
     val lm = c.getSystemService(LocationManager::class.java)
-    val fresh = withTimeoutOrNull(30_000) {
+    val fresh = if (android.os.Build.VERSION.SDK_INT < 30) null else withTimeoutOrNull(30_000) {
         suspendCancellableCoroutine<Location?> { k ->
             lm.getCurrentLocation(LocationManager.NETWORK_PROVIDER, null, c.mainExecutor) { k.resume(it) }
         }
