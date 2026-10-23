@@ -119,7 +119,7 @@ class NoiseWidget : AppWidgetProvider() {
                 return@bmp
             }
             val outline = l.style == 3
-            val lightAccent = Color.luminance(l.accent) > .5f
+            val lightAccent = androidx.core.graphics.ColorUtils.calculateLuminance(l.accent) > .5f
             val ink = if (outline) l.accent else if (lightAccent) Color.BLACK else Color.WHITE
             p.style = Paint.Style.FILL; p.color = if (outline) Color.TRANSPARENT else l.accent
             val box = RectF(3f, 3f, 109f, 109f)

@@ -68,6 +68,7 @@ object ScreenShot {
 
     /** Screenshot through the accessibility service (Android 11+): saved like the root ones. */
     private fun accShot(app: Context, acc: android.accessibilityservice.AccessibilityService, done: (String?) -> Unit) {
+        if (android.os.Build.VERSION.SDK_INT < 30) { done(null); return }
         val main = Handler(Looper.getMainLooper())
         runCatching {
             acc.takeScreenshot(android.view.Display.DEFAULT_DISPLAY, app.mainExecutor, object : android.accessibilityservice.AccessibilityService.TakeScreenshotCallback {

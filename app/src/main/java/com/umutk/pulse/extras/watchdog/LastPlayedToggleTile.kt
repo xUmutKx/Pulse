@@ -40,7 +40,7 @@ class LastPlayedToggleTile : TileService() {
         qsTile?.apply {
             label = tr("Last played", "Son çalınan")
             state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            if (Build.VERSION.SDK_INT >= 29) subtitle = last?.name
+            if (Build.VERSION.SDK_INT >= 29) subtitleCompat = last?.name
             updateTile()
         }
     }

@@ -614,6 +614,7 @@ private fun ExtraAppsCard() {
     val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity")
     /** Asks the launcher to put this app on the home screen; the shortcut opens the app directly, whether or not its app-drawer icon is switched on. */
     fun pinToHome(alias: String, label: String, icon: Int) {
+        if (android.os.Build.VERSION.SDK_INT < 26) return
         val sm = ctx.getSystemService(android.content.pm.ShortcutManager::class.java) ?: return
         if (!sm.isRequestPinShortcutSupported) return
         val i = when {

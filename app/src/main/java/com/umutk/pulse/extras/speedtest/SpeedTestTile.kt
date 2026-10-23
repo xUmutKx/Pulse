@@ -44,7 +44,7 @@ class SpeedTestTile : TileService() {
         t.label = "Speed test"
         if (busy) {
             t.state = Tile.STATE_ACTIVE
-            t.subtitle = when (s.phase) { "ping" -> "Ping…"; "down" -> "↓ %.1f".format(s.value); else -> "↑ %.1f".format(s.value) }
+            t.subtitleCompat = when (s.phase) { "ping" -> "Ping…"; "down" -> "↓ %.1f".format(s.value); else -> "↑ %.1f".format(s.value) }
             if (spin?.isActive != true) spin = scope?.launch {
                 var a = 0f
                 while (true) { t.icon = Icon.createWithBitmap(ring(a)); t.updateTile(); a = (a + 40f) % 360f; delay(120) }
@@ -54,7 +54,7 @@ class SpeedTestTile : TileService() {
             t.icon = Icon.createWithResource(this, R.drawable.ic_qs_speed)
             val r = if (s.phase == "done") s else SpeedResult.last(this)?.let { SpeedLive("done", it.down, it.pingMs, it.jitterMs, it.down, it.up) }
             t.state = Tile.STATE_INACTIVE
-            t.subtitle = if (s.phase == "error") "—" else r?.let { "↓ %.0f  ↑ %.0f  %.0f ms".format(it.down, it.up, it.ping) }
+            t.subtitleCompat = if (s.phase == "error") "—" else r?.let { "↓ %.0f  ↑ %.0f  %.0f ms".format(it.down, it.up, it.ping) }
         }
         t.updateTile()
     }

@@ -307,7 +307,7 @@ object StoreInstaller {
         val info = c.packageManager.getPackageArchiveInfo(apk.path, PackageManager.GET_SIGNING_CERTIFICATES)
             ?: throw IOException(tr("Not a readable package", "Paket okunamadı"))
         if (info.packageName != m.paket) throw IOException(tr("Package name differs", "Paket adı farklı"))
-        val digests = info.signingInfo?.apkContentsSigners.orEmpty().map { sha256Hex(it.toByteArray()) }
+        val digests = com.umutk.pulse.Compat.signers(info).orEmpty().map { sha256Hex(it.toByteArray()) }
         if (m.imzaSha256 !in digests) throw IOException(tr("Signature differs", "İmza farklı"))
         if (packageVersion(c, info.packageName) == null) markStorePkg(c, info.packageName) // an app the owner already had stays listed
         val uri = FileProvider.getUriForFile(c, "${c.packageName}.files", apk)

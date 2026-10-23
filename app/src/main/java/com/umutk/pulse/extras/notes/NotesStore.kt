@@ -47,7 +47,7 @@ object NotesStore {
         val bytes = JSONArray().also { arr -> notes.forEach { arr.put(toJson(it)) } }.toString().toByteArray(Charsets.UTF_8)
         val tmp = File(f.path + ".tmp")
         tmp.writeBytes(if (NotesPrefs.encrypted(c)) NotesCrypto.seal(bytes) else bytes)
-        Files.move(tmp.toPath(), f.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        tmp.renameTo(f)
         NotesWidget.refresh(c)
     }
 

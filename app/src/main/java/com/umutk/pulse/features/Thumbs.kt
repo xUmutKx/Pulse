@@ -55,10 +55,19 @@ object Thumbs {
         val bmp = runCatching { if (disk.exists()) BitmapFactory.decodeFile(disk.path) else null }.getOrNull()
             ?: runCatching {
                 // keeps the aspect ratio and reads the EXIF rotation; HEIC included
-                ThumbnailUtils.createImageThumbnail(f, Size(PX, PX), null).also { b ->
-                    runCatching { disk.outputStream().use { b.compress(Bitmap.CompressFormat.WEBP_LOSSY, 92, it) } }
+                (if (android.os.Build.VERSION.SDK_INT >= 29) ThumbnailUtils.createImageThumbnail(f, Size(PX, PX), null) else decodeSmall(f)).also { b ->
+                    runCatching { disk.outputStream().use { b.compress(if (android.os.Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else @Suppress("DEPRECATION") Bitmap.CompressFormat.WEBP, 92, it) } }
                 }
             }.getOrNull()
         bmp?.asImageBitmap()?.also { mem.put(k, it) }
     }
+}
+
+/** Android 5 to 9: a small version of the picture with the factory (the EXIF turn is not applied). */
+private fun decodeSmall(f: File): Bitmap {
+    val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeFile(f.path, o)
+    var step = 1
+    while (maxOf(o.outWidth, o.outHeight) / (step * 2) >= 256) step *= 2
+    return BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = step }) ?: throw java.io.IOException("unreadable")
 }

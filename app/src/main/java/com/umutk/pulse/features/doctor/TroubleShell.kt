@@ -14,8 +14,10 @@ internal object TroubleShell {
             var out = ""
             val reader = Thread { out = p.inputStream.bufferedReader().readText() }
             reader.start()
-            val done = p.waitFor(20, TimeUnit.SECONDS)
-            if (!done) p.destroyForcibly()
+            val limit = System.currentTimeMillis() + 20_000
+            var done = false
+            while (!done && System.currentTimeMillis() < limit) { done = runCatching { p.exitValue(); true }.getOrDefault(false); if (!done) Thread.sleep(100) }
+            if (!done) p.destroy()
             reader.join(2000)
             when {
                 !done -> tx("Command timed out", "Komut zaman aşımına uğradı")

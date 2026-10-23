@@ -38,7 +38,7 @@ object NotifHist {
     fun setEnabled(ctx: Context, on: Boolean) {
         ctx.getSharedPreferences("notifhist", Context.MODE_PRIVATE).edit().putBoolean("on", on).apply()
         // a listener that was granted while the app was not running may stay unbound; ask the system to bind it again
-        if (on && hasAccess(ctx)) runCatching { NotificationListenerService.requestRebind(ComponentName(ctx, NotifHistListener::class.java)) }
+        if (android.os.Build.VERSION.SDK_INT >= 24 && on && hasAccess(ctx)) runCatching { NotificationListenerService.requestRebind(ComponentName(ctx, NotifHistListener::class.java)) }
     }
 
     /** True when the user has allowed Pulse to read notifications (Settings > Notification access). */

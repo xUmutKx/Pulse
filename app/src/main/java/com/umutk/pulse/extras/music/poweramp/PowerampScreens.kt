@@ -314,7 +314,7 @@ fun NowPlayingScreen(
             // the cover's band across the window is excluded from the system back gesture, so a downward drag that starts
             // near a screen edge stays on the cover instead of going back out of the player
             val view = LocalView.current
-            DisposableEffect(view) { onDispose { view.systemGestureExclusionRects = emptyList() } }
+            DisposableEffect(view) { onDispose { if (android.os.Build.VERSION.SDK_INT >= 29) view.systemGestureExclusionRects = emptyList() } }
             // the cover settles a little smaller when the music is paused and springs back when it plays
             val coverScale by animateFloatAsState(if (playing) 1f else .9f, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f), label = "coverScale")
             Box(
@@ -327,7 +327,7 @@ fun NowPlayingScreen(
                 }.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }
                     .onGloballyPositioned { c ->
                         val b = c.boundsInWindow()
-                        view.systemGestureExclusionRects = listOf(android.graphics.Rect(0, b.top.roundToInt(), view.width, b.bottom.roundToInt()))
+                        if (android.os.Build.VERSION.SDK_INT >= 29) view.systemGestureExclusionRects = listOf(android.graphics.Rect(0, b.top.roundToInt(), view.width, b.bottom.roundToInt()))
                     },
                 contentAlignment = Alignment.Center,
             ) {

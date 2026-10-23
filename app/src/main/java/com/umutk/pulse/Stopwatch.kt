@@ -63,7 +63,7 @@ class StopwatchTile : TileService() {
             state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             icon = Icon.createWithResource(this@StopwatchTile, if (on) R.drawable.qs_pause else R.drawable.qs_play)
             label = tr("Stopwatch", "Kronometre")
-            subtitle = Stopwatch.clock(Stopwatch.elapsed(this@StopwatchTile))
+            subtitleCompat = Stopwatch.clock(Stopwatch.elapsed(this@StopwatchTile))
             updateTile()
         }
     }

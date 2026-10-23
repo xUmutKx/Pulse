@@ -55,8 +55,8 @@ class MonitorService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Opt.load(this)
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Monitor", NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Monitor", NotificationManager.IMPORTANCE_LOW)) else Unit
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH)) else Unit
         val n = build("Pulse monitor is running")
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID, n)
         if (job == null) job = scope.launch { loop() }
@@ -164,7 +164,7 @@ class MonitorService : Service() {
 @androidx.annotation.RequiresApi(24)
 class PulseTile : TileService() {
     override fun onStartListening() { Opt.load(this); paint() }
-    private fun paint() { qsTile?.apply { state = if (Opt.ovOn || Opt.notifOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "Pulse"; subtitle = if (Opt.ovOn) tr("Overlay", "Ekran üstü") else if (Opt.notifOn) tr("Notification", "Bildirim") else tr("Off", "Kapalı"); updateTile() } }
+    private fun paint() { qsTile?.apply { state = if (Opt.ovOn || Opt.notifOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "Pulse"; subtitleCompat = if (Opt.ovOn) tr("Overlay", "Ekran üstü") else if (Opt.notifOn) tr("Notification", "Bildirim") else tr("Off", "Kapalı"); updateTile() } }
     override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
     private fun click0() {
         Opt.load(this)
@@ -185,10 +185,11 @@ fun tilePage(cls: String): String = when (cls.substringAfterLast('.')) {
     "FlashlightTile" -> "toolkit:flash"
     "StopwatchTile" -> "toolkit:stopwatch"
     "ToolkitTile" -> "toolkit"
-    else -> runCatching { (Class.forName(cls).getDeclaredConstructor().newInstance() as ToolkitTile).start }.getOrDefault("toolkit")
+    else -> if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { (Class.forName(cls).getDeclaredConstructor().newInstance() as ToolkitTile).start }.getOrDefault("toolkit") else "toolkit"
 }
 
 /** Opens Pulse on [page] and closes the panel. */
+@androidx.annotation.RequiresApi(24)
 fun TileService.openPulse(page: String) {
     val i = Intent(this, MainActivity::class.java).putExtra("start", page).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
     if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, page.hashCode(), i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -226,7 +227,7 @@ open class ToolkitTile : TileService() {
     private var listening = false
     private var registered = false
     private val listener = object : SensorEventListener {
-        override fun onSensorChanged(e: SensorEvent) { qsTile?.apply { val s = subtitleFor(e.values); if (subtitle != s) { subtitle = s; updateTile() } } }
+        override fun onSensorChanged(e: SensorEvent) { qsTile?.apply { val s = subtitleFor(e.values); if (subtitle != s) { subtitleCompat = s; updateTile() } } }
         override fun onAccuracyChanged(s: Sensor?, a: Int) {}
     }
     private val tick = object : Runnable { override fun run() { paint(); if (listening) main.postDelayed(this, refreshMs) } }
@@ -242,7 +243,7 @@ open class ToolkitTile : TileService() {
         qsTile?.apply {
             label = tr(name, trName)
             state = when { noSensor -> Tile.STATE_UNAVAILABLE; (if (sensor != null) live else active()) -> Tile.STATE_ACTIVE; else -> Tile.STATE_INACTIVE }
-            subtitle = when { noSensor -> tr("No sensor", "Sensör yok"); sensor != null && !live -> tr("Off", "Kapalı"); else -> subtitleFor(null) }
+            subtitleCompat = when { noSensor -> tr("No sensor", "Sensör yok"); sensor != null && !live -> tr("Off", "Kapalı"); else -> subtitleFor(null) }
             picture?.let { icon = Icon.createWithResource(this@ToolkitTile, it) }
             updateTile()
         }
@@ -528,7 +529,7 @@ class LastPlayedTile : TileService() {
         qsTile?.apply {
             label = com.umutk.pulse.extras.watchdog.QuickTileContract.label(this@LastPlayedTile)
             state = if (last != null) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            subtitle = last?.let { if (it.kind == com.umutk.pulse.extras.watchdog.QuickTileContract.Kind.MIX) tr("Mix", "Karışım") else tr("Track", "Parça") }
+            subtitleCompat = last?.let { if (it.kind == com.umutk.pulse.extras.watchdog.QuickTileContract.Kind.MIX) tr("Mix", "Karışım") else tr("Track", "Parça") }
             updateTile()
         }
     }
@@ -571,7 +572,7 @@ class FlashlightTile : TileService() {
         qsTile?.apply {
             label = tr("Flashlight", "El feneri")
             state = if (camId == null) Tile.STATE_UNAVAILABLE else if (torchOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            subtitle = when { camId == null -> tr("No flash", "Flaş yok"); busy -> tr("Camera in use", "Kamera kullanımda"); torchOn -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
+            subtitleCompat = when { camId == null -> tr("No flash", "Flaş yok"); busy -> tr("Camera in use", "Kamera kullanımda"); torchOn -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
             icon = Icon.createWithResource(this@FlashlightTile, if (torchOn) R.drawable.ic_qs_flashlight else R.drawable.qs_flashlight_off)
             updateTile()
         }

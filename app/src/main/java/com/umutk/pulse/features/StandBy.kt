@@ -229,8 +229,8 @@ object StandBy {
         owner?.stop(); owner = null; view = null; host = null; autoStarted = false
         // the two tiles re-read their state, so a cover closed by a double tap does not stay lit
         val app = ctx.applicationContext
-        runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, CoverTile::class.java)) }
-        runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, StandByTile::class.java)) }
+        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, CoverTile::class.java)) }
+        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, StandByTile::class.java)) }
     }
 }
 
@@ -673,6 +673,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
 }
 
 /** Quick Settings tile: starts or closes the advanced cover by hand (the manual trigger). */
+@androidx.annotation.RequiresApi(24)
 class StandByTile : android.service.quicksettings.TileService() {
     override fun onStartListening() = paint()
     private fun paint() {
