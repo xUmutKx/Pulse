@@ -237,6 +237,11 @@ fun AuthenticatorScreen(back: () -> Unit) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // as its own app (no bar of Pulse above it) the page carries its own back arrow
+        if (com.umutk.pulse.LocalExtraLook.current != null) Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
+            Text("Authenticator", color = com.umutk.pulse.T.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
+        }
         PHead("Authenticator", guide = "authenticator")
         PCard {
             Text("Add account", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
