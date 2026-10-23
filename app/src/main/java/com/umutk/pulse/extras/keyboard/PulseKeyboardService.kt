@@ -496,12 +496,36 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.panel == "keys") KeyboardPrefs.save(this)
     }
 
-    /** Hands the text of the field (the selection, else what is before the cursor) to the translator: the Google Translate app, or its page. */
+    /**
+     * Translates the selected text, or the text before the cursor, inside the keyboard (the MyMemory service, no key needed) and puts the translation in its place.
+     * From the language of the keyboard to the next one of the keyboard's languages (Turkish and English by default).
+     */
     private fun translate() {
         val c = currentInputConnection ?: return
-        val text = (c.getSelectedText(0)?.toString()?.takeIf { it.isNotBlank() } ?: c.getTextBeforeCursor(500, 0)?.toString().orEmpty()).trim()
-        val url = "https://translate.google.com/?sl=auto&tl=${java.util.Locale.getDefault().language}&op=translate&text=" + android.net.Uri.encode(text)
-        runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        val sel = c.getSelectedText(0)?.toString()?.takeIf { it.isNotBlank() }
+        val text = (sel ?: c.getTextBeforeCursor(400, 0)?.toString().orEmpty()).trim()
+        if (text.isEmpty()) return
+        val langs = KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }.distinct()
+        val from = KeyboardLayouts.dict(st.lang)
+        val to = langs.firstOrNull { it != from } ?: if (from == "tr") "en" else "tr"
+        android.widget.Toast.makeText(this, com.umutk.pulse.tr("Translating…", "Çevriliyor…"), android.widget.Toast.LENGTH_SHORT).show()
+        scope.launch(Dispatchers.IO) {
+            val out = runCatching {
+                val url = java.net.URL("https://api.mymemory.translated.net/get?q=" + java.net.URLEncoder.encode(text.take(480), "UTF-8") + "&langpair=$from|$to")
+                val conn = (url.openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 8000; readTimeout = 12000 }
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                org.json.JSONObject(body).getJSONObject("responseData").getString("translatedText").takeIf { it.isNotBlank() }
+            }.getOrNull()
+            withContext(Dispatchers.Main) {
+                val ic = currentInputConnection ?: return@withContext
+                if (out == null) { android.widget.Toast.makeText(this@PulseKeyboardService, com.umutk.pulse.tr("Could not translate", "Çevrilemedi"), android.widget.Toast.LENGTH_SHORT).show(); return@withContext }
+                finishWord("", false)
+                // a selection is replaced by committing over it; the text before the cursor is deleted first
+                if (sel == null) ic.deleteSurroundingText(text.length, 0)
+                ic.commitText(out, 1)
+                afterText()
+            }
+        }
     }
 
     override fun hide() { finishWord("", false); requestHideSelf(0) }
