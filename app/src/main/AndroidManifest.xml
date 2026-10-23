@@ -50,6 +50,7 @@
     <!-- music, video and ambient playback services (extras/watchdog, extras/music) -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE" />
     <!-- screen recorder (extras/screenrec): MediaProjection service and optional microphone -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
@@ -666,6 +667,7 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
+        <service android:name="com.umutk.pulse.extras.buds.BudsService" android:exported="false" android:foregroundServiceType="connectedDevice" />
         <!-- internet speed test tile (extras/speedtest): a tap starts it, the ring turns while it measures, the result sits under the name -->
         <service android:name="com.umutk.pulse.extras.speedtest.SpeedTestTile" android:exported="true" android:label="Speed test" android:icon="@drawable/ic_qs_speed"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
