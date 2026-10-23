@@ -363,27 +363,34 @@ private fun StoreDetail(
 }
 
 /** Built into Pulse: nothing is downloaded, each row opens the page in this app. Routes are in Tools.kt; apps are Pulse's own standalone activities. */
-private class BuiltinRow(val name: String, val sub: String, val icon: String, val onClick: () -> Unit)
+/** [place]: "app:<alias>" or "tool:<id>" when the row has a switch for being listed in the right-hand ⋮ menu (Extra apps). */
+private class BuiltinRow(val name: String, val sub: String, val icon: String, val place: String? = null, val onClick: () -> Unit)
 
 @Composable
 private fun BuiltinRows() {
     val ctx = LocalContext.current
     val openTool = LocalOpenTool.current
     val rows = listOf(
-        BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
-        BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
-        BuiltinRow(tr("White noise", "Beyaz gürültü"), tr("Calm sounds you mix and loop", "Karıştırıp döngüye aldığın sakin sesler"), "volume") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "whitenoise") },
-        BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
-        BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
-        BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
-        BuiltinRow(tr("Contacts", "Kişiler"), tr("Contacts and groups", "Kişiler ve gruplar"), "users") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
-        BuiltinRow("ArtCraft", tr("Drawing", "Çizim"), "menu") { launchExtra(ctx, "com.umutk.pulse.ArtCraftActivity") },
-        BuiltinRow(tr("Messages", "Mesajlar"), tr("SMS", "SMS"), "messages") { openTool("messages") },
+        BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
+        BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image", "app:VideoLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
+        BuiltinRow(tr("White noise", "Beyaz gürültü"), tr("Calm sounds you mix and loop", "Karıştırıp döngüye aldığın sakin sesler"), "volume", "app:WhiteNoiseLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "whitenoise") },
+        BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder", "app:FilesLauncher") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
+        BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image", "app:PhotosLauncher") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
+        BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar", "app:CalendarLauncher") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
+        BuiltinRow(tr("Contacts", "Kişiler"), tr("Contacts and groups", "Kişiler ve gruplar"), "users", "app:ContactsLauncher") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
+        BuiltinRow("ArtCraft", tr("Drawing", "Çizim"), "menu", "app:ArtCraftLauncher") { launchExtra(ctx, "com.umutk.pulse.ArtCraftActivity") },
+        BuiltinRow(tr("Messages", "Mesajlar"), tr("SMS", "SMS"), "messages", "app:MessagesLauncher") { openTool("messages") },
         BuiltinRow(tr("Launcher", "Ana ekran"), tr("Home screen looks", "Ana ekran görünümleri"), "apps") { openTool("launcher") },
-        BuiltinRow(tr("Screen recorder", "Ekran kaydı"), tr("Record the screen", "Ekranı kaydet"), "record") { openTool("screenrec") },
-        BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
-        BuiltinRow(tr("Notes", "Notlar"), tr("Notes and lists", "Notlar ve listeler"), "notes") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "notes") },
-        BuiltinRow(tr("Weather", "Hava durumu"), tr("Forecast", "Tahmin"), "menu") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "weather") },
+        BuiltinRow(tr("Screen recorder", "Ekran kaydı"), tr("Record the screen", "Ekranı kaydet"), "record", "app:ScreenRecLauncher") { openTool("screenrec") },
+        BuiltinRow(tr("Calculator", "Hesap makinesi"), tr("Standard, scientific, graphing (also 3D), converter", "Standart, bilimsel, grafik (3D dahil), dönüştürücü"), "calc", "app:CalculatorLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "calculator") },
+        BuiltinRow(tr("Keyboard", "Klavye"), tr("Pulse keyboard: themes, swipe typing, autocorrect", "Pulse klavyesi: temalar, kaydırarak yazma, otomatik düzeltme"), "keyboard", "app:KeyboardLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "keyboard") },
+        BuiltinRow(tr("Speed test", "Hız testi"), tr("Internet speed: ping, download, upload, provider", "İnternet hızı: ping, indirme, yükleme, sağlayıcı"), "speed", "tool:speedtest") { openTool("speedtest") },
+        BuiltinRow(tr("Buds manager", "Buds yöneticisi"), tr("Galaxy Buds: stop the music and noise control when taken out", "Galaxy Buds: çıkarınca müzik ve gürültü denetimi dursun"), "sensors", "tool:buds") { openTool("buds") },
+        BuiltinRow("Paint", tr("Draw and edit pictures", "Resim çiz ve düzenle"), "palette", "app:PaintLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "paint") },
+        BuiltinRow("LocalSend", tr("Send files to nearby devices", "Yakındaki cihazlara dosya gönder"), "wifi", "app:LocalSendLauncher") { openTool("localsend") },
+        BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu", "app:VoiceLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
+        BuiltinRow(tr("Notes", "Notlar"), tr("Notes and lists", "Notlar ve listeler"), "notes", "app:NotesLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "notes") },
+        BuiltinRow(tr("Weather", "Hava durumu"), tr("Forecast", "Tahmin"), "menu", "app:WeatherLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "weather") },
     )
     rows.forEach { r ->
         Row(Modifier.fillMaxWidth().clickable { r.onClick() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -392,6 +399,13 @@ private fun BuiltinRows() {
             Column(Modifier.weight(1f)) {
                 Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(r.sub, color = T.sub, fontSize = 12.sp)
+            }
+            // listed in the ⋮ menu (top right > Extra apps) or left out of it
+            r.place?.let { pl ->
+                val kind = pl.substringBefore(':'); val key = pl.substringAfter(':')
+                val tool = if (kind == "tool") com.umutk.pulse.ToolPlace.byId(key) else null
+                val on = if (tool != null) com.umutk.pulse.ToolPlace.where(ctx, tool) != "hidden" else com.umutk.pulse.AppPlace.where(key) != "hidden"
+                PSwitch(on, { v -> if (tool != null) com.umutk.pulse.ToolPlace.set(ctx, tool, if (v) "extra" else "hidden") else com.umutk.pulse.AppPlace.set(ctx, key, if (v) "menu" else "hidden") })
             }
         }
     }
