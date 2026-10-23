@@ -77,6 +77,7 @@ fun LauncherSettings(back: () -> Unit) {
     BackHandler { if (cat.isNotEmpty()) cat = "" else back() }
     var pickLook by remember { mutableStateOf(false) }
     var pickDock by remember { mutableStateOf(false) }
+    var pickPack by remember { mutableStateOf(false) }
     var pickSort by remember { mutableStateOf(false) }
     var pickHidden by remember { mutableStateOf(false) }
     var pickWall by remember { mutableStateOf(false) }
@@ -172,11 +173,15 @@ fun LauncherSettings(back: () -> Unit) {
                 LauncherPrefs.drawerColumns = it.roundToInt(); save()
             }
             ValueRow("eyeOff", tr("Hidden apps", "Gizli uygulamalar"), "${LauncherPrefs.hidden.size}") { pickHidden = true }
+            ValueRow("palette", tr("Icon pack", "Simge paketi"), IconPacks.installed(ctx).firstOrNull { it.pkg == LauncherPrefs.iconPack }?.label ?: tr("Default", "Varsayılan")) { pickPack = true }
+            SwitchLine("bell", tr("Notification badges on the app pictures", "Uygulama resimlerinde bildirim sayısı"), LauncherPrefs.badges) { LauncherPrefs.badges = it; save() }
+            Text(tr("Badges need notification access for one of Pulse's listeners (Notification history).", "Rozetler için Pulse'un bildirim erişimi (Bildirim geçmişi) açık olmalı."), color = T.sub, fontSize = 12.sp)
         }
         if (cat == "extras") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // gestures
             SwitchLine("lock", tr("Double tap to lock the screen", "Çift dokunuşla ekranı kilitle"), LauncherPrefs.gestureLock) { LauncherPrefs.gestureLock = it; save() }
             SwitchLine("chevron", tr("Swipe down: notifications", "Aşağı kaydır: bildirimler"), LauncherPrefs.swipeDownShade) { LauncherPrefs.swipeDownShade = it; save() }
+            SwitchLine("search", tr("Swipe down: quick search", "Aşağı kaydır: hızlı arama"), LauncherPrefs.swipeDownSearch) { LauncherPrefs.swipeDownSearch = it; save() }
             SwitchLine("apps", tr("Swipe up: apps list", "Yukarı kaydır: uygulama listesi"), LauncherPrefs.swipeUpApps) { LauncherPrefs.swipeUpApps = it; save() }
             Text(tr("The lock and notification gestures use the \"Pulse · Screen cover layer\" accessibility service.", "Kilit ve bildirim hareketleri \"Pulse · Screen cover layer\" erişilebilirlik hizmetini kullanır."), color = T.sub, fontSize = 12.sp)
             SwitchLine("sensors", tr("Tick on long press", "Uzun basınca titreşim"), LauncherPrefs.haptic) { LauncherPrefs.haptic = it; save() }
@@ -236,6 +241,13 @@ fun LauncherSettings(back: () -> Unit) {
             }
         },
         confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { pickLook = false } })
+    if (pickPack) {
+        val packs = remember { IconPacks.installed(ctx) }
+        PickDialog(tr("Icon pack", "Simge paketi"), listOf(tr("Default", "Varsayılan") to LauncherPrefs.iconPack.isBlank()) + packs.map { it.label to (it.pkg == LauncherPrefs.iconPack) }, onDismiss = { pickPack = false },
+            extra = { if (packs.isEmpty()) Text(tr("No icon pack is installed (Nova / ADW packs from the Play Store work).", "Yüklü simge paketi yok (Play Store'daki Nova / ADW paketleri çalışır)."), color = T.sub, fontSize = 12.sp) }) { i ->
+            LauncherPrefs.iconPack = if (i == 0) "" else packs[i - 1].pkg; save(); pickPack = false
+        }
+    }
     if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; addWidget(it) }, onDismiss = { pickWidget = false })
     if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false

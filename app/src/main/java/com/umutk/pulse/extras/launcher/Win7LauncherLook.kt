@@ -107,6 +107,7 @@ class Win7LauncherLook : LauncherLook {
                         }
                     }
                 }
+                TaskbarWindows("7", Color.White, 32.dp)
                 Spacer(Modifier.weight(1f))
                 Box(Modifier.width(1.dp).fillMaxHeight(.6f).background(W7_TRAY_LINE))
                 TaskbarClock(Color.White, Modifier.padding(horizontal = 8.dp))

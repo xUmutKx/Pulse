@@ -124,6 +124,7 @@ class XpLauncherLook : LauncherLook {
                         LaunchAppPicture(app, 16.dp, onBlue, taskbar)
                     }
                 }
+                TaskbarWindows("xp", onBlue, 24.dp)
             }
             Spacer(Modifier.weight(1f).fillMaxHeight())
             Row(

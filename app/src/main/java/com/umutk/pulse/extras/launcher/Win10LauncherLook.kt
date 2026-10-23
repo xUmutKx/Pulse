@@ -119,6 +119,7 @@ class Win10LauncherLook(
                         LaunchAppPicture(app, 24.dp, Color(0xFF0078D7), Color.White)
                     }
                 }
+                TaskbarWindows("10", fg, 40.dp)
             }
             Box(Modifier.width(46.dp).fillMaxHeight(), contentAlignment = Alignment.Center) { Canvas(Modifier.size(16.dp)) { wifiIcon(fg) } }
             Box(Modifier.width(46.dp).fillMaxHeight(), contentAlignment = Alignment.Center) { Canvas(Modifier.size(16.dp)) { speakerIcon(fg) } }
@@ -152,6 +153,7 @@ class Win10LauncherLook(
                     LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
                         // no search: the pinned tiles, then the apps in their tile groups; searching gives one flat list of rows
                         if (query.isBlank()) {
+                            item { LiveTiles(0.dp, Modifier.padding(bottom = 4.dp)) }
                             if (pinned.isNotEmpty()) items(pinned.chunked(3)) { row -> TileRow(row, state, onClose) }
                             groupedApps(all).forEach { (g, apps) ->
                                 item { WinHeading(tr(g.en, g.tr), fg) }
