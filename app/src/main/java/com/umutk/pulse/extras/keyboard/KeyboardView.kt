@@ -412,6 +412,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     var spaceDragged = false
                     var lastStep = 0
                     var quick = false
+                    var delRepeats = 0
                     var startX = d.position.x
                     var curX = d.position.x
                     // the long press and the repeats fall due at a fixed time: the finger's small moves must not push them back
@@ -428,7 +429,10 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             // the long press (or the next repeat of the delete key)
                             val now = android.os.SystemClock.uptimeMillis()
                             when (key.kind) {
-                                KeyKind.DELETE -> { if (!quick) a.backspace(); due = now + 55L }
+                                KeyKind.DELETE -> {
+                                    // held long enough: a whole word per repeat instead of a letter
+                                    if (!quick) { delRepeats++; if (delRepeats > 9) { a.deleteWord(); due = now + 170L } else { a.backspace(); due = now + 55L } } else due = now + 55L
+                                }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
                                 KeyKind.COMMA -> { long = true; st.preview = null; a.feedback(); a.voice(); due = Long.MAX_VALUE / 2 }

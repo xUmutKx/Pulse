@@ -38,6 +38,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     private val word = StringBuilder()
     private var prevWord: String? = null
+    private var emailField = false
+    private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
     private var selStart = 0
@@ -113,6 +115,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.plain = cls != InputType.TYPE_CLASS_TEXT || (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0 ||
             v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
                 InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_FILTER)
+        emailField = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS); lastEmail = null
         st.page = if (cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME) 1 else 0
         st.panel = "keys"; st.toolbar = false
         st.enter = when {
@@ -129,6 +132,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onFinishInput() {
         super.onFinishInput()
+        lastEmail?.let { e -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(e) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != e }).take(5).joinToString("\n")).apply() } }
+        lastEmail = null
         word.clear(); lastCorrection = null
         KeyboardDictionary.saveUser(this)
     }
@@ -268,6 +273,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
+        if (emailField) {
+            val before = c.getTextBeforeCursor(100, 0)?.toString().orEmpty()
+            if (w.startsWith("@") && '@' in before) c.deleteSurroundingText(before.length - before.lastIndexOf('@'), 0)
+            c.commitText(w, 1); afterText(); return
+        }
         val isEmoji = !w[0].isLetterOrDigit()
         val g = lastGlide
         if (word.isEmpty() && g != null && w in glideAlts) {
@@ -310,6 +320,20 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         val pos = (selStart + delta).coerceAtLeast(0)
         c.setSelection(pos, pos); selStart = pos; selEnd = pos
+    }
+
+    override fun deleteWord() {
+        val c = currentInputConnection ?: return
+        finishWord("", false); lastGlide = null; lastCorrection = null
+        val before = c.getTextBeforeCursor(80, 0)?.toString().orEmpty()
+        if (before.isEmpty()) return
+        var n = 0
+        while (n < before.length && before[before.length - 1 - n].isWhitespace()) n++
+        val wordStart = n
+        while (n < before.length && (before[before.length - 1 - n].isLetterOrDigit() || before[before.length - 1 - n] == '\'')) n++
+        if (n == wordStart) n++   // punctuation: one mark
+        c.deleteSurroundingText(n, 0)
+        afterText()
     }
 
     override fun quickDeleteStart() { finishWord("", false); anchor = selEnd; st.selecting = true }
@@ -485,10 +509,35 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
+    private val domains = listOf("@gmail.com", "@outlook.com", "@hotmail.com", "@yahoo.com", "@icloud.com", "@yandex.com")
+    private val emailRe = Regex("^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$")
+
+    /** An e-mail field: the addresses typed here before when it is empty, the usual domains once there is a name or an "@". */
+    private fun emailSuggestions() {
+        val before = currentInputConnection?.getTextBeforeCursor(100, 0)?.toString().orEmpty()
+        if (emailRe.matches(before)) lastEmail = before
+        val list = when {
+            before.isEmpty() -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }.take(3)
+            '@' in before -> domains.filter { it.startsWith("@" + before.substringAfterLast('@'), true) && it.length > before.substringAfterLast('@').length + 1 }.take(3)
+            else -> domains.take(3)
+        }
+        slotWords = arrayOf(list.getOrElse(0) { "" }, list.getOrElse(1) { "" }, list.getOrElse(2) { "" })
+        st.slots = slotWords.toList()
+    }
+
     private fun updateSuggestions() {
         job?.cancel()
+        if (emailField) { emailSuggestions(); return }
         if (!KeyboardPrefs.suggestions || st.plain) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val up = st.shift > 0
+        // the start of the field or of a sentence: the words a sentence begins with, before anything has been typed
+        if (typed.isEmpty()) {
+            val tb = currentInputConnection?.getTextBeforeCursor(3, 0)?.toString().orEmpty()
+            if (tb.isEmpty() || tb.trimEnd(' ').let { it.isEmpty() || it.last() in ".!?\n" }) {
+                val starts = if (KeyboardLayouts.dict(code) == "tr") listOf("Merhaba", "Ben", "Evet") else listOf("I", "The", "Hello")
+                slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; return
+            }
+        }
         job = scope.launch {
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up) }
             if (word.toString() == typed) { target = res.third; slotWords = res.second; st.slots = res.first }

@@ -70,6 +70,8 @@ interface KbActions {
     fun glide(letters: String)
     fun extraKey(id: String)
     fun hide()
+    /** Deletes the word before the cursor (the held delete key, after the first letters). */
+    fun deleteWord() {}
     /** Voice typing of the device (the Google voice input). */
     fun voice()
 }

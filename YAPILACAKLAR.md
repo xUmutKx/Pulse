@@ -1131,3 +1131,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.313: derlenmedi — hızlı ayarlar: kutucuk animasyonu art arda basılınca kare resmini asıl simge sanıyordu (DNS simgesi bozuluyordu), düzeltildi
 - 0.10.314: derlenmedi — Buds: bildirim yalnız ekran açıkken ya da "arka planda bağlı kal" açıkken; kulaklık yokken servis kapanır, bağlanınca (ACL) yeniden açılır
 - 0.10.315: derlenmedi (derleme istenmedi) — Windows 11 başlat menüsünde Oturumu kapat altta sabit; Pulse ana sayfada geri tuşu uygulamayı kapatmaz, arka plana atar
+- 0.10.316: derlenmedi (derleme istenmedi) — klavye: boş alanda ve cümle başında başlangıç önerileri (I/The/Hello, Merhaba/Ben/Evet), e-posta alanında önce yazılan adresler sonra alan adları, silme tuşu basılı tutulunca kelime kelime siler
