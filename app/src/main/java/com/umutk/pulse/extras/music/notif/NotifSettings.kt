@@ -55,7 +55,7 @@ fun NotificationSettingsSection() {
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { allowed = it }
     fun save(l: List<String>) { ids = l; MusicSettings.setNotificationButtonIds(c, l); MusicPlaybackService.relayout() }
 
-    SettingsSection(tr("Notification", "Bildirim")) {
+    SettingsSection(tr("Buttons", "Tuşlar"), startOpen = true) {
         if (!allowed) SwitchRow(tr("Show notification", "Bildirimi göster"), false) { if (it) ask.launch(Manifest.permission.POST_NOTIFICATIONS) }
         SwitchRow(tr("Pause on unplug", "Çıkarınca duraklat"), unplug) { unplug = it; MusicSettings.setPauseOnUnplug(c, it) }
         NotifPreview(ids)
