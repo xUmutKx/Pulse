@@ -11,12 +11,14 @@ object KeyboardLayouts {
     /** Language code -> its name, rows of letters and the long-press characters. */
     class Lang(val code: String, val name: String, val rows: List<String>, val locale: Locale, val alts: Map<Char, String>)
 
-    private val digitsOnLetters = mapOf('q' to '1', 'w' to '2', 'e' to '3', 'r' to '4', 't' to '5', 'y' to '6', 'u' to '7', 'i' to '8', 'o' to '9', 'p' to '0')
+    private const val DIGITS = "1234567890"
 
     private val en = Lang("en", "English", listOf("qwertyuiop", "asdfghjkl", "zxcvbnm"), Locale.ENGLISH, mapOf(
         'a' to "àáâäãåāæ", 'e' to "èéêëēę", 'i' to "ìíîïī", 'o' to "òóôöõøœō", 'u' to "ùúûüū", 'c' to "çćč", 'n' to "ñń", 's' to "śšß", 'y' to "ýÿ", 'z' to "žźż", 'l' to "ł", 'd' to "ð"))
     private val tr = Lang("tr", "Türkçe", listOf("qwertyuıopğü", "asdfghjklşi", "zxcvbnmöç"), Locale("tr", "TR"), mapOf(
         'a' to "âáà", 'e' to "éêè", 'i' to "îíı", 'ı' to "î", 'o' to "ôó", 'u' to "ûú", 'c' to "ç", 'g' to "ğ", 's' to "ş", 'n' to "ñ"))
+    // the Turkish F keyboard: the letters in the order of Turkish, the common ones under the fingers
+    private val trf = Lang("trf", "Türkçe F", listOf("fgğıodrnhpqw", "uieaütkmlyş", "jövcçzsbx"), Locale("tr", "TR"), tr.alts)
     private val de = Lang("de", "Deutsch", listOf("qwertzuiop", "asdfghjkl", "yxcvbnm"), Locale.GERMAN, mapOf(
         'a' to "äàáâã", 'o' to "öòóôõ", 'u' to "üùúû", 's' to "ß", 'e' to "éèêë", 'i' to "íìîï", 'c' to "ç", 'n' to "ñ"))
     private val fr = Lang("fr", "Français", listOf("azertyuiop", "qsdfghjklm", "wxcvbn"), Locale.FRENCH, mapOf(
@@ -24,17 +26,20 @@ object KeyboardLayouts {
     private val es = Lang("es", "Español", listOf("qwertyuiop", "asdfghjklñ", "zxcvbnm"), Locale("es", "ES"), mapOf(
         'a' to "áàäâ", 'e' to "éèëê", 'i' to "íìïî", 'o' to "óòöô", 'u' to "úùüû", 'n' to "ñ", 'c' to "ç"))
 
-    val all = listOf(en, tr, de, fr, es)
+    val all = listOf(en, tr, trf, de, fr, es)
     val languages: Set<String> = all.map { it.code }.toSet()
+    /** The word list a layout uses: both Turkish layouts share one. */
+    fun dict(code: String) = if (code == "trf") "tr" else code
+
     fun lang(code: String): Lang = all.firstOrNull { it.code == code } ?: en
 
     /** The letter rows of [code] as keys; [upper] gives capital letters. Without the number row the top letters carry their digit on long press. */
     fun letterRows(code: String, upper: Boolean, digitsOnPress: Boolean): List<List<KbKey>> {
         val l = lang(code)
-        return l.rows.map { row ->
-            row.map { ch ->
+        return l.rows.mapIndexed { r, row ->
+            row.mapIndexed { i, ch ->
                 val alts = buildList {
-                    if (digitsOnPress) digitsOnLetters[ch]?.let { add(it.toString()) }
+                    if (digitsOnPress && r == 0 && i < DIGITS.length) add(DIGITS[i].toString())
                     l.alts[ch]?.forEach { add(it.toString()) }
                 }
                 KbKey(cap(ch.toString(), l, upper), KeyKind.CHAR, 1f, if (upper) alts.map { cap(it, l, true) } else alts)
