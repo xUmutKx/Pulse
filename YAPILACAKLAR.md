@@ -1066,3 +1066,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.246 derlenmedi: 0.10.244/245 derleme düzeltmesi (font kaynakları, matchParentSize importu).
 
 - 0.10.247 derlenmedi: Poweramp yedeğinde olmayan şarkılar "atlandı" diye bildirilir; Poweramp oynatıcıda kapak ekran kenarına daha yakın; Poweramp widget kapağı varsayılan %86 (+%15) ve widget ayarları (köşeler, kapak gölgesi, yuvarlak kapak); LocalSend aktarımında duraklat/iptal ve sürüklenebilir yüzen balon (ilerleme halkası, dokununca kart); Windows Phone kutucukları her zaman kare (küçük/orta/geniş), uzun basınca boyut, ayarlarda düzen.
+
+- 0.10.248 derlenmedi: yedek yüklenince "telefonda yok" mesajı kalktı; Favoriler yıldıza göre (çok yıldız önce, sonra ada göre); Ses bilgisi penceresinde ve parça menüsünde "Düzenle / Etiketleri düzenle"; YouTube anahtarı kaynak koddan kalktı (sayfadan okunur).
