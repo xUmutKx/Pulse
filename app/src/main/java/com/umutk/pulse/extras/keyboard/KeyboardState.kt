@@ -70,6 +70,8 @@ interface KbActions {
     fun glide(letters: String)
     fun extraKey(id: String)
     fun hide()
+    /** Voice typing of the device (the Google voice input). */
+    fun voice()
 }
 
 /** Does nothing: the preview in the settings. */
@@ -96,6 +98,7 @@ object NoKbActions : KbActions {
     override fun glide(letters: String) {}
     override fun extraKey(id: String) {}
     override fun hide() {}
+    override fun voice() {}
 }
 
 /** The keyboard of the settings page: the panels open and close so a change of the menu or the keys can be seen at once. */

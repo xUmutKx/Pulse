@@ -1110,3 +1110,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.281 derlenmedi: derleme düzeltmesi.
 - 0.10.283: derlenmedi — uygulama listesinde klasörler (Klasöre ekle, uzun bas: ana ekrana ekle/adlandır/sil)
 - 0.10.284: derlenmedi — Widget Stack skin görselleri (5 skin), hız testi yeni düzen, Windows hesap makinesi küçük tuşlar altta, Buds kategoriler+açıklama+tüm ses cihazları, Fluent ikonlar (hız testi, buds, hesap makinesi, klavye)
+- 0.10.286: derlenmedi — klavye (sadece EN/TR, dil seçimi, virgül uzun bas=sesle yazma, aşağı kaydır kapat, gri/uzun tuşlar), ekstra uygulama menü varsayılanları, hava durumu sahne+ikonlar+kartlar, launcher ayarları Nova kategorileri

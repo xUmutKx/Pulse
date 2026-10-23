@@ -8,7 +8,7 @@ enum class KeyKind { CHAR, SHIFT, DELETE, ENTER, SPACE, MODE, EMOJI, COMMA, PERI
 class KbKey(val label: String, val kind: KeyKind = KeyKind.CHAR, val weight: Float = 1f, val alts: List<String> = emptyList())
 
 object KeyboardLayouts {
-    /** Language code -> its name, rows of letters and the long-press characters. */
+    /** English and Turkish (QWERTY) only. Language code -> its name, rows of letters and the long-press characters. */
     class Lang(val code: String, val name: String, val rows: List<String>, val locale: Locale, val alts: Map<Char, String>)
 
     private const val DIGITS = "1234567890"
@@ -26,7 +26,7 @@ object KeyboardLayouts {
     private val es = Lang("es", "Español", listOf("qwertyuiop", "asdfghjklñ", "zxcvbnm"), Locale("es", "ES"), mapOf(
         'a' to "áàäâ", 'e' to "éèëê", 'i' to "íìïî", 'o' to "óòöô", 'u' to "úùüû", 'n' to "ñ", 'c' to "ç"))
 
-    val all = listOf(en, tr, trf, de, fr, es)
+    val all = listOf(en, tr)
     val languages: Set<String> = all.map { it.code }.toSet()
     /** The word list a layout uses: both Turkish layouts share one. */
     fun dict(code: String) = if (code == "trf") "tr" else code

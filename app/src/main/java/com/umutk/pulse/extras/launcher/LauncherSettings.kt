@@ -180,12 +180,6 @@ fun LauncherSettings(back: () -> Unit) {
                     com.umutk.pulse.PChip(LauncherPrefs.pageEffect == k, n) { LauncherPrefs.pageEffect = k; save() }
                 }
             }
-            Text(tr("Folder picture", "Klasör resmi"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("grid" to tr("Grid", "Izgara"), "line" to tr("Line", "Satır"), "stack" to tr("Stack", "Yığın")).forEach { (k, n) ->
-                    com.umutk.pulse.PChip(LauncherPrefs.folderStyle == k, n) { LauncherPrefs.folderStyle = k; save() }
-                }
-            }
         }
         if (cat == "dock") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SwitchLine("apps", tr("Show dock", "Dok görünsün"), LauncherPrefs.dockShown) { LauncherPrefs.dockShown = it; save() }
@@ -202,13 +196,8 @@ fun LauncherSettings(back: () -> Unit) {
             }
             ValueRow("eyeOff", tr("Hidden apps", "Gizli uygulamalar"), "${LauncherPrefs.hidden.size}") { pickHidden = true }
             ValueRow("palette", tr("Icon pack", "Simge paketi"), IconPacks.installed(ctx).firstOrNull { it.pkg == LauncherPrefs.iconPack }?.label ?: tr("Default", "Varsayılan")) { pickPack = true }
-            SwitchLine("bell", tr("Notification badges on the app pictures", "Uygulama resimlerinde bildirim sayısı"), LauncherPrefs.badges) { LauncherPrefs.badges = it; save() }
-            if (LauncherPrefs.badges) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("number" to tr("Numbers", "Sayı"), "dot" to tr("Dots", "Nokta")).forEach { (k, n) -> com.umutk.pulse.PChip(LauncherPrefs.badgeStyle == k, n) { LauncherPrefs.badgeStyle = k; save() } }
-            }
-            Text(tr("Badges need notification access for one of Pulse's listeners (Notification history).", "Rozetler için Pulse'un bildirim erişimi (Bildirim geçmişi) açık olmalı."), color = T.sub, fontSize = 12.sp)
         }
-        if (cat == "extras") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        if (cat == "gestures") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // gestures
             SwitchLine("lock", tr("Double tap to lock the screen", "Çift dokunuşla ekranı kilitle"), LauncherPrefs.gestureLock) { LauncherPrefs.gestureLock = it; save() }
             SwitchLine("chevron", tr("Swipe down: notifications", "Aşağı kaydır: bildirimler"), LauncherPrefs.swipeDownShade) { LauncherPrefs.swipeDownShade = it; save() }
@@ -216,6 +205,8 @@ fun LauncherSettings(back: () -> Unit) {
             SwitchLine("apps", tr("Swipe up: apps list", "Yukarı kaydır: uygulama listesi"), LauncherPrefs.swipeUpApps) { LauncherPrefs.swipeUpApps = it; save() }
             Text(tr("The lock and notification gestures use the \"Pulse · Screen cover layer\" accessibility service.", "Kilit ve bildirim hareketleri \"Pulse · Screen cover layer\" erişilebilirlik hizmetini kullanır."), color = T.sub, fontSize = 12.sp)
             SwitchLine("sensors", tr("Tick on long press", "Uzun basınca titreşim"), LauncherPrefs.haptic) { LauncherPrefs.haptic = it; save() }
+        }
+        if (cat == "feel") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (cur.id in com.umutk.pulse.loginLooks) {
                 SwitchLine("power", tr("Boot screen when the launcher starts", "Başlatıcı açılırken önyükleme ekranı"), LauncherPrefs.bootScreen) { LauncherPrefs.bootScreen = it; save() }
                 SwitchLine("users", tr("Sign-in screen when the launcher starts", "Başlatıcı açılırken giriş ekranı"), LauncherPrefs.loginScreen) { LauncherPrefs.loginScreen = it; save() }
@@ -233,6 +224,8 @@ fun LauncherSettings(back: () -> Unit) {
             SwitchLine("volume", tr("Sound effects (start-up chime, clicks)", "Ses efektleri (açılış sesi, tıklama)"), LauncherPrefs.sounds) { LauncherPrefs.sounds = it; save() }
             SliderRow("${tr("Darken the wallpaper", "Duvar kağıdını karart")}: ${LauncherPrefs.wallDim}%", LauncherPrefs.wallDim.toFloat(), 0f..70f) { LauncherPrefs.wallDim = it.roundToInt(); save() }
             SliderRow("${tr("Blur the wallpaper", "Duvar kağıdını bulanıklaştır")}: ${LauncherPrefs.wallBlur}", LauncherPrefs.wallBlur.toFloat(), 0f..24f) { LauncherPrefs.wallBlur = it.roundToInt(); save() }
+        }
+        if (cat == "screen") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // clock and screen
             SwitchLine("clock", tr("24-hour clock", "24 saatlik saat"), LauncherPrefs.clock24) { LauncherPrefs.clock24 = it; save() }
             SwitchLine("clock", tr("Seconds on the desktop clock", "Masaüstü saatinde saniye"), LauncherPrefs.clockSeconds) { LauncherPrefs.clockSeconds = it; save() }
@@ -244,10 +237,27 @@ fun LauncherSettings(back: () -> Unit) {
             SwitchLine("search", tr("Keyboard opens in the apps search", "Uygulama aramasında klavye açılsın"), LauncherPrefs.searchFocus) { LauncherPrefs.searchFocus = it; save() }
             SwitchLine("lock", tr("Lock the layout (gadgets stay where they are)", "Düzeni kilitle (gadget'lar yerinde kalır)"), LauncherPrefs.lockLayout) { LauncherPrefs.lockLayout = it; save() }
         }
+        if (cat == "folders") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(tr("Folder picture", "Klasör resmi"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("grid" to tr("Grid", "Izgara"), "line" to tr("Line", "Satır"), "stack" to tr("Stack", "Yığın")).forEach { (k, n) ->
+                    com.umutk.pulse.PChip(LauncherPrefs.folderStyle == k, n) { LauncherPrefs.folderStyle = k; save() }
+                }
+            }
+        }
+        if (cat == "badges") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            SwitchLine("bell", tr("Notification badges on the app pictures", "Uygulama resimlerinde bildirim sayısı"), LauncherPrefs.badges) { LauncherPrefs.badges = it; save() }
+            if (LauncherPrefs.badges) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("number" to tr("Numbers", "Sayı"), "dot" to tr("Dots", "Nokta")).forEach { (k, n) -> com.umutk.pulse.PChip(LauncherPrefs.badgeStyle == k, n) { LauncherPrefs.badgeStyle = k; save() } }
+            }
+            Text(tr("Badges need notification access for one of Pulse's listeners (Notification history).", "Rozetler için Pulse'un bildirim erişimi (Bildirim geçmişi) açık olmalı."), color = T.sub, fontSize = 12.sp)
+        }
         if (cat == "system") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ValueRow("home", tr("Default home app", "Varsayılan ana ekran"), if (isHome) tr("Yes", "Evet") else tr("No", "Hayır")) {
                 ctx.startActivity(Intent(Settings.ACTION_HOME_SETTINGS))
             }
+        }
+        if (cat == "backup") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ValueRow("save", tr("Export launcher settings", "Ana ekran ayarlarını dışa aktar"), "Download/PulseLauncher.properties") {
                 android.widget.Toast.makeText(ctx, if (LauncherPrefs.exportSettings(ctx)) tr("Saved to Download", "Download'a kaydedildi") else tr("Could not save", "Kaydedilemedi"), android.widget.Toast.LENGTH_SHORT).show()
             }
@@ -313,13 +323,18 @@ private class LCat(val key: String, val color: Long, val icon: String, val en: S
 
 private val LAUNCHER_CATS = listOf(
     LCat("look", 0xFF7E57C2, "palette", "Look", "Görünüm", "Look, wallpaper", "Görünüm, duvar kağıdı"),
+    LCat("home", 0xFF43A047, "apps", "Home screen", "Ana ekran", "Grid, icons, pages, windows, orientation", "Izgara, simgeler, sayfalar, pencereler, yön"),
+    LCat("dock", 0xFFEF6C00, "pin", "Dock", "Dok", "Pinned apps", "Sabitli uygulamalar"),
+    LCat("apps", 0xFF3949AB, "sort", "App drawer", "Uygulama çekmecesi", "Sort, columns, hidden apps, icon pack", "Sıralama, sütunlar, gizli uygulamalar, simge paketi"),
+    LCat("folders", 0xFFF9A825, "folder", "Folders", "Klasörler", "How a folder looks", "Klasörün görünümü"),
     LCat("widgets", 0xFF1E88E5, "gridView", "Widgets", "Widget'lar", "Add and remove widgets", "Widget ekle ve kaldır"),
     LCat("desktop", 0xFF26A69A, "folder", "Desktop icons", "Masaüstü simgeleri", "Which shortcuts sit on the Windows desktops", "Windows masaüstlerindeki kısayollar"),
-    LCat("home", 0xFF43A047, "apps", "Home screen", "Ana ekran", "Clock, grid, windows, orientation", "Saat, ızgara, pencereler, yön"),
-    LCat("dock", 0xFFEF6C00, "pin", "Dock", "Dok", "Pinned apps", "Sabitli uygulamalar"),
-    LCat("apps", 0xFF3949AB, "sort", "Apps", "Uygulamalar", "Sort, drawer columns, hidden apps", "Sıralama, çekmece, gizli uygulamalar"),
-    LCat("extras", 0xFFD81B60, "sensors", "Extras", "Ekstralar", "Gestures, icon shape, wallpaper effects, clock formats", "Hareketler, simge şekli, duvar kağıdı efektleri, saat biçimi"),
-    LCat("system", 0xFF6D4C41, "settings", "System", "Sistem", "Default home app, backup, reset", "Varsayılan ana ekran, yedek, sıfırla"),
+    LCat("feel", 0xFF8E24AA, "palette", "Look and feel", "Görünüm ve his", "Icon shape, wallpaper effects, sounds, boot screens", "Simge şekli, duvar kağıdı efektleri, sesler, açılış ekranları"),
+    LCat("gestures", 0xFFD81B60, "sensors", "Gestures and inputs", "Hareketler ve girişler", "Double tap, swipes, vibration", "Çift dokunuş, kaydırmalar, titreşim"),
+    LCat("badges", 0xFFE53935, "bell", "Notification badges", "Bildirim rozetleri", "Numbers or dots on the apps", "Uygulamalarda sayı ya da nokta"),
+    LCat("screen", 0xFF00897B, "clock", "Clock and screen", "Saat ve ekran", "Clock formats, screen on, layout lock", "Saat biçimi, ekran açık kalsın, düzen kilidi"),
+    LCat("backup", 0xFF546E7A, "save", "Backup and reset", "Yedek ve sıfırlama", "Export, import, reset", "Dışa aktar, içe aktar, sıfırla"),
+    LCat("system", 0xFF6D4C41, "settings", "System", "Sistem", "Default home app", "Varsayılan ana ekran"),
 )
 
 private fun sortLabel(s: String): String = when (s) {
