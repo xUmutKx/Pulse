@@ -332,6 +332,8 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     }
     var actionFor by remember { mutableStateOf<LaunchApp?>(null) }
     val open: (LaunchApp) -> Unit = { app ->
+        // the look's click when anything opens (the desktop shortcuts played it already)
+        if (!app.pkg.startsWith("pulse:")) { LauncherSounds.prepare(ctx, look.id); LauncherSounds.click(look.id) }
         if (isFolder(app)) FolderUi.open = app.pkg.removePrefix(FOLDER_PREFIX)
         else if (app.pkg.startsWith("file:")) openLink(ctx, app.pkg.removePrefix("file:"))
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
