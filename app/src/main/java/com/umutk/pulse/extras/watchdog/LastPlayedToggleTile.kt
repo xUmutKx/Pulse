@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.watchdog
 
+import com.umutk.pulse.subtitleCompat
+
 import android.os.Build
 import android.service.quicksettings.Tile
 import android.service.quicksettings.TileService
