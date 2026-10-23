@@ -24,6 +24,7 @@ object KeyboardDictionary {
     private val pairs = ConcurrentHashMap<String, ConcurrentHashMap<String, Int>>()
     private var userLoaded = false
     private fun d(l: String) = KeyboardLayouts.dict(l)
+    fun dictOf(code: String) = d(code)
     private var dirty = 0
 
     /** A candidate word with its score (bigger is better) and how far it is from what was typed (0 = the typed word itself). */
@@ -82,6 +83,7 @@ object KeyboardDictionary {
     private fun loadUser(c: Context) {
         userLoaded = true
         runCatching { File(c.filesDir, "kbd_user.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) user[p[0]] = p[1].toIntOrNull() ?: 1 } }
+        runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
     }
 
@@ -96,8 +98,8 @@ object KeyboardDictionary {
 
     /** Forgets everything learned from the user (settings > factory settings, and the "Clear learned words" row). */
     fun forgetUser(c: Context) {
-        user.clear(); pairs.clear(); dirty = 0
-        File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete()
+        user.clear(); pairs.clear(); typos.clear(); dirty = 0
+        File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete(); File(c.filesDir, "kbd_typos.txt").delete()
     }
 
     fun learnedCount() = user.size
@@ -121,7 +123,7 @@ object KeyboardDictionary {
     fun isWord(code: String, w: String): Boolean {
         val lang = d(code)
         val l = w.lowercase(Locale.ROOT)
-        return lexes[lang]?.index?.containsKey(l) == true || (user[l] ?: 0) >= 2
+        return lexes[lang]?.index?.containsKey(l) == true || (user[l] ?: 0) >= 2 || (lang == "tr" && trKnown(l))
     }
 
     private fun score(code: String, w: String): Float {
@@ -170,6 +172,100 @@ object KeyboardDictionary {
         for (i in lx.words.indices) consider(lx.words[i], lx.score[i])
         user.forEach { (w, _) -> if (best.none { it.word == w }) consider(w, score(lang, w)) }
         return best.sortedByDescending { it.score }.take(n)
+    }
+
+    // ---- Turkish endings ---------------------------------------------------------------------------------------------------------------------------
+    // The lists hold the base words; an inflected word ("yanlışlıkları") is a base word with a chain of endings. A typed word counts as known when it splits
+    // into a known base and a chain of endings, and a mistyped one is mended on both sides: the base word by the typo cost, the ending to the nearest chain.
+
+    private val endings = listOf("lar", "ler", "ım", "im", "um", "üm", "ın", "in", "un", "ün", "ı", "i", "u", "ü", "a", "e", "da", "de", "ta", "te", "dan", "den", "tan", "ten",
+        "nın", "nin", "nun", "nün", "ya", "ye", "yı", "yi", "yu", "yü", "lı", "li", "lu", "lü", "sız", "siz", "suz", "süz", "ki", "ken", "mış", "miş", "muş", "müş",
+        "dı", "di", "du", "dü", "tı", "ti", "tu", "tü", "yor", "ıyor", "iyor", "uyor", "üyor", "acak", "ecek", "mak", "mek", "ma", "me", "m", "n", "k", "nız", "niz", "nuz", "nüz",
+        "ız", "iz", "uz", "üz", "lık", "lik", "luk", "lük", "cı", "ci", "cu", "cü", "çı", "çi", "çu", "çü", "la", "le", "ca", "ce", "ça", "çe", "dır", "dir", "dur", "dür",
+        "tır", "tir", "tur", "tür", "sın", "sin", "sun", "sün", "sı", "si", "su", "sü", "nı", "ni", "nu", "nü", "na", "ne", "nda", "nde", "ndan", "nden", "mız", "miz", "muz", "müz",
+        "ları", "leri", "larım", "lerim", "ımız", "imiz", "dım", "dim", "tım", "tim", "dık", "dik", "tık", "tik", "sa", "se", "mı", "mi", "mu", "mü", "bil", "ebil", "abil", "madı", "medi")
+    private val common = listOf("lar", "ler", "ı", "i", "u", "ü", "ın", "in", "da", "de", "dan", "den", "a", "e", "ya", "ye", "lı", "li", "sız", "siz", "ım", "im", "mız", "miz", "ları", "leri", "ki", "la", "le", "lık", "lik", "yor", "mak", "mek")
+
+    /** Endings by length: single ones, two in a row, and three in a row from the common ones. */
+    private val chains: Array<List<String>> by lazy {
+        val set = LinkedHashSet<String>()
+        set += ""
+        endings.forEach { set += it }
+        for (a in endings) for (b in endings) if (a.length + b.length <= 9) set += a + b
+        for (a in common) for (b in common) for (c in common) if (a.length + b.length + c.length <= 9) set += a + b + c
+        val by = Array(10) { ArrayList<String>() }
+        set.forEach { if (it.length < 10) by[it.length] += it }
+        Array(10) { by[it] }
+    }
+    private val chainSet: Set<String> by lazy { chains.flatMap { it }.toHashSet() }
+
+    private fun backVowel(c: Char) = c in "aıou"
+    private fun frontVowel(c: Char) = c in "eiöü"
+
+    /** The ending agrees with the last vowel of the base (back or front vowels), as Turkish endings do. */
+    private fun harmony(stem: String, tail: String): Boolean {
+        if (tail.isEmpty()) return true
+        if ("yor" in tail || "ki" in tail || "ken" in tail) return true
+        val v = stem.lastOrNull { backVowel(it) || frontVowel(it) } ?: return true
+        val back = backVowel(v)
+        return tail.none { if (back) frontVowel(it) else backVowel(it) }
+    }
+
+    private fun trBaseWord(lx: Lex, w: String): Boolean = lx.index.containsKey(w) || (user[w] ?: 0) >= 2
+
+    /** A base word and a chain of endings: the word is a real (inflected) Turkish word. */
+    fun trKnown(w: String): Boolean {
+        val lx = lexes["tr"] ?: return false
+        if (w.length < 5) return false
+        for (k in w.length - 1 downTo 3) {
+            val tail = w.substring(k)
+            if (tail.length > 9) break
+            if (tail in chainSet && harmony(w.substring(0, k), tail) && trBaseWord(lx, w.substring(0, k))) return true
+            // a softened last consonant (kitap -> kitabı, çocuk -> çocuğu)
+            val stem = w.substring(0, k)
+            val hard = when (stem.last()) { 'b' -> "p"; 'c' -> "ç"; 'd' -> "t"; 'ğ' -> "k"; else -> null }
+            if (hard != null && tail.isNotEmpty() && (tail[0] in "aeıioöuü") && tail in chainSet && trBaseWord(lx, stem.dropLast(1) + hard)) return true
+        }
+        return false
+    }
+
+    /** Mended inflected words: the base mended by [correct], the ending mended to the nearest chain that agrees with it. */
+    fun trCorrect(typed: String, n: Int): List<Cand> {
+        val lx = lexes["tr"] ?: return emptyList()
+        if (typed.length < 5 || typed.length > 26) return emptyList()
+        val out = ArrayList<Cand>()
+        val a = FloatArray(32); val b = FloatArray(32); val c = FloatArray(32)
+        for (k in typed.length - 1 downTo maxOf(3, typed.length - 9)) {
+            val stemT = typed.substring(0, k); val tailT = typed.substring(k)
+            // the nearest ending chains
+            var bestTail: String? = null; var bestCost = 1.05f
+            for (len in maxOf(0, tailT.length - 1)..minOf(9, tailT.length + 1)) for (tail in chains[len]) {
+                val cst = if (tail == tailT) 0f else distance(tailT, tail, bestCost, a, b, c)
+                if (cst < bestCost) { bestCost = cst; bestTail = tail }
+                if (cst == 0f) break
+            }
+            val tail = bestTail ?: continue
+            val stems = correct("tr", stemT, if (stemT.length >= 5) 1f else .7f, 3)
+            for (st in stems) {
+                if (!harmony(st.word, tail) || st.word.length < 3) continue
+                val cost = st.cost + bestCost
+                out += Cand(st.word + tail, st.score - 4f * cost - .6f, cost)
+            }
+        }
+        return out.sortedByDescending { it.score }.distinctBy { it.word }.take(n)
+    }
+
+    // ---- what the user's own typos turned out to mean ------------------------------------------------------------------------------------------------
+
+    private val typos = ConcurrentHashMap<String, String>()
+
+    /** The word this exact typo was turned into before (by tapping the suggestion), or null. */
+    fun typoFix(c: Context, typed: String): String? { if (!userLoaded) loadUser(c); return typos[typed] }
+
+    fun learnTypo(c: Context, typed: String, word: String) {
+        if (typed.length < 3 || typed == word || word.startsWith(typed)) return
+        typos[typed] = word
+        runCatching { File(c.filesDir, "kbd_typos.txt").writeText(typos.entries.take(4000).joinToString("\n") { "${it.key} ${it.value}" }) }
     }
 
     /**

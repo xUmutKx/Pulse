@@ -1133,3 +1133,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.315: derlenmedi (derleme istenmedi) — Windows 11 başlat menüsünde Oturumu kapat altta sabit; Pulse ana sayfada geri tuşu uygulamayı kapatmaz, arka plana atar
 - 0.10.316: derlenmedi (derleme istenmedi) — klavye: boş alanda ve cümle başında başlangıç önerileri (I/The/Hello, Merhaba/Ben/Evet), e-posta alanında önce yazılan adresler sonra alan adları, silme tuşu basılı tutulunca kelime kelime siler
 - 0.10.317: derlenmedi (derleme istenmedi) — klavye: yazarken kaydırma (flow) mavi çizgisi kaldırıldı, aşağı kaydırınca klavye kayarak değil hemen kapanır (siyah ekran sorunu)
+- 0.10.318: derlenmedi (derleme istenmedi) — klavye otomatik düzeltme: Türkçe çekimli kelimeler (taban + ek) tanınır ve düzeltilir, uzun kelimelerde daha çok hataya izin, dokunduğunuz öneriden kendi yazım hatalarınızı öğrenir
