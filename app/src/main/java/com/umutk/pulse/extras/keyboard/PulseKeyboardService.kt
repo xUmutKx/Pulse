@@ -76,6 +76,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 // a language without a word list fetches its own (when there is a connection)
                 if (!KeyboardDictionary.hasList(this@PulseKeyboardService, code)) KeyboardDictionary.download(this@PulseKeyboardService, code)
                 KeyboardDictionary.load(this@PulseKeyboardService, code)
+                // the small bundled list is replaced once by the full one (inflected forms, names), when there is a connection
+                runCatching { KeyboardDictionary.upgradeOnce(this@PulseKeyboardService, code) }
             }
             withContext(Dispatchers.Main) { updateSuggestions() }
         }
@@ -555,14 +557,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val lower = typed.lowercase(loc)
         val codes = dictCodes(code)
-        val comp = codes.flatMap { KeyboardDictionary.complete(it, lower, 4) }.sortedByDescending { it.score }.take(5)
+        val comp = codes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word) }.take(5)
         val maxCost = if (KeyboardLayouts.dict(code) == "tr") (if (lower.length >= 5) .8f else .65f) else if (lower.length >= 4) 1.3f else .7f
         val learned = KeyboardDictionary.typoFix(this, lower)
         val tr = codes.any { KeyboardDictionary.dictOf(it) == "tr" }
         // long words may hold more slips; Turkish words are also mended as a base word plus its endings
         val limit = if (lower.length >= 8) maxCost + .5f else maxCost
         val corr = if (lower.length >= 2) (codes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4) else emptyList()) +
-            (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score }.distinctBy { it.word }.take(6) else emptyList()
+            (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word) }.distinctBy { it.word }.take(6) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
         val fix = corr.firstOrNull { it.word != lower }?.takeIf { lower.length >= 3 && it.cost <= limit && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }

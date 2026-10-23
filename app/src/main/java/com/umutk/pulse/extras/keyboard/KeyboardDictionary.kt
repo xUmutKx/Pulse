@@ -60,25 +60,44 @@ object KeyboardDictionary {
     /** Downloads the most used words of [code] (FrequencyWords, CC BY-SA 4.0) into the app's files and loads them. Call from a background thread; true when it worked. */
     fun download(c: Context, code: String): Boolean = runCatching {
         val lang = d(code)
-        val url = java.net.URL("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/$lang/${lang}_50k.txt")
+        // the full list (every form of every word seen in the subtitles, the commonest 150 000) first: Turkish and German need the inflected forms; else the 50 000 list
+        var out = fetch(lang, "${lang}_full.txt", 150000)
+        if (out.size < 500) out = fetch(lang, "${lang}_50k.txt", 50000)
+        if (out.size < 500) return@runCatching false
+        File(c.filesDir, "kbd").mkdirs()
+        File(c.filesDir, "kbd/$lang.txt").writeText(out.joinToString("\n") + "\n")
+        File(c.filesDir, "kbd/$lang.up").writeText("1")
+        lexes.remove(lang)
+        load(c, lang)
+        true
+    }.getOrDefault(false)
+
+    private fun fetch(lang: String, file: String, cap: Int): List<String> = runCatching {
+        val url = java.net.URL("https://raw.githubusercontent.com/hermitdave/FrequencyWords/master/content/2018/$lang/$file")
         val out = ArrayList<String>()
-        val conn = (url.openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 15000; readTimeout = 30000 }
+        val conn = (url.openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 15000; readTimeout = 60000 }
         conn.inputStream.bufferedReader().useLines { lines ->
             for (ln in lines) {
                 val i = ln.indexOf(' ')
                 if (i <= 0) continue
                 val w = ln.substring(0, i)
+                val n = ln.substring(i + 1).toIntOrNull() ?: 0
+                if (n < 2) break
                 if (w.length in 1..24 && w.all { it.isLetter() || it == '\'' } && !(w.length == 1 && lang != "tr" && lang != "en" && w.none { it in "aeiouyàáâéèêíóúyà" })) out += ln
-                if (out.size >= 40000) break
+                if (out.size >= cap) break
             }
         }
-        if (out.size < 500) return@runCatching false
-        File(c.filesDir, "kbd").mkdirs()
-        File(c.filesDir, "kbd/$lang.txt").writeText(out.joinToString("\n") + "\n")
-        lexes.remove(lang)
-        load(c, lang)
-        true
-    }.getOrDefault(false)
+        out
+    }.getOrDefault(emptyList())
+
+    /** The bundled list is small: once, when there is a connection, the full one replaces it. Call from a background thread. */
+    fun upgradeOnce(c: Context, code: String) {
+        val lang = d(code)
+        if (File(c.filesDir, "kbd/$lang.up").exists()) return
+        val cm = c.getSystemService(android.net.ConnectivityManager::class.java)
+        val online = cm?.getNetworkCapabilities(cm.activeNetwork)?.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET) == true
+        if (online) download(c, code)
+    }
 
     private fun loadUser(c: Context) {
         userLoaded = true
@@ -87,8 +106,8 @@ object KeyboardDictionary {
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
     }
 
-    fun saveUser(c: Context) {
-        if (dirty == 0) return
+    fun saveUser(c: Context, force: Boolean = false) {
+        if (dirty == 0 && !force) return
         dirty = 0
         runCatching {
             File(c.filesDir, "kbd_user.txt").writeText(user.entries.sortedByDescending { it.value }.take(8000).joinToString("\n") { "${it.key} ${it.value}" })
@@ -118,6 +137,36 @@ object KeyboardDictionary {
         user[w] = (user[w] ?: 0) + 1
         if (!prev.isNullOrEmpty()) { val m = pairs.getOrPut(prev.lowercase(Locale.ROOT)) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
         if (++dirty >= 25) saveUser(c)
+    }
+
+    /** A word the person is known to use (a contact name, a word of the phone's dictionary): counted [times] times. */
+    fun learnWord(word: String, times: Int) {
+        val w = word.lowercase(Locale.ROOT)
+        if (w.length < 2 || w.any { it.isDigit() }) return
+        user[w] = maxOf(user[w] ?: 0, times)
+        dirty++
+    }
+
+    /** A written text (a message): its words and the pairs of words that follow each other count, as when they were typed. */
+    fun learnText(c: Context, text: String) {
+        if (!userLoaded) loadUser(c)
+        var prev: String? = null
+        for (raw in text.lowercase(Locale.ROOT).split(Regex("[^\\p{L}'’]+"))) {
+            val w = raw.trim('\'', '’')
+            if (w.length < 2 || w.length > 24) { prev = null; continue }
+            user[w] = (user[w] ?: 0) + 1
+            val p = prev
+            if (p != null) { val m = pairs.getOrPut(p) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
+            prev = w
+        }
+        dirty++
+    }
+
+    /** How much more likely [w] is right after [prev], from what the person wrote (0 when it never followed). */
+    fun pairBoost(prev: String?, w: String): Float {
+        if (prev.isNullOrEmpty()) return 0f
+        val n = pairs[prev.lowercase(Locale.ROOT)]?.get(w.lowercase(Locale.ROOT)) ?: return 0f
+        return 1.5f + ln(1f + n) * 1.2f
     }
 
     fun isWord(code: String, w: String): Boolean {
