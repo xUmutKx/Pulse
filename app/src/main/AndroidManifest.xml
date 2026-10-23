@@ -1281,6 +1281,7 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_winamp_compact_info" />
         </receiver>
+        <activity android:name="com.umutk.pulse.extras.music.widgets.PowerampWidgetConfig" android:exported="false" />
         <receiver android:name="com.umutk.pulse.extras.music.widgets.PowerampWidget" android:label="Poweramp" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
