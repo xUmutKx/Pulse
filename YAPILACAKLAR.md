@@ -1052,3 +1052,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.239 derlenmedi: 0.10.238 derleme düzeltmesi (importlar).
 
 - 0.10.240 derlenmedi: Bluetooth otomatik çalma artık oynatıcı kapalıyken de (manifest alıcısı + servis başlatma); widget sanatçısı: etiket/kütüphaneden okunur, "Bilinmeyen sanatçı" yerine gerçek ad.
+
+- 0.10.241 derlenmedi: Pulse ayarlarında kategori ikon dairesi kaldırıldı; Win11 görünümde yinelenen duvar kağıdı ızgarası kaldırıldı; Poweramp root içe aktarma doğru root görünümüyle (hata nedeni gösterilir); kapak aşağı çekilince altta gidilecek sayfa (kütüphane/arama) hazır, ışınlanma yok; Kulaklık/Bluetooth ayarları (kablolu kulaklıkta devam, çıkınca duraklat, USB DAC, ses odağı, tuşlar); LocalSend Fluent menü ikonu, tüm arayüzlerde + ARP/USB/hotspot taraması, Fluent yükleme halkası.

@@ -388,7 +388,7 @@ private val FC_PIC = mapOf("processes" to "processes", "performance" to "perform
 
 private val FC_NAMED = mapOf("extraFiles" to "files", "extraPhotos" to "photos", "extraCalendar" to "calendar", "extraContacts" to "contacts", "extraPaint" to "paint", "extraArtCraft" to "artcraft",
     "extraMusic" to "music", "extraVideo" to "video", "extraWhiteNoise" to "whitenoise", "extraVoice" to "voice", "extraNotes" to "notes", "extraWeather" to "weather", "extraMessages" to "messages",
-    "extraLauncher" to "launcher", "extraScreenRec" to "screenrec", "extraNotifHist" to "notifhist", "extraStore" to "store")
+    "extraLauncher" to "launcher", "extraScreenRec" to "screenrec", "extraNotifHist" to "notifhist", "extraLocalSend" to "localsend", "extraStore" to "store")
 
 /** The filled Fluent glyph of a [FluentFilled] key, in its own colour. */
 @androidx.compose.runtime.Composable

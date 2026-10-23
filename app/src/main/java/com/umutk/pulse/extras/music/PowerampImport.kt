@@ -16,6 +16,9 @@ import java.util.zip.ZipInputStream
 object PowerampImport {
     class Result(val playlists: Int, val ratings: Int, val plays: Int, val covers: Int, val embedded: Int, val missing: Int, val missingNames: List<String> = emptyList())
 
+    /** Why the last direct import returned null. */
+    @Volatile var lastError = ""
+
     private fun nfc(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFC)
 
     private fun fold(s: String) = java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFKD).replace(Regex("\\p{M}+"), "").lowercase().filter { it.isLetterOrDigit() }
@@ -49,14 +52,17 @@ object PowerampImport {
      * album_art pictures it saved. Blocking: call off the main thread. Null when there is no root or Poweramp is not installed.
      */
     fun direct(ctx: Context, library: List<Track>, embed: Boolean): Result? {
-        if (com.umutk.pulse.Shell.root != true) return null
         val pkg = "com.maxmpz.audioplayer"
         val work = File(ctx.cacheDir, "pa_import").apply { deleteRecursively(); mkdirs() }
-        val src = "/data/data/$pkg/databases"
-        val names = com.umutk.pulse.Shell.runRoot("ls -1 $src 2>/dev/null").lines().map { it.trim() }.filter { it.isNotEmpty() && !it.endsWith("-journal") }
-        if (names.isEmpty()) return null
+        // plain su may run in an isolated mount view that hides other apps' data: find the root view that really sees Poweramp's databases
+        val why = StringBuilder()
+        val seen = com.umutk.pulse.Shell.rootSee(listOf("/data/data/$pkg/databases", "/data/user/0/$pkg/databases"), why)
+        if (seen == null) { lastError = why.toString().ifBlank { "root refused or Poweramp not installed" }; return null }
+        val (mode, src) = seen
+        val names = com.umutk.pulse.Shell.runRoot("ls -1 $src 2>/dev/null", mode).lines().map { it.trim() }.filter { it.isNotEmpty() && !it.endsWith("-journal") }
+        if (names.isEmpty()) { lastError = "no databases in $src"; return null }
         // copy the databases with their write-ahead logs, so the newest ratings are in
-        com.umutk.pulse.Shell.runRoot("for f in $src/*; do cp \"\$f\" '${work.path}/' 2>/dev/null; done; chmod -R 666 '${work.path}' 2>/dev/null")
+        com.umutk.pulse.Shell.runRoot("for f in $src/*; do cp \"\$f\" '${work.path}/' 2>/dev/null; done; chmod 777 '${work.path}'; chmod 666 '${work.path}'/* 2>/dev/null", mode)
         var db: File? = null
         for (n in names.filter { !it.endsWith("-wal") && !it.endsWith("-shm") }) {
             val f = File(work, n)
@@ -67,7 +73,7 @@ object PowerampImport {
             }.getOrDefault(false)
             if (has) { db = f; break }
         }
-        db ?: return null
+        if (db == null) { lastError = "no library database among ${names.size} files"; return null }
         // the pictures: Poweramp's album_art folders on shared storage
         val pics = ArrayList<File>()
         val picDirs = listOf("/storage/emulated/0/Poweramp/album_art", "/storage/emulated/0/Android/data/$pkg/files/album_art", "/storage/emulated/0/Android/data/$pkg/files/Poweramp/album_art")
