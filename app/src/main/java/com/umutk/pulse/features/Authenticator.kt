@@ -93,10 +93,10 @@ object Totp {
     fun selfTest(): Boolean = code("12345678901234567890".toByteArray(Charsets.US_ASCII), 59L, 6) == "287082"
 }
 
-private data class Acct(val issuer: String, val name: String, val secret: String, val digits: Int, val period: Int, val algo: String)
+internal data class Acct(val issuer: String, val name: String, val secret: String, val digits: Int, val period: Int, val algo: String)
 
 /** Accounts as JSON, AES-256-GCM with a key in the Android Keystore. File layout: 12-byte IV, then ciphertext. */
-private object AuthStore {
+internal object AuthStore {
     private const val ALIAS = "pulse_totp"
     private const val FILE = "totp.bin"
     private const val IV_LEN = 12
@@ -113,6 +113,21 @@ private object AuthStore {
                 .build()
         )
         return gen.generateKey()
+    }
+
+    /** Any bytes, sealed with the phone's own key (it cannot leave the phone). */
+    fun sealRaw(b: ByteArray): ByteArray { val c = Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.ENCRYPT_MODE, key()); return c.iv + c.doFinal(b) }
+    fun openRaw(b: ByteArray): ByteArray { val c = Cipher.getInstance("AES/GCM/NoPadding"); c.init(Cipher.DECRYPT_MODE, key(), GCMParameterSpec(128, b.copyOfRange(0, IV_LEN))); return c.doFinal(b.copyOfRange(IV_LEN, b.size)) }
+
+    fun toJson(list: List<Acct>): String {
+        val arr = JSONArray()
+        list.forEach { a -> arr.put(JSONObject().put("issuer", a.issuer).put("name", a.name).put("secret", a.secret).put("digits", a.digits).put("period", a.period).put("algo", a.algo)) }
+        return arr.toString()
+    }
+
+    fun fromJson(s: String): List<Acct> {
+        val arr = JSONArray(s)
+        return List(arr.length()) { i -> val o = arr.getJSONObject(i); Acct(o.getString("issuer"), o.getString("name"), o.getString("secret"), o.getInt("digits"), o.getInt("period"), o.getString("algo")) }
     }
 
     fun load(ctx: Context): List<Acct> {
@@ -143,6 +158,69 @@ private object AuthStore {
         tmp.writeBytes(out)
         Files.move(tmp.toPath(), File(ctx.filesDir, FILE).toPath(), StandardCopyOption.REPLACE_EXISTING)
     }
+}
+
+/** The Authenticator's own switches. */
+internal object AuthPrefs {
+    private fun p(c: Context) = c.getSharedPreferences("auth_settings", Context.MODE_PRIVATE)
+    /** The system fingerprint / face / PIN prompt before the codes show. */
+    fun biometric(c: Context) = p(c).getBoolean("biometric", false)
+    fun setBiometric(c: Context, v: Boolean) = p(c).edit().putBoolean("biometric", v).apply()
+    /** The accounts travel in the Pulse backup, sealed with a password of the user's. */
+    fun backup(c: Context) = p(c).getBoolean("backup", false)
+    fun setBackup(c: Context, v: Boolean) = p(c).edit().putBoolean("backup", v).apply()
+}
+
+/**
+ * The accounts inside a Pulse backup. The phone's own key cannot move to another phone, so the accounts are sealed with a password instead
+ * (PBKDF2 + AES-GCM) into files/auth-backup.enc of the backup zip; a restore leaves that file in place and the Authenticator asks for the password to take them in.
+ */
+internal object AuthBackup {
+    private const val FILE = "auth-backup.enc"
+    private const val PASS = "auth-pass.bin"
+    private val MAGIC = "PAB1".toByteArray()
+
+    fun hasPassword(c: Context) = File(c.filesDir, PASS).isFile
+    fun setPassword(c: Context, pw: String) { File(c.filesDir, PASS).writeBytes(AuthStore.sealRaw(pw.toByteArray())) }
+    private fun password(c: Context): String? = runCatching { String(AuthStore.openRaw(File(c.filesDir, PASS).readBytes())) }.getOrNull()
+    fun on(c: Context) = AuthPrefs.backup(c) && hasPassword(c)
+    fun hasRestore(c: Context) = File(c.filesDir, FILE).isFile
+    fun dropRestore(c: Context) { File(c.filesDir, FILE).delete() }
+
+    private fun derive(pw: String, salt: ByteArray) = javax.crypto.spec.SecretKeySpec(
+        javax.crypto.SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(javax.crypto.spec.PBEKeySpec(pw.toCharArray(), salt, 120_000, 256)).encoded, "AES")
+
+    /** The sealed accounts for the backup zip; null when the backup switch is off, no password is set or there are no accounts. */
+    fun seal(c: Context): ByteArray? {
+        if (!on(c)) return null
+        val pw = password(c) ?: return null
+        val list = runCatching { AuthStore.load(c) }.getOrNull()?.takeIf { it.isNotEmpty() } ?: return null
+        val salt = ByteArray(16).also { java.security.SecureRandom().nextBytes(it) }
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.ENCRYPT_MODE, derive(pw, salt)) }
+        return MAGIC + salt + cipher.iv + cipher.doFinal(AuthStore.toJson(list).toByteArray())
+    }
+
+    /** The accounts of a restored backup, or null when the password is wrong. */
+    fun open(c: Context, pw: String): List<Acct>? = runCatching {
+        val b = File(c.filesDir, FILE).readBytes()
+        require(b.size > 32 && b.copyOfRange(0, 4).contentEquals(MAGIC))
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding").apply { init(Cipher.DECRYPT_MODE, derive(pw, b.copyOfRange(4, 20)), GCMParameterSpec(128, b.copyOfRange(20, 32))) }
+        AuthStore.fromJson(String(cipher.doFinal(b.copyOfRange(32, b.size))))
+    }.getOrNull()
+}
+
+/** The system prompt (fingerprint, face, or the screen lock when no biometrics are set) before the codes show. Nothing is asked when the phone has no lock at all. */
+private fun askSystemLock(ctx: Context, onOk: () -> Unit, onFail: () -> Unit) {
+    val auth = android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG or android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    val bm = ctx.getSystemService(android.hardware.biometrics.BiometricManager::class.java)
+    if (bm == null || bm.canAuthenticate(auth) != android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) { onOk(); return }
+    runCatching {
+        android.hardware.biometrics.BiometricPrompt.Builder(ctx).setTitle("Authenticator").setAllowedAuthenticators(auth).build()
+            .authenticate(android.os.CancellationSignal(), ctx.mainExecutor, object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult?) { onOk() }
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) { onFail() }
+            })
+    }.onFailure { onFail() }
 }
 
 /** The text of the QR code in a picture, or null when there is none. */
@@ -193,6 +271,16 @@ fun AuthenticatorScreen(back: () -> Unit) {
     var copiedAt by remember { mutableStateOf(0L) }
     var now by remember { mutableStateOf(System.currentTimeMillis()) }
 
+    var unlocked by remember { mutableStateOf(!AuthPrefs.biometric(ctx)) }
+    var showSettings by remember { mutableStateOf(false) }
+    var bioOn by remember { mutableStateOf(AuthPrefs.biometric(ctx)) }
+    var bkOn by remember { mutableStateOf(AuthPrefs.backup(ctx)) }
+    var bkPass by remember { mutableStateOf("") }
+    var hasRestore by remember { mutableStateOf(AuthBackup.hasRestore(ctx)) }
+    var restorePass by remember { mutableStateOf("") }
+    var setMsg by remember { mutableStateOf("") }
+    // the system prompt comes up by itself when the page opens; a cancelled prompt leaves the lock screen with a button to ask again
+    LaunchedEffect(Unit) { if (!unlocked) askSystemLock(ctx, { unlocked = true }, {}) }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) { runCatching { AuthStore.load(ctx) } }.fold(
             onSuccess = { accounts = it },
@@ -233,6 +321,14 @@ fun AuthenticatorScreen(back: () -> Unit) {
     val askCam = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok -> if (ok) scanning = true else msg = tr("Camera permission is needed to scan", "Taramak için kamera izni gerekir") }
     if (scanning) QrScanDialog({ useQr(it) }) { scanning = false }
 
+    if (!unlocked) {
+        Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
+            PIcon("lock", T.text, 48.dp)
+            Spacer(Modifier.height(16.dp))
+            PButton(tr("Unlock", "Kilidi aç")) { askSystemLock(ctx, { unlocked = true }, {}) }
+        }
+        return
+    }
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -243,6 +339,44 @@ fun AuthenticatorScreen(back: () -> Unit) {
             Text("Authenticator", color = com.umutk.pulse.T.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
         }
         PHead("Authenticator", guide = "authenticator")
+        // the settings button next to the guide's (i)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+            Box(Modifier.size(36.dp).clickable { showSettings = !showSettings }, contentAlignment = Alignment.Center) { PIcon("settings", if (showSettings) Look.accent else T.sub, 22.dp) }
+        }
+        if (hasRestore) PCard {
+            Text(tr("Accounts in the restored backup", "Geri yüklenen yedekteki hesaplar"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            PField(restorePass, { restorePass = it }, tr("Backup password", "Yedek parolası"))
+            PButton(tr("Bring the accounts in", "Hesapları al")) {
+                val got = AuthBackup.open(ctx, restorePass)
+                if (got == null) msg = tr("Wrong password, or the file is damaged", "Parola yanlış ya da dosya bozuk")
+                else {
+                    val have = accounts.map { it.issuer + "|" + it.name + "|" + it.secret }.toSet()
+                    save(accounts + got.filter { (it.issuer + "|" + it.name + "|" + it.secret) !in have }) { AuthBackup.dropRestore(ctx); hasRestore = false; restorePass = ""; msg = "" }
+                }
+            }
+            if (msg.isNotEmpty()) Text(msg, color = Color(0xFFC42B1C), fontSize = 13.sp)
+        }
+        if (showSettings) PCard {
+            Text(tr("Settings", "Ayarlar"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Ask for the fingerprint (or the screen lock) to open", "Açmak için parmak izi (ya da ekran kilidi) iste"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                com.umutk.pulse.PSwitch(bioOn, { bioOn = it; AuthPrefs.setBiometric(ctx, it) })
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Put the accounts in the Pulse backup", "Hesapları Pulse yedeğine koy"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                com.umutk.pulse.PSwitch(bkOn, { bkOn = it; AuthPrefs.setBackup(ctx, it) })
+            }
+            if (bkOn) {
+                Text(tr("The accounts are sealed with this password inside the backup; without it they cannot be opened.", "Hesaplar yedeğin içinde bu parolayla şifrelenir; parola olmadan açılamaz."), color = T.sub, fontSize = 12.sp)
+                PField(bkPass, { bkPass = it }, if (AuthBackup.hasPassword(ctx)) tr("New backup password (leave empty to keep)", "Yeni yedek parolası (boşsa aynı kalır)") else tr("Backup password", "Yedek parolası"))
+                PButton(tr("Save password", "Parolayı kaydet")) {
+                    if (bkPass.length < 6) setMsg = tr("At least 6 characters", "En az 6 karakter")
+                    else { runCatching { AuthBackup.setPassword(ctx, bkPass) }.onSuccess { bkPass = ""; setMsg = tr("Saved", "Kaydedildi") }.onFailure { setMsg = it.message.orEmpty() } }
+                }
+                if (setMsg.isNotEmpty()) Text(setMsg, color = T.sub, fontSize = 12.sp)
+                if (!AuthBackup.hasPassword(ctx)) Text(tr("No password yet: the accounts stay out of the backup until one is saved.", "Henüz parola yok: kaydedilene kadar hesaplar yedeğe girmez."), color = T.sub, fontSize = 12.sp)
+            }
+        }
         PCard {
             Text("Add account", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
             PField(issuer, { issuer = it }, "Issuer (e.g. GitHub)")

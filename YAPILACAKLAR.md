@@ -1078,3 +1078,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.252 derlenmedi: Müzik çalarda (Material) şarkı kapağı %10 büyüdü.
 
 - 0.10.253 derlenmedi: Authenticator sayfasına geri tuşu ve başlık (Pulse içinde üst çubukta, kendi uygulaması olarak açılınca sayfanın başında).
+
+- 0.10.254 derlenmedi: Authenticator: sistem parmak izi / ekran kilidi istemi (ayarlardan açılır), hesapları Pulse yedeğine koy (kendi parolanla şifrelenir, geri yüklenince parolayla alınır), sayfada ayar tuşu.
