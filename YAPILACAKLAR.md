@@ -1122,3 +1122,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.305: derlenmedi — söz ekranı tam siyah; albüm kapağı arama (sanatçı + şarkı/albüm alanları, her zaman görünür) Material oynatıcıya da eklendi, Poweramp penceresinde sonuç varken de alanlar var
 - 0.10.306: derlenmedi — müzik bildirimi: kapak artık kendi/gömülü/internetten bulunan kapaktan gelir (sadece sistem albüm resmine bağlı değildi), 5 tuş sınırında Kapat tuşu düşmez
 - 0.10.307: derlenmedi — Dosyalar: tür açılınca kendi sayfası (en büyük önce, Diğer de açılır), başlıktaki boyut/tür/temizlik simgeleri varsayılan kapalı (Ayarlar ile açılır), SD Maid kural dosyalarından temizlik kategorileri; Buds: ad boşluk/çift cihaz düzeltildi, simge, dokunma/ses/oyun/bul ayarları; Menü: Hesap makinesinden sonraki uygulamalar varsayılan Ekstra uygulamalarda; Başlatıcı: çekmece simge boyutu, ad yazısı boyutu
+- 0.10.308: derlenmedi — Mesajlar: imza, gönderme geri alma süresi, sohbeti sessize alma (Textra ayarları)
