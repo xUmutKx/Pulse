@@ -24,6 +24,8 @@ class KbState {
     var incognito by mutableStateOf(false)
     var toolbar by mutableStateOf(false)
     var preview by mutableStateOf<KbPreview?>(null)
+    /** The suggestion slot (0..2) asked "never suggest this again", waiting for the second tap; -1 none. */
+    var banAsk by mutableStateOf(-1)
     var clips by mutableStateOf(listOf<String>())
     var recents by mutableStateOf(listOf<String>())
     /** The width of the keyboard's window in px, for keeping the pop-ups inside it. */
@@ -70,6 +72,9 @@ interface KbActions {
     fun glide(letters: String)
     fun extraKey(id: String)
     fun hide()
+    /** A long press on a suggestion: it turns into the "never suggest again" button. */
+    fun slotLong(i: Int) {}
+    fun banSlot(i: Int) {}
     /** Deletes the word before the cursor (the held delete key, after the first letters). */
     fun deleteWord() {}
     /** Voice typing of the device (the Google voice input). */
