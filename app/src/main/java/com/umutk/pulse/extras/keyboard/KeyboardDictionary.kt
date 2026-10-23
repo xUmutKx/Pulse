@@ -102,6 +102,13 @@ object KeyboardDictionary {
 
     fun learnedCount() = user.size
 
+    /** Words taken from another keyboard: each becomes a known word (counted three times, so it is not "corrected" away). */
+    fun importUser(c: Context, words: List<String>) {
+        if (!userLoaded) loadUser(c)
+        words.forEach { w -> val l = w.lowercase(Locale.ROOT); if ((user[l] ?: 0) < 3) user[l] = 3 }
+        dirty = 1; saveUser(c)
+    }
+
     /** A word the user finished: it counts towards the completions, and the pair with the word before it towards the next-word suggestions. */
     fun learn(c: Context, prev: String?, word: String) {
         val w = word.lowercase(Locale.ROOT)

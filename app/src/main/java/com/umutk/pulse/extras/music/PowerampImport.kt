@@ -126,27 +126,58 @@ object PowerampImport {
                     // Poweramp version cannot break the query; when none matches, the column names go to the message.
                     fun columnsOf(t: String) = d.rawQuery("pragma table_info($t)", null).use { c -> generateSequence { if (c.moveToNext()) c.getString(1) else null }.toList() }
                     val cols = columnsOf("folder_files"); val fcols = columnsOf("folders")
-                    val pathExpr = when {
-                        "file_path" in cols -> "folder_files.file_path"
-                        "path" in fcols && "name" in cols -> "(folders.path || folder_files.name)"
-                        else -> null
-                    }
+                    // Poweramp keeps the path in file_path for some songs and as folder path + name for the rest: every form is tried, as Poweramp itself does
+                    val parts = listOfNotNull(
+                        "folder_files.file_path".takeIf { "file_path" in cols },
+                        "(folders.path || folder_files.name)".takeIf { "path" in fcols && "name" in cols },
+                        "folder_files.name".takeIf { "name" in cols },
+                    )
+                    val pathExpr = if (parts.isEmpty()) null else "COALESCE(" + parts.joinToString(", ") + ")"
                     val ratingCol = listOf("rating", "user_rating", "stars").firstOrNull { it in cols }
                     val playCols = listOf("played_times", "total_played_times", "play_count", "played_count", "plays").filter { it in cols }
                     if (pathExpr == null || (ratingCol == null && playCols.isEmpty())) { lastError = "folder_files: $cols; folders: $fcols"; return@let }
                     val ratingSql = ratingCol?.let { "COALESCE(folder_files.$it, 0)" } ?: "0"
                     val playSql = when { playCols.isEmpty() -> "0"; playCols.size == 1 -> "COALESCE(folder_files.${playCols[0]}, 0)"; else -> "max(" + playCols.joinToString(", ") { "COALESCE(folder_files.$it, 0)" } + ")" }
+                    // the rating scale: stars 0..5, tenths of stars 0..10, or percent 0..100
+                    val topRating = ratingCol?.let { d.rawQuery("select max($it) from folder_files", null).use { c -> if (c.moveToFirst()) c.getInt(0) else 0 } } ?: 0
+                    fun stars(r: Int) = when { topRating > 10 -> (r + 10) / 20; topRating > 5 -> (r + 1) / 2; else -> r }.coerceIn(0, 5)
+                    var scanned = 0
                     d.rawQuery("select $pathExpr, $ratingSql, $playSql from folder_files left join folders on folders._id = folder_files.folder_id where $ratingSql > 0 or $playSql > 0", null).use { c ->
                         while (c.moveToNext()) {
                             val p = c.getString(0) ?: continue
+                            scanned++
                             val t = find(p.removePrefix("/storage/").removePrefix("emulated/0/")) ?: find(p) ?: run { missing++; null } ?: continue
-                            val r = c.getInt(1); val n = c.getInt(2)
+                            val r = stars(c.getInt(1)); val n = c.getInt(2)
                             if (r in 1..5) { MusicStats.setRating(ctx, t.path, r); ratings++ }
                             repeat(n.coerceIn(0, 500)) { MusicStats.add(ctx, t.path, t.title, t.artist, t.album, 0L, true) }
                             if (n > 0) plays++
                         }
                     }
-                    if (ratings == 0 && plays == 0) lastError = "no rated or played song matched (${missing} not on this phone); columns: rating=$ratingCol plays=$playCols"
+                    // the playlists of the library (the name is in playlists.playlist, the songs in playlist_entries)
+                    val tables = d.rawQuery("select name from sqlite_master where type='table'", null).use { c -> generateSequence { if (c.moveToNext()) c.getString(0) else null }.toSet() }
+                    if ("playlists" in tables && "playlist_entries" in tables) {
+                        val pcols = columnsOf("playlists"); val ecols = columnsOf("playlist_entries")
+                        val nameCol = listOf("playlist", "name").firstOrNull { it in pcols }
+                        if (nameCol != null) {
+                            val epath = listOfNotNull(
+                                "folder_files.file_path".takeIf { "file_path" in cols },
+                                "(folders.path || folder_files.name)".takeIf { "path" in fcols && "name" in cols },
+                                "(playlist_entries.folder_path || playlist_entries.file_name)".takeIf { "folder_path" in ecols && "file_name" in ecols },
+                                "playlist_entries.file_name".takeIf { "file_name" in ecols },
+                            )
+                            if (epath.isNotEmpty()) d.rawQuery("select _id, $nameCol from playlists", null).use { pl ->
+                                while (pl.moveToNext()) {
+                                    val id = pl.getLong(0); val name = (pl.getString(1) ?: "").substringBefore(" (Imported").trim().ifBlank { "Poweramp $id" }
+                                    val list = ArrayList<Track>()
+                                    d.rawQuery("select COALESCE(${epath.joinToString(", ")}) from playlist_entries left join folder_files on folder_files._id = playlist_entries.folder_file_id left join folders on folders._id = folder_files.folder_id where playlist_entries.playlist_id = ? order by playlist_entries._id", arrayOf(id.toString())).use { c ->
+                                        while (c.moveToNext()) { val p = c.getString(0) ?: continue; if (p.startsWith("http")) continue; (find(p.removePrefix("/storage/").removePrefix("emulated/0/")) ?: find(p))?.let { list += it } ?: run { missing++ } }
+                                    }
+                                    if (list.isNotEmpty()) { Playlists.save(ctx, name, list); playlists++ }
+                                }
+                            }
+                        }
+                    }
+                    if (ratings == 0 && plays == 0) lastError = "no rated or played song matched ($scanned read, $missing not on this phone); columns: rating=$ratingCol plays=$playCols top=$topRating"
                     return@let
                 }
                 d.rawQuery("select _id, name from playlists", null).use { pl ->
