@@ -1062,3 +1062,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.244 derlenmedi: StandBy uygulamasının APK sinden alınanlar: ekran listesi (Segmented, Big Crop, Retroflip, Neon, Matrix, Pixel, Roman, Word, Solar Watch, Radial, Analog Clean/NoMarkers/Square, Clock of Clocks, World, Dementia, Sereno, Battery Dots/Wave, Charging, Stopwatch, Timer, Pomodoro, Quotes, Striking Calendar - 27 yeni sayfa), 38 Big Crop + 15 Retroflip + 12 Solar renk paleti ve stil seçici; launcher önerileri: ana ekranda klasörler + sürükle-bırak + sayfalar arası taşıma, masaüstü simgelerini istediğin yere sürükle, hızlı arama (aşağı kaydır) + son açılanlar, simge paketi desteği (Nova/ADW), bildirim rozetleri, Win10/11 başlatta canlı kutucuklar, görev çubuğunda pencere düğmeleri (95/XP/7/10/11), Windows Phone kutucukları varsayılan açık.
 
 - 0.10.245 derlenmedi: Gelişmiş kapak ayarları düzenleyici oldu: üstte seçili sayfanın büyük canlı önizlemesi, altında Sayfalar / Stil / Renk / Diğer sekmeleri, her seçenek küçük canlı resimlerle.
+
+- 0.10.246 derlenmedi: 0.10.244/245 derleme düzeltmesi (font kaynakları, matchParentSize importu).
