@@ -110,7 +110,7 @@ class PowerampWidget : AppWidgetProvider() {
                 val k = lastShrink
                 setViewPadding(
                     R.id.pa_overlay,
-                    (f.x * k).toInt(), ((f.y + BTN_TOP * f.h) * k).toInt(), ((bw - f.x - f.w) * k).toInt(), ((bh - f.y - BTN_BOTTOM * f.h) * k).toInt(),
+                    ((f.x + 0.075f * f.w) * k).toInt(), ((f.y + BTN_TOP * f.h) * k).toInt(), ((bw - f.x - f.w + 0.075f * f.w) * k).toInt(), ((bh - f.y - BTN_BOTTOM * f.h) * k).toInt(),
                 )
                 // a tap anywhere else opens the player, straight on the now playing page and without an opening animation
                 setOnClickPendingIntent(R.id.pa_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 72, "route" to "music"))
@@ -227,8 +227,8 @@ class PowerampWidget : AppWidgetProvider() {
             // loop, shuffle and the counter, on one line above the buttons
             val iy = 124f
             // the two marks are a third bigger, and their touch areas (pa_mid, below) a good deal larger
-            cv.save(); cv.scale(1.45f, 1.45f, x0 + 15f, iy); glyphLoop(cv, p, x0 + 15f, iy, if (repeat != 0) accent else dim, repeat == 1); cv.restore()
-            cv.save(); cv.scale(1.45f, 1.45f, x0 + 54f, iy); glyphShuffle(cv, p, x0 + 54f, iy, if (shuffle) accent else dim); cv.restore()
+            cv.save(); cv.scale(1.38f, 1.38f, x0 + 15f, iy); glyphLoop(cv, p, x0 + 15f, iy, if (repeat != 0) accent else dim, repeat == 1); cv.restore()
+            cv.save(); cv.scale(1.38f, 1.38f, x0 + 54f, iy); glyphShuffle(cv, p, x0 + 54f, iy, if (shuffle) accent else dim); cv.restore()
             val cp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 14f; textAlign = Paint.Align.RIGHT }
             cv.drawText(if (total > 0) "${index + 1}/$total" else "", W - 12f, iy + 5f, cp)
 
@@ -239,11 +239,11 @@ class PowerampWidget : AppWidgetProvider() {
             // transport: five buttons on the fifths of the window (the overlay views sit on these)
             val cy = 174f
             val c = GREY
-            glyphSkip(cv, p, W * 0.1f, cy, c, back = true)
-            glyphSeek(cv, p, W * 0.3f, cy, c, back = true)
+            glyphSkip(cv, p, W * 0.16f, cy, c, back = true)
+            glyphSeek(cv, p, W * 0.33f, cy, c, back = true)
             if (playing) glyphPause(cv, p, W * 0.5f, cy, c) else glyphPlay(cv, p, W * 0.5f, cy, c)
-            glyphSeek(cv, p, W * 0.7f, cy, c, back = false)
-            glyphSkip(cv, p, W * 0.9f, cy, c, back = false)
+            glyphSeek(cv, p, W * 0.67f, cy, c, back = false)
+            glyphSkip(cv, p, W * 0.84f, cy, c, back = false)
             return out
         }
 
