@@ -49,7 +49,8 @@ object ImgSkins {
 
     /** The skin and its picture painted into [c] (a canvas in skin pixels). */
     fun paint(c: Canvas, ctx: Context, s: ImgSkin, st: SkinState) {
-        base(ctx, s)?.let { c.drawBitmap(it, 0f, 0f, Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)) }
+        // the picture is stored larger than the skin's own pixels, so it stays sharp when the widget or the page is big
+        base(ctx, s)?.let { c.drawBitmap(it, null, RectF(0f, 0f, s.w.toFloat(), s.h.toFloat()), Paint(Paint.FILTER_BITMAP_FLAG or Paint.ANTI_ALIAS_FLAG)) }
         s.draw(c, ctx, st)
     }
 }

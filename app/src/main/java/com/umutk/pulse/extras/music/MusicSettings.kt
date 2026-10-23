@@ -72,6 +72,9 @@ object MusicSettings {
     fun setResumeWired(c: Context, on: Boolean) = sp(c).edit().putBoolean("resumeWired", on).apply()
 
     fun pauseUsbDac(c: Context) = sp(c).getBoolean("pauseUsb", false)
+    /** The song stops when the media volume is turned down to zero. */
+    fun pauseAtZeroVolume(c: Context) = sp(c).getBoolean("pauseZero", false)
+    fun setPauseAtZeroVolume(c: Context, v: Boolean) = sp(c).edit().putBoolean("pauseZero", v).apply()
     fun setPauseUsbDac(c: Context, on: Boolean) = sp(c).edit().putBoolean("pauseUsb", on).apply()
 
     fun respondButtons(c: Context) = sp(c).getBoolean("buttons", true)

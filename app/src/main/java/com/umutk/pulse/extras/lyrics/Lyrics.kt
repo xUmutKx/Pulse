@@ -381,6 +381,18 @@ object Lyrics {
         fromText(t.substringAfter('\n'), "cache")
     }.getOrNull()
 
+    /** The lyrics of a song that were wrong: the downloaded copy, the saved one and the .lrc / .txt beside the file go, and it is not looked up again for a while. */
+    fun forget(ctx: Context, path: String?, title: String, artist: String) {
+        val app = ctx.applicationContext
+        val key = "t|${artist.trim().lowercase()}|${title.trim().lowercase()}"
+        runCatching { cacheFile(app, key).delete() }
+        if (path != null && !path.contains("://")) {
+            runCatching { val st = LyricsStore(app); st.load(path, artist, title)?.let { st.delete(it, path) } }
+            runCatching { File(path.substringBeforeLast('.') + ".lrc").delete(); File(path.substringBeforeLast('.') + ".txt").delete() }
+        }
+        markMiss(app, key)
+    }
+
     private fun missPrefs(c: Context) = c.getSharedPreferences("lyrics_miss", Context.MODE_PRIVATE)
     private fun missed(c: Context, key: String) = System.currentTimeMillis() - missPrefs(c).getLong(sha(key), 0L) < 3L * 24 * 3600 * 1000
     private fun markMiss(c: Context, key: String) = missPrefs(c).edit().putLong(sha(key), System.currentTimeMillis()).apply()

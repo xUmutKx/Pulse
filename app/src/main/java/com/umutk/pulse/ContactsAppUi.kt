@@ -252,7 +252,7 @@ private fun CtAvatar(photo: String?, name: String, size: Dp, bitmap: Bitmap? = n
 }
 
 @Composable
-private fun CtInput(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, kb: KeyboardType = KeyboardType.Text, single: Boolean = true, trailing: @Composable (() -> Unit)? = null) {
+private fun CtInput(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, kb: KeyboardType = KeyboardType.Text, single: Boolean = true, words: Boolean = false, trailing: @Composable (() -> Unit)? = null) {
     // the label sits on the top border, left-aligned, and cuts the line behind it; the text starts a little lower inside the box
     var focused by remember { mutableStateOf(false) }
     var labelW by remember { mutableStateOf(0) }
@@ -271,7 +271,7 @@ private fun CtInput(value: String, onChange: (String) -> Unit, label: String, mo
                 value, onChange, Modifier.weight(1f).onFocusChanged { focused = it.isFocused },
                 textStyle = androidx.compose.ui.text.TextStyle(color = T.text, fontSize = 16.sp),
                 singleLine = single, cursorBrush = androidx.compose.ui.graphics.SolidColor(ctAcc),
-                keyboardOptions = KeyboardOptions(keyboardType = kb),
+                keyboardOptions = KeyboardOptions(keyboardType = kb, capitalization = if (words) androidx.compose.ui.text.input.KeyboardCapitalization.Words else androidx.compose.ui.text.input.KeyboardCapitalization.None),
             )
             trailing?.invoke()
         }
@@ -634,22 +634,34 @@ private fun CtList(contacts: List<CtContact>, onOpen: (Long) -> Unit, letters: B
                     is CtRow.C -> {
                         val small = l == "win95"
                         val deco = if (l == "win11") Modifier.padding(horizontal = 8.dp, vertical = 1.dp).clip(RoundedCornerShape(8.dp)).background(T.panel) else Modifier
-                        Row(Modifier.fillMaxWidth().then(deco).then(if (r.c.id in ctSel) Modifier.background(ctAcc.copy(alpha = .18f)) else Modifier)
-                            .pointerInput(r.c.id) { detectTapGestures(onLongPress = { ctToggle(r.c.id) }, onTap = { if (ctSel.isNotEmpty()) ctToggle(r.c.id) else onOpen(r.c.id) }) }
-                            .pointerInput(r.c.id) {
-                                // swipe right = call, left = message
-                                var dx = 0f
-                                detectHorizontalDragGestures(onDragStart = { dx = 0f }, onDragEnd = {
-                                    val n = r.c.nums.substringBefore('\n').trim()
-                                    if (n.isNotEmpty() && dx > 160f) call(n)
-                                    else if (n.isNotEmpty() && dx < -160f) runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(n))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                                }) { _, d -> dx += d }
-                            }.padding(start = if (small) 8.dp else 16.dp, end = if (letters) 28.dp else 16.dp, top = if (small) 2.dp else 8.dp, bottom = if (small) 2.dp else 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            CtAvatar(r.c.photo, r.c.display, if (small) 20.dp else 44.dp)
-                            Spacer(Modifier.width(if (small) 8.dp else 16.dp))
-                            Text(r.c.label(), color = T.text, fontSize = if (small) 13.sp else 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            if (r.c.starred && letters) CtGlyph(Icons.Outlined.Star, null, Modifier.size(16.dp), tint = ctAcc)
+                        // the row slides with the finger: green with a phone when it goes right (call), blue with a message when it goes left; let go far enough and it does it
+                        val off = remember(r.c.id) { androidx.compose.animation.core.Animatable(0f) }
+                        val num = r.c.nums.substringBefore('\n').trim()
+                        Box(Modifier.fillMaxWidth().then(deco)) {
+                            val x = off.value
+                            if (x != 0f) {
+                                val k = (kotlin.math.abs(x) / 160f).coerceIn(0f, 1f)
+                                Box(Modifier.matchParentSize().background(if (x > 0) Color(0xFF2E9E4F) else Color(0xFF1E88E5)).padding(horizontal = 24.dp), contentAlignment = if (x > 0) Alignment.CenterStart else Alignment.CenterEnd) {
+                                    CtGlyph(if (x > 0) Icons.Outlined.Call else Icons.Outlined.Message, null, Modifier.size((20 + 10 * k).dp).graphicsLayer { alpha = .4f + .6f * k }, tint = Color.White)
+                                }
+                            }
+                            Row(Modifier.fillMaxWidth().graphicsLayer { translationX = off.value }.background(T.bg).then(if (r.c.id in ctSel) Modifier.background(ctAcc.copy(alpha = .18f)) else Modifier)
+                                .pointerInput(r.c.id) { detectTapGestures(onLongPress = { ctToggle(r.c.id) }, onTap = { if (ctSel.isNotEmpty()) ctToggle(r.c.id) else onOpen(r.c.id) }) }
+                                .pointerInput(r.c.id) {
+                                    detectHorizontalDragGestures(onDragEnd = {
+                                        val d = off.value
+                                        scope.launch { off.animateTo(0f, androidx.compose.animation.core.spring(dampingRatio = .7f, stiffness = 300f)) }
+                                        if (num.isNotEmpty() && d > 160f) call(num)
+                                        else if (num.isNotEmpty() && d < -160f) runCatching { ctx.startActivity(Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:" + Uri.encode(num))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                                    }, onDragCancel = { scope.launch { off.animateTo(0f) } }) { change, d -> change.consume(); scope.launch { off.snapTo((off.value + d * .85f).coerceIn(-260f, 260f)) } }
+                                }.padding(start = if (small) 8.dp else 16.dp, end = if (letters) 28.dp else 16.dp, top = if (small) 2.dp else 8.dp, bottom = if (small) 2.dp else 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                CtAvatar(r.c.photo, r.c.display, if (small) 20.dp else 44.dp)
+                                Spacer(Modifier.width(if (small) 8.dp else 16.dp))
+                                Text(r.c.label(), color = T.text, fontSize = if (small) 13.sp else 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                if (r.c.starred && letters) CtGlyph(Icons.Outlined.Star, null, Modifier.size(16.dp), tint = ctAcc)
+                            }
                         }
+                    }
                     }
                 }
             }
@@ -826,7 +838,7 @@ private fun CtMulti(kind: Int, icon: androidx.compose.ui.graphics.vector.ImageVe
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             CtGlyph(icon, null, tint = if (i == 0) T.sub else Color.Transparent)
             Spacer(Modifier.width(12.dp))
-            CtInput(f.value, { items[i] = f.copy(value = it) }, label, Modifier.weight(1f), kb, single = kind != 2)
+            CtInput(f.value, { items[i] = f.copy(value = it) }, label, Modifier.weight(1f), kb, single = kind != 2, words = kind == 2)
             Spacer(Modifier.width(6.dp))
             Box(Modifier.clip(RoundedCornerShape(ctRadius)).border(1.dp, T.line, RoundedCornerShape(ctRadius)).clickable {
                 val ts = ctTypes(kind); items[i] = f.copy(type = ts[(ts.indexOf(f.type) + 1) % ts.size])
@@ -886,13 +898,13 @@ private fun CtEditScreen(id: Long, seed: CtDetail?, onBack: () -> Unit, onSaved:
             // an extra name field shows when its switch is on or the contact already has a value
             // name fields: one framed box each, label above, same as the phone field
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (CtPrefs.showPrefix || !b?.prefix.isNullOrBlank()) CtInput(prefix, { prefix = it }, ctr("Name prefix", "Ön ek"), Modifier.fillMaxWidth())
-                CtInput(given, { given = it }, ctr("First name", "Ad"), Modifier.fillMaxWidth())
-                if (CtPrefs.showMiddle || !b?.middle.isNullOrBlank()) CtInput(middle, { middle = it }, ctr("Middle name", "İkinci ad"), Modifier.fillMaxWidth())
-                CtInput(family, { family = it }, ctr("Surname", "Soyad"), Modifier.fillMaxWidth())
-                if (CtPrefs.showSuffix || !b?.suffix.isNullOrBlank()) CtInput(suffix, { suffix = it }, ctr("Name suffix", "Son ek"), Modifier.fillMaxWidth())
+                if (CtPrefs.showPrefix || !b?.prefix.isNullOrBlank()) CtInput(prefix, { prefix = it }, ctr("Name prefix", "Ön ek"), Modifier.fillMaxWidth(), words = true)
+                CtInput(given, { given = it }, ctr("First name", "Ad"), Modifier.fillMaxWidth(), words = true)
+                if (CtPrefs.showMiddle || !b?.middle.isNullOrBlank()) CtInput(middle, { middle = it }, ctr("Middle name", "İkinci ad"), Modifier.fillMaxWidth(), words = true)
+                CtInput(family, { family = it }, ctr("Surname", "Soyad"), Modifier.fillMaxWidth(), words = true)
+                if (CtPrefs.showSuffix || !b?.suffix.isNullOrBlank()) CtInput(suffix, { suffix = it }, ctr("Name suffix", "Son ek"), Modifier.fillMaxWidth(), words = true)
             }
-            if (CtPrefs.showNick || !b?.nick.isNullOrBlank()) CtInput(nick, { nick = it }, ctr("Nickname", "Takma ad"), Modifier.fillMaxWidth())
+            if (CtPrefs.showNick || !b?.nick.isNullOrBlank()) CtInput(nick, { nick = it }, ctr("Nickname", "Takma ad"), Modifier.fillMaxWidth(), words = true)
             if (!b?.lookup.isNullOrBlank()) CtBgRow(b!!.lookup)
             CtMulti(0, Icons.Outlined.Call, ctr("Phone", "Telefon"), phones)
             CtMulti(1, Icons.Outlined.Email, ctr("Email", "E-posta"), emails)

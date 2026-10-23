@@ -58,8 +58,8 @@ abstract class ImgSkinWidget(private val index: Int) : AppWidgetProvider() {
             val portrait = c.resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE
             val w = (if (portrait) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_WIDTH, 0) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_WIDTH, 0)).takeIf { it > 0 } ?: 250
             val h = (if (portrait) o.getInt(AppWidgetManager.OPTION_APPWIDGET_MAX_HEIGHT, 0) else o.getInt(AppWidgetManager.OPTION_APPWIDGET_MIN_HEIGHT, 0)).takeIf { it > 0 } ?: 120
-            // a widget picture travels as 4 bytes a pixel and must stay under about 1 MB
-            val k = sqrt(w * d * h * d / 230_000f).coerceAtLeast(1f)
+            // a widget picture is 4 bytes a pixel; about 3 MB of picture is well under what the system allows a widget
+            val k = sqrt(w * d * h * d / 750_000f).coerceAtLeast(1f)
             shrink = k
             return (w * d / k).toInt().coerceAtLeast(1) to (h * d / k).toInt().coerceAtLeast(1)
         }
