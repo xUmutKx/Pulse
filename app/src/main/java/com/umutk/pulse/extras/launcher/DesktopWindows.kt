@@ -86,9 +86,9 @@ fun DesktopWindowLayer(lookId: String, bottom: Dp) {
     val skin = remember(lookId) { frameSkin(lookId) }
     BoxWithConstraints(Modifier.fillMaxSize().padding(bottom = bottom)) {
         DesktopWindows.list.filter { !it.min }.sortedBy { it.z }.forEach { w -> key(w.id) { DesktopWindowFrame(w, skin, lookId, maxWidth, maxHeight) } }
-        // the minimised windows wait as small chips along the bottom, just above the taskbar
+        // the minimised windows wait on the taskbar (TaskbarWindows); with the taskbar hidden they wait as small chips along the bottom
         val mins = DesktopWindows.list.filter { it.min }
-        if (mins.isNotEmpty()) Row(Modifier.align(Alignment.BottomStart).padding(start = 6.dp, bottom = 4.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        if (!LauncherPrefs.dockShown && mins.isNotEmpty()) Row(Modifier.align(Alignment.BottomStart).padding(start = 6.dp, bottom = 4.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             mins.forEach { w ->
                 Row(Modifier.clip(RoundedCornerShape(skin.corner.coerceAtMost(8.dp))).background(skin.frame).clickable { w.min = false; DesktopWindows.front(w) }.padding(horizontal = 10.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(w.title, color = skin.titleInk.takeIf { skin.kind != "7" && skin.kind != "xp" } ?: Color.White, fontSize = 12.sp, maxLines = 1)

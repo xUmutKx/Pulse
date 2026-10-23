@@ -50,7 +50,7 @@ object LauncherPrefs {
     /** The round buttons at the top right of the home screen (apps, task manager, settings); off by default: the settings are in the long press menu. */
     var topChips by mutableStateOf(false)
     /** Windows Phone looks: true = coloured live tiles, false (default) = plain icons with the name under them. */
-    var phoneTiles by mutableStateOf(false)
+    var phoneTiles by mutableStateOf(true)
     // ---- more things to set (Launcher settings > Extras) ----
     /** Double tap on an empty part of the home locks the screen. */
     var gestureLock by mutableStateOf(false)
@@ -80,6 +80,18 @@ object LauncherPrefs {
     /** Where each widget sits on the Windows desktops: "x,y,w,h" in dp, by widget id. */
     var widgetPos by mutableStateOf<Map<Int, String>>(emptyMap())
     var desktopOn by mutableStateOf(DESKTOP_DEFAULT)
+    /** Swipe down on the home opens the quick search (when the shade is not set for it). */
+    var swipeDownSearch by mutableStateOf(true)
+    /** Notification counts on the app pictures. */
+    var badges by mutableStateOf(true)
+    /** The package of the installed icon pack that draws the app pictures; empty = the apps' own. */
+    var iconPack by mutableStateOf("")
+    /** The order of the home grid: "app:<package>" and "f:<folder id>" entries; apps not listed follow in the usual order. */
+    var homeOrder by mutableStateOf<List<String>>(emptyList())
+    /** Folders of the home grid: id -> "name|package,package". */
+    var folders by mutableStateOf<Map<String, String>>(emptyMap())
+    /** Where each desktop shortcut sits on the Windows desktops: "x,y" in dp, by shortcut id. */
+    var iconPos by mutableStateOf<Map<String, String>>(emptyMap())
 
     fun wallIndex(look: String): Int = walls[look] ?: 0
     fun setWallIndex(look: String, i: Int) { walls = walls + (look to i) }
@@ -108,7 +120,11 @@ object LauncherPrefs {
         sort = p.getProperty("sort") ?: "name"
         hidden = list(p.getProperty("hidden")).toSet()
         topChips = p.getProperty("topChips") == "true"
-        phoneTiles = p.getProperty("phoneTiles") == "true"
+        phoneTiles = p.getProperty("phoneTiles") != "false"
+        swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
+        homeOrder = p.getProperty("homeOrder").orEmpty().split(',').filter { it.isNotBlank() }
+        folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
+        iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
         gestureLock = p.getProperty("gestureLock") == "true"; swipeDownShade = p.getProperty("swipeDownShade") == "true"; swipeUpApps = p.getProperty("swipeUpApps") == "true"
         iconShape = p.getProperty("iconShape") ?: "squircle"; wallDim = p.getProperty("wallDim")?.toIntOrNull() ?: 0; wallBlur = p.getProperty("wallBlur")?.toIntOrNull() ?: 0
         wallDaily = p.getProperty("wallDaily") == "true"; keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
@@ -141,6 +157,10 @@ object LauncherPrefs {
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
         p.setProperty("phoneTiles", phoneTiles.toString()); p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
+        p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
+        p.setProperty("homeOrder", homeOrder.joinToString(","))
+        folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
+        iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
         usage.forEach { (pkg, t) -> p.setProperty(USE + pkg, t.toString()) }
         widgetPos.forEach { (id, v) -> p.setProperty("wpos.$id", v) }
         walls.forEach { (lookId, i) -> p.setProperty(WALL + lookId, i.toString()) }
@@ -149,9 +169,8 @@ object LauncherPrefs {
         runCatching { tmp.outputStream().use { p.store(it, null) }; tmp.renameTo(f) }
     }
 
-    /** Records a launch; only when the sort is by last opened (the user chose it, so nothing is recorded otherwise). */
+    /** Records a launch (the quick search shows the apps opened last, and the sort by last opened uses it). Stays on the phone, in the launcher's own file. */
     fun touch(c: Context, pkg: String) {
-        if (sort != "opened") return
         usage = usage + (pkg to System.currentTimeMillis())
         save(c)
     }
@@ -159,7 +178,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = false; clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); folders = emptyMap(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; wallDaily = false; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
         usage = emptyMap(); walls = emptyMap()

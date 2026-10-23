@@ -114,6 +114,7 @@ class Win95LauncherLook : LauncherLook {
                         LaunchAppPicture(app, 18.dp, W95.Face, W95.Black)
                     }
                 }
+                TaskbarWindows("95", Color.Black, 24.dp, Modifier.padding(start = 4.dp))
                 Spacer(Modifier.weight(1f))
                 // sunken tray with a speaker and the clock
                 Row(

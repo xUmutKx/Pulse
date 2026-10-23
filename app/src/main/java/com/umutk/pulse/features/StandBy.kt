@@ -95,6 +95,14 @@ val STANDBY_PAGES = listOf(
     "calendar" to ("Calendar" to "Takvim"), "battery" to ("Battery" to "Pil"), "music" to ("Now playing" to "Çalan şarkı"),
     "duo_clock_battery" to ("Clock + battery" to "Saat + pil"), "duo_clock_calendar" to ("Clock + calendar" to "Saat + takvim"),
     "duo_analog_digital" to ("Analog + digital" to "Analog + dijital"), "duo_music_clock" to ("Music + clock" to "Müzik + saat"),
+    // the skins of the iOS StandBy app
+    "seg" to ("Segmented Clock" to "Segmentli saat"), "seg_wide" to ("Segmented Clock Horizontal" to "Yatay segmentli saat"), "crop" to ("Big Crop Clock" to "Büyük kırpık saat"),
+    "flip" to ("Retroflip Clock" to "Retro çevirmeli saat"), "neon" to ("Neon Clock" to "Neon saat"), "matrix" to ("Matrix Clock" to "Matrix saat"), "pixel" to ("Pixel Art Clock" to "Piksel saat"),
+    "roman" to ("Roman Clock" to "Romen rakamlı saat"), "word" to ("Word Clock" to "Yazıyla saat"), "solar" to ("Solar Watch" to "Güneş saati"), "radial" to ("Radial Invert Clock" to "Halkalı saat"),
+    "analog_clean" to ("Analog Clock Clean" to "Sade analog saat"), "analog_nomark" to ("Analog Clock Clean No Markers" to "İşaretsiz analog saat"), "analog_square" to ("Analog Clock Square" to "Kare analog saat"),
+    "clocks" to ("Clock Of Clocks" to "Saatlerden saat"), "world" to ("World Clock" to "Dünya saati"), "dementia" to ("Dementia Clock" to "Büyük yazılı saat"), "sereno" to ("Sereno" to "Sereno"),
+    "bat_dots" to ("Battery Dots" to "Pil noktaları"), "bat_wave" to ("Battery Liquid Wave" to "Pil dalgası"), "charging" to ("Charging" to "Şarj"),
+    "stopwatch" to ("Stopwatch" to "Kronometre"), "timer" to ("Timer" to "Zamanlayıcı"), "pomodoro" to ("Pomodoro" to "Pomodoro"), "quotes" to ("Quotes" to "Sözler"), "cal_striking" to ("Striking Calendar" to "Büyük günlü takvim"),
 )
 
 /** Settings of the advanced screen cover ("StandBy" mode). Own prefs file "standby"; the basic cover keeps its own (CoverStore). */
@@ -107,6 +115,9 @@ object StandByPrefs {
     fun setPages(c: Context, l: List<String>) = p(c).edit().putString("pages", l.joinToString(",")).apply()
     fun font(c: Context) = p(c).getString("font", "light") ?: "light"
     fun setFont(c: Context, v: String) = p(c).edit().putString("font", v).apply()
+    /** The palette picked for a skin with several ("crop", "flip", "solar"). */
+    fun style(c: Context, key: String) = p(c).getInt("style_$key", 0)
+    fun setStyle(c: Context, key: String, v: Int) = p(c).edit().putInt("style_$key", v).apply()
     fun colour(c: Context) = p(c).getInt("colour", 0).coerceIn(0, COLOURS.lastIndex)
     fun setColour(c: Context, v: Int) = p(c).edit().putInt("colour", v).apply()
     fun h24(c: Context) = p(c).getBoolean("h24", true)
@@ -228,7 +239,7 @@ private fun StandByUi(ctx: Context, onClose: () -> Unit) {
 }
 
 @Composable
-private fun PageView(ctx: Context, id: String, ink: Color, tick: Long) {
+internal fun PageView(ctx: Context, id: String, ink: Color, tick: Long) {
     if (id.startsWith("duo_")) {
         val land = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
         val (a, b) = when (id) {
@@ -246,17 +257,43 @@ private fun PageView(ctx: Context, id: String, ink: Color, tick: Long) {
 }
 
 @Composable
-private fun Widget(ctx: Context, id: String, ink: Color, tick: Long) = when (id) {
+internal fun Widget(ctx: Context, id: String, ink: Color, tick: Long) = when (id) {
     "analog" -> AnalogFace(ink, tick)
     "date" -> DigitalFace(ctx, ink, tick, withDate = true)
     "calendar" -> MonthFace(ink)
     "battery" -> BatteryFace(ctx, ink, tick)
     "music" -> MusicFace(ctx, ink)
+    "seg" -> SegmentedFace(ctx, ink, tick, false)
+    "seg_wide" -> SegmentedFace(ctx, ink, tick, true)
+    "crop" -> BigCropFace(ctx, tick, StandByPrefs.style(ctx, "crop"))
+    "flip" -> RetroFlipFace(ctx, tick, StandByPrefs.style(ctx, "flip"))
+    "neon" -> NeonFace(ctx, ink, tick)
+    "matrix" -> MatrixFace(ctx, tick)
+    "pixel" -> PixelFace(ctx, ink, tick)
+    "roman" -> RomanFace(ctx, ink, tick)
+    "word" -> WordFace(ctx, ink, tick)
+    "solar" -> SolarFace(ctx, tick, StandByPrefs.style(ctx, "solar"))
+    "radial" -> RadialFace(ctx, ink, tick)
+    "analog_clean" -> AnalogVariantFace(ink, tick, "clean")
+    "analog_nomark" -> AnalogVariantFace(ink, tick, "nomark")
+    "analog_square" -> AnalogVariantFace(ink, tick, "square")
+    "clocks" -> ClockOfClocksFace(ctx, ink, tick)
+    "world" -> WorldClockFace(ctx, ink, tick)
+    "dementia" -> DementiaFace(ctx, ink, tick)
+    "sereno" -> SerenoFace(ctx, ink, tick)
+    "bat_dots" -> BatteryDotsFace(ctx, ink, tick)
+    "bat_wave" -> BatteryWaveFace(ctx, ink, tick)
+    "charging" -> ChargingFace(ctx, ink, tick)
+    "stopwatch" -> StopwatchFace(ink)
+    "timer" -> TimerFace(ctx, ink)
+    "pomodoro" -> PomodoroFace(ink)
+    "quotes" -> QuotesFace(ink, tick)
+    "cal_striking" -> StrikingCalendarFace(ink)
     else -> DigitalFace(ctx, ink, tick, withDate = false)
 }
 
 /** The clock fonts: the system ones, and the fonts of the iOS StandBy app's clock skins (square segment displays, condensed, serif, neon...). [adv] is the width of a digit in em, so the clock fills its box. */
-private class ClockFont(val id: String, val en: String, val tr: String, val family: FontFamily, val weight: FontWeight, val adv: Float = .5f)
+internal class ClockFont(val id: String, val en: String, val tr: String, val family: FontFamily, val weight: FontWeight, val adv: Float = .5f)
 
 private fun res(r: Int) = FontFamily(androidx.compose.ui.text.font.Font(r))
 
@@ -310,7 +347,7 @@ private val CLOCK_FONTS: List<ClockFont> by lazy {
     )
 }
 
-private fun clockFont(id: String): ClockFont = CLOCK_FONTS.firstOrNull { it.id == id } ?: CLOCK_FONTS[0]
+internal fun clockFont(id: String): ClockFont = CLOCK_FONTS.firstOrNull { it.id == id } ?: CLOCK_FONTS[0]
 
 @Composable
 private fun DigitalFace(ctx: Context, ink: Color, tick: Long, withDate: Boolean) {
@@ -346,7 +383,7 @@ private fun AnalogFace(ink: Color, tick: Long) {
 }
 
 @Composable
-private fun MonthFace(ink: Color) {
+internal fun MonthFace(ink: Color) {
     val cal = Calendar.getInstance()
     val today = cal.get(Calendar.DAY_OF_MONTH)
     val first = (cal.clone() as Calendar).apply { set(Calendar.DAY_OF_MONTH, 1) }
@@ -448,6 +485,10 @@ fun StandBySettings() {
             }
         }
     }
+    // the skins that have palettes: one row of small pictures each, shown while that skin is among the pages
+    if ("crop" in pages) PaletteRow(tr("Big Crop Clock style", "Büyük kırpık saat stili"), CROP_STYLES.size, StandByPrefs.style(ctx, "crop"), { StandByPrefs.setStyle(ctx, "crop", it) }) { i, sel -> MiniScreen(110.dp, sel) { BigCropFace(ctx, tick, i) } }
+    if ("flip" in pages) PaletteRow(tr("Retroflip style", "Retro çevirmeli stil"), FLIP_STYLES.size, StandByPrefs.style(ctx, "flip"), { StandByPrefs.setStyle(ctx, "flip", it) }) { i, sel -> MiniScreen(110.dp, sel) { RetroFlipFace(ctx, tick, i) } }
+    if ("solar" in pages) PaletteRow(tr("Solar Watch style", "Güneş saati stili"), SOLAR_STYLES.size, StandByPrefs.style(ctx, "solar"), { StandByPrefs.setStyle(ctx, "solar", it) }) { i, sel -> MiniScreen(110.dp, sel) { SolarFace(ctx, tick, i) } }
     Text(tr("Digits", "Rakamlar"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         CLOCK_FONTS.forEach { f ->
@@ -505,5 +546,16 @@ private fun MiniScreen(width: androidx.compose.ui.unit.Dp, picked: Boolean, cont
     Box(Modifier.size(width, ph).clip(RoundedCornerShape(8.dp)).background(Color.Black)
         .border(if (picked) 2.dp else 1.dp, if (picked) com.umutk.pulse.Look.accent else Color(0x55888888), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
         Box(Modifier.requiredSize(sw, sh).graphicsLayer { val k = width.toPx() / sw.toPx(); scaleX = k; scaleY = k }.padding(16.dp)) { content() }
+    }
+}
+
+
+/** A row of palette pictures; a tap picks one ([onPick]). [tile] draws picture i, selected or not. */
+@Composable
+private fun PaletteRow(title: String, count: Int, picked: Int, onPick: (Int) -> Unit, tile: @Composable (Int, Boolean) -> Unit) {
+    var cur by remember { mutableIntStateOf(picked) }
+    Text(title, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for (i in 0 until count) Box(Modifier.clickable { cur = i; onPick(i) }) { tile(i, i == cur) }
     }
 }

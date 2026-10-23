@@ -60,6 +60,11 @@ import com.umutk.pulse.LookHost
 import com.umutk.pulse.Opt
 import com.umutk.pulse.T
 import kotlinx.coroutines.Dispatchers
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.zIndex
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
 /** Pulse Launcher: a HOME app with its own look and layout. Runs in its own process, so Pulse's Look / Cfg / Opt stay untouched. */
@@ -73,7 +78,7 @@ class LauncherActivity : ComponentActivity() {
         @Suppress("DEPRECATION") overridePendingTransition(0, 0)
         setContent {
             val look = LauncherLooks.byId(LauncherPrefs.look)
-            val apps by produceState(emptyList<LaunchApp>()) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
+            val apps by produceState(emptyList<LaunchApp>(), LauncherPrefs.iconPack) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
             BackHandler(enabled = LauncherSession.startOpen) { LauncherSession.startOpen = false }
             val edge = with(LocalDensity.current) { sideInsetPx.toDp() }
             LookHost(lookId = look.id) { key(look.id) { CompositionLocalProvider(LocalLauncherEdge provides edge) { LauncherRoot(look, apps) } } }
@@ -151,19 +156,52 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
 )
 
 /**
- * The desktop: icons run down the left edge and start a new column when the screen is full, like a real Windows desktop.
+ * The desktop: icons run down the left edge and start a new column when the screen is full, like a real Windows desktop. A long press picks an icon up and it
+ * snaps to the grid where it is put down (unless the layout is locked); the places are kept per shortcut.
  */
 @Composable
 private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<LaunchApp>, iconDp: Int, edge: androidx.compose.ui.unit.Dp, open: (LaunchApp) -> Unit) {
+    val ctx = LocalContext.current
+    val d = LocalDensity.current.density
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
-        val cell = (iconDp + 48).dp
-        val perColumn = (maxHeight / cell).toInt().coerceAtLeast(1)
-        Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-            items.chunked(perColumn).forEach { col ->
-                Column {
-                    col.forEach { app -> look.IconCell(app, iconDp, Modifier.width(88.dp).appTap(state, app) { open(app) }) }
-                }
+        val cellW = 92f; val cellH = (iconDp + 48).toFloat()
+        val perColumn = (maxHeight.value / cellH).toInt().coerceAtLeast(1)
+        val cols = (maxWidth.value / cellW).toInt().coerceAtLeast(1)
+        // the cell (column, row) of each shortcut: the one it was put down on, else the next free place down the left edge
+        val cells = HashMap<String, Pair<Int, Int>>()
+        items.forEach { a -> LauncherPrefs.iconPos[a.pkg]?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 2 }?.let { cells[a.pkg] = it[0] to it[1] } }
+        var next = 0
+        items.forEach { a ->
+            if (a.pkg !in cells) {
+                while (cells.values.contains((next / perColumn) to (next % perColumn))) next++
+                cells[a.pkg] = (next / perColumn) to (next % perColumn)
             }
+        }
+        items.forEach { app ->
+            val (col, row) = cells.getValue(app.pkg)
+            var drag by remember(app.pkg) { mutableStateOf<androidx.compose.ui.geometry.Offset?>(null) }
+            val x = drag?.x ?: (col * cellW); val y = drag?.y ?: (row * cellH)
+            Box(
+                Modifier.offset(x.dp, y.dp).width(88.dp).zIndex(if (drag != null) 2f else 0f)
+                    .pointerInput(app.pkg, LauncherPrefs.lockLayout) {
+                        if (!LauncherPrefs.lockLayout) detectDragGesturesAfterLongPress(
+                            onDragStart = { drag = androidx.compose.ui.geometry.Offset(col * cellW, row * cellH) },
+                            onDrag = { c, dr -> c.consume(); drag = drag?.let { it + androidx.compose.ui.geometry.Offset(dr.x / d, dr.y / d) } },
+                            onDragEnd = {
+                                val p = drag; drag = null
+                                if (p != null) {
+                                    var nc = Math.round(p.x / cellW).coerceIn(0, cols - 1); var nr = Math.round(p.y / cellH).coerceIn(0, perColumn - 1)
+                                    // a taken cell: the nearest free one down that column, then the next columns
+                                    val taken = cells.filterKeys { it != app.pkg }.values.toSet()
+                                    var guard = 0
+                                    while ((nc to nr) in taken && guard++ < cols * perColumn) { nr++; if (nr >= perColumn) { nr = 0; nc = (nc + 1) % cols } }
+                                    LauncherPrefs.iconPos = LauncherPrefs.iconPos + (app.pkg to "$nc,$nr"); LauncherPrefs.save(ctx)
+                                }
+                            },
+                            onDragCancel = { drag = null },
+                        )
+                    },
+            ) { look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) }) }
         }
     }
 }
@@ -230,13 +268,15 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
 internal fun loadApps(ctx: Context): List<LaunchApp> {
     val pm = ctx.packageManager
     val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+    val pack = LauncherPrefs.iconPack
+    val packMap = if (pack.isNotBlank()) IconPacks.filter(ctx, pack) else emptyMap()
     return pm.queryIntentActivities(main, 0)
         .filter { it.activityInfo.packageName != ctx.packageName }
         .distinctBy { it.activityInfo.packageName }
         .map { ri ->
             val pkg = ri.activityInfo.packageName
             LaunchApp(ri.loadLabel(pm).toString(), pkg,
-                runCatching { ri.loadIcon(pm).toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull(),
+                runCatching { (IconPacks.icon(ctx, pack, packMap, pkg, ri.activityInfo.name) ?: ri.loadIcon(pm)).toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull(),
                 installed = runCatching { pm.getPackageInfo(pkg, 0).firstInstallTime }.getOrDefault(0L),
                 system = (ri.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
                 category = ri.activityInfo.applicationInfo.category)
@@ -248,6 +288,7 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
 private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val ctx = LocalContext.current
     val edge = LocalLauncherEdge.current
+    LaunchedEffect(Unit) { while (true) { LauncherBadges.read(ctx); delay(2500) } }
     val vertical = LauncherPrefs.vertical
     val columns = LauncherPrefs.columns.coerceIn(2, 8)
     val iconDp = LauncherPrefs.iconDp.coerceIn(24, 64)
@@ -282,7 +323,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     // the home screen is a desktop, not an app grid: the Windows looks show the desktop shortcuts, the others show no icons (the apps list holds every app); a setting brings the app grid back
     val desktop = look.id in WINDOWS_LOOKS
     val shortcuts = remember(desktop, LauncherPrefs.desktopOn) { if (desktop) desktopItems().filter { it.pkg in LauncherPrefs.desktopOn } else emptyList() }
-    val home = if (LauncherPrefs.homeApps) visible else shortcuts
+    val home = if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) visible else shortcuts
     val grid = rememberLazyGridState()
     val pages = home.chunked(columns * PAGE_ROWS)
     val pager = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
@@ -312,22 +353,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                             look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) })
                         }
                     }
-                } else {
-                    // horizontal: apps flow left to right, one page per columns x PAGE_ROWS block
-                    HorizontalPager(pager, Modifier.fillMaxSize()) { p ->
-                        Column(Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
-                            pages.getOrElse(p) { emptyList() }.chunked(columns).forEach { row ->
-                                Row(Modifier.fillMaxWidth()) {
-                                    row.forEach { app ->
-                                        Box(Modifier.weight(1f).appTap(state, app) { open(app) }) { look.IconCell(app, iconDp, Modifier.fillMaxWidth()) }
-                                    }
-                                    repeat(columns - row.size) { Spacer(Modifier.weight(1f)) }
-                                }
-                            }
-                        }
-                    }
-                    if (pages.size > 1) PageDots(pager.currentPage, pages.size, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
-                }
+                } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) HomeGrid(look, state, visible, columns, iconDp, edge, open)
             }
             if (!look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
         }
@@ -356,6 +382,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             Box(Modifier.weight(1f).fillMaxWidth()) { look.StartMenu(state, { LauncherSession.startOpen = false }, Modifier.fillMaxSize()) }
         }
         HomeSheet()
+        if (LauncherSession.searchOpen) QuickSearch(state) { LauncherSession.searchOpen = false }
         actionFor?.let { app -> AppActionDialog(app, autoDock) { actionFor = null } }
     }
 }
