@@ -261,22 +261,37 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
     val bg = if (mat) Color.Black else T.panel
     val fg = if (mat) Color(0xFF9A9A9F) else T.sub
     val accent = T.accent
+    var menu by remember { mutableStateOf(false) }
+    val openTool = com.umutk.pulse.LocalOpenTool.current
     val items = listOf(
         Triple("home", "home" to tr("Home", "Ana"), "home"), Triple("files", "folder" to tr("Browse", "Gözat"), "files"), Triple("share", "share" to tr("Share", "Paylaş"), "share"),
-        Triple("search", "search" to tr("Search", "Ara"), "search"), Triple("tree", "disk" to tr("Analyze", "Analiz"), "tree"),
+        Triple("search", "search" to tr("Search", "Ara"), "search"), Triple("more", "more" to tr("More", "Diğer"), "more"),
     )
     Row(Modifier.fillMaxWidth().background(bg).then(if (mat) Modifier else Modifier.frame(T)).padding(vertical = 8.dp)) {
         items.forEach { (id, iconLabel, target) ->
-            val on = tab == target || (id == "tree" && tab in setOf("types", "cache"))
+            val on = tab == target || (id == "more" && tab in setOf("tree", "types", "cache"))
             Column(Modifier.weight(1f).clickable {
                 when (id) {
+                    "more" -> menu = true
                     "share" -> onShare()
                     "search" -> { FilesHomeNav.openSearch = true; onTab("files") }
                     else -> onTab(target)
                 }
             }, horizontalAlignment = Alignment.CenterHorizontally) {
-                PIcon(iconLabel.first, if (on) accent else fg, 26.dp)
-                Text(iconLabel.second, color = if (on) accent else fg, fontSize = 12.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, maxLines = 1)
+                Box {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        PIcon(iconLabel.first, if (on) accent else fg, 26.dp)
+                        Text(iconLabel.second, color = if (on) accent else fg, fontSize = 12.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, maxLines = 1)
+                    }
+                    if (id == "more") com.umutk.pulse.ThemedMenu(menu, { menu = false }) {
+                        com.umutk.pulse.ThemedMenuItem(tr("Media tools", "Medya araçları"), { menu = false; openTool("mediatools") }, iconKey = "tool_mediatools")
+                        com.umutk.pulse.ThemedMenuItem(tr("File converter", "Dosya dönüştürücü"), { menu = false; openTool("mediatools") }, iconKey = "tool_mediatools")
+                        com.umutk.pulse.ThemedMenuItem(tr("Folder sizes", "Klasör boyutları"), { menu = false; onTab("tree") }, iconKey = "disk")
+                        com.umutk.pulse.ThemedMenuItem(tr("File types", "Dosya türleri"), { menu = false; onTab("types") }, iconKey = "folder")
+                        com.umutk.pulse.ThemedMenuItem(tr("Clean cache", "Önbelleği temizle"), { menu = false; onTab("cache") }, iconKey = "delete")
+                        com.umutk.pulse.ThemedMenuItem(tr("Settings", "Ayarlar"), { menu = false; openTool("files_settings") }, iconKey = "settings")
+                    }
+                }
             }
         }
     }

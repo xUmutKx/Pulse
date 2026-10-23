@@ -59,8 +59,42 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var glideAlts: List<String> = emptyList()
     private var clipboard: ClipboardManager? = null
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
-        val t = clipboard?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()?.trim()
-        if (!t.isNullOrEmpty() && t.length <= 600 && !st.incognito && !st.plain) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20)
+        // everything copied is kept (a password field's copy and a sensitive one are not), texts and pictures
+        val clip = clipboard?.primaryClip?.takeIf { it.itemCount > 0 } ?: return@OnPrimaryClipChangedListener
+        if (st.incognito || st.plain) return@OnPrimaryClipChangedListener
+        if (android.os.Build.VERSION.SDK_INT >= 24 && clip.description.extras?.getBoolean("android.content.extra.IS_SENSITIVE") == true) return@OnPrimaryClipChangedListener
+        val item = clip.getItemAt(0)
+        val uri = item.uri
+        if (uri != null && clip.description.hasMimeType("image/*")) {
+            scope.launch(Dispatchers.IO) { val l = ClipStore.addImage(this@PulseKeyboardService, uri); withContext(Dispatchers.Main) { st.clipItems = l } }
+        } else {
+            val t = item.coerceToText(this)?.toString()?.trim()
+            if (!t.isNullOrEmpty()) { st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+        }
+    }
+
+    override fun clipPin(id: Long) { st.clipItems = ClipStore.togglePin(this, id) }
+    override fun clipDelete(ids: Set<Long>) { st.clipItems = ClipStore.delete(this, ids) }
+    override fun clipClear() { st.clipItems = ClipStore.clear(this) }
+
+    /** A kept item into the field: a text is typed, a picture is handed over as content when the field takes pictures. */
+    override fun pasteClip(item: ClipItem) {
+        val c = currentInputConnection ?: return
+        finishWord("", false)
+        val path = item.image
+        if (path == null) { c.commitText(item.text, 1); st.panel = "keys"; afterText(); return }
+        val info = currentInputEditorInfo
+        val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
+        val ok = types.any { it.startsWith("image/") || it == "*/*" }
+        if (!ok) { android.widget.Toast.makeText(this, com.umutk.pulse.tr("This field takes no pictures", "Bu alan resim kabul etmiyor"), android.widget.Toast.LENGTH_SHORT).show(); return }
+        runCatching {
+            val f = java.io.File(path)
+            val u = androidx.core.content.FileProvider.getUriForFile(this, "$packageName.files", f)
+            val mime = if (f.inputStream().use { it.read() } == 0x89) "image/png" else "image/jpeg"
+            val content = androidx.core.view.inputmethod.InputContentInfoCompat(u, android.content.ClipDescription("clip", arrayOf(mime)), null)
+            androidx.core.view.inputmethod.InputConnectionCompat.commitContent(c, info!!, content, androidx.core.view.inputmethod.InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null)
+            st.panel = "keys"
+        }
     }
 
     private val lang get() = KeyboardLayouts.lang(st.lang)
@@ -85,6 +119,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
             withContext(Dispatchers.Main) { updateSuggestions() }
         }
+        st.clipItems = ClipStore.load(this)
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.addPrimaryClipChangedListener(clipListener)
     }
@@ -111,6 +146,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         st.inline = emptyList(); st.emojiQuery = null
+        st.clipItems = ClipStore.load(this)
         // the settings may have changed the language since the last field
         KeyboardPrefs.load(this)
         val primary = KeyboardPrefs.langList().first()
@@ -550,6 +586,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** A letter typed while Ctrl, Alt, Win or Shift waits: the key press with those modifiers (Ctrl+C and so on), not the letter. */
     private fun sendChord(ch: Char): Boolean {
         finishWord("", false)
+        // Ctrl with A, C, X, V, Z, Y: the editor's own actions (a raw key chord is not understood by every text field, and some typed the letter after it)
+        if (st.ctrl > 0 && st.alt == 0 && st.win == 0) {
+            val act = when (ch.lowercaseChar()) {
+                'a' -> "selectAll"; 'c' -> "copy"; 'x' -> "cut"; 'v' -> "paste"; 'y' -> "redo"
+                'z' -> if (ch.isUpperCase() || st.shiftMod > 0) "redo" else "undo"
+                else -> null
+            }
+            if (act != null) { edit(act); useModifiers(); if (st.shift == 1) st.shift = 0; return true }
+        }
         val evs = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(charArrayOf(ch.lowercaseChar())) ?: return false
         val shifted = ch.isUpperCase() || st.shift > 0
         evs.filter { it.keyCode !in setOf(59, 60, 57, 58, 113, 114, 117, 118) }.forEach { e -> sendKey(e.keyCode, if (shifted) KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON else 0) }
