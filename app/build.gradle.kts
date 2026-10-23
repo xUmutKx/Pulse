@@ -14,6 +14,7 @@ android {
         versionCode = 292
         versionName = "0.10.282"
         ndk { abiFilters += "arm64-v8a" }
+        resourceConfigurations += listOf("en", "tr")
     }
     // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
     signingConfigs {
@@ -35,7 +36,6 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
-    androidResources { localeFilters += listOf("en", "tr") }
     buildFeatures { compose = true; aidl = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
