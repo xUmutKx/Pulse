@@ -312,6 +312,7 @@ class MusicPlayerEngine private constructor(context: Context) {
         .setMediaId(path)
         .setUri(uriOf(path))
         .setMediaMetadata(MediaMetadata.Builder().setTitle(title).setArtist(artist).setAlbumTitle(album)
+            .setExtras(android.os.Bundle().apply { putString(com.umutk.pulse.extras.music.notif.NotifArt.KEY_PATH, path) })
             .also { b -> if (albumId > 0 && MusicSettings.notificationArt(app)) b.setArtworkUri(Uri.parse("content://media/external/audio/albumart/$albumId")) }.build())
         .build()
 
