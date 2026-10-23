@@ -1072,3 +1072,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.249 derlenmedi: 0.10.248 derleme düzeltmesi (Edit ikonu importu); gelişmiş kapakta: Apple stili (Inter) font, kendi font dosyam (örn. SF Pro), yalnız kenar çizgisi (içi boş rakam), elle karıştırılan renk; gelişmiş modda temel kapağa ait düğmeler gizlendi; Poweramp yedeği ayarlarda Kütüphane altına taşındı, doğrudan içe aktarma veritabanı sütunlarını okuyarak çalışır ve hata nedenini yazar.
 
 - 0.10.250 derlenmedi: gelişmiş kapakta telefon dikeyken saat sayfaları düzeltildi: dijital, segmentli, neon, matrix, piksel, çevirmeli, saatlerden saat yatay yerine saat üstte dakika altta dizilir ve ekranı doldurur.
+
+- 0.10.251 derlenmedi: gelişmiş kapak ayarlarında "Şimdi dene" kaldırıldı (zaten anahtar açıyor), parlaklık da yalnız temel kapakta.
