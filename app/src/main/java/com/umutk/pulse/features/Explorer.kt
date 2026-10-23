@@ -193,9 +193,9 @@ private fun FilesPageInner() {
     val ctx = LocalContext.current
     val standalone = ctx is com.umutk.pulse.FilesActivity
     // the standalone Files app starts on its home page (storage, recent, types); inside Pulse the explorer opens at once
-    var tab by rememberSaveable { mutableStateOf(if (standalone) "home" else "files") }
+    var tab by rememberSaveable { mutableStateOf(if (standalone && !FilesPrefs.startBrowse) "home" else "files") }
     val top = remember { Environment.getExternalStorageDirectory() }
-    val back: () -> Unit = { tab = if (standalone) "home" else "files" }
+    val back: () -> Unit = { tab = if (standalone && !FilesPrefs.startBrowse) "home" else "files" }
     // the full-screen window is the standalone app's; embedded in Pulse the page stays a page
     var full by rememberSaveable { mutableStateOf(standalone && (Opt.filesFull || FilesLaunch.full)) }
     LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full && standalone) { full = true; FilesLaunch.full = false } }

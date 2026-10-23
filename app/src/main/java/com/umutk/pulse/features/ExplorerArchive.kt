@@ -726,6 +726,7 @@ object FilesPrefs {
     var rowSep by mutableStateOf(false)      // a thin line between list rows
     var folderCards by mutableStateOf(false) // a card behind each folder (Material looks start without it)
     var alt by mutableStateOf(false)         // alternate row colours
+    var startBrowse by mutableStateOf(false) // the standalone app opens on the Browse page, not the Home page
     var analysis by mutableStateOf(false)    // the folder sizes / file types / cleanup icons in the header (the menu and the home page reach them anyway)
     var radius by mutableStateOf(1)          // card corner radius: small / medium / large
     // the Library folders of internal storage (drawer), by relative path; the ones in libHidden are not shown
@@ -743,14 +744,14 @@ object FilesPrefs {
         thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0)
         foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
         cards = p.getBoolean("ex_cards", true); folderCards = p.getBoolean("ex_fcards", false); rowSep = p.getBoolean("ex_rowsep", false); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
-        analysis = p.getBoolean("ex_analysis", false)
+        analysis = p.getBoolean("ex_analysis", false); startBrowse = p.getBoolean("ex_startbrowse", false)
         libHidden = p.getStringSet("ex_lib_off", emptySet())?.toSet() ?: emptySet()
     }
     fun save(c: android.content.Context) {
         sp(c).edit().putStringSet("ex_lib_off", libHidden).apply()
         sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putInt("ex_icon", icon)
             .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
-            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).apply()
+            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
     }
 }
 
@@ -829,6 +830,7 @@ fun FilesSettings() {
             val ttl = listOf(15 to "15 min", 60 to "1 h", 360 to "6 h", 1440 to "1 day", 0 to tr("Never", "Hiç"))
             Chips(tr("Delete temporary copies after", "Geçici kopyalar şu süre sonra silinsin"), "delete", ttl.map { it.second }, ttl.indexOfFirst { it.first == TempCopies.minutes(ctx) }.coerceAtLeast(1)) { TempCopies.setMinutes(ctx, ttl[it].first) }
             SwRow(tr("Show hidden files", "Gizli dosyaları göster"), "search", fp.hidden) { fp.hidden = it }
+            SwRow(tr("Open on the Browse page", "Gözat sayfasında aç"), "folder", fp.startBrowse) { fp.startBrowse = it }
             SwRow(tr("Size, type and cleanup icons in the header", "Başlıkta boyut, tür ve temizlik simgeleri"), "disk", fp.analysis) { fp.analysis = it }
             SwRow(tr("Show file extensions", "Dosya uzantılarını göster"), "notes", fp.ext) { fp.ext = it }
             SwRow(tr("Confirm before delete", "Silmeden önce sor"), "delete", fp.confirm) { fp.confirm = it }
