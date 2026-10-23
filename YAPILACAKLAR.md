@@ -1125,3 +1125,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.308: derlenmedi — Mesajlar: imza, gönderme geri alma süresi, sohbeti sessize alma (Textra ayarları)
 - 0.10.309: derlenmedi — müzik çalar ve söz ekranı Inter yazı tipi (kalın gerçekten kalın, Türkçe/Kiril/Yunan harfleri); bozuk etiketler (CanlÄ± gibi) düzeltilir
 - 0.10.310: derlenmedi — müzik: ses 0 olunca durur açılınca devam eder, medya bildirimi tam oynatıcıyı açar, söz bildirimi söz ekranını açar (Material), bozuk LRC (saniye gösteren satırlar) süzülür, türe göre otomatik ekolayzır, Türkçe karakter duyarsız arama; klavye: aşağı kaydırma ile kapatma düzeltildi, 3 nokta menüsünden kes/kopyala/yapıştır kalktı, Sesle yazma + Çeviri + Pano eklendi; Dosyalar ana sayfası turuncu yerine tema vurgusu; Mesajlar SmsManager eski Android uyumu
+- 0.10.311: derlenmedi — Buds yöneticisi yeniden yazıldı: çizili kulaklık+kutu, pil çubukları, ayarlar kulaklığın uzun durum mesajından okunur (EQ, dokunma, kilit, ANC gücü, ortam sesi, kesintisiz bağlantı...); tüm uygulama NewApi taraması için elle çalışan lint iş akışı
+- 0.10.311: tüm uygulama NewApi taraması: tek bulgu (Html.fromHtml, API 24) HtmlCompat ile düzeltildi

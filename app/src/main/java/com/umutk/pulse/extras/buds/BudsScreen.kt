@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -94,6 +95,7 @@ fun BudsScreen(back: () -> Unit) {
             }
             return@Column
         }
+        BudsHero(s, devices.firstOrNull { it.first == address }?.second.orEmpty(), address != null)
         // the earbuds
         PCard {
             Text(tr("Earbuds", "Kulaklık"), color = T.sub, fontSize = 12.sp)
@@ -113,17 +115,10 @@ fun BudsScreen(back: () -> Unit) {
         }
         // the state
         if (s.connected) {
-            PCard {
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                    Bud("L", s.batteryL, s.wornL)
-                    if (s.batteryCase in 0..100) Bud(tr("Case", "Kutu"), s.batteryCase, null)
-                    Bud("R", s.batteryR, s.wornR)
-                }
-            }
             if (s.canNoise) PCard {
                 Text(tr("Noise control", "Gürültü denetimi"), color = T.sub, fontSize = 12.sp)
                 Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(0 to tr("Off", "Kapalı"), 1 to "ANC", 2 to tr("Ambient", "Ortam")).forEach { (m, n) -> PChip(s.noise == m, n) { BudsLink.setNoise(m) } }
+                    (listOf(0 to tr("Off", "Kapalı"), 1 to "ANC", 2 to tr("Ambient", "Ortam")) + (if (s.name.contains("Buds3")) listOf(3 to tr("Adaptive", "Uyarlanır")) else emptyList())).forEach { (m, n) -> PChip(s.noise == m, n) { BudsLink.setNoise(m) } }
                 }
                 Text(when (s.noise) {
                     1 -> tr("Active noise cancelling: the earbuds listen to the outside and play the opposite sound, so engines and crowds get quieter.", "Aktif gürültü engelleme: kulaklık dışarıyı dinler ve ters sesi çalar, motor ve kalabalık sesi azalır.")
@@ -133,7 +128,7 @@ fun BudsScreen(back: () -> Unit) {
                 }, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             }
         } else if (address != null) Text(tr("Not connected. Put the earbuds in or open their case.", "Bağlı değil. Kulaklığı tak ya da kutusunu aç."), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
-        if (s.connected) BudsControls()
+        if (s.connected) BudsControls(s)
         SettingsSection(tr("When the earbuds come out", "Kulaklıklar çıkınca"), startOpen = true) {
             BRow(tr("Stop the music", "Müziği durdur"), tr("When both earbuds are taken out of your ears, the music or video that is playing is paused.", "İki kulaklık da kulaktan çıkınca çalan müzik ya da video duraklatılır."), pause) { pause = it; BudsPrefs.setPauseOnRemove(ctx, it) }
             BRow(tr("Turn noise control off", "Gürültü denetimini kapat"), tr("Noise cancelling and ambient sound are switched off while the earbuds are out, which saves their battery.", "Kulaklıklar çıkıkken gürültü engelleme ve ortam sesi kapatılır, pil tasarrufu sağlar."), noiseOff) { noiseOff = it; BudsPrefs.setNoiseOffOnRemove(ctx, it) }
@@ -173,20 +168,20 @@ private fun BRow(title: String, desc: String, checked: Boolean, onChange: (Boole
 
 /** The settings of the earbuds themselves, sent over the serial link (message ids and values from the GalaxyBudsClient notes). */
 @Composable
-private fun BudsControls() {
+private fun BudsControls(s: BudsState) {
     val ctx = LocalContext.current
-    var touchL by remember { mutableStateOf(BudsPrefs.saved(ctx, "touchL", 2)) }
-    var touchR by remember { mutableStateOf(BudsPrefs.saved(ctx, "touchR", 2)) }
-    var cycle by remember { mutableStateOf(BudsPrefs.saved(ctx, "cycle", 0)) }
-    var lock by remember { mutableStateOf(BudsPrefs.saved(ctx, "lock", 0) == 1) }
-    var eq by remember { mutableStateOf(BudsPrefs.saved(ctx, "eq", 0)) }
-    var ancHigh by remember { mutableStateOf(BudsPrefs.saved(ctx, "ancHigh", 0) == 1) }
-    var ambVol by remember { mutableStateOf(BudsPrefs.saved(ctx, "ambVol", 1)) }
-    var seamless by remember { mutableStateOf(BudsPrefs.saved(ctx, "seamless", 1) == 1) }
-    var voice by remember { mutableStateOf(BudsPrefs.saved(ctx, "voice", 0) == 1) }
-    var oneBud by remember { mutableStateOf(BudsPrefs.saved(ctx, "oneBud", 0) == 1) }
+    var touchL by remember(s.touchL) { mutableStateOf(s.touchL.takeIf { it in 1..4 } ?: BudsPrefs.saved(ctx, "touchL", 2)) }
+    var touchR by remember(s.touchR) { mutableStateOf(s.touchR.takeIf { it in 1..4 } ?: BudsPrefs.saved(ctx, "touchR", 2)) }
+    var cycle by remember(s.cycle) { mutableStateOf(s.cycle.takeIf { it in 0..2 } ?: BudsPrefs.saved(ctx, "cycle", 0)) }
+    var lock by remember(s.lock) { mutableStateOf(s.lock ?: (BudsPrefs.saved(ctx, "lock", 0) == 1)) }
+    var eq by remember(s.eq) { mutableStateOf(s.eq.takeIf { it in 0..5 } ?: BudsPrefs.saved(ctx, "eq", 0)) }
+    var ancHigh by remember(s.ancHigh) { mutableStateOf(s.ancHigh ?: (BudsPrefs.saved(ctx, "ancHigh", 0) == 1)) }
+    var ambVol by remember(s.ambientVolume) { mutableStateOf(s.ambientVolume.takeIf { it in 0..3 } ?: BudsPrefs.saved(ctx, "ambVol", 1)) }
+    var seamless by remember(s.seamless) { mutableStateOf(s.seamless ?: (BudsPrefs.saved(ctx, "seamless", 1) == 1)) }
+    var voice by remember(s.voiceDetect) { mutableStateOf(s.voiceDetect ?: (BudsPrefs.saved(ctx, "voice", 0) == 1)) }
+    var oneBud by remember(s.oneBud) { mutableStateOf(s.oneBud ?: (BudsPrefs.saved(ctx, "oneBud", 0) == 1)) }
     var game by remember { mutableStateOf(BudsPrefs.saved(ctx, "game", 0) == 1) }
-    var spatial by remember { mutableStateOf(BudsPrefs.saved(ctx, "spatial", 0) == 1) }
+    var spatial by remember(s.spatial) { mutableStateOf(s.spatial ?: (BudsPrefs.saved(ctx, "spatial", 0) == 1)) }
     var find by remember { mutableStateOf(false) }
     fun save(k: String, v: Int) = BudsPrefs.save(ctx, k, v)
     val touchNames = listOf(1 to tr("Voice assistant", "Sesli asistan"), 2 to tr("Noise control", "Gürültü denetimi"), 3 to tr("Volume", "Ses"))
@@ -222,5 +217,54 @@ private fun BudsControls() {
     SettingsSection(tr("More", "Diğer")) {
         BRow(tr("Seamless connection", "Kesintisiz bağlantı"), tr("The earbuds move to your other Galaxy devices by themselves.", "Kulaklık diğer Galaxy cihazlarına kendiliğinden geçer."), seamless) { seamless = it; save("seamless", if (it) 1 else 0); BudsLink.send(BudsProto.SET_SEAMLESS_CONNECTION, if (it) 1 else 0) }
         BRow(tr("Find my earbuds", "Kulaklığımı bul"), tr("Makes the earbuds beep. Turn it off when you have found them.", "Kulaklıkların bip sesi çıkarmasını sağlar. Bulunca kapat."), find) { find = it; BudsLink.send(if (it) BudsProto.FIND_START else BudsProto.FIND_STOP) }
+    }
+}
+
+
+/** The top card: the case and the two earbuds drawn, which one is in the ear, the batteries and whether the link is up. */
+@Composable
+private fun BudsHero(s: BudsState, name: String, picked: Boolean) {
+    PCard {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(s.name.ifBlank { name }.ifBlank { "Galaxy Buds" }, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text(when { s.connected -> tr("Connected", "Bağlı"); picked -> tr("Connecting…", "Bağlanıyor…") ; else -> tr("Pick the earbuds below", "Aşağıdan kulaklığı seç") },
+                    color = if (s.connected) T.accent else T.sub, fontSize = 13.sp)
+            }
+        }
+        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(120.dp).padding(top = 8.dp)) {
+            val w = size.width; val h = size.height
+            val body = if (s.connected) Color(0xFFE9E9EE) else T.text.copy(alpha = .25f)
+            fun bud(cx: Float, worn: Boolean, flip: Float) {
+                val ring = if (worn) T.accent else T.text.copy(alpha = .18f)
+                drawOval(body, androidx.compose.ui.geometry.Offset(cx - 34f, h * .12f), androidx.compose.ui.geometry.Size(68f, 64f))
+                drawOval(ring, androidx.compose.ui.geometry.Offset(cx - 34f, h * .12f), androidx.compose.ui.geometry.Size(68f, 64f), style = androidx.compose.ui.graphics.drawscope.Stroke(4f))
+                drawRoundRect(body, androidx.compose.ui.geometry.Offset(cx - 9f + flip * 14f, h * .12f + 48f), androidx.compose.ui.geometry.Size(18f, 54f), androidx.compose.ui.geometry.CornerRadius(9f))
+                drawCircle(Color(0xFF3A3A44), 11f, androidx.compose.ui.geometry.Offset(cx + flip * -8f, h * .12f + 30f))
+            }
+            bud(w * .22f, s.wornL, -1f)
+            // the case in the middle: a rounded block with a lid line and a small light
+            val cw = 110f
+            drawRoundRect(T.text.copy(alpha = .14f), androidx.compose.ui.geometry.Offset(w * .5f - cw / 2, h * .18f), androidx.compose.ui.geometry.Size(cw, h * .62f), androidx.compose.ui.geometry.CornerRadius(34f))
+            drawLine(T.text.copy(alpha = .3f), androidx.compose.ui.geometry.Offset(w * .5f - cw / 2 + 8f, h * .18f + h * .2f), androidx.compose.ui.geometry.Offset(w * .5f + cw / 2 - 8f, h * .18f + h * .2f), 3f)
+            drawCircle(if (s.connected) T.accent else T.text.copy(alpha = .3f), 5f, androidx.compose.ui.geometry.Offset(w * .5f, h * .18f + h * .42f))
+            bud(w * .78f, s.wornR, 1f)
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            BudBattery("L", s.batteryL, s.wornL)
+            if (s.batteryCase in 0..100) BudBattery(tr("Case", "Kutu"), s.batteryCase, null)
+            BudBattery("R", s.batteryR, s.wornR)
+        }
+    }
+}
+
+@Composable
+private fun BudBattery(label: String, level: Int, worn: Boolean?) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(if (level in 0..100) "$level%" else "—", color = if (level in 0..20) Color(0xFFC42B1C) else T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Box(Modifier.padding(top = 4.dp).size(width = 56.dp, height = 6.dp).clip(RoundedCornerShape(3.dp)).background(T.text.copy(alpha = .12f))) {
+            if (level in 0..100) Box(Modifier.fillMaxWidth(level / 100f).fillMaxHeight().background(if (level <= 20) Color(0xFFC42B1C) else T.accent))
+        }
+        Text(label + if (worn == true) " · " + tr("in ear", "kulakta") else "", color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
     }
 }
