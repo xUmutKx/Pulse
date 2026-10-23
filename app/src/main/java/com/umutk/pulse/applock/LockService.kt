@@ -292,6 +292,8 @@ class LockService : AccessibilityService() {
         if (pkg in transient) return
         // hot path: a locked app that must ask is covered at once, before any window lookup (the later size check removes it for a floating window)
         if (pkg in AppLock.locked && pkg !in never && AppLock.needsAsk(pkg, System.currentTimeMillis())) {
+            // a chat bubble (a small floating window) opens without the lock unless Settings > App lock > Bubbles is on
+            if (!AppLock.lockBubbles && floating(pkg)) return
             mark("a11y-hot", SystemClock.uptimeMillis() - e.eventTime)
             Log.d("AppLock", "a11y hot $pkg/$cls (event age ${SystemClock.uptimeMillis() - e.eventTime}ms)")
             onForeground(pkg)
@@ -334,13 +336,14 @@ class LockService : AccessibilityService() {
             }
             // an unlocked app whose last window (bubble) is gone has now been left: its grace time starts
             if (allKnown) for (p in AppLock.locked) if (p !in seen && (p != current || SystemClock.uptimeMillis() - cardAt > 1500)) AppLock.leave(p)
-            val hit = seen.firstOrNull { it in AppLock.locked && it !in never && it !in transient && it != packageName && AppLock.needsAsk(it, System.currentTimeMillis()) }
+            val hit = seen.firstOrNull { it in AppLock.locked && it !in never && it !in transient && it != packageName && AppLock.needsAsk(it, System.currentTimeMillis()) && (AppLock.lockBubbles || !floating(it)) }
             if (hit != null) {
                 if (hit != cardPkg) {
                     mark("windows"); Log.d("AppLock", "window of locked app $hit (bubble or floating)")
                     spec = null; showCard(hit)
                     current = hit   // a bubble opened while another app was in front: it is now the app being used
                 }
+            } else if (!AppLock.lockBubbles && shown && !authing && cardPkg != null && cardPkg in seen && floating(cardPkg!!)) { Log.d("AppLock", "$cardPkg is only a bubble, lock removed"); hideCard()
             } else if (allKnown && shown && !authing && cardPkg != null && (cardPkg != current || SystemClock.uptimeMillis() - cardAt > 1500) && cardPkg !in seen) { Log.d("AppLock", "window of $cardPkg gone, lock removed"); hideCard() }
         }.onFailure { Log.e("AppLock", "window scan failed", it) }
     }
@@ -369,6 +372,7 @@ class LockService : AccessibilityService() {
             current?.let { if (!hasWindow(it)) AppLock.leave(it) }
             current = pkg
         }
+        if (!AppLock.lockBubbles && pkg in AppLock.locked && floating(pkg)) { spec = null; hideCard(); return }
         if (pkg !in never && AppLock.needsAsk(pkg, System.currentTimeMillis())) {
             val guessed = spec == pkg && shown && cardPkg == pkg
             spec = null
