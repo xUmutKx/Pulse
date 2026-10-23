@@ -233,6 +233,17 @@ fun KeyboardSettings(back: () -> Unit) {
                 PButton(tr("Forget words", "Kelimeleri unut"), compact = true, danger = true) { askForget = true }
                 PButton(tr("Factory settings", "Fabrika ayarları"), compact = true, danger = true) { askReset = true }
             }
+            // the words SwiftKey learned, read with root from its own data folder
+            var skNote by remember { mutableStateOf("") }
+            PButton(tr("Take SwiftKey's words (root)", "SwiftKey kelimelerini al (root)"), compact = true) {
+                skNote = tr("Reading…", "Okunuyor…")
+                scope.launch {
+                    val r = withContext(Dispatchers.IO) { SwiftKeyImport.run(ctx) }
+                    skNote = if (r != null) tr("${r.words} words taken from ${r.files} files", "${r.files} dosyadan ${r.words} kelime alındı") else tr("Could not read SwiftKey: ", "SwiftKey okunamadı: ") + SwiftKeyImport.lastError
+                    learned = KeyboardDictionary.learnedCount()
+                }
+            }
+            if (skNote.isNotEmpty()) Text(skNote, color = T.sub, fontSize = 12.sp)
             Text(tr("Word lists from FrequencyWords (OpenSubtitles), CC BY-SA 4.0.", "Sözlükler: FrequencyWords (OpenSubtitles), CC BY-SA 4.0."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
         }
         Spacer(Modifier.height(24.dp))
