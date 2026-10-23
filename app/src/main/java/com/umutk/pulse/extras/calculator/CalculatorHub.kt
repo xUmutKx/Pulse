@@ -184,17 +184,32 @@ private fun RoundPad(rows: List<List<String>>, onKey: (String) -> Unit) {
 @Composable
 internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modifier = Modifier, onKey: (String) -> Unit) {
     val gap = if (classic) 4.dp else if (T.id == "win10") 2.dp else if (T.id == "amoled" || T.id == "material") 8.dp else 3.dp
+    val round = T.id == "amoled" || T.id == "material"
+    if (!round) {
+        // Windows looks: keys of a modest height, sitting at the bottom; the room above them is for the display
+        androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
+            val n = rows.size
+            val fit = if (constraints.hasBoundedHeight) (maxHeight - gap * (n - 1)) / n else 48.dp
+            val rowH = minOf(fit, 46.dp)
+            Column(Modifier.fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
+                rows.forEach { row ->
+                    Row(Modifier.fillMaxWidth().height(rowH), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                        row.forEach { k -> CalcKey(k, Modifier.weight(1f).fillMaxHeight(), classic) { onKey(k) } }
+                    }
+                }
+            }
+        }
+        return
+    }
     Column(modifier.fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
         rows.forEach { row ->
             Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
                 row.forEach { k ->
-                    if (T.id == "amoled" || T.id == "material") {
-                        // round keys stay round: a square as big as the cell allows, centred (a stretched circle is a thin pill)
-                        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                            val side = minOf(maxWidth, maxHeight)
-                            CalcKey(k, Modifier.size(side), classic) { onKey(k) }
-                        }
-                    } else CalcKey(k, Modifier.weight(1f).fillMaxHeight(), classic) { onKey(k) }
+                    // round keys stay round: a square as big as the cell allows, centred (a stretched circle is a thin pill)
+                    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                        val side = minOf(maxWidth, maxHeight)
+                        CalcKey(k, Modifier.size(side), classic) { onKey(k) }
+                    }
                 }
             }
         }
