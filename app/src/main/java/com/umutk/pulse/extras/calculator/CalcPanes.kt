@@ -145,11 +145,12 @@ internal fun GraphPane() {
     var h by remember { mutableFloatStateOf(1f) }
     var probe by remember { mutableStateOf<Float?>(null) }
     var deg by remember { mutableStateOf(false) }
+    var three by rememberSaveable { mutableStateOf(false) }
     val colors = listOf(Color(0xFF4FC3F7), Color(0xFFFF8A65), Color(0xFF81C784), Color(0xFFBA68C8))
     val fns = exprs.map { Sci.compile(it) }
     val grid = T.text.copy(alpha = .12f); val axis = T.text.copy(alpha = .55f); val label = T.sub
     Column(Modifier.fillMaxSize()) {
-        Box(
+        if (three) Surface3D(fns.firstOrNull(), deg, Modifier.weight(1f)) else Box(
             Modifier.weight(1f).fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel).onSizeChanged { w = it.width.toFloat(); h = it.height.toFloat() }
                 .pointerInput(Unit) {
                     detectTransformGestures { centroid, pan, zoom, _ ->
@@ -215,13 +216,77 @@ internal fun GraphPane() {
         }
         Spacer(Modifier.height(6.dp))
         exprs.forEachIndexed { i, ex ->
+            if (three && i > 0) return@forEachIndexed
             Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(14.dp).clip(CircleShape).background(if (fns[i] != null || ex.isBlank()) colors[i] else Color(0xFFC42B1C)))
                 Spacer(Modifier.size(8.dp))
-                PField(ex, { exprs[i] = it }, "f${i + 1}(x) = ", Modifier.weight(1f))
+                PField(ex, { exprs[i] = it }, if (three) (if (i == 0) "z = f(x, y) = " else "") else "f${i + 1}(x) = ", Modifier.weight(1f))
             }
         }
-        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { PChip(deg, "DEG") { deg = !deg } }
+        Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) { PChip(deg, "DEG") { deg = !deg }; PChip(three, "3D") { three = !three } }
+    }
+}
+
+/**
+ * The surface z = f(x, y) of the first function, drawn as a solid mesh: the far squares first, coloured by height. One finger turns it, two fingers
+ * zoom (the range of x and y). The same expressions as the flat graph, with y as the second variable.
+ */
+@Composable
+internal fun Surface3D(f: Sci.Fn?, deg: Boolean, modifier: Modifier) {
+    var yaw by rememberSaveable { mutableFloatStateOf(-0.7f) }
+    var pitch by rememberSaveable { mutableFloatStateOf(0.9f) }
+    var range by rememberSaveable { mutableFloatStateOf(4f) }
+    val axis = T.text.copy(alpha = .5f)
+    Box(
+        modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(T.panel).pointerInput(Unit) {
+            detectTransformGestures { _, pan, zoom, _ ->
+                yaw += pan.x / 180f; pitch = (pitch + pan.y / 180f).coerceIn(0.05f, 1.55f); range = (range / zoom).coerceIn(0.5f, 80f)
+            }
+        },
+    ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val w = size.width; val h = size.height
+            val n = 32; val r = range
+            val cyw = kotlin.math.cos(yaw); val syw = kotlin.math.sin(yaw); val cp = kotlin.math.cos(pitch); val sp = kotlin.math.sin(pitch)
+            val zlim = r * 1.2f
+            val k = minOf(w, h) / (r * 3.4f)
+            // the point on the screen (x right, y up) and its depth (bigger = farther)
+            fun sx(x: Float, y: Float) = w / 2f + (x * cyw - y * syw) * k
+            fun sy(x: Float, y: Float, z: Float) = h / 2f - (z * cp + (x * syw + y * cyw) * sp) * k
+            fun depth(x: Float, y: Float, z: Float) = (x * syw + y * cyw) * cp - z * sp
+            fun line(x0: Float, y0: Float, z0: Float, x1: Float, y1: Float, z1: Float) = drawLine(axis, Offset(sx(x0, y0), sy(x0, y0, z0)), Offset(sx(x1, y1), sy(x1, y1, z1)), 2f)
+            line(-r, 0f, 0f, r, 0f, 0f); line(0f, -r, 0f, 0f, r, 0f); line(0f, 0f, -zlim, 0f, 0f, zlim)
+            if (f == null) return@Canvas
+            val zs = Array(n + 1) { FloatArray(n + 1) }
+            for (i in 0..n) for (j in 0..n) {
+                val x = -r + 2f * r * i / n; val y = -r + 2f * r * j / n
+                Sci.y = y.toDouble()
+                val z = f.at(x.toDouble(), deg)
+                zs[i][j] = if (z.isFinite() && abs(z) < 1e6) z.toFloat().coerceIn(-zlim, zlim) else Float.NaN
+            }
+            class Quad(val i: Int, val j: Int, val d: Float)
+            val quads = ArrayList<Quad>(n * n)
+            for (i in 0 until n) for (j in 0 until n) {
+                val a = zs[i][j]; val b = zs[i + 1][j]; val c = zs[i + 1][j + 1]; val e = zs[i][j + 1]
+                if (a.isNaN() || b.isNaN() || c.isNaN() || e.isNaN()) continue
+                val x = -r + 2f * r * (i + .5f) / n; val y = -r + 2f * r * (j + .5f) / n
+                quads += Quad(i, j, depth(x, y, (a + b + c + e) / 4f))
+            }
+            quads.sortByDescending { it.d }
+            val lo = Color(0xFF4FC3F7); val hi = Color(0xFFFF8A65)
+            for (q in quads) {
+                val i = q.i; val j = q.j
+                val xs = floatArrayOf(-r + 2f * r * i / n, -r + 2f * r * (i + 1) / n, -r + 2f * r * (i + 1) / n, -r + 2f * r * i / n)
+                val ys = floatArrayOf(-r + 2f * r * j / n, -r + 2f * r * j / n, -r + 2f * r * (j + 1) / n, -r + 2f * r * (j + 1) / n)
+                val zz = floatArrayOf(zs[i][j], zs[i + 1][j], zs[i + 1][j + 1], zs[i][j + 1])
+                val path = Path()
+                for (m in 0..3) { val px = sx(xs[m], ys[m]); val py = sy(xs[m], ys[m], zz[m]); if (m == 0) path.moveTo(px, py) else path.lineTo(px, py) }
+                path.close()
+                val t = ((zz.sum() / 4f + zlim) / (2f * zlim)).coerceIn(0f, 1f)
+                drawPath(path, androidx.compose.ui.graphics.lerp(lo, hi, t))
+                drawPath(path, Color.Black.copy(alpha = .25f), style = Stroke(1f))
+            }
+        }
     }
 }
 

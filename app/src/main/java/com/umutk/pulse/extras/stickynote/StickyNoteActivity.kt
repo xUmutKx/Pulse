@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -50,7 +51,7 @@ class StickyNoteActivity : ComponentActivity() {
             val control = remember(look) { ExtraLookControl(look) { look = it; StickyLook.set(this@StickyNoteActivity, it) } }
             CompositionLocalProvider(LocalExtraLook provides control) {
                 LookHost(lookId = look) { th ->
-                    Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) {
+                    Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
                         StickyNoteScreen { finish() }
                     }
                 }

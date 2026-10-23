@@ -1,6 +1,7 @@
 package com.umutk.pulse.extras.music
 
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBarsPadding
 import android.content.Context
 import androidx.activity.compose.BackHandler
@@ -195,7 +196,7 @@ fun MusicHub(onBack: () -> Unit) {
             val ink = T.text
             var inCat by remember { mutableStateOf(false) }
             // with the art background on, the menu sits on a half-transparent dark layer so its white text reads over the cover
-            Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
+            Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 12.dp, vertical = 8.dp).verticalScroll(rememberScrollState())) {
                 if (!inCat) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { settingsOpen = false; rev++ }, contentAlignment = Alignment.Center) { PIcon("back", ink, 22.dp) }
