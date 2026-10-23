@@ -38,7 +38,10 @@ private sealed interface Page { object List : Page; object Search : Page; object
 
 /** Full page: saved lyrics, online search (LyricsScreen), and the lyrics of the playing track. */
 @Composable
-fun LyricsHub(onBack: () -> Unit) {
+fun LyricsHub(onBack: () -> Unit) = com.umutk.pulse.WithPlayerFont { LyricsHubBody(onBack) }
+
+@Composable
+private fun LyricsHubBody(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val engine = MusicPlayerEngine.get(ctx)
     val st by engine.state.collectAsState()

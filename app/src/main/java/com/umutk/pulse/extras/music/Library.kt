@@ -75,9 +75,9 @@ object MusicLibrary {
                     if (!hidden && raw.contains("/.")) continue
                     val path = q.getString(1)?.takeIf { File(it).exists() }
                         ?: android.content.ContentUris.withAppendedId(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, q.getLong(0)).toString()
-                    val artist = q.getString(4)?.takeIf { it != "<unknown>" }
+                    val artist = fixTag(q.getString(4))?.takeIf { it != "<unknown>" }
                     val genre = if (Build.VERSION.SDK_INT >= 30) q.getString(7)?.takeIf { it.isNotBlank() } else null
-                    out += Track(path, q.getString(2), (q.getLong(3) / 1000).toInt(), artist, q.getString(5), q.getLong(6),
+                    out += Track(path, fixTag(q.getString(2)), (q.getLong(3) / 1000).toInt(), artist, fixTag(q.getString(5)), q.getLong(6),
                         genre, q.getInt(8).takeIf { it > 0 } ?: 0, q.getString(9)?.takeIf { it.isNotBlank() && it != "<unknown>" }, q.getLong(10))
                 }
             }
@@ -85,6 +85,18 @@ object MusicLibrary {
             // permission revoked mid-scan: keep what the cache has
         }
         return out
+    }
+
+    private val mojibake = Regex("[\u00C2\u00C3\u00C4\u00C5][\u0080-\u00BF\u0131\u015F\u0178\u2018-\u203A\u20AC\u0152\u0153\u0160\u0161\u017D\u017E\u02C6\u02DC\u2122]")
+
+    /** A tag whose UTF-8 bytes were read as Latin-1 ("CanlÄ±" for "Canlı") is read again the right way; a clean tag stays as it is. */
+    internal fun fixTag(s: String?): String? {
+        if (s == null || !mojibake.containsMatchIn(s)) return s
+        val fixed = runCatching {
+            // Windows-1252 first (the system's usual wrong reading), then Latin-1
+            String(s.toByteArray(charset("windows-1252")), Charsets.UTF_8)
+        }.getOrNull()
+        return if (fixed != null && '\uFFFD' !in fixed && fixed.length < s.length) fixed else s
     }
 
     fun byAlbum(l: List<Track>): Map<String, List<Track>> = l.groupBy { it.album ?: "?" }
