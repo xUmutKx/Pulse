@@ -102,6 +102,7 @@ val STANDBY_PAGES = listOf(
     "roman" to ("Roman Clock" to "Romen rakamlı saat"), "word" to ("Word Clock" to "Yazıyla saat"), "solar" to ("Solar Watch" to "Güneş saati"), "radial" to ("Radial Invert Clock" to "Halkalı saat"),
     "analog_clean" to ("Analog Clock Clean" to "Sade analog saat"), "analog_nomark" to ("Analog Clock Clean No Markers" to "İşaretsiz analog saat"), "analog_square" to ("Analog Clock Square" to "Kare analog saat"),
     "clocks" to ("Clock Of Clocks" to "Saatlerden saat"), "world" to ("World Clock" to "Dünya saati"), "dementia" to ("Dementia Clock" to "Büyük yazılı saat"), "sereno" to ("Sereno" to "Sereno"),
+    "tick_digital" to ("Ticks Digital" to "Çizgili dijital saat"), "tick_analog" to ("Ticks Analog" to "Çizgili analog saat"),
     "bat_dots" to ("Battery Dots" to "Pil noktaları"), "bat_wave" to ("Battery Liquid Wave" to "Pil dalgası"), "charging" to ("Charging" to "Şarj"),
     "stopwatch" to ("Stopwatch" to "Kronometre"), "timer" to ("Timer" to "Zamanlayıcı"), "pomodoro" to ("Pomodoro" to "Pomodoro"), "quotes" to ("Quotes" to "Sözler"), "cal_striking" to ("Striking Calendar" to "Büyük günlü takvim"),
 )
@@ -312,6 +313,8 @@ internal fun Widget(ctx: Context, id: String, ink: Color, tick: Long) = when (id
     "world" -> WorldClockFace(ctx, ink, tick)
     "dementia" -> DementiaFace(ctx, ink, tick)
     "sereno" -> SerenoFace(ctx, ink, tick)
+    "tick_digital" -> TickDigitalFace(ctx, ink, tick)
+    "tick_analog" -> TickAnalogFace(ctx, ink, tick)
     "bat_dots" -> BatteryDotsFace(ctx, ink, tick)
     "bat_wave" -> BatteryWaveFace(ctx, ink, tick)
     "charging" -> ChargingFace(ctx, ink, tick)
@@ -537,7 +540,13 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     val hasFont = editing in setOf("clock", "date", "duo_clock_battery", "duo_clock_calendar", "duo_analog_digital", "duo_music_clock")
     val palette = editing in setOf("crop", "flip", "solar")
     BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 10.dp)) {
-        androidx.compose.runtime.key(rev) { MiniScreen(maxWidth, true) { PageView(ctx, editing, ink, tick) } }
+        // the page as the cover draws it with the phone lying down and standing up
+        androidx.compose.runtime.key(rev) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
+                MiniScreen(maxWidth * .62f, true) { PageView(ctx, editing, ink, tick) }
+                MiniScreen(maxWidth * .34f, true, portrait = true) { PageView(ctx, editing, ink, tick) }
+            }
+        }
     }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         val n = STANDBY_PAGES.firstOrNull { it.first == editing }?.second
@@ -667,12 +676,16 @@ class StandByTile : android.service.quicksettings.TileService() {
 
 /** A small black screen showing [content] as the full-screen cover draws it: the content is laid out at a phone-sized landscape screen and scaled down to [width]. */
 @Composable
-private fun MiniScreen(width: androidx.compose.ui.unit.Dp, picked: Boolean, content: @Composable () -> Unit) {
-    val ph = width * 10f / 16f
-    val sw = 640.dp; val sh = 400.dp
+private fun MiniScreen(width: androidx.compose.ui.unit.Dp, picked: Boolean, portrait: Boolean = false, content: @Composable () -> Unit) {
+    val ph = if (portrait) width * 16f / 10f else width * 10f / 16f
+    val sw = if (portrait) 400.dp else 640.dp; val sh = if (portrait) 640.dp else 400.dp
+    // the page lays itself out for the direction of the screen (two widgets side by side or stacked), so the preview says which one it is
+    val conf = android.content.res.Configuration(LocalConfiguration.current).apply { orientation = if (portrait) android.content.res.Configuration.ORIENTATION_PORTRAIT else android.content.res.Configuration.ORIENTATION_LANDSCAPE }
     Box(Modifier.size(width, ph).clip(RoundedCornerShape(8.dp)).background(Color.Black)
         .border(if (picked) 2.dp else 1.dp, if (picked) com.umutk.pulse.Look.accent else Color(0x55888888), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
-        Box(Modifier.requiredSize(sw, sh).graphicsLayer { val k = width.toPx() / sw.toPx(); scaleX = k; scaleY = k }.padding(16.dp)) { content() }
+        androidx.compose.runtime.CompositionLocalProvider(LocalConfiguration provides conf) {
+            Box(Modifier.requiredSize(sw, sh).graphicsLayer { val k = width.toPx() / sw.toPx(); scaleX = k; scaleY = k }.padding(16.dp)) { content() }
+        }
     }
 }
 

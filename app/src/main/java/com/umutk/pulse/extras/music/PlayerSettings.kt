@@ -60,6 +60,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     val scope = rememberCoroutineScope()
     // the settings are grouped like Poweramp's: a list of categories with icons, each opening its own rows
     var cat by remember { mutableStateOf("") }
+    // every category opens with its groups closed (the groups of one category must not keep the open state of the one before)
+    com.umutk.pulse.extras.ui.SectionReset.epoch = remember(cat) { com.umutk.pulse.extras.ui.SectionReset.next() }
     androidx.activity.compose.BackHandler(cat.isNotEmpty()) { cat = "" }
     androidx.compose.runtime.LaunchedEffect(cat) { onCat(cat.isNotEmpty()) }
     if (cat.isEmpty()) { SettingsIndex(which) { cat = it }; extra(); return }
@@ -212,7 +214,6 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             if (smart) SliderRow(tr("Less random  ·  More random", "Daha az rastgele  ·  Daha rastgele") + "  ${rand.toInt()}%", rand / 100f, 0f..1f) { rand = it * 100f; MusicSettings.setShuffleRandomness(c, rand.toInt()) }
         }
         if (cat == "library") SwitchRow(tr("Count plays", "Çalmaları say"), stats) { stats = it; MusicSettings.setCountStats(c, it) }
-        if (cat == "look") SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) }
         if (cat == "look") { var lf by remember { mutableStateOf(MusicSettings.lyricsFull(c)) }; SwitchRow(tr("Full screen lyrics", "Tam ekran sözler"), lf) { lf = it; MusicSettings.setLyricsFull(c, it) } }
         if (cat == "look") SliderRow("${tr("Lyrics size", "Söz boyutu")}  $lyricsFont", lyricsFont.toFloat(), 12f..30f) { lyricsFont = it.toInt(); MusicSettings.setLyricsFont(c, lyricsFont) }
         if (cat == "audio") Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -232,7 +233,10 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         }
     }
 
-    if (cat == "look") com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
+    if (cat == "notif") {
+        SettingsSection(tr("Cover", "Kapak"), startOpen = true) { SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) } }
+        com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
+    }
     if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
     if (cat == "misc") SettingsSection(tr("Widgets", "Widget'lar")) {
         var bgMode by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.bg(c)) }
@@ -275,11 +279,12 @@ private class SetCat(val key: String, val icon: String, val en: String, val trNa
 
 /** The round background colour of each category's icon, as Poweramp's settings list colours its groups. */
 private fun catColor(key: String) = when (key) {
-    "look" -> 0xFF7E57C2; "audio" -> 0xFF1E88E5; "background" -> 0xFF26A69A; "art" -> 0xFFEF6C00; "library" -> 0xFF43A047; "bt" -> 0xFF3949AB; else -> 0xFF6D4C41
+    "look" -> 0xFF7E57C2; "notif" -> 0xFFD81B60; "audio" -> 0xFF1E88E5; "background" -> 0xFF26A69A; "art" -> 0xFFEF6C00; "library" -> 0xFF43A047; "bt" -> 0xFF3949AB; else -> 0xFF6D4C41
 }.let { androidx.compose.ui.graphics.Color(it) }
 
 private fun settingCats(which: SettingsFor) = listOfNotNull(
     SetCat("look", "palette", "Look and Feel", "Görünüm", "Player interface, lyrics, notifications", "Oynatıcı arayüzü, sözler, bildirimler"),
+    SetCat("notif", "bell", "Notification", "Bildirim", "Buttons shown, cover, a sample notification", "Görünen tuşlar, kapak, örnek bildirim"),
     SetCat("audio", "volume", "Audio", "Ses", "Crossfade, replay gain, speed, sleep timer", "Geçiş, ReplayGain, hız, uyku zamanlayıcı"),
     SetCat("background", "image", "Background", "Arka plan", "Now playing backdrop, details", "Çalan şarkı arka planı, ayrıntılar").takeIf { which == SettingsFor.POWERAMP },
     SetCat("art", "image", "Album Art", "Albüm kapağı", "Download, cache cleanup, Poweramp backup", "İndirme, önbellek temizliği, Poweramp yedeği"),

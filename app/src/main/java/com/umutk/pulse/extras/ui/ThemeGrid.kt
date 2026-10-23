@@ -82,10 +82,17 @@ fun ThemeGrid(items: List<ThemeItem>, selectedId: String, onSelect: (String) -> 
     }
 }
 
+/** A settings page that shows other groups than before (another category) starts with every group closed: it bumps [epoch]. */
+object SectionReset {
+    private var n = 0
+    fun next() = ++n
+    var epoch = 0
+}
+
 /** Collapsible settings group: title row with a chevron. */
 @Composable
-fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    var open by rememberSaveable(title) { mutableStateOf(false) }
+fun SettingsSection(title: String, startOpen: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
+    var open by rememberSaveable(title, SectionReset.epoch) { mutableStateOf(startOpen) }
     val f by animateFloatAsState(if (open) 1f else 0f, label = "section")
     Column(Modifier.fillMaxWidth()) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {

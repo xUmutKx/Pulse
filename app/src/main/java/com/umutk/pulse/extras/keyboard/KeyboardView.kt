@@ -117,6 +117,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -130,12 +132,19 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
     val scale = KeyboardPrefs.heightPct / 100f
     val keyH = (58f * scale).dp
     val one = KeyboardPrefs.oneHand
+    // a pull down on the bar: the keys follow the finger, and let go far enough they go away
+    val pull = remember { Animatable(0f) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    val dens = LocalDensity.current.density
     Box(modifier.fillMaxWidth().background(th.bg).onSizeChanged { st.rootW = it.width.toFloat() }) {
         Column(
             (if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
+                .graphicsLayer { translationY = pull.value }
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
-            TopBar(th, st, act)
+            TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
+                if (pull.value > 56 * dens) { act.hide(); scope.launch { delay(250); pull.snapTo(0f) } } else scope.launch { pull.animateTo(0f, tween(160)) }
+            })
             if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
             else Panel(st.panel, th, st, act, keyH)
         }
@@ -171,12 +180,11 @@ private fun Trail(th: KbTheme, st: KbState) {
 // ---- the bar ---------------------------------------------------------------------------------------------------------------------------------------
 
 @Composable
-private fun TopBar(th: KbTheme, st: KbState, act: KbActions) {
+private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().height(44.dp).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
-            var total = 0f
-            detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { if (total > 56.dp.toPx()) act.hide() }, onDragCancel = {}) { _, dy -> total += dy }
+            detectVerticalDragGestures(onDragEnd = { onRelease() }, onDragCancel = { onRelease() }) { change, dy -> change.consume(); onPull(dy) }
         },
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -328,7 +336,7 @@ private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.c
         }.padding(KeyboardPrefs.keyGap.dp / 2),
     ) {
         val on = level > 0
-        Box(Modifier.fillMaxSize().keyLook(th, if (on) th.accent else if (down) lerp(th.special, th.accent, .4f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().keyLook(th, if (on) th.accent else if (down) lerp(th.special, th.text, .2f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
             Text(d.label, color = if (on) th.onAccent else th.specialText, fontSize = 13.sp, maxLines = 1, fontWeight = if (level == 2) FontWeight.Bold else FontWeight.Normal)
         }
     }
@@ -355,7 +363,7 @@ private fun RowScope.ActionKey(th: KbTheme, h: androidx.compose.ui.unit.Dp, icon
             }
         }.padding(KeyboardPrefs.keyGap.dp / 2),
     ) {
-        Box(Modifier.fillMaxSize().keyLook(th, if (down) lerp(th.special, th.accent, .4f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = th.specialText, modifier = Modifier.size(20.dp)) }
+        Box(Modifier.fillMaxSize().keyLook(th, if (down) lerp(th.special, th.text, .2f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = th.specialText, modifier = Modifier.size(20.dp)) }
     }
 }
 
@@ -368,7 +376,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val longMs = LocalViewConfiguration.current.longPressTimeoutMillis
     val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
     val bg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.key; else -> th.special }
-    val fill by animateColorAsState(if (down) lerp(bg, th.accent, .4f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
+    val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
     val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) .93f else 1f, tween(70), label = "keyScale")
     Box(
         Modifier.weight(k.weight).height(if (small) keyH * .78f else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[k.label.lowercase()] = rect }
@@ -488,7 +496,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = 15.sp, maxLines = 1)
                 else -> {
                     if (!special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
-                        Text(k.alts.first(), color = th.sub, fontSize = 10.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
+                        Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
                     Text(k.label, color = fg, fontSize = if (small) (fs.value * .82f).sp else fs, maxLines = 1)
                 }
