@@ -67,7 +67,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class SmsThread(val id: Long, val address: String, val name: String?, val snippet: String, val date: Long, var unread: Int = 0)
-class SmsMsg(val body: String, val sent: Boolean, val date: Long)
+class SmsMsg(val body: String, val sent: Boolean, val date: Long, val images: List<Uri> = emptyList(), val mms: Boolean = false)
 
 /** Messages' own preferences (pins, blocks, toggles). Never Cfg/Opt. */
 object MsgPrefs {
@@ -81,6 +81,22 @@ object MsgPrefs {
     fun setArchived(c: Context, s: Set<String>) { p(c).edit().putStringSet("archived", s.toSet()).apply() }
     fun names(c: Context) = p(c).getBoolean("names", true)
     fun setNames(c: Context, v: Boolean) { p(c).edit().putBoolean("names", v).apply() }
+    /** Notifications of Pulse's own for incoming messages (also when another app is the default SMS app). */
+    fun notify(c: Context) = p(c).getBoolean("notify", true)
+    fun setNotify(c: Context, v: Boolean) { p(c).edit().putBoolean("notify", v).apply() }
+    /** The message text in the notification (off: only "New message"). */
+    fun showText(c: Context) = p(c).getBoolean("showText", true)
+    fun setShowText(c: Context, v: Boolean) { p(c).edit().putBoolean("showText", v).apply() }
+    /** A verification code in a message is copied to the clipboard at once. */
+    fun autoCopy(c: Context) = p(c).getBoolean("autoCopy", true)
+    fun setAutoCopy(c: Context, v: Boolean) { p(c).edit().putBoolean("autoCopy", v).apply() }
+    /** A conversation notification can open as a chat bubble. */
+    fun bubbles(c: Context) = p(c).getBoolean("bubbles", true)
+    fun setBubbles(c: Context, v: Boolean) { p(c).edit().putBoolean("bubbles", v).apply() }
+    fun sound(c: Context) = p(c).getBoolean("sound", true)
+    fun setSound(c: Context, v: Boolean) { p(c).edit().putBoolean("sound", v).apply() }
+    fun vibrate(c: Context) = p(c).getBoolean("vibrate", true)
+    fun setVibrate(c: Context, v: Boolean) { p(c).edit().putBoolean("vibrate", v).apply() }
     fun unreadFirst(c: Context) = p(c).getBoolean("unreadFirst", false)
     fun setUnreadFirst(c: Context, v: Boolean) { p(c).edit().putBoolean("unreadFirst", v).apply() }
 }
@@ -115,7 +131,7 @@ fun loadSmsThreads(c: Context, withNames: Boolean): List<SmsThread> {
     return out.values.toList()
 }
 
-private fun contactName(c: Context, address: String): String? = runCatching {
+internal fun contactName(c: Context, address: String): String? = runCatching {
     c.contentResolver.query(Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(address)),
         arrayOf(ContactsContract.PhoneLookup.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null }
 }.getOrNull()

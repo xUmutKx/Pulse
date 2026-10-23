@@ -43,7 +43,8 @@ abstract class ImgSkinWidget(private val index: Int) : AppWidgetProvider() {
         const val A_TOGGLE = "com.umutk.pulse.imgskin.TOGGLE"
         const val A_NEXT = "com.umutk.pulse.imgskin.NEXT"
         const val A_STOP = "com.umutk.pulse.imgskin.STOP"
-        private val WIDGETS = listOf(WmsBlobWidget::class.java, WmsWin7Widget::class.java, WmsCandyWidget::class.java, WmsSilverWidget::class.java, WmsLunaWidget::class.java)
+        private val WIDGETS = listOf(WmsBlobWidget::class.java, WmsWin7Widget::class.java, WmsCandyWidget::class.java, WmsSilverWidget::class.java, WmsLunaWidget::class.java,
+            WmsBubbleWidget::class.java, WmsAeroWidget::class.java, WmsNexusWidget::class.java, WmsSymphoraWidget::class.java, WmsCdWidget::class.java)
         private var shrink = 1f
         private val loop = com.umutk.pulse.extras.music.widgets.LiveLoop(1000) { refreshAll(it) }
 
@@ -104,3 +105,8 @@ class WmsWin7Widget : ImgSkinWidget(1)
 class WmsCandyWidget : ImgSkinWidget(2)
 class WmsSilverWidget : ImgSkinWidget(3)
 class WmsLunaWidget : ImgSkinWidget(4)
+class WmsBubbleWidget : ImgSkinWidget(5)
+class WmsAeroWidget : ImgSkinWidget(6)
+class WmsNexusWidget : ImgSkinWidget(7)
+class WmsSymphoraWidget : ImgSkinWidget(8)
+class WmsCdWidget : ImgSkinWidget(9)
