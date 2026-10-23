@@ -173,6 +173,11 @@ class MusicPlayerEngine private constructor(context: Context) {
         player.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) { publish(); if (!isPlaying) saveResume(); watch(isPlaying) }
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                if (MusicSettings.autoEq(app)) mediaItem?.mediaId?.let { id ->
+                    // the equalizer follows the genre of the new song
+                    val genre = MusicLibrary.tracks.value.firstOrNull { it.path == id }?.genre
+                    runCatching { equalizer.usePresetForGenre(genre) }
+                }
                 mediaItem?.toTrack()?.let { t ->
                     // the Quick panel "last played" tile and ACTION_RESUME read this
                     QuickTileContract.save(app, QuickTileContract.LastPlayed(QuickTileContract.Kind.TRACK, t.title ?: t.path.substringAfterLast('/'), t.path))

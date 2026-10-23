@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.looks
 
+import com.umutk.pulse.extras.music.foldHas
 import com.umutk.pulse.extras.music.shownArtist
 import com.umutk.pulse.extras.music.MusicLevels
 
@@ -210,6 +211,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     val ctx = LocalContext.current
     val st by engine.state.collectAsState()
     val cur = st.current
+    var openLyricsNow by remember { mutableStateOf(false) }
     var artRev by remember { mutableIntStateOf(0) }
     var artOpen by remember { mutableStateOf(false) }
     val art = rememberTrackArt(cur, artRev)
@@ -228,6 +230,11 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     var query by remember { mutableStateOf("") }
     var group by remember { mutableStateOf<String?>(null) }
     var showNow by remember { mutableStateOf(false) }
+    // a tap on the media notification opens the full player, a tap on the lyrics notification the full player with the lyrics
+    androidx.compose.runtime.LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.request) {
+        val r = com.umutk.pulse.extras.music.MusicNav.request
+        if (r == "player" || r == "lyrics") { showNow = true; if (r == "lyrics") openLyricsNow = true; com.umutk.pulse.extras.music.MusicNav.request = null }
+    }
     var showQueue by remember { mutableStateOf(false) }
     val lists = remember { Lists(ctx) }
     var playlists by remember { mutableStateOf(lists.all()) }
@@ -254,6 +261,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     var rootH by remember { mutableFloatStateOf(0f) }
     var sheetOn by remember { mutableStateOf(false) }
     var showLyrics by remember { mutableStateOf(false) }
+    androidx.compose.runtime.LaunchedEffect(openLyricsNow, cur?.path) { if (openLyricsNow && cur != null) { showLyrics = true; openLyricsNow = false } }
     if (artOpen && cur != null) com.umutk.pulse.extras.music.poweramp.CoverArtDialog(cur, com.umutk.pulse.extras.music.poweramp.PowerampStyle(), onSaved = { com.umutk.pulse.extras.music.dropArt(cur.path); artRev++ }, onClose = { artOpen = false })
     LaunchedEffect(cur?.path) { showLyrics = false }
     // a drag down moves the whole player and closes it past a fifth of the screen; a drag up opens the lyrics instead (the player stays put)
@@ -289,7 +297,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     BackHandler(showNow || group != null) { if (showQueue) showQueue = false else if (showNow) showNow = false else group = null }
 
     val q = query.trim().lowercase()
-    val songs = remember(library, q) { if (q.isEmpty()) library else library.filter { it.name().lowercase().contains(q) || it.folder().lowercase().contains(q) } }
+    val songs = remember(library, q) { if (q.isEmpty()) library else library.filter { it.name().foldHas(q) || it.folder().foldHas(q) || it.artist.foldHas(q) || it.album.foldHas(q) } }
 
     DisposableEffect(showNow) { onNowPlaying(showNow); onDispose { onNowPlaying(false) } }
 

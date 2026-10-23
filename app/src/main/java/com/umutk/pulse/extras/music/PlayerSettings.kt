@@ -210,6 +210,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             var pz by remember { mutableStateOf(MusicSettings.pauseAtZeroVolume(c)) }
             SwitchRow(tr("Pause when the volume is turned to zero", "Ses sıfıra indirilince duraklat"), pz) { pz = it; MusicSettings.setPauseAtZeroVolume(c, it); if (it) runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
         }
+        if (cat == "audio") { var ae by remember { mutableStateOf(MusicSettings.autoEq(c)) }
+            SwitchRow(tr("Equalizer by genre", "Türe göre ekolayzır"), ae) { ae = it; MusicSettings.setAutoEq(c, it) } }
         if (cat == "misc") SwitchRow(tr("Keep screen on", "Ekranı açık tut"), screenOn) { screenOn = it; MusicSettings.setKeepScreenOn(c, it) }
         if (cat == "misc") {
             var smart by remember { mutableStateOf(MusicSettings.smartShuffle(c)) }

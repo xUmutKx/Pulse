@@ -168,5 +168,6 @@ object MsgCore {
     }
 
     /** SmsManager that follows the default subscription. */
-    fun sms(c: Context): SmsManager = c.getSystemService(SmsManager::class.java)
+    @Suppress("DEPRECATION")
+    fun sms(c: Context): SmsManager = if (Build.VERSION.SDK_INT >= 31) c.getSystemService(SmsManager::class.java) else SmsManager.getDefault()
 }

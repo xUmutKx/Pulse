@@ -101,6 +101,9 @@ private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE
  * Music host page: look switcher, library from MediaStore (permission asked once, picker as fallback), playlists with
  * M3U import/export, resume of the last queue. Playback lives in [MusicPlayerEngine] / [MusicPlaybackService].
  */
+/** What a notification asks the open music page to show: "player" (the full player) or "lyrics". The page takes it and clears it. */
+object MusicNav { var request by androidx.compose.runtime.mutableStateOf<String?>(null) }
+
 @Composable
 fun MusicHub(onBack: () -> Unit) = com.umutk.pulse.WithPlayerFont { MusicHubBody(onBack) }
 
@@ -126,10 +129,15 @@ private fun MusicHubBody(onBack: () -> Unit) {
     var floating by remember { mutableStateOf(false) }
     androidx.compose.runtime.LaunchedEffect(Unit) {
         when ((ctx as? android.app.Activity)?.intent?.getStringExtra(MusicPlaybackService.EXTRA_OPEN)) {
-            "lyrics" -> lyrics = true
+            "lyrics" -> if (look != MusicLook.MATERIAL) lyrics = true
             "noise" -> noiseOpen = true
             "eq" -> settingsOpen = true
         }
+    }
+    // a tap on the lyrics notification: the lyrics of the other looks open here, the Material player takes its own request
+    androidx.compose.runtime.LaunchedEffect(MusicNav.request) {
+        if (MusicNav.request == "lyrics" && look != MusicLook.MATERIAL) { lyrics = true; MusicNav.request = null }
+        else if (MusicNav.request == "player" && look != MusicLook.MATERIAL) MusicNav.request = null
     }
     var granted by remember { mutableStateOf(MusicLibrary.hasPermission(ctx)) }
 

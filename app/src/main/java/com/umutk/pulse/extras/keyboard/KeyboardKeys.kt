@@ -18,15 +18,15 @@ object ExtraKeys {
 
     /** The tools the bar above the keys can hold: id and name. */
     val toolbar = listOf(
-        "clip" to "Clipboard", "emoji" to "Emoji", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
+        "clip" to "Clipboard", "emoji" to "Emoji", "voice" to "Voice typing", "translate" to "Translate", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
         "menu" to "Menu", "resize" to "Resize", "incognito" to "Incognito", "arrows" to "Arrows", "proRow" to "Extra keys", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
     )
     /** The tiles the menu behind the three dots can hold. */
     val menu = listOf(
-        "settings" to "Settings", "theme" to "Themes", "languages" to "Languages", "resize" to "Resize", "incognito" to "Incognito", "autocorrect" to "Autocorrect",
-        "onehand" to "One-handed", "arrows" to "Arrows", "numbers" to "Numbers", "proRow" to "Extra keys", "glide" to "Swipe typing", "clip" to "Clipboard", "emoji" to "Emoji",
-        "undo" to "Undo", "redo" to "Redo", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "lang" to "Language",
+        "clip" to "Clipboard", "translate" to "Translate", "voice" to "Voice typing", "emoji" to "Emoji", "settings" to "Settings", "theme" to "Themes", "languages" to "Languages",
+        "resize" to "Resize", "incognito" to "Incognito", "autocorrect" to "Autocorrect", "onehand" to "One-handed", "arrows" to "Arrows", "numbers" to "Numbers", "proRow" to "Extra keys",
+        "glide" to "Swipe typing", "lang" to "Language",
     )
-    const val DEFAULT_MENU = "settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,numbers,proRow,glide,clip,emoji,undo,redo"
-    const val DEFAULT_TOOLBAR = "clip,emoji,selectAll,copy,cut,menu"
+    const val DEFAULT_MENU = "clip,translate,voice,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,numbers,proRow,glide"
+    const val DEFAULT_TOOLBAR = "clip,emoji,voice,translate,menu"
 }

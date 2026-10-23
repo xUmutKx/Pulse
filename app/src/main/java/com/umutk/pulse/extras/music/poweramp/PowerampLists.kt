@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.poweramp
 
+import com.umutk.pulse.extras.music.foldHas
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Shuffle
 import com.umutk.pulse.extras.music.shownArtist
@@ -418,8 +419,8 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
     val fg = style.onBackdrop
     val hits = remember(query, library) {
         library.withIndex().filter { (_, t) ->
-            query.isBlank() || t.displayName().contains(query, true) || t.artist.orEmpty().contains(query, true) ||
-                t.album.orEmpty().contains(query, true) || t.path.contains(query, true)
+            query.isBlank() || t.displayName().foldHas(query) || t.artist.foldHas(query) ||
+                t.album.foldHas(query) || t.path.foldHas(query)
         }
     }
     // albums whose name matches: one row each, playing starts at the album's first track

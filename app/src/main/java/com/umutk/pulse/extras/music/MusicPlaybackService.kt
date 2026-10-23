@@ -44,10 +44,15 @@ class MusicPlaybackService : MediaSessionService() {
     internal fun refresh() { session?.setCustomLayout(layout()) }
 
     // the media volume turned down to zero stops the song (a setting)
+    private var pausedByZero = false
     private val volWatch = object : android.content.BroadcastReceiver() {
         override fun onReceive(c: Context, i: Intent) {
             if (i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1) != android.media.AudioManager.STREAM_MUSIC) return
-            if (i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", 1) == 0 && MusicSettings.pauseAtZeroVolume(c) && engine.player.playWhenReady) engine.pause()
+            if (!MusicSettings.pauseAtZeroVolume(c)) return
+            val v = i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", 1)
+            // the volume turned to zero stops the song, and turned up again it carries on (only when it was stopped by this)
+            if (v == 0 && engine.player.playWhenReady) { pausedByZero = true; engine.pause() }
+            else if (v > 0 && pausedByZero) { pausedByZero = false; engine.play() }
         }
     }
 
@@ -132,7 +137,7 @@ class MusicPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         setMediaNotificationProvider(NotifProvider(this))
-        val pi = PendingIntent.getActivity(this, 0, Intent().setClassName(packageName, "$packageName.ToolOpenActivity").putExtra("route", "music").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        val pi = PendingIntent.getActivity(this, 0, Intent().setClassName(packageName, "$packageName.ToolOpenActivity").putExtra("route", "music").putExtra(EXTRA_OPEN, "player").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         session = MediaSession.Builder(this, engine.player).setBitmapLoader(com.umutk.pulse.extras.music.notif.NotifArt(this)).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
         engine.player.addListener(listener)

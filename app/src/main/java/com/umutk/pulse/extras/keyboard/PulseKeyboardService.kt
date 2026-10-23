@@ -331,6 +331,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "menu" -> st.panel = if (st.panel == "menu") "keys" else "menu"
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
             "lang" -> lang()
+            "voice" -> { st.panel = "keys"; voice() }
+            "translate" -> { st.panel = "keys"; translate() }
             "back" -> st.panel = "keys"
             "emoji" -> st.panel = "emoji"
             "resize" -> st.panel = "resize"
@@ -349,6 +351,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         if (id == "resize") return
         if (st.panel == "keys") KeyboardPrefs.save(this)
+    }
+
+    /** Hands the text of the field (the selection, else what is before the cursor) to the translator: the Google Translate app, or its page. */
+    private fun translate() {
+        val c = currentInputConnection ?: return
+        val text = (c.getSelectedText(0)?.toString()?.takeIf { it.isNotBlank() } ?: c.getTextBeforeCursor(500, 0)?.toString().orEmpty()).trim()
+        val url = "https://translate.google.com/?sl=auto&tl=${java.util.Locale.getDefault().language}&op=translate&text=" + android.net.Uri.encode(text)
+        runCatching { startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
 
     override fun hide() { finishWord("", false); requestHideSelf(0) }
