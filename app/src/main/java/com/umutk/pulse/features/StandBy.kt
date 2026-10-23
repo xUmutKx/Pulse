@@ -59,6 +59,10 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.layout.requiredSize
+import androidx.compose.foundation.border
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
@@ -251,7 +255,62 @@ private fun Widget(ctx: Context, id: String, ink: Color, tick: Long) = when (id)
     else -> DigitalFace(ctx, ink, tick, withDate = false)
 }
 
-private fun fontOf(id: String) = when (id) { "bold" -> FontFamily.SansSerif to FontWeight.Bold; "serif" -> FontFamily.Serif to FontWeight.Normal; "mono" -> FontFamily.Monospace to FontWeight.Normal; "rounded" -> FontFamily.SansSerif to FontWeight.Medium; else -> FontFamily.SansSerif to FontWeight.Light }
+/** The clock fonts: the system ones, and the fonts of the iOS StandBy app's clock skins (square segment displays, condensed, serif, neon...). [adv] is the width of a digit in em, so the clock fills its box. */
+private class ClockFont(val id: String, val en: String, val tr: String, val family: FontFamily, val weight: FontWeight, val adv: Float = .5f)
+
+private fun res(r: Int) = FontFamily(androidx.compose.ui.text.font.Font(r))
+
+private val CLOCK_FONTS: List<ClockFont> by lazy {
+    val R = com.umutk.pulse.R.font
+    listOf(
+        ClockFont("light", "Light", "İnce", FontFamily.SansSerif, FontWeight.Light),
+        ClockFont("bold", "Bold", "Kalın", FontFamily.SansSerif, FontWeight.Bold),
+        ClockFont("rounded", "Rounded", "Yuvarlak", FontFamily.SansSerif, FontWeight.Medium),
+        ClockFont("serif", "Serif", "Serif", FontFamily.Serif, FontWeight.Normal),
+        ClockFont("mono", "Mono", "Mono", FontFamily.Monospace, FontWeight.Normal, .6f),
+        // square, segmented digits like a digital clock
+        ClockFont("seg7", "Segment 7", "Segment 7", res(R.sb_segments_7_classic_regular), FontWeight.Normal, .62f),
+        ClockFont("seg7b", "Segment 7 bold", "Segment 7 kalın", res(R.sb_segments_7_bold), FontWeight.Normal, .62f),
+        ClockFont("seg7r", "Segment 7 round", "Segment 7 yuvarlak", res(R.sb_segments_7_round_regular), FontWeight.Normal, .62f),
+        ClockFont("seg8", "Segment 8", "Segment 8", res(R.sb_segments_8_regular), FontWeight.Normal, .62f),
+        ClockFont("seg9", "Segment 9", "Segment 9", res(R.sb_segments_9_regular), FontWeight.Normal, .62f),
+        ClockFont("seg13", "Segment 13", "Segment 13", res(R.sb_segments_13_regular), FontWeight.Normal, .62f),
+        ClockFont("seg13r", "Segment 13 round", "Segment 13 yuvarlak", res(R.sb_segments_13_round), FontWeight.Normal, .62f),
+        ClockFont("seg15", "Segment 15 cube", "Segment 15 küp", res(R.sb_segments_15_cube), FontWeight.Normal, .62f),
+        ClockFont("seg15l", "Segment 15 line", "Segment 15 çizgi", res(R.sb_segments_15_line), FontWeight.Normal, .62f),
+        ClockFont("seg15r", "Segment 15 round", "Segment 15 yuvarlak", res(R.sb_segments_15_round), FontWeight.Normal, .62f),
+        ClockFont("seg17", "Segment 17", "Segment 17", res(R.sb_segments_17_regular), FontWeight.Normal, .62f),
+        ClockFont("pixel", "Pixel", "Piksel", res(R.sb_segments_23_pixel), FontWeight.Normal, .62f),
+        ClockFont("segc", "Segmented classic", "Klasik segment", res(R.sb_segmented_classic), FontWeight.Normal, .62f),
+        ClockFont("kode", "Kode mono", "Kode mono", res(R.sb_kode_mono), FontWeight.Normal, .6f),
+        ClockFont("bebas", "Bebas", "Bebas", res(R.sb_bebas), FontWeight.Normal, .4f),
+        ClockFont("antonio", "Antonio", "Antonio", res(R.sb_antonio), FontWeight.Normal, .42f),
+        ClockFont("gothic", "League gothic", "League gothic", res(R.sb_league_gothic), FontWeight.Normal, .36f),
+        ClockFont("economica", "Economica", "Economica", res(R.sb_economica), FontWeight.Normal, .4f),
+        ClockFont("barlow", "Barlow", "Barlow", res(R.sb_barlow), FontWeight.Normal, .5f),
+        ClockFont("montserrat", "Montserrat", "Montserrat", res(R.sb_montserrat), FontWeight.Normal, .58f),
+        ClockFont("rubik", "Rubik", "Rubik", res(R.sb_rubik), FontWeight.Normal, .55f),
+        ClockFont("saira", "Saira", "Saira", res(R.sb_saira), FontWeight.Normal, .52f),
+        ClockFont("lilita", "Lilita", "Lilita", res(R.sb_lilita), FontWeight.Normal, .5f),
+        ClockFont("numans", "Numans", "Numans", res(R.sb_numans), FontWeight.Normal, .52f),
+        ClockFont("stick", "Stick", "Stick", res(R.sb_stick_no_bills), FontWeight.Normal, .5f),
+        ClockFont("tourney", "Tourney", "Tourney", res(R.sb_tourney_regular), FontWeight.Normal, .55f),
+        ClockFont("jersey", "Jersey", "Jersey", res(R.sb_jersey10), FontWeight.Normal, .45f),
+        ClockFont("hachi", "Hachicro", "Hachicro", res(R.sb_hachicro), FontWeight.Normal, .5f),
+        ClockFont("super", "Super power", "Super power", res(R.sb_super_power), FontWeight.Normal, .55f),
+        ClockFont("tilt", "Tilt neon", "Tilt neon", res(R.sb_tilt_neon), FontWeight.Normal, .6f),
+        ClockFont("neon", "Neonderthaw", "Neonderthaw", res(R.sb_neonderthaw), FontWeight.Normal, .4f),
+        ClockFont("playfair", "Playfair", "Playfair", res(R.sb_playfair_display), FontWeight.Normal, .55f),
+        ClockFont("bodoni", "Bodoni", "Bodoni", res(R.sb_bodoni_moda), FontWeight.Normal, .55f),
+        ClockFont("dmserif", "DM serif", "DM serif", res(R.sb_dm_serif_display), FontWeight.Normal, .55f),
+        ClockFont("besley", "Besley", "Besley", res(R.sb_besley), FontWeight.Normal, .55f),
+        ClockFont("montagu", "Montagu slab", "Montagu slab", res(R.sb_montagu_slab), FontWeight.Normal, .55f),
+        ClockFont("juliett", "Juliett", "Juliett", res(R.sb_juliett), FontWeight.Normal, .5f),
+        ClockFont("edu", "Hand", "El yazısı", res(R.sb_edu_sa_beginner), FontWeight.Normal, .5f),
+    )
+}
+
+private fun clockFont(id: String): ClockFont = CLOCK_FONTS.firstOrNull { it.id == id } ?: CLOCK_FONTS[0]
 
 @Composable
 private fun DigitalFace(ctx: Context, ink: Color, tick: Long, withDate: Boolean) {
@@ -259,10 +318,10 @@ private fun DigitalFace(ctx: Context, ink: Color, tick: Long, withDate: Boolean)
     val now = Date(System.currentTimeMillis() + (tick * 0))
     val text = SimpleDateFormat(if (h24) (if (sec) "HH:mm:ss" else "HH:mm") else (if (sec) "h:mm:ss" else "h:mm"), Locale.getDefault()).format(now)
     val date = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now)
-    val (fam, wt) = fontOf(StandByPrefs.font(ctx))
+    val cf = clockFont(StandByPrefs.font(ctx)); val fam = cf.family; val wt = cf.weight
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         // the digits take as much room as the box gives
-        val size = minOf(maxWidth.value / (text.length * 0.5f), maxHeight.value * (if (withDate) 0.55f else 0.7f)).coerceAtLeast(24f)
+        val size = minOf(maxWidth.value / (text.length * cf.adv), maxHeight.value * (if (withDate) 0.55f else 0.7f)).coerceAtLeast(24f)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text, color = ink, fontSize = size.sp, fontFamily = fam, fontWeight = wt, maxLines = 1, softWrap = false, textAlign = TextAlign.Center)
             if (withDate) Text(date, color = ink.copy(alpha = .75f), fontSize = (size * 0.22f).coerceAtLeast(14f).sp, fontFamily = fam, fontWeight = FontWeight.Normal)
@@ -375,15 +434,33 @@ fun StandBySettings() {
     Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PChip(false, tr("Try it now", "Şimdi dene")) { StandBy.show(ctx) }
     }
-    Text(tr("Pages (swipe sideways to change)", "Sayfalar (yana kaydırarak değişir)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-    STANDBY_PAGES.chunked(2).forEach { row ->
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            row.forEach { (id, n) -> PChip(id in pages, tr(n.first, n.second)) { pages = if (id in pages) (pages - id).ifEmpty { listOf(id) } else pages + id; StandByPrefs.setPages(ctx, pages) } }
+    var tick by remember { mutableLongStateOf(0L) }
+    LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
+    val ink = StandByPrefs.COLOURS[colour]
+    // the pages, each one drawn as it will look (small, live); a tap puts it in or takes it out of the swipe
+    Text(tr("Pages", "Sayfalar"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        STANDBY_PAGES.forEach { (id, n) ->
+            val on = id in pages
+            Column(Modifier.width(150.dp).clickable { pages = if (on) (pages - id).ifEmpty { listOf(id) } else pages + id; StandByPrefs.setPages(ctx, pages) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                MiniScreen(150.dp, on) { PageView(ctx, id, ink, tick) }
+                Text(tr(n.first, n.second), color = if (on) T.text else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+            }
         }
     }
     Text(tr("Digits", "Rakamlar"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf("light" to tr("Light", "İnce"), "bold" to tr("Bold", "Kalın"), "rounded" to tr("Rounded", "Yuvarlak"), "serif" to "Serif", "mono" to "Mono").forEach { (k, n) -> PChip(font == k, n) { font = k; StandByPrefs.setFont(ctx, k) } }
+    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        CLOCK_FONTS.forEach { f ->
+            Column(Modifier.width(110.dp).clickable { font = f.id; StandByPrefs.setFont(ctx, f.id) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                MiniScreen(110.dp, font == f.id) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        val t = remember(tick) { SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()) }
+                        Text(t, color = ink, fontSize = (560f / (t.length * f.adv)).coerceAtMost(330f).sp, fontFamily = f.family, fontWeight = f.weight, maxLines = 1, softWrap = false)
+                    }
+                }
+                Text(tr(f.en, f.tr), color = if (font == f.id) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
+            }
+        }
     }
     Text(tr("Colour", "Renk"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -416,5 +493,17 @@ class StandByTile : android.service.quicksettings.TileService() {
     override fun onClick() {
         if (!StandBy.toggle(this) && !StandBy.showing && !Settings.canDrawOverlays(this) && CoverAccessibilityService.instance == null) return
         paint()
+    }
+}
+
+
+/** A small black screen showing [content] as the full-screen cover draws it: the content is laid out at a phone-sized landscape screen and scaled down to [width]. */
+@Composable
+private fun MiniScreen(width: androidx.compose.ui.unit.Dp, picked: Boolean, content: @Composable () -> Unit) {
+    val ph = width * 10f / 16f
+    val sw = 640.dp; val sh = 400.dp
+    Box(Modifier.size(width, ph).clip(RoundedCornerShape(8.dp)).background(Color.Black)
+        .border(if (picked) 2.dp else 1.dp, if (picked) com.umutk.pulse.Look.accent else Color(0x55888888), RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.requiredSize(sw, sh).graphicsLayer { val k = width.toPx() / sw.toPx(); scaleX = k; scaleY = k }.padding(16.dp)) { content() }
     }
 }
