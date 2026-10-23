@@ -199,8 +199,9 @@ object AppPlace {
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
     // an app that is switched on in Settings > Apps is listed in the top-right Apps menu; the chevron there can move it to the left menu or hide it
-    /** Apps that only live in the Extra apps list at first; Settings > Apps puts them in the ⋮ menu. */
-    private val quiet = setOf("KeyboardLauncher", "CalculatorLauncher", "ScreenRecLauncher", "LocalSendLauncher", "NotifHistLauncher", "VoiceLauncher", "WhiteNoiseLauncher")
+    /** Every app from the calculator on only lives in the Extra apps list at first; Settings > Apps puts them in the ⋮ menu. */
+    private val quiet = setOf("CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher",
+        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher")
     fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, if (it.alias in quiet) "hidden" else "menu") ?: "menu" } }
     fun where(alias: String): String = placed[alias] ?: if (alias in quiet) "hidden" else "menu"
     fun set(c: Context, alias: String, place: String) { placed[alias] = place; sp(c).edit().putString(alias, place).apply() }

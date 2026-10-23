@@ -92,11 +92,12 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = { if (selected != null) selected = null else onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = T.text)
             }
+            androidx.activity.compose.BackHandler(selected != null) { selected = null }
             Column(Modifier.weight(1f)) {
-                Text("Storage by type", color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(selected?.label ?: "Storage by type", color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(root.path, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             IconButton(onClick = { StorageScan.rescan(root) }) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh", tint = T.text) }
@@ -118,7 +119,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
 
         LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 24.dp)) {
             if (note.isNotEmpty()) item { Text(note, color = Color(0xFFC42B1C), fontSize = 12.sp) }
-            item {
+            if (open == null) item {
                 DonutChart(
                     slices = data.map { it.kind.label to it.bytes },
                     modifier = Modifier.padding(vertical = 12.dp),
@@ -133,7 +134,8 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                 )
             }
 
-            items(data, key = { it.kind.name }) { s ->
+            // a kind opens its own list, biggest file first, instead of unfolding under the kinds
+            if (open == null) items(data, key = { it.kind.name }) { s ->
                 val isOpen = s.kind == open
                 Row(
                     Modifier
@@ -156,7 +158,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                 val s = data.first { it.kind == open }
                 item {
                     Text(
-                        "Largest ${open.label.lowercase()}",
+                        "${open.label}: " + com.umutk.pulse.tr("largest first", "en büyük önce"),
                         color = T.sub,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),

@@ -10,6 +10,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -67,11 +68,14 @@ fun BudsScreen(back: () -> Unit) {
     val devices = remember(granted) {
         if (!granted) emptyList() else runCatching {
             (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bondedDevices.orEmpty().filter { d ->
-                val n = runCatching { d.name }.getOrNull() ?: ""
+                // a pair whose name is empty or only a space is not one to pick; the same name twice is one pair
+                val n = (runCatching { d.name }.getOrNull() ?: "").trim()
+                if (n.isEmpty()) return@filter false
                 val major = runCatching { d.bluetoothClass?.majorDeviceClass }.getOrNull()
                 n.contains("Buds", true) || n.contains("Galaxy", true) || major == android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO
             }.sortedByDescending { (runCatching { it.name }.getOrNull() ?: "").contains("Buds", true) }
-                .map { it.address to (runCatching { it.name }.getOrNull() ?: it.address) }
+                .distinctBy { (runCatching { it.name }.getOrNull() ?: "").trim().lowercase() }
+                .map { it.address to (runCatching { it.name }.getOrNull() ?: it.address).trim() }
         }.getOrDefault(emptyList())
     }
     // the only pair is picked at once, and the link is opened when the screen opens
@@ -96,7 +100,7 @@ fun BudsScreen(back: () -> Unit) {
             if (devices.isEmpty()) Text(tr("No paired Galaxy Buds. Pair them in the phone's Bluetooth settings first.", "Eşleşmiş Galaxy Buds yok. Önce telefonun Bluetooth ayarlarından eşleştir."), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 4.dp))
             devices.forEach { (a, n) ->
                 Row(Modifier.fillMaxWidth().clickable { address = a; BudsPrefs.setAddress(ctx, a) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("sensors", if (address == a) T.accent else T.sub, 22.dp)
+                    PIcon("tool_buds", if (address == a) T.accent else T.sub, 22.dp)
                     Text(n, color = T.text, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
                     if (address == a) PIcon("check", T.accent, 20.dp)
                 }
@@ -129,6 +133,7 @@ fun BudsScreen(back: () -> Unit) {
                 }, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             }
         } else if (address != null) Text(tr("Not connected. Put the earbuds in or open their case.", "Bağlı değil. Kulaklığı tak ya da kutusunu aç."), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
+        if (s.connected) BudsControls()
         SettingsSection(tr("When the earbuds come out", "Kulaklıklar çıkınca"), startOpen = true) {
             BRow(tr("Stop the music", "Müziği durdur"), tr("When both earbuds are taken out of your ears, the music or video that is playing is paused.", "İki kulaklık da kulaktan çıkınca çalan müzik ya da video duraklatılır."), pause) { pause = it; BudsPrefs.setPauseOnRemove(ctx, it) }
             BRow(tr("Turn noise control off", "Gürültü denetimini kapat"), tr("Noise cancelling and ambient sound are switched off while the earbuds are out, which saves their battery.", "Kulaklıklar çıkıkken gürültü engelleme ve ortam sesi kapatılır, pil tasarrufu sağlar."), noiseOff) { noiseOff = it; BudsPrefs.setNoiseOffOnRemove(ctx, it) }
@@ -162,5 +167,60 @@ private fun BRow(title: String, desc: String, checked: Boolean, onChange: (Boole
             PSwitch(checked, onChange)
         }
         Text(desc, color = T.sub, fontSize = 12.sp)
+    }
+}
+
+
+/** The settings of the earbuds themselves, sent over the serial link (message ids and values from the GalaxyBudsClient notes). */
+@Composable
+private fun BudsControls() {
+    val ctx = LocalContext.current
+    var touchL by remember { mutableStateOf(BudsPrefs.saved(ctx, "touchL", 2)) }
+    var touchR by remember { mutableStateOf(BudsPrefs.saved(ctx, "touchR", 2)) }
+    var cycle by remember { mutableStateOf(BudsPrefs.saved(ctx, "cycle", 0)) }
+    var lock by remember { mutableStateOf(BudsPrefs.saved(ctx, "lock", 0) == 1) }
+    var eq by remember { mutableStateOf(BudsPrefs.saved(ctx, "eq", 0)) }
+    var ancHigh by remember { mutableStateOf(BudsPrefs.saved(ctx, "ancHigh", 0) == 1) }
+    var ambVol by remember { mutableStateOf(BudsPrefs.saved(ctx, "ambVol", 1)) }
+    var seamless by remember { mutableStateOf(BudsPrefs.saved(ctx, "seamless", 1) == 1) }
+    var voice by remember { mutableStateOf(BudsPrefs.saved(ctx, "voice", 0) == 1) }
+    var oneBud by remember { mutableStateOf(BudsPrefs.saved(ctx, "oneBud", 0) == 1) }
+    var game by remember { mutableStateOf(BudsPrefs.saved(ctx, "game", 0) == 1) }
+    var spatial by remember { mutableStateOf(BudsPrefs.saved(ctx, "spatial", 0) == 1) }
+    var find by remember { mutableStateOf(false) }
+    fun save(k: String, v: Int) = BudsPrefs.save(ctx, k, v)
+    val touchNames = listOf(1 to tr("Voice assistant", "Sesli asistan"), 2 to tr("Noise control", "Gürültü denetimi"), 3 to tr("Volume", "Ses"))
+    SettingsSection(tr("Touch controls", "Dokunma denetimi"), startOpen = true) {
+        Text(tr("What a touch and hold on each earbud does.", "Her kulaklıkta basılı tutmanın ne yapacağı."), color = T.sub, fontSize = 12.sp)
+        Text(tr("Left", "Sol"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { touchNames.forEach { (v, n) -> PChip(touchL == v, n) { touchL = v; save("touchL", v); BudsLink.send(BudsProto.SET_TOUCHPAD_OPTION, touchL, touchR) } } }
+        Text(tr("Right", "Sağ"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { touchNames.forEach { (v, n) -> PChip(touchR == v, n) { touchR = v; save("touchR", v); BudsLink.send(BudsProto.SET_TOUCHPAD_OPTION, touchL, touchR) } } }
+        Text(tr("When it is set to Noise control, a hold cycles through:", "Gürültü denetimi seçiliyken basılı tutmak şunlar arasında geçer:"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
+        val cycles = listOf(tr("ANC and off", "ANC ve kapalı"), tr("Ambient and off", "Ortam ve kapalı"), tr("ANC and ambient", "ANC ve ortam"))
+        val bytes = listOf(intArrayOf(1, 0, 1), intArrayOf(0, 1, 1), intArrayOf(1, 1, 0))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { cycles.forEachIndexed { i, n -> PChip(cycle == i, n) {
+            cycle = i; save("cycle", i); val b = bytes[i]; BudsLink.send(BudsProto.SET_TOUCH_AND_HOLD_NOISE, *(b + b))
+        } } }
+        BRow(tr("Lock the touch panels", "Dokunma yüzeylerini kilitle"), tr("Taps and holds on the earbuds do nothing while locked, so a touch in your sleep or hair changes nothing.", "Kilitliyken kulaklıklara dokunmak hiçbir şey yapmaz; uyurken ya da saça değince bir şey değişmez."), lock) {
+            lock = it; save("lock", if (it) 1 else 0); BudsLink.send(BudsProto.LOCK_TOUCHPAD, if (it) 0 else 1, 1, 1, 1, 1, 1, 1)
+        }
+    }
+    SettingsSection(tr("Sound", "Ses"), startOpen = true) {
+        Text(tr("Equalizer", "Ekolayzır"), color = T.text, fontSize = 14.sp)
+        val eqs = listOf(tr("Off", "Kapalı"), tr("Bass boost", "Bas"), tr("Soft", "Yumuşak"), tr("Dynamic", "Dinamik"), tr("Clear", "Net"), tr("Treble boost", "Tiz"))
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) { eqs.forEachIndexed { i, n -> PChip(eq == i, n) { eq = i; save("eq", i); BudsLink.send(BudsProto.EQUALIZER, i) } } }
+        Text(tr("Noise cancelling strength", "Gürültü engelleme gücü"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(false to tr("Low", "Düşük"), true to tr("High", "Yüksek")).forEach { (v, n) -> PChip(ancHigh == v, n) { ancHigh = v; save("ancHigh", if (v) 1 else 0); BudsLink.send(BudsProto.NOISE_REDUCTION_LEVEL, if (v) 1 else 0) } } }
+        Text(tr("Ambient sound volume", "Ortam sesi seviyesi"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) { listOf(tr("Low", "Düşük"), tr("Medium", "Orta"), tr("High", "Yüksek")).forEachIndexed { i, n -> PChip(ambVol == i, n) { ambVol = i; save("ambVol", i); BudsLink.send(BudsProto.AMBIENT_VOLUME, i) } } }
+        BRow(tr("Noise control with one earbud", "Tek kulaklıkla gürültü denetimi"), tr("Noise cancelling and ambient sound also work when only one earbud is in.", "Gürültü engelleme ve ortam sesi tek kulaklık takılıyken de çalışır."), oneBud) { oneBud = it; save("oneBud", if (it) 1 else 0); BudsLink.send(BudsProto.SET_ANC_WITH_ONE_EARBUD, if (it) 1 else 0) }
+        BRow(tr("Voice detect", "Konuşma algılama"), tr("When you start talking, the music gets quieter and the ambient sound comes in.", "Konuşmaya başlayınca müzik kısılır ve ortam sesi açılır."), voice) { voice = it; save("voice", if (it) 1 else 0); BudsLink.send(BudsProto.SET_DETECT_CONVERSATIONS, if (it) 1 else 0) }
+        BRow(tr("360 audio", "360 ses"), tr("The sound stays where it is when you turn your head.", "Başını çevirince ses olduğu yerde kalır."), spatial) { spatial = it; save("spatial", if (it) 1 else 0); BudsLink.send(BudsProto.SET_SPATIAL_AUDIO, if (it) 1 else 0) }
+        BRow(tr("Game mode", "Oyun modu"), tr("Lowers the delay between the picture and the sound.", "Görüntü ile ses arasındaki gecikmeyi azaltır."), game) { game = it; save("game", if (it) 1 else 0); BudsLink.send(BudsProto.GAME_MODE, if (it) 1 else 0) }
+    }
+    SettingsSection(tr("More", "Diğer")) {
+        BRow(tr("Seamless connection", "Kesintisiz bağlantı"), tr("The earbuds move to your other Galaxy devices by themselves.", "Kulaklık diğer Galaxy cihazlarına kendiliğinden geçer."), seamless) { seamless = it; save("seamless", if (it) 1 else 0); BudsLink.send(BudsProto.SET_SEAMLESS_CONNECTION, if (it) 1 else 0) }
+        BRow(tr("Find my earbuds", "Kulaklığımı bul"), tr("Makes the earbuds beep. Turn it off when you have found them.", "Kulaklıkların bip sesi çıkarmasını sağlar. Bulunca kapat."), find) { find = it; BudsLink.send(if (it) BudsProto.FIND_START else BudsProto.FIND_STOP) }
     }
 }

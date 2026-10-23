@@ -22,6 +22,8 @@ object LauncherPrefs {
     /** Package names pinned to the dock, max 5. Empty = automatic (first 3 apps). */
     var dock by mutableStateOf<List<String>>(emptyList())
     var dockShown by mutableStateOf(true)
+    var drawerIconDp by mutableStateOf(0)    // 0 = the home screen size
+    var labelScale by mutableStateOf(100)    // icon label size on the home screen, percent
     var drawerColumns by mutableStateOf(5)
     /** "name" (A-Z), "installed" (newest first) or "opened" (last opened first; the only mode that records launches). */
     var sort by mutableStateOf("name")
@@ -141,6 +143,7 @@ object LauncherPrefs {
         vertical = p.getProperty("vertical") == "true"
         columns = p.getProperty("columns")?.toIntOrNull() ?: 5
         iconDp = p.getProperty("iconDp")?.toIntOrNull() ?: 48
+        drawerIconDp = p.getProperty("drawerIconDp")?.toIntOrNull() ?: 0; labelScale = p.getProperty("labelScale")?.toIntOrNull()?.coerceIn(60, 160) ?: 100
         dock = list(p.getProperty("dock")).take(7)
         dockShown = p.getProperty("dockShown") != "false"
         drawerColumns = p.getProperty("drawerColumns")?.toIntOrNull() ?: 5
@@ -183,7 +186,7 @@ object LauncherPrefs {
     fun save(c: Context) {
         val p = Properties()
         p.setProperty("look", look); p.setProperty("vertical", vertical.toString())
-        p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString())
+        p.setProperty("columns", columns.toString()); p.setProperty("iconDp", iconDp.toString()); p.setProperty("drawerIconDp", drawerIconDp.toString()); p.setProperty("labelScale", labelScale.toString())
         p.setProperty("dock", dock.joinToString(",")); p.setProperty("dockShown", dockShown.toString())
         p.setProperty("drawerColumns", drawerColumns.toString()); p.setProperty("sort", sort)
         p.setProperty("gestureLock", gestureLock.toString()); p.setProperty("swipeDownShade", swipeDownShade.toString()); p.setProperty("swipeUpApps", swipeUpApps.toString())
@@ -215,7 +218,7 @@ object LauncherPrefs {
 
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
-        look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
+        look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
         drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; sounds = true; wallDaily = false; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false

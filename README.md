@@ -217,6 +217,7 @@ The APK is written to `app/build/outputs/apk/release/`. Every build (GitHub Acti
 - **Microsoft Fluent System Icons** (MIT). The icons in the Windows themes are outlines taken from them by `tools/fetch_icons.py` into `FluentPaths.kt`; the filled and colour glyphs (`FluentFilled.kt`, `FluentMat.kt`, `FluentColor.kt`, `res/drawable-nodpi/fc_*.png`) come from the same set.
 - **Universal Android Debloater package list** (GPL-3.0, Universal-Debloater-Alliance). The debloater downloads it from GitHub; a copy is bundled in `app/src/main/assets/debloat/uad_lists.json`.
 - **Shizuku API** (MIT, copyright RikkaW). The licence text is in `app/src/main/assets/licenses/`.
+- **SD Maid SE** (GPL-3.0, darken). The folder lists of the cleaner (`app/src/main/assets/expendables/*.json`) are taken from its rule files; the GalaxyBudsClient protocol notes (GPL-3.0, ThePBone) are used the same way.
 - **Windows XP icon pack** by Matt Pettit (CC0 1.0, public domain dedication). The XP theme's Apps, Download, Heart, Phone and Startup icons come from it, resized to 48 px. The licence text is in `app/src/main/assets/licenses/xp-icons-LICENSE.txt`.
 - **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
 
