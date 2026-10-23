@@ -94,6 +94,9 @@ class BudsService : Service() {
             BudsLink.sender = null
             BudsLink.set(BudsState(message = "—"))
             runCatching { socket?.close() }
+            // nothing to hold on to: without "stay connected" the service ends, with it the notification goes until the earbuds connect again
+            if (!BudsPrefs.keepOn(this)) { stopSelf(); return }
+            runCatching { stopForeground(true) }
             // a new attempt after a while, at once when the earbuds connect
             var waited = 0
             while (waited < 20_000 && !wake) { delay(500); waited += 500 }
@@ -115,6 +118,8 @@ class BudsService : Service() {
         BudsLink.sender = { b -> runCatching { synchronized(out) { out.write(b); out.flush() } } }
         BudsLink.set(BudsState(connected = true, name = name))
         gotStatus = false; lastWorn = null
+        // connected: the notification (re)appears; a start from the background may be refused, the link works without it
+        runCatching { if (android.os.Build.VERSION.SDK_INT >= 29) startForeground(ID, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) else startForeground(ID, note()) }
         refreshNote()
         val input = s.inputStream
         val buf = ByteArray(2048)
@@ -222,5 +227,14 @@ class BudsService : Service() {
         fun start(c: Context) { ContextCompat.startForegroundService(c, Intent(c, BudsService::class.java)) }
         fun stop(c: Context) { c.stopService(Intent(c, BudsService::class.java)) }
         val running get() = BudsLink.state.value.connected
+    }
+}
+
+/** The earbuds connect: with "stay connected" on, the link is opened again (the service ended or was killed while they were away). */
+class BudsAutoStart : BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+        if (i.action != BluetoothDevice.ACTION_ACL_CONNECTED) return
+        val d = i.getParcelableExtra<BluetoothDevice>(BluetoothDevice.EXTRA_DEVICE) ?: return
+        if (BudsPrefs.keepOn(c) && d.address == BudsPrefs.address(c)) runCatching { BudsService.start(c) }
     }
 }
