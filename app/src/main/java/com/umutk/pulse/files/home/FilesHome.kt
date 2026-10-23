@@ -1,5 +1,6 @@
 package com.umutk.pulse.files.home
 
+import androidx.compose.foundation.layout.navigationBarsPadding
 import android.content.Context
 import android.content.Intent
 import android.os.Environment
@@ -269,7 +270,7 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
         Triple("home", "home" to tr("Home", "Ana"), "home"), Triple("files", "folder" to tr("Browse", "Gözat"), "files"), Triple("share", "share" to tr("Share", "Paylaş"), "share"),
         Triple("search", "search" to tr("Search", "Ara"), "search"), Triple("more", "more" to tr("More", "Diğer"), "more"),
     )
-    Row(Modifier.fillMaxWidth().background(bg).then(if (mat) Modifier else Modifier.frame(T)).padding(vertical = 8.dp)) {
+    Row(Modifier.fillMaxWidth().background(bg).then(if (mat) Modifier else Modifier.frame(T)).navigationBarsPadding().padding(vertical = 8.dp)) {
         items.forEach { (id, iconLabel, target) ->
             val on = tab == target || (id == "more" && tab in setOf("tree", "types", "cache"))
             Column(Modifier.weight(1f).clickable {

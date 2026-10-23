@@ -303,17 +303,19 @@ object KeyboardDictionary {
         for (k in typed.length - 1 downTo maxOf(3, typed.length - 9)) {
             val stemT = typed.substring(0, k); val tailT = typed.substring(k)
             // the nearest ending chains
-            var bestTail: String? = null; var bestCost = 1.05f
+            var bestTail: String? = null; var bestCost = .65f
             for (len in maxOf(0, tailT.length - 1)..minOf(9, tailT.length + 1)) for (tail in chains[len]) {
                 val cst = if (tail == tailT) 0f else distance(tailT, tail, bestCost, a, b, c)
                 if (cst < bestCost) { bestCost = cst; bestTail = tail }
                 if (cst == 0f) break
             }
             val tail = bestTail ?: continue
-            val stems = correct("tr", stemT, if (stemT.length >= 5) 1f else .7f, 3, tc)
+            val stems = correct("tr", stemT, .55f, 3, tc)
             for (st in stems) {
                 if (!harmony(st.word, tail) || st.word.length < 3) continue
                 val cost = st.cost + bestCost
+                // one slip in all: a mended word that differs in two places is a guess, not a correction
+                if (cost > 1.05f) continue
                 out += Cand(st.word + tail, st.score - 4f * cost - .6f, cost)
             }
         }
