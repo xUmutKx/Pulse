@@ -312,8 +312,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun menu(id: String) {
         when (id) {
-            "menu" -> { st.panel = "menu"; st.toolbar = false }
-            "clip" -> { st.panel = "clip"; st.toolbar = false }
+            "menu" -> st.panel = if (st.panel == "menu") "keys" else "menu"
+            "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
+            "lang" -> lang()
             "back" -> st.panel = "keys"
             "emoji" -> st.panel = "emoji"
             "resize" -> st.panel = "resize"
@@ -333,6 +334,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (id == "resize") return
         if (st.panel == "keys") KeyboardPrefs.save(this)
     }
+
+    override fun hide() { finishWord("", false); requestHideSelf(0) }
 
     override fun feedback() {
         if (KeyboardPrefs.haptic) window.window?.decorView?.performHapticFeedback(if (KeyboardPrefs.hapticMs >= 20) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.KEYBOARD_TAP)
