@@ -137,7 +137,7 @@ object StoreCatalog {
                     .getOrNull()?.let(::parseManifest).orEmpty()
             }
         }
-        val code = runCatching { c.packageManager.getPackageInfo(c.packageName, 0).longVersionCode }.getOrDefault(Long.MAX_VALUE)
+        val code = runCatching { com.umutk.pulse.Compat.longVersion(c.packageManager.getPackageInfo(c.packageName, 0)) }.getOrDefault(Long.MAX_VALUE)
         return all.filter { it.minPulse <= code && it.id !in BUILT_IN_MODULES }
     }
 

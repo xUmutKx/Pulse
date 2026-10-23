@@ -73,7 +73,7 @@ class ScreenRecActivity : ComponentActivity() {
 
     /** The microphone is asked first when it is switched on; a refusal still records the screen without sound. */
     private fun begin() {
-        if (cfg().mic && checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) micLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        if (cfg().mic && androidx.core.content.ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) micLauncher.launch(Manifest.permission.RECORD_AUDIO)
         else askConsent()
     }
 

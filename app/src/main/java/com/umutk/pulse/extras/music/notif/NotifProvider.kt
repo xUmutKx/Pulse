@@ -26,6 +26,7 @@ class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
     ): MediaNotification {
         val m = base.createNotification(session, customLayout, actionFactory, callback)
         val line = LiveLyrics.notifLine ?: return m
+        if (android.os.Build.VERSION.SDK_INT < 24) return m
         val b = Notification.Builder.recoverBuilder(ctx, m.notification).setContentText(line)
         // the song title is underlined when that is the emphasis chosen, so it cannot be taken for the lyric line
         m.notification.extras.getCharSequence(Notification.EXTRA_TITLE)?.let { b.setContentTitle(LiveLyrics.titled(ctx, it)) }
@@ -59,6 +60,6 @@ class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
 /** The media notification's own channel, made here so it carries no icon badge (the library's default channel does). */
 private const val QUIET_CHANNEL = "pulse_media_quiet"
 private fun ensureQuiet(ctx: Context) {
-    ctx.getSystemService(android.app.NotificationManager::class.java)
-        .createNotificationChannel(com.umutk.pulse.QuietChannel(QUIET_CHANNEL, ctx.getString(R.string.app_name), android.app.NotificationManager.IMPORTANCE_LOW))
+    if (android.os.Build.VERSION.SDK_INT >= 26) ctx.getSystemService(android.app.NotificationManager::class.java)
+        .createNotificationChannel(com.umutk.pulse.QuietChannel(QUIET_CHANNEL, ctx.getString(R.string.app_name), android.app.NotificationManager.IMPORTANCE_LOW)) else Unit
 }

@@ -54,8 +54,8 @@ abstract class MediaService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Playback", "Oynatma"), NotificationManager.IMPORTANCE_LOW))
+        if (android.os.Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java)
+            .createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Playback", "Oynatma"), NotificationManager.IMPORTANCE_LOW)) else Unit
         // Keeps the CPU awake while the service runs; released in onDestroy. Needs WAKE_LOCK (already in the manifest).
         wake = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "pulse:${javaClass.simpleName}")
             .apply { setReferenceCounted(false); acquire() }

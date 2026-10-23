@@ -14,6 +14,8 @@ object NotesCrypto {
     private const val MODE = "AES/GCM/NoPadding"
 
     private fun key(): SecretKey {
+        // Android 5: no hardware key store for AES, so the key is made from the phone's own build data
+        if (android.os.Build.VERSION.SDK_INT < 23) return javax.crypto.spec.SecretKeySpec(java.security.MessageDigest.getInstance("SHA-256").digest(("pulse_notes|" + android.os.Build.FINGERPRINT + "|" + android.os.Build.BOARD + "|" + android.os.Build.DEVICE).toByteArray()), "AES")
         val ks = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
         (ks.getEntry(ALIAS, null) as? KeyStore.SecretKeyEntry)?.let { return it.secretKey }
         val gen = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore")

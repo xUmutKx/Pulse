@@ -74,7 +74,7 @@ class CoverTile : TileService() {
             label = tr("Screen cover", "Ekran kapağı")
             val allowed = com.umutk.pulse.Compat.canOverlay(this@CoverTile) || CoverAccessibilityService.instance != null
             state = if (allowed && on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            subtitle = when { !allowed -> tr("Tap to allow overlay", "İzin vermek için dokun"); on -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
+            subtitleCompat = when { !allowed -> tr("Tap to allow overlay", "İzin vermek için dokun"); on -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
             updateTile()
         }
     }

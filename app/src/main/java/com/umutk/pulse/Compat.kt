@@ -27,4 +27,11 @@ object Compat {
 
     /** A symbolic link: its canonical path is not where its name says it is. */
     fun isLink(f: File): Boolean = runCatching { f.canonicalPath != File(f.absoluteFile.parentFile?.canonicalFile ?: return false, f.name).path }.getOrDefault(false)
+
+    /** Tile subtitles exist from Android 10; before it nothing is shown under the name. */
 }
+
+@androidx.annotation.RequiresApi(24)
+var android.service.quicksettings.Tile.subtitleCompat: CharSequence?
+    get() = if (Build.VERSION.SDK_INT >= 29) subtitle else null
+    set(v) { if (Build.VERSION.SDK_INT >= 29) subtitle = v }

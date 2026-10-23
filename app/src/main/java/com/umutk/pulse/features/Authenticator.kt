@@ -217,13 +217,16 @@ private fun askSystemLock(ctx: Context, onOk: () -> Unit, onFail: () -> Unit) {
     val auth = android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG or android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
     val bm = ctx.getSystemService(android.hardware.biometrics.BiometricManager::class.java)
     if (bm == null || bm.canAuthenticate(auth) != android.hardware.biometrics.BiometricManager.BIOMETRIC_SUCCESS) { onOk(); return }
-    runCatching {
-        android.hardware.biometrics.BiometricPrompt.Builder(ctx).setTitle("Authenticator").setAllowedAuthenticators(auth).build()
-            .authenticate(android.os.CancellationSignal(), ctx.mainExecutor, object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
-                override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult?) { onOk() }
-                override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) { onFail() }
-            })
-    }.onFailure { onFail() }
+    runCatching { lockPrompt(ctx, auth, onOk, onFail) }.onFailure { onFail() }
+}
+
+@androidx.annotation.RequiresApi(30)
+private fun lockPrompt(ctx: Context, auth: Int, onOk: () -> Unit, onFail: () -> Unit) {
+    android.hardware.biometrics.BiometricPrompt.Builder(ctx).setTitle("Authenticator").setAllowedAuthenticators(auth).build()
+        .authenticate(android.os.CancellationSignal(), ctx.mainExecutor, object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult?) { onOk() }
+            override fun onAuthenticationError(errorCode: Int, errString: CharSequence?) { onFail() }
+        })
 }
 
 /** The text of the QR code in a picture, or null when there is none. */
