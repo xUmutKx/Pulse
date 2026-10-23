@@ -186,7 +186,7 @@ object StandBy {
         val type = if (acc != null) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, type,
-            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
+            WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
             PixelFormat.OPAQUE,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
@@ -200,9 +200,13 @@ object StandBy {
             // hides the system bars of the overlay as well
             systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE
             setContent { StandByUi(app) { hide(app) } }
+            // the cover takes the keys: Back does nothing behind it, only the double tap closes it
+            isFocusable = true; isFocusableInTouchMode = true
+            setOnKeyListener { _, code, _ -> code == android.view.KeyEvent.KEYCODE_BACK }
         }
         view = v; owner = o; host = base; autoStarted = auto
         runCatching { wm.addView(v, lp) }.onFailure { view = null; o.stop(); owner = null; host = null; return false }
+        v.post { v.requestFocus() }
         return true
     }
 
@@ -525,6 +529,14 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
         val n = STANDBY_PAGES.firstOrNull { it.first == editing }?.second
         Text(n?.let { tr(it.first, it.second) }.orEmpty(), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1)
         // in the swipe of the cover or not
+        // the order of the swipe: move the page one place earlier or later
+        if (editing in pages && pages.size > 1) {
+            val at = pages.indexOf(editing)
+            fun move(d: Int) { val to = at + d; if (to in pages.indices) { pages = pages.toMutableList().also { val x = it.removeAt(at); it.add(to, x) }; StandByPrefs.setPages(ctx, pages); rev++ } }
+            Box(Modifier.size(34.dp).clickable { move(-1) }, contentAlignment = Alignment.Center) { PIcon("back", if (at > 0) T.text else T.sub.copy(alpha = .4f), 20.dp) }
+            Text("${at + 1}", color = T.sub, fontSize = 13.sp)
+            Box(Modifier.size(34.dp).clickable { move(1) }, contentAlignment = Alignment.Center) { PIcon("back", if (at < pages.lastIndex) T.text else T.sub.copy(alpha = .4f), 20.dp, Modifier.graphicsLayer { rotationZ = 180f }) }
+        }
         PIcon("check", if (editing in pages) T.accent else T.sub, 22.dp, Modifier.padding(end = 8.dp))
         PSwitch(editing in pages, { on -> pages = if (on) (pages + editing).distinct() else (pages - editing).ifEmpty { listOf(editing) }; StandByPrefs.setPages(ctx, pages) })
     }
