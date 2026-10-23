@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -271,7 +272,24 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         scope.launch(Dispatchers.IO) { KeyboardDictionary.load(this@PulseKeyboardService, st.lang); withContext(Dispatchers.Main) { updateSuggestions() } }
     }
 
+    override fun slotLong(i: Int) {
+        val w = slotWords.getOrNull(i).orEmpty()
+        if (w.isEmpty() || w.startsWith("\"") || !w[0].isLetter()) return
+        st.banAsk = i
+        scope.launch { delay(3000); if (st.banAsk == i) st.banAsk = -1 }
+    }
+
+    override fun banSlot(i: Int) {
+        val w = slotWords.getOrNull(i).orEmpty()
+        st.banAsk = -1
+        if (w.isEmpty()) return
+        KeyboardDictionary.ban(this, w)
+        android.widget.Toast.makeText(this, com.umutk.pulse.tr("Will not suggest \"$w\" again", "\"$w\" bir daha önerilmeyecek"), android.widget.Toast.LENGTH_SHORT).show()
+        updateSuggestions()
+    }
+
     override fun slot(i: Int) {
+        st.banAsk = -1
         val c = currentInputConnection ?: return
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
@@ -403,7 +421,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun feedback() {
-        if (KeyboardPrefs.haptic) window.window?.decorView?.performHapticFeedback(if (KeyboardPrefs.hapticMs >= 20) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.KEYBOARD_TAP)
+        if (KeyboardPrefs.haptic) {
+            // the strength slider: a short, soft pulse of its own instead of the system's key tap, which is strong on many phones
+            val ms = KeyboardPrefs.hapticMs.coerceIn(1, 40)
+            val vib = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator
+            if (vib != null && vib.hasVibrator()) {
+                if (android.os.Build.VERSION.SDK_INT >= 26) vib.vibrate(android.os.VibrationEffect.createOneShot((4 + ms / 3).toLong(), if (vib.hasAmplitudeControl()) (12 + ms * 5).coerceAtMost(255) else android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+                else @Suppress("DEPRECATION") vib.vibrate((4 + ms / 3).toLong())
+            } else window.window?.decorView?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
+        }
         if (KeyboardPrefs.sound) (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, -1f)
     }
 
@@ -551,7 +577,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** The three slots of the bar (shown and as words), and the word the space key would correct [typed] to. */
     private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean): Triple<List<String>, Array<String>, String?> {
         if (typed.isEmpty()) {
-            val n = KeyboardDictionary.next(code, prev, 3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else it }
+            val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else it }
             val w = arrayOf(n.getOrElse(0) { "" }, n.getOrElse(1) { "" }, n.getOrElse(2) { "" })
             return Triple(w.toList(), w, null)
         }
@@ -569,8 +595,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word) }.distinctBy { it.word }.take(6) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
-        val fix = corr.firstOrNull { it.word != lower }?.takeIf { lower.length >= 3 && it.cost <= limit && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
-        val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word }
+        val fix = corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && it.cost <= limit && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
+        val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
         val emoji = if (KeyboardPrefs.emojiPredictions) KeyboardDictionary.emoji(lower) else null
         val mid: String; val left: String; val right: String
         if (fix != null) { mid = cased(fix.word, typed); left = "\"$typed\""; right = emoji ?: others.firstOrNull()?.let { cased(it, typed) }.orEmpty() }
