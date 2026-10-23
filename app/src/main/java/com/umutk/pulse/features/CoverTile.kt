@@ -150,11 +150,11 @@ fun CoverSettings() {
         Text(tr("Battery", "Pil"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
         PSwitch(battery, { battery = it; CoverStore.setBattery(ctx, it) })
     }
-    }
-    // brightness while the cover is up
+    // brightness while the cover is up (the basic cover only)
     var bright by remember { mutableIntStateOf(CoverStore.bright(ctx).let { if (it < 0) 100 else it }) }
     Text(tr("Brightness", "Parlaklık"), color = T.sub, fontSize = 12.sp)
     com.umutk.pulse.PSlider(bright.toFloat(), { bright = it.toInt().coerceIn(5, 100); CoverStore.setBright(ctx, bright) }, 5f..100f) {}
+    }
     if (!adv) {
     // an open window in the cover: drag its edges
     var hole by remember { mutableStateOf(CoverStore.hole(ctx)) }
