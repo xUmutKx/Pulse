@@ -137,7 +137,7 @@ class MusicPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         setMediaNotificationProvider(NotifProvider(this))
-        val pi = PendingIntent.getActivity(this, 0, Intent().setClassName(packageName, "$packageName.ToolOpenActivity").putExtra("route", "music").putExtra(EXTRA_OPEN, "player").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
+        val pi = PendingIntent.getActivity(this, 0, Intent().setClassName(packageName, "$packageName.ExtraToolActivity").putExtra("route", "music").putExtra(EXTRA_OPEN, "player").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         session = MediaSession.Builder(this, engine.player).setBitmapLoader(com.umutk.pulse.extras.music.notif.NotifArt(this)).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
         engine.player.addListener(listener)

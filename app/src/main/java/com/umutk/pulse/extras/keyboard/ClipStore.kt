@@ -20,6 +20,9 @@ object ClipStore {
     private var items = listOf<ClipItem>()
     private var loaded = false
 
+    /** The files changed on disk (an import): read them again at the next use. */
+    fun reload() { loaded = false; items = emptyList() }
+
     private fun read(c: Context) {
         if (loaded) return
         loaded = true
