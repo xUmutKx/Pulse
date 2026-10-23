@@ -67,6 +67,11 @@ object KeyboardPrefs {
 
     // feel
     var haptic by mutableStateOf(true)
+    /** How bright the keyboard is (30..100), and the space row with the extra keys on its own. */
+    var bright by mutableStateOf(100)
+    var bottomBright by mutableStateOf(100)
+    /** Moving colour light: 0 off, 1 around the keyboard, 2 around every key (a rainbow that runs along the keys). */
+    var rgb by mutableStateOf(0)
     /** How long an unpinned clipboard item is kept, in hours (1 to 72). */
     var clipHours by mutableStateOf(24)
     /** A comma straight before a letter inside a word is a slip: it is taken out and the word goes on. */
@@ -100,7 +105,7 @@ object KeyboardPrefs {
         proKeys = p.getString("proKeys", proKeys) ?: proKeys; proBottom = p.getBoolean("proBottom", proBottom); menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
         // the menu and bar of older versions held cut / copy / paste / undo: they are replaced by the new default once
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
-        haptic = p.getBoolean("haptic", haptic); clipHours = p.getInt("clipHours", clipHours); commaSlip = p.getBoolean("commaSlip2", false); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
+        haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipHours", clipHours); commaSlip = p.getBoolean("commaSlip2", false); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
     fun save(c: Context) {
@@ -115,7 +120,7 @@ object KeyboardPrefs {
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn)
             .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proBottom", proBottom).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
-            .putBoolean("haptic", haptic).putInt("clipHours", clipHours).putBoolean("commaSlip2", commaSlip).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
+            .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("rgb", rgb).putInt("clipHours", clipHours).putBoolean("commaSlip2", commaSlip).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
 
@@ -133,7 +138,7 @@ object KeyboardPrefs {
         theme = "amoled"; heightPct = 110; autoRatio = 90; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
-        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; hapticMs = 8; sound = false
+        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; rgb = 0; hapticMs = 8; sound = false
         resetTheme(c)
         KeyboardDictionary.forgetUser(c)
         loaded = true

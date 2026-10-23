@@ -221,6 +221,14 @@ fun KeyboardSettings(back: () -> Unit) {
                 Text("${tr("Vibration strength", "Titreşim gücü")}: ${KeyboardPrefs.hapticMs}", color = T.sub, fontSize = 12.sp)
                 PSlider((KeyboardPrefs.hapticMs - 1) / 39f, { KeyboardPrefs.hapticMs = 1 + (it * 39).roundToInt() }, 0f..1f, onDone = { save() })
             }
+            Text("${tr("Brightness", "Parlaklık")}: ${KeyboardPrefs.bright}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            PSlider((KeyboardPrefs.bright - 30) / 70f, { KeyboardPrefs.bright = 30 + (it * 70).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("Brightness of the space row and extra keys", "Boşluk satırı ve ek tuşların parlaklığı")}: ${KeyboardPrefs.bottomBright}%", color = T.sub, fontSize = 12.sp)
+            PSlider((KeyboardPrefs.bottomBright - 30) / 70f, { KeyboardPrefs.bottomBright = 30 + (it * 70).roundToInt() }, 0f..1f, onDone = { save() })
+            Text(tr("Moving colour light", "Hareketli renk ışığı"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0 to tr("Off", "Kapalı"), 1 to tr("Around the keyboard", "Klavyenin çevresi"), 2 to tr("Around every key", "Her tuşun çevresi")).forEach { (v, n) -> PChip(KeyboardPrefs.rgb == v, n) { KeyboardPrefs.rgb = v; save() } }
+            }
             Switch(tr("Sound on keypress", "Tuşta ses"), "", KeyboardPrefs.sound) { KeyboardPrefs.sound = it; save() }
         }
 
