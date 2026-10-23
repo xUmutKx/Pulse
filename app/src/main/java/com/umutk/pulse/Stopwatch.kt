@@ -44,7 +44,8 @@ class StopwatchTile : TileService() {
     override fun onStartListening() { Opt.load(this); paint(); restartTicking() }
     override fun onStopListening() { main.removeCallbacks(tick) }
 
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         Stopwatch.toggle(this)
         paint()
         restartTicking()

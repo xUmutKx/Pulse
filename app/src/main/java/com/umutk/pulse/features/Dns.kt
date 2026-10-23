@@ -118,7 +118,8 @@ class DnsTile : TileService() {
             updateTile()
         }
     }
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         if (busy) return
         val (m, h) = Dns.current(this)
         // a host set in the system Settings is kept, so switching back on returns to it
