@@ -151,18 +151,19 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
                 val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
                 if (dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
                     done = true; c.consume(); st.trail = emptyList()
-                    scope.launch { pull.animateTo(rootH.coerceAtLeast(300f), tween(170)); act.hide(); delay(250); pull.snapTo(0f) }
+                    act.hide()
                 }
             }
         }
     }) {
         Column(
             (if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
-                .graphicsLayer { translationY = pull.value }
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
-                if (pull.value > 56 * dens) { act.hide(); scope.launch { delay(250); pull.snapTo(0f) } } else scope.launch { pull.animateTo(0f, tween(160)) }
+                // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
+                if (pull.value > 56 * dens) act.hide()
+                scope.launch { pull.snapTo(0f) }
             })
             if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
             else Panel(st.panel, th, st, act, keyH)
@@ -188,8 +189,9 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
 /** The path of a swipe over the letters. */
 @Composable
 private fun Trail(th: KbTheme, st: KbState) {
+    // the swipe-typing path is no longer drawn (the blue line); the keys it passes still spell the word
     val t = st.trail
-    if (t.size < 2) return
+    if (true || t.size < 2) return
     Canvas(Modifier.fillMaxSize()) {
         val path = Path().apply { moveTo(t[0].x, t[0].y); for (i in 1 until t.size) lineTo(t[i].x, t[i].y) }
         drawPath(path, th.accent.copy(alpha = .75f), style = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round))
