@@ -7,8 +7,8 @@ import androidx.compose.runtime.setValue
 
 /** Settings of the Pulse keyboard. One process, so the keyboard service and its settings page read the same state. */
 object KeyboardPrefs {
-    private const val FILE = "pulse_keyboard"
-    private var loaded = false
+    const val FILE = "pulse_keyboard"
+    internal var loaded = false
 
     // look
     var theme by mutableStateOf("amoled")

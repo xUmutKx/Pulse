@@ -124,6 +124,12 @@ object KeyboardDictionary {
         File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete(); File(c.filesDir, "kbd_typos.txt").delete(); File(c.filesDir, "kbd_banned.txt").delete(); banned.clear()
     }
 
+    /** Reads the learned data again from the files (after an import). */
+    fun reloadUser(c: Context) {
+        user.clear(); pairs.clear(); typos.clear(); banned.clear(); bias.clear()
+        userLoaded = false; loadUser(c)
+    }
+
     fun learnedCount() = user.size
 
     /** Words taken from another keyboard: each becomes a known word (counted three times, so it is not "corrected" away). */

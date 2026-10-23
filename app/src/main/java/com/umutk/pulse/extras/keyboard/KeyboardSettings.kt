@@ -78,12 +78,29 @@ fun KeyboardSettings(back: () -> Unit) {
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     var rev by remember { mutableIntStateOf(0) }
     var busy by remember { mutableStateOf<String?>(null) }
+    // the live keyboard at the bottom is shown only when asked for (the button at the top), so it does not take the room of the settings
+    var showKb by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var dataNote by remember { mutableStateOf("") }
+    val exportData = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+        if (uri != null) scope.launch {
+            val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.export(ctx, uri) }.getOrDefault(-1) }
+            dataNote = if (n >= 0) tr("Saved ($n files)", "Kaydedildi ($n dosya)") else tr("Could not save", "Kaydedilemedi")
+        }
+    }
+    val importData = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.import(ctx, uri) }.getOrDefault(-1) }
+            dataNote = if (n >= 0) tr("Loaded ($n files)", "Yüklendi ($n dosya)") else tr("This is not a keyboard backup", "Bu bir klavye yedeği değil")
+            learned = KeyboardDictionary.learnedCount(); rev++
+        }
+    }
     // the keyboard stays at the bottom, as it does on the phone, so every change shows at once
     Column(Modifier.fillMaxSize()) {
     Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
             Text(tr("Keyboard", "Klavye"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Box(Modifier.size(40.dp).clickable { showKb = !showKb }, contentAlignment = Alignment.Center) { PIcon("keyboard", if (showKb) T.accent else T.text, 22.dp) }
         }
         ExtraLookRow()
 
@@ -239,6 +256,12 @@ fun KeyboardSettings(back: () -> Unit) {
                 PButton(tr("Forget words", "Kelimeleri unut"), compact = true, danger = true) { askForget = true }
                 PButton(tr("Factory settings", "Fabrika ayarları"), compact = true, danger = true) { askReset = true }
             }
+            // everything the keyboard knows about the person in one file, and back
+            Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PButton(tr("Export data", "Veriyi dışa aktar"), compact = true) { exportData.launch("Pulse-keyboard-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) + ".zip") }
+                PButton(tr("Import data", "Veriyi içe aktar"), compact = true) { importData.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
+            }
+            if (dataNote.isNotEmpty()) Text(dataNote, color = T.sub, fontSize = 12.sp)
             // the words SwiftKey learned, read with root from its own data folder
             var skNote by remember { mutableStateOf("") }
             PButton(tr("Take SwiftKey's words (root)", "SwiftKey kelimelerini al (root)"), compact = true) {
@@ -254,7 +277,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
         Spacer(Modifier.height(24.dp))
     }
-    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))) { KeyboardView(st, acts) }
+    if (showKb) Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))) { KeyboardView(st, acts) }
     }
     if (askForget) PDialog(tr("Forget the learned words?", "Öğrenilen kelimeler unutulsun mu?"), "", tr("Forget", "Unut"), { KeyboardDictionary.forgetUser(ctx); learned = 0; askForget = false }, { askForget = false })
     if (askReset) PDialog(tr("Back to factory settings?", "Fabrika ayarlarına dönülsün mü?"), tr("Theme, size, typing options and learned words are reset.", "Tema, boyut, yazım seçenekleri ve öğrenilen kelimeler sıfırlanır."), tr("Reset", "Sıfırla"), { KeyboardPrefs.factoryReset(ctx); learned = 0; askReset = false }, { askReset = false })

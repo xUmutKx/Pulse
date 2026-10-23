@@ -135,8 +135,10 @@ open class ExtraToolActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // every tool is one card in the recent apps: a second start of the same plain tool (any entry: menu, store, launcher, widget) brings the open one forward
+        // a notification's request for a page of the music player is handed to the window in the process
+        if (savedInstanceState == null) intent.getStringExtra("notif_open")?.let { if (routeOf(intent) == "music") com.umutk.pulse.extras.music.MusicNav.request = it }
         if (savedInstanceState == null && this::class == ExtraToolActivity::class && intent.getStringExtra("frame") == null &&
-            intent.extras?.keySet().orEmpty().all { it == "route" }) {
+            intent.extras?.keySet().orEmpty().all { it == "route" || it == "notif_open" }) {
             val mine = routeOf(intent)
             val other = runCatching { getSystemService(android.app.ActivityManager::class.java).appTasks.firstOrNull { t ->
                 t.taskInfo.taskId != taskId && t.taskInfo.baseIntent.let { b -> b.component?.className.orEmpty().endsWith("ExtraToolActivity") || b.component?.className.orEmpty().endsWith("Launcher") }
