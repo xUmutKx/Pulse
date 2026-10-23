@@ -662,7 +662,6 @@ private fun CtList(contacts: List<CtContact>, onOpen: (Long) -> Unit, letters: B
                             }
                         }
                     }
-                    }
                 }
             }
         }
