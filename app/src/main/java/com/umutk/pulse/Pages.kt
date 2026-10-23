@@ -435,8 +435,8 @@ fun SettingsPage() {
                             Text(curName, color = T.sub, fontSize = 12.sp)
                             PIcon("chevron", T.sub, 18.dp, Modifier.padding(start = 6.dp).graphicsLayer { rotationZ = if (iconOpen == cat.id) 180f else 0f })
                         }
-                        if (iconOpen == cat.id) Row(Modifier.padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            IconStyle.choices(cat).forEach { (id, en, trn) -> PChip(cur == id, tr(en, trn)) { Cfg.setIconStyle(ctx, cat, id) } }
+                        if (iconOpen == cat.id) Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            IconStyle.choices(cat).forEach { (id, _, _) -> IconStyleTile(cat, id, cur == id) { Cfg.setIconStyle(ctx, cat, id) } }
                         }
                     }
                     if (Look.effect == "blur") {
@@ -615,5 +615,25 @@ fun RootSettings() {
         Text("Shizuku: installed=$installed, binder=${Shell.shizuku > 0}, permission=${Shell.shizuku == 2}, version=$sv\n" + (if (Shell.shizukuErr.isNotBlank()) "error: ${Shell.shizukuErr}\n" else "") + "su: " + Shell.rootLog.ifBlank { "not checked yet" }, color = T.sub, fontSize = 11.sp)
         if (Shell.shizukuMsg.isNotBlank()) Text(Shell.shizukuMsg, color = T.sub, fontSize = 11.sp)
         PButton("Ask Shizuku") { Shell.askShizuku(ctx) }
+    }
+}
+
+
+/** One icon style to pick: a few icons drawn in that style (the picture says it, no name). */
+@Composable
+private fun IconStyleTile(cat: IconCat, id: String, selected: Boolean, onClick: () -> Unit) {
+    val keys = when (cat) {
+        IconCat.MENU -> listOf("settings", "folder", "image")
+        IconCat.APPS -> listOf("extraFiles", "extraPhotos", "extraCalendar")
+        IconCat.TOOLS -> listOf("tool_toolkit", "tool_installer", "tool_authenticator")
+        IconCat.SCREENS -> listOf("search", "delete", "edit")
+    }
+    Row(
+        Modifier.clip(RoundedCornerShape(8.dp)).border(if (selected) 2.dp else 1.dp, if (selected) Look.accent else T.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 10.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically,
+    ) {
+        androidx.compose.runtime.CompositionLocalProvider(LocalIconStyleOverride provides id, LocalFluentIcons provides (id != "line")) {
+            keys.forEach { k -> PIcon(k, T.text, 24.dp) }
+        }
     }
 }

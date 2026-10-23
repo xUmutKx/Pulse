@@ -547,7 +547,6 @@ fun FunctionsSettings() {
         }
         Text(tr("App manager's Extract APK saves here", "App manager'ın APK çıkarma işlemi buraya kaydeder"), color = T.sub, fontSize = 12.sp)
     }
-    PCard { com.umutk.pulse.features.CoverSettings() }
     // menus and message boxes: the current look, or Material You for every look
     PCard {
         Text(tr("Pop-up windows", "Açılır pencereler"), color = T.sub, fontSize = 12.sp)

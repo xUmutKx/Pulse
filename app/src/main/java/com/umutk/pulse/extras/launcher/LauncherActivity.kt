@@ -79,6 +79,7 @@ class LauncherActivity : ComponentActivity() {
         setContent {
             val look = LauncherLooks.byId(LauncherPrefs.look)
             val apps by produceState(emptyList<LaunchApp>(), LauncherPrefs.iconPack) { value = withContext(Dispatchers.IO) { loadApps(this@LauncherActivity) } }
+            LaunchedEffect(look.id, LauncherPrefs.sounds) { LauncherSounds.prepare(this@LauncherActivity, look.id) }
             BackHandler(enabled = LauncherSession.startOpen) { LauncherSession.startOpen = false }
             val edge = with(LocalDensity.current) { sideInsetPx.toDp() }
             LookHost(lookId = look.id) { th ->
@@ -89,7 +90,7 @@ class LauncherActivity : ComponentActivity() {
                     when (stage) {
                         0 -> com.umutk.pulse.Splash(th) { stage = if (LauncherPrefs.loginScreen) 1 else 2 }
                         1 -> com.umutk.pulse.LoginScreen(th) { stage = 2 }
-                        else -> LaunchedEffect(Unit) { LauncherSession.booted = true; LauncherSounds.startup(th.id) }
+                        else -> LaunchedEffect(Unit) { LauncherSession.booted = true; LauncherSounds.startup(this@LauncherActivity, th.id) }
                     }
                 } else LaunchedEffect(Unit) { LauncherSession.booted = true }
             }
@@ -233,7 +234,7 @@ private fun startApp(ctx: Context, intent: Intent, windowed: Boolean) {
 
 /** What a desktop shortcut opens: Pulse's own pages and apps. */
 private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
-    LauncherSounds.click()
+    LauncherSounds.click(lookId)
     // Windows looks show Pulse's own pages in a window of that Windows
     if (id.startsWith("pulse:x:")) {
         val route = id.removePrefix("pulse:x:")

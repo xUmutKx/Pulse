@@ -141,7 +141,6 @@ object ToolPlace {
         Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
         Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "extra"),
         Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "extra"),
-        Tool("cover", "Screen cover", "Ekran kapağı", "cover", true, "lock", Icons.Outlined.Lock, "extra"),
     )
     private val placed = mutableStateMapOf<String, String>()
     private var loaded = false
