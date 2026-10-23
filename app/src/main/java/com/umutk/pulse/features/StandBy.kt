@@ -499,9 +499,6 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
         PChip(adv, tr("Advanced (StandBy)", "Gelişmiş (StandBy)")) { StandByPrefs.setAdvanced(ctx, true); onAdv(true) }
     }
     if (!adv) return
-    Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        PChip(false, tr("Try it now", "Şimdi dene")) { StandBy.show(ctx) }
-    }
     var tick by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
     val ink = if (colour >= StandByPrefs.COLOURS.size) Color(StandByPrefs.custom(ctx)) else StandByPrefs.COLOURS[colour]
