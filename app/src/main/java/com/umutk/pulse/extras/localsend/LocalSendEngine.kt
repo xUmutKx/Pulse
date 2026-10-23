@@ -58,6 +58,8 @@ object LocalSendEngine {
     var progress by mutableFloatStateOf(0f)
     var running by mutableStateOf(false)
     var note by mutableStateOf("")
+    /** True for a few seconds after a scan starts; the hub shows its loading animation meanwhile. */
+    var scanning by mutableStateOf(false)
 
     private var fingerprint = ""
     private var server: ServerSocket? = null
@@ -132,16 +134,28 @@ object LocalSendEngine {
         return Peer(o.optString("alias", ip), ip, o.optInt("port", PORT), o.optString("protocol", "https") == "https", fp, o.optString("deviceModel", ""), o.optString("deviceType", "mobile"))
     }
 
-    /** Asks every address of the local /24 for its LocalSend info; the ones that answer are listed. */
+    /**
+     * Asks every address of every local /24 for its LocalSend info (Wi-Fi, hotspot, USB tethering and Wi-Fi Direct all have their own interface), and every
+     * neighbour the phone has already talked to (the ARP table, read with root or the shell). The ones that answer are listed.
+     */
     fun scan() {
+        scanning = true
+        pool.execute { runCatching { Thread.sleep(7000) }; scanning = false }
         pool.execute {
-            val base = localAddress() ?: return@execute
-            val prefix = base.substringBeforeLast('.')
-            for (i in 1..254) {
-                val ip = "$prefix.$i"
-                if (ip == base) continue
-                pool.execute { if (running) probe(ip) }
+            val own = locals()
+            val seen = HashSet<String>()
+            val targets = ArrayList<String>()
+            own.forEach { base ->
+                val prefix = base.substringBeforeLast('.')
+                for (i in 1..254) "$prefix.$i".let { if (it != base && seen.add(it)) targets += it }
             }
+            // neighbours on any interface, also on subnets that are not a /24 of ours (USB tethering is often a /28 or /30)
+            runCatching {
+                com.umutk.pulse.Shell.run("ip neigh show 2>/dev/null; cat /proc/net/arp 2>/dev/null").lines().forEach { l ->
+                    Regex("""\b(\d{1,3}(?:\.\d{1,3}){3})\b""").find(l)?.value?.let { ip -> if (ip !in own && !ip.endsWith(".0") && seen.add(ip)) targets += ip }
+                }
+            }
+            targets.forEach { ip -> pool.execute { if (running) probe(ip) } }
         }
     }
 
@@ -160,10 +174,12 @@ object LocalSendEngine {
         return false
     }
 
-    private fun localAddress(): String? = runCatching {
+    private fun locals(): List<String> = runCatching {
         NetworkInterface.getNetworkInterfaces().toList().filter { it.isUp && !it.isLoopback }
-            .flatMap { it.inetAddresses.toList() }.firstOrNull { it is java.net.Inet4Address && it.isSiteLocalAddress }?.hostAddress
-    }.getOrNull()
+            .flatMap { it.inetAddresses.toList() }.filter { it is java.net.Inet4Address && it.isSiteLocalAddress }.mapNotNull { it.hostAddress }
+    }.getOrDefault(emptyList())
+
+    private fun localAddress(): String? = locals().firstOrNull()
 
     // ---------------------------------------------------------------- client
 

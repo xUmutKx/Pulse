@@ -139,6 +139,22 @@ fun PowerampApp(
     val style = remember(skinStyle) { skinStyle.copy(backdrop = PowerampBackdrop.BLACK, solid = Color.Black, gradientTo = null) }
     if (artOpen && track != null) CoverArtDialog(track, style, onSaved = { coverRev++ }, onClose = { artOpen = false })
     val artBg = PowerampPrefs.playerArt(ctx)
+    // the list pages; also drawn under the now playing page while it is pulled down, so the page it lands on is already there (no jump at the hand-over)
+    val tabBody: @Composable (PowerampTab) -> Unit = { t ->
+        when (t) {
+            PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
+            PowerampTab.SEARCH -> SearchScreen(library, track, style, onPlay = { engine.playQueue(library, it) })
+            PowerampTab.EFFECTS -> EffectsScreen(engine.equalizer, style, engine = engine, ui = eqUi)
+            PowerampTab.QUEUE -> QueueScreen(
+                tracks = st.queue,
+                currentIndex = st.index,
+                style = style,
+                onPlay = engine::playAt,
+                onRemove = engine::removeFromQueue,
+                onMove = engine::moveInQueue,
+            )
+        }
+    }
     Box(modifier.fillMaxSize().background(Color.Black)) {
         // only the now-playing page takes the blurred cover as its backdrop, when the player setting allows it
         // one layer only: the blurred cover at full strength, edge to edge outside the safe-area inset; black when off
@@ -150,7 +166,7 @@ fun PowerampApp(
                 // while the now playing page is pulled down, the screen it came from shows underneath
                 // it fades in as the page is pulled (no pop), and the hand-over after the pull needs no second fade of the same screen
                 if (tab == null && pullShown > 0f) Box(Modifier.graphicsLayer { alpha = (pullShown / 260f).coerceIn(0f, 1f) }) {
-                    LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
+                    tabBody(lastTab ?: PowerampTab.LIBRARY)
                 }
                 Crossfade(tab, animationSpec = androidx.compose.animation.core.tween(if (pullShown > 0f) 0 else 300), label = "poweramp-tab") { t ->
                     when (t) {
@@ -203,17 +219,7 @@ fun PowerampApp(
                             onEditTags = { tagEdit = true },
                             onFindArt = { artOpen = true },
                         )
-                        PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
-                        PowerampTab.SEARCH -> SearchScreen(library, track, style, onPlay = { engine.playQueue(library, it) })
-                        PowerampTab.EFFECTS -> EffectsScreen(engine.equalizer, style, engine = engine, ui = eqUi)
-                        PowerampTab.QUEUE -> QueueScreen(
-                            tracks = st.queue,
-                            currentIndex = st.index,
-                            style = style,
-                            onPlay = engine::playAt,
-                            onRemove = engine::removeFromQueue,
-                            onMove = engine::moveInQueue,
-                        )
+                        else -> tabBody(t!!)
                     }
                 }
             }

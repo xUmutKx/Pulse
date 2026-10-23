@@ -395,11 +395,10 @@ fun SettingsPage() {
                 // search over the settings categories
                 var q by remember { mutableStateOf("") }
                 PField(q, { q = it }, tr("Search settings", "Ayarlarda ara"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
-                // the categories as a plain list: a round coloured icon, the name and what is inside (the way Poweramp's settings list its groups)
+                // the categories as a plain list: the icon, the name and what is inside (the way Poweramp's settings list its groups)
                 cats.filter { q.isBlank() || it.title.contains(q, true) || it.sub.contains(q, true) }.forEach { c ->
-                    val bg = when (c.id) { "look" -> 0xFF7E57C2; "general" -> 0xFF1E88E5; "functions" -> 0xFF43A047; "monitor" -> 0xFFEF6C00; else -> 0xFF6D4C41 }
                     Row(Modifier.fillMaxWidth().clickable { cat = c.id }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(44.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color(bg)), contentAlignment = Alignment.Center) { PIcon(c.icon, androidx.compose.ui.graphics.Color.White, 24.dp) }
+                        Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { PIcon(c.icon, T.accent, 26.dp) }
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) { Text(c.title, color = T.text, fontSize = 16.sp, fontWeight = if (T.material) FontWeight.Medium else null); Text(c.sub, color = T.sub, fontSize = 12.sp) }
                         Text("›", color = T.sub, fontSize = 22.sp)

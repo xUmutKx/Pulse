@@ -44,7 +44,18 @@ class MusicPlaybackService : MediaSessionService() {
     internal fun refresh() { session?.setCustomLayout(layout()) }
 
     private val devCb = object : AudioDeviceCallback() {
-        override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) = refresh()
+        override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) {
+            refresh()
+            val types = added?.map { it.type }.orEmpty()
+            val wired = types.any { it == AudioDeviceInfo.TYPE_WIRED_HEADSET || it == AudioDeviceInfo.TYPE_WIRED_HEADPHONES }
+            val usb = types.any { it == AudioDeviceInfo.TYPE_USB_DEVICE || it == AudioDeviceInfo.TYPE_USB_HEADSET }
+            // a USB DAC can pop loudly while it starts up: pause when one connects
+            if (usb && MusicSettings.pauseUsbDac(this@MusicPlaybackService)) engine.pause()
+            else if (wired && MusicSettings.resumeWired(this@MusicPlaybackService)) {
+                Playlists.restore(this@MusicPlaybackService, engine)
+                engine.play()
+            }
+        }
         override fun onAudioDevicesRemoved(removed: Array<out AudioDeviceInfo>?) = refresh()
     }
 
@@ -56,6 +67,11 @@ class MusicPlaybackService : MediaSessionService() {
     }
 
     private val callback = object : MediaSession.Callback {
+        // "Respond to buttons" off: the headset / Bluetooth media keys do nothing
+        @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
+        override fun onMediaButtonEvent(s: MediaSession, controller: MediaSession.ControllerInfo, intent: Intent): Boolean =
+            !MusicSettings.respondButtons(this@MusicPlaybackService)
+
         override fun onConnect(s: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
             val cmds = MediaSession.ConnectionResult.DEFAULT_SESSION_COMMANDS.buildUpon().also { b ->
                 NotifBtn.values().filter { !it.builtin }.forEach { b.add(SessionCommand(NotifBtn.action(it), Bundle.EMPTY)) }

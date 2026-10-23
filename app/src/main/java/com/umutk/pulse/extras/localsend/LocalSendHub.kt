@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -45,6 +46,23 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+/** The loading animation while devices are searched: the Windows 11 progress ring (an arc that grows, shrinks and turns) in Fluent, a plain spinner elsewhere. */
+@Composable
+private fun ScanRing(modifier: Modifier = Modifier) {
+    val accent = com.umutk.pulse.Look.accent
+    val fluent = T.id == "win11" && !T.material
+    if (!fluent) { androidx.compose.material3.CircularProgressIndicator(modifier.size(20.dp), color = accent, strokeWidth = 2.dp); return }
+    val t = androidx.compose.animation.core.rememberInfiniteTransition(label = "ring")
+    val turn by t.animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1400, easing = androidx.compose.animation.core.LinearEasing)), label = "turn")
+    // the arc breathes between a short dash and most of the circle, the way the Windows 11 ring does
+    val sweep by t.animateFloat(30f, 250f, androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(700, easing = androidx.compose.animation.core.FastOutSlowInEasing), androidx.compose.animation.core.RepeatMode.Reverse), label = "sweep")
+    androidx.compose.foundation.Canvas(modifier.size(22.dp)) {
+        val w = 2.5.dp.toPx()
+        drawArc(accent.copy(alpha = .18f), 0f, 360f, false, topLeft = androidx.compose.ui.geometry.Offset(w / 2, w / 2), size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w), style = androidx.compose.ui.graphics.drawscope.Stroke(w))
+        drawArc(accent, turn - 90f, sweep, false, topLeft = androidx.compose.ui.geometry.Offset(w / 2, w / 2), size = androidx.compose.ui.geometry.Size(size.width - w, size.height - w), style = androidx.compose.ui.graphics.drawscope.Stroke(w, cap = androidx.compose.ui.graphics.StrokeCap.Round))
+    }
+}
 
 private fun sizeText(b: Long) = when { b >= 1L shl 30 -> "%.1f GB".format(b / 1073741824.0); b >= 1L shl 20 -> "%.1f MB".format(b / 1048576.0); b >= 1024 -> "%.0f KB".format(b / 1024.0); else -> "$b B" }
 
@@ -85,6 +103,7 @@ fun LocalSendHub(back: () -> Unit) {
         if (result.isNotEmpty()) Text(result, color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Nearby devices", "Yakındaki cihazlar"), color = com.umutk.pulse.Look.accent, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            if (LocalSendEngine.scanning) ScanRing(Modifier.padding(end = 8.dp))
             Box(Modifier.size(40.dp).clickable { LocalSendEngine.announce(); LocalSendEngine.scan() }, contentAlignment = Alignment.Center) { PIcon("rotate", T.text, 22.dp) }
         }
         val list = LocalSendEngine.peers.values.sortedBy { it.alias.lowercase() }

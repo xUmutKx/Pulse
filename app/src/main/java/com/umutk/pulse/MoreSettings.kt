@@ -444,7 +444,7 @@ fun ThemeWallpaperRow(lookId: String) {
     }
     // the stock pictures of this look's era (Windows 11 has its own A-D packs under Background); the own picture wins while one is set
     val walls = com.umutk.pulse.features.wallsFor(lookId)
-    if (walls.isNotEmpty()) {
+    if (walls.isNotEmpty() && lookId != "win11") {
         val sel = com.umutk.pulse.features.wallSel(lookId)
         Box(Modifier.padding(vertical = 6.dp)) {
             com.umutk.pulse.features.WallGrid(lookId, if (uri == null) sel else -1) { i ->
@@ -623,7 +623,7 @@ private fun ExtraAppsCard() {
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "PaintLauncher" to "extraPaint", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
-        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraMessages", "ExtraStoreLauncher" to "extraStore")
+        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "ExtraStoreLauncher" to "extraStore")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
     val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }

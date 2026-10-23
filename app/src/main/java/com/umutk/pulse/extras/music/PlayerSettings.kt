@@ -156,7 +156,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 importNote = r.getOrNull()?.let { x ->
                     tr("${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (x.missing > 0) ", ${x.missing} songs not found" else ""),
                         "${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (x.missing > 0) ", ${x.missing} şarkı bulunamadı" else ""))
-                } ?: tr("Poweramp's data could not be read (needs root and Poweramp installed)", "Poweramp verisi okunamadı (root ve Poweramp gerekir)")
+                } ?: tr("Poweramp's data could not be read (needs root and Poweramp installed)", "Poweramp verisi okunamadı (root ve Poweramp gerekir)") + PowerampImport.lastError.let { if (it.isBlank()) "" else ": $it" }
             }
         }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("phone", T.text, 22.dp)
@@ -191,6 +191,18 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             btAuto = it; BluetoothAutoplay.setEnabled(c, it)
             // the receiver lives in the music service, so the switch starts it; BLUETOOTH_CONNECT is needed to read the device class
             if (it) { askBt.launch(Manifest.permission.BLUETOOTH_CONNECT); runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
+        }
+        if (cat == "bt") {
+            var rw by remember { mutableStateOf(MusicSettings.resumeWired(c)) }
+            var pu by remember { mutableStateOf(MusicSettings.pauseOnUnplug(c)) }
+            var pd by remember { mutableStateOf(MusicSettings.pauseUsbDac(c)) }
+            var rb by remember { mutableStateOf(MusicSettings.respondButtons(c)) }
+            var af by remember { mutableStateOf(MusicSettings.audioFocus(c)) }
+            SwitchRow(tr("Resume on wired headset", "Kablolu kulaklıkta devam et"), rw) { rw = it; MusicSettings.setResumeWired(c, it); if (it) runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
+            SwitchRow(tr("Pause on headset disconnect", "Kulaklık çıkınca duraklat"), pu) { pu = it; MusicSettings.setPauseOnUnplug(c, it); engine.reloadSettings() }
+            SwitchRow(tr("Pause on USB DAC connection", "USB DAC bağlanınca duraklat"), pd) { pd = it; MusicSettings.setPauseUsbDac(c, it); if (it) runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
+            SwitchRow(tr("Audio focus", "Ses odağı"), af) { af = it; MusicSettings.setAudioFocus(c, it); engine.reloadSettings() }
+            SwitchRow(tr("Respond to buttons", "Tuşlara yanıt ver"), rb) { rb = it; MusicSettings.setRespondButtons(c, it) }
         }
         if (cat == "misc") SwitchRow(tr("Keep screen on", "Ekranı açık tut"), screenOn) { screenOn = it; MusicSettings.setKeepScreenOn(c, it) }
         if (cat == "misc") {
@@ -260,7 +272,7 @@ private fun settingCats(which: SettingsFor) = listOfNotNull(
     SetCat("background", "image", "Background", "Arka plan", "Now playing backdrop, details", "Çalan şarkı arka planı, ayrıntılar").takeIf { which == SettingsFor.POWERAMP },
     SetCat("art", "image", "Album Art", "Albüm kapağı", "Download, cache cleanup, Poweramp backup", "İndirme, önbellek temizliği, Poweramp yedeği"),
     SetCat("library", "folder", "Library", "Kütüphane", "Rescan, music folders, queue, statistics", "Yeniden tara, müzik klasörleri, kuyruk, istatistik"),
-    SetCat("bt", "sensors", "Headset/Bluetooth", "Kulaklık/Bluetooth", "Play when a Bluetooth device connects", "Bluetooth cihaz bağlanınca çal"),
+    SetCat("bt", "sensors", "Headset/Bluetooth", "Kulaklık/Bluetooth", "Resume, pause, buttons and audio focus", "Devam, duraklat, tuşlar ve ses odağı"),
     SetCat("misc", "settings", "Misc", "Çeşitli", "Screen, live lyrics, other tweaks", "Ekran, canlı sözler, diğer ayarlar"),
 )
 
