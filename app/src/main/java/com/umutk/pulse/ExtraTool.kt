@@ -82,6 +82,8 @@ val PaintLook = ToolLook("paint_look")
 val CalculatorLook = ToolLook("calculator_look", "win11")
 // LocalSend opens in Material until another look is picked (AMOLED is in the look list)
 val LocalSendLook = ToolLook("localsend_look")
+// the keyboard's settings open in Material until another look is picked (the keyboard's own theme is chosen inside)
+val KeyboardLook = ToolLook("keyboard_look")
 
 /** Present only inside [ExtraToolActivity]: the page can offer the look choice, inside Pulse itself it is null. */
 class ExtraLookControl(val id: String, val set: (String) -> Unit)
@@ -135,7 +137,7 @@ open class ExtraToolActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
-        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; else -> null }
+        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; else -> null }
         toolLook = store
         enter()
         setContent {
@@ -177,10 +179,14 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("NotifHistLauncher") -> "notifhist"
             n.endsWith("ExtraStoreLauncher") -> "extrastore"
             n.endsWith("LocalSendLauncher") -> "localsend"
+            n.endsWith("KeyboardLauncher") || n.endsWith("KeyboardSettingsActivity") -> "keyboard"
             else -> i.getStringExtra("route") ?: "music"
         }
     }
 }
+
+/** The keyboard's settings, started by the system's keyboard list (the gear of the input method). */
+class KeyboardSettingsActivity : ExtraToolActivity()
 
 /** The tool activity in a see-through window: the launcher's framed Pulse windows (see FramedWindow). */
 class FramedToolActivity : ExtraToolActivity()

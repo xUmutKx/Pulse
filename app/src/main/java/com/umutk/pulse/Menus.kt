@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.Keyboard
 import androidx.compose.material.icons.outlined.Calculate
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
@@ -185,6 +186,7 @@ object AppPlace {
         App("WeatherLauncher", "Weather", "Hava durumu", "weather", Icons.Outlined.WbSunny) { c, _ -> launchExtra(c, TOOL, "weather") },
         App("MessagesLauncher", "Messages", "Mesajlar", "chat", Icons.Outlined.Message) { _, o -> o("messages") },
         App("ScreenRecLauncher", "Screen recorder", "Ekran kaydı", "record", Icons.Outlined.FiberManualRecord) { _, o -> o("screenrec") },
+        App("KeyboardLauncher", "Keyboard", "Klavye", "keyboard", Icons.Outlined.Keyboard) { c, _ -> launchExtra(c, TOOL, "keyboard") },
         App("LocalSendLauncher", "LocalSend", "LocalSend", "wifi", Icons.Outlined.Wifi) { _, o -> o("localsend") },
         App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "bell", Icons.Outlined.Notifications) { _, o -> o("notifhist") },
     )
