@@ -89,7 +89,7 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     if (k == "applock") { com.umutk.pulse.applock.AppLockIcon(tint, size, modifier); return }
     // Windows 11: every icon group has its own style (IconStyle): original, Fluent colour or line
     val cat = if (k.startsWith("tool_")) IconCat.TOOLS else if (k.startsWith("extra")) IconCat.APPS else IconCat.MENU
-    val st = if (T.id == "win11" && !T.material) IconStyle.of(cat) else "original"
+    val st = if (T.id == "win11" && !T.material) (LocalIconStyleOverride.current ?: IconStyle.of(cat)) else "original"
     val fluent = T.id == "win11" && !T.material && st != "line"
     val colour = st == "colour"
     // the tools and extra apps wear the colour Fluent picture of their own (fc_*.png), else the filled Fluent glyph, never the thin outline
@@ -402,6 +402,9 @@ private fun FluentColorGlyph2(key: String, size: androidx.compose.ui.unit.Dp, mo
 }
 
 /** The icon groups of the Windows 11 look; each has its own style (Settings > Look > Icons). */
+/** Set while a style preview is drawn: the icons inside use this style instead of the saved one. */
+val LocalIconStyleOverride = androidx.compose.runtime.compositionLocalOf<String?> { null }
+
 enum class IconCat(val id: String, val en: String, val trName: String) {
     MENU("menu", "Menus, pages and buttons", "Menüler, sayfalar ve düğmeler"),
     APPS("apps", "Apps", "Uygulamalar"),

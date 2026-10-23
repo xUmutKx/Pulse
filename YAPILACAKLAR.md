@@ -1088,3 +1088,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.259 derlenmedi: derleme düzeltmesi (ControlPanel getValue/setValue importları).
 - 0.10.260 derlenmedi: deniz dalgası kaldırıldı (yanlış anlaşılma); yerine başlatıcı ses efektleri: görünüme göre açılış sesi + tıklama (Ekstralar > Ses efektleri).
 - 0.10.261 derlenmedi: APK yükleyici ayarlarında anahtarlar Material 3 anahtar; yeni "Yeni kurulumları küçült" seçeneği (tek APK: kullanılmayan işlemci kütüphaneleri silinir, Pulse anahtarıyla yeniden imzalanır, sadece kurulu olmayan uygulamalar). Ses efektleri: kullanıcı zip gönderecek, yeni ses eklenmeyecek.
+- 0.10.262 derlenmedi: başlatıcı sesleri gerçek Windows sesleri (95/XP/7/10/11 açılış + menü tıklaması, res/raw), Ekran kapağı ayarlardan ve Ekstra uygulamalar listesinden kaldırıldı (Toolkit de var), Windows 11 simge stili seçimi yazı yerine örnek simgeler.
