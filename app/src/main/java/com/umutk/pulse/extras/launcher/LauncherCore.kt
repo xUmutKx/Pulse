@@ -112,12 +112,12 @@ object LauncherLooks {
         defaultLook, MaterialLauncherLook("amoled", "AMOLED", "AMOLED", black = true),
         Win11LauncherLook(), Win10LauncherLook(),
         Win7LauncherLook(), Win95LauncherLook(), XpLauncherLook(),
-        WinPhoneLauncherLook("winphone", "Windows Phone", "Windows Phone", black = false),
-        WinPhoneLauncherLook("winphone_amoled", "Windows Phone AMOLED", "Windows Phone AMOLED", black = true),
+        // one Windows Phone look, on pure black (the grey one is gone; a saved "winphone_amoled" resolves to it)
+        WinPhoneLauncherLook("winphone", "Windows Phone", "Windows Phone", black = true),
         MaterialLauncherLook("oneui", "One UI", "One UI", black = false),
         MaterialLauncherLook("coloros", "ColorOS", "ColorOS", black = false),
     )
-    fun byId(id: String): LauncherLook = all.firstOrNull { it.id == id } ?: defaultLook
+    fun byId(id: String): LauncherLook = all.firstOrNull { it.id == (if (id == "winphone_amoled") "winphone" else id) } ?: defaultLook
 }
 
 /** App picture from the launcher icon, or a letter tile when the icon could not be read. Clipped to a squircle. */

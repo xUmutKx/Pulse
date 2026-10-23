@@ -16,7 +16,7 @@ import java.util.Locale
  */
 object ScreenShot {
     /** Whether a screenshot can be taken at all: root or Shizuku is needed. */
-    fun possible(): Boolean = Shell.root == true || Shell.shizukuOk() || com.umutk.pulse.features.CoverAccessibilityService.instance != null
+    fun possible(): Boolean = Shell.root != false || Shell.shizukuOk() || com.umutk.pulse.features.CoverAccessibilityService.instance != null
 
     /** True when the picture is (almost) all black: the sign that a secure window was blanked. */
     private fun blank(path: String): Boolean {
@@ -33,8 +33,16 @@ object ScreenShot {
     fun take(c: Context, done: (String?) -> Unit) {
         val app = c.applicationContext
         // without root or Shizuku the accessibility layer takes the picture (the system's own screenshot call; a secure window comes out black there)
-        if (Shell.root != true && !Shell.shizukuOk()) { com.umutk.pulse.features.CoverAccessibilityService.instance?.let { accShot(app, it, done); return } }
+        // root is not asked until something needs it: when it was never checked (the tile and the launcher run in their own processes) it is checked now, not assumed absent
+        if (Shell.root == false && !Shell.shizukuOk()) { com.umutk.pulse.features.CoverAccessibilityService.instance?.let { accShot(app, it, done); return } }
         Thread {
+            if (Shell.root == null && !Shell.shizukuOk()) {
+                Shell.detectRoot()
+                if (Shell.root != true) {
+                    val acc = com.umutk.pulse.features.CoverAccessibilityService.instance
+                    if (acc != null) { Handler(Looper.getMainLooper()).post { accShot(app, acc, done) }; return@Thread }
+                }
+            }
             val dir = "/sdcard/DCIM/Screenshots"
             val path = "$dir/Pulse_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".png"
             fun sh(cmd: String) = if (Shell.root == true) Shell.runRoot(cmd) else Shell.run(cmd)
