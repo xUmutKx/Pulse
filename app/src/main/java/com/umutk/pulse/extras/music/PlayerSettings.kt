@@ -137,7 +137,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             importNote = r.getOrNull()?.let { (l, n) -> tr("Saved: $l playlists, $n songs with a rating or plays", "Kaydedildi: $l çalma listesi, puanlı ya da dinlenmiş $n şarkı") } ?: tr("The backup could not be written", "Yedek yazılamadı")
         }
     }
-    if (cat == "art") SettingsSection(tr("Poweramp backup", "Poweramp yedeği")) {
+    if (cat == "library") SettingsSection(tr("Poweramp backup", "Poweramp yedeği")) {
         SwitchRow(tr("Write covers into the songs too (MP3)", "Kapakları şarkıların kendisine de yaz (MP3)"), embedCovers) { embedCovers = it }
         Row(Modifier.fillMaxWidth().clickable { pickBackup.launch(arrayOf("*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("download", T.text, 22.dp)
@@ -155,8 +155,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.direct(c, MusicLibrary.tracks.value, embedCovers) } }
                 importNote = r.getOrNull()?.let { x ->
                     tr("${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers",
-                        "${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak")
-                } ?: tr("Poweramp's data could not be read (needs root and Poweramp installed)", "Poweramp verisi okunamadı (root ve Poweramp gerekir)") + PowerampImport.lastError.let { if (it.isBlank()) "" else ": $it" }
+                        "${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak") + (if (x.ratings == 0 && x.plays == 0 && PowerampImport.lastError.isNotBlank()) ": " + PowerampImport.lastError else "")
+                } ?: tr("Poweramp's data could not be read (needs root and Poweramp installed)", "Poweramp verisi okunamadı (root ve Poweramp gerekir)") + (r.exceptionOrNull()?.let { ": " + (it.message ?: it.javaClass.simpleName) } ?: PowerampImport.lastError.let { if (it.isBlank()) "" else ": $it" })
             }
         }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("phone", T.text, 22.dp)

@@ -121,7 +121,8 @@ fun CoverSettings() {
     var text by remember { mutableStateOf(CoverStore.text(ctx)) }
     Text(tr("Screen cover", "Ekran kapağı"), color = T.text, fontSize = 15.sp)
     Text(tr("A black cover over the whole screen", "Tüm ekranı kaplayan siyah bir kapak"), color = T.sub, fontSize = 12.sp)
-    StandBySettings()
+    var adv by remember { mutableStateOf(StandByPrefs.advanced(ctx)) }
+    StandBySettings(adv) { adv = it }
     if (!Settings.canDrawOverlays(ctx) && CoverAccessibilityService.instance == null) {
         Text(tr("Needs the 'display over other apps' permission.", "'Diğer uygulamaların üstünde göster' izni gerekir."), color = T.sub, fontSize = 12.sp)
         PButton(tr("Allow", "İzin ver")) { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -134,6 +135,8 @@ fun CoverSettings() {
             Text(if (layerOn) tr("On: drawn as the topmost layer", "Açık: en üst katman olarak çizilir") else tr("Off: switch on \"Pulse · Screen cover layer\" in Accessibility", "Kapalı: Erişilebilirlik'te \"Pulse · Screen cover layer\" açılmalı"), color = T.sub, fontSize = 12.sp)
         }
     }
+    // the clock, date and battery switches belong to the basic cover only: the advanced one picks its pages in its own editor
+    if (!adv) {
     Text(tr("Stays visible on the cover", "Kapakta görünür kalanlar"), color = T.sub, fontSize = 12.sp)
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(tr("Clock", "Saat"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
@@ -147,10 +150,12 @@ fun CoverSettings() {
         Text(tr("Battery", "Pil"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
         PSwitch(battery, { battery = it; CoverStore.setBattery(ctx, it) })
     }
+    }
     // brightness while the cover is up
     var bright by remember { mutableIntStateOf(CoverStore.bright(ctx).let { if (it < 0) 100 else it }) }
     Text(tr("Brightness", "Parlaklık"), color = T.sub, fontSize = 12.sp)
     com.umutk.pulse.PSlider(bright.toFloat(), { bright = it.toInt().coerceIn(5, 100); CoverStore.setBright(ctx, bright) }, 5f..100f) {}
+    if (!adv) {
     // an open window in the cover: drag its edges
     var hole by remember { mutableStateOf(CoverStore.hole(ctx)) }
     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -191,6 +196,7 @@ fun CoverSettings() {
     }
     Text(tr("Own text", "Kendi yazın"), color = T.text, fontSize = 15.sp)
     PField(text, { text = it; CoverStore.setText(ctx, it) }, tr("Shown under the clock", "Saatin altında görünür"))
+    }
 }
 
 /** The clock of one cover design, at [k] of its preview size (the cover itself draws it in CoverService with the same faces). */
