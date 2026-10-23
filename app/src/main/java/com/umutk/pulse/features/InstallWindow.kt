@@ -938,6 +938,8 @@ object InstallShow {
     var cert by mutableStateOf(false)
     /** Splits of other CPUs (v7, x86 on an arm64 phone) are left out of the install: unticked from the start. */
     var libs by mutableStateOf(false)
+    /** A single APK that is not installed yet is cut down to the phone's CPU libraries and signed again. */
+    var shrink by mutableStateOf(false)
     /** Install source: "def" (Pulse), "play" or "custom" with [srcCustom]. Needs root or Shizuku to take effect. */
     var srcMode by mutableStateOf("def")
     var srcCustom by mutableStateOf("")
@@ -968,14 +970,14 @@ object InstallShow {
         round = p.getBoolean("inst_round", true)
         loader = p.getString("inst_loader", "round") ?: "round"
         srcMode = p.getString("inst_src", "def") ?: "def"; srcCustom = p.getString("inst_src_custom", "") ?: ""
-        sdk = p.getBoolean("inst_sdk", false); cert = p.getBoolean("inst_cert", false); libs = p.getBoolean("inst_libs", false)
+        sdk = p.getBoolean("inst_sdk", false); cert = p.getBoolean("inst_cert", false); libs = p.getBoolean("inst_libs", false); shrink = p.getBoolean("inst_shrink", false)
     }
     fun set(c: android.content.Context, key: String, v: Boolean) {
         when (key) {
             "inst_name" -> name = v; "inst_ver" -> version = v; "inst_pkg" -> pkg = v; "inst_chip" -> chip = v
             "inst_bio" -> biometric = v; "inst_cmp1" -> cmpSingle = v; "inst_sdkm" -> sdkMulti = v; "inst_same1" -> sameSingle = v
             "inst_ext" -> extended = v; "inst_sugg" -> suggest = v; "inst_exp" -> expand = v; "inst_cancel" -> cancelOnDismiss = v
-            "inst_round" -> round = v; "inst_sdk" -> sdk = v; "inst_cert" -> cert = v; "inst_libs" -> libs = v
+            "inst_round" -> round = v; "inst_sdk" -> sdk = v; "inst_cert" -> cert = v; "inst_libs" -> libs = v; "inst_shrink" -> shrink = v
         }
         prefs(c).edit().putBoolean(key, v).apply()
     }

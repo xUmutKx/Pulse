@@ -63,6 +63,15 @@ private fun SwitchRow(title: String, sub: String, on: Boolean, onChange: (Boolea
     }
 }
 
+/** An installer option: a Material 3 switch, whatever the look of the page. */
+@Composable
+private fun MatSwitchRow(title: String, sub: String, on: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable { onChange(!on) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) { Text(title, color = T.text, fontSize = 15.sp); if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 12.sp) }
+        androidx.compose.material3.Switch(on, onChange)
+    }
+}
+
 @Composable
 private fun SliderRow(title: String, value: Float, range: ClosedFloatingPointRange<Float>, onChange: (Float) -> Unit, onDone: () -> Unit) {
     Text(title, color = T.text, fontSize = 14.sp)
@@ -325,13 +334,14 @@ fun InstallWindowSettings() {
     InstallShow.load(ctx)
     PCard {
         Text("Install window", color = Look.accent, fontSize = 15.sp)
-        SwitchRow("App name", "Show the name and its badge", InstallShow.name) { InstallShow.set(ctx, "inst_name", it) }
-        SwitchRow("Version", "Show the version and code", InstallShow.version) { InstallShow.set(ctx, "inst_ver", it) }
-        SwitchRow("Package name", "Show the package name", InstallShow.pkg) { InstallShow.set(ctx, "inst_pkg", it) }
-        SwitchRow("Status", "Show New, Identical, Upgrade, Downgrade", InstallShow.chip) { InstallShow.set(ctx, "inst_chip", it) }
-        SwitchRow("SDK versions", "Min and target SDK of the APK. Off by default", InstallShow.sdk) { InstallShow.set(ctx, "inst_sdk", it) }
-        SwitchRow("Certificate", "The signing certificate fingerprint. Off by default", InstallShow.cert) { InstallShow.set(ctx, "inst_cert", it) }
-        SwitchRow(tr("Other CPU files", "Diğer işlemci dosyaları"), tr("Leave out the splits of CPUs this phone does not use (v7, x86 on an arm64 phone): less space", "Bu telefonun kullanmadığı işlemcilerin parçalarını (arm64'te v7, x86) dışarıda bırak: daha az yer"), InstallShow.libs) { InstallShow.set(ctx, "inst_libs", it) }
+        MatSwitchRow("App name", "Show the name and its badge", InstallShow.name) { InstallShow.set(ctx, "inst_name", it) }
+        MatSwitchRow("Version", "Show the version and code", InstallShow.version) { InstallShow.set(ctx, "inst_ver", it) }
+        MatSwitchRow("Package name", "Show the package name", InstallShow.pkg) { InstallShow.set(ctx, "inst_pkg", it) }
+        MatSwitchRow("Status", "Show New, Identical, Upgrade, Downgrade", InstallShow.chip) { InstallShow.set(ctx, "inst_chip", it) }
+        MatSwitchRow("SDK versions", "Min and target SDK of the APK. Off by default", InstallShow.sdk) { InstallShow.set(ctx, "inst_sdk", it) }
+        MatSwitchRow("Certificate", "The signing certificate fingerprint. Off by default", InstallShow.cert) { InstallShow.set(ctx, "inst_cert", it) }
+        MatSwitchRow(tr("Other CPU files", "Diğer işlemci dosyaları"), tr("Leave out the splits of CPUs this phone does not use (v7, x86 on an arm64 phone): less space", "Bu telefonun kullanmadığı işlemcilerin parçalarını (arm64'te v7, x86) dışarıda bırak: daha az yer"), InstallShow.libs) { InstallShow.set(ctx, "inst_libs", it) }
+        MatSwitchRow(tr("Shrink new installs", "Yeni kurulumları küçült"), tr("A single APK loses the CPU libraries this phone does not use (arm64 phone: v7 and x86 go). It is signed again with Pulse's key, so it only applies to apps that are not installed yet", "Tek APK, bu telefonun kullanmadığı işlemci kütüphanelerini (arm64'te v7 ve x86) kaybeder. Pulse anahtarıyla yeniden imzalanır; sadece henüz kurulu olmayan uygulamalara uygulanır"), InstallShow.shrink) { InstallShow.set(ctx, "inst_shrink", it) }
     }
     Downloads.load(ctx)
     PCard {
@@ -401,18 +411,18 @@ fun InstallWindowSettings() {
     }
     PCard {
         Text("Security", color = Look.accent, fontSize = 15.sp)
-        SwitchRow("Require biometric to install", "Fingerprint or face before each install. Off: never asked", InstallShow.biometric) { InstallShow.set(ctx, "inst_bio", it) }
-        SwitchRow("Cancel installation on dismiss", "Closing the window stops a waiting biometric check", InstallShow.cancelOnDismiss) { InstallShow.set(ctx, "inst_cancel", it) }
+        MatSwitchRow("Require biometric to install", "Fingerprint or face before each install. Off: never asked", InstallShow.biometric) { InstallShow.set(ctx, "inst_bio", it) }
+        MatSwitchRow("Cancel installation on dismiss", "Closing the window stops a waiting biometric check", InstallShow.cancelOnDismiss) { InstallShow.set(ctx, "inst_cancel", it) }
     }
     PCard {
         Text("Details", color = Look.accent, fontSize = 15.sp)
-        SwitchRow("Show version compare in single line", "Installed and new version on one line. Off: two lines", InstallShow.cmpSingle) { InstallShow.set(ctx, "inst_cmp1", it) }
-        SwitchRow("Show SDK compare in multi lines", "Min and target SDK on their own lines. Off: one line", InstallShow.sdkMulti) { InstallShow.set(ctx, "inst_sdkm", it) }
-        SwitchRow("Show identical data as a single value", "When the old and new values match, show one value", InstallShow.sameSingle) { InstallShow.set(ctx, "inst_same1", it) }
-        SwitchRow("Show extended menu", "More options in the install dialog", InstallShow.extended) { InstallShow.set(ctx, "inst_ext", it) }
-        SwitchRow("Show Smart Suggestions", "Next steps shown when an install fails", InstallShow.suggest) { InstallShow.set(ctx, "inst_sugg", it) }
-        SwitchRow("Expand panel by default", "Install options open when the dialog opens", InstallShow.expand) { InstallShow.set(ctx, "inst_exp", it) }
-        SwitchRow("Rounded corners", "Off: square corners in the install window", InstallShow.round) { InstallShow.set(ctx, "inst_round", it) }
+        MatSwitchRow("Show version compare in single line", "Installed and new version on one line. Off: two lines", InstallShow.cmpSingle) { InstallShow.set(ctx, "inst_cmp1", it) }
+        MatSwitchRow("Show SDK compare in multi lines", "Min and target SDK on their own lines. Off: one line", InstallShow.sdkMulti) { InstallShow.set(ctx, "inst_sdkm", it) }
+        MatSwitchRow("Show identical data as a single value", "When the old and new values match, show one value", InstallShow.sameSingle) { InstallShow.set(ctx, "inst_same1", it) }
+        MatSwitchRow("Show extended menu", "More options in the install dialog", InstallShow.extended) { InstallShow.set(ctx, "inst_ext", it) }
+        MatSwitchRow("Show Smart Suggestions", "Next steps shown when an install fails", InstallShow.suggest) { InstallShow.set(ctx, "inst_sugg", it) }
+        MatSwitchRow("Expand panel by default", "Install options open when the dialog opens", InstallShow.expand) { InstallShow.set(ctx, "inst_exp", it) }
+        MatSwitchRow("Rounded corners", "Off: square corners in the install window", InstallShow.round) { InstallShow.set(ctx, "inst_round", it) }
     }
 }
 
