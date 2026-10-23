@@ -5,8 +5,8 @@ class ExtraKeyDef(val id: String, val label: String, val code: Int = 0, val mod:
 
 object ExtraKeys {
     val all = listOf(
-        ExtraKeyDef("esc", "Esc", 111), ExtraKeyDef("tab", "Tab", 61),
-        ExtraKeyDef("ctrl", "Ctrl", mod = true), ExtraKeyDef("alt", "Alt", mod = true), ExtraKeyDef("win", "Win", mod = true), ExtraKeyDef("shiftm", "Shift", mod = true),
+        ExtraKeyDef("esc", "Esc", 111), ExtraKeyDef("tab", "⇥ Tab", 61),
+        ExtraKeyDef("ctrl", "Ctrl", mod = true), ExtraKeyDef("alt", "Alt", mod = true), ExtraKeyDef("win", "Win", mod = true), ExtraKeyDef("shiftm", "⇧ Shift", mod = true),
         ExtraKeyDef("left", "←", 21, repeat = true), ExtraKeyDef("down", "↓", 20, repeat = true), ExtraKeyDef("up", "↑", 19, repeat = true), ExtraKeyDef("right", "→", 22, repeat = true),
         ExtraKeyDef("home", "Home", 122), ExtraKeyDef("end", "End", 123), ExtraKeyDef("pgup", "PgUp", 92, repeat = true), ExtraKeyDef("pgdn", "PgDn", 93, repeat = true),
         ExtraKeyDef("del", "Del", 112, repeat = true), ExtraKeyDef("ins", "Ins", 124),
@@ -14,7 +14,8 @@ object ExtraKeys {
     ) + (1..12).map { ExtraKeyDef("f$it", "F$it", 130 + it) }
 
     fun byId(id: String) = all.firstOrNull { it.id == id }
-    const val DEFAULT = "esc,tab,ctrl,alt,win,left,down,up,right"
+    const val OLD_DEFAULT = "esc,tab,ctrl,alt,win,left,down,up,right"
+    const val DEFAULT = "esc,tab,ctrl,alt,win,shiftm,left,down,up,right"
 
     /** The tools the bar above the keys can hold: id and name. */
     val toolbar = listOf(
