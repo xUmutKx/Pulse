@@ -27,6 +27,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,6 +47,7 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.PSwitch
 import com.umutk.pulse.T
 import com.umutk.pulse.pageGutter
+import com.umutk.pulse.extras.ui.SettingsSection
 import com.umutk.pulse.tr
 
 /** The Galaxy Buds manager: pick the earbuds, see the battery and which bud is in the ear, change the noise control, and let them stop the music when taken out. */
@@ -61,12 +63,20 @@ fun BudsScreen(back: () -> Unit) {
     var noiseOff by remember { mutableStateOf(BudsPrefs.noiseOffOnRemove(ctx)) }
     var resume by remember { mutableStateOf(BudsPrefs.resumeOnWear(ctx)) }
     var keep by remember { mutableStateOf(BudsPrefs.keepOn(ctx)) }
+    // every paired earphone / headset, the Galaxy Buds first (a renamed pair has no "Buds" in its name)
     val devices = remember(granted) {
         if (!granted) emptyList() else runCatching {
-            (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bondedDevices.orEmpty()
-                .filter { (runCatching { it.name }.getOrNull() ?: "").contains("Buds", true) }.map { it.address to (runCatching { it.name }.getOrNull() ?: it.address) }
+            (ctx.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager).adapter?.bondedDevices.orEmpty().filter { d ->
+                val n = runCatching { d.name }.getOrNull() ?: ""
+                val major = runCatching { d.bluetoothClass?.majorDeviceClass }.getOrNull()
+                n.contains("Buds", true) || n.contains("Galaxy", true) || major == android.bluetooth.BluetoothClass.Device.Major.AUDIO_VIDEO
+            }.sortedByDescending { (runCatching { it.name }.getOrNull() ?: "").contains("Buds", true) }
+                .map { it.address to (runCatching { it.name }.getOrNull() ?: it.address) }
         }.getOrDefault(emptyList())
     }
+    // the only pair is picked at once, and the link is opened when the screen opens
+    LaunchedEffect(devices) { if (address == null && devices.size == 1) { address = devices[0].first; BudsPrefs.setAddress(ctx, address) } }
+    LaunchedEffect(address, granted) { if (address != null && granted && !BudsLink.state.value.connected) BudsService.start(ctx) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
@@ -111,18 +121,23 @@ fun BudsScreen(back: () -> Unit) {
                 Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     listOf(0 to tr("Off", "Kapalı"), 1 to "ANC", 2 to tr("Ambient", "Ortam")).forEach { (m, n) -> PChip(s.noise == m, n) { BudsLink.setNoise(m) } }
                 }
+                Text(when (s.noise) {
+                    1 -> tr("Active noise cancelling: the earbuds listen to the outside and play the opposite sound, so engines and crowds get quieter.", "Aktif gürültü engelleme: kulaklık dışarıyı dinler ve ters sesi çalar, motor ve kalabalık sesi azalır.")
+                    2 -> tr("Ambient sound: the outside is played into your ears, so you can hear people and traffic with the earbuds in.", "Ortam sesi: dışarıdaki ses kulağına verilir, kulaklık takılıyken insanları ve trafiği duyarsın.")
+                    0 -> tr("Off: the earbuds only play the music, nothing is cancelled and nothing is let in.", "Kapalı: kulaklık sadece müziği çalar, ses engellenmez ve dışarıdan ses verilmez.")
+                    else -> ""
+                }, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             }
         } else if (address != null) Text(tr("Not connected. Put the earbuds in or open their case.", "Bağlı değil. Kulaklığı tak ya da kutusunu aç."), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 8.dp))
-        // what happens when they come out
-        PCard {
-            Text(tr("When the earbuds come out", "Kulaklıklar çıkınca"), color = T.sub, fontSize = 12.sp)
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) { Text(tr("Stop the music", "Müziği durdur"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f)); PSwitch(pause, { pause = it; BudsPrefs.setPauseOnRemove(ctx, it) }) }
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) { Text(tr("Turn noise control off", "Gürültü denetimini kapat"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f)); PSwitch(noiseOff, { noiseOff = it; BudsPrefs.setNoiseOffOnRemove(ctx, it) }) }
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) { Text(tr("Put back as it was when worn again", "Takınca eski haline getir"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f)); PSwitch(resume, { resume = it; BudsPrefs.setResumeOnWear(ctx, it) }) }
-            Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Stay connected in the background", "Arka planda bağlı kal"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                PSwitch(keep, { keep = it; BudsPrefs.setKeepOn(ctx, it); if (it && address != null) BudsService.start(ctx) else if (!it) BudsService.stop(ctx) })
-            }
+        SettingsSection(tr("When the earbuds come out", "Kulaklıklar çıkınca"), startOpen = true) {
+            BRow(tr("Stop the music", "Müziği durdur"), tr("When both earbuds are taken out of your ears, the music or video that is playing is paused.", "İki kulaklık da kulaktan çıkınca çalan müzik ya da video duraklatılır."), pause) { pause = it; BudsPrefs.setPauseOnRemove(ctx, it) }
+            BRow(tr("Turn noise control off", "Gürültü denetimini kapat"), tr("Noise cancelling and ambient sound are switched off while the earbuds are out, which saves their battery.", "Kulaklıklar çıkıkken gürültü engelleme ve ortam sesi kapatılır, pil tasarrufu sağlar."), noiseOff) { noiseOff = it; BudsPrefs.setNoiseOffOnRemove(ctx, it) }
+        }
+        SettingsSection(tr("When you put them back", "Tekrar takınca"), startOpen = true) {
+            BRow(tr("Put back as it was", "Eski haline getir"), tr("When one earbud goes back in, the music carries on and the noise control returns to the mode it had before.", "Bir kulaklık tekrar takılınca müzik devam eder ve gürültü denetimi önceki moduna döner."), resume) { resume = it; BudsPrefs.setResumeOnWear(ctx, it) }
+        }
+        SettingsSection(tr("Connection", "Bağlantı")) {
+            BRow(tr("Stay connected in the background", "Arka planda bağlı kal"), tr("Keeps the link to the earbuds open with a small notification, so the actions above work even when this screen is closed.", "Kulaklıkla bağlantıyı küçük bir bildirimle açık tutar, böylece yukarıdaki işlemler bu ekran kapalıyken de çalışır."), keep) { keep = it; BudsPrefs.setKeepOn(ctx, it); if (it && address != null) BudsService.start(ctx) else if (!it) BudsService.stop(ctx) }
         }
         Text(tr("Galaxy Buds Live, Pro, 2, 2 Pro, FE and 3. The protocol notes are from the GalaxyBudsClient project.", "Galaxy Buds Live, Pro, 2, 2 Pro, FE ve 3. Protokol bilgisi GalaxyBudsClient projesinden."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(vertical = 12.dp))
     }
@@ -136,5 +151,16 @@ private fun Bud(label: String, battery: Int, worn: Boolean?) {
         }
         Text(if (battery in 0..100) "$battery%" else "—", color = if (battery in 0..20) Color(0xFFC42B1C) else T.text, fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp))
         if (worn != null) Text(if (worn) tr("in ear", "kulakta") else tr("out", "çıkarılmış"), color = T.sub, fontSize = 11.sp)
+    }
+}
+
+@Composable
+private fun BRow(title: String, desc: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            PSwitch(checked, onChange)
+        }
+        Text(desc, color = T.sub, fontSize = 12.sp)
     }
 }

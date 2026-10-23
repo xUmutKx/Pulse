@@ -120,18 +120,17 @@ fun KeyboardSettings(back: () -> Unit) {
         // languages and keys
         PCard {
             Title(tr("Languages", "Diller"))
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 KeyboardLayouts.all.forEach { l ->
-                    val on = l.code in KeyboardPrefs.langList()
-                    PChip(on, l.name) {
-                        val cur = KeyboardPrefs.langList()
-                        KeyboardPrefs.langs = (if (on) cur - l.code else cur + l.code).ifEmpty { cur }.joinToString(","); save()
-                        // a language that is switched on without a word list gets one now
-                        if (!on && !KeyboardDictionary.hasList(ctx, l.code)) scope.launch { withContext(Dispatchers.IO) { KeyboardDictionary.download(ctx, l.code) }; rev++ }
+                    PChip(KeyboardPrefs.langList().first() == l.code, l.name) {
+                        // the chosen layout is the one that shows; the other language still helps with corrections
+                        val other = KeyboardLayouts.all.first { it.code != l.code }.code
+                        KeyboardPrefs.langs = "${l.code},$other"; st.lang = l.code; save()
+                        scope.launch { withContext(Dispatchers.IO) { KeyboardLayouts.all.forEach { x -> if (!KeyboardDictionary.hasList(ctx, x.code)) KeyboardDictionary.download(ctx, x.code) } }; rev++ }
                     }
                 }
             }
-            Text(tr("Every language that is on corrects and suggests together: a Turkish keyboard with English on fixes both. A language without a word list downloads one.", "Açık olan her dil birlikte düzeltir ve öneri verir: İngilizce de açıksa Türkçe klavye ikisini de düzeltir. Sözlüğü olmayan dil kendi sözlüğünü indirir."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(tr("The chosen language shows its keys; both languages correct and suggest together. A language without a word list downloads one.", "Seçili dilin tuşları görünür; iki dil birlikte düzeltir ve öneri verir. Sözlüğü olmayan dil kendi sözlüğünü indirir."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.numberRow) { KeyboardPrefs.numberRow = it; save() }
             Switch(tr("Arrow keys", "Ok tuşları"), tr("Arrows, home, end, select all, copy, paste", "Oklar, başa, sona, tümünü seç, kopyala, yapıştır"), KeyboardPrefs.arrows) { KeyboardPrefs.arrows = it; save() }
             Switch(tr("Emoji key", "Emoji tuşu"), "", KeyboardPrefs.emojiKey) { KeyboardPrefs.emojiKey = it; save() }

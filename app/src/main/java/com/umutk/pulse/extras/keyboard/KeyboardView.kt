@@ -130,13 +130,30 @@ private const val POPUP_W = 44
 fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.theme, modifier: Modifier = Modifier) {
     val th = KeyboardThemes.of(themeId, st.dark)
     val scale = KeyboardPrefs.heightPct / 100f
-    val keyH = (58f * scale).dp
+    val keyH = (61f * scale).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
     val pull = remember { Animatable(0f) }
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val dens = LocalDensity.current.density
-    Box(modifier.fillMaxWidth().background(th.bg).onSizeChanged { st.rootW = it.width.toFloat() }) {
+    var rootH by remember { mutableStateOf(0f) }
+    Box(modifier.fillMaxWidth().background(th.bg).onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(Unit) {
+        // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
+        awaitEachGesture {
+            val d = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            val t0 = d.uptimeMillis; var done = false
+            while (!done) {
+                val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                val c = ev.changes.firstOrNull { it.id == d.id } ?: break
+                if (!c.pressed) break
+                val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
+                if (dy > 56.dp.toPx() && abs(dx) < dy * .6f && c.uptimeMillis - t0 < 350 && st.trail.isEmpty() && st.preview?.alts.isNullOrEmpty()) {
+                    done = true; c.consume()
+                    scope.launch { pull.animateTo(rootH.coerceAtLeast(300f), tween(170)); act.hide(); delay(250); pull.snapTo(0f) }
+                }
+            }
+        }
+    }) {
         Column(
             (if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
                 .graphicsLayer { translationY = pull.value }
@@ -231,7 +248,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val up = st.shift > 0
     val digits = !KeyboardPrefs.numberRow && KeyboardPrefs.longPressSymbols
     val langs = KeyboardPrefs.langList()
-    val lang = KeyboardLayouts.lang(st.lang)
+    val lang = KeyboardLayouts.lang(if (st.lang in langs) st.lang else langs.first())
     val rows = KeyboardLayouts.letterRows(lang.code, up, digits)
     val n1 = rows[0].size.toFloat()
     if (KeyboardPrefs.proRow && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
@@ -279,7 +296,6 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     }
     Row(Modifier.fillMaxWidth()) {
         Key(th, st, act, KbKey(if (st.page == 0) "?123" else "ABC", KeyKind.MODE, 1.5f), keyH)
-        if (langs.size > 1) Key(th, st, act, KbKey("", KeyKind.LANG, 1f), keyH)
         if (KeyboardPrefs.emojiKey) Key(th, st, act, KbKey("", KeyKind.EMOJI, 1f), keyH)
         Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.emojiKey) KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), keyH)
         Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, 4f), keyH)
@@ -375,7 +391,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val kNow by rememberUpdatedState(k)
     val longMs = LocalViewConfiguration.current.longPressTimeoutMillis
     val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
-    val bg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.key; else -> th.special }
+    val bg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
     val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
     val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) .93f else 1f, tween(70), label = "keyScale")
     Box(
@@ -412,6 +428,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 KeyKind.DELETE -> { if (!quick) a.backspace(); due = now + 55L }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
+                                KeyKind.COMMA -> { long = true; st.preview = null; a.feedback(); a.voice(); due = Long.MAX_VALUE / 2 }
                                 else -> if (!glide && key.alts.isNotEmpty() && big) {
                                     long = true; sel = 0; due = Long.MAX_VALUE / 2
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
@@ -479,7 +496,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     st.preview = null
                     st.trail = emptyList()
                 }
-            }.padding(KeyboardPrefs.keyGap.dp / 2),
+            }.padding(horizontal = KeyboardPrefs.keyGap.dp * .75f, vertical = KeyboardPrefs.keyGap.dp / 2),
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
         val fg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
