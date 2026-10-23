@@ -330,7 +330,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val scope = rememberCoroutineScope()
     val top = remember { Environment.getExternalStorageDirectory() }
     FilesPrefs.load(ctx)
-    var here by rememberSaveable { mutableStateOf(FilesPrefs.start.takeIf { it.isNotEmpty() && File(it).isDirectory } ?: top.path) }
+    var here by rememberSaveable { mutableStateOf(ExNav.lastHere?.takeIf { File(it).isDirectory && it.startsWith(top.path) } ?: FilesPrefs.start.takeIf { it.isNotEmpty() && File(it).isDirectory } ?: top.path) }
+    LaunchedEffect(here) { ExNav.lastHere = here }
     var clip by remember { mutableStateOf<Clip?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
     var dialog by remember { mutableStateOf<Pair<String, File>?>(null) }
@@ -418,8 +419,20 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             else -> null
         }
     }
-    val listing = remember(here, refresh, showHidden, sort, viaRoot) {
-        exSort((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort)
+    // the size of each folder here, measured one after the other in the background (shown under the name; the size sort uses it)
+    val dirSizes by produceState(emptyMap<String, Long>(), here, refresh, viaRoot) {
+        val dirs = (viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { it.isDirectory && !it.path.startsWith("/data") && !it.path.contains("/Android/data") && !it.path.contains("/Android/obb") }
+        val acc = HashMap<String, Long>()
+        dirs.forEach { d -> ExDirSizes.cached(d)?.let { acc[d.path] = it } }
+        value = acc.toMap()
+        for (d in dirs) {
+            if (d.path in acc) continue
+            acc[d.path] = withContext(Dispatchers.IO) { ExDirSizes.measure(d) }
+            value = acc.toMap()
+        }
+    }
+    val listing = remember(here, refresh, showHidden, sort, viaRoot, if (sort / 2 == 1) dirSizes else null) {
+        exSort((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort, dirSizes)
     }
     var resultsFor by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(resultsFor, here, showHidden) {
@@ -779,6 +792,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         val zipEnd by ZipJobs.last.collectAsState()
         LaunchedEffect(zipEnd) { if (zipEnd.isNotEmpty()) { note = zipEnd; ZipJobs.clearLast(); refresh++ } }
         zipJobs.forEach { ZipProgressLine(it) }
+        FileJobLines()
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
         if (shown.isEmpty() && arcFile == null) Text(if (recentView) "No recent files" else if (RootFs.needsRoot(here) && (!canRoot || Shell.root != true)) tr("Root is needed to list this folder", "Bu klasörü listelemek için root gerekir") else if (rootErr.isNotEmpty()) rootErr else "No files here", color = T.sub, fontSize = 13.sp)
         val item: @Composable (File) -> Unit = { f ->
@@ -860,7 +874,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         val sub = when {
                             found != null -> exRel(f, top)
                             !f.isDirectory && showSizes -> exSize(f.length()) + "  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
-                            f.isDirectory && standalone && showSizes && !f.path.startsWith("/data") -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            f.isDirectory && standalone && showSizes && !f.path.startsWith("/data") -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + (dirSizes[f.path]?.let { exSize(it) + "  ·  " } ?: "") + exDate(f.lastModified(), FilesPrefs.dateFmt)
                             else -> ""
                         }
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = (11 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1131,6 +1145,14 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         WinAlert(onDismissRequest = { dialog = null },
             title = { Text(if (kind == "rename") "Rename" else if (kind == "newfile") tr("New file", "Yeni dosya") + " (." + newFileSplit(name, newExt).second + ")" else "New folder") },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (kind == "rename") {
+                    // the name is already selected (without its extension) and the keyboard is up: type to replace it
+                    var tv by remember(f) { mutableStateOf(androidx.compose.ui.text.input.TextFieldValue(name, androidx.compose.ui.text.TextRange(0, name.lastIndexOf('.').let { if (it > 0) it else name.length }))) }
+                    val fr = remember { androidx.compose.ui.focus.FocusRequester() }
+                    val kb = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+                    LaunchedEffect(Unit) { delay(150); runCatching { fr.requestFocus() }; kb?.show() }
+                    androidx.compose.material3.OutlinedTextField(tv, { tv = it; name = it.text }, singleLine = true, modifier = Modifier.fillMaxWidth().focusRequester(fr))
+                } else
                 PField(name, { name = it }, "Name", Modifier.fillMaxWidth())
                 if (kind == "newfile") Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     // a chip sets the extension; one already typed in the name is replaced by it
@@ -1427,10 +1449,11 @@ private fun ExDots(tint: Color) {
 }
 
 /** Folders first, then the order picked by the sort icon: name, size or date, each ascending then descending. */
-private fun exSort(list: List<File>, mode: Int): List<File> {
+private fun exSort(list: List<File>, mode: Int, dirSizes: Map<String, Long> = emptyMap()): List<File> {
     val key: Comparator<File> = when (mode / 2) {
         0 -> compareBy<File> { it.name.lowercase() }
-        1 -> compareBy<File> { it.length() }
+        // by size: a folder counts with everything inside it (its size is measured in the background; unmeasured ones come as the smallest for now)
+        1 -> compareBy<File> { if (it.isDirectory) dirSizes[it.path] ?: -1L else it.length() }
         else -> compareBy<File> { it.lastModified() }
     }
     val by = if (mode % 2 == 1) key.reversed() else key
@@ -1842,4 +1865,21 @@ private fun androidx.compose.foundation.layout.BoxScope.ExNewFab(pick: (String) 
 object ExScroll {
     val memo = HashMap<String, Int>()
     var live: androidx.compose.foundation.ScrollState? = null
+}
+
+
+/** Where the Files browser was last (kept in memory, so a trip to another tab of the Files app and back lands in the same folder). */
+object ExNav { var lastHere: String? = null }
+
+/** Folder sizes: everything under a folder, measured once (up to 300 000 files) and kept until the folder changes. */
+object ExDirSizes {
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, Long>>()   // path -> (bytes, last modified when measured)
+    fun cached(d: File): Long? = cache[d.path]?.takeIf { it.second == d.lastModified() }?.first
+    fun measure(d: File): Long {
+        cached(d)?.let { return it }
+        var total = 0L; var n = 0
+        runCatching { d.walkTopDown().onEnter { true }.forEach { f -> if (f.isFile) total += f.length(); if (++n > 300_000) return@runCatching } }
+        cache[d.path] = total to d.lastModified()
+        return total
+    }
 }
