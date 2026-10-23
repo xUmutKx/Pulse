@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 
 /** What the keyboard window shows: the keys, the bar above them and the pop-ups. The service fills it, the view draws it. */
@@ -31,6 +32,15 @@ class KbState {
     var plain by mutableStateOf(false)
     /** The selection mode of the quick delete is on: the bar shows the selected text length. */
     var selecting by mutableStateOf(false)
+    /** The modifier keys of the extra row: 0 off, 1 for the next key, 2 held until pressed again. */
+    var ctrl by mutableIntStateOf(0)
+    var alt by mutableIntStateOf(0)
+    var win by mutableIntStateOf(0)
+    var shiftMod by mutableIntStateOf(0)
+    /** The finger's path while a word is swiped over the letters, in the window's pixels. */
+    var trail by mutableStateOf(listOf<Offset>())
+    /** Where each letter key sits (window pixels), for following a swipe over the keys. */
+    val letterRects = HashMap<String, Rect>()
 }
 
 /** The pop-up over a pressed key: its big label, or the row of long-press characters with the chosen one. */
@@ -57,6 +67,8 @@ interface KbActions {
     fun feedback()
     fun emoji(e: String)
     fun paste(s: String)
+    fun glide(letters: String)
+    fun extraKey(id: String)
 }
 
 /** Does nothing: the preview in the settings. */
@@ -80,4 +92,6 @@ object NoKbActions : KbActions {
     override fun feedback() {}
     override fun emoji(e: String) {}
     override fun paste(s: String) {}
+    override fun glide(letters: String) {}
+    override fun extraKey(id: String) {}
 }

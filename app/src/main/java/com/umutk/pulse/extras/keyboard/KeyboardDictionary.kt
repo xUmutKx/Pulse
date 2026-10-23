@@ -128,6 +128,33 @@ object KeyboardDictionary {
         return best.sortedByDescending { it.score }.take(n)
     }
 
+    /**
+     * The words a swipe over the letters [seq] could mean: they start and end on the swiped first and last letter and their letters come in order
+     * among the swiped ones (a double letter needs only one pass). Likelier and longer words come first, words that skip many swiped letters last.
+     */
+    fun glide(lang: String, seq: String, n: Int): List<String> {
+        if (seq.length < 2) return emptyList()
+        val lx = lexes[lang]
+        val out = ArrayList<Cand>()
+        fun consider(w: String, base: Float) {
+            if (w.length < 2 || w[0] != seq[0] || w.last() != seq.last()) return
+            var i = 0
+            var prev = '\u0000'
+            var len = 0
+            for (ch in w) {
+                if (ch == prev) continue
+                prev = ch; len++
+                while (i < seq.length && seq[i] != ch) i++
+                if (i >= seq.length) return
+                i++
+            }
+            out += Cand(w, base + .9f * len - .35f * (seq.length - len), 0f)
+        }
+        if (lx != null) for (k in lx.words.indices) consider(lx.words[k], lx.score[k])
+        user.forEach { (w, _) -> consider(w, score(lang, w)) }
+        return out.sortedByDescending { it.score }.map { it.word }.distinct().take(n)
+    }
+
     /** What follows [prev] in what the user typed, then the commonest words of the language. */
     fun next(lang: String, prev: String?, n: Int): List<String> {
         val out = ArrayList<String>()

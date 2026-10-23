@@ -52,6 +52,14 @@ object KeyboardPrefs {
     var emojiPredictions by mutableStateOf(true)
     var learn by mutableStateOf(true)
 
+    // swipes, extra keys and the toolbar
+    var glide by mutableStateOf(true)
+    var flick by mutableStateOf(true)
+    var anim by mutableStateOf(true)
+    var proRow by mutableStateOf(false)
+    var proKeys by mutableStateOf(ExtraKeys.DEFAULT)
+    var toolbarItems by mutableStateOf(ExtraKeys.DEFAULT_TOOLBAR)
+
     // feel
     var haptic by mutableStateOf(true)
     var hapticMs by mutableStateOf(12)
@@ -77,6 +85,8 @@ object KeyboardPrefs {
         quickPeriod = p.getBoolean("quickPeriod", quickPeriod); autoCap = p.getBoolean("autoCap", autoCap); autoSpace = p.getBoolean("autoSpace", autoSpace)
         cursorControl = p.getBoolean("cursorControl", cursorControl); quickDelete = p.getBoolean("quickDelete", quickDelete)
         emojiPredictions = p.getBoolean("emojiPredictions", emojiPredictions); learn = p.getBoolean("learn", learn)
+        glide = p.getBoolean("glide", glide); flick = p.getBoolean("flick", flick); anim = p.getBoolean("anim", anim); proRow = p.getBoolean("proRow", proRow)
+        proKeys = p.getString("proKeys", proKeys) ?: proKeys; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
         haptic = p.getBoolean("haptic", haptic); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
@@ -91,6 +101,7 @@ object KeyboardPrefs {
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn)
+            .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putString("proKeys", proKeys).putString("toolbarItems", toolbarItems)
             .putBoolean("haptic", haptic).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
@@ -109,7 +120,7 @@ object KeyboardPrefs {
         theme = "amoled"; heightPct = 100; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
-        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; haptic = true; hapticMs = 12; sound = false
+        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = false; proKeys = ExtraKeys.DEFAULT; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; hapticMs = 12; sound = false
         resetTheme(c)
         KeyboardDictionary.forgetUser(c)
         loaded = true
