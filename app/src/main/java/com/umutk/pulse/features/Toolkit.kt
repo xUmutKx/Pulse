@@ -347,15 +347,8 @@ private fun Flashlight() {
     var busy by remember { mutableStateOf(false) } // the camera is in use: the torch cannot be switched now
     // the callback reports the current state at once, then every change, also from the tile or another app
     DisposableEffect(id) {
-        val cb = object : CameraManager.TorchCallback() {
-            override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
-                if (cameraId != id) return
-                on = enabled; busy = false
-                if (enabled && max > 1 && Build.VERSION.SDK_INT >= 33) runCatching { level = cm.getTorchStrengthLevel(id) }
-            }
-            override fun onTorchModeUnavailable(cameraId: String) { if (cameraId == id) busy = true }
-            override fun onTorchStrengthLevelChanged(cameraId: String, newStrengthLevel: Int) { if (cameraId == id) level = newStrengthLevel }
-        }
+        if (android.os.Build.VERSION.SDK_INT < 23) return@DisposableEffect onDispose { }
+        val cb = torchCallback(cm, id, max, { on = it; busy = false }, { busy = true }, { level = it })
         cm.registerTorchCallback(cb, Handler(Looper.getMainLooper()))
         onDispose { cm.unregisterTorchCallback(cb) }
     }
@@ -765,16 +758,16 @@ object TimerClock {
     private fun notifyDone(c: Context) {
         val nm = c.getSystemService(NotificationManager::class.java)
         val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel("timer", tr("Timer", "Zamanlayıcı"), NotificationManager.IMPORTANCE_HIGH).apply {
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("timer", tr("Timer", "Zamanlayıcı"), NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(sound, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
             enableVibration(true)
-        })
+        }) else Unit
         val open = PendingIntent.getActivity(c, 7102, Intent(c, MainActivity::class.java).putExtra("start", "toolkit:timer")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         runCatching {
-            nm.notify(NOTE_ID, Notification.Builder(c, "timer").setSmallIcon(R.drawable.ic_qs_timer)
+            nm.notify(NOTE_ID, androidx.core.app.NotificationCompat.Builder(c, "timer").setSmallIcon(R.drawable.ic_qs_timer)
                 .setContentTitle(tr("Time's up", "Süre doldu")).setContentText(timerText(length(c)))
-                .setCategory(Notification.CATEGORY_ALARM).setContentIntent(open).setAutoCancel(true).build())
+                .setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM).setContentIntent(open).setAutoCancel(true).build())
         }
     }
 }
@@ -1021,7 +1014,7 @@ private fun FlagTool(key: String, text: String) {
 private fun MotionCueTool() {
     val ctx = LocalContext.current
     val on = polled(500) { com.umutk.pulse.MotionCueService.running }
-    val canDraw = polled(1000) { android.provider.Settings.canDrawOverlays(ctx) }
+    val canDraw = polled(1000) { com.umutk.pulse.Compat.canOverlay(ctx) }
     PCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Dots at the screen edges that move with the car, against motion sickness", "Araba tutmasına karşı, araçla birlikte kayan kenar noktaları"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -1048,7 +1041,7 @@ private fun FinderTool() {
     var scanned by remember { mutableIntStateOf(0) }
     var job by remember { mutableStateOf<Job?>(null) }
     var searched by remember { mutableStateOf(false) }
-    val all = polled(1000) { Environment.isExternalStorageManager() }
+    val all = polled(1000) { com.umutk.pulse.Compat.isStorageManager() }
     val root = Environment.getExternalStorageDirectory()
     val limit = 200
     fun search() {
@@ -1106,4 +1099,16 @@ private fun PowerMenuTool() {
         PButton(tr("Show power menu", "Güç menüsünü göster"), Modifier.fillMaxWidth()) { failed = !TileActions.powerMenu() }
     }
     if (failed) AccessNeededCard(tr("Power menu", "Güç menüsü"), tr("Needs App lock (accessibility), root or Shizuku.", "App lock (erişilebilirlik), root veya Shizuku gerekir."))
+}
+
+/** The torch callback of the flashlight page: state changes, "camera in use" and the brightness level. */
+@androidx.annotation.RequiresApi(23)
+private fun torchCallback(cm: CameraManager, id: String, max: Int, onState: (Boolean) -> Unit, onBusy: () -> Unit, onLevel: (Int) -> Unit) = object : CameraManager.TorchCallback() {
+    override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
+        if (cameraId != id) return
+        onState(enabled)
+        if (enabled && max > 1 && Build.VERSION.SDK_INT >= 33) runCatching { onLevel(cm.getTorchStrengthLevel(id)) }
+    }
+    override fun onTorchModeUnavailable(cameraId: String) { if (cameraId == id) onBusy() }
+    override fun onTorchStrengthLevelChanged(cameraId: String, newStrengthLevel: Int) { if (cameraId == id) onLevel(newStrengthLevel) }
 }

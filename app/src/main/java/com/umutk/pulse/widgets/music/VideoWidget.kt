@@ -47,7 +47,7 @@ class VideoWidget : AppWidgetProvider() {
                 runCatching { c.contentResolver.query(it, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { q -> if (q.moveToFirst()) q.getString(0) else null } }.getOrNull()
             } ?: uri?.lastPathSegment
             // shortcut: thumbnail loaded on the calling thread (small, system-cached); move off main if it lags
-            val thumb = uri?.let { runCatching { c.contentResolver.loadThumbnail(it, Size(320, 180), null) }.getOrNull() }
+            val thumb = if (android.os.Build.VERSION.SDK_INT < 29) null else uri?.let { runCatching { c.contentResolver.loadThumbnail(it, Size(320, 180), null) }.getOrNull() }
             return RemoteViews(c.packageName, R.layout.widget_video_main).apply {
                 setTextViewText(R.id.vw_title, name ?: "Pulse Video")
                 setTextViewText(R.id.vw_time, if (last != null && last.durMs > 0) "${clock(last.posMs)} / ${clock(last.durMs)}" else "")

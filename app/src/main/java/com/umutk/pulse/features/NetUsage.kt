@@ -67,6 +67,7 @@ private fun bytesText(b: Long): String = when {
  * so the screen falls back to "nothing recorded" instead of crashing.
  */
 private fun perUid(ctx: Context, type: Int, start: Long, end: Long): Map<Int, Long> {
+    if (android.os.Build.VERSION.SDK_INT < 23) return emptyMap()
     val nsm = ctx.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
     val sums = HashMap<Int, Long>()
     try {
@@ -183,6 +184,7 @@ private class NetScan(val denied: Boolean, val active: String?, val totals: List
 
 /** Type and name of the active network: the Wi-Fi SSID ("Wi-Fi" when it cannot be read) or "Mobile data". */
 private fun activeNet(ctx: Context): Pair<Int, String>? {
+    if (android.os.Build.VERSION.SDK_INT < 23) return null
     val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
     val caps = cm.getNetworkCapabilities(cm.activeNetwork ?: return null) ?: return null
     return when {
@@ -197,7 +199,7 @@ private fun activeNet(ctx: Context): Pair<Int, String>? {
 }
 
 /** rx and tx bytes of one network type since [start]; null when the query is denied. */
-private fun netSum(ctx: Context, type: Int, start: Long, end: Long): Pair<Long, Long>? = try {
+private fun netSum(ctx: Context, type: Int, start: Long, end: Long): Pair<Long, Long>? = if (android.os.Build.VERSION.SDK_INT < 23) null else try {
     val b = (ctx.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager).querySummaryForDevice(type, null, start, end)
     b.rxBytes to b.txBytes
 } catch (e: Exception) { null }
@@ -214,6 +216,7 @@ private fun netSeries(ctx: Context, type: Int, now: Long, slots: Int, stepMs: Lo
 
 /** Top 15 apps by bytes on one network type; uids come from PackageManager. */
 private fun topApps(ctx: Context, type: Int, start: Long, end: Long): List<NetApp> {
+    if (android.os.Build.VERSION.SDK_INT < 23) return emptyList()
     val nsm = ctx.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
     val pm = ctx.packageManager
     val b = NetworkStats.Bucket()

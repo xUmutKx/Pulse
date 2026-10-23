@@ -110,7 +110,7 @@ object ArtCraft {
         try {
             val con = URL(item.url).openConnection() as HttpURLConnection
             con.instanceFollowRedirects = true; con.connectTimeout = 15000; con.readTimeout = 30000
-            val total = con.contentLengthLong.takeIf { it > 0 } ?: item.size
+            val total = com.umutk.pulse.Compat.contentLength(con).takeIf { it > 0 } ?: item.size
             var done = 0L
             con.inputStream.use { inp ->
                 f.outputStream().use { out ->
@@ -243,9 +243,9 @@ object ArtCraft {
         val pm = c.packageManager
         val f = fileFor(c, item)
         val pkg = if (f.exists()) (pm.getPackageArchiveInfo(f.path, 0)?.packageName ?: pkgOf(item)) else pkgOf(item)
-        val installed = try { pm.getPackageInfo(pkg, 0).longVersionCode } catch (e: Exception) { -1L }
+        val installed = try { com.umutk.pulse.Compat.longVersion(pm.getPackageInfo(pkg, 0)) } catch (e: Exception) { -1L }
         if (installed < 0) return if (f.exists()) State.INSTALL else State.NONE
-        val archive = if (f.exists()) pm.getPackageArchiveInfo(f.path, 0)?.longVersionCode ?: installed else installed
+        val archive = if (f.exists()) pm.getPackageArchiveInfo(f.path, 0)?.let { com.umutk.pulse.Compat.longVersion(it) } ?: installed else installed
         return if (archive > installed) State.UPDATE else State.INSTALLED
     }
 

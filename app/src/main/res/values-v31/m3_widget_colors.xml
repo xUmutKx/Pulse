@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Android 12 and up: the wallpaper's own Material You colours -->
+    <color name="m3w_accent1_200">@android:color/system_accent1_200</color>
+    <color name="m3w_accent1_100">@android:color/system_accent1_100</color>
+    <color name="m3w_neutral2_300">@android:color/system_neutral2_300</color>
+</resources>

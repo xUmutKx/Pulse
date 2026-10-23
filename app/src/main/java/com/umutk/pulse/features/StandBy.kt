@@ -190,7 +190,7 @@ object StandBy {
         val acc = CoverAccessibilityService.instance
         val app = ctx.applicationContext
         // the accessibility layer draws above the bars and the keyboard; otherwise the overlay permission is needed
-        if (acc == null && !Settings.canDrawOverlays(app)) {
+        if (acc == null && !com.umutk.pulse.Compat.canOverlay(app)) {
             app.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${app.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             return false
         }
@@ -229,8 +229,8 @@ object StandBy {
         owner?.stop(); owner = null; view = null; host = null; autoStarted = false
         // the two tiles re-read their state, so a cover closed by a double tap does not stay lit
         val app = ctx.applicationContext
-        runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, CoverTile::class.java)) }
-        runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, StandByTile::class.java)) }
+        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, CoverTile::class.java)) }
+        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(app, android.content.ComponentName(app, StandByTile::class.java)) }
     }
 }
 
@@ -673,6 +673,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
 }
 
 /** Quick Settings tile: starts or closes the advanced cover by hand (the manual trigger). */
+@androidx.annotation.RequiresApi(24)
 class StandByTile : android.service.quicksettings.TileService() {
     override fun onStartListening() = paint()
     private fun paint() {
@@ -683,7 +684,7 @@ class StandByTile : android.service.quicksettings.TileService() {
         }
     }
     override fun onClick() {
-        if (!StandBy.toggle(this) && !StandBy.showing && !Settings.canDrawOverlays(this) && CoverAccessibilityService.instance == null) return
+        if (!StandBy.toggle(this) && !StandBy.showing && !com.umutk.pulse.Compat.canOverlay(this) && CoverAccessibilityService.instance == null) return
         paint()
         if (StandBy.showing) CoverAccessibilityService.instance?.collapseShade()
     }

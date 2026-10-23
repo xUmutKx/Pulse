@@ -82,7 +82,7 @@ fun videoThumb(item: VideoItem): ImageBitmap? {
     val key = item.uri.toString()
     val bmp by produceState(thumbs.get(key), key) {
         if (value == null) value = withContext(Dispatchers.IO) {
-            runCatching { ctx.contentResolver.loadThumbnail(item.uri, Size(320, 180), null).asImageBitmap() }.getOrNull()
+            if (android.os.Build.VERSION.SDK_INT < 29) null else runCatching { ctx.contentResolver.loadThumbnail(item.uri, Size(320, 180), null).asImageBitmap() }.getOrNull()
         }?.also { thumbs.put(key, it) }
     }
     return bmp

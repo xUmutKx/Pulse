@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.screenrec
 
+import com.umutk.pulse.subtitleCompat
+
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -11,6 +13,7 @@ import com.umutk.pulse.tr
  * Quick Settings tile for both: a tap takes a screenshot (or stops a running recording), a long press opens [ScreenRecActivity],
  * which asks for consent and starts a video recording.
  */
+@androidx.annotation.RequiresApi(24)
 class ScreenRecTile : TileService() {
     override fun onStartListening() = paint()
 
@@ -18,7 +21,7 @@ class ScreenRecTile : TileService() {
     private fun click0() {
         if (ScreenRecService.running) {
             ScreenRecService.stop(this)
-            qsTile?.apply { state = Tile.STATE_INACTIVE; subtitle = tr("Off", "Kapalı"); updateTile() }
+            qsTile?.apply { state = Tile.STATE_INACTIVE; subtitleCompat = tr("Off", "Kapalı"); updateTile() }
             return
         }
         // the shade must be gone before the picture is taken, so a transparent activity waits a moment and does it
@@ -32,7 +35,7 @@ class ScreenRecTile : TileService() {
         qsTile?.apply {
             label = tr("Screenshot / record", "Ekran görüntüsü / kayıt")
             state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            subtitle = if (on) tr("Recording", "Kaydediyor") else tr("Tap: picture", "Dokun: görüntü")
+            subtitleCompat = if (on) tr("Recording", "Kaydediyor") else tr("Tap: picture", "Dokun: görüntü")
             updateTile()
         }
     }

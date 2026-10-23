@@ -21,7 +21,7 @@ object MusicLibrary {
     private val _tracks = MutableStateFlow<List<Track>>(emptyList())
     val tracks: StateFlow<List<Track>> = _tracks.asStateFlow()
 
-    fun hasPermission(c: Context) = c.checkSelfPermission(permission) == PackageManager.PERMISSION_GRANTED
+    fun hasPermission(c: Context) = androidx.core.content.ContextCompat.checkSelfPermission(c, permission) == PackageManager.PERMISSION_GRANTED
 
     private fun cacheFile(c: Context) = File(c.filesDir, "music_library.tsv")
 

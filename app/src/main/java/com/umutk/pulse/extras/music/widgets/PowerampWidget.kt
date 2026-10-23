@@ -214,8 +214,9 @@ class PowerampWidget : AppWidgetProvider() {
             val x0 = 152f
             val maxW = W - x0 - 12f
             val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = 21f; typeface = Typeface.DEFAULT_BOLD }
-            val lay = android.text.StaticLayout.Builder.obtain(title, 0, title.length, tp, maxW.toInt())
+            val lay = if (android.os.Build.VERSION.SDK_INT >= 23) android.text.StaticLayout.Builder.obtain(title, 0, title.length, tp, maxW.toInt())
                 .setMaxLines(2).setEllipsize(TextUtils.TruncateAt.END).build()
+            else @Suppress("DEPRECATION") android.text.StaticLayout(TextUtils.ellipsize(title, tp, maxW * 1.9f, TextUtils.TruncateAt.END), tp, maxW.toInt(), android.text.Layout.Alignment.ALIGN_NORMAL, 1f, 0f, false)
             cv.save(); cv.translate(x0, 12f); lay.draw(cv); cv.restore()
             var y = 12f + lay.height + 17f
             val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 15f }

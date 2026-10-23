@@ -36,10 +36,22 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 /** Decodes a camera photo (EXIF rotation applied), downsampled so the longest side is at most [maxSide] px. */
-fun docScanDecode(f: File, maxSide: Int = 1800): Bitmap = ImageDecoder.decodeBitmap(ImageDecoder.createSource(f)) { d, info, _ ->
+fun docScanDecode(f: File, maxSide: Int = 1800): Bitmap = if (android.os.Build.VERSION.SDK_INT < 28) docScanDecodeOld(f, maxSide) else ImageDecoder.decodeBitmap(ImageDecoder.createSource(f)) { d, info, _ ->
     val s = maxOf(info.size.width, info.size.height) / maxSide.toFloat()
     if (s > 1f) d.setTargetSize((info.size.width / s).toInt(), (info.size.height / s).toInt())
     d.setAllocator(ImageDecoder.ALLOCATOR_SOFTWARE) // software pixels, so getPixels works
+}
+
+/** The same for Android 5 to 8: the factory decodes at a smaller size and the EXIF turn is applied by hand. */
+private fun docScanDecodeOld(f: File, maxSide: Int): Bitmap {
+    val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    android.graphics.BitmapFactory.decodeFile(f.path, o)
+    var step = 1
+    while (maxOf(o.outWidth, o.outHeight) / (step * 2) >= maxSide) step *= 2
+    val raw = android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = step }) ?: throw IOException("Could not read the picture")
+    val deg = when (runCatching { android.media.ExifInterface(f.path).getAttributeInt(android.media.ExifInterface.TAG_ORIENTATION, 1) }.getOrDefault(1)) { 6 -> 90f; 3 -> 180f; 8 -> 270f; else -> 0f }
+    if (deg == 0f) return raw
+    return Bitmap.createBitmap(raw, 0, 0, raw.width, raw.height, android.graphics.Matrix().apply { postRotate(deg) }, true)
 }
 
 /** Grayscale, then a levels stretch: the 2nd..98th percentile of luminance becomes 0..255 (paper goes white, ink dark). */
@@ -153,6 +165,12 @@ fun docScanWritePdf(pages: List<Bitmap>, out: OutputStream) {
 
 /** Writes [name] into Download/Pulse through MediaStore (minSdk 29); returns the name. */
 suspend fun docScanSave(ctx: Context, name: String, mime: String, write: (OutputStream) -> Unit): String = withContext(Dispatchers.IO) {
+    if (android.os.Build.VERSION.SDK_INT < 29) {
+        // before Android 10 the public Download folder is written to directly
+        val dir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), "Pulse").apply { mkdirs() }
+        File(dir, name).outputStream().use(write)
+        return@withContext name
+    }
     val values = ContentValues().apply {
         put(MediaStore.Downloads.DISPLAY_NAME, name)
         put(MediaStore.Downloads.MIME_TYPE, mime)

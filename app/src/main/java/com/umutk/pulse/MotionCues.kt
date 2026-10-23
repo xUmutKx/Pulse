@@ -58,13 +58,13 @@ class MotionCueService : Service() {
     override fun onCreate() {
         super.onCreate()
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel("cues", "Motion cues", NotificationManager.IMPORTANCE_LOW))
-        val n = Notification.Builder(this, "cues").setSmallIcon(R.drawable.ic_qs_touch).setContentTitle("Motion cues on").setOngoing(true).build()
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("cues", "Motion cues", NotificationManager.IMPORTANCE_LOW)) else Unit
+        val n = androidx.core.app.NotificationCompat.Builder(this, "cues").setSmallIcon(R.drawable.ic_qs_touch).setContentTitle("Motion cues on").setOngoing(true).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(7, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(7, n)
         running = true
         loadPrefs(this)
         wm = getSystemService(WindowManager::class.java)
-        if (!Settings.canDrawOverlays(this)) { stopSelf(); return }
+        if (!com.umutk.pulse.Compat.canOverlay(this)) { stopSelf(); return }
         val v = CueView(this).also { view = it }
         wm.addView(v, WindowManager.LayoutParams(-1, -1, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT))
@@ -150,7 +150,7 @@ class MotionCueService : Service() {
         fun loadPrefs(c: Context) { wave = c.getSharedPreferences("motion_cues", Context.MODE_PRIVATE).getBoolean("wave", false) }
         fun setWave(c: Context, on: Boolean) { wave = on; c.getSharedPreferences("motion_cues", Context.MODE_PRIVATE).edit().putBoolean("wave", on).apply() }
         fun toggle(c: Context): Boolean {
-            if (!Settings.canDrawOverlays(c)) return false
+            if (!com.umutk.pulse.Compat.canOverlay(c)) return false
             if (running) c.stopService(Intent(c, MotionCueService::class.java))
             else ContextCompat.startForegroundService(c, Intent(c, MotionCueService::class.java))
             return true

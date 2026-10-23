@@ -24,6 +24,7 @@ object ProcStats {
     }
 
     private fun totals(c: Context): Map<Int, Long> {
+        if (android.os.Build.VERSION.SDK_INT < 23) return emptyMap()
         val nsm = c.getSystemService(Context.NETWORK_STATS_SERVICE) as NetworkStatsManager
         val sums = HashMap<Int, Long>()
         for (type in intArrayOf(ConnectivityManager.TYPE_WIFI, ConnectivityManager.TYPE_MOBILE)) runCatching {
@@ -48,6 +49,7 @@ object ProcStats {
     /** App + data + cache bytes of a uid, read once and kept. Blocking. Null without usage access or for system processes. */
     fun size(c: Context, uid: Int): Long? {
         if (uid < 10000 || !Extra.usageGranted(c)) return null
+        if (android.os.Build.VERSION.SDK_INT < 26) return null
         sizes[uid]?.let { return it }
         val st = runCatching {
             (c.getSystemService(Context.STORAGE_STATS_SERVICE) as StorageStatsManager).queryStatsForUid(StorageManager.UUID_DEFAULT, uid)

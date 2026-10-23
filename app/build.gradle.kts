@@ -9,11 +9,12 @@ android {
     compileSdk = 34
     defaultConfig {
         applicationId = "com.umutk.pulse"
-        minSdk = 31
+        minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 309
-        versionName = "0.10.299"
+        versionCode = 310
+        versionName = "0.10.300"
         ndk { abiFilters += "arm64-v8a" }
+        resourceConfigurations += listOf("en", "tr")
     }
     // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
     signingConfigs {
@@ -33,13 +34,16 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        isCoreLibraryDesugaringEnabled = true
     }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
+    lint { checkOnly += setOf("NewApi"); abortOnError = false; textReport = true; textOutput = file("lint-newapi.txt") }
     buildFeatures { compose = true; aidl = true }
     packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4") // java.time, Iterable.forEach ... on Android 5 to 7
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.activity:activity-compose:1.9.2")

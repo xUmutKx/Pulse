@@ -60,7 +60,7 @@ suspend fun findDuplicates(root: File, onProgress: (ScanProgress) -> Unit): List
     withContext(Dispatchers.IO) {
         onProgress(ScanProgress("Listing files", 0, 0))
         val bySize = root.walkTopDown()
-            .filter { it.isFile && it.length() > 0 && !Files.isSymbolicLink(it.toPath()) }
+            .filter { it.isFile && it.length() > 0 && !com.umutk.pulse.Compat.isLink(it) }
             .groupBy { it.length() }
             .filterValues { it.size > 1 }
         val sizeCandidates = bySize.values.flatten()

@@ -173,7 +173,7 @@ private class LockScreen(val c: Context, val pkg: String, val tryUnlock: (String
         })
         if (picture != 0) addView(ImageView(c).apply {
             setImageResource(picture); scaleType = scale
-            if (blur) setRenderEffect(RenderEffect.createBlurEffect(70f, 70f, Shader.TileMode.CLAMP))
+            if (blur && android.os.Build.VERSION.SDK_INT >= 31) setRenderEffect(RenderEffect.createBlurEffect(70f, 70f, Shader.TileMode.CLAMP))
         }, FrameLayout.LayoutParams(MATCH, MATCH))
         if (bitmap != null) addView(ImageView(c).apply { setImageBitmap(bitmap); scaleType = scale }, FrameLayout.LayoutParams(MATCH, MATCH))
         if (scrim != 0) addView(View(c).apply { setBackgroundColor(scrim) }, FrameLayout.LayoutParams(MATCH, MATCH))
@@ -322,14 +322,14 @@ private class LockScreen(val c: Context, val pkg: String, val tryUnlock: (String
         // Material You takes the wallpaper colours; AMOLED and the colour looks keep their own
         // shortcut: ignores Look.dynamic off and a picked Material accent, upgrade if the lock must match those exactly
         val dyn = t.id == "material"
-        fun sys(dark: Int, light: Int) = c.getColor(if (night) dark else light)
+        fun sys(dark: Int, light: Int) = androidx.core.content.ContextCompat.getColor(c, if (night) dark else light)
         val coN = t.id == "coloros" && night   // ColorOS: its own dark greys
         val bg = if (dyn) sys(android.R.color.system_neutral1_900, android.R.color.system_neutral1_10) else if (coN) k(0xFF0B1210) else t.bg.toArgb()
         val panel = if (dyn) sys(android.R.color.system_accent2_700, android.R.color.system_accent2_100) else if (coN) k(0xFF16211D) else t.panel.toArgb()
         val text = if (dyn) sys(android.R.color.system_neutral1_100, android.R.color.system_neutral1_900) else if (coN) k(0xFFF2F2F2) else t.text.toArgb()
         val sub = if (dyn) sys(android.R.color.system_neutral2_200, android.R.color.system_neutral2_700) else if (coN) k(0xFF9AAAA2) else t.sub.toArgb()
         val accent = if (dyn) sys(android.R.color.system_accent1_200, android.R.color.system_accent1_600) else t.accent.toArgb()
-        val onAcc = if (Color.luminance(accent) > .45f) B else W
+        val onAcc = if (androidx.core.graphics.ColorUtils.calculateLuminance(accent) > .45) B else W
         val r = minOf(t.radius.value, 16f)
 
         val col = column()

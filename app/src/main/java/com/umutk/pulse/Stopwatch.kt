@@ -35,6 +35,7 @@ object Stopwatch {
 }
 
 /** Quick Settings tile: a tap starts or stops the stopwatch right there, without opening the app. The line under the name shows the time. */
+@androidx.annotation.RequiresApi(24)
 class StopwatchTile : TileService() {
     private val main = Handler(Looper.getMainLooper())
     private val tick = object : Runnable {
@@ -62,7 +63,7 @@ class StopwatchTile : TileService() {
             state = if (on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             icon = Icon.createWithResource(this@StopwatchTile, if (on) R.drawable.qs_pause else R.drawable.qs_play)
             label = tr("Stopwatch", "Kronometre")
-            subtitle = Stopwatch.clock(Stopwatch.elapsed(this@StopwatchTile))
+            subtitleCompat = Stopwatch.clock(Stopwatch.elapsed(this@StopwatchTile))
             updateTile()
         }
     }

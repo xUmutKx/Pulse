@@ -83,7 +83,7 @@ internal val QUICK = listOf(
             val m = c.getSystemService(Context.CAMERA_SERVICE) as CameraManager
             val id = m.cameraIdList.first()
             ActionCenter.torch = !ActionCenter.torch
-            m.setTorchMode(id, ActionCenter.torch)
+            if (android.os.Build.VERSION.SDK_INT >= 23) m.setTorchMode(id, ActionCenter.torch)
         }
     }),
     QTile(Icons.Outlined.StickyNote2, "Note", "Not", { c -> runCatching { c.startActivity(Intent(c, ExtraToolActivity::class.java).putExtra("route", "notes").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
