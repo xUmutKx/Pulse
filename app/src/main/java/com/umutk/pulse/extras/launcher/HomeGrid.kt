@@ -70,7 +70,7 @@ private fun parseFolder(v: String): Pair<String, List<String>> = v.substringBefo
 /** The home items in the saved order: folders and apps; an app that is in no folder and not in the order yet follows at the end in its usual place. */
 internal fun resolveHome(visible: List<LaunchApp>): List<HomeItem> {
     val byPkg = visible.associateBy { it.pkg }
-    val folders = LauncherPrefs.folders.mapValues { parseFolder(it.value) }
+    val folders = LauncherPrefs.folders.filterKeys { it !in LauncherPrefs.folderOff }.mapValues { parseFolder(it.value) }
     val inFolder = folders.values.flatMap { it.second }.toSet()
     val out = ArrayList<HomeItem>(); val used = HashSet<String>()
     fun folder(id: String): HomeItem.Folder? = folders[id]?.let { (n, p) -> p.mapNotNull { byPkg[it] }.takeIf { it.isNotEmpty() }?.let { HomeItem.Folder(id, n, it) } }
@@ -98,7 +98,7 @@ internal fun HomeGrid(look: LauncherLook, state: LauncherState, visible: List<La
     val ctx = LocalContext.current
     val view = LocalView.current
     val density = LocalDensity.current.density
-    val items = remember(visible, LauncherPrefs.homeOrder, LauncherPrefs.folders) { resolveHome(visible) }
+    val items = remember(visible, LauncherPrefs.homeOrder, LauncherPrefs.folders, LauncherPrefs.folderOff) { resolveHome(visible) }
     val perPage = columns * LauncherPrefs.rows
     var dragKey by remember { mutableStateOf<String?>(null) }
     var finger by remember { mutableStateOf(Offset.Zero) }
