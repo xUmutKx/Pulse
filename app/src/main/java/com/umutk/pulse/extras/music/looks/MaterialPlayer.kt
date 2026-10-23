@@ -16,6 +16,7 @@ import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.IntOffset
 import kotlin.math.abs
 import kotlin.math.roundToInt
@@ -414,7 +415,12 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         }
                     } else {
                         Spacer(Modifier.weight(1f))
-                        Box(Modifier.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }) {
+                        // a tenth bigger than the column: the cover reaches out evenly on both sides, into the page margin
+                        Box(Modifier.layout { m, c ->
+                            val w = (c.maxWidth * 1.1f).toInt()
+                            val p = m.measure(c.copy(minWidth = w, maxWidth = w, minHeight = 0, maxHeight = androidx.compose.ui.unit.Constraints.Infinity))
+                            layout(c.maxWidth, p.height) { p.place(-(w - c.maxWidth) / 2, 0) }
+                        }.fillMaxWidth().aspectRatio(1f).graphicsLayer { scaleX = coverScale; scaleY = coverScale }) {
                         CoverCarousel(art, artPrev, artNext, prevIdx >= 0, nextIdx >= 0, { engine.previous() }, { engine.next() },
                             Modifier.fillMaxSize(),
                             // a vertical drag on the cover moves the whole player, like anywhere else on it
