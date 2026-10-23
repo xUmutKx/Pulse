@@ -36,7 +36,14 @@ import java.util.concurrent.TimeUnit
 class Peer(val alias: String, val ip: String, val port: Int, val https: Boolean, val fingerprint: String, val model: String, val type: String)
 
 /** A transfer offered to this phone, waiting for Accept / Decline. */
-class Incoming(val sessionId: String, val from: String, val files: List<OfferedFile>, val decision: CompletableFuture<Boolean>)
+/** The answer to an incoming offer: the first one given counts; [get] waits for it. */
+class Decision {
+    private val q = java.util.concurrent.ArrayBlockingQueue<Boolean>(1)
+    fun complete(v: Boolean) { q.offer(v) }
+    fun get(seconds: Long): Boolean = q.poll(seconds, java.util.concurrent.TimeUnit.SECONDS) ?: false
+}
+
+class Incoming(val sessionId: String, val from: String, val files: List<OfferedFile>, val decision: Decision)
 class OfferedFile(val id: String, val name: String, val size: Long, val mime: String)
 
 /**
@@ -350,9 +357,9 @@ object LocalSendEngine {
         if (offered.isEmpty()) return reply(sock, 204)
         if (incoming != null) return reply(sock, 409)
         val session = UUID.randomUUID().toString()
-        val d = CompletableFuture<Boolean>()
+        val d = Decision()
         incoming = Incoming(session, from, offered, d)
-        val ok = runCatching { d.get(60, TimeUnit.SECONDS) }.getOrDefault(false)
+        val ok = runCatching { d.get(60) }.getOrDefault(false)
         incoming = null
         if (!ok) return reply(sock, 403)
         val tokens = offered.associate { it.id to UUID.randomUUID().toString() }

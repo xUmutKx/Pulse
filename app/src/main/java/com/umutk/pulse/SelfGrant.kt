@@ -22,12 +22,12 @@ object SelfGrant {
         if (Shell.root != true && Shell.shizuku != 2) return emptyList()
         val pkg = c.packageName
         val done = mutableListOf<String>()
-        runtime.filter { c.checkSelfPermission(it) != PackageManager.PERMISSION_GRANTED }.forEach { p ->
+        runtime.filter { androidx.core.content.ContextCompat.checkSelfPermission(c, it) != PackageManager.PERMISSION_GRANTED }.forEach { p ->
             Shell.run("pm grant $pkg $p")
-            if (c.checkSelfPermission(p) == PackageManager.PERMISSION_GRANTED) done += p
+            if (androidx.core.content.ContextCompat.checkSelfPermission(c, p) == PackageManager.PERMISSION_GRANTED) done += p
         }
         val sp = c.getSharedPreferences("p", Context.MODE_PRIVATE)
-        val version = runCatching { c.packageManager.getPackageInfo(pkg, 0).longVersionCode }.getOrDefault(0L)
+        val version = runCatching { com.umutk.pulse.Compat.longVersion(c.packageManager.getPackageInfo(pkg, 0)) }.getOrDefault(0L)
         if (sp.getLong("self_grant_ops", -1L) != version) {
             ops.forEach { Shell.run("appops set $pkg $it allow") }
             sp.edit().putLong("self_grant_ops", version).apply()

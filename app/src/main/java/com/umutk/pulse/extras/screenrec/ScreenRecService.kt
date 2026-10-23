@@ -52,7 +52,7 @@ class ScreenRecService : Service() {
             ACTION_RESUME -> { resumeRecording(); return START_NOT_STICKY }
         }
         // startForeground must run on every start that came through startForegroundService, even when it is rejected below
-        startForeground(NOTIF_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION)
+        if (android.os.Build.VERSION.SDK_INT >= 29) startForeground(NOTIF_ID, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PROJECTION) else startForeground(NOTIF_ID, notification())
         if (state != RecState.IDLE) return START_NOT_STICKY
         val data = i?.let { extraIntent(it) }
         if (i == null || data == null) { stopSelf(); return START_NOT_STICKY }
@@ -62,7 +62,7 @@ class ScreenRecService : Service() {
             fps = i.getIntExtra(EXTRA_FPS, 30),
             limitMin = i.getIntExtra(EXTRA_LIMIT, 0),
         )
-        val audio = cfg.mic && checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
+        val audio = cfg.mic && androidx.core.content.ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         try {
             val mp = getSystemService(MediaProjectionManager::class.java).getMediaProjection(i.getIntExtra(EXTRA_CODE, 0), data)
             projection = mp
@@ -94,7 +94,7 @@ class ScreenRecService : Service() {
         uri = u
         val fd = contentResolver.openFileDescriptor(u, "w") ?: error("no output file")
         pfd = fd
-        val rec = MediaRecorder(this)
+        @Suppress("DEPRECATION") val rec = if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(this) else MediaRecorder()
         recorder = rec
         rec.apply {
             if (audio) setAudioSource(MediaRecorder.AudioSource.MIC)
@@ -114,7 +114,7 @@ class ScreenRecService : Service() {
 
     private fun pauseRecording() {
         if (state != RecState.RUNNING) return
-        runCatching { recorder?.pause() }
+        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { recorder?.pause() }
         accum += SystemClock.elapsedRealtime() - runStart
         state = RecState.PAUSED
         overlay?.setPaused(true)
@@ -123,7 +123,7 @@ class ScreenRecService : Service() {
 
     private fun resumeRecording() {
         if (state != RecState.PAUSED) return
-        runCatching { recorder?.resume() }
+        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { recorder?.resume() }
         runStart = SystemClock.elapsedRealtime()
         state = RecState.RUNNING
         overlay?.setPaused(false)
@@ -188,18 +188,17 @@ class ScreenRecService : Service() {
 
     /** Status, live timer (counts only while recording) and the pause/resume and stop actions. */
     private fun notification(): Notification {
-        getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CHANNEL, tr("Screen recording", "Ekran kaydı"), NotificationManager.IMPORTANCE_LOW))
+        if (android.os.Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CHANNEL, tr("Screen recording", "Ekran kaydı"), NotificationManager.IMPORTANCE_LOW)) else Unit
         val paused = state == RecState.PAUSED
-        val icon = Icon.createWithResource(this, R.drawable.ic_qs_pulse)
         val pauseIntent = PendingIntent.getService(this, 1, Intent(this, ScreenRecService::class.java).setAction(if (paused) ACTION_RESUME else ACTION_PAUSE), PendingIntent.FLAG_IMMUTABLE)
         val stop = PendingIntent.getService(this, 0, Intent(this, ScreenRecService::class.java).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE)
-        val b = Notification.Builder(this, CHANNEL)
+        val b = androidx.core.app.NotificationCompat.Builder(this, CHANNEL)
             .setSmallIcon(R.drawable.ic_qs_pulse)
             .setContentTitle(if (paused) tr("Recording paused", "Kayıt duraklatıldı") else tr("Recording the screen", "Ekran kaydediliyor"))
             .setOngoing(true)
             .setOnlyAlertOnce(true)
-            .addAction(Notification.Action.Builder(icon, if (paused) tr("Resume", "Devam") else tr("Pause", "Duraklat"), pauseIntent).build())
-            .addAction(Notification.Action.Builder(icon, tr("Stop", "Durdur"), stop).build())
+            .addAction(R.drawable.ic_qs_pulse, if (paused) tr("Resume", "Devam") else tr("Pause", "Duraklat"), pauseIntent)
+            .addAction(R.drawable.ic_qs_pulse, tr("Stop", "Durdur"), stop)
         if (paused) b.setUsesChronometer(false).setContentText(formatElapsed(elapsedMs()))
         else b.setUsesChronometer(true).setWhen(System.currentTimeMillis() - elapsedMs())
         return b.build()
@@ -230,7 +229,7 @@ class ScreenRecService : Service() {
 
         /** [data] is the Intent from the consent dialog's result; the mic needs its permission granted before this. */
         fun start(c: Context, code: Int, data: Intent, cfg: RecConfig) {
-            c.startForegroundService(Intent(c, ScreenRecService::class.java).putExtra(EXTRA_CODE, code).putExtra(EXTRA_DATA, data)
+            androidx.core.content.ContextCompat.startForegroundService(c, Intent(c, ScreenRecService::class.java).putExtra(EXTRA_CODE, code).putExtra(EXTRA_DATA, data)
                 .putExtra(EXTRA_MIC, cfg.mic).putExtra(EXTRA_QUALITY, cfg.quality).putExtra(EXTRA_FPS, cfg.fps).putExtra(EXTRA_LIMIT, cfg.limitMin))
         }
 

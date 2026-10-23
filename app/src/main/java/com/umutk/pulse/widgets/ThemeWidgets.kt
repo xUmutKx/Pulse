@@ -142,7 +142,7 @@ abstract class SkinWidget(val skin: Skin) : AppWidgetProvider() {
     private val ticking get() = skin == Skin.IOS_WORLD || skin == Skin.IOS_UP_NEXT
     private fun alarm(ctx: Context) = ctx.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
     private fun tickIntent(ctx: Context) = PendingIntent.getBroadcast(ctx, 2000 + skin.ordinal, Intent(ctx, javaClass).setAction(TICK), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    private fun scheduleTick(ctx: Context) = alarm(ctx).setAndAllowWhileIdle(android.app.AlarmManager.RTC, (System.currentTimeMillis() / 60_000 + 1) * 60_000, tickIntent(ctx))
+    private fun scheduleTick(ctx: Context) = if (android.os.Build.VERSION.SDK_INT >= 23) alarm(ctx).setAndAllowWhileIdle(android.app.AlarmManager.RTC, (System.currentTimeMillis() / 60_000 + 1) * 60_000, tickIntent(ctx)) else alarm(ctx).set(android.app.AlarmManager.RTC, (System.currentTimeMillis() / 60_000 + 1) * 60_000, tickIntent(ctx))
 
     override fun onDisabled(ctx: Context) { if (ticking) alarm(ctx).cancel(tickIntent(ctx)) }
 
@@ -173,7 +173,7 @@ abstract class SkinWidget(val skin: Skin) : AppWidgetProvider() {
         val dens = ctx.resources.displayMetrics.density
         val px = WidgetSize.dp(ctx, id)?.let { (it.first * dens).toInt() to (it.second * dens).toInt() } ?: (0 to 0)
         val v = when {
-            art("dial") != 0 -> RemoteViews(ctx.packageName, if (skin == Skin.GL_CLOCK) R.layout.widget_skin_gl_clock else R.layout.widget_skin_analog).apply {
+            art("dial") != 0 && android.os.Build.VERSION.SDK_INT >= 23 -> RemoteViews(ctx.packageName, if (skin == Skin.GL_CLOCK) R.layout.widget_skin_gl_clock else R.layout.widget_skin_analog).apply {
                 // AnalogClock scales the dial and the hands together only when they are the same size, so the drawn dials take the hands' size
                 val hs = Skins.sizeOf(ctx, art("hour"))
                 when (skin) {
@@ -816,7 +816,7 @@ object Skins {
 
     /** The wallpaper's tonal palette when [accent] is the wallpaper accent, else tones mixed from the accent itself. */
     private fun tones(ctx: Context, accent: Int): Tones {
-        if (accent == ctx.getColor(android.R.color.system_accent1_200)) return Tones(ctx.getColor(android.R.color.system_neutral2_900), ctx.getColor(android.R.color.system_accent2_800),
+        if (android.os.Build.VERSION.SDK_INT >= 31 && accent == ctx.getColor(android.R.color.system_accent1_200)) return Tones(ctx.getColor(android.R.color.system_neutral2_900), ctx.getColor(android.R.color.system_accent2_800),
             accent, ctx.getColor(android.R.color.system_accent1_800), ctx.getColor(android.R.color.system_accent1_100), ctx.getColor(android.R.color.system_neutral2_300))
         val a = readable(accent)
         fun mix(to: Int, f: Float) = ColorUtils.blendARGB(a, to, f)

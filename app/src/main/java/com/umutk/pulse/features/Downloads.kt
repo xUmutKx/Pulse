@@ -397,7 +397,7 @@ object Downloads {
 
     /** A notification button that pauses, resumes or cancels [t]. */
     internal fun action(c: Context, t: DlTask, act: String): PendingIntent =
-        PendingIntent.getForegroundService(c, t.nid * 31 + act.hashCode(), Intent(c, DownloadService::class.java).setAction(act).putExtra("id", t.nid),
+        (if (android.os.Build.VERSION.SDK_INT >= 26) PendingIntent::getForegroundService else PendingIntent::getService)(c, t.nid * 31 + act.hashCode(), Intent(c, DownloadService::class.java).setAction(act).putExtra("id", t.nid),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
 
     /** The ongoing notification of a running download: name, progress, speed, time left, Pause and Cancel. */
@@ -434,7 +434,7 @@ object Downloads {
     internal fun notifyDone(t: DlTask, ok: Boolean) {
         val c = app ?: return
         val nm = c.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_DONE, "Finished downloads", NotificationManager.IMPORTANCE_DEFAULT))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_DONE, "Finished downloads", NotificationManager.IMPORTANCE_DEFAULT)) else Unit
         val page = PendingIntent.getActivity(c, t.nid, openPage(c), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val b = NotificationCompat.Builder(c, CH_DONE).setContentTitle(t.file.name).setAutoCancel(true)
         if (ok) {
@@ -634,7 +634,7 @@ private suspend fun DlTask.transfer(): Boolean {
         if (code == 416 && have > 0) { if (have == total.value) return true; throw Changed() }
         if (code !in 200..299) throw IOException("HTTP $code")
         val ranged = code == 206
-        val size = if (ranged) first.getHeaderField("Content-Range")?.substringAfter('/')?.toLongOrNull() ?: -1L else first.contentLengthLong
+        val size = if (ranged) first.getHeaderField("Content-Range")?.substringAfter('/')?.toLongOrNull() ?: -1L else com.umutk.pulse.Compat.contentLength(first)
         val tag = first.getHeaderField("ETag")
         val mod = first.getHeaderField("Last-Modified")
         // the saved bytes only count for the same file: same validators, same size
@@ -666,8 +666,7 @@ private suspend fun DlTask.split(total: Long): Boolean = coroutineScope {
     val fresh = partPos == null
     val pos = partPos ?: LongArray(PARTS) { it * step }.also { partPos = it }
     val tag = validator()
-    FileChannel.open(file.toPath(), if (fresh) setOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE, StandardOpenOption.TRUNCATE_EXISTING)
-        else setOf(StandardOpenOption.CREATE, StandardOpenOption.WRITE)).use { ch ->
+    java.io.RandomAccessFile(file, "rw").also { if (fresh) it.setLength(0) }.channel.use { ch ->
         done.value = pos.indices.sumOf { pos[it] - it * step }
         (0 until PARTS).map { i ->
             async(Dispatchers.IO) {
@@ -763,7 +762,7 @@ class DownloadService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         lastId = startId
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_RUN, "Downloads", NotificationManager.IMPORTANCE_LOW))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_RUN, "Downloads", NotificationManager.IMPORTANCE_LOW)) else Unit
         val fg = runCatching {
             if (Build.VERSION.SDK_INT >= 34) startForeground(ID_RUN, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(ID_RUN, note())
         }

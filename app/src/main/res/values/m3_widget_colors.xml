@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- before Android 12 there are no wallpaper colours: the Material 3 baseline purple tones -->
+    <color name="m3w_accent1_200">#D0BCFF</color>
+    <color name="m3w_accent1_100">#EADDFF</color>
+    <color name="m3w_neutral2_300">#CAC4D0</color>
+</resources>

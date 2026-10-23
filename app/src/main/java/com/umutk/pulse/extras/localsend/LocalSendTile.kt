@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.localsend
 
+import com.umutk.pulse.subtitleCompat
+
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
@@ -9,12 +11,13 @@ import com.umutk.pulse.ExtraToolActivity
 import com.umutk.pulse.tr
 
 /** Quick Settings tile: opens LocalSend (the nearby devices, ready to send). */
+@androidx.annotation.RequiresApi(24)
 class LocalSendTile : TileService() {
     override fun onStartListening() {
         qsTile?.apply {
             label = "LocalSend"
             state = Tile.STATE_INACTIVE
-            subtitle = tr("Send to nearby devices", "Yakındaki cihazlara gönder")
+            subtitleCompat = tr("Send to nearby devices", "Yakındaki cihazlara gönder")
             updateTile()
         }
     }

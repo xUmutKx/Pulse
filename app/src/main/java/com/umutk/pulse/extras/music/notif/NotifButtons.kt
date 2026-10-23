@@ -95,7 +95,7 @@ object NotifOutput {
     private const val BT = 2
     private var chosen: AudioDeviceInfo? = null
 
-    private fun kind(d: AudioDeviceInfo) = when (d.type) {
+    private fun kind(d: AudioDeviceInfo) = if (android.os.Build.VERSION.SDK_INT < 23) -1 else when (d.type) {
         AudioDeviceInfo.TYPE_BUILTIN_SPEAKER -> SPEAKER
         AudioDeviceInfo.TYPE_WIRED_HEADSET, AudioDeviceInfo.TYPE_WIRED_HEADPHONES, AudioDeviceInfo.TYPE_USB_HEADSET -> HEADSET
         AudioDeviceInfo.TYPE_BLUETOOTH_A2DP, AudioDeviceInfo.TYPE_BLE_HEADSET -> BT
@@ -103,7 +103,7 @@ object NotifOutput {
     }
 
     private fun available(c: Context): List<AudioDeviceInfo> =
-        (c.getSystemService(Context.AUDIO_SERVICE) as AudioManager).getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+        if (android.os.Build.VERSION.SDK_INT < 23) emptyList() else (c.getSystemService(Context.AUDIO_SERVICE) as AudioManager).getDevices(AudioManager.GET_DEVICES_OUTPUTS)
             .filter { kind(it) >= 0 }.distinctBy { kind(it) }
 
     /** The user's pick while still connected, otherwise the system's choice: wired, then Bluetooth, then speaker. */
@@ -125,6 +125,6 @@ object NotifOutput {
         if (av.size < 2) return
         val i = av.indexOfFirst { kind(it) == current(c) }
         chosen = av[(i + 1) % av.size]
-        MusicPlayerEngine.get(c).player.setPreferredAudioDevice(chosen)
+        if (android.os.Build.VERSION.SDK_INT >= 23) MusicPlayerEngine.get(c).player.setPreferredAudioDevice(chosen)
     }
 }

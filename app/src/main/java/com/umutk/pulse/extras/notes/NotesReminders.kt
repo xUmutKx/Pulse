@@ -38,7 +38,7 @@ object NotesReminders {
 
     fun show(c: Context, n: Note) {
         val nm = c.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Note reminders", "Not hatırlatmaları"), NotificationManager.IMPORTANCE_HIGH))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Note reminders", "Not hatırlatmaları"), NotificationManager.IMPORTANCE_HIGH)) else Unit
         val open = PendingIntent.getActivity(c, n.id.hashCode(), Intent(c, NotesEntryActivity::class.java).putExtra("open", n.id),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         val snooze = PendingIntent.getBroadcast(c, n.id.hashCode() + 1,

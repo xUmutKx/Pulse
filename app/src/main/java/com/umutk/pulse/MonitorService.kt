@@ -55,8 +55,8 @@ class MonitorService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Opt.load(this)
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Monitor", NotificationManager.IMPORTANCE_LOW))
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Monitor", NotificationManager.IMPORTANCE_LOW)) else Unit
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH_ALERT, "Alerts", NotificationManager.IMPORTANCE_HIGH)) else Unit
         val n = build("Pulse monitor is running")
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID, n)
         if (job == null) job = scope.launch { loop() }
@@ -122,7 +122,7 @@ class MonitorService : Service() {
     }
 
     private fun showOverlay(its: List<Pair<String, String>>) {
-        if (!Opt.ovOn || !Settings.canDrawOverlays(this)) { hideOverlay(); return }
+        if (!Opt.ovOn || !com.umutk.pulse.Compat.canOverlay(this)) { hideOverlay(); return }
         if (tv == null) {
             wm = getSystemService(WINDOW_SERVICE) as WindowManager
             val v = android.widget.LinearLayout(this)
@@ -161,14 +161,15 @@ class MonitorService : Service() {
 }
 
 /** Quick Settings tile: switches the floating monitor (or, without the overlay permission, the notification monitor) on and off. */
+@androidx.annotation.RequiresApi(24)
 class PulseTile : TileService() {
     override fun onStartListening() { Opt.load(this); paint() }
-    private fun paint() { qsTile?.apply { state = if (Opt.ovOn || Opt.notifOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "Pulse"; subtitle = if (Opt.ovOn) tr("Overlay", "Ekran üstü") else if (Opt.notifOn) tr("Notification", "Bildirim") else tr("Off", "Kapalı"); updateTile() } }
+    private fun paint() { qsTile?.apply { state = if (Opt.ovOn || Opt.notifOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "Pulse"; subtitleCompat = if (Opt.ovOn) tr("Overlay", "Ekran üstü") else if (Opt.notifOn) tr("Notification", "Bildirim") else tr("Off", "Kapalı"); updateTile() } }
     override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
     private fun click0() {
         Opt.load(this)
         val on = !(Opt.ovOn || Opt.notifOn)
-        if (on) { if (Settings.canDrawOverlays(this)) Opt.ovOn = true else Opt.notifOn = true } else { Opt.ovOn = false; Opt.notifOn = false }
+        if (on) { if (com.umutk.pulse.Compat.canOverlay(this)) Opt.ovOn = true else Opt.notifOn = true } else { Opt.ovOn = false; Opt.notifOn = false }
         Opt.save(this); MonitorService.sync(this); paint()
     }
 }
@@ -184,10 +185,11 @@ fun tilePage(cls: String): String = when (cls.substringAfterLast('.')) {
     "FlashlightTile" -> "toolkit:flash"
     "StopwatchTile" -> "toolkit:stopwatch"
     "ToolkitTile" -> "toolkit"
-    else -> runCatching { (Class.forName(cls).getDeclaredConstructor().newInstance() as ToolkitTile).start }.getOrDefault("toolkit")
+    else -> if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { (Class.forName(cls).getDeclaredConstructor().newInstance() as ToolkitTile).start }.getOrDefault("toolkit") else "toolkit"
 }
 
 /** Opens Pulse on [page] and closes the panel. */
+@androidx.annotation.RequiresApi(24)
 fun TileService.openPulse(page: String) {
     val i = Intent(this, MainActivity::class.java).putExtra("start", page).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
     if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, page.hashCode(), i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -196,6 +198,7 @@ fun TileService.openPulse(page: String) {
 
 /** Quick Settings tile for one Toolkit tool; [start] is the "start" extra MainActivity reads. The plain Toolkit tile opens the Toolkit page.
  *  A tap does the tool's own job in the panel ([act]); a tile without one opens its tool. Sensor tiles switch their live reading on and off. */
+@androidx.annotation.RequiresApi(24)
 open class ToolkitTile : TileService() {
     open val start: String get() = "toolkit"
     /** Turkish name; the English one is the manifest label. */
@@ -224,7 +227,7 @@ open class ToolkitTile : TileService() {
     private var listening = false
     private var registered = false
     private val listener = object : SensorEventListener {
-        override fun onSensorChanged(e: SensorEvent) { qsTile?.apply { val s = subtitleFor(e.values); if (subtitle != s) { subtitle = s; updateTile() } } }
+        override fun onSensorChanged(e: SensorEvent) { qsTile?.apply { val s = subtitleFor(e.values); if (subtitle != s) { subtitleCompat = s; updateTile() } } }
         override fun onAccuracyChanged(s: Sensor?, a: Int) {}
     }
     private val tick = object : Runnable { override fun run() { paint(); if (listening) main.postDelayed(this, refreshMs) } }
@@ -240,7 +243,7 @@ open class ToolkitTile : TileService() {
         qsTile?.apply {
             label = tr(name, trName)
             state = when { noSensor -> Tile.STATE_UNAVAILABLE; (if (sensor != null) live else active()) -> Tile.STATE_ACTIVE; else -> Tile.STATE_INACTIVE }
-            subtitle = when { noSensor -> tr("No sensor", "Sensör yok"); sensor != null && !live -> tr("Off", "Kapalı"); else -> subtitleFor(null) }
+            subtitleCompat = when { noSensor -> tr("No sensor", "Sensör yok"); sensor != null && !live -> tr("Off", "Kapalı"); else -> subtitleFor(null) }
             picture?.let { icon = Icon.createWithResource(this@ToolkitTile, it) }
             updateTile()
         }
@@ -255,6 +258,7 @@ open class ToolkitTile : TileService() {
     override fun onClick() { if (act()) paint() }
 }
 
+@androidx.annotation.RequiresApi(24)
 class CompassTile : ToolkitTile() {
     override val start: String get() = "toolkit:compass"
     override val trName: String get() = "Pusula"
@@ -267,6 +271,7 @@ class CompassTile : ToolkitTile() {
         return "%.0f° %s".format(deg, DIRS[((deg + 22.5) / 45).toInt() % 8])
     }
 }
+@androidx.annotation.RequiresApi(24)
 class LevelTile : ToolkitTile() {
     override val start: String get() = "toolkit:level"
     override val trName: String get() = "Su terazisi"
@@ -275,12 +280,14 @@ class LevelTile : ToolkitTile() {
         tr("Tilt %.0f°", "Eğim %.0f°").format(Math.toDegrees(Math.atan2(Math.hypot(it[0].toDouble(), it[1].toDouble()), it[2].toDouble())))
     }
 }
+@androidx.annotation.RequiresApi(24)
 class LuxTile : ToolkitTile() {
     override val start: String get() = "toolkit:light"
     override val trName: String get() = "Işık ölçer"
     override val sensor: Int? get() = Sensor.TYPE_LIGHT
     override fun subtitleFor(values: FloatArray?): String? = values?.let { "%.0f lx".format(it[0]) }
 }
+@androidx.annotation.RequiresApi(24)
 class DiceTile : ToolkitTile() {
     override val start: String get() = "toolkit:dice"
     override val trName: String get() = "Zar"
@@ -290,6 +297,7 @@ class DiceTile : ToolkitTile() {
     override val picture: Int? get() = prefs.getInt("dice_last", 0).takeIf { it in 1..6 }?.let { DICE_FACES[it - 1] }
 }
 private val DICE_FACES = intArrayOf(R.drawable.ic_dice_1, R.drawable.ic_dice_2, R.drawable.ic_dice_3, R.drawable.ic_dice_4, R.drawable.ic_dice_5, R.drawable.ic_dice_6)
+@androidx.annotation.RequiresApi(24)
 class CoinTile : ToolkitTile() {
     override val start: String get() = "toolkit:coin"
     override val trName: String get() = "Yazı tura"
@@ -297,6 +305,7 @@ class CoinTile : ToolkitTile() {
     override fun subtitleFor(values: FloatArray?): String? = prefs.getString("coin_last", null)?.let { tr(it, if (it == "Heads") "Tura" else "Yazı") }
     override fun act(): Boolean { prefs.edit().putString("coin_last", if ((0..1).random() == 0) "Heads" else "Tails").apply(); return true }
 }
+@androidx.annotation.RequiresApi(24)
 class ScreenshotTile : ToolkitTile() {
     override val start: String get() = "toolkit:screenshot"
     override val trName: String get() = "Ekran görüntüsü"
@@ -309,6 +318,7 @@ class ScreenshotTile : ToolkitTile() {
     override fun subtitleFor(values: FloatArray?): String? = if (failed) tr("Failed", "Olmadı") else prefs.getLong("shot_last", 0).takeIf { it > 0 }
         ?.let { android.text.format.DateFormat.getTimeFormat(this).format(Date(it)) }
 }
+@androidx.annotation.RequiresApi(24)
 class SoundModeTile : ToolkitTile() {
     override val start: String get() = "toolkit:vibrate"
     override val trName: String get() = "Ses modu"
@@ -329,6 +339,7 @@ class SoundModeTile : ToolkitTile() {
         return try { am.ringerMode = next; true } catch (e: SecurityException) { openPulse(start); false }
     }
 }
+@androidx.annotation.RequiresApi(24)
 class ClipboardTile : ToolkitTile() {
     override val start: String get() = "toolkit:clipboard"
     override val trName: String get() = "Pano"
@@ -337,6 +348,7 @@ class ClipboardTile : ToolkitTile() {
     // Android hands the clipboard only to the foreground app, so this is mostly null: the tap then opens the tool
     override fun act(): Boolean { text = TileActions.clipboardText(this)?.takeIf { it.isNotBlank() } ?: run { openPulse(start); return false }; return true }
 }
+@androidx.annotation.RequiresApi(24)
 class SensorsOffTile : ToolkitTile() {
     override val start: String get() = "toolkit:sensors"
     override val trName: String get() = "Sensörler kapalı"
@@ -351,6 +363,7 @@ class SensorsOffTile : ToolkitTile() {
         busy = true; return true
     }
 }
+@androidx.annotation.RequiresApi(24)
 class BatteryTile : ToolkitTile() {
     override val start: String get() = "toolkit:battery"
     override val trName: String get() = "Pil"
@@ -362,6 +375,7 @@ class BatteryTile : ToolkitTile() {
         "${i.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) * 100 / scale}%" + if (active()) tr(" · charging", " · şarjda") else ""
     }
 }
+@androidx.annotation.RequiresApi(24)
 class MemoryTile : ToolkitTile() {
     override val start: String get() = "toolkit:memory"
     override val trName: String get() = "Bellek"
@@ -372,6 +386,7 @@ class MemoryTile : ToolkitTile() {
         return tr("%d%% used", "%%%d dolu").format((m.totalMem - m.availMem) * 100 / m.totalMem)
     }
 }
+@androidx.annotation.RequiresApi(24)
 class TemperatureTile : ToolkitTile() {
     override val start: String get() = "toolkit:thermal"
     override val trName: String get() = "Sıcaklık"
@@ -379,6 +394,7 @@ class TemperatureTile : ToolkitTile() {
     override fun act(): Boolean = true // the reading is the job; a tap refreshes it
     override fun subtitleFor(values: FloatArray?): String? = batteryIntent()?.let { Opt.temp(it.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) / 10f) }
 }
+@androidx.annotation.RequiresApi(24)
 class VolumeTile : ToolkitTile() {
     override val start: String get() = "toolkit:volume"
     override val trName: String get() = "Ses düzeyi"
@@ -390,6 +406,7 @@ class VolumeTile : ToolkitTile() {
     }
 }
 /** Timer tile: while a timer runs, its remaining time is the subtitle and the icon turns to an hourglass. The Toolkit timer writes its end time (ms) to prefs "timer", key "end". A tap opens the timer. */
+@androidx.annotation.RequiresApi(24)
 class TimerTile : ToolkitTile() {
     override val start: String get() = "toolkit:timer"
     override val trName: String get() = "Zamanlayıcı"
@@ -402,8 +419,10 @@ class TimerTile : ToolkitTile() {
         "%02d:%02d".format(s / 60, s % 60)
     }
 }
+@androidx.annotation.RequiresApi(24)
 class CalculatorTile : ToolkitTile() { override val start: String get() = "calculator"; override val trName: String get() = "Hesap makinesi" }
 /** Network type tile (5G only, LTE only ...): a tap switches to the next mode picked in the Toolkit, as root; without root it opens the screen. */
+@androidx.annotation.RequiresApi(24)
 class NetModeTile : ToolkitTile() {
     override val start: String get() = "toolkit:globe"
     override val trName: String get() = "Ağ türü"
@@ -419,8 +438,11 @@ class NetModeTile : ToolkitTile() {
         return true
     }
 }
+@androidx.annotation.RequiresApi(24)
 class FinderTile : ToolkitTile() { override val start: String get() = "toolkit:search"; override val trName: String get() = "Bulucu" }
+@androidx.annotation.RequiresApi(24)
 class DinkTile : ToolkitTile() { override val start: String get() = "toolkit:dink"; override val trName: String get() = "Dink" }
+@androidx.annotation.RequiresApi(24)
 class ScaleTile : ToolkitTile() {
     override val start: String get() = "toolkit:scale"
     override val trName: String get() = "Ekran ölçeği"
@@ -433,6 +455,7 @@ class ScaleTile : ToolkitTile() {
         return true
     }
 }
+@androidx.annotation.RequiresApi(24)
 class RotationTile : ToolkitTile() {
     override val start: String get() = "toolkit:rotate"
     override val trName: String get() = "Ekran yönü"
@@ -464,6 +487,7 @@ class RotationTile : ToolkitTile() {
         return b
     }
 }
+@androidx.annotation.RequiresApi(24)
 class TouchesTile : ToolkitTile() {
     override val start: String get() = "toolkit:touch"
     override val trName: String get() = "Dokunma noktaları"
@@ -473,6 +497,7 @@ class TouchesTile : ToolkitTile() {
         return true
     }
 }
+@androidx.annotation.RequiresApi(24)
 class PointerTile : ToolkitTile() {
     override val start: String get() = "toolkit:pointer"
     override val trName: String get() = "Dokunma çizgileri"
@@ -482,18 +507,21 @@ class PointerTile : ToolkitTile() {
         return true
     }
 }
+@androidx.annotation.RequiresApi(24)
 class MotionCueTile : ToolkitTile() {
     override val start: String get() = "toolkit:motion"
     override val trName: String get() = "Hareket noktaları"
     override fun active(): Boolean = MotionCueService.running
     override fun act(): Boolean { if (!MotionCueService.toggle(this)) { openPulse(start); return false }; main.postDelayed({ paint() }, 300); return true }
 }
+@androidx.annotation.RequiresApi(24)
 class PowerMenuTile : ToolkitTile() {
     override val start: String get() = "toolkit:power"
     override val trName: String get() = "Güç menüsü"
     override fun act(): Boolean { if (!TileActions.powerMenu()) openPulse(start); return false }
 }
 /** Quick Settings tile "last played": shows the last track or mix ([QuickTileContract]); a tap resumes it through MainActivity. */
+@androidx.annotation.RequiresApi(24)
 class LastPlayedTile : TileService() {
     override fun onStartListening() { Opt.load(this); paint() }
     private fun paint() {
@@ -501,7 +529,7 @@ class LastPlayedTile : TileService() {
         qsTile?.apply {
             label = com.umutk.pulse.extras.watchdog.QuickTileContract.label(this@LastPlayedTile)
             state = if (last != null) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            subtitle = last?.let { if (it.kind == com.umutk.pulse.extras.watchdog.QuickTileContract.Kind.MIX) tr("Mix", "Karışım") else tr("Track", "Parça") }
+            subtitleCompat = last?.let { if (it.kind == com.umutk.pulse.extras.watchdog.QuickTileContract.Kind.MIX) tr("Mix", "Karışım") else tr("Track", "Parça") }
             updateTile()
         }
     }
@@ -525,6 +553,7 @@ object PowerMenu {
 }
 
 /** Quick Settings tile that toggles the torch; the tile follows the torch, also when another app or the system changes it. */
+@androidx.annotation.RequiresApi(24)
 class FlashlightTile : TileService() {
     private val cm by lazy { getSystemService(CameraManager::class.java) }
     private val camId: String? by lazy {
@@ -543,7 +572,7 @@ class FlashlightTile : TileService() {
         qsTile?.apply {
             label = tr("Flashlight", "El feneri")
             state = if (camId == null) Tile.STATE_UNAVAILABLE else if (torchOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
-            subtitle = when { camId == null -> tr("No flash", "Flaş yok"); busy -> tr("Camera in use", "Kamera kullanımda"); torchOn -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
+            subtitleCompat = when { camId == null -> tr("No flash", "Flaş yok"); busy -> tr("Camera in use", "Kamera kullanımda"); torchOn -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
             icon = Icon.createWithResource(this@FlashlightTile, if (torchOn) R.drawable.ic_qs_flashlight else R.drawable.qs_flashlight_off)
             updateTile()
         }

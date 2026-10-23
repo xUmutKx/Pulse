@@ -64,7 +64,7 @@ object LocalSendBubble {
         if (view != null) return true
         val acc = CoverAccessibilityService.instance
         val app = ctx.applicationContext
-        if (acc == null && !Settings.canDrawOverlays(app)) return false
+        if (acc == null && !com.umutk.pulse.Compat.canOverlay(app)) return false
         val base: Context = acc ?: app
         val wm = base.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val type = if (acc != null) WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY else WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY

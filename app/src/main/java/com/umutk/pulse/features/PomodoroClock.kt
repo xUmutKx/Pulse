@@ -104,16 +104,16 @@ object PomodoroClock {
     private fun notifyDone(c: Context, finished: Int) {
         val nm = c.getSystemService(NotificationManager::class.java)
         val sound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM) ?: RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel("timer", tr("Timer", "Zamanlayıcı"), NotificationManager.IMPORTANCE_HIGH).apply {
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("timer", tr("Timer", "Zamanlayıcı"), NotificationManager.IMPORTANCE_HIGH).apply {
             setSound(sound, AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ALARM).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
             enableVibration(true)
-        })
+        }) else Unit
         val open = PendingIntent.getActivity(c, 7106, Intent(c, MainActivity::class.java).putExtra("start", "toolkit:timer")
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         val title = if (finished == 0) tr("Time for a break", "Mola zamanı") else tr("Back to work", "Çalışma zamanı")
         runCatching {
-            nm.notify(NOTE_ID, Notification.Builder(c, "timer").setSmallIcon(R.drawable.ic_qs_timer)
-                .setContentTitle(title).setCategory(Notification.CATEGORY_ALARM).setContentIntent(open).setAutoCancel(true).build())
+            nm.notify(NOTE_ID, androidx.core.app.NotificationCompat.Builder(c, "timer").setSmallIcon(R.drawable.ic_qs_timer)
+                .setContentTitle(title).setCategory(androidx.core.app.NotificationCompat.CATEGORY_ALARM).setContentIntent(open).setAutoCancel(true).build())
         }
     }
 }

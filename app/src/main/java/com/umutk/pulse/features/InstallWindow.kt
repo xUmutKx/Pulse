@@ -173,7 +173,7 @@ private data class XposedInfo(val description: String, val minVersion: String)
 private fun oldApp(ctx: Context, pkg: String): OldApp? = try {
     val i = ctx.packageManager.getPackageInfo(pkg, 0)
     val ai = i.applicationInfo
-    OldApp(i.versionName.orEmpty(), i.longVersionCode, ai?.minSdkVersion ?: 0, ai?.targetSdkVersion ?: 0)
+    OldApp(i.versionName.orEmpty(), com.umutk.pulse.Compat.longVersion(i), if (android.os.Build.VERSION.SDK_INT >= 24) ai?.minSdkVersion ?: 0 else 0, ai?.targetSdkVersion ?: 0)
 } catch (e: PackageManager.NameNotFoundException) { null }
 
 private fun xposedInfo(ctx: Context, path: String): XposedInfo? {
@@ -222,22 +222,28 @@ object BioGate {
 
     fun run(c: Context, then: () -> Unit) {
         if (!InstallShow.biometric) { then(); return }
-        val cancel = CancellationSignal()
-        pending = cancel
-        val prompt = BiometricPrompt.Builder(c)
-            .setTitle("Install app")
-            .setDescription("Confirm it is you to install this app.")
-            .setNegativeButton("Cancel", c.mainExecutor) { _, _ -> cancel.cancel() }
-            .build()
-        prompt.authenticate(cancel, c.mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { pending = null; then() }
-            override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
-                pending = null
-                if (errorCode != BiometricPrompt.BIOMETRIC_ERROR_CANCELED && errorCode != BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED)
-                    Toast.makeText(c, "Install stopped: $errString", Toast.LENGTH_LONG).show()
-            }
-        })
+        if (android.os.Build.VERSION.SDK_INT < 28) { then(); return }
+        askPrompt(c, then)
     }
+}
+
+@androidx.annotation.RequiresApi(28)
+private fun askPrompt(c: Context, then: () -> Unit) {
+    val cancel = CancellationSignal()
+    BioGate.pending = cancel
+    val prompt = BiometricPrompt.Builder(c)
+        .setTitle("Install app")
+        .setDescription("Confirm it is you to install this app.")
+        .setNegativeButton("Cancel", c.mainExecutor) { _, _ -> cancel.cancel() }
+        .build()
+    prompt.authenticate(cancel, c.mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
+        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { BioGate.pending = null; then() }
+        override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+            BioGate.pending = null
+            if (errorCode != BiometricPrompt.BIOMETRIC_ERROR_CANCELED && errorCode != BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED)
+                Toast.makeText(c, "Install stopped: $errString", Toast.LENGTH_LONG).show()
+        }
+    })
 }
 
 /** Radius (0..1) of each loader shape at angle [a]: circle, 8-lobe burst, rounded pentagon, oval, 9-lobe cookie, rounded square, clover. */

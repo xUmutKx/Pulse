@@ -46,7 +46,7 @@ object TileActions {
 
     /** A glow along the screen edges that fades out, so you can tell the shot was taken. Needs the overlay permission; silent without it. */
     private fun flash(c: Context) = runCatching {
-        if (!Settings.canDrawOverlays(c)) return@runCatching
+        if (!com.umutk.pulse.Compat.canOverlay(c)) return@runCatching
         val d = c.resources.displayMetrics.density
         val wm = c.getSystemService(android.view.WindowManager::class.java)
         val v = android.view.View(c).apply {
