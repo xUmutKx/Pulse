@@ -31,7 +31,7 @@ class CaptureOverlay(
 
     fun show(): Boolean {
         if (bar != null) return true
-        if (!Settings.canDrawOverlays(c)) return false
+        if (!com.umutk.pulse.Compat.canOverlay(c)) return false
         val row = LinearLayout(c).apply {
             orientation = LinearLayout.HORIZONTAL
             background = GradientDrawable().apply { setColor(0xE6202020.toInt()); cornerRadius = 28 * d }

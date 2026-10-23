@@ -404,15 +404,15 @@ private fun apkMeta(ctx: android.content.Context, f: File): ApkMeta? = try {
         val app = info?.applicationInfo
         if (info == null || app == null) null else {
             app.sourceDir = f.path; app.publicSourceDir = f.path
-            val sig = runCatching { java.security.MessageDigest.getInstance("SHA-256").digest(info.signingInfo!!.apkContentsSigners[0].toByteArray()).take(6).joinToString("") { "%02x".format(it) } }.getOrDefault("")
-            val ver = "${info.versionName.orEmpty()} (${info.longVersionCode})"
+            val sig = runCatching { java.security.MessageDigest.getInstance("SHA-256").digest(com.umutk.pulse.Compat.signers(info)!![0].toByteArray()).take(6).joinToString("") { "%02x".format(it) } }.getOrDefault("")
+            val ver = "${info.versionName.orEmpty()} (${com.umutk.pulse.Compat.longVersion(info)})"
             ApkMeta(app.loadLabel(pm).toString(), info.packageName, ver, app.minSdkVersion, app.targetSdkVersion,
                 info.requestedPermissions?.toList().orEmpty(), runCatching { app.loadIcon(pm).toBitmap(96, 96).asImageBitmap() }.getOrNull(), sig, installedOf(pm, info.packageName))
         }
     }
 } catch (e: Exception) { null }
 
-private fun installedOf(pm: PackageManager, pkg: String): String? = runCatching { pm.getPackageInfo(pkg, 0).let { "${it.versionName.orEmpty()} (${it.longVersionCode})" } }.getOrNull()
+private fun installedOf(pm: PackageManager, pkg: String): String? = runCatching { pm.getPackageInfo(pkg, 0).let { "${it.versionName.orEmpty()} (${com.umutk.pulse.Compat.longVersion(it)})" } }.getOrNull()
 
 /** .xapk: the name, package and version from its manifest.json (icon.png as icon); .apks / .apkm: null, the dialog shows the file name and size. */
 private fun bundleMeta(ctx: android.content.Context, f: File): ApkMeta? = java.util.zip.ZipFile(f).use { z ->

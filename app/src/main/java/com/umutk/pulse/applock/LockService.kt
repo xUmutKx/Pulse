@@ -449,7 +449,7 @@ class LockService : AccessibilityService() {
     /** Accessibility overlay first, then a normal overlay (needs "display over other apps"), then a full-screen activity. */
     private fun addOverlay(v: FrameLayout): Boolean {
         runCatching { wm.addView(v, overlayParams(WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY)) }.onSuccess { return true }.onFailure { Log.e("AppLock", "a11y overlay failed", it) }
-        if (Settings.canDrawOverlays(this))
+        if (com.umutk.pulse.Compat.canOverlay(this))
             runCatching { wm.addView(v, overlayParams(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY)) }.onSuccess { return true }.onFailure { Log.e("AppLock", "app overlay failed", it) }
         viaActivity = runCatching { startActivity(Intent(this, LockActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION)) }
             .onFailure { Log.e("AppLock", "lock activity failed", it) }.isSuccess

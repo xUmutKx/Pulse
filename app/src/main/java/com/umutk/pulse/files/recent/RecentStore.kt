@@ -30,7 +30,7 @@ object RecentStore {
 
     /** Other apps' files are listed only with all-files access (Android 11+) or the read permission (up to Android 12L). */
     fun canListAll(c: Context): Boolean =
-        Environment.isExternalStorageManager() ||
+        com.umutk.pulse.Compat.isStorageManager() ||
             (Build.VERSION.SDK_INT <= Build.VERSION_CODES.S_V2 &&
                 ContextCompat.checkSelfPermission(c, Manifest.permission.READ_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED)
 

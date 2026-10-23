@@ -1021,7 +1021,7 @@ private fun FlagTool(key: String, text: String) {
 private fun MotionCueTool() {
     val ctx = LocalContext.current
     val on = polled(500) { com.umutk.pulse.MotionCueService.running }
-    val canDraw = polled(1000) { android.provider.Settings.canDrawOverlays(ctx) }
+    val canDraw = polled(1000) { com.umutk.pulse.Compat.canOverlay(ctx) }
     PCard {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Dots at the screen edges that move with the car, against motion sickness", "Araba tutmasına karşı, araçla birlikte kayan kenar noktaları"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -1048,7 +1048,7 @@ private fun FinderTool() {
     var scanned by remember { mutableIntStateOf(0) }
     var job by remember { mutableStateOf<Job?>(null) }
     var searched by remember { mutableStateOf(false) }
-    val all = polled(1000) { Environment.isExternalStorageManager() }
+    val all = polled(1000) { com.umutk.pulse.Compat.isStorageManager() }
     val root = Environment.getExternalStorageDirectory()
     val limit = 200
     fun search() {

@@ -9,6 +9,7 @@ import com.umutk.pulse.ExtraToolActivity
 import com.umutk.pulse.tr
 
 /** Quick Settings tile: opens LocalSend (the nearby devices, ready to send). */
+@androidx.annotation.RequiresApi(24)
 class LocalSendTile : TileService() {
     override fun onStartListening() {
         qsTile?.apply {
