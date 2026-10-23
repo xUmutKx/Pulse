@@ -20,9 +20,15 @@ object TilePop {
     private val jobs = WeakHashMap<TileService, Job>()
     private const val S = 96
 
+    // the tile's real picture, and the last frame this put on it: a second tap while the first animation still runs must not take a frame for the picture
+    private val origin = WeakHashMap<TileService, Icon>()
+    private val shown = WeakHashMap<TileService, Icon>()
+
     fun play(svc: TileService) {
         val t = svc.qsTile ?: return
-        val own = t.icon ?: return
+        val cur = t.icon ?: return
+        val own = if (cur === shown[svc] && origin[svc] != null) origin[svc]!! else cur
+        origin[svc] = own
         val d = runCatching { own.loadDrawable(svc) }.getOrNull()?.constantState?.newDrawable()?.mutate() ?: return
         jobs[svc]?.cancel()
         jobs[svc] = CoroutineScope(Dispatchers.Main).launch {
@@ -30,11 +36,14 @@ object TilePop {
             var last: Icon? = null
             scale.forEachIndexed { i, k ->
                 val frame = Icon.createWithBitmap(frame(d, k, (i + 1f) / scale.size))
-                t.icon = frame; t.updateTile(); last = frame
+                // the tile painted its own picture meanwhile (a state change): that one stays, this animation ends
+                if (i > 0 && t.icon !== last) return@launch
+                t.icon = frame; t.updateTile(); last = frame; shown[svc] = frame
                 delay(46)
             }
             // someone else (the tile's own paint) changed the picture meanwhile: leave theirs
             if (t.icon === last) { t.icon = own; t.updateTile() }
+            shown.remove(svc)
         }
     }
 
