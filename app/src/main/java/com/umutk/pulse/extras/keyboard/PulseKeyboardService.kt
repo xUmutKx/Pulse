@@ -229,8 +229,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (st.shift == 1) st.shift = 0
             updateSuggestions()
         } else {
-            val correct = !ch.isDigit()
-            finishWord(s, correct)
+            // a word is only mended when the space key ends it: a period, comma or bracket leaves what was typed as it is
+            finishWord(s, false)
             c.commitText(s, 1)
             punctTyped = ch in ",;!?:"
             lastWasSpace = false
