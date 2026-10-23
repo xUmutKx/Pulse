@@ -616,7 +616,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
         // search: the keys below type into this box
         Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 8.dp).clip(RoundedCornerShape(18.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
+            androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
             Text(if (q.isEmpty()) tr("Search emoji, flags, kaomoji", "Emoji, bayrak, kaomoji ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1)
         }
         val found = remember(q, all) { EmojiData.search(all, q) }
@@ -690,7 +690,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                         Icon(kbIcon(th, "Gesture"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
                     }
                     if (it2.image != null) ClipThumb(it2.image) else Text(it2.text, color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    if (it2.image != null) Spacer(Modifier.weight(1f))
+                    if (it2.image != null) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                     Text(ago(now - it2.time), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp))
                 }
             }
