@@ -31,6 +31,8 @@ data class LyricsRecord(
 
 data class LrcLine(val timeMs: Long, val text: String)
 
+private val wordTag = Regex("""<\d+:\d{1,2}(?:[.:]\d{1,3})?>""")
+private val onlyNumbers = Regex("""[\d:.,\s\-–>\[\]]+""")
 private val stamp = Regex("""\[(\d+):(\d{1,2})(?:[.:](\d{1,3}))?]""")
 
 /** Timed lines sorted by time. A line with several stamps is repeated for each one. Header tags like `[ti:...]` are skipped. */
@@ -39,7 +41,9 @@ fun parseLrc(lrc: String): List<LrcLine> {
     for (raw in lrc.lines()) {
         val stamps = stamp.findAll(raw).toList()
         if (stamps.isEmpty()) continue
-        val text = raw.substring(stamps.last().range.last + 1).trim()
+        // word-by-word tags <00:12.30>, stray stamps in the text, and lines that are only numbers (a broken file shows seconds) are not lyrics
+        val text = raw.substring(stamps.last().range.last + 1).replace(wordTag, "").replace(stamp, "").trim()
+        if (text.isNotEmpty() && onlyNumbers.matches(text)) continue
         for (m in stamps) {
             val fraction = m.groupValues[3].padEnd(3, '0').toLong() // "05" is 50 ms, "5" is 500 ms
             val ms = m.groupValues[1].toLong() * 60_000 + m.groupValues[2].toLong() * 1_000 + fraction

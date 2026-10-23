@@ -119,7 +119,7 @@ private fun loadStats(ctx: Context): Stats {
 }
 
 /**
- * The first page of the Files app: free space, what takes the room, recent files and folders, and the file types. Black with an orange accent in the Material look;
+ * The first page of the Files app: free space, what takes the room, recent files and folders, and the file types. Black in the Material looks, with the look's own accent colour;
  * the Windows looks draw it with their own panels and borders.
  */
 @Composable
@@ -130,7 +130,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
     val fg = if (mat) Color.White else T.text
     val sub = if (mat) Color(0xFF8E8E93) else T.sub
     val tile = if (mat) Color(0xFF161616) else T.panel
-    val accent = if (mat) Color(0xFFFF7A3C) else T.accent
+    val accent = T.accent
     val mono = if (mat) FontFamily.Monospace else FontFamily.Default
     val stats by produceState<Stats?>(null) { value = withContext(Dispatchers.IO) { loadStats(ctx) } }
     val recentFiles = remember { RecentStore.list(ctx).map { File(it) }.filter { it.isFile }.take(12) }
@@ -258,7 +258,7 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
     val mat = T.material
     val bg = if (mat) Color.Black else T.panel
     val fg = if (mat) Color(0xFF9A9A9F) else T.sub
-    val accent = if (mat) Color(0xFFFF7A3C) else T.accent
+    val accent = T.accent
     val items = listOf(
         Triple("home", "home" to tr("Home", "Ana"), "home"), Triple("files", "folder" to tr("Browse", "Gözat"), "files"), Triple("share", "share" to tr("Share", "Paylaş"), "share"),
         Triple("search", "search" to tr("Search", "Ara"), "search"), Triple("tree", "disk" to tr("Analyze", "Analiz"), "tree"),

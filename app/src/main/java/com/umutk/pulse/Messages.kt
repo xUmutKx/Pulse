@@ -125,7 +125,8 @@ private fun granted(c: Context, perm: String) = ContextCompat.checkSelfPermissio
 fun hasSmsPermissions(c: Context) = granted(c, Manifest.permission.READ_SMS) && granted(c, Manifest.permission.SEND_SMS)
 fun hasContactPermission(c: Context) = granted(c, Manifest.permission.READ_CONTACTS)
 
-private fun smsManager(c: Context): SmsManager = c.getSystemService(SmsManager::class.java)
+@Suppress("DEPRECATION")
+private fun smsManager(c: Context): SmsManager = if (android.os.Build.VERSION.SDK_INT >= 31) c.getSystemService(SmsManager::class.java) else SmsManager.getDefault()
 
 /** One row per thread (the newest message of each), newest first. Unread counts come from the same pass. */
 fun loadSmsThreads(c: Context, withNames: Boolean): List<SmsThread> {

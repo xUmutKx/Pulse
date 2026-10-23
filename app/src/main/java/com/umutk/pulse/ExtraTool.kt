@@ -211,7 +211,9 @@ class ToolOpenActivity : android.app.Activity() {
         super.onCreate(savedInstanceState)
         val route = intent.getStringExtra("route").orEmpty()
         val extras = intent.extras
-        val plain = extras == null || extras.keySet().all { it == "route" }
+        // a notification's request for a page of the music player is handed over in the process, so the open window is reused
+        intent.getStringExtra("notif_open")?.let { if (route == "music") com.umutk.pulse.extras.music.MusicNav.request = it }
+        val plain = extras == null || extras.keySet().all { it == "route" || (it == "notif_open" && route == "music") }
         val am = getSystemService(android.app.ActivityManager::class.java)
         val open = if (plain && route.isNotEmpty()) am.appTasks.firstOrNull { t ->
             val b = t.taskInfo.baseIntent

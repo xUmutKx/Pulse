@@ -157,6 +157,25 @@ class Equalizer {
         savedLevels = ShortArray(e.numberOfBands.toInt()) { e.getBandLevel(it.toShort()) }
     }
 
+    /** The preset that suits [genre] (the first name of its list this equalizer has), or the flat one; -1 when there is none to pick. */
+    fun usePresetForGenre(genre: String?) {
+        val g = genre.orEmpty().lowercase()
+        val want = when {
+            "metal" in g -> listOf("Heavy Metal", "Rock")
+            "rock" in g || "punk" in g || "grunge" in g -> listOf("Rock")
+            "hip" in g || "rap" in g || "r&b" in g || "trap" in g -> listOf("Hip Hop", "Bass boost")
+            "dance" in g || "electro" in g || "edm" in g || "house" in g || "techno" in g || "trance" in g -> listOf("Dance", "Bass boost")
+            "jazz" in g || "blues" in g || "soul" in g -> listOf("Jazz")
+            "classic" in g || "opera" in g || "orchestra" in g || "instrumental" in g || "soundtrack" in g -> listOf("Classical")
+            "folk" in g || "acoustic" in g || "country" in g || "türk" in g || "turk" in g || "arabesk" in g -> listOf("Folk", "Vocal")
+            "pop" in g -> listOf("Pop")
+            else -> listOf("Normal", "Flat")
+        }
+        val names = presetNames
+        val i = want.firstNotNullOfOrNull { w -> names.indexOfFirst { it.equals(w, true) }.takeIf { it >= 0 } } ?: return
+        if (i != currentPreset) usePreset(i)
+    }
+
     fun release() {
         SoftEq.active = false; soft = false
         eq?.release()

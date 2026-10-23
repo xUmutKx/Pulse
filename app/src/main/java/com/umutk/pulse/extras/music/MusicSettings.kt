@@ -77,6 +77,10 @@ object MusicSettings {
     fun setPauseAtZeroVolume(c: Context, v: Boolean) = sp(c).edit().putBoolean("pauseZero", v).apply()
     fun setPauseUsbDac(c: Context, on: Boolean) = sp(c).edit().putBoolean("pauseUsb", on).apply()
 
+    /** The equalizer preset follows the genre of the song that plays. */
+    fun autoEq(c: Context) = sp(c).getBoolean("autoEq", false)
+    fun setAutoEq(c: Context, v: Boolean) = sp(c).edit().putBoolean("autoEq", v).apply()
+
     fun respondButtons(c: Context) = sp(c).getBoolean("buttons", true)
     fun setRespondButtons(c: Context, on: Boolean) = sp(c).edit().putBoolean("buttons", on).apply()
 
