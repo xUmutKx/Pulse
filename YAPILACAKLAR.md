@@ -1064,3 +1064,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.245 derlenmedi: Gelişmiş kapak ayarları düzenleyici oldu: üstte seçili sayfanın büyük canlı önizlemesi, altında Sayfalar / Stil / Renk / Diğer sekmeleri, her seçenek küçük canlı resimlerle.
 
 - 0.10.246 derlenmedi: 0.10.244/245 derleme düzeltmesi (font kaynakları, matchParentSize importu).
+
+- 0.10.247 derlenmedi: Poweramp yedeğinde olmayan şarkılar "atlandı" diye bildirilir; Poweramp oynatıcıda kapak ekran kenarına daha yakın; Poweramp widget kapağı varsayılan %86 (+%15) ve widget ayarları (köşeler, kapak gölgesi, yuvarlak kapak); LocalSend aktarımında duraklat/iptal ve sürüklenebilir yüzen balon (ilerleme halkası, dokununca kart); Windows Phone kutucukları her zaman kare (küçük/orta/geniş), uzun basınca boyut, ayarlarda düzen.
