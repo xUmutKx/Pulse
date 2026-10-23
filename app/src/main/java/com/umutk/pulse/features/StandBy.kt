@@ -146,6 +146,9 @@ object StandByPrefs {
     /** Automatic trigger: start by itself while the phone charges. */
     fun autoCharge(c: Context) = p(c).getBoolean("autoCharge", false)
     fun setAutoCharge(c: Context, v: Boolean) = p(c).edit().putBoolean("autoCharge", v).apply()
+    /** Automatic trigger: start after this many seconds without a touch (0 = off). */
+    fun idleSec(c: Context) = p(c).getInt("idleSec", 0)
+    fun setIdleSec(c: Context, v: Int) = p(c).edit().putInt("idleSec", v).apply()
     /** ... and only while it lies sideways, like a bedside clock on its charger. */
     fun sideways(c: Context) = p(c).getBoolean("sideways", true)
     fun setSideways(c: Context, v: Boolean) = p(c).edit().putBoolean("sideways", v).apply()
@@ -493,6 +496,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     var drift by remember { mutableStateOf(StandByPrefs.drift(ctx)) }
     var night by remember { mutableStateOf(StandByPrefs.night(ctx)) }
     var auto by remember { mutableStateOf(StandByPrefs.autoCharge(ctx)) }
+    var idle by remember { mutableStateOf(StandByPrefs.idleSec(ctx)) }
     var side by remember { mutableStateOf(StandByPrefs.sideways(ctx)) }
     @Composable fun sw(label: String, on: Boolean, f: (Boolean) -> Unit) = Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f)); PSwitch(on, f)
@@ -622,6 +626,10 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
             Text(tr("Triggers", "Tetikleyiciler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
             sw(tr("Start by itself while charging", "Şarjdayken kendiliğinden başla"), auto) { auto = it; StandByPrefs.setAutoCharge(ctx, it) }
             if (auto) sw(tr("Only when the phone lies sideways", "Yalnızca telefon yan yatıkken"), side) { side = it; StandByPrefs.setSideways(ctx, it) }
+            Text(tr("Start when the screen is not touched", "Ekrana dokunulmayınca başla"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(0 to tr("Off", "Kapalı"), 15 to "15 s", 30 to "30 s", 60 to "1 min", 120 to "2 min", 300 to "5 min").forEach { (v, n) -> PChip(idle == v, n) { idle = v; StandByPrefs.setIdleSec(ctx, v) } }
+            }
             Text(tr("The automatic trigger needs the \"Pulse · Screen cover layer\" accessibility service to be on. The Quick Settings tile \"StandBy\" starts it by hand.", "Otomatik tetikleyici için Erişilebilirlik'te \"Pulse · Screen cover layer\" açık olmalı. Hızlı ayarlardaki \"StandBy\" kutucuğu elle başlatır."), color = T.sub, fontSize = 12.sp)
         }
     }

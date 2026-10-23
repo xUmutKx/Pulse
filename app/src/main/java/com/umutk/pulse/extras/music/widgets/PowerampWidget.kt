@@ -117,7 +117,7 @@ class PowerampWidget : AppWidgetProvider() {
                 // loop and shuffle sit at the left of the counter line, between the text and the seek line
                 setViewPadding(
                     R.id.pa_mid,
-                    ((f.x + 152 * f.scale) * k).toInt(), ((f.y + 108 * f.scale) * k).toInt(), ((bw - f.x - 210 * f.scale) * k).toInt(), ((bh - f.y - 140 * f.scale) * k).toInt(),
+                    ((f.x + 148 * f.scale) * k).toInt(), ((f.y + 100 * f.scale) * k).toInt(), ((bw - f.x - 226 * f.scale) * k).toInt(), ((bh - f.y - 148 * f.scale) * k).toInt(),
                 )
                 setOnClickPendingIntent(R.id.pa_prev, pi(c, A_PREV))
                 setOnClickPendingIntent(R.id.pa_rew, pi(c, A_REW))
@@ -226,8 +226,9 @@ class PowerampWidget : AppWidgetProvider() {
 
             // loop, shuffle and the counter, on one line above the buttons
             val iy = 124f
-            glyphLoop(cv, p, x0 + 12f, iy, if (repeat != 0) accent else dim, repeat == 1)
-            glyphShuffle(cv, p, x0 + 46f, iy, if (shuffle) accent else dim)
+            // the two marks are a third bigger, and their touch areas (pa_mid, below) a good deal larger
+            cv.save(); cv.scale(1.45f, 1.45f, x0 + 15f, iy); glyphLoop(cv, p, x0 + 15f, iy, if (repeat != 0) accent else dim, repeat == 1); cv.restore()
+            cv.save(); cv.scale(1.45f, 1.45f, x0 + 54f, iy); glyphShuffle(cv, p, x0 + 54f, iy, if (shuffle) accent else dim); cv.restore()
             val cp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = dim; textSize = 14f; textAlign = Paint.Align.RIGHT }
             cv.drawText(if (total > 0) "${index + 1}/$total" else "", W - 12f, iy + 5f, cp)
 

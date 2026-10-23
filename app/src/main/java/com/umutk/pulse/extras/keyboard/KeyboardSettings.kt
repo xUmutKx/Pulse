@@ -33,6 +33,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -126,6 +127,18 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Key pop-ups", "Tuş balonları"), "", KeyboardPrefs.keyPopups) { KeyboardPrefs.keyPopups = it; save() }
             Switch(tr("Long-press symbols", "Uzun basınca semboller"), tr("Accents and digits", "Aksanlar ve rakamlar"), KeyboardPrefs.longPressSymbols) { KeyboardPrefs.longPressSymbols = it; save() }
             Switch(tr("Language on the space key", "Boşluk tuşunda dil adı"), "", KeyboardPrefs.spaceLabel) { KeyboardPrefs.spaceLabel = it; save() }
+        }
+
+        // swipes, extra keys and the toolbar
+        PCard {
+            Title(tr("Swipes and keys", "Kaydırma ve tuşlar"))
+            Switch(tr("Swipe typing", "Kaydırarak yazma"), tr("Slide over the letters to type a word", "Harflerin üstünde kaydırarak kelime yaz"), KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
+            Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
+            Switch(tr("Animations", "Animasyonlar"), "", KeyboardPrefs.anim) { KeyboardPrefs.anim = it; save() }
+            Switch(tr("Extra key row", "Ek tuş satırı"), tr("Esc, Tab, Ctrl, Alt, Win, arrows, F-keys", "Esc, Tab, Ctrl, Alt, Win, oklar, F tuşları"), KeyboardPrefs.proRow) { KeyboardPrefs.proRow = it; save() }
+            if (KeyboardPrefs.proRow) ItemPicker(ExtraKeys.all.map { it.id to it.label }, KeyboardPrefs.proKeys) { KeyboardPrefs.proKeys = it; save() }
+            Text(tr("Toolbar", "Araç çubuğu"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+            ItemPicker(ExtraKeys.toolbar, KeyboardPrefs.toolbarItems) { KeyboardPrefs.toolbarItems = it; save() }
         }
 
         // size
@@ -235,5 +248,29 @@ private fun ColorEditor(label: String, argb: Int, onChange: (Int) -> Unit) {
         PSlider(hsv[0] / 360f, { put(h = it * 360f) }, 0f..1f, onDone = {})
         PSlider(hsv[1], { put(s = it) }, 0f..1f, onDone = {})
         PSlider(hsv[2], { put(v = it) }, 0f..1f, onDone = {})
+    }
+}
+
+/** A list of items the user puts together: the chosen ones in their order (tap one to move or remove it) and the others to add. */
+@Composable
+private fun ItemPicker(all: List<Pair<String, String>>, csv: String, onChange: (String) -> Unit) {
+    val chosen = csv.split(',').filter { id -> all.any { it.first == id } }
+    var focus by remember { mutableStateOf<String?>(null) }
+    fun name(id: String) = all.firstOrNull { it.first == id }?.second ?: id
+    Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        chosen.forEach { id -> PChip(focus == id, name(id)) { focus = if (focus == id) null else id } }
+    }
+    val f = focus
+    if (f != null && f in chosen) {
+        val at = chosen.indexOf(f)
+        Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(38.dp).clickable { if (at > 0) onChange(chosen.toMutableList().also { it.add(at - 1, it.removeAt(at)) }.joinToString(",")) }, contentAlignment = Alignment.Center) { PIcon("back", if (at > 0) T.text else T.sub.copy(alpha = .4f), 20.dp) }
+            Box(Modifier.size(38.dp).clickable { if (at < chosen.lastIndex) onChange(chosen.toMutableList().also { it.add(at + 1, it.removeAt(at)) }.joinToString(",")) }, contentAlignment = Alignment.Center) { PIcon("back", if (at < chosen.lastIndex) T.text else T.sub.copy(alpha = .4f), 20.dp, Modifier.graphicsLayer { rotationZ = 180f }) }
+            Box(Modifier.size(38.dp).clickable { onChange((chosen - f).joinToString(",")); focus = null }, contentAlignment = Alignment.Center) { PIcon("delete", T.text, 20.dp) }
+        }
+    }
+    val rest = all.filter { it.first !in chosen }
+    if (rest.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        rest.forEach { (id, n) -> PChip(false, "+ $n") { onChange((chosen + id).joinToString(",")) } }
     }
 }

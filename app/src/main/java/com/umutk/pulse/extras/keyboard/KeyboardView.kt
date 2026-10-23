@@ -1,11 +1,25 @@
 package com.umutk.pulse.extras.keyboard
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -25,6 +39,10 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.Undo
+import androidx.compose.material.icons.outlined.Redo
+import androidx.compose.material.icons.outlined.Gesture
+import androidx.compose.material.icons.outlined.Dashboard
 import androidx.compose.material.icons.outlined.AspectRatio
 import androidx.compose.material.icons.outlined.OpenWith
 import androidx.compose.material.icons.outlined.Palette
@@ -70,6 +88,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.Path
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -107,15 +130,35 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             TopBar(th, st, act)
-            when (st.panel) {
-                "emoji" -> EmojiPanel(th, st, act, keyH)
-                "menu" -> MenuPanel(th, st, act, keyH)
-                "clip" -> ClipPanel(th, st, act, keyH)
-                "resize" -> ResizePanel(th, st, keyH)
-                else -> KeysPanel(th, st, act, keyH)
-            }
+            if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
+            else Panel(st.panel, th, st, act, keyH)
         }
+        Trail(th, st)
         Preview(th, st)
+    }
+}
+
+@Composable
+private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    Column {
+        when (p) {
+            "emoji" -> EmojiPanel(th, st, act, keyH)
+            "menu" -> MenuPanel(th, st, act, keyH)
+            "clip" -> ClipPanel(th, st, act, keyH)
+            "resize" -> ResizePanel(th, st, keyH)
+            else -> KeysPanel(th, st, act, keyH)
+        }
+    }
+}
+
+/** The path of a swipe over the letters. */
+@Composable
+private fun Trail(th: KbTheme, st: KbState) {
+    val t = st.trail
+    if (t.size < 2) return
+    Canvas(Modifier.fillMaxSize()) {
+        val path = Path().apply { moveTo(t[0].x, t[0].y); for (i in 1 until t.size) lineTo(t[i].x, t[i].y) }
+        drawPath(path, th.accent.copy(alpha = .75f), style = Stroke(width = 7.dp.toPx(), cap = StrokeCap.Round))
     }
 }
 
@@ -126,13 +169,10 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions) {
     Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
         BarIcon(th, if (st.toolbar) Icons.Outlined.Close else Icons.Outlined.ExpandMore) { st.toolbar = !st.toolbar }
         if (st.toolbar) {
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                BarIcon(th, Icons.Outlined.ContentPaste) { act.menu("clip") }
-                BarIcon(th, Icons.Outlined.EmojiEmotions) { act.emojiPanel() }
-                BarIcon(th, Icons.Outlined.SelectAll) { act.edit("selectAll") }
-                BarIcon(th, Icons.Outlined.ContentCopy) { act.edit("copy") }
-                BarIcon(th, Icons.Outlined.ContentCut) { act.edit("cut") }
-                BarIcon(th, Icons.Outlined.MoreHoriz) { act.menu("menu") }
+            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                KeyboardPrefs.toolbarItems.split(',').filter { id -> ExtraKeys.toolbar.any { it.first == id } }.forEach { id ->
+                    BarIcon(th, toolIcon(id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
+                }
             }
         } else {
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
@@ -147,11 +187,20 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions) {
 }
 
 @Composable
-private fun BarIcon(th: KbTheme, icon: ImageVector, onClick: () -> Unit) {
+private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick: () -> Unit) {
     Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Box(Modifier.size(30.dp).border(1.5.dp, th.sub, RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = th.text, modifier = Modifier.size(20.dp)) }
+        Box(Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = if (on) th.accent else th.text, modifier = Modifier.size(20.dp)) }
     }
 }
+
+private fun toolIcon(id: String): ImageVector = when (id) {
+    "clip", "paste" -> Icons.Outlined.ContentPaste; "emoji" -> Icons.Outlined.EmojiEmotions; "selectAll" -> Icons.Outlined.SelectAll; "copy" -> Icons.Outlined.ContentCopy
+    "cut" -> Icons.Outlined.ContentCut; "undo" -> Icons.Outlined.Undo; "redo" -> Icons.Outlined.Redo; "menu" -> Icons.Outlined.MoreHoriz; "resize" -> Icons.Outlined.AspectRatio
+    "incognito" -> Icons.Outlined.VisibilityOff; "arrows" -> Icons.Outlined.OpenWith; "proRow" -> Icons.Outlined.Dashboard; "numbers" -> Icons.Outlined.Pin
+    "theme" -> Icons.Outlined.Palette; "settings" -> Icons.Outlined.Settings; "lang" -> Icons.Outlined.Language; else -> Icons.Outlined.Keyboard
+}
+
+private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "arrows" -> KeyboardPrefs.arrows; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
 
 // ---- the keys --------------------------------------------------------------------------------------------------------------------------------------
 
@@ -163,6 +212,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val lang = KeyboardLayouts.lang(st.lang)
     val rows = KeyboardLayouts.letterRows(lang.code, up, digits)
     val n1 = rows[0].size.toFloat()
+    if (KeyboardPrefs.proRow) ExtraRow(th, st, act, keyH)
     if (KeyboardPrefs.arrows) {
         Row(Modifier.fillMaxWidth()) {
             ActionKey(th, keyH * .8f, Icons.Outlined.ArrowBack, true) { act.arrow(21) }
@@ -219,6 +269,56 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
 @Composable
 private fun RowScope.Spacer(w: Float) { Box(Modifier.weight(w)) }
 
+/** The extra row: Esc, Tab, Ctrl, Alt, Win, arrows, F-keys, ... as many as the user put there. The modifier keys wait for the next key. */
+@Composable
+private fun ExtraRow(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    val defs = KeyboardPrefs.proKeys.split(',').mapNotNull { ExtraKeys.byId(it) }
+    if (defs.isEmpty()) return
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val w = if (defs.size * 42 <= maxWidth.value) maxWidth / defs.size else 46.dp
+        Row(Modifier.horizontalScroll(rememberScrollState())) {
+            defs.forEach { d ->
+                val level = when (d.id) { "ctrl" -> st.ctrl; "alt" -> st.alt; "win" -> st.win; "shiftm" -> st.shiftMod; else -> 0 }
+                ExtraCell(th, w, keyH * .78f, d, level) { act.extraKey(d.id) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp, d: ExtraKeyDef, level: Int, onTap: () -> Unit) {
+    val tap by rememberUpdatedState(onTap)
+    var down by remember { mutableStateOf(false) }
+    Box(
+        Modifier.width(w).height(h).pointerInput(d.id) {
+            awaitEachGesture {
+                val first = awaitFirstDown(requireUnconsumed = false)
+                down = true
+                if (d.repeat) {
+                    tap()
+                    var wait = 380L
+                    while (true) {
+                        val ev = withTimeoutOrNull(wait) { awaitPointerEvent() }
+                        if (ev == null) { tap(); wait = 70L; continue }
+                        val c = ev.changes.firstOrNull { it.id == first.id } ?: break
+                        if (c.changedToUp() || !c.pressed || (c.position - first.position).getDistance() > 24.dp.toPx()) break
+                    }
+                } else {
+                    // a drag along the row scrolls it: only a finger that lifts where it came down is a tap
+                    val up = waitForUpOrCancellation()
+                    if (up != null) tap()
+                }
+                down = false
+            }
+        }.padding(KeyboardPrefs.keyGap.dp / 2),
+    ) {
+        val on = level > 0
+        Box(Modifier.fillMaxSize().keyLook(th, if (on) th.accent else if (down) lerp(th.special, th.accent, .4f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
+            Text(d.label, color = if (on) th.onAccent else th.specialText, fontSize = 13.sp, maxLines = 1, fontWeight = if (level == 2) FontWeight.Bold else FontWeight.Normal)
+        }
+    }
+}
+
 /** A key of the arrow row: a little special key that repeats while held when [repeat]. */
 @Composable
 private fun RowScope.ActionKey(th: KbTheme, h: androidx.compose.ui.unit.Dp, icon: ImageVector, repeat: Boolean, onTap: () -> Unit) {
@@ -240,7 +340,7 @@ private fun RowScope.ActionKey(th: KbTheme, h: androidx.compose.ui.unit.Dp, icon
             }
         }.padding(KeyboardPrefs.keyGap.dp / 2),
     ) {
-        Box(Modifier.fillMaxSize().keyLook(th, th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = th.specialText, modifier = Modifier.size(20.dp)) }
+        Box(Modifier.fillMaxSize().keyLook(th, if (down) lerp(th.special, th.accent, .4f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) { Icon(icon, null, tint = th.specialText, modifier = Modifier.size(20.dp)) }
     }
 }
 
@@ -251,8 +351,12 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val actNow by rememberUpdatedState(act)
     val kNow by rememberUpdatedState(k)
     val longMs = LocalViewConfiguration.current.longPressTimeoutMillis
+    val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
+    val bg = when (k.kind) { KeyKind.ENTER -> th.accent; KeyKind.CHAR, KeyKind.SPACE -> th.key; else -> th.special }
+    val fill by animateColorAsState(if (down) lerp(bg, th.accent, .4f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
+    val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) .93f else 1f, tween(70), label = "keyScale")
     Box(
-        Modifier.weight(k.weight).height(if (small) keyH * .78f else keyH).onGloballyPositioned { rect = it.boundsInRoot() }
+        Modifier.weight(k.weight).height(if (small) keyH * .78f else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[k.label.lowercase()] = rect }
             .pointerInput(k.kind, k.label) {
                 awaitEachGesture {
                     val d = awaitFirstDown(requireUnconsumed = false); d.consume()
@@ -269,8 +373,12 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     var startX = d.position.x
                     var curX = d.position.x
                     var wait = longMs
-                    var deleted = false
-                    if (key.kind == KeyKind.DELETE) { a.backspace(); deleted = true; wait = 380L }
+                    var glide = false
+                    val seq = StringBuilder()
+                    val startRoot = Offset(rect.left + d.position.x, rect.top + d.position.y)
+                    var curRoot = startRoot
+                    val canGlide = isLetter && KeyboardPrefs.glide && st.page == 0 && st.panel == "keys"
+                    if (key.kind == KeyKind.DELETE) { a.backspace(); wait = 380L }
                     while (true) {
                         val ev = withTimeoutOrNull(wait) { awaitPointerEvent() }
                         if (ev == null) {
@@ -279,7 +387,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 KeyKind.DELETE -> { if (!quick) a.backspace(); wait = 55L }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; wait = Long.MAX_VALUE / 4 }
                                 KeyKind.SHIFT -> { long = true; wait = Long.MAX_VALUE / 4 }
-                                else -> if (key.alts.isNotEmpty() && (big)) {
+                                else -> if (!glide && key.alts.isNotEmpty() && big) {
                                     long = true; sel = 0; wait = Long.MAX_VALUE / 4
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
                                 } else wait = Long.MAX_VALUE / 4
@@ -289,14 +397,22 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                         c.consume()
                         curX = c.position.x
+                        curRoot = Offset(rect.left + c.position.x, rect.top + c.position.y)
                         if (c.changedToUp() || !c.pressed) {
+                            val up = (startRoot.y - curRoot.y)
                             when {
                                 key.kind == KeyKind.DELETE -> if (quick) a.quickDeleteEnd(true)
+                                glide && seq.length >= 3 -> a.glide(seq.toString())
+                                glide && key.alts.isNotEmpty() && KeyboardPrefs.flick && up > 24.dp.toPx() -> a.type(key.alts[0])
+                                glide -> a.type(key.label)
                                 long && sel >= 0 && key.alts.isNotEmpty() -> a.type(key.alts[sel.coerceIn(0, key.alts.lastIndex)])
                                 spaceDragged -> {}
                                 long && key.kind == KeyKind.SHIFT -> a.edit("capslock")
                                 !long -> when (key.kind) {
-                                    KeyKind.CHAR, KeyKind.COMMA, KeyKind.PERIOD -> a.type(key.label)
+                                    KeyKind.CHAR, KeyKind.COMMA, KeyKind.PERIOD -> {
+                                        // a quick flick upwards types the first long-press character
+                                        if (KeyboardPrefs.flick && key.alts.isNotEmpty() && up > 24.dp.toPx() && big) a.type(key.alts[0]) else a.type(key.label)
+                                    }
                                     KeyKind.SPACE -> a.space()
                                     KeyKind.SHIFT -> a.shift()
                                     KeyKind.ENTER -> a.enter()
@@ -311,6 +427,12 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         }
                         val dx = c.position.x - startX
                         when {
+                            // a swipe over the letters: the keys it passes spell the word
+                            canGlide && !long && (glide || (curRoot - startRoot).getDistance() > 30.dp.toPx()) -> {
+                                if (!glide) { glide = true; st.preview = null; seq.append(key.label.lowercase()); st.trail = listOf(startRoot) }
+                                st.letterRects.entries.firstOrNull { it.value.contains(curRoot) }?.key?.let { l -> if (seq.isEmpty() || seq.last().toString() != l) seq.append(l) }
+                                if (st.trail.size < 400) st.trail = st.trail + curRoot
+                            }
                             key.kind == KeyKind.DELETE && KeyboardPrefs.quickDelete && !quick && dx < -28.dp.toPx() -> { quick = true; a.quickDeleteStart(); startX = c.position.x }
                             key.kind == KeyKind.DELETE && quick -> a.quickDelete((-dx / 14.dp.toPx()).toInt().coerceAtLeast(0))
                             spaceDragged && key.kind == KeyKind.SPACE -> {
@@ -328,13 +450,13 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     }
                     down = false
                     st.preview = null
+                    st.trail = emptyList()
                 }
             }.padding(KeyboardPrefs.keyGap.dp / 2),
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
-        val bg = when (k.kind) { KeyKind.ENTER -> th.accent; KeyKind.CHAR, KeyKind.SPACE -> th.key; else -> th.special }
         val fg = when (k.kind) { KeyKind.ENTER -> th.onAccent; KeyKind.CHAR, KeyKind.SPACE -> th.text; else -> th.specialText }
-        Box(Modifier.fillMaxSize().keyLook(th, bg, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             val fs = (big * (.85f + .15f * KeyboardPrefs.heightPct / 100f)).sp
             when (k.kind) {
@@ -363,7 +485,7 @@ private fun popupLeft(rect: Rect, count: Int, rootW: Float, w: Float): Float {
 
 /** The fill, border and 3D edge of a key, per theme; pressed keys take a tint of the accent. */
 private fun Modifier.keyLook(th: KbTheme, color: Color, pressed: Boolean, shape: RoundedCornerShape): Modifier {
-    val c = if (pressed) lerp(color, th.accent, .4f) else color
+    val c = color
     return if (th.bevel) this.drawBehind {
         val s = 2.dp.toPx(); val w = size.width; val h = size.height
         drawRect(c)
@@ -381,16 +503,18 @@ private fun Preview(th: KbTheme, st: KbState) {
     val p = st.preview ?: return
     val shape = RoundedCornerShape((th.radius + 4).dp)
     val dens = androidx.compose.ui.platform.LocalDensity.current
+    val pop = remember(p.rect, p.alts.isEmpty()) { Animatable(if (KeyboardPrefs.anim) .75f else 1f) }
+    LaunchedEffect(p.rect, p.alts.isEmpty()) { pop.animateTo(1f, tween(110)) }
     if (p.alts.isEmpty()) {
         val w = with(dens) { maxOf(p.rect.width, 52.dp.toPx()) }; val h = p.rect.height * 1.15f
         val x = (p.rect.center.x - w / 2f).coerceIn(0f, (st.rootW - w).coerceAtLeast(0f)); val y = p.rect.top - h - 2f
-        Box(Modifier.offset { IntOffset(x.roundToInt(), y.roundToInt()) }.size(with(dens) { w.toDp() }, with(dens) { h.toDp() }).clip(shape).background(th.popup, shape), contentAlignment = Alignment.Center) {
+        Box(Modifier.offset { IntOffset(x.roundToInt(), y.roundToInt()) }.graphicsLayer { scaleX = pop.value; scaleY = pop.value }.size(with(dens) { w.toDp() }, with(dens) { h.toDp() }).clip(shape).background(th.popup, shape), contentAlignment = Alignment.Center) {
             Text(p.label, color = th.text, fontSize = 30.sp, maxLines = 1)
         }
     } else {
         val w = with(dens) { POPUP_W.dp.toPx() }
         val left = popupLeft(p.rect, p.alts.size, st.rootW, w); val y = p.rect.top - p.rect.height * 1.15f - 2f
-        Row(Modifier.offset { IntOffset(left.roundToInt(), y.roundToInt()) }.height(with(dens) { (p.rect.height * 1.15f).toDp() }).clip(shape).background(th.popup, shape)) {
+        Row(Modifier.offset { IntOffset(left.roundToInt(), y.roundToInt()) }.graphicsLayer { scaleX = pop.value; scaleY = pop.value }.height(with(dens) { (p.rect.height * 1.15f).toDp() }).clip(shape).background(th.popup, shape)) {
             p.alts.forEachIndexed { i, s ->
                 Box(Modifier.width(POPUP_W.dp).fillMaxSize().background(if (i == p.sel) th.accent else Color.Transparent), contentAlignment = Alignment.Center) {
                     Text(s, color = if (i == p.sel) th.onAccent else th.text, fontSize = 22.sp, maxLines = 1)
@@ -432,16 +556,18 @@ private fun MenuPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         MenuItem("languages", Icons.Outlined.Language, "Languages"), MenuItem("resize", Icons.Outlined.AspectRatio, "Resize"),
         MenuItem("incognito", Icons.Outlined.VisibilityOff, "Incognito", st.incognito), MenuItem("autocorrect", Icons.Outlined.Spellcheck, "Autocorrect", KeyboardPrefs.autocorrect),
         MenuItem("onehand", Icons.Outlined.TouchApp, "One-handed", KeyboardPrefs.oneHand != "off"), MenuItem("arrows", Icons.Outlined.OpenWith, "Arrows", KeyboardPrefs.arrows),
-        MenuItem("numbers", Icons.Outlined.Pin, "Numbers", KeyboardPrefs.numberRow), MenuItem("clip", Icons.Outlined.ContentPaste, "Clipboard"),
-        MenuItem("emoji", Icons.Outlined.EmojiEmotions, "Emoji"), MenuItem("back", Icons.Outlined.Keyboard, "Keys"),
+        MenuItem("numbers", Icons.Outlined.Pin, "Numbers", KeyboardPrefs.numberRow), MenuItem("proRow", Icons.Outlined.Dashboard, "Extra keys", KeyboardPrefs.proRow),
+        MenuItem("glide", Icons.Outlined.Gesture, "Swipe typing", KeyboardPrefs.glide), MenuItem("clip", Icons.Outlined.ContentPaste, "Clipboard"),
+        MenuItem("emoji", Icons.Outlined.EmojiEmotions, "Emoji"), MenuItem("undo", Icons.Outlined.Undo, "Undo"),
+        MenuItem("redo", Icons.Outlined.Redo, "Redo"), MenuItem("back", Icons.Outlined.Keyboard, "Keys"),
     )
     Column(Modifier.fillMaxWidth().height(keyH * 4f).background(th.menu)) {
         items.chunked(4).forEach { row ->
             Row(Modifier.weight(1f).fillMaxWidth()) {
                 row.forEach { m ->
-                    Column(Modifier.weight(1f).fillMaxSize().clickable { act.menu(m.id) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Icon(m.icon, null, tint = if (m.on) th.accent else th.text, modifier = Modifier.size(26.dp))
-                        Text(m.label, color = if (m.on) th.accent else th.text, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+                    Column(Modifier.weight(1f).fillMaxSize().clickable { if (m.id == "undo" || m.id == "redo") act.edit(m.id) else act.menu(m.id) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                        Icon(m.icon, null, tint = if (m.on) th.accent else th.text, modifier = Modifier.size(24.dp))
+                        Text(m.label, color = if (m.on) th.accent else th.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
                     }
                 }
             }
