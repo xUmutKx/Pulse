@@ -666,7 +666,7 @@ internal fun TimerFace(ctx: Context, ink: Color) {
     LaunchedEffect(endAt) {
         while (endAt > 0L) {
             left = (endAt - System.currentTimeMillis()).coerceAtLeast(0L)
-            if (left == 0L) { endAt = 0L; done = true; runCatching { (ctx.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator).vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400, 200, 400), -1)) } }
+            if (left == 0L) { endAt = 0L; done = true; runCatching { (ctx.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator).let { v -> if (android.os.Build.VERSION.SDK_INT >= 26) v.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400, 200, 400), -1)) else @Suppress("DEPRECATION") v.vibrate(longArrayOf(0, 400, 200, 400, 200, 400), -1) } } }
             delay(100)
         }
     }

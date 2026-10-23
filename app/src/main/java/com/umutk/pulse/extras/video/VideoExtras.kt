@@ -123,6 +123,7 @@ internal fun VideoExtras(player: ExoPlayer, prefs: VideoPrefs, act: Activity?, r
     }
     // a call or ring pauses the video
     DisposableEffect(player, rev) {
+        if (android.os.Build.VERSION.SDK_INT < 31) return@DisposableEffect onDispose { }
         val l = AudioManager.OnModeChangedListener { m ->
             if (prefs.pauseCall && (m == AudioManager.MODE_IN_CALL || m == AudioManager.MODE_RINGTONE || m == AudioManager.MODE_IN_COMMUNICATION)) player.pause()
         }

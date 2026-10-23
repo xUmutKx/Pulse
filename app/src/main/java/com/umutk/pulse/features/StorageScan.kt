@@ -163,7 +163,7 @@ object StorageScan {
             var total = 0L
             val mine = ArrayList<File>(list.size)
             for (child in list) {
-                if (Files.isSymbolicLink(child.toPath())) continue
+                if (com.umutk.pulse.Compat.isLink(child)) continue
                 mine.add(child)
                 if (child.isDirectory) {
                     // Android/data and Android/obb: the other apps' folders only size through root or Shizuku

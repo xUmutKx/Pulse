@@ -158,7 +158,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
     }
 
     private suspend fun tick() {
-        if (LiveLyrics.floating(ctx) && !MiniLyrics.running && Settings.canDrawOverlays(ctx)) MiniLyrics.start(ctx)
+        if (LiveLyrics.floating(ctx) && !MiniLyrics.running && com.umutk.pulse.Compat.canOverlay(ctx)) MiniLyrics.start(ctx)
         val st = engine.state.value
         // lyrics are looked up only while a notification or the lyrics widget shows them
         val wanted = LiveLyrics.notification(ctx) || LiveLyrics.separate(ctx) || com.umutk.pulse.widgets.music.LyricsWidget.placed(ctx)
@@ -205,7 +205,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
             if (st != null) sp.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, st + LiveLyrics.bold(trio.second).length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         val boldLine = android.text.SpannableString(LiveLyrics.collapsed(ctx, trio.second)).also { it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) }) else Unit
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         // the album cover beside the text, read once per song (this runs on the lyrics tick, not on the main thread)
         if (artFor != t.path) { artFor = t.path; art = runCatching { (com.umutk.pulse.extras.music.trackArtLocal(ctx, t) ?: com.umutk.pulse.extras.music.trackArt(ctx, t))?.asAndroidBitmap() }.getOrNull() }

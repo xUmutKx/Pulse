@@ -47,7 +47,7 @@ fun micaTint(): Color {
     return remember(dark) {
         if (!wallRead) {
             wallRead = true
-            wallHue = runCatching { WallpaperManager.getInstance(ctx).getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.primaryColor?.toArgb()?.let { Color(it) } }.getOrNull()
+            wallHue = if (android.os.Build.VERSION.SDK_INT < 27) null else runCatching { WallpaperManager.getInstance(ctx).getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.primaryColor?.toArgb()?.let { Color(it) } }.getOrNull()
         }
         val grey = if (dark) Color(0xFF0A0A0A) else Color(0xFFF3F3F3)
         // 6-8%: enough to warm or cool the grey, not enough for a blue cast

@@ -126,7 +126,7 @@ private fun loadAmRows(ctx: Context): List<AmRow> {
             frozen = ai.flags and ApplicationInfo.FLAG_SUSPENDED != 0,
             running = ai.flags and ApplicationInfo.FLAG_STOPPED == 0,
             updatedSystem = ai.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP != 0,
-            installer = runCatching { pm.getInstallSourceInfo(p.packageName).installingPackageName }.getOrNull(),
+            installer = runCatching { if (android.os.Build.VERSION.SDK_INT >= 30) pm.getInstallSourceInfo(p.packageName).installingPackageName else @Suppress("DEPRECATION") pm.getInstallerPackageName(p.packageName) }.getOrNull(),
             lastUsed = lastUsed[p.packageName],
             system = ai.flags and ApplicationInfo.FLAG_SYSTEM != 0,
             disabled = !ai.enabled,

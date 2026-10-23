@@ -148,7 +148,7 @@ internal object PhotosPrefs {
                 else ContentUris.parseId(u)
             if (id == null) return false
             val mu = ContentUris.withAppendedId(base, id)
-            if (Environment.isExternalStorageManager()) {
+            if (com.umutk.pulse.Compat.isStorageManager()) {
                 c.contentResolver.update(mu, android.content.ContentValues().apply { put(MediaStore.MediaColumns.IS_FAVORITE, if (on) 1 else 0) }, null, null) > 0
             } else {
                 val l = launchSender ?: return false
@@ -171,7 +171,7 @@ internal class Ph(val src: ImgSrc, val date: Long, val album: String, val fav: B
 
 /** Device pictures, newest first. With all-files access each item is a File (editable in the viewer), otherwise just a content URI. */
 internal fun queryPhotos(ctx: Context): List<Ph> {
-    val all = Environment.isExternalStorageManager()
+    val all = com.umutk.pulse.Compat.isStorageManager()
     val out = ArrayList<Ph>()
     fun read(base: Uri, video: Boolean) = runCatching {
         ctx.contentResolver.query(base, arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.DATA, MediaStore.MediaColumns.DATE_TAKEN, MediaStore.MediaColumns.DATE_MODIFIED, MediaStore.MediaColumns.BUCKET_DISPLAY_NAME) + (if (Build.VERSION.SDK_INT >= 30) arrayOf(MediaStore.MediaColumns.IS_FAVORITE) else emptyArray()), null, null, null)?.use { c ->
@@ -220,7 +220,7 @@ private fun PhotosGalleryInner(onOpen: (List<ImgSrc>, Int) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val perm = if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_IMAGES else Manifest.permission.READ_EXTERNAL_STORAGE
-    fun granted() = Environment.isExternalStorageManager() || ContextCompat.checkSelfPermission(ctx, perm) == PackageManager.PERMISSION_GRANTED
+    fun granted() = com.umutk.pulse.Compat.isStorageManager() || ContextCompat.checkSelfPermission(ctx, perm) == PackageManager.PERMISSION_GRANTED
     var ok by remember { mutableStateOf(granted()) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok = granted() }
     LaunchedEffect(Unit) { if (!ok) ask.launch(perm) }

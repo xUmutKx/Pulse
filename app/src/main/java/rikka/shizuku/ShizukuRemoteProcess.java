@@ -18,7 +18,7 @@ import moe.shizuku.server.IRemoteProcess;
 
 public class ShizukuRemoteProcess extends Process implements Parcelable {
 
-    private static final Set<ShizukuRemoteProcess> CACHE = Collections.synchronizedSet(new ArraySet<>());
+    private static final Set<ShizukuRemoteProcess> CACHE = Collections.synchronizedSet(new java.util.HashSet<>());
 
     private static final String TAG = "ShizukuRemoteProcess";
 

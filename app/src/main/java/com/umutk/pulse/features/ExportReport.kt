@@ -60,6 +60,11 @@ suspend fun buildReport(context: Context): String = withContext(Dispatchers.IO) 
 // Returns the saved display name. minSdk is 29, so MediaStore is the only path needed.
 suspend fun saveReport(context: Context, text: String): String = withContext(Dispatchers.IO) {
     val name = "pulse-report-" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss")) + ".txt"
+    if (android.os.Build.VERSION.SDK_INT < 29) {
+        // before Android 10 the public Download folder is written to directly
+        java.io.File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS), name).writeText(text)
+        return@withContext name
+    }
     val values = ContentValues().apply {
         put(MediaStore.Downloads.DISPLAY_NAME, name)
         put(MediaStore.Downloads.MIME_TYPE, "text/plain")

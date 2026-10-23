@@ -56,7 +56,7 @@ object Hw {
         val avg = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CURRENT_AVERAGE).let { if (kotlin.math.abs(it) > 20000) it / 1000 else it }
         val counter = bm.getIntProperty(BatteryManager.BATTERY_PROPERTY_CHARGE_COUNTER)
         val cycles = bi?.getIntExtra("android.os.extra.CYCLE_COUNT", -1) ?: -1
-        val remain = tryOr(-1L) { bm.computeChargeTimeRemaining() }
+        val remain = tryOr(-1L) { if (android.os.Build.VERSION.SDK_INT >= 28) bm.computeChargeTimeRemaining() else -1L }
         val now = ArrayList<Pair<String, String>>()
         now += "Level" to "%${level * 100 / scale}"
         now += "Status" to status
@@ -85,7 +85,7 @@ object Hw {
     fun network(ctx: Context): List<Section> {
         val out = ArrayList<Section>()
         val cm = ctx.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val net = cm.activeNetwork
+        val net = if (android.os.Build.VERSION.SDK_INT >= 23) cm.activeNetwork else null
         val caps = net?.let { cm.getNetworkCapabilities(it) }
         val lp = net?.let { cm.getLinkProperties(it) }
         val gen = ArrayList<Pair<String, String>>()
@@ -125,7 +125,7 @@ object Hw {
                 val rows = ArrayList<Pair<String, String>>()
                 rows += "Signal" to "${wi.rssi} dBm (${WifiManager.calculateSignalLevel(wi.rssi, 5)}/4)"
                 rows += "Link speed" to "${wi.linkSpeed} Mbps"
-                rows += "Send / receive" to "${wi.txLinkSpeedMbps} / ${wi.rxLinkSpeedMbps} Mbps"
+                rows += "Send / receive" to (if (android.os.Build.VERSION.SDK_INT >= 29) "${wi.txLinkSpeedMbps} / ${wi.rxLinkSpeedMbps} Mbps" else "${wi.linkSpeed} Mbps")
                 rows += "Frequency" to "$f MHz ($band)"
                 if (Build.VERSION.SDK_INT >= 30) rows += "Wi-Fi standard" to when (wi.wifiStandard) { 4 -> "Wi-Fi 4 (n)"; 5 -> "Wi-Fi 5 (ac)"; 6 -> "Wi-Fi 6 (ax)"; 7 -> "Wi-Fi 7 (be)"; 1 -> "Legacy (a/b/g)"; else -> "Unknown" }
                 wi.ssid?.takeIf { it != "<unknown ssid>" }?.let { rows.add(0, "Network" to it.trim('"')) }
@@ -168,11 +168,11 @@ object Hw {
         rows += "Aspect ratio" to "%.2f : 1".format(maxOf(m.widthPixels, m.heightPixels).toFloat() / minOf(m.widthPixels, m.heightPixels))
         if (d != null) {
             rows += "Refresh rate" to "%.0f Hz".format(d.refreshRate)
-            val modes = d.supportedModes.map { "%.0f".format(it.refreshRate) }.distinct()
+            val modes = if (android.os.Build.VERSION.SDK_INT >= 23) d.supportedModes.map { "%.0f".format(it.refreshRate) }.distinct() else listOf("%.0f".format(d.refreshRate))
             rows += "Supported rates" to modes.joinToString(" / ") + " Hz"
-            rows += "Wide colour (P3)" to if (d.isWideColorGamut) "Yes" else "None"
+            rows += "Wide colour (P3)" to if (android.os.Build.VERSION.SDK_INT >= 26 && d.isWideColorGamut) "Yes" else "None"
             @Suppress("DEPRECATION")
-            val hdr = d.hdrCapabilities?.supportedHdrTypes?.map { when (it) { 1 -> "Dolby Vision"; 2 -> "HDR10"; 3 -> "HLG"; 4 -> "HDR10+"; else -> "?" } }.orEmpty()
+            val hdr = (if (android.os.Build.VERSION.SDK_INT >= 24) d.hdrCapabilities?.supportedHdrTypes else null)?.map { when (it) { 1 -> "Dolby Vision"; 2 -> "HDR10"; 3 -> "HLG"; 4 -> "HDR10+"; else -> "?" } }.orEmpty()
             rows += "HDR" to if (hdr.isEmpty()) "None" else hdr.joinToString(", ")
             rows += "Name" to d.name
         }
@@ -239,7 +239,7 @@ object Hw {
     fun system(ctx: Context): List<Section> {
         val out = ArrayList<Section>()
         out += Section("Android", listOf(
-            "Version" to "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", "Security patch" to Build.VERSION.SECURITY_PATCH,
+            "Version" to "${Build.VERSION.RELEASE} (API ${Build.VERSION.SDK_INT})", "Security patch" to (if (android.os.Build.VERSION.SDK_INT >= 23) Build.VERSION.SECURITY_PATCH else "—"),
             "Build" to Build.DISPLAY, "Fingerprint" to Build.FINGERPRINT, "Type / tags" to "${Build.TYPE} / ${Build.TAGS}",
             "Bootloader" to Build.BOOTLOADER, "Radio" to (Build.getRadioVersion() ?: "—"),
         ))
@@ -276,7 +276,7 @@ object Hw {
     fun thermal(ctx: Context): List<Section> {
         val out = ArrayList<Section>()
         val pm = ctx.getSystemService(Context.POWER_SERVICE) as PowerManager
-        val st = when (pm.currentThermalStatus) {
+        val st = when (if (android.os.Build.VERSION.SDK_INT >= 29) pm.currentThermalStatus else 0) {
             PowerManager.THERMAL_STATUS_NONE -> "None"; PowerManager.THERMAL_STATUS_LIGHT -> "Light"; PowerManager.THERMAL_STATUS_MODERATE -> "Moderate"
             PowerManager.THERMAL_STATUS_SEVERE -> "Severe"; PowerManager.THERMAL_STATUS_CRITICAL -> "Critical"; PowerManager.THERMAL_STATUS_EMERGENCY -> "Emergency"; else -> "Shutdown"
         }

@@ -169,7 +169,7 @@ private fun imgSave(ctx: android.content.Context, src: ImgSrc, s: ImgEditState, 
     }
     val fmt = when (f.extension.lowercase()) {
         "png" -> Bitmap.CompressFormat.PNG
-        "webp" -> Bitmap.CompressFormat.WEBP_LOSSY
+        "webp" -> if (android.os.Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else @Suppress("DEPRECATION") Bitmap.CompressFormat.WEBP
         else -> Bitmap.CompressFormat.JPEG
     }
     f.outputStream().use { out.compress(fmt, 95, it) }

@@ -182,6 +182,7 @@ internal fun imgDecode(ctx: Context, s: ImgSrc, maxDim: Int): Bitmap? = runCatch
 
 /** Frame of a video (API 29+); null for anything else. */
 private fun videoThumb(ctx: Context, s: ImgSrc, px: Int): Bitmap? = runCatching {
+    if (android.os.Build.VERSION.SDK_INT < 29) return@runCatching null
     val sz = android.util.Size(px, px)
     if (s.file != null) android.media.ThumbnailUtils.createVideoThumbnail(s.file, sz, null) else ctx.contentResolver.loadThumbnail(s.uri, sz, null)
 }.getOrNull()

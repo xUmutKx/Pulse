@@ -67,7 +67,7 @@ object FloatingTimer {
     fun show(ctx: Context): Boolean {
         val app = ctx.applicationContext
         if (view != null) return true
-        if (!Settings.canDrawOverlays(app)) {
+        if (!com.umutk.pulse.Compat.canOverlay(app)) {
             app.startActivity(android.content.Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${app.packageName}")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
             return false
         }
@@ -115,7 +115,7 @@ private fun TimerBody(ctx: Context, onDrag: (Float, Float) -> Unit, onClose: () 
                 if (left <= 0L) {
                     left = 0L; running = false
                     // time is up: a buzz and the default notification sound
-                    runCatching { (ctx.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator).vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1)) }
+                    runCatching { (ctx.getSystemService(Context.VIBRATOR_SERVICE) as android.os.Vibrator).let { v -> if (android.os.Build.VERSION.SDK_INT >= 26) v.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0, 400, 200, 400), -1)) else @Suppress("DEPRECATION") v.vibrate(longArrayOf(0, 400, 200, 400), -1) } }
                     runCatching { android.media.RingtoneManager.getRingtone(ctx, android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)).play() }
                 }
             } else elapsed += dt

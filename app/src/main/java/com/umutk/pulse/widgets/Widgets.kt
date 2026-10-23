@@ -358,7 +358,7 @@ class WifiWidget : PulseWidget() {
     @Suppress("DEPRECATION")
     override fun content(ctx: Context, s: WidgetStyle): RemoteViews {
         // the network name needs location permission; whatever else the system gives without it is shown, never a crash
-        val located = ctx.checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        val located = androidx.core.content.ContextCompat.checkSelfPermission(ctx, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
         val info = try { (ctx.applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager).connectionInfo } catch (e: Exception) { null }
         val connected = info != null && info.rssi > -127
         val ssid = info?.ssid?.trim('"').orEmpty().let { if (!located || it.isEmpty() || it == "<unknown ssid>") if (connected) "Wi-Fi" else "Not connected" else it }

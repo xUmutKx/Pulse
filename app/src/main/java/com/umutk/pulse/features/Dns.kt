@@ -1,5 +1,7 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.subtitleCompat
+
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
@@ -105,6 +107,7 @@ fun DnsSettings() {
 
 /** Quick Settings tile: Private DNS Auto, Manual (the host saved in Pulse, else dns.google) and Off, one tap moves to the next.
  *  A failed change shows its reason as the subtitle; without root or Shizuku the tap opens Settings. */
+@androidx.annotation.RequiresApi(24)
 class DnsTile : TileService() {
     private var note: String? = null
     private var busy = false
@@ -114,7 +117,7 @@ class DnsTile : TileService() {
             val (m, h) = Dns.current(this@DnsTile)
             state = if (m != "off") Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             label = tr("Private DNS", "Özel DNS")
-            subtitle = if (busy) "…" else note ?: when (m) { "off" -> tr("Off", "Kapalı"); "hostname" -> tr("Manual", "Manuel") + h.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty(); else -> tr("Auto", "Otomatik") }
+            subtitleCompat = if (busy) "…" else note ?: when (m) { "off" -> tr("Off", "Kapalı"); "hostname" -> tr("Manual", "Manuel") + h.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty(); else -> tr("Auto", "Otomatik") }
             updateTile()
         }
     }

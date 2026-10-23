@@ -56,7 +56,7 @@ class BudsService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) { stopSelf(); return START_NOT_STICKY }
-        startForeground(ID, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE)
+        if (android.os.Build.VERSION.SDK_INT >= 29) startForeground(ID, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE) else startForeground(ID, note())
         if (job == null) {
             ContextCompat.registerReceiver(this, acl, IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED), ContextCompat.RECEIVER_EXPORTED)
             job = scope.launch { loop() }
@@ -75,12 +75,12 @@ class BudsService : Service() {
 
     private fun note(): Notification {
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(NotificationChannel("buds", "Galaxy Buds", NotificationManager.IMPORTANCE_MIN))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(NotificationChannel("buds", "Galaxy Buds", NotificationManager.IMPORTANCE_MIN))
         val s = BudsLink.state.value
         val text = if (s.connected) listOfNotNull(s.name.ifBlank { null }, s.batteryL.takeIf { it >= 0 }?.let { "L $it%" }, s.batteryR.takeIf { it >= 0 }?.let { "R $it%" }).joinToString("  ") else "…"
         val stop = android.app.PendingIntent.getService(this, 0, Intent(this, BudsService::class.java).setAction(ACTION_STOP), android.app.PendingIntent.FLAG_IMMUTABLE)
-        return Notification.Builder(this, "buds").setSmallIcon(R.drawable.ic_notif_music).setContentTitle("Galaxy Buds").setContentText(text).setOngoing(true)
-            .addAction(Notification.Action.Builder(null, "×", stop).build()).build()
+        return androidx.core.app.NotificationCompat.Builder(this, "buds").setSmallIcon(R.drawable.ic_notif_music).setContentTitle("Galaxy Buds").setContentText(text).setOngoing(true)
+            .setPriority(androidx.core.app.NotificationCompat.PRIORITY_MIN).addAction(0, "×", stop).build()
     }
 
     private fun refreshNote() { getSystemService(NotificationManager::class.java).notify(ID, note()) }

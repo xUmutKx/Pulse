@@ -26,7 +26,7 @@ private const val AUTH = BiometricManager.Authenticators.BIOMETRIC_STRONG or Bio
 
 /** True when a fingerprint, face or screen lock exists to ask for. */
 internal fun canLock(ctx: Context): Boolean =
-    ctx.getSystemService(BiometricManager::class.java)?.canAuthenticate(AUTH) == BiometricManager.BIOMETRIC_SUCCESS
+    android.os.Build.VERSION.SDK_INT >= 30 && ctx.getSystemService(BiometricManager::class.java)?.canAuthenticate(AUTH) == BiometricManager.BIOMETRIC_SUCCESS
 
 /** Full-screen lock: asks for the fingerprint, face or screen lock; the lock icon asks again. Back leaves the app. */
 @Composable
@@ -36,11 +36,17 @@ internal fun VideoLockGate(onBack: () -> Unit, onOpen: () -> Unit) {
     BackHandler(onBack = onBack)
     LaunchedEffect(tries) {
         if (!canLock(ctx)) { onOpen(); return@LaunchedEffect } // nothing to ask: do not lock the user out
-        val cancel = CancellationSignal()
-        val prompt = BiometricPrompt.Builder(ctx).setTitle(com.umutk.pulse.tr("Video Player", "Video Oynatıcı")).setAllowedAuthenticators(AUTH).build()
-        prompt.authenticate(cancel, ctx.mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
-            override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { onOpen() }
-        })
+        if (android.os.Build.VERSION.SDK_INT < 30) { onOpen(); return@LaunchedEffect }
+        askLock(ctx, onOpen)
     }
     Box(Modifier.fillMaxSize().background(T.bg).clickable { tries++ }, contentAlignment = Alignment.Center) { PIcon("applock", T.sub, 56.dp) }
+}
+
+@androidx.annotation.RequiresApi(30)
+private fun askLock(ctx: Context, onOpen: () -> Unit) {
+    val cancel = CancellationSignal()
+    val prompt = BiometricPrompt.Builder(ctx).setTitle(com.umutk.pulse.tr("Video Player", "Video Oynatıcı")).setAllowedAuthenticators(AUTH).build()
+    prompt.authenticate(cancel, ctx.mainExecutor, object : BiometricPrompt.AuthenticationCallback() {
+        override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) { onOpen() }
+    })
 }

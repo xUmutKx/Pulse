@@ -136,7 +136,7 @@ private const val NOTE_ID = 2001
 private const val CH_INST = "installs"
 /** Silent channel for the install progress and result notifications. */
 private const val CH_QUIET = "installer_quiet"
-private fun quietChannel(c: Context) = c.getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH_QUIET, "Installer", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) })
+private fun quietChannel(c: Context) = if (android.os.Build.VERSION.SDK_INT >= 26) c.getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH_QUIET, "Installer", NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) }) else Unit
 private const val ID_INST = 2002
 private const val ID_BUSY = 2003
 private const val APK_MIME = "application/vnd.android.package-archive"
@@ -331,9 +331,9 @@ object Installer {
         val icon = try { app.loadIcon(pm).toBitmap(96, 96) } catch (e: Exception) { null }
         return Picked(
             type = type, parts = listOf(base) + files.filter { it != base }, label = app.loadLabel(pm).toString(), pkg = info.packageName,
-            version = info.versionName.orEmpty(), code = info.longVersionCode, minSdk = app.minSdkVersion, targetSdk = app.targetSdkVersion,
-            sigs = digests(info.signingInfo?.apkContentsSigners), installedCode = installed?.longVersionCode,
-            installedSigs = digests(installed?.signingInfo?.apkContentsSigners), icon = icon, src = if (uri.scheme == "file") uri.path else null,
+            version = info.versionName.orEmpty(), code = com.umutk.pulse.Compat.longVersion(info), minSdk = if (android.os.Build.VERSION.SDK_INT >= 24) app.minSdkVersion else 0, targetSdk = app.targetSdkVersion,
+            sigs = digests(com.umutk.pulse.Compat.signers(info)), installedCode = installed?.let { com.umutk.pulse.Compat.longVersion(it) },
+            installedSigs = digests(installed?.let { com.umutk.pulse.Compat.signers(it) }), icon = icon, src = if (uri.scheme == "file") uri.path else null,
         )
     }
 
@@ -374,7 +374,7 @@ object Installer {
         s.orEmpty().map { sig -> MessageDigest.getInstance("SHA-256").digest(sig.toByteArray()).joinToString(":") { "%02X".format(it) } }.sorted()
 
     fun installedCode(c: Context, pkg: String): Long? =
-        try { c.packageManager.getPackageInfo(pkg, 0).longVersionCode } catch (e: PackageManager.NameNotFoundException) { null }
+        try { com.umutk.pulse.Compat.longVersion(c.packageManager.getPackageInfo(pkg, 0)) } catch (e: PackageManager.NameNotFoundException) { null }
 
     /** pm with every split in one call: the first path is the base. */
     fun silentCmd(p: Picked, down: Boolean, user: Int, dex: Boolean = false) =
@@ -496,7 +496,7 @@ object Installer {
     /** A module installed: the notification opens LSPosed so it can be turned on. */
     private fun notifyModule(c: Context, label: String) {
         val i = lsposedIntent(c) ?: return
-        c.getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Installer", NotificationManager.IMPORTANCE_DEFAULT))
+        if (android.os.Build.VERSION.SDK_INT >= 26) c.getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH, "Installer", NotificationManager.IMPORTANCE_DEFAULT)) else Unit
         val open = PendingIntent.getActivity(c, 1, i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
         val n = NotificationCompat.Builder(c, CH).setSmallIcon(android.R.drawable.stat_sys_download_done)
             .setContentTitle("$label installed").setContentText("Turn it on in LSPosed").setAutoCancel(true)
@@ -532,7 +532,7 @@ class InstallService : Service() {
     override fun onBind(i: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH_INST, "Installs", NotificationManager.IMPORTANCE_LOW))
+        if (android.os.Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).createNotificationChannel(com.umutk.pulse.QuietChannel(CH_INST, "Installs", NotificationManager.IMPORTANCE_LOW)) else Unit
         val n = NotificationCompat.Builder(this, CH_INST).setSmallIcon(android.R.drawable.stat_sys_download)
             .setContentTitle("Installing").setOngoing(true).build()
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID_INST, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID_INST, n)

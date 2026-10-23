@@ -73,7 +73,7 @@ private object TermSession {
         text += "^C\n"
     }
     fun stop() { proc?.destroy(); proc = null }
-    val alive get() = proc?.isAlive == true
+    val alive get() = proc?.let { runCatching { it.exitValue(); false }.getOrDefault(true) } == true
 }
 
 /** ADB-style shell commands for quick use: name, icon and command. Run on the phone's shell (root when available). */
