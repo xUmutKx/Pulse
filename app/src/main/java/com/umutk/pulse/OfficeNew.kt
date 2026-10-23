@@ -1,5 +1,11 @@
 package com.umutk.pulse
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -125,16 +131,39 @@ fun OfSaveAsDialog(name: String, exts: List<String>, srcDir: File?, onDismiss: (
     var ext by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(name.substringAfterLast('.', exts.first()).lowercase().takeIf { it in exts } ?: exts.first()) }
     var over by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(false) }
     val root = android.os.Environment.getExternalStorageDirectory()
-    val dirs = listOfNotNull(OfficePrefs.folder, srcDir, File(root, "Documents"), File(root, "Download")).distinctBy { it.path }
-    var dir by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(dirs.first()) }
+    val places = listOfNotNull(OfficePrefs.folder, srcDir, File(root, "Documents"), File(root, "Download"), File(root, "DCIM"), root).filter { it.isDirectory }.distinctBy { it.path }
+    var dir by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(places.first()) }
+    // the folder shown like the Windows Save As window: the way up, the folders, and the files of the kinds this document can be saved as
+    val entries = androidx.compose.runtime.remember(dir, ext) {
+        (dir.listFiles()?.toList() ?: emptyList()).filter { !it.name.startsWith(".") && (it.isDirectory || exts.any { e -> it.name.endsWith(".$e", true) }) }
+            .sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
+    }
     WinAlert(onDismissRequest = onDismiss, title = { androidx.compose.material3.Text(tr("Save as", "Farklı kaydet")) },
-        text = { androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
-            PField(base, { base = it }, tr("Name", "Ad"), androidx.compose.ui.Modifier.fillMaxWidth())
-            if (exts.size > 1) androidx.compose.foundation.layout.Row(androidx.compose.ui.Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
-                exts.forEach { e -> PChip(ext == e, ".$e") { ext = e } }
+        text = { androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+            androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(36.dp).clickable(enabled = dir.path != root.path) { dir.parentFile?.let { dir = it } }, contentAlignment = androidx.compose.ui.Alignment.Center) {
+                    PIcon("up", if (dir.path != root.path) T.text else T.sub, 20.dp)
+                }
+                androidx.compose.material3.Text(dir.path.removePrefix(root.path).ifEmpty { "/" }, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = androidx.compose.ui.Modifier.weight(1f))
             }
             androidx.compose.foundation.layout.Row(androidx.compose.ui.Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
-                dirs.forEach { d -> PChip(dir.path == d.path, if (d.path == OfficePrefs.folder.path) "Office" else d.name) { dir = d } }
+                places.forEach { d -> PChip(dir.path == d.path, if (d.path == OfficePrefs.folder.path) "Office" else if (d.path == root.path) tr("Phone", "Telefon") else d.name) { dir = d } }
+            }
+            androidx.compose.foundation.lazy.LazyColumn(androidx.compose.ui.Modifier.fillMaxWidth().height(200.dp).border(1.dp, T.line)) {
+                if (entries.isEmpty()) item { androidx.compose.material3.Text(tr("Empty folder", "Boş klasör"), color = T.sub, fontSize = 13.sp, modifier = androidx.compose.ui.Modifier.padding(10.dp)) }
+                items(entries.size) { i ->
+                    val f = entries[i]
+                    androidx.compose.foundation.layout.Row(androidx.compose.ui.Modifier.fillMaxWidth().clickable {
+                        if (f.isDirectory) dir = f else { base = f.name.substringBeforeLast('.'); exts.firstOrNull { e -> f.name.endsWith(".$e", true) }?.let { ext = it } }
+                    }.padding(horizontal = 8.dp, vertical = 7.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+                        PIcon(if (f.isDirectory) "folder" else "document", if (f.isDirectory) T.accent else T.sub, 20.dp)
+                        androidx.compose.material3.Text(f.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = androidx.compose.ui.Modifier.padding(start = 8.dp))
+                    }
+                }
+            }
+            PField(base, { base = it }, tr("File name", "Dosya adı"), androidx.compose.ui.Modifier.fillMaxWidth())
+            if (exts.size > 1) androidx.compose.foundation.layout.Row(androidx.compose.ui.Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
+                exts.forEach { e -> PChip(ext == e, ".$e") { ext = e } }
             }
             if (overwrite) PChip(over, tr("Overwrite", "Üstüne yaz")) { over = !over }
         } },

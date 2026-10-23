@@ -1114,3 +1114,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.288: derlenmedi — quick panel karo animasyonu (TilePop), perde animasyonu ayarı (varsayılan kapalı)
 - 0.10.289: derlenmedi — Dosyalar ana sayfası (depolama, son dosyalar/klasörler, türler, alt çubuk)
 - 0.10.292: derlenmedi — Poweramp widget: shuffle/loop %5 küçük, transport tuşları %15 yakın
+- 0.10.297: derlenmedi — Medya araçları (sıkıştır, GIF düzenleyici, dönüştürücü), Office Farklı kaydet penceresi, widget sayfası WMP skin kartları ve katlanan bölümler, Poweramp oynat tuşu %10 küçük

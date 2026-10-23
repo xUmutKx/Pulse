@@ -165,6 +165,8 @@ fun WidgetsPage() {
     var query by remember { mutableStateOf("") }
     // the Winamp group is closed until its arrow is tapped; a search always shows its matches
     var winampOpen by remember { mutableStateOf(false) }
+    // the plain widgets of a design: one row is shown, the rest fold under "More" (a search opens them)
+    var textOpen by remember { mutableStateOf(setOf<String>()) }
     val providers = remember { WidgetData.all.associateBy { it.javaClass.simpleName } }
     val classOf = remember { SkinWidgets.all.associate { it.skin to it.javaClass.simpleName } }
     val current = designOf(Look.theme.id)
@@ -223,10 +225,18 @@ fun WidgetsPage() {
                 .forEach { f -> cards += "f_${f.look}" to @Composable { FaceCard(ctx, f) } }
             // the plain widgets in this design's style; with all designs shown, once, in the picked style, after the first
             val plainStyle = if (only == null) style.takeIf { theme == designs.first().first } else styleFor(theme, style)
-            if (plainStyle != null) oldShown.forEach { w -> cards += "t_${theme}_${w.provider}" to @Composable { TextCard(ctx, w, providers.getValue(w.provider), plainStyle) } }
-            if (cards.isNotEmpty()) {
+            val plain = mutableListOf<Pair<String, @Composable () -> Unit>>()
+            if (plainStyle != null) oldShown.forEach { w -> plain += "t_${theme}_${w.provider}" to @Composable { TextCard(ctx, w, providers.getValue(w.provider), plainStyle) } }
+            if (cards.isNotEmpty() || plain.isNotEmpty()) {
                 item(key = "h_$theme") { FamilyHeader(theme, label) }
                 items(cards.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                // one row of the plain widgets stays in view, the others are folded
+                items(plain.take(2).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                if (plain.size > 2) {
+                    val more = theme in textOpen || query.isNotBlank()
+                    item(key = "pm_$theme") { WinampHeader(plain.size - 2, more, tr("More widgets", "Diğer widget'lar")) { textOpen = if (more) textOpen - theme else textOpen + theme } }
+                    if (more) items(plain.drop(2).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                }
             }
         }
         // the Winamp widgets belong to no design: one Music header, shown while the search matches a card
@@ -246,6 +256,10 @@ fun WidgetsPage() {
         }
         // the skins are kept apart from the three Winamp widgets: a search shows the skins that match, opened
         val skinCards = mutableListOf<Pair<String, @Composable () -> Unit>>()
+        // the Windows Media player skins (pictures of real player windows), each its own widget
+        com.umutk.pulse.extras.music.imgskin.ImgSkins.all.forEachIndexed { i, sk ->
+            if (hit("Windows Media skin") || hit(sk.name)) skinCards += "m_wms_$i" to @Composable { WmsCard(ctx, i) }
+        }
         winampSkins.filter { hit("Winamp") || hit(it.name) }.forEach { s -> skinCards += "m_skin_${s.file.name}" to @Composable { WinampSkinCard(ctx, s) } }
         if (music.isNotEmpty() || winamp.isNotEmpty() || skinCards.isNotEmpty()) {
             item(key = "h_music") { Text(tr("Music", "Müzik"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
@@ -256,8 +270,12 @@ fun WidgetsPage() {
             item(key = "h_winamp") { Text("Winamp", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) }
             if (winamp.isNotEmpty()) items(winamp.chunked(2), key = { "w_" + it.first().first }) { pair -> PairRow(pair) { it.second() } }
             if (skinCards.isNotEmpty()) {
-                item(key = "h_winamp_skins") { WinampHeader(skinCards.size, open) { winampOpen = !winampOpen } }
-                if (open) items(skinCards.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                // three skins stay in view, the rest fold under the arrow
+                items(skinCards.take(3).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                if (skinCards.size > 3) {
+                    item(key = "h_winamp_skins") { WinampHeader(skinCards.size - 3, open) { winampOpen = !winampOpen } }
+                    if (open) items(skinCards.drop(3).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                }
             }
         }
         if (music.isNotEmpty()) items(music.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
@@ -347,10 +365,10 @@ private fun FamilyHeader(theme: String, label: String) {
 
 /** Collapsible group header: title, how many widgets it holds, and a chevron that turns when open. */
 @Composable
-private fun WinampHeader(count: Int, open: Boolean, onClick: () -> Unit) {
+private fun WinampHeader(count: Int, open: Boolean, title: String = tr("Skins", "Skinler"), onClick: () -> Unit) {
     val rot by animateFloatAsState(if (open) 180f else 0f, tween(200), label = "chev")
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(top = 6.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(tr("Skins", "Skinler"), Modifier.weight(1f), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        Text(title, Modifier.weight(1f), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
         Text("$count", color = T.sub, fontSize = 14.sp)
         Spacer(Modifier.size(8.dp))
         PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = rot })
@@ -454,6 +472,29 @@ private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style:
         )
         }
       }
+    }
+}
+
+/** One Windows Media player skin as its widget draws it: the picture with the title, cover and seek bar on it. */
+@Composable
+private fun WmsCard(ctx: Context, index: Int) {
+    val skin = com.umutk.pulse.extras.music.imgskin.ImgSkins.all[index]
+    val bmp by produceState<Bitmap?>(null, index) {
+        value = withContext(drawer) {
+            runCatching {
+                val b = Bitmap.createBitmap(skin.w * 2, skin.h * 2, Bitmap.Config.ARGB_8888)
+                val c = android.graphics.Canvas(b); c.scale(2f, 2f)
+                com.umutk.pulse.extras.music.imgskin.ImgSkins.paint(c, ctx, skin, com.umutk.pulse.extras.music.imgskin.SkinState("Track name", "Artist name", true, 83_000L, 240_000L, null))
+                b
+            }.getOrNull()
+        }
+    }
+    val cls = listOf(com.umutk.pulse.extras.music.imgskin.WmsBlobWidget::class.java, com.umutk.pulse.extras.music.imgskin.WmsWin7Widget::class.java, com.umutk.pulse.extras.music.imgskin.WmsCandyWidget::class.java,
+        com.umutk.pulse.extras.music.imgskin.WmsSilverWidget::class.java, com.umutk.pulse.extras.music.imgskin.WmsLunaWidget::class.java)[index]
+    WidgetCard("WMP · " + skin.name, { WinampSkinPick.pinWidget(ctx, cls) }, skin.w.toFloat() / skin.h) {
+        val b = bmp
+        if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        else Placeholder()
     }
 }
 
