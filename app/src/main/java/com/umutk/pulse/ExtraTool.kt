@@ -191,3 +191,24 @@ class KeyboardSettingsActivity : ExtraToolActivity()
 
 /** The tool activity in a see-through window: the launcher's framed Pulse windows (see FramedWindow). */
 class FramedToolActivity : ExtraToolActivity()
+
+/**
+ * Opens a tool page by its "route" extra. The tool pages start as documents of their own (each tap would add one more window to the recent apps), so
+ * the one that is already open is brought to the front; only when there is none, a new one starts. A request for a sheet ("open") always starts a new one.
+ */
+class ToolOpenActivity : android.app.Activity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        val route = intent.getStringExtra("route").orEmpty()
+        val extras = intent.extras
+        val plain = extras == null || extras.keySet().all { it == "route" }
+        val am = getSystemService(android.app.ActivityManager::class.java)
+        val open = if (plain && route.isNotEmpty()) am.appTasks.firstOrNull { t ->
+            val b = t.taskInfo.baseIntent
+            b.getStringExtra("route") == route || b.component?.className.orEmpty().let { n -> route == "music" && n.endsWith("MusicLauncher") }
+        } else null
+        if (open != null) open.moveToFront()
+        else startActivity(Intent(this, ExtraToolActivity::class.java).also { i -> extras?.let { i.putExtras(it) } }.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        finish()
+    }
+}
