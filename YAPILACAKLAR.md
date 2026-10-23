@@ -1086,3 +1086,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.257 derlenmedi: Windows başlatıcı görünümlerinde isteğe bağlı açılış (boot) ve giriş ekranı (ayar: Başlatıcı ayarları > Ekstralar); sağ üst Uygulamalar menüsünde Hesap makinesi her zaman listelenir.
 - 0.10.258 derlenmedi: Başlatıcı duvar kağıdına hareketli deniz dalgası efekti (Ekstralar > Duvar kağıdında deniz dalgaları).
 - 0.10.259 derlenmedi: derleme düzeltmesi (ControlPanel getValue/setValue importları).
+- 0.10.260 derlenmedi: deniz dalgası kaldırıldı (yanlış anlaşılma); yerine başlatıcı ses efektleri: görünüme göre açılış sesi + tıklama (Ekstralar > Ses efektleri).

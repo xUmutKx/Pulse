@@ -230,7 +230,7 @@ fun LauncherSettings(back: () -> Unit) {
             }
             // wallpaper
             SwitchLine("image", tr("A different wallpaper every day", "Her gün farklı duvar kağıdı"), LauncherPrefs.wallDaily) { LauncherPrefs.wallDaily = it; save() }
-            SwitchLine("image", tr("Sea waves over the wallpaper", "Duvar kağıdında deniz dalgaları"), LauncherPrefs.wallSea) { LauncherPrefs.wallSea = it; save() }
+            SwitchLine("volume", tr("Sound effects (start-up chime, clicks)", "Ses efektleri (açılış sesi, tıklama)"), LauncherPrefs.sounds) { LauncherPrefs.sounds = it; save() }
             SliderRow("${tr("Darken the wallpaper", "Duvar kağıdını karart")}: ${LauncherPrefs.wallDim}%", LauncherPrefs.wallDim.toFloat(), 0f..70f) { LauncherPrefs.wallDim = it.roundToInt(); save() }
             SliderRow("${tr("Blur the wallpaper", "Duvar kağıdını bulanıklaştır")}: ${LauncherPrefs.wallBlur}", LauncherPrefs.wallBlur.toFloat(), 0f..24f) { LauncherPrefs.wallBlur = it.roundToInt(); save() }
             // clock and screen
