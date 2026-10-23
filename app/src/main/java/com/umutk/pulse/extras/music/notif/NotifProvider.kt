@@ -42,7 +42,11 @@ class NotifProvider(private val ctx: Context) : MediaNotification.Provider {
             session: MediaSession, playerCommands: Player.Commands, customLayout: ImmutableList<CommandButton>, showPauseButton: Boolean,
         ): ImmutableList<CommandButton> {
             var slot = 0
-            val out = MusicSettings.notificationButtonIds(ctx).mapNotNull { NotifBtn.of(it) }.mapNotNull { b ->
+            // the notification has room for MAX buttons; when more are chosen the Close button stays and the last others go
+            val chosen = MusicSettings.notificationButtonIds(ctx).mapNotNull { NotifBtn.of(it) }.distinct().let { l ->
+                if (l.size > NotifBtn.MAX && NotifBtn.CLOSE in l) l.filter { it != NotifBtn.CLOSE }.take(NotifBtn.MAX - 1) + NotifBtn.CLOSE else l
+            }
+            val out = chosen.mapNotNull { b ->
                 if (b.builtin) {
                     val ok = when (b) {
                         NotifBtn.PREV -> playerCommands.contains(Player.COMMAND_SEEK_TO_PREVIOUS)
