@@ -343,7 +343,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     @androidx.annotation.RequiresApi(30)
     override fun onCreateInlineSuggestionsRequest(uiExtras: android.os.Bundle): android.view.inputmethod.InlineSuggestionsRequest? {
         val d = resources.displayMetrics.density
-        val styles = androidx.autofill.inline.UiVersions.newStylesBuilder().addStyle(androidx.autofill.inline.v1.InlineSuggestionUi.newStyleBuilder().build()).build()
+        // black chips with white text (the default is a light chip, which is hard to read on a dark keyboard)
+        val chip = androidx.autofill.inline.common.ViewStyle.Builder().setBackgroundColor(android.graphics.Color.BLACK).build()
+        val title = androidx.autofill.inline.common.TextViewStyle.Builder().setTextColor(android.graphics.Color.WHITE).build()
+        val sub = androidx.autofill.inline.common.TextViewStyle.Builder().setTextColor(0xFFBBBBBB.toInt()).build()
+        val styles = androidx.autofill.inline.UiVersions.newStylesBuilder().addStyle(androidx.autofill.inline.v1.InlineSuggestionUi.newStyleBuilder()
+            .setChipStyle(chip).setTitleStyle(title).setSubtitleStyle(sub).build()).build()
         val spec = android.widget.inline.InlinePresentationSpec.Builder(android.util.Size((100 * d).toInt(), (38 * d).toInt()), android.util.Size((260 * d).toInt(), (42 * d).toInt())).setStyle(styles).build()
         return android.view.inputmethod.InlineSuggestionsRequest.Builder(listOf(spec)).setMaxSuggestionCount(4).build()
     }

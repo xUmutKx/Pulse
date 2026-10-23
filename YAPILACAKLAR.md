@@ -1152,3 +1152,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.334: derlenmedi (derleme istenmedi) — klavye: sayılara basılı tutunca üst simge/sembol/kesir, parlaklık (tümü + boşluk satırı ayrı), hareketli RGB ışık (klavye çevresi ya da her tuş), klavye içinde çeviri (MyMemory, siteye atmaz); Medya araçları: resim kalitesi kaydırıcısı + önizleme; Dosyalar Diğer menüsünde tek Medya araçları ve dönüştürücü satırı
 - 0.10.335: derlenmedi — Mesajlar: otomatik spam engelleme (rehberde olmayan numaradan reklam/bahis/kredi + link; kod ve hesap mesajları hariç), ayarlardan kapatılır; klavye RGB animasyon içe aktarma düzeltmesi
 - 0.10.336: klavye: "öneri istemiyorum" bayrağı olan alanlarda (Chrome web alanları) da öneri çubuğu açık, yalnız otomatik düzeltme kapalı
+- 0.10.337: klavye: emoji paneli tuşlarla aynı boyda (küçülmez), kategori simgeleri ikon, arama çubuğu sekmelerin yerine; otomatik doldurma önerileri siyah zemin beyaz yazı

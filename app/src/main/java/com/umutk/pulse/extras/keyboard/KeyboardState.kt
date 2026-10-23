@@ -15,6 +15,8 @@ class KbState {
     var page by mutableIntStateOf(0)
     /** keys, emoji, menu, clip, resize */
     var panel by mutableStateOf("keys")
+    /** The height in pixels of the key panel as it is on screen: the emoji panel takes the same, so the keyboard keeps its size. */
+    var keysH by mutableStateOf(0)
     /** The text typed in the emoji search (the keys type into it instead of the field); null when the search is not open. */
     var emojiQuery by mutableStateOf<String?>(null)
     var lang by mutableStateOf("en")
