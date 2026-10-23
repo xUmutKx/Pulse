@@ -72,7 +72,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         KeyboardPrefs.load(this)
         owner = StandByOwner().also { it.start() }
         st.lang = KeyboardPrefs.langList().first()
-        st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.split(' ')?.filter { it.isNotEmpty() } ?: emptyList()
+        st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.let { r -> if ('\n' in r) r.split('\n') else r.split(' ') }?.filter { it.isNotEmpty() } ?: emptyList()
         scope.launch(Dispatchers.IO) {
             KeyboardPrefs.langList().forEach { code ->
                 // a language without a word list fetches its own (when there is a connection)
@@ -108,7 +108,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
-        st.inline = emptyList()
+        st.inline = emptyList(); st.emojiQuery = null
         // the settings may have changed the language since the last field
         KeyboardPrefs.load(this)
         val primary = KeyboardPrefs.langList().first()
@@ -158,12 +158,24 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun type(s: String) {
         val c = currentInputConnection ?: return
         if (s.isEmpty()) return
+        // the emoji search is open: the keys type into its box
+        st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it + s; return } }
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
         val ch = s[0]
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
         if (letter) {
+            // a comma right before a letter, behind a word: a slip of the finger; the comma goes and the word is reopened
+            if (punctTyped && ch.isLetter() && KeyboardPrefs.commaSlip && !st.plain && word.isEmpty()) {
+                val before = c.getTextBeforeCursor(40, 0)?.toString().orEmpty()
+                if (before.length >= 3 && before.last() == ',' && before[before.length - 2].isLetter()) {
+                    var n = 1
+                    while (n < before.length && before[before.length - 1 - n].isLetter()) n++
+                    val stem = before.substring(before.length - n, before.length - 1)
+                    c.deleteSurroundingText(n, 0); word.append(stem); punctTyped = false
+                }
+            }
             if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter()) c.commitText(" ", 1)
             punctTyped = false; lastWasSpace = false
             word.append(ch)
@@ -201,6 +213,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun space() {
         val c = currentInputConnection ?: return
+        st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
         val now = SystemClock.uptimeMillis()
         if (word.isEmpty() && lastWasSpace && KeyboardPrefs.quickPeriod && !st.plain && now - spaceTap < 600) {
             val before = c.getTextBeforeCursor(2, 0)
@@ -231,6 +244,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun backspace() {
         val c = currentInputConnection ?: return
+        st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it.dropLast(1); return } }
         lastWasSpace = false
         lastGlide?.let { g ->
             val before = c.getTextBeforeCursor(g.length + 1, 0)?.toString()
@@ -266,7 +280,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun page(p: Int) { finishWord("", false); st.page = p; st.panel = "keys"; if (p == 0) updateCaps() }
 
-    override fun emojiPanel() { finishWord("", false); st.panel = if (st.panel == "emoji") "keys" else "emoji"; st.toolbar = false }
+    override fun emojiPanel() { finishWord("", false); st.emojiQuery = null; st.panel = if (st.panel == "emoji") "keys" else "emoji"; st.toolbar = false }
 
     override fun lang() {
         val l = KeyboardPrefs.langList()
@@ -469,7 +483,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         c.commitText(e, 1)
         st.recents = (listOf(e) + st.recents.filter { it != e }).take(30)
-        getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).edit().putString("recents", st.recents.joinToString(" ")).apply()
+        getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).edit().putString("recents", st.recents.joinToString("\n")).apply()
         lastWasSpace = false
     }
 
