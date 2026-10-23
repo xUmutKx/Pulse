@@ -114,6 +114,7 @@ class Win11LauncherLook : LauncherLook {
                         LaunchAppPicture(app, 24.dp, tileC, fg)
                     }
                 }
+                TaskbarWindows("11", fg, 36.dp)
             }
             TaskbarClock(fg, Modifier.align(Alignment.CenterEnd).padding(end = 12.dp))
         }
@@ -189,6 +190,7 @@ class Win11LauncherLook : LauncherLook {
                             }
                         }
                     } else Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                        LiveTiles(8.dp, Modifier.padding(bottom = 8.dp))
                         Win11Heading(if (pinned.isNotEmpty()) tr("Pinned", "Sabitlenenler") else null, fg) {
                             Row(Modifier.clip(shape).clickable { allPage = true }.padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text(tr("All apps", "Tüm uygulamalar"), color = fg, fontSize = 12.sp)

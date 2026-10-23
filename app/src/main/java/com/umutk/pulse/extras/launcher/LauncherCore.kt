@@ -84,6 +84,8 @@ object LauncherSession {
     /** The clock flyout (calendar and, in Windows 10 / 11, the quick tiles) is open; the taskbar clock sets it. */
     var clockOpen by mutableStateOf(false)
     var startOpen by mutableStateOf(false)
+    /** The quick search (a swipe down on the home) is open. */
+    var searchOpen by mutableStateOf(false)
     /** Bumped on every home press, so the pages scroll back to the first one. */
     var homeTick by mutableStateOf(0)
 }
@@ -125,11 +127,21 @@ object LauncherLooks {
 fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modifier: Modifier = Modifier) {
     val shape = when (LauncherPrefs.iconShape) { "circle" -> androidx.compose.foundation.shape.CircleShape; "square" -> RoundedCornerShape(size * .06f); "rounded" -> RoundedCornerShape(size * .16f); else -> RoundedCornerShape(size * .28f) }
     val bmp = app.icon
-    if (bmp != null) Image(bmp, null, modifier.size(size).clip(shape))
-    else if (app.iconKey != null) Box(modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
-        com.umutk.pulse.PIcon(app.iconKey, letter, size * .7f)
-    }
-    else Box(modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
-        Text(app.label.take(1).uppercase(), color = letter, fontSize = (size.value * .45f).sp)
+    val n = if (LauncherPrefs.badges) LauncherBadges.counts[app.pkg] ?: 0 else 0
+    Box(modifier.size(size)) {
+        if (bmp != null) Image(bmp, null, Modifier.size(size).clip(shape))
+        else if (app.iconKey != null) Box(Modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
+            com.umutk.pulse.PIcon(app.iconKey, letter, size * .7f)
+        }
+        else Box(Modifier.size(size).clip(shape).background(tile), contentAlignment = Alignment.Center) {
+            Text(app.label.take(1).uppercase(), color = letter, fontSize = (size.value * .45f).sp)
+        }
+        // the notification count of the app, a red dot with the number at the top right corner
+        if (n > 0) {
+            val d = (size.value * .34f).coerceIn(14f, 22f)
+            Box(Modifier.align(Alignment.TopEnd).size(d.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFE53935)), contentAlignment = Alignment.Center) {
+                Text(if (n > 9) "9+" else n.toString(), color = Color.White, fontSize = (d * .56f).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+            }
+        }
     }
 }

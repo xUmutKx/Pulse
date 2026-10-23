@@ -110,5 +110,7 @@ object NotifHist {
 
 /** Declared in the manifest. Receives every posted notification; the logic lives in [NotifHist]. */
 class NotifHistListener : NotificationListenerService() {
-    override fun onNotificationPosted(sbn: StatusBarNotification) = NotifHist.onPosted(this, sbn)
+    override fun onNotificationPosted(sbn: StatusBarNotification) { NotifHist.onPosted(this, sbn); com.umutk.pulse.extras.launcher.LauncherBadges.update(this) }
+    override fun onNotificationRemoved(sbn: StatusBarNotification) = com.umutk.pulse.extras.launcher.LauncherBadges.update(this)
+    override fun onListenerConnected() = com.umutk.pulse.extras.launcher.LauncherBadges.update(this)
 }

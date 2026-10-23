@@ -104,6 +104,7 @@ fun Modifier.homeLongPress(onLong: () -> Unit): Modifier = composed {
             var total = 0f
             detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = {
                 if (total > 140f && LauncherPrefs.swipeDownShade) globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS)
+                else if (total > 140f && LauncherPrefs.swipeDownSearch) LauncherSession.searchOpen = true
                 else if (total < -140f && LauncherPrefs.swipeUpApps) LauncherSession.startOpen = true
             }) { _, d -> total += d }
         }
