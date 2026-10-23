@@ -333,17 +333,24 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     var actionFor by remember { mutableStateOf<LaunchApp?>(null) }
     val open: (LaunchApp) -> Unit = { app ->
         if (isFolder(app)) FolderUi.open = app.pkg.removePrefix(FOLDER_PREFIX)
+        else if (app.pkg.startsWith("file:")) openLink(ctx, app.pkg.removePrefix("file:"))
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
         else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
     }
-    val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), LauncherPrefs.drawerIconDp.takeIf { it > 0 }?.coerceIn(24, 72) ?: iconDp, dock, open) { if (!it.pkg.startsWith("pulse:")) actionFor = it }
+    // what was put on the home screen by hand: files, pictures, folders, apps
+    val linkItems = remember(LauncherPrefs.links, apps) { LauncherPrefs.links.mapNotNull { linkApp(it, apps) } }
+    val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), LauncherPrefs.drawerIconDp.takeIf { it > 0 }?.coerceIn(24, 72) ?: iconDp, dock, open) {
+        // a file, picture or folder put on the home screen: a long press takes it off again (the file itself stays)
+        if (it.pkg.startsWith("file:")) { LauncherPrefs.links = LauncherPrefs.links - it.pkg; LauncherPrefs.save(ctx); android.widget.Toast.makeText(ctx, tr("Removed from the home screen", "Ana ekrandan kaldırıldı"), android.widget.Toast.LENGTH_SHORT).show() }
+        else if (!it.pkg.startsWith("pulse:")) actionFor = it
+    }
 
     // the home screen is a desktop, not an app grid: the Windows looks show the desktop shortcuts, the others show no icons (the apps list holds every app); a setting brings the app grid back
     val desktop = look.id in WINDOWS_LOOKS
     // Windows 10 / 11 have the Settings app, the older ones the Control Panel: each look shows its own of the two
     val newWin = look.id in setOf("win11", "win10", "win10black")
     val shortcuts = remember(desktop, LauncherPrefs.desktopOn, newWin) { if (desktop) desktopItems().filter { it.pkg in LauncherPrefs.desktopOn && !(newWin && it.pkg == "pulse:settings") && !(!newWin && it.pkg == "pulse:winsettings") } else emptyList() }
-    val home = if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) visible else shortcuts
+    val home = if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) (visible + linkItems).distinctBy { it.pkg } else if (desktop) shortcuts + linkItems else linkItems
     val grid = rememberLazyGridState()
     val pages = home.chunked(columns * PAGE_ROWS)
     val pager = rememberPagerState(pageCount = { pages.size.coerceAtLeast(1) })
@@ -361,7 +368,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             // a long press on an empty part of the home opens the Settings / Widgets sheet
             Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
                 if (desktop && !LauncherPrefs.homeApps) {
-                    LabelScale { DesktopIcons(look, state, shortcuts, iconDp, edge, open) }
+                    LabelScale { DesktopIcons(look, state, shortcuts + linkItems, iconDp, edge, open) }
                     // the clock gadget of the desktop, in the look's own style, top right
                     MovableDesktopClock(look.id)
                     DesktopWidgetLayer()
@@ -373,7 +380,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                             look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) })
                         }
                     }
-                } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) LabelScale { HomeGrid(look, state, visible, columns, iconDp, edge, open) }
+                } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone") || linkItems.isNotEmpty()) LabelScale { HomeGrid(look, state, (if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) visible + linkItems else linkItems).distinctBy { it.pkg }, columns, iconDp, edge, open) }
             }
             if (!look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
         }
@@ -425,4 +432,24 @@ internal fun LabelScale(content: @Composable () -> Unit) {
     val k = LauncherPrefs.labelScale / 100f
     if (k == 1f) content()
     else androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, d.fontScale * k)) { content() }
+}
+
+
+/** A thing put on the home screen: its name, and the picture of the look's own icon set (a folder, a picture, a document) or the app itself. */
+internal fun linkApp(link: String, apps: List<LaunchApp>): LaunchApp? {
+    if (link.startsWith("app:")) return apps.firstOrNull { it.pkg == link.removePrefix("app:") }
+    val path = link.removePrefix("file:")
+    val f = java.io.File(path)
+    if (!f.exists()) return null
+    val key = if (f.isDirectory) "folder" else if (f.extension.lowercase() in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic")) "image" else "document"
+    return LaunchApp(f.name.ifEmpty { path }, link, null, iconKey = key)
+}
+
+/** Opens a file with whatever handles it, a picture in the gallery, a folder in Pulse Files. */
+internal fun openLink(ctx: Context, path: String) {
+    val f = java.io.File(path)
+    if (f.isDirectory) {
+        com.umutk.pulse.features.ExNav.lastHere = f.path
+        runCatching { ctx.startActivity(Intent().setClassName(ctx, "com.umutk.pulse.FilesActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    } else com.umutk.pulse.files.home.openFileWithSystem(ctx, f)
 }

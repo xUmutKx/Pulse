@@ -376,7 +376,7 @@ private fun SwitchLine(icon: String, title: String, checked: Boolean, onChange: 
 
 /** Checklist of launchable apps; at most [max] can be ticked. [onOk] gets the ticked package names. */
 @Composable
-private fun AppCheckDialog(title: String, initial: List<String>, max: Int, onDismiss: () -> Unit, onOk: (List<String>) -> Unit) {
+internal fun AppCheckDialog(title: String, initial: List<String>, max: Int, onDismiss: () -> Unit, onOk: (List<String>) -> Unit) {
     val ctx = LocalContext.current
     val w = LocalWindowLook.current
     val apps by produceState(emptyList<LaunchApp>()) { value = withContext(Dispatchers.IO) { loadApps(ctx) } }

@@ -36,7 +36,17 @@ import com.umutk.pulse.tr
 object HomeSheetState {
     var sheet by mutableStateOf(false)
     var widgets by mutableStateOf(false)
+    var pickApp by mutableStateOf(false)
+    var newFolder by mutableStateOf(false)
 }
+
+/** The file behind a document the picker returned ("primary:Download/x.pdf" is /storage/emulated/0/Download/x.pdf), or null. */
+private fun pathOf(ctx: android.content.Context, uri: android.net.Uri): String? = runCatching {
+    val id = android.provider.DocumentsContract.getDocumentId(uri)
+    val (vol, rel) = id.split(':', limit = 2).let { it[0] to it.getOrElse(1) { "" } }
+    val root = if (vol.equals("primary", true)) android.os.Environment.getExternalStorageDirectory().path else "/storage/$vol"
+    java.io.File(root, rel).path.takeIf { java.io.File(it).exists() }
+}.getOrNull()
 
 /**
  * The home sheet (long press on empty space) with Settings and Widgets, drawn in the active look, and the widget picker
@@ -46,7 +56,14 @@ object HomeSheetState {
 fun HomeSheet() {
     val ctx = LocalContext.current
     val addWidget = rememberWidgetAdd { }
-    if (HomeSheetState.sheet) ContextPopup(220.dp, 240.dp, onDismiss = { HomeSheetState.sheet = false }) {
+    // a file or a picture for the home screen: its place on the phone is kept, the file itself is not copied
+    fun addLink(path: String?) {
+        if (path == null) { android.widget.Toast.makeText(ctx, tr("This file cannot be put on the home screen", "Bu dosya ana ekrana konamaz"), android.widget.Toast.LENGTH_SHORT).show(); return }
+        LauncherPrefs.links = (LauncherPrefs.links + "file:$path").distinct(); LauncherPrefs.save(ctx)
+    }
+    val pickFile = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u -> if (u != null) addLink(pathOf(ctx, u)) }
+    var folderName by androidx.compose.runtime.remember { mutableStateOf("") }
+    if (HomeSheetState.sheet) ContextPopup(220.dp, 400.dp, onDismiss = { HomeSheetState.sheet = false }) {
         val w = com.umutk.pulse.LocalWindowLook.current
         ActionRow("settings", tr("Settings", "Ayarlar"), w.text) {
             HomeSheetState.sheet = false
@@ -58,7 +75,28 @@ fun HomeSheet() {
         ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
         if (LauncherPrefs.look in setOf("win11", "win10", "win7", "xp", "win95")) ActionRow("notes", tr("Sticky note", "Yapışkan not"), w.text) { HomeSheetState.sheet = false; stickyNoteProvider(ctx)?.let(addWidget) }
         ActionRow("gridView", tr("Widgets", "Widget'lar"), w.text) { HomeSheetState.sheet = false; HomeSheetState.widgets = true }
+        ActionRow("apps", tr("Add an app", "Uygulama ekle"), w.text) { HomeSheetState.sheet = false; HomeSheetState.pickApp = true }
+        ActionRow("document", tr("Add a file", "Dosya ekle"), w.text) { HomeSheetState.sheet = false; pickFile.launch(arrayOf("*/*")) }
+        ActionRow("image", tr("Add a picture", "Resim ekle"), w.text) { HomeSheetState.sheet = false; pickFile.launch(arrayOf("image/*")) }
+        ActionRow("folder", tr("New folder", "Yeni klasör"), w.text) { HomeSheetState.sheet = false; folderName = ""; HomeSheetState.newFolder = true }
     }
+    if (HomeSheetState.pickApp) AppCheckDialog(tr("Add an app", "Uygulama ekle"), emptyList(), Int.MAX_VALUE, onDismiss = { HomeSheetState.pickApp = false }) { pkgs ->
+        LauncherPrefs.links = (LauncherPrefs.links + pkgs.map { "app:$it" }).distinct(); LauncherPrefs.save(ctx); HomeSheetState.pickApp = false
+    }
+    if (HomeSheetState.newFolder) com.umutk.pulse.WinAlert(
+        onDismissRequest = { HomeSheetState.newFolder = false },
+        title = { Text(tr("New folder", "Yeni klasör")) },
+        text = { com.umutk.pulse.PField(folderName, { folderName = it }, tr("Name", "Ad"), Modifier.fillMaxWidth()) },
+        confirmButton = { com.umutk.pulse.PButton(tr("Create", "Oluştur")) {
+            val n = folderName.trim().replace(Regex("[/\\\\:*?\"<>|]"), "_")
+            if (n.isNotEmpty()) {
+                val d = java.io.File(android.os.Environment.getExternalStorageDirectory(), "Documents/$n")
+                if (d.exists() || d.mkdirs()) addLink(d.path) else android.widget.Toast.makeText(ctx, tr("Could not create the folder", "Klasör oluşturulamadı"), android.widget.Toast.LENGTH_SHORT).show()
+            }
+            HomeSheetState.newFolder = false
+        } },
+        dismissButton = { com.umutk.pulse.PButton(tr("Cancel", "Vazgeç")) { HomeSheetState.newFolder = false } },
+    )
     if (HomeSheetState.widgets) WidgetPickDialog(
         onPick = { HomeSheetState.widgets = false; addWidget(it) },
         onDismiss = { HomeSheetState.widgets = false })

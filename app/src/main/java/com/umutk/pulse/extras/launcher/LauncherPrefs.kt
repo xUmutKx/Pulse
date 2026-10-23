@@ -111,6 +111,8 @@ object LauncherPrefs {
     /** The package of the installed icon pack that draws the app pictures; empty = the apps' own. */
     var iconPack by mutableStateOf("")
     /** The order of the home grid: "app:<package>" and "f:<folder id>" entries; apps not listed follow in the usual order. */
+    /** Things put on the home screen by hand: "file:<path>" (a file, a picture or a folder) and "app:<package>". */
+    var links by mutableStateOf<List<String>>(emptyList())
     var homeOrder by mutableStateOf<List<String>>(emptyList())
     /** Folders of the home grid: id -> "name|package,package". */
     var folders by mutableStateOf<Map<String, String>>(emptyMap())
@@ -158,6 +160,7 @@ object LauncherPrefs {
         dockCount = p.getProperty("dockCount")?.toIntOrNull()?.coerceIn(3, 7) ?: 5; folderStyle = p.getProperty("folderStyle") ?: "grid"; badgeStyle = p.getProperty("badgeStyle") ?: "number"; labels = p.getProperty("labels") != "false"
         clippy = p.getProperty("clippy") != "false"; bootScreen = p.getProperty("bootScreen") == "true"; loginScreen = p.getProperty("loginScreen") == "true"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
         homeOrder = p.getProperty("homeOrder").orEmpty().split(',').filter { it.isNotBlank() }
+        links = p.getProperty("links").orEmpty().split('|').filter { it.isNotBlank() }
         folderOff = p.getProperty("folderOff").orEmpty().split(',').filter { it.isNotBlank() }.toSet()
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
@@ -198,7 +201,7 @@ object LauncherPrefs {
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
         p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen", bootScreen.toString()); p.setProperty("loginScreen", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
-        p.setProperty("homeOrder", homeOrder.joinToString(","))
+        p.setProperty("homeOrder", homeOrder.joinToString(",")); p.setProperty("links", links.joinToString("|"))
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         p.setProperty("folderOff", folderOff.joinToString(","))
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
@@ -219,7 +222,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; drawerIconDp = 0; labelScale = 100; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); links = emptyList(); folders = emptyMap(); folderOff = emptySet(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; sounds = true; wallDaily = false; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
         usage = emptyMap(); walls = emptyMap()
