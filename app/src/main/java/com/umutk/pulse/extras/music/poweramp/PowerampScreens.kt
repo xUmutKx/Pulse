@@ -980,8 +980,8 @@ private fun AudioInfoDialog(track: Track, style: PowerampStyle, onEdit: (() -> U
             Spacer(Modifier.height(10.dp))
             Row(Modifier.align(Alignment.End), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 // the tags can be changed from here (title, artist, album, genre, year)
-                if (onEdit != null) Box(Modifier.clip(CircleShape).background(style.panel.copy(alpha = 1f)).border(1.dp, style.accent, CircleShape).clickable(onClick = onEdit).padding(horizontal = 18.dp, vertical = 8.dp)) {
-                    Text(tr("Edit", "Düzenle"), color = style.accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                if (onEdit != null) Box(Modifier.size(38.dp).clip(CircleShape).border(1.dp, style.accent, CircleShape).clickable(onClick = onEdit), contentAlignment = Alignment.Center) {
+                    androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Edit, null, tint = style.accent, modifier = Modifier.size(20.dp))
                 }
                 Box(Modifier.clip(CircleShape).background(style.accent).clickable(onClick = onClose).padding(horizontal = 18.dp, vertical = 8.dp)) {
                     Text(tr("Close", "Kapat"), color = style.onAccent, fontSize = 15.sp, fontWeight = FontWeight.Bold)

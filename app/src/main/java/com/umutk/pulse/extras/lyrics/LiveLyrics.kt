@@ -91,11 +91,25 @@ object LiveLyrics {
      */
     fun bold(s: String): String {
         val sb = StringBuilder()
-        // only the plain letters and digits change; every other letter (ç ş ğ ı ö ü, Cyrillic, ...) stays exactly as written, so no letter is dropped or its mark misplaced
+        // the plain letters and digits change; the Turkish letters are a bold base letter with its mark on top (c + cedilla, g + breve, ...), so they are as heavy as the rest
+        fun up(c: Char) = sb.appendCodePoint(0x1D5D4 + (c - 'A'))
+        fun lo(c: Char) = sb.appendCodePoint(0x1D5EE + (c - 'a'))
         for (ch in s) when (ch) {
-            in 'A'..'Z' -> sb.appendCodePoint(0x1D5D4 + (ch - 'A'))
-            in 'a'..'z' -> sb.appendCodePoint(0x1D5EE + (ch - 'a'))
+            in 'A'..'Z' -> up(ch)
+            in 'a'..'z' -> lo(ch)
             in '0'..'9' -> sb.appendCodePoint(0x1D7EC + (ch - '0'))
+            'ç' -> { lo('c'); sb.append('\u0327') }
+            'ş' -> { lo('s'); sb.append('\u0327') }
+            'ğ' -> { lo('g'); sb.append('\u0306') }
+            'ö' -> { lo('o'); sb.append('\u0308') }
+            'ü' -> { lo('u'); sb.append('\u0308') }
+            'ı' -> sb.appendCodePoint(0x1D6CA)   // bold small iota: a dotless i as heavy as the rest
+            'Ç' -> { up('C'); sb.append('\u0327') }
+            'Ş' -> { up('S'); sb.append('\u0327') }
+            'Ğ' -> { up('G'); sb.append('\u0306') }
+            'Ö' -> { up('O'); sb.append('\u0308') }
+            'Ü' -> { up('U'); sb.append('\u0308') }
+            'İ' -> { up('I'); sb.append('\u0307') }
             else -> sb.append(ch)
         }
         return sb.toString()

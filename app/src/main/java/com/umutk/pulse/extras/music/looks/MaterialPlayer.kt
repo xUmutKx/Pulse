@@ -180,8 +180,19 @@ private fun TopAction(icon: androidx.compose.ui.graphics.vector.ImageVector, on:
 @Composable
 private fun LevelBars(playing: Boolean, color: Color, modifier: Modifier = Modifier) {
     var levels by remember { mutableStateOf(List(MusicLevels.BANDS) { 0f }) }
+    // the bars jump up with the sound and slide back down by themselves: after the sound stops they sink for a moment (they do not fall flat at once)
     LaunchedEffect(playing) {
-        while (true) { levels = if (playing) MusicLevels.snapshot() else List(MusicLevels.BANDS) { 0f }; if (!playing) break; delay(60) }
+        var last = 0L
+        while (true) {
+            androidx.compose.runtime.withFrameNanos { t ->
+                if (t - last >= 16_000_000L) {
+                    last = t
+                    val src = if (playing) MusicLevels.snapshot() else List(MusicLevels.BANDS) { 0f }
+                    levels = List(MusicLevels.BANDS) { i -> val o = levels.getOrElse(i) { 0f }; val v = src[i]; if (v > o) o + (v - o) * .6f else o * .93f }
+                }
+            }
+            if (!playing && levels.all { it < .01f }) { levels = List(MusicLevels.BANDS) { 0f }; break }
+        }
     }
     androidx.compose.foundation.Canvas(modifier) {
         val n = levels.size

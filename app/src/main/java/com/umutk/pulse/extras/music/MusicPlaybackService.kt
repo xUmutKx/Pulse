@@ -43,6 +43,14 @@ class MusicPlaybackService : MediaSessionService() {
 
     internal fun refresh() { session?.setCustomLayout(layout()) }
 
+    // the media volume turned down to zero stops the song (a setting)
+    private val volWatch = object : android.content.BroadcastReceiver() {
+        override fun onReceive(c: Context, i: Intent) {
+            if (i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1) != android.media.AudioManager.STREAM_MUSIC) return
+            if (i.getIntExtra("android.media.EXTRA_VOLUME_STREAM_VALUE", 1) == 0 && MusicSettings.pauseAtZeroVolume(c) && engine.player.playWhenReady) engine.pause()
+        }
+    }
+
     private val devCb = object : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) {
             refresh()
@@ -125,6 +133,7 @@ class MusicPlaybackService : MediaSessionService() {
         session = MediaSession.Builder(this, engine.player).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
         engine.player.addListener(listener)
         devices.registerAudioDeviceCallback(devCb, null)
+        ContextCompat.registerReceiver(this, volWatch, IntentFilter("android.media.VOLUME_CHANGED_ACTION"), ContextCompat.RECEIVER_EXPORTED)
         ContextCompat.registerReceiver(this, btAutoplay, IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED), ContextCompat.RECEIVER_NOT_EXPORTED)
         lyricsTicker = LiveLyricsTicker(this, engine) {
             session?.let { onUpdateNotification(it) }
@@ -139,6 +148,7 @@ class MusicPlaybackService : MediaSessionService() {
         live = null
         devices.unregisterAudioDeviceCallback(devCb)
         runCatching { unregisterReceiver(btAutoplay) }
+        runCatching { unregisterReceiver(volWatch) }
         lyricsTicker?.stop(); lyricsTicker = null
         runCatching { engine.player.removeListener(listener) }
         session?.release()

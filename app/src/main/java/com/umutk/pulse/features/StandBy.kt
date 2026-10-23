@@ -47,6 +47,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import kotlinx.coroutines.launch
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
@@ -92,6 +94,7 @@ import kotlin.math.sin
 
 /** The pages of the advanced cover: single widgets full screen, and "duo" pages with two widgets side by side (stacked when the phone stands upright). */
 val STANDBY_PAGES = listOf(
+    "blank" to ("Blank (black)" to "Boş (siyah)"),
     "clock" to ("Digital clock" to "Dijital saat"), "analog" to ("Analog clock" to "Analog saat"), "date" to ("Clock with date" to "Tarihli saat"),
     "calendar" to ("Calendar" to "Takvim"), "battery" to ("Battery" to "Pil"), "music" to ("Now playing" to "Çalan şarkı"),
     "duo_clock_battery" to ("Clock + battery" to "Saat + pil"), "duo_clock_calendar" to ("Clock + calendar" to "Saat + takvim"),
@@ -111,9 +114,9 @@ val STANDBY_PAGES = listOf(
 object StandByPrefs {
     private fun p(c: Context) = c.getSharedPreferences("standby", Context.MODE_PRIVATE)
     /** True: the cover tile and the switch start this screen; false (the default): the basic black cover. */
-    fun advanced(c: Context) = p(c).getBoolean("advanced", false)
+    fun advanced(c: Context) = true
     fun setAdvanced(c: Context, on: Boolean) = p(c).edit().putBoolean("advanced", on).apply()
-    fun pages(c: Context): List<String> = (p(c).getString("pages", null) ?: "clock,duo_clock_battery,analog").split(',').filter { id -> STANDBY_PAGES.any { it.first == id } }
+    fun pages(c: Context): List<String> = (p(c).getString("pages", null) ?: "blank").split(',').filter { id -> STANDBY_PAGES.any { it.first == id } }
     fun setPages(c: Context, l: List<String>) = p(c).edit().putString("pages", l.joinToString(",")).apply()
     fun font(c: Context) = p(c).getString("font", "light") ?: "light"
     fun setFont(c: Context, v: String) = p(c).edit().putString("font", v).apply()
@@ -194,7 +197,7 @@ object StandBy {
         val lp = WindowManager.LayoutParams(
             WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, type,
             WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS or WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
-            PixelFormat.OPAQUE,
+            PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
             if (android.os.Build.VERSION.SDK_INT >= 28) layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
@@ -232,7 +235,7 @@ private fun isNight(c: Context): Boolean { val h = Calendar.getInstance().get(Ca
 
 @Composable
 private fun StandByUi(ctx: Context, onClose: () -> Unit) {
-    val pages = remember { StandByPrefs.pages(ctx).ifEmpty { listOf("clock") } }
+    val pages = remember { StandByPrefs.pages(ctx).ifEmpty { listOf("blank") } }
     var page by remember { mutableIntStateOf(0) }
     val colour = StandByPrefs.ink(ctx)
     val night = remember { isNight(ctx) }
@@ -244,9 +247,20 @@ private fun StandByUi(ctx: Context, onClose: () -> Unit) {
     val drift = StandByPrefs.drift(ctx)
     val dx = if (drift) ((minute % 5) - 2) else 0
     val dy = if (drift) ((minute % 3) - 1) else 0
+    // the curtain: black closes in from the top and the bottom to the middle, then the face fades in; closing runs it backwards
+    val reveal = remember { androidx.compose.animation.core.Animatable(0f) }
+    val sc = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(Unit) { reveal.animateTo(1f, androidx.compose.animation.core.tween(560, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+    val closeIt: () -> Unit = { sc.launch { reveal.animateTo(0f, androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing)); onClose() } }
+    val faceAlpha = ((reveal.value - .55f) / .45f).coerceIn(0f, 1f)
     Box(
-        Modifier.fillMaxSize().background(Color.Black)
-            .pointerInput(pages) { detectTapGestures(onDoubleTap = { onClose() }) }
+        Modifier.fillMaxSize()
+            .drawBehind {
+                val half = size.height / 2f * reveal.value
+                drawRect(Color.Black, androidx.compose.ui.geometry.Offset.Zero, androidx.compose.ui.geometry.Size(size.width, half))
+                drawRect(Color.Black, androidx.compose.ui.geometry.Offset(0f, size.height - half), androidx.compose.ui.geometry.Size(size.width, half))
+            }
+            .pointerInput(pages) { detectTapGestures(onDoubleTap = { closeIt() }) }
             .pointerInput(pages) {
                 var acc = 0f
                 detectHorizontalDragGestures(onDragStart = { acc = 0f }, onDragEnd = {
@@ -254,7 +268,7 @@ private fun StandByUi(ctx: Context, onClose: () -> Unit) {
                 }) { _, d -> acc += d }
             },
     ) {
-        AnimatedContent(page, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "standby", modifier = Modifier.fillMaxSize().offset(dx.dp, dy.dp)) { i ->
+        AnimatedContent(page, transitionSpec = { fadeIn() togetherWith fadeOut() }, label = "standby", modifier = Modifier.fillMaxSize().offset(dx.dp, dy.dp).graphicsLayer { alpha = faceAlpha }) { i ->
             Box(Modifier.fillMaxSize().padding(24.dp).then(if (night) Modifier.background(Color.Transparent) else Modifier)) { PageView(ctx, pages[i.coerceIn(0, pages.lastIndex)], ink, tick) }
         }
         if (pages.size > 1) Row(Modifier.align(Alignment.BottomCenter).padding(bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -313,6 +327,7 @@ internal fun Widget(ctx: Context, id: String, ink: Color, tick: Long) = when (id
     "world" -> WorldClockFace(ctx, ink, tick)
     "dementia" -> DementiaFace(ctx, ink, tick)
     "sereno" -> SerenoFace(ctx, ink, tick)
+    "blank" -> androidx.compose.foundation.layout.Box(Modifier.fillMaxSize())
     "tick_digital" -> TickDigitalFace(ctx, ink, tick)
     "tick_analog" -> TickAnalogFace(ctx, ink, tick)
     "bat_dots" -> BatteryDotsFace(ctx, ink, tick)
@@ -514,17 +529,11 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     @Composable fun sw(label: String, on: Boolean, f: (Boolean) -> Unit) = Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f)); PSwitch(on, f)
     }
-    Text(tr("Cover mode", "Kapak modu"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        PChip(!adv, tr("Basic", "Temel")) { StandByPrefs.setAdvanced(ctx, false); onAdv(false) }
-        PChip(adv, tr("Advanced (StandBy)", "Gelişmiş (StandBy)")) { StandByPrefs.setAdvanced(ctx, true); onAdv(true) }
-    }
-    if (!adv) return
     var tick by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
     val ink = if (colour >= StandByPrefs.COLOURS.size) Color(StandByPrefs.custom(ctx)) else StandByPrefs.COLOURS[colour]
     // the editor: the page being edited is shown big, exactly as the cover draws it, and everything below changes it at once
-    var editing by remember { mutableStateOf(pages.firstOrNull() ?: "clock") }
+    var editing by remember { mutableStateOf(pages.firstOrNull() ?: "blank") }
     var tab by remember { mutableIntStateOf(0) }
     var rev by remember { mutableIntStateOf(0) }
     var outline by remember { mutableStateOf(StandByPrefs.outline(ctx)) }
@@ -562,7 +571,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
             Box(Modifier.size(34.dp).clickable { move(1) }, contentAlignment = Alignment.Center) { PIcon("back", if (at < pages.lastIndex) T.text else T.sub.copy(alpha = .4f), 20.dp, Modifier.graphicsLayer { rotationZ = 180f }) }
         }
         PIcon("check", if (editing in pages) T.accent else T.sub, 22.dp, Modifier.padding(end = 8.dp))
-        PSwitch(editing in pages, { on -> pages = if (on) (pages + editing).distinct() else (pages - editing).ifEmpty { listOf(editing) }; StandByPrefs.setPages(ctx, pages) })
+        PSwitch(editing in pages, { on -> pages = if (on) (if (editing == "blank") listOf("blank") else (pages - "blank") + editing).distinct() else (pages - editing).ifEmpty { listOf("blank") }; StandByPrefs.setPages(ctx, pages) })
     }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(tr("Pages", "Sayfalar"), tr("Style", "Stil"), tr("Colour", "Renk"), tr("More", "Diğer")).forEachIndexed { i, label -> PChip(tab == i, label) { tab = i } }

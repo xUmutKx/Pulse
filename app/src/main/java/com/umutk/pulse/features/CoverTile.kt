@@ -123,6 +123,10 @@ fun CoverSettings() {
     Text(tr("A black cover over the whole screen", "Tüm ekranı kaplayan siyah bir kapak"), color = T.sub, fontSize = 12.sp)
     var adv by remember { mutableStateOf(StandByPrefs.advanced(ctx)) }
     StandBySettings(adv) { adv = it }
+    // one cover: blank black until pages are added above; its brightness
+    var bright0 by remember { mutableIntStateOf(CoverStore.bright(ctx).let { if (it < 0) 100 else it }) }
+    Text(tr("Brightness", "Parlaklık"), color = T.sub, fontSize = 12.sp)
+    com.umutk.pulse.PSlider(bright0.toFloat(), { bright0 = it.toInt().coerceIn(5, 100); CoverStore.setBright(ctx, bright0) }, 5f..100f) {}
     if (!Settings.canDrawOverlays(ctx) && CoverAccessibilityService.instance == null) {
         Text(tr("Needs the 'display over other apps' permission.", "'Diğer uygulamaların üstünde göster' izni gerekir."), color = T.sub, fontSize = 12.sp)
         PButton(tr("Allow", "İzin ver")) { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
