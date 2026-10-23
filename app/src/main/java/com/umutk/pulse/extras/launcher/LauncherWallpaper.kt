@@ -1,6 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.ui.draw.blur
 import androidx.compose.foundation.clickable
 import android.app.WallpaperManager
@@ -55,6 +56,7 @@ fun LauncherWallpaper(lookId: String, fallback: Brush, modifier: Modifier = Modi
     Box(modifier.fillMaxSize()) {
         if (bmp != null) Image(bmp, null, Modifier.fillMaxSize().then(if (LauncherPrefs.wallBlur > 0) Modifier.blur(LauncherPrefs.wallBlur.dp) else Modifier), contentScale = ContentScale.Crop)
         else Box(Modifier.fillMaxSize().background(fallback))
+        if (LauncherPrefs.wallSea) SeaWaves(Modifier.fillMaxSize())
         if (LauncherPrefs.wallDim > 0) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = LauncherPrefs.wallDim / 100f)))
         content()
     }
@@ -82,3 +84,36 @@ fun setPhoneWallpaper(c: Context, lookId: String): Boolean = runCatching {
     WallpaperManager.getInstance(c).setBitmap(full)
     true
 }.getOrDefault(false)
+
+/** Layered sea waves that roll along the lower part of the screen, with a soft shimmer on the water. */
+@Composable
+fun SeaWaves(modifier: Modifier = Modifier) {
+    val t by androidx.compose.animation.core.rememberInfiniteTransition(label = "sea").animateFloat(
+        0f, (2 * Math.PI).toFloat(),
+        androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(9000, easing = androidx.compose.animation.core.LinearEasing)), label = "t")
+    androidx.compose.foundation.Canvas(modifier) {
+        val w = size.width; val h = size.height
+        // back to front: farther waves are higher, slower and paler
+        val layers = listOf(Triple(.62f, Color(0x552E86C1), 1f), Triple(.70f, Color(0x661F6FA8), -1.3f), Triple(.79f, Color(0x80155A8A), 1.7f), Triple(.88f, Color(0x990E4268), -2.1f))
+        layers.forEachIndexed { i, (level, col, speed) ->
+            val path = androidx.compose.ui.graphics.Path()
+            val amp = h * (.012f + i * .004f)
+            path.moveTo(0f, h)
+            var x = 0f
+            while (x <= w + 8f) {
+                val y = h * level + amp * kotlin.math.sin(x / w * (5f + i) + t * speed + i) + amp * .5f * kotlin.math.sin(x / w * (11f + i * 2) - t * speed * .7f)
+                path.lineTo(x, y); x += 8f
+            }
+            path.lineTo(w, h); path.close()
+            drawPath(path, col)
+            // the white foam line on the crest
+            val foam = androidx.compose.ui.graphics.Path()
+            x = 0f
+            while (x <= w + 8f) {
+                val y = h * level + amp * kotlin.math.sin(x / w * (5f + i) + t * speed + i) + amp * .5f * kotlin.math.sin(x / w * (11f + i * 2) - t * speed * .7f)
+                if (x == 0f) foam.moveTo(x, y) else foam.lineTo(x, y); x += 8f
+            }
+            drawPath(foam, Color.White.copy(alpha = .22f), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5f))
+        }
+    }
+}
