@@ -222,7 +222,7 @@ private fun FilesPageInner() {
                         val ot = com.umutk.pulse.LocalOpenTool.current
                         com.umutk.pulse.files.home.FilesHome(onTab = { tab = it },
                             onOpenDir = { d -> ExNav.lastHere = d; tab = "files" },
-                            onOpenFile = { f -> com.umutk.pulse.files.recent.RecentStore.add(ctx, f.path); com.umutk.pulse.files.home.openFileWithSystem(ctx, f) },
+                            onOpenFile = { f -> com.umutk.pulse.files.recent.RecentStore.add(ctx, f.path); if (isArchiveFile(f) || f.extension.equals("apk", true)) { ExNav.lastHere = f.parentFile?.path ?: ExNav.lastHere; com.umutk.pulse.files.home.FilesHomeNav.pendingFile = f; tab = "files" } else com.umutk.pulse.files.home.openFileWithSystem(ctx, f) },
                             onSettings = { ot("files_settings") })
                     }
                     "tree" -> FolderTreeScreen(top, back)
@@ -496,6 +496,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         recents = exAddRecent(ctx, f)
         if (FilesPrefs.openAsk && exHandOver(ctx, f, false)) return
         Downloads.openFile(ctx, f)
+    }
+    // a file tapped on the home page: this tab is already in its folder, the archive opens inside it
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.pendingFile) {
+        com.umutk.pulse.files.home.FilesHomeNav.pendingFile?.let { f -> com.umutk.pulse.files.home.FilesHomeNav.pendingFile = null; openFile(f) }
     }
     fun toggle(p: String) { sel = if (p in sel) sel - p else sel + p }
     fun mark(p: String) { marks = if (p in marks) marks - p else marks + p; exWrite(ctx, EX_MARKS, marks) }
