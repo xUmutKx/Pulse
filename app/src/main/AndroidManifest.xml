@@ -1282,6 +1282,26 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_winamp_compact_info" />
         </receiver>
         <activity android:name="com.umutk.pulse.extras.music.widgets.PowerampWidgetConfig" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsBlobWidget" android:label="Windows Media skin · Blob" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wms1_info" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsWin7Widget" android:label="Windows Media skin · Windows 7" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wms2_info" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsCandyWidget" android:label="Windows Media skin · Candy" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wms3_info" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsSilverWidget" android:label="Windows Media skin · Silver" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wms4_info" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.extras.music.imgskin.WmsLunaWidget" android:label="Windows Media skin · Luna" android:exported="false">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_wms5_info" />
+        </receiver>
         <receiver android:name="com.umutk.pulse.extras.music.widgets.PowerampWidget" android:label="Poweramp" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
