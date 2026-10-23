@@ -58,6 +58,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.width
 import androidx.compose.ui.graphics.graphicsLayer
@@ -118,7 +119,19 @@ object StandByPrefs {
     /** The palette picked for a skin with several ("crop", "flip", "solar"). */
     fun style(c: Context, key: String) = p(c).getInt("style_$key", 0)
     fun setStyle(c: Context, key: String, v: Int) = p(c).edit().putInt("style_$key", v).apply()
-    fun colour(c: Context) = p(c).getInt("colour", 0).coerceIn(0, COLOURS.lastIndex)
+    /** 0..COLOURS.size-1 is one of the swatches; COLOURS.size is the colour mixed by hand ([custom]). */
+    fun colour(c: Context) = p(c).getInt("colour", 0).coerceIn(0, COLOURS.size)
+    fun custom(c: Context) = p(c).getInt("custom", 0xFF64D2FF.toInt())
+    fun setCustom(c: Context, v: Int) = p(c).edit().putInt("custom", v).apply()
+    /** The colour the cover draws in. */
+    fun ink(c: Context): Color = colour(c).let { if (it >= COLOURS.size) Color(custom(c)) else COLOURS[it] }
+    /** Digits drawn as an outline only (hollow), not filled. */
+    fun outline(c: Context) = p(c).getBoolean("outline", false)
+    fun setOutline(c: Context, v: Boolean) = p(c).edit().putBoolean("outline", v).apply()
+    /** A font file of the user's own (any .ttf / .otf, e.g. Apple's San Francisco if they own it), copied into the app's folder. */
+    var customFamily: FontFamily? = null
+    fun loadCustom(c: Context) { customFamily = runCatching { java.io.File(c.filesDir, "standby_font").takeIf { it.isFile }?.let { FontFamily(androidx.compose.ui.text.font.Font(it)) } }.getOrNull() }
+    fun hasCustom(c: Context) = java.io.File(c.filesDir, "standby_font").isFile
     fun setColour(c: Context, v: Int) = p(c).edit().putInt("colour", v).apply()
     fun h24(c: Context) = p(c).getBoolean("h24", true)
     fun setH24(c: Context, v: Boolean) = p(c).edit().putBoolean("h24", v).apply()
@@ -180,6 +193,7 @@ object StandBy {
             if (android.os.Build.VERSION.SDK_INT >= 28) layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
             val b = CoverStore.bright(app); if (b > 0) screenBrightness = b / 100f
         }
+        StandByPrefs.loadCustom(app)
         val o = StandByOwner().also { it.start() }
         val v = ComposeView(base).apply {
             setViewTreeLifecycleOwner(o); setViewTreeSavedStateRegistryOwner(o)
@@ -209,7 +223,7 @@ private fun isNight(c: Context): Boolean { val h = Calendar.getInstance().get(Ca
 private fun StandByUi(ctx: Context, onClose: () -> Unit) {
     val pages = remember { StandByPrefs.pages(ctx).ifEmpty { listOf("clock") } }
     var page by remember { mutableIntStateOf(0) }
-    val colour = StandByPrefs.COLOURS[StandByPrefs.colour(ctx)]
+    val colour = StandByPrefs.ink(ctx)
     val night = remember { isNight(ctx) }
     val ink = if (night) Color(0xFFB3261E) else colour
     var tick by remember { mutableLongStateOf(0L) }
@@ -299,6 +313,9 @@ private fun res(r: Int) = FontFamily(androidx.compose.ui.text.font.Font(r))
 
 private val CLOCK_FONTS: List<ClockFont> by lazy {
     listOf(
+        // the closest free look to Apple's own digits (San Francisco cannot be shipped); load the real font file as "My font"
+        ClockFont("inter", "Apple style", "Apple stili", res(com.umutk.pulse.R.font.inter_regular), FontWeight.Normal, .56f),
+        ClockFont("interb", "Apple style bold", "Apple stili kalın", res(com.umutk.pulse.R.font.inter_regular), FontWeight.Bold, .6f),
         ClockFont("light", "Light", "İnce", FontFamily.SansSerif, FontWeight.Light),
         ClockFont("bold", "Bold", "Kalın", FontFamily.SansSerif, FontWeight.Bold),
         ClockFont("rounded", "Rounded", "Yuvarlak", FontFamily.SansSerif, FontWeight.Medium),
@@ -346,7 +363,9 @@ private val CLOCK_FONTS: List<ClockFont> by lazy {
     )
 }
 
-internal fun clockFont(id: String): ClockFont = CLOCK_FONTS.firstOrNull { it.id == id } ?: CLOCK_FONTS[0]
+internal fun clockFont(id: String): ClockFont =
+    if (id == "custom") ClockFont("custom", "My font", "Kendi fontum", StandByPrefs.customFamily ?: FontFamily.SansSerif, FontWeight.Normal, .58f)
+    else CLOCK_FONTS.firstOrNull { it.id == id } ?: CLOCK_FONTS[0]
 
 @Composable
 private fun DigitalFace(ctx: Context, ink: Color, tick: Long, withDate: Boolean) {
@@ -359,7 +378,8 @@ private fun DigitalFace(ctx: Context, ink: Color, tick: Long, withDate: Boolean)
         // the digits take as much room as the box gives
         val size = minOf(maxWidth.value / (text.length * cf.adv), maxHeight.value * (if (withDate) 0.55f else 0.7f)).coerceAtLeast(24f)
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text, color = ink, fontSize = size.sp, fontFamily = fam, fontWeight = wt, maxLines = 1, softWrap = false, textAlign = TextAlign.Center)
+            Text(text, color = ink, fontSize = size.sp, fontFamily = fam, fontWeight = wt, maxLines = 1, softWrap = false, textAlign = TextAlign.Center,
+                style = if (StandByPrefs.outline(ctx)) TextStyle(drawStyle = Stroke(width = size * .045f)) else TextStyle.Default)
             if (withDate) Text(date, color = ink.copy(alpha = .75f), fontSize = (size * 0.22f).coerceAtLeast(14f).sp, fontFamily = fam, fontWeight = FontWeight.Normal)
         }
     }
@@ -446,9 +466,9 @@ private fun MusicFace(ctx: Context, ink: Color) {
 
 /** The advanced cover's settings, shown in the screen cover tool: mode, pages, look and the triggers. */
 @Composable
-fun StandBySettings() {
+fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    var adv by remember { mutableStateOf(StandByPrefs.advanced(ctx)) }
+    remember { StandByPrefs.loadCustom(ctx) }
     var pages by remember { mutableStateOf(StandByPrefs.pages(ctx)) }
     var font by remember { mutableStateOf(StandByPrefs.font(ctx)) }
     var colour by remember { mutableIntStateOf(StandByPrefs.colour(ctx)) }
@@ -463,8 +483,8 @@ fun StandBySettings() {
     }
     Text(tr("Cover mode", "Kapak modu"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        PChip(!adv, tr("Basic", "Temel")) { adv = false; StandByPrefs.setAdvanced(ctx, false) }
-        PChip(adv, tr("Advanced (StandBy)", "Gelişmiş (StandBy)")) { adv = true; StandByPrefs.setAdvanced(ctx, true) }
+        PChip(!adv, tr("Basic", "Temel")) { StandByPrefs.setAdvanced(ctx, false); onAdv(false) }
+        PChip(adv, tr("Advanced (StandBy)", "Gelişmiş (StandBy)")) { StandByPrefs.setAdvanced(ctx, true); onAdv(true) }
     }
     if (!adv) return
     Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -472,11 +492,21 @@ fun StandBySettings() {
     }
     var tick by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
-    val ink = StandByPrefs.COLOURS[colour]
+    val ink = if (colour >= StandByPrefs.COLOURS.size) Color(StandByPrefs.custom(ctx)) else StandByPrefs.COLOURS[colour]
     // the editor: the page being edited is shown big, exactly as the cover draws it, and everything below changes it at once
     var editing by remember { mutableStateOf(pages.firstOrNull() ?: "clock") }
     var tab by remember { mutableIntStateOf(0) }
     var rev by remember { mutableIntStateOf(0) }
+    var outline by remember { mutableStateOf(StandByPrefs.outline(ctx)) }
+    var custom by remember { mutableIntStateOf(StandByPrefs.custom(ctx)) }
+    val pickFont = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching { ctx.contentResolver.openInputStream(uri)?.use { i -> java.io.File(ctx.filesDir, "standby_font").outputStream().use { o -> i.copyTo(o) } } }
+            StandByPrefs.loadCustom(ctx)
+            if (StandByPrefs.customFamily != null) { font = "custom"; StandByPrefs.setFont(ctx, "custom") } else java.io.File(ctx.filesDir, "standby_font").delete()
+            rev++
+        }
+    }
     val hasFont = editing in setOf("clock", "date", "duo_clock_battery", "duo_clock_calendar", "duo_analog_digital", "duo_music_clock")
     val palette = editing in setOf("crop", "flip", "solar")
     BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 10.dp)) {
@@ -510,7 +540,18 @@ fun StandBySettings() {
             if (editing == "crop") PaletteRow(CROP_STYLES.size, StandByPrefs.style(ctx, "crop"), { StandByPrefs.setStyle(ctx, "crop", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { BigCropFace(ctx, tick, i) } }
             if (editing == "flip") PaletteRow(FLIP_STYLES.size, StandByPrefs.style(ctx, "flip"), { StandByPrefs.setStyle(ctx, "flip", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { RetroFlipFace(ctx, tick, i) } }
             if (editing == "solar") PaletteRow(SOLAR_STYLES.size, StandByPrefs.style(ctx, "solar"), { StandByPrefs.setStyle(ctx, "solar", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { SolarFace(ctx, tick, i) } }
+            if (hasFont || editing in setOf("seg", "seg_wide")) sw(tr("Outline only (hollow digits)", "Yalnız kenar çizgisi (içi boş)"), outline) { outline = it; StandByPrefs.setOutline(ctx, it); rev++ }
             if (hasFont) Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // the user's own font file first (Apple's San Francisco cannot be shipped with the app: load the file here)
+                Column(Modifier.width(110.dp).clickable { if (StandByPrefs.hasCustom(ctx) && font != "custom") { font = "custom"; StandByPrefs.setFont(ctx, "custom"); rev++ } else pickFont.launch(arrayOf("*/*")) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    MiniScreen(110.dp, font == "custom") {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            if (StandByPrefs.hasCustom(ctx)) Text("12:45", color = ink, fontSize = 150.sp, fontFamily = clockFont("custom").family, maxLines = 1, softWrap = false)
+                            else PIcon("download", ink, 80.dp)
+                        }
+                    }
+                    Text(tr("My font file", "Kendi font dosyam"), color = if (font == "custom") T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
+                }
                 CLOCK_FONTS.forEach { f ->
                     Column(Modifier.width(110.dp).clickable { font = f.id; StandByPrefs.setFont(ctx, f.id); rev++ }, horizontalAlignment = Alignment.CenterHorizontally) {
                         MiniScreen(110.dp, font == f.id) {
@@ -525,10 +566,30 @@ fun StandBySettings() {
             }
             if (!palette && !hasFont) Text(tr("This page has no style of its own: its colour is the one under Colour.", "Bu sayfanın kendi stili yok: rengi Renk sekmesindekidir."), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
         }
-        2 -> Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            StandByPrefs.COLOURS.forEachIndexed { i, c ->
-                Box(Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(c).clickable { colour = i; StandByPrefs.setColour(ctx, i); rev++ }, contentAlignment = Alignment.Center) {
-                    if (i == colour) Box(Modifier.size(14.dp).clip(RoundedCornerShape(7.dp)).background(Color.Black.copy(alpha = .5f)))
+        2 -> Column {
+            Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                StandByPrefs.COLOURS.forEachIndexed { i, c ->
+                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(c).clickable { colour = i; StandByPrefs.setColour(ctx, i); rev++ }, contentAlignment = Alignment.Center) {
+                        if (i == colour) Box(Modifier.size(14.dp).clip(RoundedCornerShape(7.dp)).background(Color.Black.copy(alpha = .5f)))
+                    }
+                }
+                // the colour mixed by hand
+                val mine = StandByPrefs.COLOURS.size
+                Box(Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(androidx.compose.ui.graphics.Brush.sweepGradient(listOf(Color.Red, Color.Yellow, Color.Green, Color.Cyan, Color.Blue, Color.Magenta, Color.Red)))
+                    .clickable { colour = mine; StandByPrefs.setColour(ctx, mine); rev++ }, contentAlignment = Alignment.Center) {
+                    if (colour == mine) Box(Modifier.size(22.dp).clip(RoundedCornerShape(11.dp)).background(Color(custom)))
+                }
+            }
+            if (colour == StandByPrefs.COLOURS.size) {
+                val c0 = Color(custom)
+                listOf(Triple("R", c0.red, 0), Triple("G", c0.green, 1), Triple("B", c0.blue, 2)).forEach { (n, v, k) ->
+                    Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(n, color = T.sub, fontSize = 13.sp, modifier = Modifier.width(22.dp))
+                        com.umutk.pulse.PSlider(v * 255f, { x ->
+                            val r = if (k == 0) x.toInt() else (c0.red * 255).toInt(); val g = if (k == 1) x.toInt() else (c0.green * 255).toInt(); val b = if (k == 2) x.toInt() else (c0.blue * 255).toInt()
+                            custom = (0xFF shl 24) or (r shl 16) or (g shl 8) or b; StandByPrefs.setCustom(ctx, custom); rev++
+                        }, 0f..255f) {}
+                    }
                 }
             }
         }

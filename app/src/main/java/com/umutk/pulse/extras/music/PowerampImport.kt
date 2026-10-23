@@ -52,6 +52,7 @@ object PowerampImport {
      * album_art pictures it saved. Blocking: call off the main thread. Null when there is no root or Poweramp is not installed.
      */
     fun direct(ctx: Context, library: List<Track>, embed: Boolean): Result? {
+        lastError = ""
         val pkg = "com.maxmpz.audioplayer"
         val work = File(ctx.cacheDir, "pa_import").apply { deleteRecursively(); mkdirs() }
         // plain su may run in an isolated mount view that hides other apps' data: find the root view that really sees Poweramp's databases
@@ -121,11 +122,21 @@ object PowerampImport {
             val d = SQLiteDatabase.openDatabase(f.path, null, if (live) SQLiteDatabase.OPEN_READWRITE else SQLiteDatabase.OPEN_READONLY)
             try {
                 if (live) {
-                    // Poweramp's library: every song with its rating and play count; the path is the folder's path plus the file name
-                    val cols = d.rawQuery("pragma table_info(folder_files)", null).use { c -> generateSequence { if (c.moveToNext()) c.getString(1) else null }.toList() }
-                    val playCol = listOf("played_times", "total_played_times", "play_count").firstOrNull { it in cols }
-                    d.rawQuery("select COALESCE(folder_files.file_path, folders.path || folder_files.name, folder_files.name), folder_files.rating" + (if (playCol != null) ", folder_files.$playCol" else ", 0") +
-                        " from folder_files left join folders on folders._id = folder_files.folder_id where folder_files.rating > 0" + (if (playCol != null) " or folder_files.$playCol > 0" else ""), null).use { c ->
+                    // Poweramp's library: every song with its rating and play count. The columns are read from the database itself, so a different
+                    // Poweramp version cannot break the query; when none matches, the column names go to the message.
+                    fun columnsOf(t: String) = d.rawQuery("pragma table_info($t)", null).use { c -> generateSequence { if (c.moveToNext()) c.getString(1) else null }.toList() }
+                    val cols = columnsOf("folder_files"); val fcols = columnsOf("folders")
+                    val pathExpr = when {
+                        "file_path" in cols -> "folder_files.file_path"
+                        "path" in fcols && "name" in cols -> "(folders.path || folder_files.name)"
+                        else -> null
+                    }
+                    val ratingCol = listOf("rating", "user_rating", "stars").firstOrNull { it in cols }
+                    val playCols = listOf("played_times", "total_played_times", "play_count", "played_count", "plays").filter { it in cols }
+                    if (pathExpr == null || (ratingCol == null && playCols.isEmpty())) { lastError = "folder_files: $cols; folders: $fcols"; return@let }
+                    val ratingSql = ratingCol?.let { "COALESCE(folder_files.$it, 0)" } ?: "0"
+                    val playSql = when { playCols.isEmpty() -> "0"; playCols.size == 1 -> "COALESCE(folder_files.${playCols[0]}, 0)"; else -> "max(" + playCols.joinToString(", ") { "COALESCE(folder_files.$it, 0)" } + ")" }
+                    d.rawQuery("select $pathExpr, $ratingSql, $playSql from folder_files left join folders on folders._id = folder_files.folder_id where $ratingSql > 0 or $playSql > 0", null).use { c ->
                         while (c.moveToNext()) {
                             val p = c.getString(0) ?: continue
                             val t = find(p.removePrefix("/storage/").removePrefix("emulated/0/")) ?: find(p) ?: run { missing++; null } ?: continue
@@ -135,6 +146,7 @@ object PowerampImport {
                             if (n > 0) plays++
                         }
                     }
+                    if (ratings == 0 && plays == 0) lastError = "no rated or played song matched (${missing} not on this phone); columns: rating=$ratingCol plays=$playCols"
                     return@let
                 }
                 d.rawQuery("select _id, name from playlists", null).use { pl ->
