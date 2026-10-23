@@ -1,5 +1,15 @@
 package com.umutk.pulse.extras.keyboard
 
+import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.Flag
+import androidx.compose.material.icons.rounded.Tag
+import androidx.compose.material.icons.rounded.Lightbulb
+import androidx.compose.material.icons.rounded.SportsSoccer
+import androidx.compose.material.icons.rounded.DirectionsCar
+import androidx.compose.material.icons.rounded.Restaurant
+import androidx.compose.material.icons.rounded.Pets
+import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.AccessTime
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.asImageBitmap
 import com.umutk.pulse.tr
@@ -194,7 +204,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
 
 @Composable
 private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
-    Column {
+    Column(Modifier.onSizeChanged { if (p == "keys" && it.height > 0) st.keysH = it.height }) {
         when (p) {
             "emoji" -> EmojiPanel(th, st, act, keyH)
             "menu" -> MenuPanel(th, st, act, keyH)
@@ -621,41 +631,53 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     val ctx = LocalContext.current
     // every emoji of Unicode and the kaomoji, read once from the app
     val all by androidx.compose.runtime.produceState(emptyList<EmojiItem>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { EmojiData.load(ctx) } }
-    // 0 recent, 1 search, 2..10 the nine groups, 11 kaomoji
-    var tab by remember { mutableStateOf(if (st.recents.isEmpty()) 2 else 0) }
-    val icons = listOf("🕘", "🔍", "😀", "🧑", "🐶", "🍔", "🚗", "⚽", "💡", "🔣", "🏁", "(ツ)")
-    Row(Modifier.fillMaxWidth().height(40.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-        icons.forEachIndexed { i, g ->
-            val on = if (i == 1) st.emojiQuery != null else st.emojiQuery == null && i == tab
-            Box(Modifier.width(46.dp).fillMaxHeight().clickable {
-                if (i == 1) { st.emojiQuery = if (st.emojiQuery == null) "" else null } else { st.emojiQuery = null; tab = i }
-            }.then(if (on) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) { Text(g, fontSize = if (i == 11) 14.sp else 20.sp, color = th.text) }
-        }
-    }
+    // 0 recent, 1..9 the nine groups, 10 kaomoji
+    var tab by remember { mutableStateOf(if (st.recents.isEmpty()) 1 else 0) }
+    val icons = listOf(Icons.Rounded.AccessTime, Icons.Rounded.EmojiEmotions, Icons.Rounded.Person, Icons.Rounded.Pets, Icons.Rounded.Restaurant, Icons.Rounded.DirectionsCar,
+        Icons.Rounded.SportsSoccer, Icons.Rounded.Lightbulb, Icons.Rounded.Tag, Icons.Rounded.Flag)
     val q = st.emojiQuery
-    if (q != null) {
-        // search: the keys below type into this box
-        Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 8.dp).clip(RoundedCornerShape(18.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-            Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
-            androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
-            Text(if (q.isEmpty()) tr("Search emoji, flags, kaomoji", "Emoji, bayrak, kaomoji ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1)
+    val dens = androidx.compose.ui.platform.LocalDensity.current
+    // the same height as the keys, so the keyboard does not shrink; the search needs the keys under it and is taller
+    val fixed = if (q == null && st.keysH > 0) Modifier.height(with(dens) { st.keysH.toDp() }) else Modifier
+    Column(Modifier.fillMaxWidth().then(fixed)) {
+        Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (q != null) {
+                // search: the box takes the place of the tabs; the keys below type into it
+                Box(Modifier.size(40.dp).clickable { st.emojiQuery = null }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "ArrowBack"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
+                Row(Modifier.weight(1f).height(32.dp).padding(end = 8.dp).clip(RoundedCornerShape(16.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
+                    Text(if (q.isEmpty()) tr("Search emoji, flags, kaomoji", "Emoji, bayrak, kaomoji ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+                }
+            } else {
+                Box(Modifier.size(width = 44.dp, height = 40.dp).clickable { st.emojiQuery = "" }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Search"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
+                Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                    icons.forEachIndexed { i, ic ->
+                        Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = i }.then(if (i == tab) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) {
+                            Icon(ic, null, tint = if (i == tab) th.accent else th.sub, modifier = Modifier.size(22.dp))
+                        }
+                    }
+                    Box(Modifier.width(52.dp).fillMaxHeight().clickable { tab = 10 }.then(if (tab == 10) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.accent else th.sub, fontSize = 14.sp) }
+                }
+            }
         }
-        val found = remember(q, all) { EmojiData.search(all, q) }
-        LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(92.dp)) {
-            items(found) { it2 -> EmojiCell(it2, th, act) }
+        if (q != null) {
+            val found = remember(q, all) { EmojiData.search(all, q) }
+            LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(48.dp)) {
+                items(found) { it2 -> EmojiCell(it2, th, act) }
+            }
+            KeysPanel(th, st, act, keyH)
+        } else {
+            val list = if (tab == 0) st.recents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
+                else if (tab == 10) all.filter { it.group >= 10 } else all.filter { it.group == tab - 1 }
+            LazyVerticalGrid(GridCells.Adaptive(if (tab == 10) 92.dp else 44.dp), Modifier.fillMaxWidth().weight(1f)) {
+                items(list) { it2 -> EmojiCell(it2, th, act) }
+            }
+            Row(Modifier.fillMaxWidth()) {
+                Key(th, st, act, KbKey("ABC", KeyKind.MODE, 2f), keyH * .85f)
+                Spacer(5f)
+                Key(th, st, act, KbKey("", KeyKind.DELETE, 2f), keyH * .85f)
+            }
         }
-        KeysPanel(th, st, act, keyH)
-        return
-    }
-    val list = if (tab == 0) st.recents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
-        else if (tab == 11) all.filter { it.group >= 10 } else all.filter { it.group == tab - 2 }
-    LazyVerticalGrid(GridCells.Adaptive(if (tab == 11) 92.dp else 44.dp), Modifier.fillMaxWidth().height(keyH * 3.4f)) {
-        items(list) { it2 -> EmojiCell(it2, th, act) }
-    }
-    Row(Modifier.fillMaxWidth()) {
-        Key(th, st, act, KbKey("ABC", KeyKind.MODE, 2f), keyH * .85f)
-        Spacer(5f)
-        Key(th, st, act, KbKey("", KeyKind.DELETE, 2f), keyH * .85f)
     }
 }
 
