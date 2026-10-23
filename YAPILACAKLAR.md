@@ -1117,3 +1117,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.297: derlenmedi — Medya araçları (sıkıştır, GIF düzenleyici, dönüştürücü), Office Farklı kaydet penceresi, widget sayfası WMP skin kartları ve katlanan bölümler, Poweramp oynat tuşu %10 küçük
 - 0.10.301: derlenmedi — size-and-compat birleşti (Android 5), SwiftKey kelimelerini root ile al, Poweramp canlı veri içe aktarma düzeltildi (yol, puan ölçeği, çalma listeleri), iki sürüm yayını
 - 0.10.302: derlenmedi — uygulama kilidi: balon (bubble) açılınca kilit çıkmaz, Ayarlar > Uygulama kilidi > Balonlar anahtarı (varsayılan kapalı)
+- 0.10.303: derlenmedi — Widget Stack: kalan 5 Frutiger Aero kaplama (6-10) ana ekran widgetı olarak eklendi, Widgetlar sayfasında hepsi listelenir; Mesajlar tercihleri (bildirim, kod kopyalama, balon) hazırlandı

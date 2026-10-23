@@ -39,7 +39,7 @@ abstract class ImgSkin(val id: String, val name: String, val w: Int, val h: Int,
 }
 
 object ImgSkins {
-    val all: List<ImgSkin> by lazy { listOf(BlobSkin, Win7Skin, PinkSkin, SilverSkin, LunaSkin) }
+    val all: List<ImgSkin> by lazy { listOf(BlobSkin, Win7Skin, PinkSkin, SilverSkin, LunaSkin, BubbleSkin, AeroSkin, NexusSkin, SymphoraSkin, CdSkin) }
     private val cache = HashMap<String, Bitmap>()
 
     /** The skin's picture. */
@@ -234,5 +234,156 @@ object LunaSkin : ImgSkin("skin5", "Luna", 422, 306, listOf(
         c.drawRoundRect(key, 9f, 9f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFFFFFFFF.toInt() })
         c.drawRoundRect(rect(149f, 245f, 197f, 293f), 7f, 7f, lin(0f, 245f, 0f, 293f, 0xFF45B845.toInt(), 0xFF0B800B.toInt()))
         glyph(c, 173f, 269f, 13f, 0xFFFFFFFF.toInt(), st.playing)
+    }
+}
+
+
+// ---- five more, in the Frutiger Aero / early media player spirit ---------------------------------------------------------------------------------
+
+/** Previous / next: a bar and a triangle (or two). */
+private fun skip(c: Canvas, cx: Float, cy: Float, s: Float, color: Int, back: Boolean) {
+    val p = Paint(Paint.ANTI_ALIAS_FLAG).apply { this.color = color }
+    val d = if (back) -1f else 1f
+    c.drawRect(RectF(cx + d * s * .85f - s * .14f, cy - s * .8f, cx + d * s * .85f + s * .14f, cy + s * .8f), p)
+    c.drawPath(Path().apply { moveTo(cx + d * s * .6f, cy - s * .8f); lineTo(cx - d * s * .8f, cy); lineTo(cx + d * s * .6f, cy + s * .8f); close() }, p)
+}
+
+private fun orb(c: Canvas, cx: Float, cy: Float, r: Float, top: Int, bottom: Int) {
+    c.drawCircle(cx, cy, r, Paint(Paint.ANTI_ALIAS_FLAG).apply { shader = RadialGradient(cx, cy - r * .4f, r * 1.3f, intArrayOf(top, bottom), null, Shader.TileMode.CLAMP) })
+    c.drawOval(RectF(cx - r * .6f, cy - r * .92f, cx + r * .6f, cy - r * .2f), Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x45FFFFFF })
+}
+
+/** An orange hand-held player with a purple dot display and a pad of blue keys. */
+object BubbleSkin : ImgSkin("skin6", "Bubble", 448, 244, listOf(
+    Hit("vis", rect(129f, 59f, 319f, 130f)), Hit("seek", rect(129f, 94f, 319f, 110f)),
+    Hit("play", circ(48f, 92f, 22f)), Hit("next", circ(58f, 134f, 20f)), Hit("prev", circ(86f, 172f, 20f)),
+)) {
+    override fun draw(c: Canvas, ctx: Context, st: SkinState) {
+        val lcd = rect(129f, 59f, 319f, 130f)
+        c.drawRoundRect(lcd, 6f, 6f, lin(0f, 59f, 0f, 130f, 0xFFB67CF0.toInt(), 0xFF9650E0.toInt()))
+        val ink = 0xFFF4E8FF.toInt(); val dim = 0xFF6F32B8.toInt()
+        val lv = st.levels
+        if (lv != null) bars(c, rect(136f, 64f, 312f, 108f), lv, ink)
+        else {
+            c.drawText(fmt(st.posMs) + " / " + fmt(st.durMs), 136f, 76f, pt(ink, 11f))
+            c.drawText(if (st.playing) "▶" else "❚❚", 306f, 76f, pt(ink, 11f, align = Paint.Align.RIGHT))
+            marquee(c, st.artist, pt(dim, 11f), rect(134f, 80f, 316f, 92f), 136f, 90f, st.clock)
+        }
+        // the seek line
+        val f = frac(st)
+        c.drawRoundRect(rect(136f, 98f, 312f, 102f), 2f, 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x55FFFFFF })
+        c.drawRoundRect(rect(136f, 98f, 136f + 176f * f, 102f), 2f, 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = ink })
+        // the song name on the bottom line, on a lighter band
+        c.drawRect(rect(129f, 106f, 319f, 128f), Paint().apply { color = 0x66FFFFFF })
+        marquee(c, st.title.uppercase(), pt(0xFF4A1A90.toInt(), 15f, true), rect(132f, 106f, 316f, 128f), 134f, 123f, st.clock)
+        val blue = 0xFF2F63B2.toInt()
+        glyph(c, 48f, 92f, 8f, blue, st.playing)
+        skip(c, 58f, 134f, 7f, blue, false)
+        skip(c, 86f, 172f, 7f, blue, true)
+        val t = pt(blue, 22f, true, Paint.Align.CENTER)
+        c.drawText("+", 400f, 99f, t); c.drawText("–", 390f, 141f, t)
+    }
+}
+
+/** A blue and green Windows 7 style media window: the cover on a dark stage, the name, a seek bar and three keys. */
+object AeroSkin : ImgSkin("skin7", "Aero", 444, 349, listOf(
+    Hit("open", rect(0f, 0f, 320f, 24f)), Hit("vis", rect(141f, 21f, 302f, 183f)), Hit("seek", rect(11f, 255f, 435f, 271f)),
+    Hit("prev", rect(138f, 283f, 198f, 330f)), Hit("play", circ(231f, 305f, 32f)), Hit("next", rect(264f, 283f, 326f, 330f)),
+)) {
+    override fun draw(c: Canvas, ctx: Context, st: SkinState) {
+        val box = rect(141f, 21f, 302f, 183f)
+        val lv = st.levels
+        if (lv != null) { c.drawRect(box, Paint().apply { color = 0xCC000000.toInt() }); bars(c, rect(148f, 28f, 295f, 176f), lv, 0xFF36E0D0.toInt()) }
+        else if (st.cover != null) cover(c, st.cover, box, 0f)
+        val white = pt(0xFFFFFFFF.toInt(), 22f, true, Paint.Align.CENTER)
+        val tw = white.measureText(st.title)
+        if (tw <= 400f) c.drawText(st.title, 222f, 220f, white) else marquee(c, st.title, pt(0xFFFFFFFF.toInt(), 22f, true), rect(16f, 198f, 430f, 228f), 20f, 220f, st.clock)
+        c.drawText(st.artist, 222f, 245f, pt(0xFFFFFFFF.toInt(), 17f, false, Paint.Align.CENTER))
+        val f = frac(st)
+        c.drawRoundRect(rect(11f, 259f, 435f, 267f), 4f, 4f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0x55203848 })
+        c.drawRoundRect(rect(11f, 259f, 11f + 424f * f, 267f), 4f, 4f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xFF1F5878.toInt() })
+        // the keys: two dark side pieces and a round middle one
+        for (r in listOf(rect(138f, 285f, 200f, 328f), rect(262f, 285f, 326f, 328f)))
+            c.drawRoundRect(r, 14f, 14f, lin(0f, r.top, 0f, r.bottom, 0xFF4A7392.toInt(), 0xFF264A66.toInt()))
+        skip(c, 168f, 306f, 11f, 0xFFF2F6FA.toInt(), true); skip(c, 296f, 306f, 11f, 0xFFF2F6FA.toInt(), false)
+        orb(c, 231f, 305f, 31f, 0xFF7FA6C2.toInt(), 0xFF28506E.toInt())
+        glyph(c, 231f, 305f, 14f, 0xFFFFFFFF.toInt(), st.playing)
+    }
+}
+
+/** A grey player with a big square screen, a green ticker line and a big round play key. */
+object NexusSkin : ImgSkin("skin8", "Nexus", 470, 407, listOf(
+    Hit("open", circ(454f, 190f, 16f)), Hit("vis", rect(54f, 46f, 400f, 284f)), Hit("seek", rect(204f, 320f, 404f, 336f)),
+    Hit("play", circ(112f, 333f, 36f)), Hit("stop", circ(174f, 342f, 20f)), Hit("prev", rect(304f, 340f, 336f, 368f)), Hit("next", rect(358f, 340f, 414f, 368f)),
+)) {
+    override fun draw(c: Canvas, ctx: Context, st: SkinState) {
+        val screen = rect(54f, 46f, 400f, 284f)
+        c.drawRect(screen, Paint().apply { color = 0xFF000000.toInt() })
+        val lv = st.levels
+        if (lv != null) bars(c, rect(64f, 56f, 390f, 276f), lv, 0xFF47E600.toInt())
+        else if (st.cover != null) { val side = 238f; cover(c, st.cover, rect(screen.centerX() - side / 2f, screen.top, screen.centerX() + side / 2f, screen.bottom), 0f) }
+        marquee(c, st.title + "  •  " + st.artist, pt(0xFF47E600.toInt(), 15f), rect(170f, 284f, 388f, 304f), 172f, 299f, st.clock)
+        val f = frac(st)
+        val tx = 204f + 200f * f
+        c.drawRect(rect(204f, 326f, tx, 328f), Paint().apply { color = 0xFF3A3A44.toInt() })
+        c.drawRect(rect(tx - 5f, 322f, tx + 5f, 332f), lin(0f, 322f, 0f, 332f, 0xFFF2F2F6.toInt(), 0xFF9A9AA6.toInt()))
+        c.drawRect(rect(tx - 5f, 322f, tx + 5f, 332f), Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1f; color = 0xFF4A4A55.toInt() })
+        // the play key shows what it will do
+        c.drawCircle(112f, 333f, 28f, Paint(Paint.ANTI_ALIAS_FLAG).apply { shader = RadialGradient(112f, 322f, 40f, intArrayOf(0xFFEFEFF4.toInt(), 0xFFB4B4C0.toInt()), null, Shader.TileMode.CLAMP) })
+        glyph(c, 112f, 333f, 14f, 0xFF4A4A58.toInt(), st.playing)
+    }
+}
+
+/** A big silver organic player: a screen with the cover, a ticker line and five round keys in the corner. */
+object SymphoraSkin : ImgSkin("skin9", "Symphora", 480, 364, listOf(
+    Hit("vis", rect(126f, 89f, 367f, 268f)), Hit("seek", rect(126f, 258f, 367f, 272f)),
+    Hit("prev", circ(55f, 67f, 12f)), Hit("play", circ(75f, 52f, 12f)), Hit("stop", circ(102f, 40f, 12f)), Hit("next", circ(130f, 33f, 12f)), Hit("open", circ(157f, 28f, 12f)),
+)) {
+    override fun draw(c: Canvas, ctx: Context, st: SkinState) {
+        val screen = rect(126f, 89f, 367f, 268f)
+        c.drawRect(screen, Paint().apply { color = 0xFF282828.toInt() })
+        val lv = st.levels
+        if (lv != null) bars(c, rect(132f, 95f, 361f, 262f), lv, 0xFFE8F4F8.toInt())
+        else if (st.cover != null) cover(c, st.cover, rect(screen.centerX() - 89f, screen.top, screen.centerX() + 89f, screen.bottom), 0f)
+        val f = frac(st)
+        c.drawRect(rect(126f, 263f, 367f, 268f), Paint().apply { color = 0x88000000.toInt() })
+        c.drawRect(rect(126f, 263f, 126f + 241f * f, 268f), Paint().apply { color = 0xFF6AD0F0.toInt() })
+        // the ticker on its plate
+        c.drawRect(rect(167f, 274f, 356f, 289f), Paint().apply { color = 0xFFB4BEC0.toInt() })
+        marquee(c, st.title + " • " + st.artist, pt(0xFF1E2224.toInt(), 12f), rect(169f, 274f, 354f, 289f), 171f, 286f, st.clock)
+        // pause shown on the play key while playing
+        if (st.playing) { orb(c, 75f, 52f, 10f, 0xFFF0F4F4.toInt(), 0xFF98A4A6.toInt()); glyph(c, 75f, 52f, 5f, 0xFF2A3234.toInt(), true) }
+    }
+}
+
+/** The old CD Player window: a picture box, the artist and track fields, a blue progress bar and four grey keys. */
+object CdSkin : ImgSkin("skin10", "CD Player", 449, 193, listOf(
+    Hit("open", rect(0f, 0f, 300f, 16f)), Hit("vis", rect(9f, 29f, 150f, 121f)), Hit("seek", rect(174f, 80f, 436f, 96f)),
+    Hit("prev", rect(164f, 107f, 229f, 134f)), Hit("next", rect(234f, 107f, 300f, 134f)), Hit("play", rect(304f, 107f, 370f, 134f)), Hit("stop", rect(374f, 107f, 440f, 134f)),
+)) {
+    override fun draw(c: Canvas, ctx: Context, st: SkinState) {
+        val box = rect(9f, 29f, 150f, 121f)
+        val lv = st.levels
+        if (lv != null) { c.drawRect(box, Paint().apply { color = 0xFF000000.toInt() }); bars(c, rect(14f, 34f, 145f, 116f), lv, 0xFF00D000.toInt()) }
+        else if (st.cover != null) cover(c, st.cover, box, 0f)
+        else c.drawRect(box, Paint().apply { color = 0xFF3C3C3C.toInt() })
+        val black = pt(0xFF000000.toInt(), 14f, true)
+        marquee(c, st.artist, black, rect(196f, 28f, 372f, 48f), 198f, 44f, st.clock)
+        marquee(c, st.title, black, rect(196f, 49f, 372f, 69f), 198f, 65f, st.clock)
+        c.drawText(fmt(st.posMs) + " / " + fmt(st.durMs), 174f, 79f, pt(0xFF000000.toInt(), 10f))
+        val f = frac(st)
+        c.drawRect(rect(174f, 84f, 436f, 93f), Paint().apply { color = 0xFFA8ACAC.toInt() })
+        c.drawRect(rect(174f, 84f, 174f + 262f * f, 93f), Paint().apply { color = 0xFF0000A8.toInt() })
+        // four keys with the old raised edge
+        val keys = listOf(rect(164f, 107f, 229f, 134f), rect(234f, 107f, 300f, 134f), rect(304f, 107f, 370f, 134f), rect(374f, 107f, 440f, 134f))
+        keys.forEach { k ->
+            c.drawRect(k, Paint().apply { color = 0xFFC0C0C0.toInt() })
+            c.drawRect(rect(k.left, k.top, k.right, k.top + 1.5f), Paint().apply { color = 0xFFFFFFFF.toInt() }); c.drawRect(rect(k.left, k.top, k.left + 1.5f, k.bottom), Paint().apply { color = 0xFFFFFFFF.toInt() })
+            c.drawRect(rect(k.left, k.bottom - 1.5f, k.right, k.bottom), Paint().apply { color = 0xFF404040.toInt() }); c.drawRect(rect(k.right - 1.5f, k.top, k.right, k.bottom), Paint().apply { color = 0xFF404040.toInt() })
+        }
+        val ink = 0xFF000000.toInt()
+        skip(c, keys[0].centerX(), 120.5f, 7f, ink, true); skip(c, keys[1].centerX(), 120.5f, 7f, ink, false)
+        glyph(c, keys[2].centerX(), 120.5f, 7f, ink, st.playing)
+        c.drawRect(rect(keys[3].centerX() - 6f, 114f, keys[3].centerX() + 6f, 127f), Paint().apply { color = ink })
     }
 }

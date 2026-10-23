@@ -490,7 +490,9 @@ private fun WmsCard(ctx: Context, index: Int) {
         }
     }
     val cls = listOf(com.umutk.pulse.extras.music.imgskin.WmsBlobWidget::class.java, com.umutk.pulse.extras.music.imgskin.WmsWin7Widget::class.java, com.umutk.pulse.extras.music.imgskin.WmsCandyWidget::class.java,
-        com.umutk.pulse.extras.music.imgskin.WmsSilverWidget::class.java, com.umutk.pulse.extras.music.imgskin.WmsLunaWidget::class.java)[index]
+        com.umutk.pulse.extras.music.imgskin.WmsSilverWidget::class.java, com.umutk.pulse.extras.music.imgskin.WmsLunaWidget::class.java,
+        com.umutk.pulse.extras.music.imgskin.WmsBubbleWidget::class.java, com.umutk.pulse.extras.music.imgskin.WmsAeroWidget::class.java, com.umutk.pulse.extras.music.imgskin.WmsNexusWidget::class.java,
+        com.umutk.pulse.extras.music.imgskin.WmsSymphoraWidget::class.java, com.umutk.pulse.extras.music.imgskin.WmsCdWidget::class.java)[index]
     WidgetCard("WMP · " + skin.name, { WinampSkinPick.pinWidget(ctx, cls) }, skin.w.toFloat() / skin.h) {
         val b = bmp
         if (b != null) Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
