@@ -1085,3 +1085,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.256 derlenmedi: Poweramp widget ayar ekranı (kapak +10%, widget seçenekleri), masaüstünde Windows Ayarlar ve Denetim Masası, Windows Phone besleme sayfası + dolu dock, Clippy (eski Windows görünümleri), Nova tarzı ana ekran ayarları (satır sayısı, etiketler, sayfa noktaları, sayfa efekti, klasör simgesi, dock simge sayısı, rozet stili).
 - 0.10.257 derlenmedi: Windows başlatıcı görünümlerinde isteğe bağlı açılış (boot) ve giriş ekranı (ayar: Başlatıcı ayarları > Ekstralar); sağ üst Uygulamalar menüsünde Hesap makinesi her zaman listelenir.
 - 0.10.258 derlenmedi: Başlatıcı duvar kağıdına hareketli deniz dalgası efekti (Ekstralar > Duvar kağıdında deniz dalgaları).
+- 0.10.259 derlenmedi: derleme düzeltmesi (ControlPanel getValue/setValue importları).
