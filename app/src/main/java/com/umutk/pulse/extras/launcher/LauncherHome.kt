@@ -168,7 +168,9 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     val pinned = app.pkg in LauncherPrefs.dock
     fun act(f: () -> Unit) { f(); onDismiss() }
     val tiles = LauncherPrefs.look == "winphone" && LauncherPrefs.phoneTiles
-    ContextPopup(230.dp, if (tiles) 330.dp else 200.dp, onDismiss) {
+    if (isFolder(app)) { ContextPopup(230.dp, 250.dp, onDismiss) { FolderActionRows(app, onDismiss) }; return }
+    val inFolder = LauncherFolders.of(app.pkg) != null
+    ContextPopup(230.dp, if (tiles) 380.dp else 250.dp, onDismiss) {
         Text(app.label, color = w.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(vertical = 6.dp))
         // Windows Phone: the size of this app's tile
         if (tiles) listOf("s" to tr("Small tile", "Küçük kutucuk"), "m" to tr("Medium tile", "Orta kutucuk"), "w" to tr("Wide tile", "Geniş kutucuk")).forEach { (k, n) ->
@@ -183,6 +185,8 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
         ActionRow("eyeOff", tr("Hide from launcher", "Ana ekranda gizle"), w.text) {
             act { LauncherPrefs.hidden = LauncherPrefs.hidden + app.pkg; LauncherPrefs.save(ctx) }
         }
+        ActionRow("folder", tr("Add to folder", "Klasöre ekle"), w.text) { act { FolderUi.pick = app } }
+        if (inFolder) ActionRow("close", tr("Remove from folder", "Klasörden çıkar"), w.text) { act { LauncherFolders.remove(ctx, app.pkg) } }
         ActionRow("pin", if (pinned) tr("Unpin from dock", "Dock'tan çıkar") else tr("Pin to dock", "Dock'a sabitle"), w.text) {
             act { togglePin(ctx, app.pkg, auto) }
         }

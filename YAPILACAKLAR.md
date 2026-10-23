@@ -1108,3 +1108,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.279 derlenmedi: derleme düzeltmesi (BudsState data class).
 - 0.10.280 derlenmedi: Kişiler: ad/soyad/adres alanlarında her kelime büyük harf, listede sağa kaydır = ara (yeşil), sola = SMS (mavi) animasyonlu. Müzik: 3 nokta menüsünden "Edit tags" kalktı (bilgi penceresinde kalem simgesi), Lyrics tuşuna basılı tutunca yanlış sözleri sil, çalarken ses çubukları kayarak iner, ses sıfır olunca duraklat ayarı (Kulaklık/Bluetooth), canlı söz bildirimi Türkçe harfleri de kalın. Poweramp yedeği: bulunamayan şarkılar sayılır + yedekteki adla da eşleşir. Ekran kapağı: Temel/Gelişmiş ayrımı kalktı, tek kapak (varsayılan boş siyah, sayfalar eklenir) + perde animasyonu. Resimli Media kaplamaları 2.5x daha keskin, widget çözünürlüğü yükseltildi.
 - 0.10.281 derlenmedi: derleme düzeltmesi.
+- 0.10.283: derlenmedi — uygulama listesinde klasörler (Klasöre ekle, uzun bas: ana ekrana ekle/adlandır/sil)
