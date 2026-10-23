@@ -35,7 +35,7 @@
             android:gravity="center"
             android:includeFontPadding="false"
             android:maxLines="1"
-            android:textColor="@android:color/system_accent1_200" />
+            android:textColor="@color/m3w_accent1_200" />
         <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="7" />
 
         <TextClock
@@ -52,7 +52,7 @@
             android:gravity="center"
             android:includeFontPadding="false"
             android:maxLines="1"
-            android:textColor="@android:color/system_accent1_100" />
+            android:textColor="@color/m3w_accent1_100" />
         <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="11" />
     </LinearLayout>
 
