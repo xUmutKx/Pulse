@@ -139,8 +139,8 @@ object StandByPrefs {
     fun seconds(c: Context) = p(c).getBoolean("seconds", false)
     fun setSeconds(c: Context, v: Boolean) = p(c).edit().putBoolean("seconds", v).apply()
     /** The picture creeps a few pixels every minute, so no pixel shows the same thing for hours. */
-    fun drift(c: Context) = p(c).getBoolean("drift", true)
-    fun setDrift(c: Context, v: Boolean) = p(c).edit().putBoolean("drift", v).apply()
+    fun drift(c: Context) = p(c).getBoolean("drift2", false)
+    fun setDrift(c: Context, v: Boolean) = p(c).edit().putBoolean("drift2", v).apply()
     /** Between 22:00 and 06:00 everything goes dim red. */
     fun night(c: Context) = p(c).getBoolean("night", true)
     fun setNight(c: Context, v: Boolean) = p(c).edit().putBoolean("night", v).apply()
@@ -242,8 +242,8 @@ private fun StandByUi(ctx: Context, onClose: () -> Unit) {
     // burn-in: the whole picture moves a few dp every minute
     val minute = (System.currentTimeMillis() / 60_000L).toInt() + (tick.toInt() * 0)
     val drift = StandByPrefs.drift(ctx)
-    val dx = if (drift) ((minute % 7) - 3) * 3 else 0
-    val dy = if (drift) ((minute % 5) - 2) * 3 else 0
+    val dx = if (drift) ((minute % 5) - 2) else 0
+    val dy = if (drift) ((minute % 3) - 1) else 0
     Box(
         Modifier.fillMaxSize().background(Color.Black)
             .pointerInput(pages) { detectTapGestures(onDoubleTap = { onClose() }) }
