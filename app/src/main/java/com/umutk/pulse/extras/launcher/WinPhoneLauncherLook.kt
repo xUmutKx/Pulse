@@ -20,6 +20,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -116,7 +117,8 @@ class WinPhoneLauncherLook(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Box(Modifier.size(52.dp).clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) {
+            // the Windows button opens the glance page (time, weather, battery ...), and from there the list of every app
+            Box(Modifier.size(52.dp).clickable { LauncherSession.feedOpen = true }, contentAlignment = Alignment.Center) {
                 StartGlyph(Color.White, 24.dp)
             }
             state.dock.forEach { app ->
@@ -124,6 +126,12 @@ class WinPhoneLauncherLook(
                     LaunchAppPicture(app, 34.dp, Color.Transparent, Color.White)
                 }
             }
+            // the rest of the dock: search, every app, and the settings at the foot
+            Spacer(Modifier.weight(1f))
+            val ctx = androidx.compose.ui.platform.LocalContext.current
+            Box(Modifier.size(52.dp).clickable { LauncherSession.searchOpen = true }, contentAlignment = Alignment.Center) { SearchGlyph(Color.White) }
+            Box(Modifier.size(52.dp).clickable { LauncherSession.startOpen = true }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("apps", Color.White, 24.dp) }
+            Box(Modifier.size(52.dp).clickable { ctx.startActivity(android.content.Intent(ctx, LauncherSettingsActivity::class.java)) }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("settings", Color.White, 24.dp) }
         }
     }
 
@@ -275,6 +283,59 @@ fun WinPhoneTiles(state: LauncherState, apps: List<LaunchApp>, edge: Dp, modifie
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+
+/**
+ * The page behind the Windows button: the time and date large, then cards with the weather (the last forecast the weather app saved), the battery, the notifications
+ * waiting and today in the calendar, and a row that opens the list of every app. A back arrow at the top goes back to the home screen.
+ */
+@Composable
+fun WinPhoneFeed(onApps: () -> Unit, onClose: () -> Unit) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    androidx.activity.compose.BackHandler { onClose() }
+    val now by androidx.compose.runtime.produceState(System.currentTimeMillis()) { while (true) { kotlinx.coroutines.delay(1000); value = System.currentTimeMillis() } }
+    val d = java.util.Date(now)
+    val forecast = remember { runCatching { com.umutk.pulse.extras.weather.WeatherStore.cached(ctx) }.getOrNull() }
+    val battery = remember(now / 20_000L) {
+        val i = ctx.registerReceiver(null, android.content.IntentFilter(android.content.Intent.ACTION_BATTERY_CHANGED))
+        val lv = i?.let { it.getIntExtra(android.os.BatteryManager.EXTRA_LEVEL, 0) * 100 / it.getIntExtra(android.os.BatteryManager.EXTRA_SCALE, 100).coerceAtLeast(1) } ?: 0
+        lv to ((i?.getIntExtra(android.os.BatteryManager.EXTRA_STATUS, 0) ?: 0).let { it == android.os.BatteryManager.BATTERY_STATUS_CHARGING || it == android.os.BatteryManager.BATTERY_STATUS_FULL })
+    }
+    val notes = LauncherBadges.counts.values.sum()
+    Column(Modifier.fillMaxSize().background(Color.Black).statusBarsPadding().navigationBarsPadding()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clickable { onClose() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", Color.White, 24.dp) }
+        }
+        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
+            Text(java.text.SimpleDateFormat(if (LauncherPrefs.clock24) "HH:mm" else "h:mm", java.util.Locale.getDefault()).format(d), color = Color.White, fontSize = 80.sp, fontWeight = FontWeight.ExtraLight)
+            Text(java.text.SimpleDateFormat("EEEE, d MMMM", java.util.Locale.getDefault()).format(d), color = Color.White.copy(alpha = .8f), fontSize = 20.sp, fontWeight = FontWeight.Light)
+            Spacer(Modifier.height(20.dp))
+            @Composable fun card(c: Color, content: @Composable () -> Unit) = Box(Modifier.fillMaxWidth().padding(bottom = 6.dp).background(c).padding(16.dp)) { content() }
+            val imp = com.umutk.pulse.extras.weather.WeatherFmt.imperial(ctx)
+            card(Color(0xFF0078D7)) {
+                if (forecast != null) Column {
+                    Text(forecast.place, color = Color.White.copy(alpha = .85f), fontSize = 14.sp)
+                    Text(com.umutk.pulse.extras.weather.WeatherFmt.temp(forecast.temp, imp), color = Color.White, fontSize = 48.sp, fontWeight = FontWeight.Light)
+                    forecast.days.firstOrNull()?.let { Text("↑ " + com.umutk.pulse.extras.weather.WeatherFmt.temp(it.max, imp) + "   ↓ " + com.umutk.pulse.extras.weather.WeatherFmt.temp(it.min, imp), color = Color.White.copy(alpha = .85f), fontSize = 14.sp) }
+                } else Text(tr("Open the weather app once to see the weather here", "Burada hava durumu için hava durumu uygulamasını bir kez aç"), color = Color.White, fontSize = 14.sp)
+            }
+            Row(Modifier.fillMaxWidth()) {
+                Box(Modifier.weight(1f).padding(end = 3.dp)) { card(Color(0xFF5C2D91)) { Column { Text("${battery.first}%", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Light); Text(if (battery.second) tr("Charging", "Şarjda") else tr("Battery", "Pil"), color = Color.White.copy(alpha = .85f), fontSize = 13.sp) } } }
+                Box(Modifier.weight(1f).padding(start = 3.dp)) { card(Color(0xFFD83B01)) { Column { Text("$notes", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Light); Text(tr("Notifications", "Bildirim"), color = Color.White.copy(alpha = .85f), fontSize = 13.sp) } } }
+            }
+            card(Color(0xFF107C10)) {
+                Column {
+                    Text(java.text.SimpleDateFormat("d", java.util.Locale.getDefault()).format(d), color = Color.White, fontSize = 40.sp, fontWeight = FontWeight.Light)
+                    Text(java.text.SimpleDateFormat("EEEE, MMMM yyyy", java.util.Locale.getDefault()).format(d), color = Color.White.copy(alpha = .85f), fontSize = 14.sp)
+                }
+            }
+            Row(Modifier.fillMaxWidth().clickable { onApps() }.padding(vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("all apps", "tüm uygulamalar"), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Light, modifier = Modifier.weight(1f))
+                Text("→", color = Color.White, fontSize = 24.sp)
             }
         }
     }

@@ -83,3 +83,32 @@ fun ControlPanelHome() {
         Spacer(Modifier.height(12.dp))
     }
 }
+
+
+/** The Windows 10 / 11 Settings app: a title, a search box and the settings as big tiles (two across) with a line of what is inside. A tap opens the page in the same window. */
+@Composable
+fun WindowsSettingsHome() {
+    val open = LocalOpenTool.current
+    var q by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf("") }
+    val all = CONTROL_PANEL.flatMap { g -> g.items.map { g to it } }
+    val shown = all.filter { (_, it) -> q.isBlank() || tr(it.en, it.trName).contains(q, true) || tr(it.enDesc, it.trDesc).contains(q, true) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 10.dp)) {
+        Text(tr("Settings", "Ayarlar"), color = T.text, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
+        com.umutk.pulse.PField(q, { q = it }, tr("Find a setting", "Ayar bul"), Modifier.fillMaxWidth().padding(vertical = 10.dp))
+        shown.chunked(2).forEach { row ->
+            Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                row.forEach { (_, it) ->
+                    Row(Modifier.weight(1f).background(T.panel).clickable { open(it.route) }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon(it.icon, T.accent, 32.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Column {
+                            Text(tr(it.en, it.trName), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 2)
+                            Text(tr(it.enDesc, it.trDesc), color = T.sub, fontSize = 11.sp, maxLines = 2)
+                        }
+                    }
+                }
+                if (row.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}

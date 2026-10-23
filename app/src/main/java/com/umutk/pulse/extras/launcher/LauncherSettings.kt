@@ -166,14 +166,34 @@ fun LauncherSettings(back: () -> Unit) {
             SliderRow("${tr("Columns", "Sütun")}: ${LauncherPrefs.columns}", LauncherPrefs.columns.toFloat(), 2f..8f) {
                 LauncherPrefs.columns = it.roundToInt(); save()
             }
+            SliderRow("${tr("Rows", "Satır")}: ${LauncherPrefs.rows}", LauncherPrefs.rows.toFloat(), 3f..8f) {
+                LauncherPrefs.rows = it.roundToInt(); save()
+            }
             SliderRow("${tr("Icon size", "Simge boyutu")}: ${LauncherPrefs.iconDp}", LauncherPrefs.iconDp.toFloat(), 24f..64f) {
                 LauncherPrefs.iconDp = it.roundToInt(); save()
+            }
+            SwitchLine("notes", tr("Names under the icons", "Simgelerin altında adlar"), LauncherPrefs.labels) { LauncherPrefs.labels = it; save() }
+            SwitchLine("gridView", tr("Page dots", "Sayfa noktaları"), LauncherPrefs.pageDots) { LauncherPrefs.pageDots = it; save() }
+            Text(tr("Page effect", "Sayfa efekti"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("simple" to tr("Simple", "Basit"), "cube" to tr("Cube", "Küp"), "zoom" to tr("Zoom fade", "Yakınlaş"), "stack" to tr("Card stack", "Kart yığını"), "flip" to tr("Flip", "Çevir")).forEach { (k, n) ->
+                    com.umutk.pulse.PChip(LauncherPrefs.pageEffect == k, n) { LauncherPrefs.pageEffect = k; save() }
+                }
+            }
+            Text(tr("Folder picture", "Klasör resmi"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("grid" to tr("Grid", "Izgara"), "line" to tr("Line", "Satır"), "stack" to tr("Stack", "Yığın")).forEach { (k, n) ->
+                    com.umutk.pulse.PChip(LauncherPrefs.folderStyle == k, n) { LauncherPrefs.folderStyle = k; save() }
+                }
             }
         }
         if (cat == "dock") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             SwitchLine("apps", tr("Show dock", "Dok görünsün"), LauncherPrefs.dockShown) { LauncherPrefs.dockShown = it; save() }
             ValueRow("pin", tr("Pinned apps", "Sabitli uygulamalar"),
-                if (LauncherPrefs.dock.isEmpty()) tr("Automatic", "Otomatik") else "${LauncherPrefs.dock.size}/5") { pickDock = true }
+                if (LauncherPrefs.dock.isEmpty()) tr("Automatic", "Otomatik") else "${LauncherPrefs.dock.size}/${LauncherPrefs.dockCount}") { pickDock = true }
+            SliderRow("${tr("Icons in the dock", "Dok'taki simge")}: ${LauncherPrefs.dockCount}", LauncherPrefs.dockCount.toFloat(), 3f..7f) {
+                LauncherPrefs.dockCount = it.roundToInt(); save()
+            }
         }
         if (cat == "apps") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             ValueRow("sort", tr("Sort", "Sıralama"), sortLabel(LauncherPrefs.sort)) { pickSort = true }
@@ -183,6 +203,9 @@ fun LauncherSettings(back: () -> Unit) {
             ValueRow("eyeOff", tr("Hidden apps", "Gizli uygulamalar"), "${LauncherPrefs.hidden.size}") { pickHidden = true }
             ValueRow("palette", tr("Icon pack", "Simge paketi"), IconPacks.installed(ctx).firstOrNull { it.pkg == LauncherPrefs.iconPack }?.label ?: tr("Default", "Varsayılan")) { pickPack = true }
             SwitchLine("bell", tr("Notification badges on the app pictures", "Uygulama resimlerinde bildirim sayısı"), LauncherPrefs.badges) { LauncherPrefs.badges = it; save() }
+            if (LauncherPrefs.badges) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("number" to tr("Numbers", "Sayı"), "dot" to tr("Dots", "Nokta")).forEach { (k, n) -> com.umutk.pulse.PChip(LauncherPrefs.badgeStyle == k, n) { LauncherPrefs.badgeStyle = k; save() } }
+            }
             Text(tr("Badges need notification access for one of Pulse's listeners (Notification history).", "Rozetler için Pulse'un bildirim erişimi (Bildirim geçmişi) açık olmalı."), color = T.sub, fontSize = 12.sp)
         }
         if (cat == "extras") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -193,6 +216,7 @@ fun LauncherSettings(back: () -> Unit) {
             SwitchLine("apps", tr("Swipe up: apps list", "Yukarı kaydır: uygulama listesi"), LauncherPrefs.swipeUpApps) { LauncherPrefs.swipeUpApps = it; save() }
             Text(tr("The lock and notification gestures use the \"Pulse · Screen cover layer\" accessibility service.", "Kilit ve bildirim hareketleri \"Pulse · Screen cover layer\" erişilebilirlik hizmetini kullanır."), color = T.sub, fontSize = 12.sp)
             SwitchLine("sensors", tr("Tick on long press", "Uzun basınca titreşim"), LauncherPrefs.haptic) { LauncherPrefs.haptic = it; save() }
+            if (cur.id in setOf("win95", "xp")) SwitchLine("help", tr("Office Assistant (Clippy) on the desktop", "Masaüstünde Office Yardımcısı (Clippy)"), LauncherPrefs.clippy) { LauncherPrefs.clippy = it; save() }
             // icons
             Text(tr("App picture shape", "Uygulama resmi şekli"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -266,7 +290,7 @@ fun LauncherSettings(back: () -> Unit) {
         extra = { Text(tr("Last opened records each launch on this phone only", "Son açılan, açılışları yalnız bu telefonda kaydeder"), color = T.sub, fontSize = 12.sp) }) { i ->
         LauncherPrefs.sort = SORTS[i]; save(); pickSort = false
     }
-    if (pickDock) AppCheckDialog(tr("Dock", "Dok"), LauncherPrefs.dock, 5, onDismiss = { pickDock = false }) {
+    if (pickDock) AppCheckDialog(tr("Dock", "Dok"), LauncherPrefs.dock, LauncherPrefs.dockCount, onDismiss = { pickDock = false }) {
         LauncherPrefs.dock = it; save(); pickDock = false
     }
     if (pickHidden) AppCheckDialog(tr("Hidden apps", "Gizli uygulamalar"), LauncherPrefs.hidden.toList(), Int.MAX_VALUE, onDismiss = { pickHidden = false }) {

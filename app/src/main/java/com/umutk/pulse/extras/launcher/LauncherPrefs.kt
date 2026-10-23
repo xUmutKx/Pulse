@@ -44,7 +44,7 @@ object LauncherPrefs {
     /** Widgets on the home screen, one "id|package|class" each (see LauncherWidgets). */
     var widgets by mutableStateOf<List<String>>(emptyList())
     private const val WALL = "wall."
-    val DESKTOP_DEFAULT = setOf("pulse:pc", "pulse:recycle", "pulse:files")
+    val DESKTOP_DEFAULT = setOf("pulse:pc", "pulse:recycle", "pulse:files", "pulse:settings", "pulse:winsettings", "pulse:store")
 
     /** The desktop shortcuts that show on the Windows desktops: This PC, Recycle Bin and File Explorer until others are switched on in the settings. */
     /** The round buttons at the top right of the home screen (apps, task manager, settings); off by default: the settings are in the long press menu. */
@@ -80,6 +80,23 @@ object LauncherPrefs {
     /** Where each widget sits on the Windows desktops: "x,y,w,h" in dp, by widget id. */
     var widgetPos by mutableStateOf<Map<Int, String>>(emptyMap())
     var desktopOn by mutableStateOf(DESKTOP_DEFAULT)
+    // ---- the home screen in the way Nova Launcher sets it up ----
+    /** Rows of the home grid (the columns are [columns]). */
+    var rows by mutableStateOf(4)
+    /** How the pages move: "simple", "cube", "zoom", "stack" or "flip". */
+    var pageEffect by mutableStateOf("simple")
+    /** The dots under the home pages. */
+    var pageDots by mutableStateOf(true)
+    /** Icons the dock can hold, 3..7. */
+    var dockCount by mutableStateOf(5)
+    /** A folder's picture: "grid" (2x2), "line" (three in a row), "stack" (piled up). */
+    var folderStyle by mutableStateOf("grid")
+    /** Badges: "number" (the count) or "dot" (a plain dot). */
+    var badgeStyle by mutableStateOf("number")
+    /** The names under the home icons and folders. */
+    var labels by mutableStateOf(true)
+    /** The Office Assistant (Clippy) sits at the bottom right of the Windows 95 and XP desktops. */
+    var clippy by mutableStateOf(true)
     /** Swipe down on the home opens the quick search (when the shade is not set for it). */
     var swipeDownSearch by mutableStateOf(true)
     /** Notification counts on the app pictures. */
@@ -117,7 +134,7 @@ object LauncherPrefs {
         vertical = p.getProperty("vertical") == "true"
         columns = p.getProperty("columns")?.toIntOrNull() ?: 5
         iconDp = p.getProperty("iconDp")?.toIntOrNull() ?: 48
-        dock = list(p.getProperty("dock")).take(5)
+        dock = list(p.getProperty("dock")).take(7)
         dockShown = p.getProperty("dockShown") != "false"
         drawerColumns = p.getProperty("drawerColumns")?.toIntOrNull() ?: 5
         sort = p.getProperty("sort") ?: "name"
@@ -127,7 +144,9 @@ object LauncherPrefs {
         phoneTiles = p.getProperty("phoneTilesOn") != "false"
         tileMode = p.getProperty("tileMode") ?: "auto"
         tileSizes = p.stringPropertyNames().filter { it.startsWith("tile.") }.associate { it.removePrefix("tile.") to p.getProperty(it) }
-        swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
+        rows = p.getProperty("rows")?.toIntOrNull()?.coerceIn(3, 8) ?: 4; pageEffect = p.getProperty("pageEffect") ?: "simple"; pageDots = p.getProperty("pageDots") != "false"
+        dockCount = p.getProperty("dockCount")?.toIntOrNull()?.coerceIn(3, 7) ?: 5; folderStyle = p.getProperty("folderStyle") ?: "grid"; badgeStyle = p.getProperty("badgeStyle") ?: "number"; labels = p.getProperty("labels") != "false"
+        clippy = p.getProperty("clippy") != "false"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
         homeOrder = p.getProperty("homeOrder").orEmpty().split(',').filter { it.isNotBlank() }
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
@@ -136,6 +155,8 @@ object LauncherPrefs {
         wallDaily = p.getProperty("wallDaily") == "true"; keepOn = p.getProperty("keepOn") == "true"; haptic = p.getProperty("haptic") != "false"; searchFocus = p.getProperty("searchFocus") == "true"
         clock24 = p.getProperty("clock24") != "false"; dateFmt = p.getProperty("dateFmt") ?: "dmy"; clockSeconds = p.getProperty("clockSeconds") == "true"; lockLayout = p.getProperty("lockLayout") == "true"
         desktopOn = p.getProperty("desktop")?.let { list(it).toSet() } ?: DESKTOP_DEFAULT
+        // once: the settings (or the Control Panel) and the Store join the desktop of a launcher set up before they existed
+        if (p.getProperty("desktopV2") == null) desktopOn = desktopOn + setOf("pulse:settings", "pulse:winsettings", "pulse:store")
         clock = p.getProperty("clock") == "true"
         desktopClock = p.getProperty("desktopClock") != "false"
         desktopNote = p.getProperty("desktopNote") == "true"
@@ -161,9 +182,11 @@ object LauncherPrefs {
         p.setProperty("iconShape", iconShape); p.setProperty("wallDim", wallDim.toString()); p.setProperty("wallBlur", wallBlur.toString()); p.setProperty("wallDaily", wallDaily.toString())
         p.setProperty("keepOn", keepOn.toString()); p.setProperty("haptic", haptic.toString()); p.setProperty("searchFocus", searchFocus.toString())
         p.setProperty("clock24", clock24.toString()); p.setProperty("dateFmt", dateFmt); p.setProperty("clockSeconds", clockSeconds.toString()); p.setProperty("lockLayout", lockLayout.toString())
-        p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
+        p.setProperty("phoneTilesOn", phoneTiles.toString()); p.setProperty("tileMode", tileMode); tileSizes.forEach { (k, v) -> p.setProperty("tile.$k", v) }; p.setProperty("topChips", topChips.toString()); p.setProperty("desktop", desktopOn.joinToString(",")); p.setProperty("desktopV2", "1"); p.setProperty("hidden", hidden.joinToString(",")); p.setProperty("clock", clock.toString()); p.setProperty("desktopClock", desktopClock.toString()); p.setProperty("desktopNote", desktopNote.toString()); p.setProperty("homeApps", homeApps.toString()); p.setProperty("windowed", windowed.toString())
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
-        p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
+        p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
+        p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
+        p.setProperty("clippy", clippy.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
         p.setProperty("homeOrder", homeOrder.joinToString(","))
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }
@@ -184,7 +207,7 @@ object LauncherPrefs {
     /** Back to the first-run settings. The look goes too: the Pulse look is restored by the next start. */
     fun reset(c: Context) {
         look = "material"; vertical = false; columns = 5; iconDp = 48; dock = emptyList(); dockShown = true
-        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); folders = emptyMap(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
+        drawerColumns = 5; sort = "name"; hidden = emptySet(); desktopOn = DESKTOP_DEFAULT; topChips = false; phoneTiles = true; rows = 4; pageEffect = "simple"; pageDots = true; dockCount = 5; folderStyle = "grid"; badgeStyle = "number"; labels = true; tileMode = "auto"; tileSizes = emptyMap(); swipeDownSearch = true; badges = true; iconPack = ""; homeOrder = emptyList(); folders = emptyMap(); iconPos = emptyMap(); clock = false; desktopClock = true; desktopNote = false; homeApps = false; windowed = false; lockPortrait = false; fullScreen = false
         gestureLock = false; swipeDownShade = false; swipeUpApps = false; iconShape = "squircle"; wallDim = 0; wallBlur = 0; wallDaily = false; keepOn = false; haptic = true; searchFocus = false
         clock24 = true; dateFmt = "dmy"; clockSeconds = false; lockLayout = false
         usage = emptyMap(); walls = emptyMap()

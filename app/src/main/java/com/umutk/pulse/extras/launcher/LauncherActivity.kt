@@ -131,6 +131,7 @@ internal fun desktopItems(): List<LaunchApp> = listOf(
     LaunchApp(tr("Command Prompt", "Komut İstemi"), "pulse:cmd", null, iconKey = "run"),
     LaunchApp(tr("Task Manager", "Görev Yöneticisi"), "pulse:taskmgr", null, iconKey = "processes"),
     LaunchApp(tr("Control Panel", "Denetim Masası"), "pulse:settings", null, iconKey = "settings"),
+    LaunchApp(tr("Settings", "Ayarlar"), "pulse:winsettings", null, iconKey = "settings"),
     LaunchApp(tr("Store", "Mağaza"), "pulse:store", null, iconKey = "download"),
     LaunchApp(tr("Control Center", "Denetim Merkezi"), "pulse:control", null, iconKey = "performance"),
     LaunchApp(tr("Performance", "Performans"), "pulse:perf", null, iconKey = "performance"),
@@ -232,7 +233,7 @@ private fun openDesktopItem(ctx: Context, id: String, lookId: String = "") {
     if (lookId in WINDOWS_LOOKS) {
         val r = when (id) { "pulse:pc" -> "page:device" to tr("This PC", "Bu bilgisayar"); "pulse:recycle" -> "page:recycle" to tr("Recycle Bin", "Geri Dönüşüm Kutusu")
             "pulse:paint" -> "paint" to "Paint"; "pulse:taskmgr" -> "page:processes" to tr("Task Manager", "Görev Yöneticisi"); "pulse:cmd" -> "page:terminal" to tr("Command Prompt", "Komut İstemi")
-            "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
+            "pulse:settings" -> "controlpanel" to tr("Control Panel", "Denetim Masası"); "pulse:winsettings" -> "winsettings" to tr("Settings", "Ayarlar"); "pulse:perf" -> "page:performance" to tr("Performance", "Performans")
             "pulse:services" -> "page:services" to tr("Services", "Hizmetler"); "pulse:startup" -> "page:startup" to tr("Startup apps", "Başlangıç uygulamaları")
             "pulse:apps" -> "page:apps" to tr("Programs", "Programlar"); "pulse:files" -> "page:filestabs" to tr("File Explorer", "Dosya Gezgini")
             "pulse:mines" -> "game:minesweeper" to tr("Minesweeper", "Mayın Tarlası"); "pulse:solitaire" -> "game:solitaire" to tr("Solitaire", "Solitaire")
@@ -322,7 +323,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
 
     // the home screen is a desktop, not an app grid: the Windows looks show the desktop shortcuts, the others show no icons (the apps list holds every app); a setting brings the app grid back
     val desktop = look.id in WINDOWS_LOOKS
-    val shortcuts = remember(desktop, LauncherPrefs.desktopOn) { if (desktop) desktopItems().filter { it.pkg in LauncherPrefs.desktopOn } else emptyList() }
+    // Windows 10 / 11 have the Settings app, the older ones the Control Panel: each look shows its own of the two
+    val newWin = look.id in setOf("win11", "win10", "win10black")
+    val shortcuts = remember(desktop, LauncherPrefs.desktopOn, newWin) { if (desktop) desktopItems().filter { it.pkg in LauncherPrefs.desktopOn && !(newWin && it.pkg == "pulse:settings") && !(!newWin && it.pkg == "pulse:winsettings") } else emptyList() }
     val home = if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) visible else shortcuts
     val grid = rememberLazyGridState()
     val pages = home.chunked(columns * PAGE_ROWS)
@@ -369,6 +372,13 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         if (desktop) Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
             DesktopWindowLayer(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp)
         }
+        // the Office Assistant keeps the old Windows desktops company, at the bottom right above the taskbar
+        if (desktop && LauncherPrefs.clippy && look.id in setOf("win95", "xp")) {
+            LaunchedEffect(Unit) { com.umutk.pulse.ClippyPrefs.load(ctx) }
+            Box(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+                com.umutk.pulse.ClippyView(Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = (if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp) + 6.dp))
+            }
+        }
         if (desktop) ClockFlyout(look.id, if (LauncherPrefs.dockShown && !look.taskbarTop) look.taskbarHeight else 0.dp)
         // Windows 10 Mobile looks: the action center comes down from the top edge
         if (look.id.startsWith("winphone")) Box(Modifier.fillMaxSize()) {
@@ -381,6 +391,8 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             Box(Modifier.statusBarsPadding()) { DrawerSearch(query) { query = it } }
             Box(Modifier.weight(1f).fillMaxWidth()) { look.StartMenu(state, { LauncherSession.startOpen = false }, Modifier.fillMaxSize()) }
         }
+        // the Windows Phone glance page; "all apps" on it opens the apps list
+        if (LauncherSession.feedOpen && look.id.startsWith("winphone")) WinPhoneFeed({ LauncherSession.feedOpen = false; LauncherSession.startOpen = true }) { LauncherSession.feedOpen = false }
         HomeSheet()
         if (LauncherSession.searchOpen) QuickSearch(state) { LauncherSession.searchOpen = false }
         actionFor?.let { app -> AppActionDialog(app, autoDock) { actionFor = null } }
