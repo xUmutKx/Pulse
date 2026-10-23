@@ -405,7 +405,8 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
             onPage(prev ?: start)
         }
     }
-    androidx.activity.compose.BackHandler(sub.isEmpty() && (page != start || ctx is FilesActivity)) { back() }
+    // Back on the first page sends Pulse to the background (it keeps its state) instead of closing it
+    androidx.activity.compose.BackHandler(sub.isEmpty()) { if (InnerBack.steps.isEmpty() && page == start && ctx !is FilesActivity) (ctx as? android.app.Activity)?.moveTaskToBack(true) else back() }
     LaunchedEffect(Downloads.wanted) { if (Downloads.wanted) { go("downloads"); Downloads.wanted = false } }
     LaunchedEffect(com.umutk.pulse.widgets.WidgetOpen.page) {
         val p = com.umutk.pulse.widgets.WidgetOpen.page
