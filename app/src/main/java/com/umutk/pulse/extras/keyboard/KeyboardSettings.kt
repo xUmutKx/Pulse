@@ -197,8 +197,9 @@ fun KeyboardSettings(back: () -> Unit) {
         PCard {
             Title(tr("Feel", "His"))
             Switch(tr("Vibrate on keypress", "Tuşta titreşim"), "", KeyboardPrefs.haptic) { KeyboardPrefs.haptic = it; save() }
-            if (KeyboardPrefs.haptic) Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(12 to tr("Light", "Hafif"), 24 to tr("Strong", "Güçlü")).forEach { (v, n) -> PChip(KeyboardPrefs.hapticMs == v, n) { KeyboardPrefs.hapticMs = v; save() } }
+            if (KeyboardPrefs.haptic) {
+                Text("${tr("Vibration strength", "Titreşim gücü")}: ${KeyboardPrefs.hapticMs}", color = T.sub, fontSize = 12.sp)
+                PSlider((KeyboardPrefs.hapticMs - 1) / 39f, { KeyboardPrefs.hapticMs = 1 + (it * 39).roundToInt() }, 0f..1f, onDone = { save() })
             }
             Switch(tr("Sound on keypress", "Tuşta ses"), "", KeyboardPrefs.sound) { KeyboardPrefs.sound = it; save() }
         }

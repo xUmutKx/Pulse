@@ -67,7 +67,7 @@ object KeyboardPrefs {
 
     // feel
     var haptic by mutableStateOf(true)
-    var hapticMs by mutableStateOf(12)
+    var hapticMs by mutableStateOf(8)   // strength 1..40
     var sound by mutableStateOf(false)
 
     fun langList(): List<String> = langs.split(',').filter { it in KeyboardLayouts.languages }.ifEmpty { listOf("en") }
@@ -129,7 +129,7 @@ object KeyboardPrefs {
         theme = "amoled"; heightPct = 110; autoRatio = 90; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
-        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; hapticMs = 12; sound = false
+        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; hapticMs = 8; sound = false
         resetTheme(c)
         KeyboardDictionary.forgetUser(c)
         loaded = true
