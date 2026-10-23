@@ -8,9 +8,9 @@ object WidgetOpts {
     /** "none" (transparent, the default), "black" or "stars" (Poweramp's starry sky). */
     fun bg(c: Context): String = p(c).getString("bg", "none") ?: "none"
     fun setBg(c: Context, v: String) = p(c).edit().putString("bg", v).apply()
-    /** The cover's size as a share of its full square, 30..100; 86 by default (a sixth bigger than the first 75). */
-    fun artPct(c: Context): Int = p(c).getInt("art_pct2", 86).coerceIn(30, 100)
-    fun setArtPct(c: Context, v: Int) = p(c).edit().putInt("art_pct2", v.coerceIn(30, 100)).apply()
+    /** The cover's size as a share of its full square, 30..100; 95 by default (it began at 75). */
+    fun artPct(c: Context): Int = p(c).getInt("art_pct3", 95).coerceIn(30, 100)
+    fun setArtPct(c: Context, v: Int) = p(c).edit().putInt("art_pct3", v.coerceIn(30, 100)).apply()
     /** The corners of the widget and of the cover, as in Poweramp's widget settings: 0 square, 1 rounded (the default), 2 round. */
     fun corners(c: Context): Int = p(c).getInt("corners", 1).coerceIn(0, 2)
     fun setCorners(c: Context, v: Int) = p(c).edit().putInt("corners", v.coerceIn(0, 2)).apply()

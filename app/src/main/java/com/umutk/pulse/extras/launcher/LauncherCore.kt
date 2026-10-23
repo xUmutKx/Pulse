@@ -68,7 +68,7 @@ fun Modifier.appTap(state: LauncherState, app: LaunchApp, onTap: () -> Unit): Mo
 
 /** Dock = the chosen packages that are installed (max 5); none until the user pins some. */
 fun dockApps(apps: List<LaunchApp>, pkgs: List<String>): List<LaunchApp> =
-    pkgs.take(5).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }
+    pkgs.take(LauncherPrefs.dockCount).mapNotNull { p -> apps.firstOrNull { it.pkg == p } }
 
 /** Side inset of the screen (rounded corners or a side cutout) in dp. Bars and menus keep their content clear of it; set by LauncherActivity. */
 val LocalLauncherEdge = compositionLocalOf { 0.dp }
@@ -84,6 +84,8 @@ object LauncherSession {
     /** The clock flyout (calendar and, in Windows 10 / 11, the quick tiles) is open; the taskbar clock sets it. */
     var clockOpen by mutableStateOf(false)
     var startOpen by mutableStateOf(false)
+    /** The Windows Phone glance page (behind the Windows button) is open. */
+    var feedOpen by mutableStateOf(false)
     /** The quick search (a swipe down on the home) is open. */
     var searchOpen by mutableStateOf(false)
     /** Bumped on every home press, so the pages scroll back to the first one. */
@@ -139,8 +141,9 @@ fun LaunchAppPicture(app: LaunchApp, size: Dp, tile: Color, letter: Color, modif
         // the notification count of the app, a red dot with the number at the top right corner
         if (n > 0) {
             val d = (size.value * .34f).coerceIn(14f, 22f)
-            Box(Modifier.align(Alignment.TopEnd).size(d.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFE53935)), contentAlignment = Alignment.Center) {
-                Text(if (n > 9) "9+" else n.toString(), color = Color.White, fontSize = (d * .56f).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
+            val dot = LauncherPrefs.badgeStyle == "dot"
+            Box(Modifier.align(Alignment.TopEnd).size((if (dot) d * .6f else d).dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0xFFE53935)), contentAlignment = Alignment.Center) {
+                if (!dot) Text(if (n > 9) "9+" else n.toString(), color = Color.White, fontSize = (d * .56f).sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1)
             }
         }
     }

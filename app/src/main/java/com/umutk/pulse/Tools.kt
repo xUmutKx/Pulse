@@ -127,6 +127,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "controlcenter" -> com.umutk.pulse.extras.launcher.ControlCenterWindow()
         id == "wpsettings" -> com.umutk.pulse.extras.launcher.PhoneSettingsHome()
         id == "controlpanel" -> com.umutk.pulse.extras.launcher.ControlPanelHome()
+        id == "winsettings" -> com.umutk.pulse.extras.launcher.WindowsSettingsHome()
         id == "page:processes" -> ProcessesPage()
         id == "page:performance" -> PerformancePage()
         id == "page:history" -> HistoryPage()
