@@ -214,7 +214,7 @@ private fun FilesPageInner() {
                 FilesSettings()
             }
         } else
-        Column(Modifier.fillMaxSize().then(if (standalone && glassId) Modifier.background(wl.bg.copy(alpha = wl.glassA)) else Modifier)) {
+        Column(Modifier.fillMaxSize().then(if (standalone && glassId) Modifier.background(wl.bg.copy(alpha = wl.glassA)) else if (standalone) Modifier.background(wl.bg) else Modifier)) {
             com.umutk.pulse.StorageAccessCard()
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when (tab) {
