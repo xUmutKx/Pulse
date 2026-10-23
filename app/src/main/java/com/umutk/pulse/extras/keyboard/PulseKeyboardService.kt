@@ -562,7 +562,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val learned = KeyboardDictionary.typoFix(this, lower)
         val tr = codes.any { KeyboardDictionary.dictOf(it) == "tr" }
         // long words may hold more slips; Turkish words are also mended as a base word plus its endings
-        val limit = if (lower.length >= 8) maxCost + .5f else maxCost
+        // a word that is the chosen share alike (90% by default) to a known word is mended on its own: 12 letters allow one slip, 20 letters two
+        val ratioLimit = ((100 - KeyboardPrefs.autoRatio) / 100f * maxOf(lower.length, 4)).coerceAtMost(2.5f)
+        val limit = maxOf(if (lower.length >= 8) maxCost + .5f else maxCost, ratioLimit)
         val corr = if (lower.length >= 2) (codes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4) else emptyList()) +
             (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word) }.distinctBy { it.word }.take(6) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
