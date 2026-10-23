@@ -190,7 +190,7 @@ internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modif
         androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
             val n = rows.size
             val fit = if (constraints.hasBoundedHeight) (maxHeight - gap * (n - 1)) / n else 48.dp
-            val rowH = minOf(fit, 46.dp)
+            val rowH = minOf(fit, 58.dp)
             Column(Modifier.fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
                 rows.forEach { row ->
                     Row(Modifier.fillMaxWidth().height(rowH), horizontalArrangement = Arrangement.spacedBy(gap)) {
