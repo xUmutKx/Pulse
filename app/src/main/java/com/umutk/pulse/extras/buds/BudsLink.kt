@@ -9,6 +9,10 @@ import kotlinx.coroutines.flow.asStateFlow
 data class BudsState(
     val connected: Boolean = false, val name: String = "", val batteryL: Int = -1, val batteryR: Int = -1, val batteryCase: Int = -1,
     val wornL: Boolean = false, val wornR: Boolean = false, val noise: Int = -1, val canNoise: Boolean = false, val message: String = "",
+    // read from the long status message; -1 / null until the earbuds have told
+    val eq: Int = -1, val touchL: Int = -1, val touchR: Int = -1, val lock: Boolean? = null, val seamless: Boolean? = null, val ambientVolume: Int = -1,
+    val ancHigh: Boolean? = null, val voiceDetect: Boolean? = null, val oneBud: Boolean? = null, val spatial: Boolean? = null, val sidetone: Boolean? = null,
+    val cycle: Int = -1, val revision: Int = -1,
 )
 
 /** The settings of the Buds manager. */
