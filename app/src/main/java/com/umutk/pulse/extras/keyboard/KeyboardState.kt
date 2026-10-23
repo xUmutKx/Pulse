@@ -15,6 +15,8 @@ class KbState {
     var page by mutableIntStateOf(0)
     /** keys, emoji, menu, clip, resize */
     var panel by mutableStateOf("keys")
+    /** The text typed in the emoji search (the keys type into it instead of the field); null when the search is not open. */
+    var emojiQuery by mutableStateOf<String?>(null)
     var lang by mutableStateOf("en")
     /** Left, middle and right slot of the bar; the middle one is what the space key puts in. */
     var slots by mutableStateOf(listOf("", "", ""))

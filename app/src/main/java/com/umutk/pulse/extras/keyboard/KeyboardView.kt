@@ -593,22 +593,52 @@ private fun Preview(th: KbTheme, st: KbState) {
 
 @Composable
 private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
-    var tab by remember { mutableStateOf(if (st.recents.isEmpty()) 1 else 0) }
-    val groups = listOf("🕘" to st.recents) + KeyboardLayouts.emoji
-    Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
-        groups.forEachIndexed { i, g ->
-            Box(Modifier.weight(1f).fillMaxSize().clickable { tab = i }.then(if (i == tab) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) { Text(g.first, fontSize = 20.sp) }
+    val ctx = LocalContext.current
+    // every emoji of Unicode and the kaomoji, read once from the app
+    val all by androidx.compose.runtime.produceState(emptyList<EmojiItem>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { EmojiData.load(ctx) } }
+    // 0 recent, 1 search, 2..10 the nine groups, 11 kaomoji
+    var tab by remember { mutableStateOf(if (st.recents.isEmpty()) 2 else 0) }
+    val icons = listOf("🕘", "🔍", "😀", "🧑", "🐶", "🍔", "🚗", "⚽", "💡", "🔣", "🏁", "(ツ)")
+    Row(Modifier.fillMaxWidth().height(40.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+        icons.forEachIndexed { i, g ->
+            val on = if (i == 1) st.emojiQuery != null else st.emojiQuery == null && i == tab
+            Box(Modifier.width(46.dp).fillMaxHeight().clickable {
+                if (i == 1) { st.emojiQuery = if (st.emojiQuery == null) "" else null } else { st.emojiQuery = null; tab = i }
+            }.then(if (on) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) { Text(g, fontSize = if (i == 11) 14.sp else 20.sp, color = th.text) }
         }
     }
-    LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(keyH * 3f)) {
-        items(groups[tab.coerceIn(0, groups.lastIndex)].second) { e ->
-            Box(Modifier.height(44.dp).clickable { act.emoji(e) }, contentAlignment = Alignment.Center) { Text(e, fontSize = 26.sp) }
+    val q = st.emojiQuery
+    if (q != null) {
+        // search: the keys below type into this box
+        Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 8.dp).clip(RoundedCornerShape(18.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(if (q.isEmpty()) tr("Search emoji, flags, kaomoji", "Emoji, bayrak, kaomoji ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1)
         }
+        val found = remember(q, all) { EmojiData.search(all, q) }
+        LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(92.dp)) {
+            items(found) { it2 -> EmojiCell(it2, th, act) }
+        }
+        KeysPanel(th, st, act, keyH)
+        return
+    }
+    val list = if (tab == 0) st.recents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
+        else if (tab == 11) all.filter { it.group >= 10 } else all.filter { it.group == tab - 2 }
+    LazyVerticalGrid(GridCells.Adaptive(if (tab == 11) 92.dp else 44.dp), Modifier.fillMaxWidth().height(keyH * 3.4f)) {
+        items(list) { it2 -> EmojiCell(it2, th, act) }
     }
     Row(Modifier.fillMaxWidth()) {
         Key(th, st, act, KbKey("ABC", KeyKind.MODE, 2f), keyH * .85f)
         Spacer(5f)
         Key(th, st, act, KbKey("", KeyKind.DELETE, 2f), keyH * .85f)
+    }
+}
+
+@Composable
+private fun EmojiCell(it: EmojiItem, th: KbTheme, act: KbActions) {
+    val kao = it.group >= 10
+    Box(Modifier.height(44.dp).clickable { act.emoji(it.e) }, contentAlignment = Alignment.Center) {
+        Text(it.e, fontSize = if (kao) 15.sp else 26.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip)
     }
 }
 
@@ -654,12 +684,15 @@ private fun ResizePanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit
     val bar = Modifier.clip(RoundedCornerShape(3.dp)).background(th.accent)
     Box(Modifier.fillMaxWidth().border(2.dp, th.accent, RoundedCornerShape(6.dp))) {
         Column { KeysPanel(th, st, NoKbActions, keyH) }
+        // the handles sit inside the keys' own size (the window around the keyboard is taller: nothing here may grow to it)
+        Box(Modifier.matchParentSize()) {
         Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> h = (h - dy / dens / 2.2f).coerceIn(70f, 170f); KeyboardPrefs.heightPct = h.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
         Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> b = (b - dy / dens).coerceIn(0f, 60f); KeyboardPrefs.bottomPad = b.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
         Box(Modifier.align(Alignment.CenterStart).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd + dx / dens).coerceIn(0f, 40f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
         Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd - dx / dens).coerceIn(0f, 40f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
         Box(Modifier.align(Alignment.Center).clip(RoundedCornerShape(24.dp)).background(th.accent).clickable { KeyboardPrefs.save(ctx); st.panel = "keys" }.padding(horizontal = 26.dp, vertical = 12.dp)) {
             Icon(kbIcon(th, "Check"), null, tint = th.onAccent, modifier = Modifier.size(24.dp))
+        }
         }
     }
 }
