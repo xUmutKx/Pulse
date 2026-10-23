@@ -58,12 +58,12 @@ fun ToolRows(vararg tools: ToolLink) {
 @Composable
 fun StorageAccessCard() {
     val ctx = LocalContext.current
-    var granted by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()) }
+    var granted by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(Build.VERSION.SDK_INT < 30 || com.umutk.pulse.Compat.isStorageManager()) }
     // back from the system screen: look again, so the card goes away once allowed
     val owner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     androidx.compose.runtime.DisposableEffect(owner) {
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e ->
-            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) granted = Build.VERSION.SDK_INT < 30 || Environment.isExternalStorageManager()
+            if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) granted = Build.VERSION.SDK_INT < 30 || com.umutk.pulse.Compat.isStorageManager()
         }
         owner.lifecycle.addObserver(ob)
         onDispose { owner.lifecycle.removeObserver(ob) }

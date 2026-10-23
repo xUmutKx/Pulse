@@ -15,6 +15,7 @@ import java.util.WeakHashMap
  * The little animation of a quick panel tile when it is switched: its picture opens from the middle and pops (as the system's own tiles do). Quick settings
  * cannot play a drawable animation for an app's tile, so a few frames of the picture are put on the tile one after the other; the tile's own picture comes back.
  */
+@androidx.annotation.RequiresApi(24)
 object TilePop {
     private val jobs = WeakHashMap<TileService, Job>()
     private const val S = 96

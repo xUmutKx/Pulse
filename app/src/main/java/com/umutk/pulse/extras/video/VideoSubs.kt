@@ -71,7 +71,7 @@ private val dirCache = HashMap<String, List<File>>()
 
 /** Subtitle files next to a local video, e.g. Movie.srt or Movie.en.srt (needs all-files access; empty without it). */
 internal fun siblingSubs(ctx: Context, v: VideoItem, prefs: VideoPrefs): List<MediaItem.SubtitleConfiguration> {
-    if (!prefs.subAuto || !v.local || v.path.isBlank() || !Environment.isExternalStorageManager()) return emptyList()
+    if (!prefs.subAuto || !v.local || v.path.isBlank() || !com.umutk.pulse.Compat.isStorageManager()) return emptyList()
     val dir = File(Environment.getExternalStorageDirectory(), v.path)
     val files = dirCache.getOrPut(dir.path) { dir.listFiles()?.filter { it.extension.lowercase() in subExts }.orEmpty() }
     val base = v.name.substringBeforeLast('.')

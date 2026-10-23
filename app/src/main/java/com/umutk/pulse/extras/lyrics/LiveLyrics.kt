@@ -158,7 +158,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
     }
 
     private suspend fun tick() {
-        if (LiveLyrics.floating(ctx) && !MiniLyrics.running && Settings.canDrawOverlays(ctx)) MiniLyrics.start(ctx)
+        if (LiveLyrics.floating(ctx) && !MiniLyrics.running && com.umutk.pulse.Compat.canOverlay(ctx)) MiniLyrics.start(ctx)
         val st = engine.state.value
         // lyrics are looked up only while a notification or the lyrics widget shows them
         val wanted = LiveLyrics.notification(ctx) || LiveLyrics.separate(ctx) || com.umutk.pulse.widgets.music.LyricsWidget.placed(ctx)

@@ -104,7 +104,7 @@ class LauncherActivity : ComponentActivity() {
         val cut = insets.getInsets(WindowInsetsCompat.Type.displayCutout())
         val platform = insets.toWindowInsets()
         val corner = listOf(RoundedCorner.POSITION_TOP_LEFT, RoundedCorner.POSITION_TOP_RIGHT,
-            RoundedCorner.POSITION_BOTTOM_LEFT, RoundedCorner.POSITION_BOTTOM_RIGHT).maxOf { platform?.getRoundedCorner(it)?.radius ?: 0 }
+            RoundedCorner.POSITION_BOTTOM_LEFT, RoundedCorner.POSITION_BOTTOM_RIGHT).maxOf { if (android.os.Build.VERSION.SDK_INT >= 31) platform?.getRoundedCorner(it)?.radius ?: 0 else 0 }
         return maxOf(cut.left, cut.right, corner)
     }
 
@@ -228,6 +228,7 @@ private fun startApp(ctx: Context, intent: Intent, windowed: Boolean) {
     val dm = ctx.resources.displayMetrics
     val w = (dm.widthPixels * .8f).toInt(); val h = (dm.heightPixels * .7f).toInt()
     val left = (dm.widthPixels - w) / 2; val top = (dm.heightPixels - h) / 3
+    if (android.os.Build.VERSION.SDK_INT < 24) { ctx.startActivity(intent); return }
     val options = android.app.ActivityOptions.makeBasic().setLaunchBounds(android.graphics.Rect(left, top, left + w, top + h))
     runCatching { ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), options.toBundle()) }.onFailure { ctx.startActivity(intent) }
 }

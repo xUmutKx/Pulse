@@ -65,13 +65,14 @@ object CoverStore {
 }
 
 /** Quick Settings tile for the screen cover (CoverService). Without the overlay permission a tap opens that permission page instead. */
+@androidx.annotation.RequiresApi(24)
 class CoverTile : TileService() {
     override fun onStartListening() = paint(CoverService.running || StandBy.showing)
 
     private fun paint(on: Boolean) {
         qsTile?.apply {
             label = tr("Screen cover", "Ekran kapağı")
-            val allowed = Settings.canDrawOverlays(this@CoverTile) || CoverAccessibilityService.instance != null
+            val allowed = com.umutk.pulse.Compat.canOverlay(this@CoverTile) || CoverAccessibilityService.instance != null
             state = if (allowed && on) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             subtitle = when { !allowed -> tr("Tap to allow overlay", "İzin vermek için dokun"); on -> tr("On", "Açık"); else -> tr("Off", "Kapalı") }
             updateTile()
@@ -80,7 +81,7 @@ class CoverTile : TileService() {
 
     override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
     private fun click0() {
-        if (!Settings.canDrawOverlays(this) && CoverAccessibilityService.instance == null) { openOverlayPermission(); return }
+        if (!com.umutk.pulse.Compat.canOverlay(this) && CoverAccessibilityService.instance == null) { openOverlayPermission(); return }
         // the advanced (StandBy) cover is a window of its own; the basic one is the black foreground service
         if (StandByPrefs.advanced(this)) { StandBy.toggle(this); paint(StandBy.showing); if (StandBy.showing) CoverAccessibilityService.instance?.collapseShade(); return }
         if (CoverService.running) { CoverService.stop(this); paint(false) } else { CoverService.start(this); paint(true); CoverAccessibilityService.instance?.collapseShade() }
@@ -103,7 +104,7 @@ fun CoverTool() {
         Text(tr("Screen cover", "Ekran kapağı"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
         PSwitch(running, { want ->
             when {
-                !Settings.canDrawOverlays(ctx) && CoverAccessibilityService.instance == null -> ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                !com.umutk.pulse.Compat.canOverlay(ctx) && CoverAccessibilityService.instance == null -> ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 want -> if (StandByPrefs.advanced(ctx)) StandBy.show(ctx) else CoverService.start(ctx)
                 else -> { CoverService.stop(ctx); StandBy.hide(ctx) }
             }
@@ -128,7 +129,7 @@ fun CoverSettings() {
     var bright0 by remember { mutableIntStateOf(CoverStore.bright(ctx).let { if (it < 0) 100 else it }) }
     Text(tr("Brightness", "Parlaklık"), color = T.sub, fontSize = 12.sp)
     com.umutk.pulse.PSlider(bright0.toFloat(), { bright0 = it.toInt().coerceIn(5, 100); CoverStore.setBright(ctx, bright0) }, 5f..100f) {}
-    if (!Settings.canDrawOverlays(ctx) && CoverAccessibilityService.instance == null) {
+    if (!com.umutk.pulse.Compat.canOverlay(ctx) && CoverAccessibilityService.instance == null) {
         Text(tr("Needs the 'display over other apps' permission.", "'Diğer uygulamaların üstünde göster' izni gerekir."), color = T.sub, fontSize = 12.sp)
         PButton(tr("Allow", "İzin ver")) { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }

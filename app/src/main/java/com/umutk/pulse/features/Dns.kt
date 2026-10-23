@@ -105,6 +105,7 @@ fun DnsSettings() {
 
 /** Quick Settings tile: Private DNS Auto, Manual (the host saved in Pulse, else dns.google) and Off, one tap moves to the next.
  *  A failed change shows its reason as the subtitle; without root or Shizuku the tap opens Settings. */
+@androidx.annotation.RequiresApi(24)
 class DnsTile : TileService() {
     private var note: String? = null
     private var busy = false

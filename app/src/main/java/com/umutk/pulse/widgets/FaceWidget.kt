@@ -40,14 +40,14 @@ abstract class FaceWidget(val look: Int) : AppWidgetProvider() {
     private fun alarm(ctx: Context) = ctx.getSystemService(Context.ALARM_SERVICE) as android.app.AlarmManager
     private fun tickIntent(ctx: Context) = PendingIntent.getBroadcast(ctx, look, Intent(ctx, javaClass).setAction(TICK), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     private fun scheduleTick(ctx: Context) =
-        alarm(ctx).setAndAllowWhileIdle(android.app.AlarmManager.RTC, (System.currentTimeMillis() / 60_000 + 1) * 60_000, tickIntent(ctx))
+        if (android.os.Build.VERSION.SDK_INT >= 23) alarm(ctx).setAndAllowWhileIdle(android.app.AlarmManager.RTC, (System.currentTimeMillis() / 60_000 + 1) * 60_000, tickIntent(ctx)) else alarm(ctx).set(android.app.AlarmManager.RTC, (System.currentTimeMillis() / 60_000 + 1) * 60_000, tickIntent(ctx))
 
     /** The face at the current time in [accent]; analog faces are a live AnalogClock (dial and hands as separate translucent bitmaps), the others one bitmap. A tap opens the matching app. */
     fun views(ctx: Context, look: Int, accent: Int, id: Int = 0): RemoteViews {
         val frost = Faces.looks[look]?.frost == true
         // the widget's own opacity, else its design's default (Windows 7 .85, iOS .9, the frosted Windows 11 clock .62)
         val op = WidgetOver.opacity(ctx, id, FaceWidgets.theme(look)).coerceIn(0f, 1f)
-        val v = if (Faces.analog(look)) {
+        val v = if (Faces.analog(look) && android.os.Build.VERSION.SDK_INT >= 23) {
             val px = (WidgetSize.dp(ctx, id)?.let { minOf(it.first, it.second) * ctx.resources.displayMetrics.density }?.toInt() ?: 400).coerceIn(160, 512)
             RemoteViews(ctx.packageName, R.layout.widget_face_analog).apply {
                 // the frosted clock sits on the Windows 11 tile like the date widget, so it draws in that tile's light accent

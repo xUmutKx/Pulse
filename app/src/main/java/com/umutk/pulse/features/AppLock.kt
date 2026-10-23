@@ -236,9 +236,9 @@ object AppLock {
 
     /** Usage access (second detection path) and "display over other apps" (overlay fallback). */
     fun usageGranted(c: Context): Boolean = (c.getSystemService(Context.APP_OPS_SERVICE) as android.app.AppOpsManager)
-        .unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), c.packageName) == android.app.AppOpsManager.MODE_ALLOWED
+        .let { ops -> if (android.os.Build.VERSION.SDK_INT >= 29) ops.unsafeCheckOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), c.packageName) else @Suppress("DEPRECATION") ops.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), c.packageName) } == android.app.AppOpsManager.MODE_ALLOWED
 
-    fun canDraw(c: Context) = Settings.canDrawOverlays(c)
+    fun canDraw(c: Context) = com.umutk.pulse.Compat.canOverlay(c)
 
     /** Whether the accessibility service is switched on in Settings. */
     fun serviceEnabled(c: Context): Boolean {

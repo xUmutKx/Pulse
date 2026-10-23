@@ -190,7 +190,7 @@ object StandBy {
         val acc = CoverAccessibilityService.instance
         val app = ctx.applicationContext
         // the accessibility layer draws above the bars and the keyboard; otherwise the overlay permission is needed
-        if (acc == null && !Settings.canDrawOverlays(app)) {
+        if (acc == null && !com.umutk.pulse.Compat.canOverlay(app)) {
             app.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${app.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             return false
         }
@@ -683,7 +683,7 @@ class StandByTile : android.service.quicksettings.TileService() {
         }
     }
     override fun onClick() {
-        if (!StandBy.toggle(this) && !StandBy.showing && !Settings.canDrawOverlays(this) && CoverAccessibilityService.instance == null) return
+        if (!StandBy.toggle(this) && !StandBy.showing && !com.umutk.pulse.Compat.canOverlay(this) && CoverAccessibilityService.instance == null) return
         paint()
         if (StandBy.showing) CoverAccessibilityService.instance?.collapseShade()
     }

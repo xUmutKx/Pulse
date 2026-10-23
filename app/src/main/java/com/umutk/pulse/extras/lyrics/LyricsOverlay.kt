@@ -74,7 +74,7 @@ private class OverlayOwner : LifecycleOwner, SavedStateRegistryOwner {
 }
 
 private fun overlayAllowed(ctx: Context): Boolean {
-    if (Settings.canDrawOverlays(ctx)) return true
+    if (com.umutk.pulse.Compat.canOverlay(ctx)) return true
     ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     return false
 }

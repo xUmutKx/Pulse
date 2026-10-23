@@ -12,6 +12,7 @@ import com.umutk.pulse.tr
  * Quick Settings tile "last played": a tap toggles the last ambient mix; without one it toggles the music queue.
  * Works with the app closed: the tile's process starts and [AmbientLast.toggle] / the music engine start their foreground service.
  */
+@androidx.annotation.RequiresApi(24)
 class LastPlayedToggleTile : TileService() {
 
     override fun onStartListening() = paint()

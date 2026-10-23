@@ -173,7 +173,7 @@ private data class XposedInfo(val description: String, val minVersion: String)
 private fun oldApp(ctx: Context, pkg: String): OldApp? = try {
     val i = ctx.packageManager.getPackageInfo(pkg, 0)
     val ai = i.applicationInfo
-    OldApp(i.versionName.orEmpty(), i.longVersionCode, ai?.minSdkVersion ?: 0, ai?.targetSdkVersion ?: 0)
+    OldApp(i.versionName.orEmpty(), com.umutk.pulse.Compat.longVersion(i), ai?.minSdkVersion ?: 0, ai?.targetSdkVersion ?: 0)
 } catch (e: PackageManager.NameNotFoundException) { null }
 
 private fun xposedInfo(ctx: Context, path: String): XposedInfo? {
@@ -221,7 +221,7 @@ object BioGate {
     var pending: CancellationSignal? = null
 
     fun run(c: Context, then: () -> Unit) {
-        if (!InstallShow.biometric) { then(); return }
+        if (!InstallShow.biometric || android.os.Build.VERSION.SDK_INT < 28) { then(); return }
         val cancel = CancellationSignal()
         pending = cancel
         val prompt = BiometricPrompt.Builder(c)
