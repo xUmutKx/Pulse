@@ -1,64 +1,48 @@
 package com.umutk.pulse.extras.launcher
 
+import android.content.Context
 import android.media.AudioAttributes
-import android.media.AudioFormat
-import android.media.AudioTrack
-import kotlin.math.PI
-import kotlin.math.exp
-import kotlin.math.sin
+import android.media.MediaPlayer
+import android.media.SoundPool
+import com.umutk.pulse.R
 
-/** The launcher's sound effects, synthesized (no sound files): a start-up chime in the look's own mood and a short click. */
+/** The launcher's sound effects: each Windows look plays its own start-up sound and its own menu click (res/raw/snd_*). */
 object LauncherSounds {
-    private const val RATE = 22050
+    private var pool: SoundPool? = null
+    private val clicks = HashMap<String, Int>()
+    private var loadedFor = ""
 
-    /** Start-up chime: a rising chord, softer and longer for the newer looks, a plain beep for Windows 95. */
-    fun startup(lookId: String) {
+    private fun key(lookId: String) = when (lookId) { "win95" -> "95"; "xp" -> "xp"; "win7" -> "7"; "win11" -> "11"; "win10", "win10black", "winphone", "winphoneamoled" -> "10"; else -> "" }
+    private fun start(k: String) = when (k) { "95" -> R.raw.snd_start_95; "xp" -> R.raw.snd_start_xp; "7" -> R.raw.snd_start_7; "10" -> R.raw.snd_start_10; "11" -> R.raw.snd_start_11; else -> 0 }
+    private fun click(k: String) = when (k) { "95" -> R.raw.snd_click_95; "xp" -> R.raw.snd_click_xp; "7" -> R.raw.snd_click_7; "10" -> R.raw.snd_click_10; "11" -> R.raw.snd_click_11; else -> 0 }
+    private val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
+
+    /** The look's start-up sound. */
+    fun startup(c: Context, lookId: String) {
         if (!LauncherPrefs.sounds) return
-        val notes = when (lookId) {
-            "win95" -> listOf(523.3, 659.3, 784.0)
-            "xp" -> listOf(392.0, 587.3, 784.0, 987.8)
-            "win7" -> listOf(349.2, 440.0, 523.3, 698.5)
-            "win10", "win10black" -> listOf(293.7, 440.0, 587.3, 740.0)
-            else -> listOf(261.6, 392.0, 523.3, 659.3)
-        }
-        play(chord(notes, if (lookId == "win95") 1.0 else 2.2))
-    }
-
-    /** A short tick when something opens. */
-    fun click() {
-        if (!LauncherPrefs.sounds) return
-        play(chord(listOf(1200.0), .06, 0.0))
-    }
-
-    // notes start one after another (stagger) and fade out together
-    private fun chord(freqs: List<Double>, seconds: Double, stagger: Double = .12): ShortArray {
-        val n = (RATE * seconds).toInt()
-        val out = ShortArray(n)
-        for (i in 0 until n) {
-            val t = i.toDouble() / RATE
-            var v = 0.0
-            freqs.forEachIndexed { k, f ->
-                val on = t - k * stagger
-                if (on >= 0) v += sin(2 * PI * f * on) * exp(-on * (3.0 / seconds * 1.5)) / freqs.size
-            }
-            out[i] = (v * 0.5 * Short.MAX_VALUE).toInt().coerceIn(-32767, 32767).toShort()
-        }
-        return out
-    }
-
-    private fun play(pcm: ShortArray) {
+        val res = start(key(lookId)).takeIf { it != 0 } ?: return
         runCatching {
-            val track = AudioTrack.Builder()
-                .setAudioAttributes(AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_ASSISTANCE_SONIFICATION).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build())
-                .setAudioFormat(AudioFormat.Builder().setEncoding(AudioFormat.ENCODING_PCM_16BIT).setSampleRate(RATE).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build())
-                .setBufferSizeInBytes(pcm.size * 2).setTransferMode(AudioTrack.MODE_STATIC).build()
-            track.write(pcm, 0, pcm.size)
-            track.setNotificationMarkerPosition(pcm.size)
-            track.setPlaybackPositionUpdateListener(object : AudioTrack.OnPlaybackPositionUpdateListener {
-                override fun onMarkerReached(t: AudioTrack) { t.release() }
-                override fun onPeriodicNotification(t: AudioTrack) {}
-            })
-            track.play()
+            MediaPlayer().apply {
+                setAudioAttributes(attrs)
+                c.resources.openRawResourceFd(res).use { setDataSource(it.fileDescriptor, it.startOffset, it.length) }
+                setOnCompletionListener { it.release() }
+                prepare(); start()
+            }
         }
+    }
+
+    /** Loads the look's click so [click] plays at once. */
+    fun prepare(c: Context, lookId: String) {
+        if (!LauncherPrefs.sounds || loadedFor == lookId) return
+        loadedFor = lookId
+        val res = click(key(lookId)).takeIf { it != 0 } ?: return
+        if (pool == null) pool = SoundPool.Builder().setMaxStreams(3).setAudioAttributes(attrs).build()
+        clicks[lookId] = pool!!.load(c, res, 1)
+    }
+
+    /** The look's click when something opens. */
+    fun click(lookId: String) {
+        if (!LauncherPrefs.sounds) return
+        clicks[lookId]?.let { pool?.play(it, 1f, 1f, 1, 0, 1f) }
     }
 }
