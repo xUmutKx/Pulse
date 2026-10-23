@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = 31
         targetSdk = 34
-        versionCode = 295
-        versionName = "0.10.285"
+        versionCode = 296
+        versionName = "0.10.286"
         ndk { abiFilters += "arm64-v8a" }
     }
     // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
