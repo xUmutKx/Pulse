@@ -128,12 +128,13 @@ class MusicPlaybackService : MediaSessionService() {
     /** Opens the Music hub (the launcher alias routes to it); [open] names a sheet for the hub to show. */
     private fun hubIntent(open: String? = null) = Intent().setClassName(packageName, "$packageName.ExtraToolActivity").putExtra("route", "music").also { i -> open?.let { i.putExtra(EXTRA_OPEN, it) } }
 
+    @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
         setMediaNotificationProvider(NotifProvider(this))
         val pi = PendingIntent.getActivity(this, 0, Intent().setClassName(packageName, "$packageName.ToolOpenActivity").putExtra("route", "music").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-        session = MediaSession.Builder(this, engine.player).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
+        session = MediaSession.Builder(this, engine.player).setBitmapLoader(com.umutk.pulse.extras.music.notif.NotifArt(this)).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
         engine.player.addListener(listener)
         if (android.os.Build.VERSION.SDK_INT >= 23) { val cb = DevCb(); devCb = cb; devices.registerAudioDeviceCallback(cb, null) }
         ContextCompat.registerReceiver(this, volWatch, IntentFilter("android.media.VOLUME_CHANGED_ACTION"), ContextCompat.RECEIVER_EXPORTED)
