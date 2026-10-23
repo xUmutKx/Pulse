@@ -97,6 +97,9 @@ object LauncherPrefs {
     var labels by mutableStateOf(true)
     /** The Office Assistant (Clippy) sits at the bottom right of the Windows 95 and XP desktops. */
     var clippy by mutableStateOf(true)
+    /** The Windows looks show their boot screen and/or sign-in screen when the launcher starts. */
+    var bootScreen by mutableStateOf(false)
+    var loginScreen by mutableStateOf(false)
     /** Swipe down on the home opens the quick search (when the shade is not set for it). */
     var swipeDownSearch by mutableStateOf(true)
     /** Notification counts on the app pictures. */
@@ -146,7 +149,7 @@ object LauncherPrefs {
         tileSizes = p.stringPropertyNames().filter { it.startsWith("tile.") }.associate { it.removePrefix("tile.") to p.getProperty(it) }
         rows = p.getProperty("rows")?.toIntOrNull()?.coerceIn(3, 8) ?: 4; pageEffect = p.getProperty("pageEffect") ?: "simple"; pageDots = p.getProperty("pageDots") != "false"
         dockCount = p.getProperty("dockCount")?.toIntOrNull()?.coerceIn(3, 7) ?: 5; folderStyle = p.getProperty("folderStyle") ?: "grid"; badgeStyle = p.getProperty("badgeStyle") ?: "number"; labels = p.getProperty("labels") != "false"
-        clippy = p.getProperty("clippy") != "false"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
+        clippy = p.getProperty("clippy") != "false"; bootScreen = p.getProperty("bootScreen") == "true"; loginScreen = p.getProperty("loginScreen") == "true"; swipeDownSearch = p.getProperty("swipeDownSearch") != "false"; badges = p.getProperty("badges") != "false"; iconPack = p.getProperty("iconPack").orEmpty()
         homeOrder = p.getProperty("homeOrder").orEmpty().split(',').filter { it.isNotBlank() }
         folders = p.stringPropertyNames().filter { it.startsWith("folder.") }.associate { it.removePrefix("folder.") to p.getProperty(it) }
         iconPos = p.stringPropertyNames().filter { it.startsWith("ipos.") }.associate { it.removePrefix("ipos.") to p.getProperty(it) }
@@ -186,7 +189,7 @@ object LauncherPrefs {
         p.setProperty("lockPortrait", lockPortrait.toString()); p.setProperty("fullScreen", fullScreen.toString())
         p.setProperty("rows", rows.toString()); p.setProperty("pageEffect", pageEffect); p.setProperty("pageDots", pageDots.toString()); p.setProperty("dockCount", dockCount.toString())
         p.setProperty("folderStyle", folderStyle); p.setProperty("badgeStyle", badgeStyle); p.setProperty("labels", labels.toString())
-        p.setProperty("clippy", clippy.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
+        p.setProperty("clippy", clippy.toString()); p.setProperty("bootScreen", bootScreen.toString()); p.setProperty("loginScreen", loginScreen.toString()); p.setProperty("swipeDownSearch", swipeDownSearch.toString()); p.setProperty("badges", badges.toString()); p.setProperty("iconPack", iconPack)
         p.setProperty("homeOrder", homeOrder.joinToString(","))
         folders.forEach { (id, v) -> p.setProperty("folder.$id", v) }
         iconPos.forEach { (id, v) -> p.setProperty("ipos.$id", v) }

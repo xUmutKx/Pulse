@@ -216,6 +216,10 @@ fun LauncherSettings(back: () -> Unit) {
             SwitchLine("apps", tr("Swipe up: apps list", "Yukarı kaydır: uygulama listesi"), LauncherPrefs.swipeUpApps) { LauncherPrefs.swipeUpApps = it; save() }
             Text(tr("The lock and notification gestures use the \"Pulse · Screen cover layer\" accessibility service.", "Kilit ve bildirim hareketleri \"Pulse · Screen cover layer\" erişilebilirlik hizmetini kullanır."), color = T.sub, fontSize = 12.sp)
             SwitchLine("sensors", tr("Tick on long press", "Uzun basınca titreşim"), LauncherPrefs.haptic) { LauncherPrefs.haptic = it; save() }
+            if (cur.id in com.umutk.pulse.loginLooks) {
+                SwitchLine("power", tr("Boot screen when the launcher starts", "Başlatıcı açılırken önyükleme ekranı"), LauncherPrefs.bootScreen) { LauncherPrefs.bootScreen = it; save() }
+                SwitchLine("users", tr("Sign-in screen when the launcher starts", "Başlatıcı açılırken giriş ekranı"), LauncherPrefs.loginScreen) { LauncherPrefs.loginScreen = it; save() }
+            }
             if (cur.id in setOf("win95", "xp")) SwitchLine("help", tr("Office Assistant (Clippy) on the desktop", "Masaüstünde Office Yardımcısı (Clippy)"), LauncherPrefs.clippy) { LauncherPrefs.clippy = it; save() }
             // icons
             Text(tr("App picture shape", "Uygulama resmi şekli"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
