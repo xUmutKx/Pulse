@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.keyboard
 
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.asImageBitmap
 import com.umutk.pulse.tr
 import androidx.compose.animation.AnimatedContent
@@ -131,9 +132,18 @@ import kotlin.math.roundToInt
 private const val POPUP_W = 44
 
 /** The whole keyboard: the bar, the keys (or the emoji, menu, clipboard and resize panels) and the pop-up over a pressed key. */
+/** The running hue (0..360) of the moving colour light; read only while drawing, so the keys do not recompose with it. */
+private val LocalHue = androidx.compose.runtime.compositionLocalOf<androidx.compose.runtime.State<Float>?> { null }
+
 @Composable
 fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.theme, modifier: Modifier = Modifier) {
     val th = KeyboardThemes.of(themeId, st.dark)
+    val hue: androidx.compose.runtime.State<Float>? = if (KeyboardPrefs.rgb > 0) androidx.compose.animation.core.rememberInfiniteTransition(label = "rgb").animateFloat(0f, 360f, androidx.compose.animation.core.infiniteRepeatable(tween(7000, easing = androidx.compose.animation.core.LinearEasing)), label = "hue") else null
+    androidx.compose.runtime.CompositionLocalProvider(LocalHue provides hue) { KeyboardViewBody(th, st, act, modifier) }
+}
+
+@Composable
+private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier: Modifier) {
     val scale = KeyboardPrefs.heightPct / 100f
     val keyH = (61f * scale).dp
     val one = KeyboardPrefs.oneHand
@@ -142,7 +152,10 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val dens = LocalDensity.current.density
     var rootH by remember { mutableStateOf(0f) }
-    Box(modifier.fillMaxWidth().background(th.bg).onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(Unit) {
+    val rootHue = LocalHue.current
+    Box(modifier.fillMaxWidth().background(th.bg)
+        .then(if (KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
+        .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(Unit) {
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
         awaitEachGesture {
             val d = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -171,6 +184,8 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
             if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
             else Panel(st.panel, th, st, act, keyH)
         }
+        // the brightness: a black veil over the keys (the pop-up above stays bright)
+        if (KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f * .85f)))
         Trail(th, st)
         Preview(th, st)
     }
@@ -312,6 +327,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
             }
         }
     }
+    Box {
     Row(Modifier.fillMaxWidth()) {
         Key(th, st, act, KbKey(if (st.page == 0) "?123" else "ABC", KeyKind.MODE, 1.5f), keyH)
         if (KeyboardPrefs.emojiKey) Key(th, st, act, KbKey("", KeyKind.EMOJI, 1f), keyH)
@@ -320,7 +336,9 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), keyH)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), keyH)
     }
-    if (KeyboardPrefs.proRow && KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
+    if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f * .85f)))
+    }
+    if (KeyboardPrefs.proRow && KeyboardPrefs.proBottom) Box { ExtraRow(th, st, act, keyH); if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f * .85f))) }
 }
 
 @Composable
@@ -523,7 +541,9 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
         val fg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
-        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
+        val keyHue = LocalHue.current
+        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp))
+            .then(if (KeyboardPrefs.rgb == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier), contentAlignment = Alignment.Center) {
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             val fs = (big * (.85f + .15f * KeyboardPrefs.heightPct / 100f)).sp
             when (k.kind) {

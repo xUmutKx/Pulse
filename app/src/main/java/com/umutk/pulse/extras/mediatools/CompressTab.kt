@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.mediatools
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.graphics.asImageBitmap
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
@@ -55,6 +57,8 @@ internal fun CompressTab() {
     val scope = rememberCoroutineScope()
     val items = remember { mutableStateListOf<Item>() }
     var level by remember { mutableStateOf(1) }
+    // picture quality set by hand (30..95); -1 follows the strength above
+    var quality by remember { mutableStateOf(-1) }
     var running by remember { mutableStateOf(false) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { list ->
         list.forEach { u -> val n = nameOf(ctx, u); val k = kindOf(n); if (k == "image" || k == "video" || k == "audio") items += Item(u, n, k, sizeOf(ctx, u)) }
@@ -62,18 +66,46 @@ internal fun CompressTab() {
     PCard {
         Text(tr("Make files smaller", "Dosyaları küçült"), color = T.text, fontSize = 16.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PChip(level == 0, tr("Light", "Hafif")) { level = 0 }
-            PChip(level == 1, tr("Medium", "Orta")) { level = 1 }
-            PChip(level == 2, tr("Strong", "Güçlü")) { level = 2 }
+            PChip(level == 0, tr("Light", "Hafif")) { level = 0; quality = -1 }
+            PChip(level == 1, tr("Medium", "Orta")) { level = 1; quality = -1 }
+            PChip(level == 2, tr("Strong", "Güçlü")) { level = 2; quality = -1 }
         }
         Text(when (level) {
             0 -> tr("Pictures 85%, videos 1080p", "Resim %85, video 1080p")
             1 -> tr("Pictures 70% and at most 2560 px, videos 720p", "Resim %70 ve en fazla 2560 px, video 720p")
             else -> tr("Pictures 50% and at most 1600 px, videos 480p", "Resim %50 ve en fazla 1600 px, video 480p")
         }, color = T.sub, fontSize = 12.sp)
+        val q = if (quality > 0) quality else intArrayOf(85, 70, 50)[level]
+        Text(tr("Picture quality", "Resim kalitesi") + ": $q%", color = T.sub, fontSize = 12.sp)
+        com.umutk.pulse.PSlider((q - 30) / 65f, { quality = 30 + (it * 65).toInt() }, 0f..1f, onDone = {})
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton(tr("Add files", "Dosya ekle"), compact = true) { pick.launch(arrayOf("image/*", "video/*", "audio/*")) }
             if (items.isNotEmpty()) PButton(tr("Clear", "Temizle"), compact = true) { if (!running) items.clear() }
+        }
+    }
+    // the first picture as it will come out: the picture itself and its size, before anything is saved
+    items.firstOrNull { it.kind == "image" }?.let { first ->
+        val q = if (quality > 0) quality else intArrayOf(85, 70, 50)[level]
+        val maxSide = intArrayOf(4096, 2560, 1600)[level]
+        val prev by androidx.compose.runtime.produceState<Pair<android.graphics.Bitmap?, Long>?>(null, first.uri, q, maxSide) {
+            value = withContext(Dispatchers.IO) {
+                runCatching {
+                    val bytes = ByteArrayOutputStream()
+                    shrinkImage(ctx, first.uri, maxSide, q, bytes)
+                    val data = bytes.toByteArray()
+                    val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, o)
+                    var ss = 1; while (o.outWidth / ss > 700) ss *= 2
+                    android.graphics.BitmapFactory.decodeByteArray(data, 0, data.size, android.graphics.BitmapFactory.Options().apply { inSampleSize = ss }) to data.size.toLong()
+                }.getOrNull()
+            }
+        }
+        PCard {
+            Text(tr("Preview", "Önizleme"), color = T.text, fontSize = 16.sp)
+            val pv = prev
+            if (pv?.first != null) androidx.compose.foundation.Image(pv.first!!.asImageBitmap(), null, Modifier.fillMaxWidth().height(180.dp), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+            else Box(Modifier.fillMaxWidth().height(180.dp), contentAlignment = Alignment.Center) { Text("…", color = T.sub) }
+            if (pv != null) Text(first.name + ": " + fmt(first.size) + " → " + fmt(pv.second) + (if (first.size > 0) "  (−" + (100 - pv.second * 100 / first.size).coerceAtLeast(0) + "%)" else ""), color = T.sub, fontSize = 12.sp)
         }
     }
     if (items.isNotEmpty()) PCard {
@@ -102,7 +134,7 @@ internal fun CompressTab() {
                 items.forEach { it ->
                     if (it.state == "done") return@forEach
                     it.state = "busy"
-                    val r = runCatching { compressOne(ctx, it.uri, it.name, it.kind, level) }.getOrElse { e -> null to (e.message ?: "failed") }
+                    val r = runCatching { compressOne(ctx, it.uri, it.name, it.kind, level, quality) }.getOrElse { e -> null to (e.message ?: "failed") }
                     if (r.first == null) { it.state = "fail"; it.note = r.second } else { it.state = "done"; it.outSize = r.first!! }
                 }
                 running = false
@@ -113,10 +145,10 @@ internal fun CompressTab() {
 }
 
 /** One file smaller; returns its new size, or null and the reason. */
-private suspend fun compressOne(ctx: android.content.Context, uri: Uri, name: String, kind: String, level: Int): Pair<Long?, String> = withContext(Dispatchers.IO) {
+private suspend fun compressOne(ctx: android.content.Context, uri: Uri, name: String, kind: String, level: Int, quality: Int = -1): Pair<Long?, String> = withContext(Dispatchers.IO) {
     when (kind) {
         "image" -> {
-            val q = intArrayOf(85, 70, 50)[level]; val maxSide = intArrayOf(4096, 2560, 1600)[level]
+            val q = if (quality > 0) quality else intArrayOf(85, 70, 50)[level]; val maxSide = intArrayOf(4096, 2560, 1600)[level]
             val bytes = ByteArrayOutputStream()
             val ext = shrinkImage(ctx, uri, maxSide, q, bytes)
             val data = bytes.toByteArray()

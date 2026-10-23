@@ -287,8 +287,7 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
                         Text(iconLabel.second, color = if (on) accent else fg, fontSize = 12.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, maxLines = 1)
                     }
                     if (id == "more") com.umutk.pulse.ThemedMenu(menu, { menu = false }) {
-                        com.umutk.pulse.ThemedMenuItem(tr("Media tools", "Medya araçları"), { menu = false; openTool("mediatools") }, iconKey = "tool_mediatools")
-                        com.umutk.pulse.ThemedMenuItem(tr("File converter", "Dosya dönüştürücü"), { menu = false; openTool("mediatools") }, iconKey = "tool_mediatools")
+                        com.umutk.pulse.ThemedMenuItem(tr("Media tools and converter", "Medya araçları ve dönüştürücü"), { menu = false; openTool("mediatools") }, iconKey = "tool_mediatools")
                         com.umutk.pulse.ThemedMenuItem(tr("Folder sizes", "Klasör boyutları"), { menu = false; onTab("tree") }, iconKey = "disk")
                         com.umutk.pulse.ThemedMenuItem(tr("File types", "Dosya türleri"), { menu = false; onTab("types") }, iconKey = "folder")
                         com.umutk.pulse.ThemedMenuItem(tr("Clean cache", "Önbelleği temizle"), { menu = false; onTab("cache") }, iconKey = "delete")
