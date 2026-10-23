@@ -446,7 +446,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             when (key.kind) {
                                 KeyKind.DELETE -> {
                                     // held long enough: a whole word per repeat instead of a letter
-                                    if (!quick) { delRepeats++; if (delRepeats > 0) { a.deleteWord(); due = now + 200L } else { a.backspace(); due = now + 55L } } else due = now + 55L
+                                    if (!quick) { delRepeats++; if (delRepeats > 0) { a.deleteWord(); due = now + maxOf(55L, 230L - delRepeats * 22L) } else { a.backspace(); due = now + 55L } } else due = now + 55L
                                 }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }

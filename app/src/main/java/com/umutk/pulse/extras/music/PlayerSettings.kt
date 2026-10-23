@@ -121,8 +121,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     // a Poweramp backup: playlists, ratings, play counts and the cover pictures come in by themselves
     var embedCovers by remember { mutableStateOf(false) }
     var importNote by remember { mutableStateOf("") }
-    val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch {
+    val doImport: (android.net.Uri) -> Unit = { uri ->
+        scope.launch {
             importNote = tr("Reading the backup…", "Yedek okunuyor…")
             if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first, then load the backup", "Kütüphane boş: önce müziği tara, sonra yedeği yükle"); return@launch }
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.run(c, uri, MusicLibrary.tracks.value, embedCovers) } }
@@ -132,6 +132,13 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                     "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") +
                     (if (x.missing > 0) "; yedekteki ${x.missing} şarkı bu telefonda bulunamadı, örn. ${x.missingNames.joinToString(", ")}" else ""))
             } ?: tr("The backup could not be read", "Yedek okunamadı")
+        }
+    }
+    val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) doImport(uri) }
+    // the backup files found on the phone: the system picker does not always show a file of this unknown kind
+    val found by androidx.compose.runtime.produceState(emptyList<java.io.File>(), cat) {
+        value = if (cat != "library") emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching { android.os.Environment.getExternalStorageDirectory().walkTopDown().maxDepth(4).onEnter { !it.name.startsWith(".") || it.name == ".poweramp" }.filter { it.isFile && it.name.endsWith(".poweramp-backup") }.sortedByDescending { it.lastModified() }.take(8).toList() }.getOrDefault(emptyList())
         }
     }
     val exportBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
@@ -146,6 +153,15 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         Row(Modifier.fillMaxWidth().clickable { pickBackup.launch(arrayOf("*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("download", T.text, 22.dp)
             Text(tr("Load a .poweramp-backup", ".poweramp-backup yükle"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        }
+        found.forEach { f ->
+            Row(Modifier.fillMaxWidth().clickable { doImport(android.net.Uri.fromFile(f)) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("document", T.sub, 20.dp)
+                Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    Text(f.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                    Text(f.parent.orEmpty().removePrefix(android.os.Environment.getExternalStorageDirectory().path), color = T.sub, fontSize = 11.sp, maxLines = 1)
+                }
+            }
         }
         Row(Modifier.fillMaxWidth().clickable { exportBackup.launch("Pulse-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) + ".poweramp-backup") }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("save", T.text, 22.dp)
