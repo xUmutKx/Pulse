@@ -12,6 +12,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Fingerprint
 import androidx.compose.material.icons.outlined.Password
 import androidx.compose.material.icons.outlined.Pattern
@@ -108,6 +109,7 @@ object AppLock {
     var hasSecret by mutableStateOf(false)
     var secretKind by mutableStateOf("pin")       // "pin", "pass" or "pattern"
     var useBio by mutableStateOf(true)            // fingerprint first, the secret as fallback
+    var lockBubbles by mutableStateOf(false)      // a chat bubble (a small floating window of a locked app) asks for the lock only when this is on; off by default
     var fast by mutableStateOf(true)              // fast mode: root/Shizuku event-log watcher (used only when one of them is available)
     @Volatile var fails = 0                       // wrong tries in a row
     @Volatile var lockedUntil = 0L                // no tries before this time (every fifth wrong try)
@@ -126,13 +128,14 @@ object AppLock {
         secretKind = p.getString("kind", "pin") ?: "pin"
         useBio = p.getBoolean("bio", true)
         fast = p.getBoolean("fast", true)
+        lockBubbles = p.getBoolean("lockBubbles", false)
         secret = p.getString("secret", null)
         hasSecret = secret != null
     }
 
     fun save(c: Context) {
         sp(c).edit().putStringSet("locked", HashSet(locked)).putInt("grace2", graceMin).putString("look", look)
-            .putInt("blur", blurDp).putInt("tint", tintA).putString("kind", secretKind).putString("secret", secret).putBoolean("bio", useBio).putBoolean("fast", fast).apply()
+            .putInt("blur", blurDp).putInt("tint", tintA).putString("kind", secretKind).putString("secret", secret).putBoolean("bio", useBio).putBoolean("fast", fast).putBoolean("lockBubbles", lockBubbles).apply()
         rev++
     }
 
@@ -148,6 +151,8 @@ object AppLock {
     fun setBio(c: Context, on: Boolean) { useBio = on; save(c) }
 
     fun setFast(c: Context, on: Boolean) { fast = on; save(c) }
+
+    fun setLockBubbles(c: Context, on: Boolean) { lockBubbles = on; save(c) }
 
     /** "follow": the theme selected in Pulse; otherwise the look picked in App lock. */
     fun lookTheme(look: String = this.look): PTheme = when (look) {
@@ -317,6 +322,7 @@ fun AppLockPage() {
                             LockTile(icon, name, sel == k, Modifier.weight(1f)) { pinMode = k; s1 = ""; s2 = ""; patternNote = "" }
                         }
                         LockTile(Icons.Outlined.Fingerprint, tr("Fingerprint", "Parmak izi"), AppLock.useBio, Modifier.weight(1f)) { AppLock.setBio(ctx, !AppLock.useBio) }
+                        LockTile(Icons.Outlined.ChatBubbleOutline, tr("Bubbles", "Balonlar"), AppLock.lockBubbles, Modifier.weight(1f)) { AppLock.setLockBubbles(ctx, !AppLock.lockBubbles) }
                     }
                     if (pinMode == "pattern") {
                         Text(if (patternNote.isNotEmpty()) patternNote else if (s1.isEmpty()) tr("Draw", "Çiz") else tr("Repeat", "Tekrar"), color = t.sub, fontSize = 12.sp, maxLines = 1)
