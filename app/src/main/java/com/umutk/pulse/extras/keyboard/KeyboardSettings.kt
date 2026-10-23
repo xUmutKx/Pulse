@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,6 +52,9 @@ import com.umutk.pulse.T
 import com.umutk.pulse.pageGutter
 import com.umutk.pulse.tr
 import kotlin.math.roundToInt
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** The Pulse keyboard's settings: set-up, a live picture of the keyboard, themes (with a custom one), size, typing and the learned words. */
 @Composable
@@ -67,7 +71,13 @@ fun KeyboardSettings(back: () -> Unit) {
     val dark = (ctx.resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) == android.content.res.Configuration.UI_MODE_NIGHT_YES
     st.dark = dark
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
+    val acts = remember { PreviewKbActions(st) }
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var rev by remember { mutableIntStateOf(0) }
+    var busy by remember { mutableStateOf<String?>(null) }
+    // the keyboard stays at the bottom, as it does on the phone, so every change shows at once
+    Column(Modifier.fillMaxSize()) {
+    Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
             Text(tr("Keyboard", "Klavye"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
@@ -83,9 +93,6 @@ fun KeyboardSettings(back: () -> Unit) {
             Spacer(Modifier.height(8.dp))
             PField(test, { test = it }, tr("Try it here", "Burada dene"), Modifier.fillMaxWidth())
         }
-
-        // the keyboard as it is now
-        Box(Modifier.padding(vertical = 8.dp).fillMaxWidth().clip(RoundedCornerShape(12.dp))) { KeyboardView(st, NoKbActions) }
 
         // themes
         PCard {
@@ -136,16 +143,21 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
             Switch(tr("Animations", "Animasyonlar"), "", KeyboardPrefs.anim) { KeyboardPrefs.anim = it; save() }
             Switch(tr("Extra key row", "Ek tuş satırı"), tr("Esc, Tab, Ctrl, Alt, Win, arrows, F-keys", "Esc, Tab, Ctrl, Alt, Win, oklar, F tuşları"), KeyboardPrefs.proRow) { KeyboardPrefs.proRow = it; save() }
-            if (KeyboardPrefs.proRow) ItemPicker(ExtraKeys.all.map { it.id to it.label }, KeyboardPrefs.proKeys) { KeyboardPrefs.proKeys = it; save() }
+            if (KeyboardPrefs.proRow) {
+                Switch(tr("Under the space row", "Boşluk satırının altında"), "", KeyboardPrefs.proBottom) { KeyboardPrefs.proBottom = it; save() }
+                ItemPicker(ExtraKeys.all.map { it.id to it.label }, KeyboardPrefs.proKeys) { KeyboardPrefs.proKeys = it; save() }
+            }
             Text(tr("Toolbar", "Araç çubuğu"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
             ItemPicker(ExtraKeys.toolbar, KeyboardPrefs.toolbarItems) { KeyboardPrefs.toolbarItems = it; save() }
+            Text(tr("Menu (the three dots)", "Menü (üç nokta)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+            ItemPicker(ExtraKeys.menu, KeyboardPrefs.menuItems) { KeyboardPrefs.menuItems = it; save() }
         }
 
         // size
         PCard {
             Title(tr("Size", "Boyut"))
             Text("${tr("Height", "Yükseklik")}: ${KeyboardPrefs.heightPct}%", color = T.sub, fontSize = 12.sp)
-            PSlider((KeyboardPrefs.heightPct - 70) / 70f, { KeyboardPrefs.heightPct = 70 + (it * 70).roundToInt() }, 0f..1f, onDone = { save() })
+            PSlider((KeyboardPrefs.heightPct - 70) / 100f, { KeyboardPrefs.heightPct = 70 + (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Bottom space", "Alt boşluk")}: ${KeyboardPrefs.bottomPad} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.bottomPad / 60f, { KeyboardPrefs.bottomPad = (it * 60).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Side space", "Yan boşluk")}: ${KeyboardPrefs.sidePad} dp", color = T.sub, fontSize = 12.sp)
@@ -185,6 +197,30 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Sound on keypress", "Tuşta ses"), "", KeyboardPrefs.sound) { KeyboardPrefs.sound = it; save() }
         }
 
+        // word lists for the corrections and suggestions
+        PCard {
+            Title(tr("Dictionaries", "Sözlükler"))
+            listOf("en" to "English", "tr" to "Türkçe", "de" to "Deutsch", "fr" to "Français", "es" to "Español").forEach { (code, name) ->
+                val has = remember(rev) { KeyboardDictionary.hasList(ctx, code) }
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                    if (busy == code) Text("…", color = T.sub, fontSize = 15.sp)
+                    else {
+                        if (has) PIcon("check", T.sub, 20.dp, Modifier.padding(end = 10.dp))
+                        PButton(if (has) tr("Update", "Güncelle") else tr("Download", "İndir"), compact = true) {
+                            busy = code
+                            scope.launch {
+                                val ok = withContext(Dispatchers.IO) { KeyboardDictionary.download(ctx, code) }
+                                busy = null; rev++
+                                if (!ok) android.widget.Toast.makeText(ctx, tr("Could not download", "İndirilemedi"), android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }
+                    }
+                }
+            }
+            Text(tr("English and Türkçe come with the app; a download replaces them with a fresh list.", "English ve Türkçe uygulamayla gelir; indirme onları yeni bir listeyle değiştirir."), color = T.sub, fontSize = 12.sp)
+        }
+
         // data
         PCard {
             Title(tr("Data", "Veri"))
@@ -196,6 +232,8 @@ fun KeyboardSettings(back: () -> Unit) {
             Text(tr("Word lists from FrequencyWords (OpenSubtitles), CC BY-SA 4.0.", "Sözlükler: FrequencyWords (OpenSubtitles), CC BY-SA 4.0."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
         }
         Spacer(Modifier.height(24.dp))
+    }
+    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))) { KeyboardView(st, acts) }
     }
     if (askForget) PDialog(tr("Forget the learned words?", "Öğrenilen kelimeler unutulsun mu?"), "", tr("Forget", "Unut"), { KeyboardDictionary.forgetUser(ctx); learned = 0; askForget = false }, { askForget = false })
     if (askReset) PDialog(tr("Back to factory settings?", "Fabrika ayarlarına dönülsün mü?"), tr("Theme, size, typing options and learned words are reset.", "Tema, boyut, yazım seçenekleri ve öğrenilen kelimeler sıfırlanır."), tr("Reset", "Sıfırla"), { KeyboardPrefs.factoryReset(ctx); learned = 0; askReset = false }, { askReset = false })

@@ -15,6 +15,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -25,6 +27,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -93,6 +96,9 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Path
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -122,7 +128,7 @@ private const val POPUP_W = 44
 fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.theme, modifier: Modifier = Modifier) {
     val th = KeyboardThemes.of(themeId, st.dark)
     val scale = KeyboardPrefs.heightPct / 100f
-    val keyH = (52f * scale).dp
+    val keyH = (58f * scale).dp
     val one = KeyboardPrefs.oneHand
     Box(modifier.fillMaxWidth().background(th.bg).onSizeChanged { st.rootW = it.width.toFloat() }) {
         Column(
@@ -166,12 +172,19 @@ private fun Trail(th: KbTheme, st: KbState) {
 
 @Composable
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions) {
-    Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-        BarIcon(th, if (st.toolbar) Icons.Outlined.Close else Icons.Outlined.ExpandMore) { st.toolbar = !st.toolbar }
+    Row(
+        Modifier.fillMaxWidth().height(44.dp).pointerInput(Unit) {
+            // a pull down on the bar closes the keyboard
+            var total = 0f
+            detectVerticalDragGestures(onDragStart = { total = 0f }, onDragEnd = { if (total > 56.dp.toPx()) act.hide() }, onDragCancel = {}) { _, dy -> total += dy }
+        },
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
         if (st.toolbar) {
             Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                 KeyboardPrefs.toolbarItems.split(',').filter { id -> ExtraKeys.toolbar.any { it.first == id } }.forEach { id ->
-                    BarIcon(th, toolIcon(id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
+                    BarIcon(th, toolIcon(th, id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
                 }
             }
         } else {
@@ -193,14 +206,15 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
     }
 }
 
-private fun toolIcon(id: String): ImageVector = when (id) {
-    "clip", "paste" -> Icons.Outlined.ContentPaste; "emoji" -> Icons.Outlined.EmojiEmotions; "selectAll" -> Icons.Outlined.SelectAll; "copy" -> Icons.Outlined.ContentCopy
-    "cut" -> Icons.Outlined.ContentCut; "undo" -> Icons.Outlined.Undo; "redo" -> Icons.Outlined.Redo; "menu" -> Icons.Outlined.MoreHoriz; "resize" -> Icons.Outlined.AspectRatio
-    "incognito" -> Icons.Outlined.VisibilityOff; "arrows" -> Icons.Outlined.OpenWith; "proRow" -> Icons.Outlined.Dashboard; "numbers" -> Icons.Outlined.Pin
-    "theme" -> Icons.Outlined.Palette; "settings" -> Icons.Outlined.Settings; "lang" -> Icons.Outlined.Language; else -> Icons.Outlined.Keyboard
+private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
+    "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "numbers" -> kbIcon(th, "Pin")
+    "theme" -> kbIcon(th, "Palette"); "settings" -> kbIcon(th, "Settings"); "lang", "languages" -> kbIcon(th, "Language"); "onehand" -> kbIcon(th, "TouchApp")
+    "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture"); else -> kbIcon(th, "Keyboard")
 }
 
-private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "arrows" -> KeyboardPrefs.arrows; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
+private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
 
 // ---- the keys --------------------------------------------------------------------------------------------------------------------------------------
 
@@ -212,18 +226,18 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val lang = KeyboardLayouts.lang(st.lang)
     val rows = KeyboardLayouts.letterRows(lang.code, up, digits)
     val n1 = rows[0].size.toFloat()
-    if (KeyboardPrefs.proRow) ExtraRow(th, st, act, keyH)
+    if (KeyboardPrefs.proRow && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
     if (KeyboardPrefs.arrows) {
         Row(Modifier.fillMaxWidth()) {
-            ActionKey(th, keyH * .8f, Icons.Outlined.ArrowBack, true) { act.arrow(21) }
-            ActionKey(th, keyH * .8f, Icons.Outlined.ArrowUpward, true) { act.arrow(19) }
-            ActionKey(th, keyH * .8f, Icons.Outlined.ArrowDownward, true) { act.arrow(20) }
-            ActionKey(th, keyH * .8f, Icons.Outlined.ArrowForward, true) { act.arrow(22) }
-            ActionKey(th, keyH * .8f, Icons.Outlined.SkipPrevious, false) { act.arrow(122) }
-            ActionKey(th, keyH * .8f, Icons.Outlined.SkipNext, false) { act.arrow(123) }
-            ActionKey(th, keyH * .8f, Icons.Outlined.SelectAll, false) { act.edit("selectAll") }
-            ActionKey(th, keyH * .8f, Icons.Outlined.ContentCopy, false) { act.edit("copy") }
-            ActionKey(th, keyH * .8f, Icons.Outlined.ContentPaste, false) { act.edit("paste") }
+            ActionKey(th, keyH * .8f, kbIcon(th, "ArrowBack"), true) { act.arrow(21) }
+            ActionKey(th, keyH * .8f, kbIcon(th, "ArrowUpward"), true) { act.arrow(19) }
+            ActionKey(th, keyH * .8f, kbIcon(th, "ArrowDownward"), true) { act.arrow(20) }
+            ActionKey(th, keyH * .8f, kbIcon(th, "ArrowForward"), true) { act.arrow(22) }
+            ActionKey(th, keyH * .8f, kbIcon(th, "SkipPrevious"), false) { act.arrow(122) }
+            ActionKey(th, keyH * .8f, kbIcon(th, "SkipNext"), false) { act.arrow(123) }
+            ActionKey(th, keyH * .8f, kbIcon(th, "SelectAll"), false) { act.edit("selectAll") }
+            ActionKey(th, keyH * .8f, kbIcon(th, "ContentCopy"), false) { act.edit("copy") }
+            ActionKey(th, keyH * .8f, kbIcon(th, "ContentPaste"), false) { act.edit("paste") }
         }
     }
     if (st.page == 0) {
@@ -264,6 +278,7 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), keyH)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), keyH)
     }
+    if (KeyboardPrefs.proRow && KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
 }
 
 @Composable
@@ -296,10 +311,10 @@ private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.c
                 down = true
                 if (d.repeat) {
                     tap()
-                    var wait = 380L
+                    var due = android.os.SystemClock.uptimeMillis() + 380L
                     while (true) {
-                        val ev = withTimeoutOrNull(wait) { awaitPointerEvent() }
-                        if (ev == null) { tap(); wait = 70L; continue }
+                        val ev = withTimeoutOrNull((due - android.os.SystemClock.uptimeMillis()).coerceAtLeast(1L)) { awaitPointerEvent() }
+                        if (ev == null) { tap(); due = android.os.SystemClock.uptimeMillis() + 70L; continue }
                         val c = ev.changes.firstOrNull { it.id == first.id } ?: break
                         if (c.changedToUp() || !c.pressed || (c.position - first.position).getDistance() > 24.dp.toPx()) break
                     }
@@ -328,10 +343,10 @@ private fun RowScope.ActionKey(th: KbTheme, h: androidx.compose.ui.unit.Dp, icon
         Modifier.weight(1f).height(h).pointerInput(repeat) {
             awaitEachGesture {
                 val d = awaitFirstDown(requireUnconsumed = false); d.consume(); down = true; tap()
-                var wait = 380L
+                var due = android.os.SystemClock.uptimeMillis() + 380L
                 while (true) {
-                    val ev = withTimeoutOrNull(wait) { awaitPointerEvent() }
-                    if (ev == null) { if (repeat) tap(); wait = 70L; continue }
+                    val ev = withTimeoutOrNull((due - android.os.SystemClock.uptimeMillis()).coerceAtLeast(1L)) { awaitPointerEvent() }
+                    if (ev == null) { if (repeat) tap(); due = android.os.SystemClock.uptimeMillis() + 70L; continue }
                     val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                     c.consume()
                     if (c.changedToUp() || !c.pressed) break
@@ -352,7 +367,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val kNow by rememberUpdatedState(k)
     val longMs = LocalViewConfiguration.current.longPressTimeoutMillis
     val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
-    val bg = when (k.kind) { KeyKind.ENTER -> th.accent; KeyKind.CHAR, KeyKind.SPACE -> th.key; else -> th.special }
+    val bg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.key; else -> th.special }
     val fill by animateColorAsState(if (down) lerp(bg, th.accent, .4f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
     val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) .93f else 1f, tween(70), label = "keyScale")
     Box(
@@ -372,25 +387,27 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     var quick = false
                     var startX = d.position.x
                     var curX = d.position.x
-                    var wait = longMs
+                    // the long press and the repeats fall due at a fixed time: the finger's small moves must not push them back
+                    var due = android.os.SystemClock.uptimeMillis() + longMs
                     var glide = false
                     val seq = StringBuilder()
                     val startRoot = Offset(rect.left + d.position.x, rect.top + d.position.y)
                     var curRoot = startRoot
                     val canGlide = isLetter && KeyboardPrefs.glide && st.page == 0 && st.panel == "keys"
-                    if (key.kind == KeyKind.DELETE) { a.backspace(); wait = 380L }
+                    if (key.kind == KeyKind.DELETE) { a.backspace(); due = android.os.SystemClock.uptimeMillis() + 380L }
                     while (true) {
-                        val ev = withTimeoutOrNull(wait) { awaitPointerEvent() }
+                        val ev = withTimeoutOrNull((due - android.os.SystemClock.uptimeMillis()).coerceAtLeast(1L)) { awaitPointerEvent() }
                         if (ev == null) {
                             // the long press (or the next repeat of the delete key)
+                            val now = android.os.SystemClock.uptimeMillis()
                             when (key.kind) {
-                                KeyKind.DELETE -> { if (!quick) a.backspace(); wait = 55L }
-                                KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; wait = Long.MAX_VALUE / 4 }
-                                KeyKind.SHIFT -> { long = true; wait = Long.MAX_VALUE / 4 }
+                                KeyKind.DELETE -> { if (!quick) a.backspace(); due = now + 55L }
+                                KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
+                                KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
                                 else -> if (!glide && key.alts.isNotEmpty() && big) {
-                                    long = true; sel = 0; wait = Long.MAX_VALUE / 4
+                                    long = true; sel = 0; due = Long.MAX_VALUE / 2
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
-                                } else wait = Long.MAX_VALUE / 4
+                                } else due = Long.MAX_VALUE / 2
                             }
                             continue
                         }
@@ -435,6 +452,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             }
                             key.kind == KeyKind.DELETE && KeyboardPrefs.quickDelete && !quick && dx < -28.dp.toPx() -> { quick = true; a.quickDeleteStart(); startX = c.position.x }
                             key.kind == KeyKind.DELETE && quick -> a.quickDelete((-dx / 14.dp.toPx()).toInt().coerceAtLeast(0))
+                            // sliding along the space key moves the cursor, held first or not
+                            key.kind == KeyKind.SPACE && KeyboardPrefs.cursorControl && !spaceDragged && abs(dx) > 18.dp.toPx() -> { spaceDragged = true; long = true; startX = c.position.x; lastStep = 0; a.feedback() }
                             spaceDragged && key.kind == KeyKind.SPACE -> {
                                 val step = (dx / 12.dp.toPx()).toInt()
                                 if (step != lastStep) { a.moveCursor(step - lastStep); lastStep = step }
@@ -455,16 +474,16 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
             }.padding(KeyboardPrefs.keyGap.dp / 2),
     ) {
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
-        val fg = when (k.kind) { KeyKind.ENTER -> th.onAccent; KeyKind.CHAR, KeyKind.SPACE -> th.text; else -> th.specialText }
+        val fg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
         Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             val fs = (big * (.85f + .15f * KeyboardPrefs.heightPct / 100f)).sp
             when (k.kind) {
-                KeyKind.SHIFT -> Icon(if (st.shift == 2) Icons.Filled.KeyboardCapslock else if (st.shift == 1) Icons.Filled.ArrowUpFilled else Icons.Outlined.ArrowUpward, null, tint = fg, modifier = Modifier.size(26.dp))
-                KeyKind.DELETE -> Icon(Icons.Outlined.Backspace, null, tint = fg, modifier = Modifier.size(26.dp))
-                KeyKind.ENTER -> Icon(when (st.enter) { "send" -> Icons.Outlined.Send; "search" -> Icons.Outlined.Search; "go", "done" -> Icons.Outlined.Check; "next" -> Icons.Outlined.ArrowForward; else -> Icons.Outlined.KeyboardReturn }, null, tint = fg, modifier = Modifier.size(26.dp))
-                KeyKind.EMOJI -> Icon(Icons.Outlined.EmojiEmotions, null, tint = fg, modifier = Modifier.size(24.dp))
-                KeyKind.LANG -> Icon(Icons.Outlined.Language, null, tint = fg, modifier = Modifier.size(24.dp))
+                KeyKind.SHIFT -> Icon(if (st.shift == 2) kbIcon(th, "KeyboardCapslock") else if (st.shift == 1) kbIcon(th, "ArrowUpward", filled = true) else kbIcon(th, "ArrowUpward"), null, tint = fg, modifier = Modifier.size(26.dp))
+                KeyKind.DELETE -> Icon(kbIcon(th, "Backspace"), null, tint = fg, modifier = Modifier.size(26.dp))
+                KeyKind.ENTER -> Icon(when (st.enter) { "send" -> kbIcon(th, "Send"); "search" -> kbIcon(th, "Search"); "go", "done" -> kbIcon(th, "Check"); "next" -> kbIcon(th, "ArrowForward"); else -> kbIcon(th, "KeyboardReturn") }, null, tint = fg, modifier = Modifier.size(26.dp))
+                KeyKind.EMOJI -> Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp))
+                KeyKind.LANG -> Icon(kbIcon(th, "Language"), null, tint = fg, modifier = Modifier.size(24.dp))
                 KeyKind.SPACE -> Text(k.label, color = th.sub, fontSize = 12.sp, maxLines = 1)
                 KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = 15.sp, maxLines = 1)
                 else -> {
@@ -551,25 +570,16 @@ private class MenuItem(val id: String, val icon: ImageVector, val label: String,
 
 @Composable
 private fun MenuPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
-    val items = listOf(
-        MenuItem("settings", Icons.Outlined.Settings, "Settings"), MenuItem("theme", Icons.Outlined.Palette, "Themes"),
-        MenuItem("languages", Icons.Outlined.Language, "Languages"), MenuItem("resize", Icons.Outlined.AspectRatio, "Resize"),
-        MenuItem("incognito", Icons.Outlined.VisibilityOff, "Incognito", st.incognito), MenuItem("autocorrect", Icons.Outlined.Spellcheck, "Autocorrect", KeyboardPrefs.autocorrect),
-        MenuItem("onehand", Icons.Outlined.TouchApp, "One-handed", KeyboardPrefs.oneHand != "off"), MenuItem("arrows", Icons.Outlined.OpenWith, "Arrows", KeyboardPrefs.arrows),
-        MenuItem("numbers", Icons.Outlined.Pin, "Numbers", KeyboardPrefs.numberRow), MenuItem("proRow", Icons.Outlined.Dashboard, "Extra keys", KeyboardPrefs.proRow),
-        MenuItem("glide", Icons.Outlined.Gesture, "Swipe typing", KeyboardPrefs.glide), MenuItem("clip", Icons.Outlined.ContentPaste, "Clipboard"),
-        MenuItem("emoji", Icons.Outlined.EmojiEmotions, "Emoji"), MenuItem("undo", Icons.Outlined.Undo, "Undo"),
-        MenuItem("redo", Icons.Outlined.Redo, "Redo"), MenuItem("back", Icons.Outlined.Keyboard, "Keys"),
-    )
-    Column(Modifier.fillMaxWidth().height(keyH * 4f).background(th.menu)) {
-        items.chunked(4).forEach { row ->
-            Row(Modifier.weight(1f).fillMaxWidth()) {
-                row.forEach { m ->
-                    Column(Modifier.weight(1f).fillMaxSize().clickable { if (m.id == "undo" || m.id == "redo") act.edit(m.id) else act.menu(m.id) }, horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                        Icon(m.icon, null, tint = if (m.on) th.accent else th.text, modifier = Modifier.size(24.dp))
-                        Text(m.label, color = if (m.on) th.accent else th.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
-                    }
-                }
+    val ids = KeyboardPrefs.menuItems.split(',').filter { id -> ExtraKeys.menu.any { it.first == id } }
+    val items = ids.map { id -> MenuItem(id, toolIcon(th, id), ExtraKeys.menu.first { it.first == id }.second, toolOn(id, st)) } + MenuItem("back", kbIcon(th, "Keyboard"), "Keys")
+    LazyVerticalGrid(GridCells.Fixed(4), Modifier.fillMaxWidth().height(keyH * 4f).background(th.menu)) {
+        items(items) { m ->
+            Column(
+                Modifier.height(keyH).clickable { when (m.id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(m.id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(m.id) } },
+                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+            ) {
+                Icon(m.icon, null, tint = if (m.on) th.accent else th.text, modifier = Modifier.size(24.dp))
+                Text(m.label, color = if (m.on) th.accent else th.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
             }
         }
     }
@@ -587,15 +597,23 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     }
 }
 
+/** Resizing on the keyboard itself: pull the top edge for the height, the bottom edge for the space below, the side edges for the space at the sides. */
 @Composable
 private fun ResizePanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit.Dp) {
-    val cols = SliderDefaults.colors(thumbColor = th.accent, activeTrackColor = th.accent, inactiveTrackColor = th.special)
-    Column(Modifier.fillMaxWidth().height(keyH * 4f).background(th.menu).padding(horizontal = 16.dp), verticalArrangement = Arrangement.Center) {
-        Slider(KeyboardPrefs.heightPct.toFloat(), { KeyboardPrefs.heightPct = it.roundToInt() }, valueRange = 70f..140f, colors = cols)
-        Slider(KeyboardPrefs.bottomPad.toFloat(), { KeyboardPrefs.bottomPad = it.roundToInt() }, valueRange = 0f..60f, colors = cols)
-        Slider(KeyboardPrefs.sidePad.toFloat(), { KeyboardPrefs.sidePad = it.roundToInt() }, valueRange = 0f..40f, colors = cols)
-        Box(Modifier.align(Alignment.End).clip(RoundedCornerShape(20.dp)).background(th.accent).clickable { st.panel = "keys" }.padding(horizontal = 22.dp, vertical = 8.dp)) {
-            Icon(Icons.Outlined.Check, null, tint = th.onAccent, modifier = Modifier.size(22.dp))
+    val ctx = LocalContext.current
+    val dens = LocalDensity.current.density
+    var h by remember { mutableFloatStateOf(KeyboardPrefs.heightPct.toFloat()) }
+    var b by remember { mutableFloatStateOf(KeyboardPrefs.bottomPad.toFloat()) }
+    var sd by remember { mutableFloatStateOf(KeyboardPrefs.sidePad.toFloat()) }
+    val bar = Modifier.clip(RoundedCornerShape(3.dp)).background(th.accent)
+    Box(Modifier.fillMaxWidth().border(2.dp, th.accent, RoundedCornerShape(6.dp))) {
+        Column { KeysPanel(th, st, NoKbActions, keyH) }
+        Box(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> h = (h - dy / dens / 2.2f).coerceIn(70f, 170f); KeyboardPrefs.heightPct = h.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
+        Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().height(30.dp).pointerInput(Unit) { detectVerticalDragGestures { _, dy -> b = (b - dy / dens).coerceIn(0f, 60f); KeyboardPrefs.bottomPad = b.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(56.dp).height(5.dp)) }
+        Box(Modifier.align(Alignment.CenterStart).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd + dx / dens).coerceIn(0f, 40f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
+        Box(Modifier.align(Alignment.CenterEnd).fillMaxHeight().width(28.dp).pointerInput(Unit) { detectHorizontalDragGestures { _, dx -> sd = (sd - dx / dens).coerceIn(0f, 40f); KeyboardPrefs.sidePad = sd.roundToInt() } }, contentAlignment = Alignment.Center) { Box(bar.width(5.dp).height(56.dp)) }
+        Box(Modifier.align(Alignment.Center).clip(RoundedCornerShape(24.dp)).background(th.accent).clickable { KeyboardPrefs.save(ctx); st.panel = "keys" }.padding(horizontal = 26.dp, vertical = 12.dp)) {
+            Icon(kbIcon(th, "Check"), null, tint = th.onAccent, modifier = Modifier.size(24.dp))
         }
     }
 }

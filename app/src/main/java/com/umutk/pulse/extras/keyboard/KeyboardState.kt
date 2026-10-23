@@ -69,6 +69,7 @@ interface KbActions {
     fun paste(s: String)
     fun glide(letters: String)
     fun extraKey(id: String)
+    fun hide()
 }
 
 /** Does nothing: the preview in the settings. */
@@ -94,4 +95,13 @@ object NoKbActions : KbActions {
     override fun paste(s: String) {}
     override fun glide(letters: String) {}
     override fun extraKey(id: String) {}
+    override fun hide() {}
+}
+
+/** The keyboard of the settings page: the panels open and close so a change of the menu or the keys can be seen at once. */
+class PreviewKbActions(private val st: KbState) : KbActions by NoKbActions {
+    override fun menu(id: String) { when (id) { "menu", "clip", "resize" -> st.panel = if (st.panel == id) "keys" else id; "back" -> st.panel = "keys"; "emoji" -> st.panel = "emoji" } }
+    override fun emojiPanel() { st.panel = if (st.panel == "emoji") "keys" else "emoji" }
+    override fun page(p: Int) { st.page = p; st.panel = "keys" }
+    override fun shift() { st.shift = (st.shift + 1) % 3 }
 }
