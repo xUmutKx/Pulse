@@ -9,6 +9,7 @@ import android.media.AudioManager
 import android.os.SystemClock
 import android.text.InputType
 import android.view.HapticFeedbackConstants
+import android.view.KeyCharacterMap
 import android.view.KeyEvent
 import android.view.View
 import android.view.inputmethod.EditorInfo
@@ -48,6 +49,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var slotWords = arrayOf("", "", "")
     private var target: String? = null
     private var anchor = 0
+    private var lastGlide: String? = null
+    private var glideAlts: List<String> = emptyList()
     private var clipboard: ClipboardManager? = null
     private val clipListener = ClipboardManager.OnPrimaryClipChangedListener {
         val t = clipboard?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()?.trim()
@@ -129,6 +132,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         if (s.isEmpty()) return
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
+        lastGlide = null
+        if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
         val ch = s[0]
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
         if (letter) {
@@ -200,6 +205,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun backspace() {
         val c = currentInputConnection ?: return
         lastWasSpace = false
+        lastGlide?.let { g ->
+            val before = c.getTextBeforeCursor(g.length + 1, 0)?.toString()
+            lastGlide = null
+            if (before == "$g ") { c.deleteSurroundingText(g.length + 1, 0); afterText(); return }
+        }
         if (word.isNotEmpty()) {
             word.deleteCharAt(word.length - 1)
             if (word.isEmpty()) c.commitText("", 1) else c.setComposingText(word, 1)
@@ -243,6 +253,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
         val isEmoji = !w[0].isLetterOrDigit()
+        val g = lastGlide
+        if (word.isEmpty() && g != null && w in glideAlts) {
+            c.deleteSurroundingText(g.length + 1, 0); c.commitText("$w ", 1); lastGlide = w; prevWord = w; return
+        }
         if (word.isNotEmpty()) {
             val typed = word.toString()
             word.clear(); target = null
@@ -269,6 +283,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "copy" -> c.performContextMenuAction(android.R.id.copy)
             "cut" -> c.performContextMenuAction(android.R.id.cut)
             "paste" -> c.performContextMenuAction(android.R.id.paste)
+            "undo" -> c.performContextMenuAction(android.R.id.undo)
+            "redo" -> c.performContextMenuAction(android.R.id.redo)
             "capslock" -> st.shift = if (st.shift == 2) 0 else 2
         }
     }
@@ -311,6 +327,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "onehand" -> { KeyboardPrefs.oneHand = when (KeyboardPrefs.oneHand) { "off" -> "right"; "right" -> "left"; else -> "off" }; KeyboardPrefs.save(this) }
             "arrows" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
             "numbers" -> { KeyboardPrefs.numberRow = !KeyboardPrefs.numberRow; KeyboardPrefs.save(this) }
+            "proRow" -> { KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
+            "glide" -> { KeyboardPrefs.glide = !KeyboardPrefs.glide; KeyboardPrefs.save(this) }
         }
         if (id == "resize") return
         if (st.panel == "keys") KeyboardPrefs.save(this)
@@ -334,6 +352,76 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         finishWord("", false)
         c.commitText(s, 1); st.panel = "keys"; afterText()
+    }
+
+    // ---- swipe typing, extra keys -------------------------------------------------------------------------------------------------------------------
+
+    override fun glide(letters: String) {
+        val c = currentInputConnection ?: return
+        val found = KeyboardDictionary.glide(st.lang, letters, 4)
+        if (found.isEmpty()) return
+        finishWord(" ", true)
+        // a word swiped right after another is a new word
+        val before = c.getTextBeforeCursor(1, 0)?.toString().orEmpty()
+        if (before.isNotEmpty() && !before[0].isWhitespace() && before[0] !in "([{\"'") c.commitText(" ", 1)
+        val up = st.shift > 0
+        fun fix(w: String) = if (up) w.replaceFirstChar { it.titlecase(lang.locale) } else w
+        val words = found.map { fix(it) }
+        c.commitText(words[0] + " ", 1)
+        if (st.shift == 1) st.shift = 0
+        if (KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord, words[0])
+        prevWord = words[0]; lastGlide = words[0]; glideAlts = words
+        lastWasSpace = true; spaceTap = SystemClock.uptimeMillis(); punctTyped = false
+        slotWords = arrayOf(words.getOrElse(1) { "" }, words[0], words.getOrElse(2) { "" })
+        st.slots = slotWords.toList()
+    }
+
+    private fun metaNow(): Int {
+        var m = 0
+        if (st.ctrl > 0) m = m or KeyEvent.META_CTRL_ON or KeyEvent.META_CTRL_LEFT_ON
+        if (st.alt > 0) m = m or KeyEvent.META_ALT_ON or KeyEvent.META_ALT_LEFT_ON
+        if (st.win > 0) m = m or KeyEvent.META_META_ON or KeyEvent.META_META_LEFT_ON
+        if (st.shiftMod > 0) m = m or KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON
+        return m
+    }
+
+    /** A one-shot modifier is used up by the key it was waiting for. */
+    private fun useModifiers() {
+        if (st.ctrl == 1) st.ctrl = 0
+        if (st.alt == 1) st.alt = 0
+        if (st.win == 1) st.win = 0
+        if (st.shiftMod == 1) st.shiftMod = 0
+    }
+
+    private fun sendKey(code: Int, extraMeta: Int = 0) {
+        val c = currentInputConnection ?: return
+        val t = SystemClock.uptimeMillis(); val meta = metaNow() or extraMeta
+        c.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_DOWN, code, 0, meta))
+        c.sendKeyEvent(KeyEvent(t, t, KeyEvent.ACTION_UP, code, 0, meta))
+        useModifiers()
+    }
+
+    /** A letter typed while Ctrl, Alt, Win or Shift waits: the key press with those modifiers (Ctrl+C and so on), not the letter. */
+    private fun sendChord(ch: Char): Boolean {
+        finishWord("", false)
+        val evs = KeyCharacterMap.load(KeyCharacterMap.VIRTUAL_KEYBOARD).getEvents(charArrayOf(ch.lowercaseChar())) ?: return false
+        val shifted = ch.isUpperCase() || st.shift > 0
+        evs.filter { it.keyCode !in setOf(59, 60, 57, 58, 113, 114, 117, 118) }.forEach { e -> sendKey(e.keyCode, if (shifted) KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON else 0) }
+        if (st.shift == 1) st.shift = 0
+        return true
+    }
+
+    override fun extraKey(id: String) {
+        val d = ExtraKeys.byId(id) ?: return
+        finishWord("", false); lastGlide = null; lastWasSpace = false
+        when (id) {
+            "ctrl" -> st.ctrl = (st.ctrl + 1) % 3
+            "alt" -> st.alt = (st.alt + 1) % 3
+            "win" -> st.win = (st.win + 1) % 3
+            "shiftm" -> st.shiftMod = (st.shiftMod + 1) % 3
+            "selectAll", "copy", "cut", "paste", "undo", "redo" -> edit(id)
+            else -> if (d.code != 0) sendKey(d.code)
+        }
     }
 
     // ---- shift, suggestions ------------------------------------------------------------------------------------------------------------------------

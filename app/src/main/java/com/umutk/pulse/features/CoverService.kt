@@ -232,7 +232,26 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
         override fun onReceive(c: Context, i: Intent) {
             // the launcher (another process) asks for a system action: lock the screen, open the notification shade
             if (i.action == "com.umutk.pulse.action.GLOBAL") { performGlobalAction(i.getIntExtra("g", 0)); return }
+            if (i.action == Intent.ACTION_SCREEN_ON) lastTouch = android.os.SystemClock.uptimeMillis()
             autoCheck()
+        }
+    }
+
+    // the idle trigger: a touch anywhere (the system tells this service when a touch starts and ends) restarts the count
+    @Volatile private var lastTouch = android.os.SystemClock.uptimeMillis()
+    private val tick = android.os.Handler(android.os.Looper.getMainLooper())
+    private val idleCheck = object : Runnable {
+        override fun run() {
+            val now = android.os.SystemClock.uptimeMillis()
+            val sec = StandByPrefs.idleSec(this@CoverAccessibilityService)
+            if (StandBy.showing) lastTouch = now
+            else if (sec > 0 && now - lastTouch >= sec * 1000L) {
+                val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+                val km = getSystemService(Context.KEYGUARD_SERVICE) as android.app.KeyguardManager
+                if (pm.isInteractive && !km.isKeyguardLocked) StandBy.show(this@CoverAccessibilityService)
+                lastTouch = now
+            }
+            tick.postDelayed(this, 3000)
         }
     }
 
@@ -249,13 +268,14 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
 
     override fun onServiceConnected() {
         instance = this
+        lastTouch = android.os.SystemClock.uptimeMillis(); tick.removeCallbacks(idleCheck); tick.postDelayed(idleCheck, 3000)
         runCatching {
             registerReceiver(power, android.content.IntentFilter().apply { addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED); addAction(Intent.ACTION_SCREEN_ON); addAction("com.umutk.pulse.action.GLOBAL") }, Context.RECEIVER_NOT_EXPORTED)
         }
     }
-    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {}
+    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) { lastTouch = android.os.SystemClock.uptimeMillis() }
     override fun onInterrupt() {}
-    override fun onUnbind(intent: Intent?): Boolean { if (instance === this) instance = null; runCatching { unregisterReceiver(power) }; return super.onUnbind(intent) }
+    override fun onUnbind(intent: Intent?): Boolean { tick.removeCallbacks(idleCheck); if (instance === this) instance = null; runCatching { unregisterReceiver(power) }; return super.onUnbind(intent) }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
     companion object { @Volatile var instance: CoverAccessibilityService? = null }
 }
