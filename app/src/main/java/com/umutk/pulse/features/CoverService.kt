@@ -277,5 +277,11 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
     override fun onInterrupt() {}
     override fun onUnbind(intent: Intent?): Boolean { tick.removeCallbacks(idleCheck); if (instance === this) instance = null; runCatching { unregisterReceiver(power) }; return super.onUnbind(intent) }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
+    /** Closes the quick panel (a tile was tapped there): asked twice, a moment apart, so a panel that was still opening closes too. */
+    fun collapseShade() {
+        val go = Runnable { performGlobalAction(GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE) }
+        tick.postDelayed(go, 200); tick.postDelayed(go, 600)
+    }
+
     companion object { @Volatile var instance: CoverAccessibilityService? = null }
 }

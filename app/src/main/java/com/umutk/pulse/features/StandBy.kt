@@ -648,6 +648,7 @@ class StandByTile : android.service.quicksettings.TileService() {
     override fun onClick() {
         if (!StandBy.toggle(this) && !StandBy.showing && !Settings.canDrawOverlays(this) && CoverAccessibilityService.instance == null) return
         paint()
+        if (StandBy.showing) CoverAccessibilityService.instance?.collapseShade()
     }
 }
 
