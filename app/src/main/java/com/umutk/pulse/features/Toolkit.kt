@@ -348,15 +348,7 @@ private fun Flashlight() {
     // the callback reports the current state at once, then every change, also from the tile or another app
     DisposableEffect(id) {
         if (android.os.Build.VERSION.SDK_INT < 23) return@DisposableEffect onDispose { }
-        val cb = object : CameraManager.TorchCallback() {
-            override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
-                if (cameraId != id) return
-                on = enabled; busy = false
-                if (enabled && max > 1 && Build.VERSION.SDK_INT >= 33) runCatching { level = cm.getTorchStrengthLevel(id) }
-            }
-            override fun onTorchModeUnavailable(cameraId: String) { if (cameraId == id) busy = true }
-            override fun onTorchStrengthLevelChanged(cameraId: String, newStrengthLevel: Int) { if (cameraId == id) level = newStrengthLevel }
-        }
+        val cb = torchCallback(cm, id, max, { on = it; busy = false }, { busy = true }, { level = it })
         cm.registerTorchCallback(cb, Handler(Looper.getMainLooper()))
         onDispose { cm.unregisterTorchCallback(cb) }
     }
@@ -1107,4 +1099,16 @@ private fun PowerMenuTool() {
         PButton(tr("Show power menu", "Güç menüsünü göster"), Modifier.fillMaxWidth()) { failed = !TileActions.powerMenu() }
     }
     if (failed) AccessNeededCard(tr("Power menu", "Güç menüsü"), tr("Needs App lock (accessibility), root or Shizuku.", "App lock (erişilebilirlik), root veya Shizuku gerekir."))
+}
+
+/** The torch callback of the flashlight page: state changes, "camera in use" and the brightness level. */
+@androidx.annotation.RequiresApi(23)
+private fun torchCallback(cm: CameraManager, id: String, max: Int, onState: (Boolean) -> Unit, onBusy: () -> Unit, onLevel: (Int) -> Unit) = object : CameraManager.TorchCallback() {
+    override fun onTorchModeChanged(cameraId: String, enabled: Boolean) {
+        if (cameraId != id) return
+        onState(enabled)
+        if (enabled && max > 1 && Build.VERSION.SDK_INT >= 33) runCatching { onLevel(cm.getTorchStrengthLevel(id)) }
+    }
+    override fun onTorchModeUnavailable(cameraId: String) { if (cameraId == id) onBusy() }
+    override fun onTorchStrengthLevelChanged(cameraId: String, newStrengthLevel: Int) { if (cameraId == id) onLevel(newStrengthLevel) }
 }

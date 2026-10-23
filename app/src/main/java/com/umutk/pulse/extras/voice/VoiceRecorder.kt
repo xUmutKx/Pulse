@@ -82,7 +82,7 @@ object VoiceStore {
 
     /** Saves a copy in Download/Pulse, where the file manager shows it. */
     fun exportToDownloads(c: Context, r: Recording): Boolean =
-        copyTo(c, r.uri, MediaStore.Downloads.EXTERNAL_CONTENT_URI, "Download/Pulse", r.name, "audio/mp4")
+        android.os.Build.VERSION.SDK_INT >= 29 && copyTo(c, r.uri, MediaStore.Downloads.EXTERNAL_CONTENT_URI, "Download/Pulse", r.name, "audio/mp4")
 
     private fun copyTo(c: Context, src: Uri, coll: Uri, rel: String, name: String, mime: String): Boolean {
         val v = ContentValues().apply {
@@ -120,6 +120,7 @@ class VoiceEngine(private val c: Context) {
     /** Starts a new take. False when the microphone or the file cannot be opened (the caller shows a message). */
     fun start(): Boolean {
         if (rec != null) return false
+        if (android.os.Build.VERSION.SDK_INT < 29) return false   // the voice recorder stores its takes with the Android 10 media store
         val name = "rec_" + SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date()) + ".m4a"
         val v = ContentValues().apply {
             put(MediaStore.Audio.Media.DISPLAY_NAME, name)
@@ -132,7 +133,7 @@ class VoiceEngine(private val c: Context) {
         val fd = runCatching { c.contentResolver.openFileDescriptor(u, "w") }.getOrNull()
         if (fd == null) { c.contentResolver.delete(u, null, null); return false }
         val q = VoicePrefs.quality(c).coerceIn(0, RATES.lastIndex)
-        val r = MediaRecorder(c)
+        @Suppress("DEPRECATION") val r = if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(c) else MediaRecorder()
         val ok = runCatching {
             r.setAudioSource(MediaRecorder.AudioSource.MIC)
             r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
@@ -153,8 +154,8 @@ class VoiceEngine(private val c: Context) {
         return true
     }
 
-    fun pause() { runCatching { rec?.pause() } }
-    fun resume() { runCatching { rec?.resume() } }
+    fun pause() { if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { rec?.pause() } }
+    fun resume() { if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { rec?.resume() } }
 
     /** Peak input level since the last call, 0 to 32767; drives the live waveform. */
     fun level(): Int {
@@ -190,7 +191,7 @@ class VoicePlayer(private val c: Context) {
         val p = runCatching { MediaPlayer().apply { setDataSource(c, u); prepare() } }.getOrNull() ?: return false
         p.isLooping = loop
         p.setOnCompletionListener { if (!it.isLooping) { uri = null; onEnd() } }
-        runCatching { p.playbackParams = PlaybackParams().setSpeed(speed) }
+        if (android.os.Build.VERSION.SDK_INT >= 23) runCatching { p.playbackParams = PlaybackParams().setSpeed(speed) }
         p.start()
         mp = p; uri = u
         return true

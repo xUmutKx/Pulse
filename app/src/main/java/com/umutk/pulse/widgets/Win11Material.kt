@@ -129,7 +129,7 @@ object Win11Material {
     /** A 96 px wide copy of the wallpaper, cached by wallpaper id; falls back to the wallpaper colours. */
     private fun wallpaper(ctx: Context): Bitmap? {
         val wm = WallpaperManager.getInstance(ctx)
-        val id = try { wm.getWallpaperId(WallpaperManager.FLAG_SYSTEM) } catch (e: Exception) { -1 }
+        val id = try { if (android.os.Build.VERSION.SDK_INT >= 24) wm.getWallpaperId(WallpaperManager.FLAG_SYSTEM) else -1 } catch (e: Exception) { -1 }
         if (id == tinyId && tiny != null) return tiny
         val bmp = try {
             // shrink in halves so the 96 px copy averages the picture instead of sampling it
@@ -140,7 +140,7 @@ object Win11Material {
                 while (b.width > 96) b = Bitmap.createScaledBitmap(b, b.width / 2, (b.height / 2).coerceAtLeast(1), true)
                 b
             }
-        } catch (e: Exception) { null } ?: try {
+        } catch (e: Exception) { null } ?: if (android.os.Build.VERSION.SDK_INT < 27) null else try {
             wm.getWallpaperColors(WallpaperManager.FLAG_SYSTEM)?.let { wc ->
                 val a = wc.primaryColor.toArgb(); val b = (wc.secondaryColor ?: wc.primaryColor).toArgb()
                 Bitmap.createBitmap(48, 96, Bitmap.Config.ARGB_8888).also {

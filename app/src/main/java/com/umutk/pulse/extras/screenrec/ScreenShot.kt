@@ -34,13 +34,13 @@ object ScreenShot {
         val app = c.applicationContext
         // without root or Shizuku the accessibility layer takes the picture (the system's own screenshot call; a secure window comes out black there)
         // root is not asked until something needs it: when it was never checked (the tile and the launcher run in their own processes) it is checked now, not assumed absent
-        if (Shell.root == false && !Shell.shizukuOk()) { com.umutk.pulse.features.CoverAccessibilityService.instance?.let { accShot(app, it, done); return } }
+        if (android.os.Build.VERSION.SDK_INT >= 30 && Shell.root == false && !Shell.shizukuOk()) { com.umutk.pulse.features.CoverAccessibilityService.instance?.let { accShot(app, it, done); return } }
         Thread {
             if (Shell.root == null && !Shell.shizukuOk()) {
                 Shell.detectRoot()
                 if (Shell.root != true) {
                     val acc = com.umutk.pulse.features.CoverAccessibilityService.instance
-                    if (acc != null) { Handler(Looper.getMainLooper()).post { accShot(app, acc, done) }; return@Thread }
+                    if (acc != null && android.os.Build.VERSION.SDK_INT >= 30) { Handler(Looper.getMainLooper()).post { accShot(app, acc, done) }; return@Thread }
                 }
             }
             val dir = "/sdcard/DCIM/Screenshots"
@@ -67,8 +67,8 @@ object ScreenShot {
     }
 
     /** Screenshot through the accessibility service (Android 11+): saved like the root ones. */
+    @androidx.annotation.RequiresApi(30)
     private fun accShot(app: Context, acc: android.accessibilityservice.AccessibilityService, done: (String?) -> Unit) {
-        if (android.os.Build.VERSION.SDK_INT < 30) { done(null); return }
         val main = Handler(Looper.getMainLooper())
         runCatching {
             acc.takeScreenshot(android.view.Display.DEFAULT_DISPLAY, app.mainExecutor, object : android.accessibilityservice.AccessibilityService.TakeScreenshotCallback {
