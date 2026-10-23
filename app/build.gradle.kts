@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 324
-        versionName = "0.10.314"
+        versionCode = 325
+        versionName = "0.10.315"
         ndk { abiFilters += "arm64-v8a" }
         resourceConfigurations += listOf("en", "tr")
     }
