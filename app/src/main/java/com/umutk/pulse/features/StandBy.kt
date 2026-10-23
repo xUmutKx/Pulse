@@ -375,12 +375,24 @@ private fun DigitalFace(ctx: Context, ink: Color, tick: Long, withDate: Boolean)
     val date = SimpleDateFormat("EEEE, d MMMM", Locale.getDefault()).format(now)
     val cf = clockFont(StandByPrefs.font(ctx)); val fam = cf.family; val wt = cf.weight
     BoxWithConstraints(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        // the digits take as much room as the box gives
-        val size = minOf(maxWidth.value / (text.length * cf.adv), maxHeight.value * (if (withDate) 0.55f else 0.7f)).coerceAtLeast(24f)
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(text, color = ink, fontSize = size.sp, fontFamily = fam, fontWeight = wt, maxLines = 1, softWrap = false, textAlign = TextAlign.Center,
-                style = if (StandByPrefs.outline(ctx)) TextStyle(drawStyle = Stroke(width = size * .045f)) else TextStyle.Default)
-            if (withDate) Text(date, color = ink.copy(alpha = .75f), fontSize = (size * 0.22f).coerceAtLeast(14f).sp, fontFamily = fam, fontWeight = FontWeight.Normal)
+        val portrait = maxHeight > maxWidth * 1.1f
+        val outline = if (StandByPrefs.outline(ctx)) TextStyle(drawStyle = Stroke(width = 4f)) else TextStyle.Default
+        if (portrait) {
+            // an upright phone: the hours over the minutes (over the seconds), each as big as the width allows
+            val lines = listOf(SimpleDateFormat(if (h24) "HH" else "h", Locale.getDefault()).format(now), SimpleDateFormat("mm", Locale.getDefault()).format(now)) + (if (sec) listOf(SimpleDateFormat("ss", Locale.getDefault()).format(now)) else emptyList())
+            val size = minOf(maxWidth.value / (2 * cf.adv), maxHeight.value / lines.size * (if (withDate) .62f else .8f)).coerceAtLeast(24f)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                lines.forEach { l -> Text(l, color = ink, fontSize = size.sp, fontFamily = fam, fontWeight = wt, maxLines = 1, softWrap = false, textAlign = TextAlign.Center, style = outline, lineHeight = (size * 1.05f).sp) }
+                if (withDate) Text(date, color = ink.copy(alpha = .75f), fontSize = (size * 0.14f).coerceAtLeast(14f).sp, fontFamily = fam, fontWeight = FontWeight.Normal, textAlign = TextAlign.Center)
+            }
+        } else {
+            // the digits take as much room as the box gives
+            val size = minOf(maxWidth.value / (text.length * cf.adv), maxHeight.value * (if (withDate) 0.55f else 0.7f)).coerceAtLeast(24f)
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(text, color = ink, fontSize = size.sp, fontFamily = fam, fontWeight = wt, maxLines = 1, softWrap = false, textAlign = TextAlign.Center,
+                    style = if (StandByPrefs.outline(ctx)) TextStyle(drawStyle = Stroke(width = size * .045f)) else TextStyle.Default)
+                if (withDate) Text(date, color = ink.copy(alpha = .75f), fontSize = (size * 0.22f).coerceAtLeast(14f).sp, fontFamily = fam, fontWeight = FontWeight.Normal)
+            }
         }
     }
 }
