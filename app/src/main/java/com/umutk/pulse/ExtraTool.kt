@@ -134,6 +134,16 @@ open class ExtraToolActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // every tool is one card in the recent apps: a second start of the same plain tool (any entry: menu, store, launcher, widget) brings the open one forward
+        if (savedInstanceState == null && this::class == ExtraToolActivity::class && intent.getStringExtra("frame") == null &&
+            intent.extras?.keySet().orEmpty().all { it == "route" }) {
+            val mine = routeOf(intent)
+            val other = runCatching { getSystemService(android.app.ActivityManager::class.java).appTasks.firstOrNull { t ->
+                t.taskInfo.taskId != taskId && t.taskInfo.baseIntent.let { b -> b.component?.className.orEmpty().endsWith("ExtraToolActivity") || b.component?.className.orEmpty().endsWith("Launcher") }
+                    && routeOf(t.taskInfo.baseIntent) == mine && t.taskInfo.baseIntent.getStringExtra("frame") == null
+            } }.getOrNull()
+            if (other != null) { other.moveToFront(); finish(); return }
+        }
         // Cfg / Opt are process-wide; this loads the saved ones before the first frame. The look itself is this tool's own (ExtraToolLook or a ToolLook).
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
@@ -175,7 +185,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("WeatherLauncher") -> "weather"
             n.endsWith("PaintLauncher") -> "paint"
             n.endsWith("CalculatorLauncher") -> "calculator"
-            n.endsWith("MessagesLauncher") -> "messages"
+            n.endsWith("MessagesLauncher") || n.endsWith("MsgComposeActivity") || n.endsWith("MsgBubbleActivity") -> "messages"
             n.endsWith("ScreenRecLauncher") -> "screenrec"
             n.endsWith("NotifHistLauncher") -> "notifhist"
             n.endsWith("ExtraStoreLauncher") -> "extrastore"
