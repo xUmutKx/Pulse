@@ -14,6 +14,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
@@ -212,6 +216,57 @@ class WinPhoneLauncherLook(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(letter, color = fg.copy(alpha = if (has) 1f else .3f), fontSize = 12.sp)
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+/**
+ * The Windows Phone start screen: tiles of different sizes laid out by themselves, four units across. The apps are taken in blocks of two rows that cycle
+ * through a wide tile, two medium tiles, a medium one with four small ones, and eight small ones, so there are no holes; the last block is small tiles.
+ */
+@Composable
+fun WinPhoneTiles(state: LauncherState, apps: List<LaunchApp>, edge: Dp, modifier: Modifier = Modifier) {
+    class Placed(val app: LaunchApp, val x: Int, val y: Int, val w: Int, val h: Int)
+    val placed = remember(apps) {
+        val out = ArrayList<Placed>()
+        var i = 0; var row = 0; var n = 0
+        val kinds = listOf("B", "C", "A", "B", "D")
+        while (i < apps.size) {
+            val left = apps.size - i
+            val kind = kinds[n % kinds.size].let { k -> when { k == "A" && left < 1 -> "D"; k == "B" && left < 2 -> "D"; k == "C" && left < 5 -> "D"; k == "D" -> "D"; else -> k } }
+            fun add(x: Int, y: Int, w: Int, h: Int) { if (i < apps.size) out += Placed(apps[i++], x, row + y, w, h) }
+            when (kind) {
+                "A" -> add(0, 0, 4, 2)
+                "B" -> { add(0, 0, 2, 2); add(2, 0, 2, 2) }
+                "C" -> { add(0, 0, 2, 2); add(2, 0, 1, 1); add(3, 0, 1, 1); add(2, 1, 1, 1); add(3, 1, 1, 1) }
+                else -> for (y in 0..1) for (x in 0..3) add(x, y, 1, 1)
+            }
+            row += 2; n++
+        }
+        out
+    }
+    val rows = (placed.maxOfOrNull { it.y + it.h } ?: 0)
+    androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp)) {
+        val gap = 4.dp
+        val unit = (maxWidth - gap * 3) / 4
+        Box(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+            Box(Modifier.fillMaxWidth().height(unit * rows + gap * (rows - 1).coerceAtLeast(0))) {
+                placed.forEach { t ->
+                    val w = unit * t.w + gap * (t.w - 1); val h = unit * t.h + gap * (t.h - 1)
+                    Box(Modifier.offset((unit + gap) * t.x, (unit + gap) * t.y).size(w, h).background(wpTile(t.app)).appTap(state, t.app) { state.open(t.app) }) {
+                        if (t.w == 1) Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { LaunchAppPicture(t.app, unit * .62f, Color.Transparent, Color.White) }
+                        else if (t.w == 4) Row(Modifier.fillMaxSize().padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            LaunchAppPicture(t.app, h * .5f, Color.Transparent, Color.White)
+                            Spacer(Modifier.width(16.dp))
+                            Text(t.app.label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        } else Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                            LaunchAppPicture(t.app, w * .4f, Color.Transparent, Color.White)
+                            Text(t.app.label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }
                 }

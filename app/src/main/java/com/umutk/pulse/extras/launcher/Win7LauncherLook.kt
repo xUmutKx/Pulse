@@ -119,7 +119,92 @@ class Win7LauncherLook : LauncherLook {
 
     @Composable
     override fun StartMenu(state: LauncherState, onClose: () -> Unit, modifier: Modifier) {
-        LauncherWindow(W7_WINDOW, state, onClose, taskbarHeight, modifier)
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val edge = LocalLauncherEdge.current
+        val none = remember { MutableInteractionSource() }
+        var query by remember { mutableStateOf("") }
+        var all by remember { mutableStateOf(false) }
+        var power by remember { mutableStateOf(false) }
+        val desk = remember { desktopItems() }
+        fun go(pkg: String) { desk.firstOrNull { it.pkg == pkg }?.let { state.open(it); onClose() } }
+        val frame = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp)
+        // a tap on the desktop around the menu closes it; the menu swallows its own taps
+        Box(modifier.clickable(interactionSource = none, indication = null, onClick = onClose)) {
+            Row(
+                Modifier.align(Alignment.BottomStart).padding(start = edge + 4.dp, bottom = taskbarHeight).width(390.dp).height(470.dp)
+                    .clip(frame).background(W7_FRAME).border(1.dp, W7_FRAME_EDGE, frame).padding(5.dp)
+                    .clickable(interactionSource = none, indication = null) { power = false },
+            ) {
+                // left pane: the programs, All programs as a folder tree, the search at the foot
+                Column(Modifier.weight(1.25f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(Color.White)) {
+                    val pinned = remember(state.dock, state.apps) { (state.dock + state.apps).distinctBy { it.pkg }.take(9) }
+                    val found = remember(query, state.apps) { state.apps.filter { it.label.contains(query.trim(), ignoreCase = true) } }
+                    LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 4.dp)) {
+                        when {
+                            query.isNotBlank() -> items(found, key = { it.pkg + it.label }) { W7Row(it, state, onClose) }
+                            all -> groupedApps(state.apps).forEach { (g, apps) ->
+                                item { W7Folder(tr(g.en, g.tr)) }
+                                items(apps, key = { it.pkg + it.label }) { Box(Modifier.padding(start = 14.dp)) { W7Row(it, state, onClose) } }
+                            }
+                            else -> items(pinned, key = { it.pkg + it.label }) { W7Row(it, state, onClose) }
+                        }
+                    }
+                    Box(Modifier.fillMaxWidth().height(1.dp).background(W7_SEP))
+                    Row(Modifier.fillMaxWidth().height(34.dp).clickable { all = !all; query = "" }.padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(if (all) "◄  " + tr("Back", "Geri") else "►  " + tr("All programs", "Tüm programlar"), color = Color.Black, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                    }
+                    W7Search(query) { query = it; if (it.isNotEmpty()) all = false }
+                }
+                Spacer(Modifier.width(5.dp))
+                // right pane: the places of the computer and the way out
+                Column(Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(4.dp)).background(W7_RIGHT).padding(vertical = 8.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(42.dp).clip(RoundedCornerShape(5.dp)).background(Color(0xFFDDE9F6)).border(1.dp, Color.White, RoundedCornerShape(5.dp)), contentAlignment = Alignment.Center) {
+                            com.umutk.pulse.PIcon("person", Color(0xFF3A6592), 28.dp)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Text("Pulse", color = Color.White, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.height(4.dp))
+                    W7Place("folder", tr("Documents", "Belgeler")) { go("pulse:files") }
+                    W7Place("image", tr("Pictures", "Resimler")) { go("pulse:files") }
+                    W7Place("music", tr("Music", "Müzik")) { go("pulse:x:music") }
+                    W7Place("gridView", tr("Games", "Oyunlar")) { go("pulse:games") }
+                    Box(Modifier.padding(vertical = 4.dp).fillMaxWidth().height(1.dp).background(Color(0x44FFFFFF)))
+                    W7Place("phone", tr("Computer", "Bilgisayar")) { go("pulse:pc") }
+                    W7Place("settings", tr("Control Panel", "Denetim Masası")) { go("pulse:settings") }
+                    W7Place("performance", tr("Devices and Printers", "Aygıtlar ve Yazıcılar")) { go("pulse:control") }
+                    W7Place("apps", tr("Default Programs", "Varsayılan Programlar")) { go("pulse:apps") }
+                    W7Place("processes", tr("Task Manager", "Görev Yöneticisi")) { go("pulse:taskmgr") }
+                    Spacer(Modifier.weight(1f))
+                    // the shut-down button sits at the bottom right of the right pane, with its arrow for the other ways out
+                    Box(Modifier.fillMaxWidth().padding(end = 8.dp), contentAlignment = Alignment.CenterEnd) {
+                        val shut = RoundedCornerShape(4.dp)
+                        Row(Modifier.height(26.dp).clip(shut).background(W7_SHUT).border(1.dp, W7_SHUT_EDGE, shut), verticalAlignment = Alignment.CenterVertically) {
+                            Text(tr("Log off", "Oturumu kapat"), color = Color(0xFF1B2B3F), fontSize = 12.sp, modifier = Modifier.clickable { onClose(); logOff(ctx) }.padding(horizontal = 10.dp).padding(vertical = 4.dp))
+                            Box(Modifier.width(1.dp).fillMaxHeight().background(W7_SHUT_EDGE))
+                            Box(Modifier.width(22.dp).fillMaxHeight().clickable { power = !power }, contentAlignment = Alignment.Center) { Text("▸", color = Color(0xFF1B2B3F), fontSize = 12.sp) }
+                        }
+                        if (power) Column(Modifier.align(Alignment.BottomEnd).padding(bottom = 30.dp).width(130.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF1F5FA)).border(1.dp, W7_SHUT_EDGE, RoundedCornerShape(4.dp))) {
+                            listOf(tr("Lock", "Kilitle") to { globalAction(ctx, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN); onClose() },
+                                tr("Log off", "Oturumu kapat") to { onClose(); logOff(ctx) }).forEach { (t, a) ->
+                                Text(t, color = Color.Black, fontSize = 12.sp, modifier = Modifier.fillMaxWidth().clickable(onClick = a).padding(horizontal = 10.dp, vertical = 8.dp))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** One place of the right pane: the classic Windows 7 icon and a white label. */
+    @Composable
+    private fun W7Place(icon: String, text: String, onClick: () -> Unit) {
+        Row(Modifier.fillMaxWidth().height(32.dp).clickable(onClick = onClick).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            com.umutk.pulse.PIcon(icon, Color.White, 22.dp)
+            Spacer(Modifier.width(8.dp))
+            Text(text, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
     }
 
     /** Program row: 28 dp icon, 12 sp black label, 36 dp tall, as in the Windows 7 programs list. */
