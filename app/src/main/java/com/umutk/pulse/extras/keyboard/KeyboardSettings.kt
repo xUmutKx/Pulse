@@ -180,6 +180,8 @@ fun KeyboardSettings(back: () -> Unit) {
             Title(tr("Typing", "Yazım"))
             Switch(tr("Suggestions", "Öneriler"), tr("Three words above the keys", "Tuşların üstünde üç kelime"), KeyboardPrefs.suggestions) { KeyboardPrefs.suggestions = it; save() }
             Switch(tr("Autocorrect", "Otomatik düzeltme"), tr("Words are corrected to the middle suggestion as you type", "Yazdıkça kelime ortadaki öneriye düzeltilir"), KeyboardPrefs.autocorrect) { KeyboardPrefs.autocorrect = it; save() }
+            Text("${tr("Correct on its own from", "Kendiliğinden düzelt, benzerlik")}: ${KeyboardPrefs.autoRatio}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            PSlider((KeyboardPrefs.autoRatio - 70) / 30f, { KeyboardPrefs.autoRatio = 70 + (it * 30).roundToInt() }, 0f..1f, onDone = { save() })
             Switch(tr("Undo autocorrect on backspace", "Geri silmede düzeltmeyi geri al"), tr("Backspace after a correction brings back what you typed", "Düzeltmeden sonra geri silmek yazdığınızı geri getirir"), KeyboardPrefs.undoOnBackspace) { KeyboardPrefs.undoOnBackspace = it; save() }
             Switch(tr("Quick prediction insert", "Hızlı tahmin ekleme"), tr("Space puts in the middle prediction, even before the next word is started", "Boşluk, yeni kelime başlamadan da ortadaki tahmini ekler"), KeyboardPrefs.quickPrediction) { KeyboardPrefs.quickPrediction = it; save() }
             Switch(tr("Quick period", "Hızlı nokta"), tr("Double tap on space puts in a period", "Boşluğa çift dokunuş nokta koyar"), KeyboardPrefs.quickPeriod) { KeyboardPrefs.quickPeriod = it; save() }
