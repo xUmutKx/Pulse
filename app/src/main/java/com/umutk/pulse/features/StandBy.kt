@@ -142,6 +142,9 @@ object StandByPrefs {
     fun seconds(c: Context) = p(c).getBoolean("seconds", false)
     fun setSeconds(c: Context, v: Boolean) = p(c).edit().putBoolean("seconds", v).apply()
     /** The picture creeps a few pixels every minute, so no pixel shows the same thing for hours. */
+    /** The curtain that opens when the cover starts and closes when it ends; off by default. */
+    fun curtain(c: Context) = p(c).getBoolean("curtain", false)
+    fun setCurtain(c: Context, v: Boolean) = p(c).edit().putBoolean("curtain", v).apply()
     fun drift(c: Context) = p(c).getBoolean("drift2", false)
     fun setDrift(c: Context, v: Boolean) = p(c).edit().putBoolean("drift2", v).apply()
     /** Between 22:00 and 06:00 everything goes dim red. */
@@ -248,10 +251,11 @@ private fun StandByUi(ctx: Context, onClose: () -> Unit) {
     val dx = if (drift) ((minute % 5) - 2) else 0
     val dy = if (drift) ((minute % 3) - 1) else 0
     // the curtain: black closes in from the top and the bottom to the middle, then the face fades in; closing runs it backwards
-    val reveal = remember { androidx.compose.animation.core.Animatable(0f) }
+    val curtainOn = remember { StandByPrefs.curtain(ctx) }
+    val reveal = remember { androidx.compose.animation.core.Animatable(if (curtainOn) 0f else 1f) }
     val sc = androidx.compose.runtime.rememberCoroutineScope()
-    LaunchedEffect(Unit) { reveal.animateTo(1f, androidx.compose.animation.core.tween(560, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
-    val closeIt: () -> Unit = { sc.launch { reveal.animateTo(0f, androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing)); onClose() } }
+    LaunchedEffect(Unit) { if (curtainOn) reveal.animateTo(1f, androidx.compose.animation.core.tween(560, easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+    val closeIt: () -> Unit = { sc.launch { if (curtainOn) reveal.animateTo(0f, androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.FastOutSlowInEasing)); onClose() } }
     val faceAlpha = ((reveal.value - .55f) / .45f).coerceIn(0f, 1f)
     Box(
         Modifier.fillMaxSize()
@@ -522,6 +526,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     var h24 by remember { mutableStateOf(StandByPrefs.h24(ctx)) }
     var sec by remember { mutableStateOf(StandByPrefs.seconds(ctx)) }
     var drift by remember { mutableStateOf(StandByPrefs.drift(ctx)) }
+    var curtain by remember { mutableStateOf(StandByPrefs.curtain(ctx)) }
     var night by remember { mutableStateOf(StandByPrefs.night(ctx)) }
     var auto by remember { mutableStateOf(StandByPrefs.autoCharge(ctx)) }
     var idle by remember { mutableStateOf(StandByPrefs.idleSec(ctx)) }
@@ -652,6 +657,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
             sw(tr("Show seconds", "Saniyeleri göster"), sec) { sec = it; StandByPrefs.setSeconds(ctx, it); rev++ }
             Text("${tr("Size", "Boyut")}: ${StandByPrefs.size(ctx)}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             com.umutk.pulse.PSlider((StandByPrefs.size(ctx) - 40) / 100f, { StandByPrefs.setSize(ctx, 40 + (it * 100).toInt()); rev++ }, 0f..1f, onDone = {})
+            sw(tr("Curtain animation when it opens and closes", "Açılırken ve kapanırken perde animasyonu"), curtain) { curtain = it; StandByPrefs.setCurtain(ctx, it) }
             sw(tr("Move a little to protect the screen", "Ekranı korumak için hafif kay"), drift) { drift = it; StandByPrefs.setDrift(ctx, it) }
             sw(tr("Night mode: dim red from 22:00 to 06:00", "Gece modu: 22:00-06:00 arası loş kırmızı"), night) { night = it; StandByPrefs.setNight(ctx, it) }
             Text(tr("Triggers", "Tetikleyiciler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))

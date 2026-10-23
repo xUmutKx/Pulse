@@ -14,7 +14,8 @@ import com.umutk.pulse.tr
 class ScreenRecTile : TileService() {
     override fun onStartListening() = paint()
 
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         if (ScreenRecService.running) {
             ScreenRecService.stop(this)
             qsTile?.apply { state = Tile.STATE_INACTIVE; subtitle = tr("Off", "Kapalı"); updateTile() }
