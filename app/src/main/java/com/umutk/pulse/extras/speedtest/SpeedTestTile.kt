@@ -22,6 +22,7 @@ import kotlinx.coroutines.launch
  * The speed test in the quick panel: a tap starts it, the tile lights up and its ring turns while it measures; when the panel is open wide the result sits under the name
  * (download, upload, ping). Another tap while it runs stops it.
  */
+@androidx.annotation.RequiresApi(24)
 class SpeedTestTile : TileService() {
     private var scope: CoroutineScope? = null
     private var spin: Job? = null

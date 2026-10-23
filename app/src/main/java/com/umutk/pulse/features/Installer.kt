@@ -331,9 +331,9 @@ object Installer {
         val icon = try { app.loadIcon(pm).toBitmap(96, 96) } catch (e: Exception) { null }
         return Picked(
             type = type, parts = listOf(base) + files.filter { it != base }, label = app.loadLabel(pm).toString(), pkg = info.packageName,
-            version = info.versionName.orEmpty(), code = info.longVersionCode, minSdk = app.minSdkVersion, targetSdk = app.targetSdkVersion,
-            sigs = digests(info.signingInfo?.apkContentsSigners), installedCode = installed?.longVersionCode,
-            installedSigs = digests(installed?.signingInfo?.apkContentsSigners), icon = icon, src = if (uri.scheme == "file") uri.path else null,
+            version = info.versionName.orEmpty(), code = com.umutk.pulse.Compat.longVersion(info), minSdk = app.minSdkVersion, targetSdk = app.targetSdkVersion,
+            sigs = digests(com.umutk.pulse.Compat.signers(info)), installedCode = installed?.let { com.umutk.pulse.Compat.longVersion(it) },
+            installedSigs = digests(installed?.let { com.umutk.pulse.Compat.signers(it) }), icon = icon, src = if (uri.scheme == "file") uri.path else null,
         )
     }
 
@@ -374,7 +374,7 @@ object Installer {
         s.orEmpty().map { sig -> MessageDigest.getInstance("SHA-256").digest(sig.toByteArray()).joinToString(":") { "%02X".format(it) } }.sorted()
 
     fun installedCode(c: Context, pkg: String): Long? =
-        try { c.packageManager.getPackageInfo(pkg, 0).longVersionCode } catch (e: PackageManager.NameNotFoundException) { null }
+        try { com.umutk.pulse.Compat.longVersion(c.packageManager.getPackageInfo(pkg, 0)) } catch (e: PackageManager.NameNotFoundException) { null }
 
     /** pm with every split in one call: the first path is the base. */
     fun silentCmd(p: Picked, down: Boolean, user: Int, dex: Boolean = false) =

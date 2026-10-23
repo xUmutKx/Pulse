@@ -87,7 +87,7 @@ class CoverService : Service() {
         if (Build.VERSION.SDK_INT >= 34) startForeground(ID, n, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE) else startForeground(ID, n)
         // the accessibility service, when it is on, draws the cover above everything (bars, keyboard, other overlays); otherwise the overlay permission is needed
         val acc = CoverAccessibilityService.instance
-        if (acc == null && !Settings.canDrawOverlays(this)) { stopSelf(); return }
+        if (acc == null && !com.umutk.pulse.Compat.canOverlay(this)) { stopSelf(); return }
 
         val v = object : FrameLayout(this) {
             override fun dispatchTouchEvent(ev: MotionEvent): Boolean { gestures.onTouchEvent(ev); return super.dispatchTouchEvent(ev) }
@@ -138,7 +138,7 @@ class CoverService : Service() {
         if (hole == null) wm?.addView(v, params(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.MATCH_PARENT, flags, PixelFormat.OPAQUE))
         else {
             // an open window: four black bands around it, so touches inside the hole reach the apps below; the clock floats in a layer of its own
-            val b = wm!!.currentWindowMetrics.bounds
+            val b = if (android.os.Build.VERSION.SDK_INT >= 30) wm!!.currentWindowMetrics.bounds else resources.displayMetrics.let { android.graphics.Rect(0, 0, it.widthPixels, it.heightPixels) }
             val sw = b.width(); val sh = b.height()
             val l = hole[0] * sw / 100; val t = hole[1] * sh / 100; val r = hole[2] * sw / 100; val bt = hole[3] * sh / 100
             v.removeView(column)
@@ -175,7 +175,7 @@ class CoverService : Service() {
 
     /** Closed from the cover itself (double tap): the quick settings tile re-reads the state instead of staying lit. */
     private fun refreshTile() {
-        runCatching { android.service.quicksettings.TileService.requestListeningState(this, ComponentName(this, CoverTile::class.java)) }
+        if (android.os.Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(this, ComponentName(this, CoverTile::class.java)) }
     }
 
     private fun statusBarHeight(): Int {
@@ -270,7 +270,7 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
         instance = this
         lastTouch = android.os.SystemClock.uptimeMillis(); tick.removeCallbacks(idleCheck); tick.postDelayed(idleCheck, 3000)
         runCatching {
-            registerReceiver(power, android.content.IntentFilter().apply { addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED); addAction(Intent.ACTION_SCREEN_ON); addAction("com.umutk.pulse.action.GLOBAL") }, Context.RECEIVER_NOT_EXPORTED)
+            androidx.core.content.ContextCompat.registerReceiver(this, power, android.content.IntentFilter().apply { addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED); addAction(Intent.ACTION_SCREEN_ON); addAction("com.umutk.pulse.action.GLOBAL") }, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         }
     }
     override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) { lastTouch = android.os.SystemClock.uptimeMillis() }

@@ -64,7 +64,7 @@ suspend fun scanLargeFiles(root: File, minBytes: Long): List<LargeFile> {
         // listFiles returns null for unreadable dirs; symlinks are skipped to avoid loops
         val children = dir.listFiles() ?: continue
         for (child in children) {
-            if (Files.isSymbolicLink(child.toPath())) continue
+            if (com.umutk.pulse.Compat.isLink(child)) continue
             if (child.isDirectory) {
                 if (!isSkippedDir(child)) stack.addLast(child)
             } else if (child.isFile && child.length() >= minBytes) {
@@ -102,7 +102,7 @@ fun LargeFilesScreen(root: File, onBack: () -> Unit) {
         selected = emptySet()
         deleteFailed = 0
         subfolders = withContext(Dispatchers.IO) {
-            folder.listFiles()?.filter { it.isDirectory && !Files.isSymbolicLink(it.toPath()) && !isSkippedDir(it) }
+            folder.listFiles()?.filter { it.isDirectory && !com.umutk.pulse.Compat.isLink(it) && !isSkippedDir(it) }
                 ?.sortedBy { it.name.lowercase() } ?: emptyList()
         }
         results = withContext(Dispatchers.IO) { scanLargeFiles(folder, minBytes) }

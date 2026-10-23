@@ -111,7 +111,7 @@ private fun fmt(ms: Int): String { val s = ms / 1000; return "%d:%02d".format(s 
 /** Cover colour: 4-means on a 24x24 copy, the biggest reasonably saturated, not too dark or bright cluster wins. */
 internal fun coverColor(bm: ImageBitmap, fallback: Color): Color = runCatching {
     var src = bm.asAndroidBitmap()
-    if (src.config == Bitmap.Config.HARDWARE) src = src.copy(Bitmap.Config.ARGB_8888, false)
+    if (android.os.Build.VERSION.SDK_INT >= 26 && src.config == Bitmap.Config.HARDWARE) src = src.copy(Bitmap.Config.ARGB_8888, false)
     val px = IntArray(24 * 24).also { Bitmap.createScaledBitmap(src, 24, 24, true).getPixels(it, 0, 24, 0, 0, 24, 24) }
     val k = 4
     val cen = Array(k) { px[it * px.size / k].let { c -> floatArrayOf(android.graphics.Color.red(c).toFloat(), android.graphics.Color.green(c).toFloat(), android.graphics.Color.blue(c).toFloat()) } }

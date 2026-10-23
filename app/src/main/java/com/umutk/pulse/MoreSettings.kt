@@ -210,7 +210,7 @@ private fun DataBackupCard() {
 fun MonitorSettings() {
     val ctx = LocalContext.current
     var tick by remember { mutableIntStateOf(0) }
-    val canOverlay = remember(tick) { Settings.canDrawOverlays(ctx) }
+    val canOverlay = remember(tick) { com.umutk.pulse.Compat.canOverlay(ctx) }
     fun apply() { Opt.save(ctx); MonitorService.sync(ctx) }
     PCard {
         SwitchRow("Floating monitor", "Live numbers over other apps", Opt.ovOn) { Opt.ovOn = it; apply() }

@@ -73,7 +73,7 @@ fun CalTheme(content: @Composable () -> Unit) {
     }
     val dark = if (CalPrefs.amoled) true else when (CalPrefs.dark) { "light" -> false; "dark" -> true; else -> isSystemInDarkTheme() }
     val acc = Color(CalPrefs.accent)
-    var cs = if (CalPrefs.dynamic) (if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx))
+    var cs = if (CalPrefs.dynamic && android.os.Build.VERSION.SDK_INT >= 31) (if (dark) dynamicDarkColorScheme(ctx) else dynamicLightColorScheme(ctx))
     else {
         val pc = if (dark) lerp(acc, Color.Black, .55f) else lerp(acc, Color.White, .8f)
         (if (dark) darkColorScheme() else lightColorScheme()).copy(primary = if (dark) lerp(acc, Color.White, .35f) else acc, onPrimary = if (dark) Color.Black else Color.White,

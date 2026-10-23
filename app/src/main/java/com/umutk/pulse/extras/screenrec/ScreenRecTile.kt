@@ -11,6 +11,7 @@ import com.umutk.pulse.tr
  * Quick Settings tile for both: a tap takes a screenshot (or stops a running recording), a long press opens [ScreenRecActivity],
  * which asks for consent and starts a video recording.
  */
+@androidx.annotation.RequiresApi(24)
 class ScreenRecTile : TileService() {
     override fun onStartListening() = paint()
 
