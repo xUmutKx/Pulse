@@ -305,11 +305,12 @@ fun LibraryScreen(
                 SongList(ix, current, style, onPlay, onPlayTracks)
             }
             Lib.Favs -> {
-                // the songs marked as favourite and the ones that were given stars (best rated first)
-                val fav = remember { com.umutk.pulse.extras.music.stats.MusicStats.favourites(ctx) }
-                val stars = remember { com.umutk.pulse.extras.music.stats.MusicStats.ratings(ctx) }
-                val items = remember(tracks) {
-                    tracks.withIndex().filter { it.value.path in fav || (stars[it.value.path] ?: 0) > 0 }.sortedByDescending { stars[it.value.path] ?: 0 }
+                // the songs marked as favourite and the ones that were given stars: most stars first, then the favourites without stars by name
+                val fav = com.umutk.pulse.extras.music.stats.MusicStats.favourites(ctx)
+                val stars = com.umutk.pulse.extras.music.stats.MusicStats.ratings(ctx)
+                val items = remember(tracks, fav, stars) {
+                    tracks.withIndex().filter { it.value.path in fav || (stars[it.value.path] ?: 0) > 0 }
+                        .sortedWith(compareByDescending<IndexedValue<Track>> { stars[it.value.path] ?: 0 }.thenBy { it.value.displayName().lowercase() })
                 }
                 SongList(items, current, style, onPlay, onPlayTracks)
             }

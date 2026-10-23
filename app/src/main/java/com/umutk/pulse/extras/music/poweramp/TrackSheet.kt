@@ -77,7 +77,7 @@ private val SheetSub = Color(0xFF9E9E9E)
  */
 @Composable
 internal fun TrackSheet(
-    track: Track, art: ImageBitmap?, onDismiss: () -> Unit, onLyrics: (() -> Unit)?, onFindArt: (() -> Unit)?, onInfo: () -> Unit,
+    track: Track, art: ImageBitmap?, onDismiss: () -> Unit, onLyrics: (() -> Unit)?, onFindArt: (() -> Unit)?, onInfo: () -> Unit, onEditTags: (() -> Unit)? = null,
 ) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -115,6 +115,7 @@ internal fun TrackSheet(
                 SheetRow(Icons.Rounded.Delete, tr("Delete", "Sil")) { pane = "delete" }
                 SheetRow(Icons.Rounded.Add, tr("Add to Playlist", "Çalma listesine ekle")) { pane = "playlist" }
                 if (onFindArt != null) SheetRow(Icons.Rounded.Image, tr("Album Art", "Albüm kapağı")) { close(); onFindArt() }
+                if (onEditTags != null) SheetRow(androidx.compose.material.icons.Icons.Rounded.Edit, tr("Edit tags", "Etiketleri düzenle")) { close(); onEditTags() }
                 Line()
                 Row(Modifier.fillMaxWidth()) {
                     SheetCell(Icons.Rounded.Info, tr("Info / Tags", "Bilgi / Etiket"), Modifier.weight(1f)) { close(); onInfo() }
