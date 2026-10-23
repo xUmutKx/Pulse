@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,7 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +35,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
@@ -66,6 +68,8 @@ fun SpeedTestScreen(back: () -> Unit) {
     if (s.phase == "ping") top = 25f
     if (s.phase == "down" || s.phase == "up") top = maxOf(top, scaleFor(s.value))
     val shown = if (s.phase == "ping") 0f else s.value
+    // the numbers on the dial slide to the new scale instead of jumping
+    val topAnim by animateFloatAsState(top, tween(450), label = "scale")
     val frac by animateFloatAsState((shown / top).coerceIn(0f, 1f), spring(dampingRatio = Spring.DampingRatioLowBouncy, stiffness = Spring.StiffnessLow), label = "needle")
     val done = s.phase == "done"
     val res = if (done) s else null
@@ -78,7 +82,7 @@ fun SpeedTestScreen(back: () -> Unit) {
         Box(Modifier.fillMaxWidth().padding(top = 8.dp).aspectRatio(1.35f), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
                 val cx = size.width / 2f; val cy = size.height * .66f
-                val r = minOf(size.width * .46f, cy * .94f)
+                val r = minOf(size.width * .36f, cy * .8f)
                 val stroke = r * .13f
                 val start = 150f; val sweep = 240f
                 val arcTopLeft = Offset(cx - r, cy - r); val arcSize = Size(r * 2, r * 2)
@@ -90,17 +94,24 @@ fun SpeedTestScreen(back: () -> Unit) {
                     val r0 = r - stroke * 1.15f; val r1 = r - stroke * (if (i % 5 == 0) 1.9f else 1.5f)
                     drawLine(T.text.copy(alpha = .45f), Offset(cx + cos(a).toFloat() * r0, cy + sin(a).toFloat() * r0), Offset(cx + cos(a).toFloat() * r1, cy + sin(a).toFloat() * r1), 2.5f, StrokeCap.Round)
                 }
+                // the values on the dial, on the scale it has now
+                val tp = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+                    color = T.text.copy(alpha = .75f).toArgb(); textSize = r * .1f; textAlign = android.graphics.Paint.Align.CENTER
+                }
+                for (i in 0..10 step 2) {
+                    val a = Math.toRadians((start + sweep * i / 10f).toDouble())
+                    val rt = r + stroke * 1.05f
+                    val v = topAnim * i / 10f
+                    drawContext.canvas.nativeCanvas.drawText(if (v >= 100f || v == v.toInt().toFloat()) "%.0f".format(v) else "%.1f".format(v), cx + cos(a).toFloat() * rt, cy + sin(a).toFloat() * rt + tp.textSize / 3f, tp)
+                }
                 // the needle
                 val na = Math.toRadians((start + sweep * frac).toDouble())
                 drawLine(Color(0xFFFF7043), Offset(cx, cy), Offset(cx + cos(na).toFloat() * (r - stroke * 2.3f), cy + sin(na).toFloat() * (r - stroke * 2.3f)), r * .035f, StrokeCap.Round)
                 drawCircle(Color(0xFFFF7043), r * .07f, Offset(cx, cy)); drawCircle(T.bg, r * .03f, Offset(cx, cy))
             }
-            // the figure and what is being measured
-            Column(Modifier.align(Alignment.Center).padding(top = 90.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                val big = when (s.phase) { "ping" -> if (s.value > 0f) "%.0f".format(s.value) else "…"; "idle", "error" -> "—"; else -> fmtSpeed(s.value) }
-                Text(big, color = T.text, fontSize = 44.sp, fontWeight = FontWeight.Light)
-                Text(when (s.phase) { "ping" -> "ms"; "down", "up", "done" -> "Mbit/s"; else -> "" }, color = T.sub, fontSize = 14.sp)
-            }
+            // the live figure, small, under the hub; no unit written
+            val big = when (s.phase) { "ping" -> if (s.value > 0f) "%.0f".format(s.value) else "…"; "idle", "error" -> "—"; else -> fmtSpeed(s.value) }
+            Text(big, color = T.text, fontSize = 22.sp, fontWeight = FontWeight.Medium, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 26.dp))
             Text(
                 when (s.phase) { "ping" -> tr("Ping", "Ping"); "down" -> tr("Download", "İndirme"); "up" -> tr("Upload", "Yükleme"); "done" -> tr("Done", "Bitti"); "error" -> tr("No connection", "Bağlantı yok"); else -> "" },
                 color = T.sub, fontSize = 15.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp),
@@ -108,10 +119,14 @@ fun SpeedTestScreen(back: () -> Unit) {
         }
         // go / stop
         Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
-            Box(
-                Modifier.size(76.dp).clip(CircleShape).background(if (busy) Color(0xFFC42B1C) else T.accent).clickable { if (busy) SpeedTest.cancel() else SpeedTest.start(ctx) },
-                contentAlignment = Alignment.Center,
-            ) { PIcon(if (busy) "close" else "speed", Color.White, 34.dp) }
+            Row(
+                Modifier.clip(RoundedCornerShape(50)).background(if (busy) Color(0xFFC42B1C) else T.accent)
+                    .clickable { if (busy) SpeedTest.cancel() else SpeedTest.start(ctx) }.padding(horizontal = 28.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                PIcon(if (busy) "close" else "play", Color.White, 24.dp)
+                Text(if (busy) tr("Stop", "Durdur") else tr("Start", "Başlat"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+            }
         }
         // the numbers
         val p = res ?: last?.let { SpeedLive("done", it.down, it.pingMs, it.jitterMs, it.down, it.up, it.isp, it.place, it.ip) }
@@ -126,8 +141,8 @@ fun SpeedTestScreen(back: () -> Unit) {
             }
             Spacer(Modifier.height(10.dp))
             Row(Modifier.fillMaxWidth()) {
-                Stat(tr("Download", "İndirme"), if (dn > 0f) fmtSpeed(dn) else "—", "Mbit/s", Modifier.weight(1f), Color(0xFF29B6F6))
-                Stat(tr("Upload", "Yükleme"), if (upv > 0f) fmtSpeed(upv) else "—", "Mbit/s", Modifier.weight(1f), Color(0xFF66BB6A))
+                Stat(tr("Download", "İndirme"), if (dn > 0f) fmtSpeed(dn) else "—", "", Modifier.weight(1f), Color(0xFF29B6F6))
+                Stat(tr("Upload", "Yükleme"), if (upv > 0f) fmtSpeed(upv) else "—", "", Modifier.weight(1f), Color(0xFF66BB6A))
             }
         }
         val isp = s.isp.ifBlank { p?.isp.orEmpty() }; val place = s.place.ifBlank { p?.place.orEmpty() }; val ip = s.ip.ifBlank { p?.ip.orEmpty() }
@@ -147,6 +162,6 @@ private fun Stat(label: String, value: String, unit: String, modifier: Modifier,
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Text(label, color = T.sub, fontSize = 12.sp)
         Text(value, color = if (tint == Color.Unspecified) T.text else tint, fontSize = 26.sp, fontWeight = FontWeight.Light)
-        Text(unit, color = T.sub, fontSize = 11.sp)
+        if (unit.isNotEmpty()) Text(unit, color = T.sub, fontSize = 11.sp)
     }
 }
