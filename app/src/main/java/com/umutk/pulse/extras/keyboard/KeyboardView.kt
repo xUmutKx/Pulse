@@ -41,6 +41,8 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Undo
 import androidx.compose.material.icons.outlined.Redo
@@ -147,8 +149,8 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
                 val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                 if (!c.pressed) break
                 val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
-                if (dy > 56.dp.toPx() && abs(dx) < dy * .6f && c.uptimeMillis - t0 < 350 && st.trail.isEmpty() && st.preview?.alts.isNullOrEmpty()) {
-                    done = true; c.consume()
+                if (dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
+                    done = true; c.consume(); st.trail = emptyList()
                     scope.launch { pull.animateTo(rootH.coerceAtLeast(300f), tween(170)); act.hide(); delay(250); pull.snapTo(0f) }
                 }
             }
@@ -236,7 +238,8 @@ private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "numbers" -> kbIcon(th, "Pin")
     "theme" -> kbIcon(th, "Palette"); "settings" -> kbIcon(th, "Settings"); "lang", "languages" -> kbIcon(th, "Language"); "onehand" -> kbIcon(th, "TouchApp")
-    "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture"); else -> kbIcon(th, "Keyboard")
+    "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture")
+    "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; else -> kbIcon(th, "Keyboard")
 }
 
 private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
