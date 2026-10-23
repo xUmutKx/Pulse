@@ -474,7 +474,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 !long -> when (key.kind) {
                                     KeyKind.CHAR, KeyKind.COMMA, KeyKind.PERIOD -> {
                                         // a quick flick upwards types the first long-press character
-                                        if (KeyboardPrefs.flick && key.alts.isNotEmpty() && up > 24.dp.toPx() && big) a.type(key.alts[0]) else a.type(key.label)
+                                        st.touch = if (key.kind == KeyKind.CHAR) curRoot else null
+                                        if (KeyboardPrefs.flick && key.alts.isNotEmpty() && up > 24.dp.toPx() && big) { st.touch = null; a.type(key.alts[0]) } else a.type(key.label)
                                     }
                                     KeyKind.SPACE -> a.space()
                                     KeyKind.SHIFT -> a.shift()

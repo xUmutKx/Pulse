@@ -47,6 +47,8 @@ class KbState {
     var trail by mutableStateOf(listOf<Offset>())
     /** Where each letter key sits (window pixels), for following a swipe over the keys. */
     val letterRects = HashMap<String, Rect>()
+    /** Where the finger last touched a letter key (screen coordinates): the touch model reads it when the letter is typed. */
+    @Volatile var touch: Offset? = null
 }
 
 /** The pop-up over a pressed key: its big label, or the row of long-press characters with the chosen one. */
