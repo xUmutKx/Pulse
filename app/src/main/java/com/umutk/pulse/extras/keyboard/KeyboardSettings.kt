@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -291,26 +293,54 @@ private fun ColorEditor(label: String, argb: Int, onChange: (Int) -> Unit) {
     }
 }
 
-/** A list of items the user puts together: the chosen ones in their order (tap one to move or remove it) and the others to add. */
+/**
+ * The keys of a row as they sit on the keyboard: hold a key and drag it to another place, tap it to take it off; the keys that are left over wait below to be added.
+ */
 @Composable
 private fun ItemPicker(all: List<Pair<String, String>>, csv: String, onChange: (String) -> Unit) {
     val chosen = csv.split(',').filter { id -> all.any { it.first == id } }
-    var focus by remember { mutableStateOf<String?>(null) }
+    val cur by androidx.compose.runtime.rememberUpdatedState(chosen)
+    val push by androidx.compose.runtime.rememberUpdatedState(onChange)
+    var drag by remember { mutableStateOf<String?>(null) }
+    var off by remember { mutableFloatStateOf(0f) }
+    var picked by remember { mutableStateOf<String?>(null) }
     fun name(id: String) = all.firstOrNull { it.first == id }?.second ?: id
-    Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        chosen.forEach { id -> PChip(focus == id, name(id)) { focus = if (focus == id) null else id } }
-    }
-    val f = focus
-    if (f != null && f in chosen) {
-        val at = chosen.indexOf(f)
-        Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(38.dp).clickable { if (at > 0) onChange(chosen.toMutableList().also { it.add(at - 1, it.removeAt(at)) }.joinToString(",")) }, contentAlignment = Alignment.Center) { PIcon("back", if (at > 0) T.text else T.sub.copy(alpha = .4f), 20.dp) }
-            Box(Modifier.size(38.dp).clickable { if (at < chosen.lastIndex) onChange(chosen.toMutableList().also { it.add(at + 1, it.removeAt(at)) }.joinToString(",")) }, contentAlignment = Alignment.Center) { PIcon("back", if (at < chosen.lastIndex) T.text else T.sub.copy(alpha = .4f), 20.dp, Modifier.graphicsLayer { rotationZ = 180f }) }
-            Box(Modifier.size(38.dp).clickable { onChange((chosen - f).joinToString(",")); focus = null }, contentAlignment = Alignment.Center) { PIcon("delete", T.text, 20.dp) }
+    val tileW = 62.dp
+    val dens = androidx.compose.ui.platform.LocalDensity.current.density
+    Row(
+        Modifier.padding(top = 6.dp).horizontalScroll(rememberScrollState()).clip(RoundedCornerShape(10.dp)).background(T.text.copy(alpha = .06f)).padding(6.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        chosen.forEach { id ->
+            val dragging = drag == id
+            Box(
+                Modifier.width(tileW).height(46.dp).graphicsLayer { translationX = if (dragging) off else 0f; alpha = if (dragging) .75f else 1f; scaleX = if (dragging) 1.08f else 1f; scaleY = if (dragging) 1.08f else 1f }
+                    .clip(RoundedCornerShape(8.dp)).background(if (picked == id) T.text.copy(alpha = .28f) else T.text.copy(alpha = .14f))
+                    .clickable { picked = if (picked == id) null else id }
+                    .pointerInput(id) {
+                        androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress(
+                            onDragStart = { drag = id; off = 0f; picked = null },
+                            onDragEnd = { drag = null; off = 0f }, onDragCancel = { drag = null; off = 0f },
+                        ) { change, d ->
+                            change.consume(); off += d.x
+                            val w = tileW.toPx() + 4 * dens
+                            val l = cur; val i = l.indexOf(id)
+                            if (off > w * .6f && i < l.lastIndex) { push(l.toMutableList().also { it.add(i + 1, it.removeAt(i)) }.joinToString(",")); off -= w }
+                            else if (off < -w * .6f && i > 0) { push(l.toMutableList().also { it.add(i - 1, it.removeAt(i)) }.joinToString(",")); off += w }
+                        }
+                    },
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(name(id), color = T.text, fontSize = 12.sp, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                if (picked == id) Box(Modifier.align(Alignment.TopEnd).size(20.dp).clip(RoundedCornerShape(10.dp)).background(Color(0xFFC42B1C)).clickable { push((chosen - id).joinToString(",")); picked = null }, contentAlignment = Alignment.Center) {
+                    Text("×", color = Color.White, fontSize = 14.sp)
+                }
+            }
         }
+        if (chosen.isEmpty()) Text("—", color = T.sub, modifier = Modifier.padding(12.dp))
     }
     val rest = all.filter { it.first !in chosen }
     if (rest.isNotEmpty()) Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        rest.forEach { (id, n) -> PChip(false, "+ $n") { onChange((chosen + id).joinToString(",")) } }
+        rest.forEach { (id, n) -> PChip(false, "+ $n") { push((chosen + id).joinToString(",")) } }
     }
 }
