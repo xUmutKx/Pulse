@@ -214,8 +214,8 @@ internal fun Swatch(color: Int, app: Int, picked: Boolean, ring: Color, modifier
 private fun windowFor(c: Context, id: String): PTheme = when (id) {
     "amoled" -> amoledWindow()
     "win11" -> Themes.first { it.id == "win11" }.let { darkTwin(it) ?: it }
-    "material" -> {
-        fun k(res: Int) = Color(c.getColor(res))
+    "material" -> if (android.os.Build.VERSION.SDK_INT < 31) Themes.first { it.id == "material" } else {
+        fun k(res: Int) = Color(androidx.core.content.ContextCompat.getColor(c, res))
         val dark = (c.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         if (dark) PTheme("material", "Material You", true, k(android.R.color.system_neutral1_900), k(android.R.color.system_neutral1_800), k(android.R.color.system_neutral1_50),
             k(android.R.color.system_neutral2_200), k(android.R.color.system_accent1_200), k(android.R.color.system_neutral2_700), 28.dp, material = true)
