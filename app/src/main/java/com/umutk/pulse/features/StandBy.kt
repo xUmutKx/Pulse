@@ -541,10 +541,11 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     val palette = editing in setOf("crop", "flip", "solar")
     BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 10.dp)) {
         // the page as the cover draws it with the phone lying down and standing up
+        val mw = maxWidth
         androidx.compose.runtime.key(rev) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.Top) {
-                MiniScreen(maxWidth * .62f, true) { PageView(ctx, editing, ink, tick) }
-                MiniScreen(maxWidth * .34f, true, portrait = true) { PageView(ctx, editing, ink, tick) }
+                MiniScreen(mw * .62f, true) { PageView(ctx, editing, ink, tick) }
+                MiniScreen(mw * .34f, true, portrait = true) { PageView(ctx, editing, ink, tick) }
             }
         }
     }

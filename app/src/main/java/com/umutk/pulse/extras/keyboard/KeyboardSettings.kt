@@ -9,6 +9,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -318,7 +319,7 @@ private fun ItemPicker(all: List<Pair<String, String>>, csv: String, onChange: (
                     .clip(RoundedCornerShape(8.dp)).background(if (picked == id) T.text.copy(alpha = .28f) else T.text.copy(alpha = .14f))
                     .clickable { picked = if (picked == id) null else id }
                     .pointerInput(id) {
-                        androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress(
+                        detectDragGesturesAfterLongPress(
                             onDragStart = { drag = id; off = 0f; picked = null },
                             onDragEnd = { drag = null; off = 0f }, onDragCancel = { drag = null; off = 0f },
                         ) { change, d ->
