@@ -341,6 +341,8 @@ object KeyboardDictionary {
     fun learnTypo(c: Context, typed: String, word: String) {
         if (typed.length < 3 || typed == word || word.startsWith(typed)) return
         typos[typed] = word
+        // one letter wrong in a word of the same length: that letter pair is this person's slip
+        if (typed.length == word.length) { val d = typed.indices.filter { typed[it] != word[it] }; if (d.size == 1) confusion["" + typed[d[0]] + word[d[0]]] = (confusion["" + typed[d[0]] + word[d[0]]] ?: 0) + 1 }
         runCatching { File(c.filesDir, "kbd_typos.txt").writeText(typos.entries.take(4000).joinToString("\n") { "${it.key} ${it.value}" }) }
     }
 
@@ -447,8 +449,12 @@ object KeyboardDictionary {
         return if (base <= .15f) base else (.15f + .85f * (d / 1.6f) * (d / 1.6f)).coerceIn(.15f, 1f)
     }
 
+    // letters this person mistypes for others (typed, meant), learned from the suggestions tapped; "ds" is one they named (d for s, as in -din for -sin)
+    private val confusion = ConcurrentHashMap<String, Int>().also { it["ds"] = 3 }
+
     private fun sub(a: Char, b: Char): Float {
         if (a == b) return 0f
+        if (confusion["" + a + b] != null) return .2f
         val fa = foldc(a); val fb = foldc(b)
         return if (fa == fb) .15f else if (near(a, b) || near(fa, fb)) .5f else 1f
     }

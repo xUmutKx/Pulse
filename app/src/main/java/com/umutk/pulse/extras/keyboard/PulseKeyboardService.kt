@@ -43,6 +43,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var prevWord2: String? = null
     private val touchPts = ArrayList<androidx.compose.ui.geometry.Offset?>()
     private var emailField = false
+    // the last text copied: the right slot of the bar offers it for two pastes
+    private var quickClip: String? = null
+    private var quickLeft = 0
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
@@ -69,7 +72,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             scope.launch(Dispatchers.IO) { val l = ClipStore.addImage(this@PulseKeyboardService, uri); withContext(Dispatchers.Main) { st.clipItems = l } }
         } else {
             val t = item.coerceToText(this)?.toString()?.trim()
-            if (!t.isNullOrEmpty()) { st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            if (!t.isNullOrEmpty()) { if (t.length <= 400) { quickClip = t; quickLeft = 2; updateSuggestions() }; st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -378,6 +381,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slot(i: Int) {
         st.banAsk = -1
+        val qc = quickClip
+        if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\uD83D\uDCCB") == true) {
+            currentInputConnection?.commitText(qc, 1)
+            if (--quickLeft <= 0) quickClip = null
+            afterText(); return
+        }
         val c = currentInputConnection ?: return
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
@@ -652,6 +661,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.slots = slotWords.toList()
     }
 
+    /** With nothing being typed, the right slot of the bar holds the text copied last (two taps paste it, then it goes). */
+    private fun showClipSlot() {
+        val q = quickClip ?: return
+        if (word.isNotEmpty() || emailField || st.plain) return
+        val label = "\uD83D\uDCCB " + q.replace('\n', ' ').take(14) + if (q.length > 14) "…" else ""
+        slotWords = arrayOf(slotWords[0], slotWords[1], q)
+        st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, label)
+    }
+
     private fun updateSuggestions() {
         job?.cancel()
         if (emailField) { emailSuggestions(); return }
@@ -669,12 +687,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val tb = currentInputConnection?.getTextBeforeCursor(3, 0)?.toString().orEmpty()
             if (tb.isEmpty() || tb.trimEnd(' ').let { it.isEmpty() || it.last() in ".!?\n" }) {
                 val starts = if (KeyboardLayouts.dict(code) == "tr") listOf("Merhaba", "Ben", "Evet") else listOf("I", "The", "Hello")
-                slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; return
+                slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; showClipSlot(); return
             }
         }
         job = scope.launch {
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
-            if (word.toString() == typed) { target = res.third; slotWords = res.second; st.slots = res.first }
+            if (word.toString() == typed) { target = res.third; slotWords = res.second; st.slots = res.first; showClipSlot() }
         }
     }
 
@@ -699,7 +717,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
-        val fix = corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && it.cost <= limit && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
+        val fix = corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && kotlin.math.abs(it.word.length - lower.length) <= 1 && it.cost <= minOf(limit, 1.0f) && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
         val emoji = if (KeyboardPrefs.emojiPredictions) KeyboardDictionary.emoji(lower) else null
         val mid: String; val left: String; val right: String
