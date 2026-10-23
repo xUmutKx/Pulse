@@ -40,6 +40,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     private val word = StringBuilder()
     private var prevWord: String? = null
+    private var prevWord2: String? = null
+    private val touchPts = ArrayList<androidx.compose.ui.geometry.Offset?>()
     private var emailField = false
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
@@ -130,7 +132,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 EditorInfo.IME_ACTION_DONE -> "done"; EditorInfo.IME_ACTION_NEXT, EditorInfo.IME_ACTION_PREVIOUS -> "next"; else -> "newline"
             }
         }
-        word.clear(); lastCorrection = null; prevWord = null; lastWasSpace = false; punctTyped = false
+        word.clear(); touchPts.clear(); lastCorrection = null; prevWord = null; prevWord2 = null; lastWasSpace = false; punctTyped = false
         st.shift = 0
         updateCaps(); updateSuggestions()
     }
@@ -179,6 +181,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter()) c.commitText(" ", 1)
             punctTyped = false; lastWasSpace = false
             word.append(ch)
+            // the touch model: where this letter was touched, and the finger's drift from the key's centre is learned
+            val tp = st.touch; st.touch = null
+            touchPts.add(tp); if (touchPts.size > 48) touchPts.removeAt(0)
+            if (tp != null) st.letterRects[ch.lowercase()]?.let { r -> KeyboardDictionary.learnTouch(ch.lowercaseChar(), tp, r.center, r.width) }
             c.setComposingText(word, 1)
             lastCorrection = null
             if (st.shift == 1) st.shift = 0
@@ -204,8 +210,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (correct && KeyboardPrefs.autocorrect && !st.plain && t != null && !t.equals(typed, true)) out = t
         c.commitText(out, 1)
         lastCorrection = if (out != typed) Correction(typed, out, sep) else null
-        if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord, typed)
-        prevWord = out
+        if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
+        prevWord2 = prevWord; prevWord = out
         word.clear(); target = null
     }
 
@@ -253,6 +259,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         if (word.isNotEmpty()) {
             word.deleteCharAt(word.length - 1)
+            if (touchPts.isNotEmpty()) touchPts.removeAt(touchPts.size - 1)
             if (word.isEmpty()) c.commitText("", 1) else c.setComposingText(word, 1)
             lastCorrection = null; target = null
             updateCaps(); updateSuggestions(); return
@@ -604,7 +611,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         job?.cancel()
         if (emailField) { emailSuggestions(); return }
         if (!KeyboardPrefs.suggestions || st.plain) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
-        val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val up = st.shift > 0
+        val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
+        // the touch model needs the touch of every letter and the key positions; a word that was not touched letter by letter is judged without it
+        val tc: KeyboardDictionary.TouchCtx? = if (typed.isNotEmpty() && touchPts.size >= typed.length && st.letterRects.isNotEmpty()) {
+            val centers = HashMap<Char, androidx.compose.ui.geometry.Offset>()
+            var w = 0f
+            st.letterRects.entries.toList().forEach { (k, r) -> if (k.length == 1) { centers[k[0]] = r.center; w = r.width } }
+            if (w > 0f) KeyboardDictionary.TouchCtx(touchPts.takeLast(typed.length), centers, w) else null
+        } else null
         // the start of the field or of a sentence: the words a sentence begins with, before anything has been typed
         if (typed.isEmpty()) {
             val tb = currentInputConnection?.getTextBeforeCursor(3, 0)?.toString().orEmpty()
@@ -614,13 +628,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         job = scope.launch {
-            val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up) }
+            val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) { target = res.third; slotWords = res.second; st.slots = res.first }
         }
     }
 
     /** The three slots of the bar (shown and as words), and the word the space key would correct [typed] to. */
-    private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean): Triple<List<String>, Array<String>, String?> {
+    private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null): Triple<List<String>, Array<String>, String?> {
         if (typed.isEmpty()) {
             val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else it }
             val w = arrayOf(n.getOrElse(0) { "" }, n.getOrElse(1) { "" }, n.getOrElse(2) { "" })
@@ -628,7 +642,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val lower = typed.lowercase(loc)
         val codes = dictCodes(code)
-        val comp = codes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word) }.take(5)
+        val comp = codes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.take(5)
         val maxCost = if (KeyboardLayouts.dict(code) == "tr") (if (lower.length >= 5) .8f else .65f) else if (lower.length >= 4) 1.3f else .7f
         val learned = KeyboardDictionary.typoFix(this, lower)
         val tr = codes.any { KeyboardDictionary.dictOf(it) == "tr" }
@@ -636,8 +650,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // a word that is the chosen share alike (90% by default) to a known word is mended on its own: 12 letters allow one slip, 20 letters two
         val ratioLimit = ((100 - KeyboardPrefs.autoRatio) / 100f * maxOf(lower.length, 4)).coerceAtMost(2.5f)
         val limit = maxOf(if (lower.length >= 8) maxCost + .5f else maxCost, ratioLimit)
-        val corr = if (lower.length >= 2) (codes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4) else emptyList()) +
-            (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word) }.distinctBy { it.word }.take(6) else emptyList()
+        val corr = if (lower.length >= 2) (codes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5, tc) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
+            (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
         val fix = corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && it.cost <= limit && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
