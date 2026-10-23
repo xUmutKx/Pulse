@@ -197,7 +197,7 @@ class VoicePlayer(private val c: Context) {
         return true
     }
 
-    fun setSpeed(s: Float) { runCatching { mp?.playbackParams = PlaybackParams().setSpeed(s) } }
+    fun setSpeed(s: Float) { if (android.os.Build.VERSION.SDK_INT >= 23) runCatching { mp?.playbackParams = PlaybackParams().setSpeed(s) } }
     fun setLoop(on: Boolean) { runCatching { mp?.isLooping = on } }
     fun toggle() { runCatching { mp?.let { if (it.isPlaying) it.pause() else it.start() } } }
     fun isPlaying(): Boolean = runCatching { mp?.isPlaying == true }.getOrDefault(false)

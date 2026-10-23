@@ -391,16 +391,17 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         }
     }
     // PiP: the window shape follows the video, and leaving the app while playing enters it by itself
-    @androidx.annotation.RequiresApi(26)
-    fun pipParams(): PictureInPictureParams {
-        val b = PictureInPictureParams.Builder().setAutoEnterEnabled(playing && !bg && prefs.autoPip)
+    fun pipParams(): PictureInPictureParams? {
+        if (android.os.Build.VERSION.SDK_INT < 26) return null
+        val b = PictureInPictureParams.Builder()
+        if (android.os.Build.VERSION.SDK_INT >= 31) b.setAutoEnterEnabled(playing && !bg && prefs.autoPip)
         if (vsize.width > 0 && vsize.height > 0) {
             val r = (vsize.width.toFloat() / vsize.height).coerceIn(0.42f, 2.39f)
             b.setAspectRatio(Rational((r * 1000).roundToInt(), 1000))
         }
         return b.build()
     }
-    LaunchedEffect(playing, vsize, bg, rev) { if (android.os.Build.VERSION.SDK_INT >= 26) runCatching { act?.setPictureInPictureParams(pipParams()) } }
+    LaunchedEffect(playing, vsize, bg, rev) { pipParams()?.let { pp -> runCatching { act?.setPictureInPictureParams(pp) } } }
 
     val audio = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
     val maxVol = remember { audio.getStreamMaxVolume(AudioManager.STREAM_MUSIC).coerceAtLeast(1) }
@@ -598,7 +599,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                         poke++
                     }) { androidx.compose.material3.Icon(Icons.Outlined.Flip, null, Modifier.size(22.dp), tint = if (abA >= 0) sk.accent else fg) }
                     SkinBtn(sk, { dlg = "sleep" }) { PIcon("timer", if (sleepAt > 0 || sleepEnd) sk.accent else fg, 24.dp) }
-                    SkinBtn(sk, { if (android.os.Build.VERSION.SDK_INT >= 26) runCatching { act?.enterPictureInPictureMode(pipParams()) } }) { androidx.compose.material3.Icon(Icons.Outlined.Tv, null, Modifier.size(22.dp), tint = fg) }
+                    SkinBtn(sk, { pipParams()?.let { pp -> runCatching { act?.enterPictureInPictureMode(pp) } } }) { androidx.compose.material3.Icon(Icons.Outlined.Tv, null, Modifier.size(22.dp), tint = fg) }
                 }
             }
         }
