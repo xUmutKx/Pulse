@@ -132,7 +132,7 @@ private suspend fun convert(ctx: android.content.Context, files: List<Uri>, name
                 when (kind) {
                     "docx" -> docxText(cacheCopy(ctx, first, name))
                     "xlsx" -> xlsxCsv(cacheCopy(ctx, first, name))
-                    else -> ctx.contentResolver.openInputStream(first)!!.use { it.readBytes() }.toString(Charsets.UTF_8).let { if (extOf(name) in setOf("html", "htm")) android.text.Html.fromHtml(it, android.text.Html.FROM_HTML_MODE_LEGACY).toString() else it }
+                    else -> ctx.contentResolver.openInputStream(first)!!.use { it.readBytes() }.toString(Charsets.UTF_8).let { if (extOf(name) in setOf("html", "htm")) androidx.core.text.HtmlCompat.fromHtml(it, androidx.core.text.HtmlCompat.FROM_HTML_MODE_LEGACY).toString() else it }
                 }
             }
             if (to == "pdf") withContext(Dispatchers.IO) { textToPdf(ctx, text, "$base.pdf") }

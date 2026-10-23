@@ -141,6 +141,24 @@ class BudsService : Service() {
                 val canNoise = !name.contains("Buds Live") && !name.contains("Buds+")
                 val mode = if (ext && canNoise && p.size > 12) u(12).takeIf { it in 0..3 } ?: -1 else -1
                 BudsLink.update { it.copy(connected = true, batteryL = bl, batteryR = br, batteryCase = if (cs in 0..100) cs else it.batteryCase, wornL = l == 1, wornR = r == 1, canNoise = canNoise, noise = if (mode >= 0) mode else it.noise) }
+                // the long status also carries the settings of the earbuds (layout of the GalaxyBudsClient notes, Buds Live and newer)
+                if (ext && !name.contains("Buds+") && p.size > 24) {
+                    val pro = name.contains("Buds2") || name.contains("Buds3") || name.contains("Buds Pro")
+                    val eqm = u(9)
+                    val bits = u(21)
+                    BudsLink.update {
+                        it.copy(
+                            revision = u(0), eq = eqm, lock = (u(10) and 0x80) == 0, touchL = (u(11) shr 4) and 0x0F, touchR = u(11) and 0x0F,
+                            seamless = u(19) == 0, ambientVolume = u(23), ancHigh = u(24) == 1,
+                            // 0 ANC and off, 1 ambient and off, 2 ANC and ambient (the bits of the touch-and-hold cycle)
+                            cycle = when { bits and 1 != 0 && bits and 4 != 0 && bits and 2 == 0 -> 0; bits and 1 != 0 && bits and 2 != 0 && bits and 4 == 0 -> 1; bits and 2 != 0 && bits and 4 != 0 -> 2; else -> it.cycle },
+                            voiceDetect = if (name.contains("Buds2 Pro") || name.contains("Buds Pro") || name.contains("Buds3")) u(26) == 1 else it.voiceDetect,
+                            oneBud = if (pro && p.size > 28) u(28) == 1 else it.oneBud,
+                            sidetone = if (pro && p.size > 33) u(33) == 1 else it.sidetone,
+                            spatial = if (name.contains("Buds2") && p.size > 35) u(35) == 1 else it.spatial,
+                        )
+                    }
+                }
                 // the earbuds expect the status to be answered, and then to hear who is talking
                 BudsLink.sender?.invoke(BudsProto.encode(m.id, p, response = true))
                 if (!gotStatus) {
