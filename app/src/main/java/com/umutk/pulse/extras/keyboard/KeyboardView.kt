@@ -400,7 +400,11 @@ private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.c
     ) {
         val on = level > 0
         Box(Modifier.fillMaxSize().keyLook(th, if (on) th.accent else if (down) lerp(th.special, th.text, .2f) else th.special, down, RoundedCornerShape(th.radius.dp)), contentAlignment = Alignment.Center) {
-            Text(d.label, color = if (on) th.onAccent else th.specialText, fontSize = 13.sp, maxLines = 1, fontWeight = if (level == 2) FontWeight.Bold else FontWeight.Normal)
+            val ink = if (on) th.onAccent else th.specialText
+            if (d.id == "win") androidx.compose.foundation.Canvas(Modifier.size(15.dp)) {
+                val g = size.width * .08f; val q = (size.width - g) / 2
+                for (i in 0..1) for (j in 0..1) drawRect(ink, androidx.compose.ui.geometry.Offset(i * (q + g), j * (q + g)), androidx.compose.ui.geometry.Size(q, q))
+            } else Text(d.label, color = ink, fontSize = 13.sp, maxLines = 1, fontWeight = if (level == 2) FontWeight.Bold else FontWeight.Normal)
         }
     }
 }
