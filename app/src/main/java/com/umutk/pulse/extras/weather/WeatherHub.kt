@@ -33,6 +33,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -186,26 +187,23 @@ fun WeatherHub(onBack: () -> Unit) {
             val today = f.days.firstOrNull()
             val rainSoon = f.hours.take(6).maxOfOrNull { it.rain } ?: 0
             item {
-                Column(Modifier.fillMaxWidth().padding(top = 8.dp).background(T.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 18.dp, horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(f.place, color = sub, fontSize = 14.sp, maxLines = 1)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        PIcon(WeatherApi.icon(f.code), fg, 64.dp)
-                        Text(t(f.temp), color = fg, fontSize = 64.sp, fontWeight = FontWeight.Light)
+                Box(Modifier.fillMaxWidth().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp))) {
+                WeatherScene(f.code, Modifier.matchParentSize())
+                Column(Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val wh = androidx.compose.ui.graphics.Color.White
+                    Text(f.place, color = wh.copy(alpha = .85f), fontSize = 15.sp, maxLines = 1)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                        WeatherGlyph(f.code, 76.dp)
+                        Text(t(f.temp), color = wh, fontSize = 68.sp, fontWeight = FontWeight.Light)
                     }
-                    Text(WeatherApi.condition(f.code), color = fg, fontSize = 18.sp)
-                    Text(tr("Feels like %s", "Hissedilen %s").format(t(f.feels)), color = sub, fontSize = 13.sp)
-                    if (today != null) {
-                        Text(tr("High %s · Low %s", "En yüksek %s · En düşük %s").format(t(today.max), t(today.min)), color = sub, fontSize = 13.sp)
+                    Text(WeatherApi.condition(f.code), color = wh, fontSize = 19.sp)
+                    Text(tr("Feels like %s", "Hissedilen %s").format(t(f.feels)), color = wh.copy(alpha = .8f), fontSize = 13.sp)
+                    Spacer(Modifier.height(14.dp))
+                    if (today != null) Row(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .22f)).padding(vertical = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        Hl(tr("High", "Yüksek"), t(today.max), wh); Hl(tr("Low", "Düşük"), t(today.min), wh); Hl(tr("Rain", "Yağış"), "${today.rain}%", wh)
                     }
-                    // a quick row under the hero: today's rain chance and the high / low, with icons so the card reads at a glance
-                    Spacer(Modifier.height(12.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                        if (today != null) {
-                            Row(verticalAlignment = Alignment.CenterVertically) { PIcon("cloud", sub, 18.dp); Spacer(Modifier.width(6.dp)); Text("${today.rain}%", color = fg, fontSize = 14.sp) }
-                            Row(verticalAlignment = Alignment.CenterVertically) { PIcon("history", sub, 18.dp); Spacer(Modifier.width(6.dp)); Text("${t(today.max)} / ${t(today.min)}", color = fg, fontSize = 14.sp) }
-                        }
-                    }
-                    Text(clock.format(Date(f.at)), color = sub, fontSize = 11.sp)
+                    Text(clock.format(Date(f.at)), color = androidx.compose.ui.graphics.Color.White.copy(alpha = .7f), fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
+                }
                 }
             }
             if (rainSoon >= 50) {
@@ -228,11 +226,11 @@ fun WeatherHub(onBack: () -> Unit) {
             }
             item { Text(tr("Next 24 hours", "Sonraki 24 saat"), color = sub, fontSize = 13.sp) }
             item {
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                LazyRow(Modifier.fillMaxWidth().background(T.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(f.hours) { h ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(WeatherFmt.clock(h.time), color = sub, fontSize = 12.sp)
-                            PIcon(WeatherApi.icon(h.code), fg, 24.dp)
+                            WeatherGlyph(h.code, 30.dp)
                             Text(t(h.temp), color = fg, fontSize = 15.sp)
                         }
                     }
@@ -252,23 +250,30 @@ fun WeatherHub(onBack: () -> Unit) {
                 }
             }
             item {
-                Column {
-                    Detail(tr("Wind", "Rüzgar"), WeatherFmt.wind(f.wind, imp) + " " + WeatherFmt.compass(f.windDir), fg, sub)
-                    Detail(tr("Gusts", "Ani rüzgar"), WeatherFmt.wind(f.gusts, imp), fg, sub)
-                    Detail(tr("Humidity", "Nem"), "${f.humidity}%", fg, sub)
-                    Detail(tr("Pressure", "Basınç"), "%.0f hPa".format(f.pressure), fg, sub)
-                    Detail(tr("Cloud cover", "Bulutluluk"), "${f.cloud}%", fg, sub)
-                    Detail(tr("Precipitation now", "Şu an yağış"), "%.1f mm".format(f.precip), fg, sub)
-                    if (today != null) Detail(tr("Sunshine today", "Bugün güneşlenme"), "%.1f h".format(today.sun), fg, sub)
-                    if (today != null) {
-                        Detail(tr("UV index", "UV indeksi"), "%.0f · %s".format(today.uv, WeatherFmt.uv(today.uv)), fg, sub)
-                        Detail(tr("Chance of rain today", "Bugün yağış olasılığı"), "${today.rain}%", fg, sub)
-                        Detail(tr("Sunrise", "Gün doğumu"), WeatherFmt.clock(today.sunrise), fg, sub)
-                        Detail(tr("Sunset", "Gün batımı"), WeatherFmt.clock(today.sunset), fg, sub)
-                        Detail(tr("Day length", "Gündüz süresi"), WeatherFmt.dayLength(today.sunrise, today.sunset), fg, sub)
+                val d = mutableListOf(
+                    tr("Wind", "Rüzgar") to WeatherFmt.wind(f.wind, imp) + " " + WeatherFmt.compass(f.windDir),
+                    tr("Gusts", "Ani rüzgar") to WeatherFmt.wind(f.gusts, imp),
+                    tr("Humidity", "Nem") to "${f.humidity}%",
+                    tr("Pressure", "Basınç") to "%.0f hPa".format(f.pressure),
+                    tr("Cloud cover", "Bulutluluk") to "${f.cloud}%",
+                    tr("Precipitation", "Yağış") to "%.1f mm".format(f.precip),
+                )
+                if (today != null) {
+                    d += tr("UV index", "UV indeksi") to "%.0f · %s".format(today.uv, WeatherFmt.uv(today.uv))
+                    d += tr("Sunshine", "Güneşlenme") to "%.1f h".format(today.sun)
+                    d += tr("Sunrise", "Gün doğumu") to WeatherFmt.clock(today.sunrise)
+                    d += tr("Sunset", "Gün batımı") to WeatherFmt.clock(today.sunset)
+                    d += tr("Day length", "Gündüz süresi") to WeatherFmt.dayLength(today.sunrise, today.sunset)
+                }
+                if (f.aqi >= 0) d += tr("Air quality", "Hava kalitesi") to "${f.aqi} · ${WeatherFmt.aqi(f.aqi)}"
+                d += tr("Moon", "Ay") to WeatherFmt.moon()
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    d.chunked(2).forEach { r ->
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            r.forEach { (l, v) -> Tile(l, v, fg, sub, Modifier.weight(1f)) }
+                            if (r.size == 1) Spacer(Modifier.weight(1f))
+                        }
                     }
-                    if (f.aqi >= 0) Detail(tr("Air quality", "Hava kalitesi"), "${f.aqi} · ${WeatherFmt.aqi(f.aqi)}", fg, sub)
-                    Detail(tr("Moon", "Ay"), WeatherFmt.moon(), fg, sub)
                 }
             }
             items(f.days, key = { it.date }) { d ->
@@ -277,7 +282,7 @@ fun WeatherHub(onBack: () -> Unit) {
                         runCatching { LocalDate.parse(d.date).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault(d.date),
                         color = fg, fontSize = 15.sp, modifier = Modifier.width(64.dp),
                     )
-                    PIcon(WeatherApi.icon(d.code), fg, 22.dp)
+                    WeatherGlyph(d.code, 28.dp)
                     Spacer(Modifier.width(10.dp))
                     Text(if (d.rain > 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
                     Spacer(Modifier.weight(1f))
@@ -302,5 +307,22 @@ private fun Detail(label: String, value: String, fg: androidx.compose.ui.graphic
     Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = sub, fontSize = 14.sp, modifier = Modifier.weight(1f))
         Text(value, color = fg, fontSize = 14.sp)
+    }
+}
+
+@Composable
+private fun Hl(label: String, value: String, c: androidx.compose.ui.graphics.Color) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(label, color = c.copy(alpha = .75f), fontSize = 12.sp)
+        Text(value, color = c, fontSize = 17.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
+/** One fact of the weather in its own rounded tile: the name small, the value big. */
+@Composable
+private fun Tile(label: String, value: String, fg: androidx.compose.ui.graphics.Color, sub: androidx.compose.ui.graphics.Color, modifier: Modifier) {
+    Column(modifier.background(T.panel, androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp)) {
+        Text(label, color = sub, fontSize = 12.sp)
+        Text(value, color = fg, fontSize = 20.sp, fontWeight = FontWeight.Light, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
     }
 }
