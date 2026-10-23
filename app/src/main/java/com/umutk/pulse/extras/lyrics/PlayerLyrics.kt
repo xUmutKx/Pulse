@@ -77,7 +77,7 @@ fun PlayerLyrics(
                 if (LiveLyrics.embed(ctx)) Lyrics.embedMp3(localPath, r)
             }
         }
-        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .94f)).pointerInput(Unit) { detectTapGestures { } }) {
+        Box(Modifier.fillMaxSize().background(Color.Black).pointerInput(Unit) { detectTapGestures { } }) {
             val (busy, res) = state
             when {
                 res != null && full -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
