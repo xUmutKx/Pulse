@@ -1076,3 +1076,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.251 derlenmedi: gelişmiş kapak ayarlarında "Şimdi dene" kaldırıldı (zaten anahtar açıyor), parlaklık da yalnız temel kapakta.
 
 - 0.10.252 derlenmedi: Müzik çalarda (Material) şarkı kapağı %10 büyüdü.
+
+- 0.10.253 derlenmedi: Authenticator sayfasına geri tuşu ve başlık (Pulse içinde üst çubukta, kendi uygulaması olarak açılınca sayfanın başında).
