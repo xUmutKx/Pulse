@@ -15,6 +15,14 @@ import com.umutk.pulse.MsgPrefs
 import com.umutk.pulse.sendSms
 import com.umutk.pulse.tr
 
+/** The automatic spam block: an unwanted message makes no notification and its number goes on the blocked list (Settings shows it, Unblock takes it off). */
+internal fun spam(c: Context, addr: String, body: String): Boolean {
+    if (!MsgPrefs.spamBlock(c)) return false
+    if (!MsgCore.isSpam(com.umutk.pulse.contactName(c, addr) != null, body)) return false
+    MsgPrefs.setBlocked(c, MsgPrefs.blocked(c) + addr)
+    return true
+}
+
 /** SMS_DELIVER (Pulse is the default app: store the message, then notify). */
 class SmsDeliverReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
@@ -24,6 +32,7 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         val body = parts.joinToString("") { it.displayMessageBody ?: "" }
         if (addr in MsgPrefs.blocked(c)) return
         MsgCore.storeInbox(c, addr, body, System.currentTimeMillis(), parts[0].timestampMillis)
+        if (spam(c, addr, body)) return
         MsgNotifier.incoming(c, addr, body)
     }
 }
@@ -36,7 +45,9 @@ class SmsReceivedReceiver : BroadcastReceiver() {
         if (parts.isEmpty()) return
         val addr = parts[0].displayOriginatingAddress ?: parts[0].originatingAddress ?: return
         if (addr in MsgPrefs.blocked(c)) return
-        MsgNotifier.incoming(c, addr, parts.joinToString("") { it.displayMessageBody ?: "" })
+        val body = parts.joinToString("") { it.displayMessageBody ?: "" }
+        if (spam(c, addr, body)) return
+        MsgNotifier.incoming(c, addr, body)
     }
 }
 

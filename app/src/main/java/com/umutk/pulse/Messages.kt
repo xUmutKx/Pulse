@@ -106,6 +106,9 @@ object MsgPrefs {
     /** Text added to the end of every message sent from here (empty: none). */
     fun signature(c: Context) = p(c).getString("signature", "") ?: ""
     fun setSignature(c: Context, v: String) { p(c).edit().putString("signature", v).apply() }
+    /** Unwanted (advertising, gambling, loan...) messages from numbers that are not in the contacts are blocked on their own. */
+    fun spamBlock(c: Context) = p(c).getBoolean("spamBlock", true)
+    fun setSpamBlock(c: Context, v: Boolean) { p(c).edit().putBoolean("spamBlock", v).apply() }
     /** Seconds a message waits before it goes out, so it can still be taken back (0: at once). */
     fun sendDelay(c: Context) = p(c).getInt("sendDelay", 0)
     fun setSendDelay(c: Context, v: Int) { p(c).edit().putInt("sendDelay", v).apply() }
@@ -257,6 +260,7 @@ fun MessagesScreen(back: () -> Unit) {
     var bubbleOn by remember { mutableStateOf(MsgPrefs.bubbles(ctx)) }
     var soundOn by remember { mutableStateOf(MsgPrefs.sound(ctx)) }
     var vibOn by remember { mutableStateOf(MsgPrefs.vibrate(ctx)) }
+    var spamOn by remember { mutableStateOf(MsgPrefs.spamBlock(ctx)) }
     val askDefault = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { isDefault = MsgCore.isDefault(ctx) }
     // the file picked for one conversation (by address); it goes out as MMS with that conversation's text
     val attach = remember { mutableStateMapOf<String, Uri>() }
@@ -329,12 +333,12 @@ fun MessagesScreen(back: () -> Unit) {
             }
             settings -> MessagesSettings(nameOn, unreadFirst, blocks, archives,
                 isDefault, { runCatching { askDefault.launch(MsgCore.defaultRequest(ctx)) } },
-                listOf(notifyOn, showText, autoCopy, bubbleOn, soundOn, vibOn), sigText, { sigText = it; MsgPrefs.setSignature(ctx, it) },
+                listOf(notifyOn, showText, autoCopy, bubbleOn, soundOn, vibOn, spamOn), sigText, { sigText = it; MsgPrefs.setSignature(ctx, it) },
                 delaySec, { delaySec = it; MsgPrefs.setSendDelay(ctx, it) },
                 { k, v -> when (k) {
                     0 -> { notifyOn = v; MsgPrefs.setNotify(ctx, v) }; 1 -> { showText = v; MsgPrefs.setShowText(ctx, v) }
                     2 -> { autoCopy = v; MsgPrefs.setAutoCopy(ctx, v) }; 3 -> { bubbleOn = v; MsgPrefs.setBubbles(ctx, v) }
-                    4 -> { soundOn = v; MsgPrefs.setSound(ctx, v) }; else -> { vibOn = v; MsgPrefs.setVibrate(ctx, v) }
+                    4 -> { soundOn = v; MsgPrefs.setSound(ctx, v) }; 6 -> { spamOn = v; MsgPrefs.setSpamBlock(ctx, v) }; else -> { vibOn = v; MsgPrefs.setVibrate(ctx, v) }
                 } },
                 onNames = { nameOn = it; MsgPrefs.setNames(ctx, it) },
                 onUnread = { unreadFirst = it; MsgPrefs.setUnreadFirst(ctx, it) },
@@ -548,6 +552,7 @@ private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<S
             }
             if (!isDefault) PButton(tr("Set", "Yap"), compact = true) { onDefault() }
         }
+        MessagesSettingRow("lock", tr("Block spam automatically", "Spam mesajları otomatik engelle"), notif[6]) { onNotif(6, it) }
         MessagesSettingRow("bell", tr("Notifications", "Bildirimler"), notif[0]) { onNotif(0, it) }
         MessagesSettingRow("eyeOn", tr("Show message text", "Mesaj metnini göster"), notif[1]) { onNotif(1, it) }
         MessagesSettingRow("copy", tr("Copy verification codes", "Doğrulama kodunu kopyala"), notif[2]) { onNotif(2, it) }
