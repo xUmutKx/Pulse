@@ -1153,3 +1153,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.335: derlenmedi — Mesajlar: otomatik spam engelleme (rehberde olmayan numaradan reklam/bahis/kredi + link; kod ve hesap mesajları hariç), ayarlardan kapatılır; klavye RGB animasyon içe aktarma düzeltmesi
 - 0.10.336: klavye: "öneri istemiyorum" bayrağı olan alanlarda (Chrome web alanları) da öneri çubuğu açık, yalnız otomatik düzeltme kapalı
 - 0.10.337: klavye: emoji paneli tuşlarla aynı boyda (küçülmez), kategori simgeleri ikon, arama çubuğu sekmelerin yerine; otomatik doldurma önerileri siyah zemin beyaz yazı
+- 0.10.338: launcher: ses efektleri medya sesinde çalar, uygulama açılınca da tık sesi
