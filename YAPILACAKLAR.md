@@ -1074,3 +1074,5 @@ Screen recorder feature list (55 candidates)
 - 0.10.250 derlenmedi: gelişmiş kapakta telefon dikeyken saat sayfaları düzeltildi: dijital, segmentli, neon, matrix, piksel, çevirmeli, saatlerden saat yatay yerine saat üstte dakika altta dizilir ve ekranı doldurur.
 
 - 0.10.251 derlenmedi: gelişmiş kapak ayarlarında "Şimdi dene" kaldırıldı (zaten anahtar açıyor), parlaklık da yalnız temel kapakta.
+
+- 0.10.252 derlenmedi: Müzik çalarda (Material) şarkı kapağı %10 büyüdü.
