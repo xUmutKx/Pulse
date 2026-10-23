@@ -58,6 +58,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     private val lang get() = KeyboardLayouts.lang(st.lang)
+    private var seenPrimary = ""
 
     /** The word lists used together: the layout's own, then those of the other languages in use (a Turkish keyboard that also corrects English). */
     private fun dictCodes(code: String): List<String> = (listOf(KeyboardLayouts.dict(code)) + KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }).distinct()
@@ -101,6 +102,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
+        // the settings may have changed the language since the last field
+        KeyboardPrefs.load(this)
+        val primary = KeyboardPrefs.langList().first()
+        if (primary != seenPrimary) { seenPrimary = primary; st.lang = primary }
+        if (st.lang !in KeyboardPrefs.langList()) st.lang = primary
         st.dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
@@ -346,6 +352,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun hide() { finishWord("", false); requestHideSelf(0) }
+
+    /** Hands the field over to the device's own voice typing (Google); the keyboard comes back when it is done. */
+    override fun voice() {
+        finishWord("", false)
+        val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
+        val voice = imm.enabledInputMethodList.firstOrNull { ime ->
+            ime.packageName != packageName && (0 until ime.subtypeCount).any { ime.getSubtypeAt(it).mode == "voice" }
+        } ?: imm.enabledInputMethodList.firstOrNull { it.id.contains("voicesearch", true) || it.id.contains("voice", true) && it.packageName != packageName }
+        if (voice == null) { android.widget.Toast.makeText(this, if (java.util.Locale.getDefault().language == "tr") "Sesle yazma açık değil" else "Voice typing is off", android.widget.Toast.LENGTH_SHORT).show(); return }
+        runCatching { switchInputMethod(voice.id) }
+    }
 
     override fun feedback() {
         if (KeyboardPrefs.haptic) window.window?.decorView?.performHapticFeedback(if (KeyboardPrefs.hapticMs >= 20) HapticFeedbackConstants.LONG_PRESS else HapticFeedbackConstants.KEYBOARD_TAP)

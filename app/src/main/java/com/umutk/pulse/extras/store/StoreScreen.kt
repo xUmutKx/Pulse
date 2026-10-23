@@ -400,13 +400,6 @@ private fun BuiltinRows() {
                 Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(r.sub, color = T.sub, fontSize = 12.sp)
             }
-            // listed in the ⋮ menu (top right > Extra apps) or left out of it
-            r.place?.let { pl ->
-                val kind = pl.substringBefore(':'); val key = pl.substringAfter(':')
-                val tool = if (kind == "tool") com.umutk.pulse.ToolPlace.byId(key) else null
-                val on = if (tool != null) com.umutk.pulse.ToolPlace.where(ctx, tool) != "hidden" else com.umutk.pulse.AppPlace.where(key) != "hidden"
-                PSwitch(on, { v -> if (tool != null) com.umutk.pulse.ToolPlace.set(ctx, tool, if (v) "extra" else "hidden") else com.umutk.pulse.AppPlace.set(ctx, key, if (v) "menu" else "hidden") })
-            }
         }
     }
     // off by default; when on, the page is listed in the ⋮ menu
