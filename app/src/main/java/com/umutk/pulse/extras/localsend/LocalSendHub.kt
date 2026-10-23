@@ -72,7 +72,8 @@ fun LocalSendHub(back: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     BackHandler { back() }
-    DisposableEffect(Unit) { LocalSendEngine.start(ctx); onDispose { LocalSendEngine.stop() } }
+    // leaving the page while something is going: the bubble keeps the transfer in sight and the engine runs on
+    DisposableEffect(Unit) { LocalSendEngine.start(ctx); onDispose { if (LocalSendEngine.busy.isNotEmpty() && LocalSendBubble.show(ctx)) Unit else LocalSendEngine.stop() } }
     // announce again now and then, so devices that joined later find this phone
     LaunchedEffect(Unit) { while (true) { delay(15_000); LocalSendEngine.announce() } }
     var target by remember { mutableStateOf<Peer?>(null) }
@@ -98,7 +99,16 @@ fun LocalSendHub(back: () -> Unit) {
         }
         if (LocalSendEngine.busy.isNotEmpty()) PCard {
             Text(LocalSendEngine.busy, color = T.text, fontSize = 14.sp)
-            androidx.compose.material3.LinearProgressIndicator(progress = { LocalSendEngine.progress }, modifier = Modifier.fillMaxWidth(), color = com.umutk.pulse.Look.accent)
+            androidx.compose.material3.LinearProgressIndicator(progress = { LocalSendEngine.progress }, modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp), color = com.umutk.pulse.Look.accent)
+            // pause, cancel, and the floating bubble that follows the transfer over the other apps
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("${(LocalSendEngine.progress * 100).toInt()}%", color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                Box(Modifier.size(40.dp).clickable { LocalSendEngine.paused = !LocalSendEngine.paused }, contentAlignment = Alignment.Center) { PIcon(if (LocalSendEngine.paused) "play" else "pause", T.text, 22.dp) }
+                Box(Modifier.size(40.dp).clickable { LocalSendEngine.cancel() }, contentAlignment = Alignment.Center) { PIcon("close", T.text, 22.dp) }
+                Box(Modifier.size(40.dp).clickable {
+                    if (!LocalSendBubble.show(ctx)) result = tr("Allow \"display over other apps\" for Pulse to float the transfer", "Aktarımı yüzdürmek için Pulse'a \"diğer uygulamaların üzerinde göster\" izni ver")
+                }, contentAlignment = Alignment.Center) { PIcon("scale", T.text, 22.dp) }
+            }
         }
         if (result.isNotEmpty()) Text(result, color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {

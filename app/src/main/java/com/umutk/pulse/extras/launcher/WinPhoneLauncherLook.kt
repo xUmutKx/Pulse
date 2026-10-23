@@ -226,27 +226,32 @@ class WinPhoneLauncherLook(
 
 
 /**
- * The Windows Phone start screen: tiles of different sizes laid out by themselves, four units across. The apps are taken in blocks of two rows that cycle
- * through a wide tile, two medium tiles, a medium one with four small ones, and eight small ones, so there are no holes; the last block is small tiles.
+ * The Windows Phone start screen: square tiles (small 1x1, medium 2x2) and wide ones (4x2), four units across. They are laid out by themselves, a long press
+ * on a tile gives it another size.
  */
 @Composable
 fun WinPhoneTiles(state: LauncherState, apps: List<LaunchApp>, edge: Dp, modifier: Modifier = Modifier) {
     class Placed(val app: LaunchApp, val x: Int, val y: Int, val w: Int, val h: Int)
-    val placed = remember(apps) {
+    val sizes = LauncherPrefs.tileSizes; val mode = LauncherPrefs.tileMode
+    val placed = remember(apps, sizes, mode) {
+        // sizes: s = 1x1, m = 2x2, w = 4x2 units; an app has the size it was given, else the layout's (auto mixes them)
+        val auto = listOf("m", "s", "s", "s", "s", "w", "m", "m", "s", "s", "s", "s")
+        val grid = ArrayList<BooleanArray>()
+        fun free(x: Int, y: Int, w: Int, h: Int): Boolean { for (r in y until y + h) for (c in x until x + w) if (r < grid.size && grid[r][c]) return false; return true }
         val out = ArrayList<Placed>()
-        var i = 0; var row = 0; var n = 0
-        val kinds = listOf("B", "C", "A", "B", "D")
-        while (i < apps.size) {
-            val left = apps.size - i
-            val kind = kinds[n % kinds.size].let { k -> when { k == "A" && left < 1 -> "D"; k == "B" && left < 2 -> "D"; k == "C" && left < 5 -> "D"; k == "D" -> "D"; else -> k } }
-            fun add(x: Int, y: Int, w: Int, h: Int) { if (i < apps.size) out += Placed(apps[i++], x, row + y, w, h) }
-            when (kind) {
-                "A" -> add(0, 0, 4, 2)
-                "B" -> { add(0, 0, 2, 2); add(2, 0, 2, 2) }
-                "C" -> { add(0, 0, 2, 2); add(2, 0, 1, 1); add(3, 0, 1, 1); add(2, 1, 1, 1); add(3, 1, 1, 1) }
-                else -> for (y in 0..1) for (x in 0..3) add(x, y, 1, 1)
+        apps.forEachIndexed { i, app ->
+            val size = sizes[app.pkg] ?: when (mode) { "medium" -> "m"; "small" -> "s"; else -> auto[i % auto.size] }
+            val (w, h) = when (size) { "w" -> 4 to 2; "m" -> 2 to 2; else -> 1 to 1 }
+            // the first place from the top left where it fits: small tiles fill the holes the bigger ones leave
+            var y = 0; var spot: Pair<Int, Int>? = null
+            while (spot == null) {
+                for (x in 0..(4 - w)) if (free(x, y, w, h)) { spot = x to y; break }
+                if (spot == null) y++
             }
-            row += 2; n++
+            val (px, py) = spot!!
+            while (grid.size < py + h) grid += BooleanArray(4)
+            for (r in py until py + h) for (c in px until px + w) grid[r][c] = true
+            out += Placed(app, px, py, w, h)
         }
         out
     }

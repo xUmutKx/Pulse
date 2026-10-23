@@ -167,8 +167,13 @@ fun AppActionDialog(app: LaunchApp, auto: List<String>, onDismiss: () -> Unit) {
     val w = LocalWindowLook.current
     val pinned = app.pkg in LauncherPrefs.dock
     fun act(f: () -> Unit) { f(); onDismiss() }
-    ContextPopup(230.dp, 200.dp, onDismiss) {
+    val tiles = LauncherPrefs.look == "winphone" && LauncherPrefs.phoneTiles
+    ContextPopup(230.dp, if (tiles) 330.dp else 200.dp, onDismiss) {
         Text(app.label, color = w.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(vertical = 6.dp))
+        // Windows Phone: the size of this app's tile
+        if (tiles) listOf("s" to tr("Small tile", "Küçük kutucuk"), "m" to tr("Medium tile", "Orta kutucuk"), "w" to tr("Wide tile", "Geniş kutucuk")).forEach { (k, n) ->
+            ActionRow("gridView", n, w.text) { act { LauncherPrefs.tileSizes = LauncherPrefs.tileSizes + (app.pkg to k); LauncherPrefs.save(ctx) } }
+        }
         ActionRow("info", tr("App info", "Uygulama bilgisi"), w.text) {
             act { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", app.pkg, null))) }
         }

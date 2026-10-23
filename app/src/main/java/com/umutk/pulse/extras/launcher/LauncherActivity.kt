@@ -346,7 +346,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                     MovableDesktopClock(look.id)
                     DesktopWidgetLayer()
                 }
-                else if (look.id == "winphone" && LauncherPrefs.phoneTiles) WinPhoneTiles(state, home, edge)
+                else if (look.id == "winphone" && LauncherPrefs.phoneTiles) WinPhoneTiles(state, visible, edge)
                 else if (vertical) {
                     LazyVerticalGrid(GridCells.Fixed(columns), Modifier.fillMaxSize().padding(horizontal = maxOf(8.dp, edge), vertical = 8.dp), state = grid) {
                         items(home, key = { it.pkg }) { app ->

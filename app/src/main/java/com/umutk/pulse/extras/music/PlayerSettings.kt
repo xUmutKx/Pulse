@@ -125,8 +125,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first, then load the backup", "Kütüphane boş: önce müziği tara, sonra yedeği yükle"); return@launch }
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.run(c, uri, MusicLibrary.tracks.value, embedCovers) } }
             importNote = r.getOrNull()?.let { x ->
-                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") + (if (x.missing > 0) ", ${x.missing} songs not found" + x.missingNames.joinToString(", ", " (e.g. ", ")") else ""),
-                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") + (if (x.missing > 0) ", ${x.missing} şarkı bulunamadı" + x.missingNames.joinToString(", ", " (örn. ", ")") else ""))
+                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") + (if (x.missing > 0) ", ${x.missing} songs of the backup are not on this phone (skipped)" else ""),
+                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") + (if (x.missing > 0) ", yedekteki ${x.missing} şarkı bu telefonda yok (atlandı)" else ""))
             } ?: tr("The backup could not be read", "Yedek okunamadı")
         }
     }
@@ -154,8 +154,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 importNote = tr("Reading Poweramp…", "Poweramp okunuyor…")
                 val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.direct(c, MusicLibrary.tracks.value, embedCovers) } }
                 importNote = r.getOrNull()?.let { x ->
-                    tr("${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (x.missing > 0) ", ${x.missing} songs not found" else ""),
-                        "${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (x.missing > 0) ", ${x.missing} şarkı bulunamadı" else ""))
+                    tr("${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (x.missing > 0) ", ${x.missing} songs not on this phone (skipped)" else ""),
+                        "${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (x.missing > 0) ", ${x.missing} şarkı bu telefonda yok (atlandı)" else ""))
                 } ?: tr("Poweramp's data could not be read (needs root and Poweramp installed)", "Poweramp verisi okunamadı (root ve Poweramp gerekir)") + PowerampImport.lastError.let { if (it.isBlank()) "" else ": $it" }
             }
         }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -247,6 +247,18 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             artPct = 30f + it * 70f
             com.umutk.pulse.extras.music.widgets.WidgetOpts.setArtPct(c, artPct.toInt()); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c)
         }
+        // as in Poweramp's own widget settings: corners, the shadow under the cover, the round cover
+        var corners by remember { mutableIntStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.corners(c)) }
+        var shadow by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.artShadow(c)) }
+        var circle by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.artCircle(c)) }
+        Text(tr("Corners", "Köşeler"), color = T.sub, fontSize = 12.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(0 to tr("Square", "Köşeli"), 1 to tr("Rounded", "Yuvarlak köşe"), 2 to tr("Round", "Tam yuvarlak")).forEach { (k, n) ->
+                com.umutk.pulse.PChip(corners == k, n) { corners = k; com.umutk.pulse.extras.music.widgets.WidgetOpts.setCorners(c, k); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c) }
+            }
+        }
+        SwitchRow(tr("Cover shadow", "Kapak gölgesi"), shadow) { shadow = it; com.umutk.pulse.extras.music.widgets.WidgetOpts.setArtShadow(c, it); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c) }
+        SwitchRow(tr("Round cover", "Yuvarlak kapak"), circle) { circle = it; com.umutk.pulse.extras.music.widgets.WidgetOpts.setArtCircle(c, it); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c) }
     }
 
     if (which == SettingsFor.POWERAMP && cat == "background") SettingsSection("Poweramp") {

@@ -60,6 +60,14 @@ object LocalSendEngine {
     var note by mutableStateOf("")
     /** True for a few seconds after a scan starts; the hub shows its loading animation meanwhile. */
     var scanning by mutableStateOf(false)
+    /** The transfer under way is held (paused) or to be dropped; checked on every block. */
+    var paused by mutableStateOf(false)
+    @Volatile var cancelled = false
+    fun cancel() { cancelled = true; paused = false }
+    private fun gate() {
+        while (paused && !cancelled) Thread.sleep(120)
+        if (cancelled) throw java.io.IOException("cancelled")
+    }
 
     private var fingerprint = ""
     private var server: ServerSocket? = null
@@ -225,7 +233,7 @@ object LocalSendEngine {
             }.getOrNull()
         }
         if (list.isEmpty()) return "Nothing to send"
-        busy = "→ ${peer.alias}"; progress = 0f
+        busy = "→ ${peer.alias}"; progress = 0f; cancelled = false; paused = false
         try {
             val files = JSONObject(); list.forEach { f -> files.put(f.id, JSONObject().put("id", f.id).put("fileName", f.name).put("size", f.size).put("fileType", f.mime)) }
             val (code, text) = post(peer, "prepare-upload", JSONObject().put("info", me()).put("files", files).toString().toByteArray(), timeoutMs = 120_000)
@@ -248,7 +256,7 @@ object LocalSendEngine {
                     cr.openInputStream(f.uri)?.use { ins ->
                         c.outputStream.use { out ->
                             val buf = ByteArray(64 * 1024)
-                            while (true) { val n = ins.read(buf); if (n < 0) break; out.write(buf, 0, n); sent += n; progress = (sent.toFloat() / total).coerceIn(0f, 1f) }
+                            while (true) { gate(); val n = ins.read(buf); if (n < 0) break; out.write(buf, 0, n); sent += n; progress = (sent.toFloat() / total).coerceIn(0f, 1f) }
                         }
                     }
                     if (c.responseCode !in 200..299) return "Upload failed (${c.responseCode})"
@@ -256,8 +264,8 @@ object LocalSendEngine {
             }
             return "Sent ${list.size} to ${peer.alias}"
         } catch (e: Exception) {
-            return "Failed: ${e.message}"
-        } finally { busy = ""; progress = 0f }
+            return if (cancelled) "Cancelled" else "Failed: ${e.message}"
+        } finally { busy = ""; progress = 0f; paused = false }
     }
 
     // ---------------------------------------------------------------- server
@@ -362,13 +370,13 @@ object LocalSendEngine {
         val clean = f.name.substringAfterLast('/').substringAfterLast('\\').ifBlank { "file" }
         var out = File(s.dir, clean); var n = 1
         while (out.exists()) { out = File(s.dir, clean.substringBeforeLast('.', clean) + " ($n)" + (clean.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" })); n++ }
-        busy = "← ${f.name}"; progress = 0f
+        busy = "← ${f.name}"; progress = 0f; cancelled = false; paused = false
         try {
             var got = 0L; val total = f.size.coerceAtLeast(1L)
-            out.outputStream().use { o -> val buf = ByteArray(64 * 1024); while (true) { val k = r.body.read(buf); if (k < 0) break; o.write(buf, 0, k); got += k; progress = (got.toFloat() / total).coerceIn(0f, 1f) } }
+            out.outputStream().use { o -> val buf = ByteArray(64 * 1024); while (true) { gate(); val k = r.body.read(buf); if (k < 0) break; o.write(buf, 0, k); got += k; progress = (got.toFloat() / total).coerceIn(0f, 1f) } }
             received.add(0, out.path)
             runCatching { android.media.MediaScannerConnection.scanFile(app, arrayOf(out.path), null, null) }
             reply(sock, 200)
-        } catch (e: Exception) { out.delete(); reply(sock, 500) } finally { busy = ""; progress = 0f }
+        } catch (e: Exception) { out.delete(); reply(sock, 500) } finally { busy = ""; progress = 0f; paused = false }
     }
 }

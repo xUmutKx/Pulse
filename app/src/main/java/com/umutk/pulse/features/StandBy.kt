@@ -139,7 +139,7 @@ object StandByPrefs {
     val COLOURS = listOf(0xFFFFFFFF, 0xFFFF9F0A, 0xFFFF453A, 0xFF30D158, 0xFF0A84FF, 0xFFFF6BD6).map { Color(it) }
 }
 
-private class StandByOwner : LifecycleOwner, SavedStateRegistryOwner {
+internal class StandByOwner : LifecycleOwner, SavedStateRegistryOwner {
     private val reg = LifecycleRegistry(this)
     private val ctl = SavedStateRegistryController.create(this)
     override val lifecycle: Lifecycle get() = reg

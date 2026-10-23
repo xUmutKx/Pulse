@@ -146,6 +146,14 @@ fun LauncherSettings(back: () -> Unit) {
         }
         if (cat == "home") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             if (cur.id.startsWith("winphone")) SwitchLine("gridView", tr("Live tiles", "Canlı kutucuklar"), LauncherPrefs.phoneTiles) { LauncherPrefs.phoneTiles = it; save() }
+            if (cur.id.startsWith("winphone") && LauncherPrefs.phoneTiles) {
+                Text(tr("Tile layout", "Kutucuk düzeni"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf("auto" to tr("Mixed", "Karışık"), "medium" to tr("All medium", "Hepsi orta"), "small" to tr("All small", "Hepsi küçük")).forEach { (k, n) ->
+                        com.umutk.pulse.PChip(LauncherPrefs.tileMode == k, n) { LauncherPrefs.tileMode = k; LauncherPrefs.tileSizes = emptyMap(); save() }
+                    }
+                }
+            }
             SwitchLine("settings", tr("Buttons at the top right", "Sağ üstteki düğmeler"), LauncherPrefs.topChips) { LauncherPrefs.topChips = it; save() }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("clock", tr("Desktop clock widget", "Masaüstü saat widget'ı"), LauncherPrefs.desktopClock) { LauncherPrefs.desktopClock = it; save() }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) ValueRow("notes", tr("Add a sticky note", "Yapışkan not ekle"), "") { stickyNoteProvider(ctx)?.let(addWidget) }
