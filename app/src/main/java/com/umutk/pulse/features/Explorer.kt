@@ -190,11 +190,12 @@ fun FilesPage() {
 
 @Composable
 private fun FilesPageInner() {
-    var tab by rememberSaveable { mutableStateOf("files") }
-    val top = remember { Environment.getExternalStorageDirectory() }
-    val back: () -> Unit = { tab = "files" }
     val ctx = LocalContext.current
     val standalone = ctx is com.umutk.pulse.FilesActivity
+    // the standalone Files app starts on its home page (storage, recent, types); inside Pulse the explorer opens at once
+    var tab by rememberSaveable { mutableStateOf(if (standalone) "home" else "files") }
+    val top = remember { Environment.getExternalStorageDirectory() }
+    val back: () -> Unit = { tab = if (standalone) "home" else "files" }
     // the full-screen window is the standalone app's; embedded in Pulse the page stays a page
     var full by rememberSaveable { mutableStateOf(standalone && (Opt.filesFull || FilesLaunch.full)) }
     LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full && standalone) { full = true; FilesLaunch.full = false } }
@@ -217,11 +218,22 @@ private fun FilesPageInner() {
             com.umutk.pulse.StorageAccessCard()
             Box(Modifier.weight(1f).fillMaxWidth()) {
                 when (tab) {
+                    "home" -> {
+                        val ot = com.umutk.pulse.LocalOpenTool.current
+                        com.umutk.pulse.files.home.FilesHome(onTab = { tab = it },
+                            onOpenDir = { d -> ExNav.lastHere = d; tab = "files" },
+                            onOpenFile = { f -> com.umutk.pulse.files.recent.RecentStore.add(ctx, f.path); com.umutk.pulse.files.home.openFileWithSystem(ctx, f) },
+                            onSettings = { ot("files_settings") })
+                    }
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
                     "cache" -> CacheCleanerScreen(back)
                     else -> ExplorerTab(full || !standalone, { tab = it }) { full = !full }
                 }
+            }
+            if (standalone) {
+                val ot = com.umutk.pulse.LocalOpenTool.current
+                com.umutk.pulse.files.home.FilesNavBar(tab, { tab = it }) { ot("localsend") }
             }
         }
         }
@@ -331,7 +343,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val top = remember { Environment.getExternalStorageDirectory() }
     FilesPrefs.load(ctx)
     var here by rememberSaveable { mutableStateOf(ExNav.lastHere?.takeIf { File(it).isDirectory && it.startsWith(top.path) } ?: FilesPrefs.start.takeIf { it.isNotEmpty() && File(it).isDirectory } ?: top.path) }
-    LaunchedEffect(here) { ExNav.lastHere = here }
+    LaunchedEffect(here) { ExNav.lastHere = here; if (standalone && here != top.path) com.umutk.pulse.files.home.RecentDirs.add(ctx, here) }
     var clip by remember { mutableStateOf<Clip?>(null) }
     var refresh by remember { mutableIntStateOf(0) }
     var dialog by remember { mutableStateOf<Pair<String, File>?>(null) }
@@ -356,6 +368,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var folderSort by remember { mutableStateOf(exReadSortMap(ctx)) }
     var drawer by remember { mutableStateOf(false) }
     var searchOpen by rememberSaveable { mutableStateOf(false) }
+    // the bottom bar's Search opens the search field
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openSearch) { if (com.umutk.pulse.files.home.FilesHomeNav.openSearch) { searchOpen = true; com.umutk.pulse.files.home.FilesHomeNav.openSearch = false } }
     var freq by remember { mutableStateOf(exRead(ctx, EX_FREQ)) }
     var sortMenu by remember { mutableStateOf(false) }
     var menuOf by remember { mutableStateOf<File?>(null) }
