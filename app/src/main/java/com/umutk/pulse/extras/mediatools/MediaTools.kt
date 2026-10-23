@@ -32,7 +32,6 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.effect.Presentation
-import androidx.media3.transformer.AudioEncoderSettings
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
 import androidx.media3.transformer.EditedMediaItem
@@ -114,12 +113,11 @@ internal suspend fun saveFile(ctx: Context, name: String, mime: String, out: Fil
  * Runs one Media3 transformer export of [input] into [out]: [height] > 0 scales a video down to that height, [audioOnly] drops the picture.
  * Returns null when it worked, else the reason. Runs on the main thread, as Transformer wants.
  */
-internal suspend fun transform(ctx: Context, input: Uri, out: File, height: Int, videoBps: Int, audioBps: Int, audioOnly: Boolean): String? = withContext(Dispatchers.Main) {
+internal suspend fun transform(ctx: Context, input: Uri, out: File, height: Int, videoBps: Int, @Suppress("UNUSED_PARAMETER") audioBps: Int, audioOnly: Boolean): String? = withContext(Dispatchers.Main) {
     out.delete()
     suspendCancellableCoroutine { k ->
         val enc = DefaultEncoderFactory.Builder(ctx)
             .setRequestedVideoEncoderSettings(VideoEncoderSettings.Builder().setBitrate(videoBps).build())
-            .setRequestedAudioEncoderSettings(AudioEncoderSettings.Builder().setBitrate(audioBps).build())
             .build()
         val t = Transformer.Builder(ctx).setEncoderFactory(enc).setVideoMimeType(MimeTypes.VIDEO_H264).setAudioMimeType(MimeTypes.AUDIO_AAC)
             .addListener(object : Transformer.Listener {

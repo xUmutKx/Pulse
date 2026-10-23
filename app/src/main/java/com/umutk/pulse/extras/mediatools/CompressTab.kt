@@ -67,9 +67,9 @@ internal fun CompressTab() {
             PChip(level == 2, tr("Strong", "Güçlü")) { level = 2 }
         }
         Text(when (level) {
-            0 -> tr("Pictures 85%, videos 1080p, music 192 kbps", "Resim %85, video 1080p, müzik 192 kbps")
-            1 -> tr("Pictures 70% and at most 2560 px, videos 720p, music 128 kbps", "Resim %70 ve en fazla 2560 px, video 720p, müzik 128 kbps")
-            else -> tr("Pictures 50% and at most 1600 px, videos 480p, music 64 kbps", "Resim %50 ve en fazla 1600 px, video 480p, müzik 64 kbps")
+            0 -> tr("Pictures 85%, videos 1080p", "Resim %85, video 1080p")
+            1 -> tr("Pictures 70% and at most 2560 px, videos 720p", "Resim %70 ve en fazla 2560 px, video 720p")
+            else -> tr("Pictures 50% and at most 1600 px, videos 480p", "Resim %50 ve en fazla 1600 px, video 480p")
         }, color = T.sub, fontSize = 12.sp)
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton(tr("Add files", "Dosya ekle"), compact = true) { pick.launch(arrayOf("image/*", "video/*", "audio/*")) }
