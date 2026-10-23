@@ -102,7 +102,10 @@ private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE
  * M3U import/export, resume of the last queue. Playback lives in [MusicPlayerEngine] / [MusicPlaybackService].
  */
 @Composable
-fun MusicHub(onBack: () -> Unit) {
+fun MusicHub(onBack: () -> Unit) = com.umutk.pulse.WithPlayerFont { MusicHubBody(onBack) }
+
+@Composable
+private fun MusicHubBody(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val engine = remember { MusicPlayerEngine.get(ctx) }
     val openTool = com.umutk.pulse.LocalOpenTool.current
