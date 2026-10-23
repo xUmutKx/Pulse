@@ -1132,3 +1132,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.314: derlenmedi — Buds: bildirim yalnız ekran açıkken ya da "arka planda bağlı kal" açıkken; kulaklık yokken servis kapanır, bağlanınca (ACL) yeniden açılır
 - 0.10.315: derlenmedi (derleme istenmedi) — Windows 11 başlat menüsünde Oturumu kapat altta sabit; Pulse ana sayfada geri tuşu uygulamayı kapatmaz, arka plana atar
 - 0.10.316: derlenmedi (derleme istenmedi) — klavye: boş alanda ve cümle başında başlangıç önerileri (I/The/Hello, Merhaba/Ben/Evet), e-posta alanında önce yazılan adresler sonra alan adları, silme tuşu basılı tutulunca kelime kelime siler
+- 0.10.317: derlenmedi (derleme istenmedi) — klavye: yazarken kaydırma (flow) mavi çizgisi kaldırıldı, aşağı kaydırınca klavye kayarak değil hemen kapanır (siyah ekran sorunu)
