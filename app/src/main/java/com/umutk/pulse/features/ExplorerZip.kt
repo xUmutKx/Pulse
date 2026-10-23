@@ -279,10 +279,10 @@ fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, Str
                 listOf("zip", "7z").forEach { k -> PChip(kind == k, k.uppercase()) { kind = k } }
             }
             // volumes: the archive is cut into parts of this size (name.zip.001, .002, ...)
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 PChip(split, tr("Split into parts", "Parçalara böl")) { split = !split }
             }
-            if (split) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (split) Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 PField(amount, { amount = it.filter { c -> c.isDigit() || c == '.' }.take(7) }, tr("Size of a part", "Parça boyutu"), Modifier.weight(1f))
                 listOf("MB", "GB").forEach { u -> PChip(unit == u, u) { unit = u } }
             }
