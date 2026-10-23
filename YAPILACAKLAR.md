@@ -1113,3 +1113,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.286: derlenmedi — klavye (sadece EN/TR, dil seçimi, virgül uzun bas=sesle yazma, aşağı kaydır kapat, gri/uzun tuşlar), ekstra uygulama menü varsayılanları, hava durumu sahne+ikonlar+kartlar, launcher ayarları Nova kategorileri
 - 0.10.288: derlenmedi — quick panel karo animasyonu (TilePop), perde animasyonu ayarı (varsayılan kapalı)
 - 0.10.289: derlenmedi — Dosyalar ana sayfası (depolama, son dosyalar/klasörler, türler, alt çubuk)
+- 0.10.292: derlenmedi — Poweramp widget: shuffle/loop %5 küçük, transport tuşları %15 yakın
