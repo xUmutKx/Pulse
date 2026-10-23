@@ -31,7 +31,6 @@ object Compat {
     /** Tile subtitles exist from Android 10; before it nothing is shown under the name. */
 }
 
-@androidx.annotation.RequiresApi(24)
 var android.service.quicksettings.Tile.subtitleCompat: CharSequence?
-    get() = if (Build.VERSION.SDK_INT >= 29) subtitle else null
-    set(v) { if (Build.VERSION.SDK_INT >= 29) subtitle = v }
+    @androidx.annotation.RequiresApi(24) get() = if (Build.VERSION.SDK_INT >= 29) subtitle else null
+    @androidx.annotation.RequiresApi(24) set(v) { if (Build.VERSION.SDK_INT >= 29) subtitle = v }

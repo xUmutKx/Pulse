@@ -1,5 +1,7 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.subtitleCompat
+
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import android.app.PendingIntent
