@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider android:previewImage="@drawable/wms_prev3" xmlns:android="http://schemas.android.com/apk/res/android"
+    android:minWidth="180dp"
+    android:minHeight="160dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="3"
+    android:minResizeWidth="120dp"
+    android:minResizeHeight="100dp"
+    android:updatePeriodMillis="1800000"
+    android:initialLayout="@layout/widget_imgskin"
+    android:resizeMode="horizontal|vertical"
+    android:widgetCategory="home_screen" />

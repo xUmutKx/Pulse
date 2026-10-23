@@ -78,6 +78,10 @@ import com.umutk.pulse.extras.music.skin.DefaultWinampSkin
 import com.umutk.pulse.extras.music.winamp.WinampClassic
 import com.umutk.pulse.extras.music.winamp.WinampEqWindow
 import com.umutk.pulse.extras.music.winamp.WinampPlaylistWindow
+import com.umutk.pulse.extras.music.imgskin.ImgSkinPlayer
+import com.umutk.pulse.extras.music.imgskin.ImgSkins
+import com.umutk.pulse.extras.music.imgskin.SkinState
+import androidx.compose.ui.graphics.asAndroidBitmap
 import com.umutk.pulse.extras.music.wmp7.Wmp7Actions
 import com.umutk.pulse.extras.music.wmp7.Wmp7Mode
 import com.umutk.pulse.extras.music.wmp7.Wmp7Now
@@ -89,7 +93,7 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 
 /** The four looks, in switcher order. Material is the default. */
-private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), LYRICS("Lyrics") }
+private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), SKINS("Media skins"), LYRICS("Lyrics") }
 
 private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE_PRIVATE)
 
@@ -176,6 +180,7 @@ fun MusicHub(onBack: () -> Unit) {
                     look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx, onSettings = { settingsOpen = true })
                     look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") })
                     look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
+                    look == MusicLook.SKINS -> SkinsPage(engine, st, onOpen = { pick.launch(arrayOf("audio/*")) })
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
                 }
               }
@@ -365,6 +370,7 @@ private enum class ThemeFamily(val en: String, val turkish: String, val look: Mu
     POWERAMP("Poweramp", "Poweramp", MusicLook.POWERAMP),
     WINAMP("Winamp", "Winamp", MusicLook.WINAMP),
     WMP("Windows Media Player 7", "Windows Media Player 7", MusicLook.WMP),
+    SKINS("Media Player skins", "Medya oynatıcı kaplamaları", MusicLook.SKINS),
     LYRICS("Lyrics", "Sözler", MusicLook.LYRICS),
 }
 
@@ -373,6 +379,7 @@ private enum class ThemeFamily(val en: String, val turkish: String, val look: Mu
 private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -> Unit) {
     val ctx = LocalContext.current
     var wmp by remember { mutableIntStateOf(prefs(ctx).getInt("wmp_skin", 0)) }
+    var skinPick by remember { mutableIntStateOf(prefs(ctx).getInt("img_skin", 0)) }
     var family by remember { mutableStateOf(ThemeFamily.values().first { it.look == look }) }
     val scheme = MaterialTheme.colorScheme
     fun pick(f: ThemeFamily) { family = f; if (f.look != look) onLook(f.look) }
@@ -397,6 +404,7 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
         ThemeFamily.MATERIAL, ThemeFamily.LYRICS -> familyMini(family, scheme)?.let { m ->
             ThemeGrid(listOf(ThemeItem(family.name, tr(family.en, family.turkish)) { MiniLook(m, Modifier.fillMaxSize()) }), family.name, onSelect = { pick(family) })
         }
+        ThemeFamily.SKINS -> ImgSkinGrid(skinPick) { skinPick = it; prefs(ctx).edit().putInt("img_skin", it).apply() }
         ThemeFamily.POWERAMP -> Unit
     }
 }
@@ -409,6 +417,7 @@ private fun familyMini(f: ThemeFamily, scheme: ColorScheme): MiniColors? = when 
     ThemeFamily.MATERIAL -> MiniColors(SolidColor(scheme.surface), scheme.surfaceVariant, scheme.primary, scheme.onSurfaceVariant)
     ThemeFamily.WINAMP -> MiniColors(SolidColor(Color(0xFF2B2B2B)), Color.Black, Color(0xFF00FF40), Color(0xFF8A8A8A))
     ThemeFamily.WMP -> wmpMini(Wmp7Skin.Default)
+    ThemeFamily.SKINS -> MiniColors(SolidColor(Color(0xFFD65DA8)), Color(0xFF2AA89E), Color.White, Color(0xFFFFE0F0))
     ThemeFamily.LYRICS -> MiniColors(SolidColor(Color.Black), Color(0xFF1A1A1A), Look.accent, Color.White.copy(alpha = .5f))
     else -> null
 }
@@ -439,6 +448,37 @@ private fun MiniLook(m: MiniColors, modifier: Modifier) {
 @Composable
 private fun WmpSkinGrid(selected: Int, onPick: (Int) -> Unit) {
     ThemeGrid(Wmp7Skin.All.mapIndexed { i, sk -> ThemeItem("$i", sk.name) { MiniLook(wmpMini(sk), Modifier.fillMaxSize()) } }, "$selected", onSelect = { onPick(it.toInt()) })
+}
+
+/** The picture skins as their own pictures in the shared grid. */
+@Composable
+private fun ImgSkinGrid(selected: Int, onPick: (Int) -> Unit) {
+    val ctx = LocalContext.current
+    ThemeGrid(ImgSkins.all.mapIndexed { i, sk ->
+        ThemeItem("$i", sk.name) {
+            val id = ctx.resources.getIdentifier("wms_prev${i + 1}", "drawable", ctx.packageName)
+            if (id != 0) Image(androidx.compose.ui.res.painterResource(id), null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        }
+    }, "$selected", onSelect = { onPick(it.toInt()) })
+}
+
+/** A picture skin as the player: the window fitted in the page, the keys of the picture working. A tap on the display shows the visualiser. */
+@Composable
+private fun SkinsPage(engine: MusicPlayerEngine, st: PlaybackState, onOpen: () -> Unit) {
+    val ctx = LocalContext.current
+    val (pos, dur) = rememberPosition(engine, st).value
+    var vis by remember { mutableStateOf(false) }
+    val skin = ImgSkins.all.getOrElse(prefs(ctx).getInt("img_skin", 0)) { ImgSkins.all[0] }
+    val art = rememberTrackArt(st.current)
+    val levels by rememberLevels(16)
+    val clock by androidx.compose.runtime.produceState(0f) { while (true) { delay(80); value += .08f } }
+    val state = SkinState(st.current?.displayName().orEmpty(), st.current?.shownArtist().orEmpty(), st.isPlaying, pos.toLong(), dur.toLong(), art?.asAndroidBitmap(), clock, if (vis) levels else null)
+    ImgSkinPlayer(
+        skin, state,
+        onHit = { id -> when (id) { "prev" -> engine.previous(); "next" -> engine.next(); "play" -> engine.togglePlayPause(); "stop" -> { engine.pause(); engine.seekTo(0) }; "open" -> onOpen(); "vis" -> vis = !vis } },
+        onSeek = { f -> if (dur > 0) engine.seekTo((f * dur).toInt()) },
+        modifier = Modifier.fillMaxSize().padding(12.dp),
+    )
 }
 
 /** Named playlists: save the queue, load or delete one, import and export M3U8 through the picker. */
