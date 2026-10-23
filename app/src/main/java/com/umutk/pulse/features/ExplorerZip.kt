@@ -12,6 +12,10 @@ import android.os.Build
 import android.os.IBinder
 import android.os.PowerManager
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -261,15 +265,36 @@ private fun ZipInfo(label: String, value: String) {
     }
 }
 
+/** A bar with a percentage and a cross at the end; the bar eases to each new value. */
+@Composable
+private fun JobLine(title: String, frac: Float, onCancel: () -> Unit) {
+    val shown by androidx.compose.animation.core.animateFloatAsState(frac.coerceIn(0f, 1f), androidx.compose.animation.core.tween(300), label = "job")
+    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Row {
+                Text(title, Modifier.weight(1f), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                Text("${(shown * 100).toInt()}%", color = T.text, fontSize = 12.sp)
+            }
+            androidx.compose.material3.LinearProgressIndicator(progress = { shown }, modifier = Modifier.fillMaxWidth().padding(top = 3.dp), color = com.umutk.pulse.Look.accent, trackColor = T.line)
+        }
+        Box(Modifier.size(36.dp).clickable(onClick = onCancel), contentAlignment = androidx.compose.ui.Alignment.Center) { com.umutk.pulse.PIcon("close", T.text, 20.dp) }
+    }
+}
+
 /** One running compression in the Files status line; it goes on when this screen is closed, and its notification shows it too. */
 @Composable
 fun ZipProgressLine(job: ZipJob) {
     val done by job.done.collectAsState()
-    val pct = if (job.total > 0) (done * 100 / job.total).toInt().coerceIn(0, 100) else 0
-    Row(Modifier.fillMaxWidth(), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-        Text(tr("Compressing ${job.name} · $pct%", "${job.name} sıkıştırılıyor · %$pct"), Modifier.weight(1f), color = T.sub, fontSize = 12.sp)
-        PButton(tr("Cancel", "İptal"), compact = true) { job.cancelled = true }
-    }
+    JobLine(tr("Compressing ${job.name}", "${job.name} sıkıştırılıyor"), if (job.total > 0) done.toFloat() / job.total else 0f) { job.cancelled = true }
+}
+
+/** The running copies, moves, deletes and extractions of [FileJobs], each with a bar and a cross, refreshed a few times a second. */
+@Composable
+fun FileJobLines() {
+    var tick by remember { mutableStateOf(0) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { while (true) { delay(250); tick++ } }
+    val jobs = remember(tick) { FileJobs.running() }
+    jobs.forEach { j -> JobLine(j.title, if (j.total > 0) j.done.get().toFloat() / j.total else 0f) { j.cancelled = true } }
 }
 
 /** What the box shows before the zip: items, the size now, and the size the zip should come to (a guess from the file types). */

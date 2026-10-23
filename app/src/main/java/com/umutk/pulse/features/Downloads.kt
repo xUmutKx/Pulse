@@ -1069,7 +1069,7 @@ private fun FolderPicker(start: File, onDismiss: () -> Unit) {
                 if (dirs.isEmpty()) Text("No folders here", color = T.sub, fontSize = 13.sp)
             }
         },
-        confirmButton = { TextButton(onClick = { Downloads.setDir(ctx, cur.path); onDismiss() }) { Text("Use this folder") } },
+        confirmButton = { androidx.compose.foundation.layout.Row(Modifier.clickable { Downloads.setDir(ctx, cur.path); onDismiss() }.padding(horizontal = 14.dp, vertical = 8.dp), verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) { com.umutk.pulse.PIcon("folder", com.umutk.pulse.T.text, 24.dp); androidx.compose.foundation.layout.Spacer(Modifier.width(6.dp)); com.umutk.pulse.PIcon("check", com.umutk.pulse.Look.accent, 24.dp) } },
         dismissButton = { TextButton(onClick = { Downloads.openFolder(ctx, cur) }) { Text("Open in files") } },
     )
 }

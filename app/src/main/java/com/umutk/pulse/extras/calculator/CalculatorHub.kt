@@ -55,10 +55,12 @@ fun CalculatorHub(back: () -> Unit) {
     var err by remember { mutableStateOf(false) }
     var mem by remember { mutableDoubleStateOf(0.0) }
     var showHistory by remember { mutableStateOf(false) }
+    var mode by rememberSaveable { mutableStateOf("standard") }
+    var menu by remember { mutableStateOf(false) }
     val history = remember { mutableStateListOf<String>() }
     val ops = "+−×÷"
     val classic = T.tabs && T.id != "win10"
-    BackHandler { if (showHistory) showHistory = false else back() }
+    BackHandler { if (showHistory) showHistory = false else if (mode != "standard") mode = "standard" else back() }
 
     fun num() = e.takeLastWhile { it.isDigit() || it == '.' }
     fun value(): Double? = if (e.isEmpty()) 0.0 else Calc.eval(e)
@@ -99,13 +101,19 @@ fun CalculatorHub(back: () -> Unit) {
     val shown = if (err) tr("Error", "Hata") else e.ifEmpty { "0" }
 
     Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = if (classic) 6.dp else 10.dp)) {
-        // title row: back, name, history
+        // title row: back, the mode's name, history (standard) and the menu (the other modes and the look of the window)
         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
-            Text(tr("Calculator", "Hesap makinesi"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-            Box(Modifier.size(40.dp).clickable { showHistory = !showHistory }, contentAlignment = Alignment.Center) { PIcon("history", if (showHistory) Look.accent else T.text, 22.dp) }
-            // the look of the calculator (Windows 11 / 10 / 7 / XP / 95, Material, AMOLED) is chosen here
-            com.umutk.pulse.ExtraLookIcon(T.text)
+            Text(modeTitle(mode), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            if (mode == "standard") Box(Modifier.size(40.dp).clickable { showHistory = !showHistory }, contentAlignment = Alignment.Center) { PIcon("history", if (showHistory) Look.accent else T.text, 22.dp) }
+            Box(Modifier.size(40.dp).clickable { menu = true }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 22.dp) }
+        }
+        if (menu) CalcMenu(mode, { mode = it; showHistory = false; menu = false }) { menu = false }
+        if (mode != "standard") {
+            Box(Modifier.weight(1f).fillMaxWidth()) {
+                when (mode) { "scientific" -> SciPane(classic); "graph" -> GraphPane(); "convert" -> ConvertPane(); else -> ProgrammerPane(classic) }
+            }
+            return@Column
         }
         if (showHistory) {
             Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState())) {
@@ -128,29 +136,65 @@ fun CalculatorHub(back: () -> Unit) {
         ) else listOf(
             listOf("MC", "MR", "M+", "M−"), listOf("%", "CE", "C", "⌫"), listOf("1/x", "x²", "√", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("±", "0", ".", "="),
         )
-        val gap = if (classic) 4.dp else if (T.id == "win10") 2.dp else if (T.id == "amoled" || T.id == "material") 8.dp else 3.dp
-        Column(Modifier.weight(1f).fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
-            rows.forEach { row ->
-                Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                    row.forEach { k ->
-                        if (T.id == "amoled" || T.id == "material") {
-                            // round keys stay round: a square as big as the cell allows, centred (a stretched circle is a thin pill)
-                            androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
-                                val side = minOf(maxWidth, maxHeight)
-                                CalcKey(k, Modifier.size(side), classic) { press(k) }
-                            }
-                        } else CalcKey(k, Modifier.weight(1f), classic) { press(k) }
-                    }
-                }
-            }
-        }
+        CalcPad(rows, classic, Modifier.weight(1f)) { press(it) }
         Spacer(Modifier.height(8.dp))
     }
 }
 
+
+/** A grid of keys that fills the room it is given: every row and every key takes an equal share, in the key style of the look. */
+@Composable
+internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modifier = Modifier, onKey: (String) -> Unit) {
+    val gap = if (classic) 4.dp else if (T.id == "win10") 2.dp else if (T.id == "amoled" || T.id == "material") 8.dp else 3.dp
+    Column(modifier.fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
+        rows.forEach { row ->
+            Row(Modifier.weight(1f).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                row.forEach { k ->
+                    if (T.id == "amoled" || T.id == "material") {
+                        // round keys stay round: a square as big as the cell allows, centred (a stretched circle is a thin pill)
+                        androidx.compose.foundation.layout.BoxWithConstraints(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.Center) {
+                            val side = minOf(maxWidth, maxHeight)
+                            CalcKey(k, Modifier.size(side), classic) { onKey(k) }
+                        }
+                    } else CalcKey(k, Modifier.weight(1f).fillMaxHeight(), classic) { onKey(k) }
+                }
+            }
+        }
+    }
+}
+
+private fun modeTitle(m: String) = when (m) {
+    "scientific" -> tr("Scientific", "Bilimsel"); "graph" -> tr("Graphing", "Grafik"); "convert" -> tr("Converter", "Dönüştürücü")
+    "programmer" -> tr("Programmer", "Programcı"); else -> tr("Calculator", "Hesap makinesi")
+}
+
+/** The menu: the modes, and the look of the calculator (Windows 11 / 10 / 7 / XP / 95, Material, AMOLED). */
+@Composable
+private fun CalcMenu(mode: String, onMode: (String) -> Unit, onClose: () -> Unit) {
+    var look by remember { mutableStateOf(false) }
+    val c = com.umutk.pulse.LocalExtraLook.current
+    if (look && c != null) com.umutk.pulse.SetLookDialog(tr("Look", "Görünüm"), com.umutk.pulse.ExtraToolLook.ids, c.id, { com.umutk.pulse.ExtraToolLook.name(it) }, { c.set(it) }) { look = false; onClose() }
+    else com.umutk.pulse.WinAlert(onDismissRequest = onClose, title = { Text(tr("Calculator", "Hesap makinesi")) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                listOf("standard" to "calc", "scientific" to "function", "graph" to "performance", "convert" to "scale", "programmer" to "terminal").forEach { (m, icon) ->
+                    Row(Modifier.fillMaxWidth().clickable { onMode(m) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon(icon, if (m == mode) Look.accent else T.text, 22.dp)
+                        Spacer(Modifier.size(12.dp))
+                        Text(modeTitle(m), color = if (m == mode) Look.accent else T.text, fontSize = 16.sp)
+                    }
+                }
+                if (c != null) Row(Modifier.fillMaxWidth().clickable { look = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("palette", T.text, 22.dp); Spacer(Modifier.size(12.dp)); Text(tr("Look", "Görünüm"), color = T.text, fontSize = 16.sp)
+                }
+            }
+        },
+        confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat"), onClick = onClose) })
+}
+
 /** One key in the look of the window: every Windows look has its own key, Material and AMOLED have round ones. */
 @Composable
-private fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: () -> Unit) {
+internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: () -> Unit) {
     val equals = k == "="
     val digit = k.length == 1 && (k[0].isDigit() || k == "." || k == "±")
     val op = k in setOf("÷", "×", "−", "+")
