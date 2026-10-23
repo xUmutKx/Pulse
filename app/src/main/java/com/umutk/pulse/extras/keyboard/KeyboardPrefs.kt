@@ -67,6 +67,8 @@ object KeyboardPrefs {
 
     // feel
     var haptic by mutableStateOf(true)
+    /** How long an unpinned clipboard item is kept, in hours (1 to 72). */
+    var clipHours by mutableStateOf(24)
     /** A comma straight before a letter inside a word is a slip: it is taken out and the word goes on. */
     var commaSlip by mutableStateOf(false)
     var hapticMs by mutableStateOf(8)   // strength 1..40
@@ -98,7 +100,7 @@ object KeyboardPrefs {
         proKeys = p.getString("proKeys", proKeys) ?: proKeys; proBottom = p.getBoolean("proBottom", proBottom); menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
         // the menu and bar of older versions held cut / copy / paste / undo: they are replaced by the new default once
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
-        haptic = p.getBoolean("haptic", haptic); commaSlip = p.getBoolean("commaSlip2", false); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
+        haptic = p.getBoolean("haptic", haptic); clipHours = p.getInt("clipHours", clipHours); commaSlip = p.getBoolean("commaSlip2", false); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
     fun save(c: Context) {
@@ -113,7 +115,7 @@ object KeyboardPrefs {
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn)
             .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proBottom", proBottom).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
-            .putBoolean("haptic", haptic).putBoolean("commaSlip2", commaSlip).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
+            .putBoolean("haptic", haptic).putInt("clipHours", clipHours).putBoolean("commaSlip2", commaSlip).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
 

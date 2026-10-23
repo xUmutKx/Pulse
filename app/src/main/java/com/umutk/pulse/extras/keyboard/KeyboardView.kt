@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.keyboard
 
+import androidx.compose.ui.graphics.asImageBitmap
 import com.umutk.pulse.tr
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateColorAsState
@@ -537,6 +538,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     if (!special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
+                    // the comma key holds voice typing on a long press: a small microphone above it says so
+                    if (k.kind == KeyKind.COMMA && !small) Icon(Icons.Rounded.Mic, null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
                     Text(k.label, color = fg, fontSize = if (small) (fs.value * .82f).sp else fs, maxLines = 1)
                 }
             }
@@ -662,16 +665,63 @@ private fun MenuPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    var sel by remember { mutableStateOf(setOf<Long>()) }
+    val selecting = sel.isNotEmpty()
+    val now = System.currentTimeMillis()
     Column(Modifier.fillMaxWidth().height(keyH * 4f).background(th.menu)) {
-        LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-            items(st.clips) { s ->
-                Text(s, color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.fillMaxWidth().clickable { act.paste(s) }.padding(horizontal = 14.dp, vertical = 12.dp))
+        // the head: how many are kept, and either the clear / select-all buttons or the delete of the picked ones
+        Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(if (selecting) "${sel.size} " + tr("selected", "seçili") else tr("Clipboard", "Pano") + " · ${st.clipItems.size}", color = th.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            if (selecting) {
+                Text(tr("All", "Tümü"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { sel = st.clipItems.map { it.id }.toSet() }.padding(8.dp))
+                Text(tr("Delete", "Sil"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipDelete(sel); sel = emptySet() }.padding(8.dp))
+                Text(tr("Cancel", "Vazgeç"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { sel = emptySet() }.padding(8.dp))
+            } else if (st.clipItems.any { !it.pinned }) Text(tr("Clear unpinned", "Sabitlenmeyenleri temizle"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipClear() }.padding(8.dp))
+        }
+        if (st.clipItems.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text(tr("Copied texts and pictures appear here", "Kopyalanan metin ve resimler burada görünür"), color = th.sub, fontSize = 14.sp) }
+        else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+            items(st.clipItems, key = { it.id }) { it2 ->
+                Row(Modifier.fillMaxWidth().combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { sel = sel + it2.id })
+                    .then(if (it2.id in sel) Modifier.background(th.special) else Modifier).padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(34.dp).clickable { act.clipPin(it2.id) }, contentAlignment = Alignment.Center) {
+                        Icon(kbIcon(th, "Gesture"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
+                    }
+                    if (it2.image != null) ClipThumb(it2.image) else Text(it2.text, color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (it2.image != null) Spacer(Modifier.weight(1f))
+                    Text(ago(now - it2.time), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp))
+                }
             }
         }
         Row(Modifier.fillMaxWidth()) { Key(th, st, act, KbKey("ABC", KeyKind.MODE, 2f), keyH * .85f); Spacer(5f); Key(th, st, act, KbKey("", KeyKind.DELETE, 2f), keyH * .85f) }
     }
+}
+
+private fun ago(ms: Long): String = when {
+    ms < 90_000L -> tr("now", "şimdi")
+    ms < 3_600_000L -> "${ms / 60_000} " + tr("min", "dk")
+    ms < 86_400_000L -> "${ms / 3_600_000} " + tr("h", "sa")
+    else -> "${ms / 86_400_000} " + tr("d", "g")
+}
+
+/** A kept picture, shown small. */
+@Composable
+private fun ClipThumb(path: String) {
+    val bmp by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, path) {
+        value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                android.graphics.BitmapFactory.decodeFile(path, o)
+                var ss = 1; while (o.outWidth / ss > 300) ss *= 2
+                android.graphics.BitmapFactory.decodeFile(path, android.graphics.BitmapFactory.Options().apply { inSampleSize = ss })?.asImageBitmap()
+            }.getOrNull()
+        }
+    }
+    val b = bmp
+    if (b != null) androidx.compose.foundation.Image(b, null, Modifier.height(56.dp).clip(RoundedCornerShape(6.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Fit)
+    else Box(Modifier.size(56.dp).clip(RoundedCornerShape(6.dp)).background(Color.Gray.copy(alpha = .3f)))
 }
 
 /** Resizing on the keyboard itself: pull the top edge for the height, the bottom edge for the space below, the side edges for the space at the sides. */
