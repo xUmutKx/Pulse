@@ -43,6 +43,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var prevWord2: String? = null
     private val touchPts = ArrayList<androidx.compose.ui.geometry.Offset?>()
     private var emailField = false
+    private var noAuto = false
     // the last text copied: the right slot of the bar offers it for two pastes
     private var quickClip: String? = null
     private var quickLeft = 0
@@ -158,7 +159,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.dark = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
         val cls = info.inputType and InputType.TYPE_MASK_CLASS
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
-        st.plain = cls != InputType.TYPE_CLASS_TEXT || (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0 ||
+        // a field that asks for no suggestions (many web inputs in Chrome do) still gets the bar; only the automatic correction stays off there
+        noAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
+        st.plain = cls != InputType.TYPE_CLASS_TEXT ||
             v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
                 InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_FILTER)
         emailField = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS); lastEmail = null
@@ -246,7 +249,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val typed = word.toString()
         var out = typed
         val t = target
-        if (correct && KeyboardPrefs.autocorrect && !st.plain && t != null && !t.equals(typed, true)) out = t
+        if (correct && KeyboardPrefs.autocorrect && !st.plain && !noAuto && t != null && !t.equals(typed, true)) out = t
         c.commitText(out, 1)
         lastCorrection = if (out != typed) Correction(typed, out, sep) else null
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
