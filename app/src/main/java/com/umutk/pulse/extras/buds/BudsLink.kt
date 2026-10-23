@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
 /** What the earbuds last told us. */
-class BudsState(
+data class BudsState(
     val connected: Boolean = false, val name: String = "", val batteryL: Int = -1, val batteryR: Int = -1, val batteryCase: Int = -1,
     val wornL: Boolean = false, val wornR: Boolean = false, val noise: Int = -1, val canNoise: Boolean = false, val message: String = "",
 )
