@@ -59,13 +59,23 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     private val lang get() = KeyboardLayouts.lang(st.lang)
 
+    /** The word lists used together: the layout's own, then those of the other languages in use (a Turkish keyboard that also corrects English). */
+    private fun dictCodes(code: String): List<String> = (listOf(KeyboardLayouts.dict(code)) + KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }).distinct()
+
     override fun onCreate() {
         super.onCreate()
         KeyboardPrefs.load(this)
         owner = StandByOwner().also { it.start() }
         st.lang = KeyboardPrefs.langList().first()
         st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.split(' ')?.filter { it.isNotEmpty() } ?: emptyList()
-        scope.launch(Dispatchers.IO) { KeyboardPrefs.langList().forEach { KeyboardDictionary.load(this@PulseKeyboardService, it) }; withContext(Dispatchers.Main) { updateSuggestions() } }
+        scope.launch(Dispatchers.IO) {
+            KeyboardPrefs.langList().forEach { code ->
+                // a language without a word list fetches its own (when there is a connection)
+                if (!KeyboardDictionary.hasList(this@PulseKeyboardService, code)) KeyboardDictionary.download(this@PulseKeyboardService, code)
+                KeyboardDictionary.load(this@PulseKeyboardService, code)
+            }
+            withContext(Dispatchers.Main) { updateSuggestions() }
+        }
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.addPrimaryClipChangedListener(clipListener)
     }
@@ -361,7 +371,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun glide(letters: String) {
         val c = currentInputConnection ?: return
-        val found = KeyboardDictionary.glide(st.lang, letters, 4)
+        val found = dictCodes(st.lang).flatMap { KeyboardDictionary.glide(it, letters, 4) }.distinct().take(4)
         if (found.isEmpty()) return
         finishWord(" ", true)
         // a word swiped right after another is a new word
@@ -438,10 +448,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.shift = if (c.getCursorCapsMode(info.inputType) != 0) 1 else 0
     }
 
-    private fun cased(w: String, typed: String): String = when {
-        typed.length > 1 && typed.all { !it.isLetter() || it.isUpperCase() } -> w.uppercase(lang.locale)
-        typed.isNotEmpty() && typed[0].isUpperCase() -> w.replaceFirstChar { it.titlecase(lang.locale) }
-        else -> w
+    private fun cased(w: String, typed: String): String {
+        // a word that is English and not Turkish is capitalised the English way (if -> If, not İf)
+        val loc = if (lang.locale.language == "tr" && w.none { it in "çğıöşü" } && KeyboardDictionary.isWord("en", w) && !KeyboardDictionary.isWord("tr", w)) Locale.ENGLISH else lang.locale
+        return when {
+            typed.length > 1 && typed.all { !it.isLetter() || it.isUpperCase() } -> w.uppercase(loc)
+            typed.isNotEmpty() && typed[0].isUpperCase() -> w.replaceFirstChar { it.titlecase(loc) }
+            else -> w
+        }
     }
 
     private fun updateSuggestions() {
@@ -462,10 +476,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             return Triple(w.toList(), w, null)
         }
         val lower = typed.lowercase(loc)
-        val comp = KeyboardDictionary.complete(code, lower, 4)
-        val maxCost = if (code == "tr") (if (lower.length >= 5) .8f else .65f) else if (lower.length >= 4) 1.3f else .7f
-        val corr = if (lower.length >= 2) KeyboardDictionary.correct(code, lower, maxCost, 5) else emptyList()
-        val valid = KeyboardDictionary.isWord(code, lower)
+        val codes = dictCodes(code)
+        val comp = codes.flatMap { KeyboardDictionary.complete(it, lower, 4) }.sortedByDescending { it.score }.take(5)
+        val maxCost = if (KeyboardLayouts.dict(code) == "tr") (if (lower.length >= 5) .8f else .65f) else if (lower.length >= 4) 1.3f else .7f
+        val corr = if (lower.length >= 2) codes.flatMap { KeyboardDictionary.correct(it, lower, maxCost, 5) }.sortedByDescending { it.score }.take(6) else emptyList()
+        val valid = codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
         val fix = corr.firstOrNull { it.word != lower }?.takeIf { lower.length >= 3 && it.cost <= maxCost && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word }

@@ -27,6 +27,9 @@ import kotlin.math.tanh
  * with [compile] and can then be evaluated for many x.
  */
 object Sci {
+    /** The second variable, y, of a surface z = f(x, y): the plot sets it before each evaluation. */
+    @Volatile var y = 0.0
+
     /** A compiled expression; [at] gives its value for x (and the angle unit: degrees or radians). */
     class Fn internal constructor(private val f: (Double, Boolean) -> Double) {
         fun at(x: Double, deg: Boolean = false): Double = f(x, deg)
@@ -124,6 +127,11 @@ object Sci {
                 val name = s.substring(st, i)
                 when (name) {
                     "x" -> return { x, _ -> x }
+                    "y" -> return { _, _ -> y }
+                    // xy, xx, yy: the product of the variables
+                    "xy", "yx" -> return { x, _ -> x * y }
+                    "xx" -> return { x, _ -> x * x }
+                    "yy" -> return { _, _ -> y * y }
                     "p" -> return { _, _ -> PI }
                     "e" -> return { _, _ -> Math.E }
                 }

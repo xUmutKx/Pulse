@@ -12,6 +12,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -85,7 +86,7 @@ fun ArtScreen() {
     var detail by remember { mutableStateOf<ArtCraft.Item?>(null) }
     val tick = ArtCraft.tick
     LaunchedEffect(Unit) { if (ArtCraft.items.isEmpty()) ArtCraft.refresh(c) }
-    Column(Modifier.fillMaxSize().background(if (ArtCraft.translucent) Color.Black.copy(alpha = .55f) else T.bg).statusBarsPadding().navigationBarsPadding().padding(horizontal = 16.dp)) {
+    Column(Modifier.fillMaxSize().background(if (ArtCraft.translucent) Color.Black.copy(alpha = .55f) else T.bg).statusBarsPadding().navigationBarsPadding().imePadding().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text("ArtCraft", color = T.text, fontSize = 30.sp, fontFamily = artFont())
@@ -196,7 +197,7 @@ private fun ArtDetail(item: ArtCraft.Item, onClose: () -> Unit) {
     val c = LocalContext.current
     BackHandler(onBack = onClose)
     val state = ArtCraft.stateOf(c, item)
-    Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().verticalScroll(rememberScrollState()).padding(16.dp),
+    Column(Modifier.fillMaxSize().background(T.bg).statusBarsPadding().navigationBarsPadding().imePadding().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onClose() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }

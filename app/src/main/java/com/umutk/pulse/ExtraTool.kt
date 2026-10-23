@@ -8,6 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -156,7 +157,7 @@ open class ExtraToolActivity : ComponentActivity() {
                         if (frame != null) com.umutk.pulse.extras.launcher.FramedWindow(frame, intent.getStringExtra("title") ?: route.substringAfter(':').replaceFirstChar { it.uppercase() }, { finish() }, if (route != start) back else null) {
                             Box(Modifier.fillMaxSize().background(th.bg)) { SubScreen(route, back) }
                         }
-                        else Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding()) { SubScreen(route, back) }
+                        else Box(Modifier.fillMaxSize().background(th.bg).statusBarsPadding().navigationBarsPadding().imePadding()) { SubScreen(route, back) }
                     }
                 }
             }

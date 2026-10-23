@@ -215,7 +215,7 @@ internal fun ImageEditor(src: ImgSrc, onClose: () -> Unit, onSaved: (File, Boole
     val ctx = LocalContext.current
     val loaded by produceState<Pair<Boolean, Bitmap?>>(false to null, src) { value = true to withContext(Dispatchers.IO) { imgDecode(ctx, src, 2560) } }
     BackHandler(true) { onClose() }
-    Column(Modifier.fillMaxSize().background(T.bg).pointerInput(Unit) {}.statusBarsPadding().navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().background(T.bg).pointerInput(Unit) {}.statusBarsPadding().navigationBarsPadding().imePadding()) {
         val b = loaded.second
         if (b != null) ImgEditBody(src, b, onClose, onSaved)
         else {
