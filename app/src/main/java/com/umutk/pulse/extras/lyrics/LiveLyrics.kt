@@ -168,6 +168,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
 
     private val nm get() = ctx.getSystemService(android.app.NotificationManager::class.java)
     private var noteText: String? = null
+    private var lastCheck = 0L
     private var artFor: String? = null
     private var art: android.graphics.Bitmap? = null
 
@@ -175,7 +176,14 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         val body = trio?.second?.takeIf { it.isNotBlank() } ?: return clearNote()
         // the current line in bold letters behind a text-style arrow (no emoji picture), the neighbours plain
         val text = listOfNotNull(trio.first?.takeIf { it.isNotBlank() }, "\u25BA " + LiveLyrics.bold(trio.second), trio.third?.takeIf { it.isNotBlank() }).joinToString("\n")
-        if (text == noteText) return
+        // the same line as before: nothing to do, unless the notification was swiped away (checked every few seconds), then it comes back
+        val now = android.os.SystemClock.uptimeMillis()
+        if (text == noteText) {
+            if (now - lastCheck < 3000) return
+            lastCheck = now
+            if (nm.activeNotifications.any { it.id == 4106 }) return
+        }
+        lastCheck = now
         noteText = text
         // the whole current line is also set in a real bold style, which covers the letters the Unicode bold cannot (ç ş ğ ı ...) on phones that keep spans
         val bold = android.text.SpannableStringBuilder(text).also { sp ->

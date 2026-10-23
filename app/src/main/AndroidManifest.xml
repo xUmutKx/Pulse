@@ -666,6 +666,13 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
             <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
+        <!-- internet speed test tile (extras/speedtest): a tap starts it, the ring turns while it measures, the result sits under the name -->
+        <service android:name="com.umutk.pulse.extras.speedtest.SpeedTestTile" android:exported="true" android:label="Speed test" android:icon="@drawable/ic_qs_speed"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <!-- opens a tool page, bringing the one that is already open to the front instead of starting another (notifications and widgets use it) -->
+        <activity android:name=".ToolOpenActivity" android:exported="false" android:theme="@android:style/Theme.NoDisplay" android:excludeFromRecents="true" android:taskAffinity="" android:noHistory="true" />
         <!-- screen cover tile (features/CoverTile): needs the overlay permission, the tile opens that page until it is granted -->
         <service android:name="com.umutk.pulse.features.CoverTile" android:exported="true" android:label="Screen cover" android:icon="@drawable/ic_qs_cover"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">

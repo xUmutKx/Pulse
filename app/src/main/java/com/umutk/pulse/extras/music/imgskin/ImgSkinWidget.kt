@@ -82,7 +82,7 @@ abstract class ImgSkinWidget(private val index: Int) : AppWidgetProvider() {
             val sh = shrink
             return RemoteViews(c.packageName, R.layout.widget_imgskin).apply {
                 setImageViewBitmap(R.id.is_img, bmp)
-                setOnClickPendingIntent(R.id.is_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 73 + index, "route" to "music"))
+                setOnClickPendingIntent(R.id.is_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 73 + index, "route" to "music"))
                 fun key(container: Int, child: Int, hitId: String, action: String) {
                     val r = skin.hits.firstOrNull { it.id == hitId }?.r
                     // a skin without that key gets a key of no size
