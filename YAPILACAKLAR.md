@@ -1087,3 +1087,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.258 derlenmedi: Başlatıcı duvar kağıdına hareketli deniz dalgası efekti (Ekstralar > Duvar kağıdında deniz dalgaları).
 - 0.10.259 derlenmedi: derleme düzeltmesi (ControlPanel getValue/setValue importları).
 - 0.10.260 derlenmedi: deniz dalgası kaldırıldı (yanlış anlaşılma); yerine başlatıcı ses efektleri: görünüme göre açılış sesi + tıklama (Ekstralar > Ses efektleri).
+- 0.10.261 derlenmedi: APK yükleyici ayarlarında anahtarlar Material 3 anahtar; yeni "Yeni kurulumları küçült" seçeneği (tek APK: kullanılmayan işlemci kütüphaneleri silinir, Pulse anahtarıyla yeniden imzalanır, sadece kurulu olmayan uygulamalar). Ses efektleri: kullanıcı zip gönderecek, yeni ses eklenmeyecek.
