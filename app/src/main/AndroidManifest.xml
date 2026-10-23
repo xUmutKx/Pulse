@@ -1310,6 +1310,14 @@
         <!-- Music player (white noise and playlists inside it), video: one activity, one launcher entry each (the entry's name picks the page) -->
         <activity android:name=".ExtraToolActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:documentLaunchMode="always" android:taskAffinity="com.umutk.pulse.tools"
             android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".KeyboardSettingsActivity" android:exported="true" android:theme="@style/Theme.Pulse" android:label="Pulse Keyboard" android:taskAffinity="com.umutk.pulse.tools"
+            android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
+        <service android:name="com.umutk.pulse.extras.keyboard.PulseKeyboardService" android:label="Pulse Keyboard" android:exported="true" android:permission="android.permission.BIND_INPUT_METHOD">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data android:name="android.view.im" android:resource="@xml/method" />
+        </service>
         <activity-alias android:name=".MusicLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_music" android:roundIcon="@mipmap/ic_music" android:label="Music Player">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -1348,6 +1356,12 @@
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".CalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_calc" android:roundIcon="@mipmap/ic_ad_calc" android:label="Calculator">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".KeyboardLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_keyboard" android:roundIcon="@mipmap/ic_ad_keyboard" android:label="Keyboard">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
