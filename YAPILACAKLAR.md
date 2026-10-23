@@ -1140,3 +1140,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.322: derlenmedi (derleme istenmedi) — klavye: parola yöneticisi (otomatik doldurma) önerileri klavyenin öneri çubuğunda çıkar (Android 11+, satır içi öneri), kullanıcı adı/parola/kart seçilebilir
 - 0.10.323: derlenmedi (derleme istenmedi) — klavye: emoji paneli yeniden yazıldı (tüm Unicode emoji + bayraklar, 9 grup, kaomoji sekmesi, Türkçe/İngilizce arama; cihazın çizemediği emoji gizlenir), Boyutlandır ekranı artık pencereyi tüm ekrana yaymaz, kelime içindeki virgül hata sayılır (ayarlanabilir)
 - 0.10.324: derlenmedi (derleme istenmedi) — klavye: "kelime içindeki virgül hatadır" varsayılan KAPALI (Bak,şey gibi virgülden sonra boşluksuz yazımı bozuyordu)
+- 0.10.325: derlenmedi (derleme istenmedi) — klavye düzeltme: dokunma modeli (parmağın tuşa değdiği nokta ve kişisel kayma, komşu tuş maliyeti buna göre), iki kelimelik bağlam (üçlü kelime dizisi) ile sıralama

@@ -102,6 +102,7 @@ object KeyboardDictionary {
     private fun loadUser(c: Context) {
         userLoaded = true
         runCatching { File(c.filesDir, "kbd_user.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) user[p[0]] = p[1].toIntOrNull() ?: 1 } }
+        runCatching { File(c.filesDir, "kbd_touch.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3 && p[0].length == 1) bias[p[0][0]] = floatArrayOf(p[1].toFloatOrNull() ?: 0f, p[2].toFloatOrNull() ?: 0f) } }
         runCatching { File(c.filesDir, "kbd_banned.txt").forEachLine { l -> if (l.isNotBlank()) banned += l.trim() } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
@@ -111,6 +112,7 @@ object KeyboardDictionary {
         if (dirty == 0 && !force) return
         dirty = 0
         runCatching {
+            File(c.filesDir, "kbd_touch.txt").writeText(bias.entries.joinToString("\n") { "${it.key} ${it.value[0]} ${it.value[1]}" })
             File(c.filesDir, "kbd_user.txt").writeText(user.entries.sortedByDescending { it.value }.take(8000).joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_pairs.txt").writeText(pairs.entries.flatMap { (a, m) -> m.entries.map { Triple(a, it.key, it.value) } }.sortedByDescending { it.third }.take(8000).joinToString("\n") { "${it.first} ${it.second} ${it.third}" })
         }
@@ -132,6 +134,15 @@ object KeyboardDictionary {
     }
 
     /** A word the user finished: it counts towards the completions, and the pair with the word before it towards the next-word suggestions. */
+    /** Learns the word with the two words before it (the pair key is "first_second"), so a word is judged by its two-word context. */
+    fun learn(c: Context, prev2: String?, prev: String?, word: String) {
+        learn(c, prev, word)
+        if (!prev2.isNullOrEmpty() && !prev.isNullOrEmpty()) {
+            val w = word.lowercase(Locale.ROOT)
+            if (w.length >= 2 && w.none { it.isDigit() }) { val m = pairs.getOrPut(prev2.lowercase(Locale.ROOT) + "_" + prev.lowercase(Locale.ROOT)) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
+        }
+    }
+
     fun learn(c: Context, prev: String?, word: String) {
         val w = word.lowercase(Locale.ROOT)
         if (w.length < 2 || w.any { it.isDigit() }) return
@@ -164,10 +175,14 @@ object KeyboardDictionary {
     }
 
     /** How much more likely [w] is right after [prev], from what the person wrote (0 when it never followed). */
-    fun pairBoost(prev: String?, w: String): Float {
+    fun pairBoost(prev: String?, w: String, prev2: String? = null): Float {
         if (prev.isNullOrEmpty()) return 0f
-        val n = pairs[prev.lowercase(Locale.ROOT)]?.get(w.lowercase(Locale.ROOT)) ?: return 0f
-        return 1.5f + ln(1f + n) * 1.2f
+        val lw = w.lowercase(Locale.ROOT)
+        val n = pairs[prev.lowercase(Locale.ROOT)]?.get(lw) ?: 0
+        // the two words before it count double: a longer context says more
+        val t = if (!prev2.isNullOrEmpty()) pairs[prev2.lowercase(Locale.ROOT) + "_" + prev.lowercase(Locale.ROOT)]?.get(lw) ?: 0 else 0
+        if (n == 0 && t == 0) return 0f
+        return (if (n > 0) 1.5f + ln(1f + n) * 1.2f else 0f) + (if (t > 0) 2f + ln(1f + t) * 2f else 0f)
     }
 
     fun isWord(code: String, w: String): Boolean {
@@ -204,7 +219,7 @@ object KeyboardDictionary {
     }
 
     /** Words close to [typed] (lowercase): the typed word itself when it is one, and the ones a typo or a missing accent away. */
-    fun correct(code: String, typed: String, maxCost: Float, n: Int): List<Cand> {
+    fun correct(code: String, typed: String, maxCost: Float, n: Int, tc: TouchCtx? = null): List<Cand> {
         val lang = d(code)
         val lx = lexes[lang] ?: return emptyList()
         val t = typed
@@ -215,7 +230,7 @@ object KeyboardDictionary {
             if (abs(w.length - t.length) > 2 || w.length > 28) return
             // a typo is rarely on the first letter: the word starts like the typed one, with a neighbour key, or is one letter longer or shorter at the start
             if (t.length >= 3) { val w0 = foldc(w[0]); if (w0 != f0 && w0 != f1 && !near(w[0], t[0]) && !(w.length > 1 && foldc(w[1]) == f0)) return }
-            val cost = distance(t, w, maxCost, d0, d1, d2)
+            val cost = distance(t, w, maxCost, d0, d1, d2, tc)
             if (cost > maxCost) return
             best += Cand(w, base - 4f * cost, cost)
         }
@@ -280,7 +295,7 @@ object KeyboardDictionary {
     }
 
     /** Mended inflected words: the base mended by [correct], the ending mended to the nearest chain that agrees with it. */
-    fun trCorrect(typed: String, n: Int): List<Cand> {
+    fun trCorrect(typed: String, n: Int, tc: TouchCtx? = null): List<Cand> {
         val lx = lexes["tr"] ?: return emptyList()
         if (typed.length < 5 || typed.length > 26) return emptyList()
         val out = ArrayList<Cand>()
@@ -295,7 +310,7 @@ object KeyboardDictionary {
                 if (cst == 0f) break
             }
             val tail = bestTail ?: continue
-            val stems = correct("tr", stemT, if (stemT.length >= 5) 1f else .7f, 3)
+            val stems = correct("tr", stemT, if (stemT.length >= 5) 1f else .7f, 3, tc)
             for (st in stems) {
                 if (!harmony(st.word, tail) || st.word.length < 3) continue
                 val cost = st.cost + bestCost
@@ -401,6 +416,35 @@ object KeyboardDictionary {
         else -> if (c.code < 128) c else Normalizer.normalize(c.toString(), Normalizer.Form.NFD).firstOrNull() ?: c
     }
 
+    /**
+     * The touch model: where each letter of the typed word was touched (screen coordinates), where the keys are, and how this person's finger drifts from the
+     * key centres. A letter touched near the edge of the next key costs less to read as that key's letter than one touched in the middle of its own key.
+     */
+    class TouchCtx(val pts: List<androidx.compose.ui.geometry.Offset?>, val centers: Map<Char, androidx.compose.ui.geometry.Offset>, val keyW: Float)
+
+    private val bias = ConcurrentHashMap<Char, FloatArray>()   // dx, dy in key widths, running average of this person's touches
+
+    /** A letter was typed: the average drift of the finger from that key's centre is updated (two percent of each new touch). */
+    fun learnTouch(ch: Char, p: androidx.compose.ui.geometry.Offset, center: androidx.compose.ui.geometry.Offset, keyW: Float) {
+        if (keyW <= 0f) return
+        val b = bias.getOrPut(ch) { FloatArray(2) }
+        b[0] = (b[0] * .98f + ((p.x - center.x) / keyW) * .02f).coerceIn(-.4f, .4f)
+        b[1] = (b[1] * .98f + ((p.y - center.y) / keyW) * .02f).coerceIn(-.4f, .4f)
+    }
+
+    private fun touchSub(i: Int, a: Char, b: Char, tc: TouchCtx): Float {
+        if (a == b) return 0f
+        val p = tc.pts.getOrNull(i) ?: return sub(a, b)
+        val c = tc.centers[b] ?: return sub(a, b)
+        val bi = bias[a]
+        val px = p.x - (bi?.get(0) ?: 0f) * tc.keyW; val py = p.y - (bi?.get(1) ?: 0f) * tc.keyW
+        val dx = (px - c.x) / tc.keyW; val dy = (py - c.y) / tc.keyW
+        val d = sqrt(dx * dx + dy * dy)
+        val base = sub(a, b)
+        // the accent-only difference stays cheap; otherwise the cost follows the distance of the touch from the other key
+        return if (base <= .15f) base else (.15f + .85f * (d / 1.6f) * (d / 1.6f)).coerceIn(.15f, 1f)
+    }
+
     private fun sub(a: Char, b: Char): Float {
         if (a == b) return 0f
         val fa = foldc(a); val fb = foldc(b)
@@ -408,7 +452,7 @@ object KeyboardDictionary {
     }
 
     /** Weighted edit distance (substitution, insertion, deletion, swap of two neighbours); stops early beyond [limit]. */
-    private fun distance(a: String, b: String, limit: Float, r0: FloatArray, r1: FloatArray, r2: FloatArray): Float {
+    private fun distance(a: String, b: String, limit: Float, r0: FloatArray, r1: FloatArray, r2: FloatArray, tc: TouchCtx? = null): Float {
         val n = a.length; val m = b.length
         if (n >= 31 || m >= 31) return limit + 1
         var prev2 = r0; var prev = r1; var cur = r2
@@ -417,7 +461,7 @@ object KeyboardDictionary {
             cur[0] = i.toFloat()
             var rowMin = cur[0]
             for (j in 1..m) {
-                var v = minOf(prev[j - 1] + sub(a[i - 1], b[j - 1]), prev[j] + 1f, cur[j - 1] + 1f)
+                var v = minOf(prev[j - 1] + (if (tc != null) touchSub(i - 1, a[i - 1], b[j - 1], tc) else sub(a[i - 1], b[j - 1])), prev[j] + 1f, cur[j - 1] + 1f)
                 if (i > 1 && j > 1 && a[i - 1] == b[j - 2] && a[i - 2] == b[j - 1]) v = minOf(v, prev2[j - 2] + .6f)
                 cur[j] = v
                 if (v < rowMin) rowMin = v
