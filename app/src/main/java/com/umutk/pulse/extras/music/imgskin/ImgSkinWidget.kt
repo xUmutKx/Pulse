@@ -85,7 +85,8 @@ abstract class ImgSkinWidget(private val index: Int) : AppWidgetProvider() {
                 setImageViewBitmap(R.id.is_img, bmp)
                 setOnClickPendingIntent(R.id.is_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 73 + index, "route" to "music"))
                 fun key(container: Int, child: Int, hitId: String, action: String) {
-                    val r = skin.hits.firstOrNull { it.id == hitId }?.r
+                    // the key a little bigger than drawn (the small ones of the skins are hard to hit, and a widget a few pixels off its computed size still works)
+                    val r = skin.hits.firstOrNull { it.id == hitId }?.r?.let { h -> val g = 7f; android.graphics.RectF(maxOf(0f, h.left - g), maxOf(0f, h.top - g), minOf(skin.w.toFloat(), h.right + g), minOf(skin.h.toFloat(), h.bottom + g)) }
                     // a skin without that key gets a key of no size
                     if (r == null) setViewPadding(container, 0, 0, bw * 4, bh * 4)
                     else setViewPadding(container, ((ox + r.left * k) * sh).toInt(), ((oy + r.top * k) * sh).toInt(), ((bw - ox - r.right * k) * sh).toInt(), ((bh - oy - r.bottom * k) * sh).toInt())
