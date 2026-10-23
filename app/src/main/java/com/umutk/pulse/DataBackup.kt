@@ -10,7 +10,7 @@ import java.util.zip.ZipOutputStream
 
 /**
  * Settings and files in one zip: every shared-preferences file (Pulse, looks, extra apps) and the user data under files/.
- * Caches, downloads and per-app data copies are left out, and so are secrets. The zip layout (shared_prefs/ and files/
+ * Caches, downloads and per-app data copies are left out, and so are secrets (the Authenticator accounts only travel when the user asks, sealed with a password of theirs). The zip layout (shared_prefs/ and files/
  * entries) is the same as before, so older backups still import. Import first unpacks into a staging folder, so a
  * broken zip changes nothing.
  * shortcut: the files are copied whole, with no size limit or progress bar; add both if large backups get slow.
@@ -43,19 +43,22 @@ object DataBackup {
     }
 
     /** File count and total bytes that an export would write, shown before the user saves. */
-    fun summary(ctx: Context): Pair<Int, Long> = entries(ctx).let { e -> e.size to e.sumOf { it.second.length() } }
+    fun summary(ctx: Context): Pair<Int, Long> = entries(ctx).let { e -> val a = com.umutk.pulse.features.AuthBackup.seal(ctx); (e.size + (if (a != null) 1 else 0)) to (e.sumOf { it.second.length() } + (a?.size ?: 0)) }
 
     /** Writes the zip to [out] and returns how many files it holds. */
     fun export(ctx: Context, out: OutputStream): Int {
         val list = entries(ctx)
+        var extra = 0
         ZipOutputStream(out).use { zip ->
             list.forEach { (name, f) ->
                 zip.putNextEntry(ZipEntry(name))
                 f.inputStream().use { it.copyTo(zip) }
                 zip.closeEntry()
             }
+            // the Authenticator accounts, when the user asked for them: sealed with their own password (see AuthBackup)
+            com.umutk.pulse.features.AuthBackup.seal(ctx)?.let { zip.putNextEntry(ZipEntry(FILES + "auth-backup.enc")); zip.write(it); zip.closeEntry(); extra = 1 }
         }
-        return list.size
+        return list.size + extra
     }
 
     /** Copies a backup from [input] over the current settings and files. Files = 0 when the zip holds nothing Pulse knows. */
