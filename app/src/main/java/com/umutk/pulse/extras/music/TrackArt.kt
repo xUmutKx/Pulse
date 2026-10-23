@@ -113,13 +113,15 @@ fun trackArtLocal(ctx: Context, track: Track): ImageBitmap? {
 /** Decoded covers kept in memory by path, so a track change shows the cover at once instead of the previous one while the new one loads. */
 private val artMem = object : LinkedHashMap<String, ImageBitmap>(16, .75f, true) { override fun removeEldestEntry(e: MutableMap.MutableEntry<String, ImageBitmap>?) = size > 30 }
 @Synchronized private fun artCached(path: String?): ImageBitmap? = path?.let { artMem[it] }
+/** Drops every cached copy of the cover of [path] (a cover was just picked for it). */
+@Synchronized internal fun dropArt(path: String) { artMem.remove(path); forgetArt(path) }
 @Synchronized private fun artKeep(path: String, b: ImageBitmap) { artMem[path] = b }
 
 /** The cover of [t]: the one in memory at once, else read off the main thread (saved and embedded art first, then the internet). Never the cover of the previous track. */
 @Composable
-fun rememberTrackArt(t: Track?): ImageBitmap? {
+fun rememberTrackArt(t: Track?, rev: Int = 0): ImageBitmap? {
     val ctx = LocalContext.current
-    return produceState<ImageBitmap?>(artCached(t?.path), t?.path) {
+    return produceState<ImageBitmap?>(artCached(t?.path), t?.path, rev) {
         // the state outlives a key change: reset it to this track's own cover (or none) before anything is loaded
         value = artCached(t?.path)
         if (t == null || value != null) return@produceState

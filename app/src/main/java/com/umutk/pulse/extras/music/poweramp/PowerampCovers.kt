@@ -155,6 +155,18 @@ internal fun CoverArtDialog(track: Track, style: PowerampStyle, onSaved: () -> U
         ) {
             Text(tr("Album art", "Albüm kapağı"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(12.dp))
+            // the names can always be spelled another way: artist and song (or album), then search again
+            if (hits?.isNotEmpty() == true) Column(Modifier.padding(bottom = 10.dp)) {
+                @Composable fun f2(v: String, hint: String, on: (String) -> Unit) = androidx.compose.foundation.text.BasicTextField(
+                    v, on, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = Color.White, fontSize = 14.sp),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(Color.White),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = .1f)).padding(horizontal = 12.dp, vertical = 8.dp),
+                    decorationBox = { inner -> if (v.isEmpty()) Text(hint, color = Color.White.copy(alpha = .4f), fontSize = 14.sp); inner() })
+                f2(qArtist, tr("Artist", "Sanatçı")) { qArtist = it }
+                f2(qName, tr("Album or song", "Albüm ya da şarkı")) { qName = it }
+                Text(tr("Search again", "Tekrar ara"), color = Color.Black, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp).align(Alignment.CenterHorizontally)
+                    .clip(RoundedCornerShape(20.dp)).background(Color.White).clickable { attempt++ }.padding(horizontal = 18.dp, vertical = 7.dp))
+            }
             val list = hits
             when {
                 list == null || saving -> Box(Modifier.fillMaxWidth().height(160.dp), Alignment.Center) {

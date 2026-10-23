@@ -210,7 +210,9 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     val ctx = LocalContext.current
     val st by engine.state.collectAsState()
     val cur = st.current
-    val art = rememberTrackArt(cur)
+    var artRev by remember { mutableIntStateOf(0) }
+    var artOpen by remember { mutableStateOf(false) }
+    val art = rememberTrackArt(cur, artRev)
     val prevIdx = remember(st.index, st.queue, engine.player.shuffleModeEnabled, engine.player.repeatMode) { engine.player.previousMediaItemIndex }
     val nextIdx = remember(st.index, st.queue, engine.player.shuffleModeEnabled, engine.player.repeatMode) { engine.player.nextMediaItemIndex }
     val (artPrev, artNext) = neighbourCovers(st.queue, prevIdx, nextIdx) { trackArt(ctx, it) }
@@ -252,6 +254,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     var rootH by remember { mutableFloatStateOf(0f) }
     var sheetOn by remember { mutableStateOf(false) }
     var showLyrics by remember { mutableStateOf(false) }
+    if (artOpen && cur != null) com.umutk.pulse.extras.music.poweramp.CoverArtDialog(cur, com.umutk.pulse.extras.music.poweramp.PowerampStyle(), onSaved = { com.umutk.pulse.extras.music.dropArt(cur.path); artRev++ }, onClose = { artOpen = false })
     LaunchedEffect(cur?.path) { showLyrics = false }
     // a drag down moves the whole player and closes it past a fifth of the screen; a drag up opens the lyrics instead (the player stays put)
     var upAcc by remember { mutableFloatStateOf(0f) }
@@ -407,6 +410,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.KeyboardArrowDown, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { showQueue = false; showNow = false })
                         Spacer(Modifier.weight(1f))
+                        TopAction(Icons.Rounded.Image, artOpen, dyn) { artOpen = true }
                         TopAction(Icons.Rounded.Subject, showLyrics, dyn) { showQueue = false; showLyrics = !showLyrics }
                         TopAction(Icons.Rounded.Bedtime, sleepLeft > 0, dyn, if (sleepLeft > 0) "$sleepLeft" else null) { sleepLeft = when (sleepLeft) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 } }
                         TopAction(Icons.Rounded.QueueMusic, showQueue, dyn) { showLyrics = false; showQueue = !showQueue }
