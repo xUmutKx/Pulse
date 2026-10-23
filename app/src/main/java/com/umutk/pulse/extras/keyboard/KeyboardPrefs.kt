@@ -56,10 +56,10 @@ object KeyboardPrefs {
     var glide by mutableStateOf(true)
     var flick by mutableStateOf(true)
     var anim by mutableStateOf(true)
-    var proRow by mutableStateOf(false)
+    var proRow by mutableStateOf(true)
     var proKeys by mutableStateOf(ExtraKeys.DEFAULT)
     /** The extra row sits under the space row instead of above the letters. */
-    var proBottom by mutableStateOf(false)
+    var proBottom by mutableStateOf(true)
     var menuItems by mutableStateOf(ExtraKeys.DEFAULT_MENU)
     var toolbarItems by mutableStateOf(ExtraKeys.DEFAULT_TOOLBAR)
 
@@ -74,6 +74,8 @@ object KeyboardPrefs {
         if (loaded) return
         loaded = true
         val p = c.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+        // once: the extra keys (arrows, Ctrl, ...) sit under the space row from now on
+        if (p.getInt("ver", 0) < 2) p.edit().putBoolean("proRow", true).putBoolean("proBottom", true).putInt("ver", 2).apply()
         theme = p.getString("theme", theme) ?: theme
         cBg = p.getInt("cBg", cBg); cKey = p.getInt("cKey", cKey); cText = p.getInt("cText", cText); cSpecial = p.getInt("cSpecial", cSpecial)
         cAccent = p.getInt("cAccent", cAccent); cMenu = p.getInt("cMenu", cMenu); cRadius = p.getInt("cRadius", cRadius)
@@ -104,7 +106,7 @@ object KeyboardPrefs {
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn)
-            .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putString("proKeys", proKeys).putBoolean("proBottom", proBottom).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
+            .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proBottom", proBottom).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
             .putBoolean("haptic", haptic).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
@@ -123,7 +125,7 @@ object KeyboardPrefs {
         theme = "amoled"; heightPct = 110; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
-        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = false; proKeys = ExtraKeys.DEFAULT; proBottom = false; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; hapticMs = 12; sound = false
+        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; hapticMs = 12; sound = false
         resetTheme(c)
         KeyboardDictionary.forgetUser(c)
         loaded = true
