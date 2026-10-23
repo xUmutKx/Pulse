@@ -474,51 +474,76 @@ fun StandBySettings() {
     var tick by remember { mutableLongStateOf(0L) }
     LaunchedEffect(Unit) { while (true) { delay(1000); tick++ } }
     val ink = StandByPrefs.COLOURS[colour]
-    // the pages, each one drawn as it will look (small, live); a tap puts it in or takes it out of the swipe
-    Text(tr("Pages", "Sayfalar"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        STANDBY_PAGES.forEach { (id, n) ->
-            val on = id in pages
-            Column(Modifier.width(150.dp).clickable { pages = if (on) (pages - id).ifEmpty { listOf(id) } else pages + id; StandByPrefs.setPages(ctx, pages) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                MiniScreen(150.dp, on) { PageView(ctx, id, ink, tick) }
-                Text(tr(n.first, n.second), color = if (on) T.text else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+    // the editor: the page being edited is shown big, exactly as the cover draws it, and everything below changes it at once
+    var editing by remember { mutableStateOf(pages.firstOrNull() ?: "clock") }
+    var tab by remember { mutableIntStateOf(0) }
+    var rev by remember { mutableIntStateOf(0) }
+    val hasFont = editing in setOf("clock", "date", "duo_clock_battery", "duo_clock_calendar", "duo_analog_digital", "duo_music_clock")
+    val palette = editing in setOf("crop", "flip", "solar")
+    BoxWithConstraints(Modifier.fillMaxWidth().padding(top = 10.dp)) {
+        androidx.compose.runtime.key(rev) { MiniScreen(maxWidth, true) { PageView(ctx, editing, ink, tick) } }
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        val n = STANDBY_PAGES.firstOrNull { it.first == editing }?.second
+        Text(n?.let { tr(it.first, it.second) }.orEmpty(), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f), maxLines = 1)
+        // in the swipe of the cover or not
+        PIcon("check", if (editing in pages) T.accent else T.sub, 22.dp, Modifier.padding(end = 8.dp))
+        PSwitch(editing in pages, { on -> pages = if (on) (pages + editing).distinct() else (pages - editing).ifEmpty { listOf(editing) }; StandByPrefs.setPages(ctx, pages) })
+    }
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        listOf(tr("Pages", "Sayfalar"), tr("Style", "Stil"), tr("Colour", "Renk"), tr("More", "Diğer")).forEachIndexed { i, label -> PChip(tab == i, label) { tab = i } }
+    }
+    when (tab) {
+        0 -> Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            STANDBY_PAGES.forEach { (id, nm) ->
+                val on = id in pages
+                Column(Modifier.width(140.dp).clickable { editing = id; rev++ }, horizontalAlignment = Alignment.CenterHorizontally) {
+                    Box {
+                        MiniScreen(140.dp, id == editing) { PageView(ctx, id, ink, tick) }
+                        // the mark of the pages that are in the cover's swipe
+                        if (on) Box(Modifier.align(Alignment.TopEnd).padding(5.dp).size(18.dp).clip(RoundedCornerShape(9.dp)).background(com.umutk.pulse.Look.accent), contentAlignment = Alignment.Center) { PIcon("check", Color.White, 12.dp) }
+                    }
+                    Text(tr(nm.first, nm.second), color = if (id == editing) T.text else T.sub, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+                }
             }
         }
-    }
-    // the skins that have palettes: one row of small pictures each, shown while that skin is among the pages
-    if ("crop" in pages) PaletteRow(tr("Big Crop Clock style", "Büyük kırpık saat stili"), CROP_STYLES.size, StandByPrefs.style(ctx, "crop"), { StandByPrefs.setStyle(ctx, "crop", it) }) { i, sel -> MiniScreen(110.dp, sel) { BigCropFace(ctx, tick, i) } }
-    if ("flip" in pages) PaletteRow(tr("Retroflip style", "Retro çevirmeli stil"), FLIP_STYLES.size, StandByPrefs.style(ctx, "flip"), { StandByPrefs.setStyle(ctx, "flip", it) }) { i, sel -> MiniScreen(110.dp, sel) { RetroFlipFace(ctx, tick, i) } }
-    if ("solar" in pages) PaletteRow(tr("Solar Watch style", "Güneş saati stili"), SOLAR_STYLES.size, StandByPrefs.style(ctx, "solar"), { StandByPrefs.setStyle(ctx, "solar", it) }) { i, sel -> MiniScreen(110.dp, sel) { SolarFace(ctx, tick, i) } }
-    Text(tr("Digits", "Rakamlar"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        CLOCK_FONTS.forEach { f ->
-            Column(Modifier.width(110.dp).clickable { font = f.id; StandByPrefs.setFont(ctx, f.id) }, horizontalAlignment = Alignment.CenterHorizontally) {
-                MiniScreen(110.dp, font == f.id) {
-                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        val t = remember(tick) { SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()) }
-                        Text(t, color = ink, fontSize = (560f / (t.length * f.adv)).coerceAtMost(330f).sp, fontFamily = f.family, fontWeight = f.weight, maxLines = 1, softWrap = false)
+        1 -> Column {
+            if (editing == "crop") PaletteRow(CROP_STYLES.size, StandByPrefs.style(ctx, "crop"), { StandByPrefs.setStyle(ctx, "crop", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { BigCropFace(ctx, tick, i) } }
+            if (editing == "flip") PaletteRow(FLIP_STYLES.size, StandByPrefs.style(ctx, "flip"), { StandByPrefs.setStyle(ctx, "flip", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { RetroFlipFace(ctx, tick, i) } }
+            if (editing == "solar") PaletteRow(SOLAR_STYLES.size, StandByPrefs.style(ctx, "solar"), { StandByPrefs.setStyle(ctx, "solar", it); rev++ }) { i, sel -> MiniScreen(110.dp, sel) { SolarFace(ctx, tick, i) } }
+            if (hasFont) Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                CLOCK_FONTS.forEach { f ->
+                    Column(Modifier.width(110.dp).clickable { font = f.id; StandByPrefs.setFont(ctx, f.id); rev++ }, horizontalAlignment = Alignment.CenterHorizontally) {
+                        MiniScreen(110.dp, font == f.id) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                val t = remember(tick) { SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()) }
+                                Text(t, color = ink, fontSize = (560f / (t.length * f.adv)).coerceAtMost(330f).sp, fontFamily = f.family, fontWeight = f.weight, maxLines = 1, softWrap = false)
+                            }
+                        }
+                        Text(tr(f.en, f.tr), color = if (font == f.id) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
                     }
                 }
-                Text(tr(f.en, f.tr), color = if (font == f.id) T.text else T.sub, fontSize = 11.sp, maxLines = 1, modifier = Modifier.padding(top = 3.dp))
+            }
+            if (!palette && !hasFont) Text(tr("This page has no style of its own: its colour is the one under Colour.", "Bu sayfanın kendi stili yok: rengi Renk sekmesindekidir."), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 12.dp))
+        }
+        2 -> Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            StandByPrefs.COLOURS.forEachIndexed { i, c ->
+                Box(Modifier.size(40.dp).clip(RoundedCornerShape(20.dp)).background(c).clickable { colour = i; StandByPrefs.setColour(ctx, i); rev++ }, contentAlignment = Alignment.Center) {
+                    if (i == colour) Box(Modifier.size(14.dp).clip(RoundedCornerShape(7.dp)).background(Color.Black.copy(alpha = .5f)))
+                }
             }
         }
-    }
-    Text(tr("Colour", "Renk"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        StandByPrefs.COLOURS.forEachIndexed { i, c ->
-            Box(Modifier.size(34.dp).clip(RoundedCornerShape(17.dp)).background(c).clickable { colour = i; StandByPrefs.setColour(ctx, i) }.then(if (i == colour) Modifier.padding(0.dp) else Modifier), contentAlignment = Alignment.Center) {
-                if (i == colour) Box(Modifier.size(12.dp).clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = .5f)))
-            }
+        else -> Column {
+            sw(tr("24-hour clock", "24 saatlik saat"), h24) { h24 = it; StandByPrefs.setH24(ctx, it); rev++ }
+            sw(tr("Show seconds", "Saniyeleri göster"), sec) { sec = it; StandByPrefs.setSeconds(ctx, it); rev++ }
+            sw(tr("Move a little to protect the screen", "Ekranı korumak için hafif kay"), drift) { drift = it; StandByPrefs.setDrift(ctx, it) }
+            sw(tr("Night mode: dim red from 22:00 to 06:00", "Gece modu: 22:00-06:00 arası loş kırmızı"), night) { night = it; StandByPrefs.setNight(ctx, it) }
+            Text(tr("Triggers", "Tetikleyiciler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+            sw(tr("Start by itself while charging", "Şarjdayken kendiliğinden başla"), auto) { auto = it; StandByPrefs.setAutoCharge(ctx, it) }
+            if (auto) sw(tr("Only when the phone lies sideways", "Yalnızca telefon yan yatıkken"), side) { side = it; StandByPrefs.setSideways(ctx, it) }
+            Text(tr("The automatic trigger needs the \"Pulse · Screen cover layer\" accessibility service to be on. The Quick Settings tile \"StandBy\" starts it by hand.", "Otomatik tetikleyici için Erişilebilirlik'te \"Pulse · Screen cover layer\" açık olmalı. Hızlı ayarlardaki \"StandBy\" kutucuğu elle başlatır."), color = T.sub, fontSize = 12.sp)
         }
     }
-    sw(tr("24-hour clock", "24 saatlik saat"), h24) { h24 = it; StandByPrefs.setH24(ctx, it) }
-    sw(tr("Show seconds", "Saniyeleri göster"), sec) { sec = it; StandByPrefs.setSeconds(ctx, it) }
-    sw(tr("Move a little to protect the screen", "Ekranı korumak için hafif kay"), drift) { drift = it; StandByPrefs.setDrift(ctx, it) }
-    sw(tr("Night mode: dim red from 22:00 to 06:00", "Gece modu: 22:00-06:00 arası loş kırmızı"), night) { night = it; StandByPrefs.setNight(ctx, it) }
-    Text(tr("Triggers", "Tetikleyiciler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-    sw(tr("Start by itself while charging", "Şarjdayken kendiliğinden başla"), auto) { auto = it; StandByPrefs.setAutoCharge(ctx, it) }
-    if (auto) sw(tr("Only when the phone lies sideways", "Yalnızca telefon yan yatıkken"), side) { side = it; StandByPrefs.setSideways(ctx, it) }
-    Text(tr("The automatic trigger needs the \"Pulse · Screen cover layer\" accessibility service to be on. The Quick Settings tile \"StandBy\" starts it by hand.", "Otomatik tetikleyici için Erişilebilirlik'te \"Pulse · Screen cover layer\" açık olmalı. Hızlı ayarlardaki \"StandBy\" kutucuğu elle başlatır."), color = T.sub, fontSize = 12.sp)
 }
 
 /** Quick Settings tile: starts or closes the advanced cover by hand (the manual trigger). */
@@ -552,10 +577,9 @@ private fun MiniScreen(width: androidx.compose.ui.unit.Dp, picked: Boolean, cont
 
 /** A row of palette pictures; a tap picks one ([onPick]). [tile] draws picture i, selected or not. */
 @Composable
-private fun PaletteRow(title: String, count: Int, picked: Int, onPick: (Int) -> Unit, tile: @Composable (Int, Boolean) -> Unit) {
+private fun PaletteRow(count: Int, picked: Int, onPick: (Int) -> Unit, tile: @Composable (Int, Boolean) -> Unit) {
     var cur by remember { mutableIntStateOf(picked) }
-    Text(title, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    Row(Modifier.padding(top = 10.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         for (i in 0 until count) Box(Modifier.clickable { cur = i; onPick(i) }) { tile(i, i == cur) }
     }
 }
