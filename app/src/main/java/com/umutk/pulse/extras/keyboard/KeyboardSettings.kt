@@ -244,6 +244,23 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             if (skNote.isNotEmpty()) Text(skNote, color = T.sub, fontSize = 12.sp)
+            // the person's own words from what is on the phone: sent messages, contact names, the phone's user dictionary
+            var mineNote by remember { mutableStateOf("") }
+            fun mine() {
+                mineNote = tr("Reading…", "Okunuyor…")
+                scope.launch {
+                    val r = withContext(Dispatchers.IO) { WordMiner.run(ctx) }
+                    mineNote = tr("${r.sms} sent messages, ${r.names} names, ${r.system} dictionary words read", "${r.sms} gönderilen mesaj, ${r.names} isim, ${r.system} sözlük kelimesi okundu") +
+                        (if (r.skipped.isNotEmpty()) tr(" (no permission: ", " (izin yok: ") + r.skipped.joinToString() + ")" else "")
+                    learned = KeyboardDictionary.learnedCount()
+                }
+            }
+            val askMine = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestMultiplePermissions()) { mine() }
+            PButton(tr("Learn from my messages and contacts", "Mesajlarımdan ve kişilerimden öğren"), compact = true) {
+                val need = WordMiner.needed(ctx)
+                if (need.isEmpty()) mine() else askMine.launch(need.toTypedArray())
+            }
+            if (mineNote.isNotEmpty()) Text(mineNote, color = T.sub, fontSize = 12.sp)
             Text(tr("Word lists from FrequencyWords (OpenSubtitles), CC BY-SA 4.0.", "Sözlükler: FrequencyWords (OpenSubtitles), CC BY-SA 4.0."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 8.dp))
         }
         Spacer(Modifier.height(24.dp))
