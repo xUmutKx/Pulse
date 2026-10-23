@@ -418,7 +418,7 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
         }
     }
     // tools that draw no back arrow of their own get the shared one; so does every page but the start page
-    val bar = (sub.isEmpty() && (page != start || ctx is FilesActivity)) || sub in setOf("toolkit", "installer", "installer_settings", "files_settings", "ram", "dns", "fonts", "guide", "cover") || InnerBack.steps.isNotEmpty()
+    val bar = (sub.isEmpty() && (page != start || ctx is FilesActivity)) || sub in setOf("toolkit", "installer", "installer_settings", "files_settings", "ram", "dns", "fonts", "guide", "cover", "authenticator") || InnerBack.steps.isNotEmpty()
     val body: @Composable () -> Unit = { Column(Modifier.fillMaxSize()) {
         if (bar) Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
@@ -446,7 +446,7 @@ private fun App(page: String, onPage: (String) -> Unit, sub: String, onSub: (Str
 private val SUB_TITLES = mapOf(
     "toolkit" to ("Toolkit" to "Araç kutusu"), "cover" to ("Screen cover" to "Ekran kapağı"), "installer" to ("Installer" to "Yükleyici"), "installer_settings" to ("Installer" to "Yükleyici"),
     "files_settings" to ("Files" to "Dosyalar"), "ram" to ("RAM" to "RAM"), "dns" to ("DNS" to "DNS"), "fonts" to ("System font" to "Sistem yazı tipi"),
-    "guide" to ("Guide" to "Kılavuz"),
+    "guide" to ("Guide" to "Kılavuz"), "authenticator" to ("Authenticator" to "Kimlik doğrulayıcı"),
 )
 
 // ---------------------------------------------------------------- Windows 11 / 10, Material, AMOLED: a sidebar on the left
