@@ -257,7 +257,7 @@ object Installer {
         val files = if (type == "APK") {
             val apk = File(dir, "base.apk")
             if (!raw.renameTo(apk)) throw IOException("Cannot prepare the APK")
-            listOf(apk)
+            listOf(if (InstallShow.shrink) shrinkApk(c, apk, dir) else apk)
         } else unpack(raw, dir)
         val hint = if (type == "XAPK") xapkPackage(raw) else null
         return fromFiles(c, type, files, hint, uri)
@@ -275,6 +275,39 @@ object Installer {
         if (parts.none { abi(it) == main }) return parts
         return parts.filter { abi(it) == null || abi(it) == main }
     }
+
+    /**
+     * The APK without the CPU libraries the phone does not use, signed again with the bundled key. Changing an APK breaks its signature, so an app that
+     * is already installed (it would be refused as an update) and an APK with nothing to cut are returned as they are.
+     */
+    private fun shrinkApk(c: Context, apk: File, dir: File): File = try {
+        val pm = c.packageManager
+        val name = pm.getPackageArchiveInfo(apk.path, 0)?.packageName
+        val installed = name != null && try { pm.getPackageInfo(name, 0); true } catch (e: PackageManager.NameNotFoundException) { false }
+        val abis = android.os.Build.SUPPORTED_ABIS.toList()
+        val have = ZipFile(apk).use { z -> z.entries().asSequence().mapNotNull { Regex("^lib/([^/]+)/").find(it.name)?.groupValues?.get(1) }.toSet() }
+        // keep the first ABI of the phone that the APK has; an APK without libraries or without that ABI stays whole
+        val keep = abis.firstOrNull { it in have }
+        if (installed || keep == null || have.size < 2) apk else {
+            val raw = File(dir, "shrunk_raw.apk")
+            ZipFile(apk).use { zf ->
+                java.util.zip.ZipOutputStream(raw.outputStream()).use { z ->
+                    zf.entries().asSequence().filter { e -> val m = Regex("^lib/([^/]+)/").find(e.name); !e.name.startsWith("META-INF/") && (m == null || m.groupValues[1] == keep) }.forEach { e ->
+                        val ne = java.util.zip.ZipEntry(e.name)
+                        // stored entries (libraries the app maps straight from the APK, resources.arsc) must stay stored and aligned
+                        if (e.method == java.util.zip.ZipEntry.STORED) { ne.method = java.util.zip.ZipEntry.STORED; ne.size = e.size; ne.compressedSize = e.size; ne.crc = e.crc }
+                        z.putNextEntry(ne); zf.getInputStream(e).use { it.copyTo(z) }; z.closeEntry()
+                    }
+                }
+            }
+            val ks = java.security.KeyStore.getInstance("PKCS12").apply { c.assets.open("fontpack.p12").use { load(it, "pulsefont".toCharArray()) } }
+            val out = File(dir, "base.shrunk.apk")
+            com.android.apksig.ApkSigner.Builder(listOf(com.android.apksig.ApkSigner.SignerConfig.Builder("pulse", ks.getKey("k", "pulsefont".toCharArray()) as java.security.PrivateKey, listOf(ks.getCertificate("k") as java.security.cert.X509Certificate)).build()))
+                .setInputApk(raw).setOutputApk(out).setMinSdkVersion(minOf(24, android.os.Build.VERSION.SDK_INT))
+                .setV1SigningEnabled(true).setV2SigningEnabled(true).build().sign()
+            raw.delete(); apk.delete(); out.renameTo(apk); apk
+        }
+    } catch (e: Exception) { apk }
 
     private fun splitApps(c: Context, p: Picked, uri: Uri): List<Picked> {
         if (p.type != "ZIP" || p.parts.size < 2) return listOf(p)
