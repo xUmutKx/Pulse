@@ -37,6 +37,14 @@ jobs:
           gradle :app:lintRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g' -Pkotlin.daemon.jvmargs=-Xmx6g --no-daemon > lint.log 2>&1 || true
           grep -E 'Error:|Call requires API|requires API level' app/lint-newapi.txt 2>/dev/null | head -80 | while IFS= read -r l; do echo "::warning::${l}"; done
           grep -c "Call requires" app/lint-newapi.txt || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        continue-on-error: true
+        with:
+          name: lint-newapi
+          path: |
+            app/lint-newapi.txt
+            lint.log
       - name: Compile errors as annotations
         if: failure()
         run: |
