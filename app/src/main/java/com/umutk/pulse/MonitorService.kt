@@ -164,7 +164,8 @@ class MonitorService : Service() {
 class PulseTile : TileService() {
     override fun onStartListening() { Opt.load(this); paint() }
     private fun paint() { qsTile?.apply { state = if (Opt.ovOn || Opt.notifOn) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; label = "Pulse"; subtitle = if (Opt.ovOn) tr("Overlay", "Ekran üstü") else if (Opt.notifOn) tr("Notification", "Bildirim") else tr("Off", "Kapalı"); updateTile() } }
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         Opt.load(this)
         val on = !(Opt.ovOn || Opt.notifOn)
         if (on) { if (Settings.canDrawOverlays(this)) Opt.ovOn = true else Opt.notifOn = true } else { Opt.ovOn = false; Opt.notifOn = false }
@@ -504,7 +505,8 @@ class LastPlayedTile : TileService() {
             updateTile()
         }
     }
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         val i = com.umutk.pulse.extras.watchdog.QuickTileContract.resumeIntent(this, MainActivity::class.java)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
@@ -546,7 +548,8 @@ class FlashlightTile : TileService() {
             updateTile()
         }
     }
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         val id = camId ?: return
         try { cm.setTorchMode(id, !torchOn) } catch (e: Exception) { busy = true; paint() }
     }

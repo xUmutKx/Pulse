@@ -38,14 +38,54 @@ jobs:
           grep -E 'Error:|Call requires API|requires API level' app/lint-newapi.txt 2>/dev/null | head -80 | while IFS= read -r l; do echo "::warning::${l}"; done
           grep -c "Call requires" app/lint-newapi.txt || true
           echo "=====LINT-BEGIN====="; grep -E "^/home.*Error" app/lint-newapi.txt | sed "s#/home/runner/work/Pulse/Pulse/app/src/main/java/com/umutk/pulse/##" ; echo "=====LINT-END====="
-      - uses: actions/upload-artifact@v4
+      - name: Lint chunk 0
         if: always()
         continue-on-error: true
-        with:
-          name: lint-newapi
-          path: |
-            app/lint-newapi.txt
-            lint.log
+        run: python3 ci/lintchunk.py 0
+      - name: Lint chunk 1
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 1
+      - name: Lint chunk 2
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 2
+      - name: Lint chunk 3
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 3
+      - name: Lint chunk 4
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 4
+      - name: Lint chunk 5
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 5
+      - name: Lint chunk 6
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 6
+      - name: Lint chunk 7
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 7
+      - name: Lint chunk 8
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 8
+      - name: Lint chunk 9
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 9
+      - name: Lint chunk 10
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 10
+      - name: Lint chunk 11
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 11
       - name: Compile errors as annotations
         if: failure()
         run: |
