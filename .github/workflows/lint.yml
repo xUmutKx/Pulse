@@ -1,0 +1,39 @@
+name: Lint NewApi
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Install SDK packages
+        run: |
+          SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
+          yes | "$SDKMANAGER" --licenses > /dev/null
+          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0"
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+      - name: Lint (NewApi only)
+        run: gradle lintRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g' -Pkotlin.daemon.jvmargs=-Xmx6g --no-daemon > lint.log 2>&1 || true
+      - name: Collect
+        run: |
+          f=$(ls app/lint-newapi.txt app/build/reports/lint-results-release.txt 2>/dev/null | head -1)
+          echo "report: $f"; [ -n "$f" ] && grep -E "Error:|Warning:" -B0 "$f" | sed 's|/home/runner/work/Pulse/Pulse/app/src/main/java/com/umutk/pulse/||' | sort -u > findings.txt || : > findings.txt
+          wc -l findings.txt; tail -5 lint.log
+      - name: Findings 1
+        run: sed -n '1,45p' findings.txt | while IFS= read -r l; do echo "::warning::$l"; done
+      - name: Findings 2
+        run: sed -n '46,90p' findings.txt | while IFS= read -r l; do echo "::warning::$l"; done
+      - name: Findings 3
+        run: sed -n '91,135p' findings.txt | while IFS= read -r l; do echo "::warning::$l"; done
+      - name: Findings 4
+        run: sed -n '136,180p' findings.txt | while IFS= read -r l; do echo "::warning::$l"; done
+      - name: Count
+        run: echo "::warning::total $(wc -l < findings.txt) lines; $(tail -3 lint.log | tr '\n' ' ')"
