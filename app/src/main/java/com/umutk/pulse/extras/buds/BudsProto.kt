@@ -18,6 +18,19 @@ object BudsProto {
     const val SET_AMBIENT_MODE = 128
     const val MANAGER_INFO = 136
     const val UPDATE_TIME = 167
+    const val SET_ANC_WITH_ONE_EARBUD = 111
+    const val SET_TOUCH_AND_HOLD_NOISE = 121
+    const val SET_DETECT_CONVERSATIONS = 122
+    const val SET_SPATIAL_AUDIO = 124
+    const val NOISE_REDUCTION_LEVEL = 131
+    const val AMBIENT_VOLUME = 132
+    const val EQUALIZER = 134
+    const val GAME_MODE = 135
+    const val LOCK_TOUCHPAD = 144
+    const val SET_TOUCHPAD_OPTION = 146
+    const val FIND_START = 160
+    const val FIND_STOP = 161
+    const val SET_SEAMLESS_CONNECTION = 175
 
     class Msg(val id: Int, val payload: ByteArray)
 

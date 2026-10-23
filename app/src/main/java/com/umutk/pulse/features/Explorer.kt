@@ -593,7 +593,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             Box(Modifier.size(36.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { ExGlyph(Icons.Outlined.Menu, "menu", T.text, 24.dp) }
             Spacer(Modifier.weight(1f))
             // tap: the folder sizes of the whole storage; hold: the same tree, opened in the folder you are in
-            ExToolbar({ onTab(it) }) { k -> if (k == "tree") openTreeAt(dir); onTab(k) }
+            if (FilesPrefs.analysis) ExToolbar({ onTab(it) }) { k -> if (k == "tree") openTreeAt(dir); onTab(k) }
             val openTool = com.umutk.pulse.LocalOpenTool.current
             if (!full) Box(Modifier.size(36.dp).clickable(onClick = onToggleFull), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.OpenInFull, null, Modifier.size(20.dp), T.sub) }
         }

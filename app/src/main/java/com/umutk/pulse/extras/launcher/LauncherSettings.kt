@@ -173,6 +173,7 @@ fun LauncherSettings(back: () -> Unit) {
                 LauncherPrefs.iconDp = it.roundToInt(); save()
             }
             SwitchLine("notes", tr("Names under the icons", "Simgelerin altında adlar"), LauncherPrefs.labels) { LauncherPrefs.labels = it; save() }
+            SliderRow("${tr("Label size", "Ad yazısı boyutu")}: ${LauncherPrefs.labelScale}%", LauncherPrefs.labelScale.toFloat(), 60f..160f) { LauncherPrefs.labelScale = it.roundToInt(); save() }
             SwitchLine("gridView", tr("Page dots", "Sayfa noktaları"), LauncherPrefs.pageDots) { LauncherPrefs.pageDots = it; save() }
             Text(tr("Page effect", "Sayfa efekti"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -193,6 +194,9 @@ fun LauncherSettings(back: () -> Unit) {
             ValueRow("sort", tr("Sort", "Sıralama"), sortLabel(LauncherPrefs.sort)) { pickSort = true }
             SliderRow("${tr("Drawer columns", "Çekmece sütunu")}: ${LauncherPrefs.drawerColumns}", LauncherPrefs.drawerColumns.toFloat(), 2f..8f) {
                 LauncherPrefs.drawerColumns = it.roundToInt(); save()
+            }
+            SliderRow("${tr("Drawer icon size", "Çekmece simge boyutu")}: ${if (LauncherPrefs.drawerIconDp == 0) tr("as home", "ana ekranla aynı") else LauncherPrefs.drawerIconDp.toString()}", (if (LauncherPrefs.drawerIconDp == 0) LauncherPrefs.iconDp else LauncherPrefs.drawerIconDp).toFloat(), 24f..72f) {
+                LauncherPrefs.drawerIconDp = it.roundToInt(); save()
             }
             ValueRow("eyeOff", tr("Hidden apps", "Gizli uygulamalar"), "${LauncherPrefs.hidden.size}") { pickHidden = true }
             ValueRow("palette", tr("Icon pack", "Simge paketi"), IconPacks.installed(ctx).firstOrNull { it.pkg == LauncherPrefs.iconPack }?.label ?: tr("Default", "Varsayılan")) { pickPack = true }

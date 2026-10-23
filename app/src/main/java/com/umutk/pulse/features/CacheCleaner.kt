@@ -66,7 +66,7 @@ private fun CacheCleanerContent(onBack: () -> Unit) {
             selected = emptySet()
             for (i in 0..2) {
                 val r = withContext(Dispatchers.IO) {
-                    runCatching { when (i) { 0 -> CleanerRules.appJunk(ctx); 1 -> CleanerRules.corpses(ctx); else -> CleanerRules.system() } }.getOrDefault(emptyList())
+                    runCatching { when (i) { 0 -> CleanerRules.appJunk(ctx); 1 -> CleanerRules.corpses(ctx); else -> CleanerRules.system(ctx) } }.getOrDefault(emptyList())
                 }
                 data = data.toMutableList().also { it[i] = r }
             }
