@@ -90,19 +90,19 @@ object ZipJobs {
     fun cancel(id: Int) { list.value.firstOrNull { it.id == id }?.let { it.cancelled = true } }
 
     /** Starts compressing [files] into [dir] as "[name].[kind]" (zip or 7z; a number is added when the name is taken). */
-    fun start(ctx: Context, files: List<File>, name: String, dir: File, kind: String = "zip"): ZipJob {
+    fun start(ctx: Context, files: List<File>, name: String, dir: File, kind: String = "zip", splitBytes: Long = 0): ZipJob {
         val c = ctx.applicationContext
         val job = ZipJob(++seq, name, files, zipTarget(dir, name, kind), files.sumOf { sizeOf(it) }, kind)
         list.value = list.value + job
         runCatching { ContextCompat.startForegroundService(c, Intent(c, ZipService::class.java)) }
         scope.launch {
-            val failed = runCatching { zipWrite(job) }.exceptionOrNull()
+            val failed = runCatching { zipWrite(job); if (splitBytes > 0) splitVolumes(job.target, splitBytes) { job.cancelled } }.exceptionOrNull()
             val st = when {
                 failed == null -> ZipState.DONE
                 failed is ZipCancelled -> ZipState.CANCELLED
                 else -> ZipState.FAILED
             }
-            if (st != ZipState.DONE) job.target.delete()
+            if (st != ZipState.DONE) { job.target.delete(); File(job.target.path + ".001").parentFile?.listFiles { f -> f.name.startsWith(job.target.name + ".") && f.name.takeLast(3).all { it.isDigit() } }?.forEach { it.delete() } }
             job.state.value = st
             list.value = list.value - job
             lastNote.value = endText(job, st)
@@ -110,6 +110,33 @@ object ZipJobs {
         }
         return job
     }
+}
+
+/**
+ * Cuts a finished archive into volumes of [size] bytes named "<archive>.001", ".002", ... (the original is removed). Joined in order they are the archive again;
+ * 7-Zip opens the first volume directly, and so does this app.
+ */
+private fun splitVolumes(archive: File, size: Long, cancelled: () -> Boolean) {
+    if (archive.length() <= size) return
+    val buf = ByteArray(256 * 1024)
+    var n = 0
+    archive.inputStream().buffered(256 * 1024).use { ins ->
+        while (true) {
+            if (cancelled()) throw ZipCancelled()
+            val part = File(archive.path + "." + (++n).toString().padStart(3, '0'))
+            var written = 0L
+            part.outputStream().buffered(256 * 1024).use { out ->
+                while (written < size) {
+                    val k = ins.read(buf, 0, minOf(buf.size.toLong(), size - written).toInt())
+                    if (k < 0) break
+                    out.write(buf, 0, k); written += k
+                }
+            }
+            if (written == 0L) { part.delete(); break }
+            if (written < size) break
+        }
+    }
+    archive.delete()
 }
 
 /** Writes the zip entry by entry, the same layout the old Compress button made: each file or folder under its parent's name. */
@@ -236,10 +263,13 @@ class ZipService : Service() {
 
 /** The compress box: the output name, what goes in, and the size the zip should come to. Confirm starts the job in the background. */
 @Composable
-fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, String) -> Unit) {
+fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, String, Long) -> Unit) {
     val est by produceState<ZipEstimate?>(null, files) { value = withContext(Dispatchers.IO) { zipEstimate(files) } }
     var name by remember(files) { mutableStateOf(if (files.size == 1) files[0].name else "Archive") }
     var kind by remember(files) { mutableStateOf("zip") }
+    var split by remember(files) { mutableStateOf(false) }
+    var amount by remember(files) { mutableStateOf("100") }
+    var unit by remember(files) { mutableStateOf("MB") }
     WinAlert(onDismissRequest = onDismiss,
         title = { Text(tr("Compress", "Sıkıştır")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -248,12 +278,20 @@ fun ZipAskDialog(files: List<File>, onDismiss: () -> Unit, onStart: (String, Str
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("zip", "7z").forEach { k -> PChip(kind == k, k.uppercase()) { kind = k } }
             }
+            // volumes: the archive is cut into parts of this size (name.zip.001, .002, ...)
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PChip(split, tr("Split into parts", "Parçalara böl")) { split = !split }
+            }
+            if (split) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PField(amount, { amount = it.filter { c -> c.isDigit() || c == '.' }.take(7) }, tr("Size of a part", "Parça boyutu"), Modifier.weight(1f))
+                listOf("MB", "GB").forEach { u -> PChip(unit == u, u) { unit = u } }
+            }
             ZipInfo(tr("Content", "İçerik"), zipKind(files))
             ZipInfo(tr("Items", "Öğe"), est?.items?.toString() ?: "…")
             ZipInfo(tr("Size", "Boyut"), est?.let { exSize(it.bytes) } ?: "…")
             ZipInfo(tr("Estimated archive", "Tahmini arşiv"), est?.let { "≈ " + exSize(it.packed) } ?: "…")
         } },
-        confirmButton = { TextButton({ val n = name.trim().removeSuffix(".zip").removeSuffix(".7z"); if (n.isNotBlank()) onStart(n, kind) }) { Text(tr("Compress", "Sıkıştır")) } },
+        confirmButton = { TextButton({ val n = name.trim().removeSuffix(".zip").removeSuffix(".7z"); val bytes = if (split) ((amount.toDoubleOrNull() ?: 0.0) * (if (unit == "GB") 1024.0 * 1024 * 1024 else 1024.0 * 1024)).toLong() else 0L; if (n.isNotBlank() && (!split || bytes >= 1024 * 1024)) onStart(n, kind, bytes) }) { Text(tr("Compress", "Sıkıştır")) } },
         dismissButton = { TextButton(onDismiss) { Text(tr("Cancel", "İptal")) } })
 }
 

@@ -62,8 +62,10 @@ fun CalculatorHub(back: () -> Unit) {
     val classic = T.tabs && T.id != "win10"
     BackHandler { if (showHistory) showHistory = false else if (mode != "standard") mode = "standard" else back() }
 
+    // a sum with brackets goes through the scientific parser, the plain ones through the simple one
+    fun ev(x: String): Double? = if ('(' in x || ')' in x) com.umutk.pulse.extras.calculator.Sci.eval(x) else Calc.eval(x)
     fun num() = e.takeLastWhile { it.isDigit() || it == '.' }
-    fun value(): Double? = if (e.isEmpty()) 0.0 else Calc.eval(e)
+    fun value(): Double? = if (e.isEmpty()) 0.0 else ev(e)
     fun set(v: Double?) { err = v == null; e = v?.let(Calc::show) ?: ""; done = v != null }
     fun press(k: String) {
         err = false
@@ -74,7 +76,7 @@ fun CalculatorHub(back: () -> Unit) {
             k == "C" -> e = ""
             k == "CE" -> e = e.dropLast(num().length)
             k == "⌫" -> e = e.dropLast(1)
-            k == "=" -> if (e.isNotEmpty()) { val v = Calc.eval(e); if (v != null) history.add(0, "$e = ${Calc.show(v)}"); set(v) }
+            k == "=" -> if (e.isNotEmpty()) { val v = ev(e); if (v != null) history.add(0, "$e = ${Calc.show(v)}"); set(v) }
             k == "±" -> value()?.let { set(-it) }
             k == "1/x" -> set(value()?.takeIf { it != 0.0 }?.let { 1 / it })
             k == "x²" -> set(value()?.let { it * it })
@@ -84,6 +86,12 @@ fun CalculatorHub(back: () -> Unit) {
             k == "M+" -> value()?.let { mem += it }
             k == "M−" -> value()?.let { mem -= it }
             e.length >= 40 -> {}
+            // the bracket key: closes a bracket that is open, else opens one (a number before it is multiplied)
+            k == "( )" -> {
+                val open = e.count { it == '(' } - e.count { it == ')' }
+                val afterNum = last != null && (last.isDigit() || last == ')' || last == '%')
+                e += if (open > 0 && afterNum) ")" else if (afterNum) "×(" else "("
+            }
             k in ops -> e = when {
                 last == null -> if (k == "−") k else e
                 k == "−" && (last == '×' || last == '÷') -> e + k
@@ -97,12 +105,19 @@ fun CalculatorHub(back: () -> Unit) {
             else -> e += k
         }
     }
-    val preview = if (!done && e.drop(1).any { it in ops || it == '%' }) Calc.eval(e)?.let(Calc::show) else null
+    val preview = if (!done && e.drop(1).any { it in ops || it == '%' || it == '(' }) ev(e.trimEnd { it in ops || it == '(' })?.let(Calc::show) else null
+    val round = T.id == "material" || T.id == "amoled"
     val shown = if (err) tr("Error", "Hata") else e.ifEmpty { "0" }
 
     Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = if (classic) 6.dp else 10.dp)) {
         // title row: back, the mode's name, history (standard) and the menu (the other modes and the look of the window)
-        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (round && mode == "standard") Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clickable { showHistory = !showHistory }, contentAlignment = Alignment.Center) { PIcon("history", if (showHistory) Look.accent else T.text, 24.dp) }
+            Spacer(Modifier.weight(1f))
+            Box(Modifier.size(44.dp).clickable { mode = "convert"; showHistory = false }, contentAlignment = Alignment.Center) { PIcon("scale", T.text, 24.dp) }
+            Box(Modifier.size(44.dp).clickable { mode = "scientific"; showHistory = false }, contentAlignment = Alignment.Center) { PIcon("function", T.text, 24.dp) }
+            Box(Modifier.size(44.dp).clickable { menu = true }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 24.dp) }
+        } else Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text(modeTitle(mode), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
             if (mode == "standard") Box(Modifier.size(40.dp).clickable { showHistory = !showHistory }, contentAlignment = Alignment.Center) { PIcon("history", if (showHistory) Look.accent else T.text, 22.dp) }
@@ -120,6 +135,16 @@ fun CalculatorHub(back: () -> Unit) {
                 if (history.isEmpty()) Text(tr("No calculations yet", "Henüz işlem yok"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(12.dp))
                 history.forEach { h -> Text(h, color = T.text, fontSize = 18.sp, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().clickable { e = h.substringAfter("= "); done = true; showHistory = false }.padding(12.dp)) }
             }
+            return@Column
+        }
+        if (round) {
+            // the Material calculator: a roomy display (the earlier sum or the answer so far above, the number being typed below) and round keys of a sensible size
+            Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.End) {
+                Text(preview?.let { "= $it" } ?: history.firstOrNull() ?: " ", color = T.sub, fontSize = 20.sp, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+                Text(shown, color = T.text, fontSize = if (shown.length > 12) 40.sp else 64.sp, fontWeight = FontWeight.Light, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+            }
+            RoundPad(listOf(listOf("C", "⌫", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("( )", "0", ".", "="))) { press(it) }
+            Spacer(Modifier.height(14.dp))
             return@Column
         }
         // display
@@ -141,6 +166,19 @@ fun CalculatorHub(back: () -> Unit) {
     }
 }
 
+
+/** Round keys in rows, as large as the width allows (but not taller than 84 dp), sitting at the bottom: the room above is the display's. */
+@Composable
+private fun RoundPad(rows: List<List<String>>, onKey: (String) -> Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val gap = 10.dp
+        val cols = rows[0].size
+        val side = minOf((maxWidth - gap * (cols - 1)) / cols, 84.dp)
+        Column(Modifier.align(Alignment.BottomCenter), verticalArrangement = Arrangement.spacedBy(gap)) {
+            rows.forEach { r -> Row(horizontalArrangement = Arrangement.spacedBy(gap)) { r.forEach { k -> CalcKey(k, Modifier.size(side), false) { onKey(k) } } } }
+        }
+    }
+}
 
 /** A grid of keys that fills the room it is given: every row and every key takes an equal share, in the key style of the look. */
 @Composable
@@ -215,7 +253,7 @@ internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: (
         else -> {
             val c = when {
                 id == "win95" -> Color(0xFFC0C0C0)
-                id == "amoled" -> when { equals -> acc; op -> Color(0xFF2A2A2A); digit -> Color(0xFF151515); else -> Color(0xFF0B0B0B) }
+                id == "amoled" -> when { equals -> acc; op -> Color(0xFF1F1F1F); else -> Color(0xFF151515) }
                 equals -> acc
                 digit -> T.text.copy(alpha = .10f).compositeOver(T.panel)
                 mem -> Color.Transparent
@@ -228,6 +266,7 @@ internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: (
         equals -> com.umutk.pulse.onAccent(acc)
         id == "win95" || id == "win7" -> if (op || k in setOf("C", "CE", "⌫")) Color(0xFFB00000) else if (mem) Color(0xFFB00000) else Color.Black
         id == "xp" -> if (op || k in setOf("C", "CE", "⌫", "±") || mem) Color(0xFFCC0000) else Color(0xFF0A246A)
+        round && k in setOf("C", "CE", "⌫") -> Color(0xFFEF5350)
         id == "amoled" -> if (op) Color(0xFFFFB74D) else if (mem) Color(0xFF9E9E9E) else Color.White
         mem -> T.sub
         else -> T.text
@@ -238,7 +277,7 @@ internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: (
             .then(if (id == "win95") Modifier.frame(T, raised = true) else if (border != null) Modifier.border(1.dp, border, shape) else Modifier)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center,
-    ) { Text(k, color = ink, fontSize = if (mem) 14.sp else 20.sp, fontWeight = if (digit || id == "xp") FontWeight.SemiBold else FontWeight.Normal) }
+    ) { Text(k, color = ink, fontSize = if (mem) 14.sp else if (round) 26.sp else 20.sp, fontWeight = if (digit || id == "xp") FontWeight.SemiBold else FontWeight.Normal) }
 }
 
 private fun Color.compositeOverBg(): Color = compositeOver(T.panel)
