@@ -25,6 +25,9 @@ object BudsPrefs {
     /** When one comes back: carry on with the music and the noise control as they were. */
     fun resumeOnWear(c: Context) = p(c).getBoolean("resume", true)
     fun setResumeOnWear(c: Context, v: Boolean) = p(c).edit().putBoolean("resume", v).apply()
+    /** The last choice made for a control (the earbuds are not asked, so this is what was last sent from here). */
+    fun saved(c: Context, key: String, def: Int) = p(c).getInt("c_$key", def)
+    fun save(c: Context, key: String, v: Int) = p(c).edit().putInt("c_$key", v).apply()
     /** Keep the connection in the background (a small notification). */
     fun keepOn(c: Context) = p(c).getBoolean("keepOn", false)
     fun setKeepOn(c: Context, v: Boolean) = p(c).edit().putBoolean("keepOn", v).apply()
@@ -38,6 +41,9 @@ object BudsLink {
     fun update(f: (BudsState) -> BudsState) { st.value = f(st.value) }
     /** Set by the service: sends a message to the earbuds. */
     @Volatile var sender: ((ByteArray) -> Unit)? = null
+
+    /** Sends one request with the given payload bytes. */
+    fun send(id: Int, vararg payload: Int) { sender?.invoke(BudsProto.encode(id, ByteArray(payload.size) { payload[it].toByte() })) }
 
     /** 0 off, 1 noise cancelling, 2 ambient sound, 3 adaptive. */
     fun setNoise(mode: Int) {

@@ -156,7 +156,7 @@ object CleanerRules {
     private fun isTrashDir(f: File) = f.name.lowercase().let { it in trashNames || it.startsWith(".trash-") }
     private fun rel(p: String) = p.removePrefix("$ext/")
 
-    fun system(): List<CleanRow> {
+    fun system(ctx: Context? = null): List<CleanRow> {
         val root = File(ext)
         val now = System.currentTimeMillis()
         val rows = LinkedHashMap<String, MutableList<Finding>>()
@@ -172,11 +172,12 @@ object CleanerRules {
         }
         File(root, "Download").walkTopDown().maxDepth(3).filter { it.isFile && it.extension.equals("apk", true) && now - it.lastModified() > APK_DAYS * 86400000L }
             .forEach { add("Old APKs in Download", it, it.length(), "apk") }
+        if (ctx != null) ExpendableDb.scan(ctx).forEach { (d, title) -> add(title, d, dirSize(d), "db") }
         Cleaner.emptyDirs().filter { !it.file.path.startsWith("$ext/Android") && !(it.file.parent == ext && it.file.name in stdDirs) }.forEach { add("Empty folders", it.file, 0L, "empty") }
         return rows.map { (t, f) -> CleanRow(t, null, t, f.take(2).joinToString(", ") { rel(it.path) }, f) }
     }
 
-    private fun systemOk(f: Finding): Boolean {
+    private fun systemOk(f: Finding, ctx: Context? = null): Boolean {
         val file = File(f.path)
         if (!plain(f.path) || !f.path.startsWith("$ext/") || f.path.startsWith("$ext/Android/") || f.path == "$ext/Android") return false
         val now = System.currentTimeMillis()
@@ -186,6 +187,7 @@ object CleanerRules {
             "tmp" -> file.isFile && file.extension.lowercase() in tempExt && now - file.lastModified() > TEMP_DAYS * 86400000L
             "apk" -> file.isFile && file.extension.equals("apk", true) && f.path.startsWith("$ext/Download/") && now - file.lastModified() > APK_DAYS * 86400000L
             "empty" -> file.isDirectory && file.list()?.isEmpty() == true
+            "db" -> ctx != null && file.isDirectory && ExpendableDb.allowed(ctx, f.path)
             else -> false
         }
     }
@@ -197,7 +199,7 @@ object CleanerRules {
         val ok = when (f.rule) {
             CACHE, APP -> appJunkOk(f.path)
             CORPSE -> corpseOk(ctx, f.path)
-            else -> systemOk(f)
+            else -> systemOk(f, ctx)
         }
         if (!ok) return 0L
         val keep = f.rule == CACHE || f.rule == APP

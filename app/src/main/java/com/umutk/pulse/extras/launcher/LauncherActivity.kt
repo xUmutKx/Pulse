@@ -336,7 +336,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         else if (app.pkg.startsWith("pulse:")) openDesktopItem(ctx, app.pkg, look.id)
         else ctx.packageManager.getLaunchIntentForPackage(app.pkg)?.let { startApp(ctx, it, LauncherPrefs.windowed && look.id in WINDOWS_LOOKS); LauncherPrefs.touch(ctx, app.pkg) }
     }
-    val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), iconDp, dock, open) { if (!it.pkg.startsWith("pulse:")) actionFor = it }
+    val state = LauncherState(drawer, vertical, LauncherPrefs.drawerColumns.coerceIn(2, 8), LauncherPrefs.drawerIconDp.takeIf { it > 0 }?.coerceIn(24, 72) ?: iconDp, dock, open) { if (!it.pkg.startsWith("pulse:")) actionFor = it }
 
     // the home screen is a desktop, not an app grid: the Windows looks show the desktop shortcuts, the others show no icons (the apps list holds every app); a setting brings the app grid back
     val desktop = look.id in WINDOWS_LOOKS
@@ -361,7 +361,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
             // a long press on an empty part of the home opens the Settings / Widgets sheet
             Box(Modifier.weight(1f).fillMaxWidth().homeLongPress { HomeSheetState.sheet = true }) {
                 if (desktop && !LauncherPrefs.homeApps) {
-                    DesktopIcons(look, state, shortcuts, iconDp, edge, open)
+                    LabelScale { DesktopIcons(look, state, shortcuts, iconDp, edge, open) }
                     // the clock gadget of the desktop, in the look's own style, top right
                     MovableDesktopClock(look.id)
                     DesktopWidgetLayer()
@@ -373,7 +373,7 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
                             look.IconCell(app, iconDp, Modifier.fillMaxWidth().appTap(state, app) { open(app) })
                         }
                     }
-                } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) HomeGrid(look, state, visible, columns, iconDp, edge, open)
+                } else if (LauncherPrefs.homeApps || look.id.startsWith("winphone")) LabelScale { HomeGrid(look, state, visible, columns, iconDp, edge, open) }
             }
             if (!look.taskbarTop && LauncherPrefs.dockShown) look.Taskbar(state, Modifier.fillMaxWidth().height(look.taskbarHeight))
         }
@@ -415,4 +415,14 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
         if (LauncherSession.searchOpen) QuickSearch(state) { LauncherSession.searchOpen = false }
         actionFor?.let { app -> AppActionDialog(app, autoDock) { actionFor = null } }
     }
+}
+
+
+/** The icon label size of the home screen (Settings > Home screen): only the text scale changes inside. */
+@Composable
+internal fun LabelScale(content: @Composable () -> Unit) {
+    val d = androidx.compose.ui.platform.LocalDensity.current
+    val k = LauncherPrefs.labelScale / 100f
+    if (k == 1f) content()
+    else androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(d.density, d.fontScale * k)) { content() }
 }
