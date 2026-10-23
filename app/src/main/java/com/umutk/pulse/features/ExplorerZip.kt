@@ -207,7 +207,7 @@ private fun endText(job: ZipJob, st: ZipState): String = when (st) {
 
 private fun notifyEnd(c: Context, job: ZipJob, st: ZipState) {
     val nm = c.getSystemService(NotificationManager::class.java)
-    nm.createNotificationChannel(com.umutk.pulse.QuietChannel(ZC_CH_END, tr("Finished compressing", "Sıkıştırma bitti"), NotificationManager.IMPORTANCE_DEFAULT))
+    if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(ZC_CH_END, tr("Finished compressing", "Sıkıştırma bitti"), NotificationManager.IMPORTANCE_DEFAULT)) else Unit
     val open = PendingIntent.getActivity(c, job.id, Intent(c, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
     val icon = if (st == ZipState.DONE) android.R.drawable.stat_sys_download_done else android.R.drawable.stat_notify_error
     nm.notify(ZC_ID_END + job.id, NotificationCompat.Builder(c, ZC_CH_END).setSmallIcon(icon)
@@ -225,7 +225,7 @@ class ZipService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         lastId = startId
         val nm = getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(ZC_CH_RUN, tr("Compressing", "Sıkıştırma"), NotificationManager.IMPORTANCE_LOW))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(ZC_CH_RUN, tr("Compressing", "Sıkıştırma"), NotificationManager.IMPORTANCE_LOW)) else Unit
         if (intent?.action == ZC_ACT_CANCEL) ZipJobs.cancel(intent.getIntExtra("id", 0))
         val fg = runCatching {
             if (Build.VERSION.SDK_INT >= 34) startForeground(ZC_ID_RUN, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(ZC_ID_RUN, note())

@@ -406,7 +406,7 @@ private fun apkMeta(ctx: android.content.Context, f: File): ApkMeta? = try {
             app.sourceDir = f.path; app.publicSourceDir = f.path
             val sig = runCatching { java.security.MessageDigest.getInstance("SHA-256").digest(com.umutk.pulse.Compat.signers(info)!![0].toByteArray()).take(6).joinToString("") { "%02x".format(it) } }.getOrDefault("")
             val ver = "${info.versionName.orEmpty()} (${com.umutk.pulse.Compat.longVersion(info)})"
-            ApkMeta(app.loadLabel(pm).toString(), info.packageName, ver, app.minSdkVersion, app.targetSdkVersion,
+            ApkMeta(app.loadLabel(pm).toString(), info.packageName, ver, if (android.os.Build.VERSION.SDK_INT >= 24) app.minSdkVersion else 0, app.targetSdkVersion,
                 info.requestedPermissions?.toList().orEmpty(), runCatching { app.loadIcon(pm).toBitmap(96, 96).asImageBitmap() }.getOrNull(), sig, installedOf(pm, info.packageName))
         }
     }

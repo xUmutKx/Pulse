@@ -115,7 +115,7 @@ class DnsTile : TileService() {
             val (m, h) = Dns.current(this@DnsTile)
             state = if (m != "off") Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
             label = tr("Private DNS", "Özel DNS")
-            subtitle = if (busy) "…" else note ?: when (m) { "off" -> tr("Off", "Kapalı"); "hostname" -> tr("Manual", "Manuel") + h.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty(); else -> tr("Auto", "Otomatik") }
+            subtitleCompat = if (busy) "…" else note ?: when (m) { "off" -> tr("Off", "Kapalı"); "hostname" -> tr("Manual", "Manuel") + h.takeIf { it.isNotEmpty() }?.let { ": $it" }.orEmpty(); else -> tr("Auto", "Otomatik") }
             updateTile()
         }
     }

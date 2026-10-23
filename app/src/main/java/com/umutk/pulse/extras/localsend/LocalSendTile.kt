@@ -15,7 +15,7 @@ class LocalSendTile : TileService() {
         qsTile?.apply {
             label = "LocalSend"
             state = Tile.STATE_INACTIVE
-            subtitle = tr("Send to nearby devices", "Yakındaki cihazlara gönder")
+            subtitleCompat = tr("Send to nearby devices", "Yakındaki cihazlara gönder")
             updateTile()
         }
     }

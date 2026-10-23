@@ -86,6 +86,118 @@ jobs:
         if: always()
         continue-on-error: true
         run: python3 ci/lintchunk.py 11
+      - name: Lint chunk 12
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 12
+      - name: Lint chunk 13
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 13
+      - name: Lint chunk 14
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 14
+      - name: Lint chunk 15
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 15
+      - name: Lint chunk 16
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 16
+      - name: Lint chunk 17
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 17
+      - name: Lint chunk 18
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 18
+      - name: Lint chunk 19
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 19
+      - name: Lint chunk 20
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 20
+      - name: Lint chunk 21
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 21
+      - name: Lint chunk 22
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 22
+      - name: Lint chunk 23
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 23
+      - name: Lint chunk 24
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 24
+      - name: Lint chunk 25
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 25
+      - name: Lint chunk 26
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 26
+      - name: Lint chunk 27
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 27
+      - name: Lint chunk 28
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 28
+      - name: Lint chunk 29
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 29
+      - name: Lint chunk 30
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 30
+      - name: Lint chunk 31
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 31
+      - name: Lint chunk 32
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 32
+      - name: Lint chunk 33
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 33
+      - name: Lint chunk 34
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 34
+      - name: Lint chunk 35
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 35
+      - name: Lint chunk 36
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 36
+      - name: Lint chunk 37
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 37
+      - name: Lint chunk 38
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 38
+      - name: Lint chunk 39
+        if: always()
+        continue-on-error: true
+        run: python3 ci/lintchunk.py 39
       - name: Compile errors as annotations
         if: failure()
         run: |

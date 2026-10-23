@@ -279,7 +279,7 @@ fun VideoHub(onBack: () -> Unit) {
                 1 -> infoFor = v
                 2 -> shareVideo(ctx, v)
                 3 -> renameFor = v
-                4 -> if (v.local) sender.launch(IntentSenderRequest.Builder(MediaStore.createDeleteRequest(ctx.contentResolver, listOf(v.uri)).intentSender).build())
+                4 -> if (v.local) { if (android.os.Build.VERSION.SDK_INT >= 30) sender.launch(IntentSenderRequest.Builder(MediaStore.createDeleteRequest(ctx.contentResolver, listOf(v.uri)).intentSender).build()) else { runCatching { ctx.contentResolver.delete(v.uri, null, null) }; rev++ } }
                 5 -> { prefs.hidden = prefs.hidden + fk(v); rev++ }
                 6 -> { prefs.forget(v.key); rev++ }
             }
@@ -291,7 +291,7 @@ fun VideoHub(onBack: () -> Unit) {
             renameFor = null
             if (n.isNotBlank() && n != v.name) {
                 if (renameVideo(ctx, v, n)) rev++
-                else if (v.local) { pendingRename = v to n; sender.launch(IntentSenderRequest.Builder(MediaStore.createWriteRequest(ctx.contentResolver, listOf(v.uri)).intentSender).build()) }
+                else if (v.local && android.os.Build.VERSION.SDK_INT >= 30) { pendingRename = v to n; sender.launch(IntentSenderRequest.Builder(MediaStore.createWriteRequest(ctx.contentResolver, listOf(v.uri)).intentSender).build()) }
             }
         }
     }

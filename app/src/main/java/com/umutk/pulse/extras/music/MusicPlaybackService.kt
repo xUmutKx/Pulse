@@ -51,7 +51,10 @@ class MusicPlaybackService : MediaSessionService() {
         }
     }
 
-    private val devCb = object : AudioDeviceCallback() {
+    private var devCb: Any? = null
+
+    @androidx.annotation.RequiresApi(23)
+    private inner class DevCb : AudioDeviceCallback() {
         override fun onAudioDevicesAdded(added: Array<out AudioDeviceInfo>?) {
             refresh()
             val types = added?.map { it.type }.orEmpty()
@@ -132,7 +135,7 @@ class MusicPlaybackService : MediaSessionService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         session = MediaSession.Builder(this, engine.player).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
         engine.player.addListener(listener)
-        devices.registerAudioDeviceCallback(devCb, null)
+        if (android.os.Build.VERSION.SDK_INT >= 23) { val cb = DevCb(); devCb = cb; devices.registerAudioDeviceCallback(cb, null) }
         ContextCompat.registerReceiver(this, volWatch, IntentFilter("android.media.VOLUME_CHANGED_ACTION"), ContextCompat.RECEIVER_EXPORTED)
         ContextCompat.registerReceiver(this, btAutoplay, IntentFilter(BluetoothDevice.ACTION_ACL_CONNECTED), ContextCompat.RECEIVER_NOT_EXPORTED)
         lyricsTicker = LiveLyricsTicker(this, engine) {
@@ -146,7 +149,7 @@ class MusicPlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         live = null
-        devices.unregisterAudioDeviceCallback(devCb)
+        if (android.os.Build.VERSION.SDK_INT >= 23) (devCb as? AudioDeviceCallback)?.let { devices.unregisterAudioDeviceCallback(it) }
         runCatching { unregisterReceiver(btAutoplay) }
         runCatching { unregisterReceiver(volWatch) }
         lyricsTicker?.stop(); lyricsTicker = null

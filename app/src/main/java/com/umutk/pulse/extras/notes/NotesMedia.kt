@@ -48,7 +48,7 @@ class NRecorder(private val c: Context) {
     fun start(): Boolean {
         val f = File(NotesStore.attachments(c), "au_${UUID.randomUUID()}.m4a")
         return try {
-            val r = MediaRecorder(c)
+            @Suppress("DEPRECATION") val r = if (android.os.Build.VERSION.SDK_INT >= 31) MediaRecorder(c) else MediaRecorder()
             r.setAudioSource(MediaRecorder.AudioSource.MIC)
             r.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
             r.setAudioEncoder(MediaRecorder.AudioEncoder.AAC)

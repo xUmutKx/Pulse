@@ -49,7 +49,7 @@ class WeatherAlertWorker(private val app: Context, params: WorkerParameters) : C
     @SuppressLint("MissingPermission")
     private fun notify(c: Context, text: String) {
         val nm = c.getSystemService(NotificationManager::class.java)
-        nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Weather alerts", "Hava uyarıları"), NotificationManager.IMPORTANCE_HIGH))
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Weather alerts", "Hava uyarıları"), NotificationManager.IMPORTANCE_HIGH)) else Unit
         // Android 13+ drops notices without the permission; the screen asks for it when the alert is switched on
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(c, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) return
         val open = PendingIntent.getActivity(
