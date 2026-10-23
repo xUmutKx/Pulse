@@ -52,7 +52,7 @@ class LyricsWidget : AppWidgetProvider() {
                     })
                     setColorStateList(R.id.lw_root, "setBackgroundTintList", if (th.shape == WidgetShape.BEVEL) null else ColorStateList.valueOf(th.bg))
                 }
-                setOnClickPendingIntent(R.id.lw_root, WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 81, "route" to "music"))
+                setOnClickPendingIntent(R.id.lw_root, WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 81, "route" to "music"))
             }
         }
     }

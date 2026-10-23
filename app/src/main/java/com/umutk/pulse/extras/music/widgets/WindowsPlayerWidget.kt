@@ -98,7 +98,7 @@ class WindowsPlayerWidget : AppWidgetProvider() {
                 setImageViewBitmap(R.id.wp_img, bmp)
                 val k = lastShrink
                 setViewPadding(R.id.wp_overlay, (f.x * k).toInt(), ((f.y + BTN_TOP * f.h) * k).toInt(), ((bw - f.x - f.w) * k).toInt(), ((bh - f.y - BTN_BOTTOM * f.h) * k).toInt())
-                setOnClickPendingIntent(R.id.wp_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ExtraToolActivity", 73, "route" to "music"))
+                setOnClickPendingIntent(R.id.wp_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 73, "route" to "music"))
                 setOnClickPendingIntent(R.id.wp_prev, pi(c, A_PREV))
                 setOnClickPendingIntent(R.id.wp_play, pi(c, A_TOGGLE))
                 setOnClickPendingIntent(R.id.wp_next, pi(c, A_NEXT))

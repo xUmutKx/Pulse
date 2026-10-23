@@ -120,7 +120,7 @@ class MusicPlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         setMediaNotificationProvider(NotifProvider(this))
-        val pi = PendingIntent.getActivity(this, 0, hubIntent().addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+        val pi = PendingIntent.getActivity(this, 0, Intent().setClassName(packageName, "$packageName.ToolOpenActivity").putExtra("route", "music").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         session = MediaSession.Builder(this, engine.player).setCallback(callback).setSessionActivity(pi).setCustomLayout(layout()).build()
         engine.player.addListener(listener)
