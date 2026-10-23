@@ -85,9 +85,17 @@ object PlaylistClient {
         })
     }
 
+    private var innerKey: String? = null
+
+    /** The key YouTube's own web page hands every visitor (INNERTUBE_API_KEY), read from the page when it is needed instead of being kept in the app. */
+    private fun ytKey(): String? = innerKey ?: runCatching {
+        Regex("\"INNERTUBE_API_KEY\"\\s*:\\s*\"([^\"]+)\"").find(getYt("https://www.youtube.com/"))?.groupValues?.get(1)
+    }.getOrNull()?.also { innerKey = it }
+
     /** Direct audio link from YouTube's own player endpoint as the Android app asks for it; null when it will not give one. */
     private fun ytAudio(videoId: String): String? = runCatching {
-        val c = URL("https://www.youtube.com/youtubei/v1/player?key=AIzaSyA8eiZmM1FaDVjRy-df2KTyQ_vz_yYM39w").openConnection() as HttpURLConnection
+        val key = ytKey()
+        val c = URL("https://www.youtube.com/youtubei/v1/player" + (if (key != null) "?key=$key" else "")).openConnection() as HttpURLConnection
         try {
             c.requestMethod = "POST"; c.doOutput = true; c.connectTimeout = 6000; c.readTimeout = 12000
             c.setRequestProperty("Content-Type", "application/json"); c.setRequestProperty("User-Agent", "com.google.android.youtube/19.09.37 (Linux; U; Android 11) gzip")

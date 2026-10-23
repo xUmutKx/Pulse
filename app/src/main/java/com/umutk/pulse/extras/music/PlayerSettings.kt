@@ -125,8 +125,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first, then load the backup", "Kütüphane boş: önce müziği tara, sonra yedeği yükle"); return@launch }
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.run(c, uri, MusicLibrary.tracks.value, embedCovers) } }
             importNote = r.getOrNull()?.let { x ->
-                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") + (if (x.missing > 0) ", ${x.missing} songs of the backup are not on this phone (skipped)" else ""),
-                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") + (if (x.missing > 0) ", yedekteki ${x.missing} şarkı bu telefonda yok (atlandı)" else ""))
+                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else ""),
+                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else ""))
             } ?: tr("The backup could not be read", "Yedek okunamadı")
         }
     }
@@ -154,8 +154,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 importNote = tr("Reading Poweramp…", "Poweramp okunuyor…")
                 val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.direct(c, MusicLibrary.tracks.value, embedCovers) } }
                 importNote = r.getOrNull()?.let { x ->
-                    tr("${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (x.missing > 0) ", ${x.missing} songs not on this phone (skipped)" else ""),
-                        "${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (x.missing > 0) ", ${x.missing} şarkı bu telefonda yok (atlandı)" else ""))
+                    tr("${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers",
+                        "${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak")
                 } ?: tr("Poweramp's data could not be read (needs root and Poweramp installed)", "Poweramp verisi okunamadı (root ve Poweramp gerekir)") + PowerampImport.lastError.let { if (it.isBlank()) "" else ": $it" }
             }
         }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {

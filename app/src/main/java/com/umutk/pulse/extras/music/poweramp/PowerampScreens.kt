@@ -933,8 +933,8 @@ private fun TrackMenu(
     Box(modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).clickable { open = true }, contentAlignment = Alignment.Center) {
         Icon(Icons.Rounded.MoreVert, tr("More", "Daha fazla"), tint = Color.White, modifier = Modifier.size(20.dp))
     }
-    if (open) TrackSheet(track, art, onDismiss = { open = false }, onLyrics = onLyrics, onFindArt = onFindArt, onInfo = { info = true })
-    if (info) AudioInfoDialog(track, style) { info = false }
+    if (open) TrackSheet(track, art, onDismiss = { open = false }, onLyrics = onLyrics, onFindArt = onFindArt, onInfo = { info = true }, onEditTags = onEditTags)
+    if (info) AudioInfoDialog(track, style, onEdit = onEditTags?.let { e -> { info = false; e() } }) { info = false }
 }
 
 @Composable
@@ -951,7 +951,7 @@ private fun TrackAction(icon: ImageVector, label: String, style: PowerampStyle, 
 
 /** Poweramp's Audio Info: the tags, length, folder, file name and size of the track. */
 @Composable
-private fun AudioInfoDialog(track: Track, style: PowerampStyle, onClose: () -> Unit) {
+private fun AudioInfoDialog(track: Track, style: PowerampStyle, onEdit: (() -> Unit)? = null, onClose: () -> Unit) {
     val size = remember(track.path) { if (track.path.contains("://")) -1L else File(track.path).length() }
     val rows = listOfNotNull(
         tr("Title", "Başlık") to track.displayName(),
@@ -978,8 +978,14 @@ private fun AudioInfoDialog(track: Track, style: PowerampStyle, onClose: () -> U
                 }
             }
             Spacer(Modifier.height(10.dp))
-            Box(Modifier.align(Alignment.End).clip(CircleShape).background(style.accent).clickable(onClick = onClose).padding(horizontal = 18.dp, vertical = 8.dp)) {
-                Text(tr("Close", "Kapat"), color = style.onAccent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+            Row(Modifier.align(Alignment.End), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                // the tags can be changed from here (title, artist, album, genre, year)
+                if (onEdit != null) Box(Modifier.clip(CircleShape).background(style.panel.copy(alpha = 1f)).border(1.dp, style.accent, CircleShape).clickable(onClick = onEdit).padding(horizontal = 18.dp, vertical = 8.dp)) {
+                    Text(tr("Edit", "Düzenle"), color = style.accent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
+                Box(Modifier.clip(CircleShape).background(style.accent).clickable(onClick = onClose).padding(horizontal = 18.dp, vertical = 8.dp)) {
+                    Text(tr("Close", "Kapat"), color = style.onAccent, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                }
             }
         }
     }
