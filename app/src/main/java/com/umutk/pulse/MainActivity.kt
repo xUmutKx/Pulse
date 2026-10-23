@@ -458,7 +458,7 @@ private fun ModernShell(page: String, go: (String) -> Unit, menus: MenuHost, bod
     var wide by rememberSaveable(t.id) { mutableStateOf(false) }
     val s by Sampler.snap.collectAsState()
     val fx = if (t.id == "win11") Look.effect else "none"
-    Box(Modifier.fillMaxSize().backdrop(fx).statusBarsPadding().navigationBarsPadding()) {
+    Box(Modifier.fillMaxSize().backdrop(fx).statusBarsPadding().navigationBarsPadding().imePadding()) {
         Row(Modifier.fillMaxSize()) {
         Spacer(Modifier.width(52.dp))
         val corner = if (t.material) t.radius else if (t.radius > 0.dp) 8.dp else 0.dp
@@ -501,7 +501,7 @@ private fun MaterialRail(page: String, go: (String) -> Unit, menus: MenuHost, bo
     if (oneUi) { OneUiShell(page, go, menus, visible + SettingsPg, body); return }
     val t = T
     val s by Sampler.snap.collectAsState()
-    Row(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+    Row(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
         NavigationRail(containerColor = t.bg) {
             Column(Modifier.verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
                 (visible + SettingsPg).forEach { p ->
@@ -594,7 +594,7 @@ private fun ClassicShell(page: String, go: (String) -> Unit, menus: MenuHost, bo
     // Aero: the glass shows the blurred desktop wallpaper behind the window
     if (a7) com.umutk.pulse.features.ThemeWallPicture("win7", Modifier.matchParentSize().blur(14.dp))
     if (axp) com.umutk.pulse.features.ThemeWallPicture("xp", Modifier.matchParentSize()) // Bliss
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().then(chrome)) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding().then(chrome)) {
         // title bar
         val titleBg = when {
             // Windows 7: the bar is the frame's glass, with the gloss over its top half
@@ -748,7 +748,7 @@ private fun Win10Shell(page: String, go: (String) -> Unit, menus: MenuHost, body
     val all = visible + SettingsPg
     val memPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
     val stripBg = if (t.dark) Color(0xFF121212) else Color(0xFFF1F1F1)
-    Column(Modifier.fillMaxSize().background(t.bg).statusBarsPadding().navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().background(t.bg).statusBarsPadding().navigationBarsPadding().imePadding()) {
         // title bar: icon, name, the three caption buttons
         Row(Modifier.fillMaxWidth().height(32.dp), verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.width(10.dp)); PIcon("performance", Look.accent, 15.dp); Spacer(Modifier.width(8.dp))

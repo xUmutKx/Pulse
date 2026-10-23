@@ -123,10 +123,12 @@ fun KeyboardSettings(back: () -> Unit) {
                     PChip(on, l.name) {
                         val cur = KeyboardPrefs.langList()
                         KeyboardPrefs.langs = (if (on) cur - l.code else cur + l.code).ifEmpty { cur }.joinToString(","); save()
+                        // a language that is switched on without a word list gets one now
+                        if (!on && !KeyboardDictionary.hasList(ctx, l.code)) scope.launch { withContext(Dispatchers.IO) { KeyboardDictionary.download(ctx, l.code) }; rev++ }
                     }
                 }
             }
-            Text(tr("Word lists: English, Türkçe. The others type without suggestions.", "Sözlük: English, Türkçe. Diğerleri öneri olmadan yazar."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            Text(tr("Every language that is on corrects and suggests together: a Turkish keyboard with English on fixes both. A language without a word list downloads one.", "Açık olan her dil birlikte düzeltir ve öneri verir: İngilizce de açıksa Türkçe klavye ikisini de düzeltir. Sözlüğü olmayan dil kendi sözlüğünü indirir."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.numberRow) { KeyboardPrefs.numberRow = it; save() }
             Switch(tr("Arrow keys", "Ok tuşları"), tr("Arrows, home, end, select all, copy, paste", "Oklar, başa, sona, tümünü seç, kopyala, yapıştır"), KeyboardPrefs.arrows) { KeyboardPrefs.arrows = it; save() }
             Switch(tr("Emoji key", "Emoji tuşu"), "", KeyboardPrefs.emojiKey) { KeyboardPrefs.emojiKey = it; save() }

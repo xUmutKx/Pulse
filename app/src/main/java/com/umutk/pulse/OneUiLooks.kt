@@ -68,7 +68,7 @@ fun OneUiBadge(icon: String, color: Color = Look.accent.copy(alpha = 1f), size: 
 fun OneUiShell(page: String, go: (String) -> Unit, menus: MenuHost, pages: List<Pg>, body: @Composable () -> Unit) {
     val t = T
     val acc = Look.accent.copy(alpha = 1f)
-    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+    Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().height(48.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Spacer(Modifier.weight(1f)); MenuOverflow(menus, t.sub)
         }
