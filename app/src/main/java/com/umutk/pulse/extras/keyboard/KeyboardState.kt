@@ -18,6 +18,8 @@ class KbState {
     var lang by mutableStateOf("en")
     /** Left, middle and right slot of the bar; the middle one is what the space key puts in. */
     var slots by mutableStateOf(listOf("", "", ""))
+    /** The password manager's suggestions (autofill), drawn by the system inside the bar; empty when there are none. */
+    var inline by mutableStateOf(listOf<android.view.View>())
     /** The letters typed so far in the word under way (shown as a quoted slot when it differs from the middle one). */
     var enter by mutableStateOf("newline")
     var dark by mutableStateOf(true)
