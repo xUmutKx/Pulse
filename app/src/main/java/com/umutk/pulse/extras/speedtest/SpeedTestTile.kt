@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.speedtest
 
+import com.umutk.pulse.subtitleCompat
+
 import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas

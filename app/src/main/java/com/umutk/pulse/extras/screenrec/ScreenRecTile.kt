@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.screenrec
 
+import com.umutk.pulse.subtitleCompat
+
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build

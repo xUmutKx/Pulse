@@ -1,5 +1,7 @@
 package com.umutk.pulse.features
 
+import com.umutk.pulse.subtitleCompat
+
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
