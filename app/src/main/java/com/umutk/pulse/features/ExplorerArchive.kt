@@ -212,16 +212,18 @@ private fun walk(f: File, body: (AEntry, () -> InputStream) -> Unit) {
 internal fun archiveEntries(f: File): List<AEntry> { val l = ArrayList<AEntry>(); walk(f) { e, _ -> l += e }; return l }
 
 /** Unpacks everything into [dest]; entries that would leave it are skipped. Returns a note for the user. */
-internal fun archiveExtract(f: File, dest: File): String = try {
+internal fun archiveExtract(f: File, dest: File, job: FileJob? = null): String = try {
     dest.mkdirs()
     val root = dest.canonicalPath + File.separator
     var n = 0
     walk(f) { e, open ->
+        if (job?.cancelled == true) return@walk
         val out = File(dest, e.path)
         if (!out.canonicalPath.startsWith(root)) return@walk
         if (e.dir) out.mkdirs() else {
             out.parentFile?.mkdirs()
-            open().use { i -> out.outputStream().use { i.copyTo(it) } }
+            // copied in blocks, so the bar of the job moves and a cross stops it between blocks
+            open().use { i -> out.outputStream().use { o -> val buf = ByteArray(128 * 1024); while (job?.cancelled != true) { val k = i.read(buf); if (k < 0) break; o.write(buf, 0, k); job?.done?.addAndGet(k.toLong()) } } }
             if (e.time > 0) out.setLastModified(e.time)
             n++
         }
@@ -419,19 +421,26 @@ internal fun ArchiveHost(req: ArcReq, onClose: () -> Unit, onNote: (String) -> U
     LaunchedEffect(req) {
         File(ctx.cacheDir, "arc").deleteRecursively()
         if (kind == "here" || kind == "named" || kind == "test") {
-            onNote(tr("Working…", "Çalışıyor…"))
+            // extracting shows a bar in the Files screen (FileJobLines) instead of a "Working" text
+            val job = if (kind == "test") null else FileJobs.begin(ctx, tr("Extracting ${f.name}", "${f.name} çıkarılıyor"), withContext(Dispatchers.IO) { runCatching { archiveEntries(f).filter { !it.dir }.sumOf { it.size } }.getOrDefault(0L) }.coerceAtLeast(1L))
             val note = withContext(Dispatchers.IO) {
-                when (kind) { "here" -> archiveExtract(f, parent); "named" -> archiveExtract(f, uniqueFile(parent, baseName(f))); else -> archiveTest(f) }
+                when (kind) { "here" -> archiveExtract(f, parent, job); "named" -> archiveExtract(f, uniqueFile(parent, baseName(f)), job); else -> archiveTest(f) }
             }
-            onNote(note); onChanged(); onClose()
+            job?.let { FileJobs.end(ctx, it, if (it.cancelled) tr("Cancelled", "İptal edildi") else note) }
+            onNote(if (job?.cancelled == true) "" else note); onChanged(); onClose()
         }
     }
     when (kind) {
         "open" -> ArcBrowser(f, onClose, onNote, onChanged, onView)
         "apk" -> ApkInfo(f, onClose) { kind = "open" }
         "pick" -> FolderPick(parent, onClose) { dest ->
-            onClose(); onNote(tr("Working…", "Çalışıyor…"))
-            kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) { val n = archiveExtract(f, dest); withContext(Dispatchers.Main) { onNote(n); onChanged() } }
+            onClose()
+            kotlinx.coroutines.GlobalScope.launch(Dispatchers.IO) {
+                val job = FileJobs.begin(ctx, tr("Extracting ${f.name}", "${f.name} çıkarılıyor"), runCatching { archiveEntries(f).filter { !it.dir }.sumOf { it.size } }.getOrDefault(0L).coerceAtLeast(1L))
+                val n = archiveExtract(f, dest, job)
+                FileJobs.end(ctx, job, if (job.cancelled) tr("Cancelled", "İptal edildi") else n)
+                withContext(Dispatchers.Main) { onNote(if (job.cancelled) "" else n); onChanged() }
+            }
         }
         "info" -> {
             val rows by produceRows(f)

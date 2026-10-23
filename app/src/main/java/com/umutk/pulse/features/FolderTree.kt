@@ -108,7 +108,8 @@ private var directStart: File? = null
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     var dir by remember(root) {
-        mutableStateOf(lastDir?.takeIf { it.isDirectory && it.path.startsWith(root.path) } ?: root)
+        // the system root always opens at "/" itself: every path starts with it, so the last storage folder (Android...) must not be taken for it
+        mutableStateOf(lastDir?.takeIf { root.path != "/" && it.isDirectory && it.path.startsWith(root.path) } ?: root)
     }
     // the one shared walk of the storage (see StorageScan): the folder on screen, its children sorted by size
     val snap by StorageScan.snap.collectAsState()
@@ -118,19 +119,27 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
     val sysRoot = root.path == "/"
     var rootRev by remember { mutableStateOf(0) }
     LaunchedEffect(root) { if (!sysRoot) StorageScan.ensure(root) }
-    LaunchedEffect(dir) { lastDir = dir }
+    LaunchedEffect(dir) { if (root.path != "/") lastDir = dir }
     // the other apps' folders (Android/data, Android/obb) are not in the storage walk below their first level: with root or Shizuku each one is measured when opened
     val rootOk = com.umutk.pulse.Shell.root == true || com.umutk.pulse.Shell.shizuku == 2
     val viaRoot = sysRoot || (rootOk && (dir.path.contains("/Android/data") || dir.path.contains("/Android/obb")))
     val rootRows by produceState<List<TreeNode>?>(if (viaRoot) RootDu.cached(dir) else null, dir, rootRev, viaRoot) {
         if (viaRoot) value = RootDu.cached(dir) ?: withContext(Dispatchers.IO) { RootDu.measure(dir) }
     }
-    val loading = if (viaRoot) rootRows == null else snap?.root != root.path
-    val rows = remember(snap, dir, rootRows, viaRoot) {
+    val snapRows = remember(snap, dir, rootRows, viaRoot) {
         if (viaRoot) return@remember rootRows.orEmpty()
         val s = snap?.takeIf { it.root == root.path }
         s?.childrenOf(dir)?.map { TreeNode(it, s.sizeOf(it)) }?.sortedByDescending { it.size }.orEmpty()
     }
+    // a folder made after the saved scan is not in it: its children are read and measured now, so it never shows as empty while it holds files
+    val needLive = !viaRoot && snap?.root == root.path && snapRows.isEmpty() && dir.list()?.isNotEmpty() == true
+    val liveRows by produceState<List<TreeNode>?>(null, dir, needLive) {
+        value = if (!needLive) null else withContext(Dispatchers.IO) {
+            dir.listFiles().orEmpty().map { f -> TreeNode(f, if (f.isFile) f.length() else f.walkTopDown().take(100_000).filter { it.isFile }.sumOf { it.length() }) }.sortedByDescending { it.size }
+        }
+    }
+    val loading = if (viaRoot) rootRows == null else if (needLive) liveRows == null else snap?.root != root.path
+    val rows = if (needLive) liveRows.orEmpty() else snapRows
 
     val atRoot = dir == root
     val direct = remember { directStart.also { directStart = null } }
