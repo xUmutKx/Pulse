@@ -215,3 +215,7 @@ fun rememberWidgetAdd(onAdded: () -> Unit): (AppWidgetProviderInfo) -> Unit {
             .putExtra(AppWidgetManager.EXTRA_APPWIDGET_PROVIDER, info.provider))
     }
 }
+
+/** The sticky note widget of Pulse (the same one any launcher can place), so the desktop's note is a real widget: one note per widget, edited by a tap. */
+fun stickyNoteProvider(c: Context): AppWidgetProviderInfo? =
+    AppWidgetManager.getInstance(c).installedProviders.firstOrNull { it.provider.packageName == c.packageName && it.provider.className.endsWith("StickyNoteWidget") }

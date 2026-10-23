@@ -629,6 +629,19 @@
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
+        <!-- "Pulse · LocalSend" in the Share list: the devices of the network are shown there and a tap sends the files (an alternative to Quick Share) -->
+        <activity android:name="com.umutk.pulse.extras.localsend.LocalSendShareActivity" android:exported="true" android:label="Pulse · LocalSend" android:icon="@drawable/ic_qs_localsend" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+        <service android:name="com.umutk.pulse.extras.localsend.LocalSendTile" android:exported="true" android:label="LocalSend" android:icon="@drawable/ic_qs_localsend"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
         <receiver android:name="com.umutk.pulse.extras.music.BluetoothAutoplayReceiver" android:exported="true">
             <intent-filter><action android:name="android.bluetooth.device.action.ACL_CONNECTED" /></intent-filter>
         </receiver>

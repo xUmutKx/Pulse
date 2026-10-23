@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -97,7 +98,7 @@ fun LauncherSettings(back: () -> Unit) {
         // the first page is the list of categories; each one opens as a page of its own
         if (cat.isEmpty()) LAUNCHER_CATS.forEach { k ->
             Row(Modifier.fillMaxWidth().clickable { cat = k.key }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.CircleShape).background(androidx.compose.ui.graphics.Color(k.color)), contentAlignment = Alignment.Center) { PIcon(k.icon, androidx.compose.ui.graphics.Color.White, 24.dp) }
+                Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { PIcon(k.icon, T.accent, 26.dp) }
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(tr(k.en, k.trName), color = T.text, fontSize = 16.sp)
                     Text(tr(k.enSub, k.trSub), color = T.sub, fontSize = 12.sp)
@@ -146,7 +147,7 @@ fun LauncherSettings(back: () -> Unit) {
             if (cur.id.startsWith("winphone")) SwitchLine("gridView", tr("Live tiles", "Canlı kutucuklar"), LauncherPrefs.phoneTiles) { LauncherPrefs.phoneTiles = it; save() }
             SwitchLine("settings", tr("Buttons at the top right", "Sağ üstteki düğmeler"), LauncherPrefs.topChips) { LauncherPrefs.topChips = it; save() }
             if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("clock", tr("Desktop clock widget", "Masaüstü saat widget'ı"), LauncherPrefs.desktopClock) { LauncherPrefs.desktopClock = it; save() }
-            if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) SwitchLine("notes", tr("Notes gadget", "Not gadget'ı"), LauncherPrefs.desktopNote) { LauncherPrefs.desktopNote = it; save() }
+            if (cur.id in setOf("win11", "win10", "win7", "xp", "win95")) ValueRow("notes", tr("Add a sticky note", "Yapışkan not ekle"), "") { stickyNoteProvider(ctx)?.let(addWidget) }
             SwitchLine("clock", tr("Clock and date", "Saat ve tarih"), LauncherPrefs.clock) { LauncherPrefs.clock = it; save() }
             SwitchLine("apps", tr("Apps on the home screen", "Ana ekranda uygulamalar"), LauncherPrefs.homeApps) { LauncherPrefs.homeApps = it; save() }
             SwitchLine("gridView", tr("Open apps in windows", "Uygulamaları pencerede aç"), LauncherPrefs.windowed) { LauncherPrefs.windowed = it; save() }
@@ -290,7 +291,8 @@ private fun ValueRow(icon: String, title: String, value: String, onClick: () -> 
         PIcon(icon, T.text, 22.dp)
         Spacer(Modifier.width(12.dp))
         Text(title, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-        if (value.isNotEmpty()) Text(value, color = T.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // the title keeps the room it needs; a long value (a file path) is cut short instead of squeezing the title into one letter per line
+        if (value.isNotEmpty()) Text(value, color = T.sub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 8.dp).widthIn(max = 140.dp))
     }
 }
 

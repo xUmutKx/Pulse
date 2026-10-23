@@ -49,7 +49,7 @@ import kotlinx.coroutines.withContext
 
 /** The loading animation while devices are searched: the Windows 11 progress ring (an arc that grows, shrinks and turns) in Fluent, a plain spinner elsewhere. */
 @Composable
-private fun ScanRing(modifier: Modifier = Modifier) {
+internal fun ScanRing(modifier: Modifier = Modifier) {
     val accent = com.umutk.pulse.Look.accent
     val fluent = T.id == "win11" && !T.material
     if (!fluent) { androidx.compose.material3.CircularProgressIndicator(modifier.size(20.dp), color = accent, strokeWidth = 2.dp); return }

@@ -18,6 +18,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -80,7 +81,7 @@ fun DesktopClock(lookId: String, modifier: Modifier = Modifier) {
 }
 
 
-/** The desktop clock as a widget of its own: moved by its grip, taken off by the cross (the launcher settings bring it back). */
+/** The desktop clock as a widget of its own: a long press opens its edit mode (grip to move, cross to take it off, scale, check to finish); the launcher settings bring it back. */
 @Composable
 fun MovableDesktopClock(lookId: String) {
     if (!LauncherPrefs.desktopClock) return
@@ -89,15 +90,26 @@ fun MovableDesktopClock(lookId: String) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
     // first place: the top right corner, as the old clock sat
     val first = (maxWidth.value - 190f).coerceAtLeast(0f)
-    fun pos(): FloatArray = LauncherPrefs.widgetPos[-1]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size == 2 }?.toFloatArray() ?: floatArrayOf(first, 10f)
+    // x, y and a scale (1 = the first size)
+    fun pos(): FloatArray = LauncherPrefs.widgetPos[-1]?.split(',')?.mapNotNull { it.toFloatOrNull() }?.takeIf { it.size >= 2 }?.let { if (it.size == 2) floatArrayOf(it[0], it[1], 1f) else it.toFloatArray() } ?: floatArrayOf(first, 10f, 1f)
+    fun put(x: Float, y: Float, k: Float) { LauncherPrefs.widgetPos = LauncherPrefs.widgetPos + (-1 to "$x,$y,$k") }
     val p = pos()
+    val editing = WidgetEdit.id == -1 && !LauncherPrefs.lockLayout
     androidx.compose.foundation.layout.Box(Modifier.offset(p[0].dp, p[1].dp)) {
-        DesktopClock(lookId)
-        fun dot(m: Modifier) = m.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(0x99000000))
-        if (!LauncherPrefs.lockLayout) androidx.compose.foundation.layout.Box(dot(Modifier.align(Alignment.TopStart).pointerInput(Unit) {
-            detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = pos(); LauncherPrefs.widgetPos = LauncherPrefs.widgetPos + (-1 to "${(q[0] + drag.x / d).coerceAtLeast(0f)},${(q[1] + drag.y / d).coerceAtLeast(0f)}") }
-        }), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("gridView", Color.White, 12.dp) }
-        if (!LauncherPrefs.lockLayout) androidx.compose.foundation.layout.Box(dot(Modifier.align(Alignment.TopEnd).clickable { LauncherPrefs.desktopClock = false; LauncherPrefs.save(ctx) }), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("close", Color.White, 12.dp) }
+        androidx.compose.foundation.layout.Box(Modifier.graphicsLayer { scaleX = p[2]; scaleY = p[2]; transformOrigin = androidx.compose.ui.graphics.TransformOrigin(0f, 0f) }.longPressEdit(-1, !LauncherPrefs.lockLayout) { WidgetEdit.id = -1 }) {
+            DesktopClock(lookId)
+        }
+        if (editing) {
+            EditDot("gridView", Modifier.align(Alignment.TopStart).pointerInput(Unit) {
+                detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = pos(); put((q[0] + drag.x / d).coerceAtLeast(0f), (q[1] + drag.y / d).coerceAtLeast(0f), q[2]) }
+            })
+            EditDot("close", Modifier.align(Alignment.TopEnd)) { WidgetEdit.id = null; LauncherPrefs.desktopClock = false; LauncherPrefs.save(ctx) }
+            EditDot("check", Modifier.align(Alignment.TopCenter)) { WidgetEdit.id = null }
+            // the corner grows or shrinks the clock
+            EditDot("scale", Modifier.align(Alignment.BottomEnd).pointerInput(Unit) {
+                detectDragGestures(onDragEnd = { LauncherPrefs.save(ctx) }) { c, drag -> c.consume(); val q = pos(); put(q[0], q[1], (q[2] + (drag.x + drag.y) / d / 240f).coerceIn(.6f, 2.5f)) }
+            })
+        }
     }
     }
 }
