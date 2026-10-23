@@ -16,7 +16,8 @@ class LastPlayedToggleTile : TileService() {
 
     override fun onStartListening() = paint()
 
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         if (AmbientLast.hasLast(this)) {
             AmbientLast.toggle(this)
             musicOn = false

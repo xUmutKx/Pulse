@@ -19,7 +19,8 @@ class LocalSendTile : TileService() {
         }
     }
 
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         val i = Intent(this, ExtraToolActivity::class.java).putExtra("route", "localsend").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
         else @Suppress("DEPRECATION") startActivityAndCollapse(i)

@@ -78,7 +78,8 @@ class CoverTile : TileService() {
         }
     }
 
-    override fun onClick() {
+    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    private fun click0() {
         if (!Settings.canDrawOverlays(this) && CoverAccessibilityService.instance == null) { openOverlayPermission(); return }
         // the advanced (StandBy) cover is a window of its own; the basic one is the black foreground service
         if (StandByPrefs.advanced(this)) { StandBy.toggle(this); paint(StandBy.showing); if (StandBy.showing) CoverAccessibilityService.instance?.collapseShade(); return }
