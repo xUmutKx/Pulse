@@ -122,9 +122,18 @@ internal fun SciPane(classic: Boolean) {
     Column(Modifier.fillMaxSize()) {
         CalcDisplay(if (err) "" else preview?.let { "= $it" } ?: "", if (err) tr("Error", "Hata") else e, classic)
         Spacer(Modifier.height(6.dp))
-        CalcPad(sci, classic, Modifier.weight(4f)) { press(it) }
-        Spacer(Modifier.height(4.dp))
-        CalcPad(pad, classic, Modifier.weight(4f)) { press(it) }
+        val round = T.id == "amoled" || T.id == "material"
+        if (round) {
+            CalcPad(sci, classic, Modifier.weight(4f)) { press(it) }
+            Spacer(Modifier.height(4.dp))
+            CalcPad(pad, classic, Modifier.weight(4f)) { press(it) }
+        } else {
+            // Windows looks: the keys are smaller and sit at the bottom, under the display
+            Spacer(Modifier.weight(1f))
+            CalcPad(sci, classic) { press(it) }
+            Spacer(Modifier.height(4.dp))
+            CalcPad(pad, classic) { press(it) }
+        }
         Spacer(Modifier.height(8.dp))
     }
 }
