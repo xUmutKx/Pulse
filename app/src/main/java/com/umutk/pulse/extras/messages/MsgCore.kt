@@ -167,6 +167,18 @@ object MsgCore {
         return out
     }
 
+    private val promo = Regex("(kazand|tıkla|tikla|hediye|bahis|casino|kredi|indirim|kampanya|fırsat|firsat|ücretsiz|ucretsiz|çekiliş|cekilis|bonus|jackpot|free|prize|winner|click|loan|bet\\b|congratulations|iptal için|iptal icin|abone|promo|sms ile|yatırım|yatirim|kripto|bitcoin)", RegexOption.IGNORE_CASE)
+    private val link = Regex("(https?://|www\\.|bit\\.ly|t\\.co/|\\.com\\b|\\.xyz\\b|\\.top\\b)", RegexOption.IGNORE_CASE)
+    private val genuine = Regex("(şifre|sifre|doğrulama|dogrulama|verification|\\bkod\\b|\\bcode\\b|işlem|islem|hesab|tutar|bakiye|kargo|siparis|sipariş|randevu)", RegexOption.IGNORE_CASE)
+
+    /** An unwanted message: from a number that is not in the contacts, with advertising words and a link, or with several advertising words; never a code or an account message. */
+    fun isSpam(known: Boolean, body: String): Boolean {
+        if (known) return false
+        if (otp(body) != null || genuine.containsMatchIn(body)) return false
+        val n = promo.findAll(body).count()
+        return (n >= 1 && link.containsMatchIn(body)) || n >= 2
+    }
+
     /** SmsManager that follows the default subscription. */
     @Suppress("DEPRECATION")
     fun sms(c: Context): SmsManager = if (Build.VERSION.SDK_INT >= 31) c.getSystemService(SmsManager::class.java) else SmsManager.getDefault()
