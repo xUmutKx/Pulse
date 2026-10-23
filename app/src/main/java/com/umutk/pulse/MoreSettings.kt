@@ -569,7 +569,7 @@ internal fun disableExtraAppsOnFreshInstall(ctx: android.content.Context) {
     val pi = pm.getPackageInfo(ctx.packageName, 0)
     val prefs = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     if (pi.firstInstallTime != pi.lastUpdateTime || prefs.getBoolean("extraAppsOff", false)) return
-    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "PaintLauncher", "CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher", "NotifHistLauncher", "LocalSendLauncher", "ExtraStoreLauncher").forEach {
+    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "PaintLauncher", "CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "ExtraStoreLauncher").forEach {
         // a missing alias throws on startup, so one bad name must not stop the rest (or the app)
         runCatching { pm.setComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + it), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP) }
     }
@@ -600,16 +600,17 @@ private fun ExtraAppsCard() {
         Triple("ScreenRecLauncher", R.drawable.mat_record, tr("Screen recorder", "Ekran kaydı")),
         Triple("NotifHistLauncher", R.drawable.mat_notifications, tr("Notification history", "Bildirim geçmişi")),
         Triple("LocalSendLauncher", R.drawable.mat_wifi, "LocalSend"),
+        Triple("KeyboardLauncher", R.drawable.mat_keyboard, tr("Keyboard", "Klavye")),
     )
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
         (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "VoiceLauncher"),
         (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher"),
         (tr("Tools and life", "Araçlar ve günlük")) to listOf("CalculatorLauncher", "WeatherLauncher", "CalendarLauncher", "ContactsLauncher"),
-        (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher", "LocalSendLauncher"),
+        (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher"),
     )
     val routeOf = mapOf("MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "PaintLauncher" to "paint",
-        "CalculatorLauncher" to "calculator", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "LocalSendLauncher" to "localsend")
+        "CalculatorLauncher" to "calculator", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard")
     val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity")
     /** Asks the launcher to put this app on the home screen; the shortcut opens the app directly, whether or not its app-drawer icon is switched on. */
     fun pinToHome(alias: String, label: String, icon: Int) {
@@ -623,7 +624,7 @@ private fun ExtraAppsCard() {
         // the app's own launcher picture (the adaptive icon), so every shortcut on the home screen looks like its app, not like Pulse
         val mip = mapOf("FilesLauncher" to "ic_files", "PhotosLauncher" to "ic_photos", "CalendarLauncher" to "ic_calendar", "ContactsLauncher" to "ic_contacts", "MusicLauncher" to "ic_music", "VideoLauncher" to "ic_video",
             "PaintLauncher" to "ic_ad_paint", "CalculatorLauncher" to "ic_ad_calc", "ArtCraftLauncher" to "ic_ad_artcraft", "WhiteNoiseLauncher" to "ic_ad_noise", "VoiceLauncher" to "ic_ad_voice", "NotesLauncher" to "ic_ad_notes",
-            "WeatherLauncher" to "ic_ad_weather", "MessagesLauncher" to "ic_ad_messages", "ScreenRecLauncher" to "ic_ad_record", "NotifHistLauncher" to "ic_ad_notif", "LocalSendLauncher" to "ic_ad_localsend", "ExtraStoreLauncher" to "ic_ad_extras")
+            "WeatherLauncher" to "ic_ad_weather", "MessagesLauncher" to "ic_ad_messages", "ScreenRecLauncher" to "ic_ad_record", "NotifHistLauncher" to "ic_ad_notif", "LocalSendLauncher" to "ic_ad_localsend", "KeyboardLauncher" to "ic_ad_keyboard", "ExtraStoreLauncher" to "ic_ad_extras")
         val res = mip[alias]?.let { ctx.resources.getIdentifier(it, "mipmap", ctx.packageName) } ?: 0
         val ic = if (res != 0) android.graphics.drawable.Icon.createWithResource(ctx, res) else android.graphics.drawable.Icon.createWithResource(ctx, icon)
         sm.requestPinShortcut(android.content.pm.ShortcutInfo.Builder(ctx, "app_$alias").setShortLabel(label).setIcon(ic).setIntent(i).build(), null)
@@ -632,7 +633,7 @@ private fun ExtraAppsCard() {
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "PaintLauncher" to "extraPaint", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
-        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "ExtraStoreLauncher" to "extraStore")
+        "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "ExtraStoreLauncher" to "extraStore")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
     val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }
