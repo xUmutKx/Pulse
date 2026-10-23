@@ -127,8 +127,10 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first, then load the backup", "Kütüphane boş: önce müziği tara, sonra yedeği yükle"); return@launch }
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.run(c, uri, MusicLibrary.tracks.value, embedCovers) } }
             importNote = r.getOrNull()?.let { x ->
-                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else ""),
-                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else ""))
+                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") +
+                    (if (x.missing > 0) "; ${x.missing} songs of the backup are not on this phone, e.g. ${x.missingNames.joinToString(", ")}" else ""),
+                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") +
+                    (if (x.missing > 0) "; yedekteki ${x.missing} şarkı bu telefonda bulunamadı, örn. ${x.missingNames.joinToString(", ")}" else ""))
             } ?: tr("The backup could not be read", "Yedek okunamadı")
         }
     }
@@ -205,6 +207,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             SwitchRow(tr("Pause on USB DAC connection", "USB DAC bağlanınca duraklat"), pd) { pd = it; MusicSettings.setPauseUsbDac(c, it); if (it) runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
             SwitchRow(tr("Audio focus", "Ses odağı"), af) { af = it; MusicSettings.setAudioFocus(c, it); engine.reloadSettings() }
             SwitchRow(tr("Respond to buttons", "Tuşlara yanıt ver"), rb) { rb = it; MusicSettings.setRespondButtons(c, it) }
+            var pz by remember { mutableStateOf(MusicSettings.pauseAtZeroVolume(c)) }
+            SwitchRow(tr("Pause when the volume is turned to zero", "Ses sıfıra indirilince duraklat"), pz) { pz = it; MusicSettings.setPauseAtZeroVolume(c, it); if (it) runCatching { c.startService(Intent(c, MusicPlaybackService::class.java)) } }
         }
         if (cat == "misc") SwitchRow(tr("Keep screen on", "Ekranı açık tut"), screenOn) { screenOn = it; MusicSettings.setKeepScreenOn(c, it) }
         if (cat == "misc") {

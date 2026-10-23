@@ -153,8 +153,13 @@ object PowerampImport {
                     while (pl.moveToNext()) {
                         val id = pl.getLong(0); val name = pl.getString(1).substringBefore(" (Imported").trim().ifBlank { "Poweramp $id" }
                         val list = ArrayList<Track>()
-                        d.rawQuery("select path from tracks where playlist_id = ? order by _id", arrayOf(id.toString())).use { c ->
-                            while (c.moveToNext()) { val p = c.getString(0); if (p.startsWith("http")) continue; find(p)?.let { list += it } ?: run { missing++; if (missingNames.size < 3) missingNames += p.substringAfterLast('/') } }
+                        d.rawQuery("select path, readable_name from tracks where playlist_id = ? order by _id", arrayOf(id.toString())).use { c ->
+                            while (c.moveToNext()) {
+                                val p = c.getString(0); if (p.startsWith("http")) continue
+                                // by the path, else by the name Poweramp showed for the song
+                                (find(p) ?: c.getString(1)?.takeIf { it.isNotBlank() && !it.startsWith("http") }?.let { n -> pick(byStem[fold(n)], n) })?.let { list += it }
+                                    ?: run { missing++; if (missingNames.size < 5) missingNames += p.substringAfterLast('/') }
+                            }
                         }
                         if (list.isNotEmpty()) { Playlists.save(ctx, name, list); playlists++ }
                     }

@@ -4,6 +4,7 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -116,11 +117,10 @@ internal fun TrackSheet(
                 SheetRow(Icons.Rounded.Delete, tr("Delete", "Sil")) { pane = "delete" }
                 SheetRow(Icons.Rounded.Add, tr("Add to Playlist", "Çalma listesine ekle")) { pane = "playlist" }
                 if (onFindArt != null) SheetRow(Icons.Rounded.Image, tr("Album Art", "Albüm kapağı")) { close(); onFindArt() }
-                if (onEditTags != null) SheetRow(androidx.compose.material.icons.Icons.Rounded.Edit, tr("Edit tags", "Etiketleri düzenle")) { close(); onEditTags() }
                 Line()
                 Row(Modifier.fillMaxWidth()) {
                     SheetCell(Icons.Rounded.Info, tr("Info / Tags", "Bilgi / Etiket"), Modifier.weight(1f)) { close(); onInfo() }
-                    SheetCell(Icons.Rounded.Subject, tr("Lyrics", "Şarkı sözleri"), Modifier.weight(1f)) { close(); onLyrics?.invoke() }
+                    SheetCell(Icons.Rounded.Subject, tr("Lyrics", "Şarkı sözleri"), Modifier.weight(1f), onLong = { pane = "forgetLyrics" }) { close(); onLyrics?.invoke() }
                 }
                 Line()
                 Row(Modifier.fillMaxWidth()) {
@@ -136,6 +136,21 @@ internal fun TrackSheet(
     }
 
     when (pane) {
+        "forgetLyrics" -> AlertDialog(
+            onDismissRequest = { pane = null },
+            title = { Text(tr("Delete these lyrics?", "Bu sözler silinsin mi?")) },
+            text = { Text(tr("The downloaded and saved lyrics of this song (and the .lrc / .txt next to the file) are removed. They are not looked up again for a few days.", "Bu şarkının indirilen ve kaydedilen sözleri (ve dosyanın yanındaki .lrc / .txt) silinir. Birkaç gün yeniden aranmaz.")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pane = null; close()
+                    scope.launch {
+                        withContext(Dispatchers.IO) { com.umutk.pulse.extras.lyrics.Lyrics.forget(ctx, track.path, track.title ?: track.path.substringAfterLast('/').substringBeforeLast('.'), track.artist.orEmpty()) }
+                        Toast.makeText(ctx, tr("Lyrics deleted", "Sözler silindi"), Toast.LENGTH_SHORT).show()
+                    }
+                }) { Text(tr("Delete", "Sil")) }
+            },
+            dismissButton = { TextButton(onClick = { pane = null }) { Text(tr("Cancel", "Vazgeç")) } },
+        )
         "delete" -> AlertDialog(
             onDismissRequest = { pane = null },
             title = { Text(tr("Delete this track?", "Bu parça silinsin mi?")) },
@@ -220,8 +235,9 @@ private fun SheetRow(icon: ImageVector, label: String, onClick: () -> Unit) {
 }
 
 @Composable
-private fun SheetCell(icon: ImageVector, label: String, modifier: Modifier, onClick: () -> Unit) {
-    Row(modifier.clickable(onClick = onClick).padding(vertical = 13.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun SheetCell(icon: ImageVector, label: String, modifier: Modifier, onLong: (() -> Unit)? = null, onClick: () -> Unit) {
+    Row(modifier.combinedClickable(onLongClick = onLong, onClick = onClick).padding(vertical = 13.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = Color.White, modifier = Modifier.size(20.dp))
         Spacer(Modifier.width(10.dp))
         Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
