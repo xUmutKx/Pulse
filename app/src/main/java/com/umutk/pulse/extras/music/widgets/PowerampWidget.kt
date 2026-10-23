@@ -241,7 +241,9 @@ class PowerampWidget : AppWidgetProvider() {
             val c = GREY
             glyphSkip(cv, p, W * 0.16f, cy, c, back = true)
             glyphSeek(cv, p, W * 0.33f, cy, c, back = true)
+            cv.save(); cv.scale(0.9f, 0.9f, W * 0.5f, cy)
             if (playing) glyphPause(cv, p, W * 0.5f, cy, c) else glyphPlay(cv, p, W * 0.5f, cy, c)
+            cv.restore()
             glyphSeek(cv, p, W * 0.67f, cy, c, back = false)
             glyphSkip(cv, p, W * 0.84f, cy, c, back = false)
             return out

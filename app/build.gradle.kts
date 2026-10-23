@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = 31
         targetSdk = 34
-        versionCode = 302
-        versionName = "0.10.292"
+        versionCode = 307
+        versionName = "0.10.297"
         ndk { abiFilters += "arm64-v8a" }
     }
     // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
@@ -62,6 +62,8 @@ dependencies {
     implementation("com.android.tools.build:apksig:8.5.2") // signs the font pack APK on the phone (features/FontChanger.kt)
     implementation("androidx.media3:media3-exoplayer:1.4.1") // Apache-2.0; music player (extras/music), 1.4.1 is the last with minCompileSdk 34
     implementation("androidx.media3:media3-session:1.4.1") // MediaSessionService: background playback and media notification
+    implementation("androidx.media3:media3-transformer:1.4.1") // Media tools: shrinking and converting video and music
+    implementation("androidx.media3:media3-effect:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1") // PlayerView in extras/video
     implementation("androidx.work:work-runtime-ktx:2.9.1") // ServiceWatchdog: periodic CheckWorker (extras/watchdog); 2.10 needs compileSdk 35
     // Apache-2.0; builds the MMS PDU for attachments in Messages (Messages.kt). okhttp 2.x is left out: the system MMS stack sends it, and okio 3 is already in use
