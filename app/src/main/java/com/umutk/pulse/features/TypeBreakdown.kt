@@ -81,7 +81,10 @@ internal class KindAcc {
 
 @Composable
 fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
-    var selected by remember(root) { mutableStateOf<FileKind?>(null) }
+    // a type tapped on the Files home page opens its list at once (one tap)
+    var selected by remember(root) { mutableStateOf<FileKind?>(when (com.umutk.pulse.files.home.FilesHomeNav.kind) {
+        "images" -> FileKind.IMAGES; "videos" -> FileKind.VIDEO; "audio" -> FileKind.AUDIO; "docs" -> FileKind.DOCUMENTS; "archives" -> FileKind.ARCHIVES; "apps" -> FileKind.APPS; else -> null
+    }.also { com.umutk.pulse.files.home.FilesHomeNav.kind = null }) }
     var pending by remember { mutableStateOf<LargeFile?>(null) }
     var note by remember { mutableStateOf("") }
     // the shared walk of the storage (see StorageScan): the same numbers as the folder tree, and no second scan
@@ -97,10 +100,10 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             }
             androidx.activity.compose.BackHandler(selected != null) { selected = null }
             Column(Modifier.weight(1f)) {
-                Text(selected?.label ?: "Storage by type", color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text(selected?.let { kindLabel(it) } ?: com.umutk.pulse.tr("Storage by type", "Türe göre depolama"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(root.path, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-            IconButton(onClick = { StorageScan.rescan(root) }) { Icon(Icons.Filled.Refresh, contentDescription = "Refresh", tint = T.text) }
+            IconButton(onClick = { StorageScan.rescan(root) }) { Icon(Icons.Filled.Refresh, contentDescription = com.umutk.pulse.tr("Refresh", "Yenile"), tint = T.text) }
         }
 
         val data = summaries
@@ -108,7 +111,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             // the same loading bar and count as the folder tree
             Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
                 com.umutk.pulse.Busy()
-                Text(if (scanned < 0) com.umutk.pulse.tr("Reading the saved scan…", "Kayıtlı tarama okunuyor…") else "Measuring… $scanned files", color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                Text(if (scanned < 0) com.umutk.pulse.tr("Reading the saved scan…", "Kayıtlı tarama okunuyor…") else com.umutk.pulse.tr("Measuring… $scanned files", "Ölçülüyor… $scanned dosya"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
             }
             return@Column
         }
@@ -121,12 +124,12 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             if (note.isNotEmpty()) item { Text(note, color = Color(0xFFC42B1C), fontSize = 12.sp) }
             if (open == null) item {
                 DonutChart(
-                    slices = data.map { it.kind.label to it.bytes },
+                    slices = data.map { kindLabel(it.kind) to it.bytes },
                     modifier = Modifier.padding(vertical = 12.dp),
                     centerText = tbFormatBytes(totalBytes),
                 )
                 Text(
-                    "$totalCount files",
+                    "$totalCount " + com.umutk.pulse.tr("files", "dosya"),
                     color = T.sub,
                     fontSize = 12.sp,
                     modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
@@ -147,8 +150,8 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Column(Modifier.weight(1f)) {
-                        Text(s.kind.label, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
-                        Text("${s.count} files", color = T.sub, fontSize = 13.sp)
+                        Text(kindLabel(s.kind), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text("${s.count} " + com.umutk.pulse.tr("files", "dosya"), color = T.sub, fontSize = 13.sp)
                     }
                     Text(tbFormatBytes(s.bytes), color = T.text, fontSize = 16.sp)
                 }
@@ -158,14 +161,14 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                 val s = data.first { it.kind == open }
                 item {
                     Text(
-                        "${open.label}: " + com.umutk.pulse.tr("largest first", "en büyük önce"),
+                        "${kindLabel(open)}: " + com.umutk.pulse.tr("largest first", "en büyük önce"),
                         color = T.sub,
                         fontSize = 12.sp,
                         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
                     )
                 }
                 if (s.largest.isEmpty()) {
-                    item { Text("No files of this type", color = T.sub, fontSize = 13.sp) }
+                    item { Text(com.umutk.pulse.tr("No files of this type", "Bu türde dosya yok"), color = T.sub, fontSize = 13.sp) }
                 }
                 items(s.largest, key = { it.file.path }) { f ->
                     // a tap opens the file in the viewer or app that handles it
@@ -199,15 +202,15 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     pending?.let { f ->
         WinAlert(
             onDismissRequest = { pending = null },
-            title = { Text("Delete this file?") },
-            text = { Text("${f.file.name}, ${tbFormatBytes(f.size)}. This cannot be undone.") },
+            title = { Text(com.umutk.pulse.tr("Delete this file?", "Bu dosya silinsin mi?")) },
+            text = { Text("${f.file.name}, ${tbFormatBytes(f.size)}. " + com.umutk.pulse.tr("This cannot be undone.", "Bu geri alınamaz.")) },
             confirmButton = {
                 TextButton(onClick = {
                     pending = null
-                    note = if (f.file.delete()) { StorageScan.forget(f.file, f.size); "" } else "Could not delete ${f.file.name}"
-                }) { Text("Delete") }
+                    note = if (f.file.delete()) { StorageScan.forget(f.file, f.size); "" } else com.umutk.pulse.tr("Could not delete ${f.file.name}", "${f.file.name} silinemedi")
+                }) { Text(com.umutk.pulse.tr("Delete", "Sil")) }
             },
-            dismissButton = { TextButton(onClick = { pending = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { pending = null }) { Text(com.umutk.pulse.tr("Cancel", "Vazgeç")) } },
         )
     }
 }
@@ -228,4 +231,11 @@ private fun tbFormatBytes(b: Long): String = when {
     b >= 1L shl 20 -> "%.1f MB".format(b / 1048576.0)
     b >= 1L shl 10 -> "%.0f KB".format(b / 1024.0)
     else -> "$b B"
+}
+
+/** The name of a file kind in the language of the app. */
+internal fun kindLabel(k: FileKind): String = when (k) {
+    FileKind.IMAGES -> com.umutk.pulse.tr("Images", "Resimler"); FileKind.VIDEO -> com.umutk.pulse.tr("Video", "Videolar"); FileKind.AUDIO -> com.umutk.pulse.tr("Audio", "Ses")
+    FileKind.DOCUMENTS -> com.umutk.pulse.tr("Documents", "Belgeler"); FileKind.ARCHIVES -> com.umutk.pulse.tr("Archives", "Arşivler"); FileKind.APPS -> com.umutk.pulse.tr("Apps", "Uygulamalar")
+    FileKind.OTHER -> com.umutk.pulse.tr("Other", "Diğer")
 }

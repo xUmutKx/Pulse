@@ -62,6 +62,8 @@ object FilesHomeNav {
     var openSearch by mutableStateOf(false)
     /** A file tapped on the home page: the Browse tab opens its folder and the file in its own way (an archive shows its contents inside). */
     var pendingFile by mutableStateOf<File?>(null)
+    /** A type tapped on the home page ("images", "videos", ...): the types page opens straight on that list. */
+    var kind by mutableStateOf<String?>(null)
 }
 
 /** The folders opened lately (newest first), kept next to the recent files. */
@@ -232,7 +234,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
         }
         item { Caption(tr("Types", "Türler")) }
         items(stats?.parts.orEmpty().filter { it.bytes > 0 || it.count > 0 }, key = { it.key }) { p ->
-            Row(Modifier.fillMaxWidth().clickable { onTab("types") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clickable { FilesHomeNav.kind = p.key; onTab("types") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(if (mat) 14.dp else 4.dp)).background(p.color), contentAlignment = Alignment.Center) { PIcon(p.icon, Color.White, 28.dp) }
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(tr(p.en, p.tr), color = fg, fontSize = 18.sp)

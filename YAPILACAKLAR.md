@@ -1142,3 +1142,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.324: derlenmedi (derleme istenmedi) — klavye: "kelime içindeki virgül hatadır" varsayılan KAPALI (Bak,şey gibi virgülden sonra boşluksuz yazımı bozuyordu)
 - 0.10.325: derlenmedi (derleme istenmedi) — klavye düzeltme: dokunma modeli (parmağın tuşa değdiği nokta ve kişisel kayma, komşu tuş maliyeti buna göre), iki kelimelik bağlam (üçlü kelime dizisi) ile sıralama
 - 0.10.326: derlenmedi (derleme istenmedi) — klavye: Ctrl+A/C/X/V/Z/Y düzenleyicinin kendi eylemleriyle (a yazma sorunu), virgül tuşunun üstünde mikrofon, pano yeniden yazıldı (her şeyi kaydeder, resim, sabitleme, toplu silme, 1 saat-3 gün saklama); Dosyalar alt çubuğunda Analiz yerine 3 nokta menüsü (Medya araçları, dosya dönüştürücü, boyutlar, türler, önbellek, ayarlar)
+- 0.10.327: derlenmedi — Dosyalar ana sayfası: bir türe (Resimler, Videolar...) tek dokunuşla doğrudan listesi açılır; tür sayfasının metinleri Türkçeleştirildi
