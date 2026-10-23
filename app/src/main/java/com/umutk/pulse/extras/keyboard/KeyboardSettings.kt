@@ -232,8 +232,8 @@ private fun ColorEditor(label: String, argb: Int, onChange: (Int) -> Unit) {
     }
     if (open) {
         fun put(h: Float = hsv[0], s: Float = hsv[1], v: Float = hsv[2]) = onChange(android.graphics.Color.HSVToColor(floatArrayOf(h, s, v)) or 0xFF000000.toInt())
-        PSlider(hsv[0] / 360f, { put(h = it * 360f) }, 0f..1f)
-        PSlider(hsv[1], { put(s = it) }, 0f..1f)
-        PSlider(hsv[2], { put(v = it) }, 0f..1f)
+        PSlider(hsv[0] / 360f, { put(h = it * 360f) }, 0f..1f, onDone = {})
+        PSlider(hsv[1], { put(s = it) }, 0f..1f, onDone = {})
+        PSlider(hsv[2], { put(v = it) }, 0f..1f, onDone = {})
     }
 }
