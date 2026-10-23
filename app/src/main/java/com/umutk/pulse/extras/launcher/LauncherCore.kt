@@ -85,6 +85,8 @@ object LauncherSession {
     var clockOpen by mutableStateOf(false)
     var startOpen by mutableStateOf(false)
     /** The Windows Phone glance page (behind the Windows button) is open. */
+    /** The boot and sign-in screens were passed in this launcher process. */
+    var booted by mutableStateOf(false)
     var feedOpen by mutableStateOf(false)
     /** The quick search (a swipe down on the home) is open. */
     var searchOpen by mutableStateOf(false)
