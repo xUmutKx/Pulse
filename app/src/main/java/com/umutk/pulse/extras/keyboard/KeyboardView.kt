@@ -1,6 +1,22 @@
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.KeyboardTab
+import androidx.compose.material.icons.rounded.KeyboardCapslock
+import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ArrowForward
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.ArrowDownward
+import androidx.compose.material.icons.rounded.KeyboardDoubleArrowUp
+import androidx.compose.material.icons.rounded.KeyboardDoubleArrowDown
+import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Backspace
+import androidx.compose.material.icons.rounded.SelectAll
+import androidx.compose.material.icons.rounded.ContentCopy
+import androidx.compose.material.icons.rounded.ContentCut
+import androidx.compose.material.icons.rounded.ContentPaste
+import androidx.compose.material.icons.rounded.Undo
+import androidx.compose.material.icons.rounded.Redo
 import androidx.compose.material.icons.rounded.Flag
 import androidx.compose.material.icons.rounded.Tag
 import androidx.compose.material.icons.rounded.Lightbulb
@@ -283,7 +299,7 @@ private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; else -> kbIcon(th, "Keyboard")
 }
 
-private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
+private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.proRow; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
 
 // ---- the keys --------------------------------------------------------------------------------------------------------------------------------------
 
@@ -371,6 +387,15 @@ private fun ExtraRow(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.co
     }
 }
 
+private fun extraIcon(id: String): ImageVector? = when (id) {
+    "tab" -> Icons.Rounded.KeyboardTab; "shiftm" -> Icons.Rounded.KeyboardCapslock
+    "left" -> Icons.Rounded.ArrowBack; "right" -> Icons.Rounded.ArrowForward; "up" -> Icons.Rounded.ArrowUpward; "down" -> Icons.Rounded.ArrowDownward
+    "pgup" -> Icons.Rounded.KeyboardDoubleArrowUp; "pgdn" -> Icons.Rounded.KeyboardDoubleArrowDown; "home" -> Icons.Rounded.Home; "del" -> Icons.Rounded.Backspace
+    "selectAll" -> Icons.Rounded.SelectAll; "copy" -> Icons.Rounded.ContentCopy; "cut" -> Icons.Rounded.ContentCut; "paste" -> Icons.Rounded.ContentPaste
+    "undo" -> Icons.Rounded.Undo; "redo" -> Icons.Rounded.Redo
+    else -> null
+}
+
 @Composable
 private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp, d: ExtraKeyDef, level: Int, onTap: () -> Unit) {
     val tap by rememberUpdatedState(onTap)
@@ -404,7 +429,8 @@ private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.c
             if (d.id == "win") androidx.compose.foundation.Canvas(Modifier.size(15.dp)) {
                 val g = size.width * .08f; val q = (size.width - g) / 2
                 for (i in 0..1) for (j in 0..1) drawRect(ink, androidx.compose.ui.geometry.Offset(i * (q + g), j * (q + g)), androidx.compose.ui.geometry.Size(q, q))
-            } else Text(d.label, color = ink, fontSize = 13.sp, maxLines = 1, fontWeight = if (level == 2) FontWeight.Bold else FontWeight.Normal)
+            } else if (KeyboardPrefs.proIcons && extraIcon(d.id) != null) Icon(extraIcon(d.id)!!, null, tint = ink, modifier = Modifier.size(20.dp))
+            else Text(d.label, color = ink, fontSize = 13.sp, maxLines = 1, fontWeight = if (level == 2) FontWeight.Bold else FontWeight.Normal)
         }
     }
 }
@@ -657,10 +683,10 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
                     icons.forEachIndexed { i, ic ->
                         Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = i }.then(if (i == tab) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) {
-                            Icon(ic, null, tint = if (i == tab) th.accent else th.sub, modifier = Modifier.size(22.dp))
+                            Icon(ic, null, tint = if (i == tab) th.text else th.sub, modifier = Modifier.size(22.dp))
                         }
                     }
-                    Box(Modifier.width(52.dp).fillMaxHeight().clickable { tab = 10 }.then(if (tab == 10) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.accent else th.sub, fontSize = 14.sp) }
+                    Box(Modifier.width(52.dp).fillMaxHeight().clickable { tab = 10 }.then(if (tab == 10) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.text else th.sub, fontSize = 14.sp) }
                 }
             }
         }
@@ -671,10 +697,15 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             }
             KeysPanel(th, st, act, keyH)
         } else {
-            val list = if (tab == 0) st.recents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
-                else if (tab == 10) all.filter { it.group >= 10 } else all.filter { it.group == tab - 1 }
-            LazyVerticalGrid(GridCells.Adaptive(if (tab == 10) 92.dp else 44.dp), Modifier.fillMaxWidth().weight(1f)) {
-                items(list) { it2 -> EmojiCell(it2, th, act) }
+            val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = tab) { 11 }
+            LaunchedEffect(tab) { if (pager.currentPage != tab) pager.animateScrollToPage(tab) }
+            LaunchedEffect(pager.currentPage) { tab = pager.currentPage }
+            androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { page ->
+                val list = if (page == 0) st.recents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
+                    else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
+                LazyVerticalGrid(GridCells.Adaptive(if (page == 10) 92.dp else 44.dp), Modifier.fillMaxSize()) {
+                    items(list) { it2 -> EmojiCell(it2, th, act) }
+                }
             }
             Row(Modifier.fillMaxWidth()) {
                 Key(th, st, act, KbKey("ABC", KeyKind.MODE, 2f), keyH * .85f)

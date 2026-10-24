@@ -75,10 +75,14 @@ fun HomeSheet() {
         ActionRow("palette", tr("Personalize", "Kişiselleştir"), w.text) { HomeSheetState.sheet = false; ctx.startActivity(Intent(ctx, LauncherSettingsActivity::class.java)) }
         if (LauncherPrefs.look in setOf("win11", "win10", "win7", "xp", "win95")) ActionRow("notes", tr("Sticky note", "Yapışkan not"), w.text) { HomeSheetState.sheet = false; stickyNoteProvider(ctx)?.let(addWidget) }
         ActionRow("gridView", tr("Widgets", "Widget'lar"), w.text) { HomeSheetState.sheet = false; HomeSheetState.widgets = true }
-        ActionRow("apps", tr("Add an app", "Uygulama ekle"), w.text) { HomeSheetState.sheet = false; HomeSheetState.pickApp = true }
-        ActionRow("document", tr("Add a file", "Dosya ekle"), w.text) { HomeSheetState.sheet = false; pickFile.launch(arrayOf("*/*")) }
-        ActionRow("image", tr("Add a picture", "Resim ekle"), w.text) { HomeSheetState.sheet = false; pickFile.launch(arrayOf("image/*")) }
-        ActionRow("folder", tr("New folder", "Yeni klasör"), w.text) { HomeSheetState.sheet = false; folderName = ""; HomeSheetState.newFolder = true }
+        var addOpen by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+        ActionRow("add", tr("New", "Yeni"), w.text) { addOpen = !addOpen }
+        if (addOpen) androidx.compose.foundation.layout.Column(Modifier.padding(start = 24.dp)) {
+            ActionRow("apps", tr("App", "Uygulama"), w.text) { HomeSheetState.sheet = false; HomeSheetState.pickApp = true }
+            ActionRow("document", tr("File", "Dosya"), w.text) { HomeSheetState.sheet = false; pickFile.launch(arrayOf("*/*")) }
+            ActionRow("image", tr("Picture", "Resim"), w.text) { HomeSheetState.sheet = false; pickFile.launch(arrayOf("image/*")) }
+            ActionRow("folder", tr("Folder", "Klasör"), w.text) { HomeSheetState.sheet = false; folderName = ""; HomeSheetState.newFolder = true }
+        }
     }
     if (HomeSheetState.pickApp) AppCheckDialog(tr("Add an app", "Uygulama ekle"), emptyList(), Int.MAX_VALUE, onDismiss = { HomeSheetState.pickApp = false }) { pkgs ->
         LauncherPrefs.links = (LauncherPrefs.links + pkgs.map { "app:$it" }).distinct(); LauncherPrefs.save(ctx); HomeSheetState.pickApp = false
