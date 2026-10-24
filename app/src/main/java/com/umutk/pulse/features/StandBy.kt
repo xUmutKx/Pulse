@@ -148,8 +148,9 @@ object StandByPrefs {
     fun drift(c: Context) = p(c).getBoolean("drift2", false)
     fun setDrift(c: Context, v: Boolean) = p(c).edit().putBoolean("drift2", v).apply()
     /** Between 22:00 and 06:00 everything goes dim red. */
-    fun night(c: Context) = p(c).getBoolean("night", true)
-    fun setNight(c: Context, v: Boolean) = p(c).edit().putBoolean("night", v).apply()
+    // off unless the person turns it on (a new key: the old default was on, and the cover went red at night without being asked)
+    fun night(c: Context) = p(c).getBoolean("night2", false)
+    fun setNight(c: Context, v: Boolean) = p(c).edit().putBoolean("night2", v).apply()
     /** Automatic trigger: start by itself while the phone charges. */
     fun autoCharge(c: Context) = p(c).getBoolean("autoCharge", false)
     fun setAutoCharge(c: Context, v: Boolean) = p(c).edit().putBoolean("autoCharge", v).apply()
