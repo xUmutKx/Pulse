@@ -135,6 +135,10 @@ fun BudsScreen(back: () -> Unit) {
             BRow(tr("Stop the music", "Müziği durdur"), tr("When both earbuds are taken out of your ears, the music or video that is playing is paused.", "İki kulaklık da kulaktan çıkınca çalan müzik ya da video duraklatılır."), pause) { pause = it; BudsPrefs.setPauseOnRemove(ctx, it) }
             BRow(tr("Turn noise control off", "Gürültü denetimini kapat"), tr("Noise cancelling and ambient sound are switched off while the earbuds are out, which saves their battery.", "Kulaklıklar çıkıkken gürültü engelleme ve ortam sesi kapatılır, pil tasarrufu sağlar."), noiseOff) { noiseOff = it; BudsPrefs.setNoiseOffOnRemove(ctx, it) }
         }
+        SettingsSection(tr("Movement", "Hareket"), startOpen = true) {
+            var byMove by remember { mutableStateOf(BudsPrefs.byMovement(ctx)) }
+            BRow(tr("Noise control by movement", "Harekete göre gürültü denetimi"), tr("Walking switches to ambient sound so you hear the street; standing or sitting still switches back to noise cancelling. The phone's motion sensor decides.", "Yürürken ortam sesi açılır, sokağı duyarsınız; durunca ya da otururken gürültü engelleme geri gelir. Karar telefonun hareket algılayıcısından gelir."), byMove) { byMove = it; BudsPrefs.setByMovement(ctx, it) }
+        }
         SettingsSection(tr("When you put them back", "Tekrar takınca"), startOpen = true) {
             BRow(tr("Put back as it was", "Eski haline getir"), tr("When one earbud goes back in, the music carries on and the noise control returns to the mode it had before.", "Bir kulaklık tekrar takılınca müzik devam eder ve gürültü denetimi önceki moduna döner."), resume) { resume = it; BudsPrefs.setResumeOnWear(ctx, it) }
         }

@@ -67,6 +67,7 @@ class BudsService : Service() {
     override fun onDestroy() {
         runCatching { unregisterReceiver(acl) }
         runCatching { socket?.close() }
+        runCatching { (getSystemService(SENSOR_SERVICE) as android.hardware.SensorManager).unregisterListener(motion) }
         BudsLink.sender = null
         BudsLink.set(BudsState())
         scope.cancel()
@@ -172,6 +173,7 @@ class BudsService : Service() {
                     val t = java.nio.ByteBuffer.allocate(12).order(java.nio.ByteOrder.LITTLE_ENDIAN).putLong(System.currentTimeMillis()).putInt(java.util.TimeZone.getDefault().rawOffset).array()
                     BudsLink.sender?.invoke(BudsProto.encode(BudsProto.UPDATE_TIME, t))
                 }
+                android.os.Handler(mainLooper).post { syncMotion() }
                 // the music player may only be touched on the main thread
                 val worn = l == 1 || r == 1
                 android.os.Handler(mainLooper).post { wearChanged(worn) }
@@ -179,6 +181,39 @@ class BudsService : Service() {
             }
             BudsProto.NOISE_CONTROLS_UPDATE -> BudsLink.update { it.copy(noise = u(0).takeIf { v -> v in 0..3 } ?: it.noise) }
         }
+    }
+
+    // ---- noise control by movement: the phone's accelerometer tells walking from standing still ---------------------------------------------------------
+    private var motionOn = false
+    private var winStart = 0L; private var sum = 0.0; private var sumSq = 0.0; private var n = 0
+    private var moving: Boolean? = null; private var streak = 0
+    private val motion = object : android.hardware.SensorEventListener {
+        override fun onAccuracyChanged(s: android.hardware.Sensor?, a: Int) {}
+        override fun onSensorChanged(e: android.hardware.SensorEvent) {
+            val m = Math.sqrt((e.values[0] * e.values[0] + e.values[1] * e.values[1] + e.values[2] * e.values[2]).toDouble())
+            val now = System.currentTimeMillis()
+            if (winStart == 0L) winStart = now
+            sum += m; sumSq += m * m; n++
+            if (now - winStart < 4000L) return
+            val mean = sum / n; val sd = Math.sqrt((sumSq / n - mean * mean).coerceAtLeast(0.0))
+            winStart = 0L; sum = 0.0; sumSq = 0.0; n = 0
+            // steps shake the phone by about 1.5 m/s² or more; sitting still stays under 0.3
+            val walking = sd > 1.2
+            if (walking == moving) { streak = 0; return }
+            if (++streak < 2) return
+            streak = 0; moving = walking
+            val cur = BudsLink.state.value
+            if (cur.canNoise && lastWorn != false && cur.noise != (if (walking) 2 else 1)) BudsLink.setNoise(if (walking) 2 else 1)
+        }
+    }
+    private fun syncMotion() {
+        val want = BudsPrefs.byMovement(this) && gotStatus
+        val sm = getSystemService(SENSOR_SERVICE) as? android.hardware.SensorManager ?: return
+        if (want && !motionOn) {
+            val a = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER) ?: return
+            moving = null; winStart = 0L; sum = 0.0; sumSq = 0.0; n = 0
+            motionOn = sm.registerListener(motion, a, android.hardware.SensorManager.SENSOR_DELAY_NORMAL)
+        } else if (!want && motionOn) { sm.unregisterListener(motion); motionOn = false }
     }
 
     /** At least one earbud in the ear, or none: acts when that changes. */

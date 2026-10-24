@@ -52,16 +52,16 @@ fun Welcome(onDone: () -> Unit) {
             color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
 
         WelcomeCard(tr("What's new", "Yenilikler")) {
-            WelcomeLine(tr("Music player with its own settings page, and playlists inside it: no separate app.",
-                "Müzik çalar kendi ayarlar sayfasıyla; çalma listeleri içinde, ayrı bir uygulama yok."))
-            WelcomeLine(tr("A white noise button in the music player.", "Müzik çalarda beyaz gürültü düğmesi."))
-            WelcomeLine(tr("Winamp skins as widgets: every skin, with the whole window.",
-                "Winamp skin'leri widget olarak: her skin, pencerenin tamamıyla."))
-            WelcomeLine(tr("Online subtitle search in the video player, like VLC.",
-                "Video oynatıcıda çevrimiçi altyazı arama, VLC gibi."))
-            WelcomeLine(tr("Album art search and tag editing in the Poweramp player.",
-                "Poweramp oynatıcıda albüm kapağı arama ve etiket düzenleme."))
-            WelcomeLine(tr("A sleep timer with a rotary dial.", "Döner kadranlı uyku zamanlayıcısı."))
+            WelcomeLine(tr("Pulse 1.0: the keyboard, the messages app, the Buds manager and the launcher are part of the app.",
+                "Pulse 1.0: klavye, mesajlar, Buds yöneticisi ve launcher uygulamanın parçası."))
+            WelcomeLine(tr("A keyboard that learns your typos, with a number pad, emoji search, clipboard history and translation.",
+                "Yazım hatalarınızı öğrenen klavye: sayı tuşları, emoji arama, pano geçmişi ve çeviri."))
+            WelcomeLine(tr("Messages: SMS and MMS, reply from the notification, mute, pin, block and spam blocking.",
+                "Mesajlar: SMS ve MMS, bildirimden yanıt, sessize alma, sabitleme, engelleme ve spam engelleme."))
+            WelcomeLine(tr("Galaxy Buds: noise control by movement, touch controls, equalizer, 360 audio.",
+                "Galaxy Buds: harekete göre gürültü denetimi, dokunma denetimi, ekolayzır, 360 ses."))
+            WelcomeLine(tr("Music: Poweramp backup in and out, stars and favourites, lyrics on the cover.",
+                "Müzik: Poweramp yedeği içe ve dışa, yıldızlar ve favoriler, kapakta sözler."))
             WelcomeLine(tr("Update check: a pop-up when a newer version is out.",
                 "Güncelleme denetimi: yeni bir sürüm çıkınca bildirim."))
         }
