@@ -114,7 +114,14 @@ object PowerampImport {
             byRel[rel]?.let { return it }
             pick(byName[nfc(p.substringAfterLast('/')).lowercase()], p)?.let { return it }
             // the song was converted or renamed (x.m4a -> x.mp3): the name without its extension
-            return pick(byStem[fold(p.substringAfterLast('/').substringBeforeLast('.'))], p)
+            val stem = fold(p.substringAfterLast('/').substringBeforeLast('.'))
+            pick(byStem[stem], p)?.let { return it }
+            // last resort: the phone's name holds the backup's name ("Artist - Song.mp3" for "Song.mp3") or the other way round
+            if (stem.length >= 6) {
+                val hit = byStem.entries.filter { (k, _) -> k.length >= 6 && (k.endsWith(stem) || stem.endsWith(k) || k.contains(stem)) }.flatMap { it.value }.distinct()
+                if (hit.size == 1) return hit[0]
+            }
+            return null
         }
         var playlists = 0; var ratings = 0; var plays = 0; var missing = 0
         val missingNames = ArrayList<String>()

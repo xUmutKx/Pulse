@@ -319,7 +319,7 @@ fun MessagesScreen(back: () -> Unit) {
                 if (t != null && !settings && !newMode) MsgNumberMenu(numMenu != null && numMenu == t.address, { numMenu = null }, t.address, ctx)
             }
             if (t != null && !settings && !newMode) {
-                if (t.address.isNotEmpty()) MessagesIcon("phone") { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(t.address)))) }
+                if (t.address.isNotEmpty()) MessagesIcon("call") { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(t.address)))) }
                 MessagesIcon("search") { threadSearch = !threadSearch; threadQuery = "" }
                 MessagesIcon("share") { shareThread(ctx, t.name ?: t.address, msgs.orEmpty()) }
             } else if (granted && !settings && !newMode) {
@@ -437,7 +437,7 @@ fun MessagesScreen(back: () -> Unit) {
                     MessagesIcon("attach") { pickFor = addr; pickFile.launch("*/*") }
                     PField(draft, { drafts[addr] = it }, tr("Message", "Mesaj"), Modifier.weight(1f), onDone = { sendNow() })
                     Spacer(Modifier.width(8.dp))
-                    PButton(tr("Send", "Gönder"), compact = true) { sendNow() }
+                    MessagesIcon("send") { sendNow() }
                 }
             }
         }
@@ -569,7 +569,7 @@ private fun MessagesSettings(names: Boolean, unreadFirst: Boolean, blocks: Set<S
         if (blocks.isEmpty()) Text(tr("None", "Yok"), color = T.sub, fontSize = 14.sp)
         blocks.sorted().forEach { a ->
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                PIcon("phone", T.sub, 20.dp)
+                PIcon("call", T.sub, 20.dp)
                 Spacer(Modifier.width(12.dp))
                 Text(a, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 PButton(tr("Unblock", "Engeli kaldır"), compact = true) { onUnblock(a) }
@@ -613,7 +613,7 @@ private fun MsgNumberMenu(open: Boolean, onDismiss: () -> Unit, number: String, 
             } else Intent(Intent.ACTION_INSERT_OR_EDIT).setType(ContactsContract.Contacts.CONTENT_ITEM_TYPE).putExtra(ContactsContract.Intents.Insert.PHONE, number)
             runCatching { ctx.startActivity(i) }
         }, iconKey = "person")
-        ThemedMenuItem(tr("Call", "Ara"), { onDismiss(); runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number)))) } }, iconKey = "phone")
+        ThemedMenuItem(tr("Call", "Ara"), { onDismiss(); runCatching { ctx.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(number)))) } }, iconKey = "call")
         ThemedMenuItem(tr("Copy", "Kopyala"), { onDismiss(); copyText(ctx, number) }, iconKey = "copy")
     }
 }
