@@ -65,6 +65,11 @@ object KeyboardPrefs {
     var proIcons by mutableStateOf(true)
     /** A gap in the middle of the letter rows, so each thumb has its half (tablets, landscape). */
     var split by mutableStateOf(false)
+    /** Floating: a narrower keyboard (70 percent of the width) that slides sideways by a handle on top; [floatX] is its place, 0 left to 1 right. */
+    var floating by mutableStateOf(false)
+    var floatX by mutableStateOf(.5f)
+    private var appCtx: Context? = null
+    fun saveFloat() { appCtx?.let { save(it) } }
     /** The typing practice of the settings is open: nothing is corrected, so the slips stay visible to be learned. */
     @Volatile var practicing = false
     var menuItems by mutableStateOf(ExtraKeys.DEFAULT_MENU)
@@ -98,7 +103,7 @@ object KeyboardPrefs {
         heightPct = p.getInt("heightPct", heightPct); autoRatio = p.getInt("autoRatio", autoRatio); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
         keyGap = p.getInt("keyGap", keyGap); oneHand = p.getString("oneHand", oneHand) ?: oneHand
         langs = p.getString("langs", langs) ?: langs
-        numberRow = p.getBoolean("numberRow", numberRow); arrows = false; emojiKey = p.getBoolean("emojiKey", emojiKey)
+        numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey)
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
         suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect)
@@ -107,12 +112,13 @@ object KeyboardPrefs {
         cursorControl = p.getBoolean("cursorControl", cursorControl); quickDelete = p.getBoolean("quickDelete", quickDelete)
         emojiPredictions = p.getBoolean("emojiPredictions", emojiPredictions); learn = p.getBoolean("learn", learn)
         glide = p.getBoolean("glide", glide); flick = p.getBoolean("flick", flick); anim = p.getBoolean("anim", anim); proRow = p.getBoolean("proRow", proRow)
-        proKeys = p.getString("proKeys", proKeys) ?: proKeys; proBottom = p.getBoolean("proBottom", proBottom); proIcons = p.getBoolean("proIcons", proIcons); split = p.getBoolean("split", split); menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
+        proKeys = p.getString("proKeys", proKeys) ?: proKeys; proBottom = p.getBoolean("proBottom", proBottom); proIcons = p.getBoolean("proIcons", proIcons); split = p.getBoolean("split", split); floating = p.getBoolean("floating", false); floatX = p.getFloat("floatX", .5f); appCtx = c.applicationContext; menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
         // once: Shift joins the default extra keys (only for those who never changed the row)
-        if (p.getBoolean("arrows", false)) { proRow = true; p.edit().putBoolean("proRow", true).putBoolean("arrows", false).apply() }
         if (p.getInt("ratioVer", 0) < 1) { autoRatio = 80; p.edit().putInt("autoRatio", 80).putInt("ratioVer", 1).apply() }
         if (p.getInt("proVer", 0) < 1) { if (proKeys == ExtraKeys.OLD_DEFAULT) proKeys = ExtraKeys.DEFAULT; p.edit().putInt("proVer", 1).apply() }
         // the menu and bar of older versions held cut / copy / paste / undo: they are replaced by the new default once
+        // the menu gets the separate "Extra keys" row switch and the "Key set" panel (F keys, Shift, ...) once, whatever it held
+        if (p.getInt("menuVer", 0) < 3) { menuItems = (menuItems.split(',') + listOf("proRow", "keyset")).distinct().joinToString(","); p.edit().putInt("menuVer", 3).putString("menuItems", menuItems).apply() }
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipHours", clipHours); commaSlip = p.getBoolean("commaSlip2", false); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
@@ -128,7 +134,7 @@ object KeyboardPrefs {
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn)
-            .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
+            .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putFloat("floatX", floatX).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
             .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("rgb", rgb).putInt("clipHours", clipHours).putBoolean("commaSlip2", commaSlip).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
@@ -147,7 +153,7 @@ object KeyboardPrefs {
         theme = "amoled"; heightPct = 110; autoRatio = 80; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
-        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; rgb = 0; hapticMs = 8; sound = false
+        cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; floating = false; floatX = .5f; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; rgb = 0; hapticMs = 8; sound = false
         resetTheme(c)
         KeyboardDictionary.forgetUser(c)
         loaded = true

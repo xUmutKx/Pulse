@@ -218,9 +218,14 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         }
     }) {
         Column(
-            (if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
+            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.7f).align(Alignment.TopStart).offset { IntOffset((st.rootW * .3f * KeyboardPrefs.floatX).roundToInt(), 0) }
+                else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
+            // the floating keyboard is narrower and slides sideways by its handle
+            if (KeyboardPrefs.floating) Box(Modifier.fillMaxWidth().height(20.dp).pointerInput(Unit) {
+                detectHorizontalDragGestures(onDragEnd = { KeyboardPrefs.saveFloat() }) { c, dx -> c.consume(); KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f) }
+            }, contentAlignment = Alignment.Center) { Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .6f))) }
             if (!st.numpad) TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
@@ -244,6 +249,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
+            "keyset" -> KeysetPanel(th, st, act, keyH)
             else -> if (st.numpad) NumPad(th, st, act, keyH) else KeysPanel(th, st, act, keyH)
         }
     }
@@ -334,13 +340,13 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "clip", "paste" -> kbIcon(th, "ContentPaste"); "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
-    "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "numbers" -> kbIcon(th, "Pin")
+    "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "theme" -> kbIcon(th, "Palette"); "settings" -> kbIcon(th, "Settings"); "lang", "languages" -> kbIcon(th, "Language"); "onehand" -> kbIcon(th, "TouchApp")
     "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture")
     "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; else -> kbIcon(th, "Keyboard")
 }
 
-private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.proRow; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
+private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
 
 // ---- the keys --------------------------------------------------------------------------------------------------------------------------------------
 
@@ -415,6 +421,29 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
 @Composable
 private fun RowScope.Spacer(w: Float) { Box(Modifier.weight(w)) }
 
+/** A key set of its own, opened from the menu: modifiers, the F keys, the navigation keys and the arrows, in rows the width of the keyboard; "abc" goes back to the letters. */
+@Composable
+private fun KeysetPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    val rows = listOf(
+        listOf("esc", "tab", "ctrl", "alt", "shiftm", "win"),
+        listOf("f1", "f2", "f3", "f4", "f5", "f6"),
+        listOf("f7", "f8", "f9", "f10", "f11", "f12"),
+        listOf("home", "end", "pgup", "pgdn", "ins", "del"),
+        listOf("left", "up", "down", "right", "selectAll", "copy"),
+    )
+    rows.forEach { r ->
+        Row(Modifier.fillMaxWidth()) {
+            r.mapNotNull { ExtraKeys.byId(it) }.forEach { d ->
+                val level = when (d.id) { "ctrl" -> st.ctrl; "alt" -> st.alt; "win" -> st.win; "shiftm" -> st.shiftMod; else -> 0 }
+                ExtraCell(th, 0.dp, keyH * .8f, d, level, Modifier.weight(1f)) { act.extraKey(d.id) }
+            }
+        }
+    }
+    Row(Modifier.fillMaxWidth()) {
+        Box(Modifier.weight(1f).height(keyH * .8f).padding(2.dp).clip(RoundedCornerShape(th.radius.dp)).background(th.special).clickable { st.panel = "keys" }, contentAlignment = Alignment.Center) { Text("abc", color = th.specialText, fontSize = 15.sp) }
+    }
+}
+
 /** The extra row: Esc, Tab, Ctrl, Alt, Win, arrows, F-keys, ... as many as the user put there. The modifier keys wait for the next key. */
 @Composable
 private fun ExtraRow(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
@@ -441,11 +470,11 @@ private fun extraIcon(id: String): ImageVector? = when (id) {
 }
 
 @Composable
-private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp, d: ExtraKeyDef, level: Int, onTap: () -> Unit) {
+private fun ExtraCell(th: KbTheme, w: androidx.compose.ui.unit.Dp, h: androidx.compose.ui.unit.Dp, d: ExtraKeyDef, level: Int, modifier: Modifier = Modifier, onTap: () -> Unit) {
     val tap by rememberUpdatedState(onTap)
     var down by remember { mutableStateOf(false) }
     Box(
-        Modifier.width(w).height(h).pointerInput(d.id) {
+        modifier.then(if (w > 0.dp) Modifier.width(w) else Modifier).height(h).pointerInput(d.id) {
             awaitEachGesture {
                 val first = awaitFirstDown(requireUnconsumed = false)
                 down = true

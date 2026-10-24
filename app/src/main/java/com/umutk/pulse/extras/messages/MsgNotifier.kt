@@ -116,6 +116,8 @@ object MsgNotifier {
                 .setData(Uri.parse("pulse-msg://" + Uri.encode(address)))
             ShortcutManagerCompat.pushDynamicShortcut(c, ShortcutInfoCompat.Builder(c, sid)
                 .setShortLabel(name).setLongLived(true).setIntent(view).setPerson(person)
+                // the conversation shortcut is for the bubble and the share sheet only: it must not sit in the long-press menu of Pulse's icon (Android 13+)
+                .setExcludedFromSurfaces(1)
                 .setIcon(IconCompat.createWithResource(c, R.mipmap.ic_ad_messages)).build())
             val pi = PendingIntent.getActivity(c, notifId(address) + 4, view, flags(true))
             b.setShortcutId(sid)
@@ -123,6 +125,14 @@ object MsgNotifier {
             b.setBubbleMetadata(NotificationCompat.BubbleMetadata.Builder(pi, IconCompat.createWithResource(c, R.mipmap.ic_ad_messages))
                 .setDesiredHeight(600).setAutoExpandBubble(false).setSuppressNotification(false).build())
         }
+    }
+
+    /** Once: the conversation shortcuts of older versions left the long-press menu of the Pulse icon full of messages. */
+    fun forgetOldShortcuts(c: Context) {
+        val p = c.getSharedPreferences("msg", Context.MODE_PRIVATE)
+        if (p.getBoolean("shortcutsCleared", false)) return
+        runCatching { ShortcutManagerCompat.removeAllDynamicShortcuts(c) }
+        p.edit().putBoolean("shortcutsCleared", true).apply()
     }
 
     fun cancel(c: Context, address: String) { runCatching { NotificationManagerCompat.from(c).cancel(notifId(address)) } }

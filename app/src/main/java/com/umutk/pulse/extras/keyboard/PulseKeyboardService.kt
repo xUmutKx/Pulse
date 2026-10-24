@@ -274,7 +274,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val lc = lang.locale
             val a = pk.lowercase(lc); val b = typed.lowercase(lc)
             if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito && a != b && a.length >= 3 && b.length >= 3 && Math.abs(a.length - b.length) <= 2 &&
-                a.commonPrefixWith(b).length >= 2 && KeyboardDictionary.isWord(st.lang, b) && !KeyboardDictionary.isWord(st.lang, a)) KeyboardDictionary.learnTypo(this, a, b)
+                KeyboardDictionary.similar(a, b) && KeyboardDictionary.isWord(st.lang, b)) KeyboardDictionary.learnTypo(this, a, b)
         }
         peak = null
         if (nameField && out.length >= 2 && !st.incognito && out.all { it.isLetter() || it == '\'' || it == '-' }) {
@@ -530,7 +530,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "incognito" -> st.incognito = !st.incognito
             "autocorrect" -> { KeyboardPrefs.autocorrect = !KeyboardPrefs.autocorrect; KeyboardPrefs.save(this) }
             "onehand" -> { KeyboardPrefs.oneHand = when (KeyboardPrefs.oneHand) { "off" -> "right"; "right" -> "left"; else -> "off" }; KeyboardPrefs.save(this) }
-            "arrows" -> { KeyboardPrefs.proRow = !KeyboardPrefs.proRow; if (KeyboardPrefs.proRow) KeyboardPrefs.proBottom = false; KeyboardPrefs.save(this) }
+            "arrows" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
+            "keyset" -> st.panel = if (st.panel == "keyset") "keys" else "keyset"
             "numbers" -> { KeyboardPrefs.numberRow = !KeyboardPrefs.numberRow; KeyboardPrefs.save(this) }
             "proRow" -> { KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
             "glide" -> { KeyboardPrefs.glide = !KeyboardPrefs.glide; KeyboardPrefs.save(this) }
@@ -815,10 +816,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
         // tested on 100 000 of the author's own chat lines (a Python copy of this rule): a correction needs a cost of .8 at most (one neighbouring key, an accent, a swap)
-        // and a candidate that is a common word (score 8 up); that took the wrong corrections from 27 to 11 of 120 and the changed words of one's own from 105 to 18 of 160
+        // and a candidate that is a common word (base score 7 up, the word's own frequency before the cost is taken off); that took the wrong corrections from 27 to 11 of 120 and the changed words of one's own from 105 to 41 of 160
         // a stretched word on purpose ("tamamdırrr", "buuu"): three of one letter in a row is left as it is
         val stretched = Regex("(\\p{L})\\1\\1").containsMatchIn(lower)
-        val fix0 = if (stretched) null else corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && kotlin.math.abs(it.word.length - lower.length) <= 1 && it.cost <= minOf(limit, .8f) && it.score >= 8f && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
+        val fix0 = if (stretched) null else corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && kotlin.math.abs(it.word.length - lower.length) <= 1 && it.cost <= minOf(limit, .8f) && it.score + 4f * it.cost >= 7f && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
         // two words run together ("birdahaki"): the space goes between them
         val fix = fix0 ?: if (!valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }

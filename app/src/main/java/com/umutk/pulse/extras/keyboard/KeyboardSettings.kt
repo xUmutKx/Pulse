@@ -147,8 +147,10 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             Text(tr("The chosen language shows its keys; both languages correct and suggest together. A language without a word list downloads one.", "Seçili dilin tuşları görünür; iki dil birlikte düzeltir ve öneri verir. Sözlüğü olmayan dil kendi sözlüğünü indirir."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.numberRow) { KeyboardPrefs.numberRow = it; save() }
+            Switch(tr("Arrow keys", "Ok tuşları"), tr("Arrows, home, end, select all, copy, paste", "Oklar, başa, sona, tümünü seç, kopyala, yapıştır"), KeyboardPrefs.arrows) { KeyboardPrefs.arrows = it; save() }
             Switch(tr("Emoji key", "Emoji tuşu"), "", KeyboardPrefs.emojiKey) { KeyboardPrefs.emojiKey = it; save() }
             Switch(tr("Split keys", "Bölünmüş tuşlar"), tr("A gap in the middle of the rows, for a tablet", "Satırların ortasında boşluk, tablet için"), KeyboardPrefs.split) { KeyboardPrefs.split = it; save() }
+            Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A narrower keyboard that slides sideways by the handle on top", "Üstteki tutamakla yana kayan, daha dar klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
             Switch(tr("Large key text", "Büyük tuş yazısı"), "", KeyboardPrefs.largeText) { KeyboardPrefs.largeText = it; save() }
             Switch(tr("Key pop-ups", "Tuş balonları"), "", KeyboardPrefs.keyPopups) { KeyboardPrefs.keyPopups = it; save() }
             Switch(tr("Long-press symbols", "Uzun basınca semboller"), tr("Accents and digits", "Aksanlar ve rakamlar"), KeyboardPrefs.longPressSymbols) { KeyboardPrefs.longPressSymbols = it; save() }
@@ -227,31 +229,8 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Sound on keypress", "Tuşta ses"), "", KeyboardPrefs.sound) { KeyboardPrefs.sound = it; save() }
         }
 
-        // word lists for the corrections and suggestions
-        KbSection("book", tr("Dictionaries", "Sözlükler")) {
-            listOf("en" to "English", "tr" to "Türkçe").forEach { (code, name) ->
-                val has = remember(rev) { KeyboardDictionary.hasList(ctx, code) }
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(name, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                    if (busy == code) Text("…", color = T.sub, fontSize = 15.sp)
-                    else {
-                        if (has) PIcon("check", T.sub, 20.dp, Modifier.padding(end = 10.dp))
-                        PButton(if (has) tr("Update", "Güncelle") else tr("Download", "İndir"), compact = true) {
-                            busy = code
-                            scope.launch {
-                                val ok = withContext(Dispatchers.IO) { KeyboardDictionary.download(ctx, code) }
-                                busy = null; rev++
-                                if (!ok) android.widget.Toast.makeText(ctx, tr("Could not download", "İndirilemedi"), android.widget.Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                    }
-                }
-            }
-            Text(tr("English and Türkçe come with the app; a download replaces them with a fresh list.", "English ve Türkçe uygulamayla gelir; indirme onları yeni bir listeyle değiştirir."), color = T.sub, fontSize = 12.sp)
-        }
-
         // typing practice: a word is shown, it is typed, and every slip is learned as a typo of that word
-        KbSection("school", tr("Typing practice", "Yazım testi")) {
+        KbSection("school", tr("Train autocorrect", "Otomatik düzeltmeyi eğit")) {
             var target by remember { mutableStateOf(KeyboardDictionary.practiceWord(KeyboardPrefs.langList().first()) ?: "") }
             var typed by remember { mutableStateOf("") }
             androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -280,6 +259,7 @@ fun KeyboardSettings(back: () -> Unit) {
 
         // statistics: what the keyboard has learned and where the fingers land
         KbSection("tune", tr("Statistics", "İstatistik")) {
+            remember { KeyboardDictionary.ensureUser(ctx) }
             val st2 = remember(learned, rev) { KeyboardDictionary.stats().toMap() }
             @Composable fun row(label: String, v: Int?) = Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
                 Text(label, color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f)); Text("${v ?: 0}", color = T.text, fontSize = 13.sp)
@@ -318,33 +298,6 @@ fun KeyboardSettings(back: () -> Unit) {
                 PButton(tr("Import data", "Veriyi içe aktar"), compact = true) { importData.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
             }
             if (dataNote.isNotEmpty()) Text(dataNote, color = T.sub, fontSize = 12.sp)
-            // the way a person writes, from an exported WhatsApp chat: only the picked person's lines, only on this phone
-            var waChat by remember { mutableStateOf<Map<String, List<String>>?>(null) }
-            var waNote by remember { mutableStateOf("") }
-            val pickChat = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
-                if (u != null) scope.launch {
-                    waNote = tr("Reading the chat…", "Sohbet okunuyor…")
-                    val r = withContext(Dispatchers.IO) { runCatching { WhatsAppImport.read(ctx, u) }.getOrNull() }
-                    waChat = r?.takeIf { it.isNotEmpty() }
-                    waNote = if (waChat == null) tr("No chat lines found in that file", "Bu dosyada sohbet satırı bulunamadı") else tr("Whose lines are yours?", "Hangi kişi sizsiniz?")
-                }
-            }
-            PButton(tr("Learn from a WhatsApp chat", "WhatsApp sohbetinden öğren"), Modifier.padding(top = 8.dp), compact = true) { pickChat.launch(arrayOf("text/plain", "application/zip", "*/*")) }
-            if (waNote.isNotEmpty()) Text(waNote, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-            waChat?.let { chat ->
-                Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    chat.entries.sortedByDescending { it.value.size }.take(6).forEach { (who, msgs) ->
-                        PChip(false, "${who.take(18)} · ${msgs.size}") {
-                            waNote = tr("Learning…", "Öğreniyor…")
-                            scope.launch {
-                                val n = withContext(Dispatchers.IO) { KeyboardLayouts.all.forEach { l -> KeyboardDictionary.load(ctx, l.code) }; WhatsAppImport.learn(ctx, msgs) }
-                                learned = KeyboardDictionary.learnedCount(); rev++
-                                waNote = tr("Learned from $n messages. The chat itself was not kept.", "$n mesajdan öğrenildi. Sohbetin kendisi saklanmadı."); waChat = null
-                            }
-                        }
-                    }
-                }
-            }
             // the words SwiftKey learned, read with root from its own data folder
             var skNote by remember { mutableStateOf("") }
             PButton(tr("Take SwiftKey's words (root)", "SwiftKey kelimelerini al (root)"), compact = true) {
@@ -370,7 +323,7 @@ fun KeyboardSettings(back: () -> Unit) {
 @Composable
 private fun KbSection(icon: String, title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
     var open by androidx.compose.runtime.saveable.rememberSaveable(title) { androidx.compose.runtime.mutableStateOf(false) }
-    PCard {
+    PCard(Modifier.padding(vertical = 5.dp)) {
         Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon(icon, T.accent, 22.dp)
             Text(title, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
