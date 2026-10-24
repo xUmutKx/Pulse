@@ -1206,3 +1206,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.37 Key pop-ups (long-press alternates, key preview) no longer cut off on the number row - derlenmedi, bekle
 - 1.0.38 Recent emojis keep their places while the emoji page is open - derlenmedi, bekle
 - 1.0.39 Symbol families on top (above the search), presets one per row and fully visible; deleting the space behind a word reopens it with suggestions - derlenmedi, bekle
+- 1.0.40 Keyboard: optional "Extra button" (compact bottom row + Shift at left, off), top bar brightness slider - derlenmedi, bekle
