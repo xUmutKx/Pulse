@@ -186,6 +186,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
         awaitEachGesture {
             val d = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            st.swiped = false
             val t0 = d.uptimeMillis; var done = false
             while (!done) {
                 val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -193,7 +194,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 if (!c.pressed) break
                 val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
                 if (dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
-                    done = true; c.consume(); st.trail = emptyList()
+                    done = true; c.consume(); st.trail = emptyList(); st.swiped = true; st.preview = null
                     act.hide()
                 }
             }
@@ -517,6 +518,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     val canGlide = isLetter && KeyboardPrefs.glide && st.page == 0 && st.panel == "keys"
                     if (key.kind == KeyKind.DELETE) { a.backspace(); due = android.os.SystemClock.uptimeMillis() + 380L }
                     while (true) {
+                        if (st.swiped) { st.preview = null; break }
                         val ev = withTimeoutOrNull((due - android.os.SystemClock.uptimeMillis()).coerceAtLeast(1L)) { awaitPointerEvent() }
                         if (ev == null) {
                             // the long press (or the next repeat of the delete key)
@@ -541,6 +543,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         curX = c.position.x
                         curRoot = Offset(rect.left + c.position.x, rect.top + c.position.y)
                         if (c.changedToUp() || !c.pressed) {
+                            if (st.swiped) { st.preview = null; break }
                             val up = (startRoot.y - curRoot.y)
                             when {
                                 key.kind == KeyKind.DELETE -> if (quick) a.quickDeleteEnd(true)

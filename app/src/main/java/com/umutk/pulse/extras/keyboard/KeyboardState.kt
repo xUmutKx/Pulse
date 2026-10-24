@@ -50,6 +50,8 @@ class KbState {
     var win by mutableIntStateOf(0)
     var shiftMod by mutableIntStateOf(0)
     /** The finger's path while a word is swiped over the letters, in the window's pixels. */
+    /** The finger of this touch swiped down to close the keyboard: the key under it must not type. */
+    @Volatile var swiped = false
     var trail by mutableStateOf(listOf<Offset>())
     /** Where each letter key sits (window pixels), for following a swipe over the keys. */
     val letterRects = HashMap<String, Rect>()
