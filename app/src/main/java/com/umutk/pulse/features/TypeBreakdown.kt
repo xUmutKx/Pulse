@@ -2,6 +2,15 @@
 package com.umutk.pulse.features
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.clickable
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -97,6 +106,10 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     // a long press picks files; the bin at the top right deletes all the picked ones at once
     var sel by remember { mutableStateOf(setOf<String>()) }
     var askBulk by remember { mutableStateOf(false) }
+    // what a swipe to the left and to the right does to a file (delete, open, pick or nothing)
+    val prefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("pulse_types", 0)
+    var swL by remember { mutableStateOf(prefs.getString("swL", "delete") ?: "delete") }
+    var swR by remember { mutableStateOf(prefs.getString("swR", "delete") ?: "delete") }
     // the shared walk of the storage (see StorageScan): the same numbers as the folder tree, and no second scan
     val snap by StorageScan.snap.collectAsState()
     val scanned by StorageScan.scanned.collectAsState()
@@ -182,6 +195,20 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
                     )
                 }
+                item {
+                    Column(Modifier.padding(bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        listOf(true, false).forEach { left ->
+                            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(if (left) "←" else "→", color = T.sub, fontSize = 16.sp, modifier = Modifier.width(22.dp))
+                                listOf("delete", "open", "pick", "none").forEach { k ->
+                                    com.umutk.pulse.PChip((if (left) swL else swR) == k, swipeLabel(k)) {
+                                        if (left) { swL = k; prefs.edit().putString("swL", k).apply() } else { swR = k; prefs.edit().putString("swR", k).apply() }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
                 if (s.largest.isEmpty()) {
                     item { Text(com.umutk.pulse.tr("No files of this type", "Bu türde dosya yok"), color = T.sub, fontSize = 13.sp) }
                 }
@@ -189,25 +216,57 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                     // a tap opens the file in the viewer or app that handles it
                     val ctx = androidx.compose.ui.platform.LocalContext.current
                     val picked = f.file.path in sel
-                    Row(
-                        Modifier.fillMaxWidth().padding(vertical = 1.dp)
-                            .background(if (picked) T.accent.copy(alpha = .14f) else Color.Transparent)
-                            .combinedClickable(
-                                onClick = { if (sel.isNotEmpty()) sel = if (picked) sel - f.file.path else sel + f.file.path else tbOpen(ctx, f.file) },
-                                onLongClick = { sel = if (picked) sel - f.file.path else sel + f.file.path },
-                            ).padding(vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        TbThumb(f.file, picked)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(f.file.name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                tbFormatBytes(f.size) + " · " + f.file.parent.orEmpty().removePrefix(root.path).trimStart('/').ifEmpty { "/" },
-                                color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            )
+                    val sc = androidx.compose.runtime.rememberCoroutineScope()
+                    val off = remember(f.file.path) { androidx.compose.animation.core.Animatable(0f) }
+                    var boxW by remember { mutableStateOf(1f) }
+                    fun doAct(a: String) {
+                        when (a) {
+                            "delete" -> note = if (f.file.delete()) { StorageScan.forget(f.file, f.size); "" } else com.umutk.pulse.tr("Could not delete ${f.file.name}", "${f.file.name} silinemedi")
+                            "open" -> tbOpen(ctx, f.file)
+                            "pick" -> sel = sel + f.file.path
                         }
-                        if (sel.isEmpty()) IconButton(onClick = { pending = f }) { Icon(Icons.Filled.Delete, "Delete", tint = Color(0xFFC42B1C)) }
+                    }
+                    Box(Modifier.fillMaxWidth().padding(vertical = 1.dp).onSizeChanged { boxW = it.width.toFloat() }) {
+                        // what the swipe will do shows behind the row, as an icon and a label on a colour
+                        val act = if (off.value > 0f) swR else swL
+                        if (off.value != 0f && act != "none") Row(
+                            Modifier.matchParentSize().background(swipeColor(act)).padding(horizontal = 20.dp),
+                            horizontalArrangement = if (off.value > 0f) Arrangement.Start else Arrangement.End, verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(swipeIcon(act), null, tint = Color.White, modifier = Modifier.size(22.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(swipeLabel(act), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        }
+                        Row(
+                            Modifier.fillMaxWidth().offset { androidx.compose.ui.unit.IntOffset(off.value.toInt(), 0) }
+                                .background(if (picked) T.accent.copy(alpha = .14f).compositeOver(T.bg) else T.bg)
+                                .pointerInput(f.file.path, swL, swR) {
+                                    detectHorizontalDragGestures(
+                                        onDragEnd = {
+                                            val a = if (off.value > 0f) swR else swL
+                                            val far = kotlin.math.abs(off.value) > boxW * .4f
+                                            sc.launch { off.animateTo(0f, androidx.compose.animation.core.spring()) }
+                                            if (far && a != "none") doAct(a)
+                                        },
+                                        onDragCancel = { sc.launch { off.animateTo(0f) } },
+                                    ) { change, dx -> change.consume(); sc.launch { off.snapTo((off.value + dx).coerceIn(-boxW * .7f, boxW * .7f)) } }
+                                }
+                                .combinedClickable(
+                                    onClick = { if (sel.isNotEmpty()) sel = if (picked) sel - f.file.path else sel + f.file.path else tbOpen(ctx, f.file) },
+                                    onLongClick = { sel = if (picked) sel - f.file.path else sel + f.file.path },
+                                ).padding(vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            TbThumb(f.file, picked)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(f.file.name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text(
+                                    tbFormatBytes(f.size) + " · " + f.file.parent.orEmpty().removePrefix(root.path).trimStart('/').ifEmpty { "/" },
+                                    color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -248,6 +307,10 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
 }
 
 /** A small picture of a file: the picture itself, a frame of a video, else the sign of its kind; a tick when picked. */
+private fun swipeLabel(a: String) = when (a) { "delete" -> com.umutk.pulse.tr("Delete", "Sil"); "open" -> com.umutk.pulse.tr("Open", "Aç"); "pick" -> com.umutk.pulse.tr("Select", "Seç"); else -> com.umutk.pulse.tr("Nothing", "Hiçbir şey") }
+private fun swipeIcon(a: String): androidx.compose.ui.graphics.vector.ImageVector = when (a) { "delete" -> Icons.Filled.Delete; "open" -> Icons.AutoMirrored.Filled.OpenInNew; else -> Icons.Filled.Check }
+private fun swipeColor(a: String): Color = when (a) { "delete" -> Color(0xFFC42B1C); "open" -> Color(0xFF1E6FD9); else -> Color(0xFF2E7D32) }
+
 @Composable
 private fun TbThumb(f: File, picked: Boolean) {
     val ext = f.extension.lowercase()
