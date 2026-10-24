@@ -24,7 +24,7 @@ object KeyboardPrefs {
     // size
     var heightPct by mutableStateOf(110)
     /** A typed word this much like a known word (percent, letters that match) is corrected on its own. */
-    var autoRatio by mutableStateOf(90)
+    var autoRatio by mutableStateOf(80)
     var sidePad by mutableStateOf(2)
     var bottomPad by mutableStateOf(0)
     var keyGap by mutableStateOf(3)
@@ -108,6 +108,7 @@ object KeyboardPrefs {
         proKeys = p.getString("proKeys", proKeys) ?: proKeys; proBottom = p.getBoolean("proBottom", proBottom); proIcons = p.getBoolean("proIcons", proIcons); menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
         // once: Shift joins the default extra keys (only for those who never changed the row)
         if (p.getBoolean("arrows", false)) { proRow = true; p.edit().putBoolean("proRow", true).putBoolean("arrows", false).apply() }
+        if (p.getInt("ratioVer", 0) < 1) { autoRatio = 80; p.edit().putInt("autoRatio", 80).putInt("ratioVer", 1).apply() }
         if (p.getInt("proVer", 0) < 1) { if (proKeys == ExtraKeys.OLD_DEFAULT) proKeys = ExtraKeys.DEFAULT; p.edit().putInt("proVer", 1).apply() }
         // the menu and bar of older versions held cut / copy / paste / undo: they are replaced by the new default once
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
@@ -141,7 +142,7 @@ object KeyboardPrefs {
     fun factoryReset(c: Context) {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().apply()
         loaded = false
-        theme = "amoled"; heightPct = 110; autoRatio = 90; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
+        theme = "amoled"; heightPct = 110; autoRatio = 80; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
         cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; rgb = 0; hapticMs = 8; sound = false
