@@ -670,7 +670,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 else @Suppress("DEPRECATION") vib.vibrate((4 + ms / 3).toLong())
             } else window.window?.decorView?.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
         }
-        if (KeyboardPrefs.sound) (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, -1f)
+        if (KeyboardPrefs.sound) { if (KeyboardPrefs.soundKind == 0) (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, -1f) else KeyboardEffects.play(KeyboardPrefs.soundKind) }
     }
 
     override fun emoji(e: String) {

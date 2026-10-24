@@ -1,6 +1,8 @@
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.SwapHoriz
+import com.umutk.pulse.extras.keyboard.KeyboardEffects.boardWash
+import com.umutk.pulse.extras.keyboard.KeyboardEffects.keyWash
 import androidx.compose.material.icons.rounded.EmojiEmotions
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.Edit
@@ -200,7 +202,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val dens = LocalDensity.current.density
     var rootH by remember { mutableStateOf(0f) }
     val rootHue = LocalHue.current
-    Box(modifier.fillMaxWidth().background(th.bg)
+    Box(modifier.fillMaxWidth().background(th.bg).boardWash(KeyboardPrefs.boardFx)
         .then(if (KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
         .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(Unit) {
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
@@ -570,7 +572,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val isLetterNow by rememberUpdatedState(isLetter)
     val bg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
     val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
-    val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) .93f else 1f, tween(70), label = "keyScale")
+    val pressedScale = when (KeyboardPrefs.motionFx) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
+    val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) pressedScale else 1f, if (KeyboardPrefs.motionFx == 3) androidx.compose.animation.core.spring(dampingRatio = .35f, stiffness = 600f) else tween(70), label = "keyScale")
     Box(
         Modifier.weight(k.weight).height(if (small) keyH * .78f else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[k.label.lowercase()] = rect }
             // not keyed on the label: a shift change renames every letter key, and a restart would drop a touch that is under way (the key then stayed shown as pressed and never typed)
@@ -686,7 +689,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
         val special = k.kind != KeyKind.CHAR && k.kind != KeyKind.SPACE
         val fg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> th.text; else -> th.specialText }
         val keyHue = LocalHue.current
-        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp))
+        Box(Modifier.fillMaxSize().graphicsLayer { scaleX = grow; scaleY = grow }.keyLook(th, fill, down, RoundedCornerShape(th.radius.dp)).keyWash(KeyboardPrefs.keyFx, th.accent, with(androidx.compose.ui.platform.LocalDensity.current) { th.radius.dp.toPx() })
             .then(if (KeyboardPrefs.rgb == 2 && keyHue != null) Modifier.drawWithContent { drawContent(); val h = (keyHue.value + rect.left / maxOf(1f, st.rootW) * 300f) % 360f; drawRoundRect(Color.hsv(h, .9f, 1f), cornerRadius = androidx.compose.ui.geometry.CornerRadius(th.radius.dp.toPx()), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())) } else Modifier), contentAlignment = Alignment.Center) {
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             val fs = (big * (.85f + .15f * KeyboardPrefs.heightPct / 100f)).sp
