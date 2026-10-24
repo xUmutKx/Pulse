@@ -257,6 +257,34 @@ fun KeyboardSettings(back: () -> Unit) {
             Text(tr("English and Türkçe come with the app; a download replaces them with a fresh list.", "English ve Türkçe uygulamayla gelir; indirme onları yeni bir listeyle değiştirir."), color = T.sub, fontSize = 12.sp)
         }
 
+        // typing practice: a word is shown, it is typed, and every slip is learned as a typo of that word
+        PCard {
+            Title(tr("Typing practice", "Yazım testi"))
+            var target by remember { mutableStateOf(KeyboardDictionary.practiceWord(KeyboardPrefs.langList().first()) ?: "") }
+            var typed by remember { mutableStateOf("") }
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                if (target.isEmpty()) {
+                    val l = KeyboardPrefs.langList().first()
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardDictionary.load(ctx, l) }
+                    target = KeyboardDictionary.practiceWord(l) ?: ""
+                }
+            }
+            var right by remember { mutableIntStateOf(0) }
+            var slips by remember { mutableIntStateOf(0) }
+            Text(target.ifEmpty { tr("The word list is loading", "Kelime listesi yükleniyor") }, color = T.text, fontSize = 26.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(vertical = 6.dp))
+            val next = {
+                val t = typed.trim().lowercase()
+                if (t.isNotEmpty() && target.isNotEmpty()) {
+                    if (t == target.lowercase()) right++ else { slips++; KeyboardDictionary.learnTypo(ctx, t, target.lowercase()) }
+                    learned = KeyboardDictionary.learnedCount()
+                }
+                typed = ""
+                target = KeyboardDictionary.practiceWord(KeyboardPrefs.langList().first()) ?: target
+            }
+            PField(typed, { typed = it; if (it.endsWith(" ") || it.endsWith("\n")) next() }, tr("Type the word", "Kelimeyi yaz"), Modifier.fillMaxWidth(), onDone = { next() })
+            Text("$right ✓   $slips ✗", color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+        }
+
         // data
         PCard {
             Title(tr("Data", "Veri"))

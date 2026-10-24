@@ -191,6 +191,13 @@ object KeyboardDictionary {
         return (if (n > 0) 1.5f + ln(1f + n) * 1.2f else 0f) + (if (t > 0) 2f + ln(1f + t) * 2f else 0f)
     }
 
+    /** A random common word of the language (4 to 9 letters) for the typing practice. */
+    fun practiceWord(code: String): String? {
+        val lx = lexes[d(code)] ?: return null
+        val top = lx.words.indices.sortedByDescending { lx.score[it] }.take(6000).map { lx.words[it] }.filter { it.length in 4..9 && it.all { c -> c.isLetter() } }
+        return top.randomOrNull()
+    }
+
     fun isWord(code: String, w: String): Boolean {
         val lang = d(code)
         val l = w.lowercase(Locale.ROOT)
