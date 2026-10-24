@@ -1,7 +1,14 @@
+@file:OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 package com.umutk.pulse.features
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -87,6 +94,9 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     }.also { com.umutk.pulse.files.home.FilesHomeNav.kind = null }) }
     var pending by remember { mutableStateOf<LargeFile?>(null) }
     var note by remember { mutableStateOf("") }
+    // a long press picks files; the bin at the top right deletes all the picked ones at once
+    var sel by remember { mutableStateOf(setOf<String>()) }
+    var askBulk by remember { mutableStateOf(false) }
     // the shared walk of the storage (see StorageScan): the same numbers as the folder tree, and no second scan
     val snap by StorageScan.snap.collectAsState()
     val scanned by StorageScan.scanned.collectAsState()
@@ -102,6 +112,11 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(selected?.let { kindLabel(it) } ?: com.umutk.pulse.tr("Storage by type", "Türe göre depolama"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(root.path, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+            if (sel.isNotEmpty()) {
+                Text("${sel.size}", color = T.sub, fontSize = 14.sp)
+                IconButton(onClick = { askBulk = true }) { Icon(Icons.Filled.Delete, com.umutk.pulse.tr("Delete", "Sil"), tint = Color(0xFFC42B1C)) }
+                IconButton(onClick = { sel = emptySet() }) { Icon(Icons.Filled.Close, com.umutk.pulse.tr("Cancel", "Vazgeç"), tint = T.text) }
             }
             IconButton(onClick = { StorageScan.rescan(root) }) { Icon(Icons.Filled.Refresh, contentDescription = com.umutk.pulse.tr("Refresh", "Yenile"), tint = T.text) }
         }
@@ -173,31 +188,48 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                 items(s.largest, key = { it.file.path }) { f ->
                     // a tap opens the file in the viewer or app that handles it
                     val ctx = androidx.compose.ui.platform.LocalContext.current
-                    Column(Modifier.fillMaxWidth().padding(vertical = 1.dp).clickable { tbOpen(ctx, f.file) }.padding(vertical = 8.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                    val picked = f.file.path in sel
+                    Row(
+                        Modifier.fillMaxWidth().padding(vertical = 1.dp)
+                            .background(if (picked) T.accent.copy(alpha = .14f) else Color.Transparent)
+                            .combinedClickable(
+                                onClick = { if (sel.isNotEmpty()) sel = if (picked) sel - f.file.path else sel + f.file.path else tbOpen(ctx, f.file) },
+                                onLongClick = { sel = if (picked) sel - f.file.path else sel + f.file.path },
+                            ).padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        TbThumb(f.file, picked)
+                        Spacer(Modifier.width(12.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(f.file.name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
-                                f.file.name,
-                                color = T.text,
-                                fontSize = 15.sp,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f),
+                                tbFormatBytes(f.size) + " · " + f.file.parent.orEmpty().removePrefix(root.path).trimStart('/').ifEmpty { "/" },
+                                color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             )
-                            Spacer(Modifier.width(8.dp))
-                            Text(tbFormatBytes(f.size), color = T.sub, fontSize = 13.sp)
-                            IconButton(onClick = { pending = f }) { Icon(Icons.Filled.Delete, "Delete", tint = Color(0xFFC42B1C)) }
                         }
-                        Text(
-                            f.file.parent.orEmpty().removePrefix(root.path).trimStart('/').ifEmpty { "/" },
-                            color = T.sub,
-                            fontSize = 11.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        if (sel.isEmpty()) IconButton(onClick = { pending = f }) { Icon(Icons.Filled.Delete, "Delete", tint = Color(0xFFC42B1C)) }
                     }
                 }
             }
         }
+    }
+    if (askBulk) {
+        val files = (summaries?.flatMap { it.largest }.orEmpty()).filter { it.file.path in sel }
+        WinAlert(
+            onDismissRequest = { askBulk = false },
+            title = { Text(com.umutk.pulse.tr("Delete ${files.size} files?", "${files.size} dosya silinsin mi?")) },
+            text = { Text(tbFormatBytes(files.sumOf { it.size }) + ". " + com.umutk.pulse.tr("This cannot be undone.", "Bu geri alınamaz.")) },
+            confirmButton = {
+                TextButton(onClick = {
+                    askBulk = false
+                    var failed = 0
+                    files.forEach { f -> if (f.file.delete()) StorageScan.forget(f.file, f.size) else failed++ }
+                    note = if (failed > 0) com.umutk.pulse.tr("$failed could not be deleted", "$failed dosya silinemedi") else ""
+                    sel = emptySet()
+                }) { Text(com.umutk.pulse.tr("Delete", "Sil")) }
+            },
+            dismissButton = { TextButton(onClick = { askBulk = false }) { Text(com.umutk.pulse.tr("Cancel", "Vazgeç")) } },
+        )
     }
     pending?.let { f ->
         WinAlert(
@@ -212,6 +244,35 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
             },
             dismissButton = { TextButton(onClick = { pending = null }) { Text(com.umutk.pulse.tr("Cancel", "Vazgeç")) } },
         )
+    }
+}
+
+/** A small picture of a file: the picture itself, a frame of a video, else the sign of its kind; a tick when picked. */
+@Composable
+private fun TbThumb(f: File, picked: Boolean) {
+    val ext = f.extension.lowercase()
+    val isImage = ext in setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic")
+    val isVideo = ext in setOf("mp4", "mkv", "webm", "3gp", "mov", "avi")
+    val bmp by androidx.compose.runtime.produceState<android.graphics.Bitmap?>(null, f.path) {
+        value = if (!isImage && !isVideo) null else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            runCatching {
+                if (isImage) {
+                    val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                    android.graphics.BitmapFactory.decodeFile(f.path, o)
+                    var s = 1; while (o.outWidth / (s * 2) >= 160 && o.outHeight / (s * 2) >= 160) s *= 2
+                    android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = s })
+                } else {
+                    val r = android.media.MediaMetadataRetriever()
+                    try { r.setDataSource(f.path); r.getFrameAtTime(1_000_000L) } finally { runCatching { r.release() } }
+                }
+            }.getOrNull()
+        }
+    }
+    Box(Modifier.size(48.dp).clip(RoundedCornerShape(8.dp)).background(T.panel), contentAlignment = Alignment.Center) {
+        val b = bmp
+        if (b != null) androidx.compose.foundation.Image(b.asImageBitmap(), null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+        else com.umutk.pulse.PIcon(if (ext in setOf("mp3", "m4a", "flac", "ogg", "wav", "opus", "aac")) "music" else if (ext == "apk") "apps" else "document", T.sub, 24.dp)
+        if (picked) Box(Modifier.fillMaxSize().background(T.accent.copy(alpha = .55f)), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Check, null, tint = Color.White, modifier = Modifier.size(26.dp)) }
     }
 }
 
