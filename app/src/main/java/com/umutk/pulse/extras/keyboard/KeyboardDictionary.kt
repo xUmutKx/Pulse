@@ -306,7 +306,10 @@ object KeyboardDictionary {
         "dı", "di", "du", "dü", "tı", "ti", "tu", "tü", "yor", "ıyor", "iyor", "uyor", "üyor", "acak", "ecek", "mak", "mek", "ma", "me", "m", "n", "k", "nız", "niz", "nuz", "nüz",
         "ız", "iz", "uz", "üz", "lık", "lik", "luk", "lük", "cı", "ci", "cu", "cü", "çı", "çi", "çu", "çü", "la", "le", "ca", "ce", "ça", "çe", "dır", "dir", "dur", "dür",
         "tır", "tir", "tur", "tür", "sın", "sin", "sun", "sün", "sı", "si", "su", "sü", "nı", "ni", "nu", "nü", "na", "ne", "nda", "nde", "ndan", "nden", "mız", "miz", "muz", "müz",
-        "ları", "leri", "larım", "lerim", "ımız", "imiz", "dım", "dim", "tım", "tim", "dık", "dik", "tık", "tik", "sa", "se", "mı", "mi", "mu", "mü", "bil", "ebil", "abil", "madı", "medi")
+        "ları", "leri", "larım", "lerim", "ımız", "imiz", "dım", "dim", "tım", "tim", "dık", "dik", "tık", "tik", "sa", "se", "mı", "mi", "mu", "mü", "bil", "ebil", "abil", "madı", "medi",
+        // the spoken forms of everyday writing: yapıyom, geliyon, gidiyoz, yapıcam, gitçem, görüşmicem
+        "yom", "yon", "yoz", "ıyom", "iyom", "uyom", "üyom", "ıyon", "iyon", "uyon", "üyon", "ıyoz", "iyoz", "uyoz", "üyoz", "cam", "cem", "caz", "cez", "çam", "çem", "çaz", "çez",
+        "ıcam", "icem", "ucam", "ücem", "ıcaz", "icez", "mıcam", "micem", "mıcaz", "micez", "mıyom", "miyom", "muyom", "müyom", "mıyon", "miyon")
     private val common = listOf("lar", "ler", "ı", "i", "u", "ü", "ın", "in", "da", "de", "dan", "den", "a", "e", "ya", "ye", "lı", "li", "sız", "siz", "ım", "im", "mız", "miz", "ları", "leri", "ki", "la", "le", "lık", "lik", "yor", "mak", "mek")
 
     /** Endings by length: single ones, two in a row, and three in a row from the common ones. */
@@ -328,7 +331,7 @@ object KeyboardDictionary {
     /** The ending agrees with the last vowel of the base (back or front vowels), as Turkish endings do. */
     private fun harmony(stem: String, tail: String): Boolean {
         if (tail.isEmpty()) return true
-        if ("yor" in tail || "ki" in tail || "ken" in tail) return true
+        if ("yor" in tail || "ki" in tail || "ken" in tail || "yom" in tail || "yon" in tail || "yoz" in tail) return true
         val v = stem.lastOrNull { backVowel(it) || frontVowel(it) } ?: return true
         val back = backVowel(v)
         return tail.none { if (back) frontVowel(it) else backVowel(it) }
