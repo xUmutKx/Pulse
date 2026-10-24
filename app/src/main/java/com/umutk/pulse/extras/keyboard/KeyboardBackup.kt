@@ -14,7 +14,7 @@ import java.util.zip.ZipOutputStream
  * and the kept clipboard (texts and pictures). Import puts them back and the keyboard reads them again.
  */
 object KeyboardBackup {
-    private val files = listOf("kbd_user.txt", "kbd_pairs.txt", "kbd_typos.txt", "kbd_banned.txt", "kbd_touch.txt", "kbd_clips.json")
+    private val files = listOf("kbd_user.txt", "kbd_pairs.txt", "kbd_typos.txt", "kbd_banned.txt", "kbd_rejects.txt", "kbd_touch.txt", "kbd_clips.json")
     private const val PREFS = "prefs.json"
 
     private fun prefsJson(c: Context): String {

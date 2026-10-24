@@ -103,6 +103,7 @@ object KeyboardDictionary {
         userLoaded = true
         runCatching { File(c.filesDir, "kbd_user.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) user[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_touch.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3 && p[0].length == 1) bias[p[0][0]] = floatArrayOf(p[1].toFloatOrNull() ?: 0f, p[2].toFloatOrNull() ?: 0f) } }
+        runCatching { File(c.filesDir, "kbd_rejects.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) rejects[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_banned.txt").forEachLine { l -> if (l.isNotBlank()) banned += l.trim() } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
@@ -121,7 +122,7 @@ object KeyboardDictionary {
     /** Forgets everything learned from the user (settings > factory settings, and the "Clear learned words" row). */
     fun forgetUser(c: Context) {
         user.clear(); pairs.clear(); typos.clear(); dirty = 0
-        File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete(); File(c.filesDir, "kbd_typos.txt").delete(); File(c.filesDir, "kbd_banned.txt").delete(); banned.clear()
+        File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete(); File(c.filesDir, "kbd_typos.txt").delete(); File(c.filesDir, "kbd_banned.txt").delete(); banned.clear(); File(c.filesDir, "kbd_rejects.txt").delete(); rejects.clear()
     }
 
     /** Reads the learned data again from the files (after an import). */
@@ -338,6 +339,18 @@ object KeyboardDictionary {
     // ---- what the user's own typos turned out to mean ------------------------------------------------------------------------------------------------
 
     private val typos = ConcurrentHashMap<String, String>()
+
+    // corrections the person undid: "typed>corrected" -> how often. A correction undone once is not made again; twice, the typed word counts as one of their words.
+    private val rejects = ConcurrentHashMap<String, Int>()
+    fun isRejected(typed: String, corrected: String) = (rejects["$typed>$corrected"] ?: 0) > 0
+    fun reject(c: Context, typed: String, corrected: String) {
+        if (!userLoaded) loadUser(c)
+        val k = typed.lowercase(Locale.ROOT) + ">" + corrected.lowercase(Locale.ROOT)
+        val n = (rejects[k] ?: 0) + 1
+        rejects[k] = n
+        if (n >= 2) learnWord(typed, 3)
+        runCatching { File(c.filesDir, "kbd_rejects.txt").writeText(rejects.entries.take(3000).joinToString("\n") { "${it.key} ${it.value}" }) }
+    }
 
     // words the person asked never to see as a suggestion again
     private val banned: MutableSet<String> = ConcurrentHashMap.newKeySet()
