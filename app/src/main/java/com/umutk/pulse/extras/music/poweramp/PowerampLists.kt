@@ -306,14 +306,20 @@ fun LibraryScreen(
                 SongList(ix, current, style, onPlay, onPlayTracks)
             }
             Lib.Favs -> {
-                // the songs marked as favourite and the ones that were given stars: most stars first, then the favourites without stars by name
+                // the songs marked as favourite and the ones that were given stars, each with its star count: sorted by stars (most first) or by name
                 val fav = com.umutk.pulse.extras.music.stats.MusicStats.favourites(ctx)
                 val stars = com.umutk.pulse.extras.music.stats.MusicStats.ratings(ctx)
-                val items = remember(tracks, fav, stars) {
-                    tracks.withIndex().filter { it.value.path in fav || (stars[it.value.path] ?: 0) > 0 }
-                        .sortedWith(compareByDescending<IndexedValue<Track>> { stars[it.value.path] ?: 0 }.thenBy { it.value.displayName().lowercase() })
+                var byStars by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(true) }
+                val items = remember(tracks, fav, stars, byStars) {
+                    val l = tracks.withIndex().filter { it.value.path in fav || (stars[it.value.path] ?: 0) > 0 }
+                    if (byStars) l.sortedWith(compareByDescending<IndexedValue<Track>> { stars[it.value.path] ?: 0 }.thenBy { it.value.displayName().lowercase() })
+                    else l.sortedBy { it.value.displayName().lowercase() }
                 }
-                SongList(items, current, style, onPlay, onPlayTracks)
+                SongList(items, current, style, onPlay, onPlayTracks, stars) {
+                    Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { byStars = !byStars }, contentAlignment = Alignment.Center) {
+                        Icon(if (byStars) Icons.Rounded.Star else Icons.Rounded.SortByAlpha, tr("Sort", "Sırala"), tint = style.accent, modifier = Modifier.size(22.dp))
+                    }
+                }
             }
             Lib.Folders -> {
                 val groups = remember(tracks) { tracks.groupBy { it.folderName() }.toList().sortedBy { it.first.lowercase() } }
@@ -359,7 +365,7 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
 
 /** A list of songs: icons on top play it in its order or shuffled; a tapped song starts this list from that song. */
 @Composable
-private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit) {
+private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}) {
     val songs = remember(items) { items.map { it.value } }
     // an empty page says so instead of staying blank
     if (items.isEmpty()) {
@@ -370,11 +376,17 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
         if (items.isNotEmpty()) item {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                headerExtra()
                 ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
                 ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
             }
         }
-        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }) }
+        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }, trailing = {
+            val n = stars?.get(t.path) ?: 0
+            if (n > 0) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
+                Icon(Icons.Rounded.Star, null, tint = Color(0xFFD9A05B), modifier = Modifier.size(16.dp)); Text("$n", color = style.textDim, fontSize = 13.sp, modifier = Modifier.padding(start = 2.dp))
+            }
+        }) }
     }
 }
 

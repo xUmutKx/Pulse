@@ -47,6 +47,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var noAuto = false
     // the last text copied: the right slot of the bar offers it for two pastes
     private var quickClip: String? = null
+    private var quickAt = 0L
     private var quickLeft = 0
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
@@ -77,7 +78,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             scope.launch(Dispatchers.IO) { val l = ClipStore.addImage(this@PulseKeyboardService, uri); withContext(Dispatchers.Main) { st.clipItems = l } }
         } else {
             val t = item.coerceToText(this)?.toString()?.trim()
-            if (!t.isNullOrEmpty()) { if (t.length <= 400) { quickClip = t; quickLeft = 2; updateSuggestions() }; st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            if (!t.isNullOrEmpty()) { if (t.length <= 400) { quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; updateSuggestions() }; st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -167,7 +168,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val v = info.inputType and InputType.TYPE_MASK_VARIATION
         // a field that asks for no suggestions (many web inputs in Chrome do) still gets the bar; only the automatic correction stays off there
         noAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
-        st.plain = cls != InputType.TYPE_CLASS_TEXT ||
+        st.plain = (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
             v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
                 InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_FILTER)
         emailField = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS); lastEmail = null
@@ -397,7 +398,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slotLong(i: Int) {
         val w = slotWords.getOrNull(i).orEmpty()
-        if (w.isEmpty() || w.startsWith("\"") || !w[0].isLetter()) return
+        if (w.isEmpty() || w.startsWith("\"") || !w[0].isLetter() || st.slots.getOrNull(i)?.startsWith("\u0001") == true) return
         st.banAsk = i
         scope.launch { delay(3000); if (st.banAsk == i) st.banAsk = -1 }
     }
@@ -414,7 +415,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun slot(i: Int) {
         st.banAsk = -1
         val qc = quickClip
-        if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\uD83D\uDCCB") == true) {
+        if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
             currentInputConnection?.commitText(qc, 1)
             if (--quickLeft <= 0) quickClip = null
             afterText(); return
@@ -741,8 +742,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** With nothing being typed, the right slot of the bar holds the text copied last (two taps paste it, then it goes). */
     private fun showClipSlot() {
         val q = quickClip ?: return
+        // the copied text stays in the bar for two minutes; after that it is only in the clipboard
+        if (SystemClock.uptimeMillis() - quickAt > 120_000L) { quickClip = null; return }
         if (word.isNotEmpty() || emailField || st.plain) return
-        val label = "\uD83D\uDCCB " + q.replace('\n', ' ').take(14) + if (q.length > 14) "…" else ""
+        val label = "\u0001" + q.replace('\n', ' ').take(14) + if (q.length > 14) "…" else ""
         slotWords = arrayOf(slotWords[0], slotWords[1], q)
         st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, label)
     }
