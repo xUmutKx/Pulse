@@ -187,6 +187,14 @@ fun BatteryHealthScreen(onBack: () -> Unit) {
             value = r.fullMah?.let { f -> r.designMah?.let { d -> "$f of $d mAh (${100L * f / d}%)" } },
             note = capacityNote(r.fullMah, r.designMah),
         )
+        // wear worked out from what flows in and out (needs no root): grows more exact with every 10 percent charged or drained while Pulse samples
+        val est = remember(r) { BatteryLog.estimate(ctx) }
+        val designU = remember { BatteryLog.designUah(ctx) / 1000 }
+        Metric(
+            title = "Measured capacity",
+            value = est?.let { (mah, n) -> if (designU > 0) "$mah of $designU mAh (${100L * mah / designU}%) · $n" else "$mah mAh · $n" },
+            note = "Estimated from the charge counter while the phone charges or drains, ten percent at a time, like AccuBattery. The number after the dot is how many measurements it rests on; it becomes steadier with each full charge. Pulse has to be sampling (the monitor on) while that happens.",
+        )
         Metric(
             title = "Temperature",
             value = r.tempC?.let { Opt.temp(it) },
