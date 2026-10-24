@@ -61,7 +61,10 @@ FAM = [
  ("Currency", [(0x24,0x24,"Signs"),(0xA2,0xA5,"Signs"),(0x20A0,0x20CF,"Signs")]),
  ("Math", [(0xB1,0xB1,"Basic"),(0xD7,0xD7,"Basic"),(0xF7,0xF7,"Basic"),(0x2200,0x22FF,"Operators"),(0x27C0,0x27EF,"Misc A"),(0x2980,0x29FF,"Misc B"),(0x2A00,0x2AFF,"Operators 2"),(0x2100,0x214F,"Letterlike")]),
  ("Braille", [(0x2800,0x28FF,"Braille")]),
+ ("Cuneiform", [(0x12000,0x123FF,"Cuneiform"),(0x12400,0x1247F,"Numbers and punctuation"),(0x12480,0x1254F,"Early dynastic")]),
+ ("Hieroglyphs", [(0x13000,0x1342F,"Egyptian hieroglyphs")]),
 ]
+LETTER_OK = {"Cuneiform", "Hieroglyphs"}   # whole scripts: their signs are letters, not symbols
 SKIP_REGIONAL = range(0x1F1E6, 0x1F200)
 # emoji live in the emoji tabs: the symbol tab holds the plain text signs only
 EMOJI_LIKE = set("⛅⛈⚡☔⭐⌚⌛✅❌❓❗❤️")
@@ -98,7 +101,7 @@ for name, ranges in FAM:
         for cp in range(a, b + 1):
             if cp in SKIP_REGIONAL: continue
             ch = chr(cp); cat = ud.category(ch)
-            if not (cat[0] in "SP" or cat in ("No", "Nl")): continue
+            if not (cat[0] in "SP" or cat in ("No", "Nl") or (name in LETTER_OK and cat[0] in "LN")): continue
             try: n = ud.name(ch).lower()
             except ValueError: continue
             if ch in seen or is_emoji(ch): continue

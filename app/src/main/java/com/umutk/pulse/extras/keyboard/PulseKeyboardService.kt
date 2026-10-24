@@ -544,28 +544,46 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      * Translates the selected text, or the text before the cursor, inside the keyboard (the MyMemory service, no key needed) and puts the translation in its place.
      * From the language of the keyboard to the next one of the keyboard's languages (Turkish and English by default).
      */
+    /** Free translation services, no key: MyMemory first, then two Lingva servers. Null when none answers. */
+    private fun translateText(text: String, from: String, to: String): String? {
+        fun get(u: String): String? = runCatching {
+            val conn = (java.net.URL(u).openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 8000; readTimeout = 12000; setRequestProperty("User-Agent", "Pulse-Keyboard") }
+            if (conn.responseCode != 200) null else conn.inputStream.bufferedReader().use { it.readText() }
+        }.getOrNull()
+        val q = java.net.URLEncoder.encode(text, "UTF-8").replace("+", "%20")
+        get("https://api.mymemory.translated.net/get?q=$q&langpair=$from%7C$to")?.let { b ->
+            runCatching { org.json.JSONObject(b).getJSONObject("responseData").getString("translatedText") }.getOrNull()
+                ?.takeIf { it.isNotBlank() && !it.contains("MYMEMORY WARNING", true) && !it.equals(text, true) }?.let { return it }
+        }
+        for (host in listOf("lingva.ml", "lingva.thedaviddelta.com")) {
+            get("https://$host/api/v1/$from/$to/$q")?.let { b ->
+                runCatching { org.json.JSONObject(b).getString("translation") }.getOrNull()?.takeIf { it.isNotBlank() }?.let { return it }
+            }
+        }
+        return null
+    }
+
     private fun translate() {
         val c = currentInputConnection ?: return
         val sel = c.getSelectedText(0)?.toString()?.takeIf { it.isNotBlank() }
-        val text = (sel ?: c.getTextBeforeCursor(400, 0)?.toString().orEmpty()).trim()
-        if (text.isEmpty()) return
+        val rawBefore = c.getTextBeforeCursor(400, 0)?.toString().orEmpty()
+        val typed = (sel ?: rawBefore).trim()
+        // nothing typed or selected: the copied text is translated and put in
+        val clip = if (typed.isEmpty()) (getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager)?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.coerceToText(this)?.toString()?.trim().orEmpty() else ""
+        val text = typed.ifEmpty { clip }
+        if (text.isEmpty()) { android.widget.Toast.makeText(this, com.umutk.pulse.tr("Type or select the text to translate", "Çevrilecek yazıyı yazın ya da seçin"), android.widget.Toast.LENGTH_SHORT).show(); return }
         val langs = KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }.distinct()
         val from = KeyboardLayouts.dict(st.lang)
         val to = langs.firstOrNull { it != from } ?: if (from == "tr") "en" else "tr"
         android.widget.Toast.makeText(this, com.umutk.pulse.tr("Translating…", "Çevriliyor…"), android.widget.Toast.LENGTH_SHORT).show()
         scope.launch(Dispatchers.IO) {
-            val out = runCatching {
-                val url = java.net.URL("https://api.mymemory.translated.net/get?q=" + java.net.URLEncoder.encode(text.take(480), "UTF-8") + "&langpair=$from|$to")
-                val conn = (url.openConnection() as java.net.HttpURLConnection).apply { connectTimeout = 8000; readTimeout = 12000 }
-                val body = conn.inputStream.bufferedReader().use { it.readText() }
-                org.json.JSONObject(body).getJSONObject("responseData").getString("translatedText").takeIf { it.isNotBlank() }
-            }.getOrNull()
+            val out = translateText(text.take(480), from, to)
             withContext(Dispatchers.Main) {
                 val ic = currentInputConnection ?: return@withContext
                 if (out == null) { android.widget.Toast.makeText(this@PulseKeyboardService, com.umutk.pulse.tr("Could not translate", "Çevrilemedi"), android.widget.Toast.LENGTH_SHORT).show(); return@withContext }
                 finishWord("", false)
                 // a selection is replaced by committing over it; the text before the cursor is deleted first
-                if (sel == null) ic.deleteSurroundingText(text.length, 0)
+                if (sel == null && typed.isNotEmpty()) ic.deleteSurroundingText(rawBefore.length, 0)
                 ic.commitText(out, 1)
                 afterText()
             }

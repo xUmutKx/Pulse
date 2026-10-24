@@ -122,6 +122,8 @@ object KeyboardDictionary {
         runCatching { File(c.filesDir, "kbd_keys.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2 && p[0].length == 1) keyCounts[p[0][0]] = p[1].toIntOrNull() ?: 0 } }
         runCatching { File(c.filesDir, "kbd_rejects.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) rejects[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_banned.txt").forEachLine { l -> if (l.isNotBlank()) banned += l.trim() } }
+        // the slips of one person's everyday writing that no near-word rule mends (two or three letters wrong in the same word): a small list inside the app, under what is learned
+        runCatching { c.assets.open("kbd/habits.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
     }

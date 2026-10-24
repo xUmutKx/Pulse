@@ -3519,3 +3519,2306 @@ $	dollar sign
 ⣽	braille pattern dots-1345678
 ⣾	braille pattern dots-2345678
 ⣿	braille pattern dots-12345678
+#Cuneiform
+##Cuneiform
+𒀀	cuneiform sign a
+𒀁	cuneiform sign a times a
+𒀂	cuneiform sign a times bad
+𒀃	cuneiform sign a times gan2 tenu
+𒀄	cuneiform sign a times ha
+𒀅	cuneiform sign a times igi
+𒀆	cuneiform sign a times lagar gunu
+𒀇	cuneiform sign a times mush
+𒀈	cuneiform sign a times sag
+𒀉	cuneiform sign a2
+𒀊	cuneiform sign ab
+𒀋	cuneiform sign ab times ash2
+𒀌	cuneiform sign ab times dun3 gunu
+𒀍	cuneiform sign ab times gal
+𒀎	cuneiform sign ab times gan2 tenu
+𒀏	cuneiform sign ab times ha
+𒀐	cuneiform sign ab times igi gunu
+𒀑	cuneiform sign ab times imin
+𒀒	cuneiform sign ab times lagab
+𒀓	cuneiform sign ab times shesh
+𒀔	cuneiform sign ab times u plus u plus u
+𒀕	cuneiform sign ab gunu
+𒀖	cuneiform sign ab2
+𒀗	cuneiform sign ab2 times balag
+𒀘	cuneiform sign ab2 times gan2 tenu
+𒀙	cuneiform sign ab2 times me plus en
+𒀚	cuneiform sign ab2 times sha3
+𒀛	cuneiform sign ab2 times tak4
+𒀜	cuneiform sign ad
+𒀝	cuneiform sign ak
+𒀞	cuneiform sign ak times erin2
+𒀟	cuneiform sign ak times shita plus gish
+𒀠	cuneiform sign al
+𒀡	cuneiform sign al times al
+𒀢	cuneiform sign al times dim2
+𒀣	cuneiform sign al times gish
+𒀤	cuneiform sign al times ha
+𒀥	cuneiform sign al times kad3
+𒀦	cuneiform sign al times ki
+𒀧	cuneiform sign al times she
+𒀨	cuneiform sign al times ush
+𒀩	cuneiform sign alan
+𒀪	cuneiform sign aleph
+𒀫	cuneiform sign amar
+𒀬	cuneiform sign amar times she
+𒀭	cuneiform sign an
+𒀮	cuneiform sign an over an
+𒀯	cuneiform sign an three times
+𒀰	cuneiform sign an plus naga opposing an plus naga
+𒀱	cuneiform sign an plus naga squared
+𒀲	cuneiform sign anshe
+𒀳	cuneiform sign apin
+𒀴	cuneiform sign arad
+𒀵	cuneiform sign arad times kur
+𒀶	cuneiform sign arkab
+𒀷	cuneiform sign asal2
+𒀸	cuneiform sign ash
+𒀹	cuneiform sign ash zida tenu
+𒀺	cuneiform sign ash kaba tenu
+𒀻	cuneiform sign ash over ash tug2 over tug2 tug2 over tug2 pap
+𒀼	cuneiform sign ash over ash over ash
+𒀽	cuneiform sign ash over ash over ash crossing ash over ash over ash
+𒀾	cuneiform sign ash2
+𒀿	cuneiform sign ashgab
+𒁀	cuneiform sign ba
+𒁁	cuneiform sign bad
+𒁂	cuneiform sign bag3
+𒁃	cuneiform sign bahar2
+𒁄	cuneiform sign bal
+𒁅	cuneiform sign bal over bal
+𒁆	cuneiform sign balag
+𒁇	cuneiform sign bar
+𒁈	cuneiform sign bara2
+𒁉	cuneiform sign bi
+𒁊	cuneiform sign bi times a
+𒁋	cuneiform sign bi times gar
+𒁌	cuneiform sign bi times igi gunu
+𒁍	cuneiform sign bu
+𒁎	cuneiform sign bu over bu ab
+𒁏	cuneiform sign bu over bu un
+𒁐	cuneiform sign bu crossing bu
+𒁑	cuneiform sign bulug
+𒁒	cuneiform sign bulug over bulug
+𒁓	cuneiform sign bur
+𒁔	cuneiform sign bur2
+𒁕	cuneiform sign da
+𒁖	cuneiform sign dag
+𒁗	cuneiform sign dag kisim5 times a plus mash
+𒁘	cuneiform sign dag kisim5 times amar
+𒁙	cuneiform sign dag kisim5 times balag
+𒁚	cuneiform sign dag kisim5 times bi
+𒁛	cuneiform sign dag kisim5 times ga
+𒁜	cuneiform sign dag kisim5 times ga plus mash
+𒁝	cuneiform sign dag kisim5 times gi
+𒁞	cuneiform sign dag kisim5 times gir2
+𒁟	cuneiform sign dag kisim5 times gud
+𒁠	cuneiform sign dag kisim5 times ha
+𒁡	cuneiform sign dag kisim5 times ir
+𒁢	cuneiform sign dag kisim5 times ir plus lu
+𒁣	cuneiform sign dag kisim5 times kak
+𒁤	cuneiform sign dag kisim5 times la
+𒁥	cuneiform sign dag kisim5 times lu
+𒁦	cuneiform sign dag kisim5 times lu plus mash2
+𒁧	cuneiform sign dag kisim5 times lum
+𒁨	cuneiform sign dag kisim5 times ne
+𒁩	cuneiform sign dag kisim5 times pap plus pap
+𒁪	cuneiform sign dag kisim5 times si
+𒁫	cuneiform sign dag kisim5 times tak4
+𒁬	cuneiform sign dag kisim5 times u2 plus gir2
+𒁭	cuneiform sign dag kisim5 times ush
+𒁮	cuneiform sign dam
+𒁯	cuneiform sign dar
+𒁰	cuneiform sign dara3
+𒁱	cuneiform sign dara4
+𒁲	cuneiform sign di
+𒁳	cuneiform sign dib
+𒁴	cuneiform sign dim
+𒁵	cuneiform sign dim times she
+𒁶	cuneiform sign dim2
+𒁷	cuneiform sign din
+𒁸	cuneiform sign din kaskal u gunu dish
+𒁹	cuneiform sign dish
+𒁺	cuneiform sign du
+𒁻	cuneiform sign du over du
+𒁼	cuneiform sign du gunu
+𒁽	cuneiform sign du sheshig
+𒁾	cuneiform sign dub
+𒁿	cuneiform sign dub times esh2
+𒂀	cuneiform sign dub2
+𒂁	cuneiform sign dug
+𒂂	cuneiform sign dugud
+𒂃	cuneiform sign duh
+𒂄	cuneiform sign dun
+𒂅	cuneiform sign dun3
+𒂆	cuneiform sign dun3 gunu
+𒂇	cuneiform sign dun3 gunu gunu
+𒂈	cuneiform sign dun4
+𒂉	cuneiform sign dur2
+𒂊	cuneiform sign e
+𒂋	cuneiform sign e times pap
+𒂌	cuneiform sign e over e nun over nun
+𒂍	cuneiform sign e2
+𒂎	cuneiform sign e2 times a plus ha plus da
+𒂏	cuneiform sign e2 times gar
+𒂐	cuneiform sign e2 times mi
+𒂑	cuneiform sign e2 times sal
+𒂒	cuneiform sign e2 times she
+𒂓	cuneiform sign e2 times u
+𒂔	cuneiform sign edin
+𒂕	cuneiform sign egir
+𒂖	cuneiform sign el
+𒂗	cuneiform sign en
+𒂘	cuneiform sign en times gan2
+𒂙	cuneiform sign en times gan2 tenu
+𒂚	cuneiform sign en times me
+𒂛	cuneiform sign en crossing en
+𒂜	cuneiform sign en opposing en
+𒂝	cuneiform sign en squared
+𒂞	cuneiform sign eren
+𒂟	cuneiform sign erin2
+𒂠	cuneiform sign esh2
+𒂡	cuneiform sign ezen
+𒂢	cuneiform sign ezen times a
+𒂣	cuneiform sign ezen times a plus lal
+𒂤	cuneiform sign ezen times a plus lal times lal
+𒂥	cuneiform sign ezen times an
+𒂦	cuneiform sign ezen times bad
+𒂧	cuneiform sign ezen times dun3 gunu
+𒂨	cuneiform sign ezen times dun3 gunu gunu
+𒂩	cuneiform sign ezen times ha
+𒂪	cuneiform sign ezen times ha gunu
+𒂫	cuneiform sign ezen times igi gunu
+𒂬	cuneiform sign ezen times kaskal
+𒂭	cuneiform sign ezen times kaskal squared
+𒂮	cuneiform sign ezen times ku3
+𒂯	cuneiform sign ezen times la
+𒂰	cuneiform sign ezen times lal times lal
+𒂱	cuneiform sign ezen times li
+𒂲	cuneiform sign ezen times lu
+𒂳	cuneiform sign ezen times u2
+𒂴	cuneiform sign ezen times ud
+𒂵	cuneiform sign ga
+𒂶	cuneiform sign ga gunu
+𒂷	cuneiform sign ga2
+𒂸	cuneiform sign ga2 times a plus da plus ha
+𒂹	cuneiform sign ga2 times a plus ha
+𒂺	cuneiform sign ga2 times a plus igi
+𒂻	cuneiform sign ga2 times ab2 tenu plus tab
+𒂼	cuneiform sign ga2 times an
+𒂽	cuneiform sign ga2 times ash
+𒂾	cuneiform sign ga2 times ash2 plus gal
+𒂿	cuneiform sign ga2 times bad
+𒃀	cuneiform sign ga2 times bar plus ra
+𒃁	cuneiform sign ga2 times bur
+𒃂	cuneiform sign ga2 times bur plus ra
+𒃃	cuneiform sign ga2 times da
+𒃄	cuneiform sign ga2 times di
+𒃅	cuneiform sign ga2 times dim times she
+𒃆	cuneiform sign ga2 times dub
+𒃇	cuneiform sign ga2 times el
+𒃈	cuneiform sign ga2 times el plus la
+𒃉	cuneiform sign ga2 times en
+𒃊	cuneiform sign ga2 times en times gan2 tenu
+𒃋	cuneiform sign ga2 times gan2 tenu
+𒃌	cuneiform sign ga2 times gar
+𒃍	cuneiform sign ga2 times gi
+𒃎	cuneiform sign ga2 times gi4
+𒃏	cuneiform sign ga2 times gi4 plus a
+𒃐	cuneiform sign ga2 times gir2 plus su
+𒃑	cuneiform sign ga2 times ha plus lu plus esh2
+𒃒	cuneiform sign ga2 times hal
+𒃓	cuneiform sign ga2 times hal plus la
+𒃔	cuneiform sign ga2 times hi plus li
+𒃕	cuneiform sign ga2 times hub2
+𒃖	cuneiform sign ga2 times igi gunu
+𒃗	cuneiform sign ga2 times ish plus hu plus ash
+𒃘	cuneiform sign ga2 times kak
+𒃙	cuneiform sign ga2 times kaskal
+𒃚	cuneiform sign ga2 times kid
+𒃛	cuneiform sign ga2 times kid plus lal
+𒃜	cuneiform sign ga2 times ku3 plus an
+𒃝	cuneiform sign ga2 times la
+𒃞	cuneiform sign ga2 times me plus en
+𒃟	cuneiform sign ga2 times mi
+𒃠	cuneiform sign ga2 times nun
+𒃡	cuneiform sign ga2 times nun over nun
+𒃢	cuneiform sign ga2 times pa
+𒃣	cuneiform sign ga2 times sal
+𒃤	cuneiform sign ga2 times sar
+𒃥	cuneiform sign ga2 times she
+𒃦	cuneiform sign ga2 times she plus tur
+𒃧	cuneiform sign ga2 times shid
+𒃨	cuneiform sign ga2 times sum
+𒃩	cuneiform sign ga2 times tak4
+𒃪	cuneiform sign ga2 times u
+𒃫	cuneiform sign ga2 times ud
+𒃬	cuneiform sign ga2 times ud plus du
+𒃭	cuneiform sign ga2 over ga2
+𒃮	cuneiform sign gaba
+𒃯	cuneiform sign gaba crossing gaba
+𒃰	cuneiform sign gad
+𒃱	cuneiform sign gad over gad gar over gar
+𒃲	cuneiform sign gal
+𒃳	cuneiform sign gal gad over gad gar over gar
+𒃴	cuneiform sign galam
+𒃵	cuneiform sign gam
+𒃶	cuneiform sign gan
+𒃷	cuneiform sign gan2
+𒃸	cuneiform sign gan2 tenu
+𒃹	cuneiform sign gan2 over gan2
+𒃺	cuneiform sign gan2 crossing gan2
+𒃻	cuneiform sign gar
+𒃼	cuneiform sign gar3
+𒃽	cuneiform sign gashan
+𒃾	cuneiform sign geshtin
+𒃿	cuneiform sign geshtin times kur
+𒄀	cuneiform sign gi
+𒄁	cuneiform sign gi times e
+𒄂	cuneiform sign gi times u
+𒄃	cuneiform sign gi crossing gi
+𒄄	cuneiform sign gi4
+𒄅	cuneiform sign gi4 over gi4
+𒄆	cuneiform sign gi4 crossing gi4
+𒄇	cuneiform sign gidim
+𒄈	cuneiform sign gir2
+𒄉	cuneiform sign gir2 gunu
+𒄊	cuneiform sign gir3
+𒄋	cuneiform sign gir3 times a plus igi
+𒄌	cuneiform sign gir3 times gan2 tenu
+𒄍	cuneiform sign gir3 times igi
+𒄎	cuneiform sign gir3 times lu plus igi
+𒄏	cuneiform sign gir3 times pa
+𒄐	cuneiform sign gisal
+𒄑	cuneiform sign gish
+𒄒	cuneiform sign gish crossing gish
+𒄓	cuneiform sign gish times bad
+𒄔	cuneiform sign gish times tak4
+𒄕	cuneiform sign gish tenu
+𒄖	cuneiform sign gu
+𒄗	cuneiform sign gu crossing gu
+𒄘	cuneiform sign gu2
+𒄙	cuneiform sign gu2 times kak
+𒄚	cuneiform sign gu2 times kak times igi gunu
+𒄛	cuneiform sign gu2 times nun
+𒄜	cuneiform sign gu2 times sal plus tug2
+𒄝	cuneiform sign gu2 gunu
+𒄞	cuneiform sign gud
+𒄟	cuneiform sign gud times a plus kur
+𒄠	cuneiform sign gud times kur
+𒄡	cuneiform sign gud over gud lugal
+𒄢	cuneiform sign gul
+𒄣	cuneiform sign gum
+𒄤	cuneiform sign gum times she
+𒄥	cuneiform sign gur
+𒄦	cuneiform sign gur7
+𒄧	cuneiform sign gurun
+𒄨	cuneiform sign gurush
+𒄩	cuneiform sign ha
+𒄪	cuneiform sign ha tenu
+𒄫	cuneiform sign ha gunu
+𒄬	cuneiform sign hal
+𒄭	cuneiform sign hi
+𒄮	cuneiform sign hi times ash
+𒄯	cuneiform sign hi times ash2
+𒄰	cuneiform sign hi times bad
+𒄱	cuneiform sign hi times dish
+𒄲	cuneiform sign hi times gad
+𒄳	cuneiform sign hi times kin
+𒄴	cuneiform sign hi times nun
+𒄵	cuneiform sign hi times she
+𒄶	cuneiform sign hi times u
+𒄷	cuneiform sign hu
+𒄸	cuneiform sign hub2
+𒄹	cuneiform sign hub2 times an
+𒄺	cuneiform sign hub2 times hal
+𒄻	cuneiform sign hub2 times kaskal
+𒄼	cuneiform sign hub2 times lish
+𒄽	cuneiform sign hub2 times ud
+𒄾	cuneiform sign hul2
+𒄿	cuneiform sign i
+𒅀	cuneiform sign i a
+𒅁	cuneiform sign ib
+𒅂	cuneiform sign idim
+𒅃	cuneiform sign idim over idim bur
+𒅄	cuneiform sign idim over idim squared
+𒅅	cuneiform sign ig
+𒅆	cuneiform sign igi
+𒅇	cuneiform sign igi dib
+𒅈	cuneiform sign igi ri
+𒅉	cuneiform sign igi over igi shir over shir ud over ud
+𒅊	cuneiform sign igi gunu
+𒅋	cuneiform sign il
+𒅌	cuneiform sign il times gan2 tenu
+𒅍	cuneiform sign il2
+𒅎	cuneiform sign im
+𒅏	cuneiform sign im times tak4
+𒅐	cuneiform sign im crossing im
+𒅑	cuneiform sign im opposing im
+𒅒	cuneiform sign im squared
+𒅓	cuneiform sign imin
+𒅔	cuneiform sign in
+𒅕	cuneiform sign ir
+𒅖	cuneiform sign ish
+𒅗	cuneiform sign ka
+𒅘	cuneiform sign ka times a
+𒅙	cuneiform sign ka times ad
+𒅚	cuneiform sign ka times ad plus ku3
+𒅛	cuneiform sign ka times ash2
+𒅜	cuneiform sign ka times bad
+𒅝	cuneiform sign ka times balag
+𒅞	cuneiform sign ka times bar
+𒅟	cuneiform sign ka times bi
+𒅠	cuneiform sign ka times erin2
+𒅡	cuneiform sign ka times esh2
+𒅢	cuneiform sign ka times ga
+𒅣	cuneiform sign ka times gal
+𒅤	cuneiform sign ka times gan2 tenu
+𒅥	cuneiform sign ka times gar
+𒅦	cuneiform sign ka times gar plus sha3 plus a
+𒅧	cuneiform sign ka times gi
+𒅨	cuneiform sign ka times gir2
+𒅩	cuneiform sign ka times gish plus sar
+𒅪	cuneiform sign ka times gish crossing gish
+𒅫	cuneiform sign ka times gu
+𒅬	cuneiform sign ka times gur7
+𒅭	cuneiform sign ka times igi
+𒅮	cuneiform sign ka times im
+𒅯	cuneiform sign ka times kak
+𒅰	cuneiform sign ka times ki
+𒅱	cuneiform sign ka times kid
+𒅲	cuneiform sign ka times li
+𒅳	cuneiform sign ka times lu
+𒅴	cuneiform sign ka times me
+𒅵	cuneiform sign ka times me plus du
+𒅶	cuneiform sign ka times me plus gi
+𒅷	cuneiform sign ka times me plus te
+𒅸	cuneiform sign ka times mi
+𒅹	cuneiform sign ka times mi plus nunuz
+𒅺	cuneiform sign ka times ne
+𒅻	cuneiform sign ka times nun
+𒅼	cuneiform sign ka times pi
+𒅽	cuneiform sign ka times ru
+𒅾	cuneiform sign ka times sa
+𒅿	cuneiform sign ka times sar
+𒆀	cuneiform sign ka times sha
+𒆁	cuneiform sign ka times she
+𒆂	cuneiform sign ka times shid
+𒆃	cuneiform sign ka times shu
+𒆄	cuneiform sign ka times sig
+𒆅	cuneiform sign ka times suhur
+𒆆	cuneiform sign ka times tar
+𒆇	cuneiform sign ka times u
+𒆈	cuneiform sign ka times u2
+𒆉	cuneiform sign ka times ud
+𒆊	cuneiform sign ka times umum times pa
+𒆋	cuneiform sign ka times ush
+𒆌	cuneiform sign ka times zi
+𒆍	cuneiform sign ka2
+𒆎	cuneiform sign ka2 crossing ka2
+𒆏	cuneiform sign kab
+𒆐	cuneiform sign kad2
+𒆑	cuneiform sign kad3
+𒆒	cuneiform sign kad4
+𒆓	cuneiform sign kad5
+𒆔	cuneiform sign kad5 over kad5
+𒆕	cuneiform sign kak
+𒆖	cuneiform sign kak times igi gunu
+𒆗	cuneiform sign kal
+𒆘	cuneiform sign kal times bad
+𒆙	cuneiform sign kal crossing kal
+𒆚	cuneiform sign kam2
+𒆛	cuneiform sign kam4
+𒆜	cuneiform sign kaskal
+𒆝	cuneiform sign kaskal lagab times u over lagab times u
+𒆞	cuneiform sign kaskal over kaskal lagab times u over lagab times u
+𒆟	cuneiform sign kesh2
+𒆠	cuneiform sign ki
+𒆡	cuneiform sign ki times bad
+𒆢	cuneiform sign ki times u
+𒆣	cuneiform sign ki times ud
+𒆤	cuneiform sign kid
+𒆥	cuneiform sign kin
+𒆦	cuneiform sign kisal
+𒆧	cuneiform sign kish
+𒆨	cuneiform sign kisim5
+𒆩	cuneiform sign kisim5 over kisim5
+𒆪	cuneiform sign ku
+𒆫	cuneiform sign ku over hi times ash2 ku over hi times ash2
+𒆬	cuneiform sign ku3
+𒆭	cuneiform sign ku4
+𒆮	cuneiform sign ku4 variant form
+𒆯	cuneiform sign ku7
+𒆰	cuneiform sign kul
+𒆱	cuneiform sign kul gunu
+𒆲	cuneiform sign kun
+𒆳	cuneiform sign kur
+𒆴	cuneiform sign kur opposing kur
+𒆵	cuneiform sign kushu2
+𒆶	cuneiform sign kwu318
+𒆷	cuneiform sign la
+𒆸	cuneiform sign lagab
+𒆹	cuneiform sign lagab times a
+𒆺	cuneiform sign lagab times a plus da plus ha
+𒆻	cuneiform sign lagab times a plus gar
+𒆼	cuneiform sign lagab times a plus lal
+𒆽	cuneiform sign lagab times al
+𒆾	cuneiform sign lagab times an
+𒆿	cuneiform sign lagab times ash zida tenu
+𒇀	cuneiform sign lagab times bad
+𒇁	cuneiform sign lagab times bi
+𒇂	cuneiform sign lagab times dar
+𒇃	cuneiform sign lagab times en
+𒇄	cuneiform sign lagab times ga
+𒇅	cuneiform sign lagab times gar
+𒇆	cuneiform sign lagab times gud
+𒇇	cuneiform sign lagab times gud plus gud
+𒇈	cuneiform sign lagab times ha
+𒇉	cuneiform sign lagab times hal
+𒇊	cuneiform sign lagab times hi times nun
+𒇋	cuneiform sign lagab times igi gunu
+𒇌	cuneiform sign lagab times im
+𒇍	cuneiform sign lagab times im plus ha
+𒇎	cuneiform sign lagab times im plus lu
+𒇏	cuneiform sign lagab times ki
+𒇐	cuneiform sign lagab times kin
+𒇑	cuneiform sign lagab times ku3
+𒇒	cuneiform sign lagab times kul
+𒇓	cuneiform sign lagab times kul plus hi plus a
+𒇔	cuneiform sign lagab times lagab
+𒇕	cuneiform sign lagab times lish
+𒇖	cuneiform sign lagab times lu
+𒇗	cuneiform sign lagab times lul
+𒇘	cuneiform sign lagab times me
+𒇙	cuneiform sign lagab times me plus en
+𒇚	cuneiform sign lagab times mush
+𒇛	cuneiform sign lagab times ne
+𒇜	cuneiform sign lagab times she plus sum
+𒇝	cuneiform sign lagab times shita plus gish plus erin2
+𒇞	cuneiform sign lagab times shita plus gish tenu
+𒇟	cuneiform sign lagab times shu2
+𒇠	cuneiform sign lagab times shu2 plus shu2
+𒇡	cuneiform sign lagab times sum
+𒇢	cuneiform sign lagab times tag
+𒇣	cuneiform sign lagab times tak4
+𒇤	cuneiform sign lagab times te plus a plus su plus na
+𒇥	cuneiform sign lagab times u
+𒇦	cuneiform sign lagab times u plus a
+𒇧	cuneiform sign lagab times u plus u plus u
+𒇨	cuneiform sign lagab times u2 plus ash
+𒇩	cuneiform sign lagab times ud
+𒇪	cuneiform sign lagab times ush
+𒇫	cuneiform sign lagab squared
+𒇬	cuneiform sign lagar
+𒇭	cuneiform sign lagar times she
+𒇮	cuneiform sign lagar times she plus sum
+𒇯	cuneiform sign lagar gunu
+𒇰	cuneiform sign lagar gunu over lagar gunu she
+𒇱	cuneiform sign lahshu
+𒇲	cuneiform sign lal
+𒇳	cuneiform sign lal times lal
+𒇴	cuneiform sign lam
+𒇵	cuneiform sign lam times kur
+𒇶	cuneiform sign lam times kur plus ru
+𒇷	cuneiform sign li
+𒇸	cuneiform sign lil
+𒇹	cuneiform sign limmu2
+𒇺	cuneiform sign lish
+𒇻	cuneiform sign lu
+𒇼	cuneiform sign lu times bad
+𒇽	cuneiform sign lu2
+𒇾	cuneiform sign lu2 times al
+𒇿	cuneiform sign lu2 times bad
+𒈀	cuneiform sign lu2 times esh2
+𒈁	cuneiform sign lu2 times esh2 tenu
+𒈂	cuneiform sign lu2 times gan2 tenu
+𒈃	cuneiform sign lu2 times hi times bad
+𒈄	cuneiform sign lu2 times im
+𒈅	cuneiform sign lu2 times kad2
+𒈆	cuneiform sign lu2 times kad3
+𒈇	cuneiform sign lu2 times kad3 plus ash
+𒈈	cuneiform sign lu2 times ki
+𒈉	cuneiform sign lu2 times la plus ash
+𒈊	cuneiform sign lu2 times lagab
+𒈋	cuneiform sign lu2 times me plus en
+𒈌	cuneiform sign lu2 times ne
+𒈍	cuneiform sign lu2 times nu
+𒈎	cuneiform sign lu2 times si plus ash
+𒈏	cuneiform sign lu2 times sik2 plus bu
+𒈐	cuneiform sign lu2 times tug2
+𒈑	cuneiform sign lu2 tenu
+𒈒	cuneiform sign lu2 crossing lu2
+𒈓	cuneiform sign lu2 opposing lu2
+𒈔	cuneiform sign lu2 squared
+𒈕	cuneiform sign lu2 sheshig
+𒈖	cuneiform sign lu3
+𒈗	cuneiform sign lugal
+𒈘	cuneiform sign lugal over lugal
+𒈙	cuneiform sign lugal opposing lugal
+𒈚	cuneiform sign lugal sheshig
+𒈛	cuneiform sign luh
+𒈜	cuneiform sign lul
+𒈝	cuneiform sign lum
+𒈞	cuneiform sign lum over lum
+𒈟	cuneiform sign lum over lum gar over gar
+𒈠	cuneiform sign ma
+𒈡	cuneiform sign ma times tak4
+𒈢	cuneiform sign ma gunu
+𒈣	cuneiform sign ma2
+𒈤	cuneiform sign mah
+𒈥	cuneiform sign mar
+𒈦	cuneiform sign mash
+𒈧	cuneiform sign mash2
+𒈨	cuneiform sign me
+𒈩	cuneiform sign mes
+𒈪	cuneiform sign mi
+𒈫	cuneiform sign min
+𒈬	cuneiform sign mu
+𒈭	cuneiform sign mu over mu
+𒈮	cuneiform sign mug
+𒈯	cuneiform sign mug gunu
+𒈰	cuneiform sign munsub
+𒈱	cuneiform sign murgu2
+𒈲	cuneiform sign mush
+𒈳	cuneiform sign mush times a
+𒈴	cuneiform sign mush times kur
+𒈵	cuneiform sign mush times za
+𒈶	cuneiform sign mush over mush
+𒈷	cuneiform sign mush over mush times a plus na
+𒈸	cuneiform sign mush crossing mush
+𒈹	cuneiform sign mush3
+𒈺	cuneiform sign mush3 times a
+𒈻	cuneiform sign mush3 times a plus di
+𒈼	cuneiform sign mush3 times di
+𒈽	cuneiform sign mush3 gunu
+𒈾	cuneiform sign na
+𒈿	cuneiform sign na2
+𒉀	cuneiform sign naga
+𒉁	cuneiform sign naga inverted
+𒉂	cuneiform sign naga times shu tenu
+𒉃	cuneiform sign naga opposing naga
+𒉄	cuneiform sign nagar
+𒉅	cuneiform sign nam nutillu
+𒉆	cuneiform sign nam
+𒉇	cuneiform sign nam2
+𒉈	cuneiform sign ne
+𒉉	cuneiform sign ne times a
+𒉊	cuneiform sign ne times ud
+𒉋	cuneiform sign ne sheshig
+𒉌	cuneiform sign ni
+𒉍	cuneiform sign ni times e
+𒉎	cuneiform sign ni2
+𒉏	cuneiform sign nim
+𒉐	cuneiform sign nim times gan2 tenu
+𒉑	cuneiform sign nim times gar plus gan2 tenu
+𒉒	cuneiform sign ninda2
+𒉓	cuneiform sign ninda2 times an
+𒉔	cuneiform sign ninda2 times ash
+𒉕	cuneiform sign ninda2 times ash plus ash
+𒉖	cuneiform sign ninda2 times gud
+𒉗	cuneiform sign ninda2 times me plus gan2 tenu
+𒉘	cuneiform sign ninda2 times ne
+𒉙	cuneiform sign ninda2 times nun
+𒉚	cuneiform sign ninda2 times she
+𒉛	cuneiform sign ninda2 times she plus a an
+𒉜	cuneiform sign ninda2 times she plus ash
+𒉝	cuneiform sign ninda2 times she plus ash plus ash
+𒉞	cuneiform sign ninda2 times u2 plus ash
+𒉟	cuneiform sign ninda2 times ush
+𒉠	cuneiform sign nisag
+𒉡	cuneiform sign nu
+𒉢	cuneiform sign nu11
+𒉣	cuneiform sign nun
+𒉤	cuneiform sign nun lagar times gar
+𒉥	cuneiform sign nun lagar times mash
+𒉦	cuneiform sign nun lagar times sal
+𒉧	cuneiform sign nun lagar times sal over nun lagar times sal
+𒉨	cuneiform sign nun lagar times ush
+𒉩	cuneiform sign nun tenu
+𒉪	cuneiform sign nun over nun
+𒉫	cuneiform sign nun crossing nun
+𒉬	cuneiform sign nun crossing nun lagar over lagar
+𒉭	cuneiform sign nunuz
+𒉮	cuneiform sign nunuz ab2 times ashgab
+𒉯	cuneiform sign nunuz ab2 times bi
+𒉰	cuneiform sign nunuz ab2 times dug
+𒉱	cuneiform sign nunuz ab2 times gud
+𒉲	cuneiform sign nunuz ab2 times igi gunu
+𒉳	cuneiform sign nunuz ab2 times kad3
+𒉴	cuneiform sign nunuz ab2 times la
+𒉵	cuneiform sign nunuz ab2 times ne
+𒉶	cuneiform sign nunuz ab2 times sila3
+𒉷	cuneiform sign nunuz ab2 times u2
+𒉸	cuneiform sign nunuz kisim5 times bi
+𒉹	cuneiform sign nunuz kisim5 times bi u
+𒉺	cuneiform sign pa
+𒉻	cuneiform sign pad
+𒉼	cuneiform sign pan
+𒉽	cuneiform sign pap
+𒉾	cuneiform sign pesh2
+𒉿	cuneiform sign pi
+𒊀	cuneiform sign pi times a
+𒊁	cuneiform sign pi times ab
+𒊂	cuneiform sign pi times bi
+𒊃	cuneiform sign pi times bu
+𒊄	cuneiform sign pi times e
+𒊅	cuneiform sign pi times i
+𒊆	cuneiform sign pi times ib
+𒊇	cuneiform sign pi times u
+𒊈	cuneiform sign pi times u2
+𒊉	cuneiform sign pi crossing pi
+𒊊	cuneiform sign pirig
+𒊋	cuneiform sign pirig times kal
+𒊌	cuneiform sign pirig times ud
+𒊍	cuneiform sign pirig times za
+𒊎	cuneiform sign pirig opposing pirig
+𒊏	cuneiform sign ra
+𒊐	cuneiform sign rab
+𒊑	cuneiform sign ri
+𒊒	cuneiform sign ru
+𒊓	cuneiform sign sa
+𒊔	cuneiform sign sag nutillu
+𒊕	cuneiform sign sag
+𒊖	cuneiform sign sag times a
+𒊗	cuneiform sign sag times du
+𒊘	cuneiform sign sag times dub
+𒊙	cuneiform sign sag times ha
+𒊚	cuneiform sign sag times kak
+𒊛	cuneiform sign sag times kur
+𒊜	cuneiform sign sag times lum
+𒊝	cuneiform sign sag times mi
+𒊞	cuneiform sign sag times nun
+𒊟	cuneiform sign sag times sal
+𒊠	cuneiform sign sag times shid
+𒊡	cuneiform sign sag times tab
+𒊢	cuneiform sign sag times u2
+𒊣	cuneiform sign sag times ub
+𒊤	cuneiform sign sag times um
+𒊥	cuneiform sign sag times ur
+𒊦	cuneiform sign sag times ush
+𒊧	cuneiform sign sag over sag
+𒊨	cuneiform sign sag gunu
+𒊩	cuneiform sign sal
+𒊪	cuneiform sign sal lagab times ash2
+𒊫	cuneiform sign sanga2
+𒊬	cuneiform sign sar
+𒊭	cuneiform sign sha
+𒊮	cuneiform sign sha3
+𒊯	cuneiform sign sha3 times a
+𒊰	cuneiform sign sha3 times bad
+𒊱	cuneiform sign sha3 times gish
+𒊲	cuneiform sign sha3 times ne
+𒊳	cuneiform sign sha3 times shu2
+𒊴	cuneiform sign sha3 times tur
+𒊵	cuneiform sign sha3 times u
+𒊶	cuneiform sign sha3 times u plus a
+𒊷	cuneiform sign sha6
+𒊸	cuneiform sign shab6
+𒊹	cuneiform sign shar2
+𒊺	cuneiform sign she
+𒊻	cuneiform sign she hu
+𒊼	cuneiform sign she over she gad over gad gar over gar
+𒊽	cuneiform sign she over she tab over tab gar over gar
+𒊾	cuneiform sign sheg9
+𒊿	cuneiform sign shen
+𒋀	cuneiform sign shesh
+𒋁	cuneiform sign shesh2
+𒋂	cuneiform sign sheshlam
+𒋃	cuneiform sign shid
+𒋄	cuneiform sign shid times a
+𒋅	cuneiform sign shid times im
+𒋆	cuneiform sign shim
+𒋇	cuneiform sign shim times a
+𒋈	cuneiform sign shim times bal
+𒋉	cuneiform sign shim times bulug
+𒋊	cuneiform sign shim times din
+𒋋	cuneiform sign shim times gar
+𒋌	cuneiform sign shim times igi
+𒋍	cuneiform sign shim times igi gunu
+𒋎	cuneiform sign shim times kushu2
+𒋏	cuneiform sign shim times lul
+𒋐	cuneiform sign shim times mug
+𒋑	cuneiform sign shim times sal
+𒋒	cuneiform sign shinig
+𒋓	cuneiform sign shir
+𒋔	cuneiform sign shir tenu
+𒋕	cuneiform sign shir over shir bur over bur
+𒋖	cuneiform sign shita
+𒋗	cuneiform sign shu
+𒋘	cuneiform sign shu over inverted shu
+𒋙	cuneiform sign shu2
+𒋚	cuneiform sign shubur
+𒋛	cuneiform sign si
+𒋜	cuneiform sign si gunu
+𒋝	cuneiform sign sig
+𒋞	cuneiform sign sig4
+𒋟	cuneiform sign sig4 over sig4 shu2
+𒋠	cuneiform sign sik2
+𒋡	cuneiform sign sila3
+𒋢	cuneiform sign su
+𒋣	cuneiform sign su over su
+𒋤	cuneiform sign sud
+𒋥	cuneiform sign sud2
+𒋦	cuneiform sign suhur
+𒋧	cuneiform sign sum
+𒋨	cuneiform sign sumash
+𒋩	cuneiform sign sur
+𒋪	cuneiform sign sur9
+𒋫	cuneiform sign ta
+𒋬	cuneiform sign ta asterisk
+𒋭	cuneiform sign ta times hi
+𒋮	cuneiform sign ta times mi
+𒋯	cuneiform sign ta gunu
+𒋰	cuneiform sign tab
+𒋱	cuneiform sign tab over tab ni over ni dish over dish
+𒋲	cuneiform sign tab squared
+𒋳	cuneiform sign tag
+𒋴	cuneiform sign tag times bi
+𒋵	cuneiform sign tag times gud
+𒋶	cuneiform sign tag times she
+𒋷	cuneiform sign tag times shu
+𒋸	cuneiform sign tag times tug2
+𒋹	cuneiform sign tag times ud
+𒋺	cuneiform sign tak4
+𒋻	cuneiform sign tar
+𒋼	cuneiform sign te
+𒋽	cuneiform sign te gunu
+𒋾	cuneiform sign ti
+𒋿	cuneiform sign ti tenu
+𒌀	cuneiform sign til
+𒌁	cuneiform sign tir
+𒌂	cuneiform sign tir times tak4
+𒌃	cuneiform sign tir over tir
+𒌄	cuneiform sign tir over tir gad over gad gar over gar
+𒌅	cuneiform sign tu
+𒌆	cuneiform sign tug2
+𒌇	cuneiform sign tuk
+𒌈	cuneiform sign tum
+𒌉	cuneiform sign tur
+𒌊	cuneiform sign tur over tur za over za
+𒌋	cuneiform sign u
+𒌌	cuneiform sign u gud
+𒌍	cuneiform sign u u u
+𒌎	cuneiform sign u over u pa over pa gar over gar
+𒌏	cuneiform sign u over u sur over sur
+𒌐	cuneiform sign u over u u reversed over u reversed
+𒌑	cuneiform sign u2
+𒌒	cuneiform sign ub
+𒌓	cuneiform sign ud
+𒌔	cuneiform sign ud kushu2
+𒌕	cuneiform sign ud times bad
+𒌖	cuneiform sign ud times mi
+𒌗	cuneiform sign ud times u plus u plus u
+𒌘	cuneiform sign ud times u plus u plus u gunu
+𒌙	cuneiform sign ud gunu
+𒌚	cuneiform sign ud sheshig
+𒌛	cuneiform sign ud sheshig times bad
+𒌜	cuneiform sign udug
+𒌝	cuneiform sign um
+𒌞	cuneiform sign um times lagab
+𒌟	cuneiform sign um times me plus da
+𒌠	cuneiform sign um times sha3
+𒌡	cuneiform sign um times u
+𒌢	cuneiform sign umbin
+𒌣	cuneiform sign umum
+𒌤	cuneiform sign umum times kaskal
+𒌥	cuneiform sign umum times pa
+𒌦	cuneiform sign un
+𒌧	cuneiform sign un gunu
+𒌨	cuneiform sign ur
+𒌩	cuneiform sign ur crossing ur
+𒌪	cuneiform sign ur sheshig
+𒌫	cuneiform sign ur2
+𒌬	cuneiform sign ur2 times a plus ha
+𒌭	cuneiform sign ur2 times a plus na
+𒌮	cuneiform sign ur2 times al
+𒌯	cuneiform sign ur2 times ha
+𒌰	cuneiform sign ur2 times nun
+𒌱	cuneiform sign ur2 times u2
+𒌲	cuneiform sign ur2 times u2 plus ash
+𒌳	cuneiform sign ur2 times u2 plus bi
+𒌴	cuneiform sign ur4
+𒌵	cuneiform sign uri
+𒌶	cuneiform sign uri3
+𒌷	cuneiform sign uru
+𒌸	cuneiform sign uru times a
+𒌹	cuneiform sign uru times ashgab
+𒌺	cuneiform sign uru times bar
+𒌻	cuneiform sign uru times dun
+𒌼	cuneiform sign uru times ga
+𒌽	cuneiform sign uru times gal
+𒌾	cuneiform sign uru times gan2 tenu
+𒌿	cuneiform sign uru times gar
+𒍀	cuneiform sign uru times gu
+𒍁	cuneiform sign uru times ha
+𒍂	cuneiform sign uru times igi
+𒍃	cuneiform sign uru times im
+𒍄	cuneiform sign uru times ish
+𒍅	cuneiform sign uru times ki
+𒍆	cuneiform sign uru times lum
+𒍇	cuneiform sign uru times min
+𒍈	cuneiform sign uru times pa
+𒍉	cuneiform sign uru times she
+𒍊	cuneiform sign uru times sig4
+𒍋	cuneiform sign uru times tu
+𒍌	cuneiform sign uru times u plus gud
+𒍍	cuneiform sign uru times ud
+𒍎	cuneiform sign uru times uruda
+𒍏	cuneiform sign uruda
+𒍐	cuneiform sign uruda times u
+𒍑	cuneiform sign ush
+𒍒	cuneiform sign ush times a
+𒍓	cuneiform sign ush times ku
+𒍔	cuneiform sign ush times kur
+𒍕	cuneiform sign ush times tak4
+𒍖	cuneiform sign ushx
+𒍗	cuneiform sign ush2
+𒍘	cuneiform sign ushumx
+𒍙	cuneiform sign utuki
+𒍚	cuneiform sign uz3
+𒍛	cuneiform sign uz3 times kaskal
+𒍜	cuneiform sign uzu
+𒍝	cuneiform sign za
+𒍞	cuneiform sign za tenu
+𒍟	cuneiform sign za squared times kur
+𒍠	cuneiform sign zag
+𒍡	cuneiform sign zamx
+𒍢	cuneiform sign ze2
+𒍣	cuneiform sign zi
+𒍤	cuneiform sign zi over zi
+𒍥	cuneiform sign zi3
+𒍦	cuneiform sign zib
+𒍧	cuneiform sign zib kaba tenu
+𒍨	cuneiform sign zig
+𒍩	cuneiform sign ziz2
+𒍪	cuneiform sign zu
+𒍫	cuneiform sign zu5
+𒍬	cuneiform sign zu5 times a
+𒍭	cuneiform sign zubur
+𒍮	cuneiform sign zum
+𒍯	cuneiform sign kap elamite
+𒍰	cuneiform sign ab times nun
+𒍱	cuneiform sign ab2 times a
+𒍲	cuneiform sign amar times kug
+𒍳	cuneiform sign dag kisim5 times u2 plus mash
+𒍴	cuneiform sign dag3
+𒍵	cuneiform sign dish plus shu
+𒍶	cuneiform sign dub times she
+𒍷	cuneiform sign ezen times gud
+𒍸	cuneiform sign ezen times she
+𒍹	cuneiform sign ga2 times an plus kak plus a
+𒍺	cuneiform sign ga2 times ash2
+𒍻	cuneiform sign ge22
+𒍼	cuneiform sign gig
+𒍽	cuneiform sign hush
+𒍾	cuneiform sign ka times anshe
+𒍿	cuneiform sign ka times ash3
+𒎀	cuneiform sign ka times gish
+𒎁	cuneiform sign ka times gud
+𒎂	cuneiform sign ka times hi times ash2
+𒎃	cuneiform sign ka times lum
+𒎄	cuneiform sign ka times pa
+𒎅	cuneiform sign ka times shul
+𒎆	cuneiform sign ka times tu
+𒎇	cuneiform sign ka times ur2
+𒎈	cuneiform sign lagab times gi
+𒎉	cuneiform sign lu2 sheshig times bad
+𒎊	cuneiform sign lu2 times esh2 plus lal
+𒎋	cuneiform sign lu2 times shu
+𒎌	cuneiform sign mesh
+𒎍	cuneiform sign mush3 times za
+𒎎	cuneiform sign na4
+𒎏	cuneiform sign nin
+𒎐	cuneiform sign nin9
+𒎑	cuneiform sign ninda2 times bal
+𒎒	cuneiform sign ninda2 times gi
+𒎓	cuneiform sign nu11 rotated ninety degrees
+𒎔	cuneiform sign pesh2 asterisk
+𒎕	cuneiform sign pir2
+𒎖	cuneiform sign sag times igi gunu
+𒎗	cuneiform sign ti2
+𒎘	cuneiform sign um times me
+𒎙	cuneiform sign u u
+##Numbers and punctuation
+𒐀	cuneiform numeric sign two ash
+𒐁	cuneiform numeric sign three ash
+𒐂	cuneiform numeric sign four ash
+𒐃	cuneiform numeric sign five ash
+𒐄	cuneiform numeric sign six ash
+𒐅	cuneiform numeric sign seven ash
+𒐆	cuneiform numeric sign eight ash
+𒐇	cuneiform numeric sign nine ash
+𒐈	cuneiform numeric sign three dish
+𒐉	cuneiform numeric sign four dish
+𒐊	cuneiform numeric sign five dish
+𒐋	cuneiform numeric sign six dish
+𒐌	cuneiform numeric sign seven dish
+𒐍	cuneiform numeric sign eight dish
+𒐎	cuneiform numeric sign nine dish
+𒐏	cuneiform numeric sign four u
+𒐐	cuneiform numeric sign five u
+𒐑	cuneiform numeric sign six u
+𒐒	cuneiform numeric sign seven u
+𒐓	cuneiform numeric sign eight u
+𒐔	cuneiform numeric sign nine u
+𒐕	cuneiform numeric sign one gesh2
+𒐖	cuneiform numeric sign two gesh2
+𒐗	cuneiform numeric sign three gesh2
+𒐘	cuneiform numeric sign four gesh2
+𒐙	cuneiform numeric sign five gesh2
+𒐚	cuneiform numeric sign six gesh2
+𒐛	cuneiform numeric sign seven gesh2
+𒐜	cuneiform numeric sign eight gesh2
+𒐝	cuneiform numeric sign nine gesh2
+𒐞	cuneiform numeric sign one geshu
+𒐟	cuneiform numeric sign two geshu
+𒐠	cuneiform numeric sign three geshu
+𒐡	cuneiform numeric sign four geshu
+𒐢	cuneiform numeric sign five geshu
+𒐣	cuneiform numeric sign two shar2
+𒐤	cuneiform numeric sign three shar2
+𒐥	cuneiform numeric sign three shar2 variant form
+𒐦	cuneiform numeric sign four shar2
+𒐧	cuneiform numeric sign five shar2
+𒐨	cuneiform numeric sign six shar2
+𒐩	cuneiform numeric sign seven shar2
+𒐪	cuneiform numeric sign eight shar2
+𒐫	cuneiform numeric sign nine shar2
+𒐬	cuneiform numeric sign one sharu
+𒐭	cuneiform numeric sign two sharu
+𒐮	cuneiform numeric sign three sharu
+𒐯	cuneiform numeric sign three sharu variant form
+𒐰	cuneiform numeric sign four sharu
+𒐱	cuneiform numeric sign five sharu
+𒐲	cuneiform numeric sign shar2 times gal plus dish
+𒐳	cuneiform numeric sign shar2 times gal plus min
+𒐴	cuneiform numeric sign one buru
+𒐵	cuneiform numeric sign two buru
+𒐶	cuneiform numeric sign three buru
+𒐷	cuneiform numeric sign three buru variant form
+𒐸	cuneiform numeric sign four buru
+𒐹	cuneiform numeric sign five buru
+𒐺	cuneiform numeric sign three variant form esh16
+𒐻	cuneiform numeric sign three variant form esh21
+𒐼	cuneiform numeric sign four variant form limmu
+𒐽	cuneiform numeric sign four variant form limmu4
+𒐾	cuneiform numeric sign four variant form limmu a
+𒐿	cuneiform numeric sign four variant form limmu b
+𒑀	cuneiform numeric sign six variant form ash9
+𒑁	cuneiform numeric sign seven variant form imin3
+𒑂	cuneiform numeric sign seven variant form imin a
+𒑃	cuneiform numeric sign seven variant form imin b
+𒑄	cuneiform numeric sign eight variant form ussu
+𒑅	cuneiform numeric sign eight variant form ussu3
+𒑆	cuneiform numeric sign nine variant form ilimmu
+𒑇	cuneiform numeric sign nine variant form ilimmu3
+𒑈	cuneiform numeric sign nine variant form ilimmu4
+𒑉	cuneiform numeric sign nine variant form ilimmu a
+𒑊	cuneiform numeric sign two ash tenu
+𒑋	cuneiform numeric sign three ash tenu
+𒑌	cuneiform numeric sign four ash tenu
+𒑍	cuneiform numeric sign five ash tenu
+𒑎	cuneiform numeric sign six ash tenu
+𒑏	cuneiform numeric sign one ban2
+𒑐	cuneiform numeric sign two ban2
+𒑑	cuneiform numeric sign three ban2
+𒑒	cuneiform numeric sign four ban2
+𒑓	cuneiform numeric sign four ban2 variant form
+𒑔	cuneiform numeric sign five ban2
+𒑕	cuneiform numeric sign five ban2 variant form
+𒑖	cuneiform numeric sign nigidamin
+𒑗	cuneiform numeric sign nigidaesh
+𒑘	cuneiform numeric sign one eshe3
+𒑙	cuneiform numeric sign two eshe3
+𒑚	cuneiform numeric sign one third dish
+𒑛	cuneiform numeric sign two thirds dish
+𒑜	cuneiform numeric sign five sixths dish
+𒑝	cuneiform numeric sign one third variant form a
+𒑞	cuneiform numeric sign two thirds variant form a
+𒑟	cuneiform numeric sign one eighth ash
+𒑠	cuneiform numeric sign one quarter ash
+𒑡	cuneiform numeric sign old assyrian one sixth
+𒑢	cuneiform numeric sign old assyrian one quarter
+𒑣	cuneiform numeric sign one quarter gur
+𒑤	cuneiform numeric sign one half gur
+𒑥	cuneiform numeric sign elamite one third
+𒑦	cuneiform numeric sign elamite two thirds
+𒑧	cuneiform numeric sign elamite forty
+𒑨	cuneiform numeric sign elamite fifty
+𒑩	cuneiform numeric sign four u variant form
+𒑪	cuneiform numeric sign five u variant form
+𒑫	cuneiform numeric sign six u variant form
+𒑬	cuneiform numeric sign seven u variant form
+𒑭	cuneiform numeric sign eight u variant form
+𒑮	cuneiform numeric sign nine u variant form
+𒑰	cuneiform punctuation sign old assyrian word divider
+𒑱	cuneiform punctuation sign vertical colon
+𒑲	cuneiform punctuation sign diagonal colon
+𒑳	cuneiform punctuation sign diagonal tricolon
+𒑴	cuneiform punctuation sign diagonal quadcolon
+##Early dynastic
+𒒀	cuneiform sign ab times nun tenu
+𒒁	cuneiform sign ab times shu2
+𒒂	cuneiform sign ad times esh2
+𒒃	cuneiform sign bad times dish tenu
+𒒄	cuneiform sign bahar2 times ab2
+𒒅	cuneiform sign bahar2 times ni
+𒒆	cuneiform sign bahar2 times za
+𒒇	cuneiform sign bu over bu times na2
+𒒈	cuneiform sign da times tak4
+𒒉	cuneiform sign dag times kur
+𒒊	cuneiform sign dim times igi
+𒒋	cuneiform sign dim times u u u
+𒒌	cuneiform sign dim2 times ud
+𒒍	cuneiform sign dug times anshe
+𒒎	cuneiform sign dug times ash
+𒒏	cuneiform sign dug times ash at left
+𒒐	cuneiform sign dug times din
+𒒑	cuneiform sign dug times dun
+𒒒	cuneiform sign dug times erin2
+𒒓	cuneiform sign dug times ga
+𒒔	cuneiform sign dug times gi
+𒒕	cuneiform sign dug times gir2 gunu
+𒒖	cuneiform sign dug times gish
+𒒗	cuneiform sign dug times ha
+𒒘	cuneiform sign dug times hi
+𒒙	cuneiform sign dug times igi gunu
+𒒚	cuneiform sign dug times kaskal
+𒒛	cuneiform sign dug times kur
+𒒜	cuneiform sign dug times kushu2
+𒒝	cuneiform sign dug times kushu2 plus kaskal
+𒒞	cuneiform sign dug times lak-020
+𒒟	cuneiform sign dug times lam
+𒒠	cuneiform sign dug times lam times kur
+𒒡	cuneiform sign dug times luh plus gish
+𒒢	cuneiform sign dug times mash
+𒒣	cuneiform sign dug times mes
+𒒤	cuneiform sign dug times mi
+𒒥	cuneiform sign dug times ni
+𒒦	cuneiform sign dug times pi
+𒒧	cuneiform sign dug times she
+𒒨	cuneiform sign dug times si gunu
+𒒩	cuneiform sign e2 times kur
+𒒪	cuneiform sign e2 times pap
+𒒫	cuneiform sign erin2 x
+𒒬	cuneiform sign esh2 crossing esh2
+𒒭	cuneiform sign ezen sheshig times ash
+𒒮	cuneiform sign ezen sheshig times hi
+𒒯	cuneiform sign ezen sheshig times igi gunu
+𒒰	cuneiform sign ezen sheshig times la
+𒒱	cuneiform sign ezen sheshig times lal
+𒒲	cuneiform sign ezen sheshig times me
+𒒳	cuneiform sign ezen sheshig times mes
+𒒴	cuneiform sign ezen sheshig times su
+𒒵	cuneiform sign ezen times su
+𒒶	cuneiform sign ga2 times bahar2
+𒒷	cuneiform sign ga2 times dim gunu
+𒒸	cuneiform sign ga2 times dug times igi gunu
+𒒹	cuneiform sign ga2 times dug times kaskal
+𒒺	cuneiform sign ga2 times eren
+𒒻	cuneiform sign ga2 times ga
+𒒼	cuneiform sign ga2 times gar plus di
+𒒽	cuneiform sign ga2 times gar plus ne
+𒒾	cuneiform sign ga2 times ha plus a
+𒒿	cuneiform sign ga2 times kushu2 plus kaskal
+𒓀	cuneiform sign ga2 times lam
+𒓁	cuneiform sign ga2 times lam times kur
+𒓂	cuneiform sign ga2 times luh
+𒓃	cuneiform sign ga2 times mush
+𒓄	cuneiform sign ga2 times ne
+𒓅	cuneiform sign ga2 times ne plus e2
+𒓆	cuneiform sign ga2 times ne plus gi
+𒓇	cuneiform sign ga2 times shim
+𒓈	cuneiform sign ga2 times ziz2
+𒓉	cuneiform sign gaba rotated ninety degrees
+𒓊	cuneiform sign geshtin times u
+𒓋	cuneiform sign gish times gish crossing gish
+𒓌	cuneiform sign gu2 times igi gunu
+𒓍	cuneiform sign gud plus gish times tak4
+𒓎	cuneiform sign ha tenu gunu
+𒓏	cuneiform sign hi times ash over hi times ash
+𒓐	cuneiform sign ka times bu
+𒓑	cuneiform sign ka times ka
+𒓒	cuneiform sign ka times u u u
+𒓓	cuneiform sign ka times ur
+𒓔	cuneiform sign lagab times zu over zu
+𒓕	cuneiform sign lak-003
+𒓖	cuneiform sign lak-021
+𒓗	cuneiform sign lak-025
+𒓘	cuneiform sign lak-030
+𒓙	cuneiform sign lak-050
+𒓚	cuneiform sign lak-051
+𒓛	cuneiform sign lak-062
+𒓜	cuneiform sign lak-079 over lak-079 gunu
+𒓝	cuneiform sign lak-080
+𒓞	cuneiform sign lak-081 over lak-081
+𒓟	cuneiform sign lak-092
+𒓠	cuneiform sign lak-130
+𒓡	cuneiform sign lak-142
+𒓢	cuneiform sign lak-210
+𒓣	cuneiform sign lak-219
+𒓤	cuneiform sign lak-220
+𒓥	cuneiform sign lak-225
+𒓦	cuneiform sign lak-228
+𒓧	cuneiform sign lak-238
+𒓨	cuneiform sign lak-265
+𒓩	cuneiform sign lak-266
+𒓪	cuneiform sign lak-343
+𒓫	cuneiform sign lak-347
+𒓬	cuneiform sign lak-348
+𒓭	cuneiform sign lak-383
+𒓮	cuneiform sign lak-384
+𒓯	cuneiform sign lak-390
+𒓰	cuneiform sign lak-441
+𒓱	cuneiform sign lak-449
+𒓲	cuneiform sign lak-449 times gu
+𒓳	cuneiform sign lak-449 times igi
+𒓴	cuneiform sign lak-449 times pap plus lu3
+𒓵	cuneiform sign lak-449 times pap plus pap plus lu3
+𒓶	cuneiform sign lak-449 times u2 plus ba
+𒓷	cuneiform sign lak-450
+𒓸	cuneiform sign lak-457
+𒓹	cuneiform sign lak-470
+𒓺	cuneiform sign lak-483
+𒓻	cuneiform sign lak-490
+𒓼	cuneiform sign lak-492
+𒓽	cuneiform sign lak-493
+𒓾	cuneiform sign lak-495
+𒓿	cuneiform sign lak-550
+𒔀	cuneiform sign lak-608
+𒔁	cuneiform sign lak-617
+𒔂	cuneiform sign lak-617 times ash
+𒔃	cuneiform sign lak-617 times bad
+𒔄	cuneiform sign lak-617 times dun3 gunu gunu
+𒔅	cuneiform sign lak-617 times ku3
+𒔆	cuneiform sign lak-617 times la
+𒔇	cuneiform sign lak-617 times tar
+𒔈	cuneiform sign lak-617 times te
+𒔉	cuneiform sign lak-617 times u2
+𒔊	cuneiform sign lak-617 times ud
+𒔋	cuneiform sign lak-617 times uruda
+𒔌	cuneiform sign lak-636
+𒔍	cuneiform sign lak-648
+𒔎	cuneiform sign lak-648 times dub
+𒔏	cuneiform sign lak-648 times ga
+𒔐	cuneiform sign lak-648 times igi
+𒔑	cuneiform sign lak-648 times igi gunu
+𒔒	cuneiform sign lak-648 times ni
+𒔓	cuneiform sign lak-648 times pap plus pap plus lu3
+𒔔	cuneiform sign lak-648 times shesh plus ki
+𒔕	cuneiform sign lak-648 times ud
+𒔖	cuneiform sign lak-648 times uruda
+𒔗	cuneiform sign lak-724
+𒔘	cuneiform sign lak-749
+𒔙	cuneiform sign lu2 gunu times ash
+𒔚	cuneiform sign lu2 times dish
+𒔛	cuneiform sign lu2 times hal
+𒔜	cuneiform sign lu2 times pap
+𒔝	cuneiform sign lu2 times pap plus pap plus lu3
+𒔞	cuneiform sign lu2 times tak4
+𒔟	cuneiform sign mi plus za7
+𒔠	cuneiform sign mush over mush times ga
+𒔡	cuneiform sign mush over mush times kak
+𒔢	cuneiform sign ninda2 times dim gunu
+𒔣	cuneiform sign ninda2 times gish
+𒔤	cuneiform sign ninda2 times gul
+𒔥	cuneiform sign ninda2 times hi
+𒔦	cuneiform sign ninda2 times kesh2
+𒔧	cuneiform sign ninda2 times lak-050
+𒔨	cuneiform sign ninda2 times mash
+𒔩	cuneiform sign ninda2 times pap plus pap
+𒔪	cuneiform sign ninda2 times u
+𒔫	cuneiform sign ninda2 times u plus u
+𒔬	cuneiform sign ninda2 times uruda
+𒔭	cuneiform sign sag gunu times ha
+𒔮	cuneiform sign sag times en
+𒔯	cuneiform sign sag times she at left
+𒔰	cuneiform sign sag times tak4
+𒔱	cuneiform sign sha6 tenu
+𒔲	cuneiform sign she over she
+𒔳	cuneiform sign she plus hub2
+𒔴	cuneiform sign she plus nam2
+𒔵	cuneiform sign she plus sar
+𒔶	cuneiform sign shu2 plus dug times ni
+𒔷	cuneiform sign shu2 plus e2 times an
+𒔸	cuneiform sign si times tak4
+𒔹	cuneiform sign tak4 plus sag
+𒔺	cuneiform sign tum times gan2 tenu
+𒔻	cuneiform sign tum times three dish
+𒔼	cuneiform sign ur2 inverted
+𒔽	cuneiform sign ur2 times ud
+𒔾	cuneiform sign uru times dara3
+𒔿	cuneiform sign uru times lak-668
+𒕀	cuneiform sign uru times lu3
+𒕁	cuneiform sign za7
+𒕂	cuneiform sign zu over zu plus sar
+𒕃	cuneiform sign zu5 times three dish tenu
+#Hieroglyphs
+##Egyptian hieroglyphs
+𓀀	egyptian hieroglyph a001
+𓀁	egyptian hieroglyph a002
+𓀂	egyptian hieroglyph a003
+𓀃	egyptian hieroglyph a004
+𓀄	egyptian hieroglyph a005
+𓀅	egyptian hieroglyph a005a
+𓀆	egyptian hieroglyph a006
+𓀇	egyptian hieroglyph a006a
+𓀈	egyptian hieroglyph a006b
+𓀉	egyptian hieroglyph a007
+𓀊	egyptian hieroglyph a008
+𓀋	egyptian hieroglyph a009
+𓀌	egyptian hieroglyph a010
+𓀍	egyptian hieroglyph a011
+𓀎	egyptian hieroglyph a012
+𓀏	egyptian hieroglyph a013
+𓀐	egyptian hieroglyph a014
+𓀑	egyptian hieroglyph a014a
+𓀒	egyptian hieroglyph a015
+𓀓	egyptian hieroglyph a016
+𓀔	egyptian hieroglyph a017
+𓀕	egyptian hieroglyph a017a
+𓀖	egyptian hieroglyph a018
+𓀗	egyptian hieroglyph a019
+𓀘	egyptian hieroglyph a020
+𓀙	egyptian hieroglyph a021
+𓀚	egyptian hieroglyph a022
+𓀛	egyptian hieroglyph a023
+𓀜	egyptian hieroglyph a024
+𓀝	egyptian hieroglyph a025
+𓀞	egyptian hieroglyph a026
+𓀟	egyptian hieroglyph a027
+𓀠	egyptian hieroglyph a028
+𓀡	egyptian hieroglyph a029
+𓀢	egyptian hieroglyph a030
+𓀣	egyptian hieroglyph a031
+𓀤	egyptian hieroglyph a032
+𓀥	egyptian hieroglyph a032a
+𓀦	egyptian hieroglyph a033
+𓀧	egyptian hieroglyph a034
+𓀨	egyptian hieroglyph a035
+𓀩	egyptian hieroglyph a036
+𓀪	egyptian hieroglyph a037
+𓀫	egyptian hieroglyph a038
+𓀬	egyptian hieroglyph a039
+𓀭	egyptian hieroglyph a040
+𓀮	egyptian hieroglyph a040a
+𓀯	egyptian hieroglyph a041
+𓀰	egyptian hieroglyph a042
+𓀱	egyptian hieroglyph a042a
+𓀲	egyptian hieroglyph a043
+𓀳	egyptian hieroglyph a043a
+𓀴	egyptian hieroglyph a044
+𓀵	egyptian hieroglyph a045
+𓀶	egyptian hieroglyph a045a
+𓀷	egyptian hieroglyph a046
+𓀸	egyptian hieroglyph a047
+𓀹	egyptian hieroglyph a048
+𓀺	egyptian hieroglyph a049
+𓀻	egyptian hieroglyph a050
+𓀼	egyptian hieroglyph a051
+𓀽	egyptian hieroglyph a052
+𓀾	egyptian hieroglyph a053
+𓀿	egyptian hieroglyph a054
+𓁀	egyptian hieroglyph a055
+𓁁	egyptian hieroglyph a056
+𓁂	egyptian hieroglyph a057
+𓁃	egyptian hieroglyph a058
+𓁄	egyptian hieroglyph a059
+𓁅	egyptian hieroglyph a060
+𓁆	egyptian hieroglyph a061
+𓁇	egyptian hieroglyph a062
+𓁈	egyptian hieroglyph a063
+𓁉	egyptian hieroglyph a064
+𓁊	egyptian hieroglyph a065
+𓁋	egyptian hieroglyph a066
+𓁌	egyptian hieroglyph a067
+𓁍	egyptian hieroglyph a068
+𓁎	egyptian hieroglyph a069
+𓁏	egyptian hieroglyph a070
+𓁐	egyptian hieroglyph b001
+𓁑	egyptian hieroglyph b002
+𓁒	egyptian hieroglyph b003
+𓁓	egyptian hieroglyph b004
+𓁔	egyptian hieroglyph b005
+𓁕	egyptian hieroglyph b005a
+𓁖	egyptian hieroglyph b006
+𓁗	egyptian hieroglyph b007
+𓁘	egyptian hieroglyph b008
+𓁙	egyptian hieroglyph b009
+𓁚	egyptian hieroglyph c001
+𓁛	egyptian hieroglyph c002
+𓁜	egyptian hieroglyph c002a
+𓁝	egyptian hieroglyph c002b
+𓁞	egyptian hieroglyph c002c
+𓁟	egyptian hieroglyph c003
+𓁠	egyptian hieroglyph c004
+𓁡	egyptian hieroglyph c005
+𓁢	egyptian hieroglyph c006
+𓁣	egyptian hieroglyph c007
+𓁤	egyptian hieroglyph c008
+𓁥	egyptian hieroglyph c009
+𓁦	egyptian hieroglyph c010
+𓁧	egyptian hieroglyph c010a
+𓁨	egyptian hieroglyph c011
+𓁩	egyptian hieroglyph c012
+𓁪	egyptian hieroglyph c013
+𓁫	egyptian hieroglyph c014
+𓁬	egyptian hieroglyph c015
+𓁭	egyptian hieroglyph c016
+𓁮	egyptian hieroglyph c017
+𓁯	egyptian hieroglyph c018
+𓁰	egyptian hieroglyph c019
+𓁱	egyptian hieroglyph c020
+𓁲	egyptian hieroglyph c021
+𓁳	egyptian hieroglyph c022
+𓁴	egyptian hieroglyph c023
+𓁵	egyptian hieroglyph c024
+𓁶	egyptian hieroglyph d001
+𓁷	egyptian hieroglyph d002
+𓁸	egyptian hieroglyph d003
+𓁹	egyptian hieroglyph d004
+𓁺	egyptian hieroglyph d005
+𓁻	egyptian hieroglyph d006
+𓁼	egyptian hieroglyph d007
+𓁽	egyptian hieroglyph d008
+𓁾	egyptian hieroglyph d008a
+𓁿	egyptian hieroglyph d009
+𓂀	egyptian hieroglyph d010
+𓂁	egyptian hieroglyph d011
+𓂂	egyptian hieroglyph d012
+𓂄	egyptian hieroglyph d014
+𓂅	egyptian hieroglyph d015
+𓂆	egyptian hieroglyph d016
+𓂇	egyptian hieroglyph d017
+𓂈	egyptian hieroglyph d018
+𓂉	egyptian hieroglyph d019
+𓂊	egyptian hieroglyph d020
+𓂋	egyptian hieroglyph d021
+𓂌	egyptian hieroglyph d022
+𓂍	egyptian hieroglyph d023
+𓂎	egyptian hieroglyph d024
+𓂏	egyptian hieroglyph d025
+𓂐	egyptian hieroglyph d026
+𓂑	egyptian hieroglyph d027
+𓂒	egyptian hieroglyph d027a
+𓂓	egyptian hieroglyph d028
+𓂔	egyptian hieroglyph d029
+𓂕	egyptian hieroglyph d030
+𓂖	egyptian hieroglyph d031
+𓂗	egyptian hieroglyph d031a
+𓂘	egyptian hieroglyph d032
+𓂙	egyptian hieroglyph d033
+𓂚	egyptian hieroglyph d034
+𓂛	egyptian hieroglyph d034a
+𓂜	egyptian hieroglyph d035
+𓂝	egyptian hieroglyph d036
+𓂞	egyptian hieroglyph d037
+𓂟	egyptian hieroglyph d038
+𓂠	egyptian hieroglyph d039
+𓂡	egyptian hieroglyph d040
+𓂢	egyptian hieroglyph d041
+𓂣	egyptian hieroglyph d042
+𓂤	egyptian hieroglyph d043
+𓂥	egyptian hieroglyph d044
+𓂦	egyptian hieroglyph d045
+𓂧	egyptian hieroglyph d046
+𓂨	egyptian hieroglyph d046a
+𓂩	egyptian hieroglyph d047
+𓂪	egyptian hieroglyph d048
+𓂫	egyptian hieroglyph d048a
+𓂬	egyptian hieroglyph d049
+𓂭	egyptian hieroglyph d050
+𓂮	egyptian hieroglyph d050a
+𓂯	egyptian hieroglyph d050b
+𓂰	egyptian hieroglyph d050c
+𓂱	egyptian hieroglyph d050d
+𓂲	egyptian hieroglyph d050e
+𓂳	egyptian hieroglyph d050f
+𓂴	egyptian hieroglyph d050g
+𓂵	egyptian hieroglyph d050h
+𓂶	egyptian hieroglyph d050i
+𓂷	egyptian hieroglyph d051
+𓂸	egyptian hieroglyph d052
+𓂹	egyptian hieroglyph d052a
+𓂺	egyptian hieroglyph d053
+𓂻	egyptian hieroglyph d054
+𓂼	egyptian hieroglyph d054a
+𓂽	egyptian hieroglyph d055
+𓂾	egyptian hieroglyph d056
+𓂿	egyptian hieroglyph d057
+𓃀	egyptian hieroglyph d058
+𓃁	egyptian hieroglyph d059
+𓃂	egyptian hieroglyph d060
+𓃃	egyptian hieroglyph d061
+𓃄	egyptian hieroglyph d062
+𓃅	egyptian hieroglyph d063
+𓃆	egyptian hieroglyph d064
+𓃇	egyptian hieroglyph d065
+𓃈	egyptian hieroglyph d066
+𓃉	egyptian hieroglyph d067
+𓃊	egyptian hieroglyph d067a
+𓃋	egyptian hieroglyph d067b
+𓃌	egyptian hieroglyph d067c
+𓃍	egyptian hieroglyph d067d
+𓃎	egyptian hieroglyph d067e
+𓃏	egyptian hieroglyph d067f
+𓃐	egyptian hieroglyph d067g
+𓃑	egyptian hieroglyph d067h
+𓃒	egyptian hieroglyph e001
+𓃓	egyptian hieroglyph e002
+𓃔	egyptian hieroglyph e003
+𓃕	egyptian hieroglyph e004
+𓃖	egyptian hieroglyph e005
+𓃗	egyptian hieroglyph e006
+𓃘	egyptian hieroglyph e007
+𓃙	egyptian hieroglyph e008
+𓃚	egyptian hieroglyph e008a
+𓃛	egyptian hieroglyph e009
+𓃜	egyptian hieroglyph e009a
+𓃝	egyptian hieroglyph e010
+𓃞	egyptian hieroglyph e011
+𓃟	egyptian hieroglyph e012
+𓃡	egyptian hieroglyph e014
+𓃢	egyptian hieroglyph e015
+𓃣	egyptian hieroglyph e016
+𓃤	egyptian hieroglyph e016a
+𓃥	egyptian hieroglyph e017
+𓃦	egyptian hieroglyph e017a
+𓃧	egyptian hieroglyph e018
+𓃨	egyptian hieroglyph e019
+𓃩	egyptian hieroglyph e020
+𓃪	egyptian hieroglyph e020a
+𓃫	egyptian hieroglyph e021
+𓃬	egyptian hieroglyph e022
+𓃭	egyptian hieroglyph e023
+𓃮	egyptian hieroglyph e024
+𓃯	egyptian hieroglyph e025
+𓃰	egyptian hieroglyph e026
+𓃱	egyptian hieroglyph e027
+𓃲	egyptian hieroglyph e028
+𓃳	egyptian hieroglyph e028a
+𓃴	egyptian hieroglyph e029
+𓃵	egyptian hieroglyph e030
+𓃶	egyptian hieroglyph e031
+𓃷	egyptian hieroglyph e032
+𓃸	egyptian hieroglyph e033
+𓃹	egyptian hieroglyph e034
+𓃺	egyptian hieroglyph e034a
+𓃻	egyptian hieroglyph e036
+𓃼	egyptian hieroglyph e037
+𓃽	egyptian hieroglyph e038
+𓃾	egyptian hieroglyph f001
+𓃿	egyptian hieroglyph f001a
+𓄀	egyptian hieroglyph f002
+𓄁	egyptian hieroglyph f003
+𓄂	egyptian hieroglyph f004
+𓄃	egyptian hieroglyph f005
+𓄄	egyptian hieroglyph f006
+𓄅	egyptian hieroglyph f007
+𓄆	egyptian hieroglyph f008
+𓄇	egyptian hieroglyph f009
+𓄈	egyptian hieroglyph f010
+𓄉	egyptian hieroglyph f011
+𓄊	egyptian hieroglyph f012
+𓄋	egyptian hieroglyph f013
+𓄌	egyptian hieroglyph f013a
+𓄍	egyptian hieroglyph f014
+𓄎	egyptian hieroglyph f015
+𓄏	egyptian hieroglyph f016
+𓄐	egyptian hieroglyph f017
+𓄑	egyptian hieroglyph f018
+𓄒	egyptian hieroglyph f019
+𓄓	egyptian hieroglyph f020
+𓄔	egyptian hieroglyph f021
+𓄕	egyptian hieroglyph f021a
+𓄖	egyptian hieroglyph f022
+𓄗	egyptian hieroglyph f023
+𓄘	egyptian hieroglyph f024
+𓄙	egyptian hieroglyph f025
+𓄚	egyptian hieroglyph f026
+𓄛	egyptian hieroglyph f027
+𓄜	egyptian hieroglyph f028
+𓄝	egyptian hieroglyph f029
+𓄞	egyptian hieroglyph f030
+𓄟	egyptian hieroglyph f031
+𓄠	egyptian hieroglyph f031a
+𓄡	egyptian hieroglyph f032
+𓄢	egyptian hieroglyph f033
+𓄣	egyptian hieroglyph f034
+𓄤	egyptian hieroglyph f035
+𓄥	egyptian hieroglyph f036
+𓄦	egyptian hieroglyph f037
+𓄧	egyptian hieroglyph f037a
+𓄨	egyptian hieroglyph f038
+𓄩	egyptian hieroglyph f038a
+𓄪	egyptian hieroglyph f039
+𓄫	egyptian hieroglyph f040
+𓄬	egyptian hieroglyph f041
+𓄭	egyptian hieroglyph f042
+𓄮	egyptian hieroglyph f043
+𓄯	egyptian hieroglyph f044
+𓄰	egyptian hieroglyph f045
+𓄱	egyptian hieroglyph f045a
+𓄲	egyptian hieroglyph f046
+𓄳	egyptian hieroglyph f046a
+𓄴	egyptian hieroglyph f047
+𓄵	egyptian hieroglyph f047a
+𓄶	egyptian hieroglyph f048
+𓄷	egyptian hieroglyph f049
+𓄸	egyptian hieroglyph f050
+𓄹	egyptian hieroglyph f051
+𓄺	egyptian hieroglyph f051a
+𓄻	egyptian hieroglyph f051b
+𓄼	egyptian hieroglyph f051c
+𓄽	egyptian hieroglyph f052
+𓄾	egyptian hieroglyph f053
+𓄿	egyptian hieroglyph g001
+𓅀	egyptian hieroglyph g002
+𓅁	egyptian hieroglyph g003
+𓅂	egyptian hieroglyph g004
+𓅃	egyptian hieroglyph g005
+𓅄	egyptian hieroglyph g006
+𓅅	egyptian hieroglyph g006a
+𓅆	egyptian hieroglyph g007
+𓅇	egyptian hieroglyph g007a
+𓅈	egyptian hieroglyph g007b
+𓅉	egyptian hieroglyph g008
+𓅊	egyptian hieroglyph g009
+𓅋	egyptian hieroglyph g010
+𓅌	egyptian hieroglyph g011
+𓅍	egyptian hieroglyph g011a
+𓅎	egyptian hieroglyph g012
+𓅏	egyptian hieroglyph g013
+𓅐	egyptian hieroglyph g014
+𓅑	egyptian hieroglyph g015
+𓅒	egyptian hieroglyph g016
+𓅓	egyptian hieroglyph g017
+𓅔	egyptian hieroglyph g018
+𓅕	egyptian hieroglyph g019
+𓅖	egyptian hieroglyph g020
+𓅗	egyptian hieroglyph g020a
+𓅘	egyptian hieroglyph g021
+𓅙	egyptian hieroglyph g022
+𓅚	egyptian hieroglyph g023
+𓅛	egyptian hieroglyph g024
+𓅜	egyptian hieroglyph g025
+𓅝	egyptian hieroglyph g026
+𓅞	egyptian hieroglyph g026a
+𓅟	egyptian hieroglyph g027
+𓅠	egyptian hieroglyph g028
+𓅡	egyptian hieroglyph g029
+𓅢	egyptian hieroglyph g030
+𓅣	egyptian hieroglyph g031
+𓅤	egyptian hieroglyph g032
+𓅥	egyptian hieroglyph g033
+𓅦	egyptian hieroglyph g034
+𓅧	egyptian hieroglyph g035
+𓅨	egyptian hieroglyph g036
+𓅩	egyptian hieroglyph g036a
+𓅪	egyptian hieroglyph g037
+𓅫	egyptian hieroglyph g037a
+𓅬	egyptian hieroglyph g038
+𓅭	egyptian hieroglyph g039
+𓅮	egyptian hieroglyph g040
+𓅯	egyptian hieroglyph g041
+𓅰	egyptian hieroglyph g042
+𓅱	egyptian hieroglyph g043
+𓅲	egyptian hieroglyph g043a
+𓅳	egyptian hieroglyph g044
+𓅴	egyptian hieroglyph g045
+𓅵	egyptian hieroglyph g045a
+𓅶	egyptian hieroglyph g046
+𓅷	egyptian hieroglyph g047
+𓅸	egyptian hieroglyph g048
+𓅹	egyptian hieroglyph g049
+𓅺	egyptian hieroglyph g050
+𓅻	egyptian hieroglyph g051
+𓅼	egyptian hieroglyph g052
+𓅽	egyptian hieroglyph g053
+𓅾	egyptian hieroglyph g054
+𓅿	egyptian hieroglyph h001
+𓆀	egyptian hieroglyph h002
+𓆁	egyptian hieroglyph h003
+𓆂	egyptian hieroglyph h004
+𓆃	egyptian hieroglyph h005
+𓆄	egyptian hieroglyph h006
+𓆅	egyptian hieroglyph h006a
+𓆆	egyptian hieroglyph h007
+𓆇	egyptian hieroglyph h008
+𓆈	egyptian hieroglyph i001
+𓆉	egyptian hieroglyph i002
+𓆊	egyptian hieroglyph i003
+𓆋	egyptian hieroglyph i004
+𓆌	egyptian hieroglyph i005
+𓆍	egyptian hieroglyph i005a
+𓆎	egyptian hieroglyph i006
+𓆏	egyptian hieroglyph i007
+𓆐	egyptian hieroglyph i008
+𓆑	egyptian hieroglyph i009
+𓆒	egyptian hieroglyph i009a
+𓆓	egyptian hieroglyph i010
+𓆔	egyptian hieroglyph i010a
+𓆕	egyptian hieroglyph i011
+𓆖	egyptian hieroglyph i011a
+𓆗	egyptian hieroglyph i012
+𓆘	egyptian hieroglyph i013
+𓆙	egyptian hieroglyph i014
+𓆚	egyptian hieroglyph i015
+𓆛	egyptian hieroglyph k001
+𓆜	egyptian hieroglyph k002
+𓆠	egyptian hieroglyph k006
+𓆡	egyptian hieroglyph k007
+𓆢	egyptian hieroglyph k008
+𓆣	egyptian hieroglyph l001
+𓆤	egyptian hieroglyph l002
+𓆥	egyptian hieroglyph l002a
+𓆦	egyptian hieroglyph l003
+𓆧	egyptian hieroglyph l004
+𓆨	egyptian hieroglyph l005
+𓆫	egyptian hieroglyph l007
+𓆬	egyptian hieroglyph l008
+𓆭	egyptian hieroglyph m001
+𓆮	egyptian hieroglyph m001a
+𓆯	egyptian hieroglyph m001b
+𓆰	egyptian hieroglyph m002
+𓆱	egyptian hieroglyph m003
+𓆲	egyptian hieroglyph m003a
+𓆳	egyptian hieroglyph m004
+𓆴	egyptian hieroglyph m005
+𓆵	egyptian hieroglyph m006
+𓆶	egyptian hieroglyph m007
+𓆷	egyptian hieroglyph m008
+𓆹	egyptian hieroglyph m010
+𓆺	egyptian hieroglyph m010a
+𓆻	egyptian hieroglyph m011
+𓆼	egyptian hieroglyph m012
+𓆽	egyptian hieroglyph m012a
+𓆾	egyptian hieroglyph m012b
+𓆿	egyptian hieroglyph m012c
+𓇀	egyptian hieroglyph m012d
+𓇁	egyptian hieroglyph m012e
+𓇂	egyptian hieroglyph m012f
+𓇃	egyptian hieroglyph m012g
+𓇄	egyptian hieroglyph m012h
+𓇅	egyptian hieroglyph m013
+𓇆	egyptian hieroglyph m014
+𓇇	egyptian hieroglyph m015
+𓇈	egyptian hieroglyph m015a
+𓇉	egyptian hieroglyph m016
+𓇊	egyptian hieroglyph m016a
+𓇋	egyptian hieroglyph m017
+𓇌	egyptian hieroglyph m017a
+𓇍	egyptian hieroglyph m018
+𓇎	egyptian hieroglyph m019
+𓇏	egyptian hieroglyph m020
+𓇐	egyptian hieroglyph m021
+𓇑	egyptian hieroglyph m022
+𓇒	egyptian hieroglyph m022a
+𓇓	egyptian hieroglyph m023
+𓇔	egyptian hieroglyph m024
+𓇕	egyptian hieroglyph m024a
+𓇖	egyptian hieroglyph m025
+𓇗	egyptian hieroglyph m026
+𓇘	egyptian hieroglyph m027
+𓇙	egyptian hieroglyph m028
+𓇚	egyptian hieroglyph m028a
+𓇛	egyptian hieroglyph m029
+𓇜	egyptian hieroglyph m030
+𓇝	egyptian hieroglyph m031
+𓇞	egyptian hieroglyph m031a
+𓇟	egyptian hieroglyph m032
+𓇠	egyptian hieroglyph m033
+𓇡	egyptian hieroglyph m033a
+𓇢	egyptian hieroglyph m033b
+𓇣	egyptian hieroglyph m034
+𓇤	egyptian hieroglyph m035
+𓇥	egyptian hieroglyph m036
+𓇦	egyptian hieroglyph m037
+𓇧	egyptian hieroglyph m038
+𓇨	egyptian hieroglyph m039
+𓇩	egyptian hieroglyph m040
+𓇪	egyptian hieroglyph m040a
+𓇫	egyptian hieroglyph m041
+𓇬	egyptian hieroglyph m042
+𓇭	egyptian hieroglyph m043
+𓇮	egyptian hieroglyph m044
+𓇯	egyptian hieroglyph n001
+𓇰	egyptian hieroglyph n002
+𓇱	egyptian hieroglyph n003
+𓇲	egyptian hieroglyph n004
+𓇳	egyptian hieroglyph n005
+𓇴	egyptian hieroglyph n006
+𓇵	egyptian hieroglyph n007
+𓇶	egyptian hieroglyph n008
+𓇷	egyptian hieroglyph n009
+𓇸	egyptian hieroglyph n010
+𓇹	egyptian hieroglyph n011
+𓇺	egyptian hieroglyph n012
+𓇻	egyptian hieroglyph n013
+𓇽	egyptian hieroglyph n015
+𓇾	egyptian hieroglyph n016
+𓇿	egyptian hieroglyph n017
+𓈀	egyptian hieroglyph n018
+𓈁	egyptian hieroglyph n018a
+𓈂	egyptian hieroglyph n018b
+𓈃	egyptian hieroglyph n019
+𓈄	egyptian hieroglyph n020
+𓈅	egyptian hieroglyph n021
+𓈆	egyptian hieroglyph n022
+𓈇	egyptian hieroglyph n023
+𓈈	egyptian hieroglyph n024
+𓈉	egyptian hieroglyph n025
+𓈊	egyptian hieroglyph n025a
+𓈋	egyptian hieroglyph n026
+𓈌	egyptian hieroglyph n027
+𓈍	egyptian hieroglyph n028
+𓈎	egyptian hieroglyph n029
+𓈏	egyptian hieroglyph n030
+𓈐	egyptian hieroglyph n031
+𓈑	egyptian hieroglyph n032
+𓈒	egyptian hieroglyph n033
+𓈓	egyptian hieroglyph n033a
+𓈔	egyptian hieroglyph n034
+𓈕	egyptian hieroglyph n034a
+𓈖	egyptian hieroglyph n035
+𓈗	egyptian hieroglyph n035a
+𓈘	egyptian hieroglyph n036
+𓈙	egyptian hieroglyph n037
+𓈚	egyptian hieroglyph n037a
+𓈛	egyptian hieroglyph n038
+𓈜	egyptian hieroglyph n039
+𓈝	egyptian hieroglyph n040
+𓈞	egyptian hieroglyph n041
+𓈟	egyptian hieroglyph n042
+𓈠	egyptian hieroglyph nl001
+𓈡	egyptian hieroglyph nl002
+𓈢	egyptian hieroglyph nl003
+𓈣	egyptian hieroglyph nl004
+𓈤	egyptian hieroglyph nl005
+𓈥	egyptian hieroglyph nl005a
+𓈦	egyptian hieroglyph nl006
+𓈧	egyptian hieroglyph nl007
+𓈨	egyptian hieroglyph nl008
+𓈩	egyptian hieroglyph nl009
+𓈪	egyptian hieroglyph nl010
+𓈫	egyptian hieroglyph nl011
+𓈬	egyptian hieroglyph nl012
+𓈭	egyptian hieroglyph nl013
+𓈮	egyptian hieroglyph nl014
+𓈯	egyptian hieroglyph nl015
+𓈰	egyptian hieroglyph nl016
+𓈱	egyptian hieroglyph nl017
+𓈲	egyptian hieroglyph nl017a
+𓈳	egyptian hieroglyph nl018
+𓈴	egyptian hieroglyph nl019
+𓈵	egyptian hieroglyph nl020
+𓈶	egyptian hieroglyph nu001
+𓈷	egyptian hieroglyph nu002
+𓈸	egyptian hieroglyph nu003
+𓈹	egyptian hieroglyph nu004
+𓈺	egyptian hieroglyph nu005
+𓈻	egyptian hieroglyph nu006
+𓈼	egyptian hieroglyph nu007
+𓈽	egyptian hieroglyph nu008
+𓈾	egyptian hieroglyph nu009
+𓈿	egyptian hieroglyph nu010
+𓉀	egyptian hieroglyph nu010a
+𓉁	egyptian hieroglyph nu011
+𓉂	egyptian hieroglyph nu011a
+𓉃	egyptian hieroglyph nu012
+𓉄	egyptian hieroglyph nu013
+𓉅	egyptian hieroglyph nu014
+𓉆	egyptian hieroglyph nu015
+𓉇	egyptian hieroglyph nu016
+𓉈	egyptian hieroglyph nu017
+𓉉	egyptian hieroglyph nu018
+𓉊	egyptian hieroglyph nu018a
+𓉋	egyptian hieroglyph nu019
+𓉌	egyptian hieroglyph nu020
+𓉍	egyptian hieroglyph nu021
+𓉎	egyptian hieroglyph nu022
+𓉏	egyptian hieroglyph nu022a
+𓉐	egyptian hieroglyph o001
+𓉑	egyptian hieroglyph o001a
+𓉒	egyptian hieroglyph o002
+𓉓	egyptian hieroglyph o003
+𓉔	egyptian hieroglyph o004
+𓉕	egyptian hieroglyph o005
+𓉖	egyptian hieroglyph o005a
+𓉗	egyptian hieroglyph o006
+𓉘	egyptian hieroglyph o006a
+𓉙	egyptian hieroglyph o006b
+𓉚	egyptian hieroglyph o006c
+𓉛	egyptian hieroglyph o006d
+𓉜	egyptian hieroglyph o006e
+𓉝	egyptian hieroglyph o006f
+𓉞	egyptian hieroglyph o007
+𓉟	egyptian hieroglyph o008
+𓉠	egyptian hieroglyph o009
+𓉡	egyptian hieroglyph o010
+𓉢	egyptian hieroglyph o010a
+𓉣	egyptian hieroglyph o010b
+𓉤	egyptian hieroglyph o010c
+𓉥	egyptian hieroglyph o011
+𓉦	egyptian hieroglyph o012
+𓉧	egyptian hieroglyph o013
+𓉨	egyptian hieroglyph o014
+𓉩	egyptian hieroglyph o015
+𓉪	egyptian hieroglyph o016
+𓉫	egyptian hieroglyph o017
+𓉬	egyptian hieroglyph o018
+𓉭	egyptian hieroglyph o019
+𓉮	egyptian hieroglyph o019a
+𓉯	egyptian hieroglyph o020
+𓉰	egyptian hieroglyph o020a
+𓉱	egyptian hieroglyph o021
+𓉲	egyptian hieroglyph o022
+𓉳	egyptian hieroglyph o023
+𓉴	egyptian hieroglyph o024
+𓉵	egyptian hieroglyph o024a
+𓉶	egyptian hieroglyph o025
+𓉷	egyptian hieroglyph o025a
+𓉸	egyptian hieroglyph o026
+𓉹	egyptian hieroglyph o027
+𓉺	egyptian hieroglyph o028
+𓉻	egyptian hieroglyph o029
+𓉼	egyptian hieroglyph o029a
+𓉽	egyptian hieroglyph o030
+𓉾	egyptian hieroglyph o030a
+𓉿	egyptian hieroglyph o031
+𓊀	egyptian hieroglyph o032
+𓊁	egyptian hieroglyph o033
+𓊂	egyptian hieroglyph o033a
+𓊃	egyptian hieroglyph o034
+𓊄	egyptian hieroglyph o035
+𓊅	egyptian hieroglyph o036
+𓊆	egyptian hieroglyph o036a
+𓊇	egyptian hieroglyph o036b
+𓊈	egyptian hieroglyph o036c
+𓊉	egyptian hieroglyph o036d
+𓊊	egyptian hieroglyph o037
+𓊋	egyptian hieroglyph o038
+𓊌	egyptian hieroglyph o039
+𓊍	egyptian hieroglyph o040
+𓊎	egyptian hieroglyph o041
+𓊏	egyptian hieroglyph o042
+𓊐	egyptian hieroglyph o043
+𓊑	egyptian hieroglyph o044
+𓊒	egyptian hieroglyph o045
+𓊓	egyptian hieroglyph o046
+𓊔	egyptian hieroglyph o047
+𓊕	egyptian hieroglyph o048
+𓊖	egyptian hieroglyph o049
+𓊗	egyptian hieroglyph o050
+𓊘	egyptian hieroglyph o050a
+𓊙	egyptian hieroglyph o050b
+𓊚	egyptian hieroglyph o051
+𓊛	egyptian hieroglyph p001
+𓊜	egyptian hieroglyph p001a
+𓊝	egyptian hieroglyph p002
+𓊞	egyptian hieroglyph p003
+𓊟	egyptian hieroglyph p003a
+𓊠	egyptian hieroglyph p004
+𓊡	egyptian hieroglyph p005
+𓊢	egyptian hieroglyph p006
+𓊣	egyptian hieroglyph p007
+𓊤	egyptian hieroglyph p008
+𓊥	egyptian hieroglyph p009
+𓊦	egyptian hieroglyph p010
+𓊧	egyptian hieroglyph p011
+𓊨	egyptian hieroglyph q001
+𓊩	egyptian hieroglyph q002
+𓊪	egyptian hieroglyph q003
+𓊫	egyptian hieroglyph q004
+𓊬	egyptian hieroglyph q005
+𓊭	egyptian hieroglyph q006
+𓊮	egyptian hieroglyph q007
+𓊯	egyptian hieroglyph r001
+𓊰	egyptian hieroglyph r002
+𓊱	egyptian hieroglyph r002a
+𓊲	egyptian hieroglyph r003
+𓊳	egyptian hieroglyph r003a
+𓊴	egyptian hieroglyph r003b
+𓊵	egyptian hieroglyph r004
+𓊶	egyptian hieroglyph r005
+𓊷	egyptian hieroglyph r006
+𓊸	egyptian hieroglyph r007
+𓊹	egyptian hieroglyph r008
+𓊺	egyptian hieroglyph r009
+𓊻	egyptian hieroglyph r010
+𓊼	egyptian hieroglyph r010a
+𓊽	egyptian hieroglyph r011
+𓊾	egyptian hieroglyph r012
+𓊿	egyptian hieroglyph r013
+𓋀	egyptian hieroglyph r014
+𓋁	egyptian hieroglyph r015
+𓋂	egyptian hieroglyph r016
+𓋃	egyptian hieroglyph r016a
+𓋄	egyptian hieroglyph r017
+𓋅	egyptian hieroglyph r018
+𓋆	egyptian hieroglyph r019
+𓋇	egyptian hieroglyph r020
+𓋈	egyptian hieroglyph r021
+𓋉	egyptian hieroglyph r022
+𓋊	egyptian hieroglyph r023
+𓋋	egyptian hieroglyph r024
+𓋌	egyptian hieroglyph r025
+𓋍	egyptian hieroglyph r026
+𓋎	egyptian hieroglyph r027
+𓋏	egyptian hieroglyph r028
+𓋐	egyptian hieroglyph r029
+𓋑	egyptian hieroglyph s001
+𓋒	egyptian hieroglyph s002
+𓋓	egyptian hieroglyph s002a
+𓋔	egyptian hieroglyph s003
+𓋕	egyptian hieroglyph s004
+𓋖	egyptian hieroglyph s005
+𓋗	egyptian hieroglyph s006
+𓋘	egyptian hieroglyph s006a
+𓋙	egyptian hieroglyph s007
+𓋚	egyptian hieroglyph s008
+𓋛	egyptian hieroglyph s009
+𓋜	egyptian hieroglyph s010
+𓋝	egyptian hieroglyph s011
+𓋞	egyptian hieroglyph s012
+𓋟	egyptian hieroglyph s013
+𓋠	egyptian hieroglyph s014
+𓋡	egyptian hieroglyph s014a
+𓋢	egyptian hieroglyph s014b
+𓋣	egyptian hieroglyph s015
+𓋤	egyptian hieroglyph s016
+𓋥	egyptian hieroglyph s017
+𓋦	egyptian hieroglyph s017a
+𓋧	egyptian hieroglyph s018
+𓋨	egyptian hieroglyph s019
+𓋩	egyptian hieroglyph s020
+𓋪	egyptian hieroglyph s021
+𓋫	egyptian hieroglyph s022
+𓋬	egyptian hieroglyph s023
+𓋭	egyptian hieroglyph s024
+𓋮	egyptian hieroglyph s025
+𓋯	egyptian hieroglyph s026
+𓋰	egyptian hieroglyph s026a
+𓋱	egyptian hieroglyph s026b
+𓋲	egyptian hieroglyph s027
+𓋳	egyptian hieroglyph s028
+𓋴	egyptian hieroglyph s029
+𓋵	egyptian hieroglyph s030
+𓋶	egyptian hieroglyph s031
+𓋷	egyptian hieroglyph s032
+𓋸	egyptian hieroglyph s033
+𓋹	egyptian hieroglyph s034
+𓋺	egyptian hieroglyph s035
+𓋻	egyptian hieroglyph s035a
+𓋼	egyptian hieroglyph s036
+𓋽	egyptian hieroglyph s037
+𓋾	egyptian hieroglyph s038
+𓋿	egyptian hieroglyph s039
+𓌀	egyptian hieroglyph s040
+𓌁	egyptian hieroglyph s041
+𓌂	egyptian hieroglyph s042
+𓌃	egyptian hieroglyph s043
+𓌄	egyptian hieroglyph s044
+𓌅	egyptian hieroglyph s045
+𓌆	egyptian hieroglyph s046
+𓌇	egyptian hieroglyph t001
+𓌈	egyptian hieroglyph t002
+𓌉	egyptian hieroglyph t003
+𓌊	egyptian hieroglyph t003a
+𓌋	egyptian hieroglyph t004
+𓌌	egyptian hieroglyph t005
+𓌍	egyptian hieroglyph t006
+𓌎	egyptian hieroglyph t007
+𓌏	egyptian hieroglyph t007a
+𓌐	egyptian hieroglyph t008
+𓌑	egyptian hieroglyph t008a
+𓌒	egyptian hieroglyph t009
+𓌓	egyptian hieroglyph t009a
+𓌔	egyptian hieroglyph t010
+𓌕	egyptian hieroglyph t011
+𓌖	egyptian hieroglyph t011a
+𓌗	egyptian hieroglyph t012
+𓌘	egyptian hieroglyph t013
+𓌙	egyptian hieroglyph t014
+𓌚	egyptian hieroglyph t015
+𓌛	egyptian hieroglyph t016
+𓌜	egyptian hieroglyph t016a
+𓌝	egyptian hieroglyph t017
+𓌞	egyptian hieroglyph t018
+𓌟	egyptian hieroglyph t019
+𓌠	egyptian hieroglyph t020
+𓌡	egyptian hieroglyph t021
+𓌢	egyptian hieroglyph t022
+𓌣	egyptian hieroglyph t023
+𓌤	egyptian hieroglyph t024
+𓌥	egyptian hieroglyph t025
+𓌦	egyptian hieroglyph t026
+𓌧	egyptian hieroglyph t027
+𓌨	egyptian hieroglyph t028
+𓌩	egyptian hieroglyph t029
+𓌪	egyptian hieroglyph t030
+𓌫	egyptian hieroglyph t031
+𓌬	egyptian hieroglyph t032
+𓌭	egyptian hieroglyph t032a
+𓌮	egyptian hieroglyph t033
+𓌯	egyptian hieroglyph t033a
+𓌰	egyptian hieroglyph t034
+𓌱	egyptian hieroglyph t035
+𓌲	egyptian hieroglyph t036
+𓌳	egyptian hieroglyph u001
+𓌴	egyptian hieroglyph u002
+𓌵	egyptian hieroglyph u003
+𓌶	egyptian hieroglyph u004
+𓌷	egyptian hieroglyph u005
+𓌸	egyptian hieroglyph u006
+𓌹	egyptian hieroglyph u006a
+𓌺	egyptian hieroglyph u006b
+𓌻	egyptian hieroglyph u007
+𓌼	egyptian hieroglyph u008
+𓌽	egyptian hieroglyph u009
+𓌾	egyptian hieroglyph u010
+𓌿	egyptian hieroglyph u011
+𓍀	egyptian hieroglyph u012
+𓍁	egyptian hieroglyph u013
+𓍂	egyptian hieroglyph u014
+𓍃	egyptian hieroglyph u015
+𓍄	egyptian hieroglyph u016
+𓍅	egyptian hieroglyph u017
+𓍆	egyptian hieroglyph u018
+𓍇	egyptian hieroglyph u019
+𓍈	egyptian hieroglyph u020
+𓍉	egyptian hieroglyph u021
+𓍊	egyptian hieroglyph u022
+𓍋	egyptian hieroglyph u023
+𓍌	egyptian hieroglyph u023a
+𓍍	egyptian hieroglyph u024
+𓍎	egyptian hieroglyph u025
+𓍏	egyptian hieroglyph u026
+𓍐	egyptian hieroglyph u027
+𓍑	egyptian hieroglyph u028
+𓍒	egyptian hieroglyph u029
+𓍓	egyptian hieroglyph u029a
+𓍔	egyptian hieroglyph u030
+𓍕	egyptian hieroglyph u031
+𓍖	egyptian hieroglyph u032
+𓍗	egyptian hieroglyph u032a
+𓍘	egyptian hieroglyph u033
+𓍙	egyptian hieroglyph u034
+𓍚	egyptian hieroglyph u035
+𓍛	egyptian hieroglyph u036
+𓍜	egyptian hieroglyph u037
+𓍝	egyptian hieroglyph u038
+𓍞	egyptian hieroglyph u039
+𓍟	egyptian hieroglyph u040
+𓍠	egyptian hieroglyph u041
+𓍡	egyptian hieroglyph u042
+𓍢	egyptian hieroglyph v001
+𓍣	egyptian hieroglyph v001a
+𓍤	egyptian hieroglyph v001b
+𓍥	egyptian hieroglyph v001c
+𓍦	egyptian hieroglyph v001d
+𓍧	egyptian hieroglyph v001e
+𓍨	egyptian hieroglyph v001f
+𓍩	egyptian hieroglyph v001g
+𓍪	egyptian hieroglyph v001h
+𓍫	egyptian hieroglyph v001i
+𓍬	egyptian hieroglyph v002
+𓍭	egyptian hieroglyph v002a
+𓍮	egyptian hieroglyph v003
+𓍯	egyptian hieroglyph v004
+𓍰	egyptian hieroglyph v005
+𓍱	egyptian hieroglyph v006
+𓍲	egyptian hieroglyph v007
+𓍳	egyptian hieroglyph v007a
+𓍴	egyptian hieroglyph v007b
+𓍵	egyptian hieroglyph v008
+𓍶	egyptian hieroglyph v009
+𓍷	egyptian hieroglyph v010
+𓍸	egyptian hieroglyph v011
+𓍹	egyptian hieroglyph v011a
+𓍺	egyptian hieroglyph v011b
+𓍻	egyptian hieroglyph v011c
+𓍼	egyptian hieroglyph v012
+𓍽	egyptian hieroglyph v012a
+𓍾	egyptian hieroglyph v012b
+𓍿	egyptian hieroglyph v013
+𓎀	egyptian hieroglyph v014
+𓎁	egyptian hieroglyph v015
+𓎂	egyptian hieroglyph v016
+𓎃	egyptian hieroglyph v017
+𓎄	egyptian hieroglyph v018
+𓎅	egyptian hieroglyph v019
+𓎆	egyptian hieroglyph v020
+𓎇	egyptian hieroglyph v020a
+𓎈	egyptian hieroglyph v020b
+𓎉	egyptian hieroglyph v020c
+𓎊	egyptian hieroglyph v020d
+𓎋	egyptian hieroglyph v020e
+𓎌	egyptian hieroglyph v020f
+𓎍	egyptian hieroglyph v020g
+𓎎	egyptian hieroglyph v020h
+𓎏	egyptian hieroglyph v020i
+𓎐	egyptian hieroglyph v020j
+𓎑	egyptian hieroglyph v020k
+𓎒	egyptian hieroglyph v020l
+𓎓	egyptian hieroglyph v021
+𓎔	egyptian hieroglyph v022
+𓎕	egyptian hieroglyph v023
+𓎖	egyptian hieroglyph v023a
+𓎗	egyptian hieroglyph v024
+𓎘	egyptian hieroglyph v025
+𓎙	egyptian hieroglyph v026
+𓎚	egyptian hieroglyph v027
+𓎛	egyptian hieroglyph v028
+𓎜	egyptian hieroglyph v028a
+𓎝	egyptian hieroglyph v029
+𓎞	egyptian hieroglyph v029a
+𓎟	egyptian hieroglyph v030
+𓎠	egyptian hieroglyph v030a
+𓎡	egyptian hieroglyph v031
+𓎢	egyptian hieroglyph v031a
+𓎣	egyptian hieroglyph v032
+𓎤	egyptian hieroglyph v033
+𓎥	egyptian hieroglyph v033a
+𓎦	egyptian hieroglyph v034
+𓎧	egyptian hieroglyph v035
+𓎨	egyptian hieroglyph v036
+𓎩	egyptian hieroglyph v037
+𓎪	egyptian hieroglyph v037a
+𓎫	egyptian hieroglyph v038
+𓎬	egyptian hieroglyph v039
+𓎭	egyptian hieroglyph v040
+𓎮	egyptian hieroglyph v040a
+𓎯	egyptian hieroglyph w001
+𓎰	egyptian hieroglyph w002
+𓎱	egyptian hieroglyph w003
+𓎲	egyptian hieroglyph w003a
+𓎳	egyptian hieroglyph w004
+𓎴	egyptian hieroglyph w005
+𓎵	egyptian hieroglyph w006
+𓎶	egyptian hieroglyph w007
+𓎷	egyptian hieroglyph w008
+𓎸	egyptian hieroglyph w009
+𓎹	egyptian hieroglyph w009a
+𓎺	egyptian hieroglyph w010
+𓎻	egyptian hieroglyph w010a
+𓎼	egyptian hieroglyph w011
+𓎽	egyptian hieroglyph w012
+𓎾	egyptian hieroglyph w013
+𓎿	egyptian hieroglyph w014
+𓏀	egyptian hieroglyph w014a
+𓏁	egyptian hieroglyph w015
+𓏂	egyptian hieroglyph w016
+𓏃	egyptian hieroglyph w017
+𓏄	egyptian hieroglyph w017a
+𓏅	egyptian hieroglyph w018
+𓏆	egyptian hieroglyph w018a
+𓏇	egyptian hieroglyph w019
+𓏈	egyptian hieroglyph w020
+𓏉	egyptian hieroglyph w021
+𓏊	egyptian hieroglyph w022
+𓏋	egyptian hieroglyph w023
+𓏌	egyptian hieroglyph w024
+𓏍	egyptian hieroglyph w024a
+𓏎	egyptian hieroglyph w025
+𓏏	egyptian hieroglyph x001
+𓏐	egyptian hieroglyph x002
+𓏑	egyptian hieroglyph x003
+𓏒	egyptian hieroglyph x004
+𓏓	egyptian hieroglyph x004a
+𓏔	egyptian hieroglyph x004b
+𓏕	egyptian hieroglyph x005
+𓏖	egyptian hieroglyph x006
+𓏗	egyptian hieroglyph x006a
+𓏘	egyptian hieroglyph x007
+𓏙	egyptian hieroglyph x008
+𓏚	egyptian hieroglyph x008a
+𓏛	egyptian hieroglyph y001
+𓏜	egyptian hieroglyph y001a
+𓏝	egyptian hieroglyph y002
+𓏞	egyptian hieroglyph y003
+𓏟	egyptian hieroglyph y004
+𓏠	egyptian hieroglyph y005
+𓏡	egyptian hieroglyph y006
+𓏢	egyptian hieroglyph y007
+𓏣	egyptian hieroglyph y008
+𓏤	egyptian hieroglyph z001
+𓏥	egyptian hieroglyph z002
+𓏦	egyptian hieroglyph z002a
+𓏧	egyptian hieroglyph z002b
+𓏨	egyptian hieroglyph z002c
+𓏩	egyptian hieroglyph z002d
+𓏪	egyptian hieroglyph z003
+𓏫	egyptian hieroglyph z003a
+𓏬	egyptian hieroglyph z003b
+𓏭	egyptian hieroglyph z004
+𓏮	egyptian hieroglyph z004a
+𓏯	egyptian hieroglyph z005
+𓏰	egyptian hieroglyph z005a
+𓏱	egyptian hieroglyph z006
+𓏲	egyptian hieroglyph z007
+𓏳	egyptian hieroglyph z008
+𓏴	egyptian hieroglyph z009
+𓏵	egyptian hieroglyph z010
+𓏶	egyptian hieroglyph z011
+𓏷	egyptian hieroglyph z012
+𓏸	egyptian hieroglyph z013
+𓏹	egyptian hieroglyph z014
+𓏺	egyptian hieroglyph z015
+𓏻	egyptian hieroglyph z015a
+𓏼	egyptian hieroglyph z015b
+𓏽	egyptian hieroglyph z015c
+𓏾	egyptian hieroglyph z015d
+𓏿	egyptian hieroglyph z015e
+𓐀	egyptian hieroglyph z015f
+𓐁	egyptian hieroglyph z015g
+𓐂	egyptian hieroglyph z015h
+𓐃	egyptian hieroglyph z015i
+𓐄	egyptian hieroglyph z016
+𓐅	egyptian hieroglyph z016a
+𓐆	egyptian hieroglyph z016b
+𓐇	egyptian hieroglyph z016c
+𓐈	egyptian hieroglyph z016d
+𓐉	egyptian hieroglyph z016e
+𓐊	egyptian hieroglyph z016f
+𓐋	egyptian hieroglyph z016g
+𓐌	egyptian hieroglyph z016h
+𓐍	egyptian hieroglyph aa001
+𓐎	egyptian hieroglyph aa002
+𓐏	egyptian hieroglyph aa003
+𓐐	egyptian hieroglyph aa004
+𓐑	egyptian hieroglyph aa005
+𓐒	egyptian hieroglyph aa006
+𓐓	egyptian hieroglyph aa007
+𓐔	egyptian hieroglyph aa007a
+𓐕	egyptian hieroglyph aa007b
+𓐖	egyptian hieroglyph aa008
+𓐗	egyptian hieroglyph aa009
+𓐘	egyptian hieroglyph aa010
+𓐙	egyptian hieroglyph aa011
+𓐚	egyptian hieroglyph aa012
+𓐛	egyptian hieroglyph aa013
+𓐜	egyptian hieroglyph aa014
+𓐝	egyptian hieroglyph aa015
+𓐞	egyptian hieroglyph aa016
+𓐟	egyptian hieroglyph aa017
+𓐠	egyptian hieroglyph aa018
+𓐡	egyptian hieroglyph aa019
+𓐢	egyptian hieroglyph aa020
+𓐣	egyptian hieroglyph aa021
+𓐤	egyptian hieroglyph aa022
+𓐥	egyptian hieroglyph aa023
+𓐦	egyptian hieroglyph aa024
+𓐧	egyptian hieroglyph aa025
+𓐨	egyptian hieroglyph aa026
+𓐩	egyptian hieroglyph aa027
+𓐪	egyptian hieroglyph aa028
+𓐫	egyptian hieroglyph aa029
+𓐬	egyptian hieroglyph aa030
+𓐭	egyptian hieroglyph aa031
+𓐮	egyptian hieroglyph aa032
+𓐯	egyptian hieroglyph v011d
