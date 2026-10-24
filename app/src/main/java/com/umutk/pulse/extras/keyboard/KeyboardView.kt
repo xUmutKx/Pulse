@@ -511,13 +511,16 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     val actNow by rememberUpdatedState(act)
     val kNow by rememberUpdatedState(k)
     val longMs = LocalViewConfiguration.current.longPressTimeoutMillis
+    LaunchedEffect(k.kind) { down = false }
     val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
+    val isLetterNow by rememberUpdatedState(isLetter)
     val bg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
     val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
     val grow by animateFloatAsState(if (down && KeyboardPrefs.anim) .93f else 1f, tween(70), label = "keyScale")
     Box(
         Modifier.weight(k.weight).height(if (small) keyH * .78f else keyH).onGloballyPositioned { rect = it.boundsInRoot(); if (isLetter) st.letterRects[k.label.lowercase()] = rect }
-            .pointerInput(k.kind, k.label) {
+            // not keyed on the label: a shift change renames every letter key, and a restart would drop a touch that is under way (the key then stayed shown as pressed and never typed)
+            .pointerInput(k.kind) {
                 awaitEachGesture {
                     val d = awaitFirstDown(requireUnconsumed = false); d.consume()
                     down = true
@@ -539,7 +542,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     val seq = StringBuilder()
                     val startRoot = Offset(rect.left + d.position.x, rect.top + d.position.y)
                     var curRoot = startRoot
-                    val canGlide = isLetter && KeyboardPrefs.glide && st.page == 0 && st.panel == "keys"
+                    val canGlide = isLetterNow && KeyboardPrefs.glide && st.page == 0 && st.panel == "keys"
                     if (key.kind == KeyKind.DELETE) { a.backspace(); due = android.os.SystemClock.uptimeMillis() + 380L }
                     while (true) {
                         if (st.swiped) { st.preview = null; break }
