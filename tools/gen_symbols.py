@@ -24,6 +24,10 @@ FAM = [
  ("Braille", [(0x2800,0x28FF)]),
 ]
 SKIP_REGIONAL = range(0x1F1E6, 0x1F200)
+# emoji live in the emoji tabs: the symbol tab holds the plain text signs only
+EMOJI_LIKE = set("⛅⛈⚡☔⭐⌚⌛✅❌❓❗❤️")
+def is_emoji(it):
+    return any(0x1F000 <= ord(c) <= 0x1FAFF or c == "\uFE0F" or c == "\u200D" for c in it) or it in EMOJI_LIKE
 out = []
 seen = set()
 def nm(ch):
@@ -33,7 +37,7 @@ for name, items in CURATED:
     rows = []
     for it in items:
         # a cell is one sign or a short sequence; emoji stay whole, "ᡣ𐭩" stays a pair
-        if it in seen: continue
+        if it in seen or is_emoji(it): continue
         rows.append((it, nm(it))); seen.add(it)
     out.append("#" + name); out += [f"{c}\t{n}" for c, n in rows]
 for name, ranges in FAM:
@@ -45,7 +49,7 @@ for name, ranges in FAM:
             if not (cat[0] in "SP" or cat in ("No", "Nl")): continue
             try: n = ud.name(ch).lower()
             except ValueError: continue
-            if ch in seen: continue
+            if ch in seen or is_emoji(ch): continue
             rows.append((ch, n)); seen.add(ch)
     out.append("#" + name); out += [f"{c}\t{n}" for c, n in rows]
 open("app/src/main/assets/kbd/symbols.txt", "w", encoding="utf-8").write("\n".join(out) + "\n")
