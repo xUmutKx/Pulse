@@ -226,7 +226,12 @@ private fun DesktopIcons(look: LauncherLook, state: LauncherState, items: List<L
  * That needs the system's freeform windows (developer option or desktop mode); without them the bounds are ignored and the app opens full screen.
  */
 private fun startApp(ctx: Context, intent: Intent, windowed: Boolean) {
-    if (!windowed) { ctx.startActivity(intent); return }
+    // the app comes up from slightly smaller and the home screen fades back, like a phone launcher
+    if (!windowed) {
+        val anim = runCatching { android.app.ActivityOptions.makeCustomAnimation(ctx, com.umutk.pulse.R.anim.launcher_open, com.umutk.pulse.R.anim.launcher_hold).toBundle() }.getOrNull()
+        runCatching { ctx.startActivity(intent, anim) }.onFailure { ctx.startActivity(intent) }
+        return
+    }
     val dm = ctx.resources.displayMetrics
     val w = (dm.widthPixels * .8f).toInt(); val h = (dm.heightPixels * .7f).toInt()
     val left = (dm.widthPixels - w) / 2; val top = (dm.heightPixels - h) / 3
