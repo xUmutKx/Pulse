@@ -721,10 +721,11 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             }
             KeysPanel(th, st, act, keyH)
         } else {
-            val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = tab) { 11 }
+            val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = tab) { 12 }
             LaunchedEffect(tab) { if (pager.currentPage != tab) pager.animateScrollToPage(tab) }
             LaunchedEffect(pager.currentPage) { tab = pager.currentPage }
             androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { page ->
+                if (page == 11) { SymbolPage(th, act); return@HorizontalPager }
                 val list = if (page == 0) st.recents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
                     else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
                 LazyVerticalGrid(GridCells.Adaptive(if (page == 10) 92.dp else 44.dp), Modifier.fillMaxSize()) {
@@ -741,8 +742,28 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                         }
                     }
                     Box(Modifier.width(48.dp).fillMaxHeight().clickable { tab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.text else th.sub, fontSize = 15.sp) }
+                    Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (tab == 11) th.text else th.sub, fontSize = 20.sp) }
                 }
                 Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.backspace() }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Backspace"), null, tint = th.text, modifier = Modifier.size(26.dp)) }
+            }
+        }
+    }
+}
+
+/** The decorative signs, in groups: a row of group names on top and the signs of the picked one below. */
+@Composable
+private fun SymbolPage(th: KbTheme, act: KbActions) {
+    var g by remember { mutableStateOf(0) }
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            KeyboardSymbols.groups.forEachIndexed { i, (en, trk, _) ->
+                Text(tr(en, trk), color = if (i == g) th.text else th.sub, fontSize = 13.sp, fontWeight = if (i == g) FontWeight.Medium else FontWeight.Normal,
+                    modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (i == g) th.special else Color.Transparent).clickable { g = i }.padding(horizontal = 12.dp, vertical = 6.dp))
+            }
+        }
+        LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
+            items(KeyboardSymbols.groups[g].third) { sym ->
+                Box(Modifier.height(44.dp).clickable { act.emoji(sym) }, contentAlignment = Alignment.Center) { Text(sym, fontSize = 22.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip) }
             }
         }
     }
