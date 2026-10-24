@@ -1128,17 +1128,24 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
 
     openAsAsk?.let { f ->
-        WinAlert(onDismissRequest = { openAsAsk = null },
+        val mat = T.material
+        // Material: quiet tonal rows with soft corners and a plain Cancel text button at the right; the Windows looks keep their own buttons
+        @Composable fun item(label: String, go: () -> Unit) {
+            if (mat) Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.text.copy(alpha = .07f)).clickable(onClick = go).padding(horizontal = 16.dp, vertical = 14.dp)) {
+                Text(label, color = T.text, fontSize = 15.sp)
+            } else PButton(label, Modifier.fillMaxWidth(), onClick = go)
+        }
+        WinAlert(onDismissRequest = { openAsAsk = null }, iconKey = "info",
             title = { Text(tr("Open as", "Şu olarak aç")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(f.name, fontSize = 12.sp, maxLines = 2)
-                PButton(tr("Archive", "Arşiv"), Modifier.fillMaxWidth()) { openAsAsk = null; arcFile = f; arcCwd = ""; sel = emptySet() }
-                PButton(tr("Text", "Metin"), Modifier.fillMaxWidth()) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
-                PButton(tr("Image", "Resim"), Modifier.fillMaxWidth()) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
-                PButton(tr("Save as…", "Farklı kaydet…"), Modifier.fillMaxWidth()) { openAsAsk = null; saveAsFile = f }
-                PButton(tr("Another app…", "Başka uygulama…"), Modifier.fillMaxWidth()) { openAsAsk = null; if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }
+                Text(f.name, fontSize = 12.sp, color = T.sub, maxLines = 2, modifier = Modifier.padding(bottom = 4.dp))
+                item(tr("Archive", "Arşiv")) { openAsAsk = null; arcFile = f; arcCwd = ""; sel = emptySet() }
+                item(tr("Text", "Metin")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
+                item(tr("Image", "Resim")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
+                item(tr("Save as…", "Farklı kaydet…")) { openAsAsk = null; saveAsFile = f }
+                item(tr("Another app…", "Başka uygulama…")) { openAsAsk = null; if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }
             } },
-            confirmButton = {}, dismissButton = { PButton(tr("Cancel", "İptal")) { openAsAsk = null } })
+            confirmButton = { TextButton({ openAsAsk = null }) { Text(tr("Cancel", "İptal")) } })
     }
     // Save as: a copy under a name and in a folder the user picks (the file may have no known type to open it with)
     saveAsFile?.let { f ->
