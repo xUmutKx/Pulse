@@ -1211,3 +1211,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.42 Files: "Open as" dialog with tonal rows and a Cancel text button; File types list: trash button replaced by swipe actions (left/right: delete, open, select, none; default delete) - derlenmedi, bekle
 - 1.0.43 Material dialogs: action buttons are plain text buttons, Material PButton is tonal instead of outlined - derlenmedi, bekle
 - 1.0.44 Keyboard: translation bar (languages at the ends, swap between, live translation, tap to insert); typo learning needs 3 sightings for real words and forgets slips that were undone - derlenmedi, bekle
+- 1.0.45 Keyboard: many more accented letters on long press; element symbols (He, Fe, Cu...) on capital letters, switch in settings - derlenmedi, bekle

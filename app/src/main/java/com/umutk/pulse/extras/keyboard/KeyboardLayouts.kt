@@ -14,9 +14,10 @@ object KeyboardLayouts {
     private const val DIGITS = "1234567890"
 
     private val en = Lang("en", "English", listOf("qwertyuiop", "asdfghjkl", "zxcvbnm"), Locale.ENGLISH, mapOf(
-        'a' to "àáâäãåāæ", 'e' to "èéêëēę", 'i' to "ìíîïī", 'o' to "òóôöõøœō", 'u' to "ùúûüū", 'c' to "çćč", 'n' to "ñń", 's' to "śšß", 'y' to "ýÿ", 'z' to "žźż", 'l' to "ł", 'd' to "ð"))
+        'a' to "àáâäãåāæąă", 'e' to "èéêëēęėě", 'i' to "ìíîïīįı", 'o' to "òóôöõøœōő", 'u' to "ùúûüūůűų", 'c' to "çćčĉ", 'n' to "ñńň", 's' to "śšßşŝ", 'y' to "ýÿŷ", 'z' to "žźż",
+        'l' to "łľĺ", 'd' to "ðďđ", 'g' to "ğĝ", 't' to "ťþţ", 'r' to "řŕ", 'w' to "ŵ", 'h' to "ĥħ", 'j' to "ĵ"))
     private val tr = Lang("tr", "Türkçe", listOf("qwertyuıopğü", "asdfghjklşi", "zxcvbnmöç"), Locale("tr", "TR"), mapOf(
-        'a' to "âáà", 'e' to "éêè", 'i' to "îíı", 'ı' to "î", 'o' to "ôó", 'u' to "ûú", 'c' to "ç", 'g' to "ğ", 's' to "ş", 'n' to "ñ"))
+        'a' to "âáàäãåā", 'e' to "éêèëēę", 'i' to "îíìïī", 'ı' to "î", 'o' to "ôóòõøœ", 'u' to "ûúùūů", 'c' to "çćč", 'g' to "ğĝ", 's' to "şśšß", 'n' to "ñń", 't' to "ţť", 'z' to "žźż", 'y' to "ýÿ", 'l' to "ł", 'd' to "đð", 'r' to "ř"))
     // the Turkish F keyboard: the letters in the order of Turkish, the common ones under the fingers
     private val trf = Lang("trf", "Türkçe F", listOf("fgğıodrnhpqw", "uieaütkmlyş", "jövcçzsbx"), Locale("tr", "TR"), tr.alts)
     private val de = Lang("de", "Deutsch", listOf("qwertzuiop", "asdfghjkl", "yxcvbnm"), Locale.GERMAN, mapOf(
@@ -42,10 +43,20 @@ object KeyboardLayouts {
                     if (digitsOnPress && r == 0 && i < DIGITS.length) add(DIGITS[i].toString())
                     l.alts[ch]?.forEach { add(it.toString()) }
                 }
-                KbKey(cap(ch.toString(), l, upper), KeyKind.CHAR, 1f, if (upper) alts.map { cap(it, l, true) } else alts)
+                // the element symbols of the letter, with their capital first letter, join the capital letter's long press
+                val chem = if (upper && KeyboardPrefs.chemKeys) chemical[ch.toString()].orEmpty() else emptyList()
+                KbKey(cap(ch.toString(), l, upper), KeyKind.CHAR, 1f, (if (upper) alts.map { cap(it, l, true) } else alts) + chem)
             }
         }
     }
+
+    /** Chemical element symbols by first letter (kept in their own case, whatever Shift does). */
+    private val chemical: Map<String, List<String>> = mapOf(
+        "a" to "Ac Ag Al Am Ar As At Au", "b" to "B Ba Be Bh Bi Bk Br", "c" to "C Ca Cd Ce Cf Cl Cm Cn Co Cr Cs Cu", "d" to "Db Ds Dy", "e" to "Er Es Eu", "f" to "F Fe Fl Fm Fr",
+        "g" to "Ga Gd Ge", "h" to "H He Hf Hg Ho Hs", "i" to "I In Ir", "k" to "K Kr", "l" to "La Li Lr Lu Lv", "m" to "Mc Md Mg Mn Mo Mt", "n" to "N Na Nb Nd Ne Nh Ni No Np",
+        "o" to "O Og Os", "p" to "P Pa Pb Pd Pm Po Pr Pt Pu", "r" to "Ra Rb Re Rf Rg Rh Rn Ru", "s" to "S Sb Sc Se Sg Si Sm Sn Sr", "t" to "Ta Tb Tc Te Th Ti Tl Tm Ts",
+        "u" to "U", "v" to "V", "w" to "W", "x" to "Xe", "y" to "Y Yb", "z" to "Zn Zr",
+    ).mapValues { it.value.split(' ') }
 
     fun cap(s: String, l: Lang, upper: Boolean) = if (upper) s.uppercase(l.locale) else s
 
