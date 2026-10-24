@@ -667,7 +667,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; zipAsk = picked }, icon = Icons.Outlined.FolderZip)
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Rename", "Yeniden adlandır"), { selMore = false; name = f.name; dialog = "rename" to f }, icon = Icons.Outlined.DriveFileRenameOutline) }
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Properties", "Özellikler"), { selMore = false; propsOf = f }, icon = Icons.Outlined.Info) }
-                        picked.singleOrNull()?.takeIf { isArchiveFile(it) }?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
+                        picked.singleOrNull()?.takeIf { isArchiveFile(it) }?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
                     }
                 }
             }
@@ -849,7 +849,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             add(Triple(if (f.path in marks) "Remove bookmark" else "Add bookmark", "bookmark", { mark(f.path) }))
                             add(Triple("Create shortcut", "link", { mark(f.path) }))
                         }
-                        if (isArchiveFile(f)) archiveMenu(f).forEach { (l, k, kind) -> add(Triple(l, k, { arc = ArcReq(kind, f, if (kind == "add" && f.path in sel) picked else listOf(f)) })) }
+                        if (isArchiveFile(f)) archiveMenu(f).forEach { (l, k, kind) -> add(Triple(l, k, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f, if (kind == "add" && f.path in sel) picked else listOf(f)) })) }
                         add(Triple("Properties", "info", { propsOf = f }))
                     }
                     val w = LocalWindowLook.current
