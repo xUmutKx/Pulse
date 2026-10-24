@@ -202,10 +202,14 @@ object PowerampImport {
                         if (list.isNotEmpty()) { Playlists.save(ctx, name, list); playlists++ }
                     }
                 }
+                // the backup's rating scale: stars 0..5, tenths of stars 0..10 or percent; everything is kept as 1..5 stars
+                val topBackup = d.rawQuery("select max(rating) from tracks", null).use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
+                fun toStars(r: Int) = when { topBackup > 10 -> (r + 10) / 20; topBackup > 5 -> (r + 1) / 2; else -> r }.coerceIn(0, 5)
+                ctx.getSharedPreferences("pulse_poweramp", Context.MODE_PRIVATE).edit().putInt("ratingMul", when { topBackup > 10 -> 20; topBackup > 5 -> 2; else -> 1 }).apply()
                 d.rawQuery("select path, rating, played_times, total_played_times from tracks where (rating > 0 or total_played_times > 0 or played_times > 0) and path not like 'http%' group by path", null).use { c ->
                     while (c.moveToNext()) {
                         val t = find(c.getString(0)) ?: continue
-                        val r = c.getInt(1); val n = maxOf(c.getInt(2), c.getInt(3))
+                        val r = toStars(c.getInt(1)); val n = maxOf(c.getInt(2), c.getInt(3))
                         if (r in 1..5) { MusicStats.setRating(ctx, t.path, r); ratings++ }
                         repeat(n.coerceAtMost(500)) { MusicStats.add(ctx, t.path, t.title, t.artist, t.album, 0L, true) }
                         if (n > 0) plays++
@@ -269,6 +273,7 @@ object PowerampImport {
                     }
                     lists++
                 }
+                val mul = ctx.getSharedPreferences("pulse_poweramp", Context.MODE_PRIVATE).getInt("ratingMul", 1)
                 val ratings = MusicStats.ratings(ctx)
                 val stats = MusicStats.all(ctx).associateBy { it.path }
                 (ratings.keys + stats.keys).toSet().forEach { p ->
@@ -276,7 +281,7 @@ object PowerampImport {
                     if (r == 0 && n == 0) return@forEach
                     val at = st?.lastPlayed ?: now
                     d.execSQL("INSERT INTO tracks (playlist_id, path, readable_name, file_type, cue_offset_ms, rating, played_at, played_fully_at, played_times, last_pos, export_type, total_played_times) VALUES (NULL, ?, ?, ?, 0, ?, ?, ?, ?, 0, 3, ?)",
-                        arrayOf<Any>(paPath(p), st?.title?.takeIf { it.isNotBlank() } ?: File(p).nameWithoutExtension, paType(p), r, at, at, n, n))
+                        arrayOf<Any>(paPath(p), st?.title?.takeIf { it.isNotBlank() } ?: File(p).nameWithoutExtension, paType(p), r * mul, at, at, n, n))
                     rows++
                 }
                 d.setTransactionSuccessful()

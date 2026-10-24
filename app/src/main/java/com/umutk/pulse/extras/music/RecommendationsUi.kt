@@ -158,7 +158,7 @@ private fun Tile(
 
 /** The moods the mix maker offers; the keys are the ones [Recommendations.moodsOf] returns. */
 private val MIX_MOODS = listOf("energetic" to ("Energetic" to "Enerjik"), "chill" to ("Chill" to "Sakin"), "focus" to ("Focus" to "Odak"), "happy" to ("Happy" to "Neşeli"))
-private val MIX_SOURCES = listOf("all" to ("Everything" to "Hepsi"), "fav" to ("Favourites" to "Favoriler"), "top" to ("Most played" to "En çok çalınan"), "fresh" to ("Not heard lately" to "Uzun süredir dinlenmeyen"))
+private val MIX_SOURCES = listOf("all" to ("Everything" to "Hepsi"), "fav" to ("Favourites" to "Favoriler"), "rated" to ("Best rated" to "En yüksek puanlı"), "top" to ("Most played" to "En çok çalınan"), "fresh" to ("Not heard lately" to "Uzun süredir dinlenmeyen"))
 
 /** The mix maker at the bottom of the home: pick moods, where the songs come from and how many, and a queue is made and played. */
 @Composable
@@ -189,9 +189,11 @@ private fun MixMaker(library: List<Track>, ink: Color, dim: Color, tile: Color, 
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(accent).clickable {
                     val stats = MusicStats.all(ctx).associateBy { it.path }
                     val fav = MusicStats.favourites(ctx)
+                    val ratings = MusicStats.ratings(ctx)
                     var pool = library.filter { t -> moods.isEmpty() || Recommendations.moodsOf(t).any { it in moods } }
                     pool = when (source) {
                         "fav" -> pool.filter { it.path in fav }
+                        "rated" -> pool.filter { (ratings[it.path] ?: 0) > 0 }.sortedByDescending { ratings[it.path] ?: 0 }.take(maxOf(count * 3, 40))
                         "top" -> pool.sortedByDescending { stats[it.path]?.plays ?: 0 }.take(maxOf(count * 3, 40))
                         "fresh" -> pool.sortedBy { stats[it.path]?.lastPlayed ?: 0L }.take(maxOf(count * 3, 40))
                         else -> pool
