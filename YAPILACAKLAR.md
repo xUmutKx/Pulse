@@ -1201,3 +1201,5 @@ Screen recorder feature list (55 candidates)
 - 1.0.33 launcher Windows 11: gorev cubugu ve menu seffafligi ayari (derlenmedi)
 - 1.0.34 klavye: ceviri (MyMemory + Lingva, panodan ceviri, hata mesaji), sembol: Civi yazisi + Hiyeroglif aileleri, alisilmis yazim hatalari listesi (derlenmedi, bekle)
 - 1.0.35 Toolkit: Floating keys (yuzen dugme: dokun=klavye, basili tut=mini panel Esc/ok/F, yana kaydir=sayfa); alisilmis yazim hatalari listesi 131 cift (derlenmedi, bekle)
+
+- 1.0.36 Shift key: outlined arrow / arrow+underline (one capital) / filled arrow joined to underline (caps lock) - derlenmedi, bekle
