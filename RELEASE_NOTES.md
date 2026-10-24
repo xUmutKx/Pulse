@@ -1,12 +1,12 @@
-## Pulse 1.0.4
+## Pulse 1.0.18
 
-Changes since 1.0: a weather and clock widget with no background (tap to change the place); the keyboard's emoji page (search on top, category bar below) and symbols page in the phone keyboard's layout; autocorrect no longer repeats a correction you undid and treats a word you undo twice as yours; more of your own words are known from the start. The full 1.0 description follows.
+Changes since 1.0.4: the keyboard's settings in collapsible sections with icons, English and Turkish dictionaries only, search and corrections in address bars, two words typed without a space are split; a symbol tab on the emoji page (icons for the families, sub-categories, Unicode names searchable, presets in symmetric designs); the emoji page with search on top and a category bar below; Poweramp lists sort by title, folder, library, year or stars in both directions with the star count shown; calculator keys animate and the pad no longer climbs over the display; the Files type list shows previews, long press picks files and the bin deletes them together; the launcher uses more columns when turned sideways; a duplicate tool window removes its own task. The full 1.0 description follows.
 
 ## Pulse 1.0
 
 The first complete release. Pulse is an all-in-one Android toolbox that can dress up as Windows 95 / XP / 7 / 10 / 11, Material or AMOLED, with its own launcher, music player, keyboard, file manager, messages app and more. Free and open source (GPL-3.0).
 
-**Which file:** `Pulse-1.0.4.apk` is for Android 12 and newer. `Pulse-1.0.4-android5.apk` is the build for older phones (Android 5 and newer, "low API"). Builds are signed with the fixed key in `ci/pulse.keystore`, so every release installs over the last one. Both builds were compiled in CI; neither has been tested on every phone, so please report bugs.
+**Which file:** `Pulse-1.0.18.apk` is for Android 12 and newer. `Pulse-1.0.18-android5.apk` is the build for older phones (Android 5 and newer, "low API"). Builds are signed with the fixed key in `ci/pulse.keystore`, so every release installs over the last one. Both builds were compiled in CI; neither has been tested on every phone, so please report bugs.
 
 ### What is new since 0.10.x
 - **Keyboard (new)**: Pulse's own keyboard with themes, one-handed and resizable layouts, RGB light, brightness, swipe typing, an extra key row (Esc, Tab, Ctrl, Alt, Win, Shift, arrows, F keys) with optional icons, a number pad for number / phone / date fields, emoji with search and kaomoji, a clipboard history, in-keyboard translation and a password-manager chip row.
