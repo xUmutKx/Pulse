@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
@@ -292,7 +293,7 @@ internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: (
     val border = when (id) { "win7" -> Color(0xFF8C99AD); "xp" -> Color(0xFF003C74); "amoled" -> Color(0xFF2A2A2A); else -> null }
     // a press shrinks the key a little and lightens it; it springs back on release
     val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
-    val pressed by androidx.compose.foundation.interaction.collectIsPressedAsState(src)
+    val pressed by src.collectIsPressedAsState()
     val press by androidx.compose.animation.core.animateFloatAsState(if (pressed) 1f else 0f, androidx.compose.animation.core.tween(if (pressed) 60 else 160), label = "key")
     Box(
         modifier.fillMaxWidth().graphicsLayer { val sc = 1f - .08f * press; scaleX = sc; scaleY = sc }.clip(shape).background(brush)
