@@ -82,6 +82,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.graphics.drawable.toBitmap
 import com.umutk.pulse.InfoRows
+import com.umutk.pulse.PSwitch
 import com.umutk.pulse.onAccent
 import com.umutk.pulse.Look
 import com.umutk.pulse.LocalWindowLook
@@ -388,11 +389,15 @@ private fun IButton(text: String, modifier: Modifier = Modifier, danger: Boolean
         else -> Color(0x24FFFFFF)
     }
     if (LocalWindowLook.current.id in winButtonLooks) { WinBtn(LocalWindowLook.current, text, modifier, danger, primary, onClick); return }
-    val ink = if (danger) Color(0xFFFF8A80) else Color.White
-    Button(onClick, modifier.height(56.dp), shape = shape,
+    // Material 3: a filled pill in the accent for the main action, tonal pills for the rest, ink from the look
+    val w = LocalWindowLook.current
+    val acc = Look.accent.copy(alpha = 1f)
+    val fill = when { danger -> Color(0xFFC42B1C).copy(alpha = .16f); primary -> acc; else -> w.text.copy(alpha = .09f) }
+    val ink = when { danger -> Color(0xFFC42B1C); primary -> onAccent(acc); else -> w.text }
+    Button(onClick, modifier.height(52.dp), shape = androidx.compose.foundation.shape.CircleShape,
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = container, contentColor = ink)) {
-        Text(text, fontSize = 16.sp, fontWeight = FontWeight.ExtraBold)
+        colors = ButtonDefaults.buttonColors(containerColor = fill, contentColor = ink)) {
+        Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -401,9 +406,7 @@ private fun OptRow(label: String, on: Boolean, set: (Boolean) -> Unit) {
     val w = LocalWindowLook.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = w.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        PChip(on, "On") { set(true) }
-        Spacer(Modifier.width(6.dp))
-        PChip(!on, "Off") { set(false) }
+        PSwitch(on, set)
     }
 }
 
@@ -420,7 +423,8 @@ private fun InstallOptions(open: Boolean, toggle: (Boolean) -> Unit, extra: @Com
     if (open) {
         OptRow("Optimise after install (dexopt)", prof.dex) { v -> Installer.edit(ctx) { it.copy(dex = v) } }
         OptRow("Delete the source file after install", prof.dropSrc) { v -> Installer.edit(ctx) { it.copy(dropSrc = v) } }
-        OptRow("Install on open", prof.auto) { v -> Installer.edit(ctx) { it.copy(auto = v) } }
+        // CPU libraries the phone does not use (v7, x86 on an arm64 phone) are cut from a new install of a universal APK
+        OptRow(tr("Remove unused CPU libraries (new installs)", "Kullanılmayan işlemci kütüphanelerini kaldır (yeni kurulum)"), InstallShow.shrink) { v -> InstallShow.set(ctx, "inst_shrink", v) }
         extra()
     }
 }
@@ -694,17 +698,7 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                         }
                     }
                 }
-                InstallOptions(opts, { opts = it }) {
-                    if (old != null && InstallShow.shellOk) Text(tr("Set source to Play Store", "Kaynağı Play Store yap"), color = w.accent, fontSize = 13.sp,
-                        modifier = Modifier.fillMaxWidth().clickable {
-                            busy = true
-                            scope.launch {
-                                val r = withContext(Dispatchers.IO) { Installer.setSource(pk.pkg, "com.android.vending") }
-                                busy = false
-                                Toast.makeText(ctx, if (r.isEmpty()) "OK" else r, Toast.LENGTH_LONG).show()
-                            }
-                        }.padding(vertical = 8.dp))
-                }
+                InstallOptions(opts, { opts = it })
                 if (pk.pkg in Installer.black) Text("On the blacklist: Pulse does not install this package", color = Warn, fontSize = 12.sp)
                 else when (st) {
                     Status.NEW, Status.UPGRADE, Status.IDENTICAL -> IButton(if (st == Status.UPGRADE) "Upgrade" else "Install", full, primary = true) { gate { if (useShell) silent(pk, down = false) else commit(pk) } }
