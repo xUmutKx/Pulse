@@ -266,6 +266,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     LaunchedEffect(cur?.path) { showLyrics = false }
     // a drag down moves the whole player and closes it past a fifth of the screen; a drag up opens the lyrics instead (the player stays put)
     var upAcc by remember { mutableFloatStateOf(0f) }
+    var lyricsPull by remember { mutableFloatStateOf(0f) }
     fun pageDrag(dy: Float) {
         if (dy < 0f) upAcc += -dy else upAcc = (upAcc - dy).coerceAtLeast(0f)
         scope.launch { sheetY.snapTo((sheetY.value + dy).coerceAtLeast(0f)) }
@@ -411,7 +412,11 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
             // the cover breathes out while playing and settles smaller when paused
             val coverScale by animateFloatAsState(if (st.isPlaying) 1f else .88f, spring(dampingRatio = .55f, stiffness = Spring.StiffnessLow), label = "cover")
             Box(Modifier.fillMaxSize().offset { IntOffset(0, sheetY.value.roundToInt()) }.background(pbg)
-                .pointerInput(Unit) { detectVerticalDragGestures(onDragEnd = { pageRelease() }, onDragCancel = { pageRelease() }, onVerticalDrag = { c, d -> if (!showLyrics) { c.consume(); pageDrag(d) } }) }) {
+                .pointerInput(Unit) { detectVerticalDragGestures(
+                    onDragEnd = { if (showLyrics) { if (lyricsPull > 100f) showLyrics = false; lyricsPull = 0f } else pageRelease() },
+                    onDragCancel = { if (showLyrics) lyricsPull = 0f else pageRelease() },
+                    // with the lyrics open a pull down that the lyrics list did not take (it is at its top) closes the lyrics only; the player stays
+                    onVerticalDrag = { c, d -> if (showLyrics) { c.consume(); lyricsPull += d } else { c.consume(); pageDrag(d) } }) }) {
                 // one layer: the blurred cover is the background when the art switch is on, nothing extra is drawn otherwise
                 if (artBackground) Crossfade(art, animationSpec = tween(600), label = "bg") { a -> if (a != null) Image(a, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop) }
                 Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
