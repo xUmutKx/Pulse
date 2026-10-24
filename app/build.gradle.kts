@@ -11,9 +11,9 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 447
-        versionName = "1.0.47"
-        ndk { abiFilters += "arm64-v8a" }
+        versionCode = 448
+        versionName = "1.0.48"
+        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
     // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
