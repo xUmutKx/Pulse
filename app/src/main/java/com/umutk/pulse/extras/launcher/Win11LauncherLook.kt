@@ -83,7 +83,7 @@ class Win11LauncherLook : LauncherLook {
     @Composable
     private fun glass(modifier: Modifier, flat: Color, shape: androidx.compose.ui.graphics.Shape? = null): Modifier =
         // the launcher's taskbar and menus are plain near-black, not a see-through grey
-        modifier.background(flat, shape ?: RectangleShape)
+        modifier.background(flat.copy(alpha = 1f - LauncherPrefs.glass / 100f), shape ?: RectangleShape)
 
     @Composable
     override fun Background(modifier: Modifier, content: @Composable () -> Unit) {
