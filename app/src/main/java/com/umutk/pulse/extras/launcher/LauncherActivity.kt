@@ -305,7 +305,9 @@ private fun LauncherRoot(look: LauncherLook, apps: List<LaunchApp>) {
     val edge = LocalLauncherEdge.current
     LaunchedEffect(Unit) { while (true) { LauncherBadges.read(ctx); delay(2500) } }
     val vertical = LauncherPrefs.vertical
-    val columns = LauncherPrefs.columns.coerceIn(2, 8)
+    // turned sideways, the same few columns would sit far apart: the columns follow the width (about one per 100 dp)
+    val screenCfg = androidx.compose.ui.platform.LocalConfiguration.current
+    val columns = if (screenCfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE) maxOf(LauncherPrefs.columns.coerceIn(2, 8), (screenCfg.screenWidthDp / 100).coerceIn(4, 10)) else LauncherPrefs.columns.coerceIn(2, 8)
     val iconDp = LauncherPrefs.iconDp.coerceIn(24, 64)
     val hidden = LauncherPrefs.hidden
     val sort = LauncherPrefs.sort
