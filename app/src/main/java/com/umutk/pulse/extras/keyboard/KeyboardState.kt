@@ -40,6 +40,8 @@ class KbState {
     var rootW by mutableStateOf(0f)
     /** The field wants no suggestions or learning (password, email, URL). */
     var plain by mutableStateOf(false)
+    /** A number, phone, date or numeric-password field: only the number pad shows. */
+    var numpad by mutableStateOf(false)
     /** The selection mode of the quick delete is on: the bar shows the selected text length. */
     var selecting by mutableStateOf(false)
     /** The modifier keys of the extra row: 0 off, 1 for the next key, 2 held until pressed again. */
