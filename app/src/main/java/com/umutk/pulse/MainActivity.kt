@@ -225,7 +225,7 @@ fun effective(t: PTheme): PTheme {
 }
 
 /** The opening screen plays once per start of the app: not on a look change, not when the app comes back from the background. */
-object SplashGate { var splashed by mutableStateOf(false) }
+object SplashGate { var splashed by mutableStateOf(false); var soundDone = false }
 
 class Pg(val id: String, val label: String, val icon: String)
 
@@ -272,6 +272,10 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         val restoreLook = { Cfg.load(wctx); Opt.load(wctx) }
         // the look's sign-in screen only when the setting is on, otherwise the Pulse splash
         // the opening animation can be switched off in Settings: Pulse then opens straight to its first page
+        // the look's start-up sound, once per start of the app and only when the option is on
+        androidx.compose.runtime.LaunchedEffect(Unit) {
+            if (Opt.startSound && !SplashGate.soundDone && wctx !is FilesActivity && th.id in loginLooks) { SplashGate.soundDone = true; com.umutk.pulse.extras.launcher.LauncherSounds.play(wctx, th.id) }
+        }
         if (!SplashGate.splashed && wctx !is FilesActivity && Opt.splash) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
         else if (!welcomed) Welcome { welcomed = true }
         else key(th.dark) {
