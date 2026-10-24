@@ -670,7 +670,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             }
                             long && key.alts.isNotEmpty() -> {
                                 val count = key.alts.size
-                                val w = POPUP_W.dp.toPx()
+                                val w = minOf(POPUP_W.dp.toPx(), st.rootW * .96f / count)
                                 val left = popupLeft(rect, count, st.rootW, w)
                                 val i = ((rect.left + c.position.x - left) / w).toInt().coerceIn(0, count - 1)
                                 if (i != sel) { sel = i; st.preview = KbPreview(rect, key.label, key.alts, i); a.feedback() }
@@ -745,12 +745,13 @@ private fun Preview(th: KbTheme, st: KbState) {
             Text(p.label, color = th.text, fontSize = 30.sp, maxLines = 1)
         }
     } else {
-        val w = with(dens) { POPUP_W.dp.toPx() }
+        // many entries (accents and element symbols) share the width of the keyboard
+        val w = minOf(with(dens) { POPUP_W.dp.toPx() }, st.rootW * .96f / p.alts.size)
         val left = popupLeft(p.rect, p.alts.size, st.rootW, w); val y = (p.rect.top - p.rect.height * 1.15f - 2f).coerceAtLeast(0f)
         Row(Modifier.offset { IntOffset(left.roundToInt(), y.roundToInt()) }.graphicsLayer { scaleX = pop.value; scaleY = pop.value }.height(with(dens) { (p.rect.height * 1.15f).toDp() }).clip(shape).background(th.popup, shape)) {
             p.alts.forEachIndexed { i, s ->
-                Box(Modifier.width(POPUP_W.dp).fillMaxSize().background(if (i == p.sel) th.accent else Color.Transparent), contentAlignment = Alignment.Center) {
-                    Text(s, color = if (i == p.sel) th.onAccent else th.text, fontSize = 22.sp, maxLines = 1)
+                Box(Modifier.width(with(dens) { w.toDp() }).fillMaxSize().background(if (i == p.sel) th.accent else Color.Transparent), contentAlignment = Alignment.Center) {
+                    Text(s, color = if (i == p.sel) th.onAccent else th.text, fontSize = if (w >= with(dens) { 40.dp.toPx() } || s.length == 1 && w >= with(dens) { 26.dp.toPx() }) 22.sp else 15.sp, maxLines = 1)
                 }
             }
         }
