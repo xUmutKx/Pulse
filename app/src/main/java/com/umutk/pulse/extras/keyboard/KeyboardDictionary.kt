@@ -203,6 +203,25 @@ object KeyboardDictionary {
         return top.randomOrNull()
     }
 
+    private val shortWords = setOf("bir", "bu", "ne", "de", "da", "mi", "mı", "mu", "mü", "ve", "ki", "ben", "sen", "çok", "her", "şu", "o",
+        "a", "i", "an", "as", "at", "be", "by", "do", "go", "he", "if", "in", "is", "it", "me", "my", "no", "of", "on", "or", "so", "to", "up", "us", "we")
+
+    /** Two words typed without the space between them ("birdahaki"): the split whose two parts are known words and likeliest together, or null. */
+    fun splitWords(code: String, w: String): String? {
+        if (w.length < 5 || w.length > 24) return null
+        var best: String? = null; var bestScore = -1f
+        for (i in 1 until w.length) {
+            val a = w.substring(0, i); val b = w.substring(i)
+            if ((a.length < 3 && a !in shortWords) || (b.length < 3 && b !in shortWords)) continue
+            if (!isWord(code, a) || !isWord(code, b)) continue
+            // both parts must be common words (a brand or a rare word that happens to split is left alone)
+            if (score(code, a) < 8f || score(code, b) < 8f) continue
+            val sc = minOf(score(code, a), score(code, b)) + (a.length + b.length) * .05f
+            if (sc > bestScore) { bestScore = sc; best = "$a $b" }
+        }
+        return best
+    }
+
     fun isWord(code: String, w: String): Boolean {
         val lang = d(code)
         val l = w.lowercase(Locale.ROOT)
