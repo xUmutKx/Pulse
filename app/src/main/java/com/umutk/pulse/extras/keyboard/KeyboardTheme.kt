@@ -26,7 +26,7 @@ object KeyboardThemes {
 
     /** The theme for [id]; [dark] is the phone's dark mode (Material, Windows 10 and Windows 11 follow it). */
     fun of(id: String, dark: Boolean): KbTheme = when (id) {
-        "amoled" -> KbTheme(id, c(0xFF000000), c(0xFF1F1F1F), c(0xFFFFFFFF), c(0xFF141414), c(0xFFFFFFFF), c(0xFF4FC3F7), c(0xFF000000), c(0xFF000000), c(0xFF2B2B2B), c(0xFF9A9A9A), 10, icons = "outlined")
+        "amoled" -> KbTheme(id, c(0xFF000000), c(0xFF1F1F1F), c(0xFFFFFFFF), c(0xFF141414), c(0xFFFFFFFF), c(0xFFB0B0B0), c(0xFF000000), c(0xFF000000), c(0xFF2B2B2B), c(0xFF9A9A9A), 10, icons = "outlined")
         "material" -> if (dark) KbTheme(id, c(0xFF1C1B1F), c(0xFF36343B), c(0xFFE6E1E5), c(0xFF2B2930), c(0xFFE6E1E5), c(0xFFD0BCFF), c(0xFF381E72), c(0xFF2B2930), c(0xFF49454F), c(0xFFCAC4D0), 12, icons = "rounded")
         else KbTheme(id, c(0xFFFEF7FF), c(0xFFFFFFFF), c(0xFF1D1B20), c(0xFFE7E0EC), c(0xFF1D1B20), c(0xFF6750A4), c(0xFFFFFFFF), c(0xFFF3EDF7), c(0xFFE6E0E9), c(0xFF49454F), 12, icons = "rounded")
         "win11" -> if (dark) KbTheme(id, c(0xFF202020), c(0xFF3B3B3B), c(0xFFFFFFFF), c(0xFF2B2B2B), c(0xFFFFFFFF), c(0xFF60CDFF), c(0xFF000000), c(0xFF2B2B2B), c(0xFF444444), c(0xFFC5C5C5), 6, border = c(0xFF1A1A1A), icons = "outlined")

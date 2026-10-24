@@ -50,6 +50,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
+    /** The word as it stood before the user started deleting letters of it: if the corrected form ends as a real word, the first form was a typo. */
+    private var peak: String? = null
+    private var corrAt = 0L
     private var selStart = 0
     private var selEnd = 0
     private var shiftTap = 0L
@@ -191,9 +194,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart; selEnd = newSelEnd
+        // the cursor went somewhere else after a correction: backspace must not undo that correction any more
+        if (lastCorrection != null && word.isEmpty() && SystemClock.uptimeMillis() - corrAt > 300 && newSelStart != oldSelStart) lastCorrection = null
         // the cursor left the word under way (the user tapped elsewhere): the word is finished as it stands
         if (word.isNotEmpty() && (candidatesStart < 0 || newSelStart < candidatesStart || newSelStart > candidatesEnd)) {
-            word.clear(); lastCorrection = null; updateSuggestions()
+            word.clear(); peak = null; lastCorrection = null; updateSuggestions()
         }
     }
 
@@ -251,7 +256,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val t = target
         if (correct && KeyboardPrefs.autocorrect && !st.plain && !noAuto && t != null && !t.equals(typed, true)) out = t
         c.commitText(out, 1)
+        peak?.let { pk ->
+            val lc = lang.locale
+            val a = pk.lowercase(lc); val b = typed.lowercase(lc)
+            if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito && a != b && a.length >= 3 && b.length >= 3 && Math.abs(a.length - b.length) <= 2 &&
+                a.commonPrefixWith(b).length >= 2 && KeyboardDictionary.isWord(st.lang, b) && !KeyboardDictionary.isWord(st.lang, a)) KeyboardDictionary.learnTypo(this, a, b)
+        }
+        peak = null
         lastCorrection = if (out != typed) Correction(typed, out, sep) else null
+        corrAt = SystemClock.uptimeMillis()
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
         prevWord2 = prevWord; prevWord = out
         word.clear(); target = null
@@ -300,6 +313,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (before == "$g ") { c.deleteSurroundingText(g.length + 1, 0); afterText(); return }
         }
         if (word.isNotEmpty()) {
+            if (peak == null && word.length >= 3) peak = word.toString()
             word.deleteCharAt(word.length - 1)
             if (touchPts.isNotEmpty()) touchPts.removeAt(touchPts.size - 1)
             if (word.isEmpty()) c.commitText("", 1) else c.setComposingText(word, 1)
@@ -311,7 +325,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val n = lc.corrected.length + lc.sep.length
             val txt = c.getTextBeforeCursor(n, 0)?.toString()
             lastCorrection = null
-            if (txt == lc.corrected + lc.sep) {
+            val after = c.getTextAfterCursor(1, 0)?.toString().orEmpty()
+            if (txt == lc.corrected + lc.sep && (after.isEmpty() || !after[0].isLetterOrDigit())) {
                 c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lc.original, 1); c.endBatchEdit()
                 word.append(lc.original); target = null; updateSuggestions(); return
             }
@@ -495,7 +510,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "incognito" -> st.incognito = !st.incognito
             "autocorrect" -> { KeyboardPrefs.autocorrect = !KeyboardPrefs.autocorrect; KeyboardPrefs.save(this) }
             "onehand" -> { KeyboardPrefs.oneHand = when (KeyboardPrefs.oneHand) { "off" -> "right"; "right" -> "left"; else -> "off" }; KeyboardPrefs.save(this) }
-            "arrows" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
+            "arrows" -> { KeyboardPrefs.proRow = !KeyboardPrefs.proRow; if (KeyboardPrefs.proRow) KeyboardPrefs.proBottom = false; KeyboardPrefs.save(this) }
             "numbers" -> { KeyboardPrefs.numberRow = !KeyboardPrefs.numberRow; KeyboardPrefs.save(this) }
             "proRow" -> { KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
             "glide" -> { KeyboardPrefs.glide = !KeyboardPrefs.glide; KeyboardPrefs.save(this) }
@@ -627,6 +642,21 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** A letter typed while Ctrl, Alt, Win or Shift waits: the key press with those modifiers (Ctrl+C and so on), not the letter. */
     private fun sendChord(ch: Char): Boolean {
         finishWord("", false)
+        // Win + D / L / A / N: what the phone has for them (home, lock, quick settings, notifications), through the accessibility helper
+        if (st.win > 0 && st.ctrl == 0) {
+            val g = when (ch.lowercaseChar()) {
+                'd' -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME
+                'l' -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_LOCK_SCREEN
+                'a' -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS
+                'n' -> android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_NOTIFICATIONS
+                else -> 0
+            }
+            if (g != 0) {
+                if (g == android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME) runCatching { startActivity(Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                else com.umutk.pulse.extras.launcher.globalAction(this, g)
+                useModifiers(); return true
+            }
+        }
         // Ctrl with A, C, X, V, Z, Y: the editor's own actions (a raw key chord is not understood by every text field, and some typed the letter after it)
         if (st.ctrl > 0 && st.alt == 0 && st.win == 0) {
             val act = when (ch.lowercaseChar()) {
@@ -652,6 +682,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "win" -> st.win = (st.win + 1) % 3
             "shiftm" -> st.shiftMod = (st.shiftMod + 1) % 3
             "selectAll", "copy", "cut", "paste", "undo", "redo" -> edit(id)
+            // Alt + Tab: the phone's recent apps (the accessibility helper), as the editor cannot switch windows
+            "tab" -> if (st.alt > 0) { com.umutk.pulse.extras.launcher.globalAction(this, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS); useModifiers() } else sendKey(d.code)
             else -> if (d.code != 0) sendKey(d.code)
         }
     }
