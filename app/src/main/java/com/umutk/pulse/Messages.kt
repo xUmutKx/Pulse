@@ -360,7 +360,8 @@ fun MessagesScreen(back: () -> Unit) {
                         PField(query, { query = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                         if (shown.isEmpty()) MessagesEmpty(Modifier.weight(1f), tr("No matches", "Eşleşme yok"))
                         else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                            items(shown, key = { it.id }) { th -> MessagesThreadRow(th, pins, { open = th },
+                            items(shown, key = { it.id }) { th -> MessagesThreadRow(th, pins, muted, { open = th },
+                                onMute = { muted = if (th.address in muted) muted - th.address else muted + th.address; MsgPrefs.setMuted(ctx, muted) },
                                 onPin = { pins = if (th.address in pins) pins - th.address else pins + th.address; MsgPrefs.setPinned(ctx, pins) },
                                 onArchive = { archives = archives + th.address; MsgPrefs.setArchived(ctx, archives) },
                                 onBlock = { blocks = blocks + th.address; MsgPrefs.setBlocked(ctx, blocks) }) }
@@ -373,18 +374,9 @@ fun MessagesScreen(back: () -> Unit) {
                 val pinned = addr in pins
                 val blocked = addr in blocks
                 if (addr.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PButton(if (pinned) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), compact = true) {
-                        pins = if (pinned) pins - addr else pins + addr; MsgPrefs.setPinned(ctx, pins)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    PButton(if (addr in muted) tr("Unmute", "Sesi aç") else tr("Mute", "Sessize al"), compact = true) {
-                        muted = if (addr in muted) muted - addr else muted + addr; MsgPrefs.setMuted(ctx, muted)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    PButton(if (blocked) tr("Unblock", "Engeli kaldır") else tr("Block", "Engelle"), compact = true) {
-                        blocks = if (blocked) blocks - addr else blocks + addr; MsgPrefs.setBlocked(ctx, blocks)
-                        if (!blocked) open = null
-                    }
+                    Box(Modifier.size(40.dp).clickable { pins = if (pinned) pins - addr else pins + addr; MsgPrefs.setPinned(ctx, pins) }, contentAlignment = Alignment.Center) { PIcon("pin", if (pinned) T.accent else T.sub, 22.dp) }
+                    Box(Modifier.size(40.dp).clickable { muted = if (addr in muted) muted - addr else muted + addr; MsgPrefs.setMuted(ctx, muted) }, contentAlignment = Alignment.Center) { PIcon("mute", if (addr in muted) T.accent else T.sub, 22.dp) }
+                    Box(Modifier.size(40.dp).clickable { blocks = if (blocked) blocks - addr else blocks + addr; MsgPrefs.setBlocked(ctx, blocks); if (!blocked) open = null }, contentAlignment = Alignment.Center) { PIcon("block", if (blocked) T.accent else T.sub, 22.dp) }
                 }
                 if (threadSearch) PField(threadQuery, { threadQuery = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                 val list = msgs.orEmpty().filter { threadQuery.isBlank() || it.body.contains(threadQuery, true) }
@@ -472,7 +464,7 @@ private fun MessagesAvatar(label: String) {
 /** One conversation row. A long press opens its menu: pin, archive, block. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, onOpen: () -> Unit, onPin: () -> Unit, onArchive: () -> Unit, onBlock: () -> Unit) {
+private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, muted: Set<String>, onOpen: () -> Unit, onPin: () -> Unit, onMute: () -> Unit, onArchive: () -> Unit, onBlock: () -> Unit) {
     val label = th.name ?: th.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
     var menu by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth()) {
@@ -495,11 +487,13 @@ private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, onOpen: () -> Un
                 Text("${th.unread}", color = onAccent(T.accent), fontSize = 11.sp)
             }
         }
+        Box(Modifier.size(36.dp).clickable { menu = true }, contentAlignment = Alignment.Center) { PIcon("more", T.sub, 20.dp) }
     }
     ThemedMenu(menu, { menu = false }) {
-        ThemedMenuItem(if (th.address in pins) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), { menu = false; onPin() })
-        ThemedMenuItem(tr("Archive", "Arşivle"), { menu = false; onArchive() })
-        ThemedMenuItem(tr("Block", "Engelle"), { menu = false; onBlock() })
+        ThemedMenuItem(if (th.address in pins) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), { menu = false; onPin() }, iconKey = "pin")
+        ThemedMenuItem(if (th.address in muted) tr("Unmute", "Sesi aç") else tr("Mute", "Sessize al"), { menu = false; onMute() }, iconKey = "mute")
+        ThemedMenuItem(tr("Archive", "Arşivle"), { menu = false; onArchive() }, iconKey = "archive")
+        ThemedMenuItem(tr("Block", "Engelle"), { menu = false; onBlock() }, iconKey = "block")
     }
     }
 }

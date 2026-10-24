@@ -102,10 +102,10 @@ internal fun GifTab() {
 
     PCard {
         Text(tr("Start from", "Şundan başla"), color = T.text, fontSize = 16.sp)
-        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PButton(tr("A GIF", "Bir GIF"), compact = true) { pickGif.launch(arrayOf("image/gif")) }
-            PButton(tr("A video", "Bir video"), compact = true) { pickVideo.launch(arrayOf("video/*")) }
-            PButton(tr("Pictures", "Resimler"), compact = true) { pickPics.launch(arrayOf("image/*")) }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ToolTile("gif", "GIF", false, Modifier.weight(1f)) { pickGif.launch(arrayOf("image/gif")) }
+            ToolTile("video", tr("Video", "Video"), false, Modifier.weight(1f)) { pickVideo.launch(arrayOf("video/*")) }
+            ToolTile("photos", tr("Pictures", "Resimler"), false, Modifier.weight(1f)) { pickPics.launch(arrayOf("image/*")) }
         }
         Text("${tr("Pictures per second", "Saniyede resim")}: ${fps.roundToInt()}", color = T.sub, fontSize = 12.sp)
         PSlider(fps, { fps = it }, 2f..24f, onDone = {})

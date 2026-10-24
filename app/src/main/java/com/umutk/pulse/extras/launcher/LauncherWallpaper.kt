@@ -39,6 +39,8 @@ fun wallpaperRes(lookId: String, landscape: Boolean = false): Int? {
     // "a different wallpaper every day": the day of the year picks the picture
     var i = (if (LauncherPrefs.wallDaily) java.util.Calendar.getInstance().get(java.util.Calendar.DAY_OF_YEAR) % all.size else LauncherPrefs.wallIndex(lookId)).coerceIn(0, all.lastIndex)
     // a phone picture is tall: a rotated screen takes the first desktop picture of the look instead
+    // Windows 11 turned sideways: its own blue bloom
+    if (landscape && lookId == "win11" && com.umutk.pulse.features.isMobileWall(lookId, i)) return com.umutk.pulse.R.drawable.splash_win11_wallpaper
     if (landscape && com.umutk.pulse.features.isMobileWall(lookId, i)) i = all.indices.firstOrNull { !com.umutk.pulse.features.isMobileWall(lookId, it) } ?: i
     // a desktop picture is wide: a portrait screen takes the first phone picture instead
     else if (!landscape && !com.umutk.pulse.features.isMobileWall(lookId, i)) i = all.indices.firstOrNull { com.umutk.pulse.features.isMobileWall(lookId, it) } ?: i

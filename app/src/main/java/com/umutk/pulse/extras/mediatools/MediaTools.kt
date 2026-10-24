@@ -7,6 +7,11 @@ import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -61,15 +66,27 @@ fun MediaToolsScreen(back: () -> Unit) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
             Text(tr("Media tools", "Medya araçları"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         }
-        Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PChip(tab == 0, tr("Compress", "Sıkıştır")) { tab = 0 }
-            PChip(tab == 1, "GIF") { tab = 1 }
-            PChip(tab == 2, tr("Convert", "Dönüştür")) { tab = 2 }
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            ToolTile("compress", tr("Compress", "Sıkıştır"), tab == 0, Modifier.weight(1f)) { tab = 0 }
+            ToolTile("gif", "GIF", tab == 1, Modifier.weight(1f)) { tab = 1 }
+            ToolTile("convert", tr("Convert", "Dönüştür"), tab == 2, Modifier.weight(1f)) { tab = 2 }
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             when (tab) { 0 -> CompressTab(); 1 -> GifTab(); else -> ConvertTab() }
             Box(Modifier.size(24.dp))
         }
+    }
+}
+
+/** An icon over a short name, the same size for every tile of a row; the picked one wears the look's accent. */
+@Composable
+internal fun ToolTile(icon: String, label: String, picked: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    Column(
+        modifier.height(68.dp).clip(RoundedCornerShape(10.dp)).background(if (picked) T.accent.copy(alpha = .16f) else T.panel).border(1.dp, if (picked) T.accent else T.line, RoundedCornerShape(10.dp)).clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center,
+    ) {
+        PIcon(icon, if (picked) T.accent else T.text, 26.dp)
+        Text(label, color = if (picked) T.accent else T.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
     }
 }
 
