@@ -277,7 +277,7 @@ fun CalMain() {
             },
             confirmButton = { if (cal?.writable == true) IconButton({ editEvent(e); detail = null }) { CalIc("edit", Icons.Outlined.Edit, ct("Edit event")) } else IconButton({ detail = null }) { CalIc("check", Icons.Outlined.Check, ct("OK")) } },
             dismissButton = { if (cal?.writable == true) IconButton({ confirmDel = true }) { CalIc("delete", Icons.Outlined.Delete, ct("Delete"), tint = MaterialTheme.colorScheme.error) } })
-        if (confirmDel) AlertDialog(onDismissRequest = { confirmDel = false }, title = { Text(ct("Delete event?")) },
+        if (confirmDel) com.umutk.pulse.WinAlert(onDismissRequest = { confirmDel = false }, title = { Text(ct("Delete event?")) },
             confirmButton = { IconButton({ CalData.delete(ctx, e.id); confirmDel = false; detail = null; refresh++ }) { CalIc("delete", Icons.Outlined.Delete, ct("Delete"), tint = MaterialTheme.colorScheme.error) } },
             dismissButton = { IconButton({ confirmDel = false }) { CalIc("close", Icons.Outlined.Close, ct("Cancel")) } })
     }

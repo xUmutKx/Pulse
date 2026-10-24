@@ -54,7 +54,7 @@ private fun PickDate(init: LocalDate, onPick: (LocalDate) -> Unit, onDismiss: ()
 @Composable
 private fun PickTime(init: LocalTime, onPick: (LocalTime) -> Unit, onDismiss: () -> Unit) {
     val st = rememberTimePickerState(init.hour, init.minute, CalPrefs.h24)
-    AlertDialog(onDismissRequest = onDismiss, text = { TimePicker(st) },
+    com.umutk.pulse.WinAlert(onDismissRequest = onDismiss, text = { TimePicker(st) },
         confirmButton = { IconButton({ onPick(LocalTime.of(st.hour, st.minute)); onDismiss() }) { CalIc("check", Icons.Outlined.Check, ct("OK")) } },
         dismissButton = { IconButton(onDismiss) { CalIc("close", Icons.Outlined.Close, ct("Cancel")) } })
 }
@@ -131,7 +131,7 @@ fun EventEditor(st: EditState, cals: List<CalCal>, onSave: (EditState) -> Unit, 
 @Composable
 fun CalendarsDialog(cals: List<CalCal>, onChange: () -> Unit, onClose: () -> Unit) {
     val ctx = LocalContext.current
-    AlertDialog(onDismissRequest = onClose, title = { Text(ct("Calendars")) },
+    com.umutk.pulse.WinAlert(onDismissRequest = onClose, title = { Text(ct("Calendars")) },
         text = {
             Column(Modifier.verticalScroll(rememberScrollState())) {
                 cals.forEach { c ->

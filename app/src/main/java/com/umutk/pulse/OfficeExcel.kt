@@ -559,7 +559,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
         }
         if (dlg.isNotEmpty()) {
             val bg = if (t.dark) Color(0xFF2B2B2B) else Color.White; val ink = if (t.dark) Color.White else Color.Black
-            AlertDialog(onDismissRequest = { dlg = "" }, confirmButton = {}, containerColor = bg, shape = RoundedCornerShape(if (t.classic) 0.dp else 14.dp), text = {
+            com.umutk.pulse.WinAlert(onDismissRequest = { dlg = "" }, confirmButton = {}, containerColor = bg, text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (dlg == "size") X_SIZES.chunked(4).forEach { row ->
                         Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) { row.forEach { n ->
