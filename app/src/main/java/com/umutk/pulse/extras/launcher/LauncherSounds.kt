@@ -17,9 +17,14 @@ object LauncherSounds {
     private fun clickRes(k: String) = when (k) { "95" -> R.raw.snd_click_95; "xp" -> R.raw.snd_click_xp; "7" -> R.raw.snd_click_7; "10" -> R.raw.snd_click_10; "11" -> R.raw.snd_click_11; else -> 0 }
     private val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
 
-    /** The look's start-up sound. */
+    /** The look's start-up sound, when the launcher's sounds are on. */
     fun startup(c: Context, lookId: String) {
         if (!LauncherPrefs.sounds) return
+        play(c, lookId)
+    }
+
+    /** The look's start-up sound whatever the launcher's setting says: for the Pulse app's own opening (its option is off until it is switched on). */
+    fun play(c: Context, lookId: String) {
         val res = startRes(key(lookId)).takeIf { it != 0 } ?: return
         runCatching {
             MediaPlayer().apply {
