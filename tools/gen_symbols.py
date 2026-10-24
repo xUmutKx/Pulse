@@ -20,6 +20,19 @@ COMBOS = [
  "『 』", "「 」", "【 】", "꧁ ꧂", "༺ ༻", "【・】", "⟦ ⟧", "❝ ❞", "❛ ❜", "〝 〞",
  "☆ ミ", "•☽────✧˖°", "☾ ˖ ✦", "ˏˋ ˎˊ", "°˖✧", "⊹ ˚ ₊", "♡ ⸜ ⸝", "୨ৎ", "ꪜ", "ᰔ", "𓆩♡𓆪", "𓆩⟡𓆪", "𓆸", "𖤐", "𖧷", "𑁍", "ꕥ", "⚝", "⛤", "ꗃ",
 ]
+import random
+_rnd = random.Random(7)
+_POOL = "˖ ⊹ ⋆ ✦ ✧ ₊ ˚ 𓂃 ౨ৎ ᡣ𐭩 ࣪ ꕤ ᯓ ⟡ 𖦹 ⁺ ˙ ‧ ᰔ ᥫ᭡ ❀ ✿ ♡ ☾ ⸜ ⸝ ꒰ ꒱ ໒ ა ˶ ᵔ ᵕ ༘ ݁ ⌒ ᴗ ❥ ღ ❁ ✩ ★ ☆ ⁂ ※ ꩜ ࿔ ࿐ ᨳ ⸙ ⛤ ⚝ ꕥ 𐙚 ୨ ୧ ˳ ˑ ᵎ ꜣ ✶ ✷ ✸ ❃ ❋ ⊱ ⊰ ❖ ◦ • ∘ ᐟ ᐠ ᐢ".split()
+_GLUE = ["", "", "˚₊", "₊˚", "˖", "⁺", "⋆"]
+GENERATED = []
+while len(GENERATED) < 140:
+    n = _rnd.randint(3, 6)
+    parts = [_rnd.choice(_POOL) for _ in range(n)]
+    if len(set(parts)) < n: continue
+    p = " ".join(parts)
+    if _rnd.random() < .5: p += _rnd.choice(_GLUE)
+    if p not in GENERATED: GENERATED.append(p)
+COMBOS += GENERATED
 FAM = [
  ("Arrows", [(0x2190,0x21FF),(0x27F0,0x27FF),(0x2900,0x297F)]),
  ("Shapes", [(0x25A0,0x25FF),(0x2500,0x259F),(0x1F780,0x1F7FF)]),

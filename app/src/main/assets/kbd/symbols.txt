@@ -69,6 +69,146 @@
 ⚝	pattern outlined white star
 ⛤	pattern pentagram
 ꗃ	pattern vai syllable bo
+ᥫ᭡ ⛤ ˚ ᡣ𐭩 ◦˖	pattern tai le letter e
+❋ ꒱ ✧₊˚	pattern heavy eight teardrop-spoked propeller asterisk
+˶ ꕤ ∘⋆	pattern modifier letter middle double acute accent
+໒ 𓂃 ᐢ	pattern lao digit two
+໒ ₊ ᐟ	pattern lao digit two
+𐙚 ᰔ • ⁺ ᐢ⋆	pattern linear a sign a306
+⟡ ᐢ ⸜ ࿐⁺	pattern white concave-sided diamond
+ᐠ 𓂃 ꒰˖	pattern canadian syllabics final grave
+✩ ꜣ ᵎ ࿔ ღ ᵔ	pattern stress outlined white star
+࣪ ᐢ ღ ❖˚₊	pattern arabic tone one dot above
+ᴗ ᡣ𐭩 ⁺ ⊱ 𐙚 ✿	pattern latin small letter bottom half o
+✸ 𐙚 ₊ ᡣ𐭩	pattern heavy eight pointed rectilinear black star
+⁂ ※ ❃ ᵎ ౨ৎ	pattern asterism
+✶ ౨ৎ 𓂃 ❁ ᐢ	pattern six pointed black star
+ᴗ ⸙ ※ ⋆ ꜣ ꩜	pattern latin small letter bottom half o
+𓂃 ꒱ ᴗ ˙ ᵔ ⛤⋆	pattern egyptian hieroglyph d013
+࣪ ✿ ˑ ⚝ ∘ ⌒	pattern arabic tone one dot above
+∘ ⌒ 𐙚 ꩜ ᨳ ა	pattern ring operator
+༘ ᴗ ˖ ᰔ˚₊	pattern tibetan astrological sign -khyud pa
+˙ ⊱ ˚ ᵎ ᐟ₊˚	pattern dot above
+⟡ ✷ ⚝ 𓂃 ⸜ ౨ৎ	pattern white concave-sided diamond
+❀ 𖦹 ⁂ ˚ ⟡ ˖	pattern white florette
+࿔ ✦ ᡣ𐭩	pattern tibetan mark closing brda rnying yig mgo sgab ma
+ᥫ᭡ ᵕ ※ ࿔ ✶ ⁺₊˚	pattern tai le letter e
+༘ ✷ ❀ ⊰ ⋆˖	pattern tibetan astrological sign -khyud pa
+ᰔ • ✦ ❖ ღ	pattern lepcha letter bla
+༘ ⊰ ࿔	pattern tibetan astrological sign -khyud pa
+໒ ◦ • ❋ ☆	pattern lao digit two
+˶ ⚝ ა ⸝	pattern modifier letter middle double acute accent
+໒ ⟡ ა˚₊	pattern lao digit two
+⁺ ⸙ ⸝	pattern superscript plus sign
+☆ ꕤ ⛤ ꜣ ⚝ ࣪	pattern white star
+˙ ✦ ᥫ᭡ ꜣ	pattern dot above
+✶ ※ ᥫ᭡ ∘	pattern six pointed black star
+⊹ ⟡ ❖	pattern hermitian conjugate matrix
+୧ ⸜ ꒱ ✦˚₊	pattern oriya digit one
+★ ༘ • 𐙚	pattern black star
+꩜ ᵎ ⊰˖	pattern cham punctuation spiral
+◦ ᥫ᭡ ❖ ⊱₊˚	pattern white bullet
+˖ ᥫ᭡ ♡ ᰔ⁺	pattern modifier letter plus sign
+ᐟ 𓂃 ★	pattern canadian syllabics final acute
+⟡ ᐟ 𓂃 ᵔ ⸜ ⌒	pattern white concave-sided diamond
+ᐟ ✦ ౨ৎ ˳ ★ ❋	pattern canadian syllabics final acute
+⌒ ˑ ⊱ ◦	pattern arc
+⊰ ༘ ᐟ ⸝	pattern precedes under relation
+𐙚 ⁺ ⛤ ˳⁺	pattern linear a sign a306
+୨ ᡣ𐭩 ꒱ ღ	pattern oriya digit two
+࿔ ᰔ ᵕ ‧	pattern tibetan mark closing brda rnying yig mgo sgab ma
+ᯓ ⛤ ✸ ❀	pattern batak letter simalungun ra
+❀ ୧ ⊱ ⚝	pattern white florette
+✩ ꕤ ࿔ ⋆ ⁂	pattern stress outlined white star
+⋆ ⸙ ☆ ⊰ ❥ ⊱	pattern star operator
+ა ⟡ ࣪	pattern georgian letter an
+݁ ˙ ୨ ༘˖	pattern syriac qushshaya
+★ ꕤ ⌒ 𓂃 ☾ ୨	pattern black star
+⋆ ꕤ ༘ ࣪ ໒⋆	pattern star operator
+ᵎ ⊹ ⁂	pattern modifier letter small turned i
+݁ ˙ ₊ ❖ ˶ 𖦹	pattern syriac qushshaya
+❥ ˑ ❋ ♡⋆	pattern rotated heavy black heart bullet
+ᵕ ✧ ⊹˖	pattern modifier letter small bottom half o
+⊱ ✶ ᵔ ˑ⋆	pattern succeeds under relation
+❃ • ⛤ ❋ ❁ ꒱	pattern heavy teardrop-spoked pinwheel asterisk
+⸝ ‧ ⚝ ※ ˚	pattern right low paraphrase bracket
+ᡣ𐭩 ᵕ ୧	pattern mongolian letter sibe ka
+❋ ᴗ ᵔ ❥ ₊ ᵎ˚₊	pattern heavy eight teardrop-spoked propeller asterisk
+˖ ༘ ࿔ ☆ ∘ ★˚₊	pattern modifier letter plus sign
+꩜ ☾ ˖ ☆₊˚	pattern cham punctuation spiral
+༘ ꕤ ᰔ	pattern tibetan astrological sign -khyud pa
+⸙ ★ ❃ ᥫ᭡˖	pattern palm branch
+₊ ⊱ ୨ ❋˖	pattern subscript plus sign
+ა ࣪ ✦⁺	pattern georgian letter an
+⟡ ᨳ ˑ ᐟ ˚	pattern white concave-sided diamond
+✸ ༘ ˖ ᵎ	pattern heavy eight pointed rectilinear black star
+❖ ౨ৎ ✶	pattern black diamond minus white x
+˶ ꒰ ა ᵎ ❃	pattern modifier letter middle double acute accent
+✷ ᴗ ₊	pattern eight pointed rectilinear black star
+ᡣ𐭩 ᰔ ☆ ᵕ	pattern mongolian letter sibe ka
+ᐠ ‧ ⊹ ✷ 𓂃⁺	pattern canadian syllabics final grave
+꒱ ✸ ❥	pattern yi radical vep
+❁ ࣪ ✶ ⋆	pattern eight petalled outlined black florette
+❖ ༘ ࿔ ˙	pattern black diamond minus white x
+𖦹 ࿔ ა ❃ ✸	pattern bamum letter phase-e ngkaami
+✸ ˑ ⚝	pattern heavy eight pointed rectilinear black star
+※ ᨳ ✩ ⁺ ☆ ˖˚₊	pattern reference mark
+⁺ ⸝ ⊹ ❥ ᵕ ࿐₊˚	pattern superscript plus sign
+࿔ ୨ ⌒	pattern tibetan mark closing brda rnying yig mgo sgab ma
+⟡ ˚ ᴗ ᥫ᭡ ᵔ	pattern white concave-sided diamond
+⊱ ✩ ⸜ ࿐ ୨ ✦	pattern succeeds under relation
+‧ ᴗ ✸ ˚ ∘ ˙₊˚	pattern hyphenation point
+ᴗ ღ ᵕ ༘ ⚝	pattern latin small letter bottom half o
+✷ ᐟ ⛤ ⁺ ✿	pattern eight pointed rectilinear black star
+꒰ ❋ ❃	pattern yi radical shy
+☆ ˑ ୨ ‧ ∘ ⸜	pattern white star
+ᐟ ꕤ ✩ ˶ ࿐˖	pattern canadian syllabics final acute
+ᨳ ݁ ⁂ 𓂃˖	pattern tai tham letter high tha
+˙ ❋ ❖ ꒱ ꕤ	pattern dot above
+⚝ ˑ ୧ ❁ ⋆ ˙⁺	pattern outlined white star
+✸ ˖ ᡣ𐭩 ⛤ ❖ ꜣ	pattern heavy eight pointed rectilinear black star
+ᵎ ࣪ ∘	pattern modifier letter small turned i
+˙ ა ᐠ	pattern dot above
+˙ ᵕ ❖ ୧ 𖦹˚₊	pattern dot above
+⸙ ༘ ໒ ˖˚₊	pattern palm branch
+⌒ ✩ ᵔ ✶ ❖ ˶	pattern arc
+ꕥ ❁ 𓂃₊˚	pattern vai syllable zha
+✧ ⁂ 𐙚 ࿔ ⛤ ⸝˚₊	pattern white four pointed star
+꒰ ❃ ⸝⋆	pattern yi radical shy
+ა ꜣ ໒ ༘	pattern georgian letter an
+⟡ ❃ ☾ ໒ ✸⁺	pattern white concave-sided diamond
+ᰔ ⛤ ˚˖	pattern lepcha letter bla
+𐙚 ˚ 𓂃 ☾⁺	pattern linear a sign a306
+𖦹 ࣪ ✿ ☆ ⸜˖	pattern bamum letter phase-e ngkaami
+✧ ❁ ᨳ ࿐ ☆ ˳	pattern white four pointed star
+⌒ ࣪ ※	pattern arc
+ᨳ ꩜ ❁ ୧⁺	pattern tai tham letter high tha
+⸝ ࿐ • ˑ ⸜ ★₊˚	pattern right low paraphrase bracket
+ꕥ ᵔ ⚝	pattern vai syllable zha
+݁ ☆ ₊ ༘ ✩	pattern syriac qushshaya
+˖ ౨ৎ ✦ ა ⟡₊˚	pattern modifier letter plus sign
+ღ ᥫ᭡ ˶˚₊	pattern georgian letter ghan
+࿔ ࣪ ⊱ ⸝ ⛤ ❀	pattern tibetan mark closing brda rnying yig mgo sgab ma
+✷ ∘ •₊˚	pattern eight pointed rectilinear black star
+ᡣ𐭩 ༘ ࣪₊˚	pattern mongolian letter sibe ka
+ˑ ♡ ა ‧ 𐙚 ᵎ	pattern modifier letter half triangular colon
+ᐠ ݁ ࿐ ᵕ ༘	pattern canadian syllabics final grave
+ᵔ ˶ ᥫ᭡ ᴗ	pattern modifier letter small top half o
+★ ౨ৎ ⛤ ᵕ	pattern black star
+ᯓ ꜣ ✧ ⟡⋆	pattern batak letter simalungun ra
+ˑ ࿐ ₊ ❥	pattern modifier letter half triangular colon
+⸜ ᡣ𐭩 ࿐ ⊱	pattern left low paraphrase bracket
+༘ ˖ ⟡ ※ ꒱ ✧	pattern tibetan astrological sign -khyud pa
+꒰ ᵕ ✧	pattern yi radical shy
+⊹ ★ ꕥ ࿐˚₊	pattern hermitian conjugate matrix
+꒰ ✧ ❃	pattern yi radical shy
+ꕥ ᯓ ⛤	pattern vai syllable zha
+◦ ꕤ ❀ ⛤	pattern white bullet
+⚝ ꒰ ˖ ୧ ❀ ୨	pattern outlined white star
+ᐢ ࿔ ᵎ ❀ ˙ ⊹	pattern canadian syllabics final top half ring
+ꕤ ᐢ ࿐ ❋ ✿ ᰔ	pattern vai syllable za
+౨ৎ ⟡ ⸙ ✸	pattern telugu digit two
+ღ ˙ ₊ ✷˖	pattern georgian letter ghan
 #Flowers
 ✿	black florette
 ❀	white florette
