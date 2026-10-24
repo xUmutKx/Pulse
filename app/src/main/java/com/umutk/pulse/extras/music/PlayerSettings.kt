@@ -128,9 +128,9 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.run(c, uri, MusicLibrary.tracks.value, embedCovers) } }
             importNote = r.getOrNull()?.let { x ->
                 tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") +
-                    (if (x.missing > 0) "; ${x.missing} songs of the backup are not on this phone, e.g. ${x.missingNames.joinToString(", ")}" else ""),
+                    (if (x.missing > 0) "; the rest was saved; ${x.missing} songs of the backup were not found on this phone, e.g. ${x.missingNames.joinToString(", ")}" else ""),
                     "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") +
-                    (if (x.missing > 0) "; yedekteki ${x.missing} şarkı bu telefonda bulunamadı, örn. ${x.missingNames.joinToString(", ")}" else ""))
+                    (if (x.missing > 0) "; kalanlar kaydedildi; yedekteki ${x.missing} şarkı bu telefonda bulunamadı, örn. ${x.missingNames.joinToString(", ")}" else ""))
             } ?: tr("The backup could not be read", "Yedek okunamadı")
         }
     }

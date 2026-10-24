@@ -259,7 +259,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val typed = word.toString()
         var out = typed
         val t = target
-        if (correct && KeyboardPrefs.autocorrect && !st.plain && !noAuto && t != null && !t.equals(typed, true)) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !noAuto && t != null && !t.equals(typed, true)) out = t
         c.commitText(out, 1)
         peak?.let { pk ->
             val lc = lang.locale
@@ -476,6 +476,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun deleteWord() {
         val c = currentInputConnection ?: return
         finishWord("", false); lastGlide = null; lastCorrection = null
+        feedback()
         val before = c.getTextBeforeCursor(80, 0)?.toString().orEmpty()
         if (before.isEmpty()) return
         var n = 0

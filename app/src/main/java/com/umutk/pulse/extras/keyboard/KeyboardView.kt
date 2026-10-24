@@ -235,7 +235,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
 /** The number pad of number, phone, date and numeric-password fields: big digits and nothing else. */
 @Composable
 private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
-    val h = keyH * 1.1f
+    val h = keyH * .95f
     listOf("123", "456", "789").forEach { line ->
         Row(Modifier.fillMaxWidth()) { line.forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, 1f), h) } }
     }
@@ -245,8 +245,8 @@ private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.comp
         Key(th, st, act, KbKey("", KeyKind.DELETE, 1f), h)
     }
     Row(Modifier.fillMaxWidth()) {
-        Key(th, st, act, KbKey("-", KeyKind.CHAR, 1f), h * .8f)
-        Key(th, st, act, KbKey("+", KeyKind.CHAR, 1f), h * .8f)
+        Key(th, st, act, KbKey("*", KeyKind.CHAR, 1f), h * .8f)
+        Key(th, st, act, KbKey("#", KeyKind.CHAR, 1f), h * .8f)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1f), h * .8f)
     }
 }
