@@ -65,7 +65,6 @@ class CoverService : Service() {
     // Touches reach the detector before the views, so a double tap anywhere closes the cover.
     private val gestures by lazy {
         GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onDoubleTap(e: MotionEvent): Boolean { stopSelf(); return true }
             // a downward fling that starts on the top edge is the way back to the status bar and quick settings
             override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
                 if (e1 == null || vy <= 0f || e1.y > topZone() || e2.y <= e1.y) return false
@@ -73,6 +72,20 @@ class CoverService : Service() {
                 return true
             }
         })
+    }
+
+    // two short taps within 600 ms anywhere close the cover (the system's double-tap detector wanted them close together and sometimes took a third)
+    private var downAt = 0L; private var downX = 0f; private var downY = 0f; private var lastTapAt = 0L
+    private fun countTaps(ev: MotionEvent) {
+        when (ev.actionMasked) {
+            MotionEvent.ACTION_DOWN -> { downAt = ev.eventTime; downX = ev.x; downY = ev.y }
+            MotionEvent.ACTION_UP -> {
+                val slop = 48f * resources.displayMetrics.density
+                if (ev.eventTime - downAt < 350 && kotlin.math.hypot(ev.x - downX, ev.y - downY) < slop) {
+                    if (ev.eventTime - lastTapAt < 600) { lastTapAt = 0L; stopSelf() } else lastTapAt = ev.eventTime
+                } else lastTapAt = 0L
+            }
+        }
     }
 
     override fun onBind(i: Intent?): IBinder? = null
@@ -90,7 +103,7 @@ class CoverService : Service() {
         if (acc == null && !com.umutk.pulse.Compat.canOverlay(this)) { stopSelf(); return }
 
         val v = object : FrameLayout(this) {
-            override fun dispatchTouchEvent(ev: MotionEvent): Boolean { gestures.onTouchEvent(ev); return super.dispatchTouchEvent(ev) }
+            override fun dispatchTouchEvent(ev: MotionEvent): Boolean { gestures.onTouchEvent(ev); countTaps(ev); return super.dispatchTouchEvent(ev) }
         }
         v.setBackgroundColor(Color.BLACK)
         // the centred items stack in one column: clock, date, battery, own text
