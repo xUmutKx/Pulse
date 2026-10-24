@@ -276,10 +276,17 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         else if (!welcomed) Welcome { welcomed = true }
         else key(th.dark) {
             // tablets and landscape: the pages are phone lists, so on a wide screen they keep a readable width in the middle instead of stretching edge to edge
-            val wdp = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp
-            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
-                androidx.compose.foundation.layout.Box(if (wdp > 900) Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()) {
-                    App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it })
+            val cfgW = androidx.compose.ui.platform.LocalConfiguration.current
+            // the minimal tablet mode: on a tablet (smallest side 600 dp or more) everything is drawn a fifth bigger, and the page keeps its readable width in the middle
+            val tablet = cfgW.smallestScreenWidthDp >= 600
+            val dens0 = androidx.compose.ui.platform.LocalDensity.current
+            val zoom = if (tablet) 1.2f else 1f
+            val wdp = (cfgW.screenWidthDp / zoom).toInt()
+            androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens0.density * zoom, dens0.fontScale)) {
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
+                    androidx.compose.foundation.layout.Box(if (wdp > 900) Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()) {
+                        App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it })
+                    }
                 }
             }
         }
