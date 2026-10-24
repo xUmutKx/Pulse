@@ -83,7 +83,9 @@ class LauncherActivity : ComponentActivity() {
             BackHandler(enabled = LauncherSession.startOpen) { LauncherSession.startOpen = false }
             val edge = with(LocalDensity.current) { sideInsetPx.toDp() }
             LookHost(lookId = look.id) { th ->
+                WindowsCursor(th.id in com.umutk.pulse.loginLooks) {
                 key(look.id) { CompositionLocalProvider(LocalLauncherEdge provides edge) { LauncherRoot(look, apps) } }
+                }
                 // the Windows looks start like a PC: boot screen, then the sign-in screen (once per launcher process)
                 if (!LauncherSession.booted && th.id in com.umutk.pulse.loginLooks) {
                     var stage by remember { mutableIntStateOf(if (LauncherPrefs.bootScreen) 0 else if (LauncherPrefs.loginScreen) 1 else 2) }
