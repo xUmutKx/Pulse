@@ -748,10 +748,22 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     val icons = listOf(Icons.Rounded.AccessTime, Icons.Rounded.EmojiEmotions, Icons.Rounded.Person, Icons.Rounded.Pets, Icons.Rounded.Restaurant, Icons.Rounded.DirectionsCar,
         Icons.Rounded.SportsSoccer, Icons.Rounded.Lightbulb, Icons.Rounded.Tag, Icons.Rounded.Flag)
     val q = st.emojiQuery
+    val fams by androidx.compose.runtime.produceState(emptyList<KeyboardSymbols.Family>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardSymbols.load(ctx) } }
+    var g by remember { mutableStateOf(0) }
+    var sub by remember { mutableStateOf(0) }
     val dens = androidx.compose.ui.platform.LocalDensity.current
     // the same height as the keys, so the keyboard does not shrink; the search needs the keys under it and is taller
     val fixed = if (q == null && st.keysH > 0) Modifier.height(with(dens) { st.keysH.toDp() }) else Modifier
     Column(Modifier.fillMaxWidth().then(fixed)) {
+        // on the symbol page the families sit above the search, where the thumb reaches them
+        if (q == null && tab == 11) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
+            fams.forEachIndexed { i, f ->
+                Box(Modifier.size(width = 44.dp, height = 36.dp).clickable { g = i; sub = 0 }, contentAlignment = Alignment.Center) {
+                    Icon(familyIcon(f.id), tr(f.en, f.tr), tint = if (i == g) th.text else th.sub, modifier = Modifier.size(22.dp))
+                    if (i == g) Box(Modifier.align(Alignment.BottomCenter).width(22.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
+                }
+            }
+        }
         Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
             if (q != null) {
                 // search: the box takes the place of the tabs; the keys below type into it
@@ -769,7 +781,6 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             }
         }
         if (q != null) {
-            val fams by androidx.compose.runtime.produceState(emptyList<KeyboardSymbols.Family>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardSymbols.load(ctx) } }
             val found = remember(q, all, fams) { EmojiData.search(all, q) + KeyboardSymbols.search(fams, q).map { EmojiItem(it.ch, 11, it.name) } }
             LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(48.dp)) {
                 items(found) { it2 -> EmojiCell(it2, th, act) }
@@ -780,7 +791,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             LaunchedEffect(tab) { if (pager.currentPage != tab) pager.animateScrollToPage(tab) }
             LaunchedEffect(pager.currentPage) { tab = pager.currentPage }
             androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { page ->
-                if (page == 11) { SymbolPage(th, act); return@HorizontalPager }
+                if (page == 11) { SymbolPage(th, act, fams, g, sub) { sub = it }; return@HorizontalPager }
                 val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
                     else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
                 LazyVerticalGrid(GridCells.Adaptive(if (page == 10) 92.dp else 44.dp), Modifier.fillMaxSize()) {
@@ -816,33 +827,21 @@ private fun familyIcon(id: String): ImageVector = when (id) {
 
 /** The symbol tab: a row of icons for the families, a row of sub-categories when the family has some, and the signs; the search above finds a sign by its Unicode name. */
 @Composable
-private fun SymbolPage(th: KbTheme, act: KbActions) {
-    val ctx = androidx.compose.ui.platform.LocalContext.current
-    val fams by androidx.compose.runtime.produceState(emptyList<KeyboardSymbols.Family>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardSymbols.load(ctx) } }
-    var g by remember { mutableStateOf(0) }
-    var sub by remember { mutableStateOf(0) }
+private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
     val fam = fams.getOrNull(g)
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
-            fams.forEachIndexed { i, f ->
-                Box(Modifier.size(width = 44.dp, height = 36.dp).clickable { g = i; sub = 0 }, contentAlignment = Alignment.Center) {
-                    Icon(familyIcon(f.id), tr(f.en, f.tr), tint = if (i == g) th.text else th.sub, modifier = Modifier.size(22.dp))
-                    if (i == g) Box(Modifier.align(Alignment.BottomCenter).width(22.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
-                }
-            }
-        }
         val subs = fam?.subs.orEmpty()
         if (subs.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             subs.forEachIndexed { i, (name, _) ->
                 Text(KeyboardSymbols.subName(name), color = if (i == sub) th.text else th.sub, fontSize = 13.sp, fontWeight = if (i == sub) FontWeight.Medium else FontWeight.Normal,
-                    modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (i == sub) th.special else Color.Transparent).clickable { sub = i }.padding(horizontal = 12.dp, vertical = 5.dp))
+                    modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (i == sub) th.special else Color.Transparent).clickable { onSub(i) }.padding(horizontal = 12.dp, vertical = 5.dp))
             }
         }
         // the presets are long: wider cells and smaller type
         val wide = fam?.id == "Patterns"
-        LazyVerticalGrid(GridCells.Adaptive(if (wide) 170.dp else 48.dp), Modifier.fillMaxSize()) {
+        LazyVerticalGrid(if (wide) GridCells.Fixed(1) else GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
             items(subs.getOrNull(sub)?.second.orEmpty()) { sg ->
-                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = if (wide) 16.sp else 22.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip) }
+                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = if (wide) 14.sp else 22.sp, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip) }
             }
         }
     }
