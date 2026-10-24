@@ -323,7 +323,7 @@ object KeyboardDictionary {
                 if (cst == 0f) break
             }
             val tail = bestTail ?: continue
-            val stems = correct("tr", stemT, .55f, 3, tc)
+            val stems = correct("tr", stemT, if (bestCost == 0f) 1.05f else .55f, 3, tc)   // the ending is right: the base may miss a whole letter ("ıkışındayım" -> "çıkışındayım")
             for (st in stems) {
                 if (!harmony(st.word, tail) || st.word.length < 3) continue
                 val cost = st.cost + bestCost
