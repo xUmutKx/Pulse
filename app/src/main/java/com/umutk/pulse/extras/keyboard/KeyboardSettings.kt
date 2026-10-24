@@ -150,6 +150,7 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Arrow keys", "Ok tuşları"), tr("Arrows, home, end, select all, copy, paste", "Oklar, başa, sona, tümünü seç, kopyala, yapıştır"), KeyboardPrefs.arrows) { KeyboardPrefs.arrows = it; save() }
             Switch(tr("Emoji key", "Emoji tuşu"), "", KeyboardPrefs.emojiKey) { KeyboardPrefs.emojiKey = it; save() }
             Switch(tr("Split keys", "Bölünmüş tuşlar"), tr("A gap in the middle of the rows, for a tablet", "Satırların ortasında boşluk, tablet için"), KeyboardPrefs.split) { KeyboardPrefs.split = it; save() }
+            Switch(tr("Extra button", "Ek tuş"), tr("A compact bottom row with a Shift key at the left", "Solda Shift tuşu olan, daha sıkışık alt satır"), KeyboardPrefs.bottomShift) { KeyboardPrefs.bottomShift = it; save() }
             Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A narrower keyboard that slides sideways by the handle on top", "Üstteki tutamakla yana kayan, daha dar klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
             Switch(tr("Large key text", "Büyük tuş yazısı"), "", KeyboardPrefs.largeText) { KeyboardPrefs.largeText = it; save() }
             Switch(tr("Key pop-ups", "Tuş balonları"), "", KeyboardPrefs.keyPopups) { KeyboardPrefs.keyPopups = it; save() }
@@ -222,6 +223,8 @@ fun KeyboardSettings(back: () -> Unit) {
             PSlider((KeyboardPrefs.bright - 30) / 70f, { KeyboardPrefs.bright = 30 + (it * 70).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Brightness of the space row and extra keys", "Boşluk satırı ve ek tuşların parlaklığı")}: ${KeyboardPrefs.bottomBright}%", color = T.sub, fontSize = 12.sp)
             PSlider((KeyboardPrefs.bottomBright - 30) / 70f, { KeyboardPrefs.bottomBright = 30 + (it * 70).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("Brightness of the top bar", "Üst çubuğun parlaklığı")}: ${KeyboardPrefs.topBright}%", color = T.sub, fontSize = 12.sp)
+            PSlider((KeyboardPrefs.topBright - 30) / 70f, { KeyboardPrefs.topBright = 30 + (it * 70).roundToInt() }, 0f..1f, onDone = { save() })
             Text(tr("Moving colour light", "Hareketli renk ışığı"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(0 to tr("Off", "Kapalı"), 1 to tr("Around the keyboard", "Klavyenin çevresi"), 2 to tr("Around every key", "Her tuşun çevresi")).forEach { (v, n) -> PChip(KeyboardPrefs.rgb == v, n) { KeyboardPrefs.rgb = v; save() } }
