@@ -668,7 +668,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             val fs = (big * (.85f + .15f * KeyboardPrefs.heightPct / 100f)).sp
             when (k.kind) {
-                KeyKind.SHIFT -> Icon(if (st.shift == 2) kbIcon(th, "KeyboardCapslock") else if (st.shift == 1) kbIcon(th, "ArrowUpward", filled = true) else kbIcon(th, "ArrowUpward"), null, tint = fg, modifier = Modifier.size(26.dp))
+                KeyKind.SHIFT -> ShiftGlyph(st.shift, fg)
                 KeyKind.DELETE -> Icon(kbIcon(th, "Backspace"), null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.ENTER -> Icon(when (st.enter) { "send" -> kbIcon(th, "Send"); "search" -> kbIcon(th, "Search"); "go", "done" -> kbIcon(th, "Check"); "next" -> kbIcon(th, "ArrowForward"); else -> kbIcon(th, "KeyboardReturn") }, null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.EMOJI -> Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp))
@@ -953,5 +953,23 @@ private fun ResizePanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit
             Icon(kbIcon(th, "Check"), null, tint = th.onAccent, modifier = Modifier.size(24.dp))
         }
         }
+    }
+}
+
+
+/** The Shift key: an outlined arrow when off, the arrow with a line under it for one capital, the arrow filled with the gap to the line filled too for caps lock. */
+@Composable
+private fun ShiftGlyph(state: Int, color: Color) {
+    androidx.compose.foundation.Canvas(Modifier.size(26.dp)) {
+        val u = size.width / 24f
+        val w = 2f * u
+        val arrow = androidx.compose.ui.graphics.Path().apply {
+            moveTo(12f * u, 3.5f * u); lineTo(20f * u, 12f * u); lineTo(15f * u, 12f * u)
+            lineTo(15f * u, if (state == 2) 19f * u else 16f * u)
+            lineTo(9f * u, if (state == 2) 19f * u else 16f * u)
+            lineTo(9f * u, 12f * u); lineTo(4f * u, 12f * u); close()
+        }
+        if (state == 2) drawPath(arrow, color) else drawPath(arrow, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        if (state >= 1) drawRoundRect(color, androidx.compose.ui.geometry.Offset(9f * u, 19.5f * u), androidx.compose.ui.geometry.Size(6f * u, 2.2f * u), androidx.compose.ui.geometry.CornerRadius(u))
     }
 }
