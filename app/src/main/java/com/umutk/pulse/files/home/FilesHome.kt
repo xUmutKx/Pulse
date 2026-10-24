@@ -272,10 +272,10 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
     )
     Row(Modifier.fillMaxWidth().background(bg).then(if (mat) Modifier else Modifier.frame(T)).navigationBarsPadding().padding(vertical = 8.dp)) {
         items.forEach { (id, iconLabel, target) ->
-            val on = tab == target || (id == "more" && tab in setOf("tree", "types", "cache"))
+            val on = tab == target || (id == "more" && tab in setOf("more", "tree", "types", "cache"))
             Column(Modifier.weight(1f).clickable {
                 when (id) {
-                    "more" -> menu = true
+                    "more" -> onTab("more")
                     "share" -> onShare()
                     "search" -> { FilesHomeNav.openSearch = true; onTab("files") }
                     else -> onTab(target)
@@ -294,6 +294,34 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
                         com.umutk.pulse.ThemedMenuItem(tr("Settings", "Ayarlar"), { menu = false; openTool("files_settings") }, iconKey = "settings")
                     }
                 }
+            }
+        }
+    }
+}
+
+
+/** "More" as a page of its own: every extra of Files as a row with its icon, a name and a line about it, in a fixed order. */
+@Composable
+fun FilesMorePage(onTab: (String) -> Unit) {
+    val openTool = com.umutk.pulse.LocalOpenTool.current
+    val rows = listOf(
+        Triple("tool_mediatools", tr("Media tools and converter", "Medya araçları ve dönüştürücü"), tr("Compress pictures and videos, make GIFs, convert files", "Resim ve videoları sıkıştır, GIF yap, dosya dönüştür")) to { openTool("mediatools") },
+        Triple("disk", tr("Folder sizes", "Klasör boyutları"), tr("Where the storage went, folder by folder", "Depolama nereye gitti, klasör klasör")) to { onTab("tree") },
+        Triple("filetypes", tr("File types", "Dosya türleri"), tr("Pictures, videos, audio, documents, archives, apps", "Resimler, videolar, ses, belgeler, arşivler, uygulamalar")) to { onTab("types") },
+        Triple("clean", tr("Clean cache", "Önbelleği temizle"), tr("Junk of apps that is safe to delete", "Uygulamaların silinmesi güvenli artıkları")) to { onTab("cache") },
+        Triple("settings", tr("Settings", "Ayarlar"), tr("Look and behaviour of Files", "Dosyalar'ın görünümü ve davranışı")) to { openTool("files_settings") },
+    )
+    androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp)) {
+        item { Text(tr("More", "Diğer"), color = T.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(bottom = 8.dp)) }
+        items(rows.size) { i ->
+            val (info, go) = rows[i]
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).background(T.panel, androidx.compose.foundation.shape.RoundedCornerShape(T.radius)).clickable { go() }.padding(horizontal = 14.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon(info.first, T.accent, 28.dp)
+                Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                    Text(info.second, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                    Text(info.third, color = T.sub, fontSize = 12.sp)
+                }
+                PIcon("chevron", T.sub, 20.dp)
             }
         }
     }

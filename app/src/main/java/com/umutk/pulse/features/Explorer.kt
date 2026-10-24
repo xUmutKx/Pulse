@@ -227,6 +227,7 @@ private fun FilesPageInner() {
                             onOpenFile = { f -> com.umutk.pulse.files.recent.RecentStore.add(ctx, f.path); if (isArchiveFile(f) || f.extension.equals("apk", true)) { ExNav.lastHere = f.parentFile?.path ?: ExNav.lastHere; com.umutk.pulse.files.home.FilesHomeNav.pendingFile = f; tab = "files" } else com.umutk.pulse.files.home.openFileWithSystem(ctx, f) },
                             onSettings = { ot("files_settings") })
                     }
+                    "more" -> com.umutk.pulse.files.home.FilesMorePage(onTab = { tab = it })
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
                     "cache" -> CacheCleanerScreen(back)
