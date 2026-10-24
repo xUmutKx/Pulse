@@ -277,6 +277,33 @@ fun KeyboardSettings(back: () -> Unit) {
             Text("$right ✓   $slips ✗", color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         }
 
+        // statistics: what the keyboard has learned and where the fingers land
+        KbSection("tune", tr("Statistics", "İstatistik")) {
+            val st2 = remember(learned, rev) { KeyboardDictionary.stats().toMap() }
+            @Composable fun row(label: String, v: Int?) = Row(Modifier.fillMaxWidth().padding(vertical = 2.dp)) {
+                Text(label, color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f)); Text("${v ?: 0}", color = T.text, fontSize = 13.sp)
+            }
+            row(tr("Letters typed", "Yazılan harf"), st2["letters"])
+            row(tr("Learned words", "Öğrenilen kelime"), st2["words"])
+            row(tr("Learned typos", "Öğrenilen yazım hatası"), st2["typos"])
+            row(tr("Undone corrections", "Geri alınan düzeltme"), st2["rejects"])
+            row(tr("Word pairs", "Kelime çifti"), st2["pairs"])
+            Text(tr("Where you type", "Nerelere basıyorsunuz"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 10.dp, bottom = 4.dp))
+            // the heat map: each key coloured by how often it was typed
+            val rowsK = listOf("qwertyuıopğü", "asdfghjklşi", "zxcvbnmöç")
+            val most = rowsK.flatMap { it.toList() }.maxOfOrNull { KeyboardDictionary.keyCount(it) }?.coerceAtLeast(1) ?: 1
+            rowsK.forEach { r ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center) {
+                    r.forEach { ch ->
+                        val f = KeyboardDictionary.keyCount(ch).toFloat() / most
+                        Box(Modifier.padding(1.5.dp).size(width = 27.dp, height = 34.dp).clip(RoundedCornerShape(5.dp)).background(T.accent.copy(alpha = .08f + .8f * f)), contentAlignment = Alignment.Center) {
+                            Text(ch.toString(), color = if (f > .5f) com.umutk.pulse.onAccent(T.accent) else T.text, fontSize = 13.sp)
+                        }
+                    }
+                }
+            }
+        }
+
         // data
         KbSection("save", tr("Data", "Veri")) {
             Text("${tr("Learned words", "Öğrenilen kelimeler")}: $learned", color = T.sub, fontSize = 13.sp)

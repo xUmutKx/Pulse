@@ -107,16 +107,24 @@ object KeyboardDictionary {
         seedWords.forEach { if ((user[it] ?: 0) < 3) user[it] = 3 }
         runCatching { File(c.filesDir, "kbd_user.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) user[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_touch.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3 && p[0].length == 1) bias[p[0][0]] = floatArrayOf(p[1].toFloatOrNull() ?: 0f, p[2].toFloatOrNull() ?: 0f) } }
+        runCatching { File(c.filesDir, "kbd_keys.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2 && p[0].length == 1) keyCounts[p[0][0]] = p[1].toIntOrNull() ?: 0 } }
         runCatching { File(c.filesDir, "kbd_rejects.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) rejects[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_banned.txt").forEachLine { l -> if (l.isNotBlank()) banned += l.trim() } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
     }
 
+    // how often each letter was typed (the heat map of the keyboard settings)
+    private val keyCounts = ConcurrentHashMap<Char, Int>()
+    fun keyCount(ch: Char) = keyCounts[ch] ?: 0
+    /** Numbers for the statistics page: learned words, learned typos, undone corrections, word pairs, letters typed. */
+    fun stats(): List<Pair<String, Int>> = listOf("words" to user.size, "typos" to typos.size, "rejects" to rejects.size, "pairs" to pairs.values.sumOf { it.size }, "letters" to keyCounts.values.sum())
+
     fun saveUser(c: Context, force: Boolean = false) {
         if (dirty == 0 && !force) return
         dirty = 0
         runCatching {
+            File(c.filesDir, "kbd_keys.txt").writeText(keyCounts.entries.joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_touch.txt").writeText(bias.entries.joinToString("\n") { "${it.key} ${it.value[0]} ${it.value[1]}" })
             File(c.filesDir, "kbd_user.txt").writeText(user.entries.sortedByDescending { it.value }.take(8000).joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_pairs.txt").writeText(pairs.entries.flatMap { (a, m) -> m.entries.map { Triple(a, it.key, it.value) } }.sortedByDescending { it.third }.take(8000).joinToString("\n") { "${it.first} ${it.second} ${it.third}" })
@@ -126,7 +134,7 @@ object KeyboardDictionary {
     /** Forgets everything learned from the user (settings > factory settings, and the "Clear learned words" row). */
     fun forgetUser(c: Context) {
         user.clear(); pairs.clear(); typos.clear(); dirty = 0
-        File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete(); File(c.filesDir, "kbd_typos.txt").delete(); File(c.filesDir, "kbd_banned.txt").delete(); banned.clear(); File(c.filesDir, "kbd_rejects.txt").delete(); rejects.clear()
+        File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete(); File(c.filesDir, "kbd_typos.txt").delete(); File(c.filesDir, "kbd_banned.txt").delete(); banned.clear(); File(c.filesDir, "kbd_rejects.txt").delete(); rejects.clear(); File(c.filesDir, "kbd_keys.txt").delete(); keyCounts.clear()
     }
 
     /** Reads the learned data again from the files (after an import). */
@@ -480,6 +488,7 @@ object KeyboardDictionary {
     /** A letter was typed: the average drift of the finger from that key's centre is updated (two percent of each new touch). */
     fun learnTouch(ch: Char, p: androidx.compose.ui.geometry.Offset, center: androidx.compose.ui.geometry.Offset, keyW: Float) {
         if (keyW <= 0f) return
+        keyCounts[ch] = (keyCounts[ch] ?: 0) + 1
         val b = bias.getOrPut(ch) { FloatArray(2) }
         b[0] = (b[0] * .98f + ((p.x - center.x) / keyW) * .02f).coerceIn(-.4f, .4f)
         b[1] = (b[1] * .98f + ((p.y - center.y) / keyW) * .02f).coerceIn(-.4f, .4f)
