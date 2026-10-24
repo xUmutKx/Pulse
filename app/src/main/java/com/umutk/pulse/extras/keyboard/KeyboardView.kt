@@ -764,9 +764,11 @@ private fun SymbolPage(th: KbTheme, act: KbActions) {
                     modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (i == g) th.special else Color.Transparent).clickable { g = i }.padding(horizontal = 12.dp, vertical = 6.dp))
             }
         }
-        LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
+        // the ready-made patterns are long: wider cells and smaller type
+        val wide = fams.getOrNull(g)?.id == "Patterns"
+        LazyVerticalGrid(GridCells.Adaptive(if (wide) 150.dp else 48.dp), Modifier.fillMaxSize()) {
             items(fams.getOrNull(g)?.signs.orEmpty()) { sg ->
-                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = 22.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip) }
+                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = if (wide) 16.sp else 22.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip) }
             }
         }
     }
