@@ -1156,3 +1156,4 @@ Screen recorder feature list (55 candidates)
 - 0.10.338: launcher: ses efektleri medya sesinde çalar, uygulama açılınca da tık sesi
 - 0.10.339 klavye ek tus satiri: Shift varsayilan, Tab/Shift ikonlu, Win logosu (derlenmedi)
 - 0.10.340 klavye: ek tus ikonlari (opsiyonel), Win+D/L/A/N ve Alt+Tab, emoji sayfalari kaydirma, gri vurgu, ust menude Extra, geri-tusu duzeltme hatasi, silerek yazim hatasi ogrenme; launcher New menusu (derlenmedi)
+- 0.10.341 klavye ayarlari: Yazim testi (kelime goster, yanlislari ogren) (derlenmedi)
