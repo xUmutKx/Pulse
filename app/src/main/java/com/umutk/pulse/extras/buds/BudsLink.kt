@@ -26,6 +26,9 @@ object BudsPrefs {
     /** ... and turn the noise control off. */
     fun noiseOffOnRemove(c: Context) = p(c).getBoolean("noiseOff", true)
     fun setNoiseOffOnRemove(c: Context, v: Boolean) = p(c).edit().putBoolean("noiseOff", v).apply()
+    /** Walking: ambient sound; standing or sitting still: noise cancelling (the phone's motion sensor decides). */
+    fun byMovement(c: Context) = p(c).getBoolean("byMovement", false)
+    fun setByMovement(c: Context, v: Boolean) = p(c).edit().putBoolean("byMovement", v).apply()
     /** When one comes back: carry on with the music and the noise control as they were. */
     fun resumeOnWear(c: Context) = p(c).getBoolean("resume", true)
     fun setResumeOnWear(c: Context, v: Boolean) = p(c).edit().putBoolean("resume", v).apply()

@@ -61,7 +61,9 @@ object Updates {
                 val tag = j.optString("tag_name")
                 if (tag.isEmpty()) return@runCatching null
                 val apk = j.optJSONArray("assets")?.let { a ->
-                    (0 until a.length()).map { a.getJSONObject(it) }.firstOrNull { it.optString("name").endsWith(".apk") }?.optString("browser_download_url")
+                    (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("name").endsWith(".apk") }
+                        // the release holds two builds: Android 12+ and the "android5" one; each phone gets its own
+                        .firstOrNull { (android.os.Build.VERSION.SDK_INT >= 31) != it.optString("name").contains("android5") }?.optString("browser_download_url")
                 }
                 val notes = j.optString("body").lines().map { it.trim().trimStart('#', '-', '*', ' ') }.filter { it.isNotEmpty() }.take(6)
                 Release(tag.trimStart('v', 'V'), notes, if (apk.isNullOrEmpty()) j.optString("html_url") else apk)
