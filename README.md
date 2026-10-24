@@ -4,6 +4,70 @@
 
 Pulse needs Android 12 or newer, and it is built for arm64 phones only.
 
+### Everything in Pulse, by category
+
+<details><summary><b>Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
+
+- Every screen, dialog, menu, icon and animation is drawn for each look; looks change at once, nothing needs a restart.
+- Windows 95, XP, 7, 10 and 11 (with dark versions), Material You and AMOLED; One UI and ColorOS styles where they exist. Windows 11 has Fluent colour, Fluent filled and line icon packs.
+- Windows boot screens and sign-in screens at start (switchable), the look's own wallpapers, framed Windows pages (This PC, Recycle Bin, Task Manager, Control Panel, Paint, Settings) in the launcher.
+- Windows start-up and click **sounds** of every look. In the launcher they follow its sound setting; the Pulse app can play the look's start-up sound when it opens: Settings > General > Start-up sound (**off by default**).
+- Extra apps (Files, Photos, Calendar, Contacts, Messages, Music, ...) have their own look and never mix with Pulse's.
+</details>
+
+<details><summary><b>Sound</b>: music player, equalizer, lyrics, white noise, recorder</summary>
+
+- Music player in three skins (Material, Poweramp, Winamp) with lyrics (synced, search by text), waveform seek bar, sleep timer, equalizer (also by genre), crossfade, playlists, mixes by mood, stars and favourites sorted both ways.
+- Poweramp backup import and export (playlists, play counts, covers; stars through the root import).
+- Home-screen widgets for every player skin, a media notification with the cover and lyrics.
+- White noise mixer with ambient sounds and bird songs, voice recorder, Bluetooth auto-play and pause on unplug or USB DAC.
+- Galaxy Buds manager: noise control (also by movement), touch controls, equalizer, 360 audio, find my earbuds.
+</details>
+
+<details><summary><b>Car and motion sickness</b></summary>
+
+- **Motion cues** (Toolkit): dots at the screen edges that move with the car, against motion sickness (nausea).
+- Bluetooth auto-play when the car or a headset connects, resume on wired headset, pause on unplug.
+- Screen cover and the advanced cover (clock, battery, notes; opens on its own while charging, also sideways) for the dashboard or the desk.
+- Show touches, pointer location, screen rotation lock and screen scale in the Toolkit.
+</details>
+
+<details><summary><b>Keyboard</b>: Pulse's own keyboard</summary>
+
+- Themes, brightness, RGB light, one-handed, resizable, split keys, number pad for number and phone fields.
+- Autocorrect that learns: touch model, Turkish endings (also the spoken ones), your typos, undone corrections, word pairs from real sentences, typing practice, statistics and a heat map of your keys. Learns from an exported WhatsApp chat on the phone only.
+- Emoji with search and kaomoji, a symbol tab (flowers, hearts, stars, arrows, presets, all Unicode symbol blocks, searchable by name), clipboard history with pins and images, translation inside the keyboard, extra key row (Ctrl, Alt, Win, Shift, arrows, F keys).
+</details>
+
+<details><summary><b>Launcher</b></summary>
+
+- Home screens for every look (taskbars, Start menus, Windows Phone tiles, Material), folders, links to files, pictures and folders, widgets, wallpapers with dimming and blur, icon packs, open animation, sounds, a mouse arrow where you touch in the Windows looks.
+</details>
+
+<details><summary><b>Messages and contacts</b></summary>
+
+- SMS and MMS (default-SMS capable): reply, read and copy-code in the notification, bubbles, mute, pin, block, undo send, signature, automatic spam blocking.
+- Contacts, Calendar and Photos as standalone apps.
+</details>
+
+<details><summary><b>Files and storage</b></summary>
+
+- File manager with zip, 7z and rar, folder tree, large and duplicate finders, type breakdown with previews and bulk delete, cache cleaner (SD Maid SE rules), root browsing, media tools (compress, GIF, convert), installer for APK, APKS, APKM and XAPK, downloads with several connections, a Save-to panel for anything shared to Pulse.
+</details>
+
+<details><summary><b>Task manager, battery and system</b></summary>
+
+- Live CPU, memory, storage, network, GPU, battery and temperature, processes with End task, app history, startup apps, services, debloater with Safe / Expert / Unsafe marks.
+- Battery health: reported condition, cycles and capacity, and the capacity **measured** from the charge counter while charging or draining.
+- Floating monitor, Quick Settings tiles, alerts, watchdog, 20+ widgets.
+</details>
+
+<details><summary><b>Toolkit and everyday tools</b></summary>
+
+- Compass, level, flashlight, lux meter, dice, coin, clipboard, screenshot, sensors off, volume, sound mode, stopwatch, timer, floating timer, network type, DNS and TTL, finder, power menu, calculator (a key layout per look, keys animate).
+- Weather with places as chips, sun and moon, alerts and a background-free weather and clock widget. Notes, Paint, Authenticator, speed test, LocalSend, notification history, screen recorder, terminal.
+</details>
+
 ### Features
 
 #### Task manager
