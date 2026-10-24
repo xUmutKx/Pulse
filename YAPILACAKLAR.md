@@ -1203,3 +1203,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.35 Toolkit: Floating keys (yuzen dugme: dokun=klavye, basili tut=mini panel Esc/ok/F, yana kaydir=sayfa); alisilmis yazim hatalari listesi 131 cift (derlenmedi, bekle)
 
 - 1.0.36 Shift key: outlined arrow / arrow+underline (one capital) / filled arrow joined to underline (caps lock) - derlenmedi, bekle
+- 1.0.37 Key pop-ups (long-press alternates, key preview) no longer cut off on the number row - derlenmedi, bekle

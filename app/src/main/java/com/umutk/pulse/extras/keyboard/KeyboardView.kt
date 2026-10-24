@@ -717,13 +717,13 @@ private fun Preview(th: KbTheme, st: KbState) {
     LaunchedEffect(p.rect, p.alts.isEmpty()) { pop.animateTo(1f, tween(110)) }
     if (p.alts.isEmpty()) {
         val w = with(dens) { maxOf(p.rect.width, 52.dp.toPx()) }; val h = p.rect.height * 1.15f
-        val x = (p.rect.center.x - w / 2f).coerceIn(0f, (st.rootW - w).coerceAtLeast(0f)); val y = p.rect.top - h - 2f
+        val x = (p.rect.center.x - w / 2f).coerceIn(0f, (st.rootW - w).coerceAtLeast(0f)); val y = (p.rect.top - h - 2f).coerceAtLeast(0f)
         Box(Modifier.offset { IntOffset(x.roundToInt(), y.roundToInt()) }.graphicsLayer { scaleX = pop.value; scaleY = pop.value }.size(with(dens) { w.toDp() }, with(dens) { h.toDp() }).clip(shape).background(th.popup, shape), contentAlignment = Alignment.Center) {
             Text(p.label, color = th.text, fontSize = 30.sp, maxLines = 1)
         }
     } else {
         val w = with(dens) { POPUP_W.dp.toPx() }
-        val left = popupLeft(p.rect, p.alts.size, st.rootW, w); val y = p.rect.top - p.rect.height * 1.15f - 2f
+        val left = popupLeft(p.rect, p.alts.size, st.rootW, w); val y = (p.rect.top - p.rect.height * 1.15f - 2f).coerceAtLeast(0f)
         Row(Modifier.offset { IntOffset(left.roundToInt(), y.roundToInt()) }.graphicsLayer { scaleX = pop.value; scaleY = pop.value }.height(with(dens) { (p.rect.height * 1.15f).toDp() }).clip(shape).background(th.popup, shape)) {
             p.alts.forEachIndexed { i, s ->
                 Box(Modifier.width(POPUP_W.dp).fillMaxSize().background(if (i == p.sel) th.accent else Color.Transparent), contentAlignment = Alignment.Center) {
