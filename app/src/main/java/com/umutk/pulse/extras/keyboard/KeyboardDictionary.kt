@@ -99,8 +99,12 @@ object KeyboardDictionary {
         if (online) download(c, code)
     }
 
+    // words of the phone and of Pulse that the subtitle word list lacks: known from the start, so they are not "corrected"
+    private val seedWords = "derle derlendi derlemek derleyip derlenmedi ikonlar widget widgetlar temalar launcher güncelle ekolayzır tıklayınca tıkladım arkaplanı ayarlardan klavyeyi uygulamayı animasyonlar".split(' ')
+
     private fun loadUser(c: Context) {
         userLoaded = true
+        seedWords.forEach { if ((user[it] ?: 0) < 3) user[it] = 3 }
         runCatching { File(c.filesDir, "kbd_user.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) user[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_touch.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3 && p[0].length == 1) bias[p[0][0]] = floatArrayOf(p[1].toFloatOrNull() ?: 0f, p[2].toFloatOrNull() ?: 0f) } }
         runCatching { File(c.filesDir, "kbd_rejects.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) rejects[p[0]] = p[1].toIntOrNull() ?: 1 } }
