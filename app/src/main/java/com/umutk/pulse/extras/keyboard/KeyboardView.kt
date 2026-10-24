@@ -203,7 +203,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             (if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
-            TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
+            if (!st.numpad) TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
                 scope.launch { pull.snapTo(0f) }
@@ -226,8 +226,27 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
-            else -> KeysPanel(th, st, act, keyH)
+            else -> if (st.numpad) NumPad(th, st, act, keyH) else KeysPanel(th, st, act, keyH)
         }
+    }
+}
+
+/** The number pad of number, phone, date and numeric-password fields: big digits and nothing else. */
+@Composable
+private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    val h = keyH * 1.1f
+    listOf("123", "456", "789").forEach { line ->
+        Row(Modifier.fillMaxWidth()) { line.forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, 1f), h) } }
+    }
+    Row(Modifier.fillMaxWidth()) {
+        Key(th, st, act, KbKey(".", KeyKind.CHAR, 1f), h)
+        Key(th, st, act, KbKey("0", KeyKind.CHAR, 1f), h)
+        Key(th, st, act, KbKey("", KeyKind.DELETE, 1f), h)
+    }
+    Row(Modifier.fillMaxWidth()) {
+        Key(th, st, act, KbKey("-", KeyKind.CHAR, 1f), h * .8f)
+        Key(th, st, act, KbKey("+", KeyKind.CHAR, 1f), h * .8f)
+        Key(th, st, act, KbKey("", KeyKind.ENTER, 1f), h * .8f)
     }
 }
 
