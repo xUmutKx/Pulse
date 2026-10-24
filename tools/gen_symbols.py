@@ -20,18 +20,27 @@ COMBOS = [
  "『 』", "「 」", "【 】", "꧁ ꧂", "༺ ༻", "【・】", "⟦ ⟧", "❝ ❞", "❛ ❜", "〝 〞",
  "☆ ミ", "•☽────✧˖°", "☾ ˖ ✦", "ˏˋ ˎˊ", "°˖✧", "⊹ ˚ ₊", "♡ ⸜ ⸝", "୨ৎ", "ꪜ", "ᰔ", "𓆩♡𓆪", "𓆩⟡𓆪", "𓆸", "𖤐", "𖧷", "𑁍", "ꕥ", "⚝", "⛤", "ꗃ",
 ]
-import random
-_rnd = random.Random(7)
-_POOL = "˖ ⊹ ⋆ ✦ ✧ ₊ ˚ 𓂃 ౨ৎ ᡣ𐭩 ࣪ ꕤ ᯓ ⟡ 𖦹 ⁺ ˙ ‧ ᰔ ᥫ᭡ ❀ ✿ ♡ ☾ ⸜ ⸝ ꒰ ꒱ ໒ ა ˶ ᵔ ᵕ ༘ ݁ ⌒ ᴗ ❥ ღ ❁ ✩ ★ ☆ ⁂ ※ ꩜ ࿔ ࿐ ᨳ ⸙ ⛤ ⚝ ꕥ 𐙚 ୨ ୧ ˳ ˑ ᵎ ꜣ ✶ ✷ ✸ ❃ ❋ ⊱ ⊰ ❖ ◦ • ∘ ᐟ ᐠ ᐢ".split()
-_GLUE = ["", "", "˚₊", "₊˚", "˖", "⁺", "⋆"]
+# presets by design: a centre sign with the same decoration on both sides, the right side the mirror of the left (wings, lines, brackets)
+_MIRROR = {"꒰": "꒱", "꒱": "꒰", "⸜": "⸝", "⸝": "⸜", "༺": "༻", "༻": "༺", "꧁": "꧂", "꧂": "꧁", "❨": "❩", "❩": "❨", "❪": "❫", "❫": "❪", "‹": "›", "›": "‹", "«": "»", "»": "«",
+           "⊱": "⊰", "⊰": "⊱", "『": "』", "』": "『", "「": "」", "」": "「", "【": "】", "】": "【", "◖": "◗", "◗": "◖", "⟨": "⟩", "⟩": "⟨", "〈": "〉", "〉": "〈", "《": "》", "》": "《",
+           "(": ")", ")": "(", "[": "]", "]": "[", "{": "}", "}": "{", "<": ">", ">": "<", "❮": "❯", "❯": "❮", "⁽": "⁾", "⁾": "⁽", "₍": "₎", "₎": "₍", "〔": "〕", "〕": "〔",
+           "ᕙ": "ᕗ", "ᕗ": "ᕙ", "𓆩": "𓆪", "𓆪": "𓆩", "⸢": "⸣", "⸣": "⸢", "◜": "◝", "◝": "◜", "╰": "╯", "╯": "╰", "≪": "≫", "≫": "≪", "﹝": "﹞", "﹞": "﹝"}
+_FRAMES = [
+ ["━━"], ["──"], ["────"], ["┈┈┈"], ["═══"], ["⋆", "｡", "˚"], ["˚", "₊", "‧"], ["୨", "୧", "┈┈"], ["꒰"], ["⸜"], ["༺"], ["꧁"], ["⊱"], ["『"], ["【"], ["𓆩"], ["⟨"], ["❨"],
+ ["⋆", "˚", "｡"], ["⊹", "࣪", "˖"], ["·", "˚", "༘"], ["◦", "•", "●"], ["⋰", "⋱"], ["≪"], ["﹝"], ["╰", "┈", "➤"][:2] , ["˖", "⁺"], ["୨", "ৎ"], ["ᡣ𐭩", "˖"], ["✧", "˖", "°"], ["·.", "·´¯", "`·.·"],
+ ["⋆", "⁺", "₊", "⋆"], ["┈┈", "✧", "┈┈"], ["━", "✦", "━"], ["∘", "◦", "˚"], ["༻", "━"], ["﹏", "﹏"], ["︶", "꒦", "꒷"],
+]
+_CENTRES = "✿ ❀ ❁ ❃ ❋ ⚘ ❦ ❧ ♡ ♥ ❥ ღ ✦ ✧ ★ ☆ ✩ ✪ ☾ ☽ ⛤ ⚝ ꕤ ✶ ✷ ❖ ◈ ◇ ⟡ ⁂ ✺ ❂ ☁ ✈ ♪ ♫".split()
 GENERATED = []
-while len(GENERATED) < 140:
-    n = _rnd.randint(3, 6)
-    parts = [_rnd.choice(_POOL) for _ in range(n)]
-    if len(set(parts)) < n: continue
-    p = " ".join(parts)
-    if _rnd.random() < .5: p += _rnd.choice(_GLUE)
-    if p not in GENERATED: GENERATED.append(p)
+def _mirror(tokens):
+    return "".join("".join(_MIRROR.get(c, c) for c in t) for t in reversed(tokens)) if all(len(t) == 1 or True for t in tokens) else ""
+_C = "✿ ♡ ✦ ❀ ☾ ❁ ★ ❥ ✧ ⚘ ღ ✩".split()
+for i, fr in enumerate(_FRAMES):
+    # each frame wears three centres, a different three each time: a flower, a heart or a star, the moon
+    for c in (_C[(i * 3 + k) % len(_C)] for k in range(3)):
+        left = "".join(fr); right = "".join(_MIRROR.get(ch, ch) for ch in "".join(reversed(fr))) if all(len(t) == 1 for t in fr) else "".join("".join(_MIRROR.get(ch, ch) for ch in t[::-1]) for t in reversed(fr))
+        pr = f"{left} {c} {right}"
+        if pr not in GENERATED: GENERATED.append(pr)
 COMBOS += GENERATED
 FAM = [
  ("Arrows", [(0x2190,0x21FF),(0x27F0,0x27FF),(0x2900,0x297F)]),
