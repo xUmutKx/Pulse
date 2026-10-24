@@ -43,6 +43,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var prevWord2: String? = null
     private val touchPts = ArrayList<androidx.compose.ui.geometry.Offset?>()
     private var emailField = false
+    private var nameField = false
     private var noAuto = false
     // the last text copied: the right slot of the bar offers it for two pastes
     private var quickClip: String? = null
@@ -168,6 +169,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
                 InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_FILTER)
         emailField = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS); lastEmail = null
+        nameField = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
+        st.numpad = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME
         st.page = if (cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME) 1 else 0
         st.panel = "keys"; st.toolbar = false
         st.enter = when {
@@ -263,6 +266,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 a.commonPrefixWith(b).length >= 2 && KeyboardDictionary.isWord(st.lang, b) && !KeyboardDictionary.isWord(st.lang, a)) KeyboardDictionary.learnTypo(this, a, b)
         }
         peak = null
+        if (nameField && out.length >= 2 && !st.incognito && out.all { it.isLetter() || it == '\'' || it == '-' }) {
+            val nm = out.replaceFirstChar { it.titlecase(lang.locale) }
+            getSharedPreferences("pulse_kb_names", MODE_PRIVATE).let { p -> p.edit().putString("list", (listOf(nm) + p.getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() && it != nm }).take(30).joinToString("\n")).apply() }
+        }
         lastCorrection = if (out != typed) Correction(typed, out, sep) else null
         corrAt = SystemClock.uptimeMillis()
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
@@ -740,6 +747,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun updateSuggestions() {
         job?.cancel()
         if (emailField) { emailSuggestions(); return }
+        // a name field: the names typed in such fields before
+        if (nameField && !st.incognito) {
+            val saved = getSharedPreferences("pulse_kb_names", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }
+            val hit = if (word.isEmpty()) saved.take(3) else saved.filter { it.startsWith(word.toString(), true) && !it.equals(word.toString(), true) }.take(3)
+            if (hit.isNotEmpty()) {
+                slotWords = arrayOf(hit.getOrElse(0) { "" }, hit.getOrElse(1) { "" }, hit.getOrElse(2) { "" }); st.slots = slotWords.toList(); return
+            }
+        }
         if (!KeyboardPrefs.suggestions || st.plain) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
         // the touch model needs the touch of every letter and the key positions; a word that was not touched letter by letter is judged without it
