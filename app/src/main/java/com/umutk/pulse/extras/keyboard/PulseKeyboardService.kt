@@ -530,7 +530,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
             "lang" -> lang()
             "voice" -> { st.panel = "keys"; voice() }
-            "translate" -> { st.panel = "keys"; translate() }
+            "translate" -> {
+                st.panel = "keys"
+                // a selection is translated at once; otherwise the translation bar opens (or closes)
+                if (currentInputConnection?.getSelectedText(0)?.isNotEmpty() == true) translate() else transOp(if (st.trans) "close" else "open")
+            }
             "back" -> st.panel = "keys"
             "emoji" -> st.panel = "emoji"
             "resize" -> st.panel = "resize"
@@ -573,6 +577,47 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         return null
+    }
+
+    private var transJob: Job? = null
+    private val transLangs = listOf("en", "tr", "de", "fr", "es", "it", "pt", "ru", "ar", "nl", "pl", "ja", "ko", "zh")
+
+    override fun transOp(op: String) {
+        when (op) {
+            "open" -> {
+                val langs = KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }.distinct()
+                val from = KeyboardLayouts.dict(st.lang)
+                st.transFrom = from; st.transTo = langs.firstOrNull { it != from } ?: if (from == "tr") "en" else "tr"
+                st.transOut = ""; st.trans = true; st.toolbar = false; scheduleTrans()
+            }
+            "close" -> { st.trans = false; transJob?.cancel(); st.transOut = ""; st.transBusy = false }
+            "swap" -> { val f = st.transFrom; st.transFrom = st.transTo; st.transTo = f; st.transOut = ""; scheduleTrans() }
+            "from" -> { st.transFrom = transLangs[(transLangs.indexOf(st.transFrom) + 1) % transLangs.size]; st.transOut = ""; scheduleTrans() }
+            "to" -> { st.transTo = transLangs[(transLangs.indexOf(st.transTo) + 1) % transLangs.size]; st.transOut = ""; scheduleTrans() }
+            "apply" -> {
+                val out = st.transOut
+                val ic = currentInputConnection ?: return
+                if (out.isBlank()) return
+                finishWord("", false)
+                val raw = ic.getTextBeforeCursor(400, 0)?.toString().orEmpty()
+                ic.deleteSurroundingText(raw.length, 0); ic.commitText(out, 1)
+                transOp("close"); afterText()
+            }
+        }
+    }
+
+    /** Translates the text before the cursor a moment after the last key, for the bar. */
+    private fun scheduleTrans() {
+        transJob?.cancel()
+        if (!st.trans) return
+        val text = currentInputConnection?.getTextBeforeCursor(400, 0)?.toString().orEmpty().trim()
+        if (text.isEmpty() || st.transFrom == st.transTo) { st.transOut = ""; st.transBusy = false; return }
+        val from = st.transFrom; val to = st.transTo
+        transJob = scope.launch {
+            delay(600); st.transBusy = true
+            val out = withContext(Dispatchers.IO) { translateText(text, from, to) }
+            if (st.trans && from == st.transFrom && to == st.transTo) { st.transOut = out.orEmpty(); st.transBusy = false }
+        }
     }
 
     private fun translate() {
@@ -792,6 +837,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     private fun updateSuggestions() {
         job?.cancel()
+        if (st.trans) scheduleTrans()
         if (emailField) { emailSuggestions(); return }
         // a name field: the names typed in such fields before
         if (nameField && !st.incognito) {

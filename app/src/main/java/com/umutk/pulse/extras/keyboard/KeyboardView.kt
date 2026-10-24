@@ -293,6 +293,7 @@ private fun Trail(th: KbTheme, st: KbState) {
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
+    if (st.trans) { TransBar(th, st, act); return }
     Row(
         Modifier.fillMaxWidth().height(44.dp).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
@@ -328,6 +329,23 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                     }
                 }
             }
+        }
+    }
+}
+
+/** The translation bar: the two languages at the ends with the swap button between them, and the translation of what is typed below; a tap puts it in. */
+@Composable
+private fun TransBar(th: KbTheme, st: KbState, act: KbActions) {
+    fun name(c: String) = java.util.Locale(c).getDisplayLanguage(java.util.Locale.getDefault()).replaceFirstChar { it.uppercase() }.ifEmpty { c.uppercase() }
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().height(40.dp), verticalAlignment = Alignment.CenterVertically) {
+            BarIcon(th, kbIcon(th, "Close")) { act.transOp("close") }
+            Box(Modifier.weight(1f).fillMaxHeight().clickable { act.transOp("from") }.padding(start = 6.dp), contentAlignment = Alignment.CenterStart) { Text(name(st.transFrom), color = th.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1) }
+            Box(Modifier.size(40.dp).clickable { act.transOp("swap") }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.SwapHoriz, null, tint = th.accent, modifier = Modifier.size(24.dp)) }
+            Box(Modifier.weight(1f).fillMaxHeight().clickable { act.transOp("to") }.padding(end = 12.dp), contentAlignment = Alignment.CenterEnd) { Text(name(st.transTo), color = th.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1) }
+        }
+        Box(Modifier.fillMaxWidth().height(34.dp).clickable(enabled = st.transOut.isNotBlank()) { act.transOp("apply") }.padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
+            Text(if (st.transOut.isNotBlank()) st.transOut else if (st.transBusy) "…" else tr("The translation shows here", "Çeviri burada görünür"), color = if (st.transOut.isNotBlank()) th.accent else th.sub, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
 }

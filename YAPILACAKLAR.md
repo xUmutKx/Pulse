@@ -1210,3 +1210,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.41 Files: the three-dot "Open archive" opens the full-page archive view (copy/cut/delete on selection), not the pop-up - derlenmedi, bekle
 - 1.0.42 Files: "Open as" dialog with tonal rows and a Cancel text button; File types list: trash button replaced by swipe actions (left/right: delete, open, select, none; default delete) - derlenmedi, bekle
 - 1.0.43 Material dialogs: action buttons are plain text buttons, Material PButton is tonal instead of outlined - derlenmedi, bekle
+- 1.0.44 Keyboard: translation bar (languages at the ends, swap between, live translation, tap to insert); typo learning needs 3 sightings for real words and forgets slips that were undone - derlenmedi, bekle
