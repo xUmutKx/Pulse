@@ -742,7 +742,9 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     // every emoji of Unicode and the kaomoji, read once from the app
     val all by androidx.compose.runtime.produceState(emptyList<EmojiItem>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { EmojiData.load(ctx) } }
     // 0 recent, 1..9 the nine groups, 10 kaomoji
-    var tab by remember { mutableStateOf(if (st.recents.isEmpty()) 1 else 0) }
+    // the recent list shown stays as it was when the panel opened, so the emojis do not jump while tapping; it updates on the next open
+    val shownRecents = remember { st.recents }
+    var tab by remember { mutableStateOf(if (shownRecents.isEmpty()) 1 else 0) }
     val icons = listOf(Icons.Rounded.AccessTime, Icons.Rounded.EmojiEmotions, Icons.Rounded.Person, Icons.Rounded.Pets, Icons.Rounded.Restaurant, Icons.Rounded.DirectionsCar,
         Icons.Rounded.SportsSoccer, Icons.Rounded.Lightbulb, Icons.Rounded.Tag, Icons.Rounded.Flag)
     val q = st.emojiQuery
@@ -779,7 +781,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             LaunchedEffect(pager.currentPage) { tab = pager.currentPage }
             androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { page ->
                 if (page == 11) { SymbolPage(th, act); return@HorizontalPager }
-                val list = if (page == 0) st.recents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
+                val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
                     else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
                 LazyVerticalGrid(GridCells.Adaptive(if (page == 10) 92.dp else 44.dp), Modifier.fillMaxSize()) {
                     items(list) { it2 -> EmojiCell(it2, th, act) }
