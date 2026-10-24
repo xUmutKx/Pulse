@@ -144,7 +144,7 @@ open class ExtraToolActivity : ComponentActivity() {
                 t.taskInfo.taskId != taskId && t.taskInfo.baseIntent.let { b -> b.component?.className.orEmpty().endsWith("ExtraToolActivity") || b.component?.className.orEmpty().endsWith("Launcher") }
                     && routeOf(t.taskInfo.baseIntent) == mine && t.taskInfo.baseIntent.getStringExtra("frame") == null
             } }.getOrNull()
-            if (other != null) { other.moveToFront(); finish(); return }
+            if (other != null) { other.moveToFront(); runCatching { overridePendingTransition(0, 0) }; finishAndRemoveTask(); return }
         }
         // Cfg / Opt are process-wide; this loads the saved ones before the first frame. The look itself is this tool's own (ExtraToolLook or a ToolLook).
         Cfg.load(this); Opt.load(this)
