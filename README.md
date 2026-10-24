@@ -2,7 +2,7 @@
 
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
 
-Pulse needs Android 12 or newer, and it is built for arm64 phones only.
+Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `Pulse-<version>-android5.apk` for Android 5 and newer. Both hold the 64-bit ARM (arm64-v8a), 32-bit ARM (armeabi-v7a) and x86_64 libraries, so they install on phones, tablets and emulators of those kinds.
 
 ### Everything in Pulse, by category
 
@@ -35,7 +35,10 @@ Pulse needs Android 12 or newer, and it is built for arm64 phones only.
 <details><summary><b>Keyboard</b>: Pulse's own keyboard</summary>
 
 - Themes, brightness, RGB light, one-handed, resizable, split keys, number pad for number and phone fields.
-- Autocorrect that learns: touch model, Turkish endings (also the spoken ones), your typos, undone corrections, word pairs from real sentences, typing practice, statistics and a heat map of your keys. Learns from an exported WhatsApp chat on the phone only.
+- Autocorrect that learns: touch model, Turkish endings (also the spoken ones), your typos (a typo that is a real word is only learned after three sightings; an undone correction is forgotten), word pairs from real sentences, train autocorrect, statistics and a heat map of your keys.
+- Effects like a keyboard studio: a colour wash over the keyboard (6), a colour effect on each key (tint, blob, glass, glow), key motion (pop, sink, bounce) and touch sounds (retro, calm, fun, pink, space; made inside the app).
+- Translation bar: the two languages at the ends, a swap button between them, the translation of what you type below, a tap puts it in. Deleting the space behind a word opens it again with its suggestions.
+- Hold a key for accents (many more letters) and, on capitals, chemical element symbols (He, Fe, Cu). Optional compact bottom row with a Shift key, separate brightness for the top bar and the bottom rows, Shift shows outline / underline / filled for off, one capital and caps lock.
 - Emoji with search and kaomoji, a symbol tab (flowers, hearts, stars, arrows, presets, all Unicode symbol blocks, searchable by name), clipboard history with pins and images, translation inside the keyboard, extra key row (Ctrl, Alt, Win, Shift, arrows, F keys).
 </details>
 
@@ -52,7 +55,7 @@ Pulse needs Android 12 or newer, and it is built for arm64 phones only.
 
 <details><summary><b>Files and storage</b></summary>
 
-- File manager with zip, 7z and rar, folder tree, large and duplicate finders, type breakdown with previews and bulk delete, cache cleaner (SD Maid SE rules), root browsing, media tools (compress, GIF, convert), installer for APK, APKS, APKM and XAPK, downloads with several connections, a Save-to panel for anything shared to Pulse.
+- File manager with zip, 7z and rar, folder tree, large and duplicate finders, type breakdown with previews, bulk delete and swipe actions on each file (delete, open or select, per direction), a full-page archive view with copy, cut and delete, cache cleaner (SD Maid SE rules), root browsing, media tools (compress, GIF, convert), installer for APK, APKS, APKM and XAPK, downloads with several connections, a Save-to panel for anything shared to Pulse.
 </details>
 
 <details><summary><b>Task manager, battery and system</b></summary>
@@ -64,6 +67,7 @@ Pulse needs Android 12 or newer, and it is built for arm64 phones only.
 
 <details><summary><b>Toolkit and everyday tools</b></summary>
 
+- Floating keys: a button over every app (tap opens the keyboard, hold opens a mini keyboard with Esc, Tab, Ctrl, F keys, arrows and more; slide sideways for pages; needs root or Shizuku to send the keys).
 - Compass, level, flashlight, lux meter, dice, coin, clipboard, screenshot, sensors off, volume, sound mode, stopwatch, timer, floating timer, network type, DNS and TTL, finder, power menu, calculator (a key layout per look, keys animate).
 - Weather with places as chips, sun and moon, alerts and a background-free weather and clock widget. Notes, Paint, Authenticator, speed test, LocalSend, notification history, screen recorder, terminal.
 </details>
