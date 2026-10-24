@@ -226,6 +226,9 @@ fun amoledWindow(): PTheme = PTheme("amoled", "AMOLED", true, c(0xFF000000), c(0
 fun monoWindow(t: PTheme): PTheme = if (t.dark) PTheme(t.id, t.name, true, c(0xFF000000), c(0xFF111111), c(0xFFFFFFFF), c(0xFF9E9E9E), c(0xFFFFFFFF), c(0xFF2A2A2A), t.radius, material = true)
     else PTheme(t.id, t.name, false, c(0xFFFFFFFF), c(0xFFF2F2F2), c(0xFF000000), c(0xFF5C5C5C), c(0xFF000000), c(0xFFCCCCCC), t.radius, material = true)
 
+/** True inside the button slots of a Material dialog: PButton draws a plain text button there, as Material 3 dialogs do. */
+val InMatDialogBtn = androidx.compose.runtime.compositionLocalOf { false }
+
 /** A Material AlertDialog drawn in the window look: its panel, text and corners. */
 @Composable
 fun WinAlert(onDismissRequest: () -> Unit, title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null, confirmButton: @Composable () -> Unit, dismissButton: (@Composable () -> Unit)? = null, containerColor: Color? = null, noDim: Boolean = false, warn: Boolean = false, iconKey: String? = null) {
@@ -268,8 +271,8 @@ fun WinAlert(onDismissRequest: () -> Unit, title: (@Composable () -> Unit)? = nu
         })
         AlertDialog(onDismissRequest, title = barTitle, text = body,
             icon = if (!w.material || noDim) null else ({ androidx.compose.material3.Icon(if (warn) androidx.compose.material.icons.Icons.Outlined.Warning else androidx.compose.material.icons.Icons.Outlined.Info, null, Modifier.size(24.dp), tint = if (warn) Color(0xFFE5A100) else w.text) }),
-            confirmButton = { WinButton(w, primary = true, content = confirmButton) },
-            dismissButton = if (dismissButton == null) null else ({ WinButton(w, primary = false, content = dismissButton) }),
+            confirmButton = { androidx.compose.runtime.CompositionLocalProvider(InMatDialogBtn provides w.material) { WinButton(w, primary = true, content = confirmButton) } },
+            dismissButton = if (dismissButton == null) null else ({ androidx.compose.runtime.CompositionLocalProvider(InMatDialogBtn provides w.material) { WinButton(w, primary = false, content = dismissButton) } }),
             // the look's glass amount makes the box see-through (mica / acrylic); the accent is only a 1 px edge
             containerColor = containerColor ?: (if (w.glassA > 0f) w.panel.copy(alpha = w.glassA) else w.panel), shape = RoundedCornerShape(if (w.material) 28.dp else w.radius),
             tonalElevation = if (flat) 0.dp else AlertDialogDefaults.TonalElevation,
