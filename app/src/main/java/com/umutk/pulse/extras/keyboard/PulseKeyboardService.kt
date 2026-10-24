@@ -260,7 +260,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val typed = word.toString()
         var out = typed
         val t = target
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !noAuto && t != null && !t.equals(typed, true)) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !noAuto && t != null && !t.equals(typed, true) && !KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale))) out = t
         c.commitText(out, 1)
         peak?.let { pk ->
             val lc = lang.locale
@@ -337,6 +337,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             lastCorrection = null
             val after = c.getTextAfterCursor(1, 0)?.toString().orEmpty()
             if (txt == lc.corrected + lc.sep && (after.isEmpty() || !after[0].isLetterOrDigit())) {
+                if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.reject(this, lc.original, lc.corrected)
                 c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lc.original, 1); c.endBatchEdit()
                 word.append(lc.original); target = null; updateSuggestions(); return
             }
