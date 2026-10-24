@@ -318,6 +318,33 @@ fun KeyboardSettings(back: () -> Unit) {
                 PButton(tr("Import data", "Veriyi içe aktar"), compact = true) { importData.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
             }
             if (dataNote.isNotEmpty()) Text(dataNote, color = T.sub, fontSize = 12.sp)
+            // the way a person writes, from an exported WhatsApp chat: only the picked person's lines, only on this phone
+            var waChat by remember { mutableStateOf<Map<String, List<String>>?>(null) }
+            var waNote by remember { mutableStateOf("") }
+            val pickChat = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
+                if (u != null) scope.launch {
+                    waNote = tr("Reading the chat…", "Sohbet okunuyor…")
+                    val r = withContext(Dispatchers.IO) { runCatching { WhatsAppImport.read(ctx, u) }.getOrNull() }
+                    waChat = r?.takeIf { it.isNotEmpty() }
+                    waNote = if (waChat == null) tr("No chat lines found in that file", "Bu dosyada sohbet satırı bulunamadı") else tr("Whose lines are yours?", "Hangi kişi sizsiniz?")
+                }
+            }
+            PButton(tr("Learn from a WhatsApp chat", "WhatsApp sohbetinden öğren"), Modifier.padding(top = 8.dp), compact = true) { pickChat.launch(arrayOf("text/plain", "application/zip", "*/*")) }
+            if (waNote.isNotEmpty()) Text(waNote, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+            waChat?.let { chat ->
+                Row(Modifier.horizontalScroll(rememberScrollState()).padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    chat.entries.sortedByDescending { it.value.size }.take(6).forEach { (who, msgs) ->
+                        PChip(false, "${who.take(18)} · ${msgs.size}") {
+                            waNote = tr("Learning…", "Öğreniyor…")
+                            scope.launch {
+                                val n = withContext(Dispatchers.IO) { WhatsAppImport.learn(ctx, msgs) }
+                                learned = KeyboardDictionary.learnedCount(); rev++
+                                waNote = tr("Learned from $n messages. The chat itself was not kept.", "$n mesajdan öğrenildi. Sohbetin kendisi saklanmadı."); waChat = null
+                            }
+                        }
+                    }
+                }
+            }
             // the words SwiftKey learned, read with root from its own data folder
             var skNote by remember { mutableStateOf("") }
             PButton(tr("Take SwiftKey's words (root)", "SwiftKey kelimelerini al (root)"), compact = true) {

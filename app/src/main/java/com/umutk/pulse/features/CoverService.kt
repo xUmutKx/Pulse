@@ -245,7 +245,7 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
         override fun onReceive(c: Context, i: Intent) {
             // the launcher (another process) asks for a system action: lock the screen, open the notification shade
             if (i.action == "com.umutk.pulse.action.GLOBAL") { performGlobalAction(i.getIntExtra("g", 0)); return }
-            if (i.action == Intent.ACTION_SCREEN_ON) lastTouch = android.os.SystemClock.uptimeMillis()
+            if (i.action == Intent.ACTION_SCREEN_ON) { lastTouch = android.os.SystemClock.uptimeMillis(); lastTrigger = false }
             autoCheck()
         }
     }
@@ -264,6 +264,8 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
                 if (pm.isInteractive && !km.isKeyguardLocked) StandBy.show(this@CoverAccessibilityService)
                 lastTouch = now
             }
+            // the charger and the turn are looked at every few seconds too: a broadcast alone missed a phone that was laid down sideways after it was plugged in
+            runCatching { val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager; if (pm.isInteractive) autoCheck() }
             tick.postDelayed(this, 3000)
         }
     }
@@ -272,10 +274,17 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
     private fun autoCheck() {
         if (!StandByPrefs.autoCharge(this)) return
         val charging = registerReceiver(null, android.content.IntentFilter(Intent.ACTION_BATTERY_CHANGED))?.getIntExtra(android.os.BatteryManager.EXTRA_PLUGGED, 0)?.let { it != 0 } == true
-        val sideways = !StandByPrefs.sideways(this) || resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-        if (charging && sideways) { if (!StandBy.showing) StandBy.show(this, auto = true) }
-        else if (StandBy.showing && StandBy.autoStarted) StandBy.hide(this)
+        // the screen's real turn (the service's own configuration does not follow it while a portrait app is in front)
+        val rot = runCatching { (getSystemService(Context.WINDOW_SERVICE) as android.view.WindowManager).defaultDisplay.rotation }.getOrDefault(0)
+        val sideways = !StandByPrefs.sideways(this) || rot == android.view.Surface.ROTATION_90 || rot == android.view.Surface.ROTATION_270 ||
+            resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        // it opens when the trigger comes true (an edge), not on every look: a cover the person closed stays closed until the charger or the turn changes
+        val trigger = charging && sideways
+        if (trigger && !lastTrigger) { if (!StandBy.showing) StandBy.show(this, auto = true) }
+        else if (!trigger && StandBy.showing && StandBy.autoStarted) StandBy.hide(this)
+        lastTrigger = trigger
     }
+    private var lastTrigger = false
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) { super.onConfigurationChanged(newConfig); autoCheck() }
 
