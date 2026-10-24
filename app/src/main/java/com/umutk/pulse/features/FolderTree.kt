@@ -224,7 +224,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
             Text("${sel.size}", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             IconButton(onClick = { askDelete = true }) { Icon(Icons.Filled.Delete, contentDescription = "Delete") }
         }
-        if (askDelete) AlertDialog(
+        if (askDelete) com.umutk.pulse.WinAlert(
             onDismissRequest = { askDelete = false },
             title = { Text("Delete ${sel.size} item(s)?") },
             text = { Text("Folders are deleted with everything in them.") },
