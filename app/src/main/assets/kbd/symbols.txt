@@ -1,4 +1,5 @@
 #Patterns
+##Classics
 ˖ ᡣ𐭩 ⊹ ࣪ ౨ৎ˚₊	pattern modifier letter plus sign
 ⋆˚࿔ ⊹ ˖	pattern star operator
 ₊˚⊹ ♡ ⊹˚₊	pattern subscript plus sign
@@ -69,6 +70,7 @@
 ⚝	pattern outlined white star
 ⛤	pattern pentagram
 ꗃ	pattern vai syllable bo
+##Lines
 ━━ ✿ ━━	pattern box drawings heavy horizontal
 ━━ ♡ ━━	pattern box drawings heavy horizontal
 ━━ ✦ ━━	pattern box drawings heavy horizontal
@@ -84,15 +86,71 @@
 ═══ ✿ ═══	pattern box drawings double horizontal
 ═══ ♡ ═══	pattern box drawings double horizontal
 ═══ ✦ ═══	pattern box drawings double horizontal
+୨୧┈┈ ⚘ ┈┈୧୨	pattern oriya digit two
+୨୧┈┈ ღ ┈┈୧୨	pattern oriya digit two
+୨୧┈┈ ✩ ┈┈୧୨	pattern oriya digit two
+╰┈ ❀ ┈╯	pattern box drawings light arc up and right
+╰┈ ☾ ┈╯	pattern box drawings light arc up and right
+╰┈ ❁ ┈╯	pattern box drawings light arc up and right
+┈┈✧┈┈ ✿ ┈┈✧┈┈	pattern box drawings light quadruple dash horizontal
+┈┈✧┈┈ ♡ ┈┈✧┈┈	pattern box drawings light quadruple dash horizontal
+┈┈✧┈┈ ✦ ┈┈✧┈┈	pattern box drawings light quadruple dash horizontal
+━✦━ ❀ ━✦━	pattern box drawings heavy horizontal
+━✦━ ☾ ━✦━	pattern box drawings heavy horizontal
+━✦━ ❁ ━✦━	pattern box drawings heavy horizontal
+༻━ ⚘ ━༺	pattern tibetan mark gug rtags gyas
+༻━ ღ ━༺	pattern tibetan mark gug rtags gyas
+༻━ ✩ ━༺	pattern tibetan mark gug rtags gyas
+##Wings
 ⋆｡˚ ❀ ˚｡⋆	pattern star operator
 ⋆｡˚ ☾ ˚｡⋆	pattern star operator
 ⋆｡˚ ❁ ˚｡⋆	pattern star operator
 ˚₊‧ ★ ‧₊˚	pattern ring above
 ˚₊‧ ❥ ‧₊˚	pattern ring above
 ˚₊‧ ✧ ‧₊˚	pattern ring above
-୨୧┈┈ ⚘ ┈┈୧୨	pattern oriya digit two
-୨୧┈┈ ღ ┈┈୧୨	pattern oriya digit two
-୨୧┈┈ ✩ ┈┈୧୨	pattern oriya digit two
+⋆˚｡ ★ ｡˚⋆	pattern star operator
+⋆˚｡ ❥ ｡˚⋆	pattern star operator
+⋆˚｡ ✧ ｡˚⋆	pattern star operator
+⊹࣪˖ ⚘ ˖࣪⊹	pattern hermitian conjugate matrix
+⊹࣪˖ ღ ˖࣪⊹	pattern hermitian conjugate matrix
+⊹࣪˖ ✩ ˖࣪⊹	pattern hermitian conjugate matrix
+·˚༘ ✿ ༘˚·	pattern middle dot
+·˚༘ ♡ ༘˚·	pattern middle dot
+·˚༘ ✦ ༘˚·	pattern middle dot
+◦•● ❀ ●•◦	pattern white bullet
+◦•● ☾ ●•◦	pattern white bullet
+◦•● ❁ ●•◦	pattern white bullet
+⋰⋱ ★ ⋱⋰	pattern up right diagonal ellipsis
+⋰⋱ ❥ ⋱⋰	pattern up right diagonal ellipsis
+⋰⋱ ✧ ⋱⋰	pattern up right diagonal ellipsis
+˖⁺ ★ ⁺˖	pattern modifier letter plus sign
+˖⁺ ❥ ⁺˖	pattern modifier letter plus sign
+˖⁺ ✧ ⁺˖	pattern modifier letter plus sign
+୨ৎ ⚘ ৎ୨	pattern oriya digit two
+୨ৎ ღ ৎ୨	pattern oriya digit two
+୨ৎ ✩ ৎ୨	pattern oriya digit two
+ᡣ𐭩˖ ✿ ˖𐭩ᡣ	pattern mongolian letter sibe ka
+ᡣ𐭩˖ ♡ ˖𐭩ᡣ	pattern mongolian letter sibe ka
+ᡣ𐭩˖ ✦ ˖𐭩ᡣ	pattern mongolian letter sibe ka
+✧˖° ❀ °˖✧	pattern white four pointed star
+✧˖° ☾ °˖✧	pattern white four pointed star
+✧˖° ❁ °˖✧	pattern white four pointed star
+·.·´¯`·.· ★ ·.·`¯´·.·	pattern middle dot
+·.·´¯`·.· ❥ ·.·`¯´·.·	pattern middle dot
+·.·´¯`·.· ✧ ·.·`¯´·.·	pattern middle dot
+⋆⁺₊⋆ ⚘ ⋆₊⁺⋆	pattern star operator
+⋆⁺₊⋆ ღ ⋆₊⁺⋆	pattern star operator
+⋆⁺₊⋆ ✩ ⋆₊⁺⋆	pattern star operator
+∘◦˚ ★ ˚◦∘	pattern ring operator
+∘◦˚ ❥ ˚◦∘	pattern ring operator
+∘◦˚ ✧ ˚◦∘	pattern ring operator
+﹏﹏ ✿ ﹏﹏	pattern wavy low line
+﹏﹏ ♡ ﹏﹏	pattern wavy low line
+﹏﹏ ✦ ﹏﹏	pattern wavy low line
+︶꒦꒷ ❀ ꒷꒦︶	pattern presentation form for vertical right parenthesis
+︶꒦꒷ ☾ ꒷꒦︶	pattern presentation form for vertical right parenthesis
+︶꒦꒷ ❁ ꒷꒦︶	pattern presentation form for vertical right parenthesis
+##Brackets
 ꒰ ✿ ꒱	pattern yi radical shy
 ꒰ ♡ ꒱	pattern yi radical shy
 ꒰ ✦ ꒱	pattern yi radical shy
@@ -123,66 +181,37 @@
 ❨ ❀ ❩	pattern medium left parenthesis ornament
 ❨ ☾ ❩	pattern medium left parenthesis ornament
 ❨ ❁ ❩	pattern medium left parenthesis ornament
-⋆˚｡ ★ ｡˚⋆	pattern star operator
-⋆˚｡ ❥ ｡˚⋆	pattern star operator
-⋆˚｡ ✧ ｡˚⋆	pattern star operator
-⊹࣪˖ ⚘ ˖࣪⊹	pattern hermitian conjugate matrix
-⊹࣪˖ ღ ˖࣪⊹	pattern hermitian conjugate matrix
-⊹࣪˖ ✩ ˖࣪⊹	pattern hermitian conjugate matrix
-·˚༘ ✿ ༘˚·	pattern middle dot
-·˚༘ ♡ ༘˚·	pattern middle dot
-·˚༘ ✦ ༘˚·	pattern middle dot
-◦•● ❀ ●•◦	pattern white bullet
-◦•● ☾ ●•◦	pattern white bullet
-◦•● ❁ ●•◦	pattern white bullet
-⋰⋱ ★ ⋱⋰	pattern up right diagonal ellipsis
-⋰⋱ ❥ ⋱⋰	pattern up right diagonal ellipsis
-⋰⋱ ✧ ⋱⋰	pattern up right diagonal ellipsis
 ≪ ⚘ ≫	pattern much less-than
 ≪ ღ ≫	pattern much less-than
 ≪ ✩ ≫	pattern much less-than
 ﹝ ✿ ﹞	pattern small left tortoise shell bracket
 ﹝ ♡ ﹞	pattern small left tortoise shell bracket
 ﹝ ✦ ﹞	pattern small left tortoise shell bracket
-╰┈ ❀ ┈╯	pattern box drawings light arc up and right
-╰┈ ☾ ┈╯	pattern box drawings light arc up and right
-╰┈ ❁ ┈╯	pattern box drawings light arc up and right
-˖⁺ ★ ⁺˖	pattern modifier letter plus sign
-˖⁺ ❥ ⁺˖	pattern modifier letter plus sign
-˖⁺ ✧ ⁺˖	pattern modifier letter plus sign
-୨ৎ ⚘ ৎ୨	pattern oriya digit two
-୨ৎ ღ ৎ୨	pattern oriya digit two
-୨ৎ ✩ ৎ୨	pattern oriya digit two
-ᡣ𐭩˖ ✿ ˖𐭩ᡣ	pattern mongolian letter sibe ka
-ᡣ𐭩˖ ♡ ˖𐭩ᡣ	pattern mongolian letter sibe ka
-ᡣ𐭩˖ ✦ ˖𐭩ᡣ	pattern mongolian letter sibe ka
-✧˖° ❀ °˖✧	pattern white four pointed star
-✧˖° ☾ °˖✧	pattern white four pointed star
-✧˖° ❁ °˖✧	pattern white four pointed star
-·.·´¯`·.· ★ ·.·`¯´·.·	pattern middle dot
-·.·´¯`·.· ❥ ·.·`¯´·.·	pattern middle dot
-·.·´¯`·.· ✧ ·.·`¯´·.·	pattern middle dot
-⋆⁺₊⋆ ⚘ ⋆₊⁺⋆	pattern star operator
-⋆⁺₊⋆ ღ ⋆₊⁺⋆	pattern star operator
-⋆⁺₊⋆ ✩ ⋆₊⁺⋆	pattern star operator
-┈┈✧┈┈ ✿ ┈┈✧┈┈	pattern box drawings light quadruple dash horizontal
-┈┈✧┈┈ ♡ ┈┈✧┈┈	pattern box drawings light quadruple dash horizontal
-┈┈✧┈┈ ✦ ┈┈✧┈┈	pattern box drawings light quadruple dash horizontal
-━✦━ ❀ ━✦━	pattern box drawings heavy horizontal
-━✦━ ☾ ━✦━	pattern box drawings heavy horizontal
-━✦━ ❁ ━✦━	pattern box drawings heavy horizontal
-∘◦˚ ★ ˚◦∘	pattern ring operator
-∘◦˚ ❥ ˚◦∘	pattern ring operator
-∘◦˚ ✧ ˚◦∘	pattern ring operator
-༻━ ⚘ ━༺	pattern tibetan mark gug rtags gyas
-༻━ ღ ━༺	pattern tibetan mark gug rtags gyas
-༻━ ✩ ━༺	pattern tibetan mark gug rtags gyas
-﹏﹏ ✿ ﹏﹏	pattern wavy low line
-﹏﹏ ♡ ﹏﹏	pattern wavy low line
-﹏﹏ ✦ ﹏﹏	pattern wavy low line
-︶꒦꒷ ❀ ꒷꒦︶	pattern presentation form for vertical right parenthesis
-︶꒦꒷ ☾ ꒷꒦︶	pattern presentation form for vertical right parenthesis
-︶꒦꒷ ❁ ꒷꒦︶	pattern presentation form for vertical right parenthesis
+##Long
+⋆｡˚ ꒰ ✿ ꒱ ˚｡⋆	pattern star operator
+⋆｡˚ ⊱ ❀ ⊰ ˚｡⋆	pattern star operator
+⋆｡˚ ꒰ ★ ꒱ ˚｡⋆	pattern star operator
+˚₊‧ ꧁ ★ ꧂ ‧₊˚	pattern ring above
+˚₊‧ 【 ⚘ 】 ‧₊˚	pattern ring above
+˚₊‧ ꧁ ✿ ꧂ ‧₊˚	pattern ring above
+୨୧┈┈ 𓆩 ✿ 𓆪 ┈┈୧୨	pattern oriya digit two
+୨୧┈┈ ༺ ❀ ༻ ┈┈୧୨	pattern oriya digit two
+୨୧┈┈ 𓆩 ★ 𓆪 ┈┈୧୨	pattern oriya digit two
+⊹࣪˖ ⸜ ★ ⸝ ˖࣪⊹	pattern hermitian conjugate matrix
+⊹࣪˖ 『 ⚘ 』 ˖࣪⊹	pattern hermitian conjugate matrix
+⊹࣪˖ ⸜ ✿ ⸝ ˖࣪⊹	pattern hermitian conjugate matrix
+━━ ⊱ ✿ ⊰ ━━	pattern box drawings heavy horizontal
+━━ ꒰ ❀ ꒱ ━━	pattern box drawings heavy horizontal
+━━ ⊱ ★ ⊰ ━━	pattern box drawings heavy horizontal
+·˚༘ 【 ★ 】 ༘˚·	pattern middle dot
+·˚༘ ꧁ ⚘ ꧂ ༘˚·	pattern middle dot
+·˚༘ 【 ✿ 】 ༘˚·	pattern middle dot
+✧˖° ༺ ✿ ༻ °˖✧	pattern white four pointed star
+✧˖° 𓆩 ❀ 𓆪 °˖✧	pattern white four pointed star
+✧˖° ༺ ★ ༻ °˖✧	pattern white four pointed star
+⋆⁺₊⋆ 『 ★ 』 ⋆₊⁺⋆	pattern star operator
+⋆⁺₊⋆ ⸜ ⚘ ⸝ ⋆₊⁺⋆	pattern star operator
+⋆⁺₊⋆ 『 ✿ 』 ⋆₊⁺⋆	pattern star operator
 #Flowers
 ✿	black florette
 ❀	white florette
@@ -421,6 +450,7 @@
 ༺༻	tibetan mark gug rtags gyon
 ᕙᕗ	canadian syllabics fa
 #Arrows
+##Arrows
 ←	leftwards arrow
 ↑	upwards arrow
 →	rightwards arrow
@@ -533,6 +563,7 @@
 ⇽	leftwards open-headed arrow
 ⇾	rightwards open-headed arrow
 ⇿	left right open-headed arrow
+##Arrows A
 ⟰	upwards quadruple arrow
 ⟱	downwards quadruple arrow
 ⟲	anticlockwise gapped circle arrow
@@ -549,6 +580,7 @@
 ⟽	long leftwards double arrow from bar
 ⟾	long rightwards double arrow from bar
 ⟿	long rightwards squiggle arrow
+##Arrows B
 ⤀	rightwards two-headed arrow with vertical stroke
 ⤁	rightwards two-headed arrow with double vertical stroke
 ⤂	leftwards double arrow with vertical stroke
@@ -678,6 +710,7 @@
 ⥾	up fish tail
 ⥿	down fish tail
 #Shapes
+##Geometric
 ■	black square
 □	white square
 ▢	white square with rounded corners
@@ -774,6 +807,7 @@
 ◽	white medium small square
 ◾	black medium small square
 ◿	lower right triangle
+##Box drawing
 │	box drawings light vertical
 ┃	box drawings heavy vertical
 ┆	box drawings light triple dash vertical
@@ -891,6 +925,7 @@
 ╽	box drawings light up and heavy down
 ╾	box drawings heavy left and light right
 ╿	box drawings heavy up and light down
+##Blocks
 ▀	upper half block
 ▁	lower one eighth block
 ▂	lower one quarter block
@@ -924,6 +959,15 @@
 ▞	quadrant upper right and lower left
 ▟	quadrant upper right and lower left and lower right
 #Music
+##Notes
+♩	quarter note
+♪	eighth note
+♫	beamed eighth notes
+♬	beamed sixteenth notes
+♭	music flat sign
+♮	music natural sign
+♯	music sharp sign
+##Musical symbols
 𝄀	musical symbol single barline
 𝄁	musical symbol double barline
 𝄂	musical symbol final barline
@@ -1119,14 +1163,8 @@
 𝇨	musical symbol kievan flat sign
 𝇩	musical symbol sori
 𝇪	musical symbol koron
-♩	quarter note
-♪	eighth note
-♫	beamed eighth notes
-♬	beamed sixteenth notes
-♭	music flat sign
-♮	music natural sign
-♯	music sharp sign
 #Symbols
+##Misc symbols
 ☇	lightning
 ☈	thunderstorm
 ☉	sun
@@ -1346,6 +1384,7 @@
 ⛽	fuel pump
 ⛾	cup on black square
 ⛿	white flag with horizontal middle black stripe
+##Dingbats
 ✀	black safety scissors
 ✁	upper blade scissors
 ✂	black scissors
@@ -1491,6 +1530,7 @@
 ➽	heavy wedge-tailed rightwards arrow
 ➾	open-outlined rightwards arrow
 ➿	double curly loop
+##Technical
 ⌀	diameter sign
 ⌂	house
 ⌃	up arrowhead
@@ -1736,6 +1776,7 @@
 ⏽	power on symbol
 ⏾	power sleep symbol
 ⏿	observer eye symbol
+##Symbols and arrows
 ⬀	north east white arrow
 ⬁	north west white arrow
 ⬂	south east white arrow
@@ -1988,14 +2029,24 @@
 ⯽	passed symbol
 ⯾	reversed right angle
 ⯿	hellschreiber pause symbol
+##Latin
+§	section sign
 ©	copyright sign
 «	left-pointing double angle quotation mark
 ¬	not sign
 ®	registered sign
-§	section sign
-¶	pilcrow sign
 °	degree sign
+¶	pilcrow sign
 #Numbers
+##Small
+²	superscript two
+³	superscript three
+¹	superscript one
+»	right-pointing double angle quotation mark
+¼	vulgar fraction one quarter
+½	vulgar fraction one half
+¾	vulgar fraction three quarters
+##Super and subscripts
 ⁰	superscript zero
 ⁴	superscript four
 ⁵	superscript five
@@ -2019,6 +2070,7 @@
 ₉	subscript nine
 ₋	subscript minus
 ₌	subscript equals sign
+##Fractions
 ⅐	vulgar fraction one seventh
 ⅑	vulgar fraction one ninth
 ⅒	vulgar fraction one tenth
@@ -2077,6 +2129,7 @@
 ↉	vulgar fraction zero thirds
 ↊	turned digit two
 ↋	turned digit three
+##Circled
 ①	circled digit one
 ②	circled digit two
 ③	circled digit three
@@ -2237,14 +2290,11 @@
 ⓽	double circled digit nine
 ⓾	double circled number ten
 ⓿	negative circled digit zero
-²	superscript two
-³	superscript three
-¹	superscript one
-»	right-pointing double angle quotation mark
-¼	vulgar fraction one quarter
-½	vulgar fraction one half
-¾	vulgar fraction three quarters
 #Punctuation
+##Latin
+¡	inverted exclamation mark
+¿	inverted question mark
+##General
 ‐	hyphen
 ‑	non-breaking hyphen
 ‒	figure dash
@@ -2309,6 +2359,7 @@
 ⁜	dotted cross
 ⁝	tricolon
 ⁞	vertical four dots
+##Supplemental
 ⸀	right angle substitution marker
 ⸁	right angle dotted substitution marker
 ⸂	left substitution bracket
@@ -2396,6 +2447,7 @@
 ⹛	bottom half left parenthesis
 ⹜	bottom half right parenthesis
 ⹝	oblique hyphen
+##CJK
 、	ideographic comma
 。	ideographic full stop
 〃	ditto mark
@@ -2443,9 +2495,13 @@
 〽	part alternation mark
 〾	ideographic variation indicator
 〿	ideographic half fill space
-¡	inverted exclamation mark
-¿	inverted question mark
 #Currency
+##Signs
+$	dollar sign
+¢	cent sign
+£	pound sign
+¤	currency sign
+¥	yen sign
 ₠	euro-currency sign
 ₡	colon sign
 ₢	cruzeiro sign
@@ -2479,12 +2535,12 @@
 ₾	lari sign
 ₿	bitcoin sign
 ⃀	som sign
-¢	cent sign
-£	pound sign
-¤	currency sign
-¥	yen sign
-$	dollar sign
 #Math
+##Basic
+±	plus-minus sign
+×	multiplication sign
+÷	division sign
+##Operators
 ∀	for all
 ∁	complement
 ∂	partial differential
@@ -2736,6 +2792,7 @@ $	dollar sign
 ⋽	contains with overbar
 ⋾	small contains with overbar
 ⋿	z notation bag membership
+##Misc A
 ⟀	three dimensional angle
 ⟁	white triangle containing small white triangle
 ⟂	perpendicular
@@ -2783,6 +2840,7 @@ $	dollar sign
 ⟭	mathematical right white tortoise shell bracket
 ⟮	mathematical left flattened parenthesis
 ⟯	mathematical right flattened parenthesis
+##Misc B
 ⦀	triple vertical bar delimiter
 ⦁	z notation spot
 ⦂	z notation type colon
@@ -2911,6 +2969,7 @@ $	dollar sign
 ⧽	right-pointing curved angle bracket
 ⧾	tiny
 ⧿	miny
+##Operators 2
 ⨀	n-ary circled dot operator
 ⨁	n-ary circled plus operator
 ⨂	n-ary circled times operator
@@ -3167,6 +3226,7 @@ $	dollar sign
 ⫽	double solidus operator
 ⫾	white vertical bar
 ⫿	n-ary white vertical bar
+##Letterlike
 ℀	account of
 ℁	addressed to the subject
 ℃	degree celsius
@@ -3201,10 +3261,8 @@ $	dollar sign
 ⅌	per sign
 ⅍	aktieselskab
 ⅏	symbol for samaritan source
-±	plus-minus sign
-×	multiplication sign
-÷	division sign
 #Braille
+##Braille
 ⠀	braille pattern blank
 ⠁	braille pattern dots-1
 ⠂	braille pattern dots-2
