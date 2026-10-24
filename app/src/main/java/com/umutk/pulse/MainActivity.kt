@@ -89,6 +89,7 @@ open class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Cfg.load(this); Opt.load(this); ToolPlace.attach(this); Downloads.load(this); Installer.load(this); SplashPic.load(this); com.umutk.pulse.features.GlassPrefs.load(this); Thread { com.umutk.pulse.features.Backdrop.load(this) }.start(); com.umutk.pulse.features.initThemeWall(this); Shell.watchShizuku()
+        com.umutk.pulse.extras.messages.MsgNotifier.forgetOldShortcuts(this)
         // installer copies from an earlier run are dead weight: a fresh start clears them (a restored instance keeps its window)
         if (savedInstanceState == null) File(cacheDir, "installer").deleteRecursively()
         disableExtraAppsOnFreshInstall(this)

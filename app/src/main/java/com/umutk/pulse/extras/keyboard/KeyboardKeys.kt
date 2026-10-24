@@ -20,14 +20,14 @@ object ExtraKeys {
     /** The tools the bar above the keys can hold: id and name. */
     val toolbar = listOf(
         "clip" to "Clipboard", "emoji" to "Emoji", "voice" to "Voice typing", "translate" to "Translate", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
-        "menu" to "Menu", "resize" to "Resize", "incognito" to "Incognito", "arrows" to "Extra keys", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
+        "menu" to "Menu", "resize" to "Resize", "incognito" to "Incognito", "arrows" to "Arrows", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
     )
     /** The tiles the menu behind the three dots can hold. */
     val menu = listOf(
         "clip" to "Clipboard", "translate" to "Translate", "voice" to "Voice typing", "emoji" to "Emoji", "settings" to "Settings", "theme" to "Themes", "languages" to "Languages",
-        "resize" to "Resize", "incognito" to "Incognito", "autocorrect" to "Autocorrect", "onehand" to "One-handed", "arrows" to "Extra keys", "numbers" to "Numbers",
+        "resize" to "Resize", "incognito" to "Incognito", "autocorrect" to "Autocorrect", "onehand" to "One-handed", "arrows" to "Arrows", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers",
         "glide" to "Swipe typing", "lang" to "Language",
     )
-    const val DEFAULT_MENU = "clip,translate,voice,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,numbers,glide"
+    const val DEFAULT_MENU = "clip,translate,voice,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide"
     const val DEFAULT_TOOLBAR = "clip,emoji,voice,translate,menu"
 }
