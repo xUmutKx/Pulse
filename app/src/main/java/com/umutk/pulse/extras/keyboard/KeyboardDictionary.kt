@@ -125,6 +125,7 @@ object KeyboardDictionary {
         // the slips of one person's everyday writing that no near-word rule mends (two or three letters wrong in the same word): a small list inside the app, under what is learned
         runCatching { c.assets.open("kbd/habits.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
+        runCatching { File(c.filesDir, "kbd_typo_seen.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typoSeen[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
     }
 
@@ -415,6 +416,8 @@ object KeyboardDictionary {
         val k = typed.lowercase(Locale.ROOT) + ">" + corrected.lowercase(Locale.ROOT)
         val n = (rejects[k] ?: 0) + 1
         rejects[k] = n
+        // the correction was undone: a learned slip that made it is forgotten
+        if (typos[typed.lowercase(Locale.ROOT)] == corrected.lowercase(Locale.ROOT)) { typos.remove(typed.lowercase(Locale.ROOT)); runCatching { File(c.filesDir, "kbd_typos.txt").writeText(typos.entries.take(4000).joinToString("\n") { "${it.key} ${it.value}" }) } }
         if (n >= 2) learnWord(typed, 3)
         runCatching { File(c.filesDir, "kbd_rejects.txt").writeText(rejects.entries.take(3000).joinToString("\n") { "${it.key} ${it.value}" }) }
     }
@@ -431,8 +434,19 @@ object KeyboardDictionary {
     /** The word this exact typo was turned into before (by tapping the suggestion), or null. */
     fun typoFix(c: Context, typed: String): String? { if (!userLoaded) loadUser(c); return typos[typed] }
 
+    // how often a pair was seen as "typed>word": a typed word that is itself a real word needs three sightings before it counts as a slip of the finger, a non-word one
+    private val typoSeen = ConcurrentHashMap<String, Int>()
+
     fun learnTypo(c: Context, typed: String, word: String) {
         if (typed.length < 3 || typed == word || word.startsWith(typed)) return
+        if (!userLoaded) loadUser(c)
+        if (typos[typed] != word) {
+            val k = "$typed>$word"
+            val n = (typoSeen[k] ?: 0) + 1
+            typoSeen[k] = n
+            runCatching { File(c.filesDir, "kbd_typo_seen.txt").writeText(typoSeen.entries.take(3000).joinToString("\n") { "${it.key} ${it.value}" }) }
+            if (n < (if (isKnown(typed)) 3 else 1)) return
+        }
         typos[typed] = word
         // one letter wrong in a word of the same length: that letter pair is this person's slip
         if (typed.length == word.length) { val d = typed.indices.filter { typed[it] != word[it] }; if (d.size == 1) confusion["" + typed[d[0]] + word[d[0]]] = (confusion["" + typed[d[0]] + word[d[0]]] ?: 0) + 1 }
