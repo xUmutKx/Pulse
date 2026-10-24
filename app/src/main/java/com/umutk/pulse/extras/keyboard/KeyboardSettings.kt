@@ -214,6 +214,18 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // feel
+        KbSection("effects", tr("Effects", "Efektler")) {
+            @Composable fun chips(title: String, names: List<Pair<String, String>>, cur: Int, set: (Int) -> Unit) {
+                Text(title, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    names.forEachIndexed { i, n -> PChip(cur == i, tr(n.first, n.second)) { set(i); save() } }
+                }
+            }
+            chips(tr("Keyboard colour effect", "Klavye renk efekti"), KeyboardEffects.boardNames, KeyboardPrefs.boardFx) { KeyboardPrefs.boardFx = it }
+            chips(tr("Key colour effect", "Tuş renk efekti"), KeyboardEffects.keyNames, KeyboardPrefs.keyFx) { KeyboardPrefs.keyFx = it }
+            chips(tr("Key motion effect", "Tuş hareket efekti"), KeyboardEffects.motionNames, KeyboardPrefs.motionFx) { KeyboardPrefs.motionFx = it }
+            chips(tr("Touch sound", "Dokunma sesi"), KeyboardEffects.soundNames, KeyboardPrefs.soundKind) { KeyboardPrefs.soundKind = it; KeyboardPrefs.sound = true; KeyboardEffects.play(it) }
+        }
         KbSection("vibrate", tr("Feel", "His")) {
             Switch(tr("Vibrate on keypress", "Tuşta titreşim"), "", KeyboardPrefs.haptic) { KeyboardPrefs.haptic = it; save() }
             if (KeyboardPrefs.haptic) {
