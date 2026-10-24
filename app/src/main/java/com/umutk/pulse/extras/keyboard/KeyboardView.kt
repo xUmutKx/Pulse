@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.keyboard
 
+import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.EmojiEmotions
 import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.Edit
