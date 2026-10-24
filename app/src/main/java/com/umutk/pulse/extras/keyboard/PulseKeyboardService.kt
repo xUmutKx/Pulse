@@ -696,7 +696,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         val info = currentInputEditorInfo ?: return
         if (info.inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) return
-        st.shift = if (c.getCursorCapsMode(info.inputType) != 0) 1 else 0
+        // the field's own flag first; many fields (browsers, chat boxes) set none, so the sentence start is read from the text itself
+        val before = c.getTextBeforeCursor(8, 0)?.toString().orEmpty()
+        val own = before.trimEnd(' ').let { t -> before.isEmpty() || before.endsWith("\n") || (before.endsWith(" ") && (t.endsWith(".") || t.endsWith("!") || t.endsWith("?") || t.endsWith("…"))) }
+        st.shift = if (c.getCursorCapsMode(info.inputType) != 0 || (own && info.inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD == 0 && !noAuto)) 1 else 0
     }
 
     private fun cased(w: String, typed: String): String {
