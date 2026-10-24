@@ -111,6 +111,9 @@ object KeyboardDictionary {
     // words of the phone and of Pulse that the subtitle word list lacks: known from the start, so they are not "corrected"
     private val seedWords = "derle derlendi derlemek derleyip derlenmedi ikonlar widget widgetlar temalar launcher güncelle ekolayzır tıklayınca tıkladım arkaplanı ayarlardan klavyeyi uygulamayı animasyonlar".split(' ')
 
+    /** Reads the learned data when it has not been read yet (the settings page shows numbers before the keyboard has run in this process). */
+    fun ensureUser(c: Context) { if (!userLoaded) loadUser(c) }
+
     private fun loadUser(c: Context) {
         userLoaded = true
         seedWords.forEach { if ((user[it] ?: 0) < 3) user[it] = 3 }
@@ -244,6 +247,12 @@ object KeyboardDictionary {
     }
 
     /** A word of either language (the word lists, the endings, or a word the person already uses). */
+    /** Whether [a] is one slip from [b] (a neighbouring key, an accent, a swap, a letter more or less). */
+    fun similar(a: String, b: String): Boolean {
+        if (a.length > 30 || b.length > 30) return false
+        return distance(a, b, 1.05f, FloatArray(32), FloatArray(32), FloatArray(32)) <= 1.05f
+    }
+
     fun isKnown(w: String): Boolean = isWord("tr", w) || isWord("en", w)
 
     fun isWord(code: String, w: String): Boolean {

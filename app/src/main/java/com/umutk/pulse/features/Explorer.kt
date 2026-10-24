@@ -205,7 +205,7 @@ private fun FilesPageInner() {
     var settings by rememberSaveable { mutableStateOf(false) }
     val openTool = com.umutk.pulse.LocalOpenTool.current
     val wl = LocalWindowLook.current
-    val glassId = wl.id == "win11"
+    val glassId = wl.id == "win11" && FilesPrefs.glass
     if (standalone) androidx.compose.runtime.SideEffect { (ctx as com.umutk.pulse.FilesActivity).setGlass(glassId) }
     val body: @Composable () -> Unit = { com.umutk.pulse.LookFade(FilesLook.theme) {
         // full screen is a Dialog that covers the app, so the settings screen opens inside it (the app's sub screen would sit behind)

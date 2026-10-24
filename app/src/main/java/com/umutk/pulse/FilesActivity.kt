@@ -4,6 +4,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import com.umutk.pulse.features.FilesLook
+import com.umutk.pulse.features.FilesPrefs
 
 /** True while the standalone Files app shows a see-through Windows look (MainActivity.Root then draws no opaque layer). */
 object FilesGlass { var on by mutableStateOf(false) }
@@ -59,14 +60,14 @@ class FilesActivity : MainActivity() {
     override fun beforeContent() {
         archiveFrom(intent)
         applyLook()
-        glass = FilesLook.theme == "win11"; FilesGlass.on = glass
+        FilesPrefs.load(this); glass = FilesLook.theme == "win11" && FilesPrefs.glass; FilesGlass.on = glass
         @Suppress("DEPRECATION") overridePendingTransition(0, 0)
         paint()
         if (glass && android.os.Build.VERSION.SDK_INT >= 31) window.setBackgroundBlurRadius(40)
     }
 
     // every start path re-applies the Files look before the first frame (Pulse's onCreate / viewers' Cfg.load reset the global Look)
-    private fun refresh() { applyLook(); setGlass(FilesLook.theme == "win11"); paint() }
+    private fun refresh() { applyLook(); setGlass(FilesLook.theme == "win11" && FilesPrefs.glass); paint() }
     override fun onStart() { refresh(); super.onStart() }
     override fun onNewIntent(intent: android.content.Intent) { refresh(); archiveFrom(intent); super.onNewIntent(intent) }
     override fun onResume() { refresh(); super.onResume() }
