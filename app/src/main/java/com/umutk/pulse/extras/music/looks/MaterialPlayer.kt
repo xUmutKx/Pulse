@@ -411,7 +411,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
             // the cover breathes out while playing and settles smaller when paused
             val coverScale by animateFloatAsState(if (st.isPlaying) 1f else .88f, spring(dampingRatio = .55f, stiffness = Spring.StiffnessLow), label = "cover")
             Box(Modifier.fillMaxSize().offset { IntOffset(0, sheetY.value.roundToInt()) }.background(pbg)
-                .pointerInput(Unit) { detectVerticalDragGestures(onDragEnd = { pageRelease() }, onDragCancel = { pageRelease() }, onVerticalDrag = { c, d -> c.consume(); pageDrag(d) }) }) {
+                .pointerInput(Unit) { detectVerticalDragGestures(onDragEnd = { pageRelease() }, onDragCancel = { pageRelease() }, onVerticalDrag = { c, d -> if (!showLyrics) { c.consume(); pageDrag(d) } }) }) {
                 // one layer: the blurred cover is the background when the art switch is on, nothing extra is drawn otherwise
                 if (artBackground) Crossfade(art, animationSpec = tween(600), label = "bg") { a -> if (a != null) Image(a, null, Modifier.fillMaxSize().blur(48.dp).alpha(.55f), contentScale = ContentScale.Crop) }
                 Column(Modifier.fillMaxSize().padding(horizontal = 24.dp, vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -477,7 +477,13 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                     val d = dur.coerceAtLeast(1)
                     // the position arrives every 400 ms: glide between the ticks instead of jumping
                     val glide by androidx.compose.animation.core.animateFloatAsState(pos.toFloat(), tween(420, easing = androidx.compose.animation.core.LinearEasing), label = "seekGlide")
-                    PSlider((if (dragging) pos.toFloat() else glide).coerceIn(0f, d.toFloat()), { dragging = true; pos = it.toInt() }, 0f..d.toFloat()) { engine.seekTo(pos); dragging = false }
+                    // the thumb is pulled along by the finger on a spring: it lags a little, overshoots and settles, so the bar feels elastic and slippery
+                    val elastic = remember { androidx.compose.animation.core.Animatable(0f) }
+                    PSlider((if (dragging) elastic.value else glide).coerceIn(0f, d.toFloat()), {
+                        val first = !dragging
+                        dragging = true; pos = it.toInt()
+                        scope.launch { if (first) elastic.snapTo(glide); elastic.animateTo(it, spring(dampingRatio = .5f, stiffness = Spring.StiffnessMediumLow)) }
+                    }, 0f..d.toFloat()) { engine.seekTo(pos); scope.launch { elastic.animateTo(pos.toFloat(), spring(dampingRatio = .6f, stiffness = Spring.StiffnessLow)); dragging = false } }
                     Row(Modifier.fillMaxWidth()) { Text(fmt(pos), color = SUB, fontSize = 12.sp); Spacer(Modifier.weight(1f)); Text(fmt(dur), color = SUB, fontSize = 12.sp) }
                     Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         ShuffleButton(engine, shuffle, dyn, SUB, 44.dp, 10.dp) { shuffle = it; modesPrefs.edit().putBoolean("queue_shuffled", it).apply() }
