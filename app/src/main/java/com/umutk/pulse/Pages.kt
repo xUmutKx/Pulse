@@ -131,6 +131,20 @@ fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false
         // single outline, no accent fill: the same for every look
         val shape = if (t.material) CircleShape else RoundedCornerShape(if (t.id == "win11") 6.dp else t.radius.coerceAtMost(12.dp))
         val fg = if (danger) Color(0xFFC42B1C) else t.text
+        if (t.material && InMatDialogBtn.current) {
+            // a Material 3 dialog action: a text button, no frame
+            Box(modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
+                Text(text, color = if (danger) fg else MaterialTheme.colorScheme.primary, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            }
+            return
+        }
+        if (t.material) {
+            // a tonal button: a soft fill instead of a heavy outline
+            Box(modifier.clip(CircleShape).background(fg.copy(alpha = if (danger) .12f else .09f)).clickable(onClick = onClick).padding(horizontal = if (compact) 10.dp else 24.dp, vertical = if (compact) 6.dp else 10.dp), contentAlignment = Alignment.Center) {
+                Text(text, color = fg, fontSize = if (compact) 12.sp else 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+            }
+            return
+        }
         Box(modifier.border(1.dp, if (danger) fg else if (t.id == "amoled") Color.White else t.line, shape).clickable(onClick = onClick).padding(horizontal = if (compact) 8.dp else if (t.material) 24.dp else 14.dp, vertical = if (t.material) 10.dp else 6.dp), contentAlignment = Alignment.Center) {
             Text(text, color = fg, fontSize = if (compact) 12.sp else if (t.material) 14.sp else 13.sp, fontWeight = if (t.material) FontWeight.Medium else null, maxLines = 1)
         }
