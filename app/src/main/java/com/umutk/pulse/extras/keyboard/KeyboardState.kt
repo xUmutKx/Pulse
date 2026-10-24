@@ -22,6 +22,12 @@ class KbState {
     var lang by mutableStateOf("en")
     /** Left, middle and right slot of the bar; the middle one is what the space key puts in. */
     var slots by mutableStateOf(listOf("", "", ""))
+    // the translation bar: it takes the top bar, translates what is typed from one language to the other
+    var trans by mutableStateOf(false)
+    var transFrom by mutableStateOf("tr")
+    var transTo by mutableStateOf("en")
+    var transOut by mutableStateOf("")
+    var transBusy by mutableStateOf(false)
     /** The password manager's suggestions (autofill), drawn by the system inside the bar; empty when there are none. */
     var inline by mutableStateOf(listOf<android.view.View>())
     /** The letters typed so far in the word under way (shown as a quoted slot when it differs from the middle one). */
@@ -64,6 +70,8 @@ class KbPreview(val rect: Rect, val label: String, val alts: List<String> = empt
 
 /** What the keys do. The service implements it; the settings page draws the keyboard with an empty one. */
 interface KbActions {
+    /** The translation bar: open, close, swap, from, to, apply. */
+    fun transOp(op: String) {}
     fun type(s: String)
     fun backspace()
     fun enter()
