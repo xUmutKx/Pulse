@@ -132,7 +132,7 @@ object WidgetData {
             UsageWidget(), BatteryWidget(), StorageWidget(), DownloadsWidget(), MemoryWidget(),
             TempWidget(), NetworkWidget(), ClockWidget(), UptimeWidget(), StorageBarWidget(),
             RamFreeWidget(), CoresWidget(), BrightnessWidget(), WifiWidget(), SignalWidget(),
-            WeatherWidget(), WeatherWideWidget(),
+            WeatherWidget(), WeatherWideWidget(), WeatherClearWidget(),
             BatteryHealthWidget(), AppCountWidget(), LastDownloadWidget(), NextAlarmWidget(), QuickWidget(), VoiceWidget(),
         ) + HealthWidgets.all + com.umutk.pulse.extras.notes.NotesWidget()
     }

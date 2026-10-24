@@ -17,7 +17,7 @@ import com.umutk.pulse.tr
 object WeatherWidgets {
     fun refreshAll(c: Context) {
         val mgr = AppWidgetManager.getInstance(c)
-        listOf(WeatherWidget(), WeatherWideWidget()).forEach { w ->
+        listOf(WeatherWidget(), WeatherWideWidget(), WeatherClearWidget()).forEach { w ->
             mgr.getAppWidgetIds(ComponentName(c, w.javaClass)).forEach { id ->
                 mgr.updateAppWidget(id, w.contentFor(c, id, WidgetStyles.of(c, id)))
             }
