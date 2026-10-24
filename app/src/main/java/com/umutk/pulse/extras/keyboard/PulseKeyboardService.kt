@@ -148,6 +148,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return ComposeView(this).apply {
             setViewTreeLifecycleOwner(o); setViewTreeSavedStateRegistryOwner(o)
             setContent { KeyboardView(st, this@PulseKeyboardService) }
+            // the bottom keys sit where the system's home swipe starts: the whole keyboard keeps its touches (Android 10+)
+            if (android.os.Build.VERSION.SDK_INT >= 29) addOnLayoutChangeListener { v, l, t, r, b, _, _, _, _ -> v.systemGestureExclusionRects = listOf(android.graphics.Rect(0, 0, r - l, b - t)) }
         }
     }
 
