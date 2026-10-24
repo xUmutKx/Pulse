@@ -4,6 +4,8 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -173,7 +175,8 @@ private fun RoundPad(rows: List<List<String>>, onKey: (String) -> Unit) {
     androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
         val gap = 10.dp
         val cols = rows[0].size
-        val side = minOf((maxWidth - gap * (cols - 1)) / cols, 84.dp)
+        // never taller than 60% of the room: the display above keeps the rest and the rows do not climb over it
+        val side = minOf((maxWidth - gap * (cols - 1)) / cols, 84.dp, ((maxHeight - gap * (rows.size - 1)) / rows.size) * .6f)
         Column(Modifier.align(Alignment.BottomCenter), verticalArrangement = Arrangement.spacedBy(gap)) {
             rows.forEach { r -> Row(horizontalArrangement = Arrangement.spacedBy(gap)) { r.forEach { k -> CalcKey(k, Modifier.size(side), false) { onKey(k) } } } }
         }
@@ -190,7 +193,7 @@ internal fun CalcPad(rows: List<List<String>>, classic: Boolean, modifier: Modif
         androidx.compose.foundation.layout.BoxWithConstraints(modifier.fillMaxWidth(), contentAlignment = Alignment.BottomCenter) {
             val n = rows.size
             val fit = if (constraints.hasBoundedHeight) (maxHeight - gap * (n - 1)) / n else 48.dp
-            val rowH = minOf(fit, 58.dp)
+            val rowH = minOf(fit, 58.dp).coerceAtLeast(30.dp)
             Column(Modifier.fillMaxWidth().widthIn(max = 520.dp), verticalArrangement = Arrangement.spacedBy(gap)) {
                 rows.forEach { row ->
                     Row(Modifier.fillMaxWidth().height(rowH), horizontalArrangement = Arrangement.spacedBy(gap)) {
@@ -287,10 +290,15 @@ internal fun CalcKey(k: String, modifier: Modifier, classic: Boolean, onClick: (
         else -> T.text
     }
     val border = when (id) { "win7" -> Color(0xFF8C99AD); "xp" -> Color(0xFF003C74); "amoled" -> Color(0xFF2A2A2A); else -> null }
+    // a press shrinks the key a little and lightens it; it springs back on release
+    val src = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val pressed by androidx.compose.foundation.interaction.collectIsPressedAsState(src)
+    val press by androidx.compose.animation.core.animateFloatAsState(if (pressed) 1f else 0f, androidx.compose.animation.core.tween(if (pressed) 60 else 160), label = "key")
     Box(
-        modifier.fillMaxWidth().clip(shape).background(brush)
+        modifier.fillMaxWidth().graphicsLayer { val sc = 1f - .08f * press; scaleX = sc; scaleY = sc }.clip(shape).background(brush)
             .then(if (id == "win95") Modifier.frame(T, raised = true) else if (border != null) Modifier.border(1.dp, border, shape) else Modifier)
-            .clickable(onClick = onClick),
+            .clickable(interactionSource = src, indication = null, onClick = onClick)
+            .drawWithContent { drawContent(); if (press > 0f) drawRect(Color.White.copy(alpha = .22f * press)) },
         contentAlignment = Alignment.Center,
     ) { Text(k, color = ink, fontSize = if (mem) 14.sp else if (round) 26.sp else 20.sp, fontWeight = if (digit || id == "xp") FontWeight.SemiBold else FontWeight.Normal) }
 }
