@@ -68,7 +68,8 @@ class SaveToActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         val list = uris()
         if (list.isEmpty()) { finish(); return }
-        setContent { LookHost(transparent = true) { Panel(list) } }
+        // its own look, Material: it is a small panel over another app, and it must not wear whatever look Pulse has (Windows 11 mixed in before)
+        setContent { LookHost(transparent = true, lookId = "material") { Panel(list) } }
     }
 
     @Composable
@@ -96,6 +97,29 @@ class SaveToActivity : ComponentActivity() {
         }
     }
 
+    /** Android 10+: the copy goes in through the media store under [folder] (Download, Documents, DCIM, Pictures, Music, Movies), in the collection that fits its type. */
+    private fun saveViaMediaStore(u: Uri, name: String, folder: String): Boolean {
+        if (android.os.Build.VERSION.SDK_INT < 29) return false
+        val ext = name.substringAfterLast('.', "").lowercase()
+        val mime = android.webkit.MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext) ?: contentResolver.getType(u) ?: "application/octet-stream"
+        val (coll, rel) = when {
+            mime.startsWith("image/") && folder in setOf("Pictures", "DCIM") -> android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI to folder
+            mime.startsWith("video/") && folder in setOf("Movies", "DCIM") -> android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI to folder
+            mime.startsWith("audio/") && folder == "Music" -> android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI to folder
+            folder == "Documents" -> android.provider.MediaStore.Files.getContentUri("external") to "Documents"
+            else -> android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI to "Download"
+        }
+        return runCatching {
+            val v = android.content.ContentValues().apply {
+                put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, name); put(android.provider.MediaStore.MediaColumns.MIME_TYPE, mime)
+                put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, rel)
+            }
+            val dst = contentResolver.insert(coll, v) ?: return@runCatching false
+            contentResolver.openInputStream(u)?.use { ins -> contentResolver.openOutputStream(dst)?.use { ins.copyTo(it) } }
+            true
+        }.getOrDefault(false)
+    }
+
     private fun save(list: List<Uri>, dir: File, single: String) {
         Thread {
             var ok = 0
@@ -104,10 +128,13 @@ class SaveToActivity : ComponentActivity() {
                     val raw = (if (list.size == 1) single else nameOf(u)).trim().ifEmpty { "file" }.replace(Regex("[\\\\/:*?\"<>|]"), "_")
                     var out = File(dir, raw); var n = 2
                     while (out.exists()) { out = File(dir, raw.substringBeforeLast('.', raw) + " ($n)" + raw.substringAfterLast('.', "").let { if (it.isEmpty()) "" else ".$it" }); n++ }
-                    dir.mkdirs()
-                    contentResolver.openInputStream(u)?.use { ins -> out.outputStream().use { ins.copyTo(it) } }
-                    android.media.MediaScannerConnection.scanFile(this, arrayOf(out.path), null, null)
-                    ok++
+                    val direct = runCatching {
+                        dir.mkdirs()
+                        contentResolver.openInputStream(u)?.use { ins -> out.outputStream().use { ins.copyTo(it) } } ?: error("no input")
+                        android.media.MediaScannerConnection.scanFile(this, arrayOf(out.path), null, null)
+                    }.isSuccess
+                    // without the all-files permission the folder cannot be written directly: the media store takes the copy instead
+                    if (direct || saveViaMediaStore(u, raw, dir.name)) ok++
                 }
             }
             runOnUiThread { android.widget.Toast.makeText(this, if (ok > 0) tr("Saved $ok to ${dir.name}", "$ok dosya ${dir.name} içine kaydedildi") else tr("Could not save", "Kaydedilemedi"), android.widget.Toast.LENGTH_SHORT).show(); finish() }

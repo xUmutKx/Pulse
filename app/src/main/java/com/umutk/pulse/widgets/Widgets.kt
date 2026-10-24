@@ -96,6 +96,7 @@ object WidgetData {
     /** Called on every sample; writes and refreshes the widgets at most every 5 s. */
     fun save(c: Context, s: Snap) {
         val now = System.currentTimeMillis()
+        runCatching { com.umutk.pulse.features.BatteryLog.sample(c, s.charging) }
         if (now - lastSaved < 5_000) return
         lastSaved = now
         val dl = Downloads.tasks.value
