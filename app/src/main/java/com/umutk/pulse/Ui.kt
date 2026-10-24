@@ -61,7 +61,7 @@ private fun material(k: String): ImageVector = when (k) {
     "download" -> Icons.Outlined.Download; "delete", "recycle" -> Icons.Outlined.Delete; "folder" -> Icons.Outlined.Folder
     "filetypes" -> Icons.Outlined.PieChart; "clean" -> Icons.Outlined.CleaningServices; "chevron" -> Icons.Outlined.ExpandMore; "back" -> Icons.AutoMirrored.Outlined.ArrowBack
     "copy" -> Icons.Outlined.ContentCopy; "move" -> Icons.Outlined.DriveFileMove; "rename" -> Icons.Outlined.DriveFileRenameOutline
-    "send" -> Icons.Outlined.Send; "video" -> Icons.Outlined.Movie; "gif" -> Icons.Outlined.Gif; "convert" -> Icons.Outlined.Transform; "compress" -> Icons.Outlined.Compress; "photos" -> Icons.Outlined.PhotoLibrary; "mute" -> Icons.Outlined.NotificationsOff; "block" -> Icons.Outlined.Block; "more" -> Icons.Outlined.MoreVert; "archive" -> Icons.Outlined.Archive; "call" -> Icons.Outlined.Call; "attach" -> Icons.Outlined.AttachFile
+    "home" -> Icons.Outlined.Home; "send" -> Icons.Outlined.Send; "video" -> Icons.Outlined.Movie; "gif" -> Icons.Outlined.Gif; "convert" -> Icons.Outlined.Transform; "compress" -> Icons.Outlined.Compress; "photos" -> Icons.Outlined.PhotoLibrary; "mute" -> Icons.Outlined.NotificationsOff; "block" -> Icons.Outlined.Block; "more" -> Icons.Outlined.MoreVert; "archive" -> Icons.Outlined.Archive; "call" -> Icons.Outlined.Call; "attach" -> Icons.Outlined.AttachFile
     "newfolder" -> Icons.Outlined.CreateNewFolder; "paste" -> Icons.Outlined.ContentPaste
     "extract" -> Icons.Outlined.Archive; "view" -> Icons.Outlined.Visibility
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Straighten; "flash" -> Icons.Outlined.FlashlightOn

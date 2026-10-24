@@ -1,6 +1,7 @@
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.KeyboardTab
 import androidx.compose.material.icons.rounded.KeyboardCapslock
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -295,7 +296,11 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 st.slots.forEachIndexed { i, s ->
                     Box(Modifier.weight(1f).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.slotLong(i) }), contentAlignment = Alignment.Center) {
-                        Text(if (st.banAsk == i) tr("Never suggest ✕", "Bir daha önerme ✕") else s, color = if (st.banAsk == i) th.accent else if (i == 1) th.text else th.sub, fontSize = 20.sp, fontWeight = if (i == 1) FontWeight.Medium else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                        if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
+                        else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                            Icon(kbIcon(th, "ContentPaste"), null, tint = th.sub, modifier = Modifier.size(16.dp))
+                            Text(s.drop(1).replace('\n', ' ').take(14) + if (s.length > 15) "…" else "", color = th.sub, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))
+                        } else Text(s, color = if (i == 1) th.text else th.sub, fontSize = 20.sp, fontWeight = if (i == 1) FontWeight.Medium else FontWeight.Normal, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                     }
                 }
             }

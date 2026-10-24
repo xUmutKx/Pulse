@@ -196,6 +196,8 @@ private fun FilesPageInner() {
     var tab by rememberSaveable { mutableStateOf(if (standalone && !FilesPrefs.startBrowse) "home" else "files") }
     val top = remember { Environment.getExternalStorageDirectory() }
     val back: () -> Unit = { tab = if (standalone && !FilesPrefs.startBrowse) "home" else "files" }
+    // Back from any other tab of the standalone app goes to the home page first
+    androidx.activity.compose.BackHandler(enabled = standalone && tab != "home") { tab = "home" }
     // the full-screen window is the standalone app's; embedded in Pulse the page stays a page
     var full by rememberSaveable { mutableStateOf(standalone && (Opt.filesFull || FilesLaunch.full)) }
     LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full && standalone) { full = true; FilesLaunch.full = false } }
