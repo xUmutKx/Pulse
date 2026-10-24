@@ -372,17 +372,18 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         val src = if (st.page == 1) KeyboardLayouts.symbols1 else KeyboardLayouts.symbols2
         src.forEachIndexed { r, line ->
             Row(Modifier.fillMaxWidth()) {
-                if (r == 2) Key(th, st, act, KbKey(if (st.page == 1) "2/2" else "1/2", KeyKind.SYMBOLS2, 1.5f), keyH)
-                val w = if (r == 2) (n1 - 3f) / line.length else n1 / line.length
+                val side = if (st.page == 1) 1f else 1.5f
+                if (r == 2) Key(th, st, act, KbKey(if (st.page == 1) "{&=" else "1/2", KeyKind.SYMBOLS2, side), keyH)
+                val w = if (r == 2) (n1 - 2 * side) / line.length else n1 / line.length
                 line.forEach { ch -> Key(th, st, act, KbKey(ch.toString(), KeyKind.CHAR, w, KeyboardLayouts.symbolAlts[ch].orEmpty()), keyH) }
-                if (r == 2) Key(th, st, act, KbKey("", KeyKind.DELETE, 1.5f), keyH)
+                if (r == 2) Key(th, st, act, KbKey("", KeyKind.DELETE, side), keyH)
             }
         }
     }
     Box {
     Row(Modifier.fillMaxWidth()) {
-        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "ABC", KeyKind.MODE, 1.5f), keyH)
-        if (KeyboardPrefs.emojiKey) Key(th, st, act, KbKey("", KeyKind.EMOJI, 1f), keyH)
+        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, 1.5f), keyH)
+        if (KeyboardPrefs.emojiKey && st.page == 0) Key(th, st, act, KbKey("", KeyKind.EMOJI, 1f), keyH)
         Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.emojiKey) KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), keyH)
         Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, 4f), keyH)
         Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), keyH)
@@ -706,14 +707,10 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                     Text(if (q.isEmpty()) tr("Search emoji, flags, kaomoji", "Emoji, bayrak, kaomoji ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
                 }
             } else {
-                Box(Modifier.size(width = 44.dp, height = 40.dp).clickable { st.emojiQuery = "" }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Search"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
-                Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                    icons.forEachIndexed { i, ic ->
-                        Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = i }.then(if (i == tab) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) {
-                            Icon(ic, null, tint = if (i == tab) th.text else th.sub, modifier = Modifier.size(22.dp))
-                        }
-                    }
-                    Box(Modifier.width(52.dp).fillMaxHeight().clickable { tab = 10 }.then(if (tab == 10) Modifier.background(th.special) else Modifier), contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.text else th.sub, fontSize = 14.sp) }
+                // the search box on top, like the phone's own emoji page; the category bar sits at the bottom
+                Row(Modifier.weight(1f).height(36.dp).padding(horizontal = 6.dp).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { st.emojiQuery = "" }.padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(20.dp))
+                    Text(tr("Search emojis", "Emoji ara"), color = th.sub, fontSize = 16.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
                 }
             }
         }
@@ -734,10 +731,18 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                     items(list) { it2 -> EmojiCell(it2, th, act) }
                 }
             }
-            Row(Modifier.fillMaxWidth()) {
-                Key(th, st, act, KbKey("ABC", KeyKind.MODE, 2f), keyH * .85f)
-                Spacer(5f)
-                Key(th, st, act, KbKey("", KeyKind.DELETE, 2f), keyH * .85f)
+            Row(Modifier.fillMaxWidth().height(keyH * .85f), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.page(0) }, contentAlignment = Alignment.Center) { Text("abc", color = th.text, fontSize = 17.sp) }
+                Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                    icons.forEachIndexed { i, ic ->
+                        Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = i }, contentAlignment = Alignment.Center) {
+                            Icon(ic, null, tint = if (i == tab) th.text else th.sub, modifier = Modifier.size(24.dp))
+                            if (i == tab) Box(Modifier.align(Alignment.BottomCenter).width(26.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
+                        }
+                    }
+                    Box(Modifier.width(48.dp).fillMaxHeight().clickable { tab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.text else th.sub, fontSize = 15.sp) }
+                }
+                Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.backspace() }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Backspace"), null, tint = th.text, modifier = Modifier.size(26.dp)) }
             }
         }
     }
