@@ -1,3 +1,74 @@
+#Patterns
+˖ ᡣ𐭩 ⊹ ࣪ ౨ৎ˚₊	pattern modifier letter plus sign
+⋆˚࿔ ⊹ ˖	pattern star operator
+₊˚⊹ ♡ ⊹˚₊	pattern subscript plus sign
+˚₊‧꒰ა ♡ ໒꒱ ‧₊˚	pattern ring above
+ᡣ𐭩 ౨ৎ ˚ ₊	pattern mongolian letter sibe ka
+⋆｡°✩ ₊˚	pattern star operator
+｡ﾟ☆: *.☽ .* :☆ﾟ.	pattern halfwidth ideographic full stop
+⋆.˚ ✮ ⋆.˚	pattern star operator
+✧˖°.	pattern white four pointed star
+𓂃 ࣪ ִֶָ ☾.	pattern egyptian hieroglyph d013
+ᯓ★	pattern batak letter simalungun ra
+ᯓ ✈︎	pattern batak letter simalungun ra
+꒰ ᵔ ᵕ ᵔ ꒱	pattern yi radical shy
+₍ᐢ. .ᐢ₎	pattern subscript left parenthesis
+૮ ˶ᵔ ᵕ ᵔ˶ ა	pattern gujarati digit eight
+(˶ᵔ ᵕ ᵔ˶)	pattern left parenthesis
+ฅ^•ﻌ•^ฅ	pattern thai character kho khon
+ʕ•ᴥ•ʔ	pattern latin letter pharyngeal voiced fricative
+ᓚᘏᗢ	pattern canadian syllabics la
+૮₍ ˶•⤙•˶ ₎ა	pattern gujarati digit eight
+૮ ˘ᴥ˘ ა	pattern gujarati digit eight
+₍⸍⸌̣ʷ̣̫⸍̣⸌₎	pattern subscript left parenthesis
+‧₊˚ ☁︎ ⋅ ♡ 𓂃	pattern hyphenation point
+⋆⁺₊⋆ ☾ ⋆⁺₊⋆	pattern star operator
+⋆ ˚｡⋆୨୧˚	pattern star operator
+୨୧ ┈┈┈┈┈┈┈┈ ୨୧	pattern oriya digit two
+⌒⌒⌒⌒⌒	pattern arc
+⸜(｡˃ ᵕ ˂ )⸝♡	pattern left low paraphrase bracket
+ʚ ♡ ɞ	pattern latin small letter closed open e
+ʚ♡⃛ɞ	pattern latin small letter closed open e
+ꕤ ⋆ ꕤ	pattern vai syllable za
+✦ ━━━━━━ ✦	pattern black four pointed star
+▬▬▬▬▬▬▬▬▬▬	pattern black rectangle
+═════ ❖ ═════	pattern box drawings double horizontal
+╰┈➤	pattern box drawings light arc up and right
+┈┈┈┈┈┈┈┈┈┈┈┈	pattern box drawings light quadruple dash horizontal
+──────⋆⋅☆⋅⋆──────	pattern box drawings light horizontal
+•·.·´¯`·.·• •·.·´¯`·.·•	pattern bullet
+｡･:*:･ﾟ★,｡･:*:･ﾟ☆	pattern halfwidth ideographic full stop
+☆*:.｡. o(≧▽≦)o .｡.:*☆	pattern white star
+『 』	pattern left white corner bracket
+「 」	pattern left corner bracket
+【 】	pattern left black lenticular bracket
+꧁ ꧂	pattern javanese left rerenggan
+༺ ༻	pattern tibetan mark gug rtags gyon
+【・】	pattern left black lenticular bracket
+⟦ ⟧	pattern mathematical left white square bracket
+❝ ❞	pattern heavy double turned comma quotation mark ornament
+❛ ❜	pattern heavy single turned comma quotation mark ornament
+〝 〞	pattern reversed double prime quotation mark
+☆ ミ	pattern white star
+•☽────✧˖°	pattern bullet
+☾ ˖ ✦	pattern last quarter moon
+ˏˋ ˎˊ	pattern modifier letter low acute accent
+°˖✧	pattern degree sign
+⊹ ˚ ₊	pattern hermitian conjugate matrix
+♡ ⸜ ⸝	pattern white heart suit
+୨ৎ	pattern oriya digit two
+ꪜ	pattern tai viet letter low po
+ᰔ	pattern lepcha letter bla
+𓆩♡𓆪	pattern egyptian hieroglyph l006
+𓆩⟡𓆪	pattern egyptian hieroglyph l006
+𓆸	pattern egyptian hieroglyph m009
+𖤐	pattern bamum letter phase-d ngkeuri
+𖧷	pattern bamum letter phase-e pi
+𑁍	pattern brahmi punctuation lotus
+ꕥ	pattern vai syllable zha
+⚝	pattern outlined white star
+⛤	pattern pentagram
+ꗃ	pattern vai syllable bo
 #Flowers
 ✿	black florette
 ❀	white florette
@@ -11,9 +82,7 @@
 ❦	floral heart
 ❧	rotated floral heart bullet
 ⚜	fleur-de-lis
-ꕥ	vai syllable zha
 ꕤ	vai syllable za
-𓆸	egyptian hieroglyph m009
 𓇼	egyptian hieroglyph n014
 ⚛	atom symbol
 ❂	circled open centre eight pointed star
@@ -69,9 +138,7 @@
 ❅	tight trifoliate snowflake
 ❄	snowflake
 ✨	sparkles
-⚝	outlined white star
 ⍟	apl functional symbol circle star
-⛤	pentagram
 ⛥	right-handed interlaced pentagram
 ⛦	left-handed interlaced pentagram
 ⛧	inverted pentagram
@@ -90,7 +157,6 @@
 ౨ৎ	telugu digit two
 ʚ	latin small letter closed open e
 ɞ	latin small letter closed reversed open e
-ᰔ	lepcha letter bla
 ᥫ	tai le letter e
 ᭡	balinese musical symbol dong
 ᯓ	batak letter simalungun ra
@@ -150,7 +216,6 @@
 ᕗ	canadian syllabics fo
 ෆ	sinhala letter fayanna
 ꕁ	vai syllable nji
-ꗃ	vai syllable bo
 ꕭ	vai syllable ga
 ꕮ	vai syllable ma
 ꕯ	vai syllable na
