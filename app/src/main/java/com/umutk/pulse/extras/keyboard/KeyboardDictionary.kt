@@ -52,6 +52,15 @@ object KeyboardDictionary {
             }
         }
         if (ws.isNotEmpty()) lexes[lang] = Lex(ws.toTypedArray(), sc.toFloatArray())
+        // the word pairs of real sentences (treebanks, CC BY-SA): what follows what before the person has written anything
+        runCatching {
+            c.assets.open("kbd/bi_$lang.txt").bufferedReader().useLines { lines ->
+                lines.forEach { l ->
+                    val p = l.split(' ')
+                    if (p.size == 3) basePairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1
+                }
+            }
+        }
     }
 
     /** Whether a word list exists for [code]: inside the app or downloaded. */
@@ -193,6 +202,9 @@ object KeyboardDictionary {
         dirty++
     }
 
+    /** Word pairs of ordinary sentences (both languages): previous word -> next word -> how often. Smaller weight than the person's own pairs. */
+    private val basePairs = ConcurrentHashMap<String, ConcurrentHashMap<String, Int>>()
+
     /** How much more likely [w] is right after [prev], from what the person wrote (0 when it never followed). */
     fun pairBoost(prev: String?, w: String, prev2: String? = null): Float {
         if (prev.isNullOrEmpty()) return 0f
@@ -200,8 +212,9 @@ object KeyboardDictionary {
         val n = pairs[prev.lowercase(Locale.ROOT)]?.get(lw) ?: 0
         // the two words before it count double: a longer context says more
         val t = if (!prev2.isNullOrEmpty()) pairs[prev2.lowercase(Locale.ROOT) + "_" + prev.lowercase(Locale.ROOT)]?.get(lw) ?: 0 else 0
-        if (n == 0 && t == 0) return 0f
-        return (if (n > 0) 1.5f + ln(1f + n) * 1.2f else 0f) + (if (t > 0) 2f + ln(1f + t) * 2f else 0f)
+        val b = basePairs[prev.lowercase(Locale.ROOT)]?.get(lw) ?: 0
+        if (n == 0 && t == 0 && b == 0) return 0f
+        return (if (n > 0) 1.5f + ln(1f + n) * 1.2f else 0f) + (if (t > 0) 2f + ln(1f + t) * 2f else 0f) + (if (b > 0) .8f + ln(1f + b) * .7f else 0f)
     }
 
     /** A random common word of the language (4 to 9 letters) for the typing practice. */
@@ -436,6 +449,7 @@ object KeyboardDictionary {
         val lang = d(code)
         val out = ArrayList<String>()
         if (!prev.isNullOrEmpty()) pairs[prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n) out += it.key }
+        if (!prev.isNullOrEmpty() && out.size < n) basePairs[prev.lowercase(Locale.ROOT)]?.entries?.sortedByDescending { it.value }?.forEach { if (out.size < n && it.key !in out) out += it.key }
         val seed = if (lang == "tr") listOf("bir", "bu", "ben", "ve", "ne", "çok") else listOf("I", "the", "you", "it", "to", "a")
         seed.forEach { if (out.size < n && it !in out) out += it }
         return out

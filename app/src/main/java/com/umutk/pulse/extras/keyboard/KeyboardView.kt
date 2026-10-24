@@ -370,17 +370,19 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         if (KeyboardPrefs.numberRow) Row(Modifier.fillMaxWidth()) {
             "1234567890".forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, n1 / 10f, KeyboardLayouts.symbolAlts[d].orEmpty()), keyH, small = true) }
         }
-        Row(Modifier.fillMaxWidth()) { rows[0].forEach { Key(th, st, act, it, keyH) } }
+        // split keys (for a tablet): a gap in the middle of each row, so both thumbs reach their half
+        val gapW = if (KeyboardPrefs.split) 2f else 0f
+        Row(Modifier.fillMaxWidth()) { rows[0].forEachIndexed { i, k -> if (gapW > 0 && i == rows[0].size / 2) Spacer(gapW); Key(th, st, act, k, keyH) } }
         Row(Modifier.fillMaxWidth()) {
             val sp = (n1 - rows[1].size) / 2f
-            if (sp > 0) Spacer(sp); rows[1].forEach { Key(th, st, act, it, keyH) }; if (sp > 0) Spacer(sp)
+            if (sp > 0) Spacer(sp); rows[1].forEachIndexed { i, k -> if (gapW > 0 && i == rows[1].size / 2) Spacer(gapW); Key(th, st, act, k, keyH) }; if (sp > 0) Spacer(sp)
         }
         Row(Modifier.fillMaxWidth()) {
             val side = ((n1 - rows[2].size) / 2f).coerceIn(1f, 2f)
             val rest = n1 - rows[2].size - 2 * side
             Key(th, st, act, KbKey("", KeyKind.SHIFT, side), keyH)
             if (rest > 0) Spacer(rest / 2f)
-            rows[2].forEach { Key(th, st, act, it, keyH) }
+            rows[2].forEachIndexed { i, k -> if (gapW > 0 && i == rows[2].size / 2) Spacer(gapW); Key(th, st, act, k, keyH) }
             if (rest > 0) Spacer(rest / 2f)
             Key(th, st, act, KbKey("", KeyKind.DELETE, side), keyH)
         }

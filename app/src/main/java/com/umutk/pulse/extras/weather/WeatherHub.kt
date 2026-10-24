@@ -162,15 +162,24 @@ fun WeatherHub(onBack: () -> Unit) {
                 }
             }
         }
-        if (!searching && cities.isNotEmpty()) {
-            items(cities, key = { it.lat.toString() + it.lon }) { c ->
-                Row(Modifier.fillMaxWidth().clickable { load(c) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("globe", fg, 20.dp)
-                    Spacer(Modifier.width(12.dp))
-                    Text(c.name, color = fg, fontSize = 15.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                    Box(Modifier.size(36.dp).clickable { WeatherStore.removeCity(ctx, c); cities = WeatherStore.cities(ctx) }, contentAlignment = Alignment.Center) {
-                        PIcon("close", sub, 18.dp)
+        // the places as a row of chips: the phone's own place, each saved city (x removes it) and a + that opens the city search
+        if (!searching) item {
+            LazyRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                item {
+                    val on = place?.device == true
+                    Row(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(if (on) T.accent.copy(alpha = .22f) else T.panel).clickable { useDevice() }.padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("compass", if (on) T.accent else fg, 16.dp); Spacer(Modifier.width(6.dp)); Text(tr("My location", "Konumum"), color = if (on) T.accent else fg, fontSize = 14.sp)
                     }
+                }
+                items(cities, key = { it.lat.toString() + it.lon }) { c ->
+                    val on = place?.let { !it.device && it.lat == c.lat && it.lon == c.lon } == true
+                    Row(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(if (on) T.accent.copy(alpha = .22f) else T.panel).clickable { load(c) }.padding(start = 12.dp, top = 4.dp, bottom = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(c.name.substringBefore(','), color = if (on) T.accent else fg, fontSize = 14.sp, maxLines = 1)
+                        Box(Modifier.size(28.dp).clickable { WeatherStore.removeCity(ctx, c); cities = WeatherStore.cities(ctx) }, contentAlignment = Alignment.Center) { PIcon("close", sub, 14.dp) }
+                    }
+                }
+                item {
+                    Box(Modifier.size(36.dp).clip(androidx.compose.foundation.shape.CircleShape).background(T.panel).clickable { searching = true; error = "" }, contentAlignment = Alignment.Center) { PIcon("add", fg, 18.dp) }
                 }
             }
         }
