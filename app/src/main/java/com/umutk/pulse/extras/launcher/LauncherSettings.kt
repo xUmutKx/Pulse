@@ -228,6 +228,7 @@ fun LauncherSettings(back: () -> Unit) {
             SwitchLine("volume", tr("Sound effects (start-up chime, clicks)", "Ses efektleri (açılış sesi, tıklama)"), LauncherPrefs.sounds) { LauncherPrefs.sounds = it; save() }
             SliderRow("${tr("Darken the wallpaper", "Duvar kağıdını karart")}: ${LauncherPrefs.wallDim}%", LauncherPrefs.wallDim.toFloat(), 0f..70f) { LauncherPrefs.wallDim = it.roundToInt(); save() }
             SliderRow("${tr("Blur the wallpaper", "Duvar kağıdını bulanıklaştır")}: ${LauncherPrefs.wallBlur}", LauncherPrefs.wallBlur.toFloat(), 0f..24f) { LauncherPrefs.wallBlur = it.roundToInt(); save() }
+            if (cur.id == "win11") SliderRow("${tr("Transparency of the taskbar and menus", "Görev çubuğu ve menü şeffaflığı")}: ${LauncherPrefs.glass}%", LauncherPrefs.glass.toFloat(), 0f..80f) { LauncherPrefs.glass = it.roundToInt(); save() }
         }
         if (cat == "screen") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // clock and screen
