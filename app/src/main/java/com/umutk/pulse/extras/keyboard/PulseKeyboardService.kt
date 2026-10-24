@@ -44,6 +44,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private val touchPts = ArrayList<androidx.compose.ui.geometry.Offset?>()
     private var emailField = false
     private var nameField = false
+    /** An address bar (Chrome's is one): search words get suggestions and corrections, an address (dots, slashes) is left alone. */
+    private var uriField = false
+    private fun urlNow(): Boolean {
+        if (!uriField) return false
+        val b = currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() + word
+        return b.any { it == '.' || it == '/' || it == ':' || it == '@' } && !b.contains(' ')
+    }
     private var noAuto = false
     // the last text copied: the right slot of the bar offers it for two pastes
     private var quickClip: String? = null
@@ -170,8 +177,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         noAuto = (info.inputType and InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS) != 0
         st.plain = (cls != InputType.TYPE_CLASS_TEXT && cls != 0) ||
             v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,
-                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_FILTER)
+                InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_FILTER)
         emailField = cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS); lastEmail = null
+        uriField = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_URI
         nameField = cls == InputType.TYPE_CLASS_TEXT && v == InputType.TYPE_TEXT_VARIATION_PERSON_NAME
         st.numpad = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME
         st.page = if (cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME) 1 else 0
@@ -260,7 +268,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val typed = word.toString()
         var out = typed
         val t = target
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !noAuto && t != null && !t.equals(typed, true) && !KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale))) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale))) out = t
         c.commitText(out, 1)
         peak?.let { pk ->
             val lc = lang.locale
@@ -762,7 +770,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 slotWords = arrayOf(hit.getOrElse(0) { "" }, hit.getOrElse(1) { "" }, hit.getOrElse(2) { "" }); st.slots = slotWords.toList(); return
             }
         }
-        if (!KeyboardPrefs.suggestions || st.plain) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
+        if (!KeyboardPrefs.suggestions || st.plain || urlNow()) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
         // the touch model needs the touch of every letter and the key positions; a word that was not touched letter by letter is judged without it
         val tc: KeyboardDictionary.TouchCtx? = if (typed.isNotEmpty() && touchPts.size >= typed.length && st.letterRects.isNotEmpty()) {
@@ -806,7 +814,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
-        val fix = corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && kotlin.math.abs(it.word.length - lower.length) <= 1 && it.cost <= minOf(limit, 1.0f) && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
+        val fix0 = corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && kotlin.math.abs(it.word.length - lower.length) <= 1 && it.cost <= minOf(limit, 1.0f) && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
+        // two words run together ("birdahaki"): the space goes between them
+        val fix = fix0 ?: if (!valid && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
         val emoji = if (KeyboardPrefs.emojiPredictions) KeyboardDictionary.emoji(lower) else null
         val mid: String; val left: String; val right: String

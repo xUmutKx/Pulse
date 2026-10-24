@@ -115,8 +115,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // themes
-        PCard {
-            Title(tr("Theme", "Tema"))
+        KbSection("palette", tr("Theme", "Tema")) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 KeyboardThemes.ids.forEach { id -> ThemeTile(id, dark, KeyboardPrefs.theme == id) { KeyboardPrefs.theme = id; save() } }
             }
@@ -135,8 +134,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // languages and keys
-        PCard {
-            Title(tr("Languages", "Diller"))
+        KbSection("language", tr("Languages", "Diller")) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 KeyboardLayouts.all.forEach { l ->
                     PChip(KeyboardPrefs.langList().first() == l.code, l.name) {
@@ -157,8 +155,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // swipes, extra keys and the toolbar
-        PCard {
-            Title(tr("Swipes and keys", "Kaydırma ve tuşlar"))
+        KbSection("keyboard", tr("Swipes and keys", "Kaydırma ve tuşlar")) {
             Switch(tr("Swipe typing", "Kaydırarak yazma"), tr("Slide over the letters to type a word", "Harflerin üstünde kaydırarak kelime yaz"), KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
             Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
             Switch(tr("Animations", "Animasyonlar"), "", KeyboardPrefs.anim) { KeyboardPrefs.anim = it; save() }
@@ -175,8 +172,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // size
-        PCard {
-            Title(tr("Size", "Boyut"))
+        KbSection("height", tr("Size", "Boyut")) {
             Text("${tr("Height", "Yükseklik")}: ${KeyboardPrefs.heightPct}%", color = T.sub, fontSize = 12.sp)
             PSlider((KeyboardPrefs.heightPct - 70) / 100f, { KeyboardPrefs.heightPct = 70 + (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Bottom space", "Alt boşluk")}: ${KeyboardPrefs.bottomPad} dp", color = T.sub, fontSize = 12.sp)
@@ -193,8 +189,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // typing
-        PCard {
-            Title(tr("Typing", "Yazım"))
+        KbSection("edit", tr("Typing", "Yazım")) {
             Switch(tr("Suggestions", "Öneriler"), tr("Three words above the keys", "Tuşların üstünde üç kelime"), KeyboardPrefs.suggestions) { KeyboardPrefs.suggestions = it; save() }
             Switch(tr("Autocorrect", "Otomatik düzeltme"), tr("Words are corrected to the middle suggestion as you type", "Yazdıkça kelime ortadaki öneriye düzeltilir"), KeyboardPrefs.autocorrect) { KeyboardPrefs.autocorrect = it; save() }
             Text("${tr("Correct on its own from", "Kendiliğinden düzelt, benzerlik")}: ${KeyboardPrefs.autoRatio}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
@@ -214,8 +209,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // feel
-        PCard {
-            Title(tr("Feel", "His"))
+        KbSection("vibrate", tr("Feel", "His")) {
             Switch(tr("Vibrate on keypress", "Tuşta titreşim"), "", KeyboardPrefs.haptic) { KeyboardPrefs.haptic = it; save() }
             if (KeyboardPrefs.haptic) {
                 Text("${tr("Vibration strength", "Titreşim gücü")}: ${KeyboardPrefs.hapticMs}", color = T.sub, fontSize = 12.sp)
@@ -233,9 +227,8 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // word lists for the corrections and suggestions
-        PCard {
-            Title(tr("Dictionaries", "Sözlükler"))
-            listOf("en" to "English", "tr" to "Türkçe", "de" to "Deutsch", "fr" to "Français", "es" to "Español").forEach { (code, name) ->
+        KbSection("book", tr("Dictionaries", "Sözlükler")) {
+            listOf("en" to "English", "tr" to "Türkçe").forEach { (code, name) ->
                 val has = remember(rev) { KeyboardDictionary.hasList(ctx, code) }
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(name, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
@@ -257,8 +250,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // typing practice: a word is shown, it is typed, and every slip is learned as a typo of that word
-        PCard {
-            Title(tr("Typing practice", "Yazım testi"))
+        KbSection("school", tr("Typing practice", "Yazım testi")) {
             var target by remember { mutableStateOf(KeyboardDictionary.practiceWord(KeyboardPrefs.langList().first()) ?: "") }
             var typed by remember { mutableStateOf("") }
             androidx.compose.runtime.LaunchedEffect(Unit) {
@@ -286,8 +278,7 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // data
-        PCard {
-            Title(tr("Data", "Veri"))
+        KbSection("save", tr("Data", "Veri")) {
             Text("${tr("Learned words", "Öğrenilen kelimeler")}: $learned", color = T.sub, fontSize = 13.sp)
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PButton(tr("Forget words", "Kelimeleri unut"), compact = true, danger = true) { askForget = true }
@@ -318,6 +309,20 @@ fun KeyboardSettings(back: () -> Unit) {
     }
     if (askForget) PDialog(tr("Forget the learned words?", "Öğrenilen kelimeler unutulsun mu?"), "", tr("Forget", "Unut"), { KeyboardDictionary.forgetUser(ctx); learned = 0; askForget = false }, { askForget = false })
     if (askReset) PDialog(tr("Back to factory settings?", "Fabrika ayarlarına dönülsün mü?"), tr("Theme, size, typing options and learned words are reset.", "Tema, boyut, yazım seçenekleri ve öğrenilen kelimeler sıfırlanır."), tr("Reset", "Sıfırla"), { KeyboardPrefs.factoryReset(ctx); learned = 0; askReset = false }, { askReset = false })
+}
+
+/** A card of the settings that opens and closes from its header (icon, title, chevron). */
+@Composable
+private fun KbSection(icon: String, title: String, content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    var open by androidx.compose.runtime.saveable.rememberSaveable(title) { androidx.compose.runtime.mutableStateOf(false) }
+    PCard {
+        Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon(icon, T.accent, 22.dp)
+            Text(title, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+            PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = if (open) 90f else 0f })
+        }
+        if (open) content()
+    }
 }
 
 @Composable

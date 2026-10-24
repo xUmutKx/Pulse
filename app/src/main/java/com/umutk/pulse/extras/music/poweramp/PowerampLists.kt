@@ -43,6 +43,8 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ArrowUpward
+import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Folder
@@ -173,7 +175,8 @@ fun LibraryScreen(
     onPlayTracks: (List<Track>, Int) -> Unit = { _, _ -> },
 ) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    var sortBy by remember { mutableIntStateOf(0) } // 0 title, 1 folder, 2 library order
+    var sortBy by remember { mutableIntStateOf(0) } // 0 title, 1 folder, 2 library order, 3 year, 4 stars
+    var reversed by remember { mutableStateOf(false) }   // the other direction of the picked order
     var node by remember { mutableStateOf<Lib>(Lib.Root) }
     val fg = style.onBackdrop
     // the tree starts at the longest directory shared by every file
@@ -221,7 +224,9 @@ fun LibraryScreen(
             }
             Text(title, color = fg, fontSize = 28.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             if (node == Lib.Songs) {
-                IconButton(onClick = { sortBy = (sortBy + 1) % 4 }) { Icon(Icons.Rounded.SortByAlpha, tr("Sort", "Sırala"), tint = if (sortBy == 2) style.textDim else style.accent) }
+                Text(listOf(tr("Title", "Ad"), tr("Folder", "Klasör"), tr("Library", "Kütüphane"), tr("Year", "Yıl"), tr("Stars", "Yıldız"))[sortBy], color = style.textDim, fontSize = 13.sp)
+                IconButton(onClick = { sortBy = (sortBy + 1) % 5 }) { Icon(if (sortBy == 4) Icons.Rounded.Star else Icons.Rounded.SortByAlpha, tr("Sort", "Sırala"), tint = style.accent) }
+                IconButton(onClick = { reversed = !reversed }) { Icon(if (reversed) Icons.Rounded.ArrowUpward else Icons.Rounded.ArrowDownward, tr("Direction", "Yön"), tint = style.accent) }
             }
         }
         val catKey: Any? = when (val n = node) {
@@ -261,17 +266,20 @@ fun LibraryScreen(
             }
             is Lib.Group -> SongList(tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }, current, style, onPlay, onPlayTracks)
             Lib.Songs -> {
-                val items = remember(tracks, sortBy) {
+                val stars = remember(tracks) { com.umutk.pulse.extras.music.stats.MusicStats.ratings(ctx) }
+                val items = remember(tracks, sortBy, reversed) {
                     val l = tracks.withIndex().toList()
-                    when (sortBy) {
+                    val sorted = when (sortBy) {
+                        4 -> l.sortedWith(compareByDescending<IndexedValue<Track>> { stars[it.value.path] ?: 0 }.thenBy { it.value.displayName().lowercase() })
                         0 -> l.sortedBy { it.value.displayName().lowercase() }
                         1 -> l.sortedBy { it.value.folderName().lowercase() }
                         // newest year first; tracks without a year tag go last
                         3 -> l.sortedWith(compareBy<IndexedValue<Track>> { if (it.value.year > 0) 0 else 1 }.thenByDescending { it.value.year })
                         else -> l
                     }
+                    if (reversed) sorted.reversed() else sorted
                 }
-                SongList(items, current, style, onPlay, onPlayTracks)
+                SongList(items, current, style, onPlay, onPlayTracks, stars)
             }
             Lib.Stats -> StatsPage(style)
             Lib.More -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
@@ -310,12 +318,17 @@ fun LibraryScreen(
                 val fav = com.umutk.pulse.extras.music.stats.MusicStats.favourites(ctx)
                 val stars = com.umutk.pulse.extras.music.stats.MusicStats.ratings(ctx)
                 var byStars by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(true) }
-                val items = remember(tracks, fav, stars, byStars) {
+                var favReversed by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+                val items = remember(tracks, fav, stars, byStars, favReversed) {
                     val l = tracks.withIndex().filter { it.value.path in fav || (stars[it.value.path] ?: 0) > 0 }
-                    if (byStars) l.sortedWith(compareByDescending<IndexedValue<Track>> { stars[it.value.path] ?: 0 }.thenBy { it.value.displayName().lowercase() })
+                    val sorted = if (byStars) l.sortedWith(compareByDescending<IndexedValue<Track>> { stars[it.value.path] ?: 0 }.thenBy { it.value.displayName().lowercase() })
                     else l.sortedBy { it.value.displayName().lowercase() }
+                    if (favReversed) sorted.reversed() else sorted
                 }
                 SongList(items, current, style, onPlay, onPlayTracks, stars) {
+                    Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { favReversed = !favReversed }, contentAlignment = Alignment.Center) {
+                        Icon(if (favReversed) Icons.Rounded.ArrowUpward else Icons.Rounded.ArrowDownward, tr("Direction", "Yön"), tint = style.accent, modifier = Modifier.size(22.dp))
+                    }
                     Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { byStars = !byStars }, contentAlignment = Alignment.Center) {
                         Icon(if (byStars) Icons.Rounded.Star else Icons.Rounded.SortByAlpha, tr("Sort", "Sırala"), tint = style.accent, modifier = Modifier.size(22.dp))
                     }
@@ -367,6 +380,8 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
 @Composable
 private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}) {
     val songs = remember(items) { items.map { it.value } }
+    val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val starMap = stars ?: remember { com.umutk.pulse.extras.music.stats.MusicStats.ratings(appCtx) }
     // an empty page says so instead of staying blank
     if (items.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("No songs here", "Burada şarkı yok"), color = style.textDim, fontSize = 15.sp) }
@@ -382,9 +397,9 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
             }
         }
         itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }, trailing = {
-            val n = stars?.get(t.path) ?: 0
+            val n = starMap[t.path] ?: 0
             if (n > 0) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
-                Icon(Icons.Rounded.Star, null, tint = Color(0xFFD9A05B), modifier = Modifier.size(16.dp)); Text("$n", color = style.textDim, fontSize = 13.sp, modifier = Modifier.padding(start = 2.dp))
+                Icon(Icons.Rounded.Star, null, tint = Color.White, modifier = Modifier.size(16.dp)); Text("$n", color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(start = 2.dp))
             }
         }) }
     }
