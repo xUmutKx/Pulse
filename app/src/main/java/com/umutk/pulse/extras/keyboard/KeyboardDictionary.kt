@@ -243,6 +243,9 @@ object KeyboardDictionary {
         return best
     }
 
+    /** A word of either language (the word lists, the endings, or a word the person already uses). */
+    fun isKnown(w: String): Boolean = isWord("tr", w) || isWord("en", w)
+
     fun isWord(code: String, w: String): Boolean {
         val lang = d(code)
         val l = w.lowercase(Locale.ROOT)
