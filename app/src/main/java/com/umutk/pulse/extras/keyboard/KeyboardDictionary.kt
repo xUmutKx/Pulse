@@ -368,14 +368,17 @@ object KeyboardDictionary {
             val stemT = typed.substring(0, k); val tailT = typed.substring(k)
             // the nearest ending chains
             var bestTail: String? = null; var bestCost = .65f
+            val ties = ArrayList<String>()   // endings as near as the best one (micam and micem for "micsm"): the one that agrees with the base's vowel wins below
             for (len in maxOf(0, tailT.length - 1)..minOf(9, tailT.length + 1)) for (tail in chains[len]) {
                 val cst = if (tail == tailT) 0f else distance(tailT, tail, bestCost, a, b, c)
-                if (cst < bestCost) { bestCost = cst; bestTail = tail }
+                if (cst < bestCost) { bestCost = cst; bestTail = tail; ties.clear(); ties += tail }
+                else if (cst == bestCost && bestTail != null && cst > 0f) ties += tail
                 if (cst == 0f) break
             }
-            val tail = bestTail ?: continue
+            if (bestTail == null) continue
             val stems = correct("tr", stemT, if (bestCost == 0f) 1.05f else .55f, 3, tc)   // the ending is right: the base may miss a whole letter ("ıkışındayım" -> "çıkışındayım")
             for (st in stems) {
+                val tail = ties.firstOrNull { t -> val v = st.word.lastOrNull { backVowel(it) || frontVowel(it) }; val tv = t.lastOrNull { backVowel(it) || frontVowel(it) }; v == null || tv == null || backVowel(v) == backVowel(tv) } ?: bestTail
                 if (!harmony(st.word, tail) || st.word.length < 3) continue
                 val cost = st.cost + bestCost
                 // one slip in all: a mended word that differs in two places is a guess, not a correction
