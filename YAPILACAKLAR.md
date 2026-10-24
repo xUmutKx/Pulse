@@ -1212,3 +1212,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.43 Material dialogs: action buttons are plain text buttons, Material PButton is tonal instead of outlined - derlenmedi, bekle
 - 1.0.44 Keyboard: translation bar (languages at the ends, swap between, live translation, tap to insert); typo learning needs 3 sightings for real words and forgets slips that were undone - derlenmedi, bekle
 - 1.0.45 Keyboard: many more accented letters on long press; element symbols (He, Fe, Cu...) on capital letters, switch in settings - derlenmedi, bekle
+- 1.0.46 Keyboard effects (like Samsung Keys Cafe): keyboard colour wash (6), key colour effect (4), key motion (3), touch sounds (5 synthesised) - derlenmedi, bekle
