@@ -337,7 +337,7 @@ fun KeyboardSettings(back: () -> Unit) {
                         PChip(false, "${who.take(18)} · ${msgs.size}") {
                             waNote = tr("Learning…", "Öğreniyor…")
                             scope.launch {
-                                val n = withContext(Dispatchers.IO) { WhatsAppImport.learn(ctx, msgs) }
+                                val n = withContext(Dispatchers.IO) { KeyboardLayouts.all.forEach { l -> KeyboardDictionary.load(ctx, l.code) }; WhatsAppImport.learn(ctx, msgs) }
                                 learned = KeyboardDictionary.learnedCount(); rev++
                                 waNote = tr("Learned from $n messages. The chat itself was not kept.", "$n mesajdan öğrenildi. Sohbetin kendisi saklanmadı."); waChat = null
                             }
