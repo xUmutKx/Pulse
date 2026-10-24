@@ -61,7 +61,7 @@ private fun material(k: String): ImageVector = when (k) {
     "download" -> Icons.Outlined.Download; "delete", "recycle" -> Icons.Outlined.Delete; "folder" -> Icons.Outlined.Folder
     "filetypes" -> Icons.Outlined.PieChart; "clean" -> Icons.Outlined.CleaningServices; "chevron" -> Icons.Outlined.ExpandMore; "back" -> Icons.AutoMirrored.Outlined.ArrowBack
     "copy" -> Icons.Outlined.ContentCopy; "move" -> Icons.Outlined.DriveFileMove; "rename" -> Icons.Outlined.DriveFileRenameOutline
-    "attach" -> Icons.Outlined.AttachFile
+    "send" -> Icons.Outlined.Send; "call" -> Icons.Outlined.Call; "attach" -> Icons.Outlined.AttachFile
     "newfolder" -> Icons.Outlined.CreateNewFolder; "paste" -> Icons.Outlined.ContentPaste
     "extract" -> Icons.Outlined.Archive; "view" -> Icons.Outlined.Visibility
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Straighten; "flash" -> Icons.Outlined.FlashlightOn

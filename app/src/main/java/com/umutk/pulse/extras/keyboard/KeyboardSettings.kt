@@ -149,7 +149,6 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             Text(tr("The chosen language shows its keys; both languages correct and suggest together. A language without a word list downloads one.", "Seçili dilin tuşları görünür; iki dil birlikte düzeltir ve öneri verir. Sözlüğü olmayan dil kendi sözlüğünü indirir."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.numberRow) { KeyboardPrefs.numberRow = it; save() }
-            Switch(tr("Arrow keys", "Ok tuşları"), tr("Arrows, home, end, select all, copy, paste", "Oklar, başa, sona, tümünü seç, kopyala, yapıştır"), KeyboardPrefs.arrows) { KeyboardPrefs.arrows = it; save() }
             Switch(tr("Emoji key", "Emoji tuşu"), "", KeyboardPrefs.emojiKey) { KeyboardPrefs.emojiKey = it; save() }
             Switch(tr("Large key text", "Büyük tuş yazısı"), "", KeyboardPrefs.largeText) { KeyboardPrefs.largeText = it; save() }
             Switch(tr("Key pop-ups", "Tuş balonları"), "", KeyboardPrefs.keyPopups) { KeyboardPrefs.keyPopups = it; save() }
@@ -269,6 +268,7 @@ fun KeyboardSettings(back: () -> Unit) {
                     target = KeyboardDictionary.practiceWord(l) ?: ""
                 }
             }
+            androidx.compose.runtime.DisposableEffect(Unit) { KeyboardPrefs.practicing = true; onDispose { KeyboardPrefs.practicing = false } }
             var right by remember { mutableIntStateOf(0) }
             var slips by remember { mutableIntStateOf(0) }
             Text(target.ifEmpty { tr("The word list is loading", "Kelime listesi yükleniyor") }, color = T.text, fontSize = 26.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(vertical = 6.dp))

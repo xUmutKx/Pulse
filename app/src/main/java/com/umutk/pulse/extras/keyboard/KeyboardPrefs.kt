@@ -63,6 +63,8 @@ object KeyboardPrefs {
     /** The extra row sits under the space row instead of above the letters. */
     var proBottom by mutableStateOf(true)
     var proIcons by mutableStateOf(true)
+    /** The typing practice of the settings is open: nothing is corrected, so the slips stay visible to be learned. */
+    @Volatile var practicing = false
     var menuItems by mutableStateOf(ExtraKeys.DEFAULT_MENU)
     var toolbarItems by mutableStateOf(ExtraKeys.DEFAULT_TOOLBAR)
 
@@ -94,7 +96,7 @@ object KeyboardPrefs {
         heightPct = p.getInt("heightPct", heightPct); autoRatio = p.getInt("autoRatio", autoRatio); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
         keyGap = p.getInt("keyGap", keyGap); oneHand = p.getString("oneHand", oneHand) ?: oneHand
         langs = p.getString("langs", langs) ?: langs
-        numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey)
+        numberRow = p.getBoolean("numberRow", numberRow); arrows = false; emojiKey = p.getBoolean("emojiKey", emojiKey)
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
         suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect)
@@ -105,6 +107,7 @@ object KeyboardPrefs {
         glide = p.getBoolean("glide", glide); flick = p.getBoolean("flick", flick); anim = p.getBoolean("anim", anim); proRow = p.getBoolean("proRow", proRow)
         proKeys = p.getString("proKeys", proKeys) ?: proKeys; proBottom = p.getBoolean("proBottom", proBottom); proIcons = p.getBoolean("proIcons", proIcons); menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
         // once: Shift joins the default extra keys (only for those who never changed the row)
+        if (p.getBoolean("arrows", false)) { proRow = true; p.edit().putBoolean("proRow", true).putBoolean("arrows", false).apply() }
         if (p.getInt("proVer", 0) < 1) { if (proKeys == ExtraKeys.OLD_DEFAULT) proKeys = ExtraKeys.DEFAULT; p.edit().putInt("proVer", 1).apply() }
         // the menu and bar of older versions held cut / copy / paste / undo: they are replaced by the new default once
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
