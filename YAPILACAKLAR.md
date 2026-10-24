@@ -1204,3 +1204,4 @@ Screen recorder feature list (55 candidates)
 
 - 1.0.36 Shift key: outlined arrow / arrow+underline (one capital) / filled arrow joined to underline (caps lock) - derlenmedi, bekle
 - 1.0.37 Key pop-ups (long-press alternates, key preview) no longer cut off on the number row - derlenmedi, bekle
+- 1.0.38 Recent emojis keep their places while the emoji page is open - derlenmedi, bekle
