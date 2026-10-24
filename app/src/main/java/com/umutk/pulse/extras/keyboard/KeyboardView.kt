@@ -228,11 +228,11 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             if (KeyboardPrefs.floating) Box(Modifier.fillMaxWidth().height(20.dp).pointerInput(Unit) {
                 detectHorizontalDragGestures(onDragEnd = { KeyboardPrefs.saveFloat() }) { c, dx -> c.consume(); KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f) }
             }, contentAlignment = Alignment.Center) { Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .6f))) }
-            if (!st.numpad) TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
+            if (!st.numpad) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
                 scope.launch { pull.snapTo(0f) }
-            })
+            }); if (KeyboardPrefs.topBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.topBright) / 100f * .85f))) }
             if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
             else Panel(st.panel, th, st, act, keyH)
         }
@@ -406,14 +406,18 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
             }
         }
     }
+    // the optional compact bottom row: lower keys and a Shift key at the left
+    val low = KeyboardPrefs.bottomShift
+    val bh = if (low) keyH * .8f else keyH
     Box {
     Row(Modifier.fillMaxWidth()) {
-        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, 1.5f), keyH)
-        if (KeyboardPrefs.emojiKey && st.page == 0) Key(th, st, act, KbKey("", KeyKind.EMOJI, 1f), keyH)
-        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.emojiKey) KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), keyH)
-        Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, 4f), keyH)
-        Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), keyH)
-        Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), keyH)
+        if (low && st.page == 0) Key(th, st, act, KbKey("", KeyKind.SHIFT, 1f), bh)
+        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, if (low) 1.25f else 1.5f), bh)
+        if (KeyboardPrefs.emojiKey && st.page == 0) Key(th, st, act, KbKey("", KeyKind.EMOJI, 1f), bh)
+        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.emojiKey) KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), bh)
+        Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, 4f), bh)
+        Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), bh)
+        Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), bh)
     }
     if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f * .85f)))
     }
