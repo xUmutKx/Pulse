@@ -19,6 +19,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.delay
@@ -44,7 +45,7 @@ fun WindowsCursor(enabled: Boolean, content: @Composable () -> Unit) {
                 moveTo(0f, 0f); lineTo(0f, 17f * k); lineTo(4.2f * k, 13.2f * k); lineTo(7.2f * k, 20f * k); lineTo(9.8f * k, 18.9f * k); lineTo(6.9f * k, 12.3f * k); lineTo(12f * k, 12.3f * k); close()
             }
             val a = alpha.value
-            androidx.compose.ui.graphics.drawscope.translate(p.x, p.y) {
+            translate(p.x, p.y) {
                 drawPath(arrow, Color.White.copy(alpha = a))
                 drawPath(arrow, Color.Black.copy(alpha = a), style = Stroke(width = 1.3f * density))
             }
