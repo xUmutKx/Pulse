@@ -1,6 +1,22 @@
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.AutoFixHigh
+import androidx.compose.material.icons.rounded.LocalFlorist
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.NightsStay
+import androidx.compose.material.icons.rounded.HorizontalRule
+import androidx.compose.material.icons.rounded.DataArray
+import androidx.compose.material.icons.rounded.NorthEast
+import androidx.compose.material.icons.rounded.Category
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.EmojiSymbols
+import androidx.compose.material.icons.rounded.Pin
+import androidx.compose.material.icons.rounded.FormatQuote
+import androidx.compose.material.icons.rounded.AttachMoney
+import androidx.compose.material.icons.rounded.Functions
+import androidx.compose.material.icons.rounded.Apps
 import androidx.compose.material.icons.rounded.Block
 import androidx.compose.material.icons.rounded.KeyboardTab
 import androidx.compose.material.icons.rounded.KeyboardCapslock
@@ -751,23 +767,42 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     }
 }
 
-/** The symbol tab: the families of Unicode's signs on top and the signs of the picked one below; the search above finds a sign by its Unicode name. */
+private fun familyIcon(id: String): ImageVector = when (id) {
+    "Patterns" -> Icons.Rounded.AutoFixHigh; "Flowers" -> Icons.Rounded.LocalFlorist; "Hearts" -> Icons.Rounded.Favorite; "Stars" -> Icons.Rounded.AutoAwesome
+    "Cute" -> Icons.Rounded.EmojiEmotions; "Moon and sky" -> Icons.Rounded.NightsStay; "Lines" -> Icons.Rounded.HorizontalRule; "Brackets" -> Icons.Rounded.DataArray
+    "Arrows" -> Icons.Rounded.NorthEast; "Shapes" -> Icons.Rounded.Category; "Music" -> Icons.Rounded.MusicNote; "Symbols" -> Icons.Rounded.EmojiSymbols
+    "Numbers" -> Icons.Rounded.Pin; "Punctuation" -> Icons.Rounded.FormatQuote; "Currency" -> Icons.Rounded.AttachMoney; "Math" -> Icons.Rounded.Functions
+    else -> Icons.Rounded.Apps
+}
+
+/** The symbol tab: a row of icons for the families, a row of sub-categories when the family has some, and the signs; the search above finds a sign by its Unicode name. */
 @Composable
 private fun SymbolPage(th: KbTheme, act: KbActions) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
     val fams by androidx.compose.runtime.produceState(emptyList<KeyboardSymbols.Family>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardSymbols.load(ctx) } }
     var g by remember { mutableStateOf(0) }
+    var sub by remember { mutableStateOf(0) }
+    val fam = fams.getOrNull(g)
     Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             fams.forEachIndexed { i, f ->
-                Text(tr(f.en, f.tr), color = if (i == g) th.text else th.sub, fontSize = 13.sp, fontWeight = if (i == g) FontWeight.Medium else FontWeight.Normal,
-                    modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (i == g) th.special else Color.Transparent).clickable { g = i }.padding(horizontal = 12.dp, vertical = 6.dp))
+                Box(Modifier.size(width = 44.dp, height = 36.dp).clickable { g = i; sub = 0 }, contentAlignment = Alignment.Center) {
+                    Icon(familyIcon(f.id), tr(f.en, f.tr), tint = if (i == g) th.text else th.sub, modifier = Modifier.size(22.dp))
+                    if (i == g) Box(Modifier.align(Alignment.BottomCenter).width(22.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
+                }
             }
         }
-        // the ready-made patterns are long: wider cells and smaller type
-        val wide = fams.getOrNull(g)?.id == "Patterns"
-        LazyVerticalGrid(GridCells.Adaptive(if (wide) 150.dp else 48.dp), Modifier.fillMaxSize()) {
-            items(fams.getOrNull(g)?.signs.orEmpty()) { sg ->
+        val subs = fam?.subs.orEmpty()
+        if (subs.size > 1) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            subs.forEachIndexed { i, (name, _) ->
+                Text(KeyboardSymbols.subName(name), color = if (i == sub) th.text else th.sub, fontSize = 13.sp, fontWeight = if (i == sub) FontWeight.Medium else FontWeight.Normal,
+                    modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (i == sub) th.special else Color.Transparent).clickable { sub = i }.padding(horizontal = 12.dp, vertical = 5.dp))
+            }
+        }
+        // the presets are long: wider cells and smaller type
+        val wide = fam?.id == "Patterns"
+        LazyVerticalGrid(GridCells.Adaptive(if (wide) 170.dp else 48.dp), Modifier.fillMaxSize()) {
+            items(subs.getOrNull(sub)?.second.orEmpty()) { sg ->
                 Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = if (wide) 16.sp else 22.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip) }
             }
         }
