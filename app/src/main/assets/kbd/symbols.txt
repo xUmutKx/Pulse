@@ -11,18 +11,6 @@
 ❦	floral heart
 ❧	rotated floral heart bullet
 ⚜	fleur-de-lis
-🌸	cherry blossom
-🌺	hibiscus
-🌼	blossom
-🌻	sunflower
-🌷	tulip
-🌹	rose
-🥀	wilted flower
-🍀	four leaf clover
-🌿	herb
-🍃	leaf fluttering in wind
-🌱	seedling
-🌾	ear of rice
 ꕥ	vai syllable zha
 ꕤ	vai syllable za
 𓆸	egyptian hieroglyph m009
@@ -39,7 +27,6 @@
 #Hearts
 ♡	white heart suit
 ♥	black heart suit
-❤	heavy black heart
 ❥	rotated heavy black heart bullet
 ❣	heavy heart exclamation mark ornament
 ღ	georgian letter ghan
@@ -47,27 +34,11 @@
 ☙	reversed rotated floral heart bullet
 ♡︎	white heart suit
 ❤︎	heavy black heart
-💗	growing heart
-💖	sparkling heart
-💕	two hearts
-💞	revolving hearts
-💓	beating heart
-💘	heart with arrow
-💝	heart with ribbon
-🤍	white heart
-🖤	black heart
-💜	purple heart
-💙	blue heart
-💚	green heart
-💛	yellow heart
-🧡	orange heart
-❤️‍🔥	heavy black heart
 ꒰ა	yi radical shy
 ໒꒱	lao digit two
 ⸜♡⸝	left low paraphrase bracket
 𐙚	linear a sign a306
 ᥫ᭡	tai le letter e
-💌	love letter
 #Stars
 ✦	black four pointed star
 ✧	white four pointed star
@@ -97,10 +68,7 @@
 ❆	heavy chevron snowflake
 ❅	tight trifoliate snowflake
 ❄	snowflake
-⭐	white medium star
-🌟	glowing star
 ✨	sparkles
-💫	dizzy symbol
 ⚝	outlined white star
 ⍟	apl functional symbol circle star
 ⛤	pentagram
@@ -195,15 +163,6 @@
 ☃	snowman
 ☄	comet
 ☼	white sun with rays
-⛅	sun behind cloud
-⛈	thunder cloud and rain
-🌙	crescent moon
-🌛	first quarter moon with face
-🌜	last quarter moon with face
-⚡	high voltage sign
-☔	umbrella with rain drops
-🌈	rainbow
-🌠	shooting star
 ☮	peace symbol
 ☯	yin yang
 ☸	wheel of dharma
@@ -785,109 +744,6 @@
 ▝	quadrant upper right
 ▞	quadrant upper right and lower left
 ▟	quadrant upper right and lower left and lower right
-🞀	black left-pointing isosceles right triangle
-🞁	black up-pointing isosceles right triangle
-🞂	black right-pointing isosceles right triangle
-🞃	black down-pointing isosceles right triangle
-🞄	black slightly small circle
-🞅	medium bold white circle
-🞆	bold white circle
-🞇	heavy white circle
-🞈	very heavy white circle
-🞉	extremely heavy white circle
-🞊	white circle containing black small circle
-🞋	round target
-🞌	black tiny square
-🞍	black slightly small square
-🞎	light white square
-🞏	medium white square
-🞐	bold white square
-🞑	heavy white square
-🞒	very heavy white square
-🞓	extremely heavy white square
-🞔	white square containing black very small square
-🞕	white square containing black medium square
-🞖	square target
-🞗	black tiny diamond
-🞘	black very small diamond
-🞙	black medium small diamond
-🞚	white diamond containing black very small diamond
-🞛	white diamond containing black medium diamond
-🞜	diamond target
-🞝	black tiny lozenge
-🞞	black very small lozenge
-🞟	black medium small lozenge
-🞠	white lozenge containing black small lozenge
-🞡	thin greek cross
-🞢	light greek cross
-🞣	medium greek cross
-🞤	bold greek cross
-🞥	very bold greek cross
-🞦	very heavy greek cross
-🞧	extremely heavy greek cross
-🞨	thin saltire
-🞩	light saltire
-🞪	medium saltire
-🞫	bold saltire
-🞬	heavy saltire
-🞭	very heavy saltire
-🞮	extremely heavy saltire
-🞯	light five spoked asterisk
-🞰	medium five spoked asterisk
-🞱	bold five spoked asterisk
-🞲	heavy five spoked asterisk
-🞳	very heavy five spoked asterisk
-🞴	extremely heavy five spoked asterisk
-🞵	light six spoked asterisk
-🞶	medium six spoked asterisk
-🞷	bold six spoked asterisk
-🞸	heavy six spoked asterisk
-🞹	very heavy six spoked asterisk
-🞺	extremely heavy six spoked asterisk
-🞻	light eight spoked asterisk
-🞼	medium eight spoked asterisk
-🞽	bold eight spoked asterisk
-🞾	heavy eight spoked asterisk
-🞿	very heavy eight spoked asterisk
-🟀	light three pointed black star
-🟁	medium three pointed black star
-🟂	three pointed black star
-🟃	medium three pointed pinwheel star
-🟄	light four pointed black star
-🟅	medium four pointed black star
-🟆	four pointed black star
-🟇	medium four pointed pinwheel star
-🟈	reverse light four pointed pinwheel star
-🟉	light five pointed black star
-🟊	heavy five pointed black star
-🟋	medium six pointed black star
-🟌	heavy six pointed black star
-🟍	six pointed pinwheel star
-🟎	medium eight pointed black star
-🟏	heavy eight pointed black star
-🟐	very heavy eight pointed black star
-🟑	heavy eight pointed pinwheel star
-🟒	light twelve pointed black star
-🟓	heavy twelve pointed black star
-🟔	heavy twelve pointed pinwheel star
-🟕	circled triangle
-🟖	negative circled triangle
-🟗	circled square
-🟘	negative circled square
-🟙	nine pointed white star
-🟠	large orange circle
-🟡	large yellow circle
-🟢	large green circle
-🟣	large purple circle
-🟤	large brown circle
-🟥	large red square
-🟦	large blue square
-🟧	large orange square
-🟨	large yellow square
-🟩	large green square
-🟪	large purple square
-🟫	large brown square
-🟰	heavy equals sign
 #Music
 𝄀	musical symbol single barline
 𝄁	musical symbol double barline
@@ -1316,7 +1172,6 @@
 ✂	black scissors
 ✃	lower blade scissors
 ✄	white scissors
-✅	white heavy check mark
 ✆	telephone location sign
 ✇	tape drive
 ✈	airplane
@@ -1350,18 +1205,15 @@
 ✳	eight spoked asterisk
 ✴	eight pointed black star
 ✵	eight pointed pinwheel star
-❌	cross mark
 ❍	shadowed white circle
 ❎	negative squared cross mark
 ❏	lower right drop-shadowed white square
 ❐	upper right drop-shadowed white square
 ❑	lower right shadowed white square
 ❒	upper right shadowed white square
-❓	black question mark ornament
 ❔	white question mark ornament
 ❕	white exclamation mark ornament
 ❖	black diamond minus white x
-❗	heavy exclamation mark symbol
 ❘	light vertical bar
 ❙	medium vertical bar
 ❚	heavy vertical bar
@@ -1483,8 +1335,6 @@
 ⌗	viewdata square
 ⌘	place of interest sign
 ⌙	turned not sign
-⌚	watch
-⌛	hourglass
 ⌜	top left corner
 ⌝	top right corner
 ⌞	bottom left corner
@@ -2208,180 +2058,6 @@
 ⓽	double circled digit nine
 ⓾	double circled number ten
 ⓿	negative circled digit zero
-🄀	digit zero full stop
-🄁	digit zero comma
-🄂	digit one comma
-🄃	digit two comma
-🄄	digit three comma
-🄅	digit four comma
-🄆	digit five comma
-🄇	digit six comma
-🄈	digit seven comma
-🄉	digit eight comma
-🄊	digit nine comma
-🄋	dingbat circled sans-serif digit zero
-🄌	dingbat negative circled sans-serif digit zero
-🄍	circled zero with slash
-🄎	circled anticlockwise arrow
-🄏	circled dollar sign with overlaid backslash
-🄐	parenthesized latin capital letter a
-🄑	parenthesized latin capital letter b
-🄒	parenthesized latin capital letter c
-🄓	parenthesized latin capital letter d
-🄔	parenthesized latin capital letter e
-🄕	parenthesized latin capital letter f
-🄖	parenthesized latin capital letter g
-🄗	parenthesized latin capital letter h
-🄘	parenthesized latin capital letter i
-🄙	parenthesized latin capital letter j
-🄚	parenthesized latin capital letter k
-🄛	parenthesized latin capital letter l
-🄜	parenthesized latin capital letter m
-🄝	parenthesized latin capital letter n
-🄞	parenthesized latin capital letter o
-🄟	parenthesized latin capital letter p
-🄠	parenthesized latin capital letter q
-🄡	parenthesized latin capital letter r
-🄢	parenthesized latin capital letter s
-🄣	parenthesized latin capital letter t
-🄤	parenthesized latin capital letter u
-🄥	parenthesized latin capital letter v
-🄦	parenthesized latin capital letter w
-🄧	parenthesized latin capital letter x
-🄨	parenthesized latin capital letter y
-🄩	parenthesized latin capital letter z
-🄪	tortoise shell bracketed latin capital letter s
-🄫	circled italic latin capital letter c
-🄬	circled italic latin capital letter r
-🄭	circled cd
-🄮	circled wz
-🄯	copyleft symbol
-🄰	squared latin capital letter a
-🄱	squared latin capital letter b
-🄲	squared latin capital letter c
-🄳	squared latin capital letter d
-🄴	squared latin capital letter e
-🄵	squared latin capital letter f
-🄶	squared latin capital letter g
-🄷	squared latin capital letter h
-🄸	squared latin capital letter i
-🄹	squared latin capital letter j
-🄺	squared latin capital letter k
-🄻	squared latin capital letter l
-🄼	squared latin capital letter m
-🄽	squared latin capital letter n
-🄾	squared latin capital letter o
-🄿	squared latin capital letter p
-🅀	squared latin capital letter q
-🅁	squared latin capital letter r
-🅂	squared latin capital letter s
-🅃	squared latin capital letter t
-🅄	squared latin capital letter u
-🅅	squared latin capital letter v
-🅆	squared latin capital letter w
-🅇	squared latin capital letter x
-🅈	squared latin capital letter y
-🅉	squared latin capital letter z
-🅊	squared hv
-🅋	squared mv
-🅌	squared sd
-🅍	squared ss
-🅎	squared ppv
-🅏	squared wc
-🅐	negative circled latin capital letter a
-🅑	negative circled latin capital letter b
-🅒	negative circled latin capital letter c
-🅓	negative circled latin capital letter d
-🅔	negative circled latin capital letter e
-🅕	negative circled latin capital letter f
-🅖	negative circled latin capital letter g
-🅗	negative circled latin capital letter h
-🅘	negative circled latin capital letter i
-🅙	negative circled latin capital letter j
-🅚	negative circled latin capital letter k
-🅛	negative circled latin capital letter l
-🅜	negative circled latin capital letter m
-🅝	negative circled latin capital letter n
-🅞	negative circled latin capital letter o
-🅟	negative circled latin capital letter p
-🅠	negative circled latin capital letter q
-🅡	negative circled latin capital letter r
-🅢	negative circled latin capital letter s
-🅣	negative circled latin capital letter t
-🅤	negative circled latin capital letter u
-🅥	negative circled latin capital letter v
-🅦	negative circled latin capital letter w
-🅧	negative circled latin capital letter x
-🅨	negative circled latin capital letter y
-🅩	negative circled latin capital letter z
-🅪	raised mc sign
-🅫	raised md sign
-🅬	raised mr sign
-🅭	circled cc
-🅮	circled c with overlaid backslash
-🅯	circled human figure
-🅰	negative squared latin capital letter a
-🅱	negative squared latin capital letter b
-🅲	negative squared latin capital letter c
-🅳	negative squared latin capital letter d
-🅴	negative squared latin capital letter e
-🅵	negative squared latin capital letter f
-🅶	negative squared latin capital letter g
-🅷	negative squared latin capital letter h
-🅸	negative squared latin capital letter i
-🅹	negative squared latin capital letter j
-🅺	negative squared latin capital letter k
-🅻	negative squared latin capital letter l
-🅼	negative squared latin capital letter m
-🅽	negative squared latin capital letter n
-🅾	negative squared latin capital letter o
-🅿	negative squared latin capital letter p
-🆀	negative squared latin capital letter q
-🆁	negative squared latin capital letter r
-🆂	negative squared latin capital letter s
-🆃	negative squared latin capital letter t
-🆄	negative squared latin capital letter u
-🆅	negative squared latin capital letter v
-🆆	negative squared latin capital letter w
-🆇	negative squared latin capital letter x
-🆈	negative squared latin capital letter y
-🆉	negative squared latin capital letter z
-🆊	crossed negative squared latin capital letter p
-🆋	negative squared ic
-🆌	negative squared pa
-🆍	negative squared sa
-🆎	negative squared ab
-🆏	negative squared wc
-🆐	square dj
-🆑	squared cl
-🆒	squared cool
-🆓	squared free
-🆔	squared id
-🆕	squared new
-🆖	squared ng
-🆗	squared ok
-🆘	squared sos
-🆙	squared up with exclamation mark
-🆚	squared vs
-🆛	squared three d
-🆜	squared second screen
-🆝	squared two k
-🆞	squared four k
-🆟	squared eight k
-🆠	squared five point one
-🆡	squared seven point one
-🆢	squared twenty-two point two
-🆣	squared sixty p
-🆤	squared one hundred twenty p
-🆥	squared latin small letter d
-🆦	squared hc
-🆧	squared hdr
-🆨	squared hi-res
-🆩	squared lossless
-🆪	squared shv
-🆫	squared uhd
-🆬	squared vod
-🆭	mask work symbol
 ²	superscript two
 ³	superscript three
 ¹	superscript one
