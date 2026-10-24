@@ -350,6 +350,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 word.append(lc.original); target = null; updateSuggestions(); return
             }
         }
+        // the space right behind a word goes: the word is open again, with its suggestions
+        val tb = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
+        if (tb.length >= 2 && tb.last() == ' ' && tb[tb.length - 2].isLetter() && c.getSelectedText(0).isNullOrEmpty() && !st.plain && KeyboardPrefs.suggestions) {
+            val w = tb.dropLast(1).takeLastWhile { it.isLetter() || it == '\'' }
+            if (w.isNotEmpty() && w.length < 40) {
+                val before = tb.dropLast(1 + w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }
+                c.beginBatchEdit(); c.deleteSurroundingText(w.length + 1, 0); c.setComposingText(w, 1); c.endBatchEdit()
+                word.setLength(0); word.append(w); touchPts.clear(); target = null; lastCorrection = null
+                prevWord = before.ifEmpty { null }?.lowercase()
+                updateCaps(); updateSuggestions(); return
+            }
+        }
         if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         updateCaps(); updateSuggestions()
     }
