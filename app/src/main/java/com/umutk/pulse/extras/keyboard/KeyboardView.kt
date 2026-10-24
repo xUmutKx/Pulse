@@ -704,7 +704,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 Box(Modifier.size(40.dp).clickable { st.emojiQuery = null }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "ArrowBack"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
                 Row(Modifier.weight(1f).height(32.dp).padding(end = 8.dp).clip(RoundedCornerShape(16.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
-                    Text(if (q.isEmpty()) tr("Search emoji, flags, kaomoji", "Emoji, bayrak, kaomoji ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+                    Text(if (q.isEmpty()) tr("Search emoji, kaomoji, symbols", "Emoji, kaomoji, sembol ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
                 }
             } else {
                 // the search box on top, like the phone's own emoji page; the category bar sits at the bottom
@@ -715,7 +715,8 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             }
         }
         if (q != null) {
-            val found = remember(q, all) { EmojiData.search(all, q) }
+            val fams by androidx.compose.runtime.produceState(emptyList<KeyboardSymbols.Family>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardSymbols.load(ctx) } }
+            val found = remember(q, all, fams) { EmojiData.search(all, q) + KeyboardSymbols.search(fams, q).map { EmojiItem(it.ch, 11, it.name) } }
             LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(48.dp)) {
                 items(found) { it2 -> EmojiCell(it2, th, act) }
             }
@@ -750,20 +751,22 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     }
 }
 
-/** The decorative signs, in groups: a row of group names on top and the signs of the picked one below. */
+/** The symbol tab: the families of Unicode's signs on top and the signs of the picked one below; the search above finds a sign by its Unicode name. */
 @Composable
 private fun SymbolPage(th: KbTheme, act: KbActions) {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val fams by androidx.compose.runtime.produceState(emptyList<KeyboardSymbols.Family>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardSymbols.load(ctx) } }
     var g by remember { mutableStateOf(0) }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            KeyboardSymbols.groups.forEachIndexed { i, (en, trk, _) ->
-                Text(tr(en, trk), color = if (i == g) th.text else th.sub, fontSize = 13.sp, fontWeight = if (i == g) FontWeight.Medium else FontWeight.Normal,
+            fams.forEachIndexed { i, f ->
+                Text(tr(f.en, f.tr), color = if (i == g) th.text else th.sub, fontSize = 13.sp, fontWeight = if (i == g) FontWeight.Medium else FontWeight.Normal,
                     modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (i == g) th.special else Color.Transparent).clickable { g = i }.padding(horizontal = 12.dp, vertical = 6.dp))
             }
         }
         LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
-            items(KeyboardSymbols.groups[g].third) { sym ->
-                Box(Modifier.height(44.dp).clickable { act.emoji(sym) }, contentAlignment = Alignment.Center) { Text(sym, fontSize = 22.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip) }
+            items(fams.getOrNull(g)?.signs.orEmpty()) { sg ->
+                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = 22.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip) }
             }
         }
     }
@@ -771,7 +774,7 @@ private fun SymbolPage(th: KbTheme, act: KbActions) {
 
 @Composable
 private fun EmojiCell(it: EmojiItem, th: KbTheme, act: KbActions) {
-    val kao = it.group >= 10
+    val kao = it.group == 10
     Box(Modifier.height(44.dp).clickable { act.emoji(it.e) }, contentAlignment = Alignment.Center) {
         Text(it.e, fontSize = if (kao) 15.sp else 26.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip)
     }
