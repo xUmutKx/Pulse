@@ -472,7 +472,7 @@ private fun CtMain(
     }
     if (newGroup) {
         var t by remember { mutableStateOf("") }
-        AlertDialog({ newGroup = false }, containerColor = T.panel, shape = RoundedCornerShape(ctRadius),
+        com.umutk.pulse.WinAlert({ newGroup = false }, containerColor = T.panel, 
             text = { CtInput(t, { t = it }, ctr("Group", "Grup")) },
             confirmButton = { IconButton({ if (t.isNotBlank()) onNewGroup(t.trim()); newGroup = false }) { CtGlyph(Icons.Outlined.Check, null, tint = ctAcc) } },
             dismissButton = { IconButton({ newGroup = false }) { CtGlyph(Icons.Outlined.Close, null, tint = T.sub) } })
@@ -764,7 +764,7 @@ private fun CtDetailScreen(id: Long, groups: List<CtGroup>, onBack: () -> Unit, 
         val gs = groups.filter { it.id in c.groups }
         if (gs.isNotEmpty()) CtInfo(Icons.Outlined.Group, gs.joinToString(", ") { it.title }, null, null)
     }
-    if (pickGroup) AlertDialog({ pickGroup = false }, containerColor = T.panel, shape = RoundedCornerShape(ctRadius),
+    if (pickGroup) com.umutk.pulse.WinAlert({ pickGroup = false }, containerColor = T.panel, 
         text = {
             Column {
                 groups.forEach { g ->
@@ -1168,7 +1168,7 @@ private fun CtSettings(onBack: () -> Unit, onImport: () -> Unit, onExport: () ->
             }
             // the real incoming-call screen belongs to the system dialer
             Text(ctr("Shown in Pulse Contacts only. The phone app draws the real call screen.", "Yalnızca Pulse Kişiler'de görünür. Gerçek arama ekranını telefon uygulaması çizer."), color = T.sub, fontSize = 12.sp)
-            editBg?.let { k -> AlertDialog({ editBg = null; bgRev++ }, containerColor = T.panel, shape = RoundedCornerShape(ctRadius), text = { CtBgRow(k) { bgRev++ } },
+            editBg?.let { k -> com.umutk.pulse.WinAlert({ editBg = null; bgRev++ }, containerColor = T.panel, text = { CtBgRow(k) { bgRev++ } },
                 confirmButton = { IconButton({ editBg = null; bgRev++ }) { CtGlyph(Icons.Outlined.Check, null, tint = ctAcc) } }) }
             }
             sec(ctr("Data", "Veri"), Icons.Outlined.FileDownload, false) {

@@ -136,7 +136,7 @@ internal fun TrackSheet(
     }
 
     when (pane) {
-        "forgetLyrics" -> AlertDialog(
+        "forgetLyrics" -> com.umutk.pulse.WinAlert(
             onDismissRequest = { pane = null },
             title = { Text(tr("Delete these lyrics?", "Bu sözler silinsin mi?")) },
             text = { Text(tr("The downloaded and saved lyrics of this song (and the .lrc / .txt next to the file) are removed. They are not looked up again for a few days.", "Bu şarkının indirilen ve kaydedilen sözleri (ve dosyanın yanındaki .lrc / .txt) silinir. Birkaç gün yeniden aranmaz.")) },
@@ -151,7 +151,7 @@ internal fun TrackSheet(
             },
             dismissButton = { TextButton(onClick = { pane = null }) { Text(tr("Cancel", "Vazgeç")) } },
         )
-        "delete" -> AlertDialog(
+        "delete" -> com.umutk.pulse.WinAlert(
             onDismissRequest = { pane = null },
             title = { Text(tr("Delete this track?", "Bu parça silinsin mi?")) },
             text = { Text(tr("The file is deleted from the phone. This cannot be undone.", "Dosya telefondan silinir. Bu geri alınamaz.")) },
@@ -169,7 +169,7 @@ internal fun TrackSheet(
         )
         "playlist" -> {
             val names = remember { Playlists.names(ctx) }
-            AlertDialog(
+            com.umutk.pulse.WinAlert(
                 onDismissRequest = { pane = null },
                 title = { Text(tr("Add to Playlist", "Çalma listesine ekle")) },
                 text = {
