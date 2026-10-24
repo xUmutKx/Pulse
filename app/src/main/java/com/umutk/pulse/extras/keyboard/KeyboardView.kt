@@ -1,6 +1,8 @@
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.EmojiEmotions
+import androidx.compose.material.icons.rounded.Visibility
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.AutoFixHigh
 import androidx.compose.material.icons.rounded.LocalFlorist
 import androidx.compose.material.icons.rounded.Favorite
@@ -806,6 +808,7 @@ private fun familyIcon(id: String): ImageVector = when (id) {
     "Cute" -> Icons.Rounded.EmojiEmotions; "Moon and sky" -> Icons.Rounded.NightsStay; "Lines" -> Icons.Rounded.HorizontalRule; "Brackets" -> Icons.Rounded.DataArray
     "Arrows" -> Icons.Rounded.NorthEast; "Shapes" -> Icons.Rounded.Category; "Music" -> Icons.Rounded.MusicNote; "Symbols" -> Icons.Rounded.EmojiSymbols
     "Numbers" -> Icons.Rounded.Pin; "Punctuation" -> Icons.Rounded.FormatQuote; "Currency" -> Icons.Rounded.AttachMoney; "Math" -> Icons.Rounded.Functions
+    "Cuneiform" -> Icons.Rounded.Edit; "Hieroglyphs" -> Icons.Rounded.Visibility
     else -> Icons.Rounded.Apps
 }
 

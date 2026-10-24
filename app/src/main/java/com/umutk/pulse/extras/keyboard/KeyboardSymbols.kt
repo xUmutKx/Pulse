@@ -17,7 +17,7 @@ object KeyboardSymbols {
         "Flowers" to ("Flowers" to "Çiçekler"), "Hearts" to ("Hearts" to "Kalpler"), "Stars" to ("Stars" to "Yıldızlar"), "Moon and sky" to ("Moon and sky" to "Ay ve gökyüzü"),
         "Lines" to ("Lines" to "Çizgiler"), "Brackets" to ("Brackets" to "Parantezler"), "Cute" to ("Cute" to "Süs"), "Arrows" to ("Arrows" to "Oklar"), "Math" to ("Math" to "Matematik"), "Shapes" to ("Shapes" to "Şekiller"),
         "Symbols" to ("Symbols" to "Semboller"), "Punctuation" to ("Punctuation" to "Noktalama"), "Currency" to ("Currency" to "Para"), "Numbers" to ("Numbers" to "Sayılar"),
-        "Music" to ("Music" to "Müzik"), "Braille" to ("Braille" to "Braille"),
+        "Music" to ("Music" to "Müzik"), "Braille" to ("Braille" to "Braille"), "Cuneiform" to ("Cuneiform" to "Çivi yazısı"), "Hieroglyphs" to ("Hieroglyphs" to "Hiyeroglif"),
     )
     private val subNames = mapOf("Classics" to "Klasikler", "Lines" to "Çizgiler", "Wings" to "Kanatlar", "Brackets" to "Parantezler", "Long" to "Uzunlar")
 
