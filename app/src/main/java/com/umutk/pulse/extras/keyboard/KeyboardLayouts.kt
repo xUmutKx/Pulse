@@ -50,7 +50,7 @@ object KeyboardLayouts {
     fun cap(s: String, l: Lang, upper: Boolean) = if (upper) s.uppercase(l.locale) else s
 
     /** The symbol pages: the first with digits and the common signs, the second with the rest. Rows of single characters. */
-    val symbols1 = listOf("1234567890", "@#/_&-+()%", "*\"':;!?")
+    val symbols1 = listOf("1234567890", "@#$&_-()=%", "\"*':/!?+")
     val symbols2 = listOf("~`|•√π÷×¶∆", "£¢€¥^°={}\\", "%©®™✓[]<>")
 
     val popupPeriod = listOf(",", "?", "!", ":", ";", "-", "'", "\"", "@", "/", "…")
