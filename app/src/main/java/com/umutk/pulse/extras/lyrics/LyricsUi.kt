@@ -69,6 +69,8 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
     val hi = if (onDark) Color.White else MaterialTheme.colorScheme.primary
     val lo = if (onDark) Color.White.copy(alpha = .72f) else T.sub
     val state = rememberLazyListState()
+    // a size and a weight to read from the other side of the table: the setting's size plus a few, always bold
+    val base = com.umutk.pulse.extras.music.MusicSettings.lyricsFont(androidx.compose.ui.platform.LocalContext.current).coerceIn(12, 30) + 4
     val cur = if (result.synced && positionMs >= 0) result.lines.indexOfLast { it.timeMs <= positionMs } else -1
     LaunchedEffect(cur) { if (cur >= 0) state.animateScrollToItem(maxOf(0, cur - 2), 0) }
     LazyColumn(modifier, state = state) {
@@ -83,8 +85,9 @@ fun LyricsView(result: LyricsResult, positionMs: Long, onSeek: ((Long) -> Unit)?
                 Text(
                     lyricMarked(l.text, mark, hi),
                     color = tone,
-                    fontSize = 18.sp,
-                    fontWeight = if (on) FontWeight.Bold else FontWeight.SemiBold,
+                    fontSize = base.sp,
+                    lineHeight = (base * 1.3f).sp,
+                    fontWeight = if (on) FontWeight.ExtraBold else FontWeight.Bold,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.fillMaxWidth()
                         .then(if (onSeek != null && result.synced) Modifier.clickable { onSeek(l.timeMs) } else Modifier)
