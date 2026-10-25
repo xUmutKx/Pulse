@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
 import kotlin.math.PI
@@ -58,7 +59,7 @@ private fun DrawScope.cloud(cx: Float, cy: Float, w: Float, c: Color) {
 /** A moon with a face: lit disc, grey seas and craters, a crescent cut from it. */
 internal fun DrawScope.moonDisc(cx: Float, cy: Float, r: Float, crescent: Boolean = false) {
     val lit = Path().apply { addOval(androidx.compose.ui.geometry.Rect(Offset(cx - r, cy - r), Size(2 * r, 2 * r))) }
-    androidx.compose.ui.graphics.drawscope.clipPath(lit) {
+    clipPath(lit) {
         drawCircle(Brush.radialGradient(listOf(Color(0xFFFFFBEA), Color(0xFFE9E3CC), Color(0xFFC9C3AD)), Offset(cx - r * .3f, cy - r * .3f), r * 1.5f), r, Offset(cx, cy))
         // the seas and craters
         val maria = listOf(Triple(-.28f, -.2f, .3f), Triple(.12f, -.35f, .22f), Triple(.25f, .08f, .26f), Triple(-.1f, .3f, .2f))
