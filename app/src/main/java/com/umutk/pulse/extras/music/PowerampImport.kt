@@ -240,23 +240,39 @@ object PowerampImport {
 
 
     /** The album pictures: "Artist - Title.jpg" against "artist - title", then against the title alone when only one song has it. Returns (covers saved, written into files). */
+    /** Names of pictures that matched no song, for the note after an import (the first few). */
+    @Volatile var unmatched: List<String> = emptyList()
+
     private fun matchCovers(ctx: Context, pics: List<File>, library: List<Track>, embed: Boolean): Pair<Int, Int> {
         var covers = 0; var embedded = 0
+        val miss = ArrayList<String>()
         val byFull = HashMap<String, Track>(); val byTitle = HashMap<String, MutableList<Track>>()
+        // a picture can be named after the song ("Artist - Title") or after the album ("Artist - Album", or the album alone): every song of that album gets it
+        val byAlbum = HashMap<String, MutableList<Track>>(); val byAlbumOnly = HashMap<String, MutableList<Track>>()
         library.forEach { t ->
             val title = t.title?.takeIf { it.isNotBlank() } ?: File(t.path).nameWithoutExtension
             byFull[fold((t.artist.orEmpty() + title))] = t
             byFull[fold(File(t.path).nameWithoutExtension)] = t
             byTitle.getOrPut(fold(title)) { ArrayList() } += t
+            t.album?.takeIf { it.isNotBlank() }?.let { al ->
+                byAlbum.getOrPut(fold(t.artist.orEmpty() + al)) { ArrayList() } += t
+                byAlbumOnly.getOrPut(fold(al)) { ArrayList() } += t
+            }
         }
         pics.forEach { f ->
             val base = f.nameWithoutExtension.substringAfter("_", f.nameWithoutExtension).substringAfter("_")
             val key = fold(base.replace(" - ", ""))
-            val t = byFull[key] ?: byFull[fold(base)] ?: byTitle[fold(base.substringAfter(" - "))]?.singleOrNull() ?: return@forEach
+            val tail = fold(base.substringAfter(" - "))
+            val targets: List<Track> = listOfNotNull(byFull[key] ?: byFull[fold(base)] ?: byTitle[tail]?.singleOrNull())
+                .ifEmpty { byAlbum[key] ?: byAlbum[fold(base)] ?: byAlbumOnly[tail]?.takeIf { l -> l.map { it.artist.orEmpty().lowercase() }.distinct().size <= 2 } ?: byAlbumOnly[fold(base)] ?: emptyList() }
+            if (targets.isEmpty()) { if (miss.size < 6) miss += base; return@forEach }
             val bytes = f.readBytes()
-            PowerampCovers.save(ctx, t.path, bytes); covers++
-            if (embed && Id3Frames.putFrame(t.path, "APIC", Id3Frames.coverBody(bytes))) embedded++
+            targets.forEach { t ->
+                PowerampCovers.save(ctx, t.path, bytes); covers++
+                if (embed && Id3Frames.putFrame(t.path, "APIC", Id3Frames.coverBody(bytes))) embedded++
+            }
         }
+        unmatched = miss
         return covers to embedded
     }
 

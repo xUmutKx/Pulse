@@ -140,8 +140,9 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first", "Kütüphane boş: önce müziği tara"); return@launch }
             importNote = tr("Reading the pictures…", "Resimler okunuyor…")
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.pictures(c, tree, MusicLibrary.tracks.value, embedCovers) } }
-            importNote = r.getOrNull()?.let { (cv, ar, em) -> tr("$cv covers, $ar artist pictures" + (if (embedCovers) " ($em written into files)" else ""), "$cv kapak, $ar sanatçı resmi" + (if (embedCovers) " ($em dosyaya yazıldı)" else "")) }
-                ?: tr("The pictures could not be read", "Resimler okunamadı")
+            importNote = r.getOrNull()?.let { (cv, ar, em) -> tr("$cv covers, $ar artist pictures" + (if (embedCovers) " ($em written into files)" else "") + (if (PowerampImport.unmatched.isNotEmpty()) "; no song found for e.g. " + PowerampImport.unmatched.joinToString(" | ") else ""),
+                "$cv kapak, $ar sanatçı resmi" + (if (embedCovers) " ($em dosyaya yazıldı)" else "") + (if (PowerampImport.unmatched.isNotEmpty()) "; şunlar için şarkı bulunamadı: " + PowerampImport.unmatched.joinToString(" | ") else "")) }
+                ?: (tr("The pictures could not be read", "Resimler okunamadı") + (r.exceptionOrNull()?.let { ": " + (it.message ?: it.javaClass.simpleName) } ?: ""))
         }
     }
     val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) doImport(uri) }
