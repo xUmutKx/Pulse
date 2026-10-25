@@ -1,6 +1,14 @@
 package com.umutk.pulse.extras.lyrics
 
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.gestures.detectTapGestures as tapGestures
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Velocity
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.size
 import androidx.compose.animation.AnimatedVisibility
@@ -77,22 +85,51 @@ fun PlayerLyrics(
                 if (LiveLyrics.embed(ctx)) Lyrics.embedMp3(localPath, r)
             }
         }
-        Box(Modifier.fillMaxSize().background(Color.Black).pointerInput(Unit) { detectTapGestures { } }) {
+        // 0 reading, 1 picking lines to share, 2 the card to share
+        var mode by remember(title, artist) { mutableIntStateOf(0) }
+        var picked by remember(title, artist) { mutableStateOf(emptySet<Int>()) }
+        var style by remember { mutableIntStateOf(0) }
+        var menu by remember { mutableStateOf(false) }
+        var pull by remember { mutableFloatStateOf(0f) }
+        val only = remember { LyricsShare.consecutive(ctx) }
+        // a pull down that the lines did not take (they are at their top) closes the lyrics
+        val closer = remember(onDismiss) {
+            object : NestedScrollConnection {
+                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                    if (source == NestedScrollSource.UserInput) pull = if (consumed.y != 0f || available.y < 0f) 0f else pull + available.y
+                    return Offset.Zero
+                }
+                override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity { if (pull > 180f) onDismiss(); pull = 0f; return Velocity.Zero }
+            }
+        }
+        fun toggle(i: Int) {
+            val cur = picked
+            if (i in cur) {
+                picked = if (!only || i == cur.min() || i == cur.max()) cur - i else setOf(i)
+            } else if (only && cur.isNotEmpty() && i != cur.min() - 1 && i != cur.max() + 1) picked = setOf(i)
+            else if (cur.size >= LyricsShare.MAX_LINES) android.widget.Toast.makeText(ctx, tr("At most ${LyricsShare.MAX_LINES} lines", "En fazla ${LyricsShare.MAX_LINES} satır"), android.widget.Toast.LENGTH_SHORT).show()
+            else picked = cur + i
+        }
+        Box(Modifier.fillMaxSize().background(Color.Black).nestedScroll(closer).pointerInput(Unit) { tapGestures { } }) {
             val (busy, res) = state
             when {
+                res != null && mode == 1 -> LyricsSelect(res, picked, ::toggle, { mode = 2 }, Modifier.fillMaxSize().padding(top = 36.dp))
+                res != null && mode == 2 -> LyricsSharePage(title, artist, art, picked.sorted().map { res.lines[it].text }, style, { style = it }, { LyricsShare.share(ctx, it) }, Modifier.fillMaxSize().padding(top = 40.dp))
                 res != null && full -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(56.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = .12f))) {
                             art?.let { androidx.compose.foundation.Image(it, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
+                            // the share button sits in the cover's top-left corner
+                            Box(Modifier.align(Alignment.TopStart).size(26.dp).background(Color.Black.copy(alpha = .55f), androidx.compose.foundation.shape.RoundedCornerShape(bottomEnd = 10.dp)).clickable { mode = 1; picked = emptySet() }, contentAlignment = Alignment.Center) { PIcon("share", Color.White, 15.dp) }
                         }
                         Column(Modifier.weight(1f).padding(start = 12.dp, end = 40.dp)) {
                             Text(title, color = Color.White, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                             Text(artist, color = Color.White.copy(alpha = .7f), fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                     }
-                    LyricsView(res, positionMs, onSeek, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), onDark = true)
+                    LyricsView(res, positionMs, onSeek, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).pointerInput(Unit) { tapGestures(onLongPress = { menu = true }) }, onDark = true)
                 }
-                res != null -> LyricsView(res, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp), onDark = true)
+                res != null -> LyricsView(res, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp).pointerInput(Unit) { tapGestures(onLongPress = { menu = true }) }, onDark = true)
                 busy -> Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
                     PLoader()
                     Text(tr("Searching for lyrics…", "Sözler aranıyor…"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
@@ -112,7 +149,17 @@ fun PlayerLyrics(
                         .background(Color.White, androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).clickable { attempt++ }.padding(horizontal = 20.dp, vertical = 9.dp))
                 }
             }
-            IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)) { PIcon("close", Color.White, 22.dp) }
+            Row(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
+                if (res != null && mode == 0) Box {
+                    IconButton(onClick = { menu = true }) { PIcon("more", Color.White, 22.dp) }
+                    com.umutk.pulse.ThemedMenu(menu, { menu = false }) {
+                        com.umutk.pulse.ThemedMenuItem(tr("Share lyrics", "Sözleri paylaş"), { menu = false; mode = 1; picked = emptySet() }, iconKey = "share")
+                        com.umutk.pulse.ThemedMenuItem(tr("Delete these lyrics", "Bu sözleri sil"), { menu = false; Lyrics.forget(ctx, localPath, title, artist); onDismiss() })
+                        com.umutk.pulse.ThemedMenuItem(tr("Search again", "Tekrar ara"), { menu = false; attempt++ })
+                    }
+                }
+                IconButton(onClick = { if (mode == 0) onDismiss() else mode = mode - 1 }) { PIcon(if (mode == 0) "close" else "back", Color.White, 22.dp) }
+            }
         }
     }
 }
