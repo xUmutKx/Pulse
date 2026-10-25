@@ -70,7 +70,7 @@ object FilesHomeNav {
 /** The folders opened lately (newest first), kept next to the recent files. */
 object RecentDirs {
     private const val KEY = "ex_recent_dirs"
-    private fun prefs(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+    private fun prefs(c: Context) = com.umutk.pulse.filesPrefs(c)
     fun list(c: Context): List<String> = prefs(c).getString(KEY, "").orEmpty().lines().filter { it.isNotBlank() }
     fun add(c: Context, path: String) {
         prefs(c).edit().putString(KEY, (listOf(path) + list(c).filter { it != path }).take(12).joinToString("\n")).apply()
