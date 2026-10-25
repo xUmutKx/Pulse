@@ -79,13 +79,13 @@ internal object CoverFetch {
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    fun find(c: Context, t: Track): ImageBitmap? {
+    fun find(c: Context, t: Track, force: Boolean = false): ImageBitmap? {
         // the network is never used on the main thread; the cover is read again on the next pass
         if (Looper.myLooper() == Looper.getMainLooper() || t.path.startsWith("http")) return null
         PowerampCovers.saved(c, t.path)?.let { return it }
-        if (!MusicSettings.onlineCovers(c)) return null
+        if (!force && !MusicSettings.onlineCovers(c)) return null
         val miss = PowerampCovers.missTime(c, t.path)
-        if (miss > 0L && System.currentTimeMillis() - miss < WEEK_MS) return null
+        if (!force && miss > 0L && System.currentTimeMillis() - miss < WEEK_MS) return null
         val artist = t.artist?.takeIf { it.isNotBlank() && it != "<unknown>" }?.let { clean(it).ifBlank { null } }
         // the album only when it is one record; a compilation ("No.1 Classics") or the folder name is no album, the song is searched then
         val album = t.album?.takeIf { it.isNotBlank() && it != "<unknown>" && !generic(it) }?.let { clean(it).ifBlank { null } }
