@@ -192,6 +192,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("NotifHistLauncher") -> "notifhist"
             n.endsWith("ExtraStoreLauncher") -> "extrastore"
             n.endsWith("LocalSendLauncher") -> "localsend"
+            n.endsWith("PaletteLauncher") -> "palette"
             n.endsWith("KeyboardLauncher") || n.endsWith("KeyboardSettingsActivity") -> "keyboard"
             else -> i.getStringExtra("route") ?: "music"
         }
