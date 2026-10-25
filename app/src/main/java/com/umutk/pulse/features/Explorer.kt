@@ -373,7 +373,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var filtDir by remember { mutableStateOf(exRead(ctx, "ex_filt_dir").associate { it.substringBeforeLast('|') to it.substringAfterLast('|') }) }
     var folderSort by remember { mutableStateOf(exReadSortMap(ctx)) }
     var drawer by remember { mutableStateOf(false) }
-    var searchOpen by rememberSaveable { mutableStateOf(false) }
+    // not saved: leaving the Files page for another and coming back finds the search closed
+    var searchOpen by remember { mutableStateOf(false) }
     // the bottom bar's Search opens the search field
     LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openSearch) { if (com.umutk.pulse.files.home.FilesHomeNav.openSearch) { searchOpen = true; com.umutk.pulse.files.home.FilesHomeNav.openSearch = false } }
     var freq by remember { mutableStateOf(exRead(ctx, EX_FREQ)) }
@@ -477,7 +478,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     val bookmarks = marks.filter { File(it).isDirectory }
     val picked = sel.map { File(it) }
 
-    fun go(p: String) { ExScroll.live?.let { ExScroll.memo[here] = it.value }; freq = exBump(ctx, p); arcFile = null; arcCwd = ""; arcSel = emptySet(); here = p; sel = emptySet(); query = ""; recentView = false }
+    fun go(p: String) { ExScroll.live?.let { ExScroll.memo[here] = it.value }; freq = exBump(ctx, p); arcFile = null; arcCwd = ""; arcSel = emptySet(); here = p; sel = emptySet(); query = ""; recentView = false; searchOpen = false }
     // Back steps out of the current view first (selection, search, recents), then up one folder; only at the top does it leave the page
     androidx.activity.compose.BackHandler(enabled = resultsFor != null || searchOpen || arcFile != null || sel.isNotEmpty() || query.isNotBlank() || recentView || dir != top) {
         when {
@@ -986,24 +987,14 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
                         Text(r.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        val sub = ((if (r.dir) "" else exSize(r.size) + "  ") + (if (r.time > 0) exDate(r.time, FilesPrefs.dateFmt) else "")).trim()
+                        val sub = ((if (r.size > 0 || !r.dir) exSize(r.size) + "  " else "") + (if (r.time > 0) exDate(r.time, FilesPrefs.dateFmt) else "")).trim()
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 11.sp)
                     }
-                    // the three dots: open, cut, copy, paste (into this folder of the archive) and delete, for this row
+                    // the three dots: delete and info for this row (open, cut, copy and paste are a tap and the selection bar)
                     Box {
                         Box(Modifier.size(36.dp).clickable { arcMenu = p }, contentAlignment = Alignment.Center) { MoreIcon(T.sub, 20.dp) }
                         ThemedMenu(arcMenu == p, { arcMenu = null }) {
                             val items = buildList<Triple<String, String, () -> Unit>> {
-                                add(Triple(tr("Open", "Aç"), "view", {
-                                    if (r.dir) arcCwd = "$p/" else scope.launch {
-                                        val out = File(ctx.cacheDir, "arc/${System.nanoTime()}/${r.name}")
-                                        val ok = withContext(Dispatchers.IO) { runCatching { archiveExtractOne(af, p, out) }.getOrDefault(false) }
-                                        if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
-                                    }
-                                }))
-                                add(Triple(tr("Cut", "Kes"), "move", { arcSel = setOf(p); arcCut() }))
-                                add(Triple(tr("Copy", "Kopyala"), "copy", { arcSel = setOf(p); arcCopy(false) }))
-                                if (clip != null) add(Triple(tr("Paste", "Yapıştır"), "paste", { arcPaste() }))
                                 add(Triple(tr("Delete", "Sil"), "delete", { arcSel = setOf(p); arcDelete() }))
                                 add(Triple(tr("Info", "Bilgi"), "info", { arcInfo = p }))
                             }
@@ -1051,7 +1042,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
         }
     }
-    if (arcFile == null && resultsFor == null) ExSearchBar(searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = "" })
+    if (arcFile == null && resultsFor == null) ExSearchBar(standalone, searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = "" })
     resultsFor?.let { q ->
         Column(Modifier.fillMaxSize().background(T.bg)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -2021,10 +2012,23 @@ private fun androidx.compose.foundation.layout.BoxScope.ExPasteFab(count: Int, m
 
 /** Floating search at the bottom-left: a round button that expands into a field (clear + close); Enter calls [onSearch]. Material = pill, the other looks = square. */
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.ExSearchBar(open: Boolean, onOpen: () -> Unit, query: String, onQuery: (String) -> Unit, onSearch: () -> Unit, onClose: () -> Unit) {
+private fun androidx.compose.foundation.layout.BoxScope.ExSearchBar(top: Boolean, open: Boolean, onOpen: () -> Unit, query: String, onQuery: (String) -> Unit, onSearch: () -> Unit, onClose: () -> Unit) {
     val shape = if (T.material) RoundedCornerShape(28.dp) else RoundedCornerShape(0.dp)
     val fr = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(open) { if (open) runCatching { fr.requestFocus() } }
+    // the standalone Files app: the search button is the one at the top right; the field grows out of it to the left, over the header
+    if (top) {
+        androidx.compose.animation.AnimatedVisibility(open, Modifier.align(Alignment.TopEnd).fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            enter = androidx.compose.animation.expandHorizontally(expandFrom = Alignment.End) + androidx.compose.animation.fadeIn(),
+            exit = androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.End) + androidx.compose.animation.fadeOut()) {
+            Row(Modifier.fillMaxWidth().height(48.dp).clip(shape).background(T.panel), verticalAlignment = Alignment.CenterVertically) {
+                PField(query, onQuery, tr("Search", "Ara"), Modifier.weight(1f).focusRequester(fr), onSearch)
+                // the cross at the right end clears the text first, then closes the field
+                Box(Modifier.size(44.dp).clickable { if (query.isNotEmpty()) onQuery("") else onClose() }, contentAlignment = Alignment.Center) { ExIcon("close", T.text, 20.dp) }
+            }
+        }
+        return
+    }
     Row(Modifier.align(Alignment.BottomStart).navigationBarsPadding().imePadding().padding(start = 16.dp, bottom = 16.dp, end = if (open) 88.dp else 0.dp)
         .then(if (open) Modifier.fillMaxWidth() else Modifier)
         .shadow(6.dp, shape).clip(shape).background(T.panel).then(if (!open) Modifier.clickable(onClick = onOpen) else Modifier),
