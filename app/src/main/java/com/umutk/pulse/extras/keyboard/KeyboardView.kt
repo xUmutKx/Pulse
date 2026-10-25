@@ -299,6 +299,8 @@ private fun Trail(th: KbTheme, st: KbState) {
 @Composable
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
     if (st.trans) { TransBar(th, st, act); return }
+    // the emoji page: the bar above takes the categories, with only a back button at its left
+    if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
     Row(
         Modifier.fillMaxWidth().height(44.dp).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
@@ -334,6 +336,27 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                     }
                 }
             }
+        }
+    }
+}
+
+private val emojiTabIcons get() = listOf(Icons.Rounded.AccessTime, Icons.Rounded.EmojiEmotions, Icons.Rounded.Person, Icons.Rounded.Pets, Icons.Rounded.Restaurant, Icons.Rounded.DirectionsCar,
+    Icons.Rounded.SportsSoccer, Icons.Rounded.Lightbulb, Icons.Rounded.Tag, Icons.Rounded.Flag)
+
+/** The bar above the emoji page: a back button, then the categories (recent, faces, people, animals, food, travel, sport, objects, symbols, flags, kaomoji, signs). */
+@Composable
+private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
+    Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+        BarIcon(th, kbIcon(th, "ArrowBack")) { act.page(0) }
+        Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+            emojiTabIcons.forEachIndexed { i, ic ->
+                Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = i }, contentAlignment = Alignment.Center) {
+                    Icon(ic, null, tint = if (i == st.emojiTab) th.text else th.sub, modifier = Modifier.size(24.dp))
+                    if (i == st.emojiTab) Box(Modifier.align(Alignment.BottomCenter).width(26.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
+                }
+            }
+            Box(Modifier.width(48.dp).fillMaxHeight().clickable { st.emojiTab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (st.emojiTab == 10) th.text else th.sub, fontSize = 15.sp) }
+            Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (st.emojiTab == 11) th.text else th.sub, fontSize = 20.sp) }
         }
     }
 }
@@ -773,9 +796,8 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     // 0 recent, 1..9 the nine groups, 10 kaomoji
     // the recent list shown stays as it was when the panel opened, so the emojis do not jump while tapping; it updates on the next open
     val shownRecents = remember { st.recents }
-    var tab by remember { mutableStateOf(if (shownRecents.isEmpty()) 1 else 0) }
-    val icons = listOf(Icons.Rounded.AccessTime, Icons.Rounded.EmojiEmotions, Icons.Rounded.Person, Icons.Rounded.Pets, Icons.Rounded.Restaurant, Icons.Rounded.DirectionsCar,
-        Icons.Rounded.SportsSoccer, Icons.Rounded.Lightbulb, Icons.Rounded.Tag, Icons.Rounded.Flag)
+    // the category (the bar above the keyboard holds the icons) lives in the state, so the bar and the pages agree
+    val tab = st.emojiTab
     val q = st.emojiQuery
     val fams by androidx.compose.runtime.produceState(emptyList<KeyboardSymbols.Family>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardSymbols.load(ctx) } }
     var g by remember { mutableStateOf(0) }
@@ -784,19 +806,6 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     // the same height as the keys, so the keyboard does not shrink; the search needs the keys under it and is taller
     val fixed = if (q == null && st.keysH > 0) Modifier.height(with(dens) { st.keysH.toDp() }) else Modifier
     Column(Modifier.fillMaxWidth().then(fixed)) {
-        // the emoji categories sit on top, where the thumb reaches them
-        if (q == null) {
-            Row(Modifier.fillMaxWidth().height(40.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                icons.forEachIndexed { i, ic ->
-                    Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = i }, contentAlignment = Alignment.Center) {
-                        Icon(ic, null, tint = if (i == tab) th.text else th.sub, modifier = Modifier.size(24.dp))
-                        if (i == tab) Box(Modifier.align(Alignment.BottomCenter).width(26.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
-                    }
-                }
-                Box(Modifier.width(48.dp).fillMaxHeight().clickable { tab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.text else th.sub, fontSize = 15.sp) }
-                Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (tab == 11) th.text else th.sub, fontSize = 20.sp) }
-            }
-        }
         // on the symbol page the families sit above the search, where the thumb reaches them
         if (q == null && tab == 11) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             fams.forEachIndexed { i, f ->
@@ -832,7 +841,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = tab) { 12 }
             // the tab follows the page only once it has settled: following it mid-swipe restarted the scroll and left the pages half way
             LaunchedEffect(tab) { if (pager.settledPage != tab) pager.animateScrollToPage(tab) }
-            LaunchedEffect(pager.settledPage) { tab = pager.settledPage }
+            LaunchedEffect(pager.settledPage) { st.emojiTab = pager.settledPage }
             androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { page ->
                 if (page == 11) { SymbolPage(th, act, fams, g, sub) { sub = it }; return@HorizontalPager }
                 val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }

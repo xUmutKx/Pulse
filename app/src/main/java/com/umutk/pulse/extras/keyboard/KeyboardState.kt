@@ -24,6 +24,8 @@ class KbState {
     var slots by mutableStateOf(listOf("", "", ""))
     // the translation bar: it takes the top bar, translates what is typed from one language to the other
     var trans by mutableStateOf(false)
+    // the category open on the emoji page (0 recent, 1..9 the groups, 10 kaomoji, 11 symbols)
+    var emojiTab by mutableStateOf(0)
     // naming a shortcut for a clipboard item: the keys type into the name
     var clipName by mutableStateOf<String?>(null)
     var clipNameFor by mutableStateOf(0L)
