@@ -23,6 +23,8 @@ class WeatherRefreshWorker(private val app: Context, params: WorkerParameters) :
             WeatherStore.saveCache(app, place.name, raw, aqi, WeatherApi.extras(place.lat, place.lon, WeatherStore.source(app) == "mgm"))
             WeatherWidgets.refreshAll(app)
         }
+        // the transparent clock-weather widget keeps its own copy per place
+        runCatching { com.umutk.pulse.widgets.WeatherClearWidget().fetchAll(app) }
         androidx.work.ListenableWorker.Result.success()
     }
 }

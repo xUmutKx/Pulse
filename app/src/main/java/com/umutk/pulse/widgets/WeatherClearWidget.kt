@@ -8,7 +8,6 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.Typeface
 import android.view.View
 import android.widget.RemoteViews
@@ -69,24 +68,27 @@ class WeatherClearWidget : PulseWidget() {
         refresh(ctx, goAsync())
     }
 
-    /** Fetches the places the placed widgets show when their saved copy is over half an hour old, then redraws them. */
+    /** Fetches the places the placed widgets show when their saved copy is over 25 minutes old (the system asks every 30), then redraws them. */
     private fun refresh(ctx: Context, pending: android.content.BroadcastReceiver.PendingResult) {
-        Thread {
-            try {
-                val mgr = AppWidgetManager.getInstance(ctx)
-                val ids = mgr.getAppWidgetIds(ComponentName(ctx, WeatherClearWidget::class.java))
-                val places = placesOf(ctx)
-                ids.map { places[indexOf(ctx, it).coerceIn(0, places.lastIndex)] }.distinct().forEach { pl ->
-                    val at = prefs(ctx).getLong("at_" + key(pl), 0L)
-                    if (System.currentTimeMillis() - at < 30 * 60_000L) return@forEach
-                    runCatching {
-                        val spot = if (pl.device) kotlinx.coroutines.runBlocking { com.umutk.pulse.extras.weather.deviceLocation(ctx) }?.let { Place(pl.name, it.latitude, it.longitude, true) } ?: return@runCatching else pl
-                        prefs(ctx).edit().putString("raw_" + key(pl), WeatherApi.forecast(spot.lat, spot.lon)).putLong("at_" + key(pl), System.currentTimeMillis()).apply()
-                    }
-                }
-                ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
-            } finally { pending.finish() }
-        }.start()
+        com.umutk.pulse.extras.weather.WeatherAuto.ensure(ctx)
+        Thread { try { fetchAll(ctx) } finally { pending.finish() } }.start()
+    }
+
+    /** The same on the calling thread; the background refresh of the weather page calls it too, so the widgets stay fresh without the page being opened. */
+    fun fetchAll(ctx: Context) {
+        val mgr = AppWidgetManager.getInstance(ctx)
+        val ids = mgr.getAppWidgetIds(ComponentName(ctx, WeatherClearWidget::class.java))
+        if (ids.isEmpty()) return
+        val places = placesOf(ctx)
+        ids.map { places[indexOf(ctx, it).coerceIn(0, places.lastIndex)] }.distinct().forEach { pl ->
+            val at = prefs(ctx).getLong("at_" + key(pl), 0L)
+            if (System.currentTimeMillis() - at < 25 * 60_000L) return@forEach
+            runCatching {
+                val spot = if (pl.device) kotlinx.coroutines.runBlocking { com.umutk.pulse.extras.weather.deviceLocation(ctx) }?.let { Place(pl.name, it.latitude, it.longitude, true) } ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.device } ?: return@runCatching else pl
+                prefs(ctx).edit().putString("raw_" + key(pl), WeatherApi.forecast(spot.lat, spot.lon)).putLong("at_" + key(pl), System.currentTimeMillis()).apply()
+            }
+        }
+        ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
     }
 
     private fun draw(ctx: Context, f: Forecast?, pl: Place, w: Int, h: Int): Bitmap {
@@ -99,21 +101,27 @@ class WeatherClearWidget : PulseWidget() {
             setShadowLayer(h * .02f, 0f, h * .006f, 0x99000000.toInt())
         }
         val padL = w * .09f; val padR = w * .09f
-        // left: temperature, place, condition, range
-        val temp = paint(.30f, true)
-        c.drawText(f?.let { WeatherFmt.temp(it.temp, imp) } ?: "--", padL, h * .36f, temp)
+        // every line on the left starts at the same ink edge: a glyph's own left bearing is taken off, so the big number and the small text line up exactly
+        fun left(p: Paint, t: String): Float { val r = android.graphics.Rect(); p.getTextBounds(t, 0, t.length, r); return padL - r.left }
+        // left: temperature (a fifth smaller than before), place, condition, range
+        val temp = paint(.24f, true)
+        val tt = f?.let { WeatherFmt.temp(it.temp, imp) } ?: "--"
+        c.drawText(tt, left(temp, tt), h * .34f, temp)
         val name = paint(.075f, false, 190)
-        val pinR = h * .028f; val pinX = padL + pinR; val pinY = h * .455f
-        val pin = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; alpha = 190; style = Paint.Style.STROKE; strokeWidth = h * .008f }
-        c.drawCircle(pinX, pinY - pinR * .4f, pinR, pin)
-        val tip = Path().apply { moveTo(pinX - pinR * .8f, pinY + pinR * .2f); lineTo(pinX, pinY + pinR * 1.9f); lineTo(pinX + pinR * .8f, pinY + pinR * .2f) }
-        c.drawPath(tip, pin)
         val nm = (f?.place?.ifBlank { null } ?: pl.name).take(18)
-        c.drawText(nm, padL + pinR * 2.6f, h * .485f, name)
+        val pinS = (h * .085f).toInt(); val pinTop = (h * .405f).toInt()
+        ContextCompat.getDrawable(ctx, R.drawable.wi_pin)?.mutate()?.let { d ->
+            d.setTint(android.graphics.Color.WHITE); d.alpha = 190
+            // the pin's own artwork has a margin of one 24th around it
+            val m = pinS / 12
+            d.setBounds(padL.toInt() - m, pinTop, padL.toInt() - m + pinS, pinTop + pinS); d.draw(c)
+        }
+        c.drawText(nm, padL + pinS * .8f, h * .475f, name)
         val cond = paint(.075f)
-        c.drawText(f?.let { WeatherApi.condition(it.code) } ?: tr("No data yet", "Henüz veri yok"), padL * .9f, h * .78f, cond)
+        val ct = f?.let { WeatherApi.condition(it.code) } ?: tr("No data yet", "Henüz veri yok")
+        c.drawText(ct, left(cond, ct), h * .78f, cond)
         val today = f?.days?.firstOrNull()
-        if (today != null) c.drawText("↑${WeatherFmt.temp(today.max, imp)} / ↓${WeatherFmt.temp(today.min, imp)}", padL * .9f, h * .88f, paint(.062f))
+        if (today != null) { val rt = "↑${WeatherFmt.temp(today.max, imp)} / ↓${WeatherFmt.temp(today.min, imp)}"; val rp = paint(.062f); c.drawText(rt, left(rp, rt), h * .88f, rp) }
         // right: the sky, the date and the time
         val icon = f?.let { WeatherApi.drawable(it.code) } ?: 0
         if (icon != 0) ContextCompat.getDrawable(ctx, icon)?.let { d ->
