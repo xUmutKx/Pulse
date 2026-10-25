@@ -594,16 +594,19 @@ private fun RowScope.ActionKey(th: KbTheme, h: androidx.compose.ui.unit.Dp, icon
     Box(
         Modifier.weight(1f).height(h).pointerInput(repeat) {
             awaitEachGesture {
-                val d = awaitFirstDown(requireUnconsumed = false); d.consume(); down = true; tap()
-                var due = android.os.SystemClock.uptimeMillis() + 380L
-                while (true) {
-                    val ev = withTimeoutOrNull((due - android.os.SystemClock.uptimeMillis()).coerceAtLeast(1L)) { awaitPointerEvent() }
-                    if (ev == null) { if (repeat) tap(); due = android.os.SystemClock.uptimeMillis() + 70L; continue }
-                    val c = ev.changes.firstOrNull { it.id == d.id } ?: break
-                    c.consume()
-                    if (c.changedToUp() || !c.pressed) break
-                }
-                down = false
+                val d = awaitFirstDown(requireUnconsumed = false); d.consume(); down = true
+                // the key must not stay lit when the touch is cancelled or the tap throws
+                try {
+                    tap()
+                    var due = android.os.SystemClock.uptimeMillis() + 380L
+                    while (true) {
+                        val ev = withTimeoutOrNull((due - android.os.SystemClock.uptimeMillis()).coerceAtLeast(1L)) { awaitPointerEvent() }
+                        if (ev == null) { if (repeat) tap(); due = android.os.SystemClock.uptimeMillis() + 70L; continue }
+                        val c = ev.changes.firstOrNull { it.id == d.id } ?: break
+                        c.consume()
+                        if (c.changedToUp() || !c.pressed) break
+                    }
+                } finally { down = false }
             }
         }.padding(KeyboardPrefs.keyGap.dp / 2),
     ) {
