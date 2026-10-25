@@ -1244,3 +1244,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.81 APK info dialog in detail + Save APKs, split zip parts joined, bundles in a folder, Save as name field Material, autocorrect strength + context + keep-case, emoji mix
 - 1.0.82 Speed test Start button: transparent, outlined in the accent colour
 - 1.0.83 Keyboard: a learned slip never turns a real word into a rarer one; real-word pairs need 5 sightings (derlenmedi)
+- 1.0.84 Weather: settings page (colours, unit, source, alerts), top bar cleared, hours/days first, 96 h + 16 days, MGM source, moon image, richer clouds, wind compass (derlenmedi)

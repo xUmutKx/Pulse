@@ -39,24 +39,31 @@ fun MoonPhase(nowMs: Long, fg: Color, sub: Color) {
     val syn = WeatherFmt.SYNODIC
     // cos is 1 at new moon and -1 at full: below 0 the lit part is more than half
     val c = cos(2 * PI * age / syn).toFloat()
-    val lit = Color(0xFFE9E7DF)
-    val dark = Color(0xFF1C2130)
-    // waxing lights the right side, waning the left side
-    val start = if (age < syn / 2) -90f else 90f
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
         Canvas(Modifier.size(84.dp)) {
             val r = size.minDimension / 2
             val center = Offset(size.width / 2, size.height / 2)
-            val box = Offset(center.x - r, center.y - r)
-            drawCircle(dark, r, center)
-            drawArc(lit, start, 180f, true, box, Size(2 * r, 2 * r))
-            // the terminator: a half ellipse that is lit (gibbous) or dark (crescent)
+            // the unlit disc first, faintly lit by the earth, then the lit part cut from the phase and drawn with the moon's seas and craters
+            drawCircle(Color(0xFF232A3D), r, center)
+            drawCircle(Color(0xFF3A4259).copy(alpha = .5f), r * .3f, Offset(center.x - r * .3f, center.y - r * .2f))
             val rx = r * abs(c)
-            val ell = Offset(center.x - rx, center.y - r)
-            val ellSize = Size(2 * rx, 2 * r)
-            if (c < 0) drawArc(lit, start + 180f, 180f, true, ell, ellSize)
-            else drawArc(dark, start, 180f, true, ell, ellSize)
-            drawCircle(sub.copy(alpha = .4f), r, center, style = Stroke(1.dp.toPx()))
+            val lit = androidx.compose.ui.graphics.Path().apply {
+                val circle = androidx.compose.ui.geometry.Rect(Offset(center.x - r, center.y - r), Size(2 * r, 2 * r))
+                val ell = androidx.compose.ui.geometry.Rect(Offset(center.x - rx, center.y - r), Size(2 * rx, 2 * r))
+                // right side lit (waxing): the right half of the disc, closed by the terminator that bulges left when more than half is lit, right when less
+                arcTo(circle, -90f, 180f, true)
+                arcTo(ell, 90f, if (c < 0) 180f else -180f, false)
+                close()
+            }
+            val flip = age >= syn / 2
+            androidx.compose.ui.graphics.drawscope.withTransform({ if (flip) scale(-1f, 1f, center) }) {
+                androidx.compose.ui.graphics.drawscope.clipPath(lit) {
+                    drawCircle(androidx.compose.ui.graphics.Brush.radialGradient(listOf(Color(0xFFFFFBEA), Color(0xFFE9E3CC), Color(0xFFC9C3AD)), Offset(center.x - r * .3f, center.y - r * .3f), r * 1.5f), r, center)
+                    listOf(Triple(-.28f, -.2f, .3f), Triple(.12f, -.35f, .22f), Triple(.25f, .08f, .26f), Triple(-.1f, .3f, .2f)).forEach { (x, y, k) -> drawCircle(Color(0xFF8C8672).copy(alpha = .35f), r * k, Offset(center.x + r * x, center.y + r * y)) }
+                    listOf(Triple(.4f, -.45f, .09f), Triple(-.5f, .15f, .08f), Triple(.05f, .55f, .07f), Triple(.55f, .42f, .06f)).forEach { (x, y, k) -> drawCircle(Color(0xFF8C8672).copy(alpha = .45f), r * k, Offset(center.x + r * x, center.y + r * y), style = Stroke(r * .03f)) }
+                }
+            }
+            drawCircle(sub.copy(alpha = .35f), r, center, style = Stroke(1.dp.toPx()))
         }
         Column {
             Text(WeatherFmt.moon(nowMs), color = fg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)

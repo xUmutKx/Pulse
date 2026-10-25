@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -79,7 +80,8 @@ fun WeatherHub(onBack: () -> Unit) {
     var imp by remember { mutableStateOf(WeatherFmt.imperial(ctx)) }
     var alerts by remember { mutableStateOf(WeatherStore.alertsOn(ctx)) }
     var showList by remember { mutableStateOf(false) }
-    var hours48 by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+    var showSettings by remember { mutableStateOf(false) }
+    var source by remember { mutableStateOf(WeatherStore.source(ctx)) }
     var skin by remember { mutableStateOf(WeatherStore.skin(ctx)) }
     val devicePlace = Place(tr("My location", "Konumum"), 0.0, 0.0, device = true)
 
@@ -94,7 +96,7 @@ fun WeatherHub(onBack: () -> Unit) {
                     withContext(Dispatchers.IO) {
                         val raw = WeatherApi.forecast(spot.lat, spot.lon)
                         val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
-                        val ex = WeatherApi.extras(spot.lat, spot.lon)
+                        val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm")
                         WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
                         WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
                     }
@@ -130,7 +132,7 @@ fun WeatherHub(onBack: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { WeatherAuto.ensure(ctx) }
-    BackHandler { if (searching) searching = false else if (showList) showList = false else onBack() }
+    BackHandler { if (showSettings) showSettings = false else if (searching) searching = false else if (showList) showList = false else onBack() }
     // first paint from the cache, then one refresh for a saved city or the phone's place when it is allowed
     LaunchedEffect(Unit) {
         val p = place
@@ -152,6 +154,15 @@ fun WeatherHub(onBack: () -> Unit) {
         val to = (cur + delta).coerceIn(0, order.lastIndex)
         if (to != cur) { val p = order[to]; if (p.device) useDevice() else load(p) }
     }
+    if (showSettings) {
+        WeatherSettings(fg, sub, bgBrush, skin, imp, source, alerts,
+            onSkin = { skin = it; WeatherStore.setSkin(ctx, it) },
+            onUnits = { imp = it; WeatherStore.setUnits(ctx, if (it) "f" else "c") },
+            onSource = { source = it; WeatherStore.setSource(ctx, it); place?.let { p -> load(p) } },
+            onAlerts = { setAlerts(it) },
+            onBack = { showSettings = false })
+        return
+    }
     if (showList) {
         PlacesPage(order, place, fg, sub, bgBrush, imp, hasLocation(ctx),
             onPick = { p -> showList = false; if (p.device) useDevice() else load(p) },
@@ -172,15 +183,10 @@ fun WeatherHub(onBack: () -> Unit) {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PIcon("back", fg, 22.dp, Modifier.clickable { if (searching) searching = false else onBack() })
                 Text(tr("Weather", "Hava durumu"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp))
-                Box(Modifier.clickable { imp = !imp; WeatherStore.setUnits(ctx, if (imp) "f" else "c") }.padding(horizontal = 6.dp, vertical = 8.dp)) {
-                    Text(if (imp) "°F" else "°C", color = fg, fontSize = 15.sp, fontWeight = FontWeight.Medium)
-                }
                 com.umutk.pulse.ExtraLookIcon(fg)
                 Box(Modifier.size(40.dp).clickable { showList = true }, contentAlignment = Alignment.Center) { PIcon("details", fg, 22.dp) }
-                Box(Modifier.size(40.dp).clickable { skin = when (skin) { "sky" -> "amoled"; "amoled" -> "app"; else -> "sky" }; WeatherStore.setSkin(ctx, skin) }, contentAlignment = Alignment.Center) { Text("◐", color = fg, fontSize = 20.sp) }
-                Box(Modifier.size(40.dp).clickable { searching = !searching; error = "" }, contentAlignment = Alignment.Center) { PIcon("search", fg, 22.dp) }
-                Box(Modifier.size(40.dp).clickable { useDevice() }, contentAlignment = Alignment.Center) { PIcon("compass", fg, 22.dp) }
                 Box(Modifier.size(40.dp).clickable { place?.let { load(it) } }, contentAlignment = Alignment.Center) { PIcon("refresh", fg, 22.dp) }
+                Box(Modifier.size(40.dp).clickable { showSettings = true }, contentAlignment = Alignment.Center) { PIcon("settings", fg, 22.dp) }
             }
         }
         if (searching) {
@@ -235,12 +241,12 @@ fun WeatherHub(onBack: () -> Unit) {
             val rainSoon = f.hours.take(6).maxOfOrNull { it.rain } ?: 0
             item {
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp))) {
-                WeatherScene(f.code, Modifier.matchParentSize())
+                WeatherScene(f.code, Modifier.matchParentSize(), day = f.isDay)
                 Column(Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     val wh = androidx.compose.ui.graphics.Color.White
                     Text(f.place, color = wh.copy(alpha = .85f), fontSize = 15.sp, maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        WeatherGlyph(f.code, 76.dp)
+                        WeatherGlyph(f.code, 76.dp, day = f.isDay)
                         Text(t(f.temp), color = wh, fontSize = 68.sp, fontWeight = FontWeight.Light)
                     }
                     Text(WeatherApi.condition(f.code), color = wh, fontSize = 19.sp)
@@ -262,6 +268,35 @@ fun WeatherHub(onBack: () -> Unit) {
                     }
                 }
             }
+            // the hours: 96 of them, the row runs on to the right as it is swiped; a day name stands at each midnight
+            item { Text(tr("Next hours", "Sonraki saatler"), color = sub, fontSize = 13.sp) }
+            item {
+                LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                    items(if (f.hours48.isNotEmpty()) f.hours48 else f.hours) { h ->
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            val midnight = h.time.length >= 16 && h.time.substring(11, 16) == "00:00"
+                            Text(if (midnight) runCatching { LocalDate.parse(h.time.take(10)).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault("") else WeatherFmt.clock(h.time), color = if (midnight) fg else sub, fontSize = 12.sp, fontWeight = if (midnight) FontWeight.Medium else FontWeight.Normal)
+                            WeatherGlyph(h.code, 30.dp, day = h.time.length < 16 || h.time.substring(11, 13).toIntOrNull()?.let { it in 6..19 } != false)
+                            Text(t(h.temp), color = fg, fontSize = 15.sp)
+                            Text(if (h.rain > 0) "${h.rain}%" else "", color = sub, fontSize = 10.sp)
+                        }
+                    }
+                }
+            }
+            item { Text(tr("Next days", "Sonraki günler"), color = sub, fontSize = 13.sp) }
+            items(f.days, key = { it.date }) { d ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        runCatching { LocalDate.parse(d.date).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault(d.date),
+                        color = fg, fontSize = 15.sp, modifier = Modifier.width(64.dp),
+                    )
+                    WeatherGlyph(d.code, 28.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(if (d.rain > 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
+                    Spacer(Modifier.weight(1f))
+                    Text("${t(d.min)} / ${t(d.max)}", color = fg, fontSize = 15.sp)
+                }
+            }
             // the sun's path today and the moon now, drawn rather than written
             item {
                 Column(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(14.dp)) {
@@ -276,33 +311,16 @@ fun WeatherHub(onBack: () -> Unit) {
             if (f.pollen.isNotEmpty()) item { PollenCard(f.pollen, fg, sub) }
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        UvCard(today?.uv ?: 0.0, fg, sub, Modifier.weight(1f)); HumidityCard(f.humidity, tr("Humidity", "Nem"), fg, sub, Modifier.weight(1f))
+                    Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        UvCard(today?.uv ?: 0.0, fg, sub, Modifier.weight(1f).fillMaxHeight()); HumidityCard(f.humidity, tr("Humidity", "Nem"), fg, sub, Modifier.weight(1f).fillMaxHeight())
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        WindCard(f.wind, f.windDir, imp, fg, sub, Modifier.weight(1f))
-                        ValueCard(tr("Dew point", "Çiy noktası"), t(f.dew), if (f.dew > 18) tr("Noticeable humidity", "Nem hissediliyor") else tr("Comfortable", "Rahat"), fg, sub, Modifier.weight(1f))
+                    Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        WindCard(f.wind, f.windDir, imp, fg, sub, Modifier.weight(1f).fillMaxHeight())
+                        ValueCard(tr("Dew point", "Çiy noktası"), t(f.dew), if (f.dew > 18) tr("Noticeable humidity", "Nem hissediliyor") else tr("Comfortable", "Rahat"), fg, sub, Modifier.weight(1f).fillMaxHeight())
                     }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PressureCard(f.pressure, fg, sub, Modifier.weight(1f))
-                        ValueCard(tr("Visibility", "Görüş"), if (f.visKm >= 0) "%.1f km".format(f.visKm) else "—", if (f.visKm >= 10) tr("Good right now", "Şu an iyi") else if (f.visKm >= 0) tr("Reduced", "Azalmış") else "", fg, sub, Modifier.weight(1f))
-                    }
-                }
-            }
-            item {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(if (hours48) tr("Next 48 hours", "Sonraki 48 saat") else tr("Next 24 hours", "Sonraki 24 saat"), color = sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                    Text(if (hours48) "24" else "48", color = fg, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(WxTheme.panel).clickable { hours48 = !hours48 }.padding(horizontal = 12.dp, vertical = 6.dp))
-                }
-            }
-            item {
-                LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(if (hours48 && f.hours48.isNotEmpty()) f.hours48 else f.hours) { h ->
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(WeatherFmt.clock(h.time), color = sub, fontSize = 12.sp)
-                            WeatherGlyph(h.code, 30.dp)
-                            Text(t(h.temp), color = fg, fontSize = 15.sp)
-                        }
+                    Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PressureCard(f.pressure, fg, sub, Modifier.weight(1f).fillMaxHeight())
+                        ValueCard(tr("Visibility", "Görüş"), if (f.visKm >= 0) "%.1f km".format(f.visKm) else "—", if (f.visKm >= 10) tr("Good right now", "Şu an iyi") else if (f.visKm >= 0) tr("Reduced", "Azalmış") else "", fg, sub, Modifier.weight(1f).fillMaxHeight())
                     }
                 }
             }
@@ -327,41 +345,19 @@ fun WeatherHub(onBack: () -> Unit) {
                 )
                 if (today != null) {
                     d += tr("Sunshine", "Güneşlenme") to "%.1f h".format(today.sun)
-                    d += tr("Sunrise", "Gün doğumu") to WeatherFmt.clock(today.sunrise)
-                    d += tr("Sunset", "Gün batımı") to WeatherFmt.clock(today.sunset)
-                    d += tr("Day length", "Gündüz süresi") to WeatherFmt.dayLength(today.sunrise, today.sunset)
                 }
                 if (f.aqi >= 0) d += tr("Air quality", "Hava kalitesi") to "${f.aqi} · ${WeatherFmt.aqi(f.aqi)}"
-                d += tr("Moon", "Ay") to WeatherFmt.moon()
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     d.chunked(2).forEach { r ->
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            r.forEach { (l, v) -> Tile(l, v, fg, sub, Modifier.weight(1f)) }
+                        Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            r.forEach { (l, v) -> Tile(l, v, fg, sub, Modifier.weight(1f).fillMaxHeight()) }
                             if (r.size == 1) Spacer(Modifier.weight(1f))
                         }
                     }
                 }
             }
-            items(f.days, key = { it.date }) { d ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        runCatching { LocalDate.parse(d.date).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault(d.date),
-                        color = fg, fontSize = 15.sp, modifier = Modifier.width(64.dp),
-                    )
-                    WeatherGlyph(d.code, 28.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Text(if (d.rain > 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
-                    Spacer(Modifier.weight(1f))
-                    Text("${t(d.min)} / ${t(d.max)}", color = fg, fontSize = 15.sp)
-                }
-            }
         }
-        item {
-            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Severe weather alerts", "Sert hava uyarıları"), color = fg, fontSize = 15.sp, modifier = Modifier.weight(1f))
-                PSwitch(alerts, { setAlerts(it) })
-            }
-        }
+        fc?.let { f -> if (f.viaMgm) item { Text(tr("Now and the first hours: MGM. Longer ranges: Open-Meteo.", "Şu an ve ilk saatler: MGM. Uzun vadeli: Open-Meteo."), color = sub, fontSize = 11.sp) } }
         if (busy) item { Text(tr("Loading...", "Yükleniyor..."), color = sub, fontSize = 13.sp) }
         if (error.isNotEmpty()) item { Text(error, color = sub, fontSize = 13.sp) }
     }
@@ -454,5 +450,38 @@ private fun Tile(label: String, value: String, fg: androidx.compose.ui.graphics.
     Column(modifier.background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(16.dp)).padding(horizontal = 14.dp, vertical = 12.dp)) {
         Text(label, color = sub, fontSize = 12.sp)
         Text(value, color = fg, fontSize = 20.sp, fontWeight = FontWeight.Light, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+/** The weather settings: how the page looks, the unit, where the data comes from, the alerts. Full rows that open a list, like the other settings screens. */
+@Composable
+private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp: Boolean, source: String, alerts: Boolean,
+                            onSkin: (String) -> Unit, onUnits: (Boolean) -> Unit, onSource: (String) -> Unit, onAlerts: (Boolean) -> Unit, onBack: () -> Unit) {
+    var ask by remember { mutableStateOf("") }
+    val skins = listOf("sky" to tr("Sky (follows the weather)", "Gökyüzü (havaya göre)"), "amoled" to "AMOLED", "app" to tr("App look", "Uygulama teması"))
+    val sources = listOf("om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"))
+    @Composable fun Row2(title: String, value: String, onClick: () -> Unit) {
+        Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text(value, color = sub, fontSize = 14.sp)
+        }
+    }
+    Column(Modifier.fillMaxSize().background(bg).padding(horizontal = pageGutter)) {
+        Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("back", fg, 22.dp, Modifier.clickable(onClick = onBack))
+            Text(tr("Weather settings", "Hava durumu ayarları"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 8.dp))
+        }
+        Row2(tr("Colours", "Renkler"), skins.first { it.first == skin }.second) { ask = "skin" }
+        Row2(tr("Temperature unit", "Sıcaklık birimi"), if (imp) "°F" else "°C") { ask = "units" }
+        Row2(tr("Data source", "Veri kaynağı"), sources.first { it.first == source }.second) { ask = "source" }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Severe weather alerts", "Sert hava uyarıları"), color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            PSwitch(alerts, onAlerts)
+        }
+        Text(tr("MGM gives the station values of now and the first hours for places in Turkey; the 96 hours and 16 days come from Open-Meteo.", "MGM, Türkiye'deki yerler için şu anın ve ilk saatlerin istasyon değerlerini verir; 96 saat ve 16 gün Open-Meteo'dan gelir."), color = sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+    }
+    when (ask) {
+        "skin" -> com.umutk.pulse.extras.video.PickDialog(tr("Colours", "Renkler"), skins.map { it.second to (it.first == skin) }, { ask = "" }) { onSkin(skins[it].first); ask = "" }
+        "units" -> com.umutk.pulse.extras.video.PickDialog(tr("Temperature unit", "Sıcaklık birimi"), listOf("°C" to !imp, "°F" to imp), { ask = "" }) { onUnits(it == 1); ask = "" }
+        "source" -> com.umutk.pulse.extras.video.PickDialog(tr("Data source", "Veri kaynağı"), sources.map { it.second to (it.first == source) }, { ask = "" }) { onSource(sources[it].first); ask = "" }
     }
 }
