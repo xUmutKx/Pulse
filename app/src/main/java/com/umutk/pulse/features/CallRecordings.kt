@@ -68,6 +68,12 @@ private fun contactPhoto(ctx: Context, name: String): ImageBitmap? = runCatching
     }
 }.getOrNull()
 
+/** The person chosen at the top of the call recordings page and the days closed; they outlive the page being redrawn. */
+object CallUi {
+    var pick by mutableStateOf<String?>(null)
+    var closed by mutableStateOf(setOf<String>())
+}
+
 /**
  * The call recordings page: the nine people called most, three by three (a tap shows only their calls), and below the calls grouped by day, each day
  * closing and opening. A tap plays the recording in the player of Files.
@@ -78,8 +84,9 @@ internal fun CallPane(files: List<File>, onPlay: (File) -> Unit) {
     val audio = remember(files) { files.filter { it.isFile && it.extension.lowercase() in EX_AUDIO }.sortedByDescending { it.lastModified() } }
     val names = remember(audio) { audio.associateWith { callName(it) } }
     val top = remember(audio) { names.values.groupingBy { it.lowercase() }.eachCount().entries.sortedByDescending { it.value }.take(9).map { e -> names.values.first { it.lowercase() == e.key } to e.value } }
-    var pick by remember { mutableStateOf<String?>(null) }
-    var closed by remember { mutableStateOf(setOf<String>()) }
+    // kept outside the page: the page is drawn again whenever the folder reloads, and the chosen person must not be forgotten with it
+    var pick by CallUi::pick
+    var closed by CallUi::closed
     val shown = if (pick == null) audio else audio.filter { names[it]?.lowercase() == pick }
     val day = remember { SimpleDateFormat("EEEE, d MMMM yyyy", Locale.getDefault()) }
     val key = remember { SimpleDateFormat("yyyy-MM-dd", Locale.US) }
