@@ -27,7 +27,7 @@ class PaletteIconProvider : ContentProvider() {
                 PaletteStudio.apps(c).load().forEach { cur.addRow(arrayOf(it.component, it.label, "content://${c.packageName}.palette.icons/icon/${it.packageName}/${it.activityName}")) }
                 cur
             }
-            "info" -> MatrixCursor(arrayOf("name", "dynamic", "version")).apply { addRow(arrayOf("Pulse Palette", 1, 1)) }
+            "info" -> MatrixCursor(arrayOf("name", "dynamic", "version")).apply { addRow(arrayOf<Any>("Pulse Palette", 1, 1)) }
             else -> null
         }
     }
