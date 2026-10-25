@@ -287,8 +287,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             updateSuggestions()
         } else {
             // a word is only mended when the space key ends it: a period, comma or bracket leaves what was typed as it is
-            finishWord(s, false)
-            c.commitText(s, 1)
+            c.beginBatchEdit()
+            try { finishWord(s, false); c.commitText(s, 1) } finally { c.endBatchEdit() }
             punctTyped = ch in ",;!?:"
             lastWasSpace = false
             if (ch in ".!?") lastCorrection = null
@@ -357,8 +357,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (word.isEmpty() && KeyboardPrefs.quickPrediction && !st.plain && slotWords[1].isNotEmpty() && prevWord != null) {
             c.commitText(slotWords[1] + " ", 1); prevWord = slotWords[1]; lastWasSpace = true; spaceTap = now; afterText(); return
         }
-        finishWord(" ", true)
-        c.commitText(" ", 1)
+        // the correction and the space go in as one edit, so the field never shows the word gone for a moment
+        c.beginBatchEdit()
+        try { finishWord(" ", true); c.commitText(" ", 1) } finally { c.endBatchEdit() }
         lastWasSpace = true; spaceTap = now; punctTyped = false
         afterText()
     }
@@ -368,7 +369,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
         if (st.trans) { transOp("apply"); return }
         captureEmail(c)
-        finishWord("\n", true)
+        c.beginBatchEdit()
+        try { finishWord("\n", true) } finally { c.endBatchEdit() }
         if (st.enter != "newline") {
             val info = currentInputEditorInfo
             c.performEditorAction(info?.imeOptions?.and(EditorInfo.IME_MASK_ACTION) ?: EditorInfo.IME_ACTION_DONE)
