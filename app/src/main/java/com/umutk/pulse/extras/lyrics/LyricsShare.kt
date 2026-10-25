@@ -103,8 +103,11 @@ object LyricsShare {
     }
 
     /** The card alone as a picture with see-through corners and no background: the cover, the song, the chosen lines and a small mark, on [card]. */
-    fun render(title: String, artist: String, art: Bitmap?, lines: List<String>, card: Int, w: Int = 1080): Bitmap {
-        val ink = readable(card)
+    fun render(title: String, artist: String, art: Bitmap?, lines: List<String>, card: Int, w: Int = 1080, photo: Boolean = false): Bitmap {
+        val onPhoto = photo && art != null
+        // on the cover photo itself: a light cover gets a pale veil and dark writing, a dark cover a dark veil and white writing
+        val lightPhoto = onPhoto && ColorUtils.calculateLuminance(Bitmap.createScaledBitmap(art!!, 1, 1, true).getPixel(0, 0)) > .5
+        val ink = if (onPhoto) (if (lightPhoto) 0xFF111111.toInt() else 0xFFFFFFFF.toInt()) else readable(card)
         val pad = 64f
         val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ink; textSize = 62f * w / 1080f; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
         val k = w / 1080f
@@ -118,14 +121,26 @@ object LyricsShare {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         c.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), 56f * k, 56f * k, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = card })
+        if (onPhoto) {
+            // the cover fills the card (centre crop), then the veil keeps the writing readable
+            val full = RectF(0f, 0f, w.toFloat(), h.toFloat())
+            val clip = android.graphics.Path().apply { addRoundRect(full, 56f * k, 56f * k, android.graphics.Path.Direction.CW) }
+            val scale = maxOf(w.toFloat() / art!!.width, h.toFloat() / art.height)
+            val sw = (w / scale).toInt().coerceAtMost(art.width); val sh = (h / scale).toInt().coerceAtMost(art.height)
+            val src = android.graphics.Rect((art.width - sw) / 2, (art.height - sh) / 2, (art.width + sw) / 2, (art.height + sh) / 2)
+            c.save(); c.clipPath(clip)
+            c.drawBitmap(art, src, full, Paint(Paint.FILTER_BITMAP_FLAG))
+            c.drawRect(full, Paint().apply { color = if (lightPhoto) 0x99FFFFFF.toInt() else 0x99000000.toInt() })
+            c.restore()
+        }
         var y = pad * k
         val left = pad * k
-        if (art != null) {
+        if (art != null && !onPhoto) {
             val r = RectF(left, y, left + 150f * k, y + 150f * k)
             val clip = android.graphics.Path().apply { addRoundRect(r, 18f * k, 18f * k, android.graphics.Path.Direction.CW) }
             c.save(); c.clipPath(clip); c.drawBitmap(art, null, r, Paint(Paint.FILTER_BITMAP_FLAG)); c.restore()
         }
-        val tx = left + (if (art != null) (150f + 28f) * k else 0f)
+        val tx = left + (if (art != null && !onPhoto) (150f + 28f) * k else 0f)
         val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ink; textSize = 50f * k; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
         val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(ink, 170); textSize = 42f * k; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
         val room = w - pad * k - tx
@@ -182,8 +197,10 @@ fun LyricsSelect(res: LyricsResult, selected: Set<Int>, onToggle: (Int) -> Unit,
 fun LyricsSharePage(title: String, artist: String, art: androidx.compose.ui.graphics.ImageBitmap?, lines: List<String>, style: Int, onStyle: (Int) -> Unit, onShare: (Bitmap) -> Unit, modifier: Modifier = Modifier) {
     val artBmp = remember(art) { art?.asAndroidBitmap() }
     val colors = remember(artBmp) { LyricsShare.palette(artBmp) }
+    // the last choice is the cover photo itself as the card
+    val photo = artBmp != null && style == colors.size
     val card = colors[style.coerceIn(0, colors.lastIndex)]
-    val bmp = remember(title, artist, artBmp, lines, card) { LyricsShare.render(title, artist, artBmp, lines, card, 720) }
+    val bmp = remember(title, artist, artBmp, lines, card, photo) { LyricsShare.render(title, artist, artBmp, lines, card, 720, photo) }
     val img = remember(bmp) { bmp.asImageBitmap() }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
         Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 28.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
@@ -193,8 +210,11 @@ fun LyricsSharePage(title: String, artist: String, art: androidx.compose.ui.grap
             colors.forEachIndexed { s, col ->
                 Box(Modifier.size(36.dp).clip(CircleShape).background(Color(col)).border(if (s == style) 3.dp else 1.dp, if (s == style) Color.White else Color.White.copy(alpha = .4f), CircleShape).clickable { onStyle(s) })
             }
+            if (art != null) Box(Modifier.size(36.dp).clip(CircleShape).border(if (photo) 3.dp else 1.dp, if (photo) Color.White else Color.White.copy(alpha = .4f), CircleShape).clickable { onStyle(colors.size) }) {
+                Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            }
         }
-        Row(Modifier.padding(vertical = 18.dp).clip(RoundedCornerShape(26.dp)).background(Color.White).clickable { onShare(LyricsShare.render(title, artist, artBmp, lines, card)) }.padding(horizontal = 34.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(vertical = 18.dp).clip(RoundedCornerShape(26.dp)).background(Color.White).clickable { onShare(LyricsShare.render(title, artist, artBmp, lines, card, photo = photo)) }.padding(horizontal = 34.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("share", Color.Black, 20.dp)
             Text(tr("Share", "Paylaş"), color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 10.dp))
         }

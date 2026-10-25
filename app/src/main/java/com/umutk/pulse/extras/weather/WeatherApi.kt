@@ -58,8 +58,10 @@ object WeatherApi {
      */
     fun extras(lat: Double, lon: Double, mgm: Boolean = false, combine: Boolean = false): String = runCatching {
         val out = JSONObject()
-        if (combine) runCatching { ensemble(lat, lon)?.let { out.put("ens", it) } }
-        if (mgm) runCatching { mgmOverlay(lat, lon)?.let { out.put("mgm", it) } }
+        // MGM first: its hours are one more voice in the combined hours, not something the combined hours then paint over
+        val m = if (mgm) runCatching { mgmOverlay(lat, lon) }.getOrNull() else null
+        m?.let { out.put("mgm", it) }
+        if (combine) runCatching { ensemble(lat, lon, m)?.let { out.put("ens", it) } }
         runCatching {
             val d = JSONObject(get("https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&daily=temperature_2m_max,temperature_2m_min&past_days=1&forecast_days=1&timezone=auto".format(java.util.Locale.US, lat, lon))).getJSONObject("daily")
             out.put("ymax", d.getJSONArray("temperature_2m_max").getDouble(0)).put("ymin", d.getJSONArray("temperature_2m_min").getDouble(0))
@@ -74,7 +76,19 @@ object WeatherApi {
     }.getOrDefault("")
 
     /** City search; the label is "Name, region, country". Empty when nothing matches. */
-    fun search(query: String): List<Place> {
+    fun search(query: String, ctx: android.content.Context? = null): List<Place> {
+        val net = runCatching { searchNet(query) }.getOrDefault(emptyList())
+        if (net.isNotEmpty() || ctx == null) return net
+        // the web service did not answer: the phone's own geocoder, when it has one
+        return runCatching {
+            @Suppress("DEPRECATION")
+            android.location.Geocoder(ctx, java.util.Locale.getDefault()).getFromLocationName(query.trim(), 5).orEmpty().map { a ->
+                Place(listOf(a.locality ?: a.featureName, a.adminArea, a.countryName).filterNotNull().filter { it.isNotBlank() }.distinct().joinToString(", "), a.latitude, a.longitude)
+            }
+        }.getOrDefault(emptyList())
+    }
+
+    private fun searchNet(query: String): List<Place> {
         val url = "https://geocoding-api.open-meteo.com/v1/search?name=${URLEncoder.encode(query.trim(), "UTF-8")}&count=5&format=json&language=${lang()}"
         val arr = JSONObject(get(url)).optJSONArray("results") ?: return emptyList()
         return (0 until arr.length()).map { i ->
@@ -84,10 +98,15 @@ object WeatherApi {
         }
     }
 
+    /** The last network failure in words (HTTP code or the exception), shown beside "could not load" so a failing phone says why. */
+    @Volatile var lastError: String = ""
+
     private fun get(url: String): String {
         val cn = openHttps(url)
+        cn.setRequestProperty("User-Agent", "Pulse/1.0 (github.com/xUmutKx/Pulse)"); cn.setRequestProperty("Accept", "application/json")
         try {
-            val code = cn.responseCode
+            val code = try { cn.responseCode } catch (e: Exception) { lastError = e.javaClass.simpleName + ": " + (e.message ?: ""); throw e }
+            if (code != 200) lastError = "HTTP $code " + url.substringAfter("://").substringBefore('/')
             check(code == 200) { "HTTP $code" }
             return cn.inputStream.bufferedReader().use { it.readText() }
         } finally {
@@ -153,7 +172,7 @@ object WeatherApi {
     }
 
     /** {hours: [{t, temp, code, rain, n}], sources}, or null when fewer than two sources answered. */
-    fun ensemble(lat: Double, lon: Double): JSONObject? {
+    fun ensemble(lat: Double, lon: Double, mgm: JSONObject? = null): JSONObject? {
         // time -> temps, codes, rain
         class Slot { val temps = ArrayList<Double>(); val codes = ArrayList<Int>(); val rain = ArrayList<Int>() }
         val slots = java.util.TreeMap<String, Slot>()
@@ -186,6 +205,17 @@ object WeatherApi {
                 val d = e.getJSONObject("data")
                 d.getJSONObject("instant").getJSONObject("details").optDouble("air_temperature", Double.NaN).takeIf { !it.isNaN() }?.let { sl.temps += it; got = true }
                 d.optJSONObject("next_1_hours")?.optJSONObject("summary")?.optString("symbol_code")?.let { noaaSky(it) }?.takeIf { it >= 0 }?.let { sl.codes += it }
+            }
+            if (got) sources++
+        }
+        // MGM's own hours, for a place in Turkey when the MGM source is chosen
+        mgm?.optJSONArray("hours")?.let { a ->
+            var got = false
+            for (i in 0 until a.length()) {
+                val e = a.getJSONObject(i)
+                val sl = slots[e.optString("t")] ?: continue
+                if (e.has("temp") && !e.isNull("temp")) { sl.temps += e.getDouble("temp"); got = true }
+                e.optInt("code", -1).takeIf { it >= 0 }?.let { sl.codes += it }
             }
             if (got) sources++
         }

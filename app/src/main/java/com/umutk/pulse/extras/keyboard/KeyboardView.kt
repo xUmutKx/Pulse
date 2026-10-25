@@ -159,6 +159,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.vector.toPath
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
@@ -258,7 +259,6 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
     Column(Modifier.onSizeChanged { if (p == "keys" && it.height > 0) st.keysH = it.height }) {
         when (p) {
             "emoji" -> EmojiPanel(th, st, act, keyH)
-            "mix" -> MixPanel(th, st, act, maxOf(panelHeight(st, keyH), keyH * 4.4f) + 44.dp)
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
@@ -305,7 +305,6 @@ private fun Trail(th: KbTheme, st: KbState) {
 @Composable
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
     if (st.trans) { TransBar(th, st, act); return }
-    if (st.panel == "mix") return
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
     Row(
@@ -318,10 +317,12 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
         BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
         if (st.toolbar) {
             Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                KeyboardPrefs.toolbarItems.split(',').filter { id -> ExtraKeys.toolbar.any { it.first == id } }.forEach { id ->
+                KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }.forEach { id ->
                     BarIcon(th, toolIcon(th, id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
                 }
             }
+            // the three dots always sit at the right end, drawn in Fluent
+            if (KeyboardPrefs.toolbarItems.split(',').contains("menu")) FluentBarIcon(th, "more", on = toolOn("menu", st)) { act.menu("menu") }
         } else if (st.inline.isNotEmpty()) {
             // a password manager has something for this field (login, password, card): its own suggestions take the bar
             Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -371,10 +372,6 @@ private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
             Box(Modifier.width(48.dp).fillMaxHeight().clickable { st.emojiTab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (st.emojiTab == 10) th.text else th.sub, fontSize = 15.sp) }
             Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (st.emojiTab == 11) th.text else th.sub, fontSize = 20.sp) }
         }
-        // the mix: two picks made into one picture
-        Box(Modifier.width(44.dp).fillMaxHeight().clickable { act.mixOp("open") }, contentAlignment = Alignment.Center) {
-            Icon(Icons.Rounded.AutoAwesome, null, tint = if (st.mix) th.accent else th.sub, modifier = Modifier.size(22.dp))
-        }
     }
   }
 }
@@ -398,6 +395,20 @@ private fun TransBar(th: KbTheme, st: KbState, act: KbActions) {
             Box(Modifier.width(1.dp).fillMaxHeight(.6f).background(th.sub.copy(alpha = .4f)))
             Box(Modifier.weight(1f).fillMaxHeight().clickable(enabled = st.transOut.isNotBlank()) { act.transOp("apply") }.padding(start = 8.dp), contentAlignment = Alignment.CenterStart) {
                 Text(if (st.transOut.isNotBlank()) st.transOut else if (st.transBusy) "…" else tr("Translation", "Çeviri"), color = if (st.transOut.isNotBlank()) th.accent else th.sub, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
+}
+
+/** A round bar button with a Fluent icon (the Fluent path of [key] drawn in the bar's colours). */
+@Composable
+private fun FluentBarIcon(th: KbTheme, key: String, on: Boolean = false, onClick: () -> Unit) {
+    val paths = remember(key) { (com.umutk.pulse.FluentPaths.map[key] ?: emptyList()).map { androidx.compose.ui.graphics.vector.PathParser().parsePathString(it).toPath() } }
+    val tint = if (on) th.accent else th.text
+    Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) {
+            androidx.compose.foundation.Canvas(Modifier.size(20.dp)) {
+                androidx.compose.ui.graphics.drawscope.scale(size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
             }
         }
     }

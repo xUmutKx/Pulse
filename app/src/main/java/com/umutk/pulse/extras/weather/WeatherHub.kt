@@ -105,7 +105,7 @@ fun WeatherHub(onBack: () -> Unit) {
                 res.onSuccess {
                     fc = it; place = spot; WeatherStore.setPlace(ctx, spot)
                     WeatherWidgets.refreshAll(ctx)
-                }.onFailure { error = tr("Could not load the weather.", "Hava durumu alınamadı.") }
+                }.onFailure { error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" } }
             }
             busy = false
         }
@@ -119,8 +119,8 @@ fun WeatherHub(onBack: () -> Unit) {
         if (query.isBlank()) return
         scope.launch {
             busy = true; error = ""
-            hits = withContext(Dispatchers.IO) { runCatching { WeatherApi.search(query) }.getOrDefault(emptyList()) }
-            if (hits.isEmpty()) error = tr("No city found.", "Şehir bulunamadı.")
+            hits = withContext(Dispatchers.IO) { WeatherApi.lastError = ""; runCatching { WeatherApi.search(query, ctx) }.getOrDefault(emptyList()) }
+            if (hits.isEmpty()) error = tr("No city found.", "Şehir bulunamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" }
             busy = false
         }
     }
@@ -365,6 +365,7 @@ fun WeatherHub(onBack: () -> Unit) {
             }
         }
         fc?.let { f -> if (f.viaMgm) item { Text(tr("Now and the first hours: MGM. Longer ranges: Open-Meteo.", "Şu an ve ilk saatler: MGM. Uzun vadeli: Open-Meteo."), color = sub, fontSize = 11.sp) } }
+        fc?.let { f -> if (f.sources >= 2) item { Text(tr("Next 24 hours: ${f.sources} forecasts combined", "Sonraki 24 saat: ${f.sources} tahmin birleştirildi"), color = sub, fontSize = 11.sp) } }
         if (busy) item { Text(tr("Loading...", "Yükleniyor..."), color = sub, fontSize = 13.sp) }
         if (error.isNotEmpty()) item { Text(error, color = sub, fontSize = 13.sp) }
     }
@@ -484,7 +485,7 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Combine several forecasts", "Birden fazla tahmini birleştir"), color = fg, fontSize = 16.sp)
-                Text(tr("The next 24 hours: Open-Meteo, ECMWF, GFS, ICON and met.no; the median temperature and the sky most of them agree on", "Sonraki 24 saat: Open-Meteo, ECMWF, GFS, ICON ve met.no; ortanca sıcaklık ve çoğunun uyuştuğu gökyüzü"), color = sub, fontSize = 12.sp)
+                Text(tr("The next 24 hours: four models through Open-Meteo (best match, ECMWF, GFS, ICON) and met.no, plus MGM for places in Turkey when it is the source; the middle temperature and the sky most of them agree on", "Sonraki 24 saat: Open-Meteo üzerinden dört model (en iyi eşleşme, ECMWF, GFS, ICON) ve met.no, kaynak MGM ise Türkiye için MGM de; orta sıcaklık ve çoğunun uyuştuğu gökyüzü"), color = sub, fontSize = 12.sp)
             }
             PSwitch(comb, { comb = it; onCombine(it) })
         }
@@ -511,14 +512,16 @@ private fun AddPlacePage(fg: Color, sub: Color, bg: Brush, onBack: () -> Unit, o
     var note by remember { mutableStateOf("") }
     val focus = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    val searchCtx = LocalContext.current
     // a short pause after the last key, then the lookup
     LaunchedEffect(q) {
         if (q.trim().length < 2) { hits = emptyList(); note = ""; return@LaunchedEffect }
         kotlinx.coroutines.delay(450)
         busy = true
-        val r = withContext(Dispatchers.IO) { runCatching { WeatherApi.search(q) } }
+        val r = withContext(Dispatchers.IO) { WeatherApi.lastError = ""; runCatching { WeatherApi.search(q, searchCtx) } }
         hits = r.getOrDefault(emptyList())
-        note = if (r.isFailure) tr("No connection.", "Bağlantı yok.") else if (hits.isEmpty()) tr("No city found.", "Şehir bulunamadı.") else ""
+        val why = WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" }
+        note = if (r.isFailure || (hits.isEmpty() && why.isNotEmpty())) tr("No connection.", "Bağlantı yok.") + why else if (hits.isEmpty()) tr("No city found.", "Şehir bulunamadı.") else ""
         busy = false
     }
     Box(Modifier.fillMaxSize().background(bg)) {
