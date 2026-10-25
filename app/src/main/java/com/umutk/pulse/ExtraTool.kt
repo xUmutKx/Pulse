@@ -37,8 +37,11 @@ import androidx.compose.ui.unit.sp
  * A store's own preference file. Its keys are copied once from the shared "p" file, then only this file is written:
  * other processes (Files, Photos, Office) hold a stale copy of "p" and would write old look keys back to disk.
  */
+@Suppress("DEPRECATION")
 fun ownPrefs(c: Context, name: String, keep: (String) -> Boolean = { true }): android.content.SharedPreferences {
-    val own = c.getSharedPreferences(name, Context.MODE_PRIVATE)
+    // MODE_MULTI_PROCESS: every open reads the file again if another process (Files, Photos, Office, Pulse) changed it, so a process never writes its old copy back over
+    // what another one saved (that is what moved the theme of Pulse when Files saved a setting)
+    val own = c.getSharedPreferences(name, Context.MODE_PRIVATE or Context.MODE_MULTI_PROCESS)
     if (own.getBoolean("_moved", false)) return own
     val e = own.edit()
     for ((k, v) in c.getSharedPreferences("p", Context.MODE_PRIVATE).all) if (keep(k)) when (v) {
@@ -47,6 +50,17 @@ fun ownPrefs(c: Context, name: String, keep: (String) -> Boolean = { true }): an
     }
     e.putBoolean("_moved", true).apply()
     return own
+}
+
+/**
+ * The Files app's own preference file: the ex_* options, the recent files and folders, the tree view. Files runs in a process of its own and Pulse runs in another, and
+ * both used to write the one shared "p" file from their own (stale) copy, so the one wiped what the other had just saved (the recent files, the look keys).
+ * MODE_MULTI_PROCESS makes every open read the file again if it changed.
+ */
+@Suppress("DEPRECATION")
+fun filesPrefs(c: Context): android.content.SharedPreferences {
+    ownPrefs(c, "files_data") { it.startsWith("ex_") || it.startsWith("tree_") || it == "tmp_copy_min" }
+    return c.getSharedPreferences("files_data", Context.MODE_PRIVATE or Context.MODE_MULTI_PROCESS)
 }
 
 /** The look of the music player, video player, white noise and playlists when opened from their own launcher icon: AMOLED black until the user picks another. */
