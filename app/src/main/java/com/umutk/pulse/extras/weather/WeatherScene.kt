@@ -15,6 +15,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -54,6 +55,32 @@ private fun DrawScope.cloud(cx: Float, cy: Float, w: Float, c: Color) {
     drawRoundRect(c, Offset(cx - w * .36f, cy - h * .02f), Size(w * .78f, h * .5f), androidx.compose.ui.geometry.CornerRadius(h * .25f))
 }
 
+/** A moon with a face: lit disc, grey seas and craters, a crescent cut from it. */
+internal fun DrawScope.moonDisc(cx: Float, cy: Float, r: Float, crescent: Boolean = false) {
+    val lit = Path().apply { addOval(androidx.compose.ui.geometry.Rect(Offset(cx - r, cy - r), Size(2 * r, 2 * r))) }
+    androidx.compose.ui.graphics.drawscope.clipPath(lit) {
+        drawCircle(Brush.radialGradient(listOf(Color(0xFFFFFBEA), Color(0xFFE9E3CC), Color(0xFFC9C3AD)), Offset(cx - r * .3f, cy - r * .3f), r * 1.5f), r, Offset(cx, cy))
+        // the seas and craters
+        val maria = listOf(Triple(-.28f, -.2f, .3f), Triple(.12f, -.35f, .22f), Triple(.25f, .08f, .26f), Triple(-.1f, .3f, .2f))
+        maria.forEach { (x, y, k) -> drawCircle(Color(0xFF8C8672).copy(alpha = .35f), r * k, Offset(cx + r * x, cy + r * y)) }
+        listOf(Triple(.4f, -.45f, .09f), Triple(-.5f, .15f, .08f), Triple(.05f, .55f, .07f), Triple(.55f, .42f, .06f)).forEach { (x, y, k) ->
+            drawCircle(Color(0xFF8C8672).copy(alpha = .45f), r * k, Offset(cx + r * x, cy + r * y), style = Stroke(r * .03f))
+        }
+        // a crescent: a disc of sky colour cut over the left side
+        if (crescent) drawCircle(Color(0xFF14213D).copy(alpha = .93f), r * .92f, Offset(cx - r * .55f, cy - r * .12f))
+    }
+}
+
+/** A soft cloud: many round puffs, brighter on top, so it reads as vapour and not as a flat shape. */
+private fun DrawScope.softCloud(cx: Float, cy: Float, w: Float, c: Color, alpha: Float) {
+    val h = w * .5f
+    val puffs = listOf(Triple(-.30f, .10f, .26f), Triple(-.12f, -.06f, .32f), Triple(.10f, -.12f, .36f), Triple(.30f, .02f, .28f), Triple(.02f, .12f, .34f), Triple(-.2f, .16f, .24f), Triple(.22f, .16f, .26f))
+    puffs.forEach { (x, y, k) ->
+        val r = w * k * .6f; val o = Offset(cx + w * x, cy + h * y)
+        drawCircle(Brush.radialGradient(listOf(c.copy(alpha = alpha), c.copy(alpha = alpha * .55f), c.copy(alpha = 0f)), o, r * 1.25f), r * 1.25f, o)
+    }
+}
+
 private fun DrawScope.sun(cx: Float, cy: Float, r: Float, spin: Float) {
     rotate(spin, Offset(cx, cy)) {
         for (i in 0 until 8) {
@@ -74,14 +101,14 @@ private fun DrawScope.bolt(cx: Float, top: Float, h: Float) {
 
 /** A small flat picture of the sky: sun, cloud, rain, snow, fog or a storm. Drawn, so every look has the same clear one. */
 @Composable
-fun WeatherGlyph(code: Int, size: Dp, modifier: Modifier = Modifier) {
+fun WeatherGlyph(code: Int, size: Dp, modifier: Modifier = Modifier, day: Boolean = true) {
     val k = skyOf(code)
     Canvas(modifier.size(size)) {
         val s = this.size.minDimension
         val c = s / 2f
         when (k) {
-            Sky.CLEAR -> sun(c, c, s * .24f, 0f)
-            Sky.PARTLY -> { sun(s * .38f, s * .36f, s * .17f, 0f); cloud(s * .56f, s * .6f, s * .7f, CLOUD) }
+            Sky.CLEAR -> if (day) sun(c, c, s * .24f, 0f) else moonDisc(c, c, s * .34f)
+            Sky.PARTLY -> { if (day) sun(s * .38f, s * .36f, s * .17f, 0f) else moonDisc(s * .38f, s * .36f, s * .22f); cloud(s * .56f, s * .6f, s * .7f, CLOUD) }
             Sky.CLOUD -> { cloud(s * .4f, s * .46f, s * .5f, CLOUD_DARK); cloud(s * .56f, s * .6f, s * .7f, CLOUD) }
             Sky.FOG -> {
                 cloud(c, s * .38f, s * .66f, CLOUD)
@@ -106,7 +133,7 @@ fun WeatherGlyph(code: Int, size: Dp, modifier: Modifier = Modifier) {
 
 /** The sky behind the hero card: a gradient by weather, with the weather moving in it (sun rays turning, clouds drifting, rain and snow falling, lightning). */
 @Composable
-fun WeatherScene(code: Int, modifier: Modifier = Modifier) {
+fun WeatherScene(code: Int, modifier: Modifier = Modifier, day: Boolean = true) {
     val k = skyOf(code)
     val t by rememberInfiniteTransition(label = "sky").animateFloat(0f, 1f, infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart), label = "t")
     val flash by rememberInfiniteTransition(label = "flash").animateFloat(0f, 1f, infiniteRepeatable(tween(5200, easing = LinearEasing), RepeatMode.Restart), label = "f")
@@ -121,15 +148,25 @@ fun WeatherScene(code: Int, modifier: Modifier = Modifier) {
             Sky.SNOW -> Color(0xFF6D86A6) to Color(0xFFDCE6F2)
             Sky.STORM -> Color(0xFF1E2535) to Color(0xFF495770)
         }
-        drawRect(Brush.verticalGradient(listOf(a, b)))
-        if (k == Sky.CLEAR || k == Sky.PARTLY) sun(w * .8f, h * .3f, h * .13f, t * 360f)
+        // by night the sky is dark whatever the weather; the colours are pulled down
+        if (day) drawRect(Brush.verticalGradient(listOf(a, b))) else drawRect(Brush.verticalGradient(listOf(lerp(a, Color(0xFF050914), .75f), lerp(b, Color(0xFF16213C), .6f))))
+        if (!day && k != Sky.RAIN && k != Sky.STORM && k != Sky.CLOUD) for (i in 0 until 40) {
+            val seed = (i * 0.6180339f) % 1f; val tw = .5f + .5f * sin((t * 2f + seed * 7f) * 2f * PI.toFloat())
+            drawCircle(Color.White.copy(alpha = .25f + .6f * tw), 1.2f + seed * 1.6f, Offset(seed * w, ((i * 0.381966f) % 1f) * h * .7f))
+        }
+        if (k == Sky.CLEAR || k == Sky.PARTLY) { if (day) sun(w * .8f, h * .3f, h * .13f, t * 360f) else moonDisc(w * .8f, h * .3f, h * .16f) }
         if (k != Sky.CLEAR) {
-            // clouds drifting across, each at its own speed
+            // clouds in layers: far ones small and slow, near ones large and quick, each bobbing a little; soft puffs, not flat shapes
             val dark = k == Sky.RAIN || k == Sky.DRIZZLE || k == Sky.STORM
-            for (i in 0..2) {
-                val sp = 1f + i * .5f
-                val x = ((t * sp + i * .37f) % 1f) * (w + h) - h * .5f
-                cloud(x, h * (.22f + i * .22f), h * (.85f - i * .1f), (if (dark) CLOUD_DARK else CLOUD).copy(alpha = .55f - i * .1f))
+            val heavy = dark || k == Sky.CLOUD || k == Sky.FOG
+            val n = if (heavy) 7 else 5
+            for (i in 0 until n) {
+                val depth = (i % 3) / 2f                         // 0 far, 1 near
+                val sp = .45f + depth * .9f
+                val x = (((t * sp) + i * .29f) % 1f) * (w + h * 1.4f) - h * .7f
+                val y = h * (.14f + ((i * 0.37f) % 1f) * .62f) + sin((t * 2f + i) * PI.toFloat()) * h * .012f
+                val base = if (dark) CLOUD_DARK else CLOUD
+                softCloud(x, y, h * (.7f + depth * .6f), if (!day) lerp(base, Color(0xFF38425A), .55f) else base, (.34f + depth * .3f) * (if (heavy) 1.15f else 1f))
             }
         }
         if (k == Sky.RAIN || k == Sky.DRIZZLE || k == Sky.STORM) {
