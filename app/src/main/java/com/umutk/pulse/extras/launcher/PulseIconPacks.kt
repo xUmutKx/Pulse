@@ -1,6 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
 import android.content.Context
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.toArgb
 import com.umutk.pulse.Look
 import com.umutk.pulse.extras.palette.AppInfo
@@ -46,6 +47,6 @@ object PulseIconPacks {
         val infos = apps.map { AppInfo(it.first, it.second, it.third) }
         engine.prepareLuminanceRanks(infos)
         val spec = spec(ctx, id)
-        return infos.mapIndexed { i, a -> runCatching { kotlinx.coroutines.runBlocking { engine.render(a, spec, i, size) }.let { androidx.compose.ui.graphics.asImageBitmap(it) } }.getOrNull() }
+        return infos.mapIndexed { i, a -> runCatching { kotlinx.coroutines.runBlocking { engine.render(a, spec, i, size) }.asImageBitmap() }.getOrNull() }
     }
 }
