@@ -159,6 +159,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.toPath
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
@@ -408,7 +409,7 @@ private fun FluentBarIcon(th: KbTheme, key: String, on: Boolean = false, onClick
     Box(Modifier.size(44.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         Box(Modifier.size(30.dp).border(1.5.dp, if (on) th.accent else th.sub, RoundedCornerShape(15.dp)), contentAlignment = Alignment.Center) {
             androidx.compose.foundation.Canvas(Modifier.size(20.dp)) {
-                androidx.compose.ui.graphics.drawscope.scale(size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
+                scale(size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
             }
         }
     }
