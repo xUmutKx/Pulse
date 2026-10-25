@@ -226,6 +226,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart; selEnd = newSelEnd
+        // the field was emptied (a message was sent: the app clears it after the Enter) or the cursor jumped: the capital letter is worked out again from what is there now
+        if (word.isEmpty() && newSelStart == newSelEnd && (newSelStart == 0 || Math.abs(newSelStart - oldSelStart) > 1)) updateCaps()
         // the cursor went somewhere else after a correction: backspace must not undo that correction any more
         if (lastCorrection != null && word.isEmpty() && SystemClock.uptimeMillis() - corrAt > 300 && newSelStart != oldSelStart) lastCorrection = null
         // the cursor left the word under way (the user tapped elsewhere): the word is finished as it stands
