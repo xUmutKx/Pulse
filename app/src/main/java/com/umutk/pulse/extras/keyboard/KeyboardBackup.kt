@@ -14,7 +14,7 @@ import java.util.zip.ZipOutputStream
  * and the kept clipboard (texts and pictures). Import puts them back and the keyboard reads them again.
  */
 object KeyboardBackup {
-    private val files = listOf("kbd_user.txt", "kbd_pairs.txt", "kbd_typos.txt", "kbd_banned.txt", "kbd_rejects.txt", "kbd_keys.txt", "kbd_touch.txt", "kbd_clips.json")
+    private val files = listOf("kbd_user.txt", "kbd_pairs.txt", "kbd_typos.txt", "kbd_banned.txt", "kbd_rejects.txt", "kbd_keys.txt", "kbd_touch.txt", "kbd_typo_seen.txt", "kbd_clips.json")
     private const val PREFS = "prefs.json"
 
     private fun prefsJson(c: Context): String {
@@ -28,10 +28,13 @@ object KeyboardBackup {
     }
 
     /** Writes the backup to [uri]; returns how many files went in. Blocking: call off the main thread. */
-    fun export(c: Context, uri: Uri): Int {
+    fun export(c: Context, uri: Uri): Int = c.contentResolver.openOutputStream(uri)?.use { write(c, it) } ?: 0
+
+    /** Writes the backup to [out] (closes it); returns how many files went in. */
+    fun write(c: Context, out: java.io.OutputStream): Int {
         KeyboardDictionary.saveUser(c, force = true)
         var n = 0
-        c.contentResolver.openOutputStream(uri)?.use { raw ->
+        out.let { raw ->
             ZipOutputStream(raw.buffered()).use { z ->
                 z.putNextEntry(ZipEntry(PREFS)); z.write(prefsJson(c).toByteArray()); z.closeEntry(); n++
                 files.forEach { f -> File(c.filesDir, f).takeIf { it.exists() }?.let { z.putNextEntry(ZipEntry(f)); it.inputStream().use { i -> i.copyTo(z) }; z.closeEntry(); n++ } }

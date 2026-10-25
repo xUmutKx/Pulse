@@ -110,7 +110,7 @@ open class MainActivity : ComponentActivity() {
 
     // the standalone tools in Pulse's own process (ExtraToolActivity) write the global Look.resolved while they are in front
     private var pulseResolved: PTheme? = null
-    override fun onPause() { super.onPause(); pulseResolved = Look.resolved }
+    override fun onPause() { super.onPause(); pulseResolved = Look.resolved; Thread { runCatching { AutoBackup.maybeRun(applicationContext) } }.start() }
 
     override fun onResume() {
         super.onResume()
