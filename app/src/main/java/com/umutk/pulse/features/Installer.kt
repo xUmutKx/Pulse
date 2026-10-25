@@ -22,6 +22,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.clip
@@ -966,7 +967,7 @@ private fun apkIcon(ctx: Context, f: java.io.File): android.graphics.Bitmap? = r
     val pm = ctx.packageManager
     val info = pm.getPackageArchiveInfo(f.path, 0)?.applicationInfo ?: return@runCatching null
     info.sourceDir = f.path; info.publicSourceDir = f.path
-    androidx.core.graphics.drawable.toBitmap(info.loadIcon(pm), 160, 160)
+    info.loadIcon(pm).toBitmap(160, 160)
 }.getOrNull()
 
 /** Several apps at once: their icons lie on each other, a little turned, where a single app would show its one icon; the title says Multi install. */
