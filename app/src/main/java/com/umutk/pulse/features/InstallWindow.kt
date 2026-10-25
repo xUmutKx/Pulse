@@ -199,7 +199,7 @@ fun lsposedIntent(c: Context): Intent? {
  * Vector and LSPosed run their manager "parasitic" (no launcher icon of its own): it opens through the system shell's warning activity with the manager's category,
  * or through the secret dialer code 5776733. Each way is tried in turn; nothing tells whether the manager came up, so a message is shown only when none could be sent.
  */
-private fun openLSPosed(c: Context) {
+fun openLSPosed(c: Context) {
     lsposedIntent(c)?.let { runCatching { c.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return } }
     for (cat in listOf("org.lsposed.manager.LAUNCH_MANAGER", "org.matrix.vector.LAUNCH_MANAGER")) {
         val ok = runCatching {
