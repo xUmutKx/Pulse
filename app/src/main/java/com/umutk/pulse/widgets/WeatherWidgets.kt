@@ -74,7 +74,7 @@ abstract class WeatherWidgetBase(private val wide: Boolean) : PulseWidget() {
         Thread {
             try {
                 val raw = WeatherApi.forecast(place.lat, place.lon)
-                WeatherStore.saveCache(ctx, place.name, raw, old?.aqi ?: -1, WeatherApi.extras(place.lat, place.lon, WeatherStore.source(ctx) == "mgm"))
+                WeatherStore.saveCache(ctx, place.name, raw, old?.aqi ?: -1, WeatherApi.extras(place.lat, place.lon, WeatherStore.source(ctx) == "mgm", WeatherStore.combine(ctx)))
                 WeatherWidgets.refreshAll(ctx)
             } catch (e: Exception) {
                 // keep the saved copy on screen; the next update tries again

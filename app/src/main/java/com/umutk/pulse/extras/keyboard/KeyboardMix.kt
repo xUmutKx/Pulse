@@ -5,6 +5,11 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.AutoAwesome
+import androidx.compose.material.icons.rounded.EmojiEmotions
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -59,16 +64,20 @@ internal fun MixPanel(th: KbTheme, st: KbState, act: KbActions, height: Dp) {
             Text(tr("Emoji mix", "Emoji birleştir"), color = th.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             Text(tr("Clear", "Temizle"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { act.mixOp("clear"); slot = 0 }.padding(12.dp))
         }
-        Row(Modifier.fillMaxWidth().height(150.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            // the two picks: a tap selects which one the next emoji fills
-            listOf(st.mixA to 0, st.mixB to 1).forEach { (e, i) ->
-                Box(Modifier.size(76.dp).clip(RoundedCornerShape(18.dp)).background(if (slot == i) th.accent.copy(alpha = .35f) else th.special).clickable { slot = i }, contentAlignment = Alignment.Center) {
-                    Text(e.ifEmpty { "?" }, fontSize = 40.sp, color = th.text)
+        // two picks, a plus, the result: a tap on a circle selects which pick the next emoji fills; a tap on the result gives the picture to the field
+        Row(Modifier.fillMaxWidth().height(120.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+            @Composable fun pickCircle(e: String, i: Int) {
+                Box(Modifier.size(80.dp).clip(CircleShape).background(if (slot == i) th.accent.copy(alpha = .35f) else th.special).border(if (slot == i) 2.dp else 0.dp, th.accent, CircleShape).clickable { slot = i }, contentAlignment = Alignment.Center) {
+                    if (e.isEmpty()) Icon(Icons.Rounded.EmojiEmotions, null, tint = th.sub, modifier = Modifier.size(38.dp)) else Text(e, fontSize = 42.sp, color = th.text)
                 }
             }
-            Box(Modifier.weight(1f).height(140.dp), contentAlignment = Alignment.Center) {
+            pickCircle(st.mixA, 0)
+            Text("+", color = th.sub, fontSize = 28.sp)
+            pickCircle(st.mixB, 1)
+            Text("=", color = th.sub, fontSize = 28.sp)
+            Box(Modifier.size(96.dp).clip(CircleShape).background(if (ready) th.accent.copy(alpha = .25f) else th.special).border(if (ready) 2.dp else 0.dp, th.accent, CircleShape).clickable(enabled = ready) { act.mixOp("send") }, contentAlignment = Alignment.Center) {
                 val p = pic
-                if (p != null) Image(p, null, Modifier.size(140.dp)) else Text(tr("Pick two emojis", "İki emoji seç"), color = th.sub, fontSize = 13.sp)
+                if (p != null) Image(p, null, Modifier.size(84.dp)) else Icon(Icons.Rounded.AutoAwesome, null, tint = th.sub, modifier = Modifier.size(38.dp))
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -76,9 +85,6 @@ internal fun MixPanel(th: KbTheme, st: KbState, act: KbActions, height: Dp) {
                 Text(EmojiMix.name(i), color = th.text, fontSize = 13.sp, fontWeight = if (st.mixStyle == i) FontWeight.Medium else FontWeight.Normal,
                     modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (st.mixStyle == i) th.accent.copy(alpha = .35f) else th.special).clickable { st.mixStyle = i }.padding(horizontal = 14.dp, vertical = 7.dp))
             }
-            Spacer(Modifier.width(8.dp))
-            Text("➤  " + tr("Send", "Gönder"), color = if (ready) th.text else th.sub, fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (ready) th.accent else th.special).clickable(enabled = ready) { act.mixOp("send") }.padding(horizontal = 16.dp, vertical = 7.dp))
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
             emojiTabIconsPublic.forEachIndexed { i, ic ->
