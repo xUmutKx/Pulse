@@ -1223,3 +1223,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.54 Keyboard: swapped letters (wrok) always mended, clipboard long press (pin, shortcut, select) with shortcut names offered as suggestions, panels keep the keys height - derlenmedi, bekle
 - 1.0.55 Files archive row menus (open/cut/copy/paste/delete); Poweramp album_art/artist_art folder import and artist pictures - derlenmedi
 - 1.0.56 Files: share several picked files at once; fix verticalScroll import
+- 1.0.57 Files: Share in the selection three-dot menu (one or several files) - derlenmedi, bekle
