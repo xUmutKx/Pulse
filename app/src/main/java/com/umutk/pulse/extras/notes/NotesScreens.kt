@@ -98,10 +98,6 @@ fun HomeView(
             if (selected.isEmpty()) {
                 NIcon("back", fg, tr("Back", "Geri")) { onBack() }
                 Text(tr("Notes", "Notlar"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                ExtraLookIcon(fg)
-                NIcon("sort", fg, tr("Sort", "Sırala")) { onDlg(NDlg.Sort) }
-                NIcon("view", fg, tr("Grid or list", "Izgara ya da liste")) { NotesPrefs.setGrid(ctx, !grid); onChanged() }
-                NIcon("recycle", fg, tr("Trash", "Çöp kutusu")) { onOpenTrash() }
                 NIcon("settings", fg, tr("Settings", "Ayarlar")) { onOpenSettings() }
                 NIcon("add", fg, tr("New note", "Yeni not")) { onNew() }
             } else {
@@ -273,7 +269,7 @@ fun NRow(icon: String, title: String, value: String = "", trailing: (@Composable
 @Composable
 fun SettingsView(
     notes: List<Note>, rev: Int, onBack: () -> Unit, onDlg: (NDlg) -> Unit, onChanged: () -> Unit, onStats: () -> Unit,
-    onSetEncrypt: (Boolean) -> Unit, onExport: () -> Unit, onExportMd: () -> Unit, onImport: () -> Unit, onRemovePin: () -> Unit,
+    onTrash: () -> Unit, onSetEncrypt: (Boolean) -> Unit, onExport: () -> Unit, onExportMd: () -> Unit, onImport: () -> Unit, onRemovePin: () -> Unit,
 ) {
     val ctx = LocalContext.current
     var open by remember { mutableStateOf(setOf("list", "paper", "security", "data")) }
@@ -292,6 +288,8 @@ fun SettingsView(
         item {
             NSection(tr("List", "Liste"), "list" in open, { toggle("list") }) {
                 NRow("sort", tr("Sort by", "Sırala"), tr(NotesPrefs.sort(ctx).en, NotesPrefs.sort(ctx).tr), onClick = { onDlg(NDlg.Sort) })
+                NRow("view", tr("Grid", "Izgara"), trailing = { PSwitch(NotesPrefs.grid(ctx), { NotesPrefs.setGrid(ctx, it); onChanged() }) })
+                NRow("recycle", tr("Trash", "Çöp kutusu"), onClick = { onTrash() })
                 NRow("sort", tr("Reverse order", "Ters sırala"), trailing = { PSwitch(NotesPrefs.reverse(ctx), { NotesPrefs.setReverse(ctx, it); onChanged() }) })
                 NRow("calendar", tr("Group by date", "Tarihe göre grupla"), trailing = { PSwitch(NotesPrefs.groups(ctx), { NotesPrefs.setGroups(ctx, it); onChanged() }) })
                 NRow("view", tr("Show previews", "Önizleme göster"), trailing = { PSwitch(NotesPrefs.previews(ctx), { NotesPrefs.setPreviews(ctx, it); onChanged() }) })

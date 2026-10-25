@@ -272,7 +272,7 @@ fun NotesHub(onBack: () -> Unit) {
             NScreen.Trash -> TrashView(notes, onBack = { screen = NScreen.Home }, onRestore = { restore(setOf(it)) }, onDrop = { dlg = NDlg.DropForever(it) }, onEmpty = { dlg = NDlg.EmptyTrash })
             NScreen.Settings -> SettingsView(
                 notes, settingsRev, onBack = { screen = NScreen.Home }, onDlg = { dlg = it }, onChanged = { rev++ },
-                onStats = { screen = NScreen.Stats },
+                onStats = { screen = NScreen.Stats }, onTrash = { screen = NScreen.Trash },
                 onSetEncrypt = { on -> NotesPrefs.setEncrypted(ctx, on); save(notes) },
                 onExport = { exportJson.launch("pulse-notes.json") }, onExportMd = { exportMd.launch("pulse-notes.md") },
                 onImport = { importJson.launch(arrayOf("application/json", "text/*", "application/octet-stream")) },
