@@ -24,3 +24,9 @@
 -keep class android.net.LinkProperties$1 { *; }
 -keep class android.net.RouteInfo { *; }
 -keep class android.net.ProxyProperties { *; }
+
+# BlackOut (extras/blackout): the Xposed entry and the status object are found by name from outside; the Xposed API itself comes from the framework
+-keep class com.umutk.pulse.extras.blackout.XposedInit { *; }
+-keep class com.umutk.pulse.extras.blackout.Status { *; }
+-keep class com.umutk.pulse.extras.blackout.AppWatch { *; }
+-dontwarn de.robv.android.xposed.**

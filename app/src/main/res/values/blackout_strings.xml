@@ -1,0 +1,20 @@
+<resources>
+    <string name="bo_watch_desc">Notices which app is in front so BlackOut can deepen the dark greys of apps that overlays cannot theme, and reads the colour under the colour bar. It only looks at where text and images are, so they stay bright. Nothing is stored or sent.</string>
+    <string name="bo_xposed_desc">BlackOut: turns the dark greys of the apps you enable into pure black (AMOLED). Works even when an app hides its colour names. Nothing leaves the phone.</string>
+    <!-- suggested scope in LSPosed: the Google apps that keep grey surfaces in their dark theme -->
+    <string-array name="bo_xposed_scope">
+        <item>com.android.vending</item>
+        <item>com.google.android.apps.photos</item>
+        <item>com.google.android.gm</item>
+        <item>com.google.android.youtube</item>
+        <item>com.google.android.apps.messaging</item>
+        <item>com.google.android.dialer</item>
+        <item>com.google.android.contacts</item>
+        <item>com.google.android.apps.maps</item>
+        <item>com.google.android.calendar</item>
+        <item>com.google.android.keep</item>
+        <item>com.google.android.apps.docs</item>
+        <item>com.android.chrome</item>
+        <item>com.umutk.pulse</item>
+    </string-array>
+</resources>
