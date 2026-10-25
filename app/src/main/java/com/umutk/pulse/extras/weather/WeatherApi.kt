@@ -198,8 +198,14 @@ object WeatherApi {
             // the sky: the group most sources agree on; on a tie the heavier group wins
             val groups = sl.codes.groupBy { skyRank(it) }
             val top = groups.maxWithOrNull(compareBy<Map.Entry<Int, List<Int>>> { it.value.size }.thenBy { it.key })
-            val code = top?.value?.let { v -> v.groupBy { it }.maxByOrNull { it.value.size }?.key } ?: -1
-            out.put(JSONObject().put("t", t).put("temp", temp).put("code", code).put("rain", if (sl.rain.isEmpty()) -1 else sl.rain.average().toInt()).put("n", sl.temps.size))
+            var code = top?.value?.let { v -> v.groupBy { it }.maxByOrNull { it.value.size }?.key } ?: -1
+            val rain = if (sl.rain.isEmpty()) -1 else sl.rain.average().toInt()
+            // the sky and the chance of rain must tell the same story: rain in the sky with hardly any chance of it is shown as cloud, and a high chance under a dry sky as light rain
+            if (code >= 0 && rain >= 0) {
+                if (skyRank(code) in 3..4 && rain < 20) code = 3
+                else if (skyRank(code) < 3 && rain >= 75) code = 61
+            }
+            out.put(JSONObject().put("t", t).put("temp", temp).put("code", code).put("rain", rain).put("n", sl.temps.size))
         }
         return if (out.length() > 0) JSONObject().put("hours", out).put("sources", sources) else null
     }
@@ -212,11 +218,16 @@ object WeatherApi {
         if (o.optJSONArray("hours") == null) return f
         val hm = HashMap<String, JSONObject>()
         o.getJSONArray("hours").let { a -> for (i in 0 until a.length()) a.getJSONObject(i).let { hm[it.getString("t")] = it } }
-        fun over(h: Hour): Hour {
+        // the first hours lean on the reading of now, so the hour list never jumps away from the temperature shown above it
+        fun over(i: Int, h: Hour): Hour {
             val e = hm[h.time.take(16)] ?: return h
-            return h.copy(temp = e.optDouble("temp", h.temp), code = e.optInt("code", -1).takeIf { it >= 0 } ?: h.code, rain = e.optInt("rain", -1).takeIf { it >= 0 } ?: h.rain)
+            if (e.optInt("n", 1) < 2) return h
+            val w = (i / 3f).coerceIn(0f, 1f)
+            val t = e.optDouble("temp", h.temp)
+            val temp = if (i < 3) f.temp * (1 - w) + t * w else t
+            return h.copy(temp = temp, code = e.optInt("code", -1).takeIf { it >= 0 } ?: h.code, rain = e.optInt("rain", -1).takeIf { it >= 0 } ?: h.rain)
         }
-        return f.copy(hours = f.hours.map(::over), hours48 = f.hours48.map(::over), sources = o.optInt("sources", 1))
+        return f.copy(hours = f.hours.mapIndexed(::over), hours48 = f.hours48.mapIndexed(::over), sources = o.optInt("sources", 1))
     }
 
     // ---- MGM (Turkish State Meteorological Service) ---------------------------------------------------------------------------------------------

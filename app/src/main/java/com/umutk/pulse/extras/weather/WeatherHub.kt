@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
@@ -171,6 +172,12 @@ fun WeatherHub(onBack: () -> Unit) {
             onBack = { showList = false })
         return
     }
+    // adding a place has a page of its own: the field is ready for typing, the cities are looked up while typing, a tap adds one and goes back
+    if (searching) {
+        AddPlacePage(fg, sub, bgBrush, { searching = false },
+            onPick = { h -> searching = false; WeatherStore.addCity(ctx, h); cities = WeatherStore.cities(ctx); load(h) })
+        return
+    }
     val clock = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     fun t(v: Double) = WeatherFmt.temp(v, imp)
     // a swipe to the side goes to the next place of the list
@@ -269,7 +276,7 @@ fun WeatherHub(onBack: () -> Unit) {
                 }
             }
             // the hours: 96 of them, the row runs on to the right as it is swiped; a day name stands at each midnight
-            item { Text(tr("Next hours", "Sonraki saatler") + (if (f.sources > 1) " · " + tr("${f.sources} sources combined", "${f.sources} kaynak birleştirildi") else ""), color = sub, fontSize = 13.sp) }
+            item { Text(tr("Next hours", "Sonraki saatler"), color = sub, fontSize = 13.sp) }
             item {
                 LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(if (f.hours48.isNotEmpty()) f.hours48 else f.hours) { h ->
@@ -491,5 +498,47 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
         "skin" -> com.umutk.pulse.extras.video.PickDialog(tr("Colours", "Renkler"), skins.map { it.second to (it.first == skin) }, { ask = "" }) { onSkin(skins[it].first); ask = "" }
         "units" -> com.umutk.pulse.extras.video.PickDialog(tr("Temperature unit", "Sıcaklık birimi"), listOf("°C" to !imp, "°F" to imp), { ask = "" }) { onUnits(it == 1); ask = "" }
         "source" -> com.umutk.pulse.extras.video.PickDialog(tr("Data source", "Veri kaynağı"), sources.map { it.second to (it.first == source) }, { ask = "" }) { onSource(sources[it].first); ask = "" }
+    }
+}
+
+
+/** The page that adds a place: a city field with a search as you type, and the matches to tap. */
+@Composable
+private fun AddPlacePage(fg: Color, sub: Color, bg: Brush, onBack: () -> Unit, onPick: (Place) -> Unit) {
+    var q by remember { mutableStateOf("") }
+    var hits by remember { mutableStateOf(emptyList<Place>()) }
+    var busy by remember { mutableStateOf(false) }
+    var note by remember { mutableStateOf("") }
+    val focus = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    // a short pause after the last key, then the lookup
+    LaunchedEffect(q) {
+        if (q.trim().length < 2) { hits = emptyList(); note = ""; return@LaunchedEffect }
+        kotlinx.coroutines.delay(450)
+        busy = true
+        val r = withContext(Dispatchers.IO) { runCatching { WeatherApi.search(q) } }
+        hits = r.getOrDefault(emptyList())
+        note = if (r.isFailure) tr("No connection.", "Bağlantı yok.") else if (hits.isEmpty()) tr("No city found.", "Şehir bulunamadı.") else ""
+        busy = false
+    }
+    Box(Modifier.fillMaxSize().background(bg)) {
+        LazyColumn(Modifier.fillMaxSize().padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            item {
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    PIcon("back", fg, 22.dp, Modifier.clickable { onBack() })
+                    Text(tr("Add a place", "Yer ekle"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                }
+            }
+            item { PField(q, { q = it }, tr("City", "Şehir"), Modifier.fillMaxWidth().focusRequester(focus)) }
+            if (busy) item { Text("…", color = sub, fontSize = 14.sp) }
+            if (note.isNotEmpty() && !busy) item { Text(note, color = sub, fontSize = 14.sp) }
+            items(hits, key = { it.lat.toString() + it.lon }) { h ->
+                Row(Modifier.fillMaxWidth().clickable { onPick(h) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("globe", fg, 20.dp)
+                    Spacer(Modifier.width(12.dp))
+                    Text(h.name, color = fg, fontSize = 15.sp, maxLines = 2)
+                }
+            }
+        }
     }
 }

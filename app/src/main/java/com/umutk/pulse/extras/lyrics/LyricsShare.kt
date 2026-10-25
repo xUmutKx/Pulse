@@ -57,68 +57,75 @@ object LyricsShare {
     fun setConsecutive(c: Context, v: Boolean) { prefs(c).edit().putBoolean("share_consecutive", v).apply() }
 
     const val MAX_LINES = 10
-    const val STYLES = 3
+    /** Five colours of the cover, then black and white. */
+    const val STYLES = 7
 
-    /** The colour of the cover that stands out most; a calm blue-grey when there is no cover. */
-    fun baseColor(art: Bitmap?): Int {
-        if (art == null) return 0xFF3A6A78.toInt()
-        val p = runCatching { androidx.palette.graphics.Palette.from(art).clearFilters().generate() }.getOrNull()
-        return p?.vibrantSwatch?.rgb ?: p?.mutedSwatch?.rgb ?: p?.dominantSwatch?.rgb ?: 0xFF3A6A78.toInt()
+    /** The seven card colours: five from the cover (vivid ones first, never two that look alike), black, white. */
+    fun palette(art: Bitmap?): List<Int> {
+        val out = ArrayList<Int>()
+        fun add(c: Int?) {
+            if (c == null || out.size >= 5) return
+            val hsl = FloatArray(3).also { ColorUtils.colorToHSL(c, it) }
+            // a near-black or near-white swatch is left to the black and white circles
+            if (hsl[2] < .08f || hsl[2] > .94f) return
+            if (out.none { o -> rgbDist(o, c) < 46 }) out.add(c or 0xFF000000.toInt())
+        }
+        if (art != null) {
+            val p = runCatching { androidx.palette.graphics.Palette.from(art).maximumColorCount(24).clearFilters().generate() }.getOrNull()
+            if (p != null) {
+                add(p.vibrantSwatch?.rgb); add(p.darkVibrantSwatch?.rgb); add(p.lightVibrantSwatch?.rgb)
+                add(p.mutedSwatch?.rgb); add(p.darkMutedSwatch?.rgb); add(p.lightMutedSwatch?.rgb); add(p.dominantSwatch?.rgb)
+                p.swatches.sortedByDescending { it.population }.forEach { add(it.rgb) }
+            }
+        }
+        // a cover with few colours (or none): tints of the base colour fill the rest
+        val base = baseColor(art)
+        var k = 0
+        while (out.size < 5 && k < 12) { add(ColorUtils.blendARGB(base, if (k % 2 == 0) 0xFF000000.toInt() else 0xFFFFFFFF.toInt(), .18f + .12f * (k / 2))); k++ }
+        while (out.size < 5) out.add(base)
+        return out + 0xFF000000.toInt() + 0xFFFFFFFF.toInt()
     }
 
-    private fun readable(bg: Int) = if (ColorUtils.calculateLuminance(bg) > .5) 0xFF111111.toInt() else 0xFFFFFFFF.toInt()
+    private fun rgbDist(a: Int, b: Int): Int {
+        val dr = android.graphics.Color.red(a) - android.graphics.Color.red(b)
+        val dg = android.graphics.Color.green(a) - android.graphics.Color.green(b)
+        val db = android.graphics.Color.blue(a) - android.graphics.Color.blue(b)
+        return Math.sqrt((dr * dr + dg * dg + db * db).toDouble()).toInt()
+    }
 
-    /**
-     * The card as a picture, 1080 x 1920: a card in the colour of the cover with the cover, the song, the chosen lines and a small mark, on a background that is
-     * [style] 0 a fade from the cover colour to black, 1 the cover colour, 2 black.
-     */
-    fun render(title: String, artist: String, art: Bitmap?, lines: List<String>, style: Int, w: Int = 1080, h: Int = 1920): Bitmap {
-        val base = baseColor(art)
-        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
-        val c = Canvas(bmp)
-        val bgPaint = Paint(Paint.ANTI_ALIAS_FLAG)
-        when (style) {
-            0 -> bgPaint.shader = LinearGradient(0f, 0f, 0f, h.toFloat(), intArrayOf(ColorUtils.blendARGB(base, 0xFF000000.toInt(), .25f), ColorUtils.blendARGB(base, 0xFF000000.toInt(), .88f), 0xFF000000.toInt()), floatArrayOf(0f, .6f, 1f), Shader.TileMode.CLAMP)
-            1 -> bgPaint.color = ColorUtils.blendARGB(base, 0xFF000000.toInt(), .2f)
-            else -> bgPaint.color = 0xFF000000.toInt()
-        }
-        c.drawRect(0f, 0f, w.toFloat(), h.toFloat(), bgPaint)
-        // the card: the cover colour, lifted a little so it reads against the background
-        val card = if (style == 1) ColorUtils.blendARGB(base, 0xFFFFFFFF.toInt(), .12f) else base
+    /** The card alone as a picture with see-through corners and no background: the cover, the song, the chosen lines and a small mark, on [card]. */
+    fun render(title: String, artist: String, art: Bitmap?, lines: List<String>, card: Int, w: Int = 1080): Bitmap {
         val ink = readable(card)
         val pad = 64f
-        val cardW = w - 2 * 80f
-        val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ink; textSize = 62f; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
-        val textW = (cardW - 2 * pad).toInt()
+        val text = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ink; textSize = 62f * w / 1080f; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
+        val k = w / 1080f
+        val textW = (w - 2 * pad * k).toInt()
         val layouts = lines.map { StaticLayout.Builder.obtain(it, 0, it.length, text, textW).setAlignment(Layout.Alignment.ALIGN_NORMAL).setLineSpacing(0f, 1.08f).build() }
-        val gap = 34f
-        val head = 150f + 56f
+        val gap = 34f * k
+        val head = (150f + 56f) * k
         val body = layouts.sumOf { it.height.toDouble() }.toFloat() + gap * (layouts.size - 1).coerceAtLeast(0)
-        val foot = 40f + 56f
-        val cardH = pad + head + body + foot + pad
-        val top = ((h - cardH) / 2f).coerceAtLeast(120f)
-        val left = 80f
-        val cp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = card }
-        c.drawRoundRect(RectF(left, top, left + cardW, top + cardH), 56f, 56f, cp)
-        var y = top + pad
-        // cover, title, artist
+        val foot = (40f + 56f) * k
+        val h = (pad * k + head + body + foot + pad * k).toInt()
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val c = Canvas(bmp)
+        c.drawRoundRect(RectF(0f, 0f, w.toFloat(), h.toFloat()), 56f * k, 56f * k, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = card })
+        var y = pad * k
+        val left = pad * k
         if (art != null) {
-            val r = RectF(left + pad, y, left + pad + 150f, y + 150f)
-            val clip = android.graphics.Path().apply { addRoundRect(r, 18f, 18f, android.graphics.Path.Direction.CW) }
+            val r = RectF(left, y, left + 150f * k, y + 150f * k)
+            val clip = android.graphics.Path().apply { addRoundRect(r, 18f * k, 18f * k, android.graphics.Path.Direction.CW) }
             c.save(); c.clipPath(clip); c.drawBitmap(art, null, r, Paint(Paint.FILTER_BITMAP_FLAG)); c.restore()
         }
-        val tx = left + pad + (if (art != null) 150f + 28f else 0f)
-        val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ink; textSize = 50f; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
-        val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(ink, 170); textSize = 42f; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
-        val room = left + cardW - pad - tx
-        c.drawText(android.text.TextUtils.ellipsize(title, tp, room, android.text.TextUtils.TruncateAt.END).toString(), tx, y + 66f, tp)
-        c.drawText(android.text.TextUtils.ellipsize(artist, ap, room, android.text.TextUtils.TruncateAt.END).toString(), tx, y + 124f, ap)
+        val tx = left + (if (art != null) (150f + 28f) * k else 0f)
+        val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ink; textSize = 50f * k; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
+        val ap = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(ink, 170); textSize = 42f * k; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
+        val room = w - pad * k - tx
+        c.drawText(android.text.TextUtils.ellipsize(title, tp, room, android.text.TextUtils.TruncateAt.END).toString(), tx, y + 66f * k, tp)
+        c.drawText(android.text.TextUtils.ellipsize(artist, ap, room, android.text.TextUtils.TruncateAt.END).toString(), tx, y + 124f * k, ap)
         y += head
-        // the lines
-        for (l in layouts) { c.save(); c.translate(left + pad, y); l.draw(c); c.restore(); y += l.height + gap }
-        // the mark
-        val mp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(ink, 150); textSize = 40f; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
-        c.drawText("Pulse", left + pad, top + cardH - pad - 4f, mp)
+        for (l in layouts) { c.save(); c.translate(left, y); l.draw(c); c.restore(); y += l.height + gap }
+        val mp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = ColorUtils.setAlphaComponent(ink, 150); textSize = 40f * k; typeface = Typeface.create("sans-serif", Typeface.BOLD) }
+        c.drawText("Pulse", left, h - pad * k - 4f * k, mp)
         return bmp
     }
 
@@ -161,22 +168,24 @@ fun LyricsSelect(res: LyricsResult, selected: Set<Int>, onToggle: (Int) -> Unit,
     }
 }
 
-/** Step two: the card as it will be shared, three backgrounds to pick from, and Share. */
+/** Step two: the card alone, seven colours to pick from (five of the cover, black, white), and Share. */
 @Composable
 fun LyricsSharePage(title: String, artist: String, art: androidx.compose.ui.graphics.ImageBitmap?, lines: List<String>, style: Int, onStyle: (Int) -> Unit, onShare: (Bitmap) -> Unit, modifier: Modifier = Modifier) {
     val artBmp = remember(art) { art?.asAndroidBitmap() }
-    val bmp = remember(title, artist, artBmp, lines, style) { LyricsShare.render(title, artist, artBmp, lines, style, 540, 960) }
+    val colors = remember(artBmp) { LyricsShare.palette(artBmp) }
+    val card = colors[style.coerceIn(0, colors.lastIndex)]
+    val bmp = remember(title, artist, artBmp, lines, card) { LyricsShare.render(title, artist, artBmp, lines, card, 720) }
     val img = remember(bmp) { bmp.asImageBitmap() }
-    val base = remember(artBmp) { Color(LyricsShare.baseColor(artBmp)) }
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Image(img, null, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 40.dp, vertical = 14.dp).clip(RoundedCornerShape(22.dp)), contentScale = ContentScale.Fit)
-        Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
-            for (s in 0 until LyricsShare.STYLES) {
-                val fill = when (s) { 0 -> base.copy(alpha = .75f); 1 -> base; else -> Color.Black }
-                Box(Modifier.size(40.dp).clip(CircleShape).background(fill).border(if (s == style) 3.dp else 1.dp, if (s == style) Color.White else Color.White.copy(alpha = .4f), CircleShape).clickable { onStyle(s) })
+        Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 28.dp, vertical = 14.dp), contentAlignment = Alignment.Center) {
+            Image(img, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            colors.forEachIndexed { s, col ->
+                Box(Modifier.size(36.dp).clip(CircleShape).background(Color(col)).border(if (s == style) 3.dp else 1.dp, if (s == style) Color.White else Color.White.copy(alpha = .4f), CircleShape).clickable { onStyle(s) })
             }
         }
-        Row(Modifier.padding(vertical = 18.dp).clip(RoundedCornerShape(26.dp)).background(Color.White).clickable { onShare(LyricsShare.render(title, artist, artBmp, lines, style)) }.padding(horizontal = 34.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.padding(vertical = 18.dp).clip(RoundedCornerShape(26.dp)).background(Color.White).clickable { onShare(LyricsShare.render(title, artist, artBmp, lines, card)) }.padding(horizontal = 34.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("share", Color.Black, 20.dp)
             Text(tr("Share", "Paylaş"), color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 10.dp))
         }

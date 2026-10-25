@@ -42,6 +42,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -69,13 +70,15 @@ import kotlin.math.roundToInt
 
 private val BLACK = 0xFF000000.toInt()
 
-/** A step card: a number, the title, one line of what it does, then the controls. The steps run from the easy ones to the hard ones, top to bottom. */
+/** A card: a number (or none), the title, one line of what it does, then the controls. The steps run from the easy ones to the hard ones, top to bottom. */
 @Composable
-private fun Step(n: Int, title: String, sub: String, content: @Composable () -> Unit) {
+private fun Step(n: Int?, title: String, sub: String, content: @Composable () -> Unit) {
     com.umutk.pulse.PCard(Modifier.fillMaxWidth()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(28.dp).clip(CircleShape).background(T.accent), contentAlignment = Alignment.Center) { Text("$n", color = com.umutk.pulse.onAccent(T.accent), fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
-            Spacer(Modifier.width(12.dp))
+            if (n != null) {
+                Box(Modifier.size(28.dp).clip(CircleShape).background(T.accent), contentAlignment = Alignment.Center) { Text("$n", color = com.umutk.pulse.onAccent(T.accent), fontSize = 14.sp, fontWeight = FontWeight.SemiBold) }
+                Spacer(Modifier.width(12.dp))
+            }
             Column(Modifier.weight(1f)) {
                 Text(title, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Text(sub, color = T.sub, fontSize = 12.sp)
@@ -83,6 +86,40 @@ private fun Step(n: Int, title: String, sub: String, content: @Composable () -> 
         }
         Spacer(Modifier.height(10.dp))
         content()
+    }
+}
+
+/** One line of the setup list: a tick or an empty circle, what it is, and the button that sets it right. */
+@Composable
+private fun SetupRow(ok: Boolean, title: String, sub: String, action: String?, onAction: () -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(24.dp).clip(CircleShape).background(if (ok) T.accent else T.sub.copy(alpha = .25f)), contentAlignment = Alignment.Center) {
+            if (ok) Text("✓", color = com.umutk.pulse.onAccent(T.accent), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+        }
+        Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {
+            Text(title, color = T.text, fontSize = 15.sp)
+            Text(sub, color = T.sub, fontSize = 12.sp)
+        }
+        if (!ok && action != null) PButton(action, compact = true, onClick = onAction)
+    }
+}
+
+/** The app as it is now (grey surface) beside what BlackOut makes of it (black), with the app's own icon and name on both halves. */
+@Composable
+private fun AppPreview(pkg: String, sp: SharedPreferences) {
+    val ctx = LocalContext.current
+    val label = remember(pkg) { runCatching { ctx.packageManager.getApplicationLabel(ctx.packageManager.getApplicationInfo(pkg, 0)).toString() }.getOrDefault(pkg) }
+    val icon: ImageBitmap? = remember(pkg) { runCatching { ctx.packageManager.getApplicationIcon(pkg).toBitmap(160, 160).asImageBitmap() }.getOrNull() }
+    val before = 0xFF2A2A2A.toInt()
+    val after = Grey.fix(before, sp.getFloat("limit", 56f).toInt(), sp.getFloat("keep", 0f) / 100f, 0, sp.getBoolean("amo_soft", false))
+    Row(Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(16.dp)).border(1.dp, T.sub.copy(alpha = .3f), RoundedCornerShape(16.dp))) {
+        listOf(before to tr("Now", "Şimdi"), after to tr("BlackOut", "BlackOut")).forEach { (c, cap) ->
+            Column(Modifier.weight(1f).fillMaxHeight().background(Color(c or -0x1000000)), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                if (icon != null) Image(icon, null, Modifier.size(48.dp)) else Spacer(Modifier.size(48.dp))
+                Text(label, color = Color.White, fontSize = 13.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp, start = 8.dp, end = 8.dp))
+                Text(cap, color = Color.White.copy(alpha = .55f), fontSize = 11.sp)
+            }
+        }
     }
 }
 
@@ -120,7 +157,7 @@ private fun openBar(ctx: Context, target: String): Boolean {
     return true
 }
 
-/** BlackOut inside Pulse: turns the greys of your apps black. Eight steps from the easy ones to the ones that need root, then one page for each app. */
+/** BlackOut inside Pulse: turns the greys of your apps black. Setup, the app list, then the advanced switches. */
 @Composable
 fun BlackOutHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -180,8 +217,20 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
         // a stand-alone BlackOut on the phone: its settings come over in one tap
         if (standalone && !sp.getBoolean("imported_standalone", false)) com.umutk.pulse.PCard(Modifier.fillMaxWidth()) {
             Text(tr("The BlackOut app is installed", "BlackOut uygulaması yüklü"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text(tr("Take its settings, colour rules and app lists over to Pulse. Root reads them from the app; without root, export them in BlackOut and import the file in step 8.", "Ayarlarını, renk kurallarını ve uygulama listelerini Pulse'a alın. Root bunları uygulamadan okur; root yoksa BlackOut'ta dışa aktarıp 8. adımda dosyayı içe aktarın."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
+            Text(tr("Take its settings, colour rules and app lists over to Pulse. Root reads them from the app; without root, export them in BlackOut and import the file under Advanced, Back up.", "Ayarlarını, renk kurallarını ve uygulama listelerini Pulse'a alın. Root bunları uygulamadan okur; root yoksa BlackOut'ta dışa aktarıp Gelişmiş > Yedekle bölümünde dosyayı içe aktarın."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
             PButton(tr("Import from BlackOut", "BlackOut'tan al"), compact = true) { scope.launch { msg = withContext(Dispatchers.IO) { BlackOutData.importFromStandalone(ctx) }; lsp = sp.getBoolean("lsp_on", true); limit = sp.getFloat("limit", 56f) } }
+        }
+
+        // three things to have on, each with its own fix button
+        com.umutk.pulse.PCard(Modifier.fillMaxWidth()) {
+            Text(tr("Setup", "Kurulum"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            val modOk = Status.isActive() || (hookNow != null && System.currentTimeMillis() - hookNow!!.at < 120_000L)
+            SetupRow(modOk, tr("Module", "Modül"), tr("LSPosed or Vector: tick the apps in the module's scope", "LSPosed veya Vector: modül kapsamında uygulamaları işaretleyin"), tr("Open", "Aç")) { com.umutk.pulse.features.openLSPosed(ctx) }
+            SetupRow(mode != Privilege.Mode.None, tr("Root or Shizuku", "Root veya Shizuku"), tr("For overlays, the screen filter and the system switches", "Kaplamalar, ekran filtresi ve sistem düğmeleri için"), if (Privilege.shizukuRunning()) tr("Allow", "İzin ver") else tr("Check", "Denetle")) {
+                if (Privilege.shizukuRunning()) Privilege.requestShizuku()
+                scope.launch { busy = true; mode = withContext(Dispatchers.IO) { Privilege.detect(sp.getString("prefer", "auto") ?: "auto") }; busy = false }
+            }
+            SetupRow(watcher, tr("Watcher", "İzleyici"), tr("For the colour bar and the screen filter", "Renk çubuğu ve ekran filtresi için"), tr("Turn on", "Aç")) { enableWatcher(ctx) }
         }
 
         Step(1, tr("Pick the apps", "Uygulamaları seçin"), tr("Each app has its own page: force dark, colour rules, overlays", "Her uygulamanın kendi sayfası var: zorla koyu, renk kuralları, kaplamalar")) {
@@ -191,7 +240,13 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
             PButton(tr("Open the app list", "Uygulama listesini aç"), compact = true) { go("apps") }
         }
 
-        Step(2, tr("How black", "Ne kadar siyah"), tr("Every dark grey up to the limit becomes black in the apps you tick", "Sınıra kadar her koyu gri, seçtiğiniz uygulamalarda siyah olur")) {
+        var adv by remember { mutableStateOf(false) }
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { adv = !adv }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Advanced", "Gelişmiş"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            PIcon("chevron", T.sub, 22.dp, Modifier.rotate(if (adv) 180f else 0f))
+        }
+        if (adv) {
+        Step(null, tr("How black", "Ne kadar siyah"), tr("Every dark grey up to the limit becomes black in the apps you tick", "Sınıra kadar her koyu gri, seçtiğiniz uygulamalarda siyah olur")) {
             Text(tr("Grey limit: ", "Gri sınırı: ") + limit.toInt(), color = T.text, fontSize = 13.sp)
             PSlider((limit - 20f) / 70f, { limit = 20f + it * 70f }, 0f..1f, onDone = { sp.edit().putFloat("limit", limit).apply() })
             Text(tr("Brightness kept: ", "Korunan parlaklık: ") + keep.toInt() + "%", color = T.text, fontSize = 13.sp)
@@ -207,7 +262,7 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
             SwitchRow(tr("Soft whites", "Yumuşak beyaz"), tr("Pure white turns light grey: less glare on AMOLED", "Saf beyaz açık gri olur: AMOLED'de daha az parlama"), soft) { soft = it; sp.edit().putBoolean("amo_soft", it).apply() }
         }
 
-        Step(3, tr("Turn the module on", "Modülü açın"), tr("LSPosed or Vector: Modules, then Pulse, switch on, tick the apps", "LSPosed veya Vector: Modüller, Pulse, aç, uygulamaları işaretle")) {
+        Step(null, tr("Turn the module on", "Modülü açın"), tr("LSPosed or Vector: Modules, then Pulse, switch on, tick the apps", "LSPosed veya Vector: Modüller, Pulse, aç, uygulamaları işaretle")) {
             val here = Status.isActive()
             val last = hookNow
             Text(
@@ -219,7 +274,7 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
             PButton(tr("Open LSPosed / Vector", "LSPosed / Vector'ü aç"), compact = true) { com.umutk.pulse.features.openLSPosed(ctx) }
         }
 
-        Step(4, tr("The colour bar (dropper)", "Renk çubuğu (damlalık)"), tr("Touch a colour on any screen and say what it should become", "Herhangi bir ekranda bir renge dokunun, neye dönüşeceğini söyleyin")) {
+        Step(null, tr("The colour bar (dropper)", "Renk çubuğu (damlalık)"), tr("Touch a colour on any screen and say what it should become", "Herhangi bir ekranda bir renge dokunun, neye dönüşeceğini söyleyin")) {
             Text(if (watcher) tr("The watcher is on", "İzleyici açık") else tr("The watcher is off: it draws the bar and reads one pixel", "İzleyici kapalı: çubuğu çizer ve tek bir piksel okur"), color = if (watcher) T.accent else T.sub, fontSize = 13.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
                 if (!watcher) PButton(tr("Turn the watcher on", "İzleyiciyi aç"), compact = true) { enableWatcher(ctx) }
@@ -230,7 +285,7 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
             Text(tr("The bar goes over everything. Open an app, drag the ring on a colour, pick what it becomes, save. Android 11 or newer; no root.", "Çubuk her şeyin üstünde durur. Bir uygulama açın, halkayı bir rengin üstüne sürükleyin, dönüşeceği rengi seçin, kaydedin. Android 11 ve üstü; root gerekmez."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
         }
 
-        Step(5, tr("Root or Shizuku", "Root veya Shizuku"), tr("Needed for the screen filter, overlays and the system switches below", "Aşağıdaki ekran filtresi, kaplamalar ve sistem düğmeleri için gerekir")) {
+        Step(null, tr("Root or Shizuku", "Root veya Shizuku"), tr("Needed for the screen filter, overlays and the system switches below", "Aşağıdaki ekran filtresi, kaplamalar ve sistem düğmeleri için gerekir")) {
             Text(when (mode) { Privilege.Mode.Root -> tr("Root works", "Root çalışıyor"); Privilege.Mode.Shizuku -> tr("Shizuku works", "Shizuku çalışıyor"); else -> Privilege.detail.ifBlank { tr("Not checked", "Denetlenmedi") } }.take(200),
                 color = if (mode != Privilege.Mode.None) T.accent else T.sub, fontSize = 13.sp)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
@@ -239,7 +294,7 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
             }
         }
 
-        Step(6, tr("Dark pages", "Koyu sayfalar"), tr("A filter over the whole screen: white pages turn black, black text turns white", "Tüm ekranda filtre: beyaz sayfalar siyah, siyah yazılar beyaz olur")) {
+        Step(null, tr("Dark pages", "Koyu sayfalar"), tr("A filter over the whole screen: white pages turn black, black text turns white", "Tüm ekranda filtre: beyaz sayfalar siyah, siyah yazılar beyaz olur")) {
             SwitchRow(tr("Dark pages", "Koyu sayfalar"), tr("Lasts until a restart; Pulse puts it back at boot", "Yeniden başlatmaya kadar sürer; Pulse açılışta geri koyar"), pg, enabled = mode != Privilege.Mode.None) {
                 pg = it; sp.edit().putBoolean("pg_on", it).apply(); pushPages(); if (it) enableWatcher(ctx)
             }
@@ -255,7 +310,7 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
             PSlider(strength, { strength = it }, 0f..1f, onDone = { sp.edit().putFloat("pg_strength", strength).apply(); pushPages() })
         }
 
-        Step(7, tr("The whole phone", "Tüm telefon"), tr("Root or Shizuku: system-wide switches", "Root veya Shizuku: sistem geneli düğmeler")) {
+        Step(null, tr("The whole phone", "Tüm telefon"), tr("Root or Shizuku: system-wide switches", "Root veya Shizuku: sistem geneli düğmeler")) {
             var fd by remember { mutableStateOf(sp.getBoolean("fdsys_on", false)) }
             var dk by remember { mutableStateOf(sp.getBoolean("sysdark_on", false)) }
             var glob by remember { mutableStateOf(sp.getBoolean("glob_pure", false)) }
@@ -272,7 +327,7 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
             }
         }
 
-        Step(8, tr("Back up", "Yedekle"), tr("Settings and colour rules as one file", "Ayarlar ve renk kuralları tek dosyada")) {
+        Step(null, tr("Back up", "Yedekle"), tr("Settings and colour rules as one file", "Ayarlar ve renk kuralları tek dosyada")) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PButton(tr("Export", "Dışa aktar"), compact = true) { save.launch("blackout-settings.json") }
                 PButton(tr("Import", "İçe aktar"), compact = true) { load.launch(arrayOf("application/json", "text/*")) }
@@ -280,6 +335,7 @@ private fun HomePage(sp: SharedPreferences, go: (String) -> Unit) {
             if (standalone) PButton(tr("Import from the BlackOut app", "BlackOut uygulamasından al"), compact = true, modifier = Modifier.padding(top = 8.dp)) {
                 scope.launch { msg = withContext(Dispatchers.IO) { BlackOutData.importFromStandalone(ctx) }; lsp = sp.getBoolean("lsp_on", true); limit = sp.getFloat("limit", 56f) }
             }
+        }
         }
         if (msg.isNotEmpty()) Text(msg, color = T.sub, fontSize = 12.sp)
         Text(tr("No internet permission. The watcher learns which app is in front; the colour bar reads one pixel when you tap Save. Nothing is stored or sent.", "İnternet izni yok. İzleyici hangi uygulamanın önde olduğunu öğrenir; renk çubuğu Kaydet'e basınca tek piksel okur. Hiçbir şey saklanmaz ya da gönderilmez."), color = T.sub, fontSize = 11.sp)
@@ -352,6 +408,7 @@ private fun AppPage(pkg: String, sp: SharedPreferences) {
     fun restart() { scope.launch { withContext(Dispatchers.IO) { Overlays.forceStop(pkg) }; msg = tr("Stopped. Open the app again and wait a few seconds.", "Durduruldu. Uygulamayı yeniden açıp birkaç saniye bekleyin.") } }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        AppPreview(pkg, sp)
         Text(pkg, color = T.sub, fontSize = 12.sp)
         kind?.let { k ->
             com.umutk.pulse.PCard(Modifier.fillMaxWidth()) {
@@ -370,6 +427,12 @@ private fun AppPage(pkg: String, sp: SharedPreferences) {
             SwitchRow(tr("Make this app dark", "Bu uygulamayı koyu yap"), tr("Takes effect when the app starts again", "Uygulama yeniden başlayınca etkili olur"), fd && smart) { fd = it; smart = it; toggle("fd_apps", it); toggle("smart_apps", it) }
             if (report != null) Text(tr("forced ${report!!.forced} · fills ${report!!.fills} · texts ${report!!.texts}", "zorlanan ${report!!.forced} · dolgu ${report!!.fills} · yazı ${report!!.texts}"), color = T.sub, fontSize = 12.sp)
         }
+        var more by remember(pkg) { mutableStateOf(rules.isNotEmpty() || pkg in set("pgmod_apps") || pkg in set("pages_apps") || pkg in set("inv_apps")) }
+        Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { more = !more }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("More options", "Daha fazla seçenek"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            PIcon("chevron", T.sub, 22.dp, Modifier.rotate(if (more) 180f else 0f))
+        }
+        if (more) {
         Step(3, tr("Colour rules", "Renk kuralları"), tr("One colour at a time: where the dropper or a code says this colour, draw that one", "Her seferinde bir renk: damlalık ya da bir kod \"şu renk\" derse, onu şu renkle çiz")) {
             SwitchRow(tr("Rules on", "Kurallar açık"), tr("Off turns every colour change of this app off", "Kapalı olunca bu uygulamanın tüm renk değişiklikleri kapanır"), rulesOn) { rulesOn = it; sp.edit().putBoolean("rcon_$pkg", it).apply() }
             rules.forEach { r ->
@@ -397,7 +460,7 @@ private fun AppPage(pkg: String, sp: SharedPreferences) {
             Text(tr("The rules work inside the module, so the app has to be restarted after a change.", "Kurallar modülün içinde çalışır; değişiklikten sonra uygulama yeniden başlatılmalı."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
         }
         Step(4, tr("Only the pages", "Yalnız sayfalar"), tr("Notes and PDF readers: big light pictures and white areas swap, toolbars stay", "Not ve PDF okuyucular: büyük açık resimler ve beyaz alanlar tersine döner, araç çubukları kalır")) {
-            SwitchRow(tr("Dark pages inside this app", "Bu uygulamada koyu sayfalar"), tr("Uses the page colour of step 6 on the home page", "Ana sayfadaki 6. adımın sayfa rengini kullanır"), pmod) { pmod = it; toggle("pgmod_apps", it) }
+            SwitchRow(tr("Dark pages inside this app", "Bu uygulamada koyu sayfalar"), tr("Uses the page colour set on the home page (Advanced)", "Ana sayfadaki (Gelişmiş) sayfa rengini kullanır"), pmod) { pmod = it; toggle("pgmod_apps", it) }
         }
         Step(5, tr("Overlays", "Kaplamalar"), tr("Root or Shizuku: Android paints this app's dark greys black from outside", "Root veya Shizuku: Android bu uygulamanın koyu grilerini dışarıdan siyaha boyar")) {
             val refused = Overlays.refused(pkg)
@@ -422,6 +485,7 @@ private fun AppPage(pkg: String, sp: SharedPreferences) {
         Step(6, tr("Screen filter while it is open", "Açıkken ekran filtresi"), tr("Root or Shizuku and the watcher: a filter over the screen only while this app is in front", "Root veya Shizuku ve izleyici: yalnız bu uygulama öndeyken ekranda filtre")) {
             SwitchRow(tr("Dark pages while open", "Açıkken koyu sayfalar"), "", filter, enabled = mode != Privilege.Mode.None) { filter = it; toggle("pages_apps", it); if (it) enableWatcher(ctx) }
             SwitchRow(tr("Invert colours while open", "Açıkken renkleri ters çevir"), tr("Android's own inversion; photos turn negative too", "Android'in kendi ters çevirmesi; fotoğraflar da negatif olur"), inv, enabled = mode != Privilege.Mode.None) { inv = it; toggle("inv_apps", it); if (it) enableWatcher(ctx) }
+        }
         }
         PButton(tr("Restart the app", "Uygulamayı yeniden başlat"), compact = true) { if (mode == Privilege.Mode.None) msg = tr("Close it from the recents screen and open it again", "Son uygulamalardan kapatıp yeniden açın") else restart() }
         if (msg.isNotEmpty()) Text(msg, color = T.sub, fontSize = 12.sp)
