@@ -193,6 +193,7 @@ object AppPlace {
         App("ScreenRecLauncher", "Screen recorder", "Ekran kaydı", "record", Icons.Outlined.FiberManualRecord) { _, o -> o("screenrec") },
         App("KeyboardLauncher", "Keyboard", "Klavye", "keyboard", Icons.Outlined.Keyboard) { c, _ -> launchExtra(c, TOOL, "keyboard") },
         App("LocalSendLauncher", "LocalSend", "LocalSend", "wifi", Icons.Outlined.Wifi) { _, o -> o("localsend") },
+        App("PaletteLauncher", "Palette", "Palette", "image", Icons.Outlined.Palette) { _, o -> o("palette") },
         App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "bell", Icons.Outlined.Notifications) { _, o -> o("notifhist") },
     )
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
