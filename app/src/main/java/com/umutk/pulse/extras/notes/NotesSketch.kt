@@ -46,15 +46,18 @@ import java.util.UUID
 /** One pen stroke: its colour, its width in canvas pixels and its points in canvas pixels. */
 class Pen(val color: Int, val width: Float, val pts: SnapshotStateList<Offset>)
 
-/** Paint's own 16 colours. The sketch bar uses them and Paint's grey in every Windows look, so it does not follow the theme. */
+/** Paint's own 16 colours. */
 private val PAINT_COLORS = listOf(
     0xFF000000, 0xFF808080, 0xFF800000, 0xFF808000, 0xFF008000, 0xFF008080, 0xFF000080, 0xFF800080,
     0xFFFFFFFF, 0xFFC0C0C0, 0xFFFF0000, 0xFFFFFF00, 0xFF00FF00, 0xFF00FFFF, 0xFF0000FF, 0xFFFF00FF,
 ).map { it.toInt() }
 /** Paint's three line widths: thin, medium, thick. */
 private val PAINT_WIDTHS = listOf(2.dp, 5.dp, 10.dp)
-private val PaintBar = Color(0xFFF0F0F0)
-private val PaintLine = Color(0xFF9A9A9A)
+/** Paint's grey bar in the Windows looks; the other looks draw the bar in their own panel, line and text colours. */
+private val winLook get() = com.umutk.pulse.T.id in setOf("win95", "xp", "win7", "win10", "win11")
+private val PaintBar get() = if (winLook) Color(0xFFF0F0F0) else com.umutk.pulse.T.panel
+private val PaintLine get() = if (winLook) Color(0xFF9A9A9A) else com.umutk.pulse.T.line
+private val PaintInk get() = if (winLook) Color.Black else com.umutk.pulse.T.text
 
 /** Full-screen sketch pad in Paint's style. Done saves a PNG attachment and gives its file name; Close gives null. */
 @Composable
@@ -107,22 +110,22 @@ fun NSketch(onDone: (String?) -> Unit) {
 /** A square tool button of the Paint bar, drawn in black on Paint's grey. */
 @Composable
 private fun PaintTool(icon: String, onClick: () -> Unit) {
-    Box(Modifier.size(34.dp).clickable2(onClick), contentAlignment = Alignment.Center) { PIcon(icon, Color.Black, 20.dp) }
+    Box(Modifier.size(34.dp).clickable2(onClick), contentAlignment = Alignment.Center) { PIcon(icon, PaintInk, 20.dp) }
 }
 
 /** A line-width button: a black bar as thick as the pen; the chosen one sits on a white, outlined square. */
 @Composable
 private fun PaintWidth(w: Dp, on: Boolean, onClick: () -> Unit) {
     Box(
-        Modifier.size(34.dp).background(if (on) Color.White else PaintBar).border(1.dp, if (on) PaintLine else PaintBar).clickable2(onClick),
+        Modifier.size(34.dp).background(if (on) (if (winLook) Color.White else com.umutk.pulse.T.accent.copy(alpha = .25f)) else PaintBar).border(1.dp, if (on) PaintLine else PaintBar).clickable2(onClick),
         contentAlignment = Alignment.Center,
-    ) { Box(Modifier.width(22.dp).height(w).background(Color.Black)) }
+    ) { Box(Modifier.width(22.dp).height(w).background(PaintInk)) }
 }
 
 /** One colour of the grid; the chosen one has a black outline. */
 @Composable
 private fun PaintColor(c: Int, on: Boolean, onClick: () -> Unit) {
-    Box(Modifier.padding(1.dp).size(18.dp).background(Color(c)).border(if (on) 2.dp else 1.dp, if (on) Color.Black else PaintLine).clickable2(onClick))
+    Box(Modifier.padding(1.dp).size(18.dp).background(Color(c)).border(if (on) 2.dp else 1.dp, if (on) PaintInk else PaintLine).clickable2(onClick))
 }
 
 private fun Modifier.clickable2(onClick: () -> Unit): Modifier = this.then(Modifier.pointerInput(Unit) { detectTapGestures(onTap = { onClick() }) })

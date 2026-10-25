@@ -285,7 +285,7 @@ fun NotesHub(onBack: () -> Unit) {
                 folder = folder, onFolder = { folder = if (folder == it) null else it },
                 selected = selected, onSelect = { selected = it },
                 onOpen = { screen = NScreen.Edit(it) },
-                onNew = { dlg = NDlg.Template },
+                onNew = { newNote() },
                 onTrash = { trash(selected) },
                 onBack = onBack,
                 onChanged = { rev++ },
