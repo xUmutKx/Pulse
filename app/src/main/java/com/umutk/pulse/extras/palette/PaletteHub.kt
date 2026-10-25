@@ -133,6 +133,12 @@ fun PaletteHub(onBack: () -> Unit) {
                 PaletteStudio.save(ctx, spec)
                 note = tr("Saved. Pick \"Pulse Palette\" as the icon pack in a launcher that reads packs from a content provider.", "Kaydedildi. Paketi içerik sağlayıcıdan okuyan bir başlatıcıda \"Pulse Palette\" olarak seçin.")
             }
+            PButton(tr("Use in the Pulse launcher", "Pulse başlatıcıda kullan")) {
+                PaletteStudio.save(ctx, spec)
+                com.umutk.pulse.extras.launcher.LauncherPrefs.iconPack = "pulse:palette"
+                com.umutk.pulse.extras.launcher.LauncherPrefs.save(ctx)
+                note = tr("The Pulse launcher now draws its icons in this look.", "Pulse başlatıcı artık ikonlarını bu görünümde çiziyor.")
+            }
             PButton(tr("Save icons as pictures", "İkonları resim olarak kaydet")) {
                 scope.launch {
                     note = tr("Drawing the icons…", "İkonlar çiziliyor…")
