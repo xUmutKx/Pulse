@@ -10,7 +10,23 @@ import org.json.JSONObject
 object BlackOutData {
     const val STANDALONE = "com.umutk.blackout"
 
-    fun prefs(c: Context): SharedPreferences = c.getSharedPreferences("blackout", Context.MODE_PRIVATE)
+    // kept in a field: preference listeners are held weakly by the system
+    private var autoBackup: SharedPreferences.OnSharedPreferenceChangeListener? = null
+
+    fun prefs(c: Context): SharedPreferences {
+        val sp = c.getSharedPreferences("blackout", Context.MODE_PRIVATE)
+        if (autoBackup == null) {
+            val app = c.applicationContext
+            // every change goes to the backup file the user picked (it survives an uninstall; import it after a reinstall)
+            autoBackup = SharedPreferences.OnSharedPreferenceChangeListener { p, k ->
+                if (k == "backup_uri") return@OnSharedPreferenceChangeListener
+                val uri = p.getString("backup_uri", null) ?: return@OnSharedPreferenceChangeListener
+                try { app.contentResolver.openOutputStream(android.net.Uri.parse(uri), "wt")?.use { it.write(export(p).toByteArray()) } } catch (_: Throwable) { }
+            }
+            sp.registerOnSharedPreferenceChangeListener(autoBackup)
+        }
+        return sp
+    }
 
     /** All settings and colour rules as one JSON text. */
     fun export(sp: SharedPreferences): String {
