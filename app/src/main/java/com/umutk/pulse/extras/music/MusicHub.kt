@@ -115,7 +115,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
     val st by engine.state.collectAsState()
     val library by MusicLibrary.tracks.collectAsState()
     // songs without a cover get one in the background, whether or not they are played (see CoverFetch.backfill)
-    LaunchedEffect(library) { CoverFetch.backfill(ctx, library); OnlineTags.backfill(ctx, library); com.umutk.pulse.extras.lyrics.Lyrics.warmIndex(ctx, library) }
+    LaunchedEffect(library) { CoverFetch.backfill(ctx, library); OnlineTags.backfill(ctx, library); com.umutk.pulse.extras.lyrics.Lyrics.warmIndex(ctx, library); com.umutk.pulse.extras.lyrics.LyricsAuto.ensure(ctx) }
     var look by remember { mutableStateOf(runCatching { MusicLook.valueOf(prefs(ctx).getString("look", "")!!) }.getOrDefault(MusicLook.MATERIAL)) }
     var artBg by remember { mutableStateOf(prefs(ctx).getBoolean("artBg", false)) }
     var lyrics by remember { mutableStateOf(false) }
