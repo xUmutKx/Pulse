@@ -254,5 +254,7 @@ fun LiveLyricsSettingsSection() {
             }
         }
         SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
+        var consec by remember { mutableStateOf(LyricsShare.consecutive(c)) }
+        SwitchRow(tr("Share: only lines that follow each other", "Paylaşım: yalnız ardışık satırlar"), consec) { consec = it; LyricsShare.setConsecutive(c, it) }
     }
 }

@@ -73,6 +73,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var punctTyped = false
     private var slotWords = arrayOf("", "", "")
     private var target: String? = null
+    /** The typed word [target] was worked out for: a correction is only made when the word is still that one. */
+    private var targetFor = ""
     private var anchor = 0
     private var lastGlide: String? = null
     private var glideAlts: List<String> = emptyList()
@@ -277,6 +279,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
             editAt = SystemClock.uptimeMillis()
             word.append(ch)
+            target = null
             // the touch model: where this letter was touched, and the finger's drift from the key's centre is learned
             val tp = st.touch; st.touch = null
             touchPts.add(tp); if (touchPts.size > 48) touchPts.removeAt(0)
@@ -305,7 +308,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             c.finishComposingText(); word.clear(); target = null; peak = null; lastCorrection = null; return false
         }
         var out = typed
-        val t = target
+        // a correction is only made to the word the bar shows in the middle for exactly this typed word; an old suggestion (the bar had not caught up with the last letters) is never used
+        val t = target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
         if (dotFix) {
@@ -984,7 +988,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val sc = if (typed.length >= 2) (KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale))
                     ?: emailsSaved().firstOrNull { it.startsWith(typed.lowercase(l.locale)) && it.length > typed.length }) else null
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
-                else { target = res.third; slotWords = res.second; st.slots = res.first }
+                else { target = res.third; targetFor = typed; slotWords = res.second; st.slots = res.first }
                 showClipSlot()
             }
         }
