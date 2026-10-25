@@ -185,20 +185,30 @@ private fun xposedInfo(ctx: Context, path: String): XposedInfo? {
     return XposedInfo(md?.getString("xposeddescription").orEmpty(), md?.get("xposedminversion")?.toString().orEmpty())
 }
 
-/** LSPosed Manager, or the older EdXposed manager, whichever is installed. */
+/** LSPosed Manager, or the older EdXposed manager, whichever is installed. Not the patch tools (LSPatch, "core patch"): those are no manager. */
 fun lsposedIntent(c: Context): Intent? {
     listOf("org.lsposed.manager", "io.github.lsposed.manager", "com.solohsu.android.edxp.manager")
         .firstNotNullOfOrNull { c.packageManager.getLaunchIntentForPackage(it) }?.let { return it }
-    // Vector and other forks have their own package names: the first installed app with "vector" or "lsposed" in it that can be opened
+    // forks have their own package names: the first installed app with "vector" or "lsposed" in it that can be opened (patch tools left out)
     return c.packageManager.getInstalledPackages(0).map { it.packageName }
-        .firstOrNull { (it.contains("vector", true) || it.contains("lsposed", true)) && c.packageManager.getLaunchIntentForPackage(it) != null }
+        .firstOrNull { p -> (p.contains("vector", true) || p.contains("lsposed", true)) && !p.contains("patch", true) && c.packageManager.getLaunchIntentForPackage(p) != null }
         ?.let { c.packageManager.getLaunchIntentForPackage(it) }
 }
 
+/**
+ * Vector and LSPosed run their manager "parasitic" (no launcher icon of its own): it opens through the system shell's warning activity with the manager's category,
+ * or through the secret dialer code 5776733. Each way is tried in turn; nothing tells whether the manager came up, so a message is shown only when none could be sent.
+ */
 private fun openLSPosed(c: Context) {
-    val i = lsposedIntent(c)
-    if (i == null) Toast.makeText(c, "LSPosed Manager is not installed", Toast.LENGTH_LONG).show()
-    else c.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    lsposedIntent(c)?.let { runCatching { c.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); return } }
+    for (cat in listOf("org.lsposed.manager.LAUNCH_MANAGER", "org.matrix.vector.LAUNCH_MANAGER")) {
+        val ok = runCatching {
+            c.startActivity(Intent(Intent.ACTION_MAIN).addCategory(cat).setClassName("com.android.shell", "com.android.shell.BugreportWarningActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.isSuccess
+        if (ok) return
+    }
+    val sent = runCatching { c.sendBroadcast(Intent("android.provider.Telephony.SECRET_CODE", Uri.parse("android_secret_code://5776733"))) }.isSuccess
+    if (!sent) Toast.makeText(c, "LSPosed / Vector Manager could not be opened", Toast.LENGTH_LONG).show()
 }
 
 /** Plain next steps for the error the system installer gave. */
@@ -671,7 +681,8 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
                 val full = Modifier.fillMaxWidth()
                 if (moduleDone) {
                     Text("${pk.label} is installed. Turn it on in LSPosed, then reboot if LSPosed asks.", color = w.text, fontSize = 13.sp)
-                    IButton("Open LSPosed", full) { openLSPosed(ctx) }
+                    // the LSPosed button stays on the module card above; here the app itself opens, as after any install
+                    ctx.packageManager.getLaunchIntentForPackage(pk.pkg)?.let { li -> IButton("Open", full, primary = true) { ctx.startActivity(li.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)); onDone() } }
                     IButton("Close", full) { onDone() }
                     return@Column
                 }
