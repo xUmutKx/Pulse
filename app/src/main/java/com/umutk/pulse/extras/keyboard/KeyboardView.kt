@@ -665,8 +665,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             val now = android.os.SystemClock.uptimeMillis()
                             when (key.kind) {
                                 KeyKind.DELETE -> {
-                                    // held long enough: a whole word per repeat instead of a letter
-                                    if (!quick) { delRepeats++; if (delRepeats > 0) { a.deleteWord(); due = now + maxOf(55L, 230L - delRepeats * 22L) } else { a.backspace(); due = now + 55L } } else due = now + 55L
+                                    // held: one letter per repeat, a little faster the longer it is held, never a whole word
+                                    if (!quick) { delRepeats++; a.backspace(); due = now + maxOf(35L, 90L - delRepeats * 3L) } else due = now + 55L
                                 }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
