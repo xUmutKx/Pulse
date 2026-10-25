@@ -43,20 +43,10 @@ object KeyboardLayouts {
                     if (digitsOnPress && r == 0 && i < DIGITS.length) add(DIGITS[i].toString())
                     l.alts[ch]?.forEach { add(it.toString()) }
                 }
-                // the element symbols of the letter, with their capital first letter, join the capital letter's long press
-                val chem = if (upper && KeyboardPrefs.chemKeys) chemical[ch.toString()].orEmpty() else emptyList()
-                KbKey(cap(ch.toString(), l, upper), KeyKind.CHAR, 1f, (if (upper) alts.map { cap(it, l, true) } else alts) + chem)
+                KbKey(cap(ch.toString(), l, upper), KeyKind.CHAR, 1f, if (upper) alts.map { cap(it, l, true) } else alts)
             }
         }
     }
-
-    /** Chemical element symbols by first letter (kept in their own case, whatever Shift does). */
-    private val chemical: Map<String, List<String>> = mapOf(
-        "a" to "Ac Ag Al Am Ar As At Au", "b" to "B Ba Be Bh Bi Bk Br", "c" to "C Ca Cd Ce Cf Cl Cm Cn Co Cr Cs Cu", "d" to "Db Ds Dy", "e" to "Er Es Eu", "f" to "F Fe Fl Fm Fr",
-        "g" to "Ga Gd Ge", "h" to "H He Hf Hg Ho Hs", "i" to "I In Ir", "k" to "K Kr", "l" to "La Li Lr Lu Lv", "m" to "Mc Md Mg Mn Mo Mt", "n" to "N Na Nb Nd Ne Nh Ni No Np",
-        "o" to "O Og Os", "p" to "P Pa Pb Pd Pm Po Pr Pt Pu", "r" to "Ra Rb Re Rf Rg Rh Rn Ru", "s" to "S Sb Sc Se Sg Si Sm Sn Sr", "t" to "Ta Tb Tc Te Th Ti Tl Tm Ts",
-        "u" to "U", "v" to "V", "w" to "W", "x" to "Xe", "y" to "Y Yb", "z" to "Zn Zr",
-    ).mapValues { it.value.split(' ') }
 
     fun cap(s: String, l: Lang, upper: Boolean) = if (upper) s.uppercase(l.locale) else s
 

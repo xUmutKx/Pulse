@@ -38,7 +38,7 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 - Autocorrect that learns: touch model, Turkish endings (also the spoken ones), your typos (a typo that is a real word is only learned after three sightings; an undone correction is forgotten), word pairs from real sentences, train autocorrect, statistics and a heat map of your keys.
 - Effects like a keyboard studio: a colour wash over the keyboard (6), a colour effect on each key (tint, blob, glass, glow), key motion (pop, sink, bounce) and touch sounds (retro, calm, fun, pink, space; made inside the app).
 - Translation bar: the two languages at the ends, a swap button between them, the translation of what you type below, a tap puts it in. Deleting the space behind a word opens it again with its suggestions.
-- Hold a key for accents (many more letters) and, on capitals, chemical element symbols (He, Fe, Cu). Optional compact bottom row with a Shift key, separate brightness for the top bar and the bottom rows, Shift shows outline / underline / filled for off, one capital and caps lock.
+- Hold a key for accents (many more letters). Optional compact bottom row with a Shift key, separate brightness for the top bar and the bottom rows, Shift shows outline / underline / filled for off, one capital and caps lock.
 - Emoji with search and kaomoji, a symbol tab (flowers, hearts, stars, arrows, presets, all Unicode symbol blocks, searchable by name), clipboard history with pins and images, translation inside the keyboard, extra key row (Ctrl, Alt, Win, Shift, arrows, F keys).
 </details>
 
