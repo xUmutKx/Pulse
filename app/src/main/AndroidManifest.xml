@@ -798,6 +798,23 @@
         <service android:name=".FloatingKeysService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="a floating key button over other apps with a small panel of keys (Esc, arrows, F keys)" />
         </service>
+        <!-- Island (extras/island): a pill at the top of the screen that shows the song, notifications, charger, headset, volume, torch, removed apps and screenshots -->
+        <service android:name="com.umutk.pulse.extras.island.IslandService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="a pill over the camera that shows what is going on" />
+        </service>
+        <service android:name="com.umutk.pulse.extras.island.IslandListenerService" android:exported="true" android:label="Pulse · Island"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+            <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
+        </service>
+        <receiver android:name="com.umutk.pulse.extras.island.IslandBoot" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
+        </receiver>
+        <activity-alias android:name=".IslandLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_island" android:roundIcon="@mipmap/ic_ad_island" android:label="Island">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <service android:name=".MotionCueService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="edge dots that move with the vehicle against motion sickness" />
         </service>
