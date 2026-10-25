@@ -632,6 +632,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 awaitEachGesture {
                     val d = awaitFirstDown(requireUnconsumed = false); d.consume()
                     down = true
+                    // however the touch ends (up, cancel, the key leaving the screen, an action that throws) the key must not stay shown as pressed
+                    try {
                     val key = kNow; val a = actNow
                     a.feedback()
                     val big = key.kind == KeyKind.CHAR || key.kind == KeyKind.COMMA || key.kind == KeyKind.PERIOD
@@ -732,9 +734,11 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             }
                         }
                     }
-                    down = false
-                    st.preview = null
-                    st.trail = emptyList()
+                    } finally {
+                        down = false
+                        st.preview = null
+                        st.trail = emptyList()
+                    }
                 }
             }.padding(horizontal = KeyboardPrefs.keyGap.dp * .75f, vertical = KeyboardPrefs.keyGap.dp / 2),
     ) {
