@@ -1012,7 +1012,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 }
             }
         }
-        if (FilesPrefs.grid) BoxWithConstraints(Modifier.fillMaxWidth()) {
+        // the call recordings folder has a page of its own: the people called, and the calls by day
+        if (arcFile == null && isCallRecordings(dir)) CallPane(shownNow) { f -> recents = exAddRecent(ctx, f); ExAudio.play(f) }
+        else if (FilesPrefs.grid) BoxWithConstraints(Modifier.fillMaxWidth()) {
             // a tile is its icon plus a little room for the name; the gap between tiles is the same small one at every size,
             // so a bigger icon only means fewer columns, and the cells share the width evenly
             val gap = 4.dp
