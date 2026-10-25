@@ -53,6 +53,7 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.ViewList
 import androidx.compose.material.icons.rounded.GridView
 import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.lazy.grid.itemsIndexed as gridItemsIndexed
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SortByAlpha
@@ -417,7 +418,7 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
     } else androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Fixed(cols), Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { header() }
-        itemsIndexed(items) { pos, (_, t) ->
+        gridItemsIndexed(items) { pos, (_, t) ->
             val art = rememberTrackArt(t)
             Column(Modifier.clickable { onPlayTracks(songs, pos) }) {
                 Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(style.chip), contentAlignment = Alignment.Center) {

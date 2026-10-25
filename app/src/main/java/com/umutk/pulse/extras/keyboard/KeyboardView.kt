@@ -965,10 +965,9 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         }
         menuFor?.let { m ->
             Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                val ic = androidx.compose.material.icons.Icons.Rounded
-                Icon(ic.PushPin, tr("Pin", "Sabitle"), tint = if (m.pinned) th.accent else th.text, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp).padding(10.dp))
-                if (m.image == null) Icon(ic.Link, tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
-                Icon(ic.CheckCircle, tr("Select", "Seç"), tint = th.text, modifier = Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp).padding(10.dp))
+                Icon(kbIcon(th, "Gesture"), tr("Pin", "Sabitle"), tint = if (m.pinned) th.accent else th.text, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp).padding(10.dp))
+                if (m.image == null) Icon(kbIcon(th, "TouchApp"), tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
+                Icon(kbIcon(th, "Check"), tr("Select", "Seç"), tint = th.text, modifier = Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp).padding(10.dp))
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 Text("✕", color = th.sub, fontSize = 16.sp, modifier = Modifier.clickable { menuFor = null }.padding(10.dp))
             }
