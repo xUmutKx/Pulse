@@ -932,6 +932,15 @@ fun FilesSettings() {
             Chips(tr("Start page", "Açılış sayfası"), "folder", listOf(tr("Home", "Ana ekran"), tr("Recent", "Son")), if (fp.openRecent) 1 else 0) { fp.openRecent = it == 1 }
             Chips(tr("Open files", "Dosyaları aç"), "openFolder", listOf(tr("Pulse viewers", "Pulse görüntüleyiciler"), tr("Ask", "Sor")), if (fp.openAsk) 1 else 0) { fp.openAsk = it == 1 }
         }
+        Sec(tr("Swipe on files", "Dosyada kaydırma"), "move") {
+            // what a swipe to the left and to the right does to a file in the lists of a file type
+            val ps = ctx.getSharedPreferences("pulse_types", 0)
+            val acts = listOf("delete", "open", "pick", "none")
+            var swL by remember { mutableStateOf(ps.getString("swL", "delete") ?: "delete") }
+            var swR by remember { mutableStateOf(ps.getString("swR", "delete") ?: "delete") }
+            FilesPickRow("back", tr("Swipe left", "Sola kaydır"), acts.map { swipeLabel(it) }, acts.indexOf(swL).coerceAtLeast(0), null) { swL = acts[it]; ps.edit().putString("swL", swL).apply() }
+            FilesPickRow("chevron", tr("Swipe right", "Sağa kaydır"), acts.map { swipeLabel(it) }, acts.indexOf(swR).coerceAtLeast(0), null) { swR = acts[it]; ps.edit().putString("swR", swR).apply() }
+        }
         Sec(tr("Appearance of rows", "Satır görünümü"), "gridView") {
             SwRow(tr("Transparency", "Şeffaflık"), "light", fp.glass, tr("See-through Files window in Windows 11 (next time it opens)", "Windows 11'de şeffaf Dosyalar penceresi (bir sonraki açılışta)")) { fp.glass = it }
             SwRow(tr("Separate rows (cards)", "Ayrı satırlar (kartlar)"), "gridView", fp.cards, tr("Each file in its own card", "Her dosya kendi kartında")) { fp.cards = it }

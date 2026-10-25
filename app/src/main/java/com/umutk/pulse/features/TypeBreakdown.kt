@@ -101,6 +101,8 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     var selected by remember(root) { mutableStateOf<FileKind?>(when (com.umutk.pulse.files.home.FilesHomeNav.kind) {
         "images" -> FileKind.IMAGES; "videos" -> FileKind.VIDEO; "audio" -> FileKind.AUDIO; "docs" -> FileKind.DOCUMENTS; "archives" -> FileKind.ARCHIVES; "apps" -> FileKind.APPS; else -> null
     }.also { com.umutk.pulse.files.home.FilesHomeNav.kind = null }) }
+    // a list opened from the Files home goes straight back there; only a list opened from the overview goes back to the overview
+    val openedDirect = remember(root) { selected != null }
     var pending by remember { mutableStateOf<LargeFile?>(null) }
     var note by remember { mutableStateOf("") }
     // a long press picks files; the bin at the top right deletes all the picked ones at once
@@ -118,10 +120,10 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = { if (selected != null) selected = null else onBack() }) {
+            IconButton(onClick = { if (selected != null && !openedDirect) selected = null else onBack() }) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = T.text)
             }
-            androidx.activity.compose.BackHandler(selected != null) { selected = null }
+            androidx.activity.compose.BackHandler(selected != null && !openedDirect) { selected = null }
             Column(Modifier.weight(1f)) {
                 Text(selected?.let { kindLabel(it) } ?: com.umutk.pulse.tr("Storage by type", "Türe göre depolama"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
                 Text(root.path, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -194,20 +196,6 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
                         fontSize = 12.sp,
                         modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
                     )
-                }
-                item {
-                    Column(Modifier.padding(bottom = 6.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                        listOf(true, false).forEach { left ->
-                            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text(if (left) "←" else "→", color = T.sub, fontSize = 16.sp, modifier = Modifier.width(22.dp))
-                                listOf("delete", "open", "pick", "none").forEach { k ->
-                                    com.umutk.pulse.PChip((if (left) swL else swR) == k, swipeLabel(k)) {
-                                        if (left) { swL = k; prefs.edit().putString("swL", k).apply() } else { swR = k; prefs.edit().putString("swR", k).apply() }
-                                    }
-                                }
-                            }
-                        }
-                    }
                 }
                 if (s.largest.isEmpty()) {
                     item { Text(com.umutk.pulse.tr("No files of this type", "Bu türde dosya yok"), color = T.sub, fontSize = 13.sp) }
@@ -307,7 +295,7 @@ fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
 }
 
 /** A small picture of a file: the picture itself, a frame of a video, else the sign of its kind; a tick when picked. */
-private fun swipeLabel(a: String) = when (a) { "delete" -> com.umutk.pulse.tr("Delete", "Sil"); "open" -> com.umutk.pulse.tr("Open", "Aç"); "pick" -> com.umutk.pulse.tr("Select", "Seç"); else -> com.umutk.pulse.tr("Nothing", "Hiçbir şey") }
+internal fun swipeLabel(a: String) = when (a) { "delete" -> com.umutk.pulse.tr("Delete", "Sil"); "open" -> com.umutk.pulse.tr("Open", "Aç"); "pick" -> com.umutk.pulse.tr("Select", "Seç"); else -> com.umutk.pulse.tr("Nothing", "Hiçbir şey") }
 private fun swipeIcon(a: String): androidx.compose.ui.graphics.vector.ImageVector = when (a) { "delete" -> Icons.Filled.Delete; "open" -> Icons.AutoMirrored.Filled.OpenInNew; else -> Icons.Filled.Check }
 private fun swipeColor(a: String): Color = when (a) { "delete" -> Color(0xFFC42B1C); "open" -> Color(0xFF1E6FD9); else -> Color(0xFF2E7D32) }
 
