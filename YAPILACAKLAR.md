@@ -1235,3 +1235,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.69 Weather: sky/amoled/app page looks, list of places, swipe between places; Install window uses the Material accent
 - 1.0.70 Weather: pollen, today vs yesterday, UV, humidity, wind compass, dew point, pressure, visibility cards; 48 hours; 30-minute background refresh
 - 1.0.72 Files: Recordings/Call page (people tiles from contacts, calls by day, play in the Files player)
+- 1.0.73 Palette extra app (icon pack studio from the own Palette project: palette, style, preview, provider, PNG zip)

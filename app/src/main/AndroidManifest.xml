@@ -1510,6 +1510,13 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".PaletteLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_localsend" android:roundIcon="@mipmap/ic_ad_localsend" android:label="Palette">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <provider android:name="com.umutk.pulse.extras.palette.PaletteIconProvider" android:authorities="${applicationId}.palette.icons" android:exported="true" />
         <service android:name="com.umutk.pulse.extras.lyrics.LyricsListenerService" android:exported="true"
             android:label="Pulse · Lyrics from the music notification" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
