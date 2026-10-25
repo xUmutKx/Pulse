@@ -1,3 +1,4 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.SwapHoriz
@@ -782,6 +783,19 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     // the same height as the keys, so the keyboard does not shrink; the search needs the keys under it and is taller
     val fixed = if (q == null && st.keysH > 0) Modifier.height(with(dens) { st.keysH.toDp() }) else Modifier
     Column(Modifier.fillMaxWidth().then(fixed)) {
+        // the emoji categories sit on top, where the thumb reaches them
+        if (q == null) {
+            Row(Modifier.fillMaxWidth().height(40.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                icons.forEachIndexed { i, ic ->
+                    Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = i }, contentAlignment = Alignment.Center) {
+                        Icon(ic, null, tint = if (i == tab) th.text else th.sub, modifier = Modifier.size(24.dp))
+                        if (i == tab) Box(Modifier.align(Alignment.BottomCenter).width(26.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
+                    }
+                }
+                Box(Modifier.width(48.dp).fillMaxHeight().clickable { tab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.text else th.sub, fontSize = 15.sp) }
+                Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (tab == 11) th.text else th.sub, fontSize = 20.sp) }
+            }
+        }
         // on the symbol page the families sit above the search, where the thumb reaches them
         if (q == null && tab == 11) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             fams.forEachIndexed { i, f ->
@@ -825,18 +839,9 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                     items(list) { it2 -> EmojiCell(it2, th, act) }
                 }
             }
-            Row(Modifier.fillMaxWidth().height(keyH * .85f), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().height(keyH * .7f), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.page(0) }, contentAlignment = Alignment.Center) { Text("abc", color = th.text, fontSize = 17.sp) }
-                Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                    icons.forEachIndexed { i, ic ->
-                        Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = i }, contentAlignment = Alignment.Center) {
-                            Icon(ic, null, tint = if (i == tab) th.text else th.sub, modifier = Modifier.size(24.dp))
-                            if (i == tab) Box(Modifier.align(Alignment.BottomCenter).width(26.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
-                        }
-                    }
-                    Box(Modifier.width(48.dp).fillMaxHeight().clickable { tab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (tab == 10) th.text else th.sub, fontSize = 15.sp) }
-                    Box(Modifier.width(44.dp).fillMaxHeight().clickable { tab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (tab == 11) th.text else th.sub, fontSize = 20.sp) }
-                }
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 Box(Modifier.width(56.dp).fillMaxHeight().clickable { act.backspace() }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Backspace"), null, tint = th.text, modifier = Modifier.size(26.dp)) }
             }
         }
@@ -864,11 +869,15 @@ private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.F
                     modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(if (i == sub) th.special else Color.Transparent).clickable { onSub(i) }.padding(horizontal = 12.dp, vertical = 5.dp))
             }
         }
-        // the presets are long: wider cells and smaller type
+        // the presets vary in length: each one takes just its own width, so two or three share a line
         val wide = fam?.id == "Patterns"
-        LazyVerticalGrid(if (wide) GridCells.Fixed(1) else GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
+        if (wide) androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            subs.getOrNull(sub)?.second.orEmpty().forEach { sg ->
+                Text(sg.ch, fontSize = 14.sp, color = th.text, maxLines = 1, softWrap = false, modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(sg.ch) }.padding(horizontal = 10.dp, vertical = 8.dp))
+            }
+        } else LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
             items(subs.getOrNull(sub)?.second.orEmpty()) { sg ->
-                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = if (wide) 14.sp else 22.sp, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip) }
+                Box(Modifier.height(44.dp).clickable { act.emoji(sg.ch) }, contentAlignment = Alignment.Center) { Text(sg.ch, fontSize = 22.sp, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip) }
             }
         }
     }

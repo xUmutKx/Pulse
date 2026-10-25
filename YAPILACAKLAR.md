@@ -1217,3 +1217,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.48 APKs hold arm64-v8a, armeabi-v7a and x86_64; README and release notes brought up to date - derlenmedi, bekle
 - 1.0.49 Install window: Material pill buttons, switches instead of On/Off, removed Install on open and Set source to Play Store, option to remove unused CPU libraries - derlenmedi, bekle
 - 1.0.50 Element symbols removed from the long press (two letters can be typed) - derlenmedi, bekle
+- 1.0.51 Emoji categories on top, presets in compact flow (2-3 per line) with 30 more, emoji removed from the symbol tab - derlenmedi, bekle

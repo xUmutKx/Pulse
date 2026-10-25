@@ -2,65 +2,43 @@
 ##Classics
 ˖ ᡣ𐭩 ⊹ ࣪ ౨ৎ˚₊	pattern modifier letter plus sign
 ⋆˚࿔ ⊹ ˖	pattern star operator
-₊˚⊹ ♡ ⊹˚₊	pattern subscript plus sign
-˚₊‧꒰ა ♡ ໒꒱ ‧₊˚	pattern ring above
 ᡣ𐭩 ౨ৎ ˚ ₊	pattern mongolian letter sibe ka
-⋆｡°✩ ₊˚	pattern star operator
-｡ﾟ☆: *.☽ .* :☆ﾟ.	pattern halfwidth ideographic full stop
 ⋆.˚ ✮ ⋆.˚	pattern star operator
-✧˖°.	pattern white four pointed star
 𓂃 ࣪ ִֶָ ☾.	pattern egyptian hieroglyph d013
 ᯓ★	pattern batak letter simalungun ra
-ᯓ ✈︎	pattern batak letter simalungun ra
 ꒰ ᵔ ᵕ ᵔ ꒱	pattern yi radical shy
 ₍ᐢ. .ᐢ₎	pattern subscript left parenthesis
 ૮ ˶ᵔ ᵕ ᵔ˶ ა	pattern gujarati digit eight
 (˶ᵔ ᵕ ᵔ˶)	pattern left parenthesis
-ฅ^•ﻌ•^ฅ	pattern thai character kho khon
 ʕ•ᴥ•ʔ	pattern latin letter pharyngeal voiced fricative
 ᓚᘏᗢ	pattern canadian syllabics la
 ૮₍ ˶•⤙•˶ ₎ა	pattern gujarati digit eight
 ૮ ˘ᴥ˘ ა	pattern gujarati digit eight
 ₍⸍⸌̣ʷ̣̫⸍̣⸌₎	pattern subscript left parenthesis
-‧₊˚ ☁︎ ⋅ ♡ 𓂃	pattern hyphenation point
 ⋆⁺₊⋆ ☾ ⋆⁺₊⋆	pattern star operator
-⋆ ˚｡⋆୨୧˚	pattern star operator
 ୨୧ ┈┈┈┈┈┈┈┈ ୨୧	pattern oriya digit two
 ⌒⌒⌒⌒⌒	pattern arc
-⸜(｡˃ ᵕ ˂ )⸝♡	pattern left low paraphrase bracket
-ʚ ♡ ɞ	pattern latin small letter closed open e
-ʚ♡⃛ɞ	pattern latin small letter closed open e
 ꕤ ⋆ ꕤ	pattern vai syllable za
-✦ ━━━━━━ ✦	pattern black four pointed star
 ▬▬▬▬▬▬▬▬▬▬	pattern black rectangle
-═════ ❖ ═════	pattern box drawings double horizontal
 ╰┈➤	pattern box drawings light arc up and right
 ┈┈┈┈┈┈┈┈┈┈┈┈	pattern box drawings light quadruple dash horizontal
-──────⋆⋅☆⋅⋆──────	pattern box drawings light horizontal
 •·.·´¯`·.·• •·.·´¯`·.·•	pattern bullet
-｡･:*:･ﾟ★,｡･:*:･ﾟ☆	pattern halfwidth ideographic full stop
-☆*:.｡. o(≧▽≦)o .｡.:*☆	pattern white star
 『 』	pattern left white corner bracket
 「 」	pattern left corner bracket
 【 】	pattern left black lenticular bracket
 ꧁ ꧂	pattern javanese left rerenggan
 ༺ ༻	pattern tibetan mark gug rtags gyon
-【・】	pattern left black lenticular bracket
 ⟦ ⟧	pattern mathematical left white square bracket
 ❝ ❞	pattern heavy double turned comma quotation mark ornament
 ❛ ❜	pattern heavy single turned comma quotation mark ornament
 〝 〞	pattern reversed double prime quotation mark
 ☆ ミ	pattern white star
-•☽────✧˖°	pattern bullet
 ☾ ˖ ✦	pattern last quarter moon
 ˏˋ ˎˊ	pattern modifier letter low acute accent
-°˖✧	pattern degree sign
 ⊹ ˚ ₊	pattern hermitian conjugate matrix
-♡ ⸜ ⸝	pattern white heart suit
 ୨ৎ	pattern oriya digit two
 ꪜ	pattern tai viet letter low po
 ᰔ	pattern lepcha letter bla
-𓆩♡𓆪	pattern egyptian hieroglyph l006
 𓆩⟡𓆪	pattern egyptian hieroglyph l006
 𓆸	pattern egyptian hieroglyph m009
 𖤐	pattern bamum letter phase-d ngkeuri
@@ -70,6 +48,44 @@
 ⚝	pattern outlined white star
 ⛤	pattern pentagram
 ꗃ	pattern vai syllable bo
+꒰ ˶• ༝ •˶꒱	pattern yi radical shy
+ʕ·ᴥ·ʔ	pattern latin letter pharyngeal voiced fricative
+⋆˙⟡	pattern star operator
+✦•┈┈┈┈•✦	pattern black four pointed star
+•°¯`•• ••´¯°•	pattern bullet
+◦•●◉✿ ✿◉●•◦	pattern white bullet
+▁▂▃▄▅▆▇█	pattern lower one eighth block
+╰☆╮	pattern box drawings light arc up and right
+░▒▓█▓▒░	pattern light shade
+⊹₊ ⋆	pattern hermitian conjugate matrix
+ᨒ ⁺ ˖	pattern buginese letter la
+★彡	pattern black star
+彡★	pattern cjk unified ideograph-5f61
+❀⊱	pattern white florette
+⊰❀	pattern precedes under relation
+✿•*¨*•.¸¸.•*¨*•✿	pattern black florette
+꧁༺ ༻꧂	pattern javanese left rerenggan
+╭┈ ➤	pattern box drawings light arc down and right
+┊ ┊ ┊ ┊	pattern box drawings light quadruple dash vertical
+— ✦ —	pattern em dash
+– ⋆ –	pattern en dash
+⸜ ⸝	pattern left low paraphrase bracket
+⌇⌇⌇	pattern wavy line
+⎯⎯⎯ ⋆ ⎯⎯⎯	pattern horizontal line extension
+◇ ◆ ◇	pattern white diamond
+▹▸▹▸	pattern white right-pointing small triangle
+⁂	pattern asterism
+※	pattern reference mark
+❖	pattern black diamond minus white x
+⌘	pattern place of interest sign
+⎔	pattern software-function symbol
+⍟	pattern apl functional symbol circle star
+⚚	pattern staff of hermes
+☽ ☾	pattern first quarter moon
+ᵔ ᵕ ᵔ	pattern modifier letter small top half o
+ᵒ̴̶̷᷄ ᵕ ᵒ̴̶̷᷅	pattern modifier letter small o
+˘ᴗ˘	pattern breve
+•ᴗ•	pattern bullet
 ##Lines
 ━━ ✿ ━━	pattern box drawings heavy horizontal
 ━━ ♡ ━━	pattern box drawings heavy horizontal
@@ -221,13 +237,10 @@
 ✾	six petalled black and white florette
 ✽	heavy teardrop-spoked asterisk
 ⚘	flower
-☘	shamrock
 ❦	floral heart
 ❧	rotated floral heart bullet
-⚜	fleur-de-lis
 ꕤ	vai syllable za
 𓇼	egyptian hieroglyph n014
-⚛	atom symbol
 ❂	circled open centre eight pointed star
 ✤	heavy four balloon-spoked asterisk
 ✥	four club-spoked asterisk
@@ -237,23 +250,16 @@
 ✣	four balloon-spoked asterisk
 ✢	four teardrop-spoked asterisk
 #Hearts
-♡	white heart suit
-♥	black heart suit
 ❥	rotated heavy black heart bullet
-❣	heavy heart exclamation mark ornament
 ღ	georgian letter ghan
 ❢	heavy exclamation mark ornament
 ☙	reversed rotated floral heart bullet
-♡︎	white heart suit
-❤︎	heavy black heart
 ꒰ა	yi radical shy
 ໒꒱	lao digit two
-⸜♡⸝	left low paraphrase bracket
 𐙚	linear a sign a306
 ᥫ᭡	tai le letter e
 #Stars
 ✦	black four pointed star
-✧	white four pointed star
 ⋆	star operator
 ★	black star
 ☆	white star
@@ -276,22 +282,14 @@
 ✸	heavy eight pointed rectilinear black star
 ✹	twelve pointed black star
 ✺	sixteen pointed asterisk
-❇	sparkle
 ❆	heavy chevron snowflake
 ❅	tight trifoliate snowflake
-❄	snowflake
-✨	sparkles
-⍟	apl functional symbol circle star
 ⛥	right-handed interlaced pentagram
 ⛦	left-handed interlaced pentagram
 ⛧	inverted pentagram
 ⋆˚	star operator
 ₊˚	subscript plus sign
-✧˖	white four pointed star
 ˙	dot above
-･	halfwidth katakana middle dot
-｡	halfwidth ideographic full stop
-ﾟ	halfwidth katakana semi-voiced sound mark
 ‧	hyphenation point
 ⸜	left low paraphrase bracket
 ⸝	right low paraphrase bracket
@@ -315,8 +313,6 @@
 ⸙	palm branch
 ⸸	turned dagger
 ꕀ	vai syllable ji
-⁂	asterism
-※	reference mark
 ⁕	flower punctuation mark
 ⁎	low asterisk
 ✻	teardrop-spoked asterisk
@@ -365,34 +361,21 @@
 #Moon and sky
 ☾	last quarter moon
 ☽	first quarter moon
-☀	black sun with rays
-☁	cloud
-☂	umbrella
-☃	snowman
-☄	comet
 ☼	white sun with rays
-☮	peace symbol
-☯	yin yang
-☸	wheel of dharma
-♨	hot springs
 𓆝	egyptian hieroglyph k003
 𓆟	egyptian hieroglyph k005
 𓆞	egyptian hieroglyph k004
 #Lines
-─	box drawings light horizontal
-━	box drawings heavy horizontal
 ┄	box drawings light triple dash horizontal
 ┅	box drawings heavy triple dash horizontal
 ┈	box drawings light quadruple dash horizontal
 ┉	box drawings heavy quadruple dash horizontal
-═	box drawings double horizontal
 ╌	box drawings light double dash horizontal
 ╍	box drawings heavy double dash horizontal
 ╴	box drawings light left
 ╶	box drawings light right
 ⎯	horizontal line extension
 ⏤	straightness
-﹏	wavy low line
 ﹋	wavy overline
 ﹌	double wavy overline
 ∼	tilde operator
@@ -402,11 +385,9 @@
 ⋆⋅⋆	star operator
 ◦•◦	white bullet
 ···	middle dot
-･ﾟ	halfwidth katakana middle dot
 ⋰	up right diagonal ellipsis
 ⋱	down right diagonal ellipsis
 ┈┈	box drawings light quadruple dash horizontal
-━━	box drawings heavy horizontal
 ⎼	horizontal scan line-7
 ╾╼	box drawings heavy left and light right
 ⸺	two-em dash
@@ -455,12 +436,6 @@
 ↑	upwards arrow
 →	rightwards arrow
 ↓	downwards arrow
-↔	left right arrow
-↕	up down arrow
-↖	north west arrow
-↗	north east arrow
-↘	south east arrow
-↙	south west arrow
 ↚	leftwards arrow with stroke
 ↛	rightwards arrow with stroke
 ↜	leftwards wave arrow
@@ -476,8 +451,6 @@
 ↦	rightwards arrow from bar
 ↧	downwards arrow from bar
 ↨	up down arrow with base
-↩	leftwards arrow with hook
-↪	rightwards arrow with hook
 ↫	leftwards arrow with loop
 ↬	rightwards arrow with loop
 ↭	left right wave arrow
@@ -633,8 +606,6 @@
 ⤱	north east arrow crossing north west arrow
 ⤲	north west arrow crossing north east arrow
 ⤳	wave arrow pointing directly right
-⤴	arrow pointing rightwards then curving upwards
-⤵	arrow pointing rightwards then curving downwards
 ⤶	arrow pointing downwards then curving leftwards
 ⤷	arrow pointing downwards then curving rightwards
 ⤸	right-side arc clockwise arrow
@@ -711,8 +682,6 @@
 ⥿	down fish tail
 #Shapes
 ##Geometric
-■	black square
-□	white square
 ▢	white square with rounded corners
 ▣	white square containing black small square
 ▤	square with horizontal fill
@@ -721,8 +690,6 @@
 ▧	square with upper left to lower right fill
 ▨	square with upper right to lower left fill
 ▩	square with diagonal crosshatch fill
-▪	black small square
-▫	white small square
 ▬	black rectangle
 ▭	white rectangle
 ▮	black vertical rectangle
@@ -730,20 +697,15 @@
 ▰	black parallelogram
 ▱	white parallelogram
 ▲	black up-pointing triangle
-△	white up-pointing triangle
 ▴	black up-pointing small triangle
-▵	white up-pointing small triangle
-▶	black right-pointing triangle
 ▷	white right-pointing triangle
 ▸	black right-pointing small triangle
 ▹	white right-pointing small triangle
 ►	black right-pointing pointer
 ▻	white right-pointing pointer
 ▼	black down-pointing triangle
-▽	white down-pointing triangle
 ▾	black down-pointing small triangle
 ▿	white down-pointing small triangle
-◀	black left-pointing triangle
 ◁	white left-pointing triangle
 ◂	black left-pointing small triangle
 ◃	white left-pointing small triangle
@@ -764,7 +726,6 @@
 ◒	circle with lower half black
 ◓	circle with upper half black
 ◔	circle with upper right quadrant black
-◕	circle with all but upper left quadrant black
 ◖	left half black circle
 ◗	right half black circle
 ◘	inverse bullet
@@ -776,7 +737,6 @@
 ◞	lower right quadrant circular arc
 ◟	lower left quadrant circular arc
 ◠	upper half circle
-◡	lower half circle
 ◢	black lower right triangle
 ◣	black lower left triangle
 ◤	black upper left triangle
@@ -802,10 +762,6 @@
 ◸	upper left triangle
 ◹	upper right triangle
 ◺	lower left triangle
-◻	white medium square
-◼	black medium square
-◽	white medium small square
-◾	black medium small square
 ◿	lower right triangle
 ##Box drawing
 │	box drawings light vertical
@@ -814,7 +770,6 @@
 ┇	box drawings heavy triple dash vertical
 ┊	box drawings light quadruple dash vertical
 ┋	box drawings heavy quadruple dash vertical
-┌	box drawings light down and right
 ┍	box drawings down light and right heavy
 ┎	box drawings down heavy and right light
 ┏	box drawings heavy down and right
@@ -826,7 +781,6 @@
 ┕	box drawings up light and right heavy
 ┖	box drawings up heavy and right light
 ┗	box drawings heavy up and right
-┘	box drawings light up and left
 ┙	box drawings up light and left heavy
 ┚	box drawings up heavy and left light
 ┛	box drawings heavy up and left
@@ -846,7 +800,6 @@
 ┩	box drawings down light and left up heavy
 ┪	box drawings up light and left down heavy
 ┫	box drawings heavy vertical and left
-┬	box drawings light down and horizontal
 ┭	box drawings left heavy and right down light
 ┮	box drawings right heavy and left down light
 ┯	box drawings down light and horizontal heavy
@@ -861,7 +814,6 @@
 ┸	box drawings up heavy and horizontal light
 ┹	box drawings right light and left up heavy
 ┺	box drawings left light and right up heavy
-┻	box drawings heavy up and horizontal
 ┼	box drawings light vertical and horizontal
 ┽	box drawings left heavy and right vertical light
 ┾	box drawings right heavy and left vertical light
@@ -900,7 +852,6 @@
 ╢	box drawings vertical double and left single
 ╣	box drawings double vertical and left
 ╤	box drawings down single and horizontal double
-╥	box drawings down double and horizontal single
 ╦	box drawings double down and horizontal
 ╧	box drawings up single and horizontal double
 ╨	box drawings up double and horizontal single
@@ -910,7 +861,6 @@
 ╬	box drawings double vertical and horizontal
 ╭	box drawings light arc down and right
 ╮	box drawings light arc down and left
-╯	box drawings light arc up and left
 ╰	box drawings light arc up and right
 ╱	box drawings light diagonal upper right to lower left
 ╲	box drawings light diagonal upper left to lower right
@@ -961,7 +911,6 @@
 #Music
 ##Notes
 ♩	quarter note
-♪	eighth note
 ♫	beamed eighth notes
 ♬	beamed sixteenth notes
 ♭	music flat sign
@@ -1172,32 +1121,21 @@
 ☋	descending node
 ☌	conjunction
 ☍	opposition
-☎	black telephone
 ☏	white telephone
 ☐	ballot box
-☑	ballot box with check
 ☒	ballot box with x
 ☓	saltire
-☕	hot beverage
 ☖	white shogi piece
 ☗	black shogi piece
 ☚	black left pointing index
 ☛	black right pointing index
-☜	white left pointing index
-☝	white up pointing index
-☞	white right pointing index
 ☟	white down pointing index
-☠	skull and crossbones
 ☡	caution sign
-☢	radioactive sign
-☣	biohazard sign
 ☤	caduceus
 ☥	ankh
-☦	orthodox cross
 ☧	chi rho
 ☨	cross of lorraine
 ☩	cross of jerusalem
-☪	star and crescent
 ☫	farsi symbol
 ☬	adi shakti
 ☭	hammer and sickle
@@ -1209,30 +1147,14 @@
 ☵	trigram for water
 ☶	trigram for mountain
 ☷	trigram for earth
-☹	white frowning face
-☺	white smiling face
 ☻	black smiling face
 ☿	mercury
-♀	female sign
 ♁	earth
-♂	male sign
 ♃	jupiter
 ♄	saturn
 ♅	uranus
 ♆	neptune
 ♇	pluto
-♈	aries
-♉	taurus
-♊	gemini
-♋	cancer
-♌	leo
-♍	virgo
-♎	libra
-♏	scorpius
-♐	sagittarius
-♑	capricorn
-♒	aquarius
-♓	pisces
 ♔	white chess king
 ♕	white chess queen
 ♖	white chess rook
@@ -1244,12 +1166,8 @@
 ♜	black chess rook
 ♝	black chess bishop
 ♞	black chess knight
-♟	black chess pawn
-♠	black spade suit
 ♢	white diamond suit
-♣	black club suit
 ♤	white spade suit
-♦	black diamond suit
 ♧	white club suit
 ♰	west syriac cross
 ♱	east syriac cross
@@ -1262,11 +1180,8 @@
 ♸	recycling symbol for type-6 plastics
 ♹	recycling symbol for type-7 plastics
 ♺	recycling symbol for generic materials
-♻	black universal recycling symbol
 ♼	recycled paper symbol
 ♽	partially-recycled paper symbol
-♾	permanent paper sign
-♿	wheelchair symbol
 ⚀	die face-1
 ⚁	die face-2
 ⚂	die face-3
@@ -1285,33 +1200,19 @@
 ⚏	digram for greater yin
 ⚐	white flag
 ⚑	black flag
-⚒	hammer and pick
-⚓	anchor
-⚔	crossed swords
-⚕	staff of aesculapius
-⚖	scales
-⚗	alembic
-⚙	gear
-⚚	staff of hermes
 ⚞	three lines converging right
 ⚟	three lines converging left
-⚠	warning sign
 ⚢	doubled female sign
 ⚣	doubled male sign
 ⚤	interlocked female and male sign
 ⚥	male and female sign
 ⚦	male with stroke sign
-⚧	male with stroke and male and female sign
 ⚨	vertical male with stroke sign
 ⚩	horizontal male with stroke sign
-⚪	medium white circle
-⚫	medium black circle
 ⚬	medium small white circle
 ⚭	marriage symbol
 ⚮	divorce symbol
 ⚯	unmarried partnership symbol
-⚰	coffin
-⚱	funeral urn
 ⚲	neuter
 ⚳	ceres
 ⚴	pallas
@@ -1323,14 +1224,11 @@
 ⚺	semisextile
 ⚻	quincunx
 ⚼	sesquiquadrate
-⚽	soccer ball
-⚾	baseball
 ⚿	squared key
 ⛀	white draughts man
 ⛁	white draughts king
 ⛂	black draughts man
 ⛃	black draughts king
-⛄	snowman without snow
 ⛆	rain
 ⛇	black snowman
 ⛉	turned white shogi piece
@@ -1338,13 +1236,8 @@
 ⛋	white diamond in square
 ⛌	crossing lanes
 ⛍	disabled car
-⛎	ophiuchus
-⛏	pick
 ⛐	car sliding
-⛑	helmet with white cross
 ⛒	circled crossing lanes
-⛓	chains
-⛔	no entry
 ⛕	alternate one-way left way traffic
 ⛖	black two-way left way traffic
 ⛗	white two-way left way traffic
@@ -1361,77 +1254,45 @@
 ⛢	astronomical symbol for uranus
 ⛣	heavy circle with stroke and two dots above
 ⛨	black cross on shield
-⛩	shinto shrine
-⛪	church
 ⛫	castle
 ⛬	historic site
 ⛭	gear without hub
 ⛮	gear with handles
 ⛯	map symbol for lighthouse
-⛰	mountain
-⛱	umbrella on ground
-⛲	fountain
-⛳	flag in hole
-⛴	ferry
-⛵	sailboat
 ⛶	square four corners
-⛷	skier
-⛸	ice skate
-⛹	person with ball
-⛺	tent
 ⛻	japanese bank symbol
 ⛼	headstone graveyard symbol
-⛽	fuel pump
 ⛾	cup on black square
 ⛿	white flag with horizontal middle black stripe
 ##Dingbats
 ✀	black safety scissors
 ✁	upper blade scissors
-✂	black scissors
 ✃	lower blade scissors
 ✄	white scissors
 ✆	telephone location sign
 ✇	tape drive
-✈	airplane
-✉	envelope
-✊	raised fist
-✋	raised hand
-✌	victory hand
-✍	writing hand
 ✎	lower right pencil
-✏	pencil
 ✐	upper right pencil
 ✑	white nib
-✒	black nib
 ✓	check mark
-✔	heavy check mark
 ✕	multiplication x
-✖	heavy multiplication x
 ✗	ballot x
 ✘	heavy ballot x
 ✙	outlined greek cross
 ✚	heavy greek cross
 ✛	open centre cross
 ✜	heavy open centre cross
-✝	latin cross
 ✞	shadowed white latin cross
 ✟	outlined latin cross
 ✠	maltese cross
-✡	star of david
 ✱	heavy asterisk
 ✲	open centre asterisk
-✳	eight spoked asterisk
-✴	eight pointed black star
 ✵	eight pointed pinwheel star
 ❍	shadowed white circle
-❎	negative squared cross mark
 ❏	lower right drop-shadowed white square
 ❐	upper right drop-shadowed white square
 ❑	lower right shadowed white square
 ❒	upper right shadowed white square
-❔	white question mark ornament
-❕	white exclamation mark ornament
-❖	black diamond minus white x
 ❘	light vertical bar
 ❙	medium vertical bar
 ❚	heavy vertical bar
@@ -1487,9 +1348,6 @@
 ➒	dingbat negative circled sans-serif digit nine
 ➓	dingbat negative circled sans-serif number ten
 ➔	heavy wide-headed rightwards arrow
-➕	heavy plus sign
-➖	heavy minus sign
-➗	heavy division sign
 ➘	heavy south east arrow
 ➙	heavy rightwards arrow
 ➚	heavy north east arrow
@@ -1499,7 +1357,6 @@
 ➞	heavy triangle-headed rightwards arrow
 ➟	dashed triangle-headed rightwards arrow
 ➠	heavy dashed triangle-headed rightwards arrow
-➡	black rightwards arrow
 ➢	three-d top-lighted rightwards arrowhead
 ➣	three-d bottom-lighted rightwards arrowhead
 ➤	black rightwards arrowhead
@@ -1514,7 +1371,6 @@
 ➭	heavy lower right-shadowed white rightwards arrow
 ➮	heavy upper right-shadowed white rightwards arrow
 ➯	notched lower right-shadowed white rightwards arrow
-➰	curly loop
 ➱	notched upper right-shadowed white rightwards arrow
 ➲	circled heavy white rightwards arrow
 ➳	white-feathered rightwards arrow
@@ -1529,7 +1385,6 @@
 ➼	wedge-tailed rightwards arrow
 ➽	heavy wedge-tailed rightwards arrow
 ➾	open-outlined rightwards arrow
-➿	double curly loop
 ##Technical
 ⌀	diameter sign
 ⌂	house
@@ -1545,14 +1400,12 @@
 ⌍	bottom left crop
 ⌎	top right crop
 ⌏	top left crop
-⌐	reversed not sign
 ⌑	square lozenge
 ⌓	segment
 ⌔	sector
 ⌕	telephone recorder
 ⌖	position indicator
 ⌗	viewdata square
-⌘	place of interest sign
 ⌙	turned not sign
 ⌜	top left corner
 ⌝	top right corner
@@ -1566,7 +1419,6 @@
 ⌥	option key
 ⌦	erase to the right
 ⌧	x in a rectangle box
-⌨	keyboard
 〈	left-pointing angle bracket
 〉	right-pointing angle bracket
 ⌫	erase to the left
@@ -1672,7 +1524,6 @@
 ⎑	passive-pull-down-output symbol
 ⎒	passive-pull-up-output symbol
 ⎓	direct current symbol form two
-⎔	software-function symbol
 ⎕	apl functional symbol quad
 ⎖	decimal separator key symbol
 ⎗	previous page
@@ -1729,7 +1580,6 @@
 ⏌	dentistry symbol light vertical and bottom left
 ⏍	square foot
 ⏎	return symbol
-⏏	eject symbol
 ⏐	vertical line extension
 ⏑	metrical breve
 ⏒	metrical long over short
@@ -1753,24 +1603,10 @@
 ⏦	ac current
 ⏧	electrical intersection
 ⏨	decimal exponent symbol
-⏩	black right-pointing double triangle
-⏪	black left-pointing double triangle
-⏫	black up-pointing double triangle
-⏬	black down-pointing double triangle
-⏭	black right-pointing double triangle with vertical bar
-⏮	black left-pointing double triangle with vertical bar
-⏯	black right-pointing triangle with double vertical bar
-⏰	alarm clock
-⏱	stopwatch
-⏲	timer clock
-⏳	hourglass with flowing sand
 ⏴	black medium left-pointing triangle
 ⏵	black medium right-pointing triangle
 ⏶	black medium up-pointing triangle
 ⏷	black medium down-pointing triangle
-⏸	double vertical bar
-⏹	black square for stop
-⏺	black circle for record
 ⏻	power symbol
 ⏼	power on-off symbol
 ⏽	power on symbol
@@ -1782,9 +1618,6 @@
 ⬂	south east white arrow
 ⬃	south west white arrow
 ⬄	left right white arrow
-⬅	leftwards black arrow
-⬆	upwards black arrow
-⬇	downwards black arrow
 ⬈	north east black arrow
 ⬉	north west black arrow
 ⬊	south east black arrow
@@ -1804,8 +1637,6 @@
 ⬘	diamond with top half black
 ⬙	diamond with bottom half black
 ⬚	dotted square
-⬛	black large square
-⬜	white large square
 ⬝	black very small square
 ⬞	white very small square
 ⬟	black pentagon
@@ -1861,7 +1692,6 @@
 ⭒	white small star
 ⭓	black right-pointing pentagon
 ⭔	white right-pointing pentagon
-⭕	heavy large circle
 ⭖	heavy oval with oval inside
 ⭗	heavy circle with circle inside
 ⭘	heavy circle
@@ -2228,7 +2058,6 @@
 Ⓙ	circled latin capital letter j
 Ⓚ	circled latin capital letter k
 Ⓛ	circled latin capital letter l
-Ⓜ	circled latin capital letter m
 Ⓝ	circled latin capital letter n
 Ⓞ	circled latin capital letter o
 Ⓟ	circled latin capital letter p
@@ -2486,13 +2315,11 @@
 〧	hangzhou numeral seven
 〨	hangzhou numeral eight
 〩	hangzhou numeral nine
-〰	wavy dash
 〶	circled postal mark
 〷	ideographic telegraph line feed separator symbol
 〸	hangzhou numeral ten
 〹	hangzhou numeral twenty
 〺	hangzhou numeral thirty
-〽	part alternation mark
 〾	ideographic variation indicator
 〿	ideographic half fill space
 #Currency
@@ -2541,7 +2368,6 @@ $	dollar sign
 ×	multiplication sign
 ÷	division sign
 ##Operators
-∀	for all
 ∁	complement
 ∂	partial differential
 ∃	there exists
@@ -2583,7 +2409,6 @@ $	dollar sign
 ∧	logical and
 ∨	logical or
 ∩	intersection
-∪	union
 ∫	integral
 ∬	double integral
 ∭	triple integral
@@ -2626,7 +2451,6 @@ $	dollar sign
 ≓	image of or approximately equal to
 ≔	colon equals
 ≕	equals colon
-≖	ring in equal to
 ≗	ring equal to
 ≘	corresponds to
 ≙	estimates
@@ -2642,8 +2466,6 @@ $	dollar sign
 ≣	strictly equivalent to
 ≤	less-than or equal to
 ≥	greater-than or equal to
-≦	less-than over equal to
-≧	greater-than over equal to
 ≨	less-than but not equal to
 ≩	greater-than but not equal to
 ≪	much less-than
