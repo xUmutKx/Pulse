@@ -113,7 +113,7 @@ class PowerampWidget : AppWidgetProvider() {
                     ((f.x + 0.075f * f.w) * k).toInt(), ((f.y + BTN_TOP * f.h) * k).toInt(), ((bw - f.x - f.w + 0.075f * f.w) * k).toInt(), ((bh - f.y - BTN_BOTTOM * f.h) * k).toInt(),
                 )
                 // a tap anywhere else opens the player, straight on the now playing page and without an opening animation
-                setOnClickPendingIntent(R.id.pa_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 72, "route" to "music"))
+                setOnClickPendingIntent(R.id.pa_img, com.umutk.pulse.widgets.music.WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 72, "route" to "music", "notif_open" to "player"))
                 // loop and shuffle sit at the left of the counter line, between the text and the seek line
                 setViewPadding(
                     R.id.pa_mid,
