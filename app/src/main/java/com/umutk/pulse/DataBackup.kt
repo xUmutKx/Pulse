@@ -10,10 +10,9 @@ import java.util.zip.ZipOutputStream
 
 /**
  * Settings and files in one zip: every shared-preferences file (Pulse, looks, extra apps) and the user data under files/.
- * Caches, downloads and per-app data copies are left out, and so are secrets (the Authenticator accounts only travel when the user asks, sealed with a password of theirs). The zip layout (shared_prefs/ and files/
+ * Everything under files/ goes in except what Pulse rebuilds by itself (see DROP), and secrets are left out (the Authenticator accounts only travel when the user asks, sealed with a password of theirs). The zip layout (shared_prefs/ and files/
  * entries) is the same as before, so older backups still import. Import first unpacks into a staging folder, so a
  * broken zip changes nothing.
- * shortcut: the files are copied whole, with no size limit or progress bar; add both if large backups get slow.
  */
 object DataBackup {
     private const val PREFS = "shared_prefs/"
@@ -22,9 +21,11 @@ object DataBackup {
     /** shared_prefs files that never leave the phone: Spotify login tokens and the app-lock PIN hash. */
     private val SKIP_PREFS = setOf("spotify.xml", "applock.xml")
 
-    /** The only files/ entries the backup carries: small user data. Everything else (covers, skins, pictures, call backgrounds, copied files, caches, downloaded packs, big attachments) stays out, so the zip is a few hundred KB, not hundreds of MB. */
-    private val KEEP_FILES = setOf("playlists", "profile.jpg", "uad_lists.json", "lyrics-saved", "notes", "pa_backups", "standby_font", "kbd_clips.json", "clips")
-    private fun keepFile(rel: String) = KEEP_FILES.any { rel == it || rel.startsWith("$it/") } || rel.startsWith("resume.")
+    /** What the backup leaves out of files/: things Pulse downloads or builds again by itself (covers, search indexes, word lists, the store, caches), temp and broken files, and anything over [MAX_FILE]. Everything else the user made is in. */
+    private val DROP = setOf("covers", "artist_art", "lyrics-cache", "lyrics-hits", "lyrics_index.gz", "music_library.tsv", "widget_blur_bg.jpg", "store", "kbd", "restore")
+    private const val MAX_FILE = 100L * 1024 * 1024
+    private fun keepFile(rel: String, size: Long) =
+        size <= MAX_FILE && DROP.none { rel == it || rel.startsWith("$it/") } && !rel.endsWith(".tmp") && !rel.endsWith(".bad") && !rel.startsWith("autobackup.")
 
     /** What a restore put back, for the message shown after import. */
     class Restored(val files: Int, val prefs: List<String>, val folders: List<String>)
@@ -37,7 +38,7 @@ object DataBackup {
         val prefs = pd.walkTopDown().filter { it.isFile && it.name !in SKIP_PREFS }
             .map { PREFS + it.relativeTo(pd).invariantSeparatorsPath to it }
         val fd = ctx.filesDir
-        val files = fd.walkTopDown().filter { it.isFile && keepFile(it.relativeTo(fd).invariantSeparatorsPath) }
+        val files = fd.walkTopDown().filter { it.isFile && keepFile(it.relativeTo(fd).invariantSeparatorsPath, it.length()) }
             .map { FILES + it.relativeTo(fd).invariantSeparatorsPath to it }
         return prefs.toList() + files
     }
