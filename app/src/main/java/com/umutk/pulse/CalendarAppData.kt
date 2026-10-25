@@ -41,6 +41,7 @@ object CalPrefs {
     var showDeclined by mutableStateOf(true)
     var colorSrc by mutableStateOf("event")     // event / calendar
     var monthTitles by mutableStateOf(true)     // month cells: titles or dots
+    var monthStyle by mutableStateOf("grid")    // grid (framed cells) / round (round days, no frames) / clean (no frames, a thin line between the weeks)
     var weekHour by mutableStateOf(7)           // hour the week/day grid opens at
     var weekZoom by mutableStateOf(48)          // hour height, dp
     var defVis by mutableStateOf(0)             // Events.ACCESS_*: 0 default, 1 confidential, 2 private, 3 public
@@ -57,7 +58,7 @@ object CalPrefs {
         hidden = p.getStringSet("hidden", emptySet())!!.toSet(); defCal = p.getLong("defCal", -1L)
         holShow = p.getBoolean("holShow", true); holCountry = p.getString("holCountry", "")!!; holPublic = p.getBoolean("holPublic", true); holObs = p.getBoolean("holObs", false)
         defDur = p.getInt("defDur", 60); defRem = p.getInt("defRem", 10); weekNums = p.getBoolean("weekNums", false); hlWeekend = p.getBoolean("hlWeekend", false)
-        showDeclined = p.getBoolean("showDeclined", true); colorSrc = p.getString("colorSrc", "event")!!; monthTitles = p.getBoolean("monthTitles", true)
+        showDeclined = p.getBoolean("showDeclined", true); colorSrc = p.getString("colorSrc", "event")!!; monthTitles = p.getBoolean("monthTitles", true); monthStyle = p.getString("monthStyle", "grid")!!
         weekHour = p.getInt("weekHour", 7); weekZoom = p.getInt("weekZoom", 48); defVis = p.getInt("defVis", 0); defAvail = p.getInt("defAvail", 0)
         goToday = p.getBoolean("goToday", true); lastDay = p.getLong("lastDay", 0L)
     }
@@ -67,7 +68,7 @@ object CalPrefs {
             ?.putString("startView", startView)?.putStringSet("hidden", hidden)?.putLong("defCal", defCal)
             ?.putBoolean("holShow", holShow)?.putString("holCountry", holCountry)?.putBoolean("holPublic", holPublic)?.putBoolean("holObs", holObs)
             ?.putInt("defDur", defDur)?.putInt("defRem", defRem)?.putBoolean("weekNums", weekNums)?.putBoolean("hlWeekend", hlWeekend)?.putBoolean("showDeclined", showDeclined)
-            ?.putString("colorSrc", colorSrc)?.putBoolean("monthTitles", monthTitles)?.putInt("weekHour", weekHour)?.putInt("weekZoom", weekZoom)
+            ?.putString("colorSrc", colorSrc)?.putBoolean("monthTitles", monthTitles)?.putString("monthStyle", monthStyle)?.putInt("weekHour", weekHour)?.putInt("weekZoom", weekZoom)
             ?.putInt("defVis", defVis)?.putInt("defAvail", defAvail)?.putBoolean("goToday", goToday)?.putLong("lastDay", lastDay)?.apply()
         apply()
     }
@@ -98,7 +99,7 @@ private val TR2 = mapOf(
     "Search events" to "Etkinlik ara", "Results" to "Sonuçlar", "Clear" to "Temizle", "Events" to "Etkinlikler", "Views" to "Görünümler",
     "Default duration" to "Varsayılan süre", "Default reminder" to "Varsayılan hatırlatıcı", "None" to "Yok", "Week numbers" to "Hafta numaraları",
     "Highlight weekends" to "Hafta sonlarını vurgula", "Show declined events" to "Reddedilenleri göster", "Event colour" to "Etkinlik rengi",
-    "Event" to "Etkinlik", "Month titles" to "Ay görünümünde başlıklar", "Week starts at" to "Hafta görünümü başlangıç saati", "Zoom" to "Yakınlaştırma",
+    "Event" to "Etkinlik", "Month titles" to "Ay görünümünde başlıklar", "Month style" to "Ay görünümü stili", "Framed cells" to "Çerçeveli hücreler", "Round days" to "Yuvarlak günler", "No frames" to "Çerçevesiz", "Week starts at" to "Hafta görünümü başlangıç saati", "Zoom" to "Yakınlaştırma",
     "Small" to "Küçük", "Medium" to "Orta", "Large" to "Büyük", "Visibility" to "Görünürlük", "Availability" to "Müsaitlik", "Busy" to "Meşgul", "Free" to "Boş",
     "Default" to "Varsayılan", "Private" to "Özel", "Public" to "Herkese açık", "Confidential" to "Gizli", "Open on today" to "Açılışta bugüne git")
 fun ct(s: String) = if (CalPrefs.lang == "tr") TR[s] ?: TR2[s] ?: s else s

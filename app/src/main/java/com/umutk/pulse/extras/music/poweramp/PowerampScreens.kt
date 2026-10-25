@@ -354,12 +354,14 @@ fun NowPlayingScreen(
                     Box(Modifier.fillMaxSize().clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))).background(style.panel), contentAlignment = Alignment.Center) {
                         if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                         else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(96.dp))
+                        // the song's canvas (a short video of the user's choice) plays over the cover
+                        com.umutk.pulse.extras.music.CanvasVideo(track?.path, true, Modifier.fillMaxSize())
                     }
                 }
                 if (track != null) {
                     RatingStar(rating, onRate, favourite, onFavourite, style, Modifier.align(Alignment.BottomStart).padding(start = 4.dp, bottom = 2.dp))
                     TrackMenu(track, onEditTags, onFindArt, onLyrics, style, Modifier.align(Alignment.BottomEnd).padding(end = 2.dp, bottom = 2.dp))
-                    if (onLyrics != null && !lyricsOpen) LyricsIcon(onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
+                    if (onLyrics != null && !lyricsOpen) LyricsIcon(track, onLyrics, Modifier.align(Alignment.BottomEnd).padding(end = 38.dp, bottom = 2.dp))
                 }
                 // the lyrics lie over the cover square, above the star, the menu and the lyrics button
                 Box(Modifier.fillMaxSize().zIndex(10f)) {
@@ -917,8 +919,11 @@ private fun LyricsButtonRow(c: Context) {
 
 /** Lyrics button: an icon-only disc on the cover's bottom-right, same size and style as the three dots beside it. */
 @Composable
-private fun LyricsIcon(onClick: () -> Unit, modifier: Modifier) {
-    Box(modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+private fun LyricsIcon(track: Track?, onClick: () -> Unit, modifier: Modifier) {
+    var ask by remember { mutableStateOf(false) }
+    if (ask && track != null) com.umutk.pulse.extras.lyrics.ForgetLyricsDialog(track.path.takeIf { !it.contains("://") }, track.displayName(), track.artist.orEmpty()) { ask = false }
+    Box(modifier.size(36.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).combinedClickable(onLongClick = { ask = true }, onClick = onClick), contentAlignment = Alignment.Center) {
         Icon(Icons.Rounded.Subject, tr("Lyrics", "Sözler"), tint = Color.White, modifier = Modifier.size(20.dp))
     }
 }

@@ -29,6 +29,7 @@ import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LibraryMusic
+import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Subject
@@ -120,7 +121,7 @@ internal fun TrackSheet(
                 Line()
                 Row(Modifier.fillMaxWidth()) {
                     SheetCell(Icons.Rounded.Info, tr("Info / Tags", "Bilgi / Etiket"), Modifier.weight(1f)) { close(); onInfo() }
-                    SheetCell(Icons.Rounded.Subject, tr("Lyrics", "Şarkı sözleri"), Modifier.weight(1f), onLong = { pane = "forgetLyrics" }) { close(); onLyrics?.invoke() }
+                    SheetCell(Icons.Rounded.Movie, "Canvas", Modifier.weight(1f)) { pane = "canvas" }
                 }
                 Line()
                 Row(Modifier.fillMaxWidth()) {
@@ -136,6 +137,7 @@ internal fun TrackSheet(
     }
 
     when (pane) {
+        "canvas" -> CanvasPane(track.path, onDismiss = { pane = null }, onDone = { pane = null; close() })
         "forgetLyrics" -> com.umutk.pulse.WinAlert(
             onDismissRequest = { pane = null },
             title = { Text(tr("Delete these lyrics?", "Bu sözler silinsin mi?")) },
@@ -242,4 +244,21 @@ private fun SheetCell(icon: ImageVector, label: String, modifier: Modifier, onLo
         Spacer(Modifier.width(10.dp))
         Text(label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
+}
+
+/** Canvas: pick a short video for this song (it loops, muted, in the cover's place) or remove the one it has. */
+@Composable
+private fun CanvasPane(key: String, onDismiss: () -> Unit, onDone: () -> Unit) {
+    val ctx = LocalContext.current
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
+        if (u != null) { com.umutk.pulse.extras.music.TrackCanvas.keep(ctx, u); com.umutk.pulse.extras.music.TrackCanvas.set(ctx, key, u.toString()); onDone() }
+    }
+    val has = com.umutk.pulse.extras.music.TrackCanvas.get(ctx, key) != null
+    com.umutk.pulse.WinAlert(
+        onDismissRequest = onDismiss,
+        title = { Text("Canvas") },
+        text = { Text(tr("A short looping video for this song, shown in place of the cover.", "Bu şarkı için kapağın yerinde dönen kısa bir video.")) },
+        confirmButton = { TextButton(onClick = { picker.launch(arrayOf("video/*")) }) { Text(tr("Choose video", "Video seç")) } },
+        dismissButton = { if (has) TextButton(onClick = { com.umutk.pulse.extras.music.TrackCanvas.set(ctx, key, null); onDone() }) { Text(tr("Remove", "Kaldır")) } else TextButton(onClick = onDismiss) { Text(tr("Cancel", "Vazgeç")) } },
+    )
 }

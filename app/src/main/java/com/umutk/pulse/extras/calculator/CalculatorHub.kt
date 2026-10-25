@@ -129,6 +129,8 @@ fun CalculatorHub(back: () -> Unit) {
         if (menu) CalcMenu(mode, { mode = it; showHistory = false; menu = false }) { menu = false }
         if (mode != "standard") {
             Box(Modifier.weight(1f).fillMaxWidth()) {
+                // Back leaves the pane for the plain calculator first, never the whole app
+                BackHandler { mode = "standard" }
                 when (mode) { "scientific" -> SciPane(classic); "graph" -> GraphPane(); "convert" -> ConvertPane(); else -> ProgrammerPane(classic) }
             }
             return@Column

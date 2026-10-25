@@ -151,6 +151,25 @@ fun MonthView(anchor: LocalDate, evs: List<CalEv>, onDay: (LocalDate) -> Unit, o
             if (CalPrefs.weekNums) Text("${weekNo(start.plusDays((w * 7).toLong()))}", Modifier.width(22.dp).padding(top = 4.dp), textAlign = TextAlign.Center, fontSize = 10.sp, color = MaterialTheme.colorScheme.outline)
             for (i in 0..6) {
                 val d = start.plusDays((w * 7 + i).toLong()); val inMonth = d.month == anchor.month
+                if (CalPrefs.monthStyle != "grid") {
+                    // no frames: a day is its number, the day's events are dots under it; "clean" has a thin line between the weeks, "round" puts every day in a soft circle
+                    val round = CalPrefs.monthStyle == "round"
+                    val cs = MaterialTheme.colorScheme
+                    val day = evs.filter { it.on(d) }.sortedWith(compareBy({ !it.allDay }, { it.start }))
+                    Column(Modifier.weight(1f).fillMaxHeight().then(if (!round) Modifier.drawBehind { drawLine(Color.Gray.copy(alpha = .25f), Offset(0f, 0f), Offset(size.width, 0f), 1f) } else Modifier)
+                        .clickable { onDay(d) }.padding(vertical = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Box(Modifier.size(if (round) 38.dp else 34.dp).clip(CircleShape)
+                            .background(if (d == today) cs.primary else if (round) cs.onSurface.copy(alpha = if (inMonth) .07f else .03f) else Color.Transparent),
+                            contentAlignment = Alignment.Center) {
+                            Text("${d.dayOfMonth}", fontSize = 17.sp, fontWeight = if (d == today) FontWeight.SemiBold else FontWeight.Normal,
+                                color = if (d == today) cs.onPrimary else if (inMonth) (if (isWeekend(d)) cs.primary else cs.onSurface) else cs.onSurface.copy(alpha = .38f))
+                        }
+                        Row(Modifier.padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                            day.take(3).forEach { Box(Modifier.size(6.dp).clip(CircleShape).background(evColor(it))) }
+                        }
+                    }
+                    continue
+                }
                 Column(Modifier.weight(1f).fillMaxHeight().then(if (isWeekend(d)) Modifier.background(MaterialTheme.colorScheme.primary.copy(alpha = .07f)) else Modifier).border(0.5.dp, calLine()).clickable { onDay(d) }.padding(1.dp)) {
                     Box(Modifier.align(Alignment.CenterHorizontally).size(22.dp).clip(calDayShape()).background(if (d == today) MaterialTheme.colorScheme.primary else Color.Transparent), contentAlignment = Alignment.Center) {
                         Text("${d.dayOfMonth}", fontSize = 11.sp, color = if (d == today) MaterialTheme.colorScheme.onPrimary else if (inMonth) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = .38f))

@@ -173,6 +173,7 @@ fun CalSettings(cals: List<CalCal>, onClose: () -> Unit, onChange: () -> Unit) {
     val viewOpts = listOf("month" to ct("Month"), "week" to ct("Week"), "day" to ct("Day"), "agenda" to ct("Agenda"))
     val visOpts = listOf(0 to ct("Default"), 1 to ct("Confidential"), 2 to ct("Private"), 3 to ct("Public"))
     val availOpts = listOf(0 to ct("Busy"), 1 to ct("Free"))
+    val styleOpts = listOf("grid" to ct("Framed cells"), "round" to ct("Round days"), "clean" to ct("No frames"))
     val colOpts = listOf("event" to ct("Event"), "calendar" to ct("Calendar"))
     val zoomOpts = listOf(36 to ct("Small"), 48 to ct("Medium"), 64 to ct("Large"))
     val countryOpts = listOf("" to ct("Device country") + " (" + CalHolidays.country() + ")") + CalHolidays.countries.map { it to CalHolidays.countryName(it) }
@@ -212,7 +213,8 @@ fun CalSettings(cals: List<CalCal>, onClose: () -> Unit, onChange: () -> Unit) {
                 SetSwitchRow(ic("calendar", Icons.Outlined.Today), ct("Open on today"), CalPrefs.goToday) { v -> p { CalPrefs.goToday = v } }
                 SetSwitchRow(ic("table", Icons.Outlined.Tag), ct("Week numbers"), CalPrefs.weekNums) { v -> p { CalPrefs.weekNums = v } }
                 SetSwitchRow(ic("calendar", Icons.Outlined.CalendarViewWeek), ct("Highlight weekends"), CalPrefs.hlWeekend) { v -> p { CalPrefs.hlWeekend = v } }
-                SetSwitchRow(ic("details", Icons.Outlined.ViewAgenda), ct("Month titles"), CalPrefs.monthTitles) { v -> p { CalPrefs.monthTitles = v } }
+                SetRow(ic("table", Icons.Outlined.CalendarViewMonth), ct("Month style"), styleOpts.first { it.first == CalPrefs.monthStyle }.second, { dlg = "mstyle" })
+                if (CalPrefs.monthStyle == "grid") SetSwitchRow(ic("details", Icons.Outlined.ViewAgenda), ct("Month titles"), CalPrefs.monthTitles) { v -> p { CalPrefs.monthTitles = v } }
                 SetRow(ic("clock", Icons.Outlined.Schedule), ct("Week starts at"), fmtTime(java.time.LocalTime.of(CalPrefs.weekHour, 0)), { dlg = "hour" })
                 SetRow(ic("search", Icons.Outlined.ZoomIn), ct("Zoom"), zoomOpts.first { it.first == CalPrefs.weekZoom }.second, { dlg = "zoom" })
             }
@@ -243,6 +245,7 @@ fun CalSettings(cals: List<CalCal>, onClose: () -> Unit, onChange: () -> Unit) {
         "rem" -> SetPickDialog(ct("Default reminder"), listOf(-1 to ct("None")) + REMS.map { it to remText(it) }, CalPrefs.defRem, { v -> p { CalPrefs.defRem = v } }, { dlg = "" })
         "vis" -> SetPickDialog(ct("Visibility"), visOpts, CalPrefs.defVis, { v -> p { CalPrefs.defVis = v } }, { dlg = "" })
         "avail" -> SetPickDialog(ct("Availability"), availOpts, CalPrefs.defAvail, { v -> p { CalPrefs.defAvail = v } }, { dlg = "" })
+        "mstyle" -> SetPickDialog(ct("Month style"), styleOpts, CalPrefs.monthStyle, { v -> p { CalPrefs.monthStyle = v } }, { dlg = "" })
         "col" -> SetPickDialog(ct("Event colour"), colOpts, CalPrefs.colorSrc, { v -> p { CalPrefs.colorSrc = v }; onChange() }, { dlg = "" })
         "hour" -> SetPickDialog(ct("Week starts at"), (0..12).map { it to fmtTime(java.time.LocalTime.of(it, 0)) }, CalPrefs.weekHour, { v -> p { CalPrefs.weekHour = v } }, { dlg = "" })
         "zoom" -> SetPickDialog(ct("Zoom"), zoomOpts, CalPrefs.weekZoom, { v -> p { CalPrefs.weekZoom = v } }, { dlg = "" })

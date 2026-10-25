@@ -89,7 +89,6 @@ fun PlayerLyrics(
         var mode by remember(title, artist) { mutableIntStateOf(0) }
         var picked by remember(title, artist) { mutableStateOf(emptySet<Int>()) }
         var style by remember { mutableIntStateOf(0) }
-        var menu by remember { mutableStateOf(false) }
         var pull by remember { mutableFloatStateOf(0f) }
         val only = remember { LyricsShare.consecutive(ctx) }
         // a pull down that the lines did not take (they are at their top) closes the lyrics
@@ -127,9 +126,9 @@ fun PlayerLyrics(
                             Text(artist, color = Color.White.copy(alpha = .7f), fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
                         }
                     }
-                    LyricsView(res, positionMs, onSeek, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp).pointerInput(Unit) { tapGestures(onLongPress = { menu = true }) }, onDark = true)
+                    LyricsView(res, positionMs, onSeek, Modifier.weight(1f).fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), onDark = true)
                 }
-                res != null -> LyricsView(res, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp).pointerInput(Unit) { tapGestures(onLongPress = { menu = true }) }, onDark = true)
+                res != null -> LyricsView(res, positionMs, onSeek, Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 48.dp), onDark = true)
                 busy -> Column(Modifier.fillMaxSize(), Arrangement.Center, Alignment.CenterHorizontally) {
                     PLoader()
                     Text(tr("Searching for lyrics…", "Sözler aranıyor…"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.padding(top = 12.dp))
@@ -150,14 +149,8 @@ fun PlayerLyrics(
                 }
             }
             Row(Modifier.align(Alignment.TopEnd).padding(4.dp)) {
-                if (res != null && mode == 0) Box {
-                    IconButton(onClick = { menu = true }) { PIcon("more", Color.White, 22.dp) }
-                    com.umutk.pulse.ThemedMenu(menu, { menu = false }) {
-                        com.umutk.pulse.ThemedMenuItem(tr("Share lyrics", "Sözleri paylaş"), { menu = false; mode = 1; picked = emptySet() }, iconKey = "share")
-                        com.umutk.pulse.ThemedMenuItem(tr("Delete these lyrics", "Bu sözleri sil"), { menu = false; Lyrics.forget(ctx, localPath, title, artist); onDismiss() })
-                        com.umutk.pulse.ThemedMenuItem(tr("Search again", "Tekrar ara"), { menu = false; attempt++ })
-                    }
-                }
+                // the share button sits right here, no menu: Share opens the line picker
+                if (res != null && mode == 0) IconButton(onClick = { mode = 1; picked = emptySet() }) { PIcon("share", Color.White, 22.dp) }
                 IconButton(onClick = { if (mode == 0) onDismiss() else mode = mode - 1 }) { PIcon(if (mode == 0) "close" else "back", Color.White, 22.dp) }
             }
         }
