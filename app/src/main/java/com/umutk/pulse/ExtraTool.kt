@@ -194,6 +194,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("LocalSendLauncher") -> "localsend"
             n.endsWith("PaletteLauncher") -> "palette"
             n.endsWith("BlackOutLauncher") -> "blackout"
+            n.endsWith("IslandLauncher") -> "island"
             n.endsWith("KeyboardLauncher") || n.endsWith("KeyboardSettingsActivity") -> "keyboard"
             // another app's launcher entry (Files, Calendar, Contacts, Photos...) is never the music player: it must not match the "already open" check
             n.endsWith("Launcher") -> n.substringAfterLast('.')
