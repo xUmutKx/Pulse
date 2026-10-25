@@ -23,7 +23,7 @@ object DataBackup {
     private val SKIP_PREFS = setOf("spotify.xml", "applock.xml")
 
     /** The only files/ entries the backup carries: small user data. Everything else (covers, skins, pictures, call backgrounds, copied files, caches, downloaded packs, big attachments) stays out, so the zip is a few hundred KB, not hundreds of MB. */
-    private val KEEP_FILES = setOf("playlists", "profile.jpg", "uad_lists.json", "lyrics-saved", "notes/notes.json")
+    private val KEEP_FILES = setOf("playlists", "profile.jpg", "uad_lists.json", "lyrics-saved", "notes", "pa_backups", "standby_font", "kbd_clips.json", "clips")
     private fun keepFile(rel: String) = KEEP_FILES.any { rel == it || rel.startsWith("$it/") } || rel.startsWith("resume.")
 
     /** What a restore put back, for the message shown after import. */

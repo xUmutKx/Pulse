@@ -159,6 +159,27 @@ private fun DataBackupCard() {
             val size = android.text.format.Formatter.formatShortFileSize(ctx, bytes)
             Text(tr("$n files, $size", "$n dosya, $size"), color = T.sub, fontSize = 12.sp)
         }
+        var auto by remember { mutableStateOf(AutoBackup.enabled(ctx)) }
+        var lastAuto by remember { mutableStateOf(AutoBackup.lastRun(ctx)) }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Back up every day", "Her gün yedekle"), color = T.text, fontSize = 14.sp)
+                Text(tr("Pulse and keyboard zips in Download/Pulse backup, the last 7 of each",
+                    "Pulse ve klavye zip'leri Download/Pulse backup içinde, her birinin son 7'si"), color = T.sub, fontSize = 12.sp)
+                if (lastAuto > 0) Text(tr("Last: ", "Son: ") + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(lastAuto)), color = T.sub, fontSize = 12.sp)
+            }
+            PSwitch(auto, { auto = it; AutoBackup.setEnabled(ctx, it) })
+        }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PButton(tr("Back up now", "Şimdi yedekle")) {
+                scope.launch {
+                    status = tr("Saving...", "Kaydediliyor...")
+                    val ok = withContext(Dispatchers.IO) { AutoBackup.run(ctx) }
+                    lastAuto = AutoBackup.lastRun(ctx)
+                    status = if (ok) tr("Saved to Download/Pulse backup", "Download/Pulse backup içine kaydedildi") else tr("Could not save", "Kaydedilemedi")
+                }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton(tr("Export", "Dışa aktar")) { save.launch("pulse-backup.zip") }
             PButton(tr("Import", "İçe aktar")) { open.launch(arrayOf("application/zip", "application/octet-stream")) }
