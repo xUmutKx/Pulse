@@ -830,6 +830,8 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     val fams by androidx.compose.runtime.produceState(emptyList<KeyboardSymbols.Family>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { KeyboardSymbols.load(ctx) } }
     var g by remember { mutableStateOf(0) }
     var sub by remember { mutableStateOf(0) }
+    // the emoji whose five skin tones are on offer (long press); the strip takes the place of the search box
+    var toneBase by remember { mutableStateOf<String?>(null) }
     val dens = androidx.compose.ui.platform.LocalDensity.current
     // the same height as the keys, so the keyboard does not shrink; the search needs the keys under it and is taller
     val fixed = if (q == null && st.keysH > 0) Modifier.height(with(dens) { st.keysH.toDp() }) else Modifier
@@ -850,6 +852,15 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 Row(Modifier.weight(1f).height(32.dp).padding(end = 8.dp).clip(RoundedCornerShape(16.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(kbIcon(th, "Search"), null, tint = th.sub, modifier = Modifier.size(18.dp))
                     Text(if (q.isEmpty()) tr("Search emoji, kaomoji, symbols", "Emoji, kaomoji, sembol ara") else q, color = if (q.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.padding(start = 8.dp))
+                }
+            } else if (toneBase != null) {
+                val base = toneBase!!
+                Row(Modifier.weight(1f).height(36.dp).padding(horizontal = 6.dp).clip(RoundedCornerShape(10.dp)).background(th.special), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+                    (listOf(-1) + (0..4)).forEach { i ->
+                        val e = if (i < 0) base else EmojiTone.toned(base, i)
+                        Box(Modifier.size(38.dp).clickable { EmojiTone.choose(ctx, base, i); act.emoji(e); toneBase = null }, contentAlignment = Alignment.Center) { Text(e, fontSize = 24.sp, color = th.text) }
+                    }
+                    Box(Modifier.size(34.dp).clickable { toneBase = null }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "Close"), null, tint = th.sub, modifier = Modifier.size(18.dp)) }
                 }
             } else {
                 // the search box on top, like the phone's own emoji page; the category bar sits at the bottom
@@ -875,7 +886,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
                 val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
                     else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
                 LazyVerticalGrid(GridCells.Adaptive(if (page == 10) 92.dp else 44.dp), Modifier.fillMaxSize()) {
-                    items(list) { it2 -> EmojiCell(it2, th, act) }
+                    items(list) { it2 -> EmojiCell(it2, th, act, tones = page != 0 && page != 10, onTones = { e -> toneBase = e }) }
                 }
             }
             Row(Modifier.fillMaxWidth().height(keyH * .7f), verticalAlignment = Alignment.CenterVertically) {
@@ -928,11 +939,16 @@ private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.F
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun EmojiCell(it: EmojiItem, th: KbTheme, act: KbActions) {
+private fun EmojiCell(it: EmojiItem, th: KbTheme, act: KbActions, tones: Boolean = false, onTones: (String) -> Unit = {}) {
     val kao = it.group == 10
-    Box(Modifier.height(44.dp).clickable { act.emoji(it.e) }, contentAlignment = Alignment.Center) {
-        Text(it.e, fontSize = if (kao) 15.sp else 26.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip)
+    val ctx = LocalContext.current
+    // the tone chosen for this emoji before is the one shown (not on the recent page, which keeps what was sent)
+    val shown = if (tones && !kao) EmojiTone.shown(ctx, it.e) else it.e
+    val canTone = tones && !kao && EmojiTone.supports(it.e)
+    Box(Modifier.height(44.dp).combinedClickable(onLongClick = if (canTone) ({ onTones(it.e) }) else null, onClick = { act.emoji(shown) }), contentAlignment = Alignment.Center) {
+        Text(shown, fontSize = if (kao) 15.sp else 26.sp, color = th.text, maxLines = 1, overflow = TextOverflow.Clip)
     }
 }
 
