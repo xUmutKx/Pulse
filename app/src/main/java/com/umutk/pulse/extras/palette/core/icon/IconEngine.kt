@@ -124,7 +124,7 @@ class IconEngine(
         backdrop: Bitmap? = null,
         useCache: Boolean = true
     ): Bitmap = withContext(Dispatchers.Default) {
-        val key = cache.key(app.key + (override?.styleId ?: ""), spec.renderKey(), size)
+        val key = cache.key(app.key + (override?.styleId ?: "") + "#" + (override?.colorIndex ?: -1), spec.renderKey(), size)
         if (useCache) cache.get(key)?.let { return@withContext it }
 
         val bmp = generate(app, spec, index, size, override, backdrop)

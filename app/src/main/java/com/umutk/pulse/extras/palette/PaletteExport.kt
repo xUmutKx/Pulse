@@ -21,7 +21,7 @@ object PaletteExport {
         var n = 0
         ZipOutputStream(out).use { z ->
             apps.forEachIndexed { i, app ->
-                val bmp = kotlinx.coroutines.runBlocking { engine.render(app, spec, i, 192, useCache = false) }
+                val bmp = kotlinx.coroutines.runBlocking { engine.render(app, spec, i, 192, PaletteStore.overrides(c)[app.key], useCache = false) }
                 z.putNextEntry(ZipEntry(app.safeName + ".png"))
                 bmp.compress(Bitmap.CompressFormat.PNG, 100, z)
                 z.closeEntry(); n++

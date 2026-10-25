@@ -23,27 +23,11 @@ object PaletteStudio {
     fun apps(c: Context): AppRepository = repo ?: synchronized(this) { repo ?: AppRepository(c.applicationContext).also { repo = it } }
     fun engine(c: Context): IconEngine = eng ?: synchronized(this) { eng ?: IconEngine(c.applicationContext, apps(c), IconCache(c.applicationContext)).also { eng = it } }
 
-    private fun sp(c: Context) = c.getSharedPreferences("palette_studio", Context.MODE_PRIVATE)
-
     /** The saved look, or the default one (lavender squircles). */
-    fun spec(c: Context): ThemeSpec {
-        val s = sp(c).getString("spec", null) ?: return ThemeSpec()
-        return runCatching {
-            val o = JSONObject(s)
-            val cols = o.getJSONArray("colors").let { a -> (0 until a.length()).map { a.getInt(it) } }
-            ThemeSpec(
-                palette = ColorPalette(name = o.optString("name", "Palette"), colors = cols),
-                mode = enumOf(o.optString("mode"), IconMode.TILES), style = o.optString("style", "material_you"),
-                shape = enumOf(o.optString("shape"), TileShape.SQUIRCLE), finish = enumOf(o.optString("finish"), Finish.MATTE),
-                assignment = enumOf(o.optString("assign"), ColorAssignment.LUMINANCE), seed = o.optLong("seed", 42L),
-            )
-        }.getOrDefault(ThemeSpec())
-    }
+    fun spec(c: Context): ThemeSpec = PaletteStore.active(c)
 
     fun save(c: Context, t: ThemeSpec) {
-        val o = JSONObject().put("name", t.palette.name).put("colors", JSONArray(t.palette.colors)).put("mode", t.mode.name).put("style", t.style)
-            .put("shape", t.shape.name).put("finish", t.finish.name).put("assign", t.assignment.name).put("seed", t.seed)
-        sp(c).edit().putString("spec", o.toString()).apply()
+        PaletteStore.saveActive(c, t)
         eng?.cache?.clearMemory()
     }
 
