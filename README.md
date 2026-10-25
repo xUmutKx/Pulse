@@ -1,5 +1,13 @@
 ### Pulse
 
+| Pulse keyboard settings | BlackOut | Buds manager | System font | Windows 11 look: flyout |
+|---|---|---|---|---|
+| <img src="docs/screenshots/keyboard.jpg" width="170" alt="Pulse keyboard settings"> | <img src="docs/screenshots/blackout.jpg" width="170" alt="BlackOut"> | <img src="docs/screenshots/buds-manager.jpg" width="170" alt="Buds manager"> | <img src="docs/screenshots/system-font.jpg" width="170" alt="System font"> | <img src="docs/screenshots/win11-flyout.jpg" width="170" alt="Windows 11 look: flyout"> |
+
+| Windows 11 look: desktop | Calculator | Weather | Files | Music player |
+|---|---|---|---|---|
+| <img src="docs/screenshots/win11-desktop.jpg" width="170" alt="Windows 11 look: desktop"> | <img src="docs/screenshots/calculator.jpg" width="170" alt="Calculator"> | <img src="docs/screenshots/weather.jpg" width="170" alt="Weather"> | <img src="docs/screenshots/files.jpg" width="170" alt="Files"> | <img src="docs/screenshots/music-player.jpg" width="170" alt="Music player"> |
+
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.
 
 Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `Pulse-<version>-android5.apk` for Android 5 and newer. Both hold the 64-bit ARM (arm64-v8a), 32-bit ARM (armeabi-v7a) and x86_64 libraries, so they install on phones, tablets and emulators of those kinds.
