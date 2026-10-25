@@ -3,6 +3,7 @@ package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.widthIn
 import com.umutk.pulse.extras.keyboard.KeyboardEffects.boardWash
 import com.umutk.pulse.extras.keyboard.KeyboardEffects.keyWash
 import androidx.compose.material.icons.rounded.EmojiEmotions
@@ -882,9 +883,15 @@ private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.F
         }
         // the presets vary in length: each one takes just its own width, so two or three share a line
         val wide = fam?.id == "Patterns"
-        if (wide) androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            subs.getOrNull(sub)?.second.orEmpty().forEach { sg ->
-                Text(sg.ch, fontSize = 14.sp, color = th.text, maxLines = 1, softWrap = false, modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(sg.ch) }.padding(horizontal = 10.dp, vertical = 8.dp))
+        if (wide) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+            // a long preset is shrunk to the width of the keyboard, so every one shows whole
+            val room = maxWidth - 12.dp
+            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                subs.getOrNull(sub)?.second.orEmpty().forEach { sg ->
+                    val n = sg.ch.length
+                    val fs = when { n > 44 -> 9.sp; n > 36 -> 10.sp; n > 28 -> 11.sp; n > 22 -> 12.sp; else -> 14.sp }
+                    Text(sg.ch, fontSize = fs, color = th.text, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip, modifier = Modifier.widthIn(max = room).clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(sg.ch) }.padding(horizontal = 10.dp, vertical = 8.dp))
+                }
             }
         } else LazyVerticalGrid(GridCells.Adaptive(48.dp), Modifier.fillMaxSize()) {
             items(subs.getOrNull(sub)?.second.orEmpty()) { sg ->
