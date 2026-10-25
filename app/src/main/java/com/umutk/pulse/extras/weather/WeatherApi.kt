@@ -217,6 +217,9 @@ object WeatherStore {
 
     /** "c" or "f". */
     fun units(c: Context): String = p(c).getString("units", "c") ?: "c"
+    /** How the weather page looks: "sky" (a sky that follows the weather), "amoled" (black) or "app" (the app look). */
+    fun skin(c: Context): String = p(c).getString("skin", "sky") ?: "sky"
+    fun setSkin(c: Context, v: String) = p(c).edit().putString("skin", v).apply()
 
     fun setUnits(c: Context, u: String) = p(c).edit().putString("units", u).apply()
 

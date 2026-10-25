@@ -391,7 +391,8 @@ private fun IButton(text: String, modifier: Modifier = Modifier, danger: Boolean
     if (LocalWindowLook.current.id in winButtonLooks) { WinBtn(LocalWindowLook.current, text, modifier, danger, primary, onClick); return }
     // Material 3: a filled pill in the accent for the main action, tonal pills for the rest, ink from the look
     val w = LocalWindowLook.current
-    val acc = Look.accent.copy(alpha = 1f)
+    // a Material window wears its own accent (black or white), not the Windows accent colour of the app
+    val acc = (if (w.material) w.accent else Look.accent).copy(alpha = 1f)
     val fill = when { danger -> Color(0xFFC42B1C).copy(alpha = .16f); primary -> acc; else -> w.text.copy(alpha = .09f) }
     val ink = when { danger -> Color(0xFFC42B1C); primary -> onAccent(acc); else -> w.text }
     Button(onClick, modifier.height(52.dp), shape = androidx.compose.foundation.shape.CircleShape,
@@ -406,7 +407,8 @@ private fun OptRow(label: String, on: Boolean, set: (Boolean) -> Unit) {
     val w = LocalWindowLook.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = w.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
-        PSwitch(on, set)
+        val acc = (if (w.material) w.accent else Look.accent).copy(alpha = 1f)
+        androidx.compose.material3.Switch(on, set, colors = androidx.compose.material3.SwitchDefaults.colors(checkedThumbColor = onAccent(acc), checkedTrackColor = acc, uncheckedTrackColor = Color.Transparent, uncheckedBorderColor = w.sub, uncheckedThumbColor = w.sub))
     }
 }
 
