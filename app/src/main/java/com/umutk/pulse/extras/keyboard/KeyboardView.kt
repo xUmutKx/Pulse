@@ -196,7 +196,9 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
 
 @Composable
 private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier: Modifier) {
-    val scale = KeyboardPrefs.heightPct / 100f
+    // turned sideways the keyboard would fill the screen: the keys are lower there (about 60%)
+    val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    val scale = KeyboardPrefs.heightPct / 100f * (if (land) .6f else 1f)
     val keyH = (61f * scale).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
