@@ -20,7 +20,7 @@ class WeatherRefreshWorker(private val app: Context, params: WorkerParameters) :
         runCatching {
             val raw = WeatherApi.forecast(place.lat, place.lon)
             val aqi = WeatherApi.airQuality(place.lat, place.lon)
-            WeatherStore.saveCache(app, place.name, raw, aqi, WeatherApi.extras(place.lat, place.lon, WeatherStore.source(app) == "mgm"))
+            WeatherStore.saveCache(app, place.name, raw, aqi, WeatherApi.extras(place.lat, place.lon, WeatherStore.source(app) == "mgm", WeatherStore.combine(app)))
             WeatherWidgets.refreshAll(app)
         }
         // the transparent clock-weather widget keeps its own copy per place
