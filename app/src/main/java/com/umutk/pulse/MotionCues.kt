@@ -112,6 +112,7 @@ class MotionCueService : Service() {
     private lateinit var wm: WindowManager
     private var view: CueView? = null
     private var est: MotionEstimator? = null
+    private var strip: View? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -129,7 +130,49 @@ class MotionCueService : Service() {
         // Android 12 treats touches through a window that is more than about 80% opaque as "obscured" and many apps refuse them; just under that, taps reach the app below
         if (Build.VERSION.SDK_INT >= 31) lp.alpha = .79f
         wm.addView(v, lp)
+        addTopStrip()
         est = MotionEstimator(this) { m -> view?.setMotion(m) }.also { it.start(android.os.Handler(android.os.Looper.getMainLooper())) }
+    }
+
+    /**
+     * The way out, like the screen cover: a thin strip along the top edge takes touches (the dots themselves never do). A double tap on it switches the cues off;
+     * a swipe down from it switches them off and pulls the quick settings panel down, so they can be closed from there too.
+     */
+    private fun addTopStrip() {
+        val d = resources.displayMetrics.density
+        val sbId = resources.getIdentifier("status_bar_height", "dimen", "android")
+        val h = maxOf(if (sbId > 0) resources.getDimensionPixelSize(sbId) else 0, (24 * d).toInt())
+        var lastTap = 0L; var downAt = 0L; var downX = 0f; var downY = 0f
+        val gestures = android.view.GestureDetector(this, object : android.view.GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(e1: android.view.MotionEvent?, e2: android.view.MotionEvent, vx: Float, vy: Float): Boolean {
+                if (e1 == null || vy <= 0f || e2.y <= e1.y) return false
+                stopSelf()
+                android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+                    com.umutk.pulse.extras.launcher.globalAction(applicationContext, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_QUICK_SETTINGS)
+                    Thread { runCatching { Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd statusbar expand-settings")).waitFor() } }.start()
+                }, 250L)
+                return true
+            }
+        })
+        val sv = object : View(this) {
+            override fun onTouchEvent(ev: android.view.MotionEvent): Boolean {
+                gestures.onTouchEvent(ev)
+                when (ev.actionMasked) {
+                    android.view.MotionEvent.ACTION_DOWN -> { downAt = ev.eventTime; downX = ev.x; downY = ev.y }
+                    android.view.MotionEvent.ACTION_UP -> {
+                        val slop = 48f * d
+                        if (ev.eventTime - downAt < 350 && Math.hypot((ev.x - downX).toDouble(), (ev.y - downY).toDouble()) < slop) {
+                            if (ev.eventTime - lastTap < 600) { lastTap = 0L; stopSelf() } else lastTap = ev.eventTime
+                        } else lastTap = 0L
+                    }
+                }
+                return true
+            }
+        }
+        val lp = WindowManager.LayoutParams(-1, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, PixelFormat.TRANSLUCENT)
+        lp.gravity = android.view.Gravity.TOP
+        runCatching { wm.addView(sv, lp); strip = sv }
     }
 
     override fun onStartCommand(i: Intent?, f: Int, id: Int) = START_STICKY
@@ -137,8 +180,11 @@ class MotionCueService : Service() {
 
     override fun onDestroy() {
         running = false
+        // the quick settings tile reads the state again, so it does not stay lit after a close from the top edge
+        if (Build.VERSION.SDK_INT >= 24) runCatching { android.service.quicksettings.TileService.requestListeningState(this, android.content.ComponentName(this, MotionCueTile::class.java)) }
         est?.stop()
         view?.let { runCatching { wm.removeView(it) } }
+        strip?.let { runCatching { wm.removeView(it) } }
         super.onDestroy()
     }
 
