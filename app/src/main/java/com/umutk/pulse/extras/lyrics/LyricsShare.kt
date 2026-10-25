@@ -57,6 +57,15 @@ object LyricsShare {
     fun setConsecutive(c: Context, v: Boolean) { prefs(c).edit().putBoolean("share_consecutive", v).apply() }
 
     const val MAX_LINES = 10
+    /** The colour of the cover that stands out most; a calm blue-grey when there is no cover. */
+    fun baseColor(art: Bitmap?): Int {
+        if (art == null) return 0xFF3A6A78.toInt()
+        val p = runCatching { androidx.palette.graphics.Palette.from(art).clearFilters().generate() }.getOrNull()
+        return p?.vibrantSwatch?.rgb ?: p?.mutedSwatch?.rgb ?: p?.dominantSwatch?.rgb ?: 0xFF3A6A78.toInt()
+    }
+
+    private fun readable(bg: Int) = if (ColorUtils.calculateLuminance(bg) > .5) 0xFF111111.toInt() else 0xFFFFFFFF.toInt()
+
     /** Five colours of the cover, then black and white. */
     const val STYLES = 7
 
