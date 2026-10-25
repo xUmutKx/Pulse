@@ -50,6 +50,10 @@ import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.LibraryMusic
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.ViewList
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.ui.unit.Dp
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.SortByAlpha
 import androidx.compose.material.icons.rounded.QueueMusic
@@ -387,21 +391,43 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("No songs here", "Burada şarkı yok"), color = style.textDim, fontSize = 15.sp) }
         return
     }
-    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
-        if (items.isNotEmpty()) item {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                headerExtra()
-                ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
-                ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
+    // how the songs are laid out: one per row, or two or three to a row with the cover on top and the name under it
+    var cols by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(1) }
+    val stars5: @Composable (Track, Dp) -> Unit = { t, sz ->
+        val n = (starMap[t.path] ?: 0).coerceAtMost(5)
+        if (n > 0) Row(verticalAlignment = Alignment.CenterVertically) { repeat(n) { Icon(Icons.Rounded.Star, null, tint = Color.White, modifier = Modifier.size(sz)) } }
+    }
+    val header: @Composable () -> Unit = {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
+            headerExtra()
+            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { cols = cols % 3 + 1 }, contentAlignment = Alignment.Center) {
+                Icon(if (cols == 1) Icons.Rounded.ViewList else Icons.Rounded.GridView, tr("View", "Görünüm"), tint = style.accent, modifier = Modifier.size(22.dp))
+                if (cols > 1) Text("$cols", color = style.accent, fontSize = 9.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.BottomEnd).padding(end = 6.dp, bottom = 4.dp))
+            }
+            ListAction(Icons.Rounded.PlayArrow, tr("Play", "Çal"), style) { onPlayTracks(songs, 0) }
+            ListAction(Icons.Rounded.Shuffle, tr("Shuffle", "Karıştır"), style) { onPlayTracks(songs.shuffled(), 0) }
+        }
+    }
+    if (cols == 1) LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
+        item { header() }
+        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }, trailing = {
+            Box(Modifier.padding(end = 8.dp)) { stars5(t, 13.dp) }
+        }) }
+    } else androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Fixed(cols), Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { header() }
+        itemsIndexed(items) { pos, (_, t) ->
+            val art = rememberTrackArt(t)
+            Column(Modifier.clickable { onPlayTracks(songs, pos) }) {
+                Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(style.chip), contentAlignment = Alignment.Center) {
+                    if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                    else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(32.dp))
+                }
+                Text(t.displayName(), color = if (t == current) style.accent else style.onBackdrop, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                stars5(t, 11.dp)
             }
         }
-        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }, trailing = {
-            val n = starMap[t.path] ?: 0
-            if (n > 0) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(end = 8.dp)) {
-                Icon(Icons.Rounded.Star, null, tint = Color.White, modifier = Modifier.size(16.dp)); Text("$n", color = Color.White, fontSize = 13.sp, modifier = Modifier.padding(start = 2.dp))
-            }
-        }) }
     }
 }
 

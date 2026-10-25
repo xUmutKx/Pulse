@@ -101,9 +101,9 @@ fun ThemedMenuItem(label: String, onClick: () -> Unit, iconKey: String? = null, 
     val ink = if (lit && s.hiInk != Color.Unspecified) s.hiInk else s.ink
     // a plain row, not Material's DropdownMenuItem, so the classic looks can be as tight as the real menus
     Row(
-        Modifier.fillMaxWidth().heightIn(min = s.rowMin).background(if (lit) s.hiBg else Color.Transparent)
+        Modifier.fillMaxWidth().heightIn(min = minOf(s.rowMin, 40.dp)).background(if (lit) s.hiBg else Color.Transparent)
             .clickable(interactionSource = press, indication = if (s.hiBg == Color.Unspecified) LocalIndication.current else null, onClick = onClick)
-            .padding(horizontal = s.rowH, vertical = s.rowV),
+            .padding(horizontal = s.rowH, vertical = (s.rowV - 3.dp).coerceAtLeast(2.dp)),
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
     ) {
         when {
