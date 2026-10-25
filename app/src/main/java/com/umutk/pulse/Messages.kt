@@ -323,7 +323,7 @@ fun MessagesScreen(back: () -> Unit) {
                 MessagesIcon("search") { threadSearch = !threadSearch; threadQuery = "" }
                 MessagesIcon("share") { shareThread(ctx, t.name ?: t.address, msgs.orEmpty()) }
             } else if (granted && !settings && !newMode) {
-                MessagesIcon("add") { newMode = true; newTo = "" }
+                if (threads.isNullOrEmpty()) MessagesIcon("add") { newMode = true; newTo = "" }
                 MessagesIcon("settings") { settings = true }
             }
         }
@@ -385,12 +385,14 @@ fun MessagesScreen(back: () -> Unit) {
                     else -> {
                         PField(query, { query = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                         if (shown.isEmpty()) MessagesEmpty(Modifier.weight(1f), tr("No matches", "Eşleşme yok"))
-                        else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+                        else Box(Modifier.weight(1f).fillMaxWidth()) { LazyColumn(Modifier.fillMaxSize()) {
                             items(shown, key = { it.id }) { th -> MessagesThreadRow(th, pins, muted, { open = th },
                                 onMute = { muted = if (th.address in muted) muted - th.address else muted + th.address; MsgPrefs.setMuted(ctx, muted) },
                                 onPin = { pins = if (th.address in pins) pins - th.address else pins + th.address; MsgPrefs.setPinned(ctx, pins) },
                                 onArchive = { archives = archives + th.address; MsgPrefs.setArchived(ctx, archives) },
                                 onBlock = { blocks = blocks + th.address; MsgPrefs.setBlocked(ctx, blocks) }) }
+                        }
+                            Box(Modifier.align(Alignment.BottomEnd).padding(18.dp).size(56.dp).clip(CircleShape).background(T.accent).clickable { newMode = true; newTo = "" }, contentAlignment = Alignment.Center) { PIcon("add", androidx.compose.ui.graphics.Color.White, 26.dp) }
                         }
                     }
                 }

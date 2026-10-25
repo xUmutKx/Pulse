@@ -219,13 +219,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         KeyboardDictionary.saveUser(this)
     }
 
+    private var editAt = 0L
+
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
         selStart = newSelStart; selEnd = newSelEnd
         // the cursor went somewhere else after a correction: backspace must not undo that correction any more
         if (lastCorrection != null && word.isEmpty() && SystemClock.uptimeMillis() - corrAt > 300 && newSelStart != oldSelStart) lastCorrection = null
         // the cursor left the word under way (the user tapped elsewhere): the word is finished as it stands
-        if (word.isNotEmpty() && (candidatesStart < 0 || newSelStart < candidatesStart || newSelStart > candidatesEnd)) {
+        // (the report may be late: a report right after our own edit is not the user's tap, and the open word is closed, never dropped)
+        if (word.isNotEmpty() && SystemClock.uptimeMillis() - editAt > 250 && (candidatesStart < 0 || newSelStart < candidatesStart || newSelStart > candidatesEnd)) {
+            currentInputConnection?.finishComposingText()
             word.clear(); peak = null; lastCorrection = null; updateSuggestions()
         }
     }
@@ -266,6 +270,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 }
             }
             punctTyped = false; lastWasSpace = false
+            // the field must still hold the open word right before the cursor; if the app changed it or moved the cursor, the word is closed as it is, and a new one starts
+            if (word.isNotEmpty()) {
+                val tb = c.getTextBeforeCursor(word.length, 0)?.toString()
+                if (tb != word.toString()) { c.finishComposingText(); word.clear(); peak = null; touchPts.clear(); target = null }
+            }
+            editAt = SystemClock.uptimeMillis()
             word.append(ch)
             // the touch model: where this letter was touched, and the finger's drift from the key's centre is learned
             val tp = st.touch; st.touch = null
@@ -291,6 +301,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         if (word.isEmpty()) return
         val typed = word.toString()
+        // the field no longer holds the word before the cursor (moved by the app or the user): nothing is replaced, so nothing is lost
+        if (c.getTextBeforeCursor(typed.length, 0)?.toString() != typed) {
+            c.finishComposingText(); word.clear(); target = null; peak = null; lastCorrection = null; return
+        }
         var out = typed
         val t = target
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
@@ -375,6 +389,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (before == "$g ") { c.deleteSurroundingText(g.length + 1, 0); afterText(); return }
         }
         if (word.isNotEmpty()) {
+            editAt = SystemClock.uptimeMillis()
             if (peak == null && word.length >= 3) peak = word.toString()
             word.deleteCharAt(word.length - 1)
             if (touchPts.isNotEmpty()) touchPts.removeAt(touchPts.size - 1)
