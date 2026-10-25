@@ -137,6 +137,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         KeyboardPrefs.load(this)
         owner = StandByOwner().also { it.start() }
         st.lang = KeyboardPrefs.langList().first()
+        scope.launch(Dispatchers.IO) { runCatching { EmojiData.index(this@PulseKeyboardService) } }
         st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.let { r -> if ('\n' in r) r.split('\n') else r.split(' ') }?.filter { it.isNotEmpty() } ?: emptyList()
         scope.launch(Dispatchers.IO) {
             KeyboardPrefs.langList().forEach { code ->
@@ -414,7 +415,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun page(p: Int) { finishWord("", false); st.page = p; st.panel = "keys"; if (p == 0) updateCaps() }
 
-    override fun emojiPanel() { finishWord("", false); st.emojiQuery = null; st.panel = if (st.panel == "emoji") "keys" else "emoji"; st.toolbar = false }
+    override fun emojiPanel() { finishWord("", false); st.emojiQuery = null; if (st.panel != "emoji") st.emojiTab = if (st.recents.isEmpty()) 1 else 0; st.panel = if (st.panel == "emoji") "keys" else "emoji"; st.toolbar = false }
 
     override fun lang() {
         val l = KeyboardPrefs.langList()
@@ -575,7 +576,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (currentInputConnection?.getSelectedText(0)?.isNotEmpty() == true) translate() else transOp(if (st.trans) "close" else "open")
             }
             "back" -> st.panel = "keys"
-            "emoji" -> st.panel = "emoji"
+            "emoji" -> { st.emojiTab = if (st.recents.isEmpty()) 1 else 0; st.panel = "emoji" }
             "resize" -> st.panel = "resize"
             "settings", "languages" -> {
                 st.panel = "keys"
@@ -935,7 +936,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null): Triple<List<String>, Array<String>, String?> {
         if (typed.isEmpty()) {
             val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else it }
-            val w = arrayOf(n.getOrElse(0) { "" }, n.getOrElse(1) { "" }, n.getOrElse(2) { "" })
+            // after a word and a space: the emoji of the word just written takes the last place
+            val em = if (KeyboardPrefs.emojiPredictions && prev != null) (KeyboardDictionary.emoji(prev) ?: EmojiData.forWord(prev)) else null
+            val w = arrayOf(n.getOrElse(0) { "" }, n.getOrElse(1) { "" }, em ?: n.getOrElse(2) { "" })
             return Triple(w.toList(), w, null)
         }
         val lower = typed.lowercase(loc)
@@ -968,7 +971,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }.maxByOrNull { it.score }
         val fix = swapFix ?: fix0 ?: if (!valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
-        val emoji = if (KeyboardPrefs.emojiPredictions) KeyboardDictionary.emoji(lower) else null
+        val emoji = if (KeyboardPrefs.emojiPredictions) (KeyboardDictionary.emoji(lower) ?: EmojiData.forWord(lower)) else null
         val mid: String; val left: String; val right: String
         if (fix != null) { mid = cased(fix.word, typed); left = "\"$typed\""; right = emoji ?: others.firstOrNull()?.let { cased(it, typed) }.orEmpty() }
         else { mid = typed; left = others.getOrNull(0)?.let { cased(it, typed) }.orEmpty(); right = emoji ?: others.getOrNull(1)?.let { cased(it, typed) }.orEmpty() }
