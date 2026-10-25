@@ -26,7 +26,7 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 
 <details><summary><b>Car and motion sickness</b></summary>
 
-- **Motion cues** (Toolkit): dots at the screen edges that move with the car, against motion sickness (nausea).
+- **Motion cues** (Toolkit): a field of dots that stays fixed in the world while the phone moves (acceleration, turning and tilt are read from the sensors), against motion sickness (nausea); the middle can stay clear, and taps go through it.
 - Bluetooth auto-play when the car or a headset connects, resume on wired headset, pause on unplug.
 - Screen cover and the advanced cover (clock, battery, notes; opens on its own while charging, also sideways) for the dashboard or the desk.
 - Show touches, pointer location, screen rotation lock and screen scale in the Toolkit.
@@ -286,6 +286,7 @@ The APK is written to `app/build/outputs/apk/release/`. Every build (GitHub Acti
 - **Universal Android Debloater package list** (GPL-3.0, Universal-Debloater-Alliance). The debloater downloads it from GitHub; a copy is bundled in `app/src/main/assets/debloat/uad_lists.json`.
 - **Shizuku API** (MIT, copyright RikkaW). The licence text is in `app/src/main/assets/licenses/`.
 - **SD Maid SE** (GPL-3.0, darken). The folder lists of the cleaner (`app/src/main/assets/expendables/*.json`) are taken from its rule files; the GalaxyBudsClient protocol notes (GPL-3.0, ThePBone) are used the same way.
+- **Motion cues** by David Ventura (GPL-3.0-only, https://github.com/davidv/motion-sickness-app). The sensor fusion and the dot field of Pulse's Motion cues are adapted from it.
 - **Windows XP icon pack** by Matt Pettit (CC0 1.0, public domain dedication). The XP theme's Apps, Download, Heart, Phone and Startup icons come from it, resized to 48 px. The licence text is in `app/src/main/assets/licenses/xp-icons-LICENSE.txt`.
 - **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
 
