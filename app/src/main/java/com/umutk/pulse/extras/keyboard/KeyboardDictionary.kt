@@ -447,6 +447,16 @@ object KeyboardDictionary {
     // how often a pair was seen as "typed>word": a typed word that is itself a real word needs three sightings before it counts as a slip of the finger, a non-word one
     private val typoSeen = ConcurrentHashMap<String, Int>()
 
+    /** A correction the person wrote down by hand: [typed] always becomes [word], at once (no sightings needed). */
+    fun teach(c: Context, typed: String, word: String) {
+        if (!userLoaded) loadUser(c)
+        val t = typed.trim().lowercase(Locale.ROOT); val w = word.trim().lowercase(Locale.ROOT)
+        if (t.isEmpty() || w.isEmpty() || t == w || t.contains(' ') || w.contains(' ')) return
+        typos[t] = w
+        rejects.remove("$t>$w")
+        runCatching { File(c.filesDir, "kbd_typos.txt").writeText(typos.entries.take(4000).joinToString("\n") { "${it.key} ${it.value}" }) }
+    }
+
     fun learnTypo(c: Context, typed: String, word: String) {
         if (typed.length < 3 || typed == word || word.startsWith(typed)) return
         if (!userLoaded) loadUser(c)

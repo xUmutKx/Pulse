@@ -270,6 +270,19 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             PField(typed, { typed = it; if (it.endsWith(" ") || it.endsWith("\n")) next() }, tr("Type the word", "Kelimeyi yaz"), Modifier.fillMaxWidth(), onDone = { next() })
             Text("$right ✓   $slips ✗", color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+            // a correction written by hand: the wrong word and the right one
+            Text(tr("Teach a correction", "Bir düzeltme öğret"), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 14.dp, bottom = 4.dp))
+            var wrongW by remember { mutableStateOf("") }
+            var rightW by remember { mutableStateOf("") }
+            var taught by remember { mutableStateOf("") }
+            PField(wrongW, { wrongW = it }, tr("Wrong word", "Yanlış kelime"), Modifier.fillMaxWidth())
+            PField(rightW, { rightW = it }, tr("Right word", "Doğrusu"), Modifier.fillMaxWidth().padding(top = 6.dp))
+            PButton(tr("Add", "Ekle"), Modifier.padding(top = 8.dp)) {
+                if (wrongW.isNotBlank() && rightW.isNotBlank()) {
+                    KeyboardDictionary.teach(ctx, wrongW, rightW); taught = "${wrongW.trim()} → ${rightW.trim()}"; wrongW = ""; rightW = ""; learned = KeyboardDictionary.learnedCount()
+                }
+            }
+            if (taught.isNotEmpty()) Text(tr("Added: ", "Eklendi: ") + taught, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
         }
 
         // statistics: what the keyboard has learned and where the fingers land
