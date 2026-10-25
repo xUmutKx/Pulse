@@ -66,6 +66,7 @@ abstract class WeatherWidgetBase(private val wide: Boolean) : PulseWidget() {
 
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
         super.onUpdate(ctx, mgr, ids)
+        com.umutk.pulse.extras.weather.WeatherAuto.ensure(ctx)
         val place = WeatherStore.savedPlace(ctx) ?: return
         val old = WeatherStore.cached(ctx)
         if (old != null && System.currentTimeMillis() - old.at < MAX_AGE_MS) return
@@ -73,7 +74,7 @@ abstract class WeatherWidgetBase(private val wide: Boolean) : PulseWidget() {
         Thread {
             try {
                 val raw = WeatherApi.forecast(place.lat, place.lon)
-                WeatherStore.saveCache(ctx, place.name, raw, old?.aqi ?: -1)
+                WeatherStore.saveCache(ctx, place.name, raw, old?.aqi ?: -1, WeatherApi.extras(place.lat, place.lon, WeatherStore.source(ctx) == "mgm"))
                 WeatherWidgets.refreshAll(ctx)
             } catch (e: Exception) {
                 // keep the saved copy on screen; the next update tries again

@@ -293,16 +293,7 @@ fun LauncherSettings(back: () -> Unit) {
             }
         },
         confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { pickLook = false } })
-    if (pickPack) {
-        val packs = remember { IconPacks.installed(ctx) }
-        // the packs inside Pulse come first, then the ones installed from the Play Store
-        val ids = listOf("") + PulseIconPacks.ids + packs.map { it.pkg }
-        val names = listOf(tr("Default", "Varsayılan")) + PulseIconPacks.ids.map { PulseIconPacks.label(it) } + packs.map { it.label }
-        PickDialog(tr("Icon pack", "Simge paketi"), names.mapIndexed { i, n -> n to (ids[i] == LauncherPrefs.iconPack) }, onDismiss = { pickPack = false },
-            extra = { Text(tr("Pulse Palette uses the look made in the Palette app.", "Pulse Palette, Palette uygulamasında hazırlanan görünümü kullanır."), color = T.sub, fontSize = 12.sp) }) { i ->
-            LauncherPrefs.iconPack = ids[i]; save(); pickPack = false
-        }
-    }
+    if (pickPack) IconPackPicker(LauncherPrefs.iconPack, onPick = { LauncherPrefs.iconPack = it; save(); pickPack = false }, onDismiss = { pickPack = false })
     if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; addWidget(it) }, onDismiss = { pickWidget = false })
     if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false
