@@ -103,6 +103,7 @@ fun HomeView(
             } else {
                 NIcon("close", fg, tr("Cancel", "İptal")) { onSelect(emptySet()) }
                 Text(tr("${selected.size} selected", "${selected.size} seçili"), color = fg, fontSize = 17.sp, modifier = Modifier.weight(1f))
+                NIcon("check", fg, tr("Select all", "Hepsini seç")) { onSelect(sorted.map { it.id }.toSet()) }
                 NIcon("pin", fg, tr("Pin", "Sabitle")) { onPinSelected() }
                 NIcon("palette", fg, tr("Colour", "Renk")) { onDlg(NDlg.Swatch(selected)) }
                 NIcon("folder", fg, tr("Folder", "Klasör")) { onDlg(NDlg.Folder(selected)) }
@@ -289,6 +290,7 @@ fun SettingsView(
             NSection(tr("List", "Liste"), "list" in open, { toggle("list") }) {
                 NRow("sort", tr("Sort by", "Sırala"), tr(NotesPrefs.sort(ctx).en, NotesPrefs.sort(ctx).tr), onClick = { onDlg(NDlg.Sort) })
                 NRow("view", tr("Grid", "Izgara"), trailing = { PSwitch(NotesPrefs.grid(ctx), { NotesPrefs.setGrid(ctx, it); onChanged() }) })
+                NRow("add", tr("New from a template", "Şablondan yeni not"), onClick = { onDlg(NDlg.Template) })
                 NRow("recycle", tr("Trash", "Çöp kutusu"), onClick = { onTrash() })
                 NRow("sort", tr("Reverse order", "Ters sırala"), trailing = { PSwitch(NotesPrefs.reverse(ctx), { NotesPrefs.setReverse(ctx, it); onChanged() }) })
                 NRow("calendar", tr("Group by date", "Tarihe göre grupla"), trailing = { PSwitch(NotesPrefs.groups(ctx), { NotesPrefs.setGroups(ctx, it); onChanged() }) })
