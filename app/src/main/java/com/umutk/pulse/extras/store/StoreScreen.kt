@@ -389,6 +389,7 @@ private fun BuiltinRows() {
         BuiltinRow("Paint", tr("Draw and edit pictures", "Resim çiz ve düzenle"), "palette", "app:PaintLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "paint") },
         BuiltinRow("LocalSend", tr("Send files to nearby devices", "Yakındaki cihazlara dosya gönder"), "wifi", "app:LocalSendLauncher") { openTool("localsend") },
         BuiltinRow("BlackOut", tr("Greys to true black on AMOLED: LSPosed module, colour rules, dropper, dark pages", "AMOLED'de griler gerçek siyah: LSPosed modülü, renk kuralları, damlalık, koyu sayfalar"), "shield", "app:BlackOutLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "blackout") },
+        BuiltinRow("Island", tr("A pill over the camera: the song, notifications, charger, headset, volume, torch and screenshots", "Kameranın üstünde bir hap: şarkı, bildirimler, şarj, kulaklık, ses, fener ve ekran görüntüleri"), "phone", "app:IslandLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "island") },
         BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu", "app:VoiceLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
         BuiltinRow(tr("Notes", "Notlar"), tr("Notes and lists", "Notlar ve listeler"), "notes", "app:NotesLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "notes") },
         BuiltinRow(tr("Weather", "Hava durumu"), tr("Forecast", "Tahmin"), "menu", "app:WeatherLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "weather") },

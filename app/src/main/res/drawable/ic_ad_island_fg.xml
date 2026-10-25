@@ -1,0 +1,8 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <!-- a pill with a dot at its right end and a thin card under it: white line glyph, like the other extra apps -->
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:strokeLineJoin="round" android:fillColor="#00000000"
+        android:pathData="M30,34h48a10,10 0 0 1 0,20h-48a10,10 0 0 1 0,-20z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M68,44a4,4 0 1 1 8,0a4,4 0 1 1 -8,0z" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="4" android:strokeLineCap="round" android:fillColor="#00000000" android:pathData="M38,72h32" />
+</vector>
