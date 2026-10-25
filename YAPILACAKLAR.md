@@ -1258,3 +1258,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.95 Keyboard: Shift while a word is open puts the capital-letter form in the middle of the bar; a tap applies it (derlenmedi)
 - 1.0.96 README screenshots in one collapsed block, small and framed; keyboard: capital letter worked out again when the field is emptied or the cursor jumps (Beeper); emoji mix bigger (derlenmedi)
 - 1.0.97 Emoji mix: circles + result you tap to send; clear weather widget closer to the left; weather: 24 hours from several forecasts combined (derlenmedi)
+- 1.0.98 Motion cues: a strip along the top edge; double tap closes, swipe down closes and opens quick settings
