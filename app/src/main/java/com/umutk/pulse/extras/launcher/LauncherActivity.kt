@@ -291,14 +291,18 @@ internal fun loadApps(ctx: Context): List<LaunchApp> {
     val pm = ctx.packageManager
     val main = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
     val pack = LauncherPrefs.iconPack
-    val packMap = if (pack.isNotBlank()) IconPacks.filter(ctx, pack) else emptyMap()
-    return pm.queryIntentActivities(main, 0)
+    val builtin = PulseIconPacks.isBuiltin(pack)
+    val packMap = if (pack.isNotBlank() && !builtin) IconPacks.filter(ctx, pack) else emptyMap()
+    val found = pm.queryIntentActivities(main, 0)
         .filter { it.activityInfo.packageName != ctx.packageName }
         .distinctBy { it.activityInfo.packageName }
-        .map { ri ->
+    // a pack inside Pulse draws all the icons in one go
+    val drawn = if (builtin) PulseIconPacks.render(ctx, pack, found.map { Triple(it.activityInfo.packageName, it.activityInfo.name, it.loadLabel(pm).toString()) }, ICON_PX) else emptyList()
+    return found.withIndex()
+        .map { (i, ri) ->
             val pkg = ri.activityInfo.packageName
             LaunchApp(ri.loadLabel(pm).toString(), pkg,
-                runCatching { (IconPacks.icon(ctx, pack, packMap, pkg, ri.activityInfo.name) ?: ri.loadIcon(pm)).toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull(),
+                (if (builtin) drawn.getOrNull(i) else null) ?: runCatching { (IconPacks.icon(ctx, pack, packMap, pkg, ri.activityInfo.name) ?: ri.loadIcon(pm)).toBitmap(ICON_PX, ICON_PX).asImageBitmap() }.getOrNull(),
                 installed = runCatching { pm.getPackageInfo(pkg, 0).firstInstallTime }.getOrDefault(0L),
                 system = (ri.activityInfo.applicationInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0,
                 category = ri.activityInfo.applicationInfo.category)

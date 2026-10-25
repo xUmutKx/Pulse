@@ -42,6 +42,8 @@ object StyleCatalog {
             gradient = 0.4f, stroke = 0.4f, glyphScale = 0.46f, bgTone = 0.55f, fgTone = 1f),
         IconStyle("apple_glyph", "Apple Glyph", TileShape.SQUIRCLE, 0.32f, Finish.GLOSSY,
             gradient = 0.6f, glyphScale = 0.50f, bgTone = 0.40f, fgTone = 1f),
+        IconStyle("material_glass", "Material glass", TileShape.SQUIRCLE, 0.36f, Finish.GLASS,
+            gradient = 0.3f, shadow = 0.22f, stroke = 0.45f, glyphScale = 0.50f, bgTone = 0.5f, fgTone = 1f),
         IconStyle("glass", "Glass", TileShape.SQUIRCLE, 0.34f, Finish.GLASS,
             stroke = 0.5f, glyphScale = 0.46f, bgTone = 0.6f, fgTone = 1f),
         IconStyle("frosted", "Frosted Glass", TileShape.SQUIRCLE, 0.34f, Finish.FROSTED,
