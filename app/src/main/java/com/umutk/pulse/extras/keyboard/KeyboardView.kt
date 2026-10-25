@@ -2,6 +2,7 @@
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.foundation.verticalScroll
 import com.umutk.pulse.extras.keyboard.KeyboardEffects.boardWash
 import com.umutk.pulse.extras.keyboard.KeyboardEffects.keyWash
 import androidx.compose.material.icons.rounded.EmojiEmotions
