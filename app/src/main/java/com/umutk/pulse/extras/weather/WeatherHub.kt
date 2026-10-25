@@ -79,6 +79,7 @@ fun WeatherHub(onBack: () -> Unit) {
     var imp by remember { mutableStateOf(WeatherFmt.imperial(ctx)) }
     var alerts by remember { mutableStateOf(WeatherStore.alertsOn(ctx)) }
     var showList by remember { mutableStateOf(false) }
+    var hours48 by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var skin by remember { mutableStateOf(WeatherStore.skin(ctx)) }
     val devicePlace = Place(tr("My location", "Konumum"), 0.0, 0.0, device = true)
 
@@ -288,7 +289,6 @@ fun WeatherHub(onBack: () -> Unit) {
                     }
                 }
             }
-            var hours48 by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
             item {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(if (hours48) tr("Next 48 hours", "Sonraki 48 saat") else tr("Next 24 hours", "Sonraki 24 saat"), color = sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
