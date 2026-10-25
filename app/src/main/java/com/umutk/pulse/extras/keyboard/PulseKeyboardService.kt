@@ -435,6 +435,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun shift() {
         val now = SystemClock.uptimeMillis()
         st.shift = when (st.shift) { 0 -> { shiftTap = now; 1 }; 1 -> if (now - shiftTap < 450) 2 else 0; else -> 0 }
+        // a word is open: the bar shows (or drops) its capital-letter form
+        if (word.isNotEmpty()) updateSuggestions()
     }
 
     override fun page(p: Int) { finishWord("", false); st.page = p; st.panel = "keys"; if (p == 0) updateCaps() }
@@ -1048,9 +1050,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
         val emoji = if (KeyboardPrefs.emojiPredictions) (KeyboardDictionary.emoji(lower) ?: EmojiData.forWord(lower)) else null
         val mid: String; val left: String; val right: String
-        if (fix != null) { mid = cased(fix.word, typed); left = "\"$typed\""; right = emoji ?: others.firstOrNull()?.let { cased(it, typed) }.orEmpty() }
+        // Shift pressed while the word is open: the middle holds the capital-letter form (the one the correction would give, when there is one), and a tap puts it in
+        val loc = lang.locale
+        val capital = up && typed.isNotEmpty() && typed[0].isLetter() && typed[0].isLowerCase()
+        fun capped(w: String) = if (capital) w.replaceFirstChar { it.titlecase(loc) } else w
+        if (fix != null) { mid = capped(cased(fix.word, typed)); left = "\"$typed\""; right = emoji ?: others.firstOrNull()?.let { cased(it, typed) }.orEmpty() }
+        else if (capital) { mid = capped(typed); left = "\"$typed\""; right = emoji ?: others.getOrNull(0)?.let { capped(cased(it, typed)) }.orEmpty() }
         else { mid = typed; left = others.getOrNull(0)?.let { cased(it, typed) }.orEmpty(); right = emoji ?: others.getOrNull(1)?.let { cased(it, typed) }.orEmpty() }
-        val words = arrayOf(if (fix != null) typed else left, mid, right)
-        return Triple(listOf(left, mid, right), words, fix?.let { cased(it.word, typed) })
+        val words = arrayOf(if (fix != null || capital) typed else left, mid, right)
+        return Triple(listOf(left, mid, right), words, fix?.let { capped(cased(it.word, typed)) })
     }
 }
