@@ -898,7 +898,7 @@ private class MenuItem(val id: String, val icon: ImageVector, val label: String,
 private fun MenuPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
     val ids = KeyboardPrefs.menuItems.split(',').filter { id -> ExtraKeys.menu.any { it.first == id } }
     val items = ids.map { id -> MenuItem(id, toolIcon(th, id), ExtraKeys.menu.first { it.first == id }.second, toolOn(id, st)) } + MenuItem("back", kbIcon(th, "Keyboard"), "Keys")
-    LazyVerticalGrid(GridCells.Fixed(4), Modifier.fillMaxWidth().height(keyH * 4f).background(th.menu)) {
+    LazyVerticalGrid(GridCells.Fixed(4), Modifier.fillMaxWidth().height(panelHeight(st, keyH)).background(th.menu)) {
         items(items) { m ->
             Column(
                 Modifier.height(keyH).clickable { when (m.id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(m.id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(m.id) } },
@@ -917,7 +917,26 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     var sel by remember { mutableStateOf(setOf<Long>()) }
     val selecting = sel.isNotEmpty()
     val now = System.currentTimeMillis()
-    Column(Modifier.fillMaxWidth().height(keyH * 4f).background(th.menu)) {
+    // a long press on an item: pin it, make a shortcut of it, or pick it
+    var menuFor by remember { mutableStateOf<ClipItem?>(null) }
+    val naming = st.clipName
+    if (naming != null) {
+        val target = st.clipItems.firstOrNull { it.id == st.clipNameFor }
+        Column(Modifier.fillMaxWidth().background(th.menu)) {
+            Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Shortcut name", "Kısayol adı"), color = th.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+                Text(tr("Save", "Kaydet"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipShortcutSave() }.padding(8.dp))
+                Text(tr("Cancel", "Vazgeç"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { act.clipShortcutCancel() }.padding(8.dp))
+            }
+            Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 12.dp).clip(RoundedCornerShape(10.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (naming.isEmpty()) tr("e.g. address", "örn. adres") else naming, color = if (naming.isEmpty()) th.sub else th.text, fontSize = 16.sp, maxLines = 1)
+            }
+            Text(target?.text.orEmpty().replace('\n', ' '), color = th.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
+            KeysPanel(th, st, act, keyH)
+        }
+        return
+    }
+    Column(Modifier.fillMaxWidth().then(if (st.clipName != null) Modifier else Modifier.height(panelHeight(st, keyH))).background(th.menu)) {
         // the head: how many are kept, and either the clear / select-all buttons or the delete of the picked ones
         Row(Modifier.fillMaxWidth().height(40.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(if (selecting) "${sel.size} " + tr("selected", "seçili") else tr("Clipboard", "Pano") + " · ${st.clipItems.size}", color = th.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
@@ -927,10 +946,19 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 Text(tr("Cancel", "Vazgeç"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { sel = emptySet() }.padding(8.dp))
             } else if (st.clipItems.any { !it.pinned }) Text(tr("Clear unpinned", "Sabitlenmeyenleri temizle"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipClear() }.padding(8.dp))
         }
+        menuFor?.let { m ->
+            Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(if (m.pinned) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.padding(10.dp))
+                if (m.image == null) Text(tr("Shortcut", "Kısayol"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.padding(10.dp))
+                Text(tr("Select", "Seç"), color = th.accent, fontSize = 14.sp, modifier = Modifier.clickable { sel = sel + m.id; menuFor = null }.padding(10.dp))
+                androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                Text("✕", color = th.sub, fontSize = 16.sp, modifier = Modifier.clickable { menuFor = null }.padding(10.dp))
+            }
+        }
         if (st.clipItems.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text(tr("Copied texts and pictures appear here", "Kopyalanan metin ve resimler burada görünür"), color = th.sub, fontSize = 14.sp) }
         else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
             items(st.clipItems, key = { it.id }) { it2 ->
-                Row(Modifier.fillMaxWidth().combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { sel = sel + it2.id })
+                Row(Modifier.fillMaxWidth().combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { menuFor = it2 })
                     .then(if (it2.id in sel) Modifier.background(th.special) else Modifier).padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(34.dp).clickable { act.clipPin(it2.id) }, contentAlignment = Alignment.Center) {
                         Icon(kbIcon(th, "Gesture"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
@@ -950,6 +978,13 @@ private fun ago(ms: Long): String = when {
     ms < 3_600_000L -> "${ms / 60_000} " + tr("min", "dk")
     ms < 86_400_000L -> "${ms / 3_600_000} " + tr("h", "sa")
     else -> "${ms / 86_400_000} " + tr("d", "g")
+}
+
+/** Every panel keeps the height of the keys, so the keyboard does not shrink when one opens. */
+@Composable
+private fun panelHeight(st: KbState, keyH: androidx.compose.ui.unit.Dp): androidx.compose.ui.unit.Dp {
+    val d = LocalDensity.current
+    return if (st.keysH > 0) with(d) { st.keysH.toDp() } else keyH * 4f
 }
 
 /** A kept picture, shown small. */
