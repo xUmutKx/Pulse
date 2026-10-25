@@ -254,6 +254,12 @@ fun LiveLyricsSettingsSection() {
             }
         }
         SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
+        var autoAll by remember { mutableStateOf(LyricsAuto.on(c)) }
+        SwitchRow(tr("Find lyrics for the whole library in the background", "Tüm kütüphane için sözleri arka planda bul"), autoAll) { autoAll = it; LyricsAuto.setOn(c, it) }
+        var st by remember { mutableStateOf(LyricsAuto.status(c)) }
+        androidx.compose.runtime.LaunchedEffect(autoAll) { while (true) { st = LyricsAuto.status(c); kotlinx.coroutines.delay(2000) } }
+        if (st.second > 0) Text(tr("${st.first} of ${st.second} songs looked at, ${st.third} with lyrics", "${st.second} şarkıdan ${st.first} tanesine bakıldı, ${st.third} tanesinin sözü var"), color = T.sub, fontSize = 12.sp)
+        com.umutk.pulse.PButton(tr("Search now", "Şimdi ara"), compact = true) { LyricsAuto.runNow(c); autoAll = true }
         var consec by remember { mutableStateOf(LyricsShare.consecutive(c)) }
         SwitchRow(tr("Share: only lines that follow each other", "Paylaşım: yalnız ardışık satırlar"), consec) { consec = it; LyricsShare.setConsecutive(c, it) }
     }

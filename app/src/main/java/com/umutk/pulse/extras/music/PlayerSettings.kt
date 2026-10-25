@@ -218,6 +218,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             // turning it on looks for the covers that are missing now, not only after the next library scan
             if (it) CoverFetch.backfill(c, MusicLibrary.tracks.value)
         }
+        if (cat == "art") CoverRepairSection()
         if (cat == "art") SwitchRow(tr("Download missing tags (album, genre, year)", "Eksik etiketleri indir (albüm, tür, yıl)"), onlineTags) {
             onlineTags = it; MusicSettings.setOnlineTags(c, it)
             if (it) OnlineTags.backfill(c, MusicLibrary.tracks.value)
