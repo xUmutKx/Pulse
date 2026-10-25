@@ -1233,3 +1233,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.64 Presets shrink to the keyboard width so long ones show whole - derlenmedi
 - 1.0.65 compile fixes (grid itemsIndexed, keyboard icons)
 - 1.0.69 Weather: sky/amoled/app page looks, list of places, swipe between places; Install window uses the Material accent
+- 1.0.70 Weather: pollen, today vs yesterday, UV, humidity, wind compass, dew point, pressure, visibility cards; 48 hours; 30-minute background refresh
