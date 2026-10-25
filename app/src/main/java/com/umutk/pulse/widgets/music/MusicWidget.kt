@@ -188,7 +188,7 @@ open class MusicWidget : AppWidgetProvider() {
                     setOnClickPendingIntent(R.id.mw_shuf, WidgetUi.broadcast(c, MusicWidget::class.java, A_SHUF))
                     setOnClickPendingIntent(R.id.mw_rep, WidgetUi.broadcast(c, MusicWidget::class.java, A_REP))
                 }
-                val open = WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 71, "route" to "music")
+                val open = WidgetUi.launch(c, "com.umutk.pulse.ToolOpenActivity", 71, "route" to "music", "notif_open" to "player")
                 setOnClickPendingIntent(if (layout == R.layout.widget_music_slim) R.id.mw_title else R.id.mw_art, open)
             }
             return when (kind) {
