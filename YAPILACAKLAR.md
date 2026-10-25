@@ -1216,3 +1216,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.47 Material everywhere (1/3): 12 direct AlertDialogs now go through WinAlert (Poweramp track sheet, Folder tree, Contacts, Excel, Calendar); calendar event detail keeps its own (icon slot) - derlenmedi, bekle
 - 1.0.48 APKs hold arm64-v8a, armeabi-v7a and x86_64; README and release notes brought up to date - derlenmedi, bekle
 - 1.0.49 Install window: Material pill buttons, switches instead of On/Off, removed Install on open and Set source to Play Store, option to remove unused CPU libraries - derlenmedi, bekle
+- 1.0.50 Element symbols removed from the long press (two letters can be typed) - derlenmedi, bekle
