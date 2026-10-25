@@ -36,6 +36,13 @@ def kind(fr):
     if any(c in j for c in "━─┈═"): return "Lines"
     if any(c in _MIRROR for c in j): return "Brackets"
     return "Wings"
+COMBOS_HAND += [
+    "꒰ ˶• ༝ •˶꒱", "(｡•̀ᴗ-)✧", "₍ᐢ•ﻌ•ᐢ₎", "ʕ·ᴥ·ʔ", "(≧◡≦)", "(◕‿◕)", "(๑˃ᴗ˂)ﻭ", "٩(◕‿◕｡)۶", "(⁠｡⁠•̀⁠ᴗ⁠-⁠)⁠✧", "ヾ(＾∇＾)", "(´｡• ᵕ •｡`)",
+    "⋆˙⟡", "✦•┈┈┈┈•✦", "•°¯`•• ••´¯°•", "─── ･ ｡ﾟ☆: *.☽ .* :☆ﾟ. ───", "◦•●◉✿ ✿◉●•◦", "▁▂▃▄▅▆▇█", "╰☆╮", "░▒▓█▓▒░", "⊹₊ ⋆", "ᨒ ⁺ ˖",
+    "★彡", "彡★", "☆*:.｡. .｡.:*☆", "｡･:*:･ﾟ★,｡･:*:･ﾟ☆", "✧･ﾟ: *✧･ﾟ:*", "･ﾟ✧", "⋆｡˚ ❀ ˚｡⋆", "❀⊱", "⊰❀", "✿•*¨*•.¸¸.•*¨*•✿",
+    "꧁༺ ༻꧂", "༺♡༻", "╭┈ ➤", "┊ ┊ ┊ ┊", "┈┈┈┈ ✧ ┈┈┈┈", "— ✦ —", "– ⋆ –", "·˚ ༘ ♡ ⋆｡˚", "ˏˋ ˎˊ", "♪ ♫ ♬", "⸜ ⸝", "⌇⌇⌇", "﹏﹏﹏", "︵‿︵‿︵",
+    "⎯⎯⎯ ⋆ ⎯⎯⎯", "▪︎▫︎▪︎▫︎", "◇ ◆ ◇", "▹▸▹▸", "⁂", "※", "❖", "⌘", "⎔", "⍟", "☄", "⚝", "⚚", "☽ ☾", "☽ ✧ ☾", "ᵔ ᵕ ᵔ", "ᵒ̴̶̷᷄ ᵕ ᵒ̴̶̷᷅", "˘ᴗ˘", "•ᴗ•", "o(≧▽≦)o",
+]
 GENERATED = []
 _C = "✿ ♡ ✦ ❀ ☾ ❁ ★ ❥ ✧ ⚘ ღ ✩".split()
 def _right(fr):
@@ -68,8 +75,17 @@ LETTER_OK = {"Cuneiform", "Hieroglyphs"}   # whole scripts: their signs are lett
 SKIP_REGIONAL = range(0x1F1E6, 0x1F200)
 # emoji live in the emoji tabs: the symbol tab holds the plain text signs only
 EMOJI_LIKE = set("⛅⛈⚡☔⭐⌚⌛✅❌❓❗❤️")
+import os
+_EMOJI_CP = set()
+_ep = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "src", "main", "assets", "kbd", "emoji.txt")
+if os.path.exists(_ep):
+    for _l in open(_ep, encoding="utf-8"):
+        _f = _l.split("\t")
+        if len(_f) > 1:
+            for _c in _f[1]:
+                if ord(_c) >= 0x2190 and _c not in "\uFE0F\u200D\uFE0E": _EMOJI_CP.add(_c)
 def is_emoji(it):
-    return any(0x1F000 <= ord(c) <= 0x1FAFF or c == "\uFE0F" or c == "\u200D" for c in it) or it in EMOJI_LIKE
+    return any(c in _EMOJI_CP for c in it) or any(0x1F000 <= ord(c) <= 0x1FAFF or c == "\uFE0F" or c == "\u200D" for c in it) or it in EMOJI_LIKE
 out = []
 seen = set()
 def nm(ch):
