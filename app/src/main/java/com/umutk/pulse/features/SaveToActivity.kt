@@ -94,7 +94,6 @@ class SaveToActivity : ComponentActivity() {
                 androidx.compose.runtime.CompositionLocalProvider(com.umutk.pulse.InMatDialogBtn provides true) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                         PButton(text = tr("Cancel", "İptal")) { finish() }
-                        Spacer(Modifier.size(8.dp))
                         PButton(text = tr("Save", "Kaydet")) { save(list, target, name) }
                     }
                 }
