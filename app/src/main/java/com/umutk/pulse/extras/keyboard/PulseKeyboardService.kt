@@ -790,45 +790,6 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (KeyboardPrefs.sound) { if (KeyboardPrefs.soundKind == 0) (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, -1f) else KeyboardEffects.play(KeyboardPrefs.soundKind) }
     }
 
-    override fun mixOp(op: String) {
-        when (op) {
-            "open" -> { st.mixA = ""; st.mixB = ""; st.panel = "mix" }
-            "close" -> { st.mixA = ""; st.mixB = ""; st.panel = "emoji" }
-            "style" -> st.mixStyle = (st.mixStyle + 1) % EmojiMix.styles
-            "clear" -> { st.mixA = ""; st.mixB = "" }
-            "send" -> sendMix()
-        }
-    }
-
-    /** The two picks made into one picture; the field takes it as content, otherwise it goes to the clipboard. */
-    private fun sendMix() {
-        val a = st.mixA; val b = st.mixB
-        if (a.isEmpty() || b.isEmpty()) return
-        val c = currentInputConnection ?: return
-        val f = java.io.File(cacheDir, "mix/mix_${System.currentTimeMillis()}.png")
-        // only the latest few pictures are kept, the rest would pile up in the cache
-        java.io.File(cacheDir, "mix").listFiles()?.sortedByDescending { it.lastModified() }?.drop(8)?.forEach { it.delete() }
-        scope.launch(Dispatchers.IO) {
-            runCatching { f.parentFile?.mkdirs(); f.outputStream().use { EmojiMix.render(a, b, st.mixStyle).compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) } }
-            withContext(Dispatchers.Main) {
-                val info = currentInputEditorInfo
-                val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
-                val ok = f.exists() && info != null && types.any { it.startsWith("image/") || it == "*/*" }
-                if (ok) runCatching {
-                    val u = androidx.core.content.FileProvider.getUriForFile(this@PulseKeyboardService, "$packageName.files", f)
-                    val content = androidx.core.view.inputmethod.InputContentInfoCompat(u, android.content.ClipDescription("mix", arrayOf("image/png")), null)
-                    androidx.core.view.inputmethod.InputConnectionCompat.commitContent(c, info!!, content, androidx.core.view.inputmethod.InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null)
-                    st.mixA = ""; st.mixB = ""
-                } else {
-                    // this field takes no pictures: the two emojis go in as text
-                    finishWord("", false); c.commitText(a + b, 1)
-                    android.widget.Toast.makeText(this@PulseKeyboardService, com.umutk.pulse.tr("This field takes no pictures; the emojis were typed", "Bu alan resim kabul etmiyor; emojiler yazıldı"), android.widget.Toast.LENGTH_SHORT).show()
-                    st.mixA = ""; st.mixB = ""
-                }
-            }
-        }
-    }
-
     override fun emoji(e: String) {
         val c = currentInputConnection ?: return
         finishWord("", false)
