@@ -43,7 +43,7 @@ class PaletteIconProvider : ContentProvider() {
             val info = apps.getOrNull(idx) ?: return@runBlocking null
             val engine = PaletteStudio.engine(c)
             engine.prepareLuminanceRanks(apps)
-            val bmp = engine.render(info, spec, idx, 192)
+            val bmp = engine.render(info, spec, idx, 192, PaletteStore.overrides(c)[info.key])
             val f = File(c.cacheDir, "palette_provider").apply { mkdirs() }.resolve("${seg[1]}_${seg[2].hashCode()}.png")
             FileOutputStream(f).use { bmp.compress(Bitmap.CompressFormat.PNG, 100, it) }
             ParcelFileDescriptor.open(f, ParcelFileDescriptor.MODE_READ_ONLY)
