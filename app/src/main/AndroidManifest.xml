@@ -1523,6 +1523,26 @@
             </intent-filter>
         </activity-alias>
         <provider android:name="com.umutk.pulse.extras.palette.PaletteIconProvider" android:authorities="${applicationId}.palette.icons" android:exported="true" />
+        <receiver android:name="com.umutk.pulse.extras.palette.automation.AutomationReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="com.umutk.pulse.palette.APPLY_THEME" />
+                <action android:name="com.umutk.pulse.palette.NEXT_PALETTE" />
+                <action android:name="com.umutk.pulse.palette.REGENERATE" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
+        <receiver android:name="com.umutk.pulse.extras.palette.widget.PaletteWidgetProvider" android:label="Palette" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/palette_widget_info" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.extras.palette.widget.PaletteSwatchWidgetProvider" android:label="Palette swatch" android:exported="true">
+            <intent-filter><action android:name="android.appwidget.action.APPWIDGET_UPDATE" /></intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/palette_swatch_widget_info" />
+        </receiver>
+        <service android:name="com.umutk.pulse.extras.palette.wallpaper.LivePaletteWallpaperService" android:label="Palette" android:exported="true" android:permission="android.permission.BIND_WALLPAPER">
+            <intent-filter><action android:name="android.service.wallpaper.WallpaperService" /></intent-filter>
+            <meta-data android:name="android.service.wallpaper" android:resource="@xml/palette_live_wallpaper" />
+        </service>
         <service android:name="com.umutk.pulse.extras.lyrics.LyricsListenerService" android:exported="true"
             android:label="Pulse · Lyrics from the music notification" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter><action android:name="android.service.notification.NotificationListenerService" /></intent-filter>
