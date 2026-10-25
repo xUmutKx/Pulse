@@ -96,7 +96,7 @@ private fun WallpaperTab(st: PaletteState) {
     var videoUri by remember { mutableStateOf(WidgetRefresher.currentVideoUri(ctx)) }
     var useVideo by remember { mutableStateOf(WidgetRefresher.useVideoWallpaper(ctx)) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) { runCatching { st.decode(uri, 1024) }.getOrNull()?.let { st.setWallpaper(it) }; st.paletteFromImage(uri) }
+        if (uri != null) { runCatching { st.decode(uri, 1024) }.getOrNull()?.let { st.useWallpaper(it) }; st.paletteFromImage(uri) }
     }
     val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) { st.setWallpaperVideo(uri); videoUri = uri; useVideo = true } }
 
@@ -124,9 +124,9 @@ private fun WallpaperTab(st: PaletteState) {
             }
         }
     }
-    if (art) AbstractPaletteArtRow(spec.palette) { b -> st.setWallpaper(b) }
+    if (art) AbstractPaletteArtRow(spec.palette) { b -> st.useWallpaper(b) }
     if (samples) {
-        SamplePhotoRow(spec.palette) { b -> st.setWallpaper(b) }
+        SamplePhotoRow(spec.palette) { b -> st.useWallpaper(b) }
         HintText(tr("Sample photos come from loremflickr.com.", "Örnek fotoğraflar loremflickr.com'dan gelir."))
     }
 
