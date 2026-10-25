@@ -30,7 +30,7 @@ data class Forecast(
     val wind: Double, val gusts: Double, val windDir: Int, val humidity: Int, val pressure: Double, val cloud: Int, val isDay: Boolean,
     val days: List<Day>, val hours: List<Hour>, val aqi: Int = -1, val precip: Double = 0.0,
     val dew: Double = 0.0, val visKm: Double = -1.0, val yMax: Double = Double.NaN, val yMin: Double = Double.NaN,
-    val pollen: Map<String, Int> = emptyMap(), val hours48: List<Hour> = emptyList(), val viaMgm: Boolean = false,
+    val pollen: Map<String, Int> = emptyMap(), val hours48: List<Hour> = emptyList(), val viaMgm: Boolean = false, val sources: Int = 1,
 )
 
 /** Open-Meteo: forecast, air quality and geocoding, no key. Same HTTPS helper as the store. */
@@ -56,8 +56,9 @@ object WeatherApi {
      * What the main forecast does not hold: yesterday's high and low, and the pollen counts (grains per cubic metre, Europe only) of now. A small JSON text for the cache;
      * "" when the service has nothing.
      */
-    fun extras(lat: Double, lon: Double, mgm: Boolean = false): String = runCatching {
+    fun extras(lat: Double, lon: Double, mgm: Boolean = false, combine: Boolean = false): String = runCatching {
         val out = JSONObject()
+        if (combine) runCatching { ensemble(lat, lon)?.let { out.put("ens", it) } }
         if (mgm) runCatching { mgmOverlay(lat, lon)?.let { out.put("mgm", it) } }
         runCatching {
             val d = JSONObject(get("https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&daily=temperature_2m_max,temperature_2m_min&past_days=1&forecast_days=1&timezone=auto".format(java.util.Locale.US, lat, lon))).getJSONObject("daily")
@@ -127,7 +128,95 @@ object WeatherApi {
             cur.optDouble("dew_point_2m", 0.0), if (hv != null && start < hv.length() && !hv.isNull(start)) hv.optDouble(start, 0.0) / 1000.0 else -1.0,
             ex?.optDouble("ymax", Double.NaN) ?: Double.NaN, ex?.optDouble("ymin", Double.NaN) ?: Double.NaN, pol, hours48,
         )
-        return ex?.optJSONObject("mgm")?.let { runCatching { applyMgm(base, it) }.getOrNull() } ?: base
+        val withMgm = ex?.optJSONObject("mgm")?.let { runCatching { applyMgm(base, it) }.getOrNull() } ?: base
+        return ex?.optJSONObject("ens")?.let { runCatching { applyEnsemble(withMgm, it) }.getOrNull() } ?: withMgm
+    }
+
+    // ---- Several forecasts for the next 24 hours -------------------------------------------------------------------------------------------------
+    // Open-Meteo's own best guess, three more weather models (ECMWF, GFS, ICON, asked in one request) and met.no each give the hours. Per hour the temperature is the median
+    // (a trimmed mean when there are four or more: one model that is far off cannot drag it), the sky is the one most sources agree on (the worse one when they tie, so a
+    // storm is not dropped), the chance of rain is the average. The result replaces the hours; it is kept with the forecast as "ens".
+
+    private fun noaaSky(sym: String): Int = when {
+        sym.contains("thunder") -> 95
+        sym.contains("heavysnow") -> 75
+        sym.contains("snow") -> 73
+        sym.contains("sleet") -> 67
+        sym.contains("heavyrain") -> 65
+        sym.contains("rain") -> 63
+        sym.contains("fog") -> 45
+        sym.startsWith("cloudy") -> 3
+        sym.startsWith("partlycloudy") -> 2
+        sym.startsWith("fair") -> 1
+        sym.startsWith("clearsky") -> 0
+        else -> -1
+    }
+
+    /** {hours: [{t, temp, code, rain, n}], sources}, or null when fewer than two sources answered. */
+    fun ensemble(lat: Double, lon: Double): JSONObject? {
+        // time -> temps, codes, rain
+        class Slot { val temps = ArrayList<Double>(); val codes = ArrayList<Int>(); val rain = ArrayList<Int>() }
+        val slots = java.util.TreeMap<String, Slot>()
+        var sources = 0
+        runCatching {
+            val j = JSONObject(get("https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&hourly=temperature_2m,weather_code,precipitation_probability&models=best_match,ecmwf_ifs025,gfs_seamless,icon_seamless&forecast_hours=30&timezone=auto".format(java.util.Locale.US, lat, lon))).getJSONObject("hourly")
+            val times = j.getJSONArray("time")
+            val keys = j.keys().asSequence().toList()
+            val tk = keys.filter { it.startsWith("temperature_2m") }
+            sources += tk.size
+            for (i in 0 until times.length()) {
+                val sl = slots.getOrPut(times.getString(i)) { Slot() }
+                for (k in tk) j.optJSONArray(k)?.takeIf { !it.isNull(i) }?.let { sl.temps += it.getDouble(i) }
+                for (k in keys.filter { it.startsWith("weather_code") }) j.optJSONArray(k)?.takeIf { !it.isNull(i) }?.let { sl.codes += it.getInt(i) }
+                for (k in keys.filter { it.startsWith("precipitation_probability") }) j.optJSONArray(k)?.takeIf { !it.isNull(i) }?.let { sl.rain += it.getInt(i) }
+            }
+        }
+        runCatching {
+            val cn = openHttps("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.4f&lon=%.4f".format(java.util.Locale.US, lat, lon))
+            cn.setRequestProperty("User-Agent", "Pulse/1.0 github.com/xUmutKx/Pulse")
+            val body = try { check(cn.responseCode == 200) { "HTTP ${cn.responseCode}" }; cn.inputStream.bufferedReader().use { it.readText() } } finally { cn.disconnect() }
+            val ts = JSONObject(body).getJSONObject("properties").getJSONArray("timeseries")
+            var got = false
+            for (i in 0 until ts.length()) {
+                val e = ts.getJSONObject(i)
+                val local = java.time.Instant.parse(e.getString("time")).atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()
+                if (local.minute != 0) continue
+                val key = local.toString().take(13) + ":00"
+                val sl = slots[key] ?: continue
+                val d = e.getJSONObject("data")
+                d.getJSONObject("instant").getJSONObject("details").optDouble("air_temperature", Double.NaN).takeIf { !it.isNaN() }?.let { sl.temps += it; got = true }
+                d.optJSONObject("next_1_hours")?.optJSONObject("summary")?.optString("symbol_code")?.let { noaaSky(it) }?.takeIf { it >= 0 }?.let { sl.codes += it }
+            }
+            if (got) sources++
+        }
+        if (sources < 2) return null
+        val out = JSONArray()
+        for ((t, sl) in slots) {
+            if (sl.temps.isEmpty()) continue
+            val sorted = sl.temps.sorted()
+            val temp = if (sorted.size >= 4) sorted.drop(1).dropLast(1).average() else if (sorted.size % 2 == 1) sorted[sorted.size / 2] else (sorted[sorted.size / 2 - 1] + sorted[sorted.size / 2]) / 2
+            // the sky: the group most sources agree on; on a tie the heavier group wins
+            val groups = sl.codes.groupBy { skyRank(it) }
+            val top = groups.maxWithOrNull(compareBy<Map.Entry<Int, List<Int>>> { it.value.size }.thenBy { it.key })
+            val code = top?.value?.let { v -> v.groupBy { it }.maxByOrNull { it.value.size }?.key } ?: -1
+            out.put(JSONObject().put("t", t).put("temp", temp).put("code", code).put("rain", if (sl.rain.isEmpty()) -1 else sl.rain.average().toInt()).put("n", sl.temps.size))
+        }
+        return if (out.length() > 0) JSONObject().put("hours", out).put("sources", sources) else null
+    }
+
+    /** The groups of the sky, mildest to worst: clear, cloud, fog, rain, snow, storm. */
+    private fun skyRank(code: Int) = when (code) { 0, 1 -> 0; 2, 3 -> 1; 45, 48 -> 2; 51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82 -> 3; 71, 73, 75, 77, 85, 86 -> 4; 95, 96, 99 -> 5; else -> 1 }
+
+    /** The model forecast with the combined hours laid over it. */
+    private fun applyEnsemble(f: Forecast, o: JSONObject): Forecast {
+        if (o.optJSONArray("hours") == null) return f
+        val hm = HashMap<String, JSONObject>()
+        o.getJSONArray("hours").let { a -> for (i in 0 until a.length()) a.getJSONObject(i).let { hm[it.getString("t")] = it } }
+        fun over(h: Hour): Hour {
+            val e = hm[h.time.take(16)] ?: return h
+            return h.copy(temp = e.optDouble("temp", h.temp), code = e.optInt("code", -1).takeIf { it >= 0 } ?: h.code, rain = e.optInt("rain", -1).takeIf { it >= 0 } ?: h.rain)
+        }
+        return f.copy(hours = f.hours.map(::over), hours48 = f.hours48.map(::over), sources = o.optInt("sources", 1))
     }
 
     // ---- MGM (Turkish State Meteorological Service) ---------------------------------------------------------------------------------------------
@@ -358,6 +447,10 @@ object WeatherStore {
     /** The data source: "om" Open-Meteo alone, "mgm" MGM station values for places in Turkey on top of Open-Meteo. */
     fun source(c: Context): String = p(c).getString("source", "om") ?: "om"
     fun setSource(c: Context, v: String) = p(c).edit().putString("source", v).apply()
+
+    /** Combine several forecasts (models and met.no) for the next 24 hours; on by default. */
+    fun combine(c: Context): Boolean = p(c).getBoolean("combine", true)
+    fun setCombine(c: Context, v: Boolean) = p(c).edit().putBoolean("combine", v).apply()
 
     /** Hour of the last severe-weather notice, so one storm is announced once. */
     fun lastAlert(c: Context): String = p(c).getString("alert_hour", "") ?: ""

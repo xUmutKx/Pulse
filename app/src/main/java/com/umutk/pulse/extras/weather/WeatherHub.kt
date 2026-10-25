@@ -96,7 +96,7 @@ fun WeatherHub(onBack: () -> Unit) {
                     withContext(Dispatchers.IO) {
                         val raw = WeatherApi.forecast(spot.lat, spot.lon)
                         val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
-                        val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm")
+                        val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm", WeatherStore.combine(ctx))
                         WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
                         WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
                     }
@@ -155,7 +155,7 @@ fun WeatherHub(onBack: () -> Unit) {
         if (to != cur) { val p = order[to]; if (p.device) useDevice() else load(p) }
     }
     if (showSettings) {
-        WeatherSettings(fg, sub, bgBrush, skin, imp, source, alerts,
+        WeatherSettings(fg, sub, bgBrush, skin, imp, source, alerts, WeatherStore.combine(ctx), { WeatherStore.setCombine(ctx, it); place?.let { p -> load(p) } },
             onSkin = { skin = it; WeatherStore.setSkin(ctx, it) },
             onUnits = { imp = it; WeatherStore.setUnits(ctx, if (it) "f" else "c") },
             onSource = { source = it; WeatherStore.setSource(ctx, it); place?.let { p -> load(p) } },
@@ -269,7 +269,7 @@ fun WeatherHub(onBack: () -> Unit) {
                 }
             }
             // the hours: 96 of them, the row runs on to the right as it is swiped; a day name stands at each midnight
-            item { Text(tr("Next hours", "Sonraki saatler"), color = sub, fontSize = 13.sp) }
+            item { Text(tr("Next hours", "Sonraki saatler") + (if (f.sources > 1) " · " + tr("${f.sources} sources combined", "${f.sources} kaynak birleştirildi") else ""), color = sub, fontSize = 13.sp) }
             item {
                 LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     items(if (f.hours48.isNotEmpty()) f.hours48 else f.hours) { h ->
@@ -455,7 +455,7 @@ private fun Tile(label: String, value: String, fg: androidx.compose.ui.graphics.
 
 /** The weather settings: how the page looks, the unit, where the data comes from, the alerts. Full rows that open a list, like the other settings screens. */
 @Composable
-private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp: Boolean, source: String, alerts: Boolean,
+private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp: Boolean, source: String, alerts: Boolean, combine: Boolean, onCombine: (Boolean) -> Unit,
                             onSkin: (String) -> Unit, onUnits: (Boolean) -> Unit, onSource: (String) -> Unit, onAlerts: (Boolean) -> Unit, onBack: () -> Unit) {
     var ask by remember { mutableStateOf("") }
     val skins = listOf("sky" to tr("Sky (follows the weather)", "Gökyüzü (havaya göre)"), "amoled" to "AMOLED", "app" to tr("App look", "Uygulama teması"))
@@ -473,6 +473,14 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
         Row2(tr("Colours", "Renkler"), skins.first { it.first == skin }.second) { ask = "skin" }
         Row2(tr("Temperature unit", "Sıcaklık birimi"), if (imp) "°F" else "°C") { ask = "units" }
         Row2(tr("Data source", "Veri kaynağı"), sources.first { it.first == source }.second) { ask = "source" }
+        var comb by remember { mutableStateOf(combine) }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Combine several forecasts", "Birden fazla tahmini birleştir"), color = fg, fontSize = 16.sp)
+                Text(tr("The next 24 hours: Open-Meteo, ECMWF, GFS, ICON and met.no; the median temperature and the sky most of them agree on", "Sonraki 24 saat: Open-Meteo, ECMWF, GFS, ICON ve met.no; ortanca sıcaklık ve çoğunun uyuştuğu gökyüzü"), color = sub, fontSize = 12.sp)
+            }
+            PSwitch(comb, { comb = it; onCombine(it) })
+        }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Severe weather alerts", "Sert hava uyarıları"), color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
             PSwitch(alerts, onAlerts)

@@ -100,7 +100,7 @@ class WeatherClearWidget : PulseWidget() {
             typeface = Typeface.create("sans-serif", if (bold) Typeface.BOLD else Typeface.NORMAL)
             setShadowLayer(h * .02f, 0f, h * .006f, 0x99000000.toInt())
         }
-        val padL = w * .09f; val padR = w * .09f
+        val padL = w * .04f; val padR = w * .04f
         // every line on the left starts at the same ink edge: a glyph's own left bearing is taken off, so the big number and the small text line up exactly
         fun left(p: Paint, t: String): Float { val r = android.graphics.Rect(); p.getTextBounds(t, 0, t.length, r); return padL - r.left }
         // left: temperature (a fifth smaller than before), place, condition, range
