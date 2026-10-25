@@ -1196,7 +1196,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             title = { Text(tr("Open as", "Şu olarak aç")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(f.name, fontSize = 12.sp, color = T.sub, maxLines = 2, modifier = Modifier.padding(bottom = 4.dp))
-                item(tr("Archive", "Arşiv")) { openAsAsk = null; arcFile = f; arcCwd = ""; sel = emptySet() }
+                item(tr("Archive", "Arşiv")) { openAsAsk = null; ArcForce.paths += f.path; arcFile = f; arcCwd = ""; sel = emptySet() }
                 item(tr("Text", "Metin")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
                 item(tr("Image", "Resim")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
                 item(tr("Save as…", "Farklı kaydet…")) { openAsAsk = null; saveAsFile = f }

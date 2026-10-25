@@ -61,6 +61,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var lastCorrection: Correction? = null
     /** The word as it stood before the user started deleting letters of it: if the corrected form ends as a real word, the first form was a typo. */
     private var peak: String? = null
+    // a letter was typed right behind "word." with no space: the space and a capital are put in when the word ends, unless it is an address
+    private var dotFix = false
+    private val tlds = setOf("com", "net", "org", "edu", "gov", "io", "co", "me", "app", "dev", "info", "biz", "tr", "uk", "de", "fr", "es", "it", "ru", "us", "tv", "xyz", "online", "site", "tech", "store", "ai", "gg", "ly", "to", "cc", "eu", "nl", "pl", "jp", "cn", "br", "in", "au", "ca", "ch", "se", "no", "fi", "dk", "gen", "web", "html", "php")
     private var corrAt = 0L
     private var selStart = 0
     private var selEnd = 0
@@ -251,6 +254,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 }
             }
             if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter()) c.commitText(" ", 1)
+            dotFix = false
+            if (word.isEmpty() && !punctTyped && ch.isLetter() && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace) {
+                val bt = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
+                if (bt.length >= 4 && bt.last() == '.') {
+                    val token = bt.takeLastWhile { !it.isWhitespace() }
+                    val stem = token.dropLast(1)
+                    dotFix = stem.length >= 3 && stem.all { it.isLetter() } && !stem.startsWith("www", true)
+                }
+            }
             punctTyped = false; lastWasSpace = false
             word.append(ch)
             // the touch model: where this letter was touched, and the finger's drift from the key's centre is learned
@@ -279,7 +291,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val typed = word.toString()
         var out = typed
         val t = target
+        // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
+        var spaceBefore = false
+        if (dotFix) {
+            dotFix = false
+            val lw = typed.lowercase(lang.locale)
+            if (sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
+        }
         if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 3))) out = t
+        if (spaceBefore) {
+            c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
+            out = out.replaceFirstChar { it.titlecase(lang.locale) }
+        }
         c.commitText(out, 1)
         peak?.let { pk ->
             val lc = lang.locale
@@ -303,6 +326,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun space() {
         val c = currentInputConnection ?: return
+        captureEmail(c)
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
         if (st.clipName != null && st.panel == "clip") return
         val now = SystemClock.uptimeMillis()
@@ -325,6 +349,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun enter() {
         val c = currentInputConnection ?: return
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
+        captureEmail(c)
         finishWord("\n", true)
         if (st.enter != "newline") {
             val info = currentInputEditorInfo
@@ -829,6 +854,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private val emailRe = Regex("^[A-Za-z0-9._%+\\-]+@[A-Za-z0-9.\\-]+\\.[A-Za-z]{2,}$")
 
     /** An e-mail field: the addresses typed here before when it is empty, the usual domains once there is a name or an "@". */
+    private fun emailsSaved(): List<String> = getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }
+
+    /** An e-mail address typed before the cursor is remembered, so its first letters offer it later in any field. */
+    private fun captureEmail(c: android.view.inputmethod.InputConnection) {
+        if (st.incognito || st.plain) return
+        val tok = c.getTextBeforeCursor(80, 0)?.toString().orEmpty().trimEnd().takeLastWhile { !it.isWhitespace() }
+        if (emailRe.matches(tok)) {
+            val low = tok.lowercase()
+            getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).let { sp -> sp.edit().putString("list", (listOf(low) + emailsSaved().filter { it != low }).take(8).joinToString("\n")).apply() }
+        }
+    }
+
     private fun emailSuggestions() {
         val before = currentInputConnection?.getTextBeforeCursor(100, 0)?.toString().orEmpty()
         if (emailRe.matches(before)) lastEmail = before
@@ -885,7 +922,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) {
                 // a shortcut of the clipboard: the name typed offers the whole text in the middle
-                val sc = if (typed.length >= 2) KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale)) else null
+                val sc = if (typed.length >= 2) (KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale))
+                    ?: emailsSaved().firstOrNull { it.startsWith(typed.lowercase(l.locale)) && it.length > typed.length }) else null
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
                 else { target = res.third; slotWords = res.second; st.slots = res.first }
                 showClipSlot()

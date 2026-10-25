@@ -9,6 +9,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -79,8 +80,8 @@ class SaveToActivity : ComponentActivity() {
         var target by remember { mutableStateOf(dirs.firstOrNull() ?: top) }
         var name by remember { mutableStateOf(nameOf(list.first())) }
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .5f)), contentAlignment = Alignment.Center) {
-            Column(Modifier.padding(horizontal = pageGutter).widthIn(max = 380.dp).fillMaxWidth().background(T.bg).border(1.dp, T.line).padding(20.dp)) {
-                Text(tr("Save to…", "Şuraya kaydet…"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.Medium)
+            Column(Modifier.padding(horizontal = pageGutter).widthIn(max = 380.dp).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).background(T.panel).padding(24.dp)) {
+                Text(tr("Save to…", "Şuraya kaydet…"), color = T.text, fontSize = 24.sp)
                 Spacer(Modifier.height(12.dp))
                 if (list.size == 1) PField(name, { name = it }, tr("Name", "Ad"), Modifier.fillMaxWidth())
                 else Text(tr("${list.size} files", "${list.size} dosya"), color = T.sub, fontSize = 14.sp)
@@ -89,9 +90,13 @@ class SaveToActivity : ComponentActivity() {
                     dirs.forEach { d -> PChip(target.path == d.path, d.name) { target = d } }
                 }
                 Spacer(Modifier.height(16.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    PButton(text = tr("Cancel", "İptal"), modifier = Modifier.weight(1f)) { finish() }
-                    PButton(text = tr("Save", "Kaydet"), modifier = Modifier.weight(1f)) { save(list, target, name) }
+                // Material 3 dialog actions: plain text buttons at the right
+                androidx.compose.runtime.CompositionLocalProvider(com.umutk.pulse.InMatDialogBtn provides true) {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                        PButton(text = tr("Cancel", "İptal")) { finish() }
+                        Spacer(Modifier.width(8.dp))
+                        PButton(text = tr("Save", "Kaydet")) { save(list, target, name) }
+                    }
                 }
             }
         }
