@@ -38,6 +38,8 @@ object KeyboardPrefs {
     var numberRow by mutableStateOf(false)
     var arrows by mutableStateOf(false)
     var emojiKey by mutableStateOf(true)
+    /** The key beside ?123: "menu" (the three-dot menu), "emoji" or "none". */
+    var bottomKey by mutableStateOf("menu")
     var largeText by mutableStateOf(false)
     var keyPopups by mutableStateOf(true)
     var longPressSymbols by mutableStateOf(true)
@@ -111,7 +113,7 @@ object KeyboardPrefs {
         heightPct = p.getInt("heightPct", heightPct); autoRatio = p.getInt("autoRatio", autoRatio); autoLevel = p.getInt("autoLevel", autoLevel); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
         keyGap = p.getInt("keyGap", keyGap); oneHand = p.getString("oneHand", oneHand) ?: oneHand
         langs = p.getString("langs", langs) ?: langs
-        numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey)
+        numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey", null) ?: "menu"
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
         longPressSymbols = p.getBoolean("longPressSymbols", longPressSymbols); spaceLabel = p.getBoolean("spaceLabel", spaceLabel)
         suggestions = p.getBoolean("suggestions", suggestions); autocorrect = p.getBoolean("autocorrect", autocorrect)
@@ -137,7 +139,7 @@ object KeyboardPrefs {
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
             .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putString("oneHand", oneHand)
             .putString("langs", langs)
-            .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putBoolean("largeText", largeText)
+            .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
@@ -159,7 +161,7 @@ object KeyboardPrefs {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().apply()
         loaded = false
         theme = "amoled"; heightPct = 110; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
-        numberRow = false; arrows = false; emojiKey = true; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
+        numberRow = false; arrows = false; emojiKey = true; bottomKey = "menu"; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
         cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; floating = false; floatX = .5f; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; topBright = 100; bottomShift = false; keyFx = 0; boardFx = 0; motionFx = 0; soundKind = 0; rgb = 0; hapticMs = 8; sound = false
         resetTheme(c)

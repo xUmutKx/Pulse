@@ -2,7 +2,7 @@ package com.umutk.pulse.extras.keyboard
 
 import java.util.Locale
 
-enum class KeyKind { CHAR, SHIFT, DELETE, ENTER, SPACE, MODE, EMOJI, COMMA, PERIOD, LANG, SYMBOLS2 }
+enum class KeyKind { CHAR, SHIFT, DELETE, ENTER, SPACE, MODE, EMOJI, MENU, COMMA, PERIOD, LANG, SYMBOLS2 }
 
 /** One key: its [label] (what it shows and types), the characters of its long press ([alts]) and its width ([weight]). */
 class KbKey(val label: String, val kind: KeyKind = KeyKind.CHAR, val weight: Float = 1f, val alts: List<String> = emptyList())
