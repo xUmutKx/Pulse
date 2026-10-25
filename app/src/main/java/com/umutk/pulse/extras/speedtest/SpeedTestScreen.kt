@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -120,13 +121,15 @@ fun SpeedTestScreen(back: () -> Unit) {
         }
         // go / stop
         Box(Modifier.fillMaxWidth().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+            // no fill: white text on a light accent was unreadable, so the button is an outline in the accent colour (red while running)
+            val tone = if (busy) Color(0xFFC42B1C) else T.accent
             Row(
-                Modifier.clip(RoundedCornerShape(50)).background(if (busy) Color(0xFFC42B1C) else T.accent)
+                Modifier.clip(RoundedCornerShape(50)).border(2.dp, tone, RoundedCornerShape(50))
                     .clickable { if (busy) SpeedTest.cancel() else SpeedTest.start(ctx) }.padding(horizontal = 28.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                PIcon(if (busy) "close" else "play", Color.White, 24.dp)
-                Text(if (busy) tr("Stop", "Durdur") else tr("Start", "Başlat"), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                PIcon(if (busy) "close" else "play", tone, 24.dp)
+                Text(if (busy) tr("Stop", "Durdur") else tr("Start", "Başlat"), color = tone, fontSize = 16.sp, fontWeight = FontWeight.Medium)
             }
         }
         // the numbers
