@@ -1228,3 +1228,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.59 Messages: new message shows contact suggestions; imported Poweramp backups are kept inside Pulse - derlenmedi
 - 1.0.60 Poweramp pictures: albums matched by album name too, unmatched names and the error shown - derlenmedi
 - 1.0.61 poweramp-backup opens as archive; space after word.next typed together (not addresses); saved e-mails offered by first letters; Save-to dialog and chips in Material 3 - derlenmedi
+- 1.0.62 Files: archive entry Info, extension toggle button, HTML shown in the app (also extension-less pages), Open as always asked for unknown types - derlenmedi

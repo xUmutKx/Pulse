@@ -388,6 +388,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var arcSel by remember { mutableStateOf(emptySet<String>()) }
     // the row of the open archive whose three-dot menu is showing
     var arcMenu by remember { mutableStateOf<String?>(null) }
+    var arcInfo by remember { mutableStateOf<String?>(null) }
+    // an HTML page shown in the app
+    var htmlView by remember { mutableStateOf<File?>(null) }
     // bumped after a cut rewrote the archive, so its entries are read again
     var arcRev by remember { mutableStateOf(0) }
     val wantedArc = FilesLaunch.archive
@@ -490,6 +493,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (f.extension.equals("apk", true) || (standalone && f.extension.lowercase() in setOf("xapk", "apks", "apkm"))) { apkAsk = f; sel = emptySet(); return }
         if (isArchiveFile(f)) { arcFile = f; arcCwd = ""; sel = emptySet(); return }
         if (FilesPrefs.openAsk) { recents = exAddRecent(ctx, f); if (exHandOver(ctx, f, false)) return }
+        // web pages show in the app (a file with no extension that holds a page too)
+        if (f.extension.lowercase() in setOf("html", "htm", "xhtml") || (f.extension.isEmpty() && exLooksHtml(f))) { recents = exAddRecent(ctx, f); htmlView = f; return }
         // music files play right here, in a thin player at the bottom, not in another app
         if (f.extension.lowercase() in EX_AUDIO) { recents = exAddRecent(ctx, f); ExAudio.play(f); return }
         if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpen(ctx, f, if (ctx is com.umutk.pulse.FilesActivity) "material" else null); return }
@@ -499,7 +504,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             return
         }
         if (com.umutk.pulse.ofIsText(f)) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f); return }
-        if (fileMime(f) == "*/*") { openAsAsk = f; return }
+        // a file of no known type always asks how to open it (with or without an extension)
+        if (f.extension.isEmpty() || fileMime(f) == "*/*") { openAsAsk = f; return }
         recents = exAddRecent(ctx, f)
         if (FilesPrefs.openAsk && exHandOver(ctx, f, false)) return
         Downloads.openFile(ctx, f)
@@ -835,6 +841,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             }
                         }
                     }
+                    // show or hide the file extensions in the list
+                    ExAct("ext", if (FilesPrefs.ext) Look.accent else T.sub) { FilesPrefs.ext = !FilesPrefs.ext; FilesPrefs.save(ctx) }
                     ExAct(if (dir.path in marks) "starOn" else "star", if (dir.path in marks) Look.accent else T.sub) { mark(dir.path) }
                     ExAct("home", T.text) { go(top.path) }
                 }
@@ -993,6 +1001,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                                 add(Triple(tr("Copy", "Kopyala"), "copy", { arcSel = setOf(p); arcCopy(false) }))
                                 if (clip != null) add(Triple(tr("Paste", "Yapıştır"), "paste", { arcPaste() }))
                                 add(Triple(tr("Delete", "Sil"), "delete", { arcSel = setOf(p); arcDelete() }))
+                                add(Triple(tr("Info", "Bilgi"), "info", { arcInfo = p }))
                             }
                             items.forEach { (label, key, act) -> ThemedMenuItem(label, { arcMenu = null; act() }, leading = { ExIcon(key, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) }
                         }
@@ -1064,6 +1073,29 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
     if (recentView) RecentScreen({ openFile(it) }) { recentView = false }
     ExMiniPlayer()
+    htmlView?.let { h -> ExHtmlViewer(h, { htmlView = null }) { htmlView = null; com.umutk.pulse.ofOpenText(ctx, h) } }
+    arcInfo?.let { p ->
+        val af = arcFile
+        val all = arcAll.orEmpty()
+        val e = all.firstOrNull { it.path == p }
+        val under = all.filter { it.path.startsWith("$p/") && !it.dir }
+        com.umutk.pulse.WinAlert({ arcInfo = null }, title = { Text(p.substringAfterLast('/'), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(tr("Path", "Yol") + ": " + p, fontSize = 13.sp)
+                    if (af != null) Text(tr("In", "İçinde") + ": " + af.name, fontSize = 13.sp)
+                    if (e != null && !e.dir) {
+                        Text(tr("Size", "Boyut") + ": " + exSize(e.size), fontSize = 13.sp)
+                        Text(tr("Packed", "Sıkıştırılmış") + ": " + exSize(e.packed), fontSize = 13.sp)
+                    } else {
+                        Text(tr("Files", "Dosya") + ": ${under.size}", fontSize = 13.sp)
+                        Text(tr("Size", "Boyut") + ": " + exSize(under.sumOf { it.size }), fontSize = 13.sp)
+                    }
+                    if (e != null && e.time > 0) Text(tr("Modified", "Değiştirilme") + ": " + exDate(e.time, FilesPrefs.dateFmt), fontSize = 13.sp)
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton({ arcInfo = null }) { Text(tr("Close", "Kapat")) } })
+    }
     androidx.compose.runtime.DisposableEffect(Unit) { onDispose { ExAudio.stop() } }
     if (arcFile == null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { doPaste() }) { clip = null } }
     // inside an archive the same button writes into the archive (the bar's paste can be pushed out of view by its other buttons)
@@ -1197,6 +1229,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             text = { Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(f.name, fontSize = 12.sp, color = T.sub, maxLines = 2, modifier = Modifier.padding(bottom = 4.dp))
                 item(tr("Archive", "Arşiv")) { openAsAsk = null; ArcForce.paths += f.path; arcFile = f; arcCwd = ""; sel = emptySet() }
+                item("HTML") { openAsAsk = null; recents = exAddRecent(ctx, f); htmlView = f }
                 item(tr("Text", "Metin")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
                 item(tr("Image", "Resim")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
                 item(tr("Save as…", "Farklı kaydet…")) { openAsAsk = null; saveAsFile = f }
@@ -1426,7 +1459,7 @@ private fun ExIcon(k: String, tint: Color, size: Dp = 22.dp, rot: Float = 0f) = 
 }
 
 private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
-    "star" to Icons.Filled.StarBorder, "bookmark" to Icons.Filled.BookmarkBorder, "starOn" to Icons.Filled.Star, "check" to Icons.Filled.CheckCircle,
+    "ext" to Icons.Filled.TextFields, "star" to Icons.Filled.StarBorder, "bookmark" to Icons.Filled.BookmarkBorder, "starOn" to Icons.Filled.Star, "check" to Icons.Filled.CheckCircle,
     "sortName" to Icons.Filled.SortByAlpha, "sortSize" to Icons.Filled.DataUsage, "sortDate" to Icons.Filled.Schedule,
     "eyeOn" to Icons.Filled.Visibility, "eyeOff" to Icons.Filled.VisibilityOff, "sizes" to Icons.Filled.Straighten,
     "zoomIn" to Icons.Filled.ZoomIn, "zoomOut" to Icons.Filled.ZoomOut, "selectAll" to Icons.Outlined.SelectAll,
@@ -1442,7 +1475,7 @@ private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
 private val W11_ACTION = mapOf("Open" to "open", "Cut" to "cut", "Properties" to "properties", "View archive" to "openFolder", "Copy path" to "link", "Create shortcut" to "folderLink")
 
 private val EX_FLUENT = mapOf(
-    "star" to "heart", "starOn" to "heart", "bookmark" to "bookmark", "check" to "info", "sortName" to "details", "sortSize" to "disk", "sortDate" to "history",
+    "ext" to "document", "star" to "heart", "starOn" to "heart", "bookmark" to "bookmark", "check" to "info", "sortName" to "details", "sortSize" to "disk", "sortDate" to "history",
     "eyeOn" to "view", "eyeOff" to "view", "sizes" to "disk", "recent" to "history", "emptyFolder" to "folder", "bigFile" to "disk",
     "dupes" to "copy", "undo" to "paste", "home" to "folder", "share" to "download", "openWith" to "run", "zip" to "extract",
     "filter" to "details", "link" to "copy", "save" to "rename", "edit" to "rename",
@@ -1889,6 +1922,33 @@ private fun ExToolbar(onTab: (String) -> Unit, onLong: (String) -> Unit) {
 /** Paste button above the "+" while the clipboard holds something: tap pastes here, long press clears the clipboard; the badge counts the items. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
+/** A file of no known extension that starts like a web page. */
+private fun exLooksHtml(f: File): Boolean = runCatching {
+    f.inputStream().use { i -> val b = ByteArray(600); val n = i.read(b); n > 0 && String(b, 0, n, Charsets.UTF_8).trimStart().lowercase().let { it.startsWith("<!doctype html") || it.startsWith("<html") || it.contains("<head") || it.contains("<body") } }
+}.getOrDefault(false)
+
+/** A web page of the phone drawn inside the app: no scripts, only the page itself. */
+@Composable
+private fun ExHtmlViewer(f: File, onClose: () -> Unit, onSource: () -> Unit) {
+    androidx.compose.ui.window.Dialog(onDismissRequest = onClose, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(Modifier.fillMaxSize().background(T.bg)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(f.name, Modifier.weight(1f), color = T.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(tr("Source", "Kaynak"), Modifier.clip(RoundedCornerShape(10.dp)).clickable { onSource() }.padding(horizontal = 10.dp, vertical = 8.dp), color = Look.accent, fontSize = 13.sp)
+                Text("✕", Modifier.clickable { onClose() }.padding(horizontal = 12.dp, vertical = 8.dp), color = T.text, fontSize = 18.sp)
+            }
+            androidx.compose.ui.viewinterop.AndroidView(Modifier.fillMaxSize(), factory = { c ->
+                android.webkit.WebView(c).apply {
+                    settings.javaScriptEnabled = false; settings.allowFileAccess = true; settings.allowContentAccess = false
+                    setBackgroundColor(android.graphics.Color.WHITE)
+                    val text = runCatching { f.readText() }.getOrDefault("")
+                    loadDataWithBaseURL("file://" + (f.parent ?: "") + "/", text, "text/html", "utf-8", null)
+                }
+            })
+        }
+    }
+}
+
 internal val EX_AUDIO = setOf("mp3", "ogg", "oga", "opus", "wav", "flac", "m4a", "aac", "amr")
 
 /** The player of the music files tapped in Files: one file at a time, played in place, with speed. */
