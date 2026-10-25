@@ -29,6 +29,16 @@ object PowerampImport {
         var db: File? = null
         val pics = ArrayList<File>()
         var artists = 0
+        // a copy of the backup stays inside Pulse (Files may have moved the original): it shows in the list of backups to load again
+        runCatching {
+            val keep = File(ctx.filesDir, "pa_backups").apply { mkdirs() }
+            if (uri.scheme != "file" || !uri.path.orEmpty().startsWith(keep.path)) {
+                val copy = File(keep, "Backup-" + java.text.SimpleDateFormat("yyyy-MM-dd-HHmmss", java.util.Locale.US).format(java.util.Date()) + ".poweramp-backup")
+                ctx.contentResolver.openInputStream(uri)?.use { i -> copy.outputStream().use { o -> i.copyTo(o) } }
+                // the same backup twice is kept once
+                keep.listFiles()?.filter { it != copy && it.length() == copy.length() && it.readBytes().contentEquals(copy.readBytes()) }?.forEach { copy.delete() }
+            }
+        }
         ctx.contentResolver.openInputStream(uri)?.use { raw ->
             ZipInputStream(raw.buffered()).use { z ->
                 var e = z.nextEntry
