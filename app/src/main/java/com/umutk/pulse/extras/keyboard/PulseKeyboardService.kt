@@ -232,7 +232,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (lastCorrection != null && word.isEmpty() && SystemClock.uptimeMillis() - corrAt > 300 && newSelStart != oldSelStart) lastCorrection = null
         // the cursor left the word under way (the user tapped elsewhere): the word is finished as it stands
         // (the report may be late: a report right after our own edit is not the user's tap, and the open word is closed, never dropped)
-        if (word.isNotEmpty() && SystemClock.uptimeMillis() - editAt > 250 && (candidatesStart < 0 || newSelStart < candidatesStart || newSelStart > candidatesEnd)) {
+        if (word.isNotEmpty() && SystemClock.uptimeMillis() - editAt > 250 && (candidatesStart < 0 || newSelStart < candidatesStart || newSelStart > candidatesEnd || newSelStart < candidatesEnd)) {
+            // (a tap inside the word closes it too, so Backspace deletes at the cursor and not at the end of the word)
             currentInputConnection?.finishComposingText()
             word.clear(); peak = null; lastCorrection = null; updateSuggestions()
         }

@@ -37,10 +37,25 @@ object Sci {
 
     /** The compiled expression, or null when it cannot be read. */
     fun compile(src: String): Fn? = runCatching {
-        val p = Parser(src.replace('×', '*').replace('÷', '/').replace('−', '-').replace('π', 'p').replace("pi", "p").replace(" ", "").replace(',', '.').lowercase())
+        val p = Parser(normalize(src).replace('π', 'p').replace("pi", "p").replace(" ", "").replace(',', '.').lowercase())
         val f = p.parseAll()
         Fn(f)
     }.getOrNull()
+
+    private const val SUP = "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻ˣʸ"
+    private const val SUP_TO = "0123456789+-xy"
+
+    /** What people type for the same thing is read as one: x² x³ x⁻¹ (superscripts), ** , √x, ∛x, × · ∗, ÷ ⁄, − – —, [ ] { }, "2x²" and so on. */
+    fun normalize(src: String): String {
+        var t = src.replace("**", "^").replace('×', '*').replace('·', '*').replace('⋅', '*').replace('∙', '*').replace('∗', '*')
+            .replace('÷', '/').replace('⁄', '/').replace('∕', '/').replace('−', '-').replace('–', '-').replace('—', '-')
+            .replace('[', '(').replace(']', ')').replace('{', '(').replace('}', ')').replace('％', '%')
+        // a run of superscripts is the exponent: x²  ->  x^(2),  x⁻¹  ->  x^(-1)
+        t = Regex("[$SUP]+").replace(t) { m -> "^(" + m.value.map { SUP_TO[SUP.indexOf(it)] }.joinToString("") + ")" }
+        // √x, √2, ∛x without brackets
+        t = Regex("([√∛])\\s*([a-zA-Z0-9.]+)").replace(t) { m -> (if (m.groupValues[1] == "√") "sqrt(" else "cbrt(") + m.groupValues[2] + ")" }
+        return t.replace("√", "sqrt").replace("∛", "cbrt")
+    }
 
     /** The value of an expression without a variable; null when it cannot be read or is not a number. */
     fun eval(src: String, deg: Boolean = false): Double? = compile(src)?.at(0.0, deg)?.takeIf { it.isFinite() }

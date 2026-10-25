@@ -43,6 +43,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -168,9 +169,10 @@ private class Lists(val ctx: android.content.Context) {
 }
 
 /** A round top-bar button; [label] shows beside it (minutes left on the sleep timer). */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun TopAction(icon: androidx.compose.ui.graphics.vector.ImageVector, on: Boolean, accent: Color, label: String? = null, onClick: () -> Unit) {
-    Row(Modifier.padding(start = 4.dp).clip(RoundedCornerShape(50)).background(if (on) accent.copy(alpha = .22f) else Color.Transparent).clickable(onClick = onClick)
+private fun TopAction(icon: androidx.compose.ui.graphics.vector.ImageVector, on: Boolean, accent: Color, label: String? = null, onLong: (() -> Unit)? = null, onClick: () -> Unit) {
+    Row(Modifier.padding(start = 4.dp).clip(RoundedCornerShape(50)).background(if (on) accent.copy(alpha = .22f) else Color.Transparent).combinedClickable(onLongClick = onLong, onClick = onClick)
         .padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Icon(icon, null, tint = if (on) accent else TXT, modifier = Modifier.size(22.dp))
         if (label != null) { Spacer(Modifier.width(4.dp)); Text(label, color = accent, fontSize = 13.sp, fontWeight = FontWeight.Medium) }
@@ -261,6 +263,8 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     var rootH by remember { mutableFloatStateOf(0f) }
     var sheetOn by remember { mutableStateOf(false) }
     var showLyrics by remember { mutableStateOf(false) }
+    var askForget by remember { mutableStateOf(false) }
+    if (askForget && cur != null) com.umutk.pulse.extras.lyrics.ForgetLyricsDialog(cur.path.takeIf { !it.contains("://") }, cur.name(), cur.artistName()) { askForget = false }
     androidx.compose.runtime.LaunchedEffect(openLyricsNow, cur?.path) { if (openLyricsNow && cur != null) { showLyrics = true; openLyricsNow = false } }
     if (artOpen && cur != null) com.umutk.pulse.extras.music.poweramp.CoverArtDialog(cur, com.umutk.pulse.extras.music.poweramp.PowerampStyle(), onSaved = { com.umutk.pulse.extras.music.dropArt(cur.path); artRev++ }, onClose = { artOpen = false })
     LaunchedEffect(cur?.path) { showLyrics = false }
@@ -424,7 +428,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         Icon(Icons.Rounded.KeyboardArrowDown, null, tint = TXT, modifier = Modifier.size(36.dp).clickable { showQueue = false; showNow = false })
                         Spacer(Modifier.weight(1f))
                         TopAction(Icons.Rounded.Image, artOpen, dyn) { artOpen = true }
-                        TopAction(Icons.Rounded.Subject, showLyrics, dyn) { showQueue = false; showLyrics = !showLyrics }
+                        TopAction(Icons.Rounded.Subject, showLyrics, dyn, null, onLong = { askForget = true }) { showQueue = false; showLyrics = !showLyrics }
                         TopAction(Icons.Rounded.Bedtime, sleepLeft > 0, dyn, if (sleepLeft > 0) "$sleepLeft" else null) { sleepLeft = when (sleepLeft) { 0 -> 15; 15 -> 30; 30 -> 60; else -> 0 } }
                         TopAction(Icons.Rounded.QueueMusic, showQueue, dyn) { showLyrics = false; showQueue = !showQueue }
                     }
@@ -456,6 +460,8 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                             if (a != null) Image(a, null, Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)), contentScale = ContentScale.Crop)
                             else Box(Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)).background(dyn.copy(alpha = .18f)), contentAlignment = Alignment.Center) { Icon(Icons.Rounded.MusicNote, null, tint = dyn, modifier = Modifier.fillMaxSize(.45f)) }
                         }
+                        // the song's canvas (a short video of the user's choice) plays over the cover
+                        com.umutk.pulse.extras.music.CanvasVideo(cur.path, st.isPlaying, Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)))
                         // the lyrics sit on top of the cover, in its place
                         com.umutk.pulse.extras.lyrics.PlayerLyrics(visible = showLyrics, title = cur.name(), artist = cur.artistName(), album = cur.album, durationMs = dur.toLong(),
                             localPath = cur.path.takeIf { !it.contains("://") }, positionMs = pos.toLong(), onDismiss = { showLyrics = false },
