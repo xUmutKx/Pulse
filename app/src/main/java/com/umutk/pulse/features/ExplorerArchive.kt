@@ -425,10 +425,12 @@ private fun bundleMeta(ctx: android.content.Context, f: File): ApkMeta? = java.u
 }
 
 /** The archive entries of the ⋮ menu as (label, icon key, request kind). */
+private fun shortName(f: File): String = baseName(f).let { if (it.length > 14) it.take(13) + "…" else it }
+
 internal fun archiveMenu(f: File): List<Triple<String, String, String>> = listOf(
     Triple(tr("Open archive", "Arşivi aç"), "zip", "open"),
     Triple(tr("Extract here", "Buraya çıkar"), "extract", "here"),
-    Triple(tr("Extract to ${baseName(f)}/", "${baseName(f)}/ içine çıkar"), "folder", "named"),
+    Triple(tr("Extract to ${shortName(f)}/", "${shortName(f)}/ içine çıkar"), "folder", "named"),
     Triple(tr("Extract to…", "Şuraya çıkar…"), "openWith", "pick"),
     Triple(tr("Add to archive…", "Arşive ekle…"), "zip", "add"),
     Triple(tr("Archive info", "Arşiv bilgisi"), "info", "info"),

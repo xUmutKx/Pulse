@@ -490,6 +490,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (f.extension.equals("apk", true) || (standalone && f.extension.lowercase() in setOf("xapk", "apks", "apkm"))) { apkAsk = f; sel = emptySet(); return }
         if (isArchiveFile(f)) { arcFile = f; arcCwd = ""; sel = emptySet(); return }
         if (FilesPrefs.openAsk) { recents = exAddRecent(ctx, f); if (exHandOver(ctx, f, false)) return }
+        // music files play right here, in a thin player at the bottom, not in another app
+        if (f.extension.lowercase() in EX_AUDIO) { recents = exAddRecent(ctx, f); ExAudio.play(f); return }
         if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpen(ctx, f, if (ctx is com.umutk.pulse.FilesActivity) "material" else null); return }
         if (f.extension.lowercase() in com.umutk.pulse.IMG_EXTS || f.extension.lowercase() in setOf("heic", "heif", "avif")) {
             recents = exAddRecent(ctx, f)
@@ -696,7 +698,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 val files = withContext(Dispatchers.IO) { archiveExtractSel(af, picks, entries, dest) }
                 arcSel = emptySet()
                 if (here) { note = tr("Extracted ${files.size}", "${files.size} öğe çıkarıldı"); refresh++ }
-                else { clip = Clip(files, false); note = tr("Copied ${files.size}: paste in a folder", "${files.size} öğe kopyalandı: bir klasörde yapıştır") }
+                else {
+                    // a picked folder is copied as the folder, not as the files inside it: the clipboard holds the top-level picks only
+                    val tops = picks.map { p -> File(dest, p.removePrefix(p.substringBeforeLast('/', "")).trimStart('/')) }.filter { it.exists() }.distinct()
+                    clip = Clip(tops.ifEmpty { files }, false); note = tr("Copied ${tops.size.coerceAtLeast(1)}: paste in a folder", "${tops.size.coerceAtLeast(1)} öğe kopyalandı: bir klasörde yapıştır")
+                }
             }
         }
         // cut: the picks go to the clipboard as a move (paste them in a folder or an archive), and leave the archive
@@ -1057,6 +1063,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
     }
     if (recentView) RecentScreen({ openFile(it) }) { recentView = false }
+    ExMiniPlayer()
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { ExAudio.stop() } }
     if (arcFile == null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { doPaste() }) { clip = null } }
     // inside an archive the same button writes into the archive (the bar's paste can be pushed out of view by its other buttons)
     if (arcFile != null && resultsFor == null) clip?.let { c -> ExPasteFab(c.files.size, c.move, { arcPasteNow() }) { clip = null } }
@@ -1881,6 +1889,57 @@ private fun ExToolbar(onTab: (String) -> Unit, onLong: (String) -> Unit) {
 /** Paste button above the "+" while the clipboard holds something: tap pastes here, long press clears the clipboard; the badge counts the items. */
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
+internal val EX_AUDIO = setOf("mp3", "ogg", "oga", "opus", "wav", "flac", "m4a", "aac", "amr")
+
+/** The player of the music files tapped in Files: one file at a time, played in place, with speed. */
+internal object ExAudio {
+    private var mp: android.media.MediaPlayer? = null
+    var file by mutableStateOf<File?>(null)
+    var playing by mutableStateOf(false)
+    var pos by mutableStateOf(0)
+    var dur by mutableStateOf(0)
+    var speed by mutableStateOf(1f)
+
+    fun play(f: File) {
+        stop()
+        val p = android.media.MediaPlayer()
+        runCatching {
+            p.setDataSource(f.path); p.prepare(); p.setOnCompletionListener { playing = false; pos = 0 }
+            mp = p; file = f; dur = p.duration; pos = 0
+            p.start(); applySpeed(); playing = true
+        }.onFailure { runCatching { p.release() }; mp = null; file = null }
+    }
+    private fun applySpeed() {
+        val p = mp ?: return
+        // speed needs Android 6; it is set while playing (a paused player would start on setting it)
+        if (android.os.Build.VERSION.SDK_INT >= 23 && p.isPlaying) runCatching { p.playbackParams = p.playbackParams.setSpeed(speed) }
+    }
+    fun toggle() { val p = mp ?: return; if (p.isPlaying) { p.pause(); playing = false } else { p.start(); applySpeed(); playing = true } }
+    fun seek(ms: Int) { mp?.seekTo(ms); pos = ms }
+    fun nextSpeed() { speed = when { speed < .9f -> 1f; speed < 1.1f -> 1.25f; speed < 1.4f -> 1.5f; speed < 1.9f -> 2f; else -> .75f }; applySpeed() }
+    fun tick() { val p = mp ?: return; if (p.isPlaying) pos = p.currentPosition }
+    fun stop() { runCatching { mp?.stop() }; runCatching { mp?.release() }; mp = null; file = null; playing = false; pos = 0; dur = 0 }
+}
+
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.ExMiniPlayer() {
+    val f = ExAudio.file ?: return
+    LaunchedEffect(f) { while (true) { ExAudio.tick(); kotlinx.coroutines.delay(250) } }
+    fun mmss(ms: Int) = "%d:%02d".format(ms / 60000, ms / 1000 % 60)
+    Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp).clip(RoundedCornerShape(16.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 6.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(36.dp).clickable { ExAudio.toggle() }, contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Icon(if (ExAudio.playing) androidx.compose.material.icons.Icons.Rounded.Pause else androidx.compose.material.icons.Icons.Rounded.PlayArrow, null, tint = Look.accent, modifier = Modifier.size(26.dp))
+            }
+            Text(f.nameWithoutExtension, Modifier.weight(1f).padding(horizontal = 6.dp), color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(mmss(ExAudio.pos) + " / " + mmss(ExAudio.dur), color = T.sub, fontSize = 11.sp)
+            Text(("%.2f".format(ExAudio.speed).trimEnd('0').trimEnd('.')) + "x", Modifier.clip(RoundedCornerShape(10.dp)).clickable { ExAudio.nextSpeed() }.padding(horizontal = 8.dp, vertical = 6.dp), color = Look.accent, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+            Box(Modifier.size(32.dp).clickable { ExAudio.stop() }, contentAlignment = Alignment.Center) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Close, null, tint = T.sub, modifier = Modifier.size(18.dp)) }
+        }
+        com.umutk.pulse.PSlider(if (ExAudio.dur > 0) ExAudio.pos.toFloat() / ExAudio.dur else 0f, { ExAudio.seek((it * ExAudio.dur).toInt()) }, 0f..1f, onDone = {})
+    }
+}
+
 private fun androidx.compose.foundation.layout.BoxScope.ExPasteFab(count: Int, move: Boolean, onPaste: () -> Unit, onClear: () -> Unit) {
     val win = Opt.authentic && LocalWindowLook.current.id in com.umutk.pulse.winButtonLooks
     val shape = RoundedCornerShape(if (win) (if (LocalWindowLook.current.id == "win95") 0.dp else 4.dp) else 14.dp)
