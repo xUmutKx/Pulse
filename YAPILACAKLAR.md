@@ -1243,3 +1243,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.80 Keyboard: a typed word is never replaced or dropped when the app moves the cursor; Messages: new-message button at the bottom
 - 1.0.81 APK info dialog in detail + Save APKs, split zip parts joined, bundles in a folder, Save as name field Material, autocorrect strength + context + keep-case, emoji mix
 - 1.0.82 Speed test Start button: transparent, outlined in the accent colour
+- 1.0.83 Keyboard: a learned slip never turns a real word into a rarer one; real-word pairs need 5 sightings (derlenmedi)

@@ -1006,7 +1006,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val codes = dictCodes(code)
         val comp = codes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.take(5)
         val maxCost = if (KeyboardLayouts.dict(code) == "tr") (if (lower.length >= 5) .8f else .65f) else if (lower.length >= 4) 1.3f else .7f
-        val learned = KeyboardDictionary.typoFix(this, lower)
+        // a learned slip never turns a real word into a rarer one ("tak" into something else because both were typed once): it must lead to a clearly likelier word
+        val learned = KeyboardDictionary.typoFix(this, lower)?.takeIf { l ->
+            !codes.any { KeyboardDictionary.isWord(it, lower) } || codes.maxOf { KeyboardDictionary.baseScore(it, l) } > codes.maxOf { KeyboardDictionary.baseScore(it, lower) } + 2f
+        }
         val tr = codes.any { KeyboardDictionary.dictOf(it) == "tr" }
         // long words may hold more slips; Turkish words are also mended as a base word plus its endings
         // a word that is the chosen share alike (90% by default) to a known word is mended on its own: 12 letters allow one slip, 20 letters two
