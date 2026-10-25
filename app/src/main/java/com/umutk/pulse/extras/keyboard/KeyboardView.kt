@@ -240,12 +240,12 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
                 scope.launch { pull.snapTo(0f) }
-            }); if (KeyboardPrefs.topBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.topBright) / 100f * .85f))) }
+            }); if (KeyboardPrefs.topBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.topBright) / 100f))) }
             if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
             else Panel(st.panel, th, st, act, keyH)
         }
         // the brightness: a black veil over the keys (the pop-up above stays bright)
-        if (KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f * .85f)))
+        if (KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
         Trail(th, st)
         Preview(th, st)
     }
@@ -485,9 +485,9 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), bh)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), bh)
     }
-    if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f * .85f)))
+    if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f)))
     }
-    if (KeyboardPrefs.proRow && KeyboardPrefs.proBottom) Box { ExtraRow(th, st, act, keyH); if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f * .85f))) }
+    if (KeyboardPrefs.proRow && KeyboardPrefs.proBottom) Box { ExtraRow(th, st, act, keyH); if (KeyboardPrefs.bottomBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bottomBright) / 100f))) }
 }
 
 @Composable

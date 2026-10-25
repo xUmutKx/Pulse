@@ -58,7 +58,7 @@ object CoverStore {
     fun pos(c: Context) = prefs(c).getInt("pos", 4).coerceIn(0, 8)
     fun setPos(c: Context, p: Int) = prefs(c).edit().putInt("pos", p).apply()
     /** Brightness of the screen while the cover is up, 5..100 (100 = the panel's maximum); -1 = never set, the system's own. */
-    fun bright(c: Context) = prefs(c).getInt("bright", -1).let { if (it < 0) -1 else it.coerceIn(5, 100) }
+    fun bright(c: Context) = prefs(c).getInt("bright", -1).let { if (it < 0) -1 else it.coerceIn(1, 100) }
     fun setBright(c: Context, v: Int) = prefs(c).edit().putInt("bright", v).apply()
     /** The part of the screen the cover leaves open, in percent of the screen: left, top, right, bottom; null = the cover is closed everywhere. */
     fun hole(c: Context): IntArray? = prefs(c).getString("hole", null)?.split(',')?.mapNotNull { it.toIntOrNull() }?.takeIf { it.size == 4 }?.toIntArray()
@@ -130,7 +130,7 @@ fun CoverSettings() {
     // one cover: blank black until pages are added above; its brightness
     var bright0 by remember { mutableIntStateOf(CoverStore.bright(ctx).let { if (it < 0) 100 else it }) }
     Text(tr("Brightness", "Parlaklık"), color = T.sub, fontSize = 12.sp)
-    com.umutk.pulse.PSlider(bright0.toFloat(), { bright0 = it.toInt().coerceIn(5, 100); CoverStore.setBright(ctx, bright0) }, 5f..100f) {}
+    com.umutk.pulse.PSlider(bright0.toFloat(), { bright0 = it.toInt().coerceIn(1, 100); CoverStore.setBright(ctx, bright0) }, 1f..100f) {}
     if (!com.umutk.pulse.Compat.canOverlay(ctx) && CoverAccessibilityService.instance == null) {
         Text(tr("Needs the 'display over other apps' permission.", "'Diğer uygulamaların üstünde göster' izni gerekir."), color = T.sub, fontSize = 12.sp)
         PButton(tr("Allow", "İzin ver")) { ctx.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${ctx.packageName}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -161,7 +161,7 @@ fun CoverSettings() {
     // brightness while the cover is up (the basic cover only)
     var bright by remember { mutableIntStateOf(CoverStore.bright(ctx).let { if (it < 0) 100 else it }) }
     Text(tr("Brightness", "Parlaklık"), color = T.sub, fontSize = 12.sp)
-    com.umutk.pulse.PSlider(bright.toFloat(), { bright = it.toInt().coerceIn(5, 100); CoverStore.setBright(ctx, bright) }, 5f..100f) {}
+    com.umutk.pulse.PSlider(bright.toFloat(), { bright = it.toInt().coerceIn(1, 100); CoverStore.setBright(ctx, bright) }, 1f..100f) {}
     }
     if (!adv) {
     // an open window in the cover: drag its edges

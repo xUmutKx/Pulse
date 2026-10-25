@@ -1254,3 +1254,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.91 BlackOut extra app (engine, LSPosed/Vector module entry, colour bar, dark pages, overlays; steps 1-8; import from the stand-alone app) (derlenmedi)
 - 1.0.92 Lyrics: share card (pick lines, colours from the cover), menu with share / delete / search again, pull down to close; autocorrect only to the word the bar shows (derlenmedi)
 - 1.0.93 Lyrics for the whole library in the background (worker, setting, Search now); Search and apply missing covers with a hand-pick list for the ones not matched
+- 1.0.94 Darker minimum: keyboard brightness sliders go down to 5% and the veil reaches black; screen cover brightness down to 1% (derlenmedi)
