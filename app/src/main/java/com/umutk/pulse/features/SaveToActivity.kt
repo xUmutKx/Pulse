@@ -83,7 +83,7 @@ class SaveToActivity : ComponentActivity() {
             Column(Modifier.padding(horizontal = pageGutter).widthIn(max = 380.dp).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).background(T.panel).padding(24.dp)) {
                 Text(tr("Save to…", "Şuraya kaydet…"), color = T.text, fontSize = 24.sp)
                 Spacer(Modifier.height(12.dp))
-                if (list.size == 1) PField(name, { name = it }, tr("Name", "Ad"), Modifier.fillMaxWidth())
+                if (list.size == 1) com.umutk.pulse.PNameField(name, { name = it }, tr("Name", "Ad"), Modifier.fillMaxWidth())
                 else Text(tr("${list.size} files", "${list.size} dosya"), color = T.sub, fontSize = 14.sp)
                 Spacer(Modifier.height(10.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {

@@ -1241,3 +1241,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.78 Motion cues rebuilt on the sensor fusion of Motion cues (GPL-3.0); keyboard translation input
 - 1.0.79 Keyboard lower in landscape
 - 1.0.80 Keyboard: a typed word is never replaced or dropped when the app moves the cursor; Messages: new-message button at the bottom
+- 1.0.81 APK info dialog in detail + Save APKs, split zip parts joined, bundles in a folder, Save as name field Material, autocorrect strength + context + keep-case, emoji mix
