@@ -1240,3 +1240,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.77 Windows 11/10/7/XP/95 icon looks as built-in packs and Palette styles
 - 1.0.78 Motion cues rebuilt on the sensor fusion of Motion cues (GPL-3.0); keyboard translation input
 - 1.0.79 Keyboard lower in landscape
+- 1.0.80 Keyboard: a typed word is never replaced or dropped when the app moves the cursor; Messages: new-message button at the bottom
