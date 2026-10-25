@@ -53,6 +53,8 @@ class KbState {
     var clips by mutableStateOf(listOf<String>())
     /** The kept clipboard: texts and pictures, pinned first. */
     var clipItems by mutableStateOf(listOf<ClipItem>())
+    /** The small picture of the screenshot just taken: it waits in the right slot of the bar to be pasted. */
+    var shotThumb by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     var recents by mutableStateOf(listOf<String>())
     /** The width of the keyboard's window in px, for keeping the pop-ups inside it. */
     var rootW by mutableStateOf(0f)

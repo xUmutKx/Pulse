@@ -22,6 +22,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -718,7 +722,7 @@ fun InstallerPage() {
         }
     }
 
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+    fun loadUris(uris: List<Uri>) {
         if (uris.isNotEmpty() && !busy) scope.launch {
             busy = true
             val (items, bad) = withContext(Dispatchers.IO) { Installer.inspectAll(ctx, uris) }
@@ -726,8 +730,14 @@ fun InstallerPage() {
             sel = items.toSet()
             Installer.status = if (bad.isEmpty()) "" else "Could not read: $bad"
             busy = false
-            if (Installer.cur.mode == "auto") start(items)
+            if (Installer.cur.mode == "auto" && uris.size == 1) start(items)
         }
+    }
+    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> loadUris(uris) }
+    // several APKs picked in Files arrive here as paths: they are read like a pick, and shown as one multi install
+    androidx.compose.runtime.LaunchedEffect(Unit) {
+        val ps = InstallerPreload.paths
+        if (ps.isNotEmpty()) { InstallerPreload.paths = emptyList(); loadUris(ps.map { Uri.fromFile(java.io.File(it)) }) }
     }
 
     val openTool = LocalOpenTool.current
@@ -749,6 +759,7 @@ fun InstallerPage() {
             }
             if (Installer.status.isNotEmpty()) Text(Installer.status, color = Look.accent, fontSize = 13.sp)
         }
+        if (list.size >= 2) MultiInstallHeader(list)
         list.forEach { pk ->
             PCard {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -944,4 +955,40 @@ private fun InstButton(text: String, danger: Boolean = false, onClick: () -> Uni
     val t = LocalWindowLook.current
     if (t.id in winButtonLooks) PButton(text, danger = danger, onClick = onClick)
     else androidx.compose.material3.TextButton(onClick) { Text(text, color = if (danger) Color(0xFFC42B1C) else t.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium) }
+}
+
+
+/** APK paths another page hands to the installer (several files picked in Files), read once when the installer opens. */
+object InstallerPreload { @Volatile var paths: List<String> = emptyList() }
+
+/** The icon of an APK that is not installed yet, read from the file itself. */
+private fun apkIcon(ctx: Context, f: java.io.File): android.graphics.Bitmap? = runCatching {
+    val pm = ctx.packageManager
+    val info = pm.getPackageArchiveInfo(f.path, 0)?.applicationInfo ?: return@runCatching null
+    info.sourceDir = f.path; info.publicSourceDir = f.path
+    androidx.core.graphics.drawable.toBitmap(info.loadIcon(pm), 160, 160)
+}.getOrNull()
+
+/** Several apps at once: their icons lie on each other, a little turned, where a single app would show its one icon; the title says Multi install. */
+@Composable
+private fun MultiInstallHeader(list: List<Picked>) {
+    val ctx = LocalContext.current
+    val icons = remember(list) { list.take(6).map { pk -> pk to (pk.files.firstOrNull()?.let { apkIcon(ctx, it) }) } }
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(96.dp), contentAlignment = Alignment.Center) {
+                icons.forEachIndexed { i, (pk, bmp) ->
+                    val t = i - (icons.size - 1) / 2f
+                    Box(Modifier.offset(x = (t * 13).dp, y = (if (i % 2 == 0) -4 else 5).dp).rotate(t * 9f).size(46.dp).clip(RoundedCornerShape(11.dp)).background(T.panel).border(1.dp, T.line, RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+                        if (bmp != null) androidx.compose.foundation.Image(bmp.asImageBitmap(), null, Modifier.fillMaxSize())
+                        else AppIcon(pk.pkg, 40.dp)
+                    }
+                }
+            }
+            Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                Text("Multi install", color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+                Text("${list.size} apps", color = T.sub, fontSize = 13.sp)
+            }
+        }
+    }
 }

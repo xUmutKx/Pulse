@@ -136,6 +136,8 @@ open class ExtraToolActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         // every tool is one card in the recent apps: a second start of the same plain tool (any entry: menu, store, launcher, widget) brings the open one forward
         // a notification's request for a page of the music player is handed to the window in the process
+        // several APKs picked in Files: the installer opens with them already read
+        if (savedInstanceState == null) intent.getStringArrayListExtra("apks")?.let { com.umutk.pulse.features.InstallerPreload.paths = it }
         if (savedInstanceState == null) intent.getStringExtra("notif_open")?.let { if (routeOf(intent) == "music") com.umutk.pulse.extras.music.MusicNav.request = it }
         if (savedInstanceState == null && this::class == ExtraToolActivity::class && intent.getStringExtra("frame") == null &&
             intent.extras?.keySet().orEmpty().all { it == "route" || it == "notif_open" }) {
