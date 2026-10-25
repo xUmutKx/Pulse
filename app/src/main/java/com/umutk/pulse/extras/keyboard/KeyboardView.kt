@@ -829,8 +829,9 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             KeysPanel(th, st, act, keyH)
         } else {
             val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = tab) { 12 }
-            LaunchedEffect(tab) { if (pager.currentPage != tab) pager.animateScrollToPage(tab) }
-            LaunchedEffect(pager.currentPage) { tab = pager.currentPage }
+            // the tab follows the page only once it has settled: following it mid-swipe restarted the scroll and left the pages half way
+            LaunchedEffect(tab) { if (pager.settledPage != tab) pager.animateScrollToPage(tab) }
+            LaunchedEffect(pager.settledPage) { tab = pager.settledPage }
             androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { page ->
                 if (page == 11) { SymbolPage(th, act, fams, g, sub) { sub = it }; return@HorizontalPager }
                 val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
