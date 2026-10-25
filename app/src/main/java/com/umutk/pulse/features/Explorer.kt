@@ -51,6 +51,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
+import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -1919,9 +1922,6 @@ private fun ExToolbar(onTab: (String) -> Unit, onLong: (String) -> Unit) {
     }
 }
 
-/** Paste button above the "+" while the clipboard holds something: tap pastes here, long press clears the clipboard; the badge counts the items. */
-@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
-@Composable
 /** A file of no known extension that starts like a web page. */
 private fun exLooksHtml(f: File): Boolean = runCatching {
     f.inputStream().use { i -> val b = ByteArray(600); val n = i.read(b); n > 0 && String(b, 0, n, Charsets.UTF_8).trimStart().lowercase().let { it.startsWith("<!doctype html") || it.startsWith("<html") || it.contains("<head") || it.contains("<body") } }
@@ -1937,7 +1937,7 @@ private fun ExHtmlViewer(f: File, onClose: () -> Unit, onSource: () -> Unit) {
                 Text(tr("Source", "Kaynak"), Modifier.clip(RoundedCornerShape(10.dp)).clickable { onSource() }.padding(horizontal = 10.dp, vertical = 8.dp), color = Look.accent, fontSize = 13.sp)
                 Text("✕", Modifier.clickable { onClose() }.padding(horizontal = 12.dp, vertical = 8.dp), color = T.text, fontSize = 18.sp)
             }
-            androidx.compose.ui.viewinterop.AndroidView(Modifier.fillMaxSize(), factory = { c ->
+            androidx.compose.ui.viewinterop.AndroidView(modifier = Modifier.fillMaxSize(), factory = { c ->
                 android.webkit.WebView(c).apply {
                     settings.javaScriptEnabled = false; settings.allowFileAccess = true; settings.allowContentAccess = false
                     setBackgroundColor(android.graphics.Color.WHITE)
@@ -1989,17 +1989,20 @@ private fun androidx.compose.foundation.layout.BoxScope.ExMiniPlayer() {
     Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 10.dp, vertical = 8.dp).clip(RoundedCornerShape(16.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 6.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(36.dp).clickable { ExAudio.toggle() }, contentAlignment = Alignment.Center) {
-                androidx.compose.material3.Icon(if (ExAudio.playing) androidx.compose.material.icons.Icons.Rounded.Pause else androidx.compose.material.icons.Icons.Rounded.PlayArrow, null, tint = Look.accent, modifier = Modifier.size(26.dp))
+                androidx.compose.material3.Icon(if (ExAudio.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = Look.accent, modifier = Modifier.size(26.dp))
             }
             Text(f.nameWithoutExtension, Modifier.weight(1f).padding(horizontal = 6.dp), color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(mmss(ExAudio.pos) + " / " + mmss(ExAudio.dur), color = T.sub, fontSize = 11.sp)
             Text(("%.2f".format(ExAudio.speed).trimEnd('0').trimEnd('.')) + "x", Modifier.clip(RoundedCornerShape(10.dp)).clickable { ExAudio.nextSpeed() }.padding(horizontal = 8.dp, vertical = 6.dp), color = Look.accent, fontSize = 12.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-            Box(Modifier.size(32.dp).clickable { ExAudio.stop() }, contentAlignment = Alignment.Center) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Close, null, tint = T.sub, modifier = Modifier.size(18.dp)) }
+            Box(Modifier.size(32.dp).clickable { ExAudio.stop() }, contentAlignment = Alignment.Center) { androidx.compose.material3.Icon(Icons.Rounded.Close, null, tint = T.sub, modifier = Modifier.size(18.dp)) }
         }
         com.umutk.pulse.PSlider(if (ExAudio.dur > 0) ExAudio.pos.toFloat() / ExAudio.dur else 0f, { ExAudio.seek((it * ExAudio.dur).toInt()) }, 0f..1f, onDone = {})
     }
 }
 
+/** Paste button above the "+" while the clipboard holds something: tap pastes here, long press clears the clipboard; the badge counts the items. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+@Composable
 private fun androidx.compose.foundation.layout.BoxScope.ExPasteFab(count: Int, move: Boolean, onPaste: () -> Unit, onClear: () -> Unit) {
     val win = Opt.authentic && LocalWindowLook.current.id in com.umutk.pulse.winButtonLooks
     val shape = RoundedCornerShape(if (win) (if (LocalWindowLook.current.id == "win95") 0.dp else 4.dp) else 14.dp)
