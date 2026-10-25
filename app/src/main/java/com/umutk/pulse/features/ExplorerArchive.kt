@@ -71,7 +71,11 @@ internal class AEntry(val path: String, val dir: Boolean, val size: Long, val pa
 /** What the file manager asks the archive screens to do: kind is open, apk, here, named, pick, test, info or add. */
 internal class ArcReq(val kind: String, val file: File, val files: List<File> = listOf(file))
 
-private val ZIP_EXT = setOf("zip", "apk", "jar", "xapk", "apks", "apkm", "aar")
+private val ZIP_EXT = setOf("zip", "apk", "jar", "xapk", "apks", "apkm", "aar", "poweramp-backup")
+
+/** Files the person chose "Open as > Archive" for: read as a zip whatever their extension, when they really start with the zip signature. */
+internal object ArcForce { val paths = HashSet<String>() }
+private fun zipMagic(f: File) = runCatching { f.inputStream().use { i -> val b = ByteArray(4); i.read(b) == 4 && b[0] == 'P'.code.toByte() && b[1] == 'K'.code.toByte() && b[2] == 3.toByte() && b[3] == 4.toByte() } }.getOrDefault(false)
 
 private fun kindOf(f: File): String {
     val n = f.name.lowercase()
@@ -88,6 +92,7 @@ private fun kindOf(f: File): String {
         n.endsWith(".rar") -> "rar"
         n.endsWith(".gz") -> "gz"
         n.substringAfterLast('.', "") in ZIP_EXT -> "zip"
+        f.path in ArcForce.paths && zipMagic(f) -> "zip"
         else -> ""
     }
 }
