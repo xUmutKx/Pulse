@@ -386,6 +386,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var arcCwd by remember { mutableStateOf("") }
     // entries picked inside an open archive (their paths); copy or extract takes them out
     var arcSel by remember { mutableStateOf(emptySet<String>()) }
+    // the row of the open archive whose three-dot menu is showing
+    var arcMenu by remember { mutableStateOf<String?>(null) }
     // bumped after a cut rewrote the archive, so its entries are read again
     var arcRev by remember { mutableStateOf(0) }
     val wantedArc = FilesLaunch.archive
@@ -753,6 +755,22 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 }
             }
         }
+        // delete: the picks leave the archive for good (zip-family only)
+        fun arcDelete() {
+            val af = arcFile ?: return
+            val picks = arcSel
+            scope.launch {
+                val r = withContext(Dispatchers.IO) { archiveRemove(af, picks) }
+                arcSel = emptySet(); arcRev++
+                note = when (r) {
+                    "" -> tr("Deleted ${picks.size} from the archive", "${picks.size} öğe arşivden silindi")
+                    "apk" -> tr("APK files cannot be edited: removing entries breaks the signature", "APK'ler düzenlenemez: imza bozulur")
+                    "unsupported" -> tr("Deleting works on zip files only", "Silme yalnızca zip dosyalarında çalışır")
+                    else -> tr("Could not rewrite the archive: $r", "Arşiv yeniden yazılamadı: $r")
+                }
+                refresh++
+            }
+        }
         arcPasteNow = { arcPaste() }
         val arcBar: @Composable () -> Unit = {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -762,6 +780,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 SelSquare(T.text, { arcCopy(false) }) { ExIcon("copy", T.text, 24.dp) }
                 SelSquare(T.text, { arcCopy(true) }) { ExIcon("zip", T.text, 24.dp) }
                 SelSquare(T.text, { arcCut() }) { ExIcon("cut", T.text, 24.dp) }
+                if (clip != null) SelSquare(T.text, { arcPaste() }) { ExIcon("paste", T.text, 24.dp) }
+                SelSquare(T.text, { arcDelete() }) { ExIcon("delete", T.text, 24.dp) }
             }
         }
         PCard(Modifier.then(if (sel.isNotEmpty() || arcSel.isNotEmpty()) Modifier.zIndex(1f).graphicsLayer { translationY = exScroll.value.toFloat() } else Modifier).sizeDrag(ctx) { sizing = it }.sizeOverlay(sizing, T.panel, Look.accent)) {
@@ -941,6 +961,26 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         Text(r.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val sub = ((if (r.dir) "" else exSize(r.size) + "  ") + (if (r.time > 0) exDate(r.time, FilesPrefs.dateFmt) else "")).trim()
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 11.sp)
+                    }
+                    // the three dots: open, cut, copy, paste (into this folder of the archive) and delete, for this row
+                    Box {
+                        Box(Modifier.size(36.dp).clickable { arcMenu = p }, contentAlignment = Alignment.Center) { MoreIcon(T.sub, 20.dp) }
+                        ThemedMenu(arcMenu == p, { arcMenu = null }) {
+                            val items = buildList<Triple<String, String, () -> Unit>> {
+                                add(Triple(tr("Open", "Aç"), "view", {
+                                    if (r.dir) arcCwd = "$p/" else scope.launch {
+                                        val out = File(ctx.cacheDir, "arc/${System.nanoTime()}/${r.name}")
+                                        val ok = withContext(Dispatchers.IO) { runCatching { archiveExtractOne(af, p, out) }.getOrDefault(false) }
+                                        if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
+                                    }
+                                }))
+                                add(Triple(tr("Cut", "Kes"), "move", { arcSel = setOf(p); arcCut() }))
+                                add(Triple(tr("Copy", "Kopyala"), "copy", { arcSel = setOf(p); arcCopy(false) }))
+                                if (clip != null) add(Triple(tr("Paste", "Yapıştır"), "paste", { arcPaste() }))
+                                add(Triple(tr("Delete", "Sil"), "delete", { arcSel = setOf(p); arcDelete() }))
+                            }
+                            items.forEach { (label, key, act) -> ThemedMenuItem(label, { arcMenu = null; act() }, leading = { ExIcon(key, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) }
+                        }
                     }
                 }
             }
