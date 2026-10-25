@@ -59,16 +59,16 @@ internal fun MixPanel(th: KbTheme, st: KbState, act: KbActions, height: Dp) {
             Text(tr("Emoji mix", "Emoji birleştir"), color = th.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             Text(tr("Clear", "Temizle"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { act.mixOp("clear"); slot = 0 }.padding(12.dp))
         }
-        Row(Modifier.fillMaxWidth().height(110.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Row(Modifier.fillMaxWidth().height(150.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             // the two picks: a tap selects which one the next emoji fills
             listOf(st.mixA to 0, st.mixB to 1).forEach { (e, i) ->
-                Box(Modifier.size(64.dp).clip(RoundedCornerShape(16.dp)).background(if (slot == i) th.accent.copy(alpha = .35f) else th.special).clickable { slot = i }, contentAlignment = Alignment.Center) {
-                    Text(e.ifEmpty { "?" }, fontSize = 32.sp, color = th.text)
+                Box(Modifier.size(76.dp).clip(RoundedCornerShape(18.dp)).background(if (slot == i) th.accent.copy(alpha = .35f) else th.special).clickable { slot = i }, contentAlignment = Alignment.Center) {
+                    Text(e.ifEmpty { "?" }, fontSize = 40.sp, color = th.text)
                 }
             }
-            Box(Modifier.weight(1f).height(100.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.weight(1f).height(140.dp), contentAlignment = Alignment.Center) {
                 val p = pic
-                if (p != null) Image(p, null, Modifier.size(100.dp)) else Text(tr("Pick two emojis", "İki emoji seç"), color = th.sub, fontSize = 13.sp)
+                if (p != null) Image(p, null, Modifier.size(140.dp)) else Text(tr("Pick two emojis", "İki emoji seç"), color = th.sub, fontSize = 13.sp)
             }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -88,8 +88,8 @@ internal fun MixPanel(th: KbTheme, st: KbState, act: KbActions, height: Dp) {
             }
         }
         val list = if (group == 0) st.recents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, 0, "") } else all.filter { it.group == group - 1 }
-        LazyVerticalGrid(GridCells.Adaptive(46.dp), Modifier.fillMaxWidth().weight(1f)) {
-            items(list) { it2 -> Box(Modifier.height(46.dp).clickable { pick(it2.e) }, contentAlignment = Alignment.Center) { Text(it2.e, fontSize = 26.sp, color = th.text, maxLines = 1) } }
+        LazyVerticalGrid(GridCells.Adaptive(52.dp), Modifier.fillMaxWidth().weight(1f)) {
+            items(list) { it2 -> Box(Modifier.height(52.dp).clickable { pick(it2.e) }, contentAlignment = Alignment.Center) { Text(it2.e, fontSize = 30.sp, color = th.text, maxLines = 1) } }
         }
     }
 }

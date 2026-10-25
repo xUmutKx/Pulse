@@ -6,6 +6,22 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 
 ### Everything in Pulse, by category
 
+<details><summary><b>Screenshots</b></summary>
+
+| Processes | Performance | Overview |
+|---|---|---|
+| <img src="docs/screenshots/processes.png" width="170" alt="Processes"> | <img src="docs/screenshots/performance.png" width="170" alt="Performance"> | <img src="docs/screenshots/overview.png" width="170" alt="Overview"> |
+
+| CPU cores | Windows 95 Performance | Windows 7 Startup apps |
+|---|---|---|
+| <img src="docs/screenshots/cores.png" width="170" alt="CPU cores"> | <img src="docs/screenshots/win95-performance.png" width="170" alt="Windows 95 Performance"> | <img src="docs/screenshots/win7-startup.png" width="170" alt="Windows 7 Startup apps"> |
+
+| Windows XP widgets | Windows 7 gadgets | App manager |
+|---|---|---|
+| <img src="docs/screenshots/xp-widgets.png" width="170" alt="Windows XP widgets"> | <img src="docs/screenshots/win7-gadgets.png" width="170" alt="Windows 7 gadgets"> | <img src="docs/screenshots/app-manager.png" width="170" alt="App manager"> |
+
+</details>
+
 <details><summary><b>Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
 
 - Every screen, dialog, menu, icon and animation is drawn for each look; looks change at once, nothing needs a restart.
@@ -83,22 +99,6 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 - **Services**: running services (root only).
 - **Details**: search, filter, sort, and open the app.
 
-#### Processes
-
-![Processes](docs/screenshots/processes.png)
-
-#### Performance
-
-![Performance](docs/screenshots/performance.png)
-
-#### Overview
-
-![Overview](docs/screenshots/overview.png)
-
-#### CPU cores
-
-![CPU cores](docs/screenshots/cores.png)
-
 #### App manager and debloater
 
 - **Apps**: search, filter (All, User, System, Disabled, Battery limit, Xposed modules) and sort (name, size, install date, last used), each with its own icon. Open an app to open it, see its app settings, force stop it, uninstall it, or extract its APK to `Downloads/Pulse/extract`.
@@ -116,11 +116,6 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 #### Widgets and gadgets
 
 Home-screen widgets in every look: Windows 7 gadget clocks, CPU meter, battery and drive; XP and 95 classics; Windows 11 tiles that follow your accent colour; Material You, AMOLED, glass and iOS-style tiles. Music widgets include Winamp with its real skins, and searching "win" in the Widgets page lists them.
-
-<p>
-<img src="docs/screenshots/win7-gadgets.png" width="32%" alt="Windows 7 gadget clocks">
-<img src="docs/screenshots/app-manager.png" width="32%" alt="App manager">
-</p>
 
 - **Windows 7 gadgets**: the nine original clock faces, live, with a second hand.
 - **App manager**: filter and sort your apps, open the details of any app, and jump to Debloat to remove system apps with descriptions from the Universal Debloater list.
@@ -218,12 +213,6 @@ Each look can have its own wallpaper. The Settings page shows the picture in the
 #### The looks
 
 Pulse can dress up as Windows 95, XP, 7, 10 or 11, or stay plain Material You / AMOLED. Each look draws its own windows, menus, buttons, dialogs and graphs. Settings has a switch to go back to the simpler earlier versions of the old looks.
-
-<p>
-<img src="docs/screenshots/win95-performance.png" width="32%" alt="Windows 95 Performance tab">
-<img src="docs/screenshots/win7-startup.png" width="32%" alt="Windows 7 Startup apps">
-<img src="docs/screenshots/xp-widgets.png" width="32%" alt="Windows XP widgets">
-</p>
 
 - **Windows 95**: the Performance tab with the CPU graph in green on black, the CPU details and a status bar at the bottom.
 - **Windows 7**: Startup apps with the Aero frame, so you can stop apps from starting at boot (root).

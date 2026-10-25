@@ -1256,3 +1256,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.93 Lyrics for the whole library in the background (worker, setting, Search now); Search and apply missing covers with a hand-pick list for the ones not matched
 - 1.0.94 Darker minimum: keyboard brightness sliders go down to 5% and the veil reaches black; screen cover brightness down to 1% (derlenmedi)
 - 1.0.95 Keyboard: Shift while a word is open puts the capital-letter form in the middle of the bar; a tap applies it (derlenmedi)
+- 1.0.96 README screenshots in one collapsed block, small and framed; keyboard: capital letter worked out again when the field is emptied or the cursor jumps (Beeper); emoji mix bigger (derlenmedi)

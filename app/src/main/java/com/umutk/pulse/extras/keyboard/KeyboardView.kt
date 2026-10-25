@@ -256,7 +256,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
     Column(Modifier.onSizeChanged { if (p == "keys" && it.height > 0) st.keysH = it.height }) {
         when (p) {
             "emoji" -> EmojiPanel(th, st, act, keyH)
-            "mix" -> MixPanel(th, st, act, panelHeight(st, keyH) + 44.dp)
+            "mix" -> MixPanel(th, st, act, maxOf(panelHeight(st, keyH), keyH * 4.4f) + 44.dp)
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
