@@ -465,7 +465,7 @@ object KeyboardDictionary {
             val n = (typoSeen[k] ?: 0) + 1
             typoSeen[k] = n
             runCatching { File(c.filesDir, "kbd_typo_seen.txt").writeText(typoSeen.entries.take(3000).joinToString("\n") { "${it.key} ${it.value}" }) }
-            if (n < (if (isKnown(typed)) 3 else 1)) return
+            if (n < (if (isKnown(typed)) 5 else 1)) return
         }
         typos[typed] = word
         // one letter wrong in a word of the same length: that letter pair is this person's slip
