@@ -93,8 +93,9 @@ fun WeatherHub(onBack: () -> Unit) {
                     withContext(Dispatchers.IO) {
                         val raw = WeatherApi.forecast(spot.lat, spot.lon)
                         val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
-                        WeatherStore.saveCache(ctx, spot.name, raw, aqi)
-                        WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi)
+                        val ex = WeatherApi.extras(spot.lat, spot.lon)
+                        WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
+                        WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
                     }
                 }
                 res.onSuccess {
@@ -127,6 +128,7 @@ fun WeatherHub(onBack: () -> Unit) {
         WeatherAlerts.set(ctx, on)
     }
 
+    LaunchedEffect(Unit) { WeatherAuto.ensure(ctx) }
     BackHandler { if (searching) searching = false else if (showList) showList = false else onBack() }
     // first paint from the cache, then one refresh for a saved city or the phone's place when it is allowed
     LaunchedEffect(Unit) {
@@ -268,10 +270,34 @@ fun WeatherHub(onBack: () -> Unit) {
                     MoonPhase(now, fg, sub)
                 }
             }
-            item { Text(tr("Next 24 hours", "Sonraki 24 saat"), color = sub, fontSize = 13.sp) }
+            // today against yesterday, and the facts of the moment as cards: pollen, UV, humidity, wind, dew point, pressure, visibility
+            if (!f.yMax.isNaN() && today != null) item { VsYesterday(today.max - f.yMax, imp, fg, sub) }
+            if (f.pollen.isNotEmpty()) item { PollenCard(f.pollen, fg, sub) }
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        UvCard(today?.uv ?: 0.0, fg, sub, Modifier.weight(1f)); HumidityCard(f.humidity, tr("Humidity", "Nem"), fg, sub, Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        WindCard(f.wind, f.windDir, imp, fg, sub, Modifier.weight(1f))
+                        ValueCard(tr("Dew point", "Çiy noktası"), t(f.dew), if (f.dew > 18) tr("Noticeable humidity", "Nem hissediliyor") else tr("Comfortable", "Rahat"), fg, sub, Modifier.weight(1f))
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        PressureCard(f.pressure, fg, sub, Modifier.weight(1f))
+                        ValueCard(tr("Visibility", "Görüş"), if (f.visKm >= 0) "%.1f km".format(f.visKm) else "—", if (f.visKm >= 10) tr("Good right now", "Şu an iyi") else if (f.visKm >= 0) tr("Reduced", "Azalmış") else "", fg, sub, Modifier.weight(1f))
+                    }
+                }
+            }
+            var hours48 by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
+            item {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(if (hours48) tr("Next 48 hours", "Sonraki 48 saat") else tr("Next 24 hours", "Sonraki 24 saat"), color = sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                    Text(if (hours48) "24" else "48", color = fg, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(WxTheme.panel).clickable { hours48 = !hours48 }.padding(horizontal = 12.dp, vertical = 6.dp))
+                }
+            }
             item {
                 LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(f.hours) { h ->
+                    items(if (hours48 && f.hours48.isNotEmpty()) f.hours48 else f.hours) { h ->
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(WeatherFmt.clock(h.time), color = sub, fontSize = 12.sp)
                             WeatherGlyph(h.code, 30.dp)
@@ -295,15 +321,11 @@ fun WeatherHub(onBack: () -> Unit) {
             }
             item {
                 val d = mutableListOf(
-                    tr("Wind", "Rüzgar") to WeatherFmt.wind(f.wind, imp) + " " + WeatherFmt.compass(f.windDir),
                     tr("Gusts", "Ani rüzgar") to WeatherFmt.wind(f.gusts, imp),
-                    tr("Humidity", "Nem") to "${f.humidity}%",
-                    tr("Pressure", "Basınç") to "%.0f hPa".format(f.pressure),
                     tr("Cloud cover", "Bulutluluk") to "${f.cloud}%",
                     tr("Precipitation", "Yağış") to "%.1f mm".format(f.precip),
                 )
                 if (today != null) {
-                    d += tr("UV index", "UV indeksi") to "%.0f · %s".format(today.uv, WeatherFmt.uv(today.uv))
                     d += tr("Sunshine", "Güneşlenme") to "%.1f h".format(today.sun)
                     d += tr("Sunrise", "Gün doğumu") to WeatherFmt.clock(today.sunrise)
                     d += tr("Sunset", "Gün batımı") to WeatherFmt.clock(today.sunset)
@@ -360,7 +382,7 @@ private fun skyColors(code: Int, day: Boolean): List<Color> = when {
 }
 
 /** The panel colour of the weather page, set by the chosen look of the page (a see-through white on the sky, dark grey on black). */
-private object WxTheme { var panel by mutableStateOf(Color.Unspecified) }
+internal object WxTheme { var panel by mutableStateOf(Color.Unspecified) }
 
 /** The list of places: a card for the phone's place and for each saved city, with the weather now and the day's range; a tap opens it. */
 @Composable

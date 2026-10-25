@@ -29,6 +29,8 @@ data class Forecast(
     val place: String, val at: Long, val time: String, val temp: Double, val feels: Double, val code: Int,
     val wind: Double, val gusts: Double, val windDir: Int, val humidity: Int, val pressure: Double, val cloud: Int, val isDay: Boolean,
     val days: List<Day>, val hours: List<Hour>, val aqi: Int = -1, val precip: Double = 0.0,
+    val dew: Double = 0.0, val visKm: Double = -1.0, val yMax: Double = Double.NaN, val yMin: Double = Double.NaN,
+    val pollen: Map<String, Int> = emptyMap(), val hours48: List<Hour> = emptyList(),
 )
 
 /** Open-Meteo: forecast, air quality and geocoding, no key. Same HTTPS helper as the store. */
@@ -37,8 +39,8 @@ object WeatherApi {
 
     fun forecast(lat: Double, lon: Double): String {
         val url = "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f".format(java.util.Locale.US, lat, lon) +
-            "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,surface_pressure,cloud_cover,is_day,precipitation" +
-            "&hourly=temperature_2m,weather_code,precipitation_probability&forecast_hours=48" +
+            "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,surface_pressure,cloud_cover,is_day,precipitation,dew_point_2m" +
+            "&hourly=temperature_2m,weather_code,precipitation_probability,visibility&forecast_hours=48" +
             "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset,sunshine_duration" +
             "&forecast_days=7&timezone=auto&wind_speed_unit=kmh"
         return get(url)
@@ -49,6 +51,25 @@ object WeatherApi {
         val url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.4f&longitude=%.4f&current=european_aqi".format(java.util.Locale.US, lat, lon)
         JSONObject(get(url)).getJSONObject("current").optInt("european_aqi", -1)
     }.getOrDefault(-1)
+
+    /**
+     * What the main forecast does not hold: yesterday's high and low, and the pollen counts (grains per cubic metre, Europe only) of now. A small JSON text for the cache;
+     * "" when the service has nothing.
+     */
+    fun extras(lat: Double, lon: Double): String = runCatching {
+        val out = JSONObject()
+        runCatching {
+            val d = JSONObject(get("https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f&daily=temperature_2m_max,temperature_2m_min&past_days=1&forecast_days=1&timezone=auto".format(java.util.Locale.US, lat, lon))).getJSONObject("daily")
+            out.put("ymax", d.getJSONArray("temperature_2m_max").getDouble(0)).put("ymin", d.getJSONArray("temperature_2m_min").getDouble(0))
+        }
+        runCatching {
+            val c = JSONObject(get("https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.4f&longitude=%.4f&current=alder_pollen,birch_pollen,grass_pollen,mugwort_pollen,olive_pollen,ragweed_pollen&timezone=auto".format(java.util.Locale.US, lat, lon))).getJSONObject("current")
+            val p = JSONObject()
+            listOf("alder", "birch", "grass", "mugwort", "olive", "ragweed").forEach { k -> if (!c.isNull(k + "_pollen") && c.has(k + "_pollen")) p.put(k, c.getDouble(k + "_pollen").toInt()) }
+            if (p.length() > 0) out.put("pollen", p)
+        }
+        out.toString()
+    }.getOrDefault("")
 
     /** City search; the label is "Name, region, country". Empty when nothing matches. */
     fun search(query: String): List<Place> {
@@ -73,7 +94,7 @@ object WeatherApi {
     }
 
     /** Reads the forecast JSON from the cache or a fresh response. Throws on a malformed body. */
-    fun parse(place: String, raw: String, at: Long, aqi: Int = -1): Forecast {
+    fun parse(place: String, raw: String, at: Long, aqi: Int = -1, extras: String = ""): Forecast {
         val j = JSONObject(raw)
         val cur = j.getJSONObject("current")
         val d = j.getJSONObject("daily")
@@ -93,11 +114,17 @@ object WeatherApi {
         var start = 0
         while (start < ht.length() && ht.getString(start) < nowHour) start++
         val hours = (start until minOf(start + 24, ht.length())).map { Hour(ht.getString(it), hc.getInt(it), hT.optDouble(it, 0.0), hp.optInt(it, 0)) }
+        val hv = h.optJSONArray("visibility")
+        val hours48 = (start until minOf(start + 48, ht.length())).map { Hour(ht.getString(it), hc.getInt(it), hT.optDouble(it, 0.0), hp.optInt(it, 0)) }
+        val ex = runCatching { JSONObject(extras) }.getOrNull()
+        val pol = ex?.optJSONObject("pollen")?.let { po -> po.keys().asSequence().associateWith { k -> po.optInt(k, 0) } }.orEmpty()
         return Forecast(
             place, at, cur.getString("time"), cur.getDouble("temperature_2m"), cur.optDouble("apparent_temperature", cur.getDouble("temperature_2m")),
             cur.getInt("weather_code"), cur.getDouble("wind_speed_10m"), cur.optDouble("wind_gusts_10m", 0.0), cur.optInt("wind_direction_10m", 0),
             cur.getInt("relative_humidity_2m"), cur.optDouble("surface_pressure", 0.0), cur.optInt("cloud_cover", 0), cur.optInt("is_day", 1) == 1,
             days, hours, aqi, cur.optDouble("precipitation", 0.0),
+            cur.optDouble("dew_point_2m", 0.0), if (hv != null && start < hv.length() && !hv.isNull(start)) hv.optDouble(start, 0.0) / 1000.0 else -1.0,
+            ex?.optDouble("ymax", Double.NaN) ?: Double.NaN, ex?.optDouble("ymin", Double.NaN) ?: Double.NaN, pol, hours48,
         )
     }
 
@@ -242,15 +269,15 @@ object WeatherStore {
 
     fun removeCity(c: Context, pl: Place) = saveCities(c, cities(c).filterNot { it.lat == pl.lat && it.lon == pl.lon })
 
-    fun saveCache(c: Context, place: String, raw: String, aqi: Int) {
-        p(c).edit().putString("raw", raw).putString("cache_place", place).putInt("aqi", aqi).putLong("at", System.currentTimeMillis()).apply()
+    fun saveCache(c: Context, place: String, raw: String, aqi: Int, extras: String? = null) {
+        p(c).edit().putString("raw", raw).putString("cache_place", place).putInt("aqi", aqi).putLong("at", System.currentTimeMillis()).apply { if (extras != null) putString("extras", extras) }.apply()
     }
 
     /** The last forecast shown, or null when none was saved or the saved copy is unreadable. */
     fun cached(c: Context): Forecast? {
         val s = p(c)
         val raw = s.getString("raw", null) ?: return null
-        return runCatching { WeatherApi.parse(s.getString("cache_place", "").orEmpty(), raw, s.getLong("at", 0L), s.getInt("aqi", -1)) }.getOrNull()
+        return runCatching { WeatherApi.parse(s.getString("cache_place", "").orEmpty(), raw, s.getLong("at", 0L), s.getInt("aqi", -1), s.getString("extras", "").orEmpty()) }.getOrNull()
     }
 
     /** Hour of the last severe-weather notice, so one storm is announced once. */
