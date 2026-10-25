@@ -199,7 +199,7 @@ fun LauncherSettings(back: () -> Unit) {
                 LauncherPrefs.drawerIconDp = it.roundToInt(); save()
             }
             ValueRow("eyeOff", tr("Hidden apps", "Gizli uygulamalar"), "${LauncherPrefs.hidden.size}") { pickHidden = true }
-            ValueRow("palette", tr("Icon pack", "Simge paketi"), IconPacks.installed(ctx).firstOrNull { it.pkg == LauncherPrefs.iconPack }?.label ?: tr("Default", "Varsayılan")) { pickPack = true }
+            ValueRow("palette", tr("Icon pack", "Simge paketi"), (if (PulseIconPacks.isBuiltin(LauncherPrefs.iconPack)) PulseIconPacks.label(LauncherPrefs.iconPack) else IconPacks.installed(ctx).firstOrNull { it.pkg == LauncherPrefs.iconPack }?.label) ?: tr("Default", "Varsayılan")) { pickPack = true }
         }
         if (cat == "gestures") Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
             // gestures
@@ -295,9 +295,12 @@ fun LauncherSettings(back: () -> Unit) {
         confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { pickLook = false } })
     if (pickPack) {
         val packs = remember { IconPacks.installed(ctx) }
-        PickDialog(tr("Icon pack", "Simge paketi"), listOf(tr("Default", "Varsayılan") to LauncherPrefs.iconPack.isBlank()) + packs.map { it.label to (it.pkg == LauncherPrefs.iconPack) }, onDismiss = { pickPack = false },
-            extra = { if (packs.isEmpty()) Text(tr("No icon pack is installed (Nova / ADW packs from the Play Store work).", "Yüklü simge paketi yok (Play Store'daki Nova / ADW paketleri çalışır)."), color = T.sub, fontSize = 12.sp) }) { i ->
-            LauncherPrefs.iconPack = if (i == 0) "" else packs[i - 1].pkg; save(); pickPack = false
+        // the packs inside Pulse come first, then the ones installed from the Play Store
+        val ids = listOf("") + PulseIconPacks.ids + packs.map { it.pkg }
+        val names = listOf(tr("Default", "Varsayılan")) + PulseIconPacks.ids.map { PulseIconPacks.label(it) } + packs.map { it.label }
+        PickDialog(tr("Icon pack", "Simge paketi"), names.mapIndexed { i, n -> n to (ids[i] == LauncherPrefs.iconPack) }, onDismiss = { pickPack = false },
+            extra = { Text(tr("Pulse Palette uses the look made in the Palette app.", "Pulse Palette, Palette uygulamasında hazırlanan görünümü kullanır."), color = T.sub, fontSize = 12.sp) }) { i ->
+            LauncherPrefs.iconPack = ids[i]; save(); pickPack = false
         }
     }
     if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; addWidget(it) }, onDismiss = { pickWidget = false })
