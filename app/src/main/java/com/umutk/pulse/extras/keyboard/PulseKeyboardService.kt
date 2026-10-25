@@ -737,8 +737,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun mixOp(op: String) {
         when (op) {
-            "open" -> { st.mix = true; st.mixA = ""; st.mixB = "" }
-            "close" -> { st.mix = false; st.mixA = ""; st.mixB = "" }
+            "open" -> { st.mixA = ""; st.mixB = ""; st.panel = "mix" }
+            "close" -> { st.mixA = ""; st.mixB = ""; st.panel = "emoji" }
             "style" -> st.mixStyle = (st.mixStyle + 1) % EmojiMix.styles
             "clear" -> { st.mixA = ""; st.mixB = "" }
             "send" -> sendMix()
@@ -773,10 +773,6 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun emoji(e: String) {
-        if (st.mix && st.panel == "emoji" && e.codePointCount(0, e.length) <= 8 && e.any { Character.isSurrogate(it) || it.code > 0x2000 }) {
-            if (st.mixA.isEmpty()) st.mixA = e else st.mixB = e
-            return
-        }
         val c = currentInputConnection ?: return
         finishWord("", false)
         c.commitText(e, 1)

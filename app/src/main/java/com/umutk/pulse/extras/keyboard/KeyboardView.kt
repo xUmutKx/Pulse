@@ -256,6 +256,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
     Column(Modifier.onSizeChanged { if (p == "keys" && it.height > 0) st.keysH = it.height }) {
         when (p) {
             "emoji" -> EmojiPanel(th, st, act, keyH)
+            "mix" -> MixPanel(th, st, act, panelHeight(st, keyH) + 44.dp)
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
@@ -302,6 +303,7 @@ private fun Trail(th: KbTheme, st: KbState) {
 @Composable
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
     if (st.trans) { TransBar(th, st, act); return }
+    if (st.panel == "mix") return
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
     Row(
@@ -343,6 +345,7 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     }
 }
 
+internal val emojiTabIconsPublic get() = emojiTabIcons
 private val emojiTabIcons get() = listOf(Icons.Rounded.AccessTime, Icons.Rounded.EmojiEmotions, Icons.Rounded.Person, Icons.Rounded.Pets, Icons.Rounded.Restaurant, Icons.Rounded.DirectionsCar,
     Icons.Rounded.SportsSoccer, Icons.Rounded.Lightbulb, Icons.Rounded.Tag, Icons.Rounded.Flag)
 
@@ -363,19 +366,8 @@ private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
             Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (st.emojiTab == 11) th.text else th.sub, fontSize = 20.sp) }
         }
         // the mix: two picks made into one picture
-        Box(Modifier.width(44.dp).fillMaxHeight().clickable { act.mixOp(if (st.mix) "close" else "open") }, contentAlignment = Alignment.Center) {
+        Box(Modifier.width(44.dp).fillMaxHeight().clickable { act.mixOp("open") }, contentAlignment = Alignment.Center) {
             Icon(Icons.Rounded.AutoAwesome, null, tint = if (st.mix) th.accent else th.sub, modifier = Modifier.size(22.dp))
-        }
-    }
-    if (st.mix) Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(st.mixA.ifEmpty { "?" }, fontSize = 26.sp, color = th.text, modifier = Modifier.width(40.dp).clickable { act.mixOp("clear") })
-        Text("+", color = th.sub, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 6.dp))
-        Text(st.mixB.ifEmpty { "?" }, fontSize = 26.sp, color = th.text, modifier = Modifier.width(40.dp).clickable { act.mixOp("clear") })
-        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-        Text(EmojiMix.name(st.mixStyle), color = th.text, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(th.special).clickable { act.mixOp("style") }.padding(horizontal = 12.dp, vertical = 6.dp))
-        androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
-        Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(if (st.mixA.isNotEmpty() && st.mixB.isNotEmpty()) th.accent else th.special).clickable(enabled = st.mixA.isNotEmpty() && st.mixB.isNotEmpty()) { act.mixOp("send") }, contentAlignment = Alignment.Center) {
-            Text("➤", color = th.text, fontSize = 16.sp)
         }
     }
   }
@@ -485,11 +477,11 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     Box {
     Row(Modifier.fillMaxWidth()) {
         if (low && st.page == 0) Key(th, st, act, KbKey("", KeyKind.SHIFT, 1f), bh)
-        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, if (low) 1.25f else 1.5f), bh)
+        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, if (low) 1.0f else 1.2f), bh)
         // the key beside ?123: the three-dot menu, the emoji panel, or nothing (the emoji stay under a long press on the comma)
         if (KeyboardPrefs.bottomKey != "none" && st.page == 0) Key(th, st, act, KbKey("", if (KeyboardPrefs.bottomKey == "emoji") KeyKind.EMOJI else KeyKind.MENU, 1f), bh)
         Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.bottomKey == "emoji") KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), bh)
-        Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, 4f), bh)
+        Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, if (low) 4.25f else 4.3f), bh)
         Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), bh)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), bh)
     }
