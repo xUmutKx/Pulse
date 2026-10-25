@@ -11,11 +11,14 @@ import android.graphics.Typeface
  * The styles are drawn here, nothing is fetched and no artwork of another app is used.
  */
 object EmojiMix {
-    const val styles = 4
+    const val styles = 5
 
-    fun name(i: Int) = when (i) { 0 -> "Corner"; 1 -> "Halves"; 2 -> "Hat"; else -> "Side by side" }
+    fun name(i: Int) = when (i) { 0 -> "Blend"; 1 -> "Corner"; 2 -> "Halves"; 3 -> "Hat"; else -> "Side by side" }
 
     fun render(a: String, b: String, style: Int, size: Int = 512): Bitmap {
+        // Blend: two faces become one face (brows and mouth of the first, eyes of the second); anything else is laid out like the next style
+        if (style == 0) FaceBlend.render(a, b, size)?.let { return it }
+        val style = if (style == 0) 1 else style
         val bmp = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         fun draw(e: String, cx: Float, cy: Float, px: Float, clip: Path? = null) {
@@ -28,15 +31,15 @@ object EmojiMix {
         val s = size.toFloat()
         when (style) {
             // the first big, the second small at the lower right
-            0 -> { draw(a, s * .46f, s * .46f, s * .78f); draw(b, s * .74f, s * .74f, s * .44f) }
+            1 -> { draw(a, s * .46f, s * .46f, s * .78f); draw(b, s * .74f, s * .74f, s * .44f) }
             // the left half of the first beside the right half of the second: one face made of two
-            1 -> {
+            2 -> {
                 val left = Path().apply { addRect(0f, 0f, s / 2f, s, Path.Direction.CW) }
                 val right = Path().apply { addRect(s / 2f, 0f, s, s, Path.Direction.CW) }
                 draw(a, s / 2f, s / 2f, s * .86f, left); draw(b, s / 2f, s / 2f, s * .86f, right)
             }
             // the second sits on top of the first, like a hat
-            2 -> { draw(a, s / 2f, s * .58f, s * .72f); draw(b, s / 2f, s * .2f, s * .4f) }
+            3 -> { draw(a, s / 2f, s * .58f, s * .72f); draw(b, s / 2f, s * .2f, s * .4f) }
             // side by side, slightly overlapping
             else -> { draw(a, s * .32f, s / 2f, s * .62f); draw(b, s * .68f, s / 2f, s * .62f) }
         }

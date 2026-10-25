@@ -805,6 +805,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (a.isEmpty() || b.isEmpty()) return
         val c = currentInputConnection ?: return
         val f = java.io.File(cacheDir, "mix/mix_${System.currentTimeMillis()}.png")
+        // only the latest few pictures are kept, the rest would pile up in the cache
+        java.io.File(cacheDir, "mix").listFiles()?.sortedByDescending { it.lastModified() }?.drop(8)?.forEach { it.delete() }
         scope.launch(Dispatchers.IO) {
             runCatching { f.parentFile?.mkdirs(); f.outputStream().use { EmojiMix.render(a, b, st.mixStyle).compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) } }
             withContext(Dispatchers.Main) {

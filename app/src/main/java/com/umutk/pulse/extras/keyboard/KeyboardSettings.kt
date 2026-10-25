@@ -320,6 +320,18 @@ fun KeyboardSettings(back: () -> Unit) {
 
         // data
         KbSection("save", tr("Data", "Veri")) {
+            // what the keyboard keeps on the phone, and a way to clear it
+            var sizeRev by remember { mutableIntStateOf(0) }
+            val sizes = remember(sizeRev) {
+                fun len(f: java.io.File): Long = if (f.isDirectory) (f.listFiles()?.sumOf { len(it) } ?: 0L) else f.length()
+                listOf(len(java.io.File(ctx.cacheDir, "mix")), len(java.io.File(ctx.filesDir, "clips")), len(java.io.File(ctx.filesDir, "kbd")))
+            }
+            fun mb(n: Long) = android.text.format.Formatter.formatShortFileSize(ctx, n)
+            Text(tr("Mixed emoji pictures: ", "Karışık emoji resimleri: ") + mb(sizes[0]) + "\n" + tr("Clipboard pictures: ", "Pano resimleri: ") + mb(sizes[1]) + "\n" + tr("Word lists: ", "Sözlükler: ") + mb(sizes[2]), color = T.sub, fontSize = 13.sp)
+            Row(Modifier.padding(top = 6.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PButton(tr("Delete mixed pictures", "Karışık resimleri sil"), compact = true, danger = true) { java.io.File(ctx.cacheDir, "mix").deleteRecursively(); sizeRev++ }
+                PButton(tr("Clear clipboard", "Panoyu temizle"), compact = true, danger = true) { ClipStore.clear(ctx); sizeRev++ }
+            }
             Text("${tr("Learned words", "Öğrenilen kelimeler")}: $learned", color = T.sub, fontSize = 13.sp)
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 PButton(tr("Forget words", "Kelimeleri unut"), compact = true, danger = true) { askForget = true }
