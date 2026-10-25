@@ -344,11 +344,37 @@ fun MessagesScreen(back: () -> Unit) {
                 onUnread = { unreadFirst = it; MsgPrefs.setUnreadFirst(ctx, it) },
                 onUnblock = { a -> blocks = blocks - a; MsgPrefs.setBlocked(ctx, blocks) },
                 onUnarchive = { a -> archives = archives - a; MsgPrefs.setArchived(ctx, archives) })
-            newMode -> Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                PField(newTo, { newTo = it }, tr("To", "Kime"), Modifier.weight(1f))
-                Spacer(Modifier.width(8.dp))
-                PButton(tr("Next", "İleri"), compact = true) {
-                    if (newTo.isNotBlank()) { open = SmsThread(-1L, newTo.trim(), null, "", 0L); newMode = false }
+            newMode -> Column(Modifier.fillMaxWidth().weight(1f)) {
+                Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PField(newTo, { newTo = it }, tr("Message to…", "Mesaj gönder…"), Modifier.weight(1f).fillMaxWidth())
+                    Spacer(Modifier.width(8.dp))
+                    PButton(tr("Next", "İleri"), compact = true) {
+                        if (newTo.isNotBlank()) { open = SmsThread(-1L, newTo.trim(), null, "", 0L); newMode = false }
+                    }
+                }
+                // the contacts whose name or number matches what is typed (all of them, newest first, while nothing is typed)
+                val hits by androidx.compose.runtime.produceState(emptyList<Pair<String, String>>(), newTo) {
+                    value = withContext(Dispatchers.IO) {
+                        runCatching {
+                            val q = newTo.trim()
+                            val uri = if (q.isEmpty()) ContactsContract.CommonDataKinds.Phone.CONTENT_URI else Uri.withAppendedPath(ContactsContract.CommonDataKinds.Phone.CONTENT_FILTER_URI, Uri.encode(q))
+                            ctx.contentResolver.query(uri, arrayOf(ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME, ContactsContract.CommonDataKinds.Phone.NUMBER), null, null, ContactsContract.CommonDataKinds.Phone.DISPLAY_NAME + " COLLATE NOCASE")?.use { c ->
+                                val out = ArrayList<Pair<String, String>>(); val seen = HashSet<String>()
+                                while (c.moveToNext() && out.size < 40) { val n = c.getString(0).orEmpty(); val num = c.getString(1).orEmpty(); if (num.isNotBlank() && seen.add(num.filter { it.isDigit() })) out += n to num }
+                                out
+                            }.orEmpty()
+                        }.getOrDefault(emptyList())
+                    }
+                }
+                LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+                    items(hits) { (name, num) ->
+                        Row(Modifier.fillMaxWidth().clickable { open = SmsThread(-1L, num, null, "", 0L); newMode = false }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) {
+                                Text(name.ifBlank { num }, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                if (name.isNotBlank()) Text(num, color = T.sub, fontSize = 12.sp, maxLines = 1)
+                            }
+                        }
+                    }
                 }
             }
             t == null -> {

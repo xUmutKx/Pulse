@@ -148,7 +148,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     // the backup files found on the phone: the system picker does not always show a file of this unknown kind
     val found by androidx.compose.runtime.produceState(emptyList<java.io.File>(), cat) {
         value = if (cat != "library") emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            runCatching { android.os.Environment.getExternalStorageDirectory().walkTopDown().maxDepth(4).onEnter { !it.name.startsWith(".") || it.name == ".poweramp" }.filter { it.isFile && it.name.endsWith(".poweramp-backup") }.sortedByDescending { it.lastModified() }.take(8).toList() }.getOrDefault(emptyList())
+            (java.io.File(c.filesDir, "pa_backups").listFiles()?.filter { it.isFile }.orEmpty()) + runCatching { android.os.Environment.getExternalStorageDirectory().walkTopDown().maxDepth(4).onEnter { !it.name.startsWith(".") || it.name == ".poweramp" }.filter { it.isFile && it.name.endsWith(".poweramp-backup") }.sortedByDescending { it.lastModified() }.take(8).toList() }.getOrDefault(emptyList())
         }
     }
     val exportBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->

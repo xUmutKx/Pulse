@@ -1225,3 +1225,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.56 Files: share several picked files at once; fix verticalScroll import
 - 1.0.57 Files: Share in the selection three-dot menu (one or several files) - derlenmedi, bekle
 - 1.0.58 stars as icons + grid views, folder copy from archive as folder, short extract-to name and tighter menus, clipboard icons, teach a correction, floating keys QS tile, Files mini audio player with speed - derlenmedi
+- 1.0.59 Messages: new message shows contact suggestions; imported Poweramp backups are kept inside Pulse - derlenmedi
