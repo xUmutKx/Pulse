@@ -104,6 +104,22 @@ private fun partOf(media: Int, mime: String?): String? {
     }
 }
 
+/** The last numbers of the home page, kept in memory and on disk: the page opens with them at once and the fresh ones replace them a moment later. */
+private object StatsCache {
+    private var mem: Stats? = null
+    private fun sp(c: Context) = c.getSharedPreferences("files_home_cache", Context.MODE_PRIVATE)
+    fun get(c: Context): Stats? = mem ?: runCatching {
+        val p = sp(c)
+        if (!p.contains("total")) return@runCatching null
+        val parts = PARTS.map { Part(it.key, it.en, it.tr, it.icon, it.color).also { x -> x.bytes = p.getLong("b_" + it.key, 0L); x.count = p.getInt("n_" + it.key, 0) } }
+        Stats(p.getLong("total", 0L), p.getLong("free", 0L), parts, p.getLong("other", 0L))
+    }.getOrNull().also { mem = it }
+    fun put(c: Context, s: Stats) {
+        mem = s
+        sp(c).edit().apply { putLong("total", s.total); putLong("free", s.free); putLong("other", s.other); s.parts.forEach { putLong("b_" + it.key, it.bytes); putInt("n_" + it.key, it.count) } }.apply()
+    }
+}
+
 private fun loadStats(ctx: Context): Stats {
     val top = Environment.getExternalStorageDirectory()
     val st = runCatching { StatFs(top.path) }.getOrNull()
@@ -137,7 +153,9 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
     val tile = if (mat) Color(0xFF161616) else T.panel
     val accent = T.accent
     val mono = if (mat) FontFamily.Monospace else FontFamily.Default
-    val stats by produceState<Stats?>(null) { value = withContext(Dispatchers.IO) { loadStats(ctx) } }
+    // the last numbers show at once; the fresh ones come in behind them
+    var stats by remember { mutableStateOf(StatsCache.get(ctx)) }
+    androidx.compose.runtime.LaunchedEffect(Unit) { val n = withContext(Dispatchers.IO) { loadStats(ctx) }; StatsCache.put(ctx, n); stats = n }
     val recentFiles = remember { RecentStore.list(ctx).map { File(it) }.filter { it.isFile }.take(12) }
     var dirs by remember { mutableStateOf(RecentDirs.list(ctx).filter { File(it).isDirectory }) }
     fun box(m: Modifier): Modifier = if (mat) m.clip(RoundedCornerShape(14.dp)).background(tile) else m.background(tile).frame(T)
