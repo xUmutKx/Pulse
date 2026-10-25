@@ -89,6 +89,16 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
+    override fun clipShortcut(id: Long) { st.clipNameFor = id; st.clipName = "" }
+    override fun clipShortcutCancel() { st.clipName = null }
+    override fun clipShortcutSave() {
+        val name = st.clipName?.trim()?.lowercase(lang.locale).orEmpty()
+        val item = st.clipItems.firstOrNull { it.id == st.clipNameFor }
+        st.clipName = null
+        if (name.isEmpty() || item == null || item.text.isBlank()) return
+        KeyShortcuts.put(this, name, item.text)
+        android.widget.Toast.makeText(this, com.umutk.pulse.tr("Shortcut saved: $name", "Kısayol kaydedildi: $name"), android.widget.Toast.LENGTH_SHORT).show()
+    }
     override fun clipPin(id: Long) { st.clipItems = ClipStore.togglePin(this, id) }
     override fun clipDelete(ids: Set<Long>) { st.clipItems = ClipStore.delete(this, ids) }
     override fun clipClear() { st.clipItems = ClipStore.clear(this) }
@@ -223,6 +233,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (s.isEmpty()) return
         // the emoji search is open: the keys type into its box
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it + s; return } }
+        st.clipName?.let { if (st.panel == "clip") { if (s.all { ch -> ch.isLetterOrDigit() }) st.clipName = it + s; return } }
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
@@ -268,7 +279,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val typed = word.toString()
         var out = typed
         val t = target
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale))) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 3))) out = t
         c.commitText(out, 1)
         peak?.let { pk ->
             val lc = lang.locale
@@ -293,6 +304,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun space() {
         val c = currentInputConnection ?: return
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
+        if (st.clipName != null && st.panel == "clip") return
         val now = SystemClock.uptimeMillis()
         if (word.isEmpty() && lastWasSpace && KeyboardPrefs.quickPeriod && !st.plain && now - spaceTap < 600) {
             val before = c.getTextBeforeCursor(2, 0)
@@ -312,6 +324,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun enter() {
         val c = currentInputConnection ?: return
+        if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
         finishWord("\n", true)
         if (st.enter != "newline") {
             val info = currentInputEditorInfo
@@ -324,6 +337,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun backspace() {
         val c = currentInputConnection ?: return
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it.dropLast(1); return } }
+        st.clipName?.let { if (st.panel == "clip") { st.clipName = it.dropLast(1); return } }
         lastWasSpace = false
         lastGlide?.let { g ->
             val before = c.getTextBeforeCursor(g.length + 1, 0)?.toString()
@@ -869,7 +883,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         job = scope.launch {
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
-            if (word.toString() == typed) { target = res.third; slotWords = res.second; st.slots = res.first; showClipSlot() }
+            if (word.toString() == typed) {
+                // a shortcut of the clipboard: the name typed offers the whole text in the middle
+                val sc = if (typed.length >= 2) KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale)) else null
+                if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
+                else { target = res.third; slotWords = res.second; st.slots = res.first }
+                showClipSlot()
+            }
         }
     }
 
@@ -900,7 +920,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val stretched = Regex("(\\p{L})\\1\\1").containsMatchIn(lower)
         val fix0 = if (stretched) null else corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && kotlin.math.abs(it.word.length - lower.length) <= 1 && it.cost <= minOf(limit, .8f) && it.score + 4f * it.cost >= 7f && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
         // two words run together ("birdahaki"): the space goes between them
-        val fix = fix0 ?: if (!valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
+        // two neighbouring letters swapped into a common word ("wrok" for "work"): always a slip, whatever was learned or undone before
+        val swapFix = if (stretched || lower.length !in 3..20 || codes.any { KeyboardDictionary.baseScore(it, lower) > 0f } || (tr && KeyboardDictionary.trKnown(lower))) null else (0 until lower.length - 1).mapNotNull { i ->
+            if (lower[i] == lower[i + 1]) null else {
+                val w = lower.substring(0, i) + lower[i + 1] + lower[i] + lower.substring(i + 2)
+                val s = codes.maxOf { KeyboardDictionary.baseScore(it, w) }
+                if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < 3) KeyboardDictionary.Cand(w, s, .6f) else null
+            }
+        }.maxByOrNull { it.score }
+        val fix = swapFix ?: fix0 ?: if (!valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
         val emoji = if (KeyboardPrefs.emojiPredictions) KeyboardDictionary.emoji(lower) else null
         val mid: String; val left: String; val right: String

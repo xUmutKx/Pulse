@@ -1220,3 +1220,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.51 Emoji categories on top, presets in compact flow (2-3 per line) with 30 more, emoji removed from the symbol tab - derlenmedi, bekle
 - 1.0.52 Emoji pager no longer stops half way; an empty text box always starts with a capital - derlenmedi, bekle
 - 1.0.53 Files home opens with the last numbers at once (cached), refreshes behind - derlenmedi, bekle
+- 1.0.54 Keyboard: swapped letters (wrok) always mended, clipboard long press (pin, shortcut, select) with shortcut names offered as suggestions, panels keep the keys height - derlenmedi, bekle
