@@ -100,7 +100,7 @@ fun StudioTab(st: PaletteState) {
         // the palette
         SectionTitle(tr("Palette", "Palet"))
         PCard(Modifier.fillMaxWidth()) {
-            SwatchRow(spec.palette, selected) { i -> selected = if (selected == i) -1 else i }
+            SwatchRow(spec.palette, selected, onSelect = { i -> selected = if (selected == i) -1 else i })
             Box(Modifier.size(8.dp))
             LabeledSlider(tr("Number of colours: ", "Renk sayısı: ") + spec.palette.size, spec.palette.size.toFloat(), 2f..12f) { st.resizePalette(it.toInt()) }
             Box(Modifier.size(6.dp))
