@@ -1516,6 +1516,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_blackout" android:roundIcon="@mipmap/ic_ad_blackout" android:label="BlackOut">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <provider android:name="com.umutk.pulse.extras.palette.PaletteIconProvider" android:authorities="${applicationId}.palette.icons" android:exported="true" />
         <service android:name="com.umutk.pulse.extras.lyrics.LyricsListenerService" android:exported="true"
             android:label="Pulse · Lyrics from the music notification" android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
@@ -1598,5 +1604,23 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_clear" />
         </receiver>
+
+        <!-- BlackOut (extras/blackout): Pulse is also an LSPosed / Vector module (legacy entry, assets/xposed_init); the module turns dark greys black inside the apps ticked in LSPosed -->
+        <meta-data android:name="xposedmodule" android:value="true" />
+        <meta-data android:name="xposeddescription" android:resource="@string/bo_xposed_desc" />
+        <meta-data android:name="xposedminversion" android:value="93" />
+        <meta-data android:name="xposedscope" android:resource="@array/bo_xposed_scope" />
+        <meta-data android:name="xposedsharedprefs" android:value="true" />
+        <receiver android:name="com.umutk.pulse.extras.blackout.HookReceiver" android:exported="true">
+            <intent-filter><action android:name="com.umutk.pulse.BLACKOUT_HOOK_STATUS" /></intent-filter>
+        </receiver>
+        <receiver android:name="com.umutk.pulse.extras.blackout.BlackOutBoot" android:exported="true">
+            <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
+        </receiver>
+        <service android:name="com.umutk.pulse.extras.blackout.AppWatch" android:exported="true" android:label="Pulse · BlackOut"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
+            <meta-data android:name="android.accessibilityservice" android:resource="@xml/blackout_watch" />
+        </service>
     </application>
 </manifest>

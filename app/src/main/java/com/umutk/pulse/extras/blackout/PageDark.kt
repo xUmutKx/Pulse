@@ -1,0 +1,83 @@
+package com.umutk.pulse.extras.blackout
+
+/**
+ * Dark pages: a screen-wide color matrix (the kind Android's own color inversion uses) that turns white pages into the chosen
+ * color and black text into white. With [Cfg.hueSafe] only the lightness is turned around, so colors in photos and ink keep their hue.
+ * Needs root or Shizuku: the matrix is handed to SurfaceFlinger. It lasts until reboot.
+ */
+object PageDark {
+    /** [strength] blends the filter with the untouched screen: 0 = off, 1 = full dark pages. */
+    class Cfg(val bg: Int, val text: Int, val hueSafe: Boolean, val strength: Float = 1f)
+
+    private fun ch(c: Int, shift: Int) = ((c shr shift) and 255) / 255f
+
+    /** Row-major 3x3 part and the offsets, normalised 0..1: out = off + M * in, blended with the identity by [Cfg.strength]. */
+    private fun parts(c: Cfg): Pair<Array<FloatArray>, FloatArray> {
+        val lo = floatArrayOf(ch(c.bg, 16), ch(c.bg, 8), ch(c.bg, 0))
+        val hi = floatArrayOf(ch(c.text, 16), ch(c.text, 8), ch(c.text, 0))
+        val m: Array<FloatArray>
+        if (c.hueSafe) {
+            // only the lightness is turned around: white -> page color, black -> text, while every color keeps its hue and saturation
+            val w = floatArrayOf(.299f, .587f, .114f)
+            m = Array(3) { r -> FloatArray(3) { k -> (if (r == k) 1f else 0f) + w[k] * (lo[r] - hi[r] - 1f) } }
+        } else {
+            val h = arrayOf(floatArrayOf(-1f, 0f, 0f), floatArrayOf(0f, -1f, 0f), floatArrayOf(0f, 0f, -1f))
+            m = Array(3) { r -> FloatArray(3) { k -> (hi[r] - lo[r]) * h[r][k] } }
+        }
+        // linear blend from the untouched screen (identity, no offset) to the full filter
+        val s = c.strength.coerceIn(0f, 1f)
+        val blended = Array(3) { r -> FloatArray(3) { k -> (if (r == k) 1f else 0f) * (1f - s) + m[r][k] * s } }
+        return blended to FloatArray(3) { hi[it] * s }
+    }
+
+    /** What one sRGB colour turns into under [c]: the swatches on the Dark pages card are drawn with this. */
+    fun mapColor(c: Cfg, rgb: Int): Int {
+        val (m, off) = parts(c)
+        val v = floatArrayOf(ch(rgb, 16), ch(rgb, 8), ch(rgb, 0))
+        fun out(r: Int) = Math.round((off[r] + m[r][0] * v[0] + m[r][1] * v[1] + m[r][2] * v[2]).coerceIn(0f, 1f) * 255f)
+        return (out(0) shl 16) or (out(1) shl 8) or out(2)
+    }
+
+    /** Android ColorMatrix (4x5 row-major, offsets 0..255) for the live preview. */
+    fun colorMatrix(c: Cfg): FloatArray {
+        val (m, off) = parts(c)
+        return floatArrayOf(
+            m[0][0], m[0][1], m[0][2], 0f, off[0] * 255f,
+            m[1][0], m[1][1], m[1][2], 0f, off[1] * 255f,
+            m[2][0], m[2][1], m[2][2], 0f, off[2] * 255f,
+            0f, 0f, 0f, 1f, 0f)
+    }
+
+    /** The same matrix, column-major 4x4, as SurfaceFlinger wants it. */
+    private fun sfMatrix(c: Cfg): FloatArray {
+        val (m, off) = parts(c)
+        val o = FloatArray(16)
+        for (col in 0..2) for (row in 0..2) o[col * 4 + row] = m[row][col]
+        o[12] = off[0]; o[13] = off[1]; o[14] = off[2]; o[15] = 1f
+        return o
+    }
+
+    fun apply(c: Cfg): Privilege.Out {
+        val f = sfMatrix(c).joinToString(" ") { "f " + String.format(java.util.Locale.US, "%.4f", it) }
+        return Privilege.run("service call SurfaceFlinger 1015 i32 1 $f")
+    }
+
+    fun fromPrefs(sp: android.content.SharedPreferences): Cfg = from({ k, d -> sp.getFloat(k, d) }, sp.getBoolean("pg_hue", true))
+
+    /** The saved colors, read through [f] so the LSPosed module (which has no SharedPreferences) can use it too. */
+    fun from(f: (String, Float) -> Float, hueSafe: Boolean): Cfg {
+        val bg = (f("pg_r", 0f).toInt() shl 16) or (f("pg_g", 0f).toInt() shl 8) or f("pg_b", 0f).toInt()
+        val t = f("pg_text", 235f).toInt().let { (it shl 16) or (it shl 8) or it }
+        return Cfg(bg, t, hueSafe, f("pg_strength", 1f))
+    }
+
+    /** Black level: greys up to [level] (0..80 of 255) become pure black, and the rest is stretched back up so white stays white. out = (in - t) / (1 - t). */
+    fun applyCrush(level: Int): Privilege.Out {
+        val t = level / 255f
+        val k = 1f / (1f - t); val off = -t * k
+        val m = FloatArray(16).also { it[0] = k; it[5] = k; it[10] = k; it[12] = off; it[13] = off; it[14] = off; it[15] = 1f }
+        return Privilege.run("service call SurfaceFlinger 1015 i32 1 " + m.joinToString(" ") { "f " + String.format(java.util.Locale.US, "%.4f", it) })
+    }
+
+    fun clear(): Privilege.Out = Privilege.run("service call SurfaceFlinger 1015 i32 0")
+}
