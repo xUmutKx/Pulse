@@ -95,6 +95,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Mic
@@ -334,6 +336,10 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                 st.slots.forEachIndexed { i, s ->
                     Box(Modifier.weight(1f).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.slotLong(i) }), contentAlignment = Alignment.Center) {
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
+                        else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                            st.shotThumb?.let { Image(it, null, Modifier.size(26.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop) }
+                            Text(s.drop(1), color = th.accent, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 6.dp))
+                        }
                         else if (s.startsWith("\u0001")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             Icon(kbIcon(th, "ContentPaste"), null, tint = th.sub, modifier = Modifier.size(16.dp))
                             Text(s.drop(1).replace('\n', ' ').take(14) + if (s.length > 15) "…" else "", color = th.sub, fontSize = 20.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 4.dp))

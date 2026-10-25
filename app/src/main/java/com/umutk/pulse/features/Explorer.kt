@@ -204,6 +204,8 @@ private fun FilesPageInner() {
     // the full-screen window is the standalone app's; embedded in Pulse the page stays a page
     var full by rememberSaveable { mutableStateOf(standalone && (Opt.filesFull || FilesLaunch.full)) }
     LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full && standalone) { full = true; FilesLaunch.full = false } }
+    // an archive opened from another app shows in the browser at once, not on the home page
+    LaunchedEffect(FilesLaunch.archive) { if (FilesLaunch.archive != null && standalone) tab = "files" }
     var windowed by rememberSaveable { mutableStateOf(false) }
     var settings by rememberSaveable { mutableStateOf(false) }
     val openTool = com.umutk.pulse.LocalOpenTool.current
@@ -670,6 +672,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 DenseSelSquare(T.sub, { sel = emptySet() }) { ExIcon("close", T.sub, 24.dp) }
                 Text("${sel.size}", Modifier.weight(1f).padding(start = 4.dp), color = T.text, fontSize = 11.sp, maxLines = 1)
                 DenseSelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
+                // several APKs picked: one button (left of cut) installs them all in one go, in the installer
+                if (picked.size >= 2 && picked.all { it.isFile && it.extension.lowercase() in setOf("apk", "xapk", "apks", "apkm") }) DenseSelSquare(Look.accent, {
+                    val i = Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "installer").putStringArrayListExtra("apks", ArrayList(picked.map { it.path })).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    runCatching { ctx.startActivity(i) }; sel = emptySet()
+                }, big = true) { ExGlyph(Icons.Outlined.Android, "installer", Look.accent, 24.dp) }
                 DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }, big = true) { ExIcon("cut", T.text, 24.dp) }
                 DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }, big = true) { ExIcon("copy", T.text, 24.dp) }
                 if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }, big = true) { ExIcon("paste", Look.accent, 24.dp) }

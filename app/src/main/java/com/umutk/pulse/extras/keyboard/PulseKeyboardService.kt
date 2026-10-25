@@ -24,6 +24,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.asImageBitmap
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -154,10 +155,46 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.clipItems = ClipStore.load(this)
         clipboard = getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.addPrimaryClipChangedListener(clipListener)
+        runCatching { contentResolver.registerContentObserver(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, true, shotObserver) }
+    }
+
+    // ---- a screenshot just taken waits in the right slot of the bar, to be pasted from there --------------------------------------------------
+    private var shotItem: ClipItem? = null
+    private var shotAt = 0L
+    private var shotId = -1L
+    private val shotObserver = object : android.database.ContentObserver(android.os.Handler(android.os.Looper.getMainLooper())) {
+        override fun onChange(selfChange: Boolean) { scope.launch { delay(900); checkShot() } }
+    }
+
+    private suspend fun checkShot() {
+        if (st.incognito) return
+        val perm = if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_IMAGES else android.Manifest.permission.READ_EXTERNAL_STORAGE
+        if (checkSelfPermission(perm) != android.content.pm.PackageManager.PERMISSION_GRANTED) return
+        val found = withContext(Dispatchers.IO) {
+            runCatching {
+                val cols = arrayOf(android.provider.MediaStore.Images.Media._ID, android.provider.MediaStore.Images.Media.DISPLAY_NAME, android.provider.MediaStore.Images.Media.DATE_ADDED, android.provider.MediaStore.Images.Media.DATA)
+                contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 1")?.use { c ->
+                    if (!c.moveToFirst()) return@use null
+                    val name = c.getString(1).orEmpty(); val path = c.getString(3).orEmpty()
+                    if (System.currentTimeMillis() / 1000 - c.getLong(2) > 8 || !(name.contains("screenshot", true) || path.contains("screenshot", true))) return@use null
+                    c.getLong(0)
+                }
+            }.getOrNull()
+        } ?: return
+        if (found == shotId) return
+        shotId = found
+        val uri = android.net.Uri.withAppendedPath(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, found.toString())
+        val items = withContext(Dispatchers.IO) { ClipStore.addImage(this@PulseKeyboardService, uri) }
+        st.clipItems = items
+        val item = items.filter { it.image != null }.maxByOrNull { it.time } ?: return
+        shotItem = item; shotAt = SystemClock.uptimeMillis()
+        st.shotThumb = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(item.image, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap() }.getOrNull() }
+        updateSuggestions()
     }
 
     override fun onDestroy() {
         clipboard?.removePrimaryClipChangedListener(clipListener)
+        runCatching { contentResolver.unregisterContentObserver(shotObserver) }
         KeyboardDictionary.saveUser(this)
         owner?.stop(); scope.cancel()
         super.onDestroy()
@@ -505,6 +542,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun slot(i: Int) {
         st.banAsk = -1
         val qc = quickClip
+        // the screenshot just taken: a tap pastes it (when the field takes pictures)
+        if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
+            shotItem?.let { pasteClip(it) }
+            shotItem = null; st.shotThumb = null; updateSuggestions(); return
+        }
         if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
             currentInputConnection?.commitText(qc, 1)
             if (--quickLeft <= 0) quickClip = null
@@ -952,6 +994,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     /** With nothing being typed, the right slot of the bar holds the text copied last (two taps paste it, then it goes). */
     private fun showClipSlot() {
+        // a screenshot that was just taken takes the right slot for two minutes
+        if (shotItem != null && SystemClock.uptimeMillis() - shotAt > 120_000L) { shotItem = null; st.shotThumb = null }
+        if (shotItem != null && word.isEmpty() && !emailField && !st.plain) {
+            slotWords = arrayOf(slotWords[0], slotWords[1], "")
+            st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002" + com.umutk.pulse.tr("Screenshot", "Ekran görüntüsü"))
+            return
+        }
         val q = quickClip ?: return
         // the copied text stays in the bar for two minutes; after that it is only in the clipboard
         if (SystemClock.uptimeMillis() - quickAt > 120_000L) { quickClip = null; return }
