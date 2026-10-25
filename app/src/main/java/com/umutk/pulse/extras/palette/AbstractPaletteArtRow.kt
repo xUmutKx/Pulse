@@ -1,4 +1,4 @@
-package com.umutk.pulse.extras.palette.ui.components
+package com.umutk.pulse.extras.palette
 
 import android.graphics.Bitmap
 import androidx.compose.foundation.Image
