@@ -245,6 +245,16 @@ fun PField(value: String, onChange: (String) -> Unit, hint: String, modifier: Mo
         } })
 }
 
+/** A name box: the Material look gets the outlined text field of a Material dialog (floating label), the other looks the usual box. */
+@Composable
+fun PNameField(value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier) {
+    if (T.material && !oem) {
+        androidx.compose.material3.OutlinedTextField(value, onChange, modifier, singleLine = true, label = { Text(label) },
+            colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedTextColor = T.text, unfocusedTextColor = T.text, focusedBorderColor = Look.accent, focusedLabelColor = Look.accent, cursorColor = Look.accent,
+                unfocusedBorderColor = T.sub, unfocusedLabelColor = T.sub))
+    } else PField(value, onChange, label, modifier)
+}
+
 @Composable
 fun PSlider(value: Float, onChange: (Float) -> Unit, range: ClosedFloatingPointRange<Float>, thick: Boolean = false, modifier: Modifier = Modifier, onDone: () -> Unit) {
     val t = T

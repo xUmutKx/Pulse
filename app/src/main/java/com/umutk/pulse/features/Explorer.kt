@@ -896,6 +896,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             add(Triple("Create shortcut", "link", { mark(f.path) }))
                         }
                         if (isArchiveFile(f)) archiveMenu(f).forEach { (l, k, kind) -> add(Triple(l, k, { if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f, if (kind == "add" && f.path in sel) picked else listOf(f)) })) }
+                        if (isFirstPart(f)) add(Triple(tr("Join parts", "Parçaları birleştir"), "zip", { scope.launch { note = withContext(Dispatchers.IO) { joinParts(f) }; refresh++ } }))
                         add(Triple("Properties", "info", { propsOf = f }))
                     }
                     val w = LocalWindowLook.current
@@ -1249,7 +1250,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         var target by remember(f) { mutableStateOf(roots.first()) }
         WinAlert(onDismissRequest = { saveAsFile = null }, title = { Text(tr("Save as", "Farklı kaydet")) },
             text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PField(newName, { newName = it }, tr("Name", "Ad"), Modifier.fillMaxWidth())
+                com.umutk.pulse.PNameField(newName, { newName = it }, tr("Name", "Ad"), Modifier.fillMaxWidth())
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     roots.forEach { d -> PChip(target.path == d.path, if (d.path == dir.path) tr("Here", "Burası") else d.name) { target = d } }
                 }

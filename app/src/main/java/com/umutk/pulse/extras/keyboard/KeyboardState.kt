@@ -26,6 +26,11 @@ class KbState {
     var trans by mutableStateOf(false)
     // the category open on the emoji page (0 recent, 1..9 the groups, 10 kaomoji, 11 symbols)
     var emojiTab by mutableStateOf(0)
+    /** Emoji mix: two emojis made into one picture. mixA/mixB are the picks, mixStyle the way they are put together. */
+    var mix by mutableStateOf(false)
+    var mixA by mutableStateOf("")
+    var mixB by mutableStateOf("")
+    var mixStyle by mutableStateOf(0)
     // naming a shortcut for a clipboard item: the keys type into the name
     var clipName by mutableStateOf<String?>(null)
     var clipNameFor by mutableStateOf(0L)
@@ -79,6 +84,8 @@ class KbPreview(val rect: Rect, val label: String, val alts: List<String> = empt
 interface KbActions {
     /** The translation bar: open, close, swap, from, to, apply. */
     fun transOp(op: String) {}
+    /** Emoji mix: open, close, style, clear, send. */
+    fun mixOp(op: String) {}
     /** Clipboard shortcuts: start naming one for an item, save it, cancel. */
     fun clipShortcut(id: Long) {}
     fun clipShortcutSave() {}

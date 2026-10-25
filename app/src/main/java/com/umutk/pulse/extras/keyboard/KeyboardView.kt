@@ -349,6 +349,7 @@ private val emojiTabIcons get() = listOf(Icons.Rounded.AccessTime, Icons.Rounded
 /** The bar above the emoji page: a back button, then the categories (recent, faces, people, animals, food, travel, sport, objects, symbols, flags, kaomoji, signs). */
 @Composable
 private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
+  Column(Modifier.fillMaxWidth()) {
     Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
         BarIcon(th, kbIcon(th, "ArrowBack")) { act.page(0) }
         Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
@@ -361,7 +362,23 @@ private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
             Box(Modifier.width(48.dp).fillMaxHeight().clickable { st.emojiTab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (st.emojiTab == 10) th.text else th.sub, fontSize = 15.sp) }
             Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (st.emojiTab == 11) th.text else th.sub, fontSize = 20.sp) }
         }
+        // the mix: two picks made into one picture
+        Box(Modifier.width(44.dp).fillMaxHeight().clickable { act.mixOp(if (st.mix) "close" else "open") }, contentAlignment = Alignment.Center) {
+            Icon(Icons.Rounded.AutoAwesome, null, tint = if (st.mix) th.accent else th.sub, modifier = Modifier.size(22.dp))
+        }
     }
+    if (st.mix) Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(st.mixA.ifEmpty { "?" }, fontSize = 26.sp, color = th.text, modifier = Modifier.width(40.dp).clickable { act.mixOp("clear") })
+        Text("+", color = th.sub, fontSize = 18.sp, modifier = Modifier.padding(horizontal = 6.dp))
+        Text(st.mixB.ifEmpty { "?" }, fontSize = 26.sp, color = th.text, modifier = Modifier.width(40.dp).clickable { act.mixOp("clear") })
+        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+        Text(EmojiMix.name(st.mixStyle), color = th.text, fontSize = 13.sp, modifier = Modifier.clip(RoundedCornerShape(14.dp)).background(th.special).clickable { act.mixOp("style") }.padding(horizontal = 12.dp, vertical = 6.dp))
+        androidx.compose.foundation.layout.Spacer(Modifier.width(8.dp))
+        Box(Modifier.size(36.dp).clip(RoundedCornerShape(18.dp)).background(if (st.mixA.isNotEmpty() && st.mixB.isNotEmpty()) th.accent else th.special).clickable(enabled = st.mixA.isNotEmpty() && st.mixB.isNotEmpty()) { act.mixOp("send") }, contentAlignment = Alignment.Center) {
+            Text("➤", color = th.text, fontSize = 16.sp)
+        }
+    }
+  }
 }
 
 /** The translation bar: the two languages at the ends with the swap button between them, and the translation of what is typed below; a tap puts it in. */

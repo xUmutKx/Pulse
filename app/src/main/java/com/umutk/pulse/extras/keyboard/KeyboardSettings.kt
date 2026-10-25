@@ -196,6 +196,8 @@ fun KeyboardSettings(back: () -> Unit) {
         KbSection("edit", tr("Typing", "Yazım")) {
             Switch(tr("Suggestions", "Öneriler"), tr("Three words above the keys", "Tuşların üstünde üç kelime"), KeyboardPrefs.suggestions) { KeyboardPrefs.suggestions = it; save() }
             Switch(tr("Autocorrect", "Otomatik düzeltme"), tr("Words are corrected to the middle suggestion as you type", "Yazdıkça kelime ortadaki öneriye düzeltilir"), KeyboardPrefs.autocorrect) { KeyboardPrefs.autocorrect = it; save() }
+            Text("${tr("Strength", "Güç")}: " + listOf(tr("Modest", "Ölçülü"), tr("Normal", "Normal"), tr("Aggressive", "Sert"), tr("Very aggressive", "Çok sert"))[KeyboardPrefs.autoLevel.coerceIn(0, 3)], color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            PSlider(KeyboardPrefs.autoLevel / 3f, { KeyboardPrefs.autoLevel = (it * 3).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Correct on its own from", "Kendiliğinden düzelt, benzerlik")}: ${KeyboardPrefs.autoRatio}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             PSlider((KeyboardPrefs.autoRatio - 70) / 30f, { KeyboardPrefs.autoRatio = 70 + (it * 30).roundToInt() }, 0f..1f, onDone = { save() })
             Switch(tr("Comma inside a word is a slip", "Kelime içindeki virgül hatadır"), tr("A comma typed straight before a letter is taken out and the word goes on", "Harften hemen önce yazılan virgül silinir, kelime devam eder"), KeyboardPrefs.commaSlip) { KeyboardPrefs.commaSlip = it; save() }

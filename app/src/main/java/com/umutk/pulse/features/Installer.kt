@@ -233,10 +233,29 @@ object Installer {
         File(c.cacheDir, "installer").deleteRecursively()
         val ok = ArrayList<Picked>()
         val bad = ArrayList<String>()
-        for (u in uris) {
+        for (u in joinParts(c, uris)) {
             try { ok += splitApps(c, inspect(c, u), u) } catch (e: Exception) { bad += "${u.lastPathSegment.orEmpty().substringAfterLast('/')}: ${e.message.orEmpty()}" }
         }
         return ok to bad.joinToString("; ")
+    }
+
+    private fun displayName(c: Context, u: Uri): String =
+        if (u.scheme == "file") File(u.path.orEmpty()).name
+        else runCatching { c.contentResolver.query(u, null, null, null, null)?.use { q -> if (q.moveToFirst()) q.getString(q.getColumnIndexOrThrow(android.provider.OpenableColumns.DISPLAY_NAME)) else null } }.getOrNull() ?: u.lastPathSegment.orEmpty().substringAfterLast('/')
+
+    /** Picked parts of one split archive ("x.zip.001", "x.zip.002", …) are put back together into one file first; other picks pass on as they are. */
+    private fun joinParts(c: Context, uris: List<Uri>): List<Uri> {
+        val named = uris.map { it to displayName(c, it) }
+        val part = Regex("^(.*)\\.(\\d{3})$")
+        val groups = named.filter { part.matches(it.second) }.groupBy { part.matchEntire(it.second)!!.groupValues[1] }
+        if (groups.isEmpty()) return uris
+        val out = named.filter { !part.matches(it.second) }.map { it.first }.toMutableList()
+        for ((stem, list) in groups) {
+            val joined = File(c.cacheDir, "installer/joined/${System.nanoTime()}/$stem").apply { parentFile?.mkdirs() }
+            joined.outputStream().use { o -> list.sortedBy { it.second }.forEach { (u, _) -> c.contentResolver.openInputStream(u)?.use { it.copyTo(o) } } }
+            out += Uri.fromFile(joined)
+        }
+        return out
     }
 
     /** Copies the picked file to the cache and reads its package info. The type comes from the entries inside. */
@@ -244,7 +263,8 @@ object Installer {
         val dir = File(c.cacheDir, "installer/${System.nanoTime()}").apply { mkdirs() }.canonicalFile
         val raw = File(dir, "pick.bin")
         c.contentResolver.openInputStream(uri)?.use { i -> raw.outputStream().use { i.copyCapped(it) } } ?: throw IOException("Cannot open the file")
-        val names = try { entryNames(raw) } catch (e: IOException) { throw IOException("Not an APK or zip file") }
+        // a bundle zipped inside one folder (APKMirror style) is read like one at the top
+        val names = try { entryNames(raw).let { l -> if (l.any { it.contains('/') }) l.map { it.substringAfterLast('/') } + l else l } } catch (e: IOException) { throw IOException("Not an APK or zip file") }
         val type = when {
             "AndroidManifest.xml" in names -> "APK"
             "manifest.json" in names -> "XAPK"
