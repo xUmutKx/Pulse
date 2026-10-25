@@ -662,6 +662,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }, big = true) { ExIcon("copy", T.text, 24.dp) }
                 if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }, big = true) { ExIcon("paste", Look.accent, 24.dp) }
                 picked.singleOrNull()?.takeIf { !it.isDirectory }?.let { f -> DenseSelSquare(T.text, { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }) { ExIcon("share", T.text, 24.dp) } }
+                // several files: one share of all of them (folders in the pick are left out)
+                if (picked.size > 1 && picked.any { it.isFile }) DenseSelSquare(T.text, { if (!exShareMany(ctx, picked)) note = tr("Could not share", "Paylaşılamadı") else if (picked.any { it.isDirectory }) note = tr("Folders were left out", "Klasörler paylaşıma alınmadı") }) { ExIcon("share", T.text, 24.dp) }
                 DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
                 Box {
                     DenseSelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 24.dp) }
@@ -1619,6 +1621,18 @@ private fun exHandOver(ctx: Context, f: File, share: Boolean): Boolean = runCatc
     // Open with is the system's own "Just once / Always" picker (no chooser wrapper); Share keeps the chooser
     if (share) ctx.startActivity(Intent.createChooser(i, f.name).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     else ctx.startActivity(i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+}.isSuccess
+
+/** Shares several files at once (folders are left out: they have no single file to send). False when none could be handed over. */
+private fun exShareMany(ctx: Context, files: List<File>): Boolean = runCatching {
+    val list = files.filter { it.isFile }
+    val uris = ArrayList<android.net.Uri>(list.map { FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", it) })
+    val mimes = list.map { fileMime(it) }.distinct()
+    val mime = if (mimes.size == 1) mimes[0] else if (mimes.all { it.substringBefore('/') == mimes[0].substringBefore('/') }) mimes[0].substringBefore('/') + "/*" else "*/*"
+    val i = Intent(Intent.ACTION_SEND_MULTIPLE).setType(mime).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+    i.clipData = ClipData.newRawUri("", uris[0]).also { cd -> uris.drop(1).forEach { cd.addItem(ClipData.Item(it)) } }
+    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    ctx.startActivity(Intent.createChooser(i, "${list.size}").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
 }.isSuccess
 
 /** Pictures (HEIC included) go straight to Samsung Gallery when it is there, else to whatever the phone opens them with; false when nothing took it. */
