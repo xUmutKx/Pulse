@@ -814,7 +814,7 @@ object FilesPrefs {
     val libFolders = listOf("DCIM", "Download", "Movies", "Music", "Pictures", "Documents", "DCIM/Screenshots")
     var libHidden by mutableStateOf(emptySet<String>())
     private var loaded = false
-    private fun sp(c: android.content.Context) = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
+    private fun sp(c: android.content.Context) = com.umutk.pulse.filesPrefs(c)
     fun load(c: android.content.Context) {
         if (loaded) return
         loaded = true
@@ -862,7 +862,7 @@ fun FilesSettings() {
     @Composable
     fun Chips(title: String, k: String, opts: List<String>, sel: Int, f: (Int) -> Unit) =
         FilesPickRow(k, title, opts, sel, null) { f(it); fp.save(ctx) }
-    fun sp(c: android.content.Context) = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
+    fun sp(c: android.content.Context) = com.umutk.pulse.filesPrefs(c)
     val top = android.os.Environment.getExternalStorageDirectory().path
     val folders = listOf("" to tr("Storage", "Depolama")) + listOf("DCIM", "Download", "Documents", "Pictures", "Music", "Movies").filter { java.io.File(top, it).isDirectory }.map { "$top/$it" to it }
     com.umutk.pulse.PCard {
@@ -1003,8 +1003,8 @@ private fun FilesPickRow(k: String, title: String, opts: List<String>, sel: Int,
 
 /** The files an archive cut / copy writes into the app's data (arcclip) and cache (arcsel) so they can be pasted later: swept after a time the user sets (an hour at first). */
 object TempCopies {
-    fun minutes(c: android.content.Context): Int = c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getInt("tmp_copy_min", 60)
-    fun setMinutes(c: android.content.Context, m: Int) { c.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putInt("tmp_copy_min", m).apply(); sweep(c) }
+    fun minutes(c: android.content.Context): Int = com.umutk.pulse.filesPrefs(c).getInt("tmp_copy_min", 60)
+    fun setMinutes(c: android.content.Context, m: Int) { com.umutk.pulse.filesPrefs(c).edit().putInt("tmp_copy_min", m).apply(); sweep(c) }
     /** Deletes the temporary copy folders older than the chosen time. Cheap: call it whenever the app or Files opens. */
     fun sweep(c: android.content.Context) {
         val m = minutes(c); if (m <= 0) return

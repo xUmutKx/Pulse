@@ -371,7 +371,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     // sort: one order for every folder, unless a folder has its own (folderSort); both are kept on the phone
     var sortAll by remember { mutableStateOf(exReadInt(ctx, EX_SORT_ALL, 0)) }  // not saveable: the settings screen can change it
     // type filter: remembered for all folders or just this one ("all" = none; "ext:a,b" = custom extensions)
-    var filtAll by remember { mutableStateOf(ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getString("ex_filt_all", "all") ?: "all") }
+    var filtAll by remember { mutableStateOf(com.umutk.pulse.filesPrefs(ctx).getString("ex_filt_all", "all") ?: "all") }
     var filtDir by remember { mutableStateOf(exRead(ctx, "ex_filt_dir").associate { it.substringBeforeLast('|') to it.substringAfterLast('|') }) }
     var folderSort by remember { mutableStateOf(exReadSortMap(ctx)) }
     var drawer by remember { mutableStateOf(false) }
@@ -548,7 +548,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }, { type ->
             sortMenu = false
             if (here in filtDir) { filtDir = filtDir + (here to type); exWrite(ctx, "ex_filt_dir", filtDir.map { "${it.key}|${it.value}" }) }
-            else { filtAll = type; ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString("ex_filt_all", type).apply() }
+            else { filtAll = type; com.umutk.pulse.filesPrefs(ctx).edit().putString("ex_filt_all", type).apply() }
         }, { on ->
             // one switch for sort and filter in this folder; the menu stays open
             folderSort = if (on) folderSort + (here to sort) else folderSort - here
@@ -1487,10 +1487,10 @@ private val EX_FLUENT = mapOf(
 
 /** Recent files and bookmarks: one path per line under [key]. */
 private fun exRead(ctx: Context, key: String): List<String> =
-    ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getString(key, "").orEmpty().lines().filter { it.isNotBlank() }
+    com.umutk.pulse.filesPrefs(ctx).getString(key, "").orEmpty().lines().filter { it.isNotBlank() }
 
 private fun exWrite(ctx: Context, key: String, list: List<String>) {
-    ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString(key, list.joinToString("\n")).apply()
+    com.umutk.pulse.filesPrefs(ctx).edit().putString(key, list.joinToString("\n")).apply()
 }
 
 /** Puts [f] at the top of the recent list (50 at most) and returns the new list. */
@@ -1499,10 +1499,10 @@ private fun exAddRecent(ctx: Context, f: File): List<String> {
     return list
 }
 
-private fun exReadInt(ctx: Context, key: String, def: Int): Int = ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getInt(key, def)
+private fun exReadInt(ctx: Context, key: String, def: Int): Int = com.umutk.pulse.filesPrefs(ctx).getInt(key, def)
 
 private fun exWriteInt(ctx: Context, key: String, v: Int) {
-    ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putInt(key, v).apply()
+    com.umutk.pulse.filesPrefs(ctx).edit().putInt(key, v).apply()
 }
 
 /** Folder path -> sort mode, one "path|mode" line each (the path may hold '|', the mode is after the last one). */

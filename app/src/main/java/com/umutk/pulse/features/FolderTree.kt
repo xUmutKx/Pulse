@@ -168,7 +168,7 @@ private fun FolderTreeContent(root: File, onBack: () -> Unit) {
         }
     }
     // list or square tiles, remembered for the next visit
-    val prefs = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("p", Context.MODE_PRIVATE)
+    val prefs = com.umutk.pulse.filesPrefs(androidx.compose.ui.platform.LocalContext.current)
     // 0 list, 1 square tiles, 2 the disk map (blocks as big as the folders); the button cycles them
     var mode by remember { mutableStateOf(prefs.getInt("tree_mode", if (prefs.getBoolean("tree_grid", false)) 1 else 0).coerceIn(0, 2)) }
     val grid = mode == 1

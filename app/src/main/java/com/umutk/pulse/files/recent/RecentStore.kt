@@ -16,7 +16,7 @@ object RecentStore {
 
     class Arrival(val path: String, val name: String, val addedMs: Long)
 
-    private fun prefs(c: Context) = c.getSharedPreferences("p", Context.MODE_PRIVATE)
+    private fun prefs(c: Context) = com.umutk.pulse.filesPrefs(c)
 
     fun list(c: Context): List<String> = prefs(c).getString(KEY, "").orEmpty().lines().filter { it.isNotBlank() }
 
