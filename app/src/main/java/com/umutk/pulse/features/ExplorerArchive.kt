@@ -534,20 +534,93 @@ private fun ArcRow(icon: String, name: String, sub: String, onClick: () -> Unit)
     }
 }
 
-/** Tap on an APK / bundle: Material info dialog (follows the Files look), Open archive, Install, Cancel; the installer gets the Files look in the standalone app. */
+/** Tap on an APK / bundle: the whole file name, what is inside (app, package, versions, SDK, signature, parts), then Install, Browse and, for bundles, Save as APKs. */
 @Composable
 internal fun ApkInfo(f: File, onClose: () -> Unit, onView: () -> Unit) {
     val ctx = LocalContext.current
-    // one line: Cancel on the left, Browse and Install side by side on the right
+    val bundle = !f.extension.equals("apk", true)
+    val meta by androidx.compose.runtime.produceState<ApkMeta?>(null, f) { value = withContext(Dispatchers.IO) { runCatching { apkMeta(ctx, f) }.getOrNull() } }
+    val parts by androidx.compose.runtime.produceState<List<AEntry>>(emptyList(), f) {
+        value = if (bundle) withContext(Dispatchers.IO) { runCatching { archiveEntries(f).filter { !it.dir && it.path.endsWith(".apk", true) } }.getOrDefault(emptyList()) } else emptyList()
+    }
+    val scope = rememberCoroutineScope()
+    val m = meta
+    val abis = parts.map { it.path.substringAfterLast('/') }.mapNotNull { Regex("(arm64_v8a|armeabi_v7a|x86_64|x86|armeabi)", RegexOption.IGNORE_CASE).find(it)?.value?.replace('_', '-') }.distinct()
     WinAlert(onDismissRequest = onClose,
-        title = { Text(f.name, maxLines = 1, overflow = TextOverflow.Ellipsis) },
-        text = { Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClose) { Text("Cancel") }
-            Spacer(Modifier.weight(1f))
-            TextButton(onView) { Text("Browse") }
-            TextButton({ onClose(); apkInstall(ctx, f) }) { Text("Install") }
+        title = { Row(verticalAlignment = Alignment.CenterVertically) {
+            m?.icon?.let { Image(it, null, Modifier.size(40.dp)); Spacer(Modifier.width(12.dp)) }
+            Text(m?.label?.takeIf { it.isNotBlank() } ?: f.name, Modifier.weight(1f))
         } },
-        confirmButton = {})
+        text = { Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            // the file name in full, wrapped, and selectable
+            androidx.compose.foundation.text.selection.SelectionContainer { Text(f.name, color = T.text, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium) }
+            val rows = buildList {
+                add(tr("Type", "Tür") to if (bundle) f.extension.uppercase() + tr(" bundle", " paketi") else "APK")
+                add(tr("File size", "Dosya boyutu") to Guard.gb(f.length()))
+                add(tr("Folder", "Klasör") to (f.parentFile?.path ?: ""))
+                if (m != null) {
+                    if (m.pkg.isNotBlank()) add(tr("Package", "Paket") to m.pkg)
+                    add(tr("Version", "Sürüm") to m.ver)
+                    add(tr("Installed", "Kurulu") to (m.installed ?: tr("not installed", "kurulu değil")))
+                    if (m.min > 0 || m.target > 0) add("SDK" to "min ${m.min}, target ${m.target}")
+                    if (m.sig.isNotBlank()) add(tr("Signature", "İmza") to m.sig)
+                    if (m.perms.isNotEmpty()) add(tr("Permissions", "İzinler") to m.perms.size.toString())
+                }
+                if (bundle) {
+                    add(tr("Parts", "Parça") to parts.size.toString())
+                    if (abis.isNotEmpty()) add("ABI" to abis.joinToString(", "))
+                }
+                add(tr("Modified", "Değiştirilme") to DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(f.lastModified())))
+            }
+            InfoRows(rows)
+            if (bundle && parts.isNotEmpty()) {
+                Text(tr("Parts", "Parçalar"), color = T.sub, fontSize = 12.sp)
+                parts.sortedByDescending { it.size }.forEach { e ->
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(e.path.substringAfterLast('/'), Modifier.weight(1f), color = T.text, fontSize = 12.sp)
+                        Text(Guard.gb(e.size), color = T.sub, fontSize = 12.sp)
+                    }
+                }
+            }
+        } },
+        confirmButton = { Row {
+            TextButton(onView) { Text(tr("Browse", "Gözat")) }
+            if (bundle) TextButton({
+                scope.launch {
+                    val note = withContext(Dispatchers.IO) { runCatching { apkExport(f) }.getOrElse { tr("Could not save", "Kaydedilemedi") } }
+                    android.widget.Toast.makeText(ctx, note, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }) { Text(tr("Save APKs", "APK'ları kaydet")) }
+            TextButton({ onClose(); apkInstall(ctx, f) }) { Text(tr("Install", "Yükle")) }
+        } },
+        dismissButton = { TextButton(onClose) { Text(tr("Cancel", "İptal")) } })
+}
+
+/** The .apk files of a bundle (not OBB data) go into their own folder under Download, ready for any installer. */
+private fun apkExport(f: File): String {
+    val out = uniqueDir(File(android.os.Environment.getExternalStorageDirectory(), "Download"), baseName(f))
+    out.mkdirs()
+    var n = 0
+    java.util.zip.ZipFile(f).use { z ->
+        val en = z.entries()
+        while (en.hasMoreElements()) {
+            val e = en.nextElement()
+            val name = e.name.substringAfterLast('/')
+            if (e.isDirectory || !name.endsWith(".apk", true)) continue
+            val dst = File(out, name).canonicalFile
+            if (dst.parentFile != out.canonicalFile) continue
+            z.getInputStream(e).use { i -> dst.outputStream().use { i.copyTo(it) } }
+            n++
+        }
+    }
+    if (n == 0) { out.delete(); return tr("No APK inside", "İçinde APK yok") }
+    return tr("Saved $n APKs to Download/${out.name}", "$n APK Download/${out.name} içine kaydedildi")
+}
+
+private fun uniqueDir(dir: File, name: String): File {
+    var d = File(dir, name); var n = 2
+    while (d.exists()) { d = File(dir, "$name ($n)"); n++ }
+    return d
 }
 
 /** Starts the existing installer window; from the standalone Files app it is told to use the Files look. */
@@ -931,4 +1004,19 @@ object TempCopies {
             root.listFiles()?.filter { it.lastModified() < limit }?.forEach { runCatching { it.deleteRecursively() } }
         }
     }
+}
+
+/** "x.zip.001": the first part of a split archive; the parts "x.zip.002", … sit beside it. */
+internal fun isFirstPart(f: File): Boolean = f.isFile && f.name.endsWith(".001")
+
+/** Puts the parts of a split archive together into "x.zip" next to the first part. Returns a note. */
+internal fun joinParts(f: File): String {
+    val stem = f.name.dropLast(4)
+    val dir = f.parentFile ?: return tr("Could not join", "Birleştirilemedi")
+    val parts = generateSequence(1) { it + 1 }.map { File(dir, stem + ".%03d".format(it)) }.takeWhile { it.isFile }.toList()
+    val out = uniqueFile(dir, stem)
+    return runCatching {
+        out.outputStream().buffered().use { o -> parts.forEach { p -> p.inputStream().use { it.copyTo(o) } } }
+        tr("Joined ${parts.size} parts into ${out.name}", "${parts.size} parça ${out.name} olarak birleştirildi")
+    }.getOrElse { out.delete(); tr("Could not join", "Birleştirilemedi") }
 }

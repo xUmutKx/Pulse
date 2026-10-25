@@ -733,7 +733,48 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (KeyboardPrefs.sound) { if (KeyboardPrefs.soundKind == 0) (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, -1f) else KeyboardEffects.play(KeyboardPrefs.soundKind) }
     }
 
+    override fun mixOp(op: String) {
+        when (op) {
+            "open" -> { st.mix = true; st.mixA = ""; st.mixB = "" }
+            "close" -> { st.mix = false; st.mixA = ""; st.mixB = "" }
+            "style" -> st.mixStyle = (st.mixStyle + 1) % EmojiMix.styles
+            "clear" -> { st.mixA = ""; st.mixB = "" }
+            "send" -> sendMix()
+        }
+    }
+
+    /** The two picks made into one picture; the field takes it as content, otherwise it goes to the clipboard. */
+    private fun sendMix() {
+        val a = st.mixA; val b = st.mixB
+        if (a.isEmpty() || b.isEmpty()) return
+        val c = currentInputConnection ?: return
+        val f = java.io.File(cacheDir, "mix/mix_${System.currentTimeMillis()}.png")
+        scope.launch(Dispatchers.IO) {
+            runCatching { f.parentFile?.mkdirs(); f.outputStream().use { EmojiMix.render(a, b, st.mixStyle).compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) } }
+            withContext(Dispatchers.Main) {
+                val info = currentInputEditorInfo
+                val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
+                val ok = f.exists() && info != null && types.any { it.startsWith("image/") || it == "*/*" }
+                if (ok) runCatching {
+                    val u = androidx.core.content.FileProvider.getUriForFile(this@PulseKeyboardService, "$packageName.files", f)
+                    val content = androidx.core.view.inputmethod.InputContentInfoCompat(u, android.content.ClipDescription("mix", arrayOf("image/png")), null)
+                    androidx.core.view.inputmethod.InputConnectionCompat.commitContent(c, info!!, content, androidx.core.view.inputmethod.InputConnectionCompat.INPUT_CONTENT_GRANT_READ_URI_PERMISSION, null)
+                    st.mixA = ""; st.mixB = ""
+                } else {
+                    // this field takes no pictures: the two emojis go in as text
+                    finishWord("", false); c.commitText(a + b, 1)
+                    android.widget.Toast.makeText(this@PulseKeyboardService, com.umutk.pulse.tr("This field takes no pictures; the emojis were typed", "Bu alan resim kabul etmiyor; emojiler yazıldı"), android.widget.Toast.LENGTH_SHORT).show()
+                    st.mixA = ""; st.mixB = ""
+                }
+            }
+        }
+    }
+
     override fun emoji(e: String) {
+        if (st.mix && st.panel == "emoji" && e.codePointCount(0, e.length) <= 8 && e.any { Character.isSurrogate(it) || it.code > 0x2000 }) {
+            if (st.mixA.isEmpty()) st.mixA = e else st.mixB = e
+            return
+        }
         val c = currentInputConnection ?: return
         finishWord("", false)
         c.commitText(e, 1)
@@ -979,7 +1020,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // and a candidate that is a common word (base score 7 up, the word's own frequency before the cost is taken off); that took the wrong corrections from 27 to 11 of 120 and the changed words of one's own from 105 to 41 of 160
         // a stretched word on purpose ("tamamdırrr", "buuu"): three of one letter in a row is left as it is
         val stretched = Regex("(\\p{L})\\1\\1").containsMatchIn(lower)
-        val fix0 = if (stretched) null else corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf { lower.length >= 3 && kotlin.math.abs(it.word.length - lower.length) <= 1 && it.cost <= minOf(limit, .8f) && it.score + 4f * it.cost >= 7f && (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f) }
+        // the strength setting (modest to very aggressive) sets how far a correction may reach and how common the word must be; a word that follows the one before it
+        // in the user's own or the built-in pairs may reach a little further, as the context backs it
+        val capL = floatArrayOf(.6f, .8f, 1.0f, 1.2f)[KeyboardPrefs.autoLevel.coerceIn(0, 3)]
+        val minL = floatArrayOf(8f, 7f, 6f, 5f)[KeyboardPrefs.autoLevel.coerceIn(0, 3)]
+        // a name or brand typed with capitals inside ("iPhone", "McDonald") or a short all-capital word (an acronym) is left as it is
+        val keepCase = typed.length >= 2 && (typed.drop(1).any { it.isUpperCase() } && !typed.all { it.isUpperCase() } || (typed.all { it.isUpperCase() } && typed.length <= 5))
+        val fix0 = if (stretched || keepCase) null else corr.firstOrNull { it.word != lower && !KeyboardDictionary.isBanned(it.word) }?.takeIf {
+            val ctx = KeyboardDictionary.pairBoost(prev, it.word, prev2) > 0f
+            lower.length >= 3 && kotlin.math.abs(it.word.length - lower.length) <= 1 && it.cost <= minOf(limit, capL + (if (ctx) .2f else 0f)) && it.score + 4f * it.cost >= minL - (if (ctx) 1f else 0f) &&
+                (!valid || it.score - (corr.firstOrNull { c -> c.word == lower }?.score ?: 0f) > 5f)
+        }
         // two words run together ("birdahaki"): the space goes between them
         // two neighbouring letters swapped into a common word ("wrok" for "work"): always a slip, whatever was learned or undone before
         val swapFix = if (stretched || lower.length !in 3..20 || codes.any { KeyboardDictionary.baseScore(it, lower) > 0f } || (tr && KeyboardDictionary.trKnown(lower))) null else (0 until lower.length - 1).mapNotNull { i ->
