@@ -1231,3 +1231,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.62 Files: archive entry Info, extension toggle button, HTML shown in the app (also extension-less pages), Open as always asked for unknown types - derlenmedi
 - 1.0.63 Emoji page: the suggestion bar holds back + categories; emoji suggestions from every emoji keyword, also for the word just written - derlenmedi
 - 1.0.64 Presets shrink to the keyboard width so long ones show whole - derlenmedi
+- 1.0.65 compile fixes (grid itemsIndexed, keyboard icons)
