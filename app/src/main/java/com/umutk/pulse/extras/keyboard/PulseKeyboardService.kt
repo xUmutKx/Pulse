@@ -287,8 +287,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             updateSuggestions()
         } else {
             // a word is only mended when the space key ends it: a period, comma or bracket leaves what was typed as it is
-            c.beginBatchEdit()
-            try { finishWord(s, false); c.commitText(s, 1) } finally { c.endBatchEdit() }
+            if (!finishWord(s, false, s)) c.commitText(s, 1)
             punctTyped = ch in ",;!?:"
             lastWasSpace = false
             if (ch in ".!?") lastCorrection = null
@@ -297,13 +296,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** Ends the word under way: commits it, corrected when the correction applies. [sep] is what the user typed after it. */
-    private fun finishWord(sep: String, correct: Boolean) {
-        val c = currentInputConnection ?: return
-        if (word.isEmpty()) return
+    private fun finishWord(sep: String, correct: Boolean, tail: String = ""): Boolean {
+        val c = currentInputConnection ?: return false
+        if (word.isEmpty()) return false
         val typed = word.toString()
         // the field no longer holds the word before the cursor (moved by the app or the user): nothing is replaced, so nothing is lost
         if (c.getTextBeforeCursor(typed.length, 0)?.toString() != typed) {
-            c.finishComposingText(); word.clear(); target = null; peak = null; lastCorrection = null; return
+            c.finishComposingText(); word.clear(); target = null; peak = null; lastCorrection = null; return false
         }
         var out = typed
         val t = target
@@ -319,7 +318,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
         }
-        c.commitText(out, 1)
+        // the word and what follows it (the space or the sign) go in with one commit: the field never shows the word gone with the space alone
+        c.commitText(out + tail, 1)
         peak?.let { pk ->
             val lc = lang.locale
             val a = pk.lowercase(lc); val b = typed.lowercase(lc)
@@ -336,6 +336,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
         prevWord2 = prevWord; prevWord = out
         word.clear(); target = null
+        return true
     }
 
     private fun afterText() { updateCaps(); updateSuggestions() }
@@ -358,8 +359,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             c.commitText(slotWords[1] + " ", 1); prevWord = slotWords[1]; lastWasSpace = true; spaceTap = now; afterText(); return
         }
         // the correction and the space go in as one edit, so the field never shows the word gone for a moment
-        c.beginBatchEdit()
-        try { finishWord(" ", true); c.commitText(" ", 1) } finally { c.endBatchEdit() }
+        if (!finishWord(" ", true, " ")) c.commitText(" ", 1)
         lastWasSpace = true; spaceTap = now; punctTyped = false
         afterText()
     }
@@ -369,8 +369,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
         if (st.trans) { transOp("apply"); return }
         captureEmail(c)
-        c.beginBatchEdit()
-        try { finishWord("\n", true) } finally { c.endBatchEdit() }
+        finishWord("\n", true)
         if (st.enter != "newline") {
             val info = currentInputEditorInfo
             c.performEditorAction(info?.imeOptions?.and(EditorInfo.IME_MASK_ACTION) ?: EditorInfo.IME_ACTION_DONE)
