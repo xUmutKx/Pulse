@@ -1219,3 +1219,4 @@ Screen recorder feature list (55 candidates)
 - 1.0.50 Element symbols removed from the long press (two letters can be typed) - derlenmedi, bekle
 - 1.0.51 Emoji categories on top, presets in compact flow (2-3 per line) with 30 more, emoji removed from the symbol tab - derlenmedi, bekle
 - 1.0.52 Emoji pager no longer stops half way; an empty text box always starts with a capital - derlenmedi, bekle
+- 1.0.53 Files home opens with the last numbers at once (cached), refreshes behind - derlenmedi, bekle
