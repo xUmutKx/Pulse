@@ -172,7 +172,7 @@ class PaletteState(val ctx: Context, private val scope: CoroutineScope) {
     fun clearCache() { scope.launch(Dispatchers.IO) { PaletteStudio.engine(ctx).cache.clearAll() } }
 
     // ---- wallpaper and widget picture ---------------------------------------------------------------------------------------------------------
-    fun setWallpaper(bmp: Bitmap?) { wallpaper = bmp }
+    fun useWallpaper(bmp: Bitmap?) { wallpaper = bmp }
 
     fun generateWallpaper(w: Int, h: Int) {
         val s = spec
