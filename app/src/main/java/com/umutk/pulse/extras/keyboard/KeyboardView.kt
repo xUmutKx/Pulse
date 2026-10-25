@@ -486,8 +486,9 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     Row(Modifier.fillMaxWidth()) {
         if (low && st.page == 0) Key(th, st, act, KbKey("", KeyKind.SHIFT, 1f), bh)
         Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, if (low) 1.25f else 1.5f), bh)
-        if (KeyboardPrefs.emojiKey && st.page == 0) Key(th, st, act, KbKey("", KeyKind.EMOJI, 1f), bh)
-        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.emojiKey) KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), bh)
+        // the key beside ?123: the three-dot menu, the emoji panel, or nothing (the emoji stay under a long press on the comma)
+        if (KeyboardPrefs.bottomKey != "none" && st.page == 0) Key(th, st, act, KbKey("", if (KeyboardPrefs.bottomKey == "emoji") KeyKind.EMOJI else KeyKind.MENU, 1f), bh)
+        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.bottomKey == "emoji") KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), bh)
         Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, 4f), bh)
         Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), bh)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), bh)
@@ -701,6 +702,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                     KeyKind.MODE -> a.page(if (st.page == 0) 1 else 0)
                                     KeyKind.SYMBOLS2 -> a.page(if (st.page == 1) 2 else 1)
                                     KeyKind.EMOJI -> a.emojiPanel()
+                                    KeyKind.MENU -> a.menu("menu")
                                     KeyKind.LANG -> a.lang()
                                     else -> {}
                                 }
@@ -750,6 +752,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 KeyKind.DELETE -> Icon(kbIcon(th, "Backspace"), null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.ENTER -> Icon(when (st.enter) { "send" -> kbIcon(th, "Send"); "search" -> kbIcon(th, "Search"); "go", "done" -> kbIcon(th, "Check"); "next" -> kbIcon(th, "ArrowForward"); else -> kbIcon(th, "KeyboardReturn") }, null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.EMOJI -> Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp))
+                KeyKind.MENU -> Icon(kbIcon(th, "MoreHoriz"), null, tint = fg, modifier = Modifier.size(24.dp))
                 KeyKind.LANG -> Icon(kbIcon(th, "Language"), null, tint = fg, modifier = Modifier.size(24.dp))
                 KeyKind.SPACE -> Text(k.label, color = th.sub, fontSize = 12.sp, maxLines = 1)
                 KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = 15.sp, maxLines = 1)
