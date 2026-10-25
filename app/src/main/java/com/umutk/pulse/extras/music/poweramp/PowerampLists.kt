@@ -261,7 +261,7 @@ fun LibraryScreen(
                         .toList().let { if (n.kind == 3) it.sortedByDescending { g -> g.first.toIntOrNull() ?: 0 } else it.sortedBy { g -> g.first.lowercase() } }
                 }
                 LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
-                    itemsIndexed(groups) { _, (name, list) -> CatRow(catIcons[n.kind], Color(0xFF6E8BE8), name, style, count = list.size, art = list.firstOrNull()) { node = Lib.Group(n.kind, name) } }
+                    itemsIndexed(groups) { _, (name, list) -> CatRow(catIcons[n.kind], Color(0xFF6E8BE8), name, style, count = list.size, art = list.firstOrNull(), artist = if (n.kind == 1) name else null) { node = Lib.Group(n.kind, name) } }
                 }
             }
             is Lib.Group -> SongList(tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }, current, style, onPlay, onPlayTracks)
@@ -414,12 +414,14 @@ private fun ListAction(icon: ImageVector, label: String, style: PowerampStyle, o
 }
 
 @Composable
-private fun CatRow(icon: ImageVector, color: Color, label: String, style: PowerampStyle, count: Int = -1, art: Track? = null, open: Boolean = false, onClick: () -> Unit) {
+private fun CatRow(icon: ImageVector, color: Color, label: String, style: PowerampStyle, count: Int = -1, art: Track? = null, open: Boolean = false, artist: String? = null, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        val cover = rememberTrackArt(art)
+        val ctxA = androidx.compose.ui.platform.LocalContext.current
+        val pic by androidx.compose.runtime.produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, artist) { value = artist?.let { n -> kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.umutk.pulse.extras.music.ArtistArt.load(ctxA, n) } } }
+        val cover = pic ?: rememberTrackArt(art)
         Box(Modifier.size(40.dp).clip(CircleShape).background(color.copy(alpha = .45f)), contentAlignment = Alignment.Center) {
             if (cover != null) Image(cover, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             else Icon(icon, null, tint = Color.White.copy(alpha = .92f), modifier = Modifier.size(22.dp))

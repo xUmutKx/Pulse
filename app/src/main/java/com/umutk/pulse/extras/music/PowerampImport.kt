@@ -14,7 +14,7 @@ import java.util.zip.ZipInputStream
  * The settings file of the backup is encrypted by Poweramp and is not read.
  */
 object PowerampImport {
-    class Result(val playlists: Int, val ratings: Int, val plays: Int, val covers: Int, val embedded: Int, val missing: Int, val missingNames: List<String> = emptyList())
+    class Result(val playlists: Int, val ratings: Int, val plays: Int, val covers: Int, val embedded: Int, val missing: Int, val missingNames: List<String> = emptyList(), val artists: Int = 0)
 
     /** Why the last direct import returned null. */
     @Volatile var lastError = ""
@@ -28,6 +28,7 @@ object PowerampImport {
         val work = File(ctx.cacheDir, "pa_import").apply { deleteRecursively(); mkdirs() }
         var db: File? = null
         val pics = ArrayList<File>()
+        var artists = 0
         ctx.contentResolver.openInputStream(uri)?.use { raw ->
             ZipInputStream(raw.buffered()).use { z ->
                 var e = z.nextEntry
@@ -36,6 +37,10 @@ object PowerampImport {
                     if (!e.isDirectory) {
                         val lower = n.lowercase()
                         if (lower.endsWith("lists-export")) File(work, "lists.db").also { f -> f.outputStream().use { z.copyTo(it) }; db = f }
+                        else if ((lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")) && lower.replace(' ', '_').contains("artist_art")) {
+                            // an artist picture: "Artist.jpg" inside an artist_art folder
+                            runCatching { ArtistArt.save(ctx, n.substringAfterLast('/').substringBeforeLast('.'), z.readBytes()); artists++ }
+                        }
                         else if (lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".png")) {
                             File(work, "art_${pics.size}_" + n.substringAfterLast('/')).also { f -> f.outputStream().use { z.copyTo(it) }; pics += f }
                         }
@@ -44,7 +49,8 @@ object PowerampImport {
                 }
             }
         }
-        return process(ctx, work, db, pics, library, embed, live = false)
+        val r = process(ctx, work, db, pics, library, embed, live = false)
+        return Result(r.playlists, r.ratings, r.plays, r.covers, r.embedded, r.missing, r.missingNames, artists)
     }
 
     /**
@@ -217,7 +223,14 @@ object PowerampImport {
                 }
             } finally { d.close() }
         }
-        // covers: "Artist - Title.jpg" against "artist - title", then against the title alone when only one song has it
+        val (covers, embedded) = matchCovers(ctx, pics, library, embed)
+        work.deleteRecursively()
+        return Result(playlists, ratings, plays, covers, embedded, missing, missingNames)
+    }
+
+
+    /** The album pictures: "Artist - Title.jpg" against "artist - title", then against the title alone when only one song has it. Returns (covers saved, written into files). */
+    private fun matchCovers(ctx: Context, pics: List<File>, library: List<Track>, embed: Boolean): Pair<Int, Int> {
         var covers = 0; var embedded = 0
         val byFull = HashMap<String, Track>(); val byTitle = HashMap<String, MutableList<Track>>()
         library.forEach { t ->
@@ -234,8 +247,38 @@ object PowerampImport {
             PowerampCovers.save(ctx, t.path, bytes); covers++
             if (embed && Id3Frames.putFrame(t.path, "APIC", Id3Frames.coverBody(bytes))) embedded++
         }
+        return covers to embedded
+    }
+
+    /**
+     * Pictures out of a folder the person picked (the folder that holds album_art and artist_art, or one of them): album pictures are named
+     * "Artist - Title.jpg" and become covers, artist pictures are named "Artist.jpg" and show in the artists list. Blocking: call off the main thread.
+     * Returns (covers, artist pictures, written into files).
+     */
+    fun pictures(ctx: Context, tree: Uri, library: List<Track>, embed: Boolean): Triple<Int, Int, Int> {
+        val work = File(ctx.cacheDir, "pa_pics").apply { deleteRecursively(); mkdirs() }
+        val albums = ArrayList<File>(); var artists = 0
+        val cr = ctx.contentResolver
+        fun walk(docId: String, inArtist: Boolean) {
+            val kids = android.provider.DocumentsContract.buildChildDocumentsUriUsingTree(tree, docId)
+            val rows = ArrayList<Triple<String, String, Boolean>>()
+            cr.query(kids, arrayOf(android.provider.DocumentsContract.Document.COLUMN_DOCUMENT_ID, android.provider.DocumentsContract.Document.COLUMN_DISPLAY_NAME, android.provider.DocumentsContract.Document.COLUMN_MIME_TYPE), null, null, null)?.use { c ->
+                while (c.moveToNext()) rows += Triple(c.getString(0), c.getString(1) ?: "", c.getString(2) == android.provider.DocumentsContract.Document.MIME_TYPE_DIR)
+            }
+            rows.forEach { (id, name, dir) ->
+                if (dir) walk(id, inArtist || name.lowercase().replace(" ", "_").contains("artist"))
+                else if (name.lowercase().let { it.endsWith(".jpg") || it.endsWith(".jpeg") || it.endsWith(".png") }) runCatching {
+                    val bytes = cr.openInputStream(android.provider.DocumentsContract.buildDocumentUriUsingTree(tree, id))?.use { it.readBytes() } ?: return@runCatching
+                    if (inArtist) { ArtistArt.save(ctx, name.substringBeforeLast('.'), bytes); artists++ }
+                    else albums += File(work, "art_${albums.size}_$name").also { it.writeBytes(bytes) }
+                }
+            }
+        }
+        val root = android.provider.DocumentsContract.getTreeDocumentId(tree)
+        walk(root, root.lowercase().replace(" ", "_").contains("artist"))
+        val (covers, embedded) = matchCovers(ctx, albums, library, embed)
         work.deleteRecursively()
-        return Result(playlists, ratings, plays, covers, embedded, missing, missingNames)
+        return Triple(covers, artists, embedded)
     }
 
     private fun paPath(p: String): String = when {

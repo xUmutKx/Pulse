@@ -127,11 +127,21 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first, then load the backup", "Kütüphane boş: önce müziği tara, sonra yedeği yükle"); return@launch }
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.run(c, uri, MusicLibrary.tracks.value, embedCovers) } }
             importNote = r.getOrNull()?.let { x ->
-                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers" + (if (embedCovers) " (${x.embedded} written into files)" else "") +
+                tr("${x.playlists} playlists, ${x.ratings} ratings, ${x.plays} play counts, ${x.covers} covers, ${x.artists} artist pictures" + (if (embedCovers) " (${x.embedded} written into files)" else "") +
                     (if (x.missing > 0) "; the rest was saved; ${x.missing} songs of the backup were not found on this phone, e.g. ${x.missingNames.joinToString(", ")}" else ""),
-                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") +
+                    "${x.playlists} çalma listesi, ${x.ratings} puan, ${x.plays} dinlenme sayısı, ${x.covers} kapak, ${x.artists} sanatçı resmi" + (if (embedCovers) " (${x.embedded} dosyaya yazıldı)" else "") +
                     (if (x.missing > 0) "; kalanlar kaydedildi; yedekteki ${x.missing} şarkı bu telefonda bulunamadı, örn. ${x.missingNames.joinToString(", ")}" else ""))
             } ?: tr("The backup could not be read", "Yedek okunamadı")
+        }
+    }
+    // the album_art / artist_art folders of Poweramp, picked as a folder: covers by "Artist - Title.jpg", artist pictures by "Artist.jpg"
+    val pickPics = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { tree ->
+        if (tree != null) scope.launch {
+            if (MusicLibrary.tracks.value.isEmpty()) { importNote = tr("The library is empty: scan the music first", "Kütüphane boş: önce müziği tara"); return@launch }
+            importNote = tr("Reading the pictures…", "Resimler okunuyor…")
+            val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.pictures(c, tree, MusicLibrary.tracks.value, embedCovers) } }
+            importNote = r.getOrNull()?.let { (cv, ar, em) -> tr("$cv covers, $ar artist pictures" + (if (embedCovers) " ($em written into files)" else ""), "$cv kapak, $ar sanatçı resmi" + (if (embedCovers) " ($em dosyaya yazıldı)" else "")) }
+                ?: tr("The pictures could not be read", "Resimler okunamadı")
         }
     }
     val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) doImport(uri) }
@@ -153,6 +163,10 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         Row(Modifier.fillMaxWidth().clickable { pickBackup.launch(arrayOf("*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("download", T.text, 22.dp)
             Text(tr("Load a .poweramp-backup", ".poweramp-backup yükle"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        }
+        Row(Modifier.fillMaxWidth().clickable { pickPics.launch(null) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("image", T.text, 22.dp)
+            Text(tr("Load album_art / artist_art pictures (folder)", "album_art / artist_art resimlerini yükle (klasör)"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
         }
         found.forEach { f ->
             Row(Modifier.fillMaxWidth().clickable { doImport(android.net.Uri.fromFile(f)) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
