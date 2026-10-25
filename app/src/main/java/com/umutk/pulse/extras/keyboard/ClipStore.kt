@@ -92,3 +92,12 @@ object ClipStore {
         read(c); val gone = items.filter { !it.pinned }; drop(c, gone); items = items - gone.toSet(); write(c); return load(c)
     }
 }
+
+/** Short names for a copied text: typing the name offers the whole text (an address, a number, a phrase). */
+object KeyShortcuts {
+    private fun sp(c: Context) = c.getSharedPreferences("pulse_kb_shortcuts", Context.MODE_PRIVATE)
+    fun find(c: Context, name: String): String? = sp(c).getString(name, null)?.takeIf { it.isNotEmpty() }
+    fun put(c: Context, name: String, text: String) { sp(c).edit().putString(name, text).apply() }
+    fun all(c: Context): Map<String, String> = sp(c).all.mapNotNull { (k, v) -> (v as? String)?.let { k to it } }.toMap()
+    fun remove(c: Context, name: String) { sp(c).edit().remove(name).apply() }
+}

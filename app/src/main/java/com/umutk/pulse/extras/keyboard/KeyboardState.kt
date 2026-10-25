@@ -24,6 +24,9 @@ class KbState {
     var slots by mutableStateOf(listOf("", "", ""))
     // the translation bar: it takes the top bar, translates what is typed from one language to the other
     var trans by mutableStateOf(false)
+    // naming a shortcut for a clipboard item: the keys type into the name
+    var clipName by mutableStateOf<String?>(null)
+    var clipNameFor by mutableStateOf(0L)
     var transFrom by mutableStateOf("tr")
     var transTo by mutableStateOf("en")
     var transOut by mutableStateOf("")
@@ -72,6 +75,10 @@ class KbPreview(val rect: Rect, val label: String, val alts: List<String> = empt
 interface KbActions {
     /** The translation bar: open, close, swap, from, to, apply. */
     fun transOp(op: String) {}
+    /** Clipboard shortcuts: start naming one for an item, save it, cancel. */
+    fun clipShortcut(id: Long) {}
+    fun clipShortcutSave() {}
+    fun clipShortcutCancel() {}
     fun type(s: String)
     fun backspace()
     fun enter()

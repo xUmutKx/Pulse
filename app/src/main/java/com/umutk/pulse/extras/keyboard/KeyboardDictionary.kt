@@ -256,6 +256,16 @@ object KeyboardDictionary {
         return distance(a, b, 1.05f, FloatArray(32), FloatArray(32), FloatArray(32)) <= 1.05f
     }
 
+    /** The score a word has in the word list itself (not the learned words), 0 when it is not in it. */
+    fun baseScore(code: String, w: String): Float { val lx = lexes[d(code)] ?: return 0f; return lx.index[w]?.let { lx.score[it] } ?: 0f }
+    fun rejectCount(typed: String, corrected: String) = rejects[typed + ">" + corrected] ?: 0
+    /** [b] is [a] with two neighbouring letters swapped. */
+    fun isSwap(a: String, b: String): Boolean {
+        if (a.length != b.length || a.length < 2 || a == b) return false
+        val i = a.indices.first { a[it] != b[it] }
+        return i + 1 < a.length && a[i] == b[i + 1] && a[i + 1] == b[i] && a.substring(i + 2) == b.substring(i + 2)
+    }
+
     fun isKnown(w: String): Boolean = isWord("tr", w) || isWord("en", w)
 
     fun isWord(code: String, w: String): Boolean {
