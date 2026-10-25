@@ -515,7 +515,6 @@ private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, muted: Set<Strin
                 Text("${th.unread}", color = onAccent(T.accent), fontSize = 11.sp)
             }
         }
-        Box(Modifier.size(36.dp).clickable { menu = true }, contentAlignment = Alignment.Center) { PIcon("more", T.sub, 20.dp) }
     }
     ThemedMenu(menu, { menu = false }) {
         ThemedMenuItem(if (th.address in pins) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), { menu = false; onPin() }, iconKey = "pin")
