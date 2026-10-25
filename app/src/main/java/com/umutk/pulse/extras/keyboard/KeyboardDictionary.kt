@@ -256,6 +256,12 @@ object KeyboardDictionary {
         return distance(a, b, 1.05f, FloatArray(32), FloatArray(32), FloatArray(32)) <= 1.05f
     }
 
+    /** Two slips apart: the word deleted whole and typed again may differ by more than one letter. */
+    fun similarLoose(a: String, b: String): Boolean {
+        if (a.length > 30 || b.length > 30 || a.length < 4) return false
+        return distance(a, b, 2.2f, FloatArray(32), FloatArray(32), FloatArray(32)) <= 2.1f
+    }
+
     /** The score a word has in the word list itself (not the learned words), 0 when it is not in it. */
     fun baseScore(code: String, w: String): Float { val lx = lexes[d(code)] ?: return 0f; return lx.index[w]?.let { lx.score[it] } ?: 0f }
     fun rejectCount(typed: String, corrected: String) = rejects[typed + ">" + corrected] ?: 0
