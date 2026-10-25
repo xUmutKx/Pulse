@@ -238,6 +238,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // the emoji search is open: the keys type into its box
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it + s; return } }
         st.clipName?.let { if (st.panel == "clip") { if (s.all { ch -> ch.isLetterOrDigit() }) st.clipName = it + s; return } }
+        if (st.trans) { st.transIn += s; scheduleTrans(); return }
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
@@ -330,6 +331,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         captureEmail(c)
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
         if (st.clipName != null && st.panel == "clip") return
+        if (st.trans) { if (st.transIn.isNotEmpty() && !st.transIn.endsWith(" ")) st.transIn += " "; return }
         val now = SystemClock.uptimeMillis()
         if (word.isEmpty() && lastWasSpace && KeyboardPrefs.quickPeriod && !st.plain && now - spaceTap < 600) {
             val before = c.getTextBeforeCursor(2, 0)
@@ -350,6 +352,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun enter() {
         val c = currentInputConnection ?: return
         if (st.clipName != null && st.panel == "clip") { clipShortcutSave(); return }
+        if (st.trans) { transOp("apply"); return }
         captureEmail(c)
         finishWord("\n", true)
         if (st.enter != "newline") {
@@ -364,6 +367,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it.dropLast(1); return } }
         st.clipName?.let { if (st.panel == "clip") { st.clipName = it.dropLast(1); return } }
+        if (st.trans && st.transIn.isNotEmpty()) { st.transIn = st.transIn.dropLast(1); scheduleTrans(); return }
         lastWasSpace = false
         lastGlide?.let { g ->
             val before = c.getTextBeforeCursor(g.length + 1, 0)?.toString()
@@ -628,9 +632,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val langs = KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }.distinct()
                 val from = KeyboardLayouts.dict(st.lang)
                 st.transFrom = from; st.transTo = langs.firstOrNull { it != from } ?: if (from == "tr") "en" else "tr"
-                st.transOut = ""; st.trans = true; st.toolbar = false; scheduleTrans()
+                st.transOut = ""; st.transIn = ""; st.trans = true; st.toolbar = false; scheduleTrans()
             }
-            "close" -> { st.trans = false; transJob?.cancel(); st.transOut = ""; st.transBusy = false }
+            "close" -> { st.trans = false; transJob?.cancel(); st.transOut = ""; st.transIn = ""; st.transBusy = false }
             "swap" -> { val f = st.transFrom; st.transFrom = st.transTo; st.transTo = f; st.transOut = ""; scheduleTrans() }
             "from" -> { st.transFrom = transLangs[(transLangs.indexOf(st.transFrom) + 1) % transLangs.size]; st.transOut = ""; scheduleTrans() }
             "to" -> { st.transTo = transLangs[(transLangs.indexOf(st.transTo) + 1) % transLangs.size]; st.transOut = ""; scheduleTrans() }
@@ -639,8 +643,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val ic = currentInputConnection ?: return
                 if (out.isBlank()) return
                 finishWord("", false)
-                val raw = ic.getTextBeforeCursor(400, 0)?.toString().orEmpty()
-                ic.deleteSurroundingText(raw.length, 0); ic.commitText(out, 1)
+                // what was typed in the bar: the translation goes into the text box at the cursor; nothing typed: the text of the box itself is replaced
+                if (st.transIn.isEmpty()) { val raw = ic.getTextBeforeCursor(400, 0)?.toString().orEmpty(); ic.deleteSurroundingText(raw.length, 0) }
+                ic.commitText(out, 1)
                 transOp("close"); afterText()
             }
         }
@@ -650,7 +655,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun scheduleTrans() {
         transJob?.cancel()
         if (!st.trans) return
-        val text = currentInputConnection?.getTextBeforeCursor(400, 0)?.toString().orEmpty().trim()
+        val text = st.transIn.trim().ifEmpty { currentInputConnection?.getTextBeforeCursor(400, 0)?.toString().orEmpty().trim() }
         if (text.isEmpty() || st.transFrom == st.transTo) { st.transOut = ""; st.transBusy = false; return }
         val from = st.transFrom; val to = st.transTo
         transJob = scope.launch {

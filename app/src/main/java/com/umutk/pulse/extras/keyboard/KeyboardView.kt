@@ -373,8 +373,15 @@ private fun TransBar(th: KbTheme, st: KbState, act: KbActions) {
             Box(Modifier.size(40.dp).clickable { act.transOp("swap") }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.SwapHoriz, null, tint = th.accent, modifier = Modifier.size(24.dp)) }
             Box(Modifier.weight(1f).fillMaxHeight().clickable { act.transOp("to") }.padding(end = 12.dp), contentAlignment = Alignment.CenterEnd) { Text(name(st.transTo), color = th.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1) }
         }
-        Box(Modifier.fillMaxWidth().height(34.dp).clickable(enabled = st.transOut.isNotBlank()) { act.transOp("apply") }.padding(horizontal = 14.dp), contentAlignment = Alignment.CenterStart) {
-            Text(if (st.transOut.isNotBlank()) st.transOut else if (st.transBusy) "…" else tr("The translation shows here", "Çeviri burada görünür"), color = if (st.transOut.isNotBlank()) th.accent else th.sub, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // one row, two halves: what is typed at the left (the keys write here), its translation at the right (a tap puts it in the text box)
+        Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.weight(1f).fillMaxHeight().padding(end = 6.dp), contentAlignment = Alignment.CenterStart) {
+                Text(if (st.transIn.isEmpty()) tr("Type here…", "Buraya yaz…") else st.transIn + "▏", color = if (st.transIn.isEmpty()) th.sub else th.text, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Box(Modifier.width(1.dp).fillMaxHeight(.6f).background(th.sub.copy(alpha = .4f)))
+            Box(Modifier.weight(1f).fillMaxHeight().clickable(enabled = st.transOut.isNotBlank()) { act.transOp("apply") }.padding(start = 8.dp), contentAlignment = Alignment.CenterStart) {
+                Text(if (st.transOut.isNotBlank()) st.transOut else if (st.transBusy) "…" else tr("Translation", "Çeviri"), color = if (st.transOut.isNotBlank()) th.accent else th.sub, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
         }
     }
 }

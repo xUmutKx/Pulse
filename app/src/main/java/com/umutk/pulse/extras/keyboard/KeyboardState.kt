@@ -32,6 +32,8 @@ class KbState {
     var transFrom by mutableStateOf("tr")
     var transTo by mutableStateOf("en")
     var transOut by mutableStateOf("")
+    // what is typed while the translation bar is open: the keys write here, not into the app's text box
+    var transIn by mutableStateOf("")
     var transBusy by mutableStateOf(false)
     /** The password manager's suggestions (autofill), drawn by the system inside the bar; empty when there are none. */
     var inline by mutableStateOf(listOf<android.view.View>())

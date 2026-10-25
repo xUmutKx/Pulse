@@ -1030,6 +1030,13 @@ private fun MotionCueTool() {
             PSwitch(wave, { com.umutk.pulse.MotionCueService.setWave(ctx, it) })
         }
     }
+    val focus = polled(500) { com.umutk.pulse.MotionCueService.focus }
+    PCard {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Keep the middle of the screen clear (dots near the edges)", "Ekranın ortası boş kalsın (noktalar kenarlarda)"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            PSwitch(focus, { com.umutk.pulse.MotionCueService.setFocus(ctx, it) })
+        }
+    }
     if (!canDraw) AccessNeededCard(tr("Motion cues", "Hareket noktaları"), tr("Needs the permission to display over other apps.", "Diğer uygulamaların üzerinde gösterme izni gerekir."))
 }
 
