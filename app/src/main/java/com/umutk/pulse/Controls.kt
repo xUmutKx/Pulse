@@ -190,7 +190,7 @@ fun PChip(on: Boolean, label: String, onClick: () -> Unit) {
         }
         return
     }
-    if (t.material) { FilterChip(on, onClick, { Text(label) }, shape = CircleShape, colors = FilterChipDefaults.filterChipColors(containerColor = Color.Transparent, selectedContainerColor = Color.Transparent, selectedLabelColor = t.text)); return }
+    if (t.material) { FilterChip(on, onClick, { Text(label) }, shape = androidx.compose.foundation.shape.RoundedCornerShape(8.dp), colors = FilterChipDefaults.filterChipColors(containerColor = Color.Transparent, labelColor = t.text, selectedContainerColor = Look.accent.copy(alpha = .22f), selectedLabelColor = t.text)); return }
     if (win95Authentic) { // a 95 push button that stays pushed in: sunken bevel, text moved 1 px, no bold
         Box(Modifier.heightIn(min = 40.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
             Box(Modifier.defaultMinSize(minHeight = 23.dp).background(Color(0xFFC0C0C0)).bevel(!on).padding(horizontal = 10.dp, vertical = 4.dp).offset(if (on) 1.dp else 0.dp, if (on) 1.dp else 0.dp), contentAlignment = Alignment.Center) {
