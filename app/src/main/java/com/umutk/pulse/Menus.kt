@@ -271,6 +271,7 @@ fun MenuOverflow(host: MenuHost, color: Color) {
         MoreIcon(color, 22.dp, Modifier.clickable { open = true }.padding(horizontal = 8.dp, vertical = 2.dp))
         // the menu takes the look: its panel (the Material container colour), corners and, on the Windows looks, the edge
         ThemedMenu(open, { open = false }) {
+          CompositionLocalProvider(LocalNoColourIcons provides true) {
             host.tops.forEachIndexed { i, m ->
                 if (i > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(w.line.copy(alpha = .5f)))
                 val fold = m.label == EXTRA_APPS
@@ -278,6 +279,7 @@ fun MenuOverflow(host: MenuHost, color: Color) {
                     modifier = Modifier.fillMaxWidth().then(if (fold) Modifier.clickable { extra = !extra } else Modifier).padding(start = 16.dp, top = 8.dp, bottom = 2.dp))
                 if (!fold || extra) m.items.forEach { Item(it) { open = false } }
             }
+          }
         }
     }
 }

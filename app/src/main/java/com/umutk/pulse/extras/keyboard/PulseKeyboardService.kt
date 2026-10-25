@@ -256,6 +256,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         lastEmail = null
         word.clear(); lastCorrection = null
         KeyboardDictionary.saveUser(this)
+        Thread { runCatching { com.umutk.pulse.AutoBackup.maybeRun(applicationContext) } }.start()
     }
 
     private var editAt = 0L

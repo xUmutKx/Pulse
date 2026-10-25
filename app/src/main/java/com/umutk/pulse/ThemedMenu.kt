@@ -92,6 +92,9 @@ fun ThemedMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Co
  * One row of a [ThemedMenu]. The icon comes from [leading], else from the look's icon pack by [iconKey] (95 / XP / 7 icon sets, Fluent, Material Symbols), else [icon].
  * [checked] shows a tick in front: null = no tick column at all.
  */
+/** True inside the top-right "⋮" menu: the coloured icon sets of Windows 95, XP and 7 are left out there, the text carries the row. */
+val LocalNoColourIcons = androidx.compose.runtime.compositionLocalOf { false }
+
 @Composable
 fun ThemedMenuItem(label: String, onClick: () -> Unit, iconKey: String? = null, icon: ImageVector? = null, checked: Boolean? = null, leading: (@Composable () -> Unit)? = null) {
     val s = LocalMenuStyle.current
@@ -100,6 +103,7 @@ fun ThemedMenuItem(label: String, onClick: () -> Unit, iconKey: String? = null, 
     val lit = down && s.hiBg != Color.Unspecified
     val ink = if (lit && s.hiInk != Color.Unspecified) s.hiInk else s.ink
     // a plain row, not Material's DropdownMenuItem, so the classic looks can be as tight as the real menus
+    val plain = LocalNoColourIcons.current && T.id in setOf("win95", "xp", "win7")
     Row(
         Modifier.fillMaxWidth().heightIn(min = minOf(s.rowMin, 40.dp)).background(if (lit) s.hiBg else Color.Transparent)
             .clickable(interactionSource = press, indication = if (s.hiBg == Color.Unspecified) LocalIndication.current else null, onClick = onClick)
@@ -107,11 +111,12 @@ fun ThemedMenuItem(label: String, onClick: () -> Unit, iconKey: String? = null, 
         verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
     ) {
         when {
+            plain -> {}
             leading != null -> leading()
             iconKey != null -> PIcon(iconKey, if (lit) ink else s.sub, s.iconSize)
             icon != null -> Icon(icon, null, Modifier.size(s.iconSize), tint = if (lit) ink else s.sub)
         }
-        if (leading != null || iconKey != null || icon != null) Spacer(Modifier.width(10.dp))
+        if (!plain && (leading != null || iconKey != null || icon != null)) Spacer(Modifier.width(10.dp))
         if (checked != null) androidx.compose.foundation.layout.Box(Modifier.width(18.dp)) { if (checked) Text("\u2713", color = if (lit) ink else Look.accent, fontSize = s.font) }
         Text(label, color = ink, fontSize = s.font, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
