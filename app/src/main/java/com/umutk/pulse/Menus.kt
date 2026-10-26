@@ -245,6 +245,8 @@ private val WIN11_MENU_KEY = mapOf(
     "Toolkit" to "tool_toolkit", "Office" to "tool_office", "Download manager" to "tool_download", "App lock" to "tool_applock", "Health" to "tool_health",
     "APK installer" to "tool_installer", "Device troubleshoot" to "tool_troubleshoot", "Authenticator" to "tool_authenticator", "Network usage" to "tool_netusage",
     "Screen cover" to "tool_cover", "Store" to "extraStore", "Settings" to "settings", "DNS" to "globe",
+    // these two fell through to a "tool_goodlock"/"tool_buds" key with no glyph behind it and drew nothing in Win11
+    "Good Lock" to "gridView", "Buds manager" to "sensors",
 )
 
 /** The menu bar of the classic looks: each word opens its menu. */

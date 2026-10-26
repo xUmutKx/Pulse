@@ -135,6 +135,12 @@ object KeyboardPrefs {
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
         // the emoji key lives beside ?123 again; the bar keeps the three-dot menu in its place
         if (p.getInt("menuVer", 0) < 4) { toolbarItems = toolbarItems.split(',').map { if (it == "emoji") "menu" else it }.distinct().joinToString(","); p.edit().putInt("menuVer", 4).putString("toolbarItems", toolbarItems).apply() }
+        // the key bar (Fn, Home/End, Page keys, ...) gets a quick toggle beside the mic, next to voice
+        if (p.getInt("menuVer", 0) < 5) {
+            val items = toolbarItems.split(',').toMutableList()
+            if ("arrows" !in items) { val i = items.indexOf("voice"); if (i >= 0) items.add(i + 1, "arrows") else items.add("arrows") }
+            toolbarItems = items.joinToString(","); p.edit().putInt("menuVer", 5).putString("toolbarItems", toolbarItems).apply()
+        }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 

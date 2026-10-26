@@ -171,6 +171,8 @@ object FilesLaunch {
     var full by mutableStateOf(false)
     /** An archive another app asked Pulse to open (Open with Pulse on a zip): the explorer browses it like a folder. */
     var archive by mutableStateOf<File?>(null)
+    /** Set the moment such an archive is on its way in (a content:// copy can take a second): the Home page switches to Browse at once instead of flashing first. */
+    var opening by mutableStateOf(false)
 }
 
 /** When set, tapping a file hands it to this callback instead of opening it (the Office "Open file" picker). */
@@ -197,9 +199,11 @@ private fun FilesPageInner() {
     val ctx = LocalContext.current
     val standalone = ctx is com.umutk.pulse.FilesActivity
     // the standalone Files app starts on its home page (storage, recent, types); inside Pulse the explorer opens at once
-    var tab by rememberSaveable { mutableStateOf(if (standalone && !FilesPrefs.startBrowse) "home" else "files") }
+    // an archive is already on its way in (set the moment the intent arrives, before the content:// copy that can take a second): skip the home flash
+    var tab by rememberSaveable { mutableStateOf(if (standalone && !FilesPrefs.startBrowse && !FilesLaunch.opening) "home" else "files") }
     val top = remember { Environment.getExternalStorageDirectory() }
-    val back: () -> Unit = { tab = if (standalone && !FilesPrefs.startBrowse) "home" else "files" }
+    // Folder sizes / File types / Clean cache are only ever opened from the Browse tab's own drawer, so back always returns there, never to Home
+    val back: () -> Unit = { tab = "files" }
     // Back from any other tab of the standalone app goes to the home page first
     androidx.activity.compose.BackHandler(enabled = standalone && tab != "home") { tab = "home" }
     // the full-screen window is the standalone app's; embedded in Pulse the page stays a page
@@ -209,7 +213,7 @@ private fun FilesPageInner() {
     // it goes the way a file tapped on the home page goes (that way opens the archive inside the browser): the browser tab, and the file handed over as the pending one
     LaunchedEffect(FilesLaunch.archive) {
         val a = FilesLaunch.archive
-        if (a != null && standalone) { FilesLaunch.archive = null; com.umutk.pulse.files.home.FilesHomeNav.pendingFile = a; ExNav.lastHere = a.parentFile?.path ?: ExNav.lastHere; tab = "files" }
+        if (a != null && standalone) { FilesLaunch.archive = null; FilesLaunch.opening = false; com.umutk.pulse.files.home.FilesHomeNav.pendingFile = a; ExNav.lastHere = a.parentFile?.path ?: ExNav.lastHere; tab = "files" }
     }
     var windowed by rememberSaveable { mutableStateOf(false) }
     var settings by rememberSaveable { mutableStateOf(false) }
@@ -237,6 +241,8 @@ private fun FilesPageInner() {
                             onOpenFile = { f -> com.umutk.pulse.files.recent.RecentStore.add(ctx, f.path); if (isArchiveFile(f) || f.extension.equals("apk", true)) { ExNav.lastHere = f.parentFile?.path ?: ExNav.lastHere; com.umutk.pulse.files.home.FilesHomeNav.pendingFile = f; tab = "files" } else com.umutk.pulse.files.home.openFileWithSystem(ctx, f) },
                             onSettings = { ot("files_settings") })
                     }
+                    "files" -> if (FilesLaunch.opening && FilesLaunch.archive == null) com.umutk.pulse.Center(tr("Opening…", "Açılıyor…"))
+                        else ExplorerTab(full || !standalone, { tab = it }) { full = !full }
                     "more" -> com.umutk.pulse.files.home.FilesMorePage(onTab = { tab = it })
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)

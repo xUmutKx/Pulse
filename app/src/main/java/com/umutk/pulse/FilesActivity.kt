@@ -40,12 +40,14 @@ class FilesActivity : MainActivity() {
         val name = if (u.scheme == "file") u.lastPathSegment.orEmpty() else runCatching {
             contentResolver.query(u, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { if (it.moveToFirst()) it.getString(0) else null }
         }.getOrNull() ?: u.lastPathSegment.orEmpty().substringAfterLast('/')
+        // switches the Home page to Browse at once; the copy that follows (content:// only) used to leave Home showing for about a second first
+        com.umutk.pulse.features.FilesLaunch.opening = true
         Thread {
             val f = if (u.scheme == "file") u.path?.let { java.io.File(it) } else runCatching {
                 val d = java.io.File(cacheDir, "opened").apply { mkdirs() }
                 java.io.File(d, name.ifEmpty { "archive.zip" }).also { out -> contentResolver.openInputStream(u)?.use { ins -> out.outputStream().use { ins.copyTo(it) } } }
             }.getOrNull()
-            if (f != null && f.isFile) runOnUiThread { com.umutk.pulse.features.FilesLaunch.archive = f }
+            runOnUiThread { if (f != null && f.isFile) com.umutk.pulse.features.FilesLaunch.archive = f else com.umutk.pulse.features.FilesLaunch.opening = false }
         }.start()
     }
 
