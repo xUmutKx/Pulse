@@ -877,6 +877,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             }
                         }
                     }
+                    // list or grid, icon shows the one a tap switches to (same convention as the standalone app's overflow row)
+                    ExAct(if (FilesPrefs.grid) "list" else "grid", T.sub) { FilesPrefs.grid = !FilesPrefs.grid; FilesPrefs.save(ctx) }
                     // show or hide the file extensions in the list
                     ExAct("ext", if (FilesPrefs.ext) Look.accent else T.sub) { FilesPrefs.ext = !FilesPrefs.ext; FilesPrefs.save(ctx) }
                     ExAct(if (dir.path in marks) "starOn" else "star", if (dir.path in marks) Look.accent else T.sub) { mark(dir.path) }
@@ -975,7 +977,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         val sub = when {
                             found != null -> exRel(f, top)
                             !f.isDirectory && showSizes -> exSize(f.length()) + "  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
-                            f.isDirectory && standalone && showSizes && !f.path.startsWith("/data") -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + (dirSizes[f.path]?.let { exSize(it) + "  ·  " } ?: "") + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            // the folder's own total size was already measured in the background either way (dirSizes above); it just was not shown
+                            // outside the standalone app — now the embedded Files tab gets it too
+                            f.isDirectory && showSizes && !f.path.startsWith("/data") -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + (dirSizes[f.path]?.let { exSize(it) + "  ·  " } ?: "") + exDate(f.lastModified(), FilesPrefs.dateFmt)
                             else -> ""
                         }
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = (11 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1498,6 +1502,7 @@ private fun ExIcon(k: String, tint: Color, size: Dp = 22.dp, rot: Float = 0f) = 
 }
 
 private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
+    "grid" to Icons.Outlined.GridView, "list" to Icons.Outlined.ViewList,
     "ext" to Icons.Filled.TextFields, "star" to Icons.Filled.StarBorder, "bookmark" to Icons.Filled.BookmarkBorder, "starOn" to Icons.Filled.Star, "check" to Icons.Filled.CheckCircle,
     "sortName" to Icons.Filled.SortByAlpha, "sortSize" to Icons.Filled.DataUsage, "sortDate" to Icons.Filled.Schedule,
     "eyeOn" to Icons.Filled.Visibility, "eyeOff" to Icons.Filled.VisibilityOff, "sizes" to Icons.Filled.Straighten,
@@ -1514,6 +1519,7 @@ private val EX_MATERIAL: Map<String, ImageVector> = mapOf(
 private val W11_ACTION = mapOf("Open" to "open", "Cut" to "cut", "Properties" to "properties", "View archive" to "openFolder", "Copy path" to "link", "Create shortcut" to "folderLink")
 
 private val EX_FLUENT = mapOf(
+    "grid" to "gridView", "list" to "details",
     "ext" to "document", "star" to "heart", "starOn" to "heart", "bookmark" to "bookmark", "check" to "info", "sortName" to "details", "sortSize" to "disk", "sortDate" to "history",
     "eyeOn" to "view", "eyeOff" to "view", "sizes" to "disk", "recent" to "history", "emptyFolder" to "folder", "bigFile" to "disk",
     "dupes" to "copy", "undo" to "paste", "home" to "folder", "share" to "download", "openWith" to "run", "zip" to "extract",
