@@ -379,6 +379,7 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar", "app:CalendarLauncher") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
         BuiltinRow(tr("Contacts", "Kişiler"), tr("Contacts and groups", "Kişiler ve gruplar"), "users", "app:ContactsLauncher") { launchExtra(ctx, "com.umutk.pulse.ContactsActivity") },
         BuiltinRow("ArtCraft", tr("Drawing", "Çizim"), "menu", "app:ArtCraftLauncher") { launchExtra(ctx, "com.umutk.pulse.ArtCraftActivity") },
+        BuiltinRow(tr("Browser", "Tarayıcı"), tr("Dark mode and ad blocking, the phone's own WebView", "Dark mode ve reklam engelleme, telefonun kendi WebView'ı"), "globe", "app:BrowserLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "browser") },
         BuiltinRow(tr("Messages", "Mesajlar"), tr("SMS", "SMS"), "messages", "app:MessagesLauncher") { openTool("messages") },
         BuiltinRow(tr("Launcher", "Ana ekran"), tr("Home screen looks", "Ana ekran görünümleri"), "apps") { openTool("launcher") },
         BuiltinRow(tr("Screen recorder", "Ekran kaydı"), tr("Record the screen", "Ekranı kaydet"), "record", "app:ScreenRecLauncher") { openTool("screenrec") },
