@@ -587,7 +587,8 @@ private fun InstallWindowBody(file: File, onDone: () -> Unit) {
         busy = true
         pk.drop = Installer.cur.dropSrc
         scope.launch {
-            val out = withContext(Dispatchers.IO) { Shell.run(Installer.silentCmd(pk, down, 0, Installer.cur.dex)) }
+            // Shizuku (shell) cannot open Pulse's private cache folder, so the install goes through a session fed from a shared folder; only the root path keeps the plain command (it supports the dex option)
+            val out = withContext(Dispatchers.IO) { Shell.run(if (Installer.cur.dex && Shell.root == true) Installer.silentCmd(pk, down, 0, true) else Installer.silentScript(ctx, pk, down, 0)) }
             if (out.contains("Success")) {
                 if (pk.drop) Installer.dropSource(ctx, pk)
                 // a module stays on screen so the LSPosed button can follow the install
