@@ -109,12 +109,12 @@ class OfPal(
     val accent: Color,
 )
 
-val OF_THEME_IDS = listOf("365", "365d", "2017", "2017d", "2013", "2003", "95")
+val OF_THEME_IDS = listOf("365", "365d", "2017", "2017d", "2013", "2013d", "2003", "95")
 val OF_PICK_IDS = OF_THEME_IDS + listOf("app", "amoled", "material")
 
 fun ofThemeName(id: String) = when (id) {
     "365" -> "Office 365"; "365d" -> "Office 365 dark"; "2017" -> "Office 2017"; "2017d" -> "Office 2017 dark"
-    "2013" -> "Office 2013"; "2003" -> "Office 2003"; "95" -> "Office 95"; "amoled" -> "AMOLED"; "material" -> "Material"; "oneui" -> "One UI"; "coloros" -> "ColorOS"; else -> tr("App look", "Uygulama görünümü")
+    "2013" -> "Office 2013"; "2013d" -> "Office 2013 dark"; "2003" -> "Office 2003"; "95" -> "Office 95"; "amoled" -> "AMOLED"; "material" -> "Material"; "oneui" -> "One UI"; "coloros" -> "ColorOS"; else -> tr("App look", "Uygulama görünümü")
 }
 
 /** "app" becomes the Office look closest to the current Pulse look. */
@@ -126,7 +126,8 @@ fun ofResolveId(id: String): String {
     if (th.id == "oneui") return "oneui"
     if (th.id == "coloros") return "coloros"
     val base = when (th.id) { "win95" -> "95"; "xp" -> "2003"; "win7" -> "2013"; "win10" -> "2017"; else -> "365" }
-    return if (th.dark && (base == "365" || base == "2017")) base + "d" else base
+    // 2013 (Windows 7) used to have no dark sibling at all: Pulse's own dark mode had no effect on Office's chrome there
+    return if (th.dark && (base == "365" || base == "2017" || base == "2013")) base + "d" else base
 }
 
 /** Flat dark variant of the app colour (dark looks tint their chrome with it instead of grey). */
@@ -159,6 +160,8 @@ fun ofPal(id: String, k: OfKind): OfPal {
             ofDarkTint(a, .6f), Color(0xFFEDEDED), ofDarkTint(a, .45f), ofDarkTint(a, .8f), Color.White, ofDarkTint(a, .7f), Color.White, a)
         "2013" -> OfPal(Color.White, Color(0xFF444444), Color.White, Color(0xFF444444), Color(0xFFF6F6F6), a,
             Color(0xFFF6F6F6), Color(0xFF444444), Color(0xFFD4D4D4), Color(0xFFE6E6E6), Color.White, a, Color.White, a)
+        "2013d" -> OfPal(ofDarkTint(a, .7f), Color.White, ofDarkTint(a, .7f), Color.White, ofDarkTint(a, .6f), Color.White,
+            ofDarkTint(a, .6f), Color(0xFFEDEDED), ofDarkTint(a, .45f), ofDarkTint(a, .8f), Color.White, ofDarkTint(a, .7f), Color.White, a)
         "2003" -> OfPal(Color(0xFF0A5BE0), Color.White, Color(0xFFECE9D8), Color.Black, Color(0xFFECE9D8), Color.Black,
             Color(0xFFECE9D8), Color.Black, Color(0xFFACA899), Color(0xFFA4BEE6), Color.White, Color(0xFFECE9D8), Color.Black, a)
         "95" -> OfPal(Color(0xFF000080), Color.White, Color(0xFFC0C0C0), Color.Black, Color(0xFFC0C0C0), Color.Black,
