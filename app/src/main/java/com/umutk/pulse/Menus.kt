@@ -23,6 +23,7 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.Image
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material.icons.outlined.Wifi
+import androidx.compose.material.icons.outlined.Public
 import androidx.compose.material.icons.outlined.Brush
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.PhoneAndroid
@@ -186,6 +187,7 @@ object AppPlace {
         App("PaintLauncher", "Paint", "Paint", "palette", Icons.Outlined.Brush) { c, _ -> launchExtra(c, TOOL, "paint") },
         App("CalculatorLauncher", "Calculator", "Hesap makinesi", "calc", Icons.Outlined.Calculate) { c, _ -> launchExtra(c, TOOL, "calculator") },
         App("ArtCraftLauncher", "ArtCraft", "ArtCraft", "palette", Icons.Outlined.Palette) { c, _ -> launchExtra(c, "com.umutk.pulse.ArtCraftActivity") },
+        App("BrowserLauncher", "Browser", "Tarayıcı", "globe", Icons.Outlined.Public) { c, _ -> launchExtra(c, TOOL, "browser") },
         App("MusicLauncher", "Music player", "Müzik çalar", "music", Icons.Outlined.MusicNote) { c, _ -> launchExtra(c, TOOL, "music") },
         App("VideoLauncher", "Video", "Video", "video", Icons.Outlined.Videocam) { c, _ -> launchExtra(c, TOOL, "video") },
         App("WhiteNoiseLauncher", "White noise", "Beyaz gürültü", "volume", Icons.Outlined.Waves) { c, _ -> launchExtra(c, TOOL, "whitenoise") },
@@ -206,7 +208,7 @@ object AppPlace {
     // an app that is switched on in Settings > Apps is listed in the top-right Apps menu; the chevron there can move it to the left menu or hide it
     /** Every app from the calculator on only lives in the Extra apps list at first; Settings > Apps puts them in the ⋮ menu. */
     private val quiet = setOf("CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher",
-        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher")
+        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher", "BrowserLauncher")
     fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, if (it.alias in quiet) "hidden" else "menu") ?: "menu" } }
     fun where(alias: String): String = placed[alias] ?: if (alias in quiet) "hidden" else "menu"
     fun set(c: Context, alias: String, place: String) { placed[alias] = place; sp(c).edit().putString(alias, place).apply() }

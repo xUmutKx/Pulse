@@ -101,6 +101,8 @@ val LocalSendLook = ToolLook("localsend_look")
 val KeyboardLook = ToolLook("keyboard_look")
 /** Good Lock modules: Material until another look is picked. */
 val GoodLockLook = ToolLook("goodlock_look")
+// Browser opens in Material until another look is picked (the chrome, not the web content: that is just whatever the page itself looks like)
+val BrowserLook = ToolLook("browser_look")
 
 /** Present only inside [ExtraToolActivity]: the page can offer the look choice, inside Pulse itself it is null. */
 class ExtraLookControl(val id: String, val set: (String) -> Unit)
@@ -177,7 +179,7 @@ open class ExtraToolActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
-        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; else -> null }
+        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; "browser" -> BrowserLook; else -> null }
         toolLook = store
         enter()
         setContent {
@@ -213,6 +215,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("NotesLauncher") -> "notes"
             n.endsWith("WeatherLauncher") -> "weather"
             n.endsWith("PaintLauncher") -> "paint"
+            n.endsWith("BrowserLauncher") -> "browser"
             n.endsWith("CalculatorLauncher") -> "calculator"
             n.endsWith("MessagesLauncher") || n.endsWith("MsgComposeActivity") || n.endsWith("MsgBubbleActivity") -> "messages"
             n.endsWith("ScreenRecLauncher") -> "screenrec"

@@ -11,8 +11,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 554
-        versionName = "1.0.154"
+        versionCode = 555
+        versionName = "1.0.155"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
@@ -47,6 +47,7 @@ dependencies {
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.autofill:autofill:1.1.0") // the password manager's suggestions inside the keyboard bar (inline autofill, Android 11+)
+    implementation("androidx.webkit:webkit:1.11.0") // Browser (extras/browser): force-dark on the phone's own WebView, no bundled engine
     implementation("androidx.activity:activity-compose:1.9.2")
     implementation("androidx.fragment:fragment:1.5.4") // 1.3.0+ needed by ActivityResult APIs (lint InvalidFragmentVersionForActivityResult)
     implementation("androidx.biometric:biometric:1.1.0") // App Lock: fingerprint prompt (applock/LockService.kt)
