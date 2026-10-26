@@ -393,6 +393,16 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu", "app:VoiceLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
         BuiltinRow(tr("Notes", "Notlar"), tr("Notes and lists", "Notlar ve listeler"), "notes", "app:NotesLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "notes") },
         BuiltinRow(tr("Weather", "Hava durumu"), tr("Forecast", "Tahmin"), "menu", "app:WeatherLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "weather") },
+        // the tools of the ⋮ menu's Tools group, so nothing is missing from this one full list of every extra app
+        BuiltinRow(tr("Toolkit", "Araç kutusu"), tr("A drawer of small utilities", "Küçük araçların bulunduğu çekmece"), "settings", "tool:toolkit") { openTool("toolkit") },
+        BuiltinRow("Office", tr("Word, Excel, PowerPoint, PDF", "Word, Excel, PowerPoint, PDF"), "office", "tool:office") { openTool("office") },
+        BuiltinRow(tr("Download manager", "İndirme yöneticisi"), tr("Downloads, pause and resume", "İndirmeler, duraklat ve devam ettir"), "download", "tool:downloads") { openTool("downloads") },
+        BuiltinRow(tr("App lock", "Uygulama kilidi"), tr("A PIN or fingerprint in front of apps", "Uygulamaların önünde PIN veya parmak izi"), "applock", "tool:applock") { openTool("applock") },
+        BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health") { openTool("health") },
+        BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
+        BuiltinRow(tr("Authenticator", "Kimlik doğrulayıcı"), tr("Two-factor codes", "İki adımlı doğrulama kodları"), "users", "tool:authenticator") { openTool("authenticator") },
+        BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
+        BuiltinRow(tr("Network usage", "Ağ kullanımı"), tr("Wi-Fi and mobile data, app by app", "Wi-Fi ve mobil veri, uygulama uygulama"), "speed", "tool:netusage") { openTool("netusage") },
     )
     rows.forEach { r ->
         Row(Modifier.fillMaxWidth().clickable { r.onClick() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
