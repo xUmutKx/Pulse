@@ -43,7 +43,13 @@ object WeatherApi {
             "&hourly=temperature_2m,weather_code,precipitation_probability,visibility&forecast_hours=96" +
             "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset,sunshine_duration" +
             "&forecast_days=16&timezone=auto&wind_speed_unit=kmh"
-        return get(url)
+        // one more try after a pause (a busy or rate-limited service), then a smaller request without the optional readings, in case one of them is the one refused
+        return runCatching { get(url) }.recoverCatching { Thread.sleep(800); get(url) }.recoverCatching {
+            get("https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f".format(java.util.Locale.US, lat, lon) +
+                "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_direction_10m,surface_pressure,cloud_cover,is_day,precipitation" +
+                "&hourly=temperature_2m,weather_code,precipitation_probability&forecast_hours=96" +
+                "&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max,uv_index_max,sunrise,sunset&forecast_days=16&timezone=auto&wind_speed_unit=kmh")
+        }.getOrThrow()
     }
 
     /** European air quality index for now, -1 when the service has no value for the place. */
