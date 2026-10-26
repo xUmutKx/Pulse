@@ -914,6 +914,8 @@ private fun DownloadsContent() {
     var link by remember { mutableStateOf("") }
     var finding by remember { mutableStateOf(false) }
     var findNote by remember { mutableStateOf("") }
+    // set only on LinkFinder.Result.None: the page itself (not a download) is worth just looking at, not re-trying as a download
+    var noLinkUrl by remember { mutableStateOf("") }
     var found by remember { mutableStateOf<List<String>?>(null) }
     val findScope = androidx.compose.runtime.rememberCoroutineScope()
     val openTool = com.umutk.pulse.LocalOpenTool.current
@@ -965,13 +967,13 @@ private fun DownloadsContent() {
                 PField(link, { link = it }, "https://", Modifier.weight(1f))
                 Box(Modifier.padding(start = 8.dp).clickable(enabled = !finding) {
                     if (link.startsWith("http")) {
-                        val u = link.trim(); finding = true; findNote = ""
+                        val u = link.trim(); finding = true; findNote = ""; noLinkUrl = ""
                         findScope.launch {
                             // a file starts at once; a web page is read for its download links
                             when (val r = LinkFinder.find(u)) {
                                 is LinkFinder.Result.Direct -> { Downloads.add(ctx, u); link = "" }
                                 is LinkFinder.Result.Found -> found = r.links
-                                is LinkFinder.Result.None -> findNote = tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı")
+                                is LinkFinder.Result.None -> { findNote = tr("No download link found on that page", "Bu sayfada indirme bağlantısı bulunamadı"); noLinkUrl = u }
                                 is LinkFinder.Result.Failed -> { findNote = r.why; Downloads.add(ctx, u); link = "" }
                             }
                             finding = false
@@ -983,6 +985,16 @@ private fun DownloadsContent() {
             }
         }
         if (findNote.isNotEmpty()) Text(findNote, color = T.sub, fontSize = 12.sp)
+        if (noLinkUrl.isNotEmpty()) Row(Modifier.clickable {
+            runCatching {
+                ctx.startActivity(android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity")
+                    .putExtra("route", "browser").putExtra("browser_url", noLinkUrl).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            noLinkUrl = ""; link = ""
+        }, verticalAlignment = Alignment.CenterVertically) {
+            PIcon("globe", Look.accent, 18.dp); Spacer(Modifier.width(6.dp))
+            Text(tr("Open in Browser instead", "Bunun yerine Browser'da aç"), color = Look.accent, fontSize = 13.sp)
+        }
         found?.let { links ->
             WinAlert(onDismissRequest = { found = null },
                 title = { Text(tr("Download links", "İndirme bağlantıları")) },
