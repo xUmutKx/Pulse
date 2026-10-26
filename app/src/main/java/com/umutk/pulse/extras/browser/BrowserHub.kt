@@ -87,20 +87,60 @@ object BrowserPrefs {
         val l = bookmarks(c)
         p(c).edit().putString("bookmarks", (if (url in l) l - url else l + url).joinToString("\n")).apply()
     }
+    // a small Tampermonkey-style extra: one script, run on every page. Not a userscript manager (no @match rules, no
+    // per-site scripts, no script store) — just a single block of JavaScript the page runs after it loads.
+    fun userScriptOn(c: Context): Boolean = p(c).getBoolean("userscript_on", false)
+    fun setUserScriptOn(c: Context, v: Boolean) = p(c).edit().putBoolean("userscript_on", v).apply()
+    fun userScript(c: Context): String = p(c).getString("userscript", "").orEmpty()
+    fun setUserScript(c: Context, v: String) = p(c).edit().putString("userscript", v).apply()
 }
 
 /**
- * A short, hand-picked list of common ad and tracker domains (a few dozen, not a real filter list with hundreds of
- * thousands of rules): good enough to quiet the worst of it without shipping or downloading a real block list.
- * A request is blocked when its host is this domain or a subdomain of it.
+ * Common ad and tracker domains, not a real filter list with hundreds of thousands of rules (those run tens of MB):
+ * 300+ distinct registrable domains, picked from how often each one appears across a well-known community hosts
+ * list (anudeepND/blacklist), with the few that are also used for ordinary site hosting or an OEM's own account
+ * services (amazonaws.com, cloudfront.net, microsoft.com, xiaomi.com, ...) deliberately left out so real sites and
+ * logins do not break. A request is blocked when its host is this domain or a subdomain of it.
  */
 private val AD_HOSTS = setOf(
-    "doubleclick.net", "googlesyndication.com", "googleadservices.com", "google-analytics.com", "googletagmanager.com", "googletagservices.com",
-    "adservice.google.com", "adnxs.com", "scorecardresearch.com", "amazon-adsystem.com", "taboola.com", "outbrain.com", "criteo.com", "criteo.net",
-    "pubmatic.com", "rubiconproject.com", "moatads.com", "2mdn.net", "adsrvr.org", "bidswitch.net", "casalemedia.com", "openx.net", "smartadserver.com",
-    "media.net", "mopub.com", "applovin.com", "unityads.unity3d.com", "chartboost.com", "vungle.com", "ironsrc.com", "adcolony.com", "yandex.ru/ads",
-    "connect.facebook.net", "ads.pinterest.com", "analytics.tiktok.com", "ads.linkedin.com", "bat.bing.com", "clarity.ms", "hotjar.com", "mixpanel.com",
-    "segment.io", "segment.com", "appsflyer.com", "adjust.com", "branch.io", "flurry.com", "inmobi.com", "smaato.com", "yieldmo.com", "sharethrough.com",
+    "1rx.io", "2mdn.net", "2o7.net", "33across.com", "360yield.com", "3lift.com", "7eer.net", "a-ads.com", "act-on.com", "actnx.com",
+    "actonsoftware.com", "ad4game.com", "adacts.com", "adcolony.com", "addapptr.com", "addthis.com", "adform.net", "adgear.com", "adgrx.com",
+    "adhigh.net", "adiquity.com", "adjust.com", "adk2x.com", "adkmob.com", "adlegend.com", "adlooxtracking.com", "admitad.com", "admob.com",
+    "adnxs.com", "adomik.com", "adoric-om.com", "adotmob.com", "adreactor.com", "adriver.ru", "adroll.com", "ads.linkedin.com", "ads.pinterest.com",
+    "adsafeprotected.com", "adsame.com", "adservice.google.com", "adskeeper.co.uk", "adsnative.com", "adsplay.in", "adsrvr.org", "adsupply.com",
+    "adswizz.com", "adsymptotic.com", "adtdp.com", "adtech.de", "adtechus.com", "adtelligent.com", "advertising.com", "adx1.com", "adxxx.com",
+    "aimtell.com", "akstat.io", "alphonso.tv", "amazon-adsystem.com", "amobee.com", "amplitude.com", "analytics.tiktok.com", "andbeyond.media",
+    "appier.io", "appier.net", "applovin.com", "appnext.com", "appnexus.com", "appsflyer.com", "apptimize.com", "apxor.com", "aralego.com",
+    "atdmt.com", "atlassolutions.com", "atomex.net", "atwola.com", "auditude.com", "automatad.com", "auxml.com", "bapb.gdn", "bat.bing.com",
+    "batmobi.net", "beemray.com", "bfmio.com", "bidswitch.net", "blismedia.com", "bounceexchange.com", "branch.io", "brandreachsys.com",
+    "brealtime.com", "brightroll.com", "btrll.com", "btttag.com", "buysellads.com", "carambo.la", "casalemedia.com", "chartbeat.net",
+    "chartboost.com", "clarity.ms", "clickability.com", "clicktale.net", "clksite.com", "cnzz.com", "connatix.com", "connect.facebook.net",
+    "connectad.io", "connexity.net", "content-ad.net", "contentabc.com", "contentdef.com", "contextweb.com", "coremetrics.com", "cpmstar.com",
+    "crazyegg.com", "criteo.com", "criteo.net", "crittercism.com", "crwdcntrl.net", "ctnsnet.com", "datafirst.io", "demandbase.com", "demdex.net",
+    "digitru.st", "districtm.io", "districtm.net", "domdex.com", "dotomi.com", "doubleclick.net", "doublepimp.com", "duapps.com", "dynamicyield.com",
+    "ensighten.com", "ero-advertising.com", "everesttech.net", "evergage.com", "evyy.net", "exelator.com", "exoclick.com", "fitanalytics.com",
+    "flurry.com", "free-counters.co.uk", "fwmrm.net", "fyber.com", "g2afse.com", "gameanalytics.com", "getclicky.com", "getui.com", "go-mpulse.net",
+    "go2affise.com", "google-analytics.com", "googleadservices.com", "googlesyndication.com", "googletagmanager.com", "googletagservices.com",
+    "hiido.com", "hotjar.com", "hoverr.media", "hyprmx.com", "igexin.com", "impactradius.com", "imrworldwide.com", "inclk.com", "inmobi.com",
+    "inmobicdn.net", "inner-active.mobi", "inq.com", "insert.io", "insightexpressai.com", "intellitxt.com", "intentmedia.net", "ironbeast.io",
+    "ironsrc.com", "juicyads.com", "justpremium.com", "kameleoon.com", "kameleoon.eu", "keywordblocks.com", "kissmetrics.com", "kochava.com",
+    "ksapisrv.com", "ksmobile.com", "leanplum.com", "lemnisk.co", "lgsmartad.com", "liadm.com", "lijit.com", "linkury.com", "liveclicker.net",
+    "liveperson.net", "localytics.com", "lpsnmedia.net", "m-pathy.com", "magnetic.com", "marfeel.com", "marinsm.com", "marketo.com", "mathtag.com",
+    "measurementapi.com", "media.net", "mediaplex.com", "mediavine.com", "mgid.com", "mirtesen.ru", "mixpanel.com", "mktoresp.com", "mmstat.com",
+    "moatads.com", "mobileapptracking.com", "mobvista.com", "moengage.com", "mookie1.com", "mopub.com", "mouseflow.com", "mpstat.us",
+    "mtraction.com", "naiadsystems.com", "netcoresmartech.com", "news-subscribe.com", "offerstrack.net", "ojrq.net", "omtrdc.net",
+    "online-metrix.net", "onthe.io", "openx.net", "optimizely.com", "optimonk.com", "optimove.net", "outbrain.com", "parsely.com", "perimeterx.net",
+    "petametrics.com", "polarmobile.com", "presage.io", "propellerads.com", "pubmatic.com", "pubnative.net", "puserving.com", "pxf.io", "qgr.ph",
+    "qualaroo.com", "quantserve.com", "redtrack.io", "reporo.net", "revcontent.com", "rtk.io", "rubiconproject.com", "scorecardresearch.com",
+    "segment.com", "segment.io", "sharethrough.com", "singular.net", "skimresources.com", "smaato.com", "smaato.net", "smartadserver.com",
+    "smartlook.com", "smi2.net", "smi2.ru", "smrtb.com", "snigelweb.com", "sokrati.com", "solocpm.com", "sonobi.com", "spotad.co",
+    "startappservice.com", "stickyadstv.com", "supersonicads.com", "switchadhub.com", "taboola.com", "tapjoy.com", "teads.tv", "tealiumiq.com",
+    "technoratimedia.com", "themoneytizer.com", "tlnk.io", "touchcommerce.com", "trafficjunky.net", "treasuredata.com", "tremorhub.com",
+    "tribalfusion.com", "tubeadvertising.eu", "tubemogul.com", "tynt.com", "ucweb.com", "umeng.com", "unityads.unity3d.com", "unoadsrv.com",
+    "urbanairship.com", "veinteractive.com", "vertamedia.com", "veruta.com", "videoplaza.tv", "vidible.tv", "viglink.com", "vizury.com",
+    "voluumtrk.com", "voodoo-ads.io", "voodoo-tech.io", "vrtzads.com", "vungle.com", "w55c.net", "webengage.co", "webengage.com", "webtrekk.net",
+    "wshareit.com", "xapads.com", "xpanama.net", "yieldmo.com", "yieldoptimizer.com", "youboranqs01.com", "zapr.in", "zedo.com", "zeotap.com",
+    "zog.link",
 )
 
 private fun adHost(host: String?): Boolean {
@@ -108,11 +148,16 @@ private fun adHost(host: String?): Boolean {
     return AD_HOSTS.any { host == it || host.endsWith(".$it") }
 }
 
+/** A page to open instead of the home page, for the one time another screen (Download manager's "open in Browser
+ *  instead") starts this tool wanting a specific address rather than whatever the home page is set to. */
+object BrowserNav { var pendingUrl: String? = null }
+
 @Composable
 fun BrowserHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
-    var addr by remember { mutableStateOf(BrowserPrefs.home(ctx)) }
-    var pageUrl by remember { mutableStateOf(BrowserPrefs.home(ctx)) }
+    val startUrl = remember { BrowserNav.pendingUrl?.also { BrowserNav.pendingUrl = null } ?: BrowserPrefs.home(ctx) }
+    var addr by remember { mutableStateOf(startUrl) }
+    var pageUrl by remember { mutableStateOf(startUrl) }
     var title by remember { mutableStateOf("") }
     var progress by remember { mutableFloatStateOf(1f) }
     var loading by remember { mutableStateOf(false) }
@@ -123,9 +168,13 @@ fun BrowserHub(onBack: () -> Unit) {
     var adBlock by remember { mutableStateOf(BrowserPrefs.adBlock(ctx)) }
     var bookmarks by remember { mutableStateOf(BrowserPrefs.bookmarks(ctx)) }
     var showBookmarks by remember { mutableStateOf(false) }
+    var userScriptOn by remember { mutableStateOf(BrowserPrefs.userScriptOn(ctx)) }
+    var userScript by remember { mutableStateOf(BrowserPrefs.userScript(ctx)) }
+    var showScript by remember { mutableStateOf(false) }
     val webRef = remember { mutableStateOf<WebView?>(null) }
     val darkState = rememberUpdatedState(dark)
     val adBlockState = rememberUpdatedState(adBlock)
+    val userScriptState = rememberUpdatedState(userScriptOn to userScript)
     // a page's own HTML5 video fullscreen (the expand icon on an embedded player): WebView hands over a view of its own
     // for as long as the video stays fullscreen; without this callback pair that button silently does nothing at all
     var fullscreenView by remember { mutableStateOf<android.view.View?>(null) }
@@ -198,6 +247,8 @@ fun BrowserHub(onBack: () -> Unit) {
                         override fun onPageFinished(view: WebView, url: String?) {
                             loading = false; title = view.title ?: ""; pageUrl = url ?: pageUrl
                             canBack = view.canGoBack(); canForward = view.canGoForward()
+                            val (on, script) = userScriptState.value
+                            if (on && script.isNotBlank()) view.evaluateJavascript(script, null)
                         }
                     }
                     webChromeClient = object : android.webkit.WebChromeClient() {
@@ -245,7 +296,14 @@ fun BrowserHub(onBack: () -> Unit) {
                         Text(tr("Block ads and trackers", "Reklam ve izleyicileri engelle"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
                         PSwitch(adBlock, { adBlock = it; BrowserPrefs.setAdBlock(ctx, it) })
                     }
-                    Text(tr("A short built-in list, not a full filter list", "Kısa, elle seçilmiş bir liste; tam bir filtre listesi değil"), color = T.sub, fontSize = 11.sp)
+                    Text(tr("A built-in list of 300+ domains, not a full filter list", "Yerleşik 300'den fazla alan adı listesi; tam bir filtre listesi değil"), color = T.sub, fontSize = 11.sp)
+                }
+                Column(Modifier.fillMaxWidth().clickable { showScript = true; sheet = false }) {
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Run a script on every page", "Her sayfada bir betik çalıştır"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                        PSwitch(userScriptOn, { userScriptOn = it; BrowserPrefs.setUserScriptOn(ctx, it) })
+                    }
+                    Text(tr("Edit the script", "Betiği düzenle"), color = T.sub, fontSize = 11.sp)
                 }
                 ExtraLookIcon(T.text)
             }
@@ -269,6 +327,29 @@ fun BrowserHub(onBack: () -> Unit) {
         },
         confirmButton = { androidx.compose.material3.TextButton({ showBookmarks = false }) { Text(tr("Close", "Kapat")) } },
     )
+
+    if (showScript) {
+        var draft by remember { mutableStateOf(userScript) }
+        WinAlert(
+            onDismissRequest = { showScript = false },
+            title = { Text(tr("Script for every page", "Her sayfa için betik")) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(tr("Plain JavaScript, run after each page loads. Not a userscript manager: one script, no @match rules, no script store.",
+                        "Düz JavaScript, her sayfa yüklendikten sonra çalışır. Bir userscript yöneticisi değil: tek betik, @match kuralı yok, betik mağazası yok."),
+                        color = T.sub, fontSize = 12.sp)
+                    androidx.compose.material3.OutlinedTextField(
+                        value = draft, onValueChange = { draft = it }, modifier = Modifier.fillMaxWidth().height(180.dp),
+                        placeholder = { Text("document.body.style... ", color = T.sub) },
+                        textStyle = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = 12.sp, color = T.text),
+                        colors = androidx.compose.material3.OutlinedTextFieldDefaults.colors(focusedTextColor = T.text, unfocusedTextColor = T.text, focusedBorderColor = com.umutk.pulse.Look.accent, unfocusedBorderColor = T.line, cursorColor = com.umutk.pulse.Look.accent),
+                    )
+                }
+            },
+            confirmButton = { androidx.compose.material3.TextButton({ userScript = draft; BrowserPrefs.setUserScript(ctx, draft); showScript = false }) { Text(tr("Save", "Kaydet")) } },
+            dismissButton = { androidx.compose.material3.TextButton({ showScript = false }) { Text(tr("Cancel", "Vazgeç")) } },
+        )
+    }
 
     DisposableEffect(Unit) { onDispose { setImmersive(false); webRef.value?.destroy() } }
 }

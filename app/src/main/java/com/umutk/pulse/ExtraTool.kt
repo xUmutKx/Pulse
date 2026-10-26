@@ -101,8 +101,8 @@ val LocalSendLook = ToolLook("localsend_look")
 val KeyboardLook = ToolLook("keyboard_look")
 /** Good Lock modules: Material until another look is picked. */
 val GoodLockLook = ToolLook("goodlock_look")
-// Browser opens in Material until another look is picked (the chrome, not the web content: that is just whatever the page itself looks like)
-val BrowserLook = ToolLook("browser_look")
+// Browser opens AMOLED black until another look is picked, like the media players (the chrome, not the web content: that is just whatever the page itself looks like)
+val BrowserLook = ToolLook("browser_look", "amoled")
 
 /** Present only inside [ExtraToolActivity]: the page can offer the look choice, inside Pulse itself it is null. */
 class ExtraLookControl(val id: String, val set: (String) -> Unit)
@@ -166,6 +166,8 @@ open class ExtraToolActivity : ComponentActivity() {
         // several APKs picked in Files: the installer opens with them already read
         if (savedInstanceState == null) intent.getStringArrayListExtra("apks")?.let { com.umutk.pulse.features.InstallerPreload.paths = it }
         if (savedInstanceState == null) intent.getStringExtra("notif_open")?.let { if (routeOf(intent) == "music") com.umutk.pulse.extras.music.MusicNav.request = it }
+        // Download manager's "open in Browser instead" hands the page it could not find a download link on
+        if (savedInstanceState == null) intent.getStringExtra("browser_url")?.let { com.umutk.pulse.extras.browser.BrowserNav.pendingUrl = it }
         if (savedInstanceState == null && this::class == ExtraToolActivity::class && intent.getStringExtra("frame") == null &&
             intent.extras?.keySet().orEmpty().all { it == "route" || it == "notif_open" }) {
             val mine = routeOf(intent)
