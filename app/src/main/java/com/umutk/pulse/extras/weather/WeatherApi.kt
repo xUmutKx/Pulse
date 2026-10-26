@@ -528,17 +528,27 @@ object WeatherStore {
     fun setAlertsOn(c: Context, on: Boolean) = p(c).edit().putBoolean("alerts", on).apply()
 }
 
-/** Where the phone is: a fresh network fix (30 s at most), else the last known one. Needs ACCESS_COARSE_LOCATION. */
+/** Where the phone is: a fresh fix from each enabled provider in turn (network, then GPS with fine permission), else the last known one of either.
+ *  Network alone often has nothing (Wi-Fi scanning off, no Play Services, a cold start) and used to leave Weather saying it could not find a place;
+ *  GPS is slower to answer but works on far more phones. Needs ACCESS_COARSE_LOCATION, or ACCESS_FINE_LOCATION for the GPS provider too. */
 @SuppressLint("MissingPermission")
 suspend fun deviceLocation(c: Context): Location? {
-    if (ContextCompat.checkSelfPermission(c, android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) return null
+    val coarse = ContextCompat.checkSelfPermission(c, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    val fine = ContextCompat.checkSelfPermission(c, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+    if (!coarse && !fine) return null
     val lm = c.getSystemService(LocationManager::class.java)
-    val fresh = if (android.os.Build.VERSION.SDK_INT < 30) null else withTimeoutOrNull(30_000) {
-        suspendCancellableCoroutine<Location?> { k ->
-            lm.getCurrentLocation(LocationManager.NETWORK_PROVIDER, null, c.mainExecutor) { k.resume(it) }
+    val providers = listOfNotNull(
+        LocationManager.NETWORK_PROVIDER.takeIf { runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) },
+        LocationManager.GPS_PROVIDER.takeIf { fine && runCatching { lm.isProviderEnabled(it) }.getOrDefault(false) },
+    )
+    val fresh = if (android.os.Build.VERSION.SDK_INT < 30) null else providers.firstNotNullOfOrNull { provider ->
+        withTimeoutOrNull(15_000) {
+            suspendCancellableCoroutine<Location?> { k ->
+                runCatching { lm.getCurrentLocation(provider, null, c.mainExecutor) { k.resume(it) } }.onFailure { if (k.isActive) k.resume(null) }
+            }
         }
     }
-    return fresh ?: listOf(LocationManager.NETWORK_PROVIDER, LocationManager.PASSIVE_PROVIDER)
+    return fresh ?: (providers + LocationManager.PASSIVE_PROVIDER)
         .mapNotNull { runCatching { lm.getLastKnownLocation(it) }.getOrNull() }
         .maxByOrNull { it.time }
 }

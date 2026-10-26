@@ -112,11 +112,13 @@ fun WeatherHub(onBack: () -> Unit) {
             busy = false
         }
     }
-    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
-        if (ok) load(devicePlace) else error = tr("Location is off. Search a city.", "Konum kapalı. Bir şehir arayın.")
+    // fine location too, not only coarse: it lets deviceLocation() fall back to GPS when the network provider has nothing (Wi-Fi scanning off, no
+    // Play Services, a cold start) — that gap used to be the usual way this ended up saying it could not find a place
+    val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { r ->
+        if (r.values.any { it }) load(devicePlace) else error = tr("Location is off. Search a city.", "Konum kapalı. Bir şehir arayın.")
     }
     val askNotif = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    fun useDevice() { if (hasLocation(ctx)) load(devicePlace) else ask.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }
+    fun useDevice() { if (hasLocation(ctx)) load(devicePlace) else ask.launch(arrayOf(Manifest.permission.ACCESS_COARSE_LOCATION, Manifest.permission.ACCESS_FINE_LOCATION)) }
     fun search() {
         if (query.isBlank()) return
         scope.launch {
