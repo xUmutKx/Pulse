@@ -414,7 +414,7 @@ fun SetupCards(app: AppRow) {
     var failed by remember(app.pkg) { mutableStateOf(false) }
     fun go(n: Int) { step = n; failed = false; sp.edit().putInt(key, n).apply() }
     val steps = SETUP_STEPS
-    BoCard {
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         BoText(tr("Setup for ${app.label}", "${app.label} kurulumu"), 14, T.text, bold = true)
         if (step >= steps.size) {
             BoText(tr("All set. Reopen the app to see the result.", "Hazır. Sonucu görmek için uygulamayı yeniden açın."), 15, T.text, modifier = Modifier.padding(top = 6.dp))
@@ -497,8 +497,9 @@ fun AppDetail(app: AppRow, result: ScanResult?, error: String?, limit: Int, keep
                 }
             }
             if (result == null && error == null) item { Row(verticalAlignment = Alignment.CenterVertically) { com.umutk.pulse.PLoader(Modifier.size(18.dp)); Spacer(Modifier.width(10.dp)); BoText(tr("Reading the app's colours…", "Uygulamanın renkleri okunuyor…"), 14, T.text) } }
-            if (!refused) item { BoLink(if (listOpen) tr("Hide colours", "Renkleri gizle") else tr("Show colours (${result?.candidates?.size ?: 0})", "Renkleri göster (${result?.candidates?.size ?: 0})")) { listOpen = !listOpen } }
-            if (listOpen && !refused) items(result?.candidates.orEmpty(), key = { it.id }) { c ->
+            if (!refused) item { BoLink(if (listOpen) tr("Hide colours", "Renkleri gizle") else tr("Show all colours (${result?.candidates?.size ?: 0})", "Tüm renkleri göster (${result?.candidates?.size ?: 0})")) { listOpen = !listOpen } }
+            // collapsed, the first few colours still show
+            if (!refused) items(if (listOpen) result?.candidates.orEmpty() else result?.candidates.orEmpty().take(4), key = { it.id }) { c ->
                 val on = c.name !in off
                 Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable { if (on) off.add(c.name) else off.remove(c.name) }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     PCheck(on, { if (on) off.add(c.name) else off.remove(c.name) })
@@ -508,9 +509,15 @@ fun AppDetail(app: AppRow, result: ScanResult?, error: String?, limit: Int, keep
                     Text(c.name, color = T.text, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 }
             }
-            item { kind?.let { k -> BoCard { BoText(k.title, 15, T.text, bold = true); BoText(k.advice) } } }
             item { SetupCards(app) }
             item { AllColorsCard(app, mode) }
+            item { kind?.let { k ->
+                var infoOpen by remember(app.pkg) { mutableStateOf(false) }
+                BoCard(Modifier.clickable { infoOpen = !infoOpen }) {
+                    BoText(k.title, 15, T.text, bold = true)
+                    if (infoOpen) BoText(k.advice, modifier = Modifier.padding(top = 4.dp)) else BoText(k.advice, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+                }
+            } }
             item { Spacer(Modifier.height(24.dp)) }
         }
     }
