@@ -462,6 +462,13 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                         }
                         // the song's canvas (a short video of the user's choice) plays over the cover
                         com.umutk.pulse.extras.music.CanvasVideo(cur.path, st.isPlaying, Modifier.fillMaxSize().clip(RoundedCornerShape(24.dp)))
+                        // with a canvas the video is the cover; one small play button sits at its foot, nothing else
+                        val canvasCtx = androidx.compose.ui.platform.LocalContext.current
+                        val canvasOn = com.umutk.pulse.extras.music.TrackCanvas.version.intValue.let { com.umutk.pulse.extras.music.TrackCanvas.get(canvasCtx, cur.path) != null }
+                        if (canvasOn && !showLyrics) Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp).size(46.dp).clip(CircleShape).background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .38f))
+                            .clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) {
+                            Icon(if (st.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, null, tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.size(26.dp))
+                        }
                         // the lyrics sit on top of the cover, in its place
                         com.umutk.pulse.extras.lyrics.PlayerLyrics(visible = showLyrics, title = cur.name(), artist = cur.artistName(), album = cur.album, durationMs = dur.toLong(),
                             localPath = cur.path.takeIf { !it.contains("://") }, positionMs = pos.toLong(), onDismiss = { showLyrics = false },

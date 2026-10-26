@@ -68,6 +68,19 @@ fun CoverRepairSection() {
         }
         if (CoverRepairJob.embedding && CoverRepairJob.finished && !busy) Text(CoverRepairJob.note, color = T.sub, fontSize = 12.sp)
         else if (CoverRepairJob.finished && !busy) Text(tr("${CoverRepairJob.applied} covers applied, ${left.size} could not be matched by themselves", "${CoverRepairJob.applied} kapak uygulandı, ${left.size} tanesi kendiliğinden eşleşmedi"), color = T.sub, fontSize = 12.sp)
+        // what the run found, to look through: the covers that were put on songs
+        if (CoverRepairJob.found.isNotEmpty() && !busy) {
+            var showFound by remember { mutableStateOf(false) }
+            Text((if (showFound) "▾ " else "▸ ") + tr("Found (${CoverRepairJob.found.size})", "Bulunanlar (${CoverRepairJob.found.size})"), color = T.accent, fontSize = 13.sp,
+                modifier = Modifier.fillMaxWidth().clickable { showFound = !showFound }.padding(vertical = 6.dp))
+            if (showFound) CoverRepairJob.found.take(80).forEach { t ->
+                Row(Modifier.fillMaxWidth().clickable { pick = t }.padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(t.displayName(), color = T.text, fontSize = 13.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                    Text(tr("Change…", "Değiştir…"), color = T.accent, fontSize = 12.sp)
+                }
+            }
+        }
+        if (left.isNotEmpty() && !busy) Text(tr("Not found (${left.size})", "Bulunamayanlar (${left.size})"), color = T.accent, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
         left.take(60).forEach { t ->
             Row(Modifier.fillMaxWidth().clickable { pick = t }.padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
