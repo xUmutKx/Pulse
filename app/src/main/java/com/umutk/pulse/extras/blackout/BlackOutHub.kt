@@ -60,7 +60,7 @@ import kotlinx.coroutines.withContext
 fun BlackOutHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
-    val prefs = remember { BlackOutData.prefs(ctx).also { Overlays.prefs = it } }
+    val prefs = remember { BlackOutData.prefs(ctx).also { Overlays.prefs = it; if (!it.contains("_v")) it.edit().putInt("_v", 1).apply() } }
     var mode by remember { mutableStateOf(Privilege.mode) }
     var detected by remember { mutableStateOf(false) }
     var group by remember { mutableStateOf("all") }

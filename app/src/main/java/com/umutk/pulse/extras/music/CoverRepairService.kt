@@ -33,10 +33,16 @@ object CoverRepairJob {
     var finished by mutableStateOf(false)
     var left by mutableStateOf(emptyList<Track>())
 
-    fun start(c: Context) {
+    /** True while the run writes covers into the files instead of searching for them. */
+    var embedding by mutableStateOf(false)
+    var embedded by mutableIntStateOf(0)
+    var note by mutableStateOf("")
+
+    fun start(c: Context, embed: Boolean = false) {
         if (busy) return
+        embedding = embed; embedded = 0; note = ""
         busy = true; finished = false; done = 0; total = 0; applied = 0; left = emptyList()
-        runCatching { ContextCompat.startForegroundService(c.applicationContext, Intent(c.applicationContext, CoverRepairService::class.java)) }
+        runCatching { ContextCompat.startForegroundService(c.applicationContext, Intent(c.applicationContext, CoverRepairService::class.java).putExtra("embed", embed)) }
             .onFailure { busy = false }
     }
     fun stop(c: Context) { c.applicationContext.stopService(Intent(c.applicationContext, CoverRepairService::class.java)) }
@@ -70,6 +76,7 @@ class CoverRepairService : Service() {
         if (Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel(ch, tr("Cover search", "Kapak arama"), NotificationManager.IMPORTANCE_LOW))
         if (Build.VERSION.SDK_INT >= 34) startForeground(id, note(), ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC) else startForeground(id, note())
         if (job?.isActive == true) return START_NOT_STICKY
+        if (intent?.getBooleanExtra("embed", false) == true) { runEmbed(nm); return START_NOT_STICKY }
         job = scope.launch {
             val todo = MusicLibrary.tracks.value.filter { !it.path.startsWith("http") && PowerampCovers.saved(this@CoverRepairService, it.path) == null && embeddedArt(this@CoverRepairService, it.path) == null }
             CoverRepairJob.total = todo.size
@@ -91,6 +98,27 @@ class CoverRepairService : Service() {
             stopForeground(true); stopSelf()
         }
         return START_NOT_STICKY
+    }
+
+    /** Writes the saved covers into the mp3 files, safely (see [CoverEmbed]); the first song is rehearsed on a copy, and a failed rehearsal stops everything. */
+    private fun runEmbed(nm: NotificationManager) {
+        job = scope.launch {
+            val todo = CoverEmbed.candidates(this@CoverRepairService, MusicLibrary.tracks.value)
+            CoverRepairJob.total = todo.size
+            if (todo.isNotEmpty() && !CoverEmbed.rehearse(this@CoverRepairService, todo.first())) {
+                CoverRepairJob.note = tr("The test on a copy failed, so no song was touched.", "Kopya üzerindeki deneme olmadı, bu yüzden hiçbir şarkıya dokunulmadı.")
+            } else for (t in todo) {
+                if (!isActive) break
+                if (CoverEmbed.embed(this@CoverRepairService, t)) { CoverRepairJob.embedded++; CoverRepairJob.applied++ }
+                CoverRepairJob.done++
+                update()
+            }
+            if (CoverRepairJob.note.isEmpty()) CoverRepairJob.note = tr("${CoverRepairJob.embedded} of ${todo.size} songs got their cover inside the file", "${todo.size} şarkıdan ${CoverRepairJob.embedded} tanesine kapak dosyanın içine yazıldı")
+            CoverRepairJob.busy = false; CoverRepairJob.finished = true
+            nm.notify(id + 1, NotificationCompat.Builder(this@CoverRepairService, ch).setSmallIcon(android.R.drawable.stat_notify_sync).setAutoCancel(true)
+                .setContentTitle(tr("Writing covers finished", "Kapak yazma bitti")).setContentText(CoverRepairJob.note).build())
+            stopForeground(true); stopSelf()
+        }
     }
 
     override fun onDestroy() {
