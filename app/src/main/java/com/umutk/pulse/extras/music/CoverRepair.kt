@@ -54,6 +54,8 @@ fun CoverRepairSection() {
     // the work runs in CoverRepairService; what is shown here is its state, so the page can be left and opened again
     val busy = CoverRepairJob.busy
     val left = CoverRepairJob.left
+    // when the run is over and some songs found nothing, the search opens for the first of them, and for the next one after each pick
+    androidx.compose.runtime.LaunchedEffect(CoverRepairJob.finished) { if (CoverRepairJob.finished && !CoverRepairJob.busy && CoverRepairJob.left.isNotEmpty() && pick == null && !CoverRepairJob.embedding && !CoverRepairJob.offered) { CoverRepairJob.offered = true; pick = CoverRepairJob.left.first() } }
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
         PButton(if (busy) tr("Searching in the background…", "Arka planda aranıyor…") else tr("Search and apply missing covers", "Eksik kapakları ara ve uygula"), compact = true) {
             if (busy) return@PButton
@@ -92,7 +94,7 @@ fun CoverRepairSection() {
         }
         if (left.size > 60) Text(tr("and ${left.size - 60} more", "ve ${left.size - 60} tane daha"), color = T.sub, fontSize = 11.sp)
     }
-    pick?.let { t -> CoverPicker(t, onDone = { done -> pick = null; if (done) CoverRepairJob.left = CoverRepairJob.left - t }) }
+    pick?.let { t -> CoverPicker(t, onDone = { done -> pick = null; if (done) { CoverRepairJob.left = CoverRepairJob.left - t; pick = CoverRepairJob.left.firstOrNull() } }) }
 }
 
 /** One song, a search box (filled in from its tags), the covers the service offers, and a tap to apply one. */

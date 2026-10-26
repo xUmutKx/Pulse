@@ -79,7 +79,7 @@ internal object CoverFetch {
         return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
     }
 
-    fun find(c: Context, t: Track, force: Boolean = false): ImageBitmap? {
+    fun find(c: Context, t: Track, force: Boolean = false, loose: Boolean = false): ImageBitmap? {
         // the network is never used on the main thread; the cover is read again on the next pass
         if (Looper.myLooper() == Looper.getMainLooper() || t.path.startsWith("http")) return null
         PowerampCovers.saved(c, t.path)?.let { return it }
@@ -100,7 +100,9 @@ internal object CoverFetch {
             if (song != null) { tries += Triple(listOfNotNull(artist, song).joinToString(" "), "song", song); if (artist != null) tries += Triple(song, "song", song) }
             var jpg: ByteArray? = null
             for ((term, entity, want) in tries) {
-                val hits = PowerampCovers.search(term, entity).filter { sameWork(it.name, want) && (artist == null || sameWork(it.artist, artist) || sameWork(artist, it.artist)) }
+                val all = PowerampCovers.search(term, entity)
+                // loose (the second pass of "Search and apply missing covers"): when nothing matches by name, the first results of the search are taken
+                val hits = all.filter { sameWork(it.name, want) && (artist == null || sameWork(it.artist, artist) || sameWork(artist, it.artist)) }.ifEmpty { if (loose) all.take(3) else emptyList() }
                 jpg = hits.firstNotNullOfOrNull { h -> runCatching { PowerampCovers.fetch(h.big) }.getOrNull()?.takeIf { it.size > 2000 } }
                 if (jpg != null) break
             }

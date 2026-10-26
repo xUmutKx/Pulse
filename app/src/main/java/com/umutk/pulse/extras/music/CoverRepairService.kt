@@ -34,6 +34,8 @@ object CoverRepairJob {
     var left by mutableStateOf(emptyList<Track>())
     /** The songs that got a cover in this run, to look through afterwards. */
     var found by mutableStateOf(emptyList<Track>())
+    /** The search has already been opened by itself for this run's leftovers. */
+    var offered by mutableStateOf(false)
 
     /** True while the run writes covers into the files instead of searching for them. */
     var embedding by mutableStateOf(false)
@@ -43,7 +45,7 @@ object CoverRepairJob {
     fun start(c: Context, embed: Boolean = false) {
         if (busy) return
         embedding = embed; embedded = 0; note = ""
-        busy = true; finished = false; done = 0; total = 0; applied = 0; left = emptyList(); found = emptyList()
+        busy = true; finished = false; done = 0; total = 0; applied = 0; left = emptyList(); found = emptyList(); offered = false
         runCatching { ContextCompat.startForegroundService(c.applicationContext, Intent(c.applicationContext, CoverRepairService::class.java).putExtra("embed", embed)) }
             .onFailure { busy = false }
     }
@@ -85,7 +87,8 @@ class CoverRepairService : Service() {
             val miss = ArrayList<Track>()
             for (t in todo) {
                 if (!isActive) break
-                val got = runCatching { CoverFetch.find(this@CoverRepairService, t, force = true) }.getOrNull()
+                // strict first (the same work by the same artist), then the first result of the search for what is left
+                val got = runCatching { CoverFetch.find(this@CoverRepairService, t, force = true) ?: CoverFetch.find(this@CoverRepairService, t, force = true, loose = true) }.getOrNull()
                 if (got != null) { CoverRepairJob.applied++; CoverRepairJob.found = CoverRepairJob.found + t; forgetArt(t.path) } else miss += t
                 CoverRepairJob.done++
                 update()
