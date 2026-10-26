@@ -59,12 +59,15 @@ fun CoverRepairSection() {
             if (busy) return@PButton
             CoverRepairJob.start(c)
         }
+        PButton(tr("Write the saved covers into the songs (mp3)", "Kayıtlı kapakları şarkı dosyalarına yaz (mp3)"), compact = true) { if (!busy) CoverRepairJob.start(c, embed = true) }
+        Text(tr("The first song is tried on a copy and every song is copied aside and checked; a bad result is undone.", "İlk şarkı önce kopyada denenir, her şarkı kenara kopyalanıp kontrol edilir; kötü sonuç geri alınır."), color = T.sub, fontSize = 11.sp)
         if (busy) {
             val p = if (CoverRepairJob.total > 0) CoverRepairJob.done.toFloat() / CoverRepairJob.total else 0f
             androidx.compose.material3.LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth(), color = com.umutk.pulse.Look.accent)
             Text("${CoverRepairJob.done} / ${CoverRepairJob.total} · " + tr("${CoverRepairJob.applied} found", "${CoverRepairJob.applied} bulundu"), color = T.sub, fontSize = 12.sp)
         }
-        if (CoverRepairJob.finished && !busy) Text(tr("${CoverRepairJob.applied} covers applied, ${left.size} could not be matched by themselves", "${CoverRepairJob.applied} kapak uygulandı, ${left.size} tanesi kendiliğinden eşleşmedi"), color = T.sub, fontSize = 12.sp)
+        if (CoverRepairJob.embedding && CoverRepairJob.finished && !busy) Text(CoverRepairJob.note, color = T.sub, fontSize = 12.sp)
+        else if (CoverRepairJob.finished && !busy) Text(tr("${CoverRepairJob.applied} covers applied, ${left.size} could not be matched by themselves", "${CoverRepairJob.applied} kapak uygulandı, ${left.size} tanesi kendiliğinden eşleşmedi"), color = T.sub, fontSize = 12.sp)
         left.take(60).forEach { t ->
             Row(Modifier.fillMaxWidth().clickable { pick = t }.padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {

@@ -67,6 +67,9 @@ internal object PowerampCovers {
         return File(File(c.filesDir, "covers"), "$hash.jpg")
     }
 
+    /** The saved cover picture of [path] as a file, or null when there is none. */
+    fun jpgOf(c: Context, path: String): File? = fileFor(c, path).takeIf { it.isFile }
+
     /** The saved cover of [path], or null when none was picked (or the file no longer decodes). */
     fun saved(c: Context, path: String): ImageBitmap? =
         fileFor(c, path).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() }

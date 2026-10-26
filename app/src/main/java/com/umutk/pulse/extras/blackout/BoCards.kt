@@ -154,7 +154,10 @@ fun HookStatusBlock(r: HookReport?, wanted: Boolean) {
         val age = (System.currentTimeMillis() - r.at) / 1000
         val fresh = age < 40
         BoText(if (fresh) tr("Module is running in this app", "Modül bu uygulamada çalışıyor") else tr("Module was running here ${age / 60} min ago (the app is closed now)", "Modül burada ${age / 60} dk önce çalışıyordu (uygulama şimdi kapalı)"), 13, if (fresh) OkGreen else T.sub, bold = true)
-        if (r.keys == 0) BoText(tr("It cannot read BlackOut's settings, so nothing you switch on here reaches it.", "BlackOut'un ayarlarını okuyamıyor, bu yüzden burada açtığınız hiçbir şey ona ulaşmıyor."), 13, BadRed)
+        if (r.keys == 0) {
+            BoText(tr("The module could not read Pulse's BlackOut settings, so nothing switched on here reaches this app yet.", "Modül Pulse'un BlackOut ayarlarını okuyamadı, bu yüzden burada açılanlar bu uygulamaya henüz ulaşmıyor."), 13, BadRed)
+            BoText(tr("1. Change any switch in BlackOut once, so the settings file exists.  2. Press Restart app.  3. Still 0? Use Fix settings access (root) in Settings > Help: the file is /data/data/com.umutk.pulse/shared_prefs/blackout.xml and the app being hooked must be allowed to read it.", "1. BlackOut'ta herhangi bir anahtarı bir kez değiştirin, ayar dosyası oluşsun.  2. Uygulamayı yeniden başlat'a basın.  3. Hâlâ 0 mı? Ayarlar > Yardım'daki Ayar erişimini düzelt'i (root) kullanın: dosya /data/data/com.umutk.pulse/shared_prefs/blackout.xml ve hooklanan uygulamanın onu okuyabilmesi gerekir."), 12)
+        }
         else if (wanted && !r.fd && !r.smart) BoText(tr("This app was started before you switched it on. Press Restart app.", "Bu uygulama siz açmadan önce başlamıştı. Uygulamayı yeniden başlat'a basın."), 13, WarnAmber)
         BoText("Android ${r.sdk} · ${r.api} · " + tr("settings read: ", "okunan ayar: ") + (if (r.keys < 0) "?" else r.keys.toString()))
         if (r.fd && r.forced > 0) BoText(tr("Force dark switched on in ${r.forced} window(s)", "Zorla koyu ${r.forced} pencerede açıldı"), 13, OkGreen)
