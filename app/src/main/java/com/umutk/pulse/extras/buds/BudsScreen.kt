@@ -51,6 +51,7 @@ import com.umutk.pulse.T
 import com.umutk.pulse.pageGutter
 import com.umutk.pulse.extras.ui.SettingsSection
 import com.umutk.pulse.tr
+import androidx.compose.animation.core.animateFloat
 
 /** The Galaxy Buds manager: pick the earbuds, see the battery and which bud is in the ear, change the noise control, and let them stop the music when taken out. */
 @Composable
