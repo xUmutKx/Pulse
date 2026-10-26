@@ -93,7 +93,7 @@ internal fun TrackSheet(
 
     // the delete the system must confirm (the file is not the app's own): Android 11+ asks once
     val deleteAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()) { r ->
-        if (r.resultCode == android.app.Activity.RESULT_OK) { Toast.makeText(ctx, tr("Deleted", "Silindi"), Toast.LENGTH_SHORT).show(); MusicLibrary.refresh(ctx) }
+        if (r.resultCode == android.app.Activity.RESULT_OK) { Toast.makeText(ctx, tr("Deleted", "Silindi"), Toast.LENGTH_SHORT).show(); scope.launch { MusicLibrary.refresh(ctx) } }
         close()
     }
     Dialog(onDismissRequest = onDismiss) {
