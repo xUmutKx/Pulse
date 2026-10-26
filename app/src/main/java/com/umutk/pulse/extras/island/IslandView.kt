@@ -52,8 +52,8 @@ class IslandView(ctx: Context) : View(ctx) {
     private val restW get() = dp(IslandPrefs.w)
     private val restH get() = dp(IslandPrefs.h)
     private val sideW get() = dp(44f)
-    private val maxW get() = min(dp(360f), resources.displayMetrics.widthPixels - dp(24f))
-    private fun openH(k: String?) = dp(when (k) { "music" -> 158f; "volume", "charge" -> 104f; "shot" -> 132f; else -> 112f })
+    private val maxW get() = min(dp(340f), resources.displayMetrics.widthPixels - dp(24f))
+    private fun openH(k: String?) = dp(when (k) { "music" -> 124f; "volume", "charge" -> 92f; "shot" -> 112f; else -> 100f })
 
     private val gestures = GestureDetector(ctx, object : GestureDetector.SimpleOnGestureListener() {
         override fun onDown(e: MotionEvent) = true
@@ -147,12 +147,12 @@ class IslandView(ctx: Context) : View(ctx) {
         c.restore()
     }
 
-    private fun icon(c: Canvas, it: IslandItem, cx: Float, cy: Float, size: Float, alpha: Float) {
+    private fun icon(c: Canvas, it: IslandItem, cx: Float, cy: Float, size: Float, alpha: Float, corner: Float = .26f) {
         val b = it.icon
         ink.alpha = (255 * alpha).toInt()
         if (b != null) {
             val s = size / 2f
-            val p = Path().apply { addRoundRect(cx - s, cy - s, cx + s, cy + s, size * .22f, size * .22f, Path.Direction.CW) }
+            val p = Path().apply { addRoundRect(cx - s, cy - s, cx + s, cy + s, size * corner, size * corner, Path.Direction.CW) }
             c.save(); c.clipPath(p); c.drawBitmap(b, null, RectF(cx - s, cy - s, cx + s, cy + s), ink); c.restore()
         } else glyph(c, it.kind, cx, cy, size * .5f, alpha)
     }
@@ -177,7 +177,7 @@ class IslandView(ctx: Context) : View(ctx) {
     private fun drawCompact(c: Canvas, it: IslandItem, w: Float, h: Float, a: Float) {
         if (a <= 0f) return
         val pad = (h - dp(22f)) / 2f
-        icon(c, it, pad + dp(11f), h / 2f, dp(22f), a)
+        icon(c, it, pad + dp(11f), h / 2f, dp(22f), a, .5f)
         val rx = w - pad - dp(11f)
         ink.alpha = (255 * a).toInt()
         when {
@@ -202,24 +202,44 @@ class IslandView(ctx: Context) : View(ctx) {
     private fun ellipsized(s: String, p: Paint, room: Float) = TextUtils.ellipsize(s, android.text.TextPaint(p), room, TextUtils.TruncateAt.END).toString()
 
     private fun drawOpen(c: Canvas, it: IslandItem, w: Float, h: Float, a: Float) {
-        val pad = dp(18f); val top = dp(16f) + max(0f, restH - dp(34f)) * 0f
+        val pad = dp(16f); val top = dp(14f)
         val ia = a.coerceIn(0f, 1f)
-        val artS = if (it.kind == "music") dp(64f) else dp(48f)
+        val artS = if (it.kind == "music") dp(52f) else dp(44f)
         icon(c, it, pad + artS / 2f, top + artS / 2f, artS, ia)
-        val tx = pad + artS + dp(14f); val room = w - tx - pad
+        // the number of a bar (volume, charge) stands at the right end of the title row
+        var right = w - pad
+        if (it.level >= 0f && it.kind != "music") {
+            txt.alpha = (255 * ia).toInt(); txt.typeface = Typeface.DEFAULT_BOLD; txt.textSize = dp(22f); txt.color = if (it.kind == "charge") 0xFF4CD964.toInt() else 0xFFFFFFFF.toInt(); txt.textAlign = Paint.Align.RIGHT
+            val pct = "${(it.level.coerceIn(0f, 1f) * 100).toInt()}%"
+            c.drawText(pct, right, top + artS / 2f + dp(8f), txt); txt.textAlign = Paint.Align.LEFT
+            right -= txt.measureText(pct) + dp(10f)
+        } else if (it.kind == "music") {
+            // three bars that move with the song, at the right end of the title row
+            val t = System.currentTimeMillis() / 150.0
+            for (i in 0..2) {
+                val hh = dp(if (it.playing) 6f + 12f * (0.5f + 0.5f * Math.sin(t + i * 1.7).toFloat()) else 6f)
+                val x = w - pad - dp(14f) + i * dp(7f)
+                ink.color = 0xFF30D158.toInt(); ink.alpha = (255 * ia).toInt()
+                c.drawRoundRect(x - dp(2f), top + artS / 2f - hh / 2f, x + dp(2f), top + artS / 2f + hh / 2f, dp(2f), dp(2f), ink)
+            }
+            ink.color = 0xFFFFFFFF.toInt()
+            right -= dp(26f)
+        }
+        val tx = pad + artS + dp(12f); val room = right - tx
         txt.alpha = (255 * ia).toInt(); txt.typeface = Typeface.DEFAULT_BOLD; txt.textSize = dp(16f); txt.color = 0xFFFFFFFF.toInt()
-        c.drawText(ellipsized(it.title, txt, room), tx, top + dp(if (it.kind == "music") 24f else 22f), txt)
+        val hasSub = it.sub.isNotEmpty()
+        c.drawText(ellipsized(it.title, txt, room), tx, top + artS / 2f + (if (hasSub) -dp(2f) else dp(6f)), txt)
         txt.typeface = Typeface.DEFAULT; txt.textSize = dp(13f); txt.color = 0xB3FFFFFF.toInt(); txt.alpha = (180 * ia).toInt()
-        if (it.sub.isNotEmpty()) c.drawText(ellipsized(it.sub, txt, room), tx, top + dp(if (it.kind == "music") 44f else 42f), txt)
+        if (hasSub) c.drawText(ellipsized(it.sub, txt, room), tx, top + artS / 2f + dp(16f), txt)
         txt.color = 0xFFFFFFFF.toInt()
         when {
             it.kind == "music" -> {
                 // progress, then previous / play-pause / next
-                val py = top + artS + dp(14f)
+                val py = top + artS + dp(11f)
                 ink.color = 0x44FFFFFF; ink.alpha = (70 * ia).toInt()
-                c.drawRoundRect(pad, py, w - pad, py + dp(3.5f), dp(2f), dp(2f), ink)
-                if (it.progress >= 0f) { ink.color = 0xFFFFFFFF.toInt(); ink.alpha = (255 * ia).toInt(); c.drawRoundRect(pad, py, pad + (w - 2 * pad) * it.progress.coerceIn(0f, 1f), py + dp(3.5f), dp(2f), dp(2f), ink) }
-                val cy = py + dp(30f); val cx = w / 2f
+                c.drawRoundRect(pad, py, w - pad, py + dp(4f), dp(2f), dp(2f), ink)
+                if (it.progress >= 0f) { ink.color = 0xFFFFFFFF.toInt(); ink.alpha = (255 * ia).toInt(); c.drawRoundRect(pad, py, pad + (w - 2 * pad) * it.progress.coerceIn(0f, 1f), py + dp(4f), dp(2f), dp(2f), ink) }
+                val cy = py + dp(27f); val cx = w / 2f
                 ink.color = 0xFFFFFFFF.toInt(); ink.alpha = (255 * ia).toInt()
                 tri(c, cx - dp(70f), cy, dp(11f), false); tri(c, cx - dp(70f) + dp(9f), cy, dp(11f), false)
                 hits.add(RectF(cx - dp(96f), cy - dp(24f), cx - dp(44f), cy + dp(24f)) to { onTransport("prev") })
@@ -229,7 +249,7 @@ class IslandView(ctx: Context) : View(ctx) {
                 hits.add(RectF(cx + dp(44f), cy - dp(24f), cx + dp(96f), cy + dp(24f)) to { onTransport("next") })
             }
             it.level >= 0f -> {
-                val py = top + artS + dp(14f)
+                val py = top + artS + dp(11f)
                 ink.color = 0x44FFFFFF; ink.alpha = (70 * ia).toInt(); c.drawRoundRect(pad, py, w - pad, py + dp(8f), dp(4f), dp(4f), ink)
                 ink.color = if (it.kind == "charge") 0xFF4CD964.toInt() else 0xFFFFFFFF.toInt(); ink.alpha = (255 * ia).toInt()
                 c.drawRoundRect(pad, py, pad + (w - 2 * pad) * it.level.coerceIn(0f, 1f), py + dp(8f), dp(4f), dp(4f), ink); ink.color = 0xFFFFFFFF.toInt()
@@ -238,7 +258,7 @@ class IslandView(ctx: Context) : View(ctx) {
                 var x = w - pad
                 txt.typeface = Typeface.DEFAULT_BOLD; txt.textSize = dp(14f)
                 it.acts.reversed().forEach { ac ->
-                    val tw = txt.measureText(ac.label); val bw = tw + dp(28f); val by = h - dp(18f) - dp(36f)
+                    val tw = txt.measureText(ac.label); val bw = tw + dp(28f); val by = h - dp(14f) - dp(36f)
                     val r = RectF(x - bw, by, x, by + dp(36f))
                     ink.color = 0x33FFFFFF; ink.alpha = (60 * ia).toInt(); c.drawRoundRect(r, dp(18f), dp(18f), ink)
                     txt.color = 0xFFFFFFFF.toInt(); txt.alpha = (255 * ia).toInt(); c.drawText(ac.label, r.left + dp(14f), r.centerY() + dp(5f), txt)

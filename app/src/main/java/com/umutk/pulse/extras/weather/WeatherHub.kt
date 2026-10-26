@@ -467,7 +467,8 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
                             onSkin: (String) -> Unit, onUnits: (Boolean) -> Unit, onSource: (String) -> Unit, onAlerts: (Boolean) -> Unit, onBack: () -> Unit) {
     var ask by remember { mutableStateOf("") }
     val skins = listOf("sky" to tr("Sky (follows the weather)", "Gökyüzü (havaya göre)"), "amoled" to "AMOLED", "app" to tr("App look", "Uygulama teması"))
-    val sources = listOf("om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"))
+    val sources = listOf("om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "metno" to tr("MET Norway (no key)", "MET Norway (anahtarsız)"), "owm" to tr("OpenWeatherMap (your key)", "OpenWeatherMap (kendi anahtarınız)"))
+    val wctx = LocalContext.current
     @Composable fun Row2(title: String, value: String, onClick: () -> Unit) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(title, color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f)); Text(value, color = sub, fontSize = 14.sp)
@@ -481,6 +482,10 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
         Row2(tr("Colours", "Renkler"), skins.first { it.first == skin }.second) { ask = "skin" }
         Row2(tr("Temperature unit", "Sıcaklık birimi"), if (imp) "°F" else "°C") { ask = "units" }
         Row2(tr("Data source", "Veri kaynağı"), sources.first { it.first == source }.second) { ask = "source" }
+        if (source == "owm") {
+            var key by remember { mutableStateOf(WeatherStore.owmKey(wctx)) }
+            PField(key, { key = it; WeatherStore.setOwmKey(wctx, it) }, tr("OpenWeatherMap key", "OpenWeatherMap anahtarı"), Modifier.fillMaxWidth())
+        }
         var comb by remember { mutableStateOf(combine) }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {

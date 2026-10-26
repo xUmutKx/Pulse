@@ -37,7 +37,19 @@ data class Forecast(
 object WeatherApi {
     private fun lang() = tr("en", "tr")
 
-    fun forecast(lat: Double, lon: Double): String {
+    /** The context the stores were last opened with, so the plain calls below know which provider is chosen. */
+    @Volatile var appCtx: android.content.Context? = null
+    /** "om" and "mgm" read Open-Meteo; "metno" is MET Norway and "owm" OpenWeatherMap (with the user's key). */
+    private fun provider(): String = appCtx?.let { WeatherStore.source(it) } ?: "om"
+    private fun openMeteo() = provider().let { it == "om" || it == "mgm" }
+
+    fun forecast(lat: Double, lon: Double): String = when (provider()) {
+        "metno" -> WeatherProviders.metno(lat, lon)
+        "owm" -> WeatherProviders.owm(lat, lon, appCtx?.let { WeatherStore.owmKey(it) }.orEmpty())
+        else -> forecastOm(lat, lon)
+    }
+
+    private fun forecastOm(lat: Double, lon: Double): String {
         val url = "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f".format(java.util.Locale.US, lat, lon) +
             "&current=temperature_2m,apparent_temperature,relative_humidity_2m,weather_code,wind_speed_10m,wind_gusts_10m,wind_direction_10m,surface_pressure,cloud_cover,is_day,precipitation,dew_point_2m" +
             "&hourly=temperature_2m,weather_code,precipitation_probability,visibility&forecast_hours=96" +
@@ -54,6 +66,7 @@ object WeatherApi {
 
     /** European air quality index for now, -1 when the service has no value for the place. */
     fun airQuality(lat: Double, lon: Double): Int = runCatching {
+        if (!openMeteo()) return@runCatching -1
         val url = "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=%.4f&longitude=%.4f&current=european_aqi".format(java.util.Locale.US, lat, lon)
         JSONObject(get(url)).getJSONObject("current").optInt("european_aqi", -1)
     }.getOrDefault(-1)
@@ -63,6 +76,7 @@ object WeatherApi {
      * "" when the service has nothing.
      */
     fun extras(lat: Double, lon: Double, mgm: Boolean = false, combine: Boolean = false): String = runCatching {
+        if (!openMeteo()) return@runCatching ""
         val out = JSONObject()
         // MGM first: its hours are one more voice in the combined hours, not something the combined hours then paint over
         val m = if (mgm) runCatching { mgmOverlay(lat, lon) }.getOrNull() else null
@@ -107,7 +121,7 @@ object WeatherApi {
     /** The last network failure in words (HTTP code or the exception), shown beside "could not load" so a failing phone says why. */
     @Volatile var lastError: String = ""
 
-    private fun get(url: String): String {
+    internal fun get(url: String): String {
         val cn = openHttps(url)
         cn.setRequestProperty("User-Agent", "Pulse/1.0 (github.com/xUmutKx/Pulse)"); cn.setRequestProperty("Accept", "application/json")
         try {
@@ -441,7 +455,11 @@ object WeatherFmt {
 
 /** Last place, cities, units and forecast; SharedPreferences, read and written only by this feature. */
 object WeatherStore {
-    private fun p(c: Context) = c.getSharedPreferences("weather", Context.MODE_PRIVATE)
+    private fun p(c: Context): android.content.SharedPreferences { WeatherApi.appCtx = c.applicationContext; return c.getSharedPreferences("weather", Context.MODE_PRIVATE) }
+
+    /** The OpenWeatherMap key the user typed (the free one is enough). */
+    fun owmKey(c: Context): String = p(c).getString("owm_key", "") ?: ""
+    fun setOwmKey(c: Context, v: String) = p(c).edit().putString("owm_key", v.trim()).apply()
 
     fun savedPlace(c: Context): Place? {
         val s = p(c)
