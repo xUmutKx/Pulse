@@ -115,6 +115,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "weather" -> com.umutk.pulse.extras.weather.WeatherHub(back)
         id == "paint" -> com.umutk.pulse.extras.paint.PaintHub(back)
         id == "browser" -> com.umutk.pulse.extras.browser.BrowserHub(back)
+        id == "office" -> { androidx.activity.compose.BackHandler { back() }; OfficePage() }
         id == "calculator" -> com.umutk.pulse.extras.calculator.CalculatorHub(back)
         id == "localsend" -> com.umutk.pulse.extras.localsend.LocalSendHub(back)
         id == "palette" -> com.umutk.pulse.extras.palette.PaletteHub(back)
