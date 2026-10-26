@@ -134,7 +134,15 @@ fun ExtraLookIcon(tint: Color = T.text) {
  * One activity behind launcher entries (MusicLauncher, VideoLauncher, WhiteNoiseLauncher). The entry it was
  * started through picks the page, so it always knows where it was opened from. Back from the page closes it.
  */
+/** A page of an extra app can take the volume keys: it returns true when it used one (true = volume up). */
+object ExtraKeys { var volume: ((Boolean) -> Boolean)? = null }
+
 open class ExtraToolActivity : ComponentActivity() {
+
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if ((keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && ExtraKeys.volume?.invoke(keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) == true) return true
+        return super.onKeyDown(keyCode, event)
+    }
 
     // same process as Pulse: LookHost writes the one global Look.resolved, so this tool keeps its own across pause / resume and Pulse keeps its own (MainActivity)
     private var ownResolved: PTheme? = null

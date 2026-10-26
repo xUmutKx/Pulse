@@ -669,7 +669,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     val startRoot = Offset(rect.left + d.position.x, rect.top + d.position.y)
                     var curRoot = startRoot
                     val canGlide = isLetterNow && KeyboardPrefs.glide && st.page == 0 && st.panel == "keys"
-                    if (key.kind == KeyKind.DELETE) { a.backspace(); due = android.os.SystemClock.uptimeMillis() + 380L }
+                    // a tap deletes its letter on release; held, the first repeat already takes a whole word (no single letter first)
+                    if (key.kind == KeyKind.DELETE) due = android.os.SystemClock.uptimeMillis() + 380L
                     while (true) {
                         if (st.swiped) { st.preview = null; break }
                         val ev = withTimeoutOrNull((due - android.os.SystemClock.uptimeMillis()).coerceAtLeast(1L)) { awaitPointerEvent() }
@@ -699,7 +700,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             if (st.swiped) { st.preview = null; break }
                             val up = (startRoot.y - curRoot.y)
                             when {
-                                key.kind == KeyKind.DELETE -> if (quick) a.quickDeleteEnd(true)
+                                key.kind == KeyKind.DELETE -> if (quick) a.quickDeleteEnd(true) else if (delRepeats == 0) a.backspace()
                                 glide && seq.length >= 3 -> a.glide(seq.toString())
                                 glide && key.alts.isNotEmpty() && KeyboardPrefs.flick && up > 24.dp.toPx() -> a.type(key.alts[0])
                                 glide -> a.type(key.label)
