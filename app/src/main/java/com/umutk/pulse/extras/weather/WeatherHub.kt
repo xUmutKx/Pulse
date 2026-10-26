@@ -339,14 +339,21 @@ fun WeatherHub(onBack: () -> Unit) {
             if (f.hours.size >= 2) {
                 item {
                     Text(tr("Temperature", "Sıcaklık"), color = sub, fontSize = 13.sp)
-                    Sparkline(f.hours.map { it.temp }, fg)
+                    Sparkline(f.hours.map { it.temp }, fg, label = { t(it) })
+                    // the numbers under the chart: now, the highest and the lowest of the hours with the time they happen
+                    val hiH = f.hours.maxByOrNull { it.temp }!!; val loH = f.hours.minByOrNull { it.temp }!!
+                    Text(tr("Now ${t(f.hours.first().temp)} · High ${t(hiH.temp)} at ${WeatherFmt.clock(hiH.time)} · Low ${t(loH.temp)} at ${WeatherFmt.clock(loH.time)}",
+                        "Şimdi ${t(f.hours.first().temp)} · En yüksek ${t(hiH.temp)} (${WeatherFmt.clock(hiH.time)}) · En düşük ${t(loH.temp)} (${WeatherFmt.clock(loH.time)})"), color = fg, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                     Row(Modifier.fillMaxWidth()) {
                         Text(WeatherFmt.clock(f.hours.first().time), color = sub, fontSize = 11.sp, modifier = Modifier.weight(1f))
                         Text(WeatherFmt.clock(f.hours.last().time), color = sub, fontSize = 11.sp)
                     }
                     Spacer(Modifier.height(6.dp))
                     Text(tr("Chance of rain", "Yağış olasılığı"), color = sub, fontSize = 13.sp)
-                    Sparkline(f.hours.map { it.rain.toDouble() }, fg, bars = true, top = 100.0)
+                    Sparkline(f.hours.map { it.rain.toDouble() }, fg, bars = true, top = 100.0, label = { "${it.toInt()}%" })
+                    val rainH = f.hours.maxByOrNull { it.rain }!!
+                    Text(tr("Highest chance ${rainH.rain}% at ${WeatherFmt.clock(rainH.time)} · average ${f.hours.map { it.rain }.average().toInt()}%",
+                        "En yüksek olasılık %${rainH.rain} (${WeatherFmt.clock(rainH.time)}) · ortalama %${f.hours.map { it.rain }.average().toInt()}"), color = fg, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
                 }
             }
             item {

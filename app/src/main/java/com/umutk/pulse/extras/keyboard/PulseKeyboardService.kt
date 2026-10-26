@@ -550,7 +550,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slotLong(i: Int) {
         val w = slotWords.getOrNull(i).orEmpty()
-        if (w.isEmpty() || w.startsWith("\"") || !w[0].isLetter() || st.slots.getOrNull(i)?.startsWith("\u0001") == true) return
+        // the quoted word is what was typed: held, it is saved as a right word (never "corrected" again)
+        if (w.startsWith("\"") || (w.isEmpty() && i == 0 && st.slots.getOrNull(0)?.startsWith("\"") == true)) {
+            val typed = if (word.isNotEmpty()) word.toString() else lastCorrection?.original.orEmpty()
+            if (typed.length >= 2 && typed.none { it.isDigit() }) {
+                KeyboardDictionary.learnWord(typed, 4)
+                lastCorrection?.let { KeyboardDictionary.reject(this, it.original, it.corrected) }
+                android.widget.Toast.makeText(this, com.umutk.pulse.tr("Saved \"$typed\" as a right word", "\"$typed\" doğru kelime olarak kaydedildi"), android.widget.Toast.LENGTH_SHORT).show()
+                updateSuggestions()
+            }
+            return
+        }
+        if (w.isEmpty() || !w[0].isLetter() || st.slots.getOrNull(i)?.startsWith("\u0001") == true) return
         st.banAsk = i
         scope.launch { delay(3000); if (st.banAsk == i) st.banAsk = -1 }
     }
@@ -578,6 +589,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             afterText(); return
         }
         val c = currentInputConnection ?: return
+        // the word the typing was just corrected from stands quoted at the left: a tap puts it back
+        val lcb = lastCorrection
+        if (i == 0 && word.isEmpty() && lcb != null && st.slots.getOrNull(0)?.startsWith("\"") == true) {
+            val n = lcb.corrected.length + lcb.sep.length
+            lastCorrection = null
+            if (c.getTextBeforeCursor(n, 0)?.toString() == lcb.corrected + lcb.sep) {
+                if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.reject(this, lcb.original, lcb.corrected)
+                c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lcb.original, 1); c.endBatchEdit()
+                word.append(lcb.original); target = null
+            }
+            updateSuggestions(); return
+        }
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
         if (emailField) {
@@ -1034,6 +1057,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             st.letterRects.entries.toList().forEach { (k, r) -> if (k.length == 1) { centers[k[0]] = r.center; w = r.width } }
             if (w > 0f) KeyboardDictionary.TouchCtx(touchPts.takeLast(typed.length), centers, w) else null
         } else null
+        // right after an automatic correction the bar shows what was typed, quoted at the left, so it can be put back with a tap or kept with a long press
+        val shown = lastCorrection
+        if (typed.isEmpty() && shown != null) {
+            slotWords = arrayOf("", "", ""); target = null
+            st.slots = listOf("\"${shown.original}\"", shown.corrected, "")
+            return
+        }
         // the start of the field or of a sentence: the words a sentence begins with, before anything has been typed
         if (typed.isEmpty()) {
             val tb = currentInputConnection?.getTextBeforeCursor(3, 0)?.toString().orEmpty()
