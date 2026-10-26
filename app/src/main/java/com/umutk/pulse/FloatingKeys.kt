@@ -131,7 +131,9 @@ class FloatingKeysService : Service() {
         bar.setOnTouchListener { _, e ->
             when (e.actionMasked) {
                 MotionEvent.ACTION_DOWN -> { downX = e.rawX; downY = e.rawY; sx = p.x; sy = p.y }
-                MotionEvent.ACTION_MOVE -> { p.x = sx + (e.rawX - downX).toInt(); p.y = sy + (e.rawY - downY).toInt(); runCatching { wm.updateViewLayout(root, p) } }
+                // the view actually added to the window manager is the wrap below (kept in the panel field), not this root: updateViewLayout(root, ...)
+                // threw every time (root is not attached to the window manager directly) and runCatching swallowed it — the panel never moved
+                MotionEvent.ACTION_MOVE -> { p.x = sx + (e.rawX - downX).toInt(); p.y = sy + (e.rawY - downY).toInt(); panel?.let { v -> runCatching { wm.updateViewLayout(v, p) } } }
             }
             false
         }
@@ -161,9 +163,17 @@ class FloatingKeysService : Service() {
                 listOf("←" to 21, "↑" to 19, "↓" to 20, "→" to 22, "⌫" to 67, "Del" to 112),
             )
             1 -> listOf((1..6).map { "F$it" to 130 + it }, (7..12).map { "F$it" to 130 + it })
-            else -> listOf(
+            2 -> listOf(
                 listOf("Home" to 122, "End" to 123, "PgUp" to 92, "PgDn" to 93, "Ins" to 124, "Del" to 112),
                 listOf("Enter" to 66, "Space" to 62, "Tab" to 61, "Esc" to 111, "⌫" to 67),
+            )
+            // a full letter keyboard, not only the side keys: QWERTY rows sending the same input-command key codes as everything
+            // else here, so a latched Shift (mods, above) still combines into a capital on Android 12+ like it does with the others
+            else -> listOf(
+                listOf("Q" to 45, "W" to 51, "E" to 33, "R" to 46, "T" to 48, "Y" to 53, "U" to 49, "I" to 37, "O" to 43, "P" to 44),
+                listOf("A" to 29, "S" to 47, "D" to 32, "F" to 34, "G" to 35, "H" to 36, "J" to 38, "K" to 39, "L" to 40),
+                listOf("Z" to 54, "X" to 52, "C" to 31, "V" to 50, "B" to 30, "N" to 42, "M" to 41, "⌫" to 67),
+                listOf("Shift" to 59, "Space" to 62, "Enter" to 66),
             )
         }
         val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
@@ -200,7 +210,7 @@ class FloatingKeysService : Service() {
     }
 
     companion object {
-        private const val PAGES = 3
+        private const val PAGES = 4
         @Volatile var running = false
         fun toggle(c: Context): Boolean {
             if (!Compat.canOverlay(c)) return false
