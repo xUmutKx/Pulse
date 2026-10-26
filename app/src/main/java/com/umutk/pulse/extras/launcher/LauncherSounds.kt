@@ -12,7 +12,14 @@ object LauncherSounds {
     private val clicks = HashMap<String, Int>()
     private var loadedFor = ""
 
-    private fun key(lookId: String) = when (lookId) { "win95" -> "95"; "xp" -> "xp"; "win7" -> "7"; "win11" -> "11"; "win10", "win10black", "winphone", "winphoneamoled" -> "10"; else -> "" }
+    // "material", "amoled", "oneui" and "coloros" (the default launcher look among them) had no key at all, so the
+    // launcher was silent on every phone that had not been switched to one of the Windows looks — the Win11 set
+    // (Fluent, the most modern one already here) stands in until each of those gets sounds of its own
+    private fun key(lookId: String) = when (lookId) {
+        "win95" -> "95"; "xp" -> "xp"; "win7" -> "7"; "win11" -> "11"; "win10", "win10black", "winphone", "winphoneamoled" -> "10"
+        "material", "amoled", "oneui", "coloros" -> "11"
+        else -> ""
+    }
     private fun startRes(k: String) = when (k) { "95" -> R.raw.snd_start_95; "xp" -> R.raw.snd_start_xp; "7" -> R.raw.snd_start_7; "10" -> R.raw.snd_start_10; "11" -> R.raw.snd_start_11; else -> 0 }
     private fun clickRes(k: String) = when (k) { "95" -> R.raw.snd_click_95; "xp" -> R.raw.snd_click_xp; "7" -> R.raw.snd_click_7; "10" -> R.raw.snd_click_10; "11" -> R.raw.snd_click_11; else -> 0 }
     private val attrs = AudioAttributes.Builder().setUsage(AudioAttributes.USAGE_MEDIA).setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build()
