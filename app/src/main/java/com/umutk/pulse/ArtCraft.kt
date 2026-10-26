@@ -80,9 +80,11 @@ object ArtCraft {
                 val rel: JSONObject = (0 until arr.length()).map { arr.getJSONObject(it) }
                     .firstOrNull { (it.optJSONArray("assets")?.length() ?: 0) > 0 } ?: throw IllegalStateException("no release with APKs")
                 val assets = rel.getJSONArray("assets")
+                // a release can ship two .apk builds of the same app (e.g. a split-ABI build next to a universal one); keep the larger, it is the fuller build
                 val list = (0 until assets.length()).map { assets.getJSONObject(it) }
                     .filter { it.optString("name").endsWith(".apk") }
                     .map { Item(appName(it.getString("name")), it.getString("name"), it.getString("browser_download_url"), it.optLong("size")) }
+                    .sortedByDescending { it.size }.distinctBy { it.app }
                 ui {
                     items.clear(); items.addAll(list); tag = rel.optString("tag_name"); notes = rel.optString("body"); status = ""
                     list.forEach { item -> val f = fileFor(c, item); if (f.exists()) readIcon(c, f, item.app) }
