@@ -370,7 +370,7 @@ fun NowPlayingScreen(
                         title = track?.displayName().orEmpty(), artist = track?.artist.orEmpty(), album = track?.album, durationMs = durationMs.toLong(),
                         localPath = track?.path?.takeIf { !it.contains("://") }, positionMs = positionMs.toLong(),
                         onDismiss = { (onLyricsDismiss ?: onLyrics)?.invoke() }, onSeek = { ms -> onSeekMs?.invoke(ms.toInt()) ?: onSeek(ms.toInt()) },
-                        modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))),
+                        modifier = Modifier.clip(RoundedCornerShape(style.artCorner.coerceAtMost(4.dp))), art = art,
                     )
                 }
             }
