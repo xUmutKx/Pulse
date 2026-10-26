@@ -93,10 +93,15 @@ object NetMode {
                 "for s in 0 1; do cmd phone set-allowed-network-types-for-users -s \$s $m; done; cmd phone set-allowed-network-types-for-users $m" +
                 (if (air) "; cmd connectivity airplane-mode enable; sleep 1; cmd connectivity airplane-mode disable" else "") + "; echo __OK"
             val out = if (Shell.root == true) Shell.runRoot(cmd) else Shell.run(cmd)
-            val ok = out.contains("__OK") && current(app) == mode
             // read back what the phone really holds now
             val back = (if (Shell.root == true) Shell.runRoot("echo sdk=\$(getprop ro.build.version.sdk); echo setting=\$(settings get global preferred_network_mode); echo allowed=\$(cmd phone get-allowed-network-types-for-users 2>&1 | head -3); echo net=\$(getprop gsm.network.type)")
                 else Shell.run("echo setting=\$(settings get global preferred_network_mode); echo allowed=\$(cmd phone get-allowed-network-types-for-users 2>&1 | head -3); echo net=\$(getprop gsm.network.type)")).trim()
+            // current(app) == mode only proves the legacy global setting we just wrote ourselves stuck — trivially true with root, so it always said
+            // "Done" even when the phone's radio never actually changed. The allowed-types readback is the one line the modem itself reports back,
+            // so an honest "worked" means that line actually carries the mask we asked for.
+            val allowedLine = back.lineSequence().firstOrNull { it.startsWith("allowed=") }.orEmpty()
+            val noError = !out.contains("Exception", true) && !out.contains("not found", true) && !allowedLine.contains("Exception", true)
+            val ok = out.contains("__OK") && noError && allowedLine.contains(m.toString())
             lastDiag = "want mode $mode, mask $m\n" + out.trim().lines().filter { it != "__OK" }.takeLast(8).joinToString("\n") + "\n" + back
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(ok) }
         }.start()
