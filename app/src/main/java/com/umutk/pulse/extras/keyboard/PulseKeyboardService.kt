@@ -946,7 +946,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return when {
             typed.length > 1 && typed.all { !it.isLetter() || it.isUpperCase() } -> w.uppercase(loc)
             typed.isNotEmpty() && typed[0].isUpperCase() -> w.replaceFirstChar { it.titlecase(loc) }
-            else -> w
+            else -> KeyboardDictionary.form(w)
         }
     }
 
@@ -1046,7 +1046,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** The three slots of the bar (shown and as words), and the word the space key would correct [typed] to. */
     private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null, fast: Boolean = false): Triple<List<String>, Array<String>, String?> {
         if (typed.isEmpty()) {
-            val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else it }
+            val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else KeyboardDictionary.form(it) }
             // after a word and a space: the emoji of the word just written takes the last place
             val em = if (KeyboardPrefs.emojiPredictions && prev != null) (KeyboardDictionary.emoji(prev) ?: EmojiData.forWord(prev)) else null
             val w = arrayOf(n.getOrElse(0) { "" }, n.getOrElse(1) { "" }, em ?: n.getOrElse(2) { "" })

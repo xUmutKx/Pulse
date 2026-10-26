@@ -126,6 +126,7 @@ object KeyboardDictionary {
         runCatching { c.assets.open("kbd/habits.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_typo_seen.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typoSeen[p[0]] = p[1].toIntOrNull() ?: 1 } }
+        runCatching { File(c.filesDir, "kbd_forms.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) forms[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_pairs.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 3) pairs.getOrPut(p[0]) { ConcurrentHashMap() }[p[1]] = p[2].toIntOrNull() ?: 1 } }
     }
 
@@ -142,19 +143,20 @@ object KeyboardDictionary {
             File(c.filesDir, "kbd_keys.txt").writeText(keyCounts.entries.joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_touch.txt").writeText(bias.entries.joinToString("\n") { "${it.key} ${it.value[0]} ${it.value[1]}" })
             File(c.filesDir, "kbd_user.txt").writeText(user.entries.sortedByDescending { it.value }.take(8000).joinToString("\n") { "${it.key} ${it.value}" })
+            File(c.filesDir, "kbd_forms.txt").writeText(forms.entries.take(2000).joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_pairs.txt").writeText(pairs.entries.flatMap { (a, m) -> m.entries.map { Triple(a, it.key, it.value) } }.sortedByDescending { it.third }.take(8000).joinToString("\n") { "${it.first} ${it.second} ${it.third}" })
         }
     }
 
     /** Forgets everything learned from the user (settings > factory settings, and the "Clear learned words" row). */
     fun forgetUser(c: Context) {
-        user.clear(); pairs.clear(); typos.clear(); dirty = 0
-        File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete(); File(c.filesDir, "kbd_typos.txt").delete(); File(c.filesDir, "kbd_banned.txt").delete(); banned.clear(); File(c.filesDir, "kbd_rejects.txt").delete(); rejects.clear(); File(c.filesDir, "kbd_keys.txt").delete(); keyCounts.clear()
+        user.clear(); pairs.clear(); forms.clear(); typos.clear(); dirty = 0
+        File(c.filesDir, "kbd_user.txt").delete(); File(c.filesDir, "kbd_forms.txt").delete(); File(c.filesDir, "kbd_pairs.txt").delete(); File(c.filesDir, "kbd_typos.txt").delete(); File(c.filesDir, "kbd_banned.txt").delete(); banned.clear(); File(c.filesDir, "kbd_rejects.txt").delete(); rejects.clear(); File(c.filesDir, "kbd_keys.txt").delete(); keyCounts.clear()
     }
 
     /** Reads the learned data again from the files (after an import). */
     fun reloadUser(c: Context) {
-        user.clear(); pairs.clear(); typos.clear(); banned.clear(); bias.clear()
+        user.clear(); pairs.clear(); forms.clear(); typos.clear(); banned.clear(); bias.clear()
         userLoaded = false; loadUser(c)
     }
 
@@ -177,9 +179,16 @@ object KeyboardDictionary {
         }
     }
 
+    /** Names and other words the person writes with a capital in the middle of a sentence (Umut, Kıvanç, Şahin): lower case -> the way it was written. */
+    private val forms = ConcurrentHashMap<String, String>()
+    /** The written form of a learned word ("umut" -> "Umut"), or the word itself. */
+    fun form(w: String): String = forms[w.lowercase(Locale.ROOT)] ?: w
+
     fun learn(c: Context, prev: String?, word: String) {
         val w = word.lowercase(Locale.ROOT)
         if (w.length < 2 || w.any { it.isDigit() }) return
+        // behind another word and still capitalised: a name, so the suggestions give it its capital again
+        if (!prev.isNullOrEmpty() && word[0].isUpperCase() && word.drop(1).none { it.isUpperCase() }) forms[w] = word
         user[w] = (user[w] ?: 0) + 1
         if (!prev.isNullOrEmpty()) { val m = pairs.getOrPut(prev.lowercase(Locale.ROOT)) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
         if (++dirty >= 25) saveUser(c)
