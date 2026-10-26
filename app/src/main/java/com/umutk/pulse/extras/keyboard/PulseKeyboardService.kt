@@ -972,6 +972,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "alt" -> st.alt = (st.alt + 1) % 3
             "win" -> st.win = (st.win + 1) % 3
             "shiftm" -> st.shiftMod = (st.shiftMod + 1) % 3
+            "fn" -> st.fnOpen = !st.fnOpen
             "selectAll", "copy", "cut", "paste", "undo", "redo" -> edit(id)
             // Alt + Tab: the phone's recent apps (the accessibility helper), as the editor cannot switch windows
             "tab" -> if (st.alt > 0) { com.umutk.pulse.extras.launcher.globalAction(this, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS); useModifiers() } else sendKey(d.code)

@@ -553,7 +553,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 note = err.ifEmpty { if (c.move) tr("Moved $n items", "$n öğe taşındı") else tr("Pasted $n items", "$n öğe yapıştırıldı") }
                 if (moved.isNotEmpty()) undo = ExUndo(moved)
                 // what came out of an archive is a one-time copy: after it lands the paste offer is gone
-                if ((c.move || c.once) && clip === c) clip = null
+                if (clip === c) clip = null
                 refresh++
             }
         }
@@ -801,7 +801,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 }
                 if (res.isEmpty()) {
                     if (c.move) { withContext(Dispatchers.IO) { c.files.forEach { it.deleteRecursively() } }; clip = null }
-                    else if (c.once && clip === c) clip = null
+                    else if (clip === c) clip = null
                     arcRev++
                 }
             }

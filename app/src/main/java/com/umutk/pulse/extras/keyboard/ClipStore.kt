@@ -11,7 +11,7 @@ class ClipItem(val id: Long, val text: String, val image: String?, val time: Lon
 
 /**
  * Everything copied while the keyboard is the input method, kept on the phone: texts and pictures, newest first, pinned ones on top. Unpinned ones are
- * dropped after the time set in the keyboard settings (one hour to three days).
+ * dropped after the time set in the keyboard settings (an hour to a week, or never: the default).
  */
 object ClipStore {
     private const val MAX = 300
@@ -41,7 +41,9 @@ object ClipStore {
     /** The items now (old unpinned ones dropped first). */
     fun load(c: Context): List<ClipItem> {
         read(c)
-        val limit = System.currentTimeMillis() - KeyboardPrefs.clipHours.coerceIn(1, 72) * 3_600_000L
+        // 0 hours = for ever; otherwise the unpinned ones older than that go
+        val hours = KeyboardPrefs.clipHours
+        val limit = if (hours <= 0) Long.MIN_VALUE else System.currentTimeMillis() - hours * 3_600_000L
         val keep = items.filter { it.pinned || it.time >= limit }
         if (keep.size != items.size) { drop(c, items - keep.toSet()); items = keep; write(c) }
         return sorted(items)

@@ -64,6 +64,8 @@ class KbState {
     var alt by mutableIntStateOf(0)
     var win by mutableIntStateOf(0)
     var shiftMod by mutableIntStateOf(0)
+    /** The Fn key was pressed: the twelve F keys replace the key bar until one is chosen. */
+    var fnOpen by mutableStateOf(false)
     /** The finger's path while a word is swiped over the letters, in the window's pixels. */
     /** The finger of this touch swiped down to close the keyboard: the key under it must not type. */
     @Volatile var swiped = false

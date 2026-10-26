@@ -147,7 +147,7 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             Text(tr("The chosen language shows its keys; both languages correct and suggest together. A language without a word list downloads one.", "Seçili dilin tuşları görünür; iki dil birlikte düzeltir ve öneri verir. Sözlüğü olmayan dil kendi sözlüğünü indirir."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
             Switch(tr("Number row", "Sayı satırı"), "", KeyboardPrefs.numberRow) { KeyboardPrefs.numberRow = it; save() }
-            Switch(tr("Arrow keys", "Ok tuşları"), tr("Arrows, home, end, select all, copy, paste", "Oklar, başa, sona, tümünü seç, kopyala, yapıştır"), KeyboardPrefs.arrows) { KeyboardPrefs.arrows = it; save() }
+            Switch(tr("Key bar", "Tuş çubuğu"), tr("Fn (F1 to F12), Shift, arrows, Home, End, Page up and down, Esc, Tab, select all, copy, paste", "Fn (F1-F12), Shift, oklar, Home, End, Page up ve down, Esc, Tab, tümünü seç, kopyala, yapıştır"), KeyboardPrefs.arrows) { KeyboardPrefs.arrows = it; save() }
             Text(tr("Key beside ?123", "?123 yanındaki tuş"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 listOf("menu" to tr("Menu (⋮)", "Menü (⋮)"), "emoji" to "Emoji", "none" to tr("None", "Yok")).forEach { (k, n) -> PChip(KeyboardPrefs.bottomKey == k, n) { KeyboardPrefs.bottomKey = k; save() } }
@@ -204,8 +204,14 @@ fun KeyboardSettings(back: () -> Unit) {
             Text("${tr("Correct on its own from", "Kendiliğinden düzelt, benzerlik")}: ${KeyboardPrefs.autoRatio}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             PSlider((KeyboardPrefs.autoRatio - 70) / 30f, { KeyboardPrefs.autoRatio = 70 + (it * 30).roundToInt() }, 0f..1f, onDone = { save() })
             Switch(tr("Comma inside a word is a slip", "Kelime içindeki virgül hatadır"), tr("A comma typed straight before a letter is taken out and the word goes on", "Harften hemen önce yazılan virgül silinir, kelime devam eder"), KeyboardPrefs.commaSlip) { KeyboardPrefs.commaSlip = it; save() }
-            Text("${tr("Keep clipboard items for", "Pano öğeleri şu kadar saklansın")}: " + (if (KeyboardPrefs.clipHours >= 24 && KeyboardPrefs.clipHours % 24 == 0) "${KeyboardPrefs.clipHours / 24} " + tr("days", "gün") else "${KeyboardPrefs.clipHours} " + tr("hours", "saat")), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-            PSlider((KeyboardPrefs.clipHours - 1) / 71f, { KeyboardPrefs.clipHours = 1 + (it * 71).roundToInt() }, 0f..1f, onDone = { save() })
+            Text(tr("Keep clipboard items for", "Pano öğeleri şu kadar saklansın"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(1 to tr("1 hour", "1 saat"), 3 to tr("3 hours", "3 saat"), 24 to tr("1 day", "1 gün"), 168 to tr("1 week", "1 hafta"), 0 to tr("Never delete", "Hiç silme")).forEach { (h, label) ->
+                    val on = KeyboardPrefs.clipHours == h
+                    Text(label, color = if (on) Color.White else T.text, fontSize = 13.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                        modifier = Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(if (on) Look.accent else T.panel).clickable { KeyboardPrefs.clipHours = h; save() }.padding(vertical = 8.dp, horizontal = 2.dp))
+                }
+            }
             Switch(tr("Quick prediction insert", "Hızlı tahmin ekleme"), tr("Space puts in the middle prediction, even before the next word is started", "Boşluk, yeni kelime başlamadan da ortadaki tahmini ekler"), KeyboardPrefs.quickPrediction) { KeyboardPrefs.quickPrediction = it; save() }
             Switch(tr("Quick period", "Hızlı nokta"), tr("Double tap on space puts in a period", "Boşluğa çift dokunuş nokta koyar"), KeyboardPrefs.quickPeriod) { KeyboardPrefs.quickPeriod = it; save() }
             Switch(tr("Auto capitalise", "Otomatik büyük harf"), tr("Capital letter at the start of a sentence", "Cümle başında büyük harf"), KeyboardPrefs.autoCap) { KeyboardPrefs.autoCap = it; save() }
