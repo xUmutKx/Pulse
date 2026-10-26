@@ -1485,6 +1485,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".OfficeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_office" android:roundIcon="@mipmap/ic_ad_office" android:label="Office">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".CalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_calc" android:roundIcon="@mipmap/ic_ad_calc" android:label="Calculator">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
