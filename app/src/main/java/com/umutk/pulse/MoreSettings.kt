@@ -319,9 +319,11 @@ fun BackdropSettings() {
         if (editing) com.umutk.pulse.features.BackdropEditor { editing = false }
         // the bundled pictures: the wide ones (1-16) and the phone ones (17-34); small previews, decoded off the main thread
         Text(tr("Wallpapers", "Duvar kağıtları"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
-        (1..16).chunked(4).forEach { row ->
+        (1..17).chunked(4).forEach { row ->
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                row.forEach { i -> BackdropThumb("win11_wall_$i", 1.6f, bd.mode == "pack$i", Modifier.weight(1f)) { scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$i") } } }
+                // the 17th wide picture (the blue bloom) is pack35, after the phone ones
+                row.forEach { i -> val pk = if (i == 17) 35 else i; BackdropThumb("win11_wall_$i", 1.6f, bd.mode == "pack$pk", Modifier.weight(1f)) { scope.launch(Dispatchers.IO) { bd.set(ctx, "pack$pk") } } }
+                repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
             }
         }
         Text(tr("Phone pictures", "Telefon resimleri"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
