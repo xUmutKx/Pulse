@@ -498,6 +498,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (filePick != null) { if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS || com.umutk.pulse.ofIsText(f)) filePick(f); return }
         if (f.extension.equals("apk", true) || (standalone && f.extension.lowercase() in setOf("xapk", "apks", "apkm"))) { apkAsk = f; sel = emptySet(); return }
         if (isArchiveFile(f)) { arcFile = f; arcCwd = ""; sel = emptySet(); return }
+        // a video plays in Pulse's own player straight away; "Open as" holds the gallery and the other apps
+        if (!FilesPrefs.openAsk && f.extension.lowercase() in EX_VIDEO) { recents = exAddRecent(ctx, f); if (exOpenInPulseVideo(ctx, f)) return }
         if (FilesPrefs.openAsk) { recents = exAddRecent(ctx, f); if (exHandOver(ctx, f, false)) return }
         // web pages show in the app (a file with no extension that holds a page too)
         if (f.extension.lowercase() in setOf("html", "htm", "xhtml") || (f.extension.isEmpty() && exLooksHtml(f))) { recents = exAddRecent(ctx, f); htmlView = f; return }
@@ -1236,6 +1238,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 item("HTML") { openAsAsk = null; recents = exAddRecent(ctx, f); htmlView = f }
                 item(tr("Text", "Metin")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpenText(ctx, f) }
                 item(tr("Image", "Resim")) { openAsAsk = null; recents = exAddRecent(ctx, f); com.umutk.pulse.imgOpen(ctx, f) }
+                if (f.extension.lowercase() in EX_VIDEO) {
+                    item(tr("Video player", "Video oynatıcı")) { openAsAsk = null; recents = exAddRecent(ctx, f); if (!exOpenInPulseVideo(ctx, f)) note = "Could not open ${f.name}" }
+                    item(tr("Gallery", "Galeri")) { openAsAsk = null; recents = exAddRecent(ctx, f); if (!exOpenInGallery(ctx, f)) note = "Could not open ${f.name}" }
+                }
                 item(tr("Save as…", "Farklı kaydet…")) { openAsAsk = null; saveAsFile = f }
                 item(tr("Another app…", "Başka uygulama…")) { openAsAsk = null; if (exHandOver(ctx, f, false)) recents = exAddRecent(ctx, f) else note = "Could not open ${f.name}" }
             } },
@@ -1949,6 +1955,17 @@ private fun ExHtmlViewer(f: File, onClose: () -> Unit, onSource: () -> Unit) {
         }
     }
 }
+
+internal val EX_VIDEO = setOf("mp4", "mkv", "webm", "mov", "avi", "3gp", "m4v", "ts", "flv", "wmv")
+
+/** Starts Pulse's video player on [f]. False when it cannot be started (the caller then falls back to the other ways). */
+private fun exOpenInPulseVideo(ctx: Context, f: File): Boolean = runCatching {
+    val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+    val i = Intent(ctx, com.umutk.pulse.ExtraToolActivity::class.java).setAction(Intent.ACTION_VIEW).setDataAndType(uri, "video/*").putExtra("route", "video")
+    i.clipData = ClipData.newRawUri("", uri)
+    i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    ctx.startActivity(i)
+}.isSuccess
 
 internal val EX_AUDIO = setOf("mp3", "ogg", "oga", "opus", "wav", "flac", "m4a", "aac", "amr")
 

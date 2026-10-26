@@ -256,6 +256,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         updateCaps(); updateSuggestions()
     }
 
+    // a keyboard that is closed with the emoji (or clipboard, or tool) page up comes back as the plain keys, whichever way it is shown again
+    private fun backToKeys() { st.panel = "keys"; st.emojiQuery = null; st.toolbar = false }
+    override fun onFinishInputView(finishingInput: Boolean) { super.onFinishInputView(finishingInput); backToKeys() }
+    override fun onWindowHidden() { super.onWindowHidden(); backToKeys() }
+    override fun onWindowShown() { super.onWindowShown(); backToKeys() }
+
     override fun onFinishInput() {
         super.onFinishInput()
         st.inline = emptyList()

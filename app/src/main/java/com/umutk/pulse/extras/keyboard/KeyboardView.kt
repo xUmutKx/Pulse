@@ -636,6 +636,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
     LaunchedEffect(k.kind) { down = false }
     val isLetter = k.kind == KeyKind.CHAR && k.label.length == 1 && k.label[0].isLetter()
     val isLetterNow by rememberUpdatedState(isLetter)
+    val view = androidx.compose.ui.platform.LocalView.current
     val bg = when (k.kind) { KeyKind.CHAR, KeyKind.SPACE, KeyKind.ENTER -> lerp(th.key, androidx.compose.ui.graphics.Color(0xFF808080), .07f); else -> th.special }
     val fill by animateColorAsState(if (down) lerp(bg, th.text, .2f) else bg, tween(if (KeyboardPrefs.anim) 90 else 0), label = "key")
     val pressedScale = when (KeyboardPrefs.motionFx) { 1 -> 1.1f; 2 -> .86f; 3 -> .9f; else -> .93f }
@@ -677,8 +678,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                             val now = android.os.SystemClock.uptimeMillis()
                             when (key.kind) {
                                 KeyKind.DELETE -> {
-                                    // held: one letter per repeat, a little faster the longer it is held, never a whole word
-                                    if (!quick) { delRepeats++; a.backspace(); due = now + maxOf(35L, 90L - delRepeats * 3L) } else due = now + 55L
+                                    // held long enough: a whole word per repeat instead of a letter, with a tick under the finger each time
+                                    if (!quick) { delRepeats++; a.deleteWord(); view.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY); due = now + maxOf(55L, 230L - delRepeats * 22L) } else due = now + 55L
                                 }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
