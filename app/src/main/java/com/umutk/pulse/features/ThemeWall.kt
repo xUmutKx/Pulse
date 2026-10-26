@@ -35,7 +35,7 @@ private fun desktopWalls(lookId: String): List<Int> = when (lookId) {
     "win7" -> listOf(R.drawable.splash_win7_wallpaper, R.drawable.wall_w7_2, R.drawable.wall_w7_3, R.drawable.wall_w7_4, R.drawable.wall_w7_5, R.drawable.wall_w7_6, R.drawable.wall_w7_7, R.drawable.wall_w7_8, R.drawable.wall_w7_9, R.drawable.wall_w7_10, R.drawable.wall_w7_11)
     "win95" -> listOf(R.drawable.wall_w95_0, R.drawable.wall_w95_1, R.drawable.wall_w95_2, R.drawable.wall_w95_3)
     "win11" -> listOf(R.drawable.win11_wall_1, R.drawable.win11_wall_2, R.drawable.win11_wall_3, R.drawable.win11_wall_4, R.drawable.win11_wall_5, R.drawable.win11_wall_6, R.drawable.win11_wall_7, R.drawable.win11_wall_8,
-        R.drawable.win11_wall_9, R.drawable.win11_wall_10, R.drawable.win11_wall_11, R.drawable.win11_wall_12, R.drawable.win11_wall_13, R.drawable.win11_wall_14, R.drawable.win11_wall_15, R.drawable.win11_wall_16)
+        R.drawable.win11_wall_9, R.drawable.win11_wall_10, R.drawable.win11_wall_11, R.drawable.win11_wall_12, R.drawable.win11_wall_13, R.drawable.win11_wall_14, R.drawable.win11_wall_15, R.drawable.win11_wall_16, R.drawable.win11_wall_17)
     "win10" -> listOf(R.drawable.wall_w10_1, R.drawable.wall_w10_2, R.drawable.wall_w10_3, R.drawable.wall_w10_4, R.drawable.wall_w10_5)
     else -> emptyList()
 }
@@ -51,6 +51,16 @@ private fun mobileWalls(lookId: String): List<Int> = when (lookId) {
 
 /** Every stock picture of a look. Windows 11 lists its phone pictures first (its default is portrait); the others keep the desktop picture first. */
 fun wallsFor(lookId: String): List<Int> = if (lookId == "win11") mobileWalls(lookId) + desktopWalls(lookId) else desktopWalls(lookId) + mobileWalls(lookId)
+
+/** Windows 11: the phone picture n (1-18) and the desktop picture w (1-17) that show the same artwork, so a turned screen swaps one for the other. 17 is the blue bloom, the default. */
+private val WIN11_PHONE_TO_WIDE = mapOf(1 to 17, 4 to 10, 6 to 6, 7 to 16, 8 to 13, 9 to 1, 10 to 14, 13 to 15, 14 to 12, 17 to 9, 18 to 5)
+
+/** Index in [wallsFor]("win11") of the picture that goes with picture [i] (phone <-> desktop), or null when it has no partner. */
+fun win11Pair(i: Int): Int? {
+    val phones = mobileWalls("win11").size
+    return if (i < phones) WIN11_PHONE_TO_WIDE[i + 1]?.let { phones + it - 1 }
+    else WIN11_PHONE_TO_WIDE.entries.firstOrNull { it.value == i - phones + 1 }?.let { it.key - 1 }
+}
 
 /** True when picture [i] of [wallsFor] is a portrait phone picture (a rotated screen uses a desktop one instead). */
 fun isMobileWall(lookId: String, i: Int): Boolean = if (lookId == "win11") i < mobileWalls(lookId).size else i >= desktopWalls(lookId).size
