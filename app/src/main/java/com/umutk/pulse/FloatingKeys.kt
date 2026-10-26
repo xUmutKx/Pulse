@@ -64,8 +64,10 @@ class FloatingKeysService : Service() {
     /** The round button: drag moves it, a tap brings the keyboard up, a long press opens or closes the panel. */
     private fun addHandle() {
         val size = (46 * d).toInt()
-        val v = TextView(this).apply {
-            text = "⌨"; textSize = 20f; setTextColor(Color.WHITE); gravity = Gravity.CENTER; background = round(0xCC202020.toInt(), 23f)
+        // the Material keyboard icon, white on a dark round button
+        val v = android.widget.ImageView(this).apply {
+            setImageResource(R.drawable.ic_float_keyboard); setColorFilter(Color.WHITE); scaleType = android.widget.ImageView.ScaleType.FIT_CENTER
+            val pad = (11 * d).toInt(); setPadding(pad, pad, pad, pad); background = round(0xCC202020.toInt(), 23f)
         }
         val p = lp(size, size, 0, (160 * d).toInt())
         var downX = 0f; var downY = 0f; var startX = 0; var startY = 0; var moved = false; var longDone = false
@@ -88,10 +90,25 @@ class FloatingKeysService : Service() {
 
     /** Asks the App Lock accessibility service for the focused text field and clicks it, which brings its keyboard up. */
     private fun openKeyboard() {
+        handle?.performHapticFeedback(android.view.HapticFeedbackConstants.VIRTUAL_KEY)
         val svc = com.umutk.pulse.applock.LockService.instance
-        val node = runCatching { svc?.rootInActiveWindow?.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT) }.getOrNull()
-        val ok = node != null && (node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK) || node.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_FOCUS))
-        if (!ok) android.widget.Toast.makeText(this, tr("Tap a text field first (the App Lock accessibility service must be on)", "Önce bir yazı alanına dokunun (Uygulama Kilidi erişilebilirlik hizmeti açık olmalı)"), android.widget.Toast.LENGTH_LONG).show()
+        if (svc == null) { android.widget.Toast.makeText(this, tr("Turn on the App Lock accessibility service first", "Önce Uygulama Kilidi erişilebilirlik hizmetini açın"), android.widget.Toast.LENGTH_LONG).show(); return }
+        val root = runCatching { svc.rootInActiveWindow }.getOrNull()
+        // the field that has the cursor; failing that, the first editable field on the screen
+        var node = runCatching { root?.findFocus(android.view.accessibility.AccessibilityNodeInfo.FOCUS_INPUT) }.getOrNull()
+        if (node == null && root != null) {
+            val todo = ArrayDeque<android.view.accessibility.AccessibilityNodeInfo>().apply { add(root) }
+            var seen = 0
+            while (todo.isNotEmpty() && seen++ < 400) {
+                val n = todo.removeFirst()
+                if (n.isEditable && n.isVisibleToUser) { node = n; break }
+                for (i in 0 until n.childCount) n.getChild(i)?.let { todo.add(it) }
+            }
+        }
+        val n = node
+        // focus first, then a click: the click is what makes most apps raise their keyboard
+        val ok = n != null && (n.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_FOCUS) or n.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
+        if (!ok) android.widget.Toast.makeText(this, tr("No text field found on the screen", "Ekranda yazı alanı bulunamadı"), android.widget.Toast.LENGTH_SHORT).show()
     }
 
     private fun togglePanel() {
