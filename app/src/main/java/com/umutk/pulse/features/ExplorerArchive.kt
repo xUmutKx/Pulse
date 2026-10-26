@@ -5,6 +5,7 @@ import com.umutk.pulse.fadingEdges
 import android.content.pm.PackageManager
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -546,12 +547,11 @@ internal fun ApkInfo(f: File, onClose: () -> Unit, onView: () -> Unit) {
     val scope = rememberCoroutineScope()
     val m = meta
     val abis = parts.map { it.path.substringAfterLast('/') }.mapNotNull { Regex("(arm64_v8a|armeabi_v7a|x86_64|x86|armeabi)", RegexOption.IGNORE_CASE).find(it)?.value?.replace('_', '-') }.distinct()
-    WinAlert(onDismissRequest = onClose,
-        title = { Row(verticalAlignment = Alignment.CenterVertically) {
+    val titleC: @Composable () -> Unit = { Row(verticalAlignment = Alignment.CenterVertically) {
             m?.icon?.let { Image(it, null, Modifier.size(40.dp)); Spacer(Modifier.width(12.dp)) }
             Text(m?.label?.takeIf { it.isNotBlank() } ?: f.name, Modifier.weight(1f))
-        } },
-        text = { Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        } }
+    val textC: @Composable () -> Unit = { Column(Modifier.heightIn(max = 460.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             // the file name in full, wrapped, and selectable
             androidx.compose.foundation.text.selection.SelectionContainer { Text(f.name, color = T.text, fontSize = 13.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium) }
             val rows = buildList {
@@ -582,15 +582,38 @@ internal fun ApkInfo(f: File, onClose: () -> Unit, onView: () -> Unit) {
                     }
                 }
             }
-        } },
+        } }
+    val save: () -> Unit = {
+        scope.launch {
+            val note = withContext(Dispatchers.IO) { runCatching { apkExport(f) }.getOrElse { tr("Could not save", "Kaydedilemedi") } }
+            android.widget.Toast.makeText(ctx, note, android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+    if (T.material) {
+        // Material: a rounded card in the window's own colours, a filled Install, tonal Browse / Save APKs, a plain Cancel
+        val w = com.umutk.pulse.LocalWindowLook.current
+        androidx.compose.ui.window.Dialog(onClose) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(w.panel).border(1.dp, w.line, RoundedCornerShape(28.dp)).padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 16.dp)) {
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides w.text, androidx.compose.material3.LocalTextStyle provides androidx.compose.material3.MaterialTheme.typography.titleLarge.copy(color = w.text, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)) { titleC() }
+                Spacer(Modifier.height(14.dp))
+                androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides w.text) { textC() }
+                Spacer(Modifier.height(18.dp))
+                @Composable fun pill(label: String, fill: Color, ink: Color, go: () -> Unit) =
+                    Text(label, Modifier.clip(RoundedCornerShape(20.dp)).background(fill).clickable(onClick = go).padding(horizontal = 18.dp, vertical = 10.dp), color = ink, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Cancel", "İptal"), Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClose).padding(horizontal = 14.dp, vertical = 10.dp), color = w.text.copy(alpha = .75f), fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                    pill(tr("Browse", "Gözat"), w.text.copy(alpha = .09f), w.text, onView)
+                    if (bundle) pill(tr("Save APKs", "APK'ları kaydet"), w.text.copy(alpha = .09f), w.text, save)
+                    pill(tr("Install", "Yükle"), w.accent.copy(alpha = 1f), com.umutk.pulse.onAccent(w.accent.copy(alpha = 1f))) { onClose(); apkInstall(ctx, f) }
+                }
+            }
+        }
+        return
+    }
+    WinAlert(onDismissRequest = onClose, title = titleC, text = textC,
         confirmButton = { Row {
             TextButton(onView) { Text(tr("Browse", "Gözat")) }
-            if (bundle) TextButton({
-                scope.launch {
-                    val note = withContext(Dispatchers.IO) { runCatching { apkExport(f) }.getOrElse { tr("Could not save", "Kaydedilemedi") } }
-                    android.widget.Toast.makeText(ctx, note, android.widget.Toast.LENGTH_LONG).show()
-                }
-            }) { Text(tr("Save APKs", "APK'ları kaydet")) }
+            if (bundle) TextButton(save) { Text(tr("Save APKs", "APK'ları kaydet")) }
             TextButton({ onClose(); apkInstall(ctx, f) }) { Text(tr("Install", "Yükle")) }
         } },
         dismissButton = { TextButton(onClose) { Text(tr("Cancel", "İptal")) } })

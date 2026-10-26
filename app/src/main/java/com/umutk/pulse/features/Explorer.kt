@@ -150,7 +150,7 @@ import java.text.DateFormat
 import java.util.Date
 
 /** Files cut or copied with the copy and move icons, waiting for the paste icon. */
-private class Clip(val files: List<File>, val move: Boolean)
+private class Clip(val files: List<File>, val move: Boolean, val once: Boolean = false)
 
 /** The last delete or move, kept in memory: each pair is (where the file is now, where it came from). */
 private class ExUndo(val moves: List<Pair<File, File>>)
@@ -549,7 +549,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 // status line: a failure note wins, else say what happened (a copy keeps the clipboard, a cut empties it)
                 note = err.ifEmpty { if (c.move) tr("Moved $n items", "$n öğe taşındı") else tr("Pasted $n items", "$n öğe yapıştırıldı") }
                 if (moved.isNotEmpty()) undo = ExUndo(moved)
-                if (c.move && clip === c) clip = null
+                // what came out of an archive is a one-time copy: after it lands the paste offer is gone
+                if ((c.move || c.once) && clip === c) clip = null
                 refresh++
             }
         }
@@ -732,7 +733,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 else {
                     // a picked folder is copied as the folder, not as the files inside it: the clipboard holds the top-level picks only
                     val tops = picks.map { p -> File(dest, p.removePrefix(p.substringBeforeLast('/', "")).trimStart('/')) }.filter { it.exists() }.distinct()
-                    clip = Clip(tops.ifEmpty { files }, false); note = tr("Copied ${tops.size.coerceAtLeast(1)}: paste in a folder", "${tops.size.coerceAtLeast(1)} öğe kopyalandı: bir klasörde yapıştır")
+                    clip = Clip(tops.ifEmpty { files }, false, once = true); note = tr("Copied ${tops.size.coerceAtLeast(1)}: paste in a folder", "${tops.size.coerceAtLeast(1)} öğe kopyalandı: bir klasörde yapıştır")
                 }
             }
         }
@@ -797,6 +798,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 }
                 if (res.isEmpty()) {
                     if (c.move) { withContext(Dispatchers.IO) { c.files.forEach { it.deleteRecursively() } }; clip = null }
+                    else if (c.once && clip === c) clip = null
                     arcRev++
                 }
             }
@@ -1221,6 +1223,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
 
 
     bulk?.let { files ->
+        val title = if (files.size > 1) "Delete Items" else if (files[0].isDirectory) "Delete Folder" else "Delete File"
+        val msg = if (Opt.recycle) (if (files.size == 1) tr("Move this item to the Recycle Bin?", "Bu öğe Çöp Kutusuna taşınsın mı?") else tr("Move these ${files.size} items to the Recycle Bin?", "Bu ${files.size} öğe Çöp Kutusuna taşınsın mı?"))
+            else (if (files.size == 1) tr("Are you sure you want to permanently delete this item?", "Bu öğeyi kalıcı olarak silmek istediğinizden emin misiniz?") else tr("Are you sure you want to permanently delete these ${files.size} items?", "Bu ${files.size} öğeyi kalıcı olarak silmek istediğinizden emin misiniz?"))
+        if (T.material) MaterialDeleteDialog(title, msg, { bulk = null }) { bulk = null; deleteNow(files) }
+        else {
         WinAlert(onDismissRequest = { bulk = null },
             title = { Text(if (files.size > 1) "Delete Items" else if (files[0].isDirectory) "Delete Folder" else "Delete File") },
             text = { Text(if (Opt.recycle) (if (files.size == 1) tr("Move this item to the Recycle Bin?", "Bu öğe Çöp Kutusuna taşınsın mı?") else tr("Move these ${files.size} items to the Recycle Bin?", "Bu ${files.size} öğe Çöp Kutusuna taşınsın mı?"))
@@ -1228,6 +1235,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             // the Windows looks draw their own button, so the red text stays on Material only
             confirmButton = { TextButton({ bulk = null; deleteNow(files) }) { Text("Delete", color = if (com.umutk.pulse.LocalWindowLook.current.id in com.umutk.pulse.winButtonLooks) Color.Unspecified else Color(0xFFC42B1C)) } },
             dismissButton = { TextButton({ bulk = null }) { Text(tr("Cancel", "İptal")) } }, iconKey = if (Opt.recycle) "recycle" else "close")
+        }
     }
 
     zipAsk?.let { files ->
@@ -1608,6 +1616,26 @@ private fun exArchiveList(f: File): List<Pair<String, Long>> = runCatching {
 /** Names containing [q] under [root]; stops after 20 000 entries or 200 hits. Hidden names only when [hidden] is on. */
 private fun exFind(root: File, q: String, hidden: Boolean, limit: Int = 20_000): List<File> =
     root.walkTopDown().take(limit).filter { it != root && (hidden || !it.name.startsWith(".")) && it.name.contains(q, ignoreCase = true) }.take(200).toList()
+
+/** The Material delete question: a rounded card with a thin edge, a quiet info mark, a bold title, grey text, a soft Cancel and a clear red Delete. */
+@Composable
+private fun MaterialDeleteDialog(title: String, msg: String, onCancel: () -> Unit, onDelete: () -> Unit) {
+    val w = com.umutk.pulse.LocalWindowLook.current
+    val edge = if (w.dark) Color(0xFF252525) else Color(0xFFD6D6D6)
+    val grey = if (w.dark) Color(0xFF939393) else Color(0xFF6E6E6E)
+    androidx.compose.ui.window.Dialog(onCancel) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(28.dp)).background(w.panel).border(1.dp, edge, RoundedCornerShape(28.dp)).padding(start = 28.dp, end = 20.dp, top = 28.dp, bottom = 20.dp)) {
+            Icon(Icons.Outlined.Info, null, Modifier.size(24.dp).align(Alignment.CenterHorizontally), tint = grey)
+            Text(title, Modifier.padding(top = 16.dp).align(Alignment.CenterHorizontally), color = w.text, fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(msg, Modifier.padding(top = 12.dp), color = grey, fontSize = 14.sp, lineHeight = 20.sp)
+            Row(Modifier.fillMaxWidth().padding(top = 28.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Cancel", "İptal"), Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onCancel).padding(horizontal = 18.dp, vertical = 10.dp), color = w.text.copy(alpha = .75f), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                Spacer(Modifier.width(8.dp))
+                Text(tr("Delete", "Sil"), Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onDelete).padding(horizontal = 18.dp, vertical = 10.dp), color = Color(0xFFFF453A), fontSize = 14.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+    }
+}
 
 /** The results of the empty-folder, largest-file and same-name finders under [dir]. */
 private fun exFinder(kind: String, dir: File): List<File> = when (kind) {
