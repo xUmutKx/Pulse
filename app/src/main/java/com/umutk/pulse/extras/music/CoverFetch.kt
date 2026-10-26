@@ -96,12 +96,14 @@ internal object CoverFetch {
         synchronized(lock) {
             PowerampCovers.saved(c, t.path)?.let { return it }
             // a cover is only taken when the result is the same album (or the same song when the album is unknown) by the same artist: no cover is better than a wrong one
-            val hit = PowerampCovers.search(term, if (album != null) "album" else "song").firstOrNull { sameWork(it.name, name) && (artist == null || sameWork(it.artist, artist)) }
-            if (hit == null) {
+            // the first match whose picture really downloads (a record can be listed by a service that has no picture of it)
+            val hits = PowerampCovers.search(term, if (album != null) "album" else "song").filter { sameWork(it.name, name) && (artist == null || sameWork(it.artist, artist)) }
+            if (hits.isEmpty()) {
                 PowerampCovers.markMiss(c, t.path)
                 return null
             }
-            val jpg = runCatching { PowerampCovers.fetch(hit.big) }.getOrNull() ?: return null
+            val jpg = hits.firstNotNullOfOrNull { h -> runCatching { PowerampCovers.fetch(h.big) }.getOrNull()?.takeIf { it.size > 2000 } }
+            if (jpg == null) { PowerampCovers.markMiss(c, t.path); return null }
             PowerampCovers.save(c, t.path, jpg)
             return BitmapFactory.decodeByteArray(jpg, 0, jpg.size)?.asImageBitmap()
         }
