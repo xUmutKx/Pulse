@@ -228,7 +228,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                 if (!c.pressed) break
                 val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
-                if (dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
+                if (st.panel == "keys" && dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
                     done = true; c.consume(); st.trail = emptyList(); st.swiped = true; st.preview = null
                     act.hide()
                 }
@@ -469,7 +469,8 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 Row(Modifier.fillMaxWidth()) { r.forEach { n -> ExtraKeys.byId("f$n")?.let { d -> ExtraCell(th, 0.dp, keyH * .8f, d, 0, Modifier.weight(1f)) { act.extraKey(d.id); st.fnOpen = false } } } }
             }
         } else BoxWithConstraints(Modifier.fillMaxWidth()) {
-            val ids = listOf("fn", "shiftm", "left", "up", "down", "right", "home", "end", "pgup", "pgdn", "esc", "tab", "selectAll", "copy", "paste")
+            // the arrows are left out: the bottom extra row already has them by default, and the same four icons twice just crowded the bar
+            val ids = listOf("fn", "shiftm", "home", "end", "pgup", "pgdn", "esc", "tab", "selectAll", "copy", "paste")
             val w = maxWidth / 10
             Row(Modifier.horizontalScroll(rememberScrollState())) {
                 ids.mapNotNull { ExtraKeys.byId(it) }.forEach { d ->

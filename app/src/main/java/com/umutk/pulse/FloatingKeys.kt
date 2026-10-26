@@ -108,7 +108,8 @@ class FloatingKeysService : Service() {
         val n = node
         // focus first, then a click: the click is what makes most apps raise their keyboard
         val ok = n != null && (n.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_FOCUS) or n.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
-        if (!ok) android.widget.Toast.makeText(this, tr("No text field found on the screen", "Ekranda yazı alanı bulunamadı"), android.widget.Toast.LENGTH_SHORT).show()
+        // no field to focus (nothing to type into): the keys panel still works on its own, so open that instead of just failing silently
+        if (!ok) togglePanel()
     }
 
     private fun togglePanel() {

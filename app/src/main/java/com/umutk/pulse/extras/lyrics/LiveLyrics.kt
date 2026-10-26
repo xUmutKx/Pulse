@@ -167,9 +167,13 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
             val trio = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, st.current!!), engine.positionMs + AHEAD_MS)
             postNote(st.current!!, trio)
         } else clearNote()
-        val line = if (wanted && st.isPlaying) {
+        var line = if (wanted && st.isPlaying) {
             st.current?.let { LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, it), engine.positionMs + AHEAD_MS) }?.second?.takeIf { it.isNotBlank() }
         } else null
+        // the gap between two sung lines left the notification blank for a moment; the last line stays up through it, same song only
+        if (line == null && wanted && st.isPlaying && st.current?.path == lastLineTrack) line = lastLineText
+        if (line != null) { lastLineText = line; lastLineTrack = st.current?.path }
+        else if (st.current?.path != lastLineTrack) { lastLineText = null; lastLineTrack = st.current?.path }
         if (line != LiveLyrics.currentLine) {
             LiveLyrics.currentLine = line
             LiveLyrics.notifLine = if (LiveLyrics.notification(ctx)) line?.let { LiveLyrics.collapsed(ctx, it) } else null
@@ -179,6 +183,10 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
 
     /** The notification is drawn a moment after the tick: the lines are taken a little early so they do not trail the voice. */
     private val AHEAD_MS = 700
+
+    // the last line shown and the song it belongs to, so a gap between lines keeps it instead of blanking the notification out
+    private var lastLineText: String? = null
+    private var lastLineTrack: String? = null
 
     private val nm get() = ctx.getSystemService(android.app.NotificationManager::class.java)
     private var noteText: String? = null
@@ -222,6 +230,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         MiniLyrics.stop(ctx)
         LiveLyrics.notifLine = null
         LiveLyrics.currentLine = null
+        lastLineText = null; lastLineTrack = null
     }
 }
 
