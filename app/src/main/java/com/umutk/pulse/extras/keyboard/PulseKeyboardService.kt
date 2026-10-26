@@ -40,6 +40,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var job: Job? = null
 
     private val word = StringBuilder()
+    /** The last word a held delete key took away, and when: the next word typed in its place teaches that it was a slip. */
+    private var deletedWord: String? = null
+    private var deletedAt = 0L
+    private fun slipDistance(a: String, b: String): Int {
+        val d = Array(a.length + 1) { IntArray(b.length + 1) }
+        for (i in 0..a.length) d[i][0] = i
+        for (j in 0..b.length) d[0][j] = j
+        for (i in 1..a.length) for (j in 1..b.length) d[i][j] = minOf(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + if (a[i - 1] == b[j - 1]) 0 else 1)
+        return d[a.length][b.length]
+    }
+    private fun learnFromDelete(typed: String) {
+        val gone = deletedWord ?: return
+        deletedWord = null
+        if (SystemClock.uptimeMillis() - deletedAt > 30_000L || !KeyboardPrefs.learn || st.plain || st.incognito) return
+        val now = typed.lowercase(lang.locale)
+        if (now == gone || now.length < 3) return
+        if (slipDistance(gone, now) <= maxOf(2, now.length / 3)) KeyboardDictionary.learnTypo(this, gone, now)
+    }
+
     /** The last key was a sentence end (full stop behind a known word, ! or ?): the next letter gets a space and a capital. */
     private var dotEnd = false
     private var prevWord: String? = null
@@ -402,6 +421,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         lastCorrection = if (out != typed) Correction(typed, out, sep) else null
         corrAt = SystemClock.uptimeMillis()
+        learnFromDelete(out)
         if (out == typed && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord2, prevWord, typed)
         prevWord2 = prevWord; prevWord = out
         word.clear(); target = null
@@ -466,18 +486,6 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (word.isEmpty()) c.commitText("", 1) else c.setComposingText(word, 1)
             lastCorrection = null; target = null
             updateCaps(); updateSuggestions(); return
-        }
-        val lc = lastCorrection
-        if (lc != null && KeyboardPrefs.undoOnBackspace) {
-            val n = lc.corrected.length + lc.sep.length
-            val txt = c.getTextBeforeCursor(n, 0)?.toString()
-            lastCorrection = null
-            val after = c.getTextAfterCursor(1, 0)?.toString().orEmpty()
-            if (txt == lc.corrected + lc.sep && (after.isEmpty() || !after[0].isLetterOrDigit())) {
-                if (KeyboardPrefs.learn && !st.incognito) KeyboardDictionary.reject(this, lc.original, lc.corrected)
-                c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lc.original, 1); c.endBatchEdit()
-                word.append(lc.original); target = null; updateSuggestions(); return
-            }
         }
         // the space right behind a word goes: the word is open again, with its suggestions
         val tb = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
@@ -680,6 +688,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val wordStart = n
         while (n < before.length && (before[before.length - 1 - n].isLetterOrDigit() || before[before.length - 1 - n] == '\'')) n++
         if (n == wordStart) n++   // punctuation: one mark
+        // the word that was deleted is remembered: if a different but alike word is typed in its place, the first was a slip of the second
+        before.takeLast(n).trim().takeIf { it.length >= 3 && it.all { ch -> ch.isLetter() || ch == '\'' } }?.let { deletedWord = it.lowercase(lang.locale); deletedAt = SystemClock.uptimeMillis() }
         c.deleteSurroundingText(n, 0)
         afterText()
     }
@@ -1114,7 +1124,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val limit = maxOf(if (lower.length >= 8) maxCost + .5f else maxCost, ratioLimit)
         // the fast pass (completions only) gives the bar its words at once; the full pass with the corrections follows and replaces it
         val corr = if (!fast && lower.length >= 2) (codes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5, tc) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
-            (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else emptyList()
+            (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else if (fast && learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
         // tested on 100 000 of the author's own chat lines (a Python copy of this rule): a correction needs a cost of .8 at most (one neighbouring key, an accent, a swap)
