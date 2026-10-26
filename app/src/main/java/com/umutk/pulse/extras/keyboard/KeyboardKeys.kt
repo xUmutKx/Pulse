@@ -29,5 +29,5 @@ object ExtraKeys {
         "glide" to "Swipe typing", "lang" to "Language",
     )
     const val DEFAULT_MENU = "clip,translate,voice,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide"
-    const val DEFAULT_TOOLBAR = "clip,menu,voice,translate,settings"
+    const val DEFAULT_TOOLBAR = "clip,menu,voice,arrows,translate,settings"
 }
