@@ -146,6 +146,7 @@ import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -384,11 +385,16 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
             val scroll = rememberScrollState()
             val sc = rememberCoroutineScope()
             val one = st.inline.size == 1
+            // each chip is a real system view (the password manager draws it): key() on the view itself keeps it from being torn
+            // down and rebuilt on every recomposition (every pixel of a swipe on the bar is one) — that teardown was the glitch where
+            // the grey back vanished mid-drag while the chip's own text, a separate rendered surface, stayed put a frame longer
             @Composable fun chips() = st.inline.forEach { v ->
-                Box(Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF3A3A3C))) {
-                    androidx.compose.ui.viewinterop.AndroidView(factory = { c ->
-                        android.widget.FrameLayout(c).also { f -> (v.parent as? android.view.ViewGroup)?.removeView(v); f.addView(v) }
-                    })
+                key(v) {
+                    Box(Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF232325))) {
+                        androidx.compose.ui.viewinterop.AndroidView(factory = { c ->
+                            android.widget.FrameLayout(c).also { f -> (v.parent as? android.view.ViewGroup)?.removeView(v); f.addView(v) }
+                        })
+                    }
                 }
             }
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
