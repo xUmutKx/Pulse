@@ -205,7 +205,11 @@ private fun FilesPageInner() {
     var full by rememberSaveable { mutableStateOf(standalone && (Opt.filesFull || FilesLaunch.full)) }
     LaunchedEffect(FilesLaunch.full) { if (FilesLaunch.full && standalone) { full = true; FilesLaunch.full = false } }
     // an archive opened from another app shows in the browser at once, not on the home page
-    LaunchedEffect(FilesLaunch.archive) { if (FilesLaunch.archive != null && standalone) tab = "files" }
+    // it goes the way a file tapped on the home page goes (that way opens the archive inside the browser): the browser tab, and the file handed over as the pending one
+    LaunchedEffect(FilesLaunch.archive) {
+        val a = FilesLaunch.archive
+        if (a != null && standalone) { FilesLaunch.archive = null; com.umutk.pulse.files.home.FilesHomeNav.pendingFile = a; ExNav.lastHere = a.parentFile?.path ?: ExNav.lastHere; tab = "files" }
+    }
     var windowed by rememberSaveable { mutableStateOf(false) }
     var settings by rememberSaveable { mutableStateOf(false) }
     val openTool = com.umutk.pulse.LocalOpenTool.current
