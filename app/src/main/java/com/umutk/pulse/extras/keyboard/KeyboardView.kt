@@ -371,6 +371,9 @@ internal val emojiTabIconsPublic get() = emojiTabIcons
 private val emojiTabIcons get() = listOf(Icons.Rounded.AccessTime, Icons.Rounded.EmojiEmotions, Icons.Rounded.Person, Icons.Rounded.Pets, Icons.Rounded.Restaurant, Icons.Rounded.DirectionsCar,
     Icons.Rounded.SportsSoccer, Icons.Rounded.Lightbulb, Icons.Rounded.Tag, Icons.Rounded.Flag)
 
+/** The order of the emoji page's tabs (ids: 0 recent, 1..9 the Unicode groups, 10 kaomoji, 11 symbols and presets); the pages follow it. */
+private val EMOJI_ORDER = listOf(0, 1, 11, 2, 3, 10, 4, 5, 6, 7, 8, 9)
+
 /** The bar above the emoji page: a back button, then the categories (recent, faces, people, animals, food, travel, sport, objects, symbols, flags, kaomoji, signs). */
 @Composable
 private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
@@ -378,14 +381,15 @@ private fun EmojiTopBar(th: KbTheme, st: KbState, act: KbActions) {
     Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
         BarIcon(th, kbIcon(th, "ArrowBack")) { act.page(0) }
         Row(Modifier.weight(1f).fillMaxHeight().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-            emojiTabIcons.forEachIndexed { i, ic ->
-                Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = i }, contentAlignment = Alignment.Center) {
-                    Icon(ic, null, tint = if (i == st.emojiTab) th.text else th.sub, modifier = Modifier.size(24.dp))
+            // recent, faces, then the symbols and presets beside the smiley, people, animals, the kaomoji between animals and food, the rest
+            EMOJI_ORDER.forEach { i ->
+                if (i == 10) Box(Modifier.width(48.dp).fillMaxHeight().clickable { st.emojiTab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (st.emojiTab == 10) th.text else th.sub, fontSize = 15.sp) }
+                else if (i == 11) Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (st.emojiTab == 11) th.text else th.sub, fontSize = 20.sp) }
+                else Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = i }, contentAlignment = Alignment.Center) {
+                    Icon(emojiTabIcons[i], null, tint = if (i == st.emojiTab) th.text else th.sub, modifier = Modifier.size(24.dp))
                     if (i == st.emojiTab) Box(Modifier.align(Alignment.BottomCenter).width(26.dp).height(3.dp).clip(RoundedCornerShape(2.dp)).background(th.text))
                 }
             }
-            Box(Modifier.width(48.dp).fillMaxHeight().clickable { st.emojiTab = 10 }, contentAlignment = Alignment.Center) { Text("(ツ)", color = if (st.emojiTab == 10) th.text else th.sub, fontSize = 15.sp) }
-            Box(Modifier.width(44.dp).fillMaxHeight().clickable { st.emojiTab = 11 }, contentAlignment = Alignment.Center) { Text("✦", color = if (st.emojiTab == 11) th.text else th.sub, fontSize = 20.sp) }
         }
     }
   }
@@ -459,16 +463,20 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val n1 = rows[0].size.toFloat()
     if (KeyboardPrefs.proRow && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
     if (KeyboardPrefs.arrows) {
-        Row(Modifier.fillMaxWidth()) {
-            ActionKey(th, keyH * .8f, kbIcon(th, "ArrowBack"), true) { act.arrow(21) }
-            ActionKey(th, keyH * .8f, kbIcon(th, "ArrowUpward"), true) { act.arrow(19) }
-            ActionKey(th, keyH * .8f, kbIcon(th, "ArrowDownward"), true) { act.arrow(20) }
-            ActionKey(th, keyH * .8f, kbIcon(th, "ArrowForward"), true) { act.arrow(22) }
-            ActionKey(th, keyH * .8f, kbIcon(th, "SkipPrevious"), false) { act.arrow(122) }
-            ActionKey(th, keyH * .8f, kbIcon(th, "SkipNext"), false) { act.arrow(123) }
-            ActionKey(th, keyH * .8f, kbIcon(th, "SelectAll"), false) { act.edit("selectAll") }
-            ActionKey(th, keyH * .8f, kbIcon(th, "ContentCopy"), false) { act.edit("copy") }
-            ActionKey(th, keyH * .8f, kbIcon(th, "ContentPaste"), false) { act.edit("paste") }
+        // the key bar: Fn (its twelve keys open from it), Shift, the arrows, Home / End, Page up / down, Esc, Tab and the editing keys
+        if (st.fnOpen) {
+            listOf((1..6), (7..12)).forEach { r ->
+                Row(Modifier.fillMaxWidth()) { r.forEach { n -> ExtraKeys.byId("f$n")?.let { d -> ExtraCell(th, 0.dp, keyH * .8f, d, 0, Modifier.weight(1f)) { act.extraKey(d.id); st.fnOpen = false } } } }
+            }
+        } else BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val ids = listOf("fn", "shiftm", "left", "up", "down", "right", "home", "end", "pgup", "pgdn", "esc", "tab", "selectAll", "copy", "paste")
+            val w = maxWidth / 10
+            Row(Modifier.horizontalScroll(rememberScrollState())) {
+                ids.mapNotNull { ExtraKeys.byId(it) }.forEach { d ->
+                    val level = when (d.id) { "shiftm" -> st.shiftMod; else -> 0 }
+                    ExtraCell(th, w, keyH * .8f, d, level) { act.extraKey(d.id) }
+                }
+            }
         }
     }
     if (st.page == 0) {
@@ -912,11 +920,12 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             }
             KeysPanel(th, st, act, keyH)
         } else {
-            val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = tab) { 12 }
+            val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = EMOJI_ORDER.indexOf(tab).coerceAtLeast(0)) { 12 }
             // the tab follows the page only once it has settled: following it mid-swipe restarted the scroll and left the pages half way
-            LaunchedEffect(tab) { if (pager.settledPage != tab) pager.animateScrollToPage(tab) }
-            LaunchedEffect(pager.settledPage) { st.emojiTab = pager.settledPage }
-            androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { page ->
+            LaunchedEffect(tab) { val p = EMOJI_ORDER.indexOf(tab); if (p >= 0 && pager.settledPage != p) pager.animateScrollToPage(p) }
+            LaunchedEffect(pager.settledPage) { st.emojiTab = EMOJI_ORDER[pager.settledPage] }
+            androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { pg ->
+                val page = EMOJI_ORDER[pg]
                 if (page == 11) { SymbolPage(th, act, fams, g, sub) { sub = it }; return@HorizontalPager }
                 val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
                     else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
@@ -1053,14 +1062,32 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         if (st.clipItems.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { Text(tr("Copied texts and pictures appear here", "Kopyalanan metin ve resimler burada görünür"), color = th.sub, fontSize = 14.sp) }
         else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
             items(st.clipItems, key = { it.id }) { it2 ->
-                Row(Modifier.fillMaxWidth().combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { menuFor = it2 })
-                    .then(if (it2.id in sel) Modifier.background(th.special) else Modifier).padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(34.dp).clickable { act.clipPin(it2.id) }, contentAlignment = Alignment.Center) {
-                        Icon(kbIcon(th, "Gesture"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
+                // roomy rows; a swipe to the right deletes the item, a swipe to the left makes a shortcut of it
+                var dx by remember(it2.id) { mutableFloatStateOf(0f) }
+                val threshold = with(LocalDensity.current) { 90.dp.toPx() }
+                Box(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp)) {
+                    // what the swipe will do shows behind the row
+                    if (dx > 8f) Box(Modifier.matchParentSize().clip(RoundedCornerShape(14.dp)).background(Color(0xFFD32F2F)), contentAlignment = Alignment.CenterStart) { Icon(kbIcon(th, "Close"), null, tint = Color.White, modifier = Modifier.padding(start = 16.dp).size(22.dp)) }
+                    if (dx < -8f) Box(Modifier.matchParentSize().clip(RoundedCornerShape(14.dp)).background(th.accent), contentAlignment = Alignment.CenterEnd) { Icon(kbIcon(th, "TouchApp"), null, tint = Color.White, modifier = Modifier.padding(end = 16.dp).size(22.dp)) }
+                    Row(Modifier.fillMaxWidth().offset { androidx.compose.ui.unit.IntOffset(dx.roundToInt(), 0) }.clip(RoundedCornerShape(14.dp)).background(if (it2.id in sel) th.special else th.key)
+                        .pointerInput(it2.id) {
+                            detectHorizontalDragGestures(
+                                onDragEnd = {
+                                    if (dx > threshold) act.clipDelete(setOf(it2.id)) else if (dx < -threshold && it2.image == null) act.clipShortcut(it2.id)
+                                    dx = 0f
+                                },
+                                onDragCancel = { dx = 0f },
+                            ) { change, drag -> change.consume(); dx += drag }
+                        }
+                        .combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { menuFor = it2 })
+                        .padding(horizontal = 10.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(34.dp).clickable { act.clipPin(it2.id) }, contentAlignment = Alignment.Center) {
+                            Icon(kbIcon(th, "Gesture"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
+                        }
+                        if (it2.image != null) ClipThumb(it2.image) else Text(it2.text, color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        if (it2.image != null) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
+                        Text(ago(now - it2.time), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp))
                     }
-                    if (it2.image != null) ClipThumb(it2.image) else Text(it2.text, color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                    if (it2.image != null) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-                    Text(ago(now - it2.time), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 8.dp))
                 }
             }
         }

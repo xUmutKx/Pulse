@@ -93,7 +93,7 @@ object KeyboardPrefs {
     /** Moving colour light: 0 off, 1 around the keyboard, 2 around every key (a rainbow that runs along the keys). */
     var rgb by mutableStateOf(0)
     /** How long an unpinned clipboard item is kept, in hours (1 to 72). */
-    var clipHours by mutableStateOf(24)
+    var clipHours by mutableStateOf(0)  // hours the unpinned items stay; 0 = for ever (the default)
     /** A comma straight before a letter inside a word is a slip: it is taken out and the word goes on. */
     var commaSlip by mutableStateOf(false)
     var hapticMs by mutableStateOf(8)   // strength 1..40
@@ -132,7 +132,7 @@ object KeyboardPrefs {
         if (p.getInt("menuVer", 0) < 1) { menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; p.edit().putInt("menuVer", 1).apply() }
         // the emoji key lives beside ?123 again; the bar keeps the three-dot menu in its place
         if (p.getInt("menuVer", 0) < 4) { toolbarItems = toolbarItems.split(',').map { if (it == "emoji") "menu" else it }.distinct().joinToString(","); p.edit().putInt("menuVer", 4).putString("toolbarItems", toolbarItems).apply() }
-        haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipHours", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
+        haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
     fun save(c: Context) {
@@ -147,7 +147,7 @@ object KeyboardPrefs {
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn)
             .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putFloat("floatX", floatX).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
-            .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("topBright", topBright).putBoolean("bottomShift", bottomShift).putInt("rgb", rgb).putInt("clipHours", clipHours).putBoolean("commaSlip2", commaSlip).putInt("keyFx", keyFx).putInt("boardFx", boardFx).putInt("motionFx", motionFx).putInt("soundKind", soundKind).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
+            .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("topBright", topBright).putBoolean("bottomShift", bottomShift).putInt("rgb", rgb).putInt("clipKeep", clipHours).putBoolean("commaSlip2", commaSlip).putInt("keyFx", keyFx).putInt("boardFx", boardFx).putInt("motionFx", motionFx).putInt("soundKind", soundKind).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
 
