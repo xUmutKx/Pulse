@@ -593,6 +593,7 @@
         <service android:name="com.umutk.pulse.features.DownloadService" android:exported="false" android:foregroundServiceType="dataSync">
         </service>
         <!-- compress in the background (features/ExplorerZip.kt) -->
+        <service android:name="com.umutk.pulse.extras.music.CoverRepairService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.ZipService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.FileOpService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.InstallService" android:exported="false" android:foregroundServiceType="specialUse">

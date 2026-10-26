@@ -50,29 +50,21 @@ import kotlinx.coroutines.withContext
 @Composable
 fun CoverRepairSection() {
     val c = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var busy by remember { mutableStateOf(false) }
-    var progress by remember { mutableStateOf("") }
-    var applied by remember { mutableStateOf(-1) }
-    var left by remember { mutableStateOf(emptyList<Track>()) }
     var pick by remember { mutableStateOf<Track?>(null) }
+    // the work runs in CoverRepairService; what is shown here is its state, so the page can be left and opened again
+    val busy = CoverRepairJob.busy
+    val left = CoverRepairJob.left
     Column(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        PButton(if (busy) progress.ifBlank { "…" } else tr("Search and apply missing covers", "Eksik kapakları ara ve uygula"), compact = true) {
+        PButton(if (busy) tr("Searching in the background…", "Arka planda aranıyor…") else tr("Search and apply missing covers", "Eksik kapakları ara ve uygula"), compact = true) {
             if (busy) return@PButton
-            scope.launch {
-                busy = true; applied = 0
-                val todo = withContext(Dispatchers.IO) { MusicLibrary.tracks.value.filter { !it.path.startsWith("http") && PowerampCovers.saved(c, it.path) == null && embeddedArt(c, it.path) == null } }
-                val miss = ArrayList<Track>()
-                todo.forEachIndexed { i, t ->
-                    progress = "${i + 1} / ${todo.size}"
-                    val got = withContext(Dispatchers.IO) { CoverFetch.find(c, t, force = true) }
-                    if (got != null) { applied++; forgetArt(t.path) } else miss += t
-                    delay(1200)
-                }
-                left = miss; busy = false; progress = ""
-            }
+            CoverRepairJob.start(c)
         }
-        if (applied >= 0 && !busy) Text(tr("$applied covers applied, ${left.size} could not be matched by themselves", "$applied kapak uygulandı, ${left.size} tanesi kendiliğinden eşleşmedi"), color = T.sub, fontSize = 12.sp)
+        if (busy) {
+            val p = if (CoverRepairJob.total > 0) CoverRepairJob.done.toFloat() / CoverRepairJob.total else 0f
+            androidx.compose.material3.LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth(), color = com.umutk.pulse.Look.accent)
+            Text("${CoverRepairJob.done} / ${CoverRepairJob.total} · " + tr("${CoverRepairJob.applied} found", "${CoverRepairJob.applied} bulundu"), color = T.sub, fontSize = 12.sp)
+        }
+        if (CoverRepairJob.finished && !busy) Text(tr("${CoverRepairJob.applied} covers applied, ${left.size} could not be matched by themselves", "${CoverRepairJob.applied} kapak uygulandı, ${left.size} tanesi kendiliğinden eşleşmedi"), color = T.sub, fontSize = 12.sp)
         left.take(60).forEach { t ->
             Row(Modifier.fillMaxWidth().clickable { pick = t }.padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
@@ -84,7 +76,7 @@ fun CoverRepairSection() {
         }
         if (left.size > 60) Text(tr("and ${left.size - 60} more", "ve ${left.size - 60} tane daha"), color = T.sub, fontSize = 11.sp)
     }
-    pick?.let { t -> CoverPicker(t, onDone = { done -> pick = null; if (done) left = left - t }) }
+    pick?.let { t -> CoverPicker(t, onDone = { done -> pick = null; if (done) CoverRepairJob.left = CoverRepairJob.left - t }) }
 }
 
 /** One song, a search box (filled in from its tags), the covers the service offers, and a tap to apply one. */
