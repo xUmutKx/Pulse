@@ -34,6 +34,12 @@ import android.content.SharedPreferences
 import android.net.NetworkCapabilities
 import android.net.wifi.WifiManager
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import kotlinx.coroutines.launch
 import androidx.compose.ui.text.font.FontWeight
 import com.umutk.pulse.Graph
 import com.umutk.pulse.Look
@@ -107,61 +113,195 @@ fun netUsage(ctx: Context, month: Boolean): List<NetRow> {
     }.sortedByDescending { it.total }
 }
 
+private val WIFI_COLOR get() = Look.accent
+private val MOBILE_COLOR = Color(0xFFFFA726)
+
+private fun dayStartAgo(daysAgo: Int): Long = Calendar.getInstance().apply {
+    set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+    add(Calendar.DAY_OF_YEAR, -daysAgo)
+}.timeInMillis
+
+/** One day: the bytes of each hour on Wi-Fi and on mobile data, and the apps of that day. */
+private class DayData(val start: Long, val hourWifi: List<Long>, val hourMobile: List<Long>, val rows: List<NetRow>)
+
+private fun sumOf(p: Pair<Long, Long>?) = (p?.first ?: 0L) + (p?.second ?: 0L)
+
+private fun loadDay(ctx: Context, start: Long): DayData {
+    val now = System.currentTimeMillis()
+    val wifi = ArrayList<Long>(24); val mobile = ArrayList<Long>(24)
+    for (h in 0 until 24) {
+        val s = start + h * HOUR_MS
+        if (s >= now) { wifi += 0L; mobile += 0L; continue }
+        val e = minOf(s + HOUR_MS, now)
+        wifi += sumOf(netSum(ctx, ConnectivityManager.TYPE_WIFI, s, e))
+        mobile += sumOf(netSum(ctx, ConnectivityManager.TYPE_MOBILE, s, e))
+    }
+    return DayData(start, wifi, mobile, netUsageRange(ctx, start, minOf(start + DAY_MS, now)))
+}
+
+/** Per-app mobile and Wi-Fi bytes between two times, biggest total first. */
+private fun netUsageRange(ctx: Context, start: Long, end: Long): List<NetRow> {
+    if (!Extra.usageGranted(ctx)) return emptyList()
+    val mobile = perUid(ctx, ConnectivityManager.TYPE_MOBILE, start, end)
+    val wifi = perUid(ctx, ConnectivityManager.TYPE_WIFI, start, end)
+    val pm = ctx.packageManager
+    return (mobile.keys + wifi.keys).distinct().mapNotNull { uid ->
+        val m = mobile[uid] ?: 0L
+        val w = wifi[uid] ?: 0L
+        if (m + w <= 0L) return@mapNotNull null
+        val pkg = pm.getPackagesForUid(uid)?.firstOrNull().orEmpty()
+        val label = when {
+            uid == UID_TETHERING -> "Hotspot and tethering"
+            uid == UID_REMOVED -> "Removed apps"
+            pkg.isEmpty() -> "System (uid $uid)"
+            else -> try { pm.getApplicationInfo(pkg, 0).loadLabel(pm).toString() } catch (e: Exception) { pkg }
+        }
+        NetRow(pkg, label, m, w)
+    }.sortedByDescending { it.total }
+}
+
+/** Bars per slot, Wi-Fi and mobile data stacked (or one of them alone), drawn in the look's colours. A tap on a bar tells which one. */
+@Composable
+private fun StackBars(wifi: List<Long>, mobile: List<Long>, filter: Int, height: androidx.compose.ui.unit.Dp, selected: Int = -1, onTap: ((Int) -> Unit)? = null) {
+    val n = wifi.size.coerceAtLeast(1)
+    val shown = List(n) { i -> (if (filter != 2) wifi.getOrElse(i) { 0L } else 0L) + (if (filter != 1) mobile.getOrElse(i) { 0L } else 0L) }
+    val max = (shown.maxOrNull() ?: 0L).coerceAtLeast(1L).toFloat()
+    val grid = T.sub.copy(alpha = .25f)
+    androidx.compose.foundation.Canvas(
+        Modifier.fillMaxWidth().height(height).then(if (onTap != null) Modifier.pointerInput(n) { detectTapGestures { o -> onTap(((o.x / size.width) * n).toInt().coerceIn(0, n - 1)) } } else Modifier)
+    ) {
+        val slot = size.width / n
+        val bw = slot * .68f
+        drawLine(grid, androidx.compose.ui.geometry.Offset(0f, size.height), androidx.compose.ui.geometry.Offset(size.width, size.height), 1.dp.toPx())
+        for (i in 0 until n) {
+            val x = i * slot + (slot - bw) / 2f
+            val w = if (filter != 2) wifi.getOrElse(i) { 0L } else 0L
+            val m = if (filter != 1) mobile.getOrElse(i) { 0L } else 0L
+            val mh = m / max * size.height
+            val wh = w / max * size.height
+            val dim = if (selected >= 0 && selected != i) .45f else 1f
+            val r = androidx.compose.ui.geometry.CornerRadius(bw / 3f)
+            if (mh > 0f) drawRoundRect(MOBILE_COLOR.copy(alpha = dim), androidx.compose.ui.geometry.Offset(x, size.height - mh), androidx.compose.ui.geometry.Size(bw, mh), r)
+            if (wh > 0f) drawRoundRect(WIFI_COLOR.copy(alpha = dim), androidx.compose.ui.geometry.Offset(x, size.height - mh - wh), androidx.compose.ui.geometry.Size(bw, wh), r)
+            if (selected == i) drawRect(T.text.copy(alpha = .08f), androidx.compose.ui.geometry.Offset(i * slot, 0f), androidx.compose.ui.geometry.Size(slot, size.height))
+        }
+    }
+}
+
+@Composable
+private fun Legend(color: Color, text: String, value: String) = Row(verticalAlignment = Alignment.CenterVertically) {
+    androidx.compose.foundation.layout.Box(Modifier.size(10.dp).clip(androidx.compose.foundation.shape.CircleShape).background(color))
+    Spacer(Modifier.width(6.dp))
+    Column { Text(value, color = T.text, fontSize = 17.sp, fontWeight = FontWeight.SemiBold); Text(text, color = T.sub, fontSize = 11.sp) }
+}
+
+private fun dayLabel(start: Long, daysAgo: Int): String = when (daysAgo) {
+    0 -> com.umutk.pulse.tr("Today", "Bugün")
+    1 -> com.umutk.pulse.tr("Yesterday", "Dün")
+    else -> java.text.SimpleDateFormat("EEEE, d MMMM", java.util.Locale.getDefault()).format(java.util.Date(start))
+}
+
+/**
+ * Network use: Wi-Fi and mobile data kept apart (a switch at the top picks both, Wi-Fi or mobile), a thirty-day strip, and one page per day to swipe
+ * through: the hourly graph on top, then the apps of that day.
+ */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun NetUsageScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     var granted by remember { mutableStateOf(Extra.usageGranted(ctx)) }
-    var month by remember { mutableStateOf(false) }
-    var rows by remember { mutableStateOf<List<NetRow>>(emptyList()) }
+    var filter by remember { mutableStateOf(0) }   // 0 both, 1 Wi-Fi, 2 mobile data
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val ob = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) granted = Extra.usageGranted(ctx) }
         lifecycle.addObserver(ob); onDispose { lifecycle.removeObserver(ob) }
     }
-    LaunchedEffect(granted, month) {
-        while (granted) {
-            rows = withContext(Dispatchers.IO) { netUsage(ctx, month) }
-            delay(30_000)
+    val days = 30
+    // the strip: Wi-Fi and mobile bytes of each of the last thirty days, oldest at the left
+    val daily by produceState<Pair<List<Long>, List<Long>>?>(null, granted) {
+        value = if (!granted) null else withContext(Dispatchers.IO) {
+            val now = System.currentTimeMillis()
+            val w = ArrayList<Long>(); val m = ArrayList<Long>()
+            for (i in days - 1 downTo 0) {
+                val s = dayStartAgo(i); val e = minOf(s + DAY_MS, now)
+                w += sumOf(netSum(ctx, ConnectivityManager.TYPE_WIFI, s, e)); m += sumOf(netSum(ctx, ConnectivityManager.TYPE_MOBILE, s, e))
+            }
+            w to m
         }
     }
+    val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = days - 1) { days }
+    val scope = rememberCoroutineScope()
+    val cache = remember { androidx.compose.runtime.mutableStateMapOf<Int, DayData>() }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 12.dp)) {
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = onBack) { Text("Back", color = T.accent) }
+            TextButton(onClick = onBack) { Text(com.umutk.pulse.tr("Back", "Geri"), color = T.accent) }
             Spacer(Modifier.weight(1f))
-            Text("Network usage", color = T.text, fontSize = 18.sp)
+            Text(com.umutk.pulse.tr("Network usage", "Ağ kullanımı"), color = T.text, fontSize = 18.sp)
         }
         if (!granted) {
             PCard {
-                Text("Showing network use per app needs the \"usage access\" permission.", color = T.text, fontSize = 14.sp)
-                PButton("Allow") { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                Text(com.umutk.pulse.tr("Showing network use per app needs the \"usage access\" permission.", "Uygulama başına ağ kullanımı için \"kullanım erişimi\" izni gerekir."), color = T.text, fontSize = 14.sp)
+                PButton(com.umutk.pulse.tr("Allow", "İzin ver")) { ctx.startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
             return@Column
         }
-        Row(Modifier.padding(bottom = 4.dp)) {
-            TextButton(onClick = { month = false }) { Text("Today", color = if (!month) T.accent else T.sub) }
-            TextButton(onClick = { month = true }) { Text("This month", color = if (month) T.accent else T.sub) }
+        // both / Wi-Fi / mobile data
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(0 to com.umutk.pulse.tr("Both", "Hepsi"), 1 to "Wi-Fi", 2 to com.umutk.pulse.tr("Mobile data", "Mobil veri")).forEach { (id, label) ->
+                val on = filter == id
+                Text(label, Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(if (on) Look.accent else T.panel).clickable { filter = id }.padding(vertical = 9.dp),
+                    color = if (on) Color.White else T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
         }
-        val top = rows.firstOrNull()?.total?.coerceAtLeast(1L) ?: 1L
-        LazyColumn(Modifier.fillMaxSize()) {
-            item { NetworksSection() }
-            if (rows.isEmpty()) item { Center("No network use recorded") }
-            items(rows.take(150), key = { "${it.pkg}|${it.label}" }) { r ->
+        // thirty days: a tap goes to that day
+        daily?.let { (w, m) -> StackBars(w, m, filter, 54.dp, selected = pager.currentPage) { i -> scope.launch { pager.animateScrollToPage(i) } } }
+        androidx.compose.foundation.layout.Spacer(Modifier.height(6.dp))
+        androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f), beyondViewportPageCount = 1) { page ->
+            val ago = days - 1 - page
+            val start = remember(page) { dayStartAgo(ago) }
+            val data = cache[page]
+            LaunchedEffect(page) {
+                if (cache[page] == null || ago == 0) cache[page] = withContext(Dispatchers.IO) { loadDay(ctx, start) }
+            }
+            LazyColumn(Modifier.fillMaxSize()) {
+                item {
+                    Text(dayLabel(start, ago), color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 4.dp))
+                    val tw = data?.hourWifi?.sum() ?: 0L; val tm = data?.hourMobile?.sum() ?: 0L
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                        if (filter != 2) Legend(WIFI_COLOR, "Wi-Fi", bytesText(tw))
+                        if (filter != 1) Legend(MOBILE_COLOR, com.umutk.pulse.tr("Mobile data", "Mobil veri"), bytesText(tm))
+                    }
+                    // the hourly graph on top
+                    PCard {
+                        Text(com.umutk.pulse.tr("Hour by hour", "Saat saat"), color = T.sub, fontSize = 12.sp)
+                        if (data == null) Center("…") else {
+                            StackBars(data.hourWifi, data.hourMobile, filter, 110.dp)
+                            Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                                listOf("00", "06", "12", "18", "24").forEach { Text(it, color = T.sub, fontSize = 10.sp) }
+                            }
+                        }
+                    }
+                    Text(com.umutk.pulse.tr("Apps", "Uygulamalar"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
+                }
+                val rows = (data?.rows ?: emptyList()).map { r -> val t = when (filter) { 1 -> r.wifi; 2 -> r.mobile; else -> r.total }; r to t }.filter { it.second > 0L }.sortedByDescending { it.second }
+                if (data != null && rows.isEmpty()) item { Center(com.umutk.pulse.tr("No network use recorded", "Kayıtlı ağ kullanımı yok")) }
+                val top = rows.firstOrNull()?.second?.coerceAtLeast(1L) ?: 1L
+                items(rows.take(150), key = { "${page}|${it.first.pkg}|${it.first.label}" }) { (r, t) ->
                     Column(Modifier.padding(vertical = 6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             if (r.pkg.isNotEmpty()) AppIcon(r.pkg, 26.dp) else Spacer(Modifier.width(26.dp))
                             Spacer(Modifier.width(8.dp))
                             Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
-                            Text(bytesText(r.total), color = T.sub, fontSize = 13.sp)
+                            Text(bytesText(t), color = T.sub, fontSize = 13.sp)
                         }
-                        Text(
-                            "mobile ${bytesText(r.mobile)} · Wi-Fi ${bytesText(r.wifi)}",
-                            Modifier.padding(start = 34.dp, top = 2.dp), color = T.sub, fontSize = 11.sp, maxLines = 1
-                        )
-                        BarMeter(r.total.toFloat() / top, T.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
+                        if (filter == 0) Text("Wi-Fi ${bytesText(r.wifi)} · ${com.umutk.pulse.tr("mobile", "mobil")} ${bytesText(r.mobile)}", Modifier.padding(start = 34.dp, top = 2.dp), color = T.sub, fontSize = 11.sp, maxLines = 1)
+                        BarMeter(t.toFloat() / top, if (filter == 2) MOBILE_COLOR else T.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
                     }
                 }
+                item { Spacer(Modifier.height(24.dp)) }
             }
+        }
     }
 }
 
