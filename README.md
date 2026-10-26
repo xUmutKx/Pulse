@@ -14,7 +14,7 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 
 ### Everything in Pulse, by category
 
-<details><summary><b>Screenshots</b></summary>
+### More screenshots
 
 | Processes | Performance | Overview |
 |---|---|---|
@@ -28,7 +28,6 @@ Two downloads per release: `Pulse-<version>.apk` for Android 12 and newer, and `
 |---|---|---|
 | <img src="docs/screenshots/xp-widgets.png" width="170" alt="Windows XP widgets"> | <img src="docs/screenshots/win7-gadgets.png" width="170" alt="Windows 7 gadgets"> | <img src="docs/screenshots/app-manager.png" width="170" alt="App manager"> |
 
-</details>
 
 <details><summary><b>Looks and Windows</b>: Windows 95, XP, 7, 10, 11, Material, AMOLED</summary>
 
