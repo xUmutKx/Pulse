@@ -139,7 +139,8 @@ open class ExtraToolActivity : ComponentActivity() {
     // a tool with its own look gives Pulse's look back on pause, before Pulse resumes (on stop it would be too late and Pulse would show this look)
     override fun onPause() { super.onPause(); ownResolved = Look.resolved; if (toolLook != null) AppLookGuard.leave(this) }
     override fun onResume() { enter(); super.onResume(); Look.resolved = ownResolved }
-    override fun onStop() { super.onStop(); if (toolLook != null) AppLookGuard.leave(this) }
+    // every tool gives Pulse its own look back when it stops, not only the ones with their own look store
+    override fun onStop() { super.onStop(); AppLookGuard.leave(this) }
     override fun onDestroy() { super.onDestroy(); if (toolLook != null) AppLookGuard.leave(this) }
 
     // Voice, Notes and Weather have their own look store; the other tools keep ExtraToolLook

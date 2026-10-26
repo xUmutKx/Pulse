@@ -173,7 +173,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val found = withContext(Dispatchers.IO) {
             runCatching {
                 val cols = arrayOf(android.provider.MediaStore.Images.Media._ID, android.provider.MediaStore.Images.Media.DISPLAY_NAME, android.provider.MediaStore.Images.Media.DATE_ADDED, android.provider.MediaStore.Images.Media.DATA)
-                contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 1")?.use { c ->
+                // a "LIMIT" in the sort order is refused from Android 11 on (the whole lookup threw and nothing was ever found): the limit goes in a Bundle
+                val q = android.os.Bundle().apply {
+                    putStringArray(android.content.ContentResolver.QUERY_ARG_SORT_COLUMNS, arrayOf(android.provider.MediaStore.Images.Media.DATE_ADDED))
+                    putInt(android.content.ContentResolver.QUERY_ARG_SORT_DIRECTION, android.content.ContentResolver.QUERY_SORT_DIRECTION_DESCENDING)
+                    putInt(android.content.ContentResolver.QUERY_ARG_LIMIT, 1)
+                }
+                (if (android.os.Build.VERSION.SDK_INT >= 26) contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, q, null)
+                else contentResolver.query(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cols, null, null, android.provider.MediaStore.Images.Media.DATE_ADDED + " DESC LIMIT 1"))?.use { c ->
                     if (!c.moveToFirst()) return@use null
                     val name = c.getString(1).orEmpty(); val path = c.getString(3).orEmpty()
                     if (System.currentTimeMillis() / 1000 - c.getLong(2) > 8 || !(name.contains("screenshot", true) || path.contains("screenshot", true))) return@use null
@@ -584,7 +591,22 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         afterText()
     }
 
-    override fun arrow(code: Int) { finishWord("", false); sendDownUpKeyEvents(code); lastWasSpace = false }
+    override fun arrow(code: Int) {
+        finishWord("", false); lastWasSpace = false
+        val c = currentInputConnection
+        // left, right, start and end of the line move the cursor through the text field itself: a key event makes Android show its keyboard-navigation highlight over the app
+        if (c != null && code in setOf(21, 22, 122, 123)) {
+            val a = minOf(selStart, selEnd); val b = maxOf(selStart, selEnd)
+            val pos = when (code) {
+                21 -> if (a != b) a else (a - 1).coerceAtLeast(0)
+                22 -> if (a != b) b else b + 1
+                122 -> { val before = c.getTextBeforeCursor(2000, 0)?.toString().orEmpty(); a - (before.length - (before.lastIndexOf('\n') + 1)) }
+                else -> { val after = c.getTextAfterCursor(2000, 0)?.toString().orEmpty(); val nl = after.indexOf('\n'); b + (if (nl < 0) after.length else nl) }
+            }
+            if (c.setSelection(pos, pos)) { selStart = pos; selEnd = pos; return }
+        }
+        sendDownUpKeyEvents(code)
+    }
 
     override fun edit(id: String) {
         val c = currentInputConnection ?: return
