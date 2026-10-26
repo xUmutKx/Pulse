@@ -396,7 +396,7 @@ private fun BuiltinRows() {
         // the tools of the ⋮ menu's Tools group, so nothing is missing from this one full list of every extra app
         BuiltinRow(tr("Toolkit", "Araç kutusu"), tr("A drawer of small utilities", "Küçük araçların bulunduğu çekmece"), "settings", "tool:toolkit") { openTool("toolkit") },
         BuiltinRow("Office", tr("Word, Excel, PowerPoint, PDF", "Word, Excel, PowerPoint, PDF"), "office", "tool:office") { openTool("office") },
-        BuiltinRow(tr("Download manager", "İndirme yöneticisi"), tr("Downloads, pause and resume", "İndirmeler, duraklat ve devam ettir"), "download", "tool:downloads") { openTool("downloads") },
+        BuiltinRow(tr("Download manager", "İndirme yöneticisi"), tr("Downloads, pause and resume", "İndirmeler, duraklat ve devam ettir"), "download", "tool:download") { openTool("downloads") },
         BuiltinRow(tr("App lock", "Uygulama kilidi"), tr("A PIN or fingerprint in front of apps", "Uygulamaların önünde PIN veya parmak izi"), "applock", "tool:applock") { openTool("applock") },
         BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health") { openTool("health") },
         BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
@@ -411,6 +411,20 @@ private fun BuiltinRows() {
             Column(Modifier.weight(1f)) {
                 Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(r.sub, color = T.sub, fontSize = 12.sp)
+            }
+            // separate from the ⋮ menu's own chevron (Settings > Extra apps): this switch only decides whether the row is also listed there.
+            // AppPlace/ToolPlace keep their state in a mutableStateMapOf, so reading .where() here already recomposes the switch on a change.
+            r.place?.let { p ->
+                when {
+                    p.startsWith("app:") -> {
+                        val alias = p.removePrefix("app:")
+                        PSwitch(com.umutk.pulse.AppPlace.where(alias) == "menu", { on -> com.umutk.pulse.AppPlace.set(ctx, alias, if (on) "menu" else "hidden") })
+                    }
+                    p.startsWith("tool:") -> {
+                        val t = com.umutk.pulse.ToolPlace.byId(p.removePrefix("tool:"))
+                        if (t != null) PSwitch(com.umutk.pulse.ToolPlace.where(ctx, t) == "menu", { on -> com.umutk.pulse.ToolPlace.set(ctx, t, if (on) "menu" else "hidden") })
+                    }
+                }
             }
         }
     }
