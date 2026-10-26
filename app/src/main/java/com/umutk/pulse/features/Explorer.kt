@@ -467,9 +467,17 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         exSort((viaRoot ?: dir.listFiles()?.toList()).orEmpty().filter { showHidden || !it.name.startsWith(".") }, sort, dirSizes)
     }
     var resultsFor by remember { mutableStateOf<String?>(null) }
-    LaunchedEffect(resultsFor, here, showHidden) {
+    // the search looks under this folder; the button beside the field widens it to the whole storage
+    var searchAll by remember { mutableStateOf(false) }
+    LaunchedEffect(resultsFor, here, showHidden, searchAll) {
         found = null
-        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { exFind(dir, q, showHidden) } }
+        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { if (searchAll) exFind(top, q, showHidden, 300_000) else exFind(dir, q, showHidden) } }
+    }
+    // typing searches this folder and everything under it by itself, a moment after the last key
+    LaunchedEffect(query, searchOpen) {
+        if (!searchOpen) return@LaunchedEffect
+        if (query.trim().length < 2) { resultsFor = null; return@LaunchedEffect }
+        delay(350); resultsFor = query.trim()
     }
     val shown: List<File> = when {
         arcFile != null -> emptyList()
@@ -1055,11 +1063,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
         }
     }
-    if (arcFile == null && resultsFor == null) ExSearchBar(standalone, searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = "" })
     resultsFor?.let { q ->
         Column(Modifier.fillMaxSize().background(T.bg)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clickable { resultsFor = null }, contentAlignment = Alignment.Center) { ExIcon("back", T.text, 22.dp) }
+                Box(Modifier.size(44.dp).clickable { resultsFor = null; searchOpen = false; query = "" }, contentAlignment = Alignment.Center) { ExIcon("back", T.text, 22.dp) }
                 Text(q, Modifier.weight(1f), color = T.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             val hits = found
@@ -1081,6 +1088,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             }
         }
     }
+    if (arcFile == null) ExSearchBar(standalone, searchOpen, { searchOpen = true }, query, { query = it }, { if (query.isNotBlank()) resultsFor = query.trim() }, { searchOpen = false; query = ""; resultsFor = null; searchAll = false }, searchAll) { searchAll = !searchAll; if (query.trim().length >= 2) resultsFor = query.trim() }
     if (recentView) RecentScreen({ openFile(it) }) { recentView = false }
     ExMiniPlayer()
     htmlView?.let { h -> ExHtmlViewer(h, { htmlView = null }) { htmlView = null; com.umutk.pulse.ofOpenText(ctx, h) } }
@@ -1598,8 +1606,8 @@ private fun exArchiveList(f: File): List<Pair<String, Long>> = runCatching {
 }.getOrDefault(emptyList())
 
 /** Names containing [q] under [root]; stops after 20 000 entries or 200 hits. Hidden names only when [hidden] is on. */
-private fun exFind(root: File, q: String, hidden: Boolean): List<File> =
-    root.walkTopDown().take(20_000).filter { it != root && (hidden || !it.name.startsWith(".")) && it.name.contains(q, ignoreCase = true) }.take(200).toList()
+private fun exFind(root: File, q: String, hidden: Boolean, limit: Int = 20_000): List<File> =
+    root.walkTopDown().take(limit).filter { it != root && (hidden || !it.name.startsWith(".")) && it.name.contains(q, ignoreCase = true) }.take(200).toList()
 
 /** The results of the empty-folder, largest-file and same-name finders under [dir]. */
 private fun exFinder(kind: String, dir: File): List<File> = when (kind) {
@@ -2040,7 +2048,7 @@ private fun androidx.compose.foundation.layout.BoxScope.ExPasteFab(count: Int, m
 
 /** Floating search at the bottom-left: a round button that expands into a field (clear + close); Enter calls [onSearch]. Material = pill, the other looks = square. */
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.ExSearchBar(top: Boolean, open: Boolean, onOpen: () -> Unit, query: String, onQuery: (String) -> Unit, onSearch: () -> Unit, onClose: () -> Unit) {
+private fun androidx.compose.foundation.layout.BoxScope.ExSearchBar(top: Boolean, open: Boolean, onOpen: () -> Unit, query: String, onQuery: (String) -> Unit, onSearch: () -> Unit, onClose: () -> Unit, all: Boolean, onAll: () -> Unit) {
     val shape = if (T.material) RoundedCornerShape(28.dp) else RoundedCornerShape(0.dp)
     val fr = remember { androidx.compose.ui.focus.FocusRequester() }
     LaunchedEffect(open) { if (open) runCatching { fr.requestFocus() } }
@@ -2051,6 +2059,8 @@ private fun androidx.compose.foundation.layout.BoxScope.ExSearchBar(top: Boolean
             exit = androidx.compose.animation.shrinkHorizontally(shrinkTowards = Alignment.End) + androidx.compose.animation.fadeOut()) {
             Row(Modifier.fillMaxWidth().height(48.dp).clip(shape).background(T.panel), verticalAlignment = Alignment.CenterVertically) {
                 PField(query, onQuery, tr("Search", "Ara"), Modifier.weight(1f).focusRequester(fr), onSearch)
+                // search the whole storage instead of this folder
+                Box(Modifier.size(44.dp).clickable(onClick = onAll), contentAlignment = Alignment.Center) { ExGlyph(Icons.Outlined.Public, "globe", if (all) Look.accent else T.sub, 22.dp) }
                 // the cross at the right end clears the text first, then closes the field
                 Box(Modifier.size(44.dp).clickable { if (query.isNotEmpty()) onQuery("") else onClose() }, contentAlignment = Alignment.Center) { ExIcon("close", T.text, 20.dp) }
             }
@@ -2065,6 +2075,7 @@ private fun androidx.compose.foundation.layout.BoxScope.ExSearchBar(top: Boolean
         else {
             Box(Modifier.size(44.dp).clickable(onClick = onClose), contentAlignment = Alignment.Center) { ExIcon("back", T.text, 20.dp) }
             PField(query, onQuery, tr("Search", "Ara"), Modifier.weight(1f).focusRequester(fr), onSearch)
+            Box(Modifier.size(44.dp).clickable(onClick = onAll), contentAlignment = Alignment.Center) { ExGlyph(Icons.Outlined.Public, "globe", if (all) Look.accent else T.sub, 22.dp) }
             if (query.isNotEmpty()) Box(Modifier.size(44.dp).clickable { onQuery("") }, contentAlignment = Alignment.Center) { ExIcon("close", T.sub, 20.dp) }
         }
     }
