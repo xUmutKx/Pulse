@@ -100,6 +100,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "fonts" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.FontChangerScreen() }
         id == "dns" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.DnsSettings() }
         id == "troubleshoot" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.doctor.TroubleshootScreen(back) }
+        id == "goodlock" -> com.umutk.pulse.extras.goodlock.GoodLockHub(back)
         id == "buds" -> com.umutk.pulse.extras.buds.BudsScreen(back)
         id == "speedtest" -> com.umutk.pulse.extras.speedtest.SpeedTestScreen(back)
         id == "mediatools" -> com.umutk.pulse.extras.mediatools.MediaToolsScreen(back)

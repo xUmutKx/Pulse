@@ -99,6 +99,8 @@ val CalculatorLook = ToolLook("calculator_look", "win11")
 val LocalSendLook = ToolLook("localsend_look")
 // the keyboard's settings open in Material until another look is picked (the keyboard's own theme is chosen inside)
 val KeyboardLook = ToolLook("keyboard_look")
+/** Good Lock modules: Material until another look is picked. */
+val GoodLockLook = ToolLook("goodlock_look")
 
 /** Present only inside [ExtraToolActivity]: the page can offer the look choice, inside Pulse itself it is null. */
 class ExtraLookControl(val id: String, val set: (String) -> Unit)
@@ -167,7 +169,7 @@ open class ExtraToolActivity : ComponentActivity() {
         Cfg.load(this); Opt.load(this)
         androidx.core.view.WindowCompat.setDecorFitsSystemWindows(window, false)
         val start = routeOf(intent)
-        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; else -> null }
+        val store = when (start) { "voice" -> VoiceLook; "notes" -> NotesLook; "weather" -> WeatherLook; "paint" -> PaintLook; "calculator" -> CalculatorLook; "localsend" -> LocalSendLook; "keyboard" -> KeyboardLook; "goodlock" -> GoodLockLook; else -> null }
         toolLook = store
         enter()
         setContent {
