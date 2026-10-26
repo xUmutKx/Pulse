@@ -846,7 +846,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             ime.packageName != packageName && (0 until ime.subtypeCount).any { ime.getSubtypeAt(it).mode == "voice" }
         } ?: imm.enabledInputMethodList.firstOrNull { it.id.contains("voicesearch", true) || it.id.contains("voice", true) && it.packageName != packageName }
         if (voice == null) { android.widget.Toast.makeText(this, if (java.util.Locale.getDefault().language == "tr") "Sesle yazma açık değil" else "Voice typing is off", android.widget.Toast.LENGTH_SHORT).show(); return }
-        runCatching { switchInputMethod(voice.id) }
+        // the finger may still be down (it is a long press): the switch waits a moment so the voice keyboard does not get the lifted finger as its own tap and close
+        val sub = (0 until voice.subtypeCount).map { voice.getSubtypeAt(it) }.firstOrNull { it.mode == "voice" }
+        scope.launch {
+            delay(260)
+            if (android.os.Build.VERSION.SDK_INT >= 28 && sub != null) runCatching { switchInputMethod(voice.id, sub) }.onFailure { runCatching { switchInputMethod(voice.id) } }
+            else runCatching { switchInputMethod(voice.id) }
+        }
     }
 
     override fun feedback() {
@@ -1034,7 +1040,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (shotItem != null && SystemClock.uptimeMillis() - shotAt > 120_000L) { shotItem = null; st.shotThumb = null }
         if (shotItem != null && word.isEmpty() && !emailField && !st.plain) {
             slotWords = arrayOf(slotWords[0], slotWords[1], "")
-            st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002" + com.umutk.pulse.tr("Screenshot", "Ekran görüntüsü"))
+            st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, "\u0002")
             return
         }
         val q = quickClip ?: return
