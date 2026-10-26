@@ -54,7 +54,7 @@ private fun material(k: String): ImageVector = when (k) {
     "startup" -> Icons.Outlined.RocketLaunch; "users" -> Icons.Outlined.People; "details" -> Icons.Outlined.FormatListBulleted
     "services" -> Icons.Outlined.Extension; "settings" -> Icons.Outlined.Settings; "menu" -> Icons.Rounded.Menu
     "cpu" -> Icons.Outlined.DeveloperBoard; "memory" -> Icons.Outlined.Memory; "disk" -> Icons.Outlined.Storage
-    "wifi" -> Icons.Outlined.Wifi; "gpu" -> Icons.Outlined.Tv; "battery" -> Icons.Outlined.BatteryFull
+    "wifi" -> Icons.Outlined.Wifi; "gpu" -> Icons.Outlined.Tv; "battery" -> Icons.Outlined.BatteryFull; "globe" -> Icons.Outlined.Public
     "thermal" -> Icons.Outlined.Thermostat; "search" -> Icons.Outlined.Search; "close" -> Icons.Outlined.Close; "check" -> Icons.Outlined.Check
     "palette" -> Icons.Outlined.Palette; "speed" -> Icons.Outlined.Timer; "info" -> Icons.Outlined.Info
     "table" -> Icons.Outlined.TableChart; "heart" -> Icons.Outlined.FavoriteBorder

@@ -816,7 +816,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <service android:name=".MotionCueService" android:exported="false" android:foregroundServiceType="specialUse">
+        <service android:name=".MotionCueService" android:exported="false" android:foregroundServiceType="specialUse" android:stopWithTask="false">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="edge dots that move with the vehicle against motion sickness" />
         </service>
         <service android:name=".MotionCueTile" android:exported="true" android:label="Motion cues" android:icon="@drawable/ic_qs_touch"
