@@ -116,28 +116,28 @@
    "id": "steam",
    "en": "Kettle steam",
    "tr": "Buhar",
-   "file": "steam.wav",
+   "file": "steam.ogg",
    "cat": "cozy"
   },
   {
    "id": "heartbeat",
    "en": "Heartbeat",
    "tr": "Kalp atışı",
-   "file": "heartbeat.wav",
+   "file": "heartbeat.ogg",
    "cat": "cozy"
   },
   {
    "id": "vinyl",
    "en": "Vinyl crackle",
    "tr": "Plak çıtırtısı",
-   "file": "vinyl.wav",
+   "file": "vinyl.ogg",
    "cat": "cozy"
   },
   {
    "id": "traffic",
    "en": "Distant traffic",
    "tr": "Uzak trafik",
-   "file": "traffic.wav",
+   "file": "traffic.ogg",
    "cat": "city"
   }
  ]
