@@ -16,6 +16,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.ui.text.font.FontWeight
 import com.umutk.pulse.fabFill
 import com.umutk.pulse.fabMark
 import androidx.compose.foundation.interaction.collectIsPressedAsState
