@@ -14,8 +14,8 @@ object IslandPrefs {
     var on by mutableStateOf(false)
     var top by mutableFloatStateOf(6f)          // distance of the pill's top edge from the top of the screen
     var x by mutableFloatStateOf(0f)            // sideways shift from the centre
-    var w by mutableFloatStateOf(120f)          // resting width
-    var h by mutableFloatStateOf(34f)           // resting height
+    var w by mutableFloatStateOf(126f)          // resting width
+    var h by mutableFloatStateOf(36f)           // resting height
     var rest by mutableStateOf(true)            // draw the resting pill (it hides behind the camera); off = nothing until there is something to show
     var music by mutableStateOf(true)
     var notif by mutableStateOf(true)
@@ -31,7 +31,7 @@ object IslandPrefs {
 
     fun load(c: Context) {
         val p = sp(c)
-        on = p.getBoolean("on", false); top = p.getFloat("top", 6f); x = p.getFloat("x", 0f); w = p.getFloat("w", 120f); h = p.getFloat("h", 34f); rest = p.getBoolean("rest", true)
+        on = p.getBoolean("on", false); top = p.getFloat("top", 6f); x = p.getFloat("x", 0f); w = p.getFloat("w", 126f); h = p.getFloat("h", 36f); rest = p.getBoolean("rest", true)
         music = p.getBoolean("music", true); notif = p.getBoolean("notif", true); charge = p.getBoolean("charge", true); headset = p.getBoolean("headset", true)
         volume = p.getBoolean("volume", true); torch = p.getBoolean("torch", true); uninstall = p.getBoolean("uninstall", true); shot = p.getBoolean("shot", true)
         style = p.getString("style", "black") ?: "black"; collapse = p.getInt("collapse", 6); haptic = p.getBoolean("haptic", true)
