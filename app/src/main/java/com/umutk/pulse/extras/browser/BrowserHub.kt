@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,11 +46,15 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.webkit.WebSettingsCompat
 import androidx.webkit.WebViewFeature
 import com.umutk.pulse.ExtraLookIcon
@@ -121,6 +126,22 @@ fun BrowserHub(onBack: () -> Unit) {
     val webRef = remember { mutableStateOf<WebView?>(null) }
     val darkState = rememberUpdatedState(dark)
     val adBlockState = rememberUpdatedState(adBlock)
+    // a page's own HTML5 video fullscreen (the expand icon on an embedded player): WebView hands over a view of its own
+    // for as long as the video stays fullscreen; without this callback pair that button silently does nothing at all
+    var fullscreenView by remember { mutableStateOf<android.view.View?>(null) }
+    var fullscreenCb by remember { mutableStateOf<android.webkit.WebChromeClient.CustomViewCallback?>(null) }
+    val activity = ctx as? android.app.Activity
+    fun setImmersive(hide: Boolean) {
+        val w = activity?.window ?: return
+        val c = WindowCompat.getInsetsController(w, w.decorView)
+        if (hide) { c.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE; c.hide(WindowInsetsCompat.Type.systemBars()) }
+        else c.show(WindowInsetsCompat.Type.systemBars())
+    }
+    fun exitFullscreenVideo() {
+        fullscreenCb?.onCustomViewHidden()
+        fullscreenView = null; fullscreenCb = null
+        setImmersive(false)
+    }
 
     @Suppress("DEPRECATION") // FORCE_DARK is the only option pre-Android 13's WebView; ALGORITHMIC_DARKENING above covers the newer ones
     fun applyDark(web: WebView) {
@@ -144,6 +165,7 @@ fun BrowserHub(onBack: () -> Unit) {
 
     BackHandler { if (canBack) webRef.value?.goBack() else onBack() }
 
+    Box(Modifier.fillMaxSize()) {
     Column(Modifier.fillMaxSize().background(pageBg)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = pageGutter, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PIcon("back", T.text, 22.dp, Modifier.clickable { if (canBack) webRef.value?.goBack() else onBack() })
@@ -180,12 +202,22 @@ fun BrowserHub(onBack: () -> Unit) {
                     }
                     webChromeClient = object : android.webkit.WebChromeClient() {
                         override fun onProgressChanged(view: WebView, p: Int) { progress = p / 100f }
+                        override fun onShowCustomView(view: android.view.View, callback: CustomViewCallback) {
+                            fullscreenView = view; fullscreenCb = callback; setImmersive(true)
+                        }
+                        override fun onHideCustomView() { exitFullscreenVideo() }
                     }
                     webRef.value = this
                     loadUrl(pageUrl)
                 }
             }, update = { web -> applyDark(web) })
         }
+    }
+    val fv = fullscreenView
+    if (fv != null) {
+        BackHandler { exitFullscreenVideo() }
+        key(fv) { Box(Modifier.fillMaxSize().background(Color.Black)) { AndroidView(Modifier.fillMaxSize(), factory = { fv }) } }
+    }
     }
 
     if (sheet) WinAlert(
@@ -238,5 +270,5 @@ fun BrowserHub(onBack: () -> Unit) {
         confirmButton = { androidx.compose.material3.TextButton({ showBookmarks = false }) { Text(tr("Close", "Kapat")) } },
     )
 
-    DisposableEffect(Unit) { onDispose { webRef.value?.destroy() } }
+    DisposableEffect(Unit) { onDispose { setImmersive(false); webRef.value?.destroy() } }
 }
