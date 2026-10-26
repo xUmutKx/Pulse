@@ -405,7 +405,7 @@ private fun IButton(text: String, modifier: Modifier = Modifier, danger: Boolean
     val acc = (if (w.material) w.accent else Look.accent).copy(alpha = 1f)
     val fill = when { danger -> Color(0xFFC42B1C).copy(alpha = .16f); primary -> acc; else -> w.text.copy(alpha = .09f) }
     val ink = when { danger -> Color(0xFFC42B1C); primary -> onAccent(acc); else -> w.text }
-    Button(onClick, modifier.height(52.dp), shape = androidx.compose.foundation.shape.CircleShape,
+    Button(onClick, modifier.padding(vertical = 5.dp).height(52.dp), shape = RoundedCornerShape(14.dp),
         contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp),
         colors = ButtonDefaults.buttonColors(containerColor = fill, contentColor = ink)) {
         Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium)

@@ -934,7 +934,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     more()
                 }
                 // the pick pill is thicker than the row's content (4 dp above and below it); the gaps between rows stay small
-                else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 4.dp).heightIn(min = 44.dp), verticalAlignment = Alignment.CenterVertically) {
+                else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 2.dp).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f).heightIn(min = 44.dp).combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), verticalAlignment = Alignment.CenterVertically) {
@@ -966,7 +966,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     val bgc = if (FilesPrefs.alt && shown.indexOf(f) % 2 == 1) T.text.copy(alpha = .05f).compositeOver(base) else base
                     Box(Modifier.fillMaxWidth().padding(vertical = 1.dp).clip(RoundedCornerShape(listOf(8, 14, 22)[FilesPrefs.radius.coerceIn(0, 2)].dp)).background(bgc).padding(horizontal = 10.dp, vertical = 2.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
                 } else Box(Modifier.fillMaxWidth().padding(vertical = 1.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
-            } else if (f.isDirectory && (FilesPrefs.folderCards || !T.material)) PCard(Modifier.fillMaxWidth()) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } } else Box(Modifier.fillMaxWidth().padding(vertical = 4.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
+            } else if (f.isDirectory && (FilesPrefs.folderCards || !T.material)) PCard(Modifier.fillMaxWidth()) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } } else Box(Modifier.fillMaxWidth().padding(vertical = 1.dp)) { Box(Modifier.alpha(cutA)) { rowBody(); if (copied) Icon(Icons.Outlined.ContentCopy, null, Modifier.align(Alignment.TopEnd).padding(end = 40.dp).size(12.dp), Look.accent) } }
         }
         arcFile?.let { af ->
             val all = arcAll
