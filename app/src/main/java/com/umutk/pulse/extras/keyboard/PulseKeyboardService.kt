@@ -528,8 +528,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     @androidx.annotation.RequiresApi(30)
     override fun onCreateInlineSuggestionsRequest(uiExtras: android.os.Bundle): android.view.inputmethod.InlineSuggestionsRequest? {
         val d = resources.displayMetrics.density
-        // black chips with white text (the default is a light chip, which is hard to read on a dark keyboard)
-        val chip = androidx.autofill.inline.common.ViewStyle.Builder().setBackgroundColor(android.graphics.Color.BLACK).build()
+        // white text on a transparent chip: the keyboard draws the grey rounded back behind it
+        val chip = androidx.autofill.inline.common.ViewStyle.Builder().setBackgroundColor(android.graphics.Color.TRANSPARENT).build()
         val title = androidx.autofill.inline.common.TextViewStyle.Builder().setTextColor(android.graphics.Color.WHITE).build()
         val sub = androidx.autofill.inline.common.TextViewStyle.Builder().setTextColor(0xFFBBBBBB.toInt()).build()
         val styles = androidx.autofill.inline.UiVersions.newStylesBuilder().addStyle(androidx.autofill.inline.v1.InlineSuggestionUi.newStyleBuilder()
