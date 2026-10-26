@@ -23,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,6 +34,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -98,6 +101,11 @@ fun GoodLockHub(onBack: () -> Unit) {
     var checking by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(0) }
     BackHandler { onBack() }
+    // volume down = the tab on the left, volume up = the tab on the right
+    DisposableEffect(Unit) {
+        ExtraKeys.volume = { up -> tab = if (up) 1 else 0; true }
+        onDispose { ExtraKeys.volume = null }
+    }
     fun reload() { scope.launch { mods = withContext(Dispatchers.IO) { installed(ctx) } } }
     fun check() { scope.launch { checking = true; feed = withContext(Dispatchers.IO) { feedVersions() }; checking = false } }
     LaunchedEffect(Unit) { reload(); check() }
@@ -121,26 +129,26 @@ fun GoodLockHub(onBack: () -> Unit) {
             }
             if (checking) Text("…", color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(start = 6.dp, top = 8.dp))
         }
-        if (mods != null && list.isEmpty()) Text(tr("No Good Lock module found on this phone. They come from the Galaxy Store.", "Bu telefonda Good Lock modülü yok. Galaxy Store'dan gelirler."), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
+        if (mods != null && list.isEmpty()) Text(tr("No Good Lock module found on this phone.", "Bu telefonda Good Lock modülü yok."), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             items(shown, key = { it.pkg }) { m ->
                 val upd = hasUpdate(m)
                 Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background2(T.panel).padding(14.dp)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
+                        ModIcon(m.pkg)
+                        Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(m.label, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(m.version + (latest(m)?.takeIf { upd }?.let { "  →  $it" } ?: ""), color = if (upd) Look.accent else T.sub, fontSize = 13.sp)
                         }
-                        if (upd) Text(tr("Update", "Güncelle"), color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                        if (upd) Text(tr("Update", "Güncelle"), color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { openMirror(ctx, m.label) }.padding(6.dp))
                     }
                     Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Action("info", tr("App info", "Uygulama bilgisi")) { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", m.pkg, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                         Action("play", tr("Open", "Aç")) { ctx.packageManager.getLaunchIntentForPackage(m.pkg)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
-                        Action("download", tr("Galaxy Store", "Galaxy Store")) {
-                            runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("samsungapps://ProductDetail/${m.pkg}")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                        }
                         Action("globe", "APKMirror") {
-                            runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.apkmirror.com/?s=" + Uri.encode(m.label))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                            openMirror(ctx, m.label)
                         }
                     }
                 }
@@ -160,3 +168,16 @@ private fun Action(icon: String, label: String, onClick: () -> Unit) {
 }
 
 private fun Modifier.background2(c: Color): Modifier = this.then(Modifier.background(c))
+
+private fun openMirror(ctx: Context, label: String) {
+    runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.apkmirror.com/?s=" + Uri.encode(label))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
+/** The module's own launcher picture. */
+@Composable
+private fun ModIcon(pkg: String) {
+    val ctx = LocalContext.current
+    val bmp = remember(pkg) { runCatching { ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+    if (bmp != null) androidx.compose.foundation.Image(bmp, null, Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+    else Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background2(T.panel), contentAlignment = Alignment.Center) { PIcon("apps", T.sub, 22.dp) }
+}
