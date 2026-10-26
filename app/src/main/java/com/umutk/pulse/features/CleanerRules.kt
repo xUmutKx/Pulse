@@ -26,12 +26,6 @@ object CleanerRules {
     private val ext: String by lazy { runCatching { Environment.getExternalStorageDirectory().canonicalPath }.getOrDefault("/storage/emulated/0") }
     private val viaShell get() = Shell.root == true || Shell.shizukuOk()
 
-    // Folders inside an app's dir that only hold re-creatable data. Never databases, shared_prefs, files, accounts.
-    private val dataRels = listOf(
-        "cache", "code_cache", "app_webview/Default/Cache", "app_webview/Default/Code Cache", "app_webview/Default/GPUCache",
-        "app_webview/Default/Service Worker/CacheStorage", "app_webview/GPUCache", "files/image_manager_disk_cache",
-        "files/picasso-cache", "files/okhttp-cache", "files/glide_cache", "files/.thumbnails", "files/thumbnails", "cache/image_manager_disk_cache",
-    )
     private val mediaRels = listOf("cache")
     private val appRe = Regex("^(/data/user/\\d+|" + Regex.escape(ext) + "/Android/data|" + Regex.escape(ext) + "/Android/media)/([A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)+)/(.+)$")
     private val pkgRe = Regex("^[A-Za-z][A-Za-z0-9_]*(\\.[A-Za-z0-9_]+)+$")
@@ -84,15 +78,38 @@ object CleanerRules {
 
     // ------------------------------------------------------------------ AppCleaner
 
+    /** Folder names never descended into or reported, even though their name might contain "cache": real app data, not junk. */
+    private val neverCache = setOf("databases", "shared_prefs")
+
+    /** Every folder under [root] whose name contains "cache" (any depth, bounded), without going into [neverCache] folders.
+     *  Replaces a fixed list of exact relative paths: an app can name its cache folder almost anything, "files/picasso-cache"
+     *  and "cache/exoplayer" alike, and a fixed list missed most of them (that was why, say, YouTube's cache never showed up). */
+    private fun findCacheDirs(root: File, maxDepth: Int = 6): List<File> {
+        val out = ArrayList<File>()
+        fun walk(dir: File, depth: Int) {
+            if (depth > maxDepth) return
+            dir.listFiles()?.forEach { k ->
+                if (!k.isDirectory) return@forEach
+                when {
+                    k.name in neverCache -> {}
+                    k.name.contains("cache", ignoreCase = true) -> out += k
+                    else -> walk(k, depth + 1)
+                }
+            }
+        }
+        walk(root, 0)
+        return out
+    }
+
     fun appJunk(ctx: Context): List<CleanRow> {
         val paths = ArrayList<String>()
         if (viaShell) {
-            val rels = dataRels.joinToString(" ") { "'$it'" }
-            val out = Shell.run("for b in /data/user/*/* '$ext'/Android/data/*; do for r in $rels; do [ -d \"\$b/\$r\" ] && echo \"\$b/\$r\"; done; done; " +
+            val prune = neverCache.joinToString(" -o ") { "-name '$it'" }
+            val out = Shell.run("for b in /data/user/*/* '$ext'/Android/data/*; do find \"\$b\" -maxdepth 6 \\( $prune \\) -prune -o -type d -iname '*cache*' -print 2>/dev/null; done; " +
                 "for b in '$ext'/Android/media/*; do [ -d \"\$b/cache\" ] && echo \"\$b/cache\"; done")
             out.lineSequence().map { it.trim() }.filter { it.startsWith("/") }.forEach { paths += it }
         } else {
-            listDirs("$ext/Android/data").forEach { b -> dataRels.forEach { r -> File(b, r).takeIf { it.isDirectory }?.let { paths += it.path } } }
+            listDirs("$ext/Android/data").forEach { b -> findCacheDirs(b).forEach { paths += it.path } }
             listDirs("$ext/Android/media").forEach { b -> mediaRels.forEach { r -> File(b, r).takeIf { it.isDirectory }?.let { paths += it.path } } }
         }
         val sz = sizes(paths)
@@ -100,7 +117,8 @@ object CleanerRules {
         val byPkg = paths.mapNotNull { p ->
             val pkg = appRe.matchEntire(p)?.groupValues?.get(2) ?: return@mapNotNull null
             val s = sz[p] ?: 0L
-            if (s <= 0L) null else pkg to Finding(p, s, if (p.endsWith("/cache") || p.endsWith("/code_cache")) CACHE else APP)
+            // every path found this way is, by construction, a folder named "cache" something, or the one fixed "media/cache": always CACHE
+            if (s <= 0L) null else pkg to Finding(p, s, CACHE)
         }.groupBy({ it.first }, { it.second })
         return byPkg.map { (pkg, f) ->
             val label = runCatching { pm.getApplicationInfo(pkg, 0).loadLabel(pm).toString() }.getOrDefault(pkg)
@@ -111,12 +129,15 @@ object CleanerRules {
 
     private fun mb(b: Long) = if (b >= 1073741824L) "%.1f GB".format(b / 1073741824.0) else "%.1f MB".format(b / 1048576.0)
 
-    /** Path is one of the known junk folders of an app, in an allowed root. */
+    /** Path is one of the known junk folders of an app, in an allowed root: under Android/media exactly "cache", under
+     *  Android/data or /data/user any folder named "cache" something, at any depth, none of its path components a real-data folder. */
     private fun appJunkOk(p: String): Boolean {
         if (!plain(p)) return false
         val m = appRe.matchEntire(p) ?: return false
         val rel = m.groupValues[3]
-        return if (m.groupValues[1].endsWith("/Android/media")) rel in mediaRels else rel in dataRels
+        val parts = rel.split('/')
+        if (parts.any { it in neverCache }) return false
+        return if (m.groupValues[1].endsWith("/Android/media")) rel in mediaRels else parts.last().contains("cache", ignoreCase = true)
     }
 
     // ------------------------------------------------------------------ CorpseFinder
