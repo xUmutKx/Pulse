@@ -91,11 +91,19 @@ internal fun TrackSheet(
     val duration = track.durationSec.takeIf { it >= 0 }?.let { formatMs(it * 1000) }.orEmpty()
     val close = onDismiss
 
+    // the delete the system must confirm (the file is not the app's own): Android 11+ asks once
+    val deleteAsk = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        if (r.resultCode == android.app.Activity.RESULT_OK) { Toast.makeText(ctx, tr("Deleted", "Silindi"), Toast.LENGTH_SHORT).show(); MusicLibrary.refresh(ctx) }
+        close()
+    }
     Dialog(onDismissRequest = onDismiss) {
+        // a darker screen behind the menu
+        val dv = androidx.compose.ui.platform.LocalView.current
+        androidx.compose.runtime.SideEffect { (dv.parent as? androidx.compose.ui.window.DialogWindowProvider)?.window?.setDimAmount(.88f) }
         Box(Modifier.fillMaxWidth(.94f).clip(RoundedCornerShape(28.dp)).background(SheetBg)) {
             if (art != null) {
                 Image(art, null, Modifier.matchParentSize().blur(40.dp).alpha(.45f), contentScale = ContentScale.Crop)
-                Box(Modifier.matchParentSize().background(SheetBg.copy(alpha = .6f)))
+                Box(Modifier.matchParentSize().background(SheetBg.copy(alpha = .82f)))
             }
             Column(Modifier.padding(16.dp).verticalScroll(rememberScrollState())) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -159,11 +167,27 @@ internal fun TrackSheet(
             text = { Text(tr("The file is deleted from the phone. This cannot be undone.", "Dosya telefondan silinir. Bu geri alınamaz.")) },
             confirmButton = {
                 TextButton(onClick = {
-                    pane = null; close()
+                    pane = null
                     scope.launch {
-                        val ok = withContext(Dispatchers.IO) { !track.path.contains("://") && File(track.path).delete() }
+                        val f = File(track.path)
+                        val ok = withContext(Dispatchers.IO) { !track.path.contains("://") && (f.delete() || !f.exists()) }
+                        // the file cannot be removed straight away (it is not the app's own): the system's delete request, with its one confirmation
+                        if (!ok && android.os.Build.VERSION.SDK_INT >= 30 && !track.path.contains("://")) {
+                            val uri = withContext(Dispatchers.IO) {
+                                runCatching {
+                                    ctx.contentResolver.query(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, arrayOf(android.provider.MediaStore.Audio.Media._ID), android.provider.MediaStore.Audio.Media.DATA + "=?", arrayOf(track.path), null)?.use { c ->
+                                        if (c.moveToFirst()) android.content.ContentUris.withAppendedId(android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, c.getLong(0)) else null
+                                    }
+                                }.getOrNull()
+                            }
+                            if (uri != null) {
+                                runCatching { deleteAsk.launch(androidx.activity.result.IntentSenderRequest.Builder(android.provider.MediaStore.createDeleteRequest(ctx.contentResolver, listOf(uri)).intentSender).build()) }
+                                    .onSuccess { return@launch }
+                            }
+                        }
                         Toast.makeText(ctx, if (ok) tr("Deleted", "Silindi") else tr("Could not delete", "Silinemedi"), Toast.LENGTH_SHORT).show()
                         if (ok) MusicLibrary.refresh(ctx)
+                        close()
                     }
                 }) { Text(tr("Delete", "Sil")) }
             },

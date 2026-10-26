@@ -456,6 +456,9 @@ fun NowPlayingScreen(
                     // about half a minute of the song is visible; short tracks and unknown lengths show the whole wave
                     windowFrac = if (durationMs > 60_000) 30_000f / durationMs else 1f,
                 )
+                // the elapsed time at the left end of the wave and the total at the right end, each on a dark pill so they read on every skin
+                Text(formatMs(shownMs), Modifier.align(Alignment.BottomStart).padding(start = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f)).padding(horizontal = 8.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(formatMs(durationMs), Modifier.align(Alignment.BottomEnd).padding(end = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f)).padding(horizontal = 8.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     // every transport button sits on a solid black disc, as in the reference player
                     Round(IV("prev"), tr("Previous", "Önceki"), 70.dp, 38.dp, fg, Color.Black, CircleShape, onPrev)
@@ -466,12 +469,6 @@ fun NowPlayingScreen(
                     )
                     Round(IV("next"), tr("Next", "Sonraki"), 70.dp, 38.dp, fg, Color.Black, CircleShape, onNext)
                 }
-            }
-            // elapsed time on the left edge, total on the right, like the reference player
-            // elapsed time and total sit at the seek bar's two ends, on the same edges
-            Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatMs(shownMs), color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Text(formatMs(durationMs), color = fg, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
             }
             Spacer(Modifier.height(8.dp))
             // a small chip under the transport; what it says is picked in the player settings (the sound quality of the file by default)

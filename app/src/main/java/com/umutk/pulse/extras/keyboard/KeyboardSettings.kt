@@ -172,6 +172,8 @@ fun KeyboardSettings(back: () -> Unit) {
                 Switch(tr("Under the space row", "Boşluk satırının altında"), "", KeyboardPrefs.proBottom) { KeyboardPrefs.proBottom = it; save() }
                 Switch(tr("Icons on the keys", "Tuşlarda ikon"), "", KeyboardPrefs.proIcons) { KeyboardPrefs.proIcons = it; save() }
                 ItemPicker(ExtraKeys.all.map { it.id to it.label }, KeyboardPrefs.proKeys) { KeyboardPrefs.proKeys = it; save() }
+                Switch(tr("Second extra row", "İkinci ek satır"), tr("Fn, Home, End, Page keys, editing keys", "Fn, Home, End, Page tuşları, düzenleme tuşları"), KeyboardPrefs.proRow2) { KeyboardPrefs.proRow2 = it; save() }
+                if (KeyboardPrefs.proRow2) ItemPicker(ExtraKeys.all.map { it.id to it.label }, KeyboardPrefs.proKeys2) { KeyboardPrefs.proKeys2 = it; save() }
             }
             Text(tr("Toolbar", "Araç çubuğu"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
             ItemPicker(ExtraKeys.toolbar, KeyboardPrefs.toolbarItems) { KeyboardPrefs.toolbarItems = it; save() }
