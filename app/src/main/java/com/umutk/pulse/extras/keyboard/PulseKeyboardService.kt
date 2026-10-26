@@ -40,6 +40,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var job: Job? = null
 
     private val word = StringBuilder()
+    /** The last key was a sentence end (full stop behind a known word, ! or ?): the next letter gets a space and a capital. */
+    private var dotEnd = false
     private var prevWord: String? = null
     private var prevWord2: String? = null
     private val touchPts = ArrayList<androidx.compose.ui.geometry.Offset?>()
@@ -302,7 +304,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
-        val ch = s[0]
+        var ch = s[0]
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
         if (letter) {
             // a comma right before a letter, behind a word: a slip of the finger; the comma goes and the word is reopened
@@ -315,7 +317,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     c.deleteSurroundingText(n, 0); word.append(stem); punctTyped = false
                 }
             }
-            if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter()) c.commitText(" ", 1)
+            if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter()) {
+                c.commitText(" ", 1)
+                // behind a full stop, ! or ? the next sentence starts with a capital
+                if (dotEnd && KeyboardPrefs.autoCap && word.isEmpty()) ch = ch.toString().uppercase(lang.locale).first()
+            }
+            dotEnd = false
             dotFix = false
             if (word.isEmpty() && !punctTyped && ch.isLetter() && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace) {
                 val bt = c.getTextBeforeCursor(60, 0)?.toString().orEmpty()
@@ -344,8 +351,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             updateSuggestions()
         } else {
             // a word is only mended when the space key ends it: a period, comma or bracket leaves what was typed as it is
+            // a full stop behind a word of the dictionary ends a sentence (not in addresses, passwords or numbers): the space and the capital come with the next letter
+            val before = word.toString().lowercase(lang.locale)
+            val dotOk = ch == '.' && before.length >= 2 && KeyboardDictionary.isKnown(before) && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace
             if (!finishWord(s, false, s)) c.commitText(s, 1)
-            punctTyped = ch in ",;!?:"
+            punctTyped = ch in ",;!?:" || dotOk
+            dotEnd = ch in "!?" || dotOk
             lastWasSpace = false
             if (ch in ".!?") lastCorrection = null
             afterText()
