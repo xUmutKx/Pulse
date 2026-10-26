@@ -90,19 +90,20 @@ internal object CoverFetch {
         // the album only when it is one record; a compilation ("No.1 Classics") or the folder name is no album, the song is searched then
         val album = t.album?.takeIf { it.isNotBlank() && it != "<unknown>" && !generic(it) }?.let { clean(it).ifBlank { null } }
         val song = clean(t.displayName()).ifBlank { null }
-        val name = album ?: song ?: return null
-        val term = listOfNotNull(artist, name).joinToString(" ").trim()
-        if (term.isEmpty()) return null
+        if (album == null && song == null) return null
         synchronized(lock) {
             PowerampCovers.saved(c, t.path)?.let { return it }
-            // a cover is only taken when the result is the same album (or the same song when the album is unknown) by the same artist: no cover is better than a wrong one
-            // the first match whose picture really downloads (a record can be listed by a service that has no picture of it)
-            val hits = PowerampCovers.search(term, if (album != null) "album" else "song").filter { sameWork(it.name, name) && (artist == null || sameWork(it.artist, artist)) }
-            if (hits.isEmpty()) {
-                PowerampCovers.markMiss(c, t.path)
-                return null
+            // several tries, narrow to wide: the album with the artist, the song with the artist, the song alone; a hit counts when the same work is meant (and the same artist, when one is known).
+            // No cover is better than a wrong one, so every try checks the names.
+            val tries = ArrayList<Triple<String, String, String>>()   // search term, entity, name to match
+            if (album != null) tries += Triple(listOfNotNull(artist, album).joinToString(" "), "album", album)
+            if (song != null) { tries += Triple(listOfNotNull(artist, song).joinToString(" "), "song", song); if (artist != null) tries += Triple(song, "song", song) }
+            var jpg: ByteArray? = null
+            for ((term, entity, want) in tries) {
+                val hits = PowerampCovers.search(term, entity).filter { sameWork(it.name, want) && (artist == null || sameWork(it.artist, artist) || sameWork(artist, it.artist)) }
+                jpg = hits.firstNotNullOfOrNull { h -> runCatching { PowerampCovers.fetch(h.big) }.getOrNull()?.takeIf { it.size > 2000 } }
+                if (jpg != null) break
             }
-            val jpg = hits.firstNotNullOfOrNull { h -> runCatching { PowerampCovers.fetch(h.big) }.getOrNull()?.takeIf { it.size > 2000 } }
             if (jpg == null) { PowerampCovers.markMiss(c, t.path); return null }
             PowerampCovers.save(c, t.path, jpg)
             return BitmapFactory.decodeByteArray(jpg, 0, jpg.size)?.asImageBitmap()

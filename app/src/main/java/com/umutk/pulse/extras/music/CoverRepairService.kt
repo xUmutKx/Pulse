@@ -32,6 +32,8 @@ object CoverRepairJob {
     var applied by mutableIntStateOf(0)
     var finished by mutableStateOf(false)
     var left by mutableStateOf(emptyList<Track>())
+    /** The songs that got a cover in this run, to look through afterwards. */
+    var found by mutableStateOf(emptyList<Track>())
 
     /** True while the run writes covers into the files instead of searching for them. */
     var embedding by mutableStateOf(false)
@@ -41,7 +43,7 @@ object CoverRepairJob {
     fun start(c: Context, embed: Boolean = false) {
         if (busy) return
         embedding = embed; embedded = 0; note = ""
-        busy = true; finished = false; done = 0; total = 0; applied = 0; left = emptyList()
+        busy = true; finished = false; done = 0; total = 0; applied = 0; left = emptyList(); found = emptyList()
         runCatching { ContextCompat.startForegroundService(c.applicationContext, Intent(c.applicationContext, CoverRepairService::class.java).putExtra("embed", embed)) }
             .onFailure { busy = false }
     }
@@ -84,7 +86,7 @@ class CoverRepairService : Service() {
             for (t in todo) {
                 if (!isActive) break
                 val got = runCatching { CoverFetch.find(this@CoverRepairService, t, force = true) }.getOrNull()
-                if (got != null) { CoverRepairJob.applied++; forgetArt(t.path) } else miss += t
+                if (got != null) { CoverRepairJob.applied++; CoverRepairJob.found = CoverRepairJob.found + t; forgetArt(t.path) } else miss += t
                 CoverRepairJob.done++
                 update()
                 delay(1200)
