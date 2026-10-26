@@ -96,7 +96,7 @@ object KeyboardPrefs {
     /** Moving colour light: 0 off, 1 around the keyboard, 2 around every key (a rainbow that runs along the keys). */
     var rgb by mutableStateOf(0)
     /** How long an unpinned clipboard item is kept, in hours (1 to 72). */
-    var clipHours by mutableStateOf(0)  // hours the unpinned items stay; 0 = for ever (the default)
+    var clipHours by mutableStateOf(168)  // hours the unpinned items stay (one week by default); 0 = for ever
     /** A comma straight before a letter inside a word is a slip: it is taken out and the word goes on. */
     var commaSlip by mutableStateOf(false)
     var hapticMs by mutableStateOf(8)   // strength 1..40

@@ -1013,7 +1013,14 @@ private class MenuItem(val id: String, val icon: ImageVector, val label: String,
 private fun MenuPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
     val ids = KeyboardPrefs.menuItems.split(',').filter { id -> ExtraKeys.menu.any { it.first == id } }
     val items = ids.map { id -> MenuItem(id, toolIcon(th, id), ExtraKeys.menu.first { it.first == id }.second, toolOn(id, st)) } + MenuItem("back", kbIcon(th, "Keyboard"), "Keys")
-    LazyVerticalGrid(GridCells.Fixed(4), Modifier.fillMaxWidth().height(panelHeight(st, keyH)).background(th.menu)) {
+    Column(Modifier.fillMaxWidth().height(panelHeight(st, keyH)).background(th.menu)) {
+    // the head: back to the keys, and the two things looked for most (settings, themes) one tap away
+    Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        BarIcon(th, kbIcon(th, "ArrowBack")) { st.panel = "keys" }
+        BarIcon(th, kbIcon(th, "Settings")) { act.menu("settings") }
+        BarIcon(th, kbIcon(th, "Palette")) { act.menu("theme") }
+    }
+    LazyVerticalGrid(GridCells.Fixed(4), Modifier.fillMaxWidth().weight(1f)) {
         items(items) { m ->
             Column(
                 Modifier.height(keyH).clickable { when (m.id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(m.id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(m.id) } },
@@ -1023,6 +1030,7 @@ private fun MenuPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 Text(m.label, color = if (m.on) th.accent else th.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
             }
         }
+    }
     }
 }
 
