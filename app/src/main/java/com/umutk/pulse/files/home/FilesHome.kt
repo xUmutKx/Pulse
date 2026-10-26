@@ -61,6 +61,8 @@ import java.io.File
 object FilesHomeNav {
     /** Set by the bottom bar's Search: the explorer opens its search field when it appears. */
     var openSearch by mutableStateOf(false)
+    /** Browse pressed while the Browse page is already open: the explorer goes back to the top folder. */
+    var toRoot by mutableStateOf(false)
     /** A file tapped on the home page: the Browse tab opens its folder and the file in its own way (an archive shows its contents inside). */
     var pendingFile by mutableStateOf<File?>(null)
     /** A type tapped on the home page ("images", "videos", ...): the types page opens straight on that list. */
@@ -296,6 +298,7 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
                     "more" -> onTab("more")
                     "share" -> onShare()
                     "search" -> { FilesHomeNav.openSearch = true; onTab("files") }
+                    "files" -> if (tab == "files") FilesHomeNav.toRoot = true else onTab(target)
                     else -> onTab(target)
                 }
             }, horizontalAlignment = Alignment.CenterHorizontally) {
