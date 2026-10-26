@@ -7,6 +7,7 @@ import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
@@ -212,12 +213,15 @@ private fun isGreyish(c: Int): Boolean { val r = (c shr 16) and 255; val g = (c 
 private fun isText(name: String) = name.contains("text", true) || name.contains("title", true) || name.contains("label", true) || name.contains("hint", true)
 
 /** Every solid colour the app defines (whites and accents too); each one can be set by hand. Changes are overlays, kept per app. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 fun AllColorsCard(app: AppRow, mode: Privilege.Mode) {
     val ctx = LocalContext.current
     val sp = remember { ctx.getSharedPreferences("blackout", Context.MODE_PRIVATE) }
     val scope = rememberCoroutineScope()
-    var all by remember(app.pkg) { mutableStateOf<List<Candidate>?>(null) }
+    // a scan is kept for the app (until its apk changes), so opening the card again does not read the apk again; nothing scans by itself
+    var all by remember(app.pkg) { mutableStateOf<List<Candidate>?>(scanned[app.pkg to app.sourceDir]) }
+    var picked by remember(app.pkg) { mutableStateOf(setOf<String>()) }
     var busy by remember(app.pkg) { mutableStateOf(false) }
     var msg by remember(app.pkg) { mutableStateOf("") }
     var editing by remember(app.pkg) { mutableStateOf<Candidate?>(null) }
@@ -232,7 +236,6 @@ fun AllColorsCard(app: AppRow, mode: Privilege.Mode) {
     BoCard {
         Row(Modifier.fillMaxWidth().clickable {
             open = !open
-            if (open && all == null && mode != Privilege.Mode.None) { busy = true; scope.launch { all = withContext(Dispatchers.IO) { runCatching { Arsc.scan(app.sourceDir, all = true).candidates }.getOrDefault(emptyList()) }; busy = false } }
         }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("All colours", "Tüm renkler"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             PIcon("chevron", T.sub, 22.dp, Modifier.rotate(if (open) 180f else 0f))
@@ -243,7 +246,7 @@ fun AllColorsCard(app: AppRow, mode: Privilege.Mode) {
         if (open && canOv) BoButtons {
             BoBtn(if (all == null) tr("Show all colours", "Tüm renkleri göster") else tr("Refresh", "Yenile"), !busy && mode != Privilege.Mode.None) {
                 busy = true
-                scope.launch { all = withContext(Dispatchers.IO) { runCatching { Arsc.scan(app.sourceDir, all = true).candidates }.getOrDefault(emptyList()) }; busy = false }
+                scope.launch { all = withContext(Dispatchers.IO) { runCatching { Arsc.scan(app.sourceDir, all = true).candidates }.getOrDefault(emptyList()) }.also { scanned[app.pkg to app.sourceDir] = it }; busy = false }
             }
             if (made.isNotEmpty()) BoBtn(tr("Restore original", "Aslına döndür"), !busy) {
                 busy = true
@@ -284,9 +287,25 @@ fun AllColorsCard(app: AppRow, mode: Privilege.Mode) {
             if (msg.isNotEmpty()) BoText(msg, 12)
         }
         if (open && canOv) all?.sortedByDescending { isBg(it.name) }?.filter { (query.isBlank() || it.name.contains(query, true)) && (!onlyDark || lumOf(it.color) < .5f) }?.let { list -> list.take(if (showAll) list.size else 8) to list.size }?.let { (rows, total) ->
+            // a long press starts a selection: more colours are added with a tap, then one colour below turns all of them at once
+            if (picked.isNotEmpty()) {
+                BoText(tr("${picked.size} selected: turn them all into", "${picked.size} seçili: hepsini şuna çevir"), 12)
+                Row(Modifier.padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    listOf(0xFF000000.toInt(), 0xFF121212.toInt(), 0xFF1E1E1E.toInt(), 0xFF0B1020.toInt(), 0xFFFFFFFF.toInt()).forEach { col ->
+                        BoDot(col, 32.dp) { if (!busy) { quick(list0(all, picked), col, tr("Selected colours changed", "Seçili renkler değişti")); picked = emptySet() } }
+                    }
+                }
+                BoButtons {
+                    BoBtn(tr("Select all shown", "Görünenlerin hepsini seç")) { picked = picked + rows.map { it.name } }
+                    BoBtn(tr("Clear", "Temizle")) { picked = emptySet() }
+                }
+            }
             rows.forEach { c ->
                 val now = made[c.name] ?: c.color
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).clickable(enabled = mode != Privilege.Mode.None) { pickedFrom = "%06X".format(c.color and 0xFFFFFF); editing = c }.padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                val on = c.name in picked
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(if (on) T.accent.copy(alpha = .22f) else Color.Transparent)
+                    .combinedClickable(enabled = mode != Privilege.Mode.None, onClick = { if (picked.isNotEmpty()) picked = if (on) picked - c.name else picked + c.name else { pickedFrom = "%06X".format(c.color and 0xFFFFFF); editing = c } },
+                        onLongClick = { picked = if (on) picked - c.name else picked + c.name }).padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
                     BoDot(c.color); BoText("→", modifier = Modifier.padding(horizontal = 6.dp)); BoDot(now)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
@@ -564,3 +583,7 @@ fun GlobalCard(mode: Privilege.Mode) {
         BoText(tr("Then close the app from recents and open it again.", "Sonra uygulamayı son uygulamalardan kapatıp yeniden açın."), modifier = Modifier.padding(top = 6.dp))
     }
 }
+
+/** What was read from each app's apk, kept for the session: reading it is slow, so it only happens when asked for. */
+private val scanned = HashMap<Pair<String, String>, List<Candidate>>()
+private fun list0(all: List<Candidate>?, names: Set<String>) = all.orEmpty().filter { it.name in names }
