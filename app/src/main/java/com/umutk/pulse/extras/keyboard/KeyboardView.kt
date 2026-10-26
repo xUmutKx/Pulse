@@ -556,18 +556,29 @@ private fun KeysetPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx
     }
 }
 
-/** The extra row: Esc, Tab, Ctrl, Alt, Win, arrows, F-keys, ... as many as the user put there. The modifier keys wait for the next key. */
+/** The extra row (and a second one when it is on): Esc, Tab, Ctrl, Alt, Win, arrows, F-keys, ... as many as the user put there. The modifier keys wait for the next key. */
 @Composable
 private fun ExtraRow(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
-    val defs = KeyboardPrefs.proKeys.split(',').mapNotNull { ExtraKeys.byId(it) }
-    if (defs.isEmpty()) return
-    BoxWithConstraints(Modifier.fillMaxWidth()) {
-        val w = if (defs.size * 42 <= maxWidth.value) maxWidth / defs.size else 46.dp
-        Row(Modifier.horizontalScroll(rememberScrollState())) {
-            defs.forEach { d ->
-                val level = when (d.id) { "ctrl" -> st.ctrl; "alt" -> st.alt; "win" -> st.win; "shiftm" -> st.shiftMod; else -> 0 }
-                ExtraCell(th, w, keyH * .78f, d, level) { act.extraKey(d.id) }
+    @Composable fun one(list: String) {
+        val defs = list.split(',').mapNotNull { ExtraKeys.byId(it) }
+        if (defs.isEmpty()) return
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val w = if (defs.size * 42 <= maxWidth.value) maxWidth / defs.size else 46.dp
+            Row(Modifier.horizontalScroll(rememberScrollState())) {
+                defs.forEach { d ->
+                    val level = when (d.id) { "ctrl" -> st.ctrl; "alt" -> st.alt; "win" -> st.win; "shiftm" -> st.shiftMod; else -> 0 }
+                    ExtraCell(th, w, keyH * .78f, d, level) { act.extraKey(d.id) }
+                }
             }
+        }
+    }
+    Column(Modifier.fillMaxWidth()) {
+        one(KeyboardPrefs.proKeys)
+        if (KeyboardPrefs.proRow2) {
+            // the F keys come up here when Fn is pressed
+            if (st.fnOpen) {
+                listOf((1..6), (7..12)).forEach { r -> Row(Modifier.fillMaxWidth()) { r.forEach { n -> ExtraKeys.byId("f$n")?.let { d -> ExtraCell(th, 0.dp, keyH * .78f, d, 0, Modifier.weight(1f)) { act.extraKey(d.id); st.fnOpen = false } } } } }
+            } else one(KeyboardPrefs.proKeys2)
         }
     }
 }

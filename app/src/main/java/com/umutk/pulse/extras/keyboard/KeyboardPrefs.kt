@@ -68,6 +68,9 @@ object KeyboardPrefs {
     var anim by mutableStateOf(true)
     var proRow by mutableStateOf(true)
     var proKeys by mutableStateOf(ExtraKeys.DEFAULT)
+    /** A second extra row under the first: its own keys (Fn, Home, End, Page keys, editing keys by default). */
+    var proRow2 by mutableStateOf(false)
+    var proKeys2 by mutableStateOf("fn,home,end,pgup,pgdn,del,ins,selectAll,copy,paste")
     /** The extra row sits under the space row instead of above the letters. */
     var proBottom by mutableStateOf(true)
     var proIcons by mutableStateOf(true)
@@ -122,7 +125,7 @@ object KeyboardPrefs {
         cursorControl = p.getBoolean("cursorControl", cursorControl); quickDelete = p.getBoolean("quickDelete", quickDelete)
         emojiPredictions = p.getBoolean("emojiPredictions", emojiPredictions); learn = p.getBoolean("learn", learn)
         glide = p.getBoolean("glide", glide); flick = p.getBoolean("flick", flick); anim = p.getBoolean("anim", anim); proRow = p.getBoolean("proRow", proRow)
-        proKeys = p.getString("proKeys", proKeys) ?: proKeys; proBottom = p.getBoolean("proBottom", proBottom); proIcons = p.getBoolean("proIcons", proIcons); split = p.getBoolean("split", split); floating = p.getBoolean("floating", false); floatX = p.getFloat("floatX", .5f); appCtx = c.applicationContext; menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
+        proKeys = p.getString("proKeys", proKeys) ?: proKeys; proRow2 = p.getBoolean("proRow2", proRow2); proKeys2 = p.getString("proKeys2", proKeys2) ?: proKeys2; proBottom = p.getBoolean("proBottom", proBottom); proIcons = p.getBoolean("proIcons", proIcons); split = p.getBoolean("split", split); floating = p.getBoolean("floating", false); floatX = p.getFloat("floatX", .5f); appCtx = c.applicationContext; menuItems = p.getString("menuItems", menuItems) ?: menuItems; toolbarItems = p.getString("toolbarItems", toolbarItems) ?: toolbarItems
         // once: Shift joins the default extra keys (only for those who never changed the row)
         if (p.getInt("ratioVer", 0) < 1) { autoRatio = 80; p.edit().putInt("autoRatio", 80).putInt("ratioVer", 1).apply() }
         if (p.getInt("proVer", 0) < 1) { if (proKeys == ExtraKeys.OLD_DEFAULT) proKeys = ExtraKeys.DEFAULT; p.edit().putInt("proVer", 1).apply() }
@@ -146,7 +149,7 @@ object KeyboardPrefs {
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
             .putBoolean("quickPrediction", quickPrediction).putBoolean("quickPeriod", quickPeriod).putBoolean("autoCap", autoCap).putBoolean("autoSpace", autoSpace)
             .putBoolean("cursorControl", cursorControl).putBoolean("quickDelete", quickDelete).putBoolean("emojiPredictions", emojiPredictions).putBoolean("learn", learn)
-            .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putFloat("floatX", floatX).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
+            .putBoolean("glide", glide).putBoolean("flick", flick).putBoolean("anim", anim).putBoolean("proRow", proRow).putInt("ver", 2).putString("proKeys", proKeys).putBoolean("proRow2", proRow2).putString("proKeys2", proKeys2).putBoolean("proBottom", proBottom).putBoolean("proIcons", proIcons).putBoolean("split", split).putBoolean("floating", floating).putFloat("floatX", floatX).putString("menuItems", menuItems).putString("toolbarItems", toolbarItems)
             .putBoolean("haptic", haptic).putInt("bright", bright).putInt("bottomBright", bottomBright).putInt("topBright", topBright).putBoolean("bottomShift", bottomShift).putInt("rgb", rgb).putInt("clipKeep", clipHours).putBoolean("commaSlip2", commaSlip).putInt("keyFx", keyFx).putInt("boardFx", boardFx).putInt("motionFx", motionFx).putInt("soundKind", soundKind).putInt("hapticMs", hapticMs).putBoolean("sound", sound)
             .apply()
     }
