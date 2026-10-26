@@ -195,7 +195,8 @@ fun LyricsSelect(res: LyricsResult, selected: Set<Int>, onToggle: (Int) -> Unit,
 /** Step two: the card alone, seven colours to pick from (five of the cover, black, white), and Share. */
 @Composable
 fun LyricsSharePage(title: String, artist: String, art: androidx.compose.ui.graphics.ImageBitmap?, lines: List<String>, style: Int, onStyle: (Int) -> Unit, onShare: (Bitmap) -> Unit, modifier: Modifier = Modifier) {
-    val artBmp = remember(art) { art?.asAndroidBitmap() }
+    // a hardware bitmap cannot be read for its colours (the palette fell back to the blue-green): a software copy can
+    val artBmp = remember(art) { art?.asAndroidBitmap()?.let { b -> if (android.os.Build.VERSION.SDK_INT >= 26 && b.config == Bitmap.Config.HARDWARE) b.copy(Bitmap.Config.ARGB_8888, false) else b } }
     val colors = remember(artBmp) { LyricsShare.palette(artBmp) }
     // the last choice is the cover photo itself as the card
     val photo = artBmp != null && style == colors.size
