@@ -268,7 +268,12 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "clip" -> ClipPanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
-            else -> if (st.numpad) NumPad(th, st, act, keyH) else KeysPanel(th, st, act, keyH)
+            "layout" -> LayoutPanel(th, st, keyH)
+            else -> when {
+                st.forceLayout == "game" -> GamePad(th, act, keyH)
+                st.forceLayout == "numpad" || (st.numpad && st.forceLayout == null) -> NumPad(th, st, act, keyH)
+                else -> KeysPanel(th, st, act, keyH)
+            }
         }
     }
 }
@@ -290,6 +295,51 @@ private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.comp
         Key(th, st, act, KbKey("#", KeyKind.CHAR, 1f), h * .8f)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1f), h * .8f)
     }
+}
+
+/** A chosen layout, over whatever the field itself would ask for. "Default" clears the pick, so the field decides again. */
+@Composable
+private fun LayoutPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit.Dp) {
+    val options = listOf(null to tr("Default", "Varsayılan"), "numpad" to tr("Numbers", "Sayılar"), "game" to tr("Game controls", "Oyun tuşları"))
+    Column(Modifier.fillMaxWidth().height(keyH * 4f), verticalArrangement = Arrangement.Center) {
+        Text(tr("Key layout", "Tuş düzeni"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp, bottom = 4.dp))
+        options.forEach { (v, label) ->
+            val on = st.forceLayout == v
+            Row(
+                Modifier.fillMaxWidth().height(keyH * .85f).clickable { st.forceLayout = v; st.panel = "keys" }.padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(label, color = if (on) th.accent else th.text, fontSize = 16.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, modifier = Modifier.weight(1f))
+                if (on) Icon(kbIcon(th, "Check"), null, tint = th.accent, modifier = Modifier.size(20.dp))
+            }
+        }
+    }
+}
+
+/** One key of the Game layout, its share of the row's width given by [w]. */
+@Composable
+private fun RowScope.GCell(th: KbTheme, act: KbActions, h: androidx.compose.ui.unit.Dp, id: String, w: Float = 1f) {
+    val d = ExtraKeys.byId(id) ?: return
+    ExtraCell(th, 0.dp, h, d, 0, Modifier.weight(w)) { act.extraKey(d.id) }
+}
+
+/** A WASD cluster for movement and a handful of action keys for the other hand: real key codes, so a game reads them like a hardware keyboard. */
+@Composable
+private fun GamePad(th: KbTheme, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    val h = keyH * .9f
+    Row(Modifier.fillMaxWidth()) {
+        // the WASD cluster on the left, three rows so W sits centred above A/S/D
+        Column(Modifier.weight(1f)) {
+            Row(Modifier.fillMaxWidth()) { Spacer(1f); GCell(th, act, h, "gW"); Spacer(1f) }
+            Row(Modifier.fillMaxWidth()) { GCell(th, act, h, "gA"); GCell(th, act, h, "gS"); GCell(th, act, h, "gD") }
+        }
+        // the action keys on the right
+        Column(Modifier.weight(1f)) {
+            Row(Modifier.fillMaxWidth()) { GCell(th, act, h, "gQ"); GCell(th, act, h, "gE") }
+            Row(Modifier.fillMaxWidth()) { GCell(th, act, h, "gShift"); GCell(th, act, h, "gCtrl") }
+        }
+    }
+    Row(Modifier.fillMaxWidth()) { GCell(th, act, h, "gSpace", 2f); GCell(th, act, h, "gEnter", 1f) }
 }
 
 /** The path of a swipe over the letters. */
@@ -444,12 +494,13 @@ private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "clip", "paste" -> kbIcon(th, "ContentPaste"); "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
+    "layout" -> kbIcon(th, "Dashboard")
     "theme" -> kbIcon(th, "Palette"); "settings" -> kbIcon(th, "Settings"); "lang", "languages" -> kbIcon(th, "Language"); "onehand" -> kbIcon(th, "TouchApp")
     "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture")
     "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; else -> kbIcon(th, "Keyboard")
 }
 
-private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; else -> false }
+private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; "layout" -> st.panel == "layout" || st.forceLayout != null; else -> false }
 
 // ---- the keys --------------------------------------------------------------------------------------------------------------------------------------
 

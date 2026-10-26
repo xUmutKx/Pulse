@@ -141,6 +141,11 @@ object KeyboardPrefs {
             if ("arrows" !in items) { val i = items.indexOf("voice"); if (i >= 0) items.add(i + 1, "arrows") else items.add("arrows") }
             toolbarItems = items.joinToString(","); p.edit().putInt("menuVer", 5).putString("toolbarItems", toolbarItems).apply()
         }
+        // the Layouts picker (Numbers / Game) gets a place in the three-dot menu
+        if (p.getInt("menuVer", 0) < 6) {
+            if ("layout" !in menuItems.split(',')) { menuItems = "$menuItems,layout"; p.edit().putInt("menuVer", 6).putString("menuItems", menuItems).apply() }
+            else p.edit().putInt("menuVer", 6).apply()
+        }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
