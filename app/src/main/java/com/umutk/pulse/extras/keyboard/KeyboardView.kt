@@ -2,6 +2,10 @@
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.material.icons.rounded.ChevronRight
+import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.widthIn
 import com.umutk.pulse.extras.keyboard.KeyboardEffects.boardWash
@@ -325,13 +329,23 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
             // the three dots always sit at the right end, drawn in Fluent
             if (KeyboardPrefs.toolbarItems.split(',').contains("menu")) FluentBarIcon(th, "more", on = toolOn("menu", st)) { act.menu("menu") }
         } else if (st.inline.isNotEmpty()) {
-            // a password manager has something for this field (login, password, card): its own suggestions take the bar
-            Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
-                st.inline.forEach { v ->
+            // a password manager has something for this field (login, password, card): its own suggestions take the bar, close together,
+            // each on a grey rounded back; one alone sits in the middle, several scroll with an arrow at each end
+            val scroll = rememberScrollState()
+            val sc = rememberCoroutineScope()
+            val one = st.inline.size == 1
+            @Composable fun chips() = st.inline.forEach { v ->
+                Box(Modifier.clip(RoundedCornerShape(20.dp)).background(Color(0xFF3A3A3C))) {
                     androidx.compose.ui.viewinterop.AndroidView(factory = { c ->
                         android.widget.FrameLayout(c).also { f -> (v.parent as? android.view.ViewGroup)?.removeView(v); f.addView(v) }
                     })
                 }
+            }
+            Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
+                if (!one) Box(Modifier.size(32.dp).clickable { sc.launch { scroll.animateScrollBy(-260f) } }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.ChevronLeft, null, tint = th.sub, modifier = Modifier.size(22.dp)) }
+                if (one) Row(Modifier.weight(1f).fillMaxSize(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) { chips() }
+                else Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) { chips() }
+                if (!one) Box(Modifier.size(32.dp).clickable { sc.launch { scroll.animateScrollBy(260f) } }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.ChevronRight, null, tint = th.sub, modifier = Modifier.size(22.dp)) }
             }
         } else {
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
