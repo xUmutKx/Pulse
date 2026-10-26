@@ -32,18 +32,23 @@ object TilePop {
         val d = runCatching { own.loadDrawable(svc) }.getOrNull()?.constantState?.newDrawable()?.mutate() ?: return
         jobs[svc]?.cancel()
         jobs[svc] = CoroutineScope(Dispatchers.Main).launch {
-            val scale = floatArrayOf(.45f, .7f, 1.18f, 1.08f, .98f, 1f)
             var last: Icon? = null
-            scale.forEachIndexed { i, k ->
-                val frame = Icon.createWithBitmap(frame(d, k, (i + 1f) / scale.size))
-                // the tile painted its own picture meanwhile (a state change): that one stays, this animation ends
-                if (i > 0 && t.icon !== last) return@launch
-                t.icon = frame; t.updateTile(); last = frame; shown[svc] = frame
-                delay(46)
+            try {
+                val scale = floatArrayOf(.45f, .7f, 1.18f, 1.08f, .98f, 1f)
+                scale.forEachIndexed { i, k ->
+                    val frame = Icon.createWithBitmap(frame(d, k, (i + 1f) / scale.size))
+                    // the tile painted its own picture meanwhile (a state change): that one stays, this animation ends
+                    if (i > 0 && t.icon !== last) return@launch
+                    t.icon = frame; t.updateTile(); last = frame; shown[svc] = frame
+                    delay(46)
+                }
+            } finally {
+                // reached at the end, on the early return above, or — a tap on the tile before the first one finished — cancelled mid-delay
+                // by the next play() call's jobs[svc]?.cancel(): a finally still runs on cancellation, so the icon never stays stuck on a
+                // squeezed in-between frame (it used to, until a slower second tap finally landed one that ran to the end)
+                if (t.icon === last) { t.icon = own; t.updateTile() }
+                shown.remove(svc)
             }
-            // someone else (the tile's own paint) changed the picture meanwhile: leave theirs
-            if (t.icon === last) { t.icon = own; t.updateTile() }
-            shown.remove(svc)
         }
     }
 
