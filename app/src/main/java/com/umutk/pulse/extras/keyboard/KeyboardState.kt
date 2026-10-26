@@ -57,6 +57,8 @@ class KbState {
     var plain by mutableStateOf(false)
     /** A number, phone, date or numeric-password field: only the number pad shows. */
     var numpad by mutableStateOf(false)
+    /** Picked by hand from the Layouts panel, over the field's own kind: null (the field decides), "numpad" or "game". */
+    var forceLayout by mutableStateOf<String?>(null)
     /** The selection mode of the quick delete is on: the bar shows the selected text length. */
     var selecting by mutableStateOf(false)
     /** The modifier keys of the extra row: 0 off, 1 for the next key, 2 held until pressed again. */

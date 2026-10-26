@@ -112,7 +112,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             scope.launch(Dispatchers.IO) { val l = ClipStore.addImage(this@PulseKeyboardService, uri); withContext(Dispatchers.Main) { st.clipItems = l } }
         } else {
             val t = item.coerceToText(this)?.toString()?.trim()
-            if (!t.isNullOrEmpty()) { if (t.length <= 400) { quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; updateSuggestions() }; st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
+            if (!t.isNullOrEmpty()) { quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -736,6 +737,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "onehand" -> { KeyboardPrefs.oneHand = when (KeyboardPrefs.oneHand) { "off" -> "right"; "right" -> "left"; else -> "off" }; KeyboardPrefs.save(this) }
             "arrows" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
             "keyset" -> st.panel = if (st.panel == "keyset") "keys" else "keyset"
+            "layout" -> st.panel = if (st.panel == "layout") "keys" else "layout"
             "numbers" -> { KeyboardPrefs.numberRow = !KeyboardPrefs.numberRow; KeyboardPrefs.save(this) }
             "proRow" -> { KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
             "glide" -> { KeyboardPrefs.glide = !KeyboardPrefs.glide; KeyboardPrefs.save(this) }

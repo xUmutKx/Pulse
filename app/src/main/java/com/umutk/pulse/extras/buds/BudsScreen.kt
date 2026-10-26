@@ -230,12 +230,23 @@ private fun BudsControls(s: BudsState) {
 /** The top card: the case and the two earbuds drawn, which one is in the ear, the batteries and whether the link is up. */
 @Composable
 private fun BudsHero(s: BudsState, name: String, picked: Boolean) {
-    PCard {
+    // a slow, soft pulse behind the earbuds while connected, so the card reads as "alive" instead of a static diagram
+    val pulse by androidx.compose.animation.core.rememberInfiniteTransition(label = "budsPulse").animateFloat(
+        initialValue = .35f, targetValue = .7f,
+        animationSpec = androidx.compose.animation.core.infiniteRepeatable(androidx.compose.animation.core.tween(1600, easing = androidx.compose.animation.core.FastOutSlowInEasing), androidx.compose.animation.core.RepeatMode.Reverse),
+        label = "pulse",
+    )
+    PCard(Modifier.clip(RoundedCornerShape(20.dp)).background(
+        androidx.compose.ui.graphics.Brush.verticalGradient(listOf(T.accent.copy(alpha = if (s.connected) .14f else .05f), Color.Transparent))
+    )) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(s.name.ifBlank { name }.ifBlank { "Galaxy Buds" }, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
-                Text(when { s.connected -> tr("Connected", "Bağlı"); picked -> tr("Connecting…", "Bağlanıyor…") ; else -> tr("Pick the earbuds below", "Aşağıdan kulaklığı seç") },
-                    color = if (s.connected) T.accent else T.sub, fontSize = 13.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (s.connected) Box(Modifier.size(7.dp).clip(CircleShape).background(T.accent.copy(alpha = pulse)))
+                    Text(when { s.connected -> tr("Connected", "Bağlı"); picked -> tr("Connecting…", "Bağlanıyor…") ; else -> tr("Pick the earbuds below", "Aşağıdan kulaklığı seç") },
+                        color = if (s.connected) T.accent else T.sub, fontSize = 13.sp, modifier = Modifier.padding(start = if (s.connected) 6.dp else 0.dp))
+                }
             }
         }
         androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(120.dp).padding(top = 8.dp)) {
@@ -266,10 +277,14 @@ private fun BudsHero(s: BudsState, name: String, picked: Boolean) {
 
 @Composable
 private fun BudBattery(label: String, level: Int, worn: Boolean?) {
+    val low = level in 0..20
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Text(if (level in 0..100) "$level%" else "—", color = if (level in 0..20) Color(0xFFC42B1C) else T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-        Box(Modifier.padding(top = 4.dp).size(width = 56.dp, height = 6.dp).clip(RoundedCornerShape(3.dp)).background(T.text.copy(alpha = .12f))) {
-            if (level in 0..100) Box(Modifier.fillMaxWidth(level / 100f).fillMaxHeight().background(if (level <= 20) Color(0xFFC42B1C) else T.accent))
+        Text(if (level in 0..100) "$level%" else "—", color = if (low) Color(0xFFC42B1C) else T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        Box(Modifier.padding(top = 4.dp).size(width = 56.dp, height = 7.dp).clip(RoundedCornerShape(4.dp)).background(T.text.copy(alpha = .1f))) {
+            if (level in 0..100) Box(
+                Modifier.fillMaxWidth(level / 100f).fillMaxHeight().clip(RoundedCornerShape(4.dp))
+                    .background(androidx.compose.ui.graphics.Brush.horizontalGradient(if (low) listOf(Color(0xFFE05A4A), Color(0xFFC42B1C)) else listOf(T.accent.copy(alpha = .75f), T.accent)))
+            )
         }
         Text(label + if (worn == true) " · " + tr("in ear", "kulakta") else "", color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp))
     }
