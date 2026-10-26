@@ -22,6 +22,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -59,13 +60,13 @@ private fun callName(f: File): String {
     return n.replace('_', ' ').trim().ifEmpty { f.nameWithoutExtension }
 }
 
-/** The photo of the contact called [name] (null when there is no such contact or no photo). */
+/** The photo of the contact called [name]: the exact name first, then a name that contains it; the big photo, else the thumbnail (null with no contact, no photo or no permission). */
 private fun contactPhoto(ctx: Context, name: String): ImageBitmap? = runCatching {
-    ctx.contentResolver.query(Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_FILTER_URI, Uri.encode(name)), arrayOf(ContactsContract.Contacts.PHOTO_THUMBNAIL_URI), null, null, null)?.use { c ->
-        if (!c.moveToFirst()) return@use null
-        val u = c.getString(0) ?: return@use null
-        ctx.contentResolver.openInputStream(Uri.parse(u))?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
-    }
+    val cr = ctx.contentResolver
+    fun lookup(sel: String, arg: String): Long? = cr.query(ContactsContract.Contacts.CONTENT_URI, arrayOf(ContactsContract.Contacts._ID), sel, arrayOf(arg), null)?.use { c -> if (c.moveToFirst()) c.getLong(0) else null }
+    val id = lookup(ContactsContract.Contacts.DISPLAY_NAME + " = ? COLLATE NOCASE", name) ?: lookup(ContactsContract.Contacts.DISPLAY_NAME + " LIKE ?", "%$name%") ?: return@runCatching null
+    val uri = android.content.ContentUris.withAppendedId(ContactsContract.Contacts.CONTENT_URI, id)
+    (ContactsContract.Contacts.openContactPhotoInputStream(cr, uri, true) ?: ContactsContract.Contacts.openContactPhotoInputStream(cr, uri, false))?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() }
 }.getOrNull()
 
 /** The person chosen at the top of the call recordings page and the days closed; they outlive the page being redrawn. */
@@ -81,6 +82,10 @@ object CallUi {
 @Composable
 internal fun CallPane(files: List<File>, onPlay: (File) -> Unit) {
     val ctx = LocalContext.current
+    // the photos need the contacts permission; it is asked once, here
+    var granted by remember { mutableStateOf(androidx.core.content.ContextCompat.checkSelfPermission(ctx, android.Manifest.permission.READ_CONTACTS) == android.content.pm.PackageManager.PERMISSION_GRANTED) }
+    val ask = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.RequestPermission()) { granted = it }
+    LaunchedEffect(Unit) { if (!granted) ask.launch(android.Manifest.permission.READ_CONTACTS) }
     val audio = remember(files) { files.filter { it.isFile && it.extension.lowercase() in EX_AUDIO }.sortedByDescending { it.lastModified() } }
     val names = remember(audio) { audio.associateWith { callName(it) } }
     val top = remember(audio) { names.values.groupingBy { it.lowercase() }.eachCount().entries.sortedByDescending { it.value }.take(9).map { e -> names.values.first { it.lowercase() == e.key } to e.value } }
@@ -93,12 +98,15 @@ internal fun CallPane(files: List<File>, onPlay: (File) -> Unit) {
     val hm = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     Column(Modifier.fillMaxWidth()) {
         if (top.isEmpty()) Text(tr("No call recordings here", "Burada çağrı kaydı yok"), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(16.dp))
+        // everyone again, in one tap (the same person's tile also lets go)
+        if (pick != null) Text(tr("Everyone (${audio.size})", "Herkes (${audio.size})"), color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(Look.accent.copy(alpha = .15f)).clickable { pick = null }.padding(horizontal = 14.dp, vertical = 6.dp))
         top.chunked(3).forEach { row ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterHorizontally)) {
                 row.forEach { (n, count) ->
                     val on = pick == n.lowercase()
-                    val photo by produceState<ImageBitmap?>(null, n) { value = withContext(Dispatchers.IO) { contactPhoto(ctx, n) } }
-                    Column(Modifier.width(96.dp).clip(RoundedCornerShape(16.dp)).background(if (on) Look.accent.copy(alpha = .2f) else androidx.compose.ui.graphics.Color.Transparent).clickable { pick = if (on) null else n.lowercase() }.padding(6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    val photo by produceState<ImageBitmap?>(null, n, granted) { value = withContext(Dispatchers.IO) { contactPhoto(ctx, n) } }
+                    Column(Modifier.width(84.dp).clip(RoundedCornerShape(16.dp)).background(if (on) Look.accent.copy(alpha = .2f) else androidx.compose.ui.graphics.Color.Transparent).clickable { pick = if (on) null else n.lowercase() }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         Box(Modifier.size(56.dp).clip(CircleShape).background(Look.accent.copy(alpha = .25f)), contentAlignment = Alignment.Center) {
                             val p = photo
                             if (p != null) androidx.compose.foundation.Image(p, null, Modifier.size(56.dp), contentScale = ContentScale.Crop)
@@ -108,7 +116,7 @@ internal fun CallPane(files: List<File>, onPlay: (File) -> Unit) {
                         Text("$count", color = T.sub, fontSize = 11.sp)
                     }
                 }
-                repeat(3 - row.size) { Spacer(Modifier.width(96.dp)) }
+                repeat(3 - row.size) { Spacer(Modifier.width(84.dp)) }
             }
         }
         Spacer(Modifier.height(8.dp))
