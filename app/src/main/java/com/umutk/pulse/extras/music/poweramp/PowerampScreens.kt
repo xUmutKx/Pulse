@@ -457,8 +457,8 @@ fun NowPlayingScreen(
                     windowFrac = if (durationMs > 60_000) 30_000f / durationMs else 1f,
                 )
                 // the elapsed time at the left end of the wave and the total at the right end, each on a dark pill so they read on every skin
-                Text(formatMs(shownMs), Modifier.align(Alignment.BottomStart).padding(start = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f)).padding(horizontal = 8.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
-                Text(formatMs(durationMs), Modifier.align(Alignment.BottomEnd).padding(end = 4.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f)).padding(horizontal = 8.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(formatMs(shownMs), Modifier.align(Alignment.CenterStart).padding(start = 2.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f)).padding(horizontal = 8.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                Text(formatMs(durationMs), Modifier.align(Alignment.CenterEnd).padding(end = 2.dp).clip(CircleShape).background(Color.Black.copy(alpha = .55f)).padding(horizontal = 8.dp, vertical = 2.dp), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 Row(Modifier.align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                     // every transport button sits on a solid black disc, as in the reference player
                     Round(IV("prev"), tr("Previous", "Önceki"), 70.dp, 38.dp, fg, Color.Black, CircleShape, onPrev)
