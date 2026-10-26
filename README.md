@@ -1,3 +1,5 @@
+<p align="center"><a href="https://github.com/xUmutKx/Pulse/releases/latest"><img src="docs/get-it-on-github.png" height="60" alt="Get it on GitHub"></a></p>
+
 ### Pulse
 
 | Pulse keyboard settings | BlackOut | Buds manager | System font | Windows 11 look: flyout |
