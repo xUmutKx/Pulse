@@ -82,6 +82,8 @@ fun NoteEditor(
 
     var preview by remember(note.id) { mutableStateOf(false) }
     var palette by remember(note.id) { mutableStateOf(false) }
+    // the tools of the note (pin, colour, folder, reminder, lock, photo, sketch, voice, read aloud, checklist) sit behind one plus button
+    var more by remember(note.id) { mutableStateOf(false) }
     var recording by remember(note.id) { mutableStateOf(false) }
     var speaking by remember(note.id) { mutableStateOf(false) }
     val undo = remember(note.id) { mutableStateListOf<String>() }
@@ -148,6 +150,7 @@ fun NoteEditor(
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             NIcon("back", fg, tr("Back", "Geri")) { onBack() }
             Box(Modifier.weight(1f))
+            NIcon(if (more) "close" else "add", if (more) T.accent else fg, tr("Add to the note", "Nota ekle")) { more = !more }
             NIcon("undo", fg, tr("Undo", "Geri al")) { undo.removeLastOrNull()?.let { prev -> onEdit { it.copy(body = prev) } } }
             NIcon(if (preview) "edit" else "view", fg, tr("Preview", "Önizleme")) { preview = !preview }
             NIcon("share", fg, tr("Share", "Paylaş")) { shareNote(ctx, text) }
@@ -155,7 +158,7 @@ fun NoteEditor(
             NIcon("newfile", fg, tr("Duplicate", "Çoğalt")) { onDuplicate() }
             NIcon("delete", fg, tr("Move to trash", "Çöpe taşı")) { onTrash() }
         }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+        if (more) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             NIcon("pin", if (note.pinned) T.accent else fg, tr("Pin", "Sabitle")) { onEdit { it.copy(pinned = !it.pinned) } }
             NIcon("palette", if (palette) T.accent else fg, tr("Colour", "Renk")) { palette = !palette }
             NIcon("folder", fg, tr("Folder", "Klasör")) { onDlg(NDlg.Folder(setOf(note.id))) }
