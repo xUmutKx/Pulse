@@ -30,6 +30,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -81,6 +82,7 @@ fun WeatherHub(onBack: () -> Unit) {
     var imp by remember { mutableStateOf(WeatherFmt.imperial(ctx)) }
     var alerts by remember { mutableStateOf(WeatherStore.alertsOn(ctx)) }
     var showList by remember { mutableStateOf(false) }
+    var allDays by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
     var source by remember { mutableStateOf(WeatherStore.source(ctx)) }
     var skin by remember { mutableStateOf(WeatherStore.skin(ctx)) }
@@ -279,8 +281,9 @@ fun WeatherHub(onBack: () -> Unit) {
             item { Text(tr("Next hours", "Sonraki saatler"), color = sub, fontSize = 13.sp) }
             item {
                 LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    items(if (f.hours48.isNotEmpty()) f.hours48 else f.hours) { h ->
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    // the first one is the hour it is now: it is lit
+                    itemsIndexed(if (f.hours48.isNotEmpty()) f.hours48 else f.hours) { hi, h ->
+                        Column(Modifier.then(if (hi == 0) Modifier.background(Color.White.copy(alpha = .20f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(horizontal = 8.dp, vertical = 6.dp) else Modifier), horizontalAlignment = Alignment.CenterHorizontally) {
                             val midnight = h.time.length >= 16 && h.time.substring(11, 16) == "00:00"
                             Text(if (midnight) runCatching { LocalDate.parse(h.time.take(10)).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault("") else WeatherFmt.clock(h.time), color = if (midnight) fg else sub, fontSize = 12.sp, fontWeight = if (midnight) FontWeight.Medium else FontWeight.Normal)
                             WeatherGlyph(h.code, 30.dp, day = h.time.length < 16 || h.time.substring(11, 13).toIntOrNull()?.let { it in 6..19 } != false)
@@ -291,7 +294,8 @@ fun WeatherHub(onBack: () -> Unit) {
                 }
             }
             item { Text(tr("Next days", "Sonraki günler"), color = sub, fontSize = 13.sp) }
-            items(f.days, key = { it.date }) { d ->
+            // five days at first; the rest of the 16 open with one tap
+            items(if (allDays) f.days else f.days.take(5), key = { it.date }) { d ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         runCatching { LocalDate.parse(d.date).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault(d.date),
@@ -304,6 +308,7 @@ fun WeatherHub(onBack: () -> Unit) {
                     Text("${t(d.min)} / ${t(d.max)}", color = fg, fontSize = 15.sp)
                 }
             }
+            if (f.days.size > 5) item { Text(if (allDays) tr("Show 5 days", "5 günü göster") else tr("Show ${f.days.size} days", "${f.days.size} günü göster"), color = fg, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable { allDays = !allDays }.padding(vertical = 8.dp)) }
             // the sun's path today and the moon now, drawn rather than written
             item {
                 Column(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(14.dp)) {
