@@ -79,7 +79,15 @@ fun ModulePage(mode: Privilege.Mode, sp: SharedPreferences) {
             msg?.let { BoText(it, modifier = Modifier.padding(top = 4.dp)) }
         }
         BoCard {
-            BoSwitchRow(tr("Apply in the ticked apps", "İşaretli uygulamalarda uygula"), "", on, bold = true) { on = it; sp.edit().putBoolean("lsp_on", it).apply() }
+            // one switch sets up the whole look: turning it on while the grey threshold and tint are still at their plain defaults
+            // also picks a threshold that catches AMOLED surfaces well and a blue-black tint, instead of a flat, unconfigured black
+            BoSwitchRow(tr("Apply in the ticked apps", "İşaretli uygulamalarda uygula"), "", on, bold = true) { v ->
+                on = v; sp.edit().putBoolean("lsp_on", v).apply()
+                if (v && limit <= 56f && tint == 0) {
+                    limit = 64f; tint = 0x050A18
+                    sp.edit().putFloat("limit", limit).putInt("tint", tint).apply()
+                }
+            }
             BoText(tr("Which greys count as surfaces", "Hangi griler yüzey sayılır"), 13, T.text, modifier = Modifier.padding(top = 6.dp))
             GreySlider(limit, { limit = it }) { sp.edit().putFloat("limit", limit).apply() }
             BoText(if (keep < 1f) tr("Result: pure black", "Sonuç: saf siyah") else tr("Result: ${keep.toInt()}% of the brightness stays", "Sonuç: parlaklığın %${keep.toInt()}'i kalır"), 13, T.text)
