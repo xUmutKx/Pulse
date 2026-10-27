@@ -162,6 +162,13 @@ object KeyboardPrefs {
         }
         padScale = p.getInt("padScale", 100)
         commaHold = p.getString("commaHold", "voice") ?: "voice"; periodHold = p.getString("periodHold", "none") ?: "none"; bottomHold = p.getString("bottomHold", "none") ?: "none"
+        // the clipboard and the gamepad trade places in the bar: the gamepad is the first key now
+        if (p.getInt("menuVer", 0) < 8) {
+            val t = toolbarItems.split(',').toMutableList()
+            val i = t.indexOf("clip"); val g = t.indexOf("gamepad")
+            if (i >= 0 && g == i + 1) { t[i] = "gamepad"; t[g] = "clip" }
+            toolbarItems = t.joinToString(","); p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
+        }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 

@@ -84,6 +84,8 @@ fun ThemedMenu(expanded: Boolean, onDismiss: () -> Unit, content: @Composable Co
             expanded, onDismiss,
             modifier = (if (s.border != null) Modifier.border(s.border, s.shape) else Modifier).then(s.edge),
             shape = s.shape, containerColor = s.bg, tonalElevation = 0.dp, content = content,
+            // not focusable: the activity keeps the keys, so the volume keys still reach MainActivity while a menu is open (they close it) instead of changing the volume
+            properties = androidx.compose.ui.window.PopupProperties(focusable = false),
         )
     }
 }
