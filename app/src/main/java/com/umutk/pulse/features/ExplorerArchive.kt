@@ -917,22 +917,28 @@ fun FilesSettings() {
     fun sp(c: android.content.Context) = com.umutk.pulse.filesPrefs(c)
     val top = android.os.Environment.getExternalStorageDirectory().path
     val folders = listOf("" to tr("Storage", "Depolama")) + listOf("DCIM", "Download", "Documents", "Pictures", "Music", "Movies").filter { java.io.File(top, it).isDirectory }.map { "$top/$it" to it }
-    // a live example: a folder and a file as the rows show them with the choices below
+    // a detailed example: what a root folder, a folder, a folder shown by name only and files show under their names with these choices
     com.umutk.pulse.PCard {
-        Text(tr("Example", "Örnek"), color = T.sub, fontSize = 12.sp)
+        Text(tr("Preview", "Önizleme"), color = T.text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Text(tr("How the rows look with the choices below", "Aşağıdaki seçimlerle satırlar böyle görünür"), color = T.sub, fontSize = 12.sp)
         val now = System.currentTimeMillis()
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Ic("folder"); Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text("Photos", color = T.text, fontSize = 15.sp)
-                Text(exInfoParts(true, 12, 340_000_000L, now - 3_600_000L), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        // one example row: an icon, the name, what the row shows under it, and the kind of place it stands for
+        @Composable fun Example(icon: String, name: String, sub: String, caption: String) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Text(caption, color = Look.accent, fontSize = 11.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Ic(icon); Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
             }
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Ic("office"); Column(Modifier.weight(1f).padding(start = 12.dp)) {
-                Text(if (fp.ext) "Notes.txt" else "Notes", color = T.text, fontSize = 15.sp)
-                Text(exInfoParts(false, 0, 2_300_000L, now - 86_400_000L * 2), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            }
-        }
+        Example("folder", "Internal storage", exInfoParts(true, 19, 19_300_000_000L, now - 3_600_000L), tr("Root folder", "Kök klasör"))
+        Example("folder", "Photos", exInfoParts(true, 115, 124_000_000L, now - 86_400_000L * 2), tr("A folder", "Bir klasör"))
+        Example("folder", "Download", "", tr("A folder with names only (set per folder)", "Yalnızca isim (klasöre özel)"))
+        Example("office", if (fp.ext) "Notes.txt" else "Notes", exInfoParts(false, 0, 2_300_000L, now - 86_400_000L * 2), tr("A file changed earlier", "Daha önce değişmiş dosya"))
+        Example("office", if (fp.ext) "Photo.jpg" else "Photo", exInfoParts(false, 0, 1_100_000L, now - 3_600_000L), tr("A file changed today", "Bugün değişmiş dosya"))
     }
     com.umutk.pulse.PCard {
         Sec(tr("Look", "Görünüm"), "palette") {
