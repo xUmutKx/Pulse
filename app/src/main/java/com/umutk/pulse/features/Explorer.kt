@@ -426,6 +426,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var bulk by remember { mutableStateOf<List<File>?>(null) }
     // files waiting for the compress box; the box starts a background zip (ExplorerZip.kt)
     var zipAsk by remember { mutableStateOf<List<File>?>(null) }
+    // the share sheet of the selection: the files themselves, their paths or their names
+    var shareSheet by remember { mutableStateOf<List<File>?>(null) }
     // the bin (when on) keeps the files and Undo brings them back
     val deleteNow: (List<File>) -> Unit = { files ->
         sel = emptySet()
@@ -704,21 +706,15 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }, big = true) { ExIcon("cut", T.text, 24.dp) }
                 DenseSelSquare(T.text, { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı") }, big = true) { ExIcon("copy", T.text, 24.dp) }
                 if (canPaste) DenseSelSquare(Look.accent, { sel = emptySet(); doPaste() }, big = true) { ExIcon("paste", Look.accent, 24.dp) }
-                picked.singleOrNull()?.takeIf { !it.isDirectory }?.let { f -> DenseSelSquare(T.text, { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }) { ExIcon("share", T.text, 24.dp) } }
-                // several files: one share of all of them (folders in the pick are left out)
-                if (picked.size > 1 && picked.any { it.isFile }) DenseSelSquare(T.text, { if (!exShareMany(ctx, picked)) note = tr("Could not share", "Paylaşılamadı") else if (picked.any { it.isDirectory }) note = tr("Folders were left out", "Klasörler paylaşıma alınmadı") }) { ExIcon("share", T.text, 24.dp) }
+                // the share button opens the share sheet (files, paths or names); folders in the pick are left out of files and paths
+                if (picked.any { it.isFile }) DenseSelSquare(T.text, { shareSheet = picked }) { ExIcon("share", T.text, 24.dp) }
                 DenseSelSquare(T.text, { askDelete(picked) }) { ExIcon("delete", T.text, 24.dp) }
                 Box {
                     DenseSelSquare(T.text, { selMore = true }) { ExGlyph(Icons.Outlined.MoreVert, "more", T.text, 24.dp) }
                     ThemedMenu(selMore, { selMore = false }) {
                         ThemedMenuItem(tr("Compress", "Sıkıştır"), { selMore = false; zipAsk = picked }, icon = Icons.Outlined.FolderZip)
                         // Share is in this menu too, for one file or for several (folders in the pick are left out)
-                        if (picked.any { it.isFile }) ThemedMenuItem(tr("Share", "Paylaş"), {
-                            selMore = false
-                            val one = picked.singleOrNull()
-                            if (one != null) { if (!exHandOver(ctx, one, true)) note = "Could not share ${one.name}" }
-                            else if (!exShareMany(ctx, picked)) note = tr("Could not share", "Paylaşılamadı") else if (picked.any { it.isDirectory }) note = tr("Folders were left out", "Klasörler paylaşıma alınmadı")
-                        }, icon = Icons.Outlined.Share)
+                        if (picked.any { it.isFile }) ThemedMenuItem(tr("Share", "Paylaş"), { selMore = false; shareSheet = picked }, icon = Icons.Outlined.Share)
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Rename", "Yeniden adlandır"), { selMore = false; name = f.name; dialog = "rename" to f }, icon = Icons.Outlined.DriveFileRenameOutline) }
                         picked.singleOrNull()?.let { f -> ThemedMenuItem(tr("Properties", "Özellikler"), { selMore = false; propsOf = f }, icon = Icons.Outlined.Info) }
                         picked.singleOrNull()?.takeIf { isArchiveFile(it) }?.let { f -> archiveMenu(f).forEach { (l, k, kind) -> ThemedMenuItem(l, { selMore = false; if (kind == "open") { arcFile = f; arcCwd = ""; arcSel = emptySet(); sel = emptySet() } else arc = ArcReq(kind, f) }, leading = { ExIcon(k, com.umutk.pulse.LocalMenuStyle.current.sub, 18.dp) }) } }
@@ -1251,6 +1247,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
 
     zipAsk?.let { files ->
         ZipAskDialog(files, { zipAsk = null }) { name, kind, bytes -> zipAsk = null; ZipJobs.start(ctx, files, name, dir, kind, bytes) }
+    }
+    shareSheet?.let { picks ->
+        ExShareSheet(picks, { shareSheet = null }, { note = it })
     }
 
     openAsAsk?.let { f ->
@@ -2187,5 +2186,42 @@ object ExDirSizes {
         runCatching { d.walkTopDown().onEnter { true }.forEach { f -> if (f.isFile) total += f.length(); if (++n > 300_000) return@runCatching } }
         cache[d.path] = total to d.lastModified()
         return total
+    }
+}
+
+/** The bottom bar of the Share button: send the files, copy their paths, or send their names as text. */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String) -> Unit) {
+    val ctx = LocalContext.current
+    val files = picks.filter { it.isFile }
+    val folders = picks.any { it.isDirectory }
+    fun done(msg: String) { note(msg); onDismiss() }
+    androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = T.panel) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+            val rows = listOf(
+                Triple(Icons.Outlined.Share, tr("Share the files", "Dosyaları paylaş")) {
+                    val ok = if (files.size == 1) exHandOver(ctx, files[0], true) else exShareMany(ctx, files)
+                    done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not share", "Paylaşılamadı"))
+                },
+                Triple(Icons.Outlined.ContentCopy, tr("Copy the paths", "Yolları kopyala")) {
+                    val text = picks.joinToString("\n") { it.path }
+                    (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("paths", text))
+                    done(tr("Paths copied", "Yollar kopyalandı"))
+                },
+                Triple(Icons.Outlined.TextSnippet, tr("Share the names as text", "Adları metin olarak paylaş")) {
+                    val text = picks.joinToString("\n") { it.name }
+                    ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    done("")
+                },
+            )
+            rows.forEach { (ic, label, act) ->
+                Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(ic, null, Modifier.size(22.dp), T.text)
+                    Spacer(Modifier.width(16.dp))
+                    Text(label, color = T.text, fontSize = 16.sp)
+                }
+            }
+        }
     }
 }
