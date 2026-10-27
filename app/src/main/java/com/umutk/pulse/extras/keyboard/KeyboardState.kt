@@ -117,6 +117,8 @@ interface KbActions {
     fun pasteClip(item: ClipItem) {}
     /** A long press on a suggestion: it turns into the "never suggest again" button. */
     fun slotLong(i: Int) {}
+    /** A stronger buzz for a long press on a suggestion, so the hold is felt before the word changes. */
+    fun longFeedback() {}
     fun banSlot(i: Int) {}
     /** Deletes the word before the cursor (the held delete key, after the first letters). */
     fun deleteWord() {}
