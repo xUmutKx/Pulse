@@ -21,6 +21,9 @@ import androidx.compose.material.icons.outlined.BookmarkBorder
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material.icons.outlined.MoreVert
+import androidx.compose.material.icons.outlined.Share
+import androidx.compose.material.icons.outlined.ContentCopy
+import androidx.compose.material.icons.outlined.OpenInBrowser
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
@@ -158,6 +161,7 @@ s.textContent = css;
 document.documentElement.appendChild(s);
 })();"""
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 fun BrowserHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -170,6 +174,7 @@ fun BrowserHub(onBack: () -> Unit) {
     var canBack by remember { mutableStateOf(false) }
     var canForward by remember { mutableStateOf(false) }
     var sheet by remember { mutableStateOf(false) }
+    var shareOpen by remember { mutableStateOf(false) }
     var dark by remember { mutableStateOf(BrowserPrefs.darkMode(ctx)) }
     var adBlock by remember { mutableStateOf(BrowserPrefs.adBlock(ctx)) }
     var bookmarks by remember { mutableStateOf(BrowserPrefs.bookmarks(ctx)) }
@@ -229,6 +234,7 @@ fun BrowserHub(onBack: () -> Unit) {
             Icon(if (loading) Icons.Outlined.Close else Icons.Outlined.Refresh, null, Modifier.size(22.dp).clickable { if (loading) webRef.value?.stopLoading() else webRef.value?.reload() }, tint = T.text)
             Icon(if (pageUrl in bookmarks) Icons.Outlined.Bookmark else Icons.Outlined.BookmarkBorder, null,
                 Modifier.size(22.dp).clickable { BrowserPrefs.toggleBookmark(ctx, pageUrl); bookmarks = BrowserPrefs.bookmarks(ctx) }, tint = if (pageUrl in bookmarks) com.umutk.pulse.Look.accent else T.text)
+            Icon(Icons.Outlined.Share, null, Modifier.size(22.dp).clickable { shareOpen = true }, tint = T.text)
             Icon(Icons.Outlined.MoreVert, null, Modifier.size(22.dp).clickable { sheet = true }, tint = T.text)
         }
         if (loading) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(2.dp))
@@ -280,6 +286,33 @@ fun BrowserHub(onBack: () -> Unit) {
         BackHandler { exitFullscreenVideo() }
         key(fv) { Box(Modifier.fillMaxSize().background(Color.Black)) { AndroidView(modifier = Modifier.fillMaxSize(), factory = { fv }) } }
     }
+    }
+
+    if (shareOpen) {
+        val sheetState = androidx.compose.material3.rememberModalBottomSheetState()
+        androidx.compose.material3.ModalBottomSheet(onDismissRequest = { shareOpen = false }, sheetState = sheetState, containerColor = T.panel) {
+            val link = pageUrl
+            val options = listOf(
+                Triple(Icons.Outlined.Share, tr("Share link", "Bağlantıyı paylaş"), {
+                    ctx.startActivity(android.content.Intent.createChooser(android.content.Intent(android.content.Intent.ACTION_SEND).setType("text/plain").putExtra(android.content.Intent.EXTRA_TEXT, link), null))
+                }),
+                Triple(Icons.Outlined.ContentCopy, tr("Copy link", "Bağlantıyı kopyala"), {
+                    (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("link", link))
+                    android.widget.Toast.makeText(ctx, tr("Link copied", "Bağlantı kopyalandı"), android.widget.Toast.LENGTH_SHORT).show()
+                }),
+                Triple(Icons.Outlined.OpenInBrowser, tr("Open in another browser", "Başka tarayıcıda aç"), {
+                    runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(link)).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                }),
+            )
+            Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                options.forEach { (ic, label, act) ->
+                    Row(Modifier.fillMaxWidth().clickable { act(); shareOpen = false }.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(ic, null, Modifier.size(22.dp), T.text); Spacer(Modifier.width(16.dp))
+                        Text(label, color = T.text, fontSize = 16.sp)
+                    }
+                }
+            }
+        }
     }
 
     if (sheet) WinAlert(
