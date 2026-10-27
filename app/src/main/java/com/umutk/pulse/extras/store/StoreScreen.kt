@@ -162,7 +162,8 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
             // a plain list of the extra apps: the built-in ones, then any downloadable module, nothing above them
             LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { BuiltinRows() }
-                items(entries, key = { it.key }) { e ->
+                // only the modules already downloaded are listed here; the rest stay in the store
+                items(entries.filter { inList(states[it.key] ?: ModuleState.NOT_INSTALLED) }, key = { it.key }) { e ->
                     StoreRow(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
                         onOpen = { openKey = e.key }, onRemove = { askRemove = it })
                 }
@@ -212,7 +213,6 @@ private fun StoreRow(e: StoreEntry, st: ModuleState, pct: Float?, error: String?
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(e.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(e.subtitle, color = T.sub, fontSize = 12.sp)
                 }
                 EntryAction(e, st, onRemove)
             }
