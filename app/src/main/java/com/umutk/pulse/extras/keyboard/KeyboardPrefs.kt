@@ -87,6 +87,10 @@ object KeyboardPrefs {
     var toolbarItems by mutableStateOf(ExtraKeys.DEFAULT_TOOLBAR)
     /** The size of the gamepad panel in percent (60..150): it follows the screen, this scales it. */
     var padScale by mutableStateOf(100)
+    /** The long-press action of the comma, the period and the key beside ?123 (ExtraKeys.hold ids). */
+    var commaHold by mutableStateOf("voice")
+    var periodHold by mutableStateOf("none")
+    var bottomHold by mutableStateOf("none")
 
     // feel
     var haptic by mutableStateOf(true)
@@ -157,6 +161,7 @@ object KeyboardPrefs {
             p.edit().putInt("menuVer", 7).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
         }
         padScale = p.getInt("padScale", 100)
+        commaHold = p.getString("commaHold", "voice") ?: "voice"; periodHold = p.getString("periodHold", "none") ?: "none"; bottomHold = p.getString("bottomHold", "none") ?: "none"
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
@@ -165,7 +170,7 @@ object KeyboardPrefs {
             .putString("theme", theme)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
             .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putString("oneHand", oneHand)
-            .putString("langs", langs).putInt("padScale", padScale)
+            .putString("langs", langs).putInt("padScale", padScale).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
