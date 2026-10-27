@@ -85,6 +85,8 @@ object KeyboardPrefs {
     @Volatile var practicing = false
     var menuItems by mutableStateOf(ExtraKeys.DEFAULT_MENU)
     var toolbarItems by mutableStateOf(ExtraKeys.DEFAULT_TOOLBAR)
+    /** The size of the gamepad panel in percent (60..150): it follows the screen, this scales it. */
+    var padScale by mutableStateOf(100)
 
     // feel
     var haptic by mutableStateOf(true)
@@ -146,6 +148,15 @@ object KeyboardPrefs {
             if ("layout" !in menuItems.split(',')) { menuItems = "$menuItems,layout"; p.edit().putInt("menuVer", 6).putString("menuItems", menuItems).apply() }
             else p.edit().putInt("menuVer", 6).apply()
         }
+        // the bar's first slots are the clipboard and the gamepad now; the mic left the bar (the comma key's long press already starts voice typing), the menu gets the gamepad too
+        if (p.getInt("menuVer", 0) < 7) {
+            val t = toolbarItems.split(',').filter { it != "voice" && it != "gamepad" && it != "clip" }.toMutableList()
+            t.add(0, "gamepad"); t.add(0, "clip")
+            toolbarItems = t.joinToString(",")
+            if ("gamepad" !in menuItems.split(',')) menuItems = menuItems.split(',').toMutableList().also { l -> val i = l.indexOf("clip"); l.add(if (i >= 0) i + 1 else 0, "gamepad") }.joinToString(",")
+            p.edit().putInt("menuVer", 7).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
+        }
+        padScale = p.getInt("padScale", 100)
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
@@ -154,7 +165,7 @@ object KeyboardPrefs {
             .putString("theme", theme)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
             .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putString("oneHand", oneHand)
-            .putString("langs", langs)
+            .putString("langs", langs).putInt("padScale", padScale)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)

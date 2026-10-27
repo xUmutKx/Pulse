@@ -122,6 +122,8 @@ interface KbActions {
     fun deleteWord() {}
     /** Voice typing of the device (the Google voice input). */
     fun voice()
+    /** A key held down ([down]) or let go of: the gamepad panel's buttons and sticks, real key codes so a game reads them like a controller or keyboard. */
+    fun padKey(code: Int, down: Boolean) {}
 }
 
 /** Does nothing: the preview in the settings. */

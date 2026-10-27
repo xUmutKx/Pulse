@@ -104,6 +104,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.SportsEsports
 import androidx.compose.material.icons.rounded.Translate
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.Undo
@@ -216,7 +217,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val dens = LocalDensity.current.density
     var rootH by remember { mutableStateOf(0f) }
     val rootHue = LocalHue.current
-    Box(modifier.fillMaxWidth().background(th.bg).boardWash(KeyboardPrefs.boardFx)
+    // the gamepad paints no board of its own: its buttons float over whatever the game shows
+    Box(modifier.fillMaxWidth().then(if (st.panel == "gamepad") Modifier else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
         .then(if (KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
         .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(Unit) {
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
@@ -267,6 +269,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "emoji" -> EmojiPanel(th, st, act, keyH)
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
+            "gamepad" -> GamepadPanel(th, act)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
             "layout" -> LayoutPanel(th, st, keyH)
@@ -497,7 +500,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
@@ -775,8 +778,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
-                                // long-press used to start voice typing; a mic shortcut already sits in the toolbar/menu, so this now opens the key layout picker (QWERTY, game, numpad, ...) instead
-                                KeyKind.COMMA -> { long = true; st.preview = null; a.feedback(); a.menu("layout"); due = Long.MAX_VALUE / 2 }
+                                KeyKind.COMMA -> { long = true; st.preview = null; a.feedback(); a.voice(); due = Long.MAX_VALUE / 2 }
                                 else -> if (!glide && key.alts.isNotEmpty() && big) {
                                     long = true; sel = 0; due = Long.MAX_VALUE / 2
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
@@ -871,8 +873,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     if (!special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
-                    // the comma key opens the key layout picker on a long press: a small hint icon above it says so (voice typing already has its own key in the toolbar/menu)
-                    if (k.kind == KeyKind.COMMA && !small) Icon(kbIcon(th, "Dashboard"), null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
+                    // the comma key holds voice typing on a long press: a small microphone above it says so
+                    if (k.kind == KeyKind.COMMA && !small) Icon(Icons.Rounded.Mic, null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
                     Text(k.label, color = fg, fontSize = if (small) (fs.value * .82f).sp else fs, maxLines = 1)
                 }
             }
