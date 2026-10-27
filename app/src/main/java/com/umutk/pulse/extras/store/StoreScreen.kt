@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -367,8 +370,19 @@ private fun StoreDetail(
 private class BuiltinRow(val name: String, val sub: String, val icon: String, val place: String? = null, val onClick: () -> Unit)
 
 @Composable
+/** The rows of the Extra apps list the user hid (a long press on a row): kept by their place key, or the name when a row has none. */
+object ExtraRowsHidden {
+    private fun sp(c: android.content.Context) = c.getSharedPreferences("store_rows", android.content.Context.MODE_PRIVATE)
+    fun load(c: android.content.Context): Set<String> = sp(c).getStringSet("hidden", emptySet()).orEmpty().toSet()
+    fun save(c: android.content.Context, keys: Set<String>) { sp(c).edit().putStringSet("hidden", keys).apply() }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
 private fun BuiltinRows() {
     val ctx = LocalContext.current
+    var hidden by remember { mutableStateOf(ExtraRowsHidden.load(ctx)) }
+    var showHidden by remember { mutableStateOf(false) }
     val openTool = LocalOpenTool.current
     val rows = listOf(
         BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
@@ -408,8 +422,14 @@ private fun BuiltinRows() {
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
         BuiltinRow(tr("Network usage", "Ağ kullanımı"), tr("Wi-Fi and mobile data, app by app", "Wi-Fi ve mobil veri, uygulama uygulama"), "speed", "tool:netusage") { openTool("netusage") },
     )
-    rows.forEach { r ->
-        Row(Modifier.fillMaxWidth().clickable { r.onClick() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    val visible = rows.filter { showHidden || (it.place ?: it.name) !in hidden }
+    visible.forEach { r ->
+        val key = r.place ?: r.name
+        val isHidden = key in hidden
+        Row(Modifier.fillMaxWidth().combinedClickable(onClick = { r.onClick() }, onLongClick = {
+            hidden = if (isHidden) hidden - key else hidden + key
+            ExtraRowsHidden.save(ctx, hidden)
+        }).alpha(if (isHidden) .45f else 1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon(r.icon, T.text, 26.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
@@ -431,6 +451,10 @@ private fun BuiltinRows() {
                 }
             }
         }
+    }
+    // the hidden rows: a line that shows them again (long press on a shown row hides it, on a hidden one brings it back)
+    if (hidden.isNotEmpty()) Row(Modifier.fillMaxWidth().clickable { showHidden = !showHidden }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(if (showHidden) tr("Hide the hidden rows", "Gizli satırları gizle") else tr("Show ${hidden.size} hidden rows", "${hidden.size} gizli satırı göster"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
     }
     // off by default; when on, the page is listed in the ⋮ menu
     var notif by remember { mutableStateOf(NotifHist.enabled(ctx)) }
