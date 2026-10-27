@@ -369,7 +369,6 @@ private fun StoreDetail(
 /** [place]: "app:<alias>" or "tool:<id>" when the row has a switch for being listed in the right-hand ⋮ menu (Extra apps). */
 private class BuiltinRow(val name: String, val sub: String, val icon: String, val place: String? = null, val onClick: () -> Unit)
 
-@Composable
 /** The rows of the Extra apps list the user hid (a long press on a row): kept by their place key, or the name when a row has none. */
 object ExtraRowsHidden {
     private fun sp(c: android.content.Context) = c.getSharedPreferences("store_rows", android.content.Context.MODE_PRIVATE)
