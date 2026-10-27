@@ -165,6 +165,7 @@ private const val EX_RECENT = "ex_recent"
 private const val EX_FREQ = "ex_freq"
 private const val EX_SORT_ALL = "ex_sort_all"
 private const val EX_SORT_DIRS = "ex_sort_dirs"
+private const val EX_VIEW_DIRS = "ex_view_dirs"
 
 /** Set by an intent that opens a folder (Pulse chosen as the file manager): Files then opens full screen. */
 object FilesLaunch {
@@ -385,6 +386,14 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var filtAll by remember { mutableStateOf(com.umutk.pulse.filesPrefs(ctx).getString("ex_filt_all", "all") ?: "all") }
     var filtDir by remember { mutableStateOf(exRead(ctx, "ex_filt_dir").associate { it.substringBeforeLast('|') to it.substringAfterLast('|') }) }
     var folderSort by remember { mutableStateOf(exReadSortMap(ctx)) }
+    // the view: a folder's own choice when it has one, else the global list / grid, and the detailed list when that is picked
+    var viewDir by remember { mutableStateOf(exReadViewMap(ctx)) }
+    var viewMenu by remember { mutableStateOf(false) }
+    var detailAll by remember { mutableStateOf(exReadInt(ctx, "ex_detail", 0) == 1) }
+    val viewOwn = viewDir[here]
+    val viewNow = viewOwn ?: if (FilesPrefs.grid) 1 else if (detailAll) 2 else 0
+    val gridNow = viewNow == 1
+    val detailNow = viewNow == 2
     var drawer by remember { mutableStateOf(false) }
     // not saved: leaving the Files page for another and coming back finds the search closed
     var searchOpen by remember { mutableStateOf(false) }
@@ -874,7 +883,26 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         }
                     }
                     // list or grid, icon shows the one a tap switches to (same convention as the standalone app's overflow row)
-                    ExAct(if (FilesPrefs.grid) "list" else "grid", T.sub) { FilesPrefs.grid = !FilesPrefs.grid; FilesPrefs.save(ctx) }
+                    Box {
+                        ExAct("view", if (viewOwn != null) Look.accent else T.sub) { viewMenu = true }
+                        ThemedMenu(viewMenu, { viewMenu = false }) {
+                            val cur = viewNow
+                            fun pick(m: Int) {
+                                viewMenu = false
+                                if (viewOwn != null) { viewDir = viewDir + (here to m); exWriteViewMap(ctx, viewDir) }
+                                else { FilesPrefs.grid = m == 1; detailAll = m == 2; FilesPrefs.save(ctx); exWriteInt(ctx, "ex_detail", if (m == 2) 1 else 0) }
+                            }
+                            ThemedMenuItem(tr("List", "Liste"), { pick(0) }, checked = cur == 0)
+                            ThemedMenuItem(tr("Grid", "Izgara"), { pick(1) }, checked = cur == 1)
+                            ThemedMenuItem(tr("Detailed list", "Detaylı liste"), { pick(2) }, checked = cur == 2)
+                            Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(com.umutk.pulse.LocalMenuStyle.current.sub.copy(alpha = .3f)))
+                            ThemedMenuItem(tr("Only for this folder", "Yalnızca bu klasör"), {
+                                viewMenu = false
+                                viewDir = if (viewOwn != null) viewDir - here else viewDir + (here to cur)
+                                exWriteViewMap(ctx, viewDir)
+                            }, checked = viewOwn != null)
+                        }
+                    }
                     ExAct(if (dir.path in marks) "starOn" else "star", if (dir.path in marks) Look.accent else T.sub) { mark(dir.path) }
                     ExAct("home", T.text) { go(top.path) }
                 }
@@ -892,7 +920,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
         if (shown.isEmpty() && arcFile == null) Text(if (recentView) "No recent files" else if (RootFs.needsRoot(here) && (!canRoot || Shell.root != true)) tr("Root is needed to list this folder", "Bu klasörü listelemek için root gerekir") else if (rootErr.isNotEmpty()) rootErr else "No files here", color = T.sub, fontSize = 13.sp)
         val item: @Composable (File) -> Unit = { f ->
-            val grid = FilesPrefs.grid
+            val grid = gridNow
             val isz = (24 + FilesPrefs.icon.coerceIn(0, 9) * 5).let { if (grid) it * 3 / 2 else it }
             // the names grow with the icons (list rows, and the tiles of the grid)
             val ts = (isz / 40f).coerceIn(1f, 1.5f)
@@ -950,9 +978,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             ExIcon(if (f.isDirectory) "folder" else "filetypes", Look.accent, (isz * 11 / 20).dp)
                         }
                     }
-                    Text(shownName, Modifier.padding(top = 4.dp), color = T.text, fontSize = (12 * tsg).sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                    Text(shownName, Modifier.fillMaxWidth().padding(top = 4.dp), color = T.text, fontSize = (12 * tsg).sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
-                    more()
+                    Box(Modifier.align(Alignment.TopEnd)) { more() }
                 }
                 // the pick pill is thicker than the row's content (4 dp above and below it); the gaps between rows stay small
                 else Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 1.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent).padding(vertical = 2.dp).heightIn(min = 40.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -970,10 +998,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         Text(shownName, color = T.text, fontSize = (16 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val sub = when {
                             found != null -> exRel(f, top)
-                            !f.isDirectory && showSizes -> exSize(f.length()) + "  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            !f.isDirectory && (showSizes || detailNow) -> exSize(f.length()) + "  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
                             // the folder's own total size was already measured in the background either way (dirSizes above); it just was not shown
                             // outside the standalone app — now the embedded Files tab gets it too
-                            f.isDirectory && showSizes && !f.path.startsWith("/data") -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + (dirSizes[f.path]?.let { exSize(it) + "  ·  " } ?: "") + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            f.isDirectory && (showSizes || detailNow) && !f.path.startsWith("/data") -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + (dirSizes[f.path]?.let { exSize(it) + "  ·  " } ?: "") + exDate(f.lastModified(), FilesPrefs.dateFmt)
                             else -> ""
                         }
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = (11 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1036,7 +1064,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
         // the call recordings folder has a page of its own: the people called, and the calls by day
         if (arcFile == null && isCallRecordings(dir)) CallPane(shownNow) { f -> recents = exAddRecent(ctx, f); ExAudio.play(f) }
-        else if (FilesPrefs.grid) BoxWithConstraints(Modifier.fillMaxWidth()) {
+        else if (gridNow) BoxWithConstraints(Modifier.fillMaxWidth()) {
             // a tile is its icon plus a little room for the name; the gap between tiles is the same small one at every size,
             // so a bigger icon only means fewer columns, and the cells share the width evenly
             val gap = 4.dp
@@ -1044,7 +1072,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             val cols = ((maxWidth + gap) / (tile + gap)).toInt().coerceAtLeast(1)
             val cell = (maxWidth - gap * (cols - 1)) / cols
             shownNow.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                r.forEach { f -> Box(Modifier.width(cell), contentAlignment = Alignment.TopCenter) { item(f) } }
+                r.forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { item(f) } }
             } }
         } else shownNow.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shownNow.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
         Spacer(Modifier.height(88.dp))
@@ -1551,6 +1579,13 @@ private fun exReadSortMap(ctx: Context): Map<String, Int> = exRead(ctx, EX_SORT_
 }.toMap()
 
 private fun exWriteSortMap(ctx: Context, map: Map<String, Int>) = exWrite(ctx, EX_SORT_DIRS, map.map { "${it.key}|${it.value}" })
+
+/** The view each folder has of its own (0 list, 1 grid, 2 detailed list); a folder not here follows the global view. */
+private fun exReadViewMap(ctx: Context): Map<String, Int> = exRead(ctx, EX_VIEW_DIRS).mapNotNull { line ->
+    val i = line.lastIndexOf('|'); if (i < 0) null else line.substring(i + 1).toIntOrNull()?.let { line.substring(0, i) to it }
+}.toMap()
+
+private fun exWriteViewMap(ctx: Context, map: Map<String, Int>) = exWrite(ctx, EX_VIEW_DIRS, map.map { "${it.key}|${it.value}" })
 
 private val EX_FILTER_ICONS = mapOf("all" to Icons.Outlined.FilterList, "images" to Icons.Outlined.Image, "videos" to Icons.Outlined.Movie, "audio" to Icons.Outlined.MusicNote,
     "docs" to Icons.Outlined.Description, "archives" to Icons.Outlined.FolderZip, "apks" to Icons.Outlined.Apps, "folders" to Icons.Outlined.Folder)

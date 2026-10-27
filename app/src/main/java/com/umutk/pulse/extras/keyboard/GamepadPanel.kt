@@ -88,8 +88,9 @@ internal fun GamepadPanel(th: KbTheme, act: KbActions) {
                 PadBtn(th, act, K_START, u * .17f, u * .09f, round = false, label = "START")
             }
             // the sticks at the bottom corners
-            PadStick(th, act, u * .4f, LEFT_STICK, Modifier.align(Alignment.BottomStart).padding(start = u * .1f))
-            PadStick(th, act, u * .4f, RIGHT_STICK, Modifier.align(Alignment.BottomEnd).padding(end = u * .1f))
+            val lift = (u * KeyboardPrefs.padLift / 100f)
+            PadStick(th, act, u * .4f, LEFT_STICK, Modifier.align(Alignment.BottomStart).padding(start = u * .1f, bottom = lift))
+            PadStick(th, act, u * .4f, RIGHT_STICK, Modifier.align(Alignment.BottomEnd).padding(end = u * .1f, bottom = lift))
             // the shoulder buttons on either side of the size control, bottom middle
             Row(Modifier.align(Alignment.BottomCenter).padding(bottom = u * .03f), horizontalArrangement = Arrangement.spacedBy(u * .05f), verticalAlignment = Alignment.Bottom) {
                 Column(verticalArrangement = Arrangement.spacedBy(u * .03f)) {
@@ -160,7 +161,7 @@ private fun PadStick(th: KbTheme, act: KbActions, dia: Dp, keys: IntArray, modif
                         val reach = radius * .62f
                         if (len > reach) v = v * (reach / len)
                         off = v
-                        val t = radius * .28f
+                        val t = radius * KeyboardPrefs.padDead / 100f
                         val want = booleanArrayOf(v.y < -t, v.x < -t, v.y > t, v.x > t)
                         for (i in 0..3) if (want[i] != held[i]) { held[i] = want[i]; actNow.padKey(keys[i], want[i]) }
                     }
