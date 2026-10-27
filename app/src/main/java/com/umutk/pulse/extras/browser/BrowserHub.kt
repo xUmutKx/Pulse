@@ -152,6 +152,22 @@ private fun adHost(host: String?): Boolean {
  *  instead") starts this tool wanting a specific address rather than whatever the home page is set to. */
 object BrowserNav { var pendingUrl: String? = null }
 
+/** A forced-dark stylesheet for the stubborn bits WebView's own force-dark leaves alone (a header painted through an
+ *  image or a gradient, a fixed top bar coloured by inline JS): common header/nav/top-bar class and id names, and the
+ *  page root as a fallback, all painted pure black. Re-injected on every page load; an existing style tag is replaced
+ *  so navigating within a page (or a reload) never stacks duplicate rules. */
+private const val FORCE_DARK_CSS_JS = """(function(){
+var css = 'html,body{background:#000!important}'+
+'header,nav,[class*=header],[class*=Header],[class*=navbar],[class*=Navbar],[class*=topbar],[class*=top-bar],[class*=appbar],[id*=header],[id*=navbar]'+
+'{background:#000!important;background-color:#000!important;background-image:none!important}';
+var old = document.getElementById('__pulse_force_dark');
+if (old) old.remove();
+var s = document.createElement('style');
+s.id = '__pulse_force_dark';
+s.textContent = css;
+document.documentElement.appendChild(s);
+})();"""
+
 @Composable
 fun BrowserHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -247,6 +263,11 @@ fun BrowserHub(onBack: () -> Unit) {
                         override fun onPageFinished(view: WebView, url: String?) {
                             loading = false; title = view.title ?: ""; pageUrl = url ?: pageUrl
                             canBack = view.canGoBack(); canForward = view.canGoForward()
+                            // WebView's own dark mode (force-dark / algorithmic darkening) recolours ordinary text and
+                            // backgrounds, but a header/top-bar painted through an image, a gradient or JS often survives
+                            // it as-is and stays a plain white strip; force it black too, the same instinct as BlackOut's
+                            // forced dark, just done in CSS since there is no app view tree to walk inside a WebView
+                            if (darkState.value) view.evaluateJavascript(FORCE_DARK_CSS_JS, null)
                             val (on, script) = userScriptState.value
                             if (on && script.isNotBlank()) view.evaluateJavascript(script, null)
                         }
