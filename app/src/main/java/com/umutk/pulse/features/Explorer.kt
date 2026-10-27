@@ -394,6 +394,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     // the item count of the folders in this folder: its own setting when it has one, else the Settings switch
     var countDir by remember { mutableStateOf(exReadCountMap(ctx)) }
     val countOwn = countDir[here]
+    // a folder whose rows show the name only (no size, date or count under it)
+    var namesDir by remember { mutableStateOf(exReadNamesSet(ctx)) }
+    val namesOnly = here in namesDir
     val countNow = countOwn?.let { it == 1 } ?: FilesPrefs.infoCount
     val viewNow = viewOwn ?: if (FilesPrefs.grid) 1 else if (detailAll) 2 else 0
     val gridNow = viewNow == 1
@@ -905,6 +908,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                                 countDir = if (countOwn != null) countDir - here else countDir + (here to (if (countNow) 0 else 1))
                                 exWriteCountMap(ctx, countDir)
                             }, checked = countNow)
+                            ThemedMenuItem(tr("Names only here", "Burada yalnızca isim"), {
+                                viewMenu = false
+                                namesDir = if (namesOnly) namesDir - here else namesDir + here
+                                exWriteNamesSet(ctx, namesDir)
+                            }, checked = namesOnly)
                             ThemedMenuItem(tr("Only for this folder", "Yalnızca bu klasör"), {
                                 viewMenu = false
                                 viewDir = if (viewOwn != null) viewDir - here else viewDir + (here to cur)
@@ -1005,7 +1013,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                         Text(shownName, color = T.text, fontSize = (16 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        val sub = when {
+                        val sub = if (namesOnly) "" else when {
                             found != null -> exRel(f, top)
                             !f.isDirectory && (showSizes || detailNow) -> exInfoParts(false, 0, f.length(), f.lastModified())
                             // the folder's own total size was already measured in the background either way (dirSizes above); it just was not shown
@@ -1731,13 +1739,21 @@ internal fun exDate(ms: Long, fmt: Int): String = when (fmt) {
 }
 
 /** Today: only the time. Otherwise: day, the month spelled out, year and time. */
+/** The folders whose rows show only the name. */
+private fun exReadNamesSet(ctx: Context): Set<String> = exRead(ctx, "ex_names_dirs").toSet()
+private fun exWriteNamesSet(ctx: Context, s: Set<String>) = exWrite(ctx, "ex_names_dirs", s.toList())
+
 private fun exSmartDate(ms: Long): String {
     val now = java.util.Calendar.getInstance(); val t = java.util.Calendar.getInstance().apply { timeInMillis = ms }
     val sameYear = now.get(java.util.Calendar.YEAR) == t.get(java.util.Calendar.YEAR)
     val sameMonth = sameYear && now.get(java.util.Calendar.MONTH) == t.get(java.util.Calendar.MONTH)
     val sameDay = sameMonth && now.get(java.util.Calendar.DAY_OF_MONTH) == t.get(java.util.Calendar.DAY_OF_MONTH)
-    val pat = when { sameDay -> "HH:mm"; else -> "d MMMM yyyy HH:mm" }
-    return java.text.SimpleDateFormat(pat, java.util.Locale.getDefault()).format(Date(ms))
+    val loc = java.util.Locale.getDefault()
+    // the month spelled out in full, whatever the system's short form is
+    val months = java.text.DateFormatSymbols.getInstance(loc).months
+    val d = t.get(java.util.Calendar.DAY_OF_MONTH); val y = t.get(java.util.Calendar.YEAR)
+    val hm = java.text.SimpleDateFormat("HH:mm", loc).format(Date(ms))
+    return if (sameDay) hm else "$d ${months[t.get(java.util.Calendar.MONTH)]} $y $hm"
 }
 
 private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
