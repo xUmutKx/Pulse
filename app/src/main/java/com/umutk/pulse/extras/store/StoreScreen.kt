@@ -422,11 +422,11 @@ private fun BuiltinRows() {
                 when {
                     p.startsWith("app:") -> {
                         val alias = p.removePrefix("app:")
-                        PSwitch(com.umutk.pulse.AppPlace.where(alias) == "menu", { on -> com.umutk.pulse.AppPlace.set(ctx, alias, if (on) "menu" else "hidden") })
+                        PSwitch(com.umutk.pulse.AppPlace.where(alias) != "hidden", { on -> com.umutk.pulse.AppPlace.set(ctx, alias, if (!on) "hidden" else if (com.umutk.pulse.AppPlace.where(alias) == "hidden") "menu" else com.umutk.pulse.AppPlace.where(alias)) })
                     }
                     p.startsWith("tool:") -> {
                         val t = com.umutk.pulse.ToolPlace.byId(p.removePrefix("tool:"))
-                        if (t != null) PSwitch(com.umutk.pulse.ToolPlace.where(ctx, t) == "menu", { on -> com.umutk.pulse.ToolPlace.set(ctx, t, if (on) "menu" else "hidden") })
+                        if (t != null) PSwitch(com.umutk.pulse.ToolPlace.where(ctx, t) != "hidden", { on -> com.umutk.pulse.ToolPlace.set(ctx, t, if (!on) "hidden" else if (com.umutk.pulse.ToolPlace.where(ctx, t) == "hidden") "extra" else com.umutk.pulse.ToolPlace.where(ctx, t)) })
                     }
                 }
             }
