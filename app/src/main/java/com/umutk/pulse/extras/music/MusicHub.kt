@@ -179,7 +179,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     Spacer(Modifier.weight(1f))
                     // white noise and playlists are not on the player bar: they sit in the Extra apps and the library
                     // Poweramp carries its own settings button at the right end of its tab bar
-                    if (look != MusicLook.POWERAMP) Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
+                    if (look != MusicLook.POWERAMP && look != MusicLook.MATERIAL) Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
                 }
                 Spacer(Modifier.height(8.dp))
             }
