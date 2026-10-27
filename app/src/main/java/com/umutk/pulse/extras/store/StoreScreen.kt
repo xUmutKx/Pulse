@@ -195,7 +195,7 @@ private fun EntryAction(e: StoreEntry, st: ModuleState, onRemove: (ExtraModule) 
         }
         is ExternalEntry -> {
             if (st == ModuleState.INSTALLED) PButton(tr("Open", "Aç"), compact = true) { StoreInstaller.launch(ctx, e.a.pkg) }
-            else e.a.fdroid?.let { url -> PButton(tr("Open in F-Droid", "F-Droid'de aç"), compact = true) { StoreInstaller.open(ctx, url) } }
+            else e.a.fdroid?.let { url -> PButton(tr("Download page", "İndirme sayfası"), compact = true) { StoreInstaller.open(ctx, url) } }
         }
     }
 }
