@@ -557,6 +557,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return true
     }
 
+    override fun longFeedback() {
+        if (!KeyboardPrefs.haptic) return
+        val vib = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator ?: return
+        if (!vib.hasVibrator()) return
+        if (android.os.Build.VERSION.SDK_INT >= 26) vib.vibrate(android.os.VibrationEffect.createOneShot(28, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        else @Suppress("DEPRECATION") vib.vibrate(28)
+    }
+
     override fun slotLong(i: Int) {
         val w = slotWords.getOrNull(i).orEmpty()
         // the quoted word is what was typed: held, it is saved as a right word (never "corrected" again)
