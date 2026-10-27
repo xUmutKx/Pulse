@@ -825,7 +825,9 @@ object FilesPrefs {
     var thumbs by mutableStateOf(true)       // image thumbnails in the list
     var binary by mutableStateOf(false)      // sizes in KiB/MiB (1024) instead of KB/MB (1000)
     var openRecent by mutableStateOf(false)  // opening page: false = start folder, true = recent files
-    var dateFmt by mutableStateOf(0)         // 0 short, 1 long, 2 ISO
+    var dateFmt by mutableStateOf(0)         // 0 short, 1 long, 2 ISO, 3 always the day and the time
+    var infoSize by mutableStateOf(true)     // the size of a file / folder in its row
+    var infoDate by mutableStateOf(true)     // the date in its row
     var foldersFirst by mutableStateOf(true)
     var openAsk by mutableStateOf(false)     // files open through the system chooser instead of Pulse's viewers
     var storageInfo by mutableStateOf(true)  // drawer: storage bar and free space
@@ -849,7 +851,7 @@ object FilesPrefs {
         start = p.getString("ex_start", "") ?: ""; hidden = p.getBoolean("ex_hidden", false); grid = p.getBoolean("ex_grid", false)
         icon = p.getInt("ex_icon", 1); confirm = p.getBoolean("ex_confirm", true); ext = p.getBoolean("ex_ext", true); sort = p.getInt("ex_sort_all", 0)
         stdFolders = p.getBoolean("ex_std", true); bookmarks = p.getBoolean("ex_bm", true)
-        thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0)
+        thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0); infoSize = p.getBoolean("ex_info_size", true); infoDate = p.getBoolean("ex_info_date", true)
         foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
         cards = p.getBoolean("ex_cards", true); folderCards = p.getBoolean("ex_fcards", false); rowSep = p.getBoolean("ex_rowsep", false); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
         analysis = p.getBoolean("ex_analysis", false); startBrowse = p.getBoolean("ex_startbrowse", false); glass = p.getBoolean("ex_glass", true)
@@ -859,8 +861,17 @@ object FilesPrefs {
         sp(c).edit().putStringSet("ex_lib_off", libHidden).putBoolean("ex_glass", glass).apply()
         sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putInt("ex_icon", icon)
             .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
-            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
+            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_info_size", infoSize).putBoolean("ex_info_date", infoDate).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
     }
+}
+
+/** The line under a name in the rows: the item count of a folder, then its size and its date when those are switched on. */
+internal fun exInfoParts(dir: Boolean, items: Int, size: Long?, ms: Long): String {
+    val p = mutableListOf<String>()
+    if (dir) p += "$items ${tr("items", "öğe")}"
+    if (FilesPrefs.infoSize) size?.let { p += exSize(it) }
+    if (FilesPrefs.infoDate) p += exDate(ms, FilesPrefs.dateFmt)
+    return p.joinToString("  ·  ")
 }
 
 /** Settings > Files: collapsible sections (look, colours, language, files), every header and row with an icon of the look's pack. */
@@ -892,6 +903,23 @@ fun FilesSettings() {
     fun sp(c: android.content.Context) = com.umutk.pulse.filesPrefs(c)
     val top = android.os.Environment.getExternalStorageDirectory().path
     val folders = listOf("" to tr("Storage", "Depolama")) + listOf("DCIM", "Download", "Documents", "Pictures", "Music", "Movies").filter { java.io.File(top, it).isDirectory }.map { "$top/$it" to it }
+    // a live example: a folder and a file as the rows show them with the choices below
+    com.umutk.pulse.PCard {
+        Text(tr("Example", "Örnek"), color = T.sub, fontSize = 12.sp)
+        val now = System.currentTimeMillis()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Ic("folder"); Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text("Photos", color = T.text, fontSize = 15.sp)
+                Text(exInfoParts(true, 12, 340_000_000L, now - 3_600_000L), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Ic("office"); Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                Text(if (fp.ext) "Notes.txt" else "Notes", color = T.text, fontSize = 15.sp)
+                Text(exInfoParts(false, 0, 2_300_000L, now - 86_400_000L * 2), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
+    }
     com.umutk.pulse.PCard {
         Sec(tr("Look", "Görünüm"), "palette") {
         val looks = listOf("app" to tr("App theme", "Uygulama teması"), "material" to "Material You", "amoled" to "AMOLED black", "coloros" to "ColorOS", "win11" to "Windows 11",
@@ -954,8 +982,10 @@ fun FilesSettings() {
             SwRow(tr("Thumbnails", "Küçük resimler"), "image", fp.thumbs) { fp.thumbs = it }
             SwRow(tr("Previews and type badges", "Önizleme ve tür rozetleri"), "image", fp.previews) { fp.previews = it }
             SwRow(tr("Folders first", "Önce klasörler"), "folder", fp.foldersFirst) { fp.foldersFirst = it }
+            SwRow(tr("Sizes in the rows", "Satırlarda boyut"), "sizes", fp.infoSize) { fp.infoSize = it }
+            SwRow(tr("Dates in the rows", "Satırlarda tarih"), "history", fp.infoDate) { fp.infoDate = it }
             Chips(tr("Size units", "Boyut birimi"), "sizes", listOf("KB · MB", "KiB · MiB"), if (fp.binary) 1 else 0) { fp.binary = it == 1 }
-            Chips(tr("Date format", "Tarih biçimi"), "history", listOf(exDate(1_700_000_000_000L, 0), exDate(1_700_000_000_000L, 1), exDate(1_700_000_000_000L, 2)), fp.dateFmt) { fp.dateFmt = it }
+            Chips(tr("Date format", "Tarih biçimi"), "history", listOf(tr("Smart", "Akıllı"), exDate(1_700_000_000_000L, 1), exDate(1_700_000_000_000L, 2), exDate(1_700_000_000_000L, 3)), fp.dateFmt) { fp.dateFmt = it }
             Chips(tr("Start page", "Açılış sayfası"), "folder", listOf(tr("Home", "Ana ekran"), tr("Recent", "Son")), if (fp.openRecent) 1 else 0) { fp.openRecent = it == 1 }
             Chips(tr("Open files", "Dosyaları aç"), "openFolder", listOf(tr("Pulse viewers", "Pulse görüntüleyiciler"), tr("Ask", "Sor")), if (fp.openAsk) 1 else 0) { fp.openAsk = it == 1 }
         }
