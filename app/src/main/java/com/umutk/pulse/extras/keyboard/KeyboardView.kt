@@ -509,6 +509,23 @@ private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; else -> kbIcon(th, "Keyboard")
 }
 
+/** What a long press on this kind of key does, from Settings > Keyboard. */
+private fun holdOf(k: KeyKind): String = when (k) {
+    KeyKind.COMMA -> KeyboardPrefs.commaHold
+    KeyKind.PERIOD -> KeyboardPrefs.periodHold
+    KeyKind.MENU, KeyKind.EMOJI, KeyKind.LANG -> KeyboardPrefs.bottomHold
+    else -> "none"
+}
+
+private fun runHold(a: KbActions, id: String) = when (id) { "emoji" -> a.emojiPanel(); "voice" -> a.voice(); "lang" -> a.lang(); else -> a.menu(id) }
+
+/** The small icon at the top of a key whose long press runs an action. */
+@Composable
+private fun androidx.compose.foundation.layout.BoxScope.HoldHint(th: KbTheme, kind: KeyKind) {
+    val h = holdOf(kind)
+    if (h != "none") Icon(toolIcon(th, h), null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
+}
+
 private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; "layout" -> st.panel == "layout" || st.forceLayout != null; else -> false }
 
 // ---- the keys --------------------------------------------------------------------------------------------------------------------------------------
@@ -778,7 +795,13 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
-                                KeyKind.COMMA -> { long = true; st.preview = null; a.feedback(); a.voice(); due = Long.MAX_VALUE / 2 }
+                                // the comma, the period and the key beside ?123 run the action chosen for them in Settings; "none" leaves the key's own pop-up characters
+                                KeyKind.COMMA, KeyKind.PERIOD, KeyKind.MENU, KeyKind.EMOJI, KeyKind.LANG -> {
+                                    val h = holdOf(key.kind)
+                                    if (h != "none") { long = true; st.preview = null; a.feedback(); runHold(a, h) }
+                                    else if (!glide && key.alts.isNotEmpty() && big) { long = true; sel = 0; st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback() }
+                                    due = Long.MAX_VALUE / 2
+                                }
                                 else -> if (!glide && key.alts.isNotEmpty() && big) {
                                     long = true; sel = 0; due = Long.MAX_VALUE / 2
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
@@ -864,17 +887,17 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                 KeyKind.SHIFT -> ShiftGlyph(st.shift, fg)
                 KeyKind.DELETE -> Icon(kbIcon(th, "Backspace"), null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.ENTER -> Icon(when (st.enter) { "send" -> kbIcon(th, "Send"); "search" -> kbIcon(th, "Search"); "go", "done" -> kbIcon(th, "Check"); "next" -> kbIcon(th, "ArrowForward"); else -> kbIcon(th, "KeyboardReturn") }, null, tint = fg, modifier = Modifier.size(26.dp))
-                KeyKind.EMOJI -> Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp))
-                KeyKind.MENU -> Icon(kbIcon(th, "MoreHoriz"), null, tint = fg, modifier = Modifier.size(24.dp))
-                KeyKind.LANG -> Icon(kbIcon(th, "Language"), null, tint = fg, modifier = Modifier.size(24.dp))
+                KeyKind.EMOJI -> { Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
+                KeyKind.MENU -> { Icon(kbIcon(th, "MoreHoriz"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
+                KeyKind.LANG -> { Icon(kbIcon(th, "Language"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
                 KeyKind.SPACE -> Text(k.label, color = th.sub, fontSize = 12.sp, maxLines = 1)
                 KeyKind.MODE, KeyKind.SYMBOLS2 -> Text(k.label, color = fg, fontSize = 15.sp, maxLines = 1)
                 else -> {
                     if (!special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
-                    // the comma key holds voice typing on a long press: a small microphone above it says so
-                    if (k.kind == KeyKind.COMMA && !small) Icon(Icons.Rounded.Mic, null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
+                    // a small icon above the comma or the period says what its long press does
+                    if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind)
                     Text(k.label, color = fg, fontSize = if (small) (fs.value * .82f).sp else fs, maxLines = 1)
                 }
             }

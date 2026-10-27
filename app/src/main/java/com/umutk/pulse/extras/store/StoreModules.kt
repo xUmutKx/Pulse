@@ -44,8 +44,10 @@ class ExternalApp(
     val showWhenMissing: Boolean = true,
 )
 
-/** Empty: every extra is built into Pulse (video, music, lyrics, white noise), no outside app is linked. */
-val EXTERNAL_APPS = listOf<ExternalApp>()
+/** Every extra is built into Pulse (video, music, lyrics, white noise); the one outside app linked is the author's own Punk Store (it opens when installed, its release page otherwise). */
+val EXTERNAL_APPS = listOf(
+    ExternalApp("com.punkstore.app", "Punk Store", "https://github.com/xUmutKx/PunkStore/releases/latest", "https://github.com/xUmutKx/PunkStore", "GPL-3.0", "18 MB", "tools"),
+)
 
 private val ID_RE = Regex("[a-z0-9-]{1,64}")
 private val SHA_RE = Regex("[0-9a-f]{64}")
