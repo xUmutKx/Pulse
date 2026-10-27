@@ -86,7 +86,7 @@ object KeyboardPrefs {
     var menuItems by mutableStateOf(ExtraKeys.DEFAULT_MENU)
     var toolbarItems by mutableStateOf(ExtraKeys.DEFAULT_TOOLBAR)
     /** The size of the gamepad panel in percent (60..150): it follows the screen, this scales it. */
-    var padScale by mutableStateOf(100)
+    var padScale by mutableStateOf(130)
     /** The long-press action of the comma, the period and the key beside ?123 (ExtraKeys.hold ids). */
     var commaHold by mutableStateOf("voice")
     var periodHold by mutableStateOf("none")
@@ -160,7 +160,7 @@ object KeyboardPrefs {
             if ("gamepad" !in menuItems.split(',')) menuItems = menuItems.split(',').toMutableList().also { l -> val i = l.indexOf("clip"); l.add(if (i >= 0) i + 1 else 0, "gamepad") }.joinToString(",")
             p.edit().putInt("menuVer", 7).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
         }
-        padScale = p.getInt("padScale", 100)
+        padScale = p.getInt("padScale", 130)
         commaHold = p.getString("commaHold", "voice") ?: "voice"; periodHold = p.getString("periodHold", "none") ?: "none"; bottomHold = p.getString("bottomHold", "none") ?: "none"
         // the clipboard and the gamepad trade places in the bar: the gamepad is the first key now
         if (p.getInt("menuVer", 0) < 8) {

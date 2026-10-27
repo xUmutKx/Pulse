@@ -65,9 +65,9 @@ internal fun GamepadPanel(th: KbTheme, act: KbActions) {
     var scale by remember { mutableStateOf(KeyboardPrefs.padScale) }
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val w = maxWidth.value
-        val fit = minOf(if (land) cfg.screenHeightDp * .62f else cfg.screenWidthDp * .62f, w * .48f)
+        val fit = minOf(if (land) cfg.screenHeightDp * .7f else cfg.screenWidthDp * .7f, w * .6f)
         val u = (fit * scale / 100f).coerceAtMost(w * .5f).dp
-        Box(Modifier.fillMaxWidth().height(u * 1.05f)) {
+        Box(Modifier.fillMaxWidth().height(u * 1.35f)) {
             // the D-pad on the left, the face buttons on the right
             Box(Modifier.align(Alignment.TopStart).padding(start = u * .06f, top = u * .03f).size(u * .5f)) {
                 PadBtn(th, act, K_UP, u * .18f, u * .18f, Modifier.align(Alignment.TopCenter), label = "▲")
@@ -118,7 +118,7 @@ private fun PadBtn(th: KbTheme, act: KbActions, code: Int, w: Dp, h: Dp, modifie
     val shape = if (round) CircleShape else RoundedCornerShape(minOf(w, h) * .3f)
     Box(
         modifier.size(w, h).clip(shape)
-            .background(if (down) th.accent.copy(alpha = .6f) else Color.Black.copy(alpha = .35f))
+            .background(if (down) th.accent.copy(alpha = .6f) else Color.Transparent)
             .border(2.dp, if (down) th.accent else th.text.copy(alpha = .9f), shape)
             .pointerInput(code) {
                 awaitEachGesture {
@@ -148,7 +148,7 @@ private fun PadStick(th: KbTheme, act: KbActions, dia: Dp, keys: IntArray, modif
     val actNow by rememberUpdatedState(act)
     val radius = with(LocalDensity.current) { (dia / 2).toPx() }
     Box(
-        modifier.size(dia).clip(CircleShape).background(Color.Black.copy(alpha = .28f)).border(2.dp, th.text.copy(alpha = .6f), CircleShape)
+        modifier.size(dia).clip(CircleShape).border(2.dp, th.text.copy(alpha = .6f), CircleShape)
             .pointerInput(keys) {
                 awaitEachGesture {
                     val d = awaitFirstDown(requireUnconsumed = false); d.consume()

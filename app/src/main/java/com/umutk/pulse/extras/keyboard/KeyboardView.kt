@@ -266,7 +266,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
 private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
     Column(Modifier.onSizeChanged { if (p == "keys" && it.height > 0) st.keysH = it.height }) {
         when (p) {
-            "emoji" -> EmojiPanel(th, st, act, keyH)
+            // the emoji page is opaque: what is behind it (the gamepad, the arrows of the bar) does not show through
+            "emoji" -> Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "gamepad" -> GamepadPanel(th, act)
