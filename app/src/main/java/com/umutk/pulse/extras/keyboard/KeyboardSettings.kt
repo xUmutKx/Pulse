@@ -49,6 +49,7 @@ import com.umutk.pulse.PChip
 import com.umutk.pulse.PDialog
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
+import androidx.compose.material3.Icon
 import com.umutk.pulse.PSlider
 import com.umutk.pulse.PSwitch
 import com.umutk.pulse.Look
@@ -162,6 +163,15 @@ fun KeyboardSettings(back: () -> Unit) {
                 Text(label, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ExtraKeys.hold.forEach { (k, n) -> PChip(get() == k, if (k == "none") tr("None", "Yok") else n) { set(k); save() } }
+                }
+                // a small key with what its long press does: the action's icon and its name, both change with the choice
+                val chosen = get()
+                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(T.text.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                        Text(label.substringAfter(" ").substringBefore(" ").take(3), color = T.text, fontSize = 13.sp)
+                    }
+                    if (chosen != "none") Icon(com.umutk.pulse.extras.keyboard.toolIcon(keyboardThemeNow(), chosen), null, tint = T.text, modifier = Modifier.size(20.dp))
+                    Text(ExtraKeys.hold.firstOrNull { it.first == chosen }?.second ?: tr("None", "Yok"), color = T.text, fontSize = 13.sp)
                 }
             }
             Switch(tr("Split keys", "Bölünmüş tuşlar"), tr("A gap in the middle of the rows, for a tablet", "Satırların ortasında boşluk, tablet için"), KeyboardPrefs.split) { KeyboardPrefs.split = it; save() }
@@ -501,3 +511,6 @@ private fun ItemPicker(all: List<Pair<String, String>>, csv: String, onChange: (
         rest.forEach { (id, n) -> PChip(false, "+ $n") { push((chosen + id).joinToString(",")) } }
     }
 }
+
+/** The keyboard's theme as the settings draw it: the one the keyboard uses now. */
+private fun keyboardThemeNow(): KbTheme = KeyboardThemes.of(KeyboardPrefs.theme, true)

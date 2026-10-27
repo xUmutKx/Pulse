@@ -500,7 +500,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
     }
 }
 
-private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
+internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "clip", "paste" -> kbIcon(th, "ContentPaste"); "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
