@@ -454,10 +454,10 @@ fun MessagesScreen(back: () -> Unit) {
                     MessagesIcon("close") { attach.remove(addr) }
                 }
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    MessagesIcon("attach") { pickFor = addr; pickFile.launch("*/*") }
+                    MessagesIcon("attach", black = true) { pickFor = addr; pickFile.launch("*/*") }
                     PField(draft, { drafts[addr] = it }, tr("Message", "Mesaj"), Modifier.weight(1f), onDone = { sendNow() })
                     Spacer(Modifier.width(8.dp))
-                    MessagesIcon("send") { sendNow() }
+                    MessagesIcon("send", black = true) { sendNow() }
                 }
             }
         }
@@ -465,8 +465,8 @@ fun MessagesScreen(back: () -> Unit) {
 }
 
 @Composable
-private fun MessagesIcon(key: String, onClick: () -> Unit) {
-    Box(Modifier.size(40.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) { PIcon(key, T.text, 22.dp) }
+private fun MessagesIcon(key: String, black: Boolean = false, onClick: () -> Unit) {
+    Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (black) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.Transparent).clickable(onClick = onClick), contentAlignment = Alignment.Center) { PIcon(key, if (black) androidx.compose.ui.graphics.Color.White else T.text, 22.dp) }
 }
 
 @Composable
