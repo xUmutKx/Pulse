@@ -964,7 +964,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                 }
                 }
-                if (grid) Column(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent), horizontalAlignment = Alignment.CenterHorizontally) {
+                if (grid) Box(Modifier.fillMaxWidth().padding(vertical = 2.dp).clip(SEL_SHAPE).background(if (isPicked) Look.accent.copy(alpha = .18f) else Color.Transparent)) {
                     Column(Modifier.fillMaxWidth().combinedClickable(
                     onClick = { if (sel.isNotEmpty()) toggle(f.path) else if (f.isDirectory) go(f.path) else openFile(f) },
                     onLongClick = { toggle(f.path) }), horizontalAlignment = Alignment.CenterHorizontally) {
