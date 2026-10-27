@@ -195,11 +195,6 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
                 }
               }
-                // Poweramp and Winamp carry their own lyrics button; the others get one on the right edge
-                if (look != MusicLook.POWERAMP && look != MusicLook.WINAMP && look != MusicLook.LYRICS) Box(Modifier.align(Alignment.CenterEnd).clip(RoundedCornerShape(topStart = 18.dp, bottomStart = 18.dp))
-                    .background(if (lyrics) Look.accent else Color.Black.copy(alpha = .6f)).clickable { lyrics = !lyrics }.padding(horizontal = 10.dp, vertical = 16.dp)) {
-                    Text(tr("Lyrics", "Sözler"), color = Color.White, fontSize = 12.sp)
-                }
             }
         }
         if (noiseOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.whitenoise.WhiteNoiseHub { noiseOpen = false } }
