@@ -288,7 +288,7 @@ fun BrowserHub(onBack: () -> Unit) {
     val fv = fullscreenView
     if (fv != null) {
         BackHandler { exitFullscreenVideo() }
-        key(fv) { Box(Modifier.fillMaxSize().background(Color.Black)) { AndroidView(Modifier.fillMaxSize(), factory = { fv }) } }
+        key(fv) { Box(Modifier.fillMaxSize().background(Color.Black)) { AndroidView(modifier = Modifier.fillMaxSize(), factory = { fv }) } }
     }
     }
 
