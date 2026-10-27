@@ -998,10 +998,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         Text(shownName, color = T.text, fontSize = (16 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         val sub = when {
                             found != null -> exRel(f, top)
-                            !f.isDirectory && (showSizes || detailNow) -> exSize(f.length()) + "  ·  " + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            !f.isDirectory && (showSizes || detailNow) -> exInfoParts(false, 0, f.length(), f.lastModified())
                             // the folder's own total size was already measured in the background either way (dirSizes above); it just was not shown
                             // outside the standalone app — now the embedded Files tab gets it too
-                            f.isDirectory && (showSizes || detailNow) && !f.path.startsWith("/data") -> "${f.list()?.size ?: 0} ${tr("items", "öğe")}  ·  " + (dirSizes[f.path]?.let { exSize(it) + "  ·  " } ?: "") + exDate(f.lastModified(), FilesPrefs.dateFmt)
+                            f.isDirectory && (showSizes || detailNow) && !f.path.startsWith("/data") -> exInfoParts(true, f.list()?.size ?: 0, dirSizes[f.path], f.lastModified())
                             else -> ""
                         }
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = (11 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1716,6 +1716,8 @@ internal fun exSize(b: Long): String {
 internal fun exDate(ms: Long, fmt: Int): String = when (fmt) {
     1 -> DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(ms))
     2 -> java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.ROOT).format(Date(ms))
+    // always the day and the time, even for a file changed today
+    3 -> java.text.SimpleDateFormat("d MMMM yyyy HH:mm", java.util.Locale.getDefault()).format(Date(ms))
     else -> exSmartDate(ms)
 }
 
