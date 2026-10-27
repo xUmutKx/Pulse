@@ -243,7 +243,7 @@ fun BrowserHub(onBack: () -> Unit) {
         }
         if (loading) LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth().height(2.dp))
         Box(Modifier.weight(1f)) {
-            AndroidView(Modifier.fillMaxSize(), factory = { c ->
+            AndroidView(modifier = Modifier.fillMaxSize(), factory = { c ->
                 WebView(c).apply {
                     layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                     settings.javaScriptEnabled = true
