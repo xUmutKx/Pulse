@@ -89,6 +89,9 @@ object KeyboardPrefs {
     var padScale by mutableStateOf(130)
     /** The long-press action of the comma, the period and the key beside ?123 (ExtraKeys.hold ids). */
     var commaHold by mutableStateOf("voice")
+    /** The gamepad sticks: the dead zone (percent of a stick's reach before it sends a key) and how far up the sticks sit (dp at 1 percent of the panel). */
+    var padDead by mutableStateOf(28)
+    var padLift by mutableStateOf(0)
     var periodHold by mutableStateOf("none")
     var bottomHold by mutableStateOf("none")
 
@@ -160,7 +163,7 @@ object KeyboardPrefs {
             if ("gamepad" !in menuItems.split(',')) menuItems = menuItems.split(',').toMutableList().also { l -> val i = l.indexOf("clip"); l.add(if (i >= 0) i + 1 else 0, "gamepad") }.joinToString(",")
             p.edit().putInt("menuVer", 7).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
         }
-        padScale = p.getInt("padScale", 130)
+        padScale = p.getInt("padScale", 130); padDead = p.getInt("padDead", 28); padLift = p.getInt("padLift", 0)
         commaHold = p.getString("commaHold", "voice") ?: "voice"; periodHold = p.getString("periodHold", "none") ?: "none"; bottomHold = p.getString("bottomHold", "none") ?: "none"
         // the clipboard and the gamepad trade places in the bar: the gamepad is the first key now
         if (p.getInt("menuVer", 0) < 8) {
@@ -177,7 +180,7 @@ object KeyboardPrefs {
             .putString("theme", theme)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
             .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putString("oneHand", oneHand)
-            .putString("langs", langs).putInt("padScale", padScale).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
+            .putString("langs", langs).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)
