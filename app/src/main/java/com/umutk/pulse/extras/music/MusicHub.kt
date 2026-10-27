@@ -15,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -399,7 +400,8 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
                     MiniLook(m, Modifier.size(44.dp, 30.dp).clip(shape)
                         .border(if (on) BorderStroke(2.dp, Look.accent) else BorderStroke(1.dp, ink.copy(alpha = .3f)), shape))
                 }
-                Text(tr(f.en, f.turkish), color = if (on) Look.accent else ink.copy(alpha = .6f), fontSize = 14.sp, maxLines = 1,
+                // a long name goes on to a second line instead of stretching the one line of the row
+                Text(tr(f.en, f.turkish), modifier = Modifier.widthIn(max = 96.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = if (on) Look.accent else ink.copy(alpha = .6f), fontSize = 14.sp, maxLines = 2,
                     fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
             }
         }
@@ -425,7 +427,8 @@ private fun familyMini(f: ThemeFamily, scheme: ColorScheme): MiniColors? = when 
     ThemeFamily.WMP -> wmpMini(Wmp7Skin.Default)
     ThemeFamily.SKINS -> MiniColors(SolidColor(Color(0xFFD65DA8)), Color(0xFF2AA89E), Color.White, Color(0xFFFFE0F0))
     ThemeFamily.LYRICS -> MiniColors(SolidColor(Color.Black), Color(0xFF1A1A1A), Look.accent, Color.White.copy(alpha = .5f))
-    else -> null
+    // the Poweramp look: black, a dark panel and its blue accent
+    ThemeFamily.POWERAMP -> MiniColors(SolidColor(Color.Black), Color(0xFF14161A), Color(0xFF2E8BFF), Color.White.copy(alpha = .5f))
 }
 
 /** A Windows Media Player 7 skin's own frame, visualisation and seek colours; flat, no gradient. */
