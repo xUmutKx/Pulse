@@ -348,7 +348,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                             if (tab == 0 && g == null && q.isEmpty()) item { RecommendationHome(library, cur, TXT, SUB, PANEL, accent, round = false, onPlay = { engine.playQueue(library, it) }, onQueue = { l, i -> engine.playQueue(l, i) }) }
                             itemsIndexed(shown, key = { i, t -> "$i${t.path}" }) { i, t ->
                                 val on = cur?.path == t.path
-                                Row(Modifier.fillMaxWidth().clickable { engine.playQueue(shown, i) }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Row(Modifier.fillMaxWidth().clickable { engine.playQueue(shown, i); showNow = true }.padding(16.dp, 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Art(t, 44.dp, accent)
                                     Spacer(Modifier.width(12.dp))
                                     Column(Modifier.weight(1f)) {

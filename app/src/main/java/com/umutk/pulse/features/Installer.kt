@@ -408,20 +408,27 @@ object Installer {
     /**
      * The same install as a pm session fed through stdin: `pm install <path>` makes the system open the path itself, and the system
      * may not read Pulse's private cache (SELinux), so the install failed without a clear reason. `cat` runs as root (or shell)
-     * and hands every APK over a pipe. Shizuku runs as shell, which cannot read the private cache either: the files are first
-     * copied to Pulse's folder on shared storage.
+     * and hands every APK over a pipe. This copy to Pulse's own folder on shared storage always runs, root included: on some
+     * devices (KernelSU / Magisk "isolated" mount namespace, some hardened ROMs) the root shell's own mount view does not
+     * reach Pulse's private /data/data cache either, so `cat` on a path there fails there with "Permission denied" and the
+     * install session silently gets 0 bytes for that split (INSTALL_PARSE_FAILED_NOT_APK at commit, with no earlier clear
+     * error) — shared storage has none of that: every root view and Shizuku's shell user both read it the same way.
      */
     fun silentScript(c: Context, p: Picked, down: Boolean, user: Int): String {
-        val files = if (Shell.root == true) p.files else {
-            val d = File(c.externalCacheDir ?: c.cacheDir, "install").apply { deleteRecursively(); mkdirs() }
-            p.files.map { f -> File(d, f.name).also { f.copyTo(it, true) } }
-        }
+        val d = File(c.externalCacheDir ?: c.cacheDir, "install").apply { deleteRecursively(); mkdirs() }
+        val files = p.files.map { f -> File(d, f.name).also { f.copyTo(it, true) } }
         fun q(s: String) = "'" + s.replace("'", "'\\''") + "'"
         val create = "pm install-create -r" + (if (down) " -d" else "") + InstallShow.srcPkg?.let { " -i $it --install-reason 0" }.orEmpty() + " --user $user"
         val sb = StringBuilder()
         sb.append("S=$(").append(create).append(" | sed -n 's/.*\\[\\([0-9]*\\)\\].*/\\1/p'); ")
         sb.append("[ -z \"\$S\" ] && { echo 'Failure: no install session'; exit 1; }; ")
-        files.forEachIndexed { n, f -> sb.append("cat ${q(f.path)} | pm install-write -S ${f.length()} \$S ${n}_${q(f.name)} - >/dev/null || { pm install-abandon \$S; echo 'Failure: could not write ${f.name}'; exit 1; }; ") }
+        files.forEachIndexed { n, f ->
+            // a read check first: a cat that fails inside the pipe would otherwise hand pm install-write an empty stream without
+            // either command reporting it (sh here does not keep a pipe's first exit status), writing a 0-byte split that only
+            // fails much later, at commit, as an unreadable "not an APK" with no link back to the real cause
+            sb.append("[ -r ${q(f.path)} ] || { pm install-abandon \$S; echo 'Failure: cannot read ${f.name}'; exit 1; }; ")
+            sb.append("cat ${q(f.path)} | pm install-write -S ${f.length()} \$S ${n}_${q(f.name)} - >/dev/null || { pm install-abandon \$S; echo 'Failure: could not write ${f.name}'; exit 1; }; ")
+        }
         sb.append("pm install-commit \$S")
         return sb.toString()
     }
