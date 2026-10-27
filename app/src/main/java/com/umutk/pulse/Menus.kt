@@ -151,8 +151,8 @@ object ToolPlace {
         Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "settings", Icons.Outlined.Widgets, "extra"),
         Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "sensors", Icons.Outlined.Headphones, "extra"),
         Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "extra"),
-        // the launcher's settings: listed in the Extra apps store with its own switch, off in the menu until it is switched on there
-        Tool("launcher", "Launcher", "Ana ekran", "launcher", true, "apps", Icons.Outlined.Apps, "hidden"),
+        // the launcher's settings: its Extra apps row (Settings card and the ⋮ Apps group) left with the old "HomeLauncher" alias in 0.10.134 and is back, on by default
+        Tool("launcher", "Launcher", "Ana ekran", "launcher", true, "apps", Icons.Outlined.Apps, "extra"),
     )
     private val placed = mutableStateMapOf<String, String>()
     private var loaded = false
