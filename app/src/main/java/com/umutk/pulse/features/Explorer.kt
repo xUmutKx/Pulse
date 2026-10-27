@@ -391,6 +391,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var viewMenu by remember { mutableStateOf(false) }
     var detailAll by remember { mutableStateOf(exReadInt(ctx, "ex_detail", 0) == 1) }
     val viewOwn = viewDir[here]
+    // the item count of the folders in this folder: its own setting when it has one, else the Settings switch
+    var countDir by remember { mutableStateOf(exReadCountMap(ctx)) }
+    val countOwn = countDir[here]
+    val countNow = countOwn?.let { it == 1 } ?: FilesPrefs.infoCount
     val viewNow = viewOwn ?: if (FilesPrefs.grid) 1 else if (detailAll) 2 else 0
     val gridNow = viewNow == 1
     val detailNow = viewNow == 2
@@ -896,6 +900,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             ThemedMenuItem(tr("Grid", "Izgara"), { pick(1) }, checked = cur == 1)
                             ThemedMenuItem(tr("Detailed list", "Detaylı liste"), { pick(2) }, checked = cur == 2)
                             Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(com.umutk.pulse.LocalMenuStyle.current.sub.copy(alpha = .3f)))
+                            ThemedMenuItem(tr("Item count in folders here", "Burada klasör öğe sayısı"), {
+                                viewMenu = false
+                                countDir = if (countOwn != null) countDir - here else countDir + (here to (if (countNow) 0 else 1))
+                                exWriteCountMap(ctx, countDir)
+                            }, checked = countNow)
                             ThemedMenuItem(tr("Only for this folder", "Yalnızca bu klasör"), {
                                 viewMenu = false
                                 viewDir = if (viewOwn != null) viewDir - here else viewDir + (here to cur)
@@ -1001,7 +1010,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                             !f.isDirectory && (showSizes || detailNow) -> exInfoParts(false, 0, f.length(), f.lastModified())
                             // the folder's own total size was already measured in the background either way (dirSizes above); it just was not shown
                             // outside the standalone app — now the embedded Files tab gets it too
-                            f.isDirectory && (showSizes || detailNow) && !f.path.startsWith("/data") -> exInfoParts(true, f.list()?.size ?: 0, dirSizes[f.path], f.lastModified())
+                            f.isDirectory && (showSizes || detailNow) && !f.path.startsWith("/data") -> exInfoParts(true, f.list()?.size ?: 0, dirSizes[f.path], f.lastModified(), countNow)
                             else -> ""
                         }
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = (11 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
