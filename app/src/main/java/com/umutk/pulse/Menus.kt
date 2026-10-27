@@ -151,6 +151,8 @@ object ToolPlace {
         Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "settings", Icons.Outlined.Widgets, "extra"),
         Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "sensors", Icons.Outlined.Headphones, "extra"),
         Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "extra"),
+        // the launcher's settings: listed in the Extra apps store with its own switch, off in the menu until it is switched on there
+        Tool("launcher", "Launcher", "Ana ekran", "launcher", true, "apps", Icons.Outlined.Apps, "hidden"),
     )
     private val placed = mutableStateMapOf<String, String>()
     private var loaded = false
@@ -249,13 +251,24 @@ private val WIN11_MENU_KEY = mapOf(
     "APK installer" to "tool_installer", "Device troubleshoot" to "tool_troubleshoot", "Authenticator" to "tool_authenticator", "Network usage" to "tool_netusage",
     "Screen cover" to "tool_cover", "Store" to "extraStore", "Settings" to "settings", "DNS" to "globe",
     // these two fell through to a "tool_goodlock"/"tool_buds" key with no glyph behind it and drew nothing in Win11
-    "Good Lock" to "gridView", "Buds manager" to "sensors",
+    "Good Lock" to "gridView", "Buds manager" to "sensors", "Launcher" to "gridView", "Ana ekran" to "gridView",
 )
+
+/**
+ * The volume keys of the main screens, where no sound plays: MainActivity counts a press of volume up / down here (and swallows it, so the
+ * system volume bar never shows), and the shell's left panel and the ⋮ menu each watch their own counter and flip when it moves.
+ */
+object ChromeKeys {
+    var leftTick by mutableIntStateOf(0)
+    var moreTick by mutableIntStateOf(0)
+}
 
 /** The menu bar of the classic looks: each word opens its menu. */
 @Composable
 fun MenuBar(host: MenuHost, color: Color, size: TextUnit, gap: Dp = 14.dp) {
     var open by remember { mutableStateOf<String?>(null) }
+    var seenMore by remember { mutableIntStateOf(ChromeKeys.moreTick) }
+    LaunchedEffect(ChromeKeys.moreTick) { if (ChromeKeys.moreTick != seenMore) { seenMore = ChromeKeys.moreTick; open = if (open == null) host.tops.firstOrNull()?.label else null } }
     val w = LocalWindowLook.current
     Row(horizontalArrangement = Arrangement.spacedBy(gap)) {
         host.tops.forEach { m ->
@@ -271,6 +284,8 @@ fun MenuBar(host: MenuHost, color: Color, size: TextUnit, gap: Dp = 14.dp) {
 @Composable
 fun MenuOverflow(host: MenuHost, color: Color) {
     var open by remember { mutableStateOf(false) }
+    var seenMore by remember { mutableIntStateOf(ChromeKeys.moreTick) }
+    LaunchedEffect(ChromeKeys.moreTick) { if (ChromeKeys.moreTick != seenMore) { seenMore = ChromeKeys.moreTick; open = !open } }
     var extra by rememberSaveable { mutableStateOf(false) }
     val w = LocalWindowLook.current
     Box {

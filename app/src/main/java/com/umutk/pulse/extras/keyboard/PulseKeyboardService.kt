@@ -717,6 +717,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         when (id) {
             "menu" -> st.panel = if (st.panel == "menu") "keys" else "menu"
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
+            "gamepad" -> st.panel = if (st.panel == "gamepad") "keys" else "gamepad"
             "lang" -> lang()
             "voice" -> { st.panel = "keys"; voice() }
             "translate" -> {
@@ -964,6 +965,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         evs.filter { it.keyCode !in setOf(59, 60, 57, 58, 113, 114, 117, 118) }.forEach { e -> sendKey(e.keyCode, if (shifted) KeyEvent.META_SHIFT_ON or KeyEvent.META_SHIFT_LEFT_ON else 0) }
         if (st.shift == 1) st.shift = 0
         return true
+    }
+
+    override fun padKey(code: Int, down: Boolean) {
+        val c = currentInputConnection ?: return
+        val t = SystemClock.uptimeMillis()
+        c.sendKeyEvent(KeyEvent(t, t, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, 0))
     }
 
     override fun extraKey(id: String) {

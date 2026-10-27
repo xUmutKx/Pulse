@@ -135,6 +135,19 @@ open class MainActivity : ComponentActivity() {
         }.start()
     }
 
+    // no sound plays on these screens: volume up opens the left panel, volume down the ⋮ menu, and the system volume stays untouched
+    override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if ((event?.repeatCount ?: 0) == 0) { if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) ChromeKeys.leftTick++ else ChromeKeys.moreTick++ }
+            return true
+        }
+        return super.onKeyDown(keyCode, event)
+    }
+    override fun onKeyUp(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) return true
+        return super.onKeyUp(keyCode, event)
+    }
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         handleShare(intent)
@@ -477,6 +490,9 @@ private fun ModernShell(page: String, go: (String) -> Unit, menus: MenuHost, bod
     val t = T
     if (t.material) { MaterialRail(page, go, menus, body); return }
     var wide by rememberSaveable(t.id) { mutableStateOf(false) }
+    // volume up folds the left panel open and closed, like the hamburger at its top
+    var seenLeft by remember { mutableIntStateOf(ChromeKeys.leftTick) }
+    LaunchedEffect(ChromeKeys.leftTick) { if (ChromeKeys.leftTick != seenLeft) { seenLeft = ChromeKeys.leftTick; wide = !wide } }
     val s by Sampler.snap.collectAsState()
     val fx = if (t.id == "win11") Look.effect else "none"
     Box(Modifier.fillMaxSize().backdrop(fx).statusBarsPadding().navigationBarsPadding().imePadding()) {
