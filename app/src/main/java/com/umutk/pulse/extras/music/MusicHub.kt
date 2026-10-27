@@ -189,7 +189,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     lyrics -> LyricsPanel(st.current, rememberPosition(engine, st).value.first, Modifier.fillMaxSize(), onSeek = { engine.seekTo(it) })
                     look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it })
                     look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx, onSettings = { settingsOpen = true })
-                    look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") })
+                    look == MusicLook.WINAMP -> Box(Modifier.fillMaxSize().background(Color.Black)) { com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") }) }
                     look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
                     look == MusicLook.SKINS -> SkinsPage(engine, st, onOpen = { pick.launch(arrayOf("audio/*")) })
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
