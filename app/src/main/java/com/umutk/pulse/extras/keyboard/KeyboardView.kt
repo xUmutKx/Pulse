@@ -775,7 +775,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 }
                                 KeyKind.SPACE -> { if (KeyboardPrefs.cursorControl) { long = true; spaceDragged = true; startX = curX; lastStep = 0; a.feedback() }; due = Long.MAX_VALUE / 2 }
                                 KeyKind.SHIFT -> { long = true; due = Long.MAX_VALUE / 2 }
-                                KeyKind.COMMA -> { long = true; st.preview = null; a.feedback(); a.voice(); due = Long.MAX_VALUE / 2 }
+                                // long-press used to start voice typing; a mic shortcut already sits in the toolbar/menu, so this now opens the key layout picker (QWERTY, game, numpad, ...) instead
+                                KeyKind.COMMA -> { long = true; st.preview = null; a.feedback(); a.menu("layout"); due = Long.MAX_VALUE / 2 }
                                 else -> if (!glide && key.alts.isNotEmpty() && big) {
                                     long = true; sel = 0; due = Long.MAX_VALUE / 2
                                     st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback()
@@ -870,8 +871,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     if (!special && k.alts.isNotEmpty() && KeyboardPrefs.longPressSymbols && !small && k.alts.first().length == 1 && k.alts.first()[0].isDigit()) {
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
-                    // the comma key holds voice typing on a long press: a small microphone above it says so
-                    if (k.kind == KeyKind.COMMA && !small) Icon(Icons.Rounded.Mic, null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
+                    // the comma key opens the key layout picker on a long press: a small hint icon above it says so (voice typing already has its own key in the toolbar/menu)
+                    if (k.kind == KeyKind.COMMA && !small) Icon(kbIcon(th, "Dashboard"), null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
                     Text(k.label, color = fg, fontSize = if (small) (fs.value * .82f).sp else fs, maxLines = 1)
                 }
             }
