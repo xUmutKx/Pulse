@@ -190,13 +190,14 @@ object MiniLyrics {
         val wm = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val d = app.resources.displayMetrics
         val lp = WindowManager.LayoutParams(
-            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
+            (d.widthPixels * 0.9f).toInt(), WindowManager.LayoutParams.WRAP_CONTENT, overlayType(),
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL, PixelFormat.TRANSLUCENT,
         ).apply { gravity = Gravity.TOP or Gravity.START; x = 0; y = (d.heightPixels * 0.75f).toInt() }
         val pad = (12 * d.density).toInt()
         val t = TextView(app).apply {
             setTextColor(AColor.WHITE); textSize = 16f; typeface = Typeface.DEFAULT_BOLD; gravity = Gravity.CENTER
-            maxLines = 2; maxWidth = (d.widthPixels * 0.9f).toInt(); setPadding(pad, pad / 2, pad, pad / 2)
+            // a long line goes on to the next one inside the window (the window has a fixed width now), up to four lines
+            maxLines = 4; setPadding(pad, pad / 2, pad, pad / 2)
             background = GradientDrawable().apply { setColor(0xAA000000.toInt()); cornerRadius = 20 * d.density }
             visibility = View.GONE
             var dx = 0f; var dy = 0f
