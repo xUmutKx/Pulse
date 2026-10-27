@@ -565,7 +565,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         }
     }
     val sortUi: @Composable () -> Unit = {
-        ExSortMenu(sortMenu, sort, here in folderSort, filt, { sortMenu = false }, { mode ->
+        ExSortMenu(sortMenu, sort, here in folderSort, filt, FilesPrefs.ext, { FilesPrefs.ext = !FilesPrefs.ext; FilesPrefs.save(ctx) }, showHidden, { showHidden = !showHidden }, { sortMenu = false }, { mode ->
             if (here in folderSort) { folderSort = folderSort + (here to mode); exWriteSortMap(ctx, folderSort) }
             else { sortAll = mode; exWriteInt(ctx, EX_SORT_ALL, mode) }
             sortMenu = false
@@ -879,8 +879,6 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     }
                     // list or grid, icon shows the one a tap switches to (same convention as the standalone app's overflow row)
                     ExAct(if (FilesPrefs.grid) "list" else "grid", T.sub) { FilesPrefs.grid = !FilesPrefs.grid; FilesPrefs.save(ctx) }
-                    // show or hide the file extensions in the list
-                    ExAct("ext", if (FilesPrefs.ext) Look.accent else T.sub) { FilesPrefs.ext = !FilesPrefs.ext; FilesPrefs.save(ctx) }
                     ExAct(if (dir.path in marks) "starOn" else "star", if (dir.path in marks) Look.accent else T.sub) { mark(dir.path) }
                     ExAct("home", T.text) { go(top.path) }
                 }
@@ -1579,7 +1577,7 @@ private fun exFilterOk(f: File, type: String): Boolean {
 /** The filter dialog in the Files look (WinAlert follows LocalWindowLook): big type rows, custom extensions, "Only this folder" and Clear. */
 /** The sort popup: six orders, the filter types, then one switch that gives this folder its own sort and filter. */
 @Composable
-private fun ExSortMenu(expanded: Boolean, current: Int, perFolder: Boolean, filt: String, onDismiss: () -> Unit, onPick: (Int) -> Unit, onFilter: (String) -> Unit, onPerFolder: (Boolean) -> Unit) {
+private fun ExSortMenu(expanded: Boolean, current: Int, perFolder: Boolean, filt: String, extOn: Boolean, onExt: () -> Unit, hiddenOn: Boolean, onHidden: () -> Unit, onDismiss: () -> Unit, onPick: (Int) -> Unit, onFilter: (String) -> Unit, onPerFolder: (Boolean) -> Unit) {
     // one row per key; the arrow shows the direction, tapping the same key again flips it
     val keys = listOf(tr("Name", "Ad"), tr("Size", "Boyut"), tr("Date", "Tarih"))
     ThemedMenu(expanded, onDismiss) {
@@ -1596,6 +1594,14 @@ private fun ExSortMenu(expanded: Boolean, current: Int, perFolder: Boolean, filt
                 Icon(EX_FILTER_ICONS[id] ?: Icons.Outlined.FilterList, label, Modifier.size(20.dp), if (on) Look.accent else com.umutk.pulse.LocalMenuStyle.current.sub)
             }
         } } }
+        // the file extensions and the hidden files switches: icon buttons beside the type filters
+        Row(Modifier.padding(horizontal = 8.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            listOf(Triple(extOn, onExt, Icons.Outlined.Title to tr("File extensions", "Dosya uzantıları")), Triple(hiddenOn, onHidden, Icons.Outlined.Visibility to tr("Hidden files", "Gizli dosyalar"))).forEach { (on, act, pair) ->
+                Box(Modifier.size(36.dp).clip(CircleShape).background(if (on) Look.accent.copy(alpha = .2f) else Color.Transparent).clickable { act() }, contentAlignment = Alignment.Center) {
+                    Icon(pair.first, pair.second, Modifier.size(20.dp), if (on) Look.accent else com.umutk.pulse.LocalMenuStyle.current.sub)
+                }
+            }
+        }
         Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(com.umutk.pulse.LocalMenuStyle.current.sub.copy(alpha = .3f)))
         ThemedMenuItem(tr("Only for this folder", "Yalnızca bu klasör"), { onPerFolder(!perFolder) }, checked = perFolder)
     }
