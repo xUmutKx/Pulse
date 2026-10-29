@@ -1474,3 +1474,10 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.197 Network usage: Day / Week / Month, a pie of the biggest apps for the week and the month, and a tap on an app opens two root switches (block mobile data / block Wi-Fi) that are read back from the firewall; without root it says Android has no other way (derlenmedi)
 - 1.0.198 Paint: a Spray tool (a cloud of dots, sized by the width) and a Watercolour tool (wide see-through strokes that deepen where they cross), Redo next to Undo, 20 undo steps (derlenmedi)
 - 1.0.199 Floating timer: smaller by default, a size slider, see-through slider, four background colours, a switch to show only the time or the buttons too, and it comes back where it was left (derlenmedi)
+- 1.0.200 Keyboard: when the cursor comes back to the end of a word (a tap behind it, or a delete that stops there) the word opens again and stands in the middle of the suggestion bar, and typing goes on with it instead of starting a new word. New tool Charging power (Extra apps): live watts into or out of the battery, voltage, current, temperature, peak in and out, a 60 second graph and the time to full, drawn with a cable of flowing dots (reading method after WattFlow, MIT) (derlenmedi)
+
+### 📦 Yüklenen dış uygulamalar — ikinci parti
+- 🟢 wattflow (MIT): Şarj gücü aracı olarak Pulse içine yazıldı (okuma yöntemi ondan, ekran Pulse'un), lisans metni assets/licenses içinde
+- 🟡 Lucid-Alarm (GPL-3.0, Pulse ile uyumlu): Saat modülü için kaynak; alarm, kronometre, zamanlayıcı, dünya saati, Nowbar. Pulse'a alarm + dünya saati olarak aktarılıyor
+- 🔴 SoundPlus.apk (kapalı kaynak, StartApp reklam SDK'sı içeriyor): kod alınamaz; yalnız özellik referansı
+- 🔴 Bionic Tape ekran görüntüleri (kaset çalar görünümü): müzik oynatıcıya kaset görünümü fikri olarak not edildi
