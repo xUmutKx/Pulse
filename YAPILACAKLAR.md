@@ -1362,12 +1362,12 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 
 ### 2 Temalar / AMOLED
 - 🔴 2.1 Ayrı Material / Windows 11 / AMOLED siyah teması + AMOLED vurgu rengi; tüm ekranlar (çubuklar, hızlı panel, ayarlar, menüler, editörler, PDF/Office, müzik, ağ, geçmiş, pencereler, klavye); başka temanın rengi sızmasın
-- 🔴 2.2 Kontrast: Win11 End Task, indirme silme penceresi Delete/Cancel, otomatik metin/düğme rengi
+- 🟡 2.2 Kontrast: End Task (kırmızı zemin beyaz yazı) ve indirme silme penceresi düğmeleri yapıldı; genel otomatik metin/düğme rengi taraması sürüyor
 - 🔴 2.3 Tam siyah, vurgu, kart arka planı, saydam katman, kontrast, animasyon yoğunluğu seçenekleri
 
 ### 3 Dosyalar / APK / ZIP / Office
-- 🔴 3.0 Recording/çağrı kayıtlarında 3 nokta menüsü ile paylaşma (diğer klasörler gibi)
-- 🔴 3.1 APK ayrıntı: Install tek satır, Browse/Install düzeni; APK/ZIP/diğer için tutarlı menü; seçim ekranlarında çoklu seçim; sil/kopyala/taşı/paylaş/arşivle
+- 🟢 3.0 Recording/çağrı kayıtlarında 3 nokta menüsü ile paylaşma (diğer klasörler gibi)
+- 🟡 3.1 APK ayrıntı: Install tek satır (yapıldı: IButton tek satır), Browse/Install düzeni; APK/ZIP/diğer için tutarlı menü; seçim ekranlarında çoklu seçim; sil/kopyala/taşı/paylaş/arşivle
 - 🔴 3.2 Birden çok resmi tek PDF yapma, PDF sayfa/görsel düzenleme, dosya türüne göre araçlar, Tools bölümüne taşıma
 - 🔴 3.3 PowerPoint açma/görüntüleme/slayt gezme/düzenleme, Office araç çubukları, tam siyah tema
 
@@ -1376,7 +1376,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 4.1 Yedek küçültme: önbellek, müzik dosyası, kapaklar yedeklenmez; boyut gösterimi; eski yedekleri yönetme/silme
 
 ### 5 Video oynatıcı
-- 🔴 5.0 Alt kontroller için yarı saydam katman, beyaz ikon kontrastı, 3 nokta menüsü düzeni, Cast düğmesi (gerçek), dokunma alanları
+- 🟢 5.0 (Cast = telefonun ekran yansıtma ekranı; videoyu devretmez) Alt kontroller için yarı saydam katman, beyaz ikon kontrastı, 3 nokta menüsü düzeni, Cast düğmesi (gerçek), dokunma alanları
 
 ### 6 Saat uygulaması
 - 🔴 6.0 Lucid kaynağı/lisansı incelenecek (ZIP projede yoksa açıkça belirtilecek); alarm, geri sayım, kronometre, dünya saatleri, temalar, widget
@@ -1385,7 +1385,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 ### 7 Network Manager
 - 🔴 7.1 Günlük/haftalık/aylık kullanım, grafik, pasta, uygulama bazlı, Wi-Fi/mobil ayrı (gerçek NetworkStatsManager)
 - 🔴 7.2 Uygulama başına mobil/Wi-Fi engelleme (root iptables/cmd netpolicy), mevcut durum
-- 🔴 7.3 Ağ türü değiştirme: "Phone didn't take it" nedeni, desteklenmeyeni gizle, izin/modem hatası ayrımı, sahte başarı yok
+- 🟡 7.3 (hata mesajı artık nedeni ayırıyor: yetki / komuta yanıt yok / modem kabul etmedi; desteklenmeyen türü gizleme sürüyor) Ağ türü değiştirme: "Phone didn't take it" nedeni, desteklenmeyeni gizle, izin/modem hatası ayrımı, sahte başarı yok
 
 ### 8 Extra Apps menüsü
 - 🟡 8.0 Görünürlük anahtarları (uzun basma ile gizleme yapıldı); ızgara düzeni + liste seçeneği, App Info/Open düğmesi kaldırma, Office kaldırma, kaydırma konumu koruma
@@ -1408,7 +1408,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 11.1 Bildirimde durdur, dokununca doğrudan Music Player, bildirim kaybolma nedeni
 
 ### 12 İndirme yöneticisi
-- 🔴 12.0 Silinen dosya listede kalmasın, Delete/Cancel kontrastı, çoklu seçim + toplu silme, onay, silme doğrulama
+- 🟢 12.0 Silinen dosya listede kalmasın (2,5 sn'de bir kontrol), Delete/Cancel kontrastı, uzun basıp çoklu seçim + toplu silme, onay, silinemeyen dosya uyarısı
 
 ### 13 Uygulama geçmişi
 - 🔴 13.0 Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
@@ -1462,3 +1462,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 🔴 relay (kaynak): telefon-bilgisayar dosya/pano aktarımı (yerel Wi-Fi)
 - 🔴 Savr (kaynak, GPLv3): yer imi uygulaması
 - 🔴 APK: Battery Supervisor, BigText, ChatNotes, Device Info, Groundd, Multi Toolbox, My Vinyl, Outplay, Punto, RadioSquare — her birinin özelliği incelenip Pulse'taki karşılığı/eksiği çıkarılacak
+- 1.0.188 Fixes: Install button stays on one line; End task is white on red; Downloads list drops files that were deleted, long press picks several rows with one delete question, Delete/Cancel buttons readable in every look; call recordings rows get a three-dot menu (share, copy path); video player: soft dark shade behind top and bottom controls, a Cast button (the phone screen-cast picker), the More menu no longer repeats speed, repeat and sleep timer; network type failure says why (permission, no answer, modem refused) (derlenmedi)

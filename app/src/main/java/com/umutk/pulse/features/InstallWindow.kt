@@ -406,9 +406,10 @@ private fun IButton(text: String, modifier: Modifier = Modifier, danger: Boolean
     val fill = when { danger -> Color(0xFFC42B1C).copy(alpha = .16f); primary -> acc; else -> w.text.copy(alpha = .09f) }
     val ink = when { danger -> Color(0xFFC42B1C); primary -> onAccent(acc); else -> w.text }
     Button(onClick, modifier.padding(vertical = 2.5.dp).height(52.dp), shape = RoundedCornerShape(14.dp),
-        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 0.dp),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 0.dp),
         colors = ButtonDefaults.buttonColors(containerColor = fill, contentColor = ink)) {
-        Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+        // one line only: "Install" must never fall onto two lines
+        Text(text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, softWrap = false, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
     }
 }
 
