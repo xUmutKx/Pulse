@@ -528,9 +528,10 @@ private fun runHold(a: KbActions, id: String) = when (id) { "emoji" -> a.emojiPa
 
 /** The small icon at the top of a key whose long press runs an action. */
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.HoldHint(th: KbTheme, kind: KeyKind) {
+private fun androidx.compose.foundation.layout.BoxScope.HoldHint(th: KbTheme, kind: KeyKind, listening: Boolean = false) {
     val h = holdOf(kind)
-    if (h != "none") Icon(toolIcon(th, h), null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
+    // the speech icon turns to the accent while it listens
+    if (h != "none") Icon(toolIcon(th, h), null, tint = if (listening) th.accent else th.text.copy(alpha = .7f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(15.dp))
 }
 
 private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; "layout" -> st.panel == "layout" || st.forceLayout != null; else -> false }
@@ -906,7 +907,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
                     // a small icon above the comma or the period says what its long press does
-                    if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind)
+                    if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind, st.listening)
                     Text(k.label, color = fg, fontSize = if (small) (fs.value * .82f).sp else fs, maxLines = 1)
                 }
             }
