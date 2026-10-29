@@ -174,7 +174,7 @@ open class ExtraToolActivity : ComponentActivity() {
             intent.extras?.keySet().orEmpty().all { it == "route" || it == "notif_open" }) {
             val mine = routeOf(intent)
             val other = runCatching { getSystemService(android.app.ActivityManager::class.java).appTasks.firstOrNull { t ->
-                t.taskInfo.taskId != taskId && t.taskInfo.baseIntent.let { b -> b.component?.className.orEmpty().endsWith("ExtraToolActivity") || b.component?.className.orEmpty().endsWith("Launcher") }
+                t.taskInfo.taskId != taskId && (android.os.Build.VERSION.SDK_INT < 29 || t.taskInfo.numActivities > 0) && t.taskInfo.baseIntent.let { b -> b.component?.className.orEmpty().endsWith("ExtraToolActivity") || b.component?.className.orEmpty().endsWith("Launcher") }
                     && routeOf(t.taskInfo.baseIntent) == mine && t.taskInfo.baseIntent.getStringExtra("frame") == null
             } }.getOrNull()
             if (other != null) { other.moveToFront(); runCatching { overridePendingTransition(0, 0) }; finishAndRemoveTask(); return }
@@ -257,8 +257,10 @@ class ToolOpenActivity : android.app.Activity() {
         intent.getStringExtra("notif_open")?.let { if (route == "music") com.umutk.pulse.extras.music.MusicNav.request = it }
         val plain = extras == null || extras.keySet().all { it == "route" || (it == "notif_open" && route == "music") }
         val am = getSystemService(android.app.ActivityManager::class.java)
+        // a card in the recents with no window left (the app was closed) is not brought forward: nothing would show, so a new one starts
         val open = if (plain && route.isNotEmpty()) am.appTasks.firstOrNull { t ->
             val b = t.taskInfo.baseIntent
+            (android.os.Build.VERSION.SDK_INT < 29 || t.taskInfo.numActivities > 0) &&
             b.getStringExtra("route") == route || b.component?.className.orEmpty().let { n -> route == "music" && n.endsWith("MusicLauncher") }
         } else null
         if (open != null) open.moveToFront()
