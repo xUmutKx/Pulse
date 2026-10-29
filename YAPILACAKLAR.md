@@ -1393,7 +1393,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 
 ### 9 Toolkit
 - 🟡 9.1 Hız testi: geçmiş sayfası (günlük gezinme, ortalama, silme), kayıtlı sonuçlar, hata nedeni yapıldı; Toolkit içine taşıma ve Quick Panel kısayolu (karo var) açık
-- 🔴 9.2 Yüzen sayaç: küçük, geri sayım, başlat/duraklat/devam/sıfırla/kapat, görünüm, saydamlık, konum korunması
+- 🟢 9.2 Yüzen sayaç: geri sayım, başlat/duraklat/sıfırla/kapat zaten vardı; küçültme (%50-140), saydamlık, arka plan rengi, yalnız süre/düğmeli seçeneği ve konumun hatırlanması eklendi
 
 ### 10 Müzik
 - 🔴 10.1 Yedekte müzik/kapak çoğaltma yok
@@ -1473,3 +1473,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.196 Speed test: every finished test is saved; a history page (the clock icon) goes day by day with the averages and a delete for each test; a failed test says why (no internet, timeout, secure connection) (derlenmedi)
 - 1.0.197 Network usage: Day / Week / Month, a pie of the biggest apps for the week and the month, and a tap on an app opens two root switches (block mobile data / block Wi-Fi) that are read back from the firewall; without root it says Android has no other way (derlenmedi)
 - 1.0.198 Paint: a Spray tool (a cloud of dots, sized by the width) and a Watercolour tool (wide see-through strokes that deepen where they cross), Redo next to Undo, 20 undo steps (derlenmedi)
+- 1.0.199 Floating timer: smaller by default, a size slider, see-through slider, four background colours, a switch to show only the time or the buttons too, and it comes back where it was left (derlenmedi)
