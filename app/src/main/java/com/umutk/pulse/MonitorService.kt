@@ -211,6 +211,9 @@ open class ToolkitTile : TileService() {
     open fun active(): Boolean = false
     /** The tile's own picture (the dice face). Null keeps the manifest icon. */
     open val picture: Int? get() = null
+    /** Pictures shown one after the other for a moment after a tap (the die rolling, the coin turning); null for none. */
+    open fun flicker(): List<Int>? = null
+    private var frame: Int? = null
     /** Repaint period while the panel is open, for readings that change on their own; 0 = only on open and tap. */
     open val refreshMs: Long get() = 0L
     /** The tile's own job, done in the panel. Returns true to repaint; a tile without one opens its tool. */
@@ -244,7 +247,7 @@ open class ToolkitTile : TileService() {
             label = tr(name, trName)
             state = when { noSensor -> Tile.STATE_UNAVAILABLE; (if (sensor != null) live else active()) -> Tile.STATE_ACTIVE; else -> Tile.STATE_INACTIVE }
             subtitleCompat = when { noSensor -> tr("No sensor", "Sensör yok"); sensor != null && !live -> tr("Off", "Kapalı"); else -> subtitleFor(null) }
-            picture?.let { icon = Icon.createWithResource(this@ToolkitTile, it) }
+            (frame ?: picture)?.let { icon = Icon.createWithResource(this@ToolkitTile, it) }
             updateTile()
         }
     }
@@ -255,7 +258,15 @@ open class ToolkitTile : TileService() {
         main.removeCallbacks(tick); if (refreshMs > 0) main.postDelayed(tick, refreshMs)
     }
     override fun onStopListening() { listening = false; listen(); main.removeCallbacks(tick) }
-    override fun onClick() { if (act()) paint() }
+    override fun onClick() {
+        if (!act()) return
+        val f = flicker()
+        if (f.isNullOrEmpty()) { paint(); return }
+        // the result is already stored: the tile shows a few pictures, then settles on the real one
+        var i = 0
+        val step = object : Runnable { override fun run() { if (i < f.size) { frame = f[i++]; paint(); main.postDelayed(this, 80) } else { frame = null; paint() } } }
+        main.removeCallbacks(step); main.post(step)
+    }
 }
 
 @androidx.annotation.RequiresApi(24)
@@ -295,6 +306,7 @@ class DiceTile : ToolkitTile() {
     // a tap rolls in the panel; the tile shows the face that came up
     override fun act(): Boolean { prefs.edit().putInt("dice_last", (1..6).random()).apply(); return true }
     override val picture: Int? get() = prefs.getInt("dice_last", 0).takeIf { it in 1..6 }?.let { DICE_FACES[it - 1] }
+    override fun flicker(): List<Int> = List(7) { DICE_FACES.random() }
 }
 private val DICE_FACES = intArrayOf(R.drawable.ic_dice_1, R.drawable.ic_dice_2, R.drawable.ic_dice_3, R.drawable.ic_dice_4, R.drawable.ic_dice_5, R.drawable.ic_dice_6)
 @androidx.annotation.RequiresApi(24)
@@ -304,6 +316,9 @@ class CoinTile : ToolkitTile() {
     // stored in English (shared with the Toolkit page): heads is "tura" in Turkish, tails "yazı"
     override fun subtitleFor(values: FloatArray?): String? = prefs.getString("coin_last", null)?.let { tr(it, if (it == "Heads") "Tura" else "Yazı") }
     override fun act(): Boolean { prefs.edit().putString("coin_last", if ((0..1).random() == 0) "Heads" else "Tails").apply(); return true }
+    // the side that came up; before the first toss the tile shows heads
+    override val picture: Int? get() = if (prefs.getString("coin_last", "Heads") == "Tails") R.drawable.ic_coin_tails else R.drawable.ic_coin_heads
+    override fun flicker(): List<Int> = List(7) { if (it % 2 == 0) R.drawable.ic_coin_heads else R.drawable.ic_coin_tails }
 }
 @androidx.annotation.RequiresApi(24)
 class ScreenshotTile : ToolkitTile() {

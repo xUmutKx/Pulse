@@ -28,6 +28,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.IOException
@@ -102,6 +103,15 @@ object RelayHost {
         if (users == 0 && !background(c)) {
             node?.stop()
             runCatching { lock?.release() }; lock = null
+        }
+    }
+
+    /** For a share sheet that is closing: the node stays up until every transfer has ended, then lets go as [close] does. */
+    fun closeWhenIdle(c: Context) {
+        val app = c.applicationContext
+        scope.launch {
+            runCatching { node(app).transfers.first { list -> list.none { !it.status.isFinished } } }
+            close(app)
         }
     }
 
