@@ -379,6 +379,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             dotEnd = ch in "!?" || dotOk
             lastWasSpace = false
             if (ch in ".!?") lastCorrection = null
+            prevWord = null; prevWord2 = null
             afterText()
         }
     }
@@ -445,8 +446,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 lastWasSpace = false; punctTyped = false; afterText(); return
             }
         }
-        if (word.isEmpty() && KeyboardPrefs.quickPrediction && !st.plain && slotWords[1].isNotEmpty() && prevWord != null) {
-            c.commitText(slotWords[1] + " ", 1); prevWord = slotWords[1]; lastWasSpace = true; spaceTap = now; afterText(); return
+        // the predicted word is only added when the field really ends in the word we remember (not after a sign, a deleted word, a paste or a moved cursor):
+        // otherwise Space would write words the user never asked for
+        if (word.isEmpty() && KeyboardPrefs.quickPrediction && !st.plain && slotWords[1].isNotEmpty() && prevWord != null && c.getSelectedText(0).isNullOrEmpty()) {
+            val tail = c.getTextBeforeCursor(prevWord!!.length + 1, 0)?.toString().orEmpty()
+            val ends = tail.length == prevWord!!.length + 1 && tail.last() == ' ' && tail.dropLast(1).equals(prevWord, true)
+            if (ends && !punctTyped) {
+                c.commitText(slotWords[1] + " ", 1); prevWord = slotWords[1]; lastWasSpace = true; spaceTap = now; afterText(); return
+            }
         }
         // the correction and the space go in as one edit, so the field never shows the word gone for a moment
         if (!finishWord(" ", true, " ")) c.commitText(" ", 1)
@@ -501,6 +508,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+        // text was deleted that the remembered words may have belonged to: they are forgotten, so no old prediction is written back
+        prevWord = null; prevWord2 = null; lastCorrection = null; lastGlide = null
         updateCaps(); updateSuggestions()
     }
 
