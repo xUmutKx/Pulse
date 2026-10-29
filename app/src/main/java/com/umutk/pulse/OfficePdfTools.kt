@@ -62,8 +62,9 @@ private fun uriToTemp(ctx: Context, uri: Uri, ext: String): File {
     return f
 }
 
-private fun targetFile(name: String): File {
+private fun targetFile(name0: String): File {
     val dir = OfficePrefs.folder.apply { mkdirs() }
+    val name = name0
     var f = File(dir, "$name.pdf"); var n = 2
     while (f.exists()) f = File(dir, "$name ($n).pdf").also { n++ }
     return f
@@ -82,25 +83,19 @@ private fun parsePageRanges(text: String, count: Int): List<Int> {
     return out.toList()
 }
 
-private fun renderPageBitmap(r: PdfRenderer, i: Int): Bitmap {
+private fun renderPageBitmap(r: PdfRenderer, i: Int, renderW: Int = RENDER_W): Bitmap {
     val pg = r.openPage(i)
     try {
-        val h = (RENDER_W * pg.height.toFloat() / pg.width).toInt().coerceIn(1, 6000)
-        val b = Bitmap.createBitmap(RENDER_W, h, Bitmap.Config.ARGB_8888)
+        val h = (renderW * pg.height.toFloat() / pg.width).toInt().coerceIn(1, 7000)
+        val b = Bitmap.createBitmap(renderW, h, Bitmap.Config.ARGB_8888)
         b.eraseColor(android.graphics.Color.WHITE)
         pg.render(b, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
         return b
     } finally { pg.close() }
 }
 
-private fun PdfDocument.addBitmapPage(bm: Bitmap, pageNo: Int, maxW: Int = PDF_PAGE_W) {
-    val sc = maxW / bm.width.toFloat()
-    val page = startPage(PdfDocument.PageInfo.Builder(maxW, (bm.height * sc).toInt().coerceAtLeast(1), pageNo).create())
-    page.canvas.scale(sc, sc); page.canvas.drawBitmap(bm, 0f, 0f, null)
-    finishPage(page)
-}
-
 private fun pdfMerge(ctx: Context, uris: List<Uri>, outName: String): File {
+    val o = otOut(ctx)
     val pd = PdfDocument()
     try {
         var pageNo = 1
@@ -108,7 +103,7 @@ private fun pdfMerge(ctx: Context, uris: List<Uri>, outName: String): File {
             val tmp = uriToTemp(ctx, u, "pdf")
             val pfd = ParcelFileDescriptor.open(tmp, ParcelFileDescriptor.MODE_READ_ONLY)
             val r = PdfRenderer(pfd)
-            try { for (i in 0 until r.pageCount) { val bm = renderPageBitmap(r, i); pd.addBitmapPage(bm, pageNo++); bm.recycle() } }
+            try { for (i in 0 until r.pageCount) { val bm = renderPageBitmap(r, i, o.renderW); pd.addPicturePage(bm, pageNo++, o); bm.recycle() } }
             finally { r.close(); pfd.close(); tmp.delete() }
         }
         val out = targetFile(outName)
@@ -118,13 +113,14 @@ private fun pdfMerge(ctx: Context, uris: List<Uri>, outName: String): File {
 }
 
 private fun pdfSplit(ctx: Context, uri: Uri, pages: String, outName: String): File {
+    val o = otOut(ctx)
     val tmp = uriToTemp(ctx, uri, "pdf")
     val pfd = ParcelFileDescriptor.open(tmp, ParcelFileDescriptor.MODE_READ_ONLY)
     val r = PdfRenderer(pfd)
     val pd = PdfDocument()
     try {
         val idx = parsePageRanges(pages, r.pageCount).ifEmpty { (0 until r.pageCount).toList() }
-        idx.forEachIndexed { k, i -> val bm = renderPageBitmap(r, i); pd.addBitmapPage(bm, k + 1); bm.recycle() }
+        idx.forEachIndexed { k, i -> val bm = renderPageBitmap(r, i, o.renderW); pd.addPicturePage(bm, k + 1, o); bm.recycle() }
         val out = targetFile(outName)
         FileOutputStream(out).use { pd.writeTo(it) }
         return out
@@ -132,12 +128,13 @@ private fun pdfSplit(ctx: Context, uri: Uri, pages: String, outName: String): Fi
 }
 
 private fun imagesToPdf(ctx: Context, uris: List<Uri>, outName: String): File {
+    val o = otOut(ctx)
     val pd = PdfDocument()
     try {
         uris.forEachIndexed { k, u ->
             val bytes = ctx.contentResolver.openInputStream(u)?.use { it.readBytes() } ?: return@forEachIndexed
             val bm = BitmapFactory.decodeByteArray(bytes, 0, bytes.size) ?: return@forEachIndexed
-            pd.addBitmapPage(bm, k + 1); bm.recycle()
+            pd.addPicturePage(bm, k + 1, o); bm.recycle()
         }
         val out = targetFile(outName)
         FileOutputStream(out).use { pd.writeTo(it) }
@@ -162,27 +159,28 @@ fun PdfToolsPage(onBack: () -> Unit) {
     fun doJob(block: () -> File) {
         busy = true
         scope.launch {
-            val msg = try { val f = withContext(Dispatchers.IO) { block() }; ofOpen(ctx, f); tr("Saved: ${f.name}", "Kaydedildi: ${f.name}") }
+            val msg = try { val f = withContext(Dispatchers.IO) { block() }; if (OtPrefs.openAfter(ctx)) ofOpen(ctx, f); tr("Saved: ${f.name}", "Kaydedildi: ${f.name}") }
             catch (e: Throwable) { tr("Could not create the PDF: ${e.message ?: e.javaClass.simpleName}", "PDF oluşturulamadı: ${e.message ?: e.javaClass.simpleName}") }
             busy = false; Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show()
         }
     }
 
     val pickPdfs = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { us ->
-        if (us.size >= 2) { pickedUris = us; nameText = "Merged"; job = PdfJob.MERGE }
+        if (us.size >= 2) { pickedUris = us; nameText = OtPrefs.prefix(ctx).ifEmpty { "Merged" }; job = PdfJob.MERGE }
         else if (us.isNotEmpty()) Toast.makeText(ctx, tr("Pick two or more PDFs", "İki veya daha fazla PDF seç"), Toast.LENGTH_SHORT).show()
     }
     val pickPdfOne = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
-        if (u != null) { pickedUris = listOf(u); nameText = "Split"; rangeText = ""; job = PdfJob.SPLIT }
+        if (u != null) { pickedUris = listOf(u); nameText = OtPrefs.prefix(ctx).ifEmpty { "Split" }; rangeText = ""; job = PdfJob.SPLIT }
     }
     val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { us ->
-        if (us.isNotEmpty()) { pickedUris = us; nameText = "Images"; job = PdfJob.IMAGES }
+        if (us.isNotEmpty()) { pickedUris = us; nameText = OtPrefs.prefix(ctx).ifEmpty { "Images" }; job = PdfJob.IMAGES }
     }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
-            Text(tr("PDF Tools", "PDF araçları"), color = T.text, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+            PIcon("convert", T.accent, 24.dp)
+            Text(tr("PDF tools", "PDF araçları"), Modifier.padding(start = 8.dp), color = T.text, fontSize = 18.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
         }
         PCard {
             Text(tr("Pages are redrawn as pictures: great for combining scans and printouts, not for text-selectable results.",
