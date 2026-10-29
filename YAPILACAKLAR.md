@@ -1398,7 +1398,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 ### 10 Müzik
 - 🔴 10.1 Yedekte müzik/kapak çoğaltma yok
 - 🔴 10.2 Widget: yeniden boyutlandırmada düzen, kapağa/ada dokununca doğru oynatıcı, düğmeler gerçek durumu yönetir, 5 sn ileri/geri korunur, göster/gizle, ayar
-- 🔴 10.3 Yıldız dokunma alanı + %15 büyüt, ilerleme çubuğu akıcılığı
+- 🟡 10.3 (yıldızlar %15 büyütüldü, hap büyüdü; ilerleme çubuğu güncelleme sıklığı 400 ms'den 100 ms'ye indi) Yıldız dokunma alanı + %15 büyüt, ilerleme çubuğu akıcılığı
 - 🔴 10.4 Kitaplık arayüzü, daha çok ruh hâli etiketi, etiket görme/düzenleme, çevrimiçi etiket
 - 🔴 10.5 Çevrimiçi arama/çalma listesi: iki oynatıcı sorunu, gerçek sonuçlar
 - 🔴 10.6 Dinleme özeti (Wrapped benzeri): 3 aylık, aylık/yıllık, sanatçı/şarkı, süre, ruh hâli/tür, sayfalı tam ekran, görsel dışa aktarma, geçmiş yoksa kayıt tutma
@@ -1489,3 +1489,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.206 New tools: Radio (Extra apps: search the open station directory, pick a country, play through the music player so it goes on in the background with the media notification, favourites; a failed search says why) and Big text (Toolkit: a message across the whole screen in huge letters, still or running like a signboard, six colour pairs, screen stays on) (derlenmedi)
 - 1.0.207 Keyboard: a sign or a number typed right after a word no longer replaces the word: the word is closed where it stands and the sign is added after it as one batch (before, the commit relied on the app replacing the composing text, which some fields do wrongly: the word vanished or a second word appeared); with 1.0.185 the predicted word is no longer written after a sign or a number (derlenmedi)
 - 1.0.208 Keyboard: Backspace right after an automatic correction takes it back (the word as typed opens again) and that correction is remembered as unwanted, even for swapped letters, so the same word is not corrected again; no space is added by itself after a sign any more (off by default, also for those who had it on; the typing setting can turn it on again) (derlenmedi)
+- 1.0.209 Music: the Poweramp rating stars are 15 percent larger with a taller touch pill (44 dp, five cells of 34 dp), and the progress bars of the Material, Poweramp and music page players refresh 3 to 4 times as often, so they move smoothly (derlenmedi)
