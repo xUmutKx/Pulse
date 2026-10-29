@@ -40,7 +40,7 @@ android {
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
     lint { checkOnly += setOf("NewApi"); abortOnError = false; textReport = true; textOutput = file("lint-newapi.txt") }
     buildFeatures { compose = true; aidl = true }
-    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class") } // the last two: BouncyCastle ships them in several jars
 }
 
 dependencies {
