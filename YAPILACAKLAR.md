@@ -1449,7 +1449,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 
 ### 23-24 Genel kalite ve teslim
 - 🔴 23.0 Gereksiz yeniden çizim, ikon önbelleği, tema/vurgu ortaklaştırma, ANR/çökme, boyut
-- 🔴 24.0 Birim testleri (klavye noktalama/dil), tek sürüm derleme, sonuç raporu (APK konumu/boyut, bağımlılık-lisans, mimari)
+- 🟡 24.0 (klavye benzerlik/yer değiştirme birim testi eklendi) Birim testleri (klavye noktalama/dil), tek sürüm derleme, sonuç raporu (APK konumu/boyut, bağımlılık-lisans, mimari)
 - 1.0.185 Keyboard: Space no longer writes a predicted word unless the field really ends in the last word typed; after a sign or a delete the remembered words are dropped, so no deleted or extra word comes back after a full stop or comma (derlenmedi)
 - 1.0.186 Keyboard bar: long words get more room and the third suggestion steps aside when three would not fit, so words are not cut with dots; saved e-mail addresses are no longer offered in ordinary text fields (derlenmedi)
 - 1.0.187 Keyboard: a new "Direction keys" layout (Settings > Keyboard): nine big keys, a tap types the centre letter and a drag towards a corner or side types the character shown there (English and Turkish letters, shift/caps/copy/cut/paste/undo/redo by swipe, emoji key with settings/menu/language/voice swipes, backspace with repeat, space with cursor drag) (derlenmedi)
@@ -1502,3 +1502,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.219 App history: a tap on an app sets a daily time limit (off, 15 min to 3 h); when the time is up the App lock helper sends the phone back to the home screen with a message, until midnight (needs usage access and the helper; background music and downloads go on) (derlenmedi)
 - 1.0.220 App history: the download icon saves the shown range as a CSV (app, package, category as the app declares it, minutes, total) in Download/Pulse (derlenmedi)
 - 1.0.221 Save as dialog: explicit text/button colours and window panel colour so AMOLED no longer shows grey/white (derlenmedi)
+- 1.0.222 Keyboard unit test (isSwap/similar); Gamepad size slider in keyboard settings; Music recap mood+genre page (7th); Extra apps list keeps its scroll; Paint paper colour (File menu, Windows looks) (derlenmedi)

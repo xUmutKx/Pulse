@@ -75,7 +75,7 @@ object PlayLog {
 
 private val DEEP = Color(0xFF14102B); private val VIOLET = Color(0xFF7C4DFF); private val PINK = Color(0xFFFF4F9A); private val LIME = Color(0xFFC6FF3D); private val SOFT = Color(0xFFEDE7FF)
 
-class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long)
+class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList())
 
 private fun makeRecap(c: Context, days: Int): Recap {
     val from = System.currentTimeMillis() - days * 86_400_000L
@@ -91,7 +91,16 @@ private fun makeRecap(c: Context, days: Int): Recap {
         hour[h] += x.ms; part[when { h in 6..11 -> 0; h in 12..17 -> 1; h in 18..22 -> 2; else -> 3 }] += x.ms
         day[(cal.get(Calendar.DAY_OF_WEEK) + 5) % 7] += x.ms
     }
-    return Recap(from, minutes, e.count { it.counted }, artists, songs, part.toList(), day.toList(), hour.indices.maxByOrNull { hour[it] } ?: 0, PlayLog.since(c))
+    // mood and genre come from the tags of the songs that are in the library now; a song that is gone from it is left out
+    val byPath = com.umutk.pulse.extras.music.MusicLibrary.tracks.value.associateBy { it.path }
+    val mood = HashMap<String, Long>(); val genre = HashMap<String, Long>()
+    e.forEach { x ->
+        val t = byPath[x.path] ?: return@forEach
+        com.umutk.pulse.extras.music.Recommendations.moodsOf(t).forEach { m -> mood[m] = (mood[m] ?: 0L) + x.ms }
+        t.genre?.trim()?.takeIf { it.isNotEmpty() }?.let { g -> genre[g] = (genre[g] ?: 0L) + x.ms }
+    }
+    return Recap(from, minutes, e.count { it.counted }, artists, songs, part.toList(), day.toList(), hour.indices.maxByOrNull { hour[it] } ?: 0, PlayLog.since(c),
+        mood.toList().sortedByDescending { it.second }.take(5), genre.toList().sortedByDescending { it.second }.take(5))
 }
 
 /** The card as a picture (1080 x 1920): the figures of the recap on a dark violet ground. Saved as a PNG in Download/Pulse. */
@@ -129,7 +138,7 @@ fun RecapScreen(back: () -> Unit) {
     BackHandler { back() }
     var days by remember { mutableIntStateOf(90) }
     val r = remember(days) { makeRecap(ctx, days) }
-    val pager = rememberPagerState { 6 }
+    val pager = rememberPagerState { 7 }
     val scope = rememberCoroutineScope()
     var saved by remember { mutableStateOf("") }
     val label = when (days) { 30 -> tr("Last 30 days", "Son 30 gün"); 365 -> tr("Last year", "Son bir yıl"); else -> tr("Last 3 months", "Son 3 ay") }
@@ -145,7 +154,7 @@ fun RecapScreen(back: () -> Unit) {
             }
             // the dots of the pages
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.Center) {
-                repeat(6) { i -> Box(Modifier.padding(horizontal = 3.dp).size(if (pager.currentPage == i) 18.dp else 7.dp, 7.dp).clip(RoundedCornerShape(4.dp)).background(if (pager.currentPage == i) LIME else Color.White.copy(alpha = .25f))) }
+                repeat(7) { i -> Box(Modifier.padding(horizontal = 3.dp).size(if (pager.currentPage == i) 18.dp else 7.dp, 7.dp).clip(RoundedCornerShape(4.dp)).background(if (pager.currentPage == i) LIME else Color.White.copy(alpha = .25f))) }
             }
             HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { page ->
                 Column(Modifier.fillMaxSize().padding(28.dp), verticalArrangement = Arrangement.Center) {
@@ -205,6 +214,23 @@ fun RecapScreen(back: () -> Unit) {
                                 r.byDay.forEachIndexed { i, v -> Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                                     Box(Modifier.fillMaxWidth().height((8 + 56 * v / mx.toFloat()).dp).clip(RoundedCornerShape(4.dp)).background(if (v == mx) LIME else PINK.copy(alpha = .7f)))
                                     Text(dn[i], color = SOFT.copy(alpha = .6f), fontSize = 11.sp) } }
+                            }
+                        }
+                        5 -> {
+                            Text(tr("Mood and genre", "Ruh hâli ve tür"), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                            if (r.moods.isEmpty() && r.genres.isEmpty()) Text(tr("The tags of the songs say nothing yet.", "Şarkıların etiketleri henüz bir şey söylemiyor."), color = SOFT.copy(alpha = .7f), fontSize = 15.sp, modifier = Modifier.padding(top = 10.dp))
+                            listOf(r.moods to true, r.genres to false).forEach { (rows, isMood) ->
+                                if (rows.isNotEmpty()) {
+                                    val top = rows.first().second.coerceAtLeast(1L)
+                                    Text(if (isMood) tr("Mood", "Ruh hâli") else tr("Genre", "Tür"), color = SOFT.copy(alpha = .6f), fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
+                                    rows.forEachIndexed { i, (n, ms) ->
+                                        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                            Text(n.replaceFirstChar { it.uppercase() }, color = SOFT, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.size(width = 110.dp, height = 20.dp))
+                                            Box(Modifier.weight(1f).height(10.dp).clip(RoundedCornerShape(5.dp)).background(Color.White.copy(alpha = .1f))) { Box(Modifier.fillMaxWidth(ms / top.toFloat()).fillMaxHeight().background(if (i == 0) LIME else VIOLET)) }
+                                            Text(" ${ms / 60_000L} " + tr("min", "dk"), color = SOFT.copy(alpha = .7f), fontSize = 12.sp)
+                                        }
+                                    }
+                                }
                             }
                         }
                         else -> {
