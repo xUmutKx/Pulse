@@ -671,6 +671,15 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+        <!-- "Pulse · Relay" in the system Share list: files, text and links to a paired Relay device (extras/relay/RelayShareActivity.kt) -->
+        <activity android:name="com.umutk.pulse.extras.relay.RelayShareActivity" android:exported="true" android:label="Pulse · Relay" android:icon="@drawable/ic_qs_localsend" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
         <service android:name="com.umutk.pulse.FloatingKeysTile" android:exported="true" android:label="Floating keys" android:icon="@drawable/ic_qs_keys"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
