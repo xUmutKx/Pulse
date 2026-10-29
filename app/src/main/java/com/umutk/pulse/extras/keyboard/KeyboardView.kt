@@ -605,10 +605,10 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     Box {
     Row(Modifier.fillMaxWidth()) {
         if (low && st.page == 0) Key(th, st, act, KbKey("", KeyKind.SHIFT, 1f), bh)
-        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, if (low) 1.0f else 1.2f), bh)
+        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, (if (low) 1.0f else 1.2f) * (1f - KeyboardPrefs.modeShrink / 100f)), bh)
         // the key beside ?123: the three-dot menu, the emoji panel, or nothing (the emoji stay under a long press on the comma)
         if (KeyboardPrefs.bottomKey != "none" && st.page == 0) Key(th, st, act, KbKey("", if (KeyboardPrefs.bottomKey == "emoji") KeyKind.EMOJI else KeyKind.MENU, 1f), bh)
-        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.bottomKey == "emoji") KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), bh)
+        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f - KeyboardPrefs.commaShrink / 100f, if (KeyboardPrefs.bottomKey == "emoji") KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), bh)
         Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, if (low) 4.25f else 4.3f), bh)
         Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), bh)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), bh)

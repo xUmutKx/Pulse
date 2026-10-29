@@ -30,6 +30,10 @@ object KeyboardPrefs {
     var sidePad by mutableStateOf(2)
     var bottomPad by mutableStateOf(0)
     var keyGap by mutableStateOf(3)
+    /** The ?123 key is this many percent narrower than its normal width; the space bar takes the room. */
+    var modeShrink by mutableStateOf(15)
+    /** The comma key is this many percent narrower; the space bar takes the room. */
+    var commaShrink by mutableStateOf(10)
     /** off, left, right: a narrower keyboard pushed to one side. */
     var oneHand by mutableStateOf("off")
 
@@ -133,7 +137,7 @@ object KeyboardPrefs {
         cBg = p.getInt("cBg", cBg); cKey = p.getInt("cKey", cKey); cText = p.getInt("cText", cText); cSpecial = p.getInt("cSpecial", cSpecial)
         cAccent = p.getInt("cAccent", cAccent); cMenu = p.getInt("cMenu", cMenu); cRadius = p.getInt("cRadius", cRadius)
         heightPct = p.getInt("heightPct", heightPct); autoRatio = p.getInt("autoRatio", autoRatio); autoLevel = p.getInt("autoLevel", autoLevel); sidePad = p.getInt("sidePad", sidePad); bottomPad = p.getInt("bottomPad", bottomPad)
-        keyGap = p.getInt("keyGap", keyGap); oneHand = p.getString("oneHand", oneHand) ?: oneHand
+        keyGap = p.getInt("keyGap", keyGap); modeShrink = p.getInt("modeShrink", modeShrink); commaShrink = p.getInt("commaShrink", commaShrink); oneHand = p.getString("oneHand", oneHand) ?: oneHand
         langs = p.getString("langs", langs) ?: langs
         numberRow = p.getBoolean("numberRow", numberRow); arrows = p.getBoolean("arrows", arrows); emojiKey = p.getBoolean("emojiKey", emojiKey); bottomKey = p.getString("bottomKey2", null) ?: "emoji"
         largeText = p.getBoolean("largeText", largeText); keyPopups = p.getBoolean("keyPopups", keyPopups)
@@ -191,7 +195,7 @@ object KeyboardPrefs {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit()
             .putString("theme", theme)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
-            .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putString("oneHand", oneHand)
+            .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
             .putString("langs", langs).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
@@ -214,7 +218,7 @@ object KeyboardPrefs {
     fun factoryReset(c: Context) {
         c.getSharedPreferences(FILE, Context.MODE_PRIVATE).edit().clear().apply()
         loaded = false
-        theme = "amoled"; heightPct = 110; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; oneHand = "off"; langs = "tr,en"
+        theme = "amoled"; heightPct = 110; autoRatio = 80; autoLevel = 1; sidePad = 2; bottomPad = 0; keyGap = 3; modeShrink = 15; commaShrink = 10; oneHand = "off"; langs = "tr,en"
         numberRow = false; arrows = false; emojiKey = true; bottomKey = "emoji"; largeText = false; keyPopups = true; longPressSymbols = true; spaceLabel = true
         suggestions = true; autocorrect = true; undoOnBackspace = true; quickPrediction = false; quickPeriod = true; autoCap = true; autoSpace = true
         cursorControl = true; quickDelete = true; emojiPredictions = true; learn = true; learnMode = 3; autoLang = true; glide = true; flick = true; anim = true; proRow = true; proKeys = ExtraKeys.DEFAULT; proBottom = true; proIcons = true; split = false; floating = false; floatX = .5f; menuItems = ExtraKeys.DEFAULT_MENU; toolbarItems = ExtraKeys.DEFAULT_TOOLBAR; haptic = true; bright = 100; bottomBright = 100; topBright = 100; bottomShift = false; dirLayout = false; keyFx = 0; boardFx = 0; motionFx = 0; soundKind = 0; rgb = 0; hapticMs = 8; sound = false
