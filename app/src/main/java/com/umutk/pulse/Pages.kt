@@ -187,6 +187,7 @@ fun HistoryPage() {
     var screenOnly by remember { mutableStateOf(false) }
     // the range shown: today, the last 7 days, the last 30 days
     var range by remember { mutableStateOf(1) }
+    var limitFor by remember { mutableStateOf<Pair<String, String>?>(null) }
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e ->
@@ -203,6 +204,7 @@ fun HistoryPage() {
     }
     LaunchedEffect(Unit) { while (true) { notes = NoteCount.today(ctx); delay(5000) } }
     val total = rows.sumOf { it.ms }
+    limitFor?.let { (pk, lb) -> com.umutk.pulse.applock.AppLimitDialog(pk, lb) { limitFor = null } }
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.weight(1f)) { Header("App history", when (range) { 1 -> tr("today", "bugün"); 7 -> tr("7 days", "7 gün"); else -> tr("30 days", "30 gün") }) }
@@ -238,10 +240,12 @@ fun HistoryPage() {
             LazyColumn(Modifier.weight(1f)) {
                 item { Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { DonutChart(slices, Modifier.fillMaxWidth(), centerText = hms(total)) } }
                 items(rows.take(80), key = { it.pkg }) { r ->
-                    Column(Modifier.padding(vertical = 6.dp)) {
+                    // a tap sets a daily time limit for the app
+                    Column(Modifier.clickable { limitFor = r.pkg to r.label }.padding(vertical = 6.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             AppIcon(r.pkg, 26.dp); Spacer(Modifier.width(8.dp))
                             Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
+                            if (com.umutk.pulse.applock.AppLimits.minutes(ctx, r.pkg) > 0) { PIcon("timer", Look.accent, 16.dp); Spacer(Modifier.width(6.dp)) }
                             Text(hms(r.ms), color = T.sub, fontSize = 13.sp)
                         }
                         BarMeter(r.ms.toFloat() / top, Look.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
