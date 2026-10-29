@@ -2296,7 +2296,11 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
         targets = withContext(Dispatchers.IO) {
             val pm = ctx.packageManager
             runCatching {
-                pm.queryIntentActivities(sendIntent(files), 0).distinctBy { it.activityInfo.packageName }.take(12).map { ri ->
+                pm.queryIntentActivities(sendIntent(files), 0).distinctBy { it.activityInfo.packageName }
+                    // the nearby-device senders come first: Pulse's LocalSend, the LocalSend app, Quick Share
+                    .sortedBy { ri -> val n = ri.activityInfo.name; val pk = ri.activityInfo.packageName
+                        when { n.endsWith("LocalSendShareActivity") -> 0; pk == "org.localsend.localsend_app" -> 1; n.contains("nearby.sharing") -> 2; pk == "com.samsung.android.app.sharelive" -> 3; else -> 4 } }
+                    .take(12).map { ri ->
                     ShareTarget(ri.loadLabel(pm).toString(), runCatching { ri.loadIcon(pm).toBitmap(96, 96).asImageBitmap() }.getOrNull(),
                         android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.name))
                 }
@@ -2323,6 +2327,10 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
                 if (files.isNotEmpty()) add(Triple("share", tr("Share the files", "Dosyaları paylaş")) {
                     val ok = if (files.size == 1) exHandOver(ctx, files[0], true) else exShareMany(ctx, files)
                     done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not share", "Paylaşılamadı"))
+                })
+                if (files.isNotEmpty()) add(Triple("wifi", tr("Nearby devices (LocalSend)", "Yakındaki cihazlar (LocalSend)")) {
+                    val ok = runCatching { ctx.startActivity(sendIntent(files).setClassName(ctx, "com.umutk.pulse.extras.localsend.LocalSendShareActivity")) }.isSuccess
+                    done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not open LocalSend", "LocalSend açılamadı"))
                 })
                 add(Triple("archive", tr("Share as one zip (folders too)", "Tek zip olarak paylaş (klasörler dahil)")) {
                     note(tr("Zipping…", "Zipleniyor…"))
