@@ -591,7 +591,7 @@ private fun ofFileItems(acts: List<OAct>, onBack: () -> Unit, showInfo: () -> Un
     val ops = LocalOfFile.current ?: return emptyList()
     fun isClose(a: OAct) = a.label == "Close" || a.label == tr("Close", "Kapat")
     val own = acts.filter { it.group == "File" }.map { a ->
-        if (a.label == "Save" || a.label == tr("Save", "Kaydet")) OAct(a.label, a.group, a.icon, a.on, a.enabled && ops.dirty(), a.png, a.click) else a
+        if (a.label == "Save" || a.label == tr("Save", "Kaydet")) OAct(a.label, a.group, a.icon, a.on, a.enabled && ops.dirty(), a.png, a.cap, a.click) else a
     }
     val extra = buildList {
         val cp = own.firstOrNull { it.label == "Save a copy" || it.label == tr("Save a copy", "Kopya kaydet") }
