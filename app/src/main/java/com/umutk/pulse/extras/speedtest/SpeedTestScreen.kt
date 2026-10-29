@@ -32,6 +32,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -61,7 +62,9 @@ private fun scaleFor(v: Float): Float = listOf(10f, 25f, 50f, 100f, 250f, 500f, 
 @Composable
 fun SpeedTestScreen(back: () -> Unit) {
     val ctx = LocalContext.current
-    BackHandler { back() }
+    var showHistory by remember { androidx.compose.runtime.mutableStateOf(false) }
+    BackHandler { if (showHistory) showHistory = false else back() }
+    if (showHistory) { SpeedHistoryPage(back = { showHistory = false }); return }
     val s by SpeedTest.state.collectAsState()
     val last = remember { SpeedResult.last(ctx) }
     val busy = s.phase == "ping" || s.phase == "down" || s.phase == "up"
@@ -79,7 +82,10 @@ fun SpeedTestScreen(back: () -> Unit) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
             Text(tr("Speed test", "Hız testi"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Box(Modifier.size(40.dp).clickable { showHistory = true }, contentAlignment = Alignment.Center) { PIcon("history", T.text, 22.dp) }
         }
+        // a failed test says why
+        if (s.phase == "error" && s.why.isNotBlank()) Text(s.why, color = Color(0xFFE5484D), fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
         // the dial
         Box(Modifier.fillMaxWidth().padding(top = 8.dp).aspectRatio(1.35f), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
@@ -167,5 +173,54 @@ private fun Stat(label: String, value: String, unit: String, modifier: Modifier,
         Text(label, color = T.sub, fontSize = 12.sp)
         Text(value, color = if (tint == Color.Unspecified) T.text else tint, fontSize = 26.sp, fontWeight = FontWeight.Light)
         if (unit.isNotEmpty()) Text(unit, color = T.sub, fontSize = 11.sp)
+    }
+}
+
+
+/** The saved tests, one day at a time: the arrows go to the day before and after, each test shows its ping, download and upload, and one can be deleted. */
+@Composable
+private fun SpeedHistoryPage(back: () -> Unit) {
+    val ctx = LocalContext.current
+    var rev by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val all = remember(rev) { SpeedHistory.all(ctx).sortedByDescending { it.time } }
+    val dayFmt = remember { java.text.SimpleDateFormat("EEEE, d MMMM yyyy", java.util.Locale.getDefault()) }
+    val keyFmt = remember { java.text.SimpleDateFormat("yyyyMMdd", java.util.Locale.US) }
+    val timeFmt = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()) }
+    val days = remember(all) { all.map { keyFmt.format(java.util.Date(it.time)) }.distinct() }
+    var idx by remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val cur = idx.coerceIn(0, (days.size - 1).coerceAtLeast(0))
+    val list = if (days.isEmpty()) emptyList() else all.filter { keyFmt.format(java.util.Date(it.time)) == days[cur] }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
+            Text(tr("Past tests", "Geçmiş testler"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            if (all.isNotEmpty()) Box(Modifier.size(40.dp).clickable { SpeedHistory.clear(ctx); rev++ }, contentAlignment = Alignment.Center) { PIcon("delete", T.sub, 22.dp) }
+        }
+        if (days.isEmpty()) { Text(tr("No test has been saved yet.", "Henüz kaydedilmiş test yok."), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(16.dp)); return@Column }
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            // the list is newest first: the left arrow goes to the older day
+            Box(Modifier.size(44.dp).clickable(enabled = cur < days.size - 1) { idx = cur + 1 }, contentAlignment = Alignment.Center) { PIcon("back", if (cur < days.size - 1) T.text else T.sub.copy(alpha = .35f), 22.dp) }
+            Text(dayFmt.format(java.util.Date(list.first().time)), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, textAlign = TextAlign.Center, modifier = Modifier.weight(1f))
+            Box(Modifier.size(44.dp).clickable(enabled = cur > 0) { idx = cur - 1 }, contentAlignment = Alignment.Center) { PIcon("back", if (cur > 0) T.text else T.sub.copy(alpha = .35f), 22.dp, Modifier.rotate(180f)) }
+        }
+        PCard {
+            Row(Modifier.fillMaxWidth()) {
+                Stat(tr("Download", "İndirme"), fmtSpeed(list.map { it.down }.average().toFloat()), tr("average", "ortalama"), Modifier.weight(1f), Color(0xFF29B6F6))
+                Stat(tr("Upload", "Yükleme"), fmtSpeed(list.map { it.up }.average().toFloat()), tr("average", "ortalama"), Modifier.weight(1f), Color(0xFF66BB6A))
+                Stat(tr("Ping", "Ping"), "%.0f".format(list.map { it.pingMs }.average()), "ms", Modifier.weight(1f))
+            }
+        }
+        list.forEach { r ->
+            PCard {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(timeFmt.format(java.util.Date(r.time)) + (if (r.isp.isNotBlank()) "  ·  " + r.isp else ""), color = T.sub, fontSize = 12.sp, maxLines = 1)
+                        Text("↓ ${fmtSpeed(r.down)}   ↑ ${fmtSpeed(r.up)}   ${"%.0f".format(r.pingMs)} ms", color = T.text, fontSize = 15.sp)
+                    }
+                    Box(Modifier.size(36.dp).clickable { SpeedHistory.remove(ctx, r.time); rev++ }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 18.dp) }
+                }
+            }
+        }
+        Spacer(Modifier.height(24.dp))
     }
 }

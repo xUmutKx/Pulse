@@ -1392,7 +1392,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟡 8.1 Mağaza: yalnız indirilenler (yapıldı); kurulu → aç, kurulu değil → Download, güncelleme bilgisi/sürüm karşılaştırma, APKMirror doğrudan sayfa
 
 ### 9 Toolkit
-- 🔴 9.1 İnternet hız testi Toolkit'e taşınır (indirme/yükleme/gecikme, kayıt, geçmiş sayfası, hata), Quick Panel kısayolu
+- 🟡 9.1 Hız testi: geçmiş sayfası (günlük gezinme, ortalama, silme), kayıtlı sonuçlar, hata nedeni yapıldı; Toolkit içine taşıma ve Quick Panel kısayolu (karo var) açık
 - 🔴 9.2 Yüzen sayaç: küçük, geri sayım, başlat/duraklat/devam/sıfırla/kapat, görünüm, saydamlık, konum korunması
 
 ### 10 Müzik
@@ -1470,3 +1470,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.193 Settings: a "Keep permissions" switch (Android's permission auto-reset exemption: written with root, otherwise the system screen opens); Notification history uses a clock icon in the app list (derlenmedi)
 - 1.0.194 Keyboard learning: choose what is learned (words, sentences, both, off); a Learned words list with search, delete, add by hand, copy out and paste in (derlenmedi)
 - 1.0.195 Keyboard: the language of a sentence is worked out from its words (two words of one language and twice the other's votes), so Turkish sentences are corrected as Turkish and one English word changes nothing; a switch turns the detection off (derlenmedi)
+- 1.0.196 Speed test: every finished test is saved; a history page (the clock icon) goes day by day with the averages and a delete for each test; a failed test says why (no internet, timeout, secure connection) (derlenmedi)
