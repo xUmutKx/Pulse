@@ -364,7 +364,15 @@ class LockService : AccessibilityService() {
         windows.any { w -> w.type != AccessibilityWindowInfo.TYPE_INPUT_METHOD && w.type != AccessibilityWindowInfo.TYPE_ACCESSIBILITY_OVERLAY && w.root?.packageName?.toString() == pkg }
     }.getOrDefault(false)
 
+    private var limitNote = 0L
     private fun onForeground(pkg: String) {
+        // a daily time limit used up: back to the home screen at once, with a short message
+        if (pkg != packageName && AppLimits.exceeded(this, pkg)) {
+            performGlobalAction(GLOBAL_ACTION_HOME)
+            val now = SystemClock.elapsedRealtime()
+            if (now - limitNote > 4000L) { limitNote = now; main.post { android.widget.Toast.makeText(this, com.umutk.pulse.tr("The time limit of this app is used up for today", "Bu uygulamanın bugünkü süre sınırı doldu"), android.widget.Toast.LENGTH_LONG).show() } }
+            return
+        }
         lastPolled = pkg   // else reopening the app the poll saw last (after an event-only visit elsewhere) was taken for "already in front"
         if (spec != null && pkg in never) return   // the launcher's own events during the first 0.7 s must not take the guessed lock away
         if (pkg != current) {
