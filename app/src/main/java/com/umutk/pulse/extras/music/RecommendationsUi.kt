@@ -126,6 +126,12 @@ private fun title(p: Pick): String = when (p) {
         "chill" -> tr("Chill mix", "Sakin mix")
         "focus" -> tr("Focus mix", "Odak mix")
         "happy" -> tr("Happy mix", "Neşeli mix")
+        "sad" -> tr("Sad mix", "Hüzünlü mix")
+        "calm" -> tr("Calm mix", "Dingin mix")
+        "nostalgic" -> tr("Nostalgic mix", "Nostaljik mix")
+        "romantic" -> tr("Romantic mix", "Romantik mix")
+        "angry" -> tr("Angry mix", "Öfkeli mix")
+        "dreamy" -> tr("Dreamy mix", "Hayalci mix")
         else -> tr("Daily mix", "Günlük mix")
     }
 }
@@ -157,7 +163,7 @@ private fun Tile(
 
 
 /** The moods the mix maker offers; the keys are the ones [Recommendations.moodsOf] returns. */
-private val MIX_MOODS = listOf("energetic" to ("Energetic" to "Enerjik"), "chill" to ("Chill" to "Sakin"), "focus" to ("Focus" to "Odak"), "happy" to ("Happy" to "Neşeli"))
+private val MIX_MOODS = listOf("energetic" to ("Energetic" to "Enerjik"), "chill" to ("Chill" to "Sakin"), "focus" to ("Focus" to "Odak"), "happy" to ("Happy" to "Neşeli"), "sad" to ("Sad" to "Hüzünlü"), "calm" to ("Calm" to "Dingin"), "nostalgic" to ("Nostalgic" to "Nostaljik"), "romantic" to ("Romantic" to "Romantik"), "angry" to ("Angry" to "Öfkeli"), "dreamy" to ("Dreamy" to "Hayalci"))
 private val MIX_SOURCES = listOf("all" to ("Everything" to "Hepsi"), "fav" to ("Favourites" to "Favoriler"), "rated" to ("Best rated" to "En yüksek puanlı"), "top" to ("Most played" to "En çok çalınan"), "fresh" to ("Not heard lately" to "Uzun süredir dinlenmeyen"))
 
 /** The mix maker at the bottom of the home: pick moods, where the songs come from and how many, and a queue is made and played. */
