@@ -370,6 +370,14 @@ private fun StoreDetail(
 /** [place]: "app:<alias>" or "tool:<id>" when the row has a switch for being listed in the right-hand ⋮ menu (Extra apps). */
 private class BuiltinRow(val name: String, val sub: String, val icon: String, val place: String? = null, val onClick: () -> Unit)
 
+/** The icon key of a row: in Windows 11 the Fluent picture of the tool or app ("tool:clock" -> tool_clock, "app:BrowserLauncher" -> extraBrowser), else the row's own key. */
+private fun rowKey(r: BuiltinRow): String {
+    if (!(T.id == "win11" && !T.material)) return r.icon
+    val p = r.place ?: return r.icon
+    val k = if (p.startsWith("tool:")) "tool_" + p.removePrefix("tool:") else "extra" + p.removePrefix("app:").removeSuffix("Launcher")
+    return if (com.umutk.pulse.FluentFilled.map.containsKey(k) || com.umutk.pulse.FluentPaths.map.containsKey(k)) k else r.icon
+}
+
 /** The rows of the Extra apps list the user hid (a long press on a row): kept by their place key, or the name when a row has none. */
 object ExtraRowsHidden {
     private fun sp(c: android.content.Context) = c.getSharedPreferences("store_rows", android.content.Context.MODE_PRIVATE)
@@ -444,7 +452,7 @@ private fun BuiltinRows() {
                     hidden = if (isHidden) hidden - key else hidden + key
                     ExtraRowsHidden.save(ctx, hidden)
                 }).alpha(if (isHidden) .45f else 1f).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    PIcon(r.icon, T.text, 34.dp)
+                    PIcon(rowKey(r), T.text, 34.dp)
                     Text(r.name, color = T.text, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
                 }
             }
@@ -457,7 +465,7 @@ private fun BuiltinRows() {
             hidden = if (isHidden) hidden - key else hidden + key
             ExtraRowsHidden.save(ctx, hidden)
         }).alpha(if (isHidden) .45f else 1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon(r.icon, T.text, 26.dp)
+            PIcon(rowKey(r), T.text, 26.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
