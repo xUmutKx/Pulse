@@ -28,6 +28,12 @@ class InstallActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Cfg.load(this); Opt.load(this); Installer.load(this); InstallShow.load(this)
+        // several APKs from Files: one floating window for all of them
+        val many = intent.getStringArrayListExtra("apks")
+        if (many != null && many.isNotEmpty()) {
+            setContent { LookHost(transparent = true) { Box(Modifier.fillMaxSize()) { InstallMultiWindow(many, intent.getStringExtra("look")) { finish() } } } }
+            return
+        }
         val uri = intent.data
         if (uri == null) { finish(); return }
         setContent {
