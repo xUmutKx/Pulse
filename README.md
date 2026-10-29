@@ -285,6 +285,7 @@ The APK is written to `app/build/outputs/apk/release/`. Every build (GitHub Acti
 - **Shizuku API** (MIT, copyright RikkaW). The licence text is in `app/src/main/assets/licenses/`.
 - **SD Maid SE** (GPL-3.0, darken). The folder lists of the cleaner (`app/src/main/assets/expendables/*.json`) are taken from its rule files; the GalaxyBudsClient protocol notes (GPL-3.0, ThePBone) are used the same way.
 - **Motion cues** by David Ventura (GPL-3.0-only, https://github.com/davidv/motion-sickness-app). The sensor fusion and the dot field of Pulse's Motion cues are adapted from it.
+- **WattFlow** (MIT, copyright William / EzyAppCo). The way the battery power is read (voltage times current, with the mA/µA and sign corrections) in the Charging power tool follows it. The licence text is in `app/src/main/assets/licenses/wattflow-LICENSE.txt`.
 - **Windows XP icon pack** by Matt Pettit (CC0 1.0, public domain dedication). The XP theme's Apps, Download, Heart, Phone and Startup icons come from it, resized to 48 px. The licence text is in `app/src/main/assets/licenses/xp-icons-LICENSE.txt`.
 - **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
 
