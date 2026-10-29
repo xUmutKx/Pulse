@@ -30,3 +30,10 @@
 -keep class com.umutk.pulse.extras.blackout.Status { *; }
 -keep class com.umutk.pulse.extras.blackout.AppWatch { *; }
 -dontwarn de.robv.android.xposed.**
+
+# Relay (extras/relay): kotlinx.serialization serializers of the protocol, and the optional classes BouncyCastle only touches when present
+-keepclassmembers class com.vythera.relay.** { *** Companion; }
+-keepclasseswithmembers class com.vythera.relay.** { kotlinx.serialization.KSerializer serializer(...); }
+-keep,includedescriptorclasses class com.vythera.relay.**$$serializer { *; }
+-dontwarn org.bouncycastle.**
+-dontwarn javax.naming.**

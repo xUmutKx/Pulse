@@ -3,6 +3,7 @@ package com.umutk.pulse
 /** Fluent System Icons (MIT, Microsoft) 24px filled glyphs of the Apps card and its pages: Windows 11 shows these solid, not as outlines. */
 object FluentFilled {
     val map: Map<String, List<String>> = mapOf(
+        "tool_relay" to listOf("M3 7.2 H14 V4.5 L21 8.5 L14 12.5 V9.8 H3 Z M21 16.2 H10 V13.5 L3 17.5 L10 21.5 V18.8 H21 Z"),
         "tool_clock" to listOf("M12 2 A10 10 0 1 1 12 22 A10 10 0 1 1 12 2 Z M11 6 L11 12.4 L15.2 14.9 L15.9 13.7 L13 12 L13 6 Z"),
         "tool_radio" to listOf("M14.3 2.8 L15.3 4.3 L9.6 8 L7 8 Z M5 8 H19 A2 2 0 0 1 21 10 V19 A2 2 0 0 1 19 21 H5 A2 2 0 0 1 3 19 V10 A2 2 0 0 1 5 8 Z M9 11.3 A3.2 3.2 0 1 0 9 17.7 A3.2 3.2 0 1 0 9 11.3 Z M14 12 L14 13.6 L18 13.6 L18 12 Z M14 15.6 L14 17.2 L18 17.2 L18 15.6 Z"),
         "tool_recap" to listOf("M3 12 H7 V21 H3 Z M10 3 H14 V21 H10 Z M17 8 H21 V21 H17 Z"),
@@ -88,6 +89,7 @@ object FluentFilled {
         "extraLauncher", "tool_launcher", "tool_toolkit", "tool_troubleshoot", "page_services", "page_details" -> 0xFF5B6B7A
         "tool_applock", "page_recycle" -> 0xFFC239B3
         "tool_clock" -> 0xFF0F6CBD
+        "tool_relay" -> 0xFF0F7B6C
         "tool_radio" -> 0xFFE3008C
         "tool_recap" -> 0xFF6B69D6
         "tool_chargewatts" -> 0xFFF2B01E

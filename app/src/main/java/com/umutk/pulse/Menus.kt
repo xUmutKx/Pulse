@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Equalizer
 import androidx.compose.material.icons.outlined.Radio
+import androidx.compose.material.icons.outlined.SyncAlt
 import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Apps
@@ -154,6 +155,7 @@ object ToolPlace {
         Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "extra"),
         Tool("clock", "Clock", "Saat", "clock", true, "timer", Icons.Outlined.AccessTime, "extra"),
         Tool("radio", "Radio", "Radyo", "radio", true, "volume", Icons.Outlined.Radio, "extra"),
+        Tool("relay", "Relay", "Relay", "relay", true, "send", Icons.Outlined.SyncAlt, "extra"),
         Tool("recap", "Music recap", "Müzik özeti", "recap", true, "heart", Icons.Outlined.Equalizer, "extra"),
         Tool("speedtest", "Internet speed test", "İnternet hız testi", "speedtest", true, "speed", Icons.Outlined.Speed, "extra"),
         Tool("chargewatts", "Charging power", "Şarj gücü", "chargewatts", true, "power", Icons.Outlined.BatteryChargingFull, "extra"),
