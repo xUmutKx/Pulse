@@ -683,7 +683,7 @@ private fun SoundModeTool() {
 }
 
 @Composable
-private fun StopwatchTool() {
+internal fun StopwatchTool() {
     val ctx = LocalContext.current
     var running by remember { mutableStateOf(Stopwatch.running(ctx)) }
     var elapsed by remember { mutableLongStateOf(Stopwatch.elapsed(ctx)) }
@@ -784,7 +784,7 @@ internal fun timerText(ms: Long): String {
 }
 
 @Composable
-private fun TimerTool() {
+internal fun TimerTool() {
     val ctx = LocalContext.current
     // Android 13+ hides the "time's up" notification until notifications are allowed
     val askNotes = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
