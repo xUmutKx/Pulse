@@ -1372,7 +1372,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 3.3 PowerPoint açma/görüntüleme/slayt gezme/düzenleme, Office araç çubukları, tam siyah tema
 
 ### 4 Paylaşma / Kaydetme / Yedek
-- 🔴 4.0 Share / Save As kontrolü; Save As AMOLED'de gri-beyaz kalmasın; hata bildirimi
+- 🟡 4.0 Share / Save As kontrolü; Save As AMOLED'de gri-beyaz kalmasın; hata bildirimi
 - 🟡 4.1 Yedek: kapaklar, arama dizinleri, önbellekler ve sözlükler zaten yedeğe girmiyor; boyut gösteriliyor; kayıtlı yedek listesi (boyut, tarih), tek tek silme ve "en yeni ikisi hariç sil" eklendi. Müzik dosyaları hiç kopyalanmıyor
 
 ### 5 Video oynatıcı
@@ -1501,3 +1501,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.218 App details: the app's own icon beside its name, and Open, App info, Force stop, Extract APK and Uninstall are icon buttons instead of words (derlenmedi)
 - 1.0.219 App history: a tap on an app sets a daily time limit (off, 15 min to 3 h); when the time is up the App lock helper sends the phone back to the home screen with a message, until midnight (needs usage access and the helper; background music and downloads go on) (derlenmedi)
 - 1.0.220 App history: the download icon saves the shown range as a CSV (app, package, category as the app declares it, minutes, total) in Download/Pulse (derlenmedi)
+- 1.0.221 Save as dialog: explicit text/button colours and window panel colour so AMOLED no longer shows grey/white (derlenmedi)
