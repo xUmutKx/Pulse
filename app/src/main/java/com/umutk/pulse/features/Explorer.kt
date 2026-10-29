@@ -12,6 +12,8 @@ import android.os.StatFs
 import android.webkit.MimeTypeMap
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.background
@@ -962,7 +964,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         add(Triple("Delete", "delete", { askDelete(listOf(f)) }))
                         add(Triple("Rename", "rename", { name = f.name; dialog = "rename" to f }))
                         add(Triple("Compress", "zip", { zipAsk = listOf(f) }))
-                        if (!f.isDirectory) add(Triple("Share", "share", { if (!exHandOver(ctx, f, true)) note = "Could not share ${f.name}" }))
+                        add(Triple("Share", "share", { shareSheet = listOf(f) }))
                         if (!f.isDirectory) add(Triple("Save as", "copy", { saveAsFile = f }))
                         add(Triple("Copy path", "document", { exCopy(ctx, f.path); note = "Path copied" }))
                         if (f.isDirectory) {
@@ -2251,35 +2253,105 @@ object ExDirSizes {
     }
 }
 
-/** The bottom bar of the Share button: send the files, copy their paths, or send their names as text. */
+/** One app that takes a share: its name, its icon and the activity to start. */
+private class ShareTarget(val label: String, val icon: androidx.compose.ui.graphics.ImageBitmap?, val comp: android.content.ComponentName)
+
+/** Puts [picks] (folders with everything inside) into one zip under the app's cache and returns it; the zip is named after the one item or after how many there are. */
+private fun exZipForShare(ctx: Context, picks: List<File>): File {
+    val dir = File(ctx.cacheDir, "share").apply { deleteRecursively(); mkdirs() }
+    val out = File(dir, (if (picks.size == 1) picks[0].name else "Pulse-${picks.size}-items") + ".zip")
+    java.util.zip.ZipOutputStream(out.outputStream().buffered()).use { z ->
+        picks.forEach { root ->
+            val base = root.parentFile ?: root
+            (if (root.isDirectory) root.walkTopDown().filter { it.isFile } else sequenceOf(root)).forEach { f ->
+                z.putNextEntry(java.util.zip.ZipEntry(f.relativeTo(base).path.replace('\\', '/'))); f.inputStream().use { it.copyTo(z) }; z.closeEntry()
+            }
+        }
+    }
+    return out
+}
+
+/** The Share button: the apps that take the files in a row at the top, then the other ways to send them (a zip with the folders, Bluetooth, the names, the paths). */
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String) -> Unit) {
     val ctx = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
     val files = picks.filter { it.isFile }
     val folders = picks.any { it.isDirectory }
     fun done(msg: String) { note(msg); onDismiss() }
+    fun sendIntent(list: List<File>): Intent {
+        val uris = ArrayList<android.net.Uri>(list.map { FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", it) })
+        val mimes = list.map { fileMime(it) }.distinct()
+        val mime = if (mimes.size == 1) mimes[0] else if (mimes.all { it.substringBefore('/') == mimes[0].substringBefore('/') }) mimes[0].substringBefore('/') + "/*" else "*/*"
+        val i = if (uris.size == 1) Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uris[0])
+            else Intent(Intent.ACTION_SEND_MULTIPLE).setType(mime).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
+        i.clipData = ClipData.newRawUri("", uris[0]).also { cd -> uris.drop(1).forEach { cd.addItem(ClipData.Item(it)) } }
+        return i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    // the apps that take this share, read off the main thread
+    var targets by remember { mutableStateOf<List<ShareTarget>>(emptyList()) }
+    LaunchedEffect(files) {
+        if (files.isEmpty()) return@LaunchedEffect
+        targets = withContext(Dispatchers.IO) {
+            val pm = ctx.packageManager
+            runCatching {
+                pm.queryIntentActivities(sendIntent(files), 0).distinctBy { it.activityInfo.packageName }.take(12).map { ri ->
+                    ShareTarget(ri.loadLabel(pm).toString(), runCatching { ri.loadIcon(pm).toBitmap(96, 96).asImageBitmap() }.getOrNull(),
+                        android.content.ComponentName(ri.activityInfo.packageName, ri.activityInfo.name))
+                }
+            }.getOrDefault(emptyList())
+        }
+    }
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = T.panel) {
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
-            val rows = listOf(
-                Triple(Icons.Outlined.Share, tr("Share the files", "Dosyaları paylaş")) {
+            Text(if (picks.size == 1) picks[0].name else tr("${picks.size} items", "${picks.size} öğe"), Modifier.padding(horizontal = 20.dp, vertical = 4.dp), color = T.sub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (targets.isNotEmpty()) androidx.compose.foundation.lazy.LazyRow(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentPadding = PaddingValues(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                items(targets.size) { n ->
+                    val t = targets[n]
+                    Column(Modifier.width(72.dp).clip(RoundedCornerShape(12.dp)).clickable {
+                        val ok = runCatching { ctx.startActivity(sendIntent(files).setComponent(t.comp)) }.isSuccess
+                        done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not share", "Paylaşılamadı"))
+                    }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        val ic = t.icon
+                        if (ic != null) Image(ic, null, Modifier.size(44.dp)) else PIcon("share", T.text, 36.dp)
+                        Text(t.label, color = T.text, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
+                    }
+                }
+            }
+            val rows = buildList<Triple<String, String, () -> Unit>> {
+                if (files.isNotEmpty()) add(Triple("share", tr("Share the files", "Dosyaları paylaş")) {
                     val ok = if (files.size == 1) exHandOver(ctx, files[0], true) else exShareMany(ctx, files)
                     done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not share", "Paylaşılamadı"))
-                },
-                Triple(Icons.Outlined.ContentCopy, tr("Copy the paths", "Yolları kopyala")) {
-                    val text = picks.joinToString("\n") { it.path }
-                    (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("paths", text))
+                })
+                add(Triple("archive", tr("Share as one zip (folders too)", "Tek zip olarak paylaş (klasörler dahil)")) {
+                    note(tr("Zipping…", "Zipleniyor…"))
+                    scope.launch {
+                        val z = withContext(Dispatchers.IO) { runCatching { exZipForShare(ctx, picks) }.getOrNull() }
+                        if (z == null) done(tr("Could not zip", "Zip yapılamadı")) else { onDismiss(); if (!exHandOver(ctx, z, true)) note(tr("Could not share", "Paylaşılamadı")) else note("") }
+                    }
+                })
+                if (files.isNotEmpty() && runCatching { ctx.packageManager.getPackageInfo("com.android.bluetooth", 0); true }.getOrDefault(false))
+                    add(Triple("send", tr("Bluetooth", "Bluetooth")) {
+                        val ok = runCatching { ctx.startActivity(sendIntent(files).setPackage("com.android.bluetooth")) }.isSuccess
+                        done(if (ok) "" else tr("Bluetooth could not take it", "Bluetooth alamadı"))
+                    })
+                add(Triple("copy", tr("Copy the paths", "Yolları kopyala")) {
+                    (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("paths", picks.joinToString("\n") { it.path }))
                     done(tr("Paths copied", "Yollar kopyalandı"))
-                },
-                Triple(Icons.Outlined.TextSnippet, tr("Share the names as text", "Adları metin olarak paylaş")) {
-                    val text = picks.joinToString("\n") { it.name }
-                    ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                })
+                add(Triple("rename", tr("Copy the names", "Adları kopyala")) {
+                    (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("names", picks.joinToString("\n") { it.name }))
+                    done(tr("Names copied", "Adlar kopyalandı"))
+                })
+                add(Triple("document", tr("Share the names as text", "Adları metin olarak paylaş")) {
+                    ctx.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, picks.joinToString("\n") { it.name }), null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     done("")
-                },
-            )
+                })
+            }
             rows.forEach { (ic, label, act) ->
-                Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 20.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(ic, null, Modifier.size(22.dp), T.text)
+                Row(Modifier.fillMaxWidth().clickable { act() }.padding(horizontal = 20.dp, vertical = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon(ic, T.text, 22.dp)
                     Spacer(Modifier.width(16.dp))
                     Text(label, color = T.text, fontSize = 16.sp)
                 }
