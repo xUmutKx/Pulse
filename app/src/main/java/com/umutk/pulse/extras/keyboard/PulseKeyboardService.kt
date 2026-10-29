@@ -448,7 +448,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val lw = typed.lowercase(lang.locale)
             if (sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 3))) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
@@ -539,6 +539,20 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val before = c.getTextBeforeCursor(g.length + 1, 0)?.toString()
             lastGlide = null
             if (before == "$g ") { c.deleteSurroundingText(g.length + 1, 0); afterText(); return }
+        }
+        // right after an automatic correction, Backspace takes it back: the word as it was typed opens again, and that correction is remembered as unwanted,
+        // so the same word is not corrected the same way the next time
+        val lc = lastCorrection
+        if (lc != null && word.isEmpty() && c.getSelectedText(0).isNullOrEmpty()) {
+            val n = lc.corrected.length + lc.sep.length
+            if (c.getTextBeforeCursor(n, 0)?.toString() == lc.corrected + lc.sep) {
+                lastCorrection = null
+                if (!st.incognito) KeyboardDictionary.reject(this, lc.original, lc.corrected)
+                c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lc.original, 1); c.endBatchEdit()
+                editAt = SystemClock.uptimeMillis()
+                word.append(lc.original); touchPts.clear(); target = null; peak = null
+                updateSuggestions(); return
+            }
         }
         if (word.isNotEmpty()) {
             editAt = SystemClock.uptimeMillis()
@@ -1242,7 +1256,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (lower[i] == lower[i + 1]) null else {
                 val w = lower.substring(0, i) + lower[i + 1] + lower[i] + lower.substring(i + 2)
                 val s = codes.maxOf { KeyboardDictionary.baseScore(it, w) }
-                if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < 3) KeyboardDictionary.Cand(w, s, .6f) else null
+                if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < 1) KeyboardDictionary.Cand(w, s, .6f) else null
             }
         }.maxByOrNull { it.score }
         val fix = swapFix ?: fix0 ?: if (!fast && !valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
