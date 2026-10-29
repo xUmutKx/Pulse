@@ -1435,7 +1435,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 18.6 Tüm uygulamada liste dönüşünde kaydırma/arama/filtre korunsun
 
 ### 19 Paint / ikon üretici
-- 🔴 19.1 Paint: AMOLED, renk, kalem/sprey/sulu boya, kalınlık, silgi, geri al-yinele, PNG, tuval
+- 🟡 19.1 Paint: sprey, sulu boya, yinele eklendi (kalem, fırça, silgi, boya kovası, geri al, PNG kaydı zaten vardı); tuval boyutu/arka plan seçenekleri ve tam renk seçici açık
 - 🔴 19.2 Material ikon üretici: arama, kategori, kontur/boyut/renk, PNG, kare çıktı, lisans
 
 ### 20 Tarayıcı / WebView
@@ -1472,3 +1472,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.195 Keyboard: the language of a sentence is worked out from its words (two words of one language and twice the other's votes), so Turkish sentences are corrected as Turkish and one English word changes nothing; a switch turns the detection off (derlenmedi)
 - 1.0.196 Speed test: every finished test is saved; a history page (the clock icon) goes day by day with the averages and a delete for each test; a failed test says why (no internet, timeout, secure connection) (derlenmedi)
 - 1.0.197 Network usage: Day / Week / Month, a pie of the biggest apps for the week and the month, and a tap on an app opens two root switches (block mobile data / block Wi-Fi) that are read back from the firewall; without root it says Android has no other way (derlenmedi)
+- 1.0.198 Paint: a Spray tool (a cloud of dots, sized by the width) and a Watercolour tool (wide see-through strokes that deepen where they cross), Redo next to Undo, 20 undo steps (derlenmedi)
