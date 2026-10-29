@@ -70,6 +70,9 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
+import androidx.compose.material.icons.outlined.CheckBox
+import androidx.compose.material.icons.outlined.CheckBoxOutlineBlank
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ImageBitmap
@@ -511,6 +514,106 @@ private fun XposedRows(m: XposedInfo) {
 @Composable
 fun InstallWindow(file: File, look: String? = null, onDone: () -> Unit) {
     CompositionLocalProvider(LocalWindowLook provides installLook(look ?: InstallShow.theme)) { InstallWindowBody(file, onDone) }
+}
+
+/**
+ * Several APKs in the same floating window as a single one: the apps' icons on each other, one row per app with its state (new, upgrade, ...) and a tick, one Install button.
+ * The installs run one after the other in the install service; each app's result comes back through [Installer.outcome] and lands on its row.
+ */
+@Composable
+fun InstallMultiWindow(paths: List<String>, look: String? = null, onDone: () -> Unit) {
+    CompositionLocalProvider(LocalWindowLook provides installLook(look ?: InstallShow.theme)) { InstallMultiBody(paths, onDone) }
+}
+
+@Composable
+private fun InstallMultiBody(paths: List<String>, onDone: () -> Unit) {
+    val ctx = LocalContext.current
+    val w = LocalWindowLook.current
+    var items by remember { mutableStateOf<List<Picked>?>(null) }
+    var bad by remember { mutableStateOf("") }
+    var sel by remember { mutableStateOf<Set<Picked>>(emptySet()) }
+    var running by remember { mutableStateOf(false) }
+    val results = remember { androidx.compose.runtime.mutableStateMapOf<String, Boolean>() }
+    val icons = remember { androidx.compose.runtime.mutableStateMapOf<String, ImageBitmap?>() }
+    LaunchedEffect(paths) {
+        val (list, b) = withContext(Dispatchers.IO) { Installer.inspectAll(ctx, paths.map { Uri.fromFile(File(it)) }) }
+        items = list; bad = b
+        sel = list.filter { it.pkg !in Installer.black && !it.mismatch }.toSet()
+        list.forEach { pk -> icons[pk.pkg] = withContext(Dispatchers.IO) { pk.files.firstOrNull()?.let { apkIcon(ctx, it.path) } } }
+    }
+    val outcome = Installer.outcome
+    LaunchedEffect(outcome) {
+        val o = outcome ?: return@LaunchedEffect
+        if (running && items?.any { it.pkg == o.pkg } == true) results[o.pkg] = o.ok && withContext(Dispatchers.IO) { Installer.installedCode(ctx, o.pkg) } != null
+    }
+    val list = items
+    val picked = list?.filter { it in sel }.orEmpty()
+    val finished = running && picked.isNotEmpty() && picked.all { it.pkg in results }
+    val dismiss = { if (!running || finished) onDone() }
+    val body: @Composable () -> Unit = {
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (list == null) { BusyLine(w); Text(tr("Reading the apps...", "Uygulamalar okunuyor..."), color = w.sub, fontSize = 13.sp); return@Column }
+            // the icons lie on each other, a little turned
+            Box(Modifier.height(72.dp).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                list.take(6).forEachIndexed { i, pk ->
+                    val t = i - (minOf(list.size, 6) - 1) / 2f
+                    val img = icons[pk.pkg]
+                    Box(Modifier.offset(x = (t * 18).dp, y = (if (i % 2 == 0) -3 else 4).dp).rotate(t * 9f).size(46.dp).clip(RoundedCornerShape(11.dp)).background(w.panel).border(1.dp, w.line, RoundedCornerShape(11.dp)), contentAlignment = Alignment.Center) {
+                        if (img != null) Image(img, null, Modifier.fillMaxSize()) else Image(painterResource(R.drawable.ic_android_logo), null, Modifier.size(28.dp), colorFilter = if (w.dark) null else ColorFilter.tint(Color.Black))
+                    }
+                }
+            }
+            Text(tr("Multi install", "Çoklu kurulum"), color = w.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
+            Text(tr("${list.size} apps", "${list.size} uygulama") + if (bad.isNotEmpty()) "  ·  " + tr("could not read: $bad", "okunamadı: $bad") else "", color = w.sub, fontSize = 12.sp)
+            Column(Modifier.fillMaxWidth().heightIn(max = 300.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                list.forEach { pk ->
+                    val st = statusOf(pk)
+                    val r = results[pk.pkg]
+                    val blocked = pk.pkg in Installer.black || pk.mismatch
+                    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).clickable(enabled = !running && !blocked) { sel = if (pk in sel) sel - pk else sel + pk }.padding(horizontal = 6.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        val img = icons[pk.pkg]
+                        if (img != null) Image(img, null, Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))) else Box(Modifier.size(32.dp))
+                        Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
+                            Text(pk.label, color = w.text, fontSize = 14.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                            Text(pk.version + "  ·  " + (if (pk.pkg in Installer.black) tr("blacklisted", "kara listede") else st.label), color = if (blocked) Warn else w.sub, fontSize = 11.sp, maxLines = 1)
+                        }
+                        when {
+                            r == true -> Text(tr("Installed", "Kuruldu"), color = Color(0xFF2E7D32), fontSize = 12.sp)
+                            r == false -> Text(tr("Failed", "Başarısız"), color = Warn, fontSize = 12.sp)
+                            running && pk in sel -> Text("...", color = w.sub, fontSize = 14.sp)
+                            blocked -> Unit
+                            else -> Icon(if (pk in sel) Icons.Outlined.CheckBox else Icons.Outlined.CheckBoxOutlineBlank, null, Modifier.size(22.dp), tint = if (pk in sel) (if (w.material) w.accent else Look.accent) else w.sub)
+                        }
+                    }
+                }
+            }
+            val full = Modifier.fillMaxWidth()
+            when {
+                finished -> {
+                    val ok = picked.count { results[it.pkg] == true }
+                    Text(tr("$ok of ${picked.size} installed.", "${picked.size} uygulamanın $ok tanesi kuruldu."), color = w.text, fontSize = 13.sp)
+                    IButton(tr("Close", "Kapat"), full, primary = true) { onDone() }
+                }
+                running -> {
+                    BusyLine(w)
+                    Text(tr("Installing one after the other. Confirm in the system installer if it asks.", "Sırayla kuruluyor. Sistem kurucusu sorarsa onayla."), color = w.sub, fontSize = 12.sp)
+                }
+                else -> {
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        IButton(tr("All", "Hepsi"), Modifier.weight(1f)) { sel = list.filter { it.pkg !in Installer.black && !it.mismatch }.toSet() }
+                        IButton(tr("None", "Hiçbiri"), Modifier.weight(1f)) { sel = emptySet() }
+                    }
+                    IButton(tr("Install ${picked.size} apps", "${picked.size} uygulamayı kur"), full, primary = true) {
+                        if (picked.isEmpty()) return@IButton
+                        BioGate.run(ctx) { Installer.outcome = null; running = true; Installer.startBackground(ctx, picked) }
+                    }
+                    IButton(tr("Cancel", "İptal"), full) { onDone() }
+                }
+            }
+        }
+    }
+    if (w.id in winButtonLooks) WinFrame(w, null, tr("Multi install", "Çoklu kurulum"), onMin = onDone, onClose = dismiss, content = body)
+    else WinAlert(onDismissRequest = dismiss, text = body, confirmButton = {}, dismissButton = null, containerColor = w.panel, noDim = true)
 }
 
 @Composable

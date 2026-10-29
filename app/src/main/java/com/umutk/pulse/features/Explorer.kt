@@ -716,7 +716,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                 DenseSelSquare(T.text, { sel = shown.map { it.path }.toSet() }) { ExIcon("selectAll", T.text, 24.dp) }
                 // several APKs picked: one button (left of cut) installs them all in one go, in the installer
                 if (picked.size >= 2 && picked.all { it.isFile && it.extension.lowercase() in setOf("apk", "xapk", "apks", "apkm") }) DenseSelSquare(Look.accent, {
-                    val i = Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "installer").putStringArrayListExtra("apks", ArrayList(picked.map { it.path })).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    val i = Intent().setClassName(ctx, "com.umutk.pulse.features.InstallActivity").putStringArrayListExtra("apks", ArrayList(picked.map { it.path })).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     runCatching { ctx.startActivity(i) }; sel = emptySet()
                 }, big = true) { ExGlyph(Icons.Outlined.Android, "installer", Look.accent, 24.dp) }
                 DenseSelSquare(T.text, { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi") }, big = true) { ExIcon("cut", T.text, 24.dp) }

@@ -449,7 +449,7 @@ private fun WinButton(w: PTheme, primary: Boolean, content: @Composable () -> Un
     val accentFill = primary && w.id == "win11"
     val fill = Look.accent.copy(alpha = 1f)
     // the caller's text colour: it must read on the accent fill, and the Win11 cancel stays in the text colour
-    val text = if (accentFill) Color.White else if (w.id == "win11") w.text else if (w.id == "xp" || w.id == "win95") Color.Black else MaterialTheme.colorScheme.primary
+    val text = if (accentFill) onAccent(fill) else if (w.id == "win11") w.text else if (w.id == "xp" || w.id == "win95") Color.Black else MaterialTheme.colorScheme.primary
     val radius = when (w.id) { "xp", "win7" -> 3.dp; "win11" -> 6.dp; "win10" -> 4.dp; else -> 0.dp }
     val edge = when (w.id) { "win95" -> Color.Black; "xp" -> Color(0xFF003C74); "win7" -> if (primary) Color(0xFF3C7FB1) else Color(0xFF707070); "win10" -> if (primary) Look.accent.copy(alpha = 1f) else Color(0xFFADADAD); else -> w.line }
     androidx.compose.runtime.CompositionLocalProvider(InWinBtnText provides text) {
