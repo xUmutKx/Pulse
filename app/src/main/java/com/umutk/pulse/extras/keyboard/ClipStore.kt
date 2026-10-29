@@ -70,7 +70,11 @@ object ClipStore {
             val f = File(dir(c), "$now.img")
             c.contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { o -> i.copyTo(o) } } ?: return load(c)
             if (f.length() == 0L || f.length() > 12_000_000L) { f.delete(); return load(c) }
-            items = items + ClipItem(now, "", f.path, now, false)
+            // a real picture file, not an ".img" no viewer opens: PNG or JPEG by the first bytes
+            val head = ByteArray(4).also { b -> f.inputStream().use { it.read(b) } }
+            val real = File(dir(c), "$now." + if (head[0] == 0x89.toByte() && head[1] == 'P'.code.toByte()) "png" else "jpg")
+            val path = if (f.renameTo(real)) real.path else f.path
+            items = items + ClipItem(now, "", path, now, false)
             trim(c); write(c)
         }
         return load(c)

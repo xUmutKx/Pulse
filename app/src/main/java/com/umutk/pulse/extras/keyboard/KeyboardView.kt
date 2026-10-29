@@ -1144,7 +1144,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 Text(tr("Cancel", "Vazgeç"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { act.clipShortcutCancel() }.padding(8.dp))
             }
             Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 12.dp).clip(RoundedCornerShape(10.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (naming.isEmpty()) tr("e.g. address", "örn. adres") else naming, color = if (naming.isEmpty()) th.sub else th.text, fontSize = 16.sp, maxLines = 1)
+                Text(if (naming.isEmpty()) "\u258F" + tr("e.g. address", "örn. adres") else naming + "\u258F", color = if (naming.isEmpty()) th.sub else th.text, fontSize = 16.sp, maxLines = 1)
             }
             Text(target?.text.orEmpty().replace('\n', ' '), color = th.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
             KeysPanel(th, st, act, keyH)
@@ -1163,8 +1163,8 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         }
         menuFor?.let { m ->
             Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(kbIcon(th, "Gesture"), tr("Pin", "Sabitle"), tint = if (m.pinned) th.accent else th.text, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp).padding(10.dp))
-                if (m.image == null) Icon(kbIcon(th, "TouchApp"), tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
+                Icon(kbIcon(th, "PushPin"), tr("Pin", "Sabitle"), tint = if (m.pinned) th.accent else th.text, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp).padding(10.dp))
+                if (m.image == null) Icon(kbIcon(th, "Bolt"), tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
                 Icon(kbIcon(th, "Check"), tr("Select", "Seç"), tint = th.text, modifier = Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp).padding(10.dp))
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 Text("✕", color = th.sub, fontSize = 16.sp, modifier = Modifier.clickable { menuFor = null }.padding(10.dp))
@@ -1193,7 +1193,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                         .combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { menuFor = it2 })
                         .padding(horizontal = 10.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(34.dp).clickable { act.clipPin(it2.id) }, contentAlignment = Alignment.Center) {
-                            Icon(kbIcon(th, "Gesture"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
+                            Icon(kbIcon(th, "PushPin"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
                         }
                         if (it2.image != null) ClipThumb(it2.image) else Text(it2.text, color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         if (it2.image != null) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
