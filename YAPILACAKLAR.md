@@ -1357,7 +1357,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟢 1.4 Öğrenme modları (kelime / cümle / ikisi / kapalı) yapıldı; öğrenilen kelimeleri görme-silme-ekleme, listeyi kopyalama/yapıştırma yapıldı; "doğru işaretle" = elle ekleme; hariç tutma ve geri alma mevcut (düzeltmeyi geri al / bir daha önerme)
 - 🟡 1.5 (geri alınan düzeltme bir daha yapılmaz) Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
 - 🟡 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz — uzun kelimeye daha çok yer, sığmazsa üçüncü öneri çekilir; kayıtlı e-posta yalnız e-posta alanında (derlenmedi)
-- 🔴 1.7 E-posta kısayolu yalnız @ yazınca/çağrılınca, imleç noktasına ekler, önceki adı silmez, tuşa atanabilir
+- 🟡 1.7 E-posta anahtarı: bar/menü/basılı-tutma tuşu veya ek tuş satırına atanabilen "@" + alan adı tuşu, imleç noktasına ekler, önceki yazıyı silmez; alan adı Ayarlar > Klavye > Yazım; kayıtlı e-postalar yalnız e-posta alanında çıkar
 - 🟡 1.8 Pano: ekran görüntüsü gerçek PNG/JPEG, raptiye ikonu, kısayol ikonu, Ctrl+X panoya, donanım klavyesi ve basılı tutma aynı geçmiş, kısayol alanında imleç — PNG/JPEG, raptiye, kısayol ikonu, kes/kopyala geçmişe, kısayol alanı imleci yapıldı; donanım klavyesi geçmiş birleşmesi doğrulanmadı
 
 ### 2 Temalar / AMOLED
@@ -1496,3 +1496,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.213 Music: six more moods next to energetic, chill, focus and happy: sad, calm, nostalgic, romantic, angry and dreamy (found from the genre tag and the title in English and Turkish; songs from the 60s to the 90s count as nostalgic); each gets its own mix and can be chosen in the mix settings (derlenmedi)
 - 1.0.214 Music recap (Extra apps): from now on every real listening is noted with its time; the recap shows pages to swipe through (minutes, top artists, top songs, the hours and days you listen, a card) for the last 30 days, 3 months or a year, and saves the card as a PNG in Download/Pulse; it says from which day the notes count (derlenmedi)
 - 1.0.215 Extra apps list: a switch in its top right shows the apps as tiles (icon and name, three in a row) or as rows with their description; the choice is kept, and a long press still hides or shows an app (derlenmedi)
+- 1.0.216 Keyboard: an e-mail key that types "@" and a domain you choose (gmail.com by default) at the cursor, without touching what was typed before; it can sit on the bar, in the menu, in the extra key row, or on a long press of the comma, period or the key beside ?123 (derlenmedi)
