@@ -49,6 +49,9 @@
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- music, video and ambient playback services (extras/watchdog, extras/music) -->
@@ -397,6 +400,17 @@
         <!-- the result of a PackageInstaller session (see features/Installer.kt); not exported, only Pulse starts sessions -->
         <receiver android:name="com.umutk.pulse.features.InstallReceiver" android:exported="false" />
         <receiver android:name="com.umutk.pulse.features.TimerReceiver" android:exported="false" />
+        <!-- the Clock's alarms (extras/clock): the system fires AlarmReceiver; a reboot or an update sets them again -->
+        <receiver android:name="com.umutk.pulse.extras.clock.AlarmReceiver" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.extras.clock.AlarmBootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
+            </intent-filter>
+        </receiver>
+        <service android:name="com.umutk.pulse.extras.clock.AlarmRingService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <activity android:name="com.umutk.pulse.extras.clock.AlarmRingActivity" android:exported="false" android:showWhenLocked="true" android:turnScreenOn="true" android:launchMode="singleTask" android:excludeFromRecents="true" android:taskAffinity="" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
         <!-- style picker opened when a widget is added or reconfigured (see widgets/WidgetConfig.kt); the launcher starts it, so it is exported -->
         <activity android:name="com.umutk.pulse.widgets.WidgetConfigActivity" android:exported="true" android:label="Widget style" android:theme="@style/Theme.Pulse.Floating">
             <intent-filter>
