@@ -56,7 +56,7 @@ object KeyboardPrefs {
     var quickPrediction by mutableStateOf(false)
     var quickPeriod by mutableStateOf(true)
     var autoCap by mutableStateOf(true)
-    var autoSpace by mutableStateOf(true)
+    var autoSpace by mutableStateOf(false)
     var cursorControl by mutableStateOf(true)
     var quickDelete by mutableStateOf(true)
     var emojiPredictions by mutableStateOf(true)
@@ -180,6 +180,8 @@ object KeyboardPrefs {
             if (i >= 0 && g == i + 1) { t[i] = "gamepad"; t[g] = "clip" }
             toolbarItems = t.joinToString(","); p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
         }
+        // no space is added by itself after a sign any more (it can be switched on again in the typing settings)
+        if (p.getInt("menuVer", 0) < 9) { autoSpace = false; p.edit().putInt("menuVer", 9).putBoolean("autoSpace", false).apply() }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); dirLayout = p.getBoolean("dirLayout", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)
     }
 
