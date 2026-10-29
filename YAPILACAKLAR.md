@@ -1368,7 +1368,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 ### 3 Dosyalar / APK / ZIP / Office
 - 🟢 3.0 Recording/çağrı kayıtlarında 3 nokta menüsü ile paylaşma (diğer klasörler gibi)
 - 🟡 3.1 APK ayrıntı: Install tek satır (yapıldı: IButton tek satır), Browse/Install düzeni; APK/ZIP/diğer için tutarlı menü; seçim ekranlarında çoklu seçim; sil/kopyala/taşı/paylaş/arşivle
-- 🔴 3.2 Birden çok resmi tek PDF yapma, PDF sayfa/görsel düzenleme, dosya türüne göre araçlar, Tools bölümüne taşıma
+- 🟡 3.2 Medya araçları > PDF sekmesi: birden çok PDF birleştirme ve sayfa aralığı kesme (sayfalar resim olarak kopyalanır, yazı seçilemez); resimlerden tek PDF zaten Dönüştür sekmesinde. PDF sayfa/görsel düzenleme ve Tools bölümüne taşıma açık
 - 🔴 3.3 PowerPoint açma/görüntüleme/slayt gezme/düzenleme, Office araç çubukları, tam siyah tema
 
 ### 4 Paylaşma / Kaydetme / Yedek
@@ -1492,3 +1492,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.209 Music: the Poweramp rating stars are 15 percent larger with a taller touch pill (44 dp, five cells of 34 dp), and the progress bars of the Material, Poweramp and music page players refresh 3 to 4 times as often, so they move smoothly (derlenmedi)
 - 1.0.210 Backup: Settings > Data lists the saved backups with their size and date, deletes one, or deletes all but the newest two (derlenmedi)
 - 1.0.211 Temperature tool: a history card with the battery and processor lines for today, yesterday and two days ago, the range of each and the hottest moment; readings are noted once a minute while Pulse runs and kept three days (derlenmedi)
+- 1.0.212 Media tools: a PDF tab that joins several PDFs into one and cuts a range of pages out of one (the pages are drawn as pictures, so the text cannot be selected; said on the screen); saved in Download/Pulse (derlenmedi)
