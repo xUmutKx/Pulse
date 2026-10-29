@@ -148,6 +148,7 @@ private val tools = listOf(
     Tool("DNS", "DNS", "wifi") { DnsSettings() },
     Tool("Screen cover", "Ekran kapağı", "lock") { CoverTool() },
     Tool("Floating timer", "Yüzen sayaç", "pin") { FloatingTimerTool() },
+    Tool("Big text", "Büyük yazı", "document") { BigTextTool() },
 )
 
 /** The Toolkit page: a 3-column grid of tiles; a tile opens its tool, the chevron goes back. */
