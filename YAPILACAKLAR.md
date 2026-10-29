@@ -1431,7 +1431,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟡 18.2 (End Task yapıldı) Windows 11: End Task, vurgu kontrastı, tutarlı menü
 - 🟡 18.3 (menü ikonları ve tuş takımı konumu yapıldı; otomatik yardımcı açık) Grafik tema: otomatik yardımcı kapatılabilir, Scientific/Programmer ikonları, tuş takımı %15 yukarı
 - 🟡 18.4 (başlangıç sesi her görünümde bir kez çalar; ayar mevcut) Launcher sesleri ayarı, tek sefer tetikleme
-- 🔴 18.5 Not widget'ı genel widget, boyut, Music başlığı belirgin, kategoriler, WMP widget düğmesi, önceki/sonraki
+- 🟡 18.5 (Music başlığı belirginleşti) Not widget'ı genel widget, boyut, Music başlığı belirgin, kategoriler, WMP widget düğmesi, önceki/sonraki
 - 🔴 18.6 Tüm uygulamada liste dönüşünde kaydırma/arama/filtre korunsun
 
 ### 19 Paint / ikon üretici
@@ -1497,3 +1497,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.214 Music recap (Extra apps): from now on every real listening is noted with its time; the recap shows pages to swipe through (minutes, top artists, top songs, the hours and days you listen, a card) for the last 30 days, 3 months or a year, and saves the card as a PNG in Download/Pulse; it says from which day the notes count (derlenmedi)
 - 1.0.215 Extra apps list: a switch in its top right shows the apps as tiles (icon and name, three in a row) or as rows with their description; the choice is kept, and a long press still hides or shows an app (derlenmedi)
 - 1.0.216 Keyboard: an e-mail key that types "@" and a domain you choose (gmail.com by default) at the cursor, without touching what was typed before; it can sit on the bar, in the menu, in the extra key row, or on a long press of the comma, period or the key beside ?123 (derlenmedi)
+- 1.0.217 Widgets page: the Music category title is larger, in the accent colour, with its icon and a line under it (derlenmedi)

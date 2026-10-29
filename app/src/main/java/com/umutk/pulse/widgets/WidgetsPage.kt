@@ -263,7 +263,16 @@ fun WidgetsPage() {
         }
         winampSkins.filter { hit("Winamp") || hit(it.name) }.forEach { s -> skinCards += "m_skin_${s.file.name}" to @Composable { WinampSkinCard(ctx, s) } }
         if (music.isNotEmpty() || winamp.isNotEmpty() || skinCards.isNotEmpty()) {
-            item(key = "h_music") { Text(tr("Music", "Müzik"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp)) }
+            item(key = "h_music") {
+                // the category title stands out: larger, in the accent, with its icon and a line under it
+                Column(Modifier.padding(top = 18.dp, bottom = 4.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        com.umutk.pulse.PIcon("play", com.umutk.pulse.Look.accent, 26.dp)
+                        Text(tr("Music", "Müzik"), color = com.umutk.pulse.Look.accent, fontSize = 24.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 10.dp))
+                    }
+                    Box(Modifier.padding(top = 6.dp).fillMaxWidth().height(2.dp).background(com.umutk.pulse.Look.accent.copy(alpha = .35f)))
+                }
+            }
         }
         if (winamp.isNotEmpty() || skinCards.isNotEmpty()) {
             // the three Winamp widgets (window, 4x1 strip, visualizer) are always shown; the skins fold under the arrow, and a search opens them
