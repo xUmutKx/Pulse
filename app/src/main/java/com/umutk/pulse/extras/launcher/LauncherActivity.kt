@@ -94,7 +94,7 @@ class LauncherActivity : ComponentActivity() {
                         1 -> com.umutk.pulse.LoginScreen(th) { stage = 2 }
                         else -> LaunchedEffect(Unit) { LauncherSession.booted = true; LauncherSounds.startup(this@LauncherActivity, th.id) }
                     }
-                } else LaunchedEffect(Unit) { LauncherSession.booted = true }
+                } else LaunchedEffect(Unit) { if (!LauncherSession.booted) LauncherSounds.startup(this@LauncherActivity, th.id); LauncherSession.booted = true }
             }
         }
     }
