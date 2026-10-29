@@ -1383,8 +1383,8 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 6.1 Alarm AlarmManager.setAlarmClock ile, boot sonrası yeniden kurma; zorla durdurma sınırı açıkça yazılacak
 
 ### 7 Network Manager
-- 🔴 7.1 Günlük/haftalık/aylık kullanım, grafik, pasta, uygulama bazlı, Wi-Fi/mobil ayrı (gerçek NetworkStatsManager)
-- 🔴 7.2 Uygulama başına mobil/Wi-Fi engelleme (root iptables/cmd netpolicy), mevcut durum
+- 🟢 7.1 Ağ kullanımı: gün (sayfa sayfa) / hafta / ay seçimi, pasta grafik, uygulama listesi, Wi-Fi ve mobil ayrı (NetworkStatsManager gerçek verisi)
+- 🟡 7.2 Uygulama başına mobil/Wi-Fi engelleme: root ile iptables (uygulamaya dokununca iki anahtar), kural geri okunur; rootsuz mümkün değil diye yazılır; yeniden başlatmada sayfa açılınca geri yüklenir (boot alıcısı yok); cihazda denenmedi
 - 🟡 7.3 (hata mesajı artık nedeni ayırıyor: yetki / komuta yanıt yok / modem kabul etmedi; desteklenmeyen türü gizleme sürüyor) Ağ türü değiştirme: "Phone didn't take it" nedeni, desteklenmeyeni gizle, izin/modem hatası ayrımı, sahte başarı yok
 
 ### 8 Extra Apps menüsü
@@ -1471,3 +1471,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.194 Keyboard learning: choose what is learned (words, sentences, both, off); a Learned words list with search, delete, add by hand, copy out and paste in (derlenmedi)
 - 1.0.195 Keyboard: the language of a sentence is worked out from its words (two words of one language and twice the other's votes), so Turkish sentences are corrected as Turkish and one English word changes nothing; a switch turns the detection off (derlenmedi)
 - 1.0.196 Speed test: every finished test is saved; a history page (the clock icon) goes day by day with the averages and a delete for each test; a failed test says why (no internet, timeout, secure connection) (derlenmedi)
+- 1.0.197 Network usage: Day / Week / Month, a pie of the biggest apps for the week and the month, and a tap on an app opens two root switches (block mobile data / block Wi-Fi) that are read back from the firewall; without root it says Android has no other way (derlenmedi)

@@ -53,6 +53,40 @@ data class NetRow(val pkg: String, val label: String, val mobile: Long, val wifi
     val total get() = mobile + wifi
 }
 
+/**
+ * Per-app network blocking, through root (iptables rules on the app's uid, one for mobile data and one for Wi-Fi). Without root Android gives no way to cut one
+ * app off by itself, so the switches say so. The rules are gone after a reboot; they are put back each time this page opens.
+ */
+object NetBlock {
+    private fun sp(c: Context) = c.getSharedPreferences("netblock", Context.MODE_PRIVATE)
+    private fun key(uid: Int, mobile: Boolean) = "$uid:" + (if (mobile) "m" else "w")
+    fun isBlocked(c: Context, uid: Int, mobile: Boolean) = sp(c).getBoolean(key(uid, mobile), false)
+    private fun cmd(uid: Int, mobile: Boolean, on: Boolean): String {
+        val itf = if (mobile) "rmnet+" else "wlan+"
+        val rule = "OUTPUT -m owner --uid-owner $uid -o $itf -j REJECT"
+        return "iptables -D $rule 2>/dev/null; ip6tables -D $rule 2>/dev/null; " +
+            (if (on) "iptables -I $rule; ip6tables -I $rule; " else "") +
+            "iptables -C $rule 2>/dev/null && echo __ON || echo __OFF"
+    }
+    /** Switches one block on or off; [done] gets whether the rule really is as asked (read back from the firewall), on the main thread. */
+    fun set(c: Context, uid: Int, mobile: Boolean, on: Boolean, done: (Boolean) -> Unit) {
+        val app = c.applicationContext
+        Thread {
+            val out = if (com.umutk.pulse.Shell.root == true) com.umutk.pulse.Shell.runRoot(cmd(uid, mobile, on)) else ""
+            val ok = com.umutk.pulse.Shell.root == true && out.contains(if (on) "__ON" else "__OFF")
+            if (ok) sp(app).edit().apply { if (on) putBoolean(key(uid, mobile), true) else remove(key(uid, mobile)) }.apply()
+            android.os.Handler(android.os.Looper.getMainLooper()).post { done(ok) }
+        }.start()
+    }
+    /** After a reboot the rules are gone: the saved ones are put back. */
+    fun restore(c: Context) {
+        if (com.umutk.pulse.Shell.root != true) return
+        val keys = sp(c).all.filter { it.value == true }.keys
+        if (keys.isEmpty()) return
+        Thread { keys.forEach { k -> val uid = k.substringBefore(':').toIntOrNull() ?: return@forEach; com.umutk.pulse.Shell.runRoot(cmd(uid, k.endsWith(":m"), true)) } }.start()
+    }
+}
+
 private const val UID_TETHERING = -5
 private const val UID_REMOVED = -4
 
@@ -211,6 +245,9 @@ fun NetUsageScreen(onBack: () -> Unit) {
     val ctx = LocalContext.current
     var granted by remember { mutableStateOf(Extra.usageGranted(ctx)) }
     var filter by remember { mutableStateOf(0) }   // 0 both, 1 Wi-Fi, 2 mobile data
+    var range by remember { mutableStateOf(0) }    // 0 one day at a time, 1 the last 7 days, 2 the last 30 days (the ring and the apps)
+    var openPkg by remember { mutableStateOf("") }
+    LaunchedEffect(Unit) { NetBlock.restore(ctx) }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val ob = LifecycleEventObserver { _, e -> if (e == Lifecycle.Event.ON_RESUME) granted = Extra.usageGranted(ctx) }
@@ -254,6 +291,37 @@ fun NetUsageScreen(onBack: () -> Unit) {
                     color = if (on) Color.White else T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
             }
         }
+        // day / week / month
+        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf(0 to com.umutk.pulse.tr("Day", "Gün"), 1 to com.umutk.pulse.tr("Week", "Hafta"), 2 to com.umutk.pulse.tr("Month", "Ay")).forEach { (id, label) ->
+                val on = range == id
+                Text(label, Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp)).background(if (on) T.text.copy(alpha = .16f) else Color.Transparent).clickable { range = id }.padding(vertical = 7.dp),
+                    color = T.text, fontSize = 13.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            }
+        }
+        if (range > 0) {
+            val span = if (range == 1) 7 else 30
+            val sum by produceState<List<NetRow>?>(null, span) { value = withContext(Dispatchers.IO) { netUsageRange(ctx, dayStartAgo(span - 1), System.currentTimeMillis()) } }
+            val rowsR = (sum ?: emptyList()).map { r -> r to when (filter) { 1 -> r.wifi; 2 -> r.mobile; else -> r.total } }.filter { it.second > 0L }.sortedByDescending { it.second }
+            LazyColumn(Modifier.fillMaxSize()) {
+                item {
+                    val tw = (sum ?: emptyList()).sumOf { it.wifi }; val tm = (sum ?: emptyList()).sumOf { it.mobile }
+                    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                        if (filter != 2) Legend(WIFI_COLOR, "Wi-Fi", bytesText(tw))
+                        if (filter != 1) Legend(MOBILE_COLOR, com.umutk.pulse.tr("Mobile data", "Mobil veri"), bytesText(tm))
+                    }
+                    // the pie of the period: the biggest apps and the rest
+                    if (sum == null) Center("…") else if (rowsR.isNotEmpty()) PCard {
+                        val slices = rowsR.take(8).map { it.first.label to it.second } + (rowsR.drop(8).sumOf { it.second }.takeIf { it > 0 }?.let { listOf(com.umutk.pulse.tr("Others", "Diğer") to it) }.orEmpty())
+                        DonutChart(slices, Modifier.fillMaxWidth(), centerText = bytesText(rowsR.sumOf { it.second }))
+                    }
+                }
+                val top = rowsR.firstOrNull()?.second?.coerceAtLeast(1L) ?: 1L
+                items(rowsR.take(150), key = { "r|${it.first.pkg}|${it.first.label}" }) { (r, t) -> NetAppRow(r, t, top, filter, openPkg == r.pkg + r.label) { openPkg = if (openPkg == r.pkg + r.label) "" else r.pkg + r.label } }
+                item { Spacer(Modifier.height(24.dp)) }
+            }
+            return@Column
+        }
         // thirty days: a tap goes to that day
         daily?.let { (w, m) -> StackBars(w, m, filter, 54.dp, selected = pager.currentPage) { i -> scope.launch { pager.animateScrollToPage(i) } } }
         androidx.compose.foundation.layout.Spacer(Modifier.height(6.dp))
@@ -287,19 +355,42 @@ fun NetUsageScreen(onBack: () -> Unit) {
                 val rows = (data?.rows ?: emptyList()).map { r -> val t = when (filter) { 1 -> r.wifi; 2 -> r.mobile; else -> r.total }; r to t }.filter { it.second > 0L }.sortedByDescending { it.second }
                 if (data != null && rows.isEmpty()) item { Center(com.umutk.pulse.tr("No network use recorded", "Kayıtlı ağ kullanımı yok")) }
                 val top = rows.firstOrNull()?.second?.coerceAtLeast(1L) ?: 1L
-                items(rows.take(150), key = { "${page}|${it.first.pkg}|${it.first.label}" }) { (r, t) ->
-                    Column(Modifier.padding(vertical = 6.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            if (r.pkg.isNotEmpty()) AppIcon(r.pkg, 26.dp) else Spacer(Modifier.width(26.dp))
-                            Spacer(Modifier.width(8.dp))
-                            Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
-                            Text(bytesText(t), color = T.sub, fontSize = 13.sp)
-                        }
-                        if (filter == 0) Text("Wi-Fi ${bytesText(r.wifi)} · ${com.umutk.pulse.tr("mobile", "mobil")} ${bytesText(r.mobile)}", Modifier.padding(start = 34.dp, top = 2.dp), color = T.sub, fontSize = 11.sp, maxLines = 1)
-                        BarMeter(t.toFloat() / top, if (filter == 2) MOBILE_COLOR else T.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
+                items(rows.take(150), key = { "${page}|${it.first.pkg}|${it.first.label}" }) { (r, t) -> NetAppRow(r, t, top, filter, openPkg == r.pkg + r.label) { openPkg = if (openPkg == r.pkg + r.label) "" else r.pkg + r.label } }
+                item { Spacer(Modifier.height(24.dp)) }
+            }
+        }
+    }
+}
+
+/** One app's line: its icon, the bytes and a bar. A tap opens its two switches (block mobile data / block Wi-Fi), which need root. */
+@Composable
+private fun NetAppRow(r: NetRow, t: Long, top: Long, filter: Int, open: Boolean, toggle: () -> Unit) {
+    val ctx = LocalContext.current
+    val uid = remember(r.pkg) { if (r.pkg.isEmpty()) -1 else runCatching { ctx.packageManager.getApplicationInfo(r.pkg, 0).uid }.getOrDefault(-1) }
+    var rev by remember { mutableStateOf(0) }
+    var msg by remember { mutableStateOf("") }
+    Column(Modifier.padding(vertical = 6.dp).then(if (uid >= 0) Modifier.clickable { toggle() } else Modifier)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            if (r.pkg.isNotEmpty()) AppIcon(r.pkg, 26.dp) else Spacer(Modifier.width(26.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
+            if (uid >= 0 && (NetBlock.isBlocked(ctx, uid, true) || NetBlock.isBlocked(ctx, uid, false))) PIcon("block", Color(0xFFE5484D), 16.dp)
+            Spacer(Modifier.width(6.dp))
+            Text(bytesText(t), color = T.sub, fontSize = 13.sp)
+        }
+        if (filter == 0) Text("Wi-Fi ${bytesText(r.wifi)} · ${com.umutk.pulse.tr("mobile", "mobil")} ${bytesText(r.mobile)}", Modifier.padding(start = 34.dp, top = 2.dp), color = T.sub, fontSize = 11.sp, maxLines = 1)
+        BarMeter(t.toFloat() / top, if (filter == 2) MOBILE_COLOR else T.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
+        if (open && uid >= 0) Column(Modifier.padding(start = 34.dp, top = 6.dp)) {
+            if (com.umutk.pulse.Shell.root != true) Text(com.umutk.pulse.tr("Blocking one app needs root; Android has no other way to cut a single app off.", "Tek bir uygulamayı kesmek root ister; Android'de başka yolu yok."), color = T.sub, fontSize = 12.sp)
+            else {
+                listOf(true to com.umutk.pulse.tr("Block mobile data", "Mobil veriyi engelle"), false to com.umutk.pulse.tr("Block Wi-Fi", "Wi-Fi'yi engelle")).forEach { (mob, label) ->
+                    val on = remember(rev) { NetBlock.isBlocked(ctx, uid, mob) }
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(label, color = T.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        com.umutk.pulse.PSwitch(on, { want -> NetBlock.set(ctx, uid, mob, want) { ok -> rev++; msg = if (ok) "" else com.umutk.pulse.tr("The firewall did not take the rule.", "Güvenlik duvarı kuralı kabul etmedi.") } })
                     }
                 }
-                item { Spacer(Modifier.height(24.dp)) }
+                if (msg.isNotEmpty()) Text(msg, color = Color(0xFFE5484D), fontSize = 12.sp)
             }
         }
     }
