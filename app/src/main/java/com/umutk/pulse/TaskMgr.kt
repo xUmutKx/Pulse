@@ -115,9 +115,9 @@ fun ProcessesPage() {
             if (selRow != null && win95Authentic) PButton("End Task") { if (Cfg.confirmKill) ask = selRow else end(selRow) }
             else if (selRow != null) {
                 val shape = RoundedCornerShape(if (T.material) 50 else 6)
-                Box(Modifier.shadow(8.dp, shape, clip = false).clip(shape).background(T.text.copy(alpha = .06f)).border(1.dp, T.text.copy(alpha = .45f), shape)
+                Box(Modifier.shadow(8.dp, shape, clip = false).clip(shape).background(Color(0xFFC42B1C)).border(1.dp, Color.White.copy(alpha = .35f), shape)
                     .clickable { if (Cfg.confirmKill) ask = selRow else end(selRow) }.padding(horizontal = 14.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-                    Text("End task", color = Color(0xFFC42B1C), fontSize = 13.sp)
+                    Text("End task", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                 }
             }
         }

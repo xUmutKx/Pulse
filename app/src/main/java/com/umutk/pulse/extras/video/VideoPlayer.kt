@@ -47,6 +47,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Flip
 import androidx.compose.material.icons.outlined.Tv
+import androidx.compose.material.icons.outlined.Cast
+import androidx.compose.material.icons.outlined.PictureInPictureAlt
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -550,7 +552,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             val fg = sk.fg; val tf = sk.topFg
             Row(
                 // empty bar areas take the tap, so it does not reach the video and hide the bar
-                Modifier.align(Alignment.TopCenter).fillMaxWidth().background(sk.top).pointerInput(Unit) { detectTapGestures {} }.padding(horizontal = 8.dp, vertical = 4.dp),
+                Modifier.align(Alignment.TopCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xAA000000), Color.Transparent))).background(sk.top).pointerInput(Unit) { detectTapGestures {} }.padding(horizontal = 8.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 SkinBtn(sk, onBack) { PIcon("back", tf, 24.dp) }
@@ -568,7 +570,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     }
                     VBtn({ if (many) player.seekToNextMediaItem() else player.seekTo(player.currentPosition + step); poke++ }) { if (many) com.umutk.pulse.extras.ui.TIcon("next", Color.White, 26.dp, sk.icons) else Tag("+${prefs.dtapSec}", false, Color.White) }
                 }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(sk.bottom).pointerInput(Unit) { detectTapGestures {} }.then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xB3000000)))).background(sk.bottom).pointerInput(Unit) { detectTapGestures {} }.then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(clock(pos), color = fg, fontSize = 12.sp)
                     SkinSeek(pos.toFloat(), dur.toFloat(), sk, { seeking = true; pos = it.toLong(); poke++ }, { seeking = false; player.seekTo(pos) }, Modifier.weight(1f).padding(horizontal = 8.dp))
@@ -599,7 +601,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                         poke++
                     }) { androidx.compose.material3.Icon(Icons.Outlined.Flip, null, Modifier.size(22.dp), tint = if (abA >= 0) sk.accent else fg) }
                     SkinBtn(sk, { dlg = "sleep" }) { PIcon("timer", if (sleepAt > 0 || sleepEnd) sk.accent else fg, 24.dp) }
-                    SkinBtn(sk, { pipParams()?.let { pp -> runCatching { act?.enterPictureInPictureMode(pp) } } }) { androidx.compose.material3.Icon(Icons.Outlined.Tv, null, Modifier.size(22.dp), tint = fg) }
+                    SkinBtn(sk, { pipParams()?.let { pp -> runCatching { act?.enterPictureInPictureMode(pp) } } }) { androidx.compose.material3.Icon(Icons.Outlined.PictureInPictureAlt, null, Modifier.size(22.dp), tint = fg) }
+                    SkinBtn(sk, { dlg = "cast" }) { androidx.compose.material3.Icon(Icons.Outlined.Cast, null, Modifier.size(22.dp), tint = fg) }
                 }
             }
         }
@@ -680,28 +683,36 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         "subopt" -> SubOptions(prefs, subDelay, ext != null, { subDelay = it; applySub() }, { rev++ }, { dlg = "enc" }) { dlg = null }
         "enc" -> PickDialog(tr("Encoding", "Kodlama"), encodings.map { it to (it == prefs.subEnc) }, { dlg = "subopt" }) { i -> prefs.subEnc = encodings[i]; applySub(); dlg = "subopt" }
         "more" -> {
+            // only what the bottom bar does not already do (speed, repeat and the sleep timer have their own buttons there)
             val acts = listOf(
-                tr("Speed", "Hız") + ": " + speedName(speed),
-                tr("Repeat", "Tekrar") + ": " + repeatNames()[rep],
-                tr("Shuffle", "Karıştır") + ": " + (if (shuffle) tr("On", "Açık") else tr("Off", "Kapalı")),
-                tr("Background audio", "Arka plan sesi") + ": " + (if (bg) tr("On", "Açık") else tr("Off", "Kapalı")),
-                tr("Info", "Bilgi"), tr("Share", "Paylaş"),
-                tr("Sleep timer", "Uyku zamanlayıcı"), tr("Equalizer", "Ekolayzır"), tr("Reset zoom", "Yakınlaştırmayı sıfırla"),
+                "shuffle" to tr("Shuffle", "Karıştır") + ": " + (if (shuffle) tr("On", "Açık") else tr("Off", "Kapalı")),
+                "bg" to tr("Background audio", "Arka plan sesi") + ": " + (if (bg) tr("On", "Açık") else tr("Off", "Kapalı")),
+                "eq" to tr("Equalizer", "Ekolayzır"),
+                "cast" to tr("Cast the screen", "Ekranı yansıt"),
+                "info" to tr("Info", "Bilgi"),
+                "share" to tr("Share", "Paylaş"),
+                "zoom" to tr("Reset zoom", "Yakınlaştırmayı sıfırla"),
             )
-            PickDialog(tr("More", "Daha fazla"), acts.map { it to false }, { dlg = null }) { i ->
+            PickDialog(tr("More", "Daha fazla"), acts.map { it.second to false }, { dlg = null }) { i ->
                 dlg = null
-                when (i) {
-                    0 -> dlg = "speed"
-                    1 -> { rep = (rep + 1) % 3; prefs.repeat = rep; player.repeatMode = when (rep) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF } }
-                    2 -> { shuffle = !shuffle; player.shuffleModeEnabled = shuffle }
-                    3 -> { bg = !bg; prefs.bg = bg }
-                    4 -> dlg = "info"
-                    5 -> items.getOrNull(cur)?.let { shareVideo(ctx, it) }
-                    6 -> dlg = "sleep"
-                    7 -> dlg = "eq"
-                    8 -> { zoom = 1f; panX = 0f; panY = 0f }
+                when (acts[i].first) {
+                    "shuffle" -> { shuffle = !shuffle; player.shuffleModeEnabled = shuffle }
+                    "bg" -> { bg = !bg; prefs.bg = bg }
+                    "eq" -> dlg = "eq"
+                    // the phone's own cast picker (Smart View on Samsung, Cast on other phones): it mirrors the screen to a TV or a receiver; the video itself is not handed over
+                    "cast" -> dlg = "cast"
+                    "info" -> dlg = "info"
+                    "share" -> items.getOrNull(cur)?.let { shareVideo(ctx, it) }
+                    "zoom" -> { zoom = 1f; panX = 0f; panY = 0f }
                 }
             }
+        }
+        "cast" -> LaunchedEffect(Unit) {
+            // the phone's own cast picker (Smart View on Samsung, Cast on other phones): it mirrors the screen to a TV or a receiver; the video itself is not handed over
+            val tryIntents = listOf(android.content.Intent("android.settings.CAST_SETTINGS"), android.content.Intent(android.provider.Settings.ACTION_WIRELESS_SETTINGS))
+            val ok = tryIntents.any { it0 -> runCatching { ctx.startActivity(it0.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess }
+            if (!ok) android.widget.Toast.makeText(ctx, tr("This phone has no screen cast setting", "Bu telefonda ekran yansıtma ayarı yok"), android.widget.Toast.LENGTH_LONG).show()
+            dlg = null
         }
         "info" -> items.getOrNull(cur)?.let { FileInfoDialog(it.copy(durMs = if (dur > 0) dur else it.durMs, w = if (vsize.width > 0) vsize.width else it.w, h = if (vsize.height > 0) vsize.height else it.h), liveRows(tracks)) { dlg = null } }
     }
