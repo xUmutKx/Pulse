@@ -67,7 +67,7 @@ private fun material(k: String): ImageVector = when (k) {
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Straighten; "flash" -> Icons.Outlined.FlashlightOn
     "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "coin" -> Icons.Outlined.Paid; "clipboard" -> Icons.Outlined.ContentPaste
     "screenshot" -> Icons.Outlined.Screenshot; "sensors" -> Icons.Outlined.Sensors; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Timer
-    "timer" -> Icons.Outlined.HourglassBottom; "calc" -> Icons.Outlined.Calculate; "scale" -> Icons.Outlined.AspectRatio; "power" -> Icons.Outlined.PowerSettingsNew
+    "timer" -> Icons.Outlined.HourglassBottom; "calc" -> Icons.Outlined.Calculate; "function" -> Icons.Outlined.Functions; "terminal" -> Icons.Outlined.Terminal; "scale" -> Icons.Outlined.AspectRatio; "power" -> Icons.Outlined.PowerSettingsNew
     "volume" -> Icons.Outlined.VolumeUp; "rotate" -> Icons.Outlined.ScreenRotation; "touch" -> Icons.Outlined.TouchApp; "motion" -> Icons.Outlined.Waves; "pointer" -> Icons.Outlined.Adjust
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Balance; "flash" -> Icons.Outlined.FlashlightOn
     "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "coin" -> Icons.Outlined.MonetizationOn
