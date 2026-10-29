@@ -1013,12 +1013,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.Center) {
                         Text(shownName, color = T.text, fontSize = (16 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        val sub = if (namesOnly) "" else when {
+                        val sub = if (namesOnly && !detailNow) "" else when {
                             found != null -> exRel(f, top)
-                            !f.isDirectory && (showSizes || detailNow) -> exInfoParts(false, 0, f.length(), f.lastModified())
+                            !f.isDirectory && (showSizes || detailNow) -> (if (detailNow) f.extension.uppercase().takeIf { it.isNotEmpty() }?.let { "$it  ·  " } ?: "" else "") + exInfoParts(false, 0, f.length(), f.lastModified(), all = detailNow)
                             // the folder's own total size was already measured in the background either way (dirSizes above); it just was not shown
                             // outside the standalone app — now the embedded Files tab gets it too
-                            f.isDirectory && (showSizes || detailNow) && !f.path.startsWith("/data") -> exInfoParts(true, f.list()?.size ?: 0, dirSizes[f.path], f.lastModified(), countNow)
+                            f.isDirectory && (showSizes || detailNow) && !f.path.startsWith("/data") -> exInfoParts(true, f.list()?.size ?: 0, dirSizes[f.path], f.lastModified(), countNow || detailNow, all = detailNow)
                             else -> ""
                         }
                         if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = (11 * ts).sp, maxLines = 1, overflow = TextOverflow.Ellipsis)

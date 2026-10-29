@@ -878,10 +878,11 @@ internal fun exWriteCountMap(c: android.content.Context, m: Map<String, Int>) =
     com.umutk.pulse.filesPrefs(c).edit().putString("ex_count_dirs", m.map { "${it.key}|${it.value}" }.joinToString("\n")).apply()
 
 /** The line under a name in the rows: the item count of a folder, then its size and its date when those are switched on. */
-internal fun exInfoParts(dir: Boolean, items: Int, size: Long?, ms: Long, count: Boolean = FilesPrefs.infoCount): String {
+/** [all]: the detailed list, which always shows the size and the date, whatever the switches say. */
+internal fun exInfoParts(dir: Boolean, items: Int, size: Long?, ms: Long, count: Boolean = FilesPrefs.infoCount, all: Boolean = false): String {
     val p = mutableListOf<String>()
-    val showSize = if (dir) FilesPrefs.folderSize else FilesPrefs.fileSize
-    val showDate = if (dir) FilesPrefs.folderDate else FilesPrefs.fileDate
+    val showSize = all || (if (dir) FilesPrefs.folderSize else FilesPrefs.fileSize)
+    val showDate = all || (if (dir) FilesPrefs.folderDate else FilesPrefs.fileDate)
     if (dir && count) p += "$items ${tr("items", "öğe")}"
     if (showSize) size?.let { p += exSize(it) }
     if (showDate) p += exDate(ms, FilesPrefs.dateFmt)
@@ -980,7 +981,13 @@ fun FilesSettings() {
             Chips(tr("Start folder", "Başlangıç klasörü"), "folder", folders.map { it.second }, folders.indexOfFirst { it.first == fp.start }.coerceAtLeast(0)) { fp.start = folders[it].first }
             Chips(tr("Sort by", "Sıralama"), "sort", listOf(tr("Name", "Ad"), tr("Size", "Boyut"), tr("Date", "Tarih")), fp.sort / 2) { fp.sort = it * 2 + fp.sort % 2 }
             Chips(tr("Order", "Düzen"), "sort", listOf(tr("Ascending", "Artan"), tr("Descending", "Azalan")), fp.sort % 2) { fp.sort = fp.sort / 2 * 2 + it }
-            Chips(tr("View", "Görünüm"), "gridView", listOf(tr("List", "Liste"), tr("Grid", "Izgara")), if (fp.grid) 1 else 0) { fp.grid = it == 1 }
+            // the three views as small pictures: the picked one has the accent edge
+            val detail0 = com.umutk.pulse.filesPrefs(ctx).getInt("ex_detail", 0) == 1
+            var viewPick by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(if (fp.grid) 1 else if (detail0) 2 else 0) }
+            ViewStylePicker(viewPick) { m ->
+                viewPick = m; fp.grid = m == 1
+                com.umutk.pulse.filesPrefs(ctx).edit().putInt("ex_detail", if (m == 2) 1 else 0).apply()
+            }
             Chips(tr("Icon size", "Simge boyutu"), "image", listOf(tr("Tiny", "En küçük"), tr("Small", "Küçük"), tr("Medium", "Orta"), tr("Large", "Büyük"), tr("Huge", "En büyük")), fp.icon / 2) { fp.icon = it * 2 + 1 }
             // files taken out of an archive for a copy or cut wait in the app's data until they are pasted; this is how long
             val ttl = listOf(15 to "15 min", 60 to "1 h", 360 to "6 h", 1440 to "1 day", 0 to tr("Never", "Hiç"))
@@ -1108,4 +1115,34 @@ internal fun joinParts(f: File): String {
         out.outputStream().buffered().use { o -> parts.forEach { p -> p.inputStream().use { it.copyTo(o) } } }
         tr("Joined ${parts.size} parts into ${out.name}", "${parts.size} parça ${out.name} olarak birleştirildi")
     }.getOrElse { out.delete(); tr("Could not join", "Birleştirilemedi") }
+}
+
+/** Settings > Files > View: list, grid and detailed list drawn as miniatures. */
+@Composable
+private fun ViewStylePicker(picked: Int, onPick: (Int) -> Unit) {
+    val names = listOf(tr("List", "Liste"), tr("Grid", "Izgara"), tr("Detailed list", "Detaylı liste"))
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+        names.forEachIndexed { i, n ->
+            val on = i == picked
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).border(if (on) 2.dp else 1.dp, if (on) Look.accent else T.sub.copy(alpha = .35f), RoundedCornerShape(12.dp)).clickable { onPick(i) }.padding(8.dp),
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(64.dp)) {
+                    val ink = T.text.copy(alpha = .75f); val dim = T.sub.copy(alpha = .55f); val box = Look.accent.copy(alpha = .8f)
+                    val w = size.width; val h = size.height
+                    when (i) {
+                        0 -> repeat(4) { r -> val y = h * (0.06f + r * 0.24f)
+                            drawRoundRect(box, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(h * 0.16f, h * 0.16f), androidx.compose.ui.geometry.CornerRadius(3f))
+                            drawRoundRect(ink, androidx.compose.ui.geometry.Offset(h * 0.24f, y + h * 0.05f), androidx.compose.ui.geometry.Size(w * 0.55f, h * 0.06f), androidx.compose.ui.geometry.CornerRadius(3f)) }
+                        1 -> repeat(2) { r -> repeat(3) { c -> val sz = h * 0.4f; val gap = (w - 3 * sz) / 2f
+                            drawRoundRect(box, androidx.compose.ui.geometry.Offset(c * (sz + gap), r * (sz + h * 0.1f)), androidx.compose.ui.geometry.Size(sz, sz), androidx.compose.ui.geometry.CornerRadius(5f)) } }
+                        else -> repeat(3) { r -> val y = h * (0.04f + r * 0.32f)
+                            drawRoundRect(box, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(h * 0.24f, h * 0.24f), androidx.compose.ui.geometry.CornerRadius(3f))
+                            drawRoundRect(ink, androidx.compose.ui.geometry.Offset(h * 0.32f, y + h * 0.02f), androidx.compose.ui.geometry.Size(w * 0.5f, h * 0.07f), androidx.compose.ui.geometry.CornerRadius(3f))
+                            drawRoundRect(dim, androidx.compose.ui.geometry.Offset(h * 0.32f, y + h * 0.13f), androidx.compose.ui.geometry.Size(w * 0.35f, h * 0.05f), androidx.compose.ui.geometry.CornerRadius(3f)) }
+                    }
+                }
+                androidx.compose.material3.Text(n, color = T.text, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp), maxLines = 1)
+            }
+        }
+    }
 }
