@@ -386,6 +386,12 @@ object ExtraRowsHidden {
     /** The list of extra apps as tiles (icon and name) or as rows with their description. */
     fun grid(c: android.content.Context) = sp(c).getBoolean("grid", false)
     fun setGrid(c: android.content.Context, on: Boolean) { sp(c).edit().putBoolean("grid", on).apply() }
+    /** Whether the ⋮ menu lists Extra apps at all; on by default. */
+    fun menuOn(c: android.content.Context) = sp(c).getBoolean("menu_on", true)
+    fun setMenuOn(c: android.content.Context, on: Boolean) { sp(c).edit().putBoolean("menu_on", on).apply() }
+    /** An app that has its own launcher icon switched on is started from its icon, so it is not listed here. */
+    fun launcherIconOn(c: android.content.Context, alias: String): Boolean =
+        c.packageManager.getComponentEnabledSetting(android.content.ComponentName(c, "com.umutk.pulse.$alias")) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -395,10 +401,14 @@ private fun BuiltinRows() {
     var hidden by remember { mutableStateOf(ExtraRowsHidden.load(ctx)) }
     var showHidden by remember { mutableStateOf(false) }
     val openTool = LocalOpenTool.current
+    var menuOn by remember { mutableStateOf(ExtraRowsHidden.menuOn(ctx)) }
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(tr("Show Extra apps in the ⋮ menu", "Ek uygulamaları ⋮ menüsünde göster"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        PSwitch(menuOn, { menuOn = it; ExtraRowsHidden.setMenuOn(ctx, it) })
+    }
     val rows = listOf(
         BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
         BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image", "app:VideoLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
-        BuiltinRow(tr("White noise", "Beyaz gürültü"), tr("Calm sounds you mix and loop", "Karıştırıp döngüye aldığın sakin sesler"), "volume", "app:WhiteNoiseLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "whitenoise") },
         BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder", "app:FilesLauncher") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
         BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image", "app:PhotosLauncher") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
         BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar", "app:CalendarLauncher") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
@@ -438,7 +448,9 @@ private fun BuiltinRows() {
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
         BuiltinRow(tr("Network usage", "Ağ kullanımı"), tr("Wi-Fi and mobile data, app by app", "Wi-Fi ve mobil veri, uygulama uygulama"), "speed", "tool:netusage") { openTool("netusage") },
     )
-    val visible = rows.filter { showHidden || (it.place ?: it.name) !in hidden }
+    // an app with its own launcher icon is listed on its own; the rest follow the per-row eye
+    val visible = rows.filter { r -> val p = r.place.orEmpty(); !(p.startsWith("app:") && ExtraRowsHidden.launcherIconOn(ctx, p.removePrefix("app:"))) }
+        .filter { showHidden || (it.place ?: it.name) !in hidden }
     // tiles or rows: the choice is kept
     var grid by remember { mutableStateOf(ExtraRowsHidden.grid(ctx)) }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
@@ -472,36 +484,15 @@ private fun BuiltinRows() {
                 Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(r.sub, color = T.sub, fontSize = 12.sp)
             }
-            // separate from the ⋮ menu's own chevron (Settings > Extra apps): this switch only decides whether the row is also listed there.
-            // AppPlace/ToolPlace keep their state in a mutableStateMapOf, so reading .where() here already recomposes the switch on a change.
-            r.place?.let { p ->
-                when {
-                    p.startsWith("app:") -> {
-                        val alias = p.removePrefix("app:")
-                        PSwitch(com.umutk.pulse.AppPlace.where(alias) != "hidden", { on -> com.umutk.pulse.AppPlace.set(ctx, alias, if (!on) "hidden" else if (com.umutk.pulse.AppPlace.where(alias) == "hidden") "menu" else com.umutk.pulse.AppPlace.where(alias)) })
-                    }
-                    p.startsWith("tool:") -> {
-                        val t = com.umutk.pulse.ToolPlace.byId(p.removePrefix("tool:"))
-                        if (t != null) PSwitch(com.umutk.pulse.ToolPlace.where(ctx, t) != "hidden", { on -> com.umutk.pulse.ToolPlace.set(ctx, t, if (!on) "hidden" else if (com.umutk.pulse.ToolPlace.where(ctx, t) == "hidden") "extra" else com.umutk.pulse.ToolPlace.where(ctx, t)) })
-                    }
-                }
+            // the eye: hides or shows this row here and in the ⋮ menu's Extra apps list (the long press does the same)
+            Box(Modifier.size(40.dp).clickable { hidden = if (isHidden) hidden - key else hidden + key; ExtraRowsHidden.save(ctx, hidden) }, contentAlignment = Alignment.Center) {
+                PIcon(if (isHidden) "eyeOff" else "eyeOn", T.sub, 20.dp)
             }
         }
     }
     // the hidden rows: a line that shows them again (long press on a shown row hides it, on a hidden one brings it back)
     if (hidden.isNotEmpty()) Row(Modifier.fillMaxWidth().clickable { showHidden = !showHidden }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(if (showHidden) tr("Hide the hidden rows", "Gizli satırları gizle") else tr("Show ${hidden.size} hidden rows", "${hidden.size} gizli satırı göster"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
-    }
-    // off by default; when on, the page is listed in the ⋮ menu
-    var notif by remember { mutableStateOf(NotifHist.enabled(ctx)) }
-    Row(Modifier.fillMaxWidth().clickable { if (notif) openTool("notifhist") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        PIcon("info", T.text, 26.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(tr("Notification history", "Bildirim geçmişi"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text(tr("Saves the notifications you get", "Aldığın bildirimleri kaydeder"), color = T.sub, fontSize = 12.sp)
-        }
-        PSwitch(notif, { notif = it; NotifHist.setEnabled(ctx, it) })
     }
 }
 
