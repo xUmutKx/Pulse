@@ -409,8 +409,13 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
             }
         } else {
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                st.slots.forEachIndexed { i, s ->
-                    Box(Modifier.weight(1f).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
+                // long words get more of the bar; when three would not fit whole, the last one steps aside so no word is cut with dots
+                val plainLen = st.slots.map { if (it.startsWith("\u0001") || it.startsWith("\u0002")) 0 else it.length }
+                val crowded = st.slots.count { it.isNotEmpty() } == 3 && plainLen.sum() > 26 && !st.slots[2].startsWith("\u0001") && !st.slots[2].startsWith("\u0002")
+                st.slots.forEachIndexed { i, s0 ->
+                    val s = if (crowded && i == 2) "" else s0
+                    val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else (s.length / 9f).coerceIn(1f, 2.2f)
+                    Box(Modifier.weight(wt).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             st.shotThumb?.let { Image(it, null, Modifier.size(26.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop) }

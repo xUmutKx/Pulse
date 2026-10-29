@@ -1124,8 +1124,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) {
                 // a shortcut of the clipboard: the name typed offers the whole text in the middle
-                val sc = if (typed.length >= 2) (KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale))
-                    ?: emailsSaved().firstOrNull { it.startsWith(typed.lowercase(l.locale)) && it.length > typed.length }) else null
+                // saved e-mail addresses are offered only in e-mail fields (above) or after an "@", never while ordinary words are typed
+                val sc = if (typed.length >= 2) KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale)) else null
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
                 else { target = res.third; targetFor = typed; slotWords = res.second; st.slots = res.first }
                 showClipSlot()
