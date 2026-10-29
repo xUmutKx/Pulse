@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.AccessTime
 import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Headphones
@@ -149,6 +150,7 @@ object ToolPlace {
         Tool("installer", "APK installer", "APK yükleyici", "installer", true, "download", Icons.Outlined.SystemUpdate, "extra"),
         Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
         Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "extra"),
+        Tool("clock", "Clock", "Saat", "clock", true, "timer", Icons.Outlined.AccessTime, "extra"),
         Tool("speedtest", "Internet speed test", "İnternet hız testi", "speedtest", true, "speed", Icons.Outlined.Speed, "extra"),
         Tool("chargewatts", "Charging power", "Şarj gücü", "chargewatts", true, "power", Icons.Outlined.BatteryChargingFull, "extra"),
         Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "settings", Icons.Outlined.Widgets, "extra"),

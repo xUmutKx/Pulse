@@ -1379,8 +1379,8 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟢 5.0 (Cast = telefonun ekran yansıtma ekranı; videoyu devretmez) Alt kontroller için yarı saydam katman, beyaz ikon kontrastı, 3 nokta menüsü düzeni, Cast düğmesi (gerçek), dokunma alanları
 
 ### 6 Saat uygulaması
-- 🔴 6.0 Lucid kaynağı/lisansı incelenecek (ZIP projede yoksa açıkça belirtilecek); alarm, geri sayım, kronometre, dünya saatleri, temalar, widget
-- 🔴 6.1 Alarm AlarmManager.setAlarmClock ile, boot sonrası yeniden kurma; zorla durdurma sınırı açıkça yazılacak
+- 🟡 6.0 Saat (Extra apps): alarm (AlarmManager.setAlarmClock, tekrar günleri, erteleme, titreşim, tam ekran çalma ekranı, yeniden başlatmada geri kurulur), dünya saati, kronometre ve zamanlayıcı bir arada. Lucid (GPL-3.0, Pulse ile uyumlu) tasarım kaynağı; kod Pulse'un kendi. AMOLED/Material/Win11 temaları ve vurgu rengi Pulse'un ortak temasıyla gelir; Lucid'in özel zil sesi, animasyonlu arka plan, widget ve Nowbar özellikleri açık
+- 🟢 6.1 Alarm AlarmManager.setAlarmClock ile kuruldu, açılışta/güncellemede yeniden kurulur. Sınır: "Zorla durdur" yapılırsa hiçbir uygulamanın alarmı Pulse açılana kadar çalmaz (Android kuralı); cihazda denenmedi
 
 ### 7 Network Manager
 - 🟢 7.1 Ağ kullanımı: gün (sayfa sayfa) / hafta / ay seçimi, pasta grafik, uygulama listesi, Wi-Fi ve mobil ayrı (NetworkStatsManager gerçek verisi)
@@ -1481,3 +1481,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 🟡 Lucid-Alarm (GPL-3.0, Pulse ile uyumlu): Saat modülü için kaynak; alarm, kronometre, zamanlayıcı, dünya saati, Nowbar. Pulse'a alarm + dünya saati olarak aktarılıyor
 - 🔴 SoundPlus.apk (kapalı kaynak, StartApp reklam SDK'sı içeriyor): kod alınamaz; yalnız özellik referansı
 - 🔴 Bionic Tape ekran görüntüleri (kaset çalar görünümü): müzik oynatıcıya kaset görünümü fikri olarak not edildi
+- 1.0.201 New Clock (Extra apps): real system alarms (repeat days, snooze, vibration, an alarm screen over the lock screen, set again after a reboot), world clocks, and the stopwatch and timer in one place; Android asks for the exact-alarm and full-screen permissions and the screen says so when one is missing (derlenmedi)
