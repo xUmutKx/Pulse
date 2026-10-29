@@ -8,6 +8,8 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.Settings
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
@@ -242,28 +244,35 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
-            PHead(d?.label ?: pkg, d?.version ?: "")
+            // the app's own icon with its name, and the actions as icons (a long press on none is needed: the note below says what was done)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                com.umutk.pulse.AppIcon(pkg, 52.dp)
+                Column(Modifier.weight(1f).padding(start = 12.dp)) { PHead(d?.label ?: pkg, d?.version ?: "") }
+            }
             Text(pkg, color = T.sub, fontSize = 12.sp)
-            Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton("Open") {
+            Row(Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                @Composable fun act(icon: String, desc: String, danger: Boolean = false, onClick: () -> Unit) {
+                    Box(Modifier.size(50.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background((if (danger) androidx.compose.ui.graphics.Color(0xFFE5484D) else T.text).copy(alpha = .12f)).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+                        com.umutk.pulse.PIcon(icon, if (danger) androidx.compose.ui.graphics.Color(0xFFE5484D) else T.text, 24.dp)
+                    }
+                }
+                act("play", tr("Open", "Aç")) {
                     val launch = ctx.packageManager.getLaunchIntentForPackage(pkg)
                     if (launch != null) ctx.startActivity(launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                     else note = "${d?.label ?: pkg} has no screen to open"
                 }
-                PButton("App info") {
+                act("info", tr("App info", "Uygulama bilgisi")) {
                     ctx.startActivity(
                         Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg"))
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 }
-                PButton("Force stop") {
+                act("block", tr("Force stop", "Durmaya zorla")) {
                     Shell.run("am force-stop $pkg")
                     note = "${d?.label ?: pkg} was stopped"
                 }
-                PButton("Extract APK") { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
-                if (d != null && !d.isSystem) {
-                    PButton("Uninstall", danger = true) { confirmUninstall = true }
-                }
+                act("archive", tr("Extract APK", "APK çıkar")) { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
+                if (d != null && !d.isSystem) act("delete", tr("Uninstall", "Kaldır"), danger = true) { confirmUninstall = true }
             }
             if (note.isNotEmpty()) Text(note, color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp)
             error?.let { Text(it, color = T.sub, fontSize = 13.sp) }
