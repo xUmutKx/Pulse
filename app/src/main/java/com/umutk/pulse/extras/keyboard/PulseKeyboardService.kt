@@ -247,6 +247,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun onDestroy() {
+        runCatching { recognizer?.destroy() }; recognizer = null
         clipboard?.removePrimaryClipChangedListener(clipListener)
         runCatching { contentResolver.unregisterContentObserver(shotObserver) }
         KeyboardDictionary.saveUser(this)
@@ -941,9 +942,54 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun hide() { finishWord("", false); requestHideSelf(0) }
 
-    /** Hands the field over to the device's own voice typing (Google); the keyboard comes back when it is done. */
+    private var recognizer: android.speech.SpeechRecognizer? = null
+    private var voiceFallbackDone = false
+
+    /**
+     * Speech typing: listens right here, in the keyboard, and writes what was said into the field; the keyboard stays up. Needs the microphone
+     * permission of Pulse. Without it (or without a recognizer on the phone) the device's own voice keyboard is opened as before.
+     */
     override fun voice() {
         finishWord("", false)
+        if (st.listening) { stopListening(); return }
+        val granted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted || !android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { switchToVoiceKeyboard(); return }
+        val tag = if (lang.code == "tr") "tr-TR" else "en-US"
+        val rec = recognizer ?: android.speech.SpeechRecognizer.createSpeechRecognizer(this).also { recognizer = it }
+        rec.setRecognitionListener(object : android.speech.RecognitionListener {
+            override fun onReadyForSpeech(params: android.os.Bundle?) { st.listening = true }
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() { st.listening = false }
+            override fun onError(error: Int) {
+                st.listening = false
+                // no match is not an error worth a message; a missing recognizer falls back to the voice keyboard once
+                if (error == android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == android.speech.SpeechRecognizer.ERROR_NO_MATCH || error == android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT) return
+                if (!voiceFallbackDone && error == android.speech.SpeechRecognizer.ERROR_CLIENT) { voiceFallbackDone = true; switchToVoiceKeyboard() }
+            }
+            override fun onResults(results: android.os.Bundle?) {
+                st.listening = false
+                val text = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                if (text.isNotBlank()) { currentInputConnection?.commitText(text.trim() + " ", 1); afterText() }
+            }
+            override fun onPartialResults(partial: android.os.Bundle?) {}
+            override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+        })
+        val i = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, tag)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        runCatching { rec.startListening(i) }.onFailure { st.listening = false; switchToVoiceKeyboard() }
+    }
+
+    private fun stopListening() {
+        st.listening = false
+        runCatching { recognizer?.stopListening() }
+    }
+
+    /** The device's own voice keyboard, when speech typing in Pulse is not possible. */
+    private fun switchToVoiceKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         val voice = imm.enabledInputMethodList.firstOrNull { ime ->
             ime.packageName != packageName && (0 until ime.subtypeCount).any { ime.getSubtypeAt(it).mode == "voice" }
