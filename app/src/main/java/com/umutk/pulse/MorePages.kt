@@ -384,14 +384,6 @@ fun PropsPage() {
 
 @Composable
 fun StoragePage() {
-    val scope = rememberCoroutineScope()
-    var folders by remember { mutableStateOf<List<Pair<String, Long>>?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    LiveSections("Storage", 0, top = {
-        PCard {
-            Text("Folder sizes", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            PButton(if (busy) "Calculating…" else "Calculate") { if (!busy) { busy = true; scope.launch { folders = withContext(Dispatchers.IO) { Hw.folderSizes() }; busy = false } } }
-            folders?.let { f -> if (f.isEmpty()) Text("Could not read (storage permission may be needed)", color = T.sub, fontSize = 12.sp) else InfoRows(f.map { it.first to "%.1f MB".format(it.second / 1048576f) }) }
-        }
-    }) { Hw.storage(it) }
+    // the folder sizes moved to the Files app (Folder sizes), so they are not repeated here
+    LiveSections("Storage", 0) { Hw.storage(it) }
 }
