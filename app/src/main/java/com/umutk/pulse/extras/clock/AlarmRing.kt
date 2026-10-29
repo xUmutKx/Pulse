@@ -99,7 +99,7 @@ class AlarmRingService : Service() {
     private fun startBuzz() {
         val v = getSystemService(Context.VIBRATOR_SERVICE) as Vibrator
         val pattern = longArrayOf(0, 600, 400, 600, 1200)
-        if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createWaveform(pattern, 0)) else @Suppress("DEPRECATION") v.vibrate(pattern, 0)
+        if (Build.VERSION.SDK_INT >= 26) v.vibrate(VibrationEffect.createWaveform(pattern, 0)) else { @Suppress("DEPRECATION") v.vibrate(pattern, 0) }
     }
 
     private fun stopAll() {
@@ -128,7 +128,7 @@ class AlarmRingActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: android.os.Bundle?) {
         super.onCreate(savedInstanceState)
         if (Build.VERSION.SDK_INT >= 27) { setShowWhenLocked(true); setTurnScreenOn(true) }
-        else @Suppress("DEPRECATION") window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
+        else { @Suppress("DEPRECATION") window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON) }
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         val id = intent.getIntExtra("id", -1)
         androidx.core.content.ContextCompat.registerReceiver(this, closed, android.content.IntentFilter(AlarmRingService.ACTION_CLOSED), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
