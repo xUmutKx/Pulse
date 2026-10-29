@@ -1353,7 +1353,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 ### 1 Klavye (en yüksek öncelik)
 - 🟡 1.1 Noktalama sonrası kelime ekleme/silme hatası: sebep bulunacak (InputConnection/composing/seçim senkronu), eski düzeltme sonucu yeni metne uygulanmayacak, silinen kelime geri gelmeyecek — ilk düzeltme: Space artık yalnız alan gerçekten son kelimeyle bitiyorsa tahmin ekler, noktalama/silme sonrası hatırlanan kelime unutulur (derlenmedi)
 - 🔴 1.2 Türkçe düzeltme motoru: kök+ek analizi, harf atlama/tekrar/yer değişimi, komşu tuş, ç ğ ı i ö ş ü, önceki-sonraki kelime bağlamı, emin değilse dokunma
-- 🔴 1.3 Türkçe/İngilizce cümle bağlamı ile ayrım (tek kelime dili değiştirmez), otomatik algı ve elle seçim ayrı
+- 🟢 1.3 (cümlenin kelimeleri oy verir, tek kelime dili değiştirmez, ayarda kapatılabilir) Türkçe/İngilizce cümle bağlamı ile ayrım (tek kelime dili değiştirmez), otomatik algı ve elle seçim ayrı
 - 🟢 1.4 Öğrenme modları (kelime / cümle / ikisi / kapalı) yapıldı; öğrenilen kelimeleri görme-silme-ekleme, listeyi kopyalama/yapıştırma yapıldı; "doğru işaretle" = elle ekleme; hariç tutma ve geri alma mevcut (düzeltmeyi geri al / bir daha önerme)
 - 🔴 1.5 Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
 - 🟡 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz — uzun kelimeye daha çok yer, sığmazsa üçüncü öneri çekilir; kayıtlı e-posta yalnız e-posta alanında (derlenmedi)
@@ -1469,3 +1469,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.192 Ambient sound notification: it has a Stop button, and a tap opens the music player's sound page instead of the Pulse start page; the music keep-alive notification opens the player (derlenmedi)
 - 1.0.193 Settings: a "Keep permissions" switch (Android's permission auto-reset exemption: written with root, otherwise the system screen opens); Notification history uses a clock icon in the app list (derlenmedi)
 - 1.0.194 Keyboard learning: choose what is learned (words, sentences, both, off); a Learned words list with search, delete, add by hand, copy out and paste in (derlenmedi)
+- 1.0.195 Keyboard: the language of a sentence is worked out from its words (two words of one language and twice the other's votes), so Turkish sentences are corrected as Turkish and one English word changes nothing; a switch turns the detection off (derlenmedi)

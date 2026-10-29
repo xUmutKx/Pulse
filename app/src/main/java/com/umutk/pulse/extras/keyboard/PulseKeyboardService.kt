@@ -155,7 +155,32 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var seenPrimary = ""
 
     /** The word lists used together: the layout's own, then those of the other languages in use (a Turkish keyboard that also corrects English). */
-    private fun dictCodes(code: String): List<String> = (listOf(KeyboardLayouts.dict(code)) + KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }).distinct()
+    private fun dictCodes(code: String): List<String> {
+        val all = (listOf(KeyboardLayouts.dict(code)) + KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }).distinct()
+        // the language of the sentence under way goes first (see detectLang)
+        val c = ctxLang
+        return if (c != null && c in all) listOf(c) + all.filter { it != c } else all
+    }
+
+    /** The language of the sentence being written, from its last words; null when it is mixed or too short to tell (then every language of the keyboard counts alike). */
+    @Volatile private var ctxLang: String? = null
+
+    /**
+     * One English word does not turn a Turkish sentence English: the words of the sentence so far vote, each word that belongs to exactly one of the keyboard's
+     * languages counts for it, and a language leads only with at least two such words and twice the votes of the other. The word being typed is not counted.
+     */
+    private fun detectLang() {
+        val langs = KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }.distinct()
+        if (!KeyboardPrefs.autoLang || langs.size < 2) { ctxLang = null; return }
+        val tb = currentInputConnection?.getTextBeforeCursor(140, 0)?.toString().orEmpty()
+        val sentence = tb.takeLastWhile { it !in ".!?\n" }
+        val ws = sentence.split(Regex("[^\\p{L}']+")).filter { it.length >= 3 }.let { if (word.isNotEmpty()) it.dropLast(1) else it }.takeLast(6)
+        val votes = HashMap<String, Int>()
+        ws.forEach { w -> val low = w.lowercase(lang.locale); val hits = langs.filter { KeyboardDictionary.isWord(it, low) }; if (hits.size == 1) votes[hits[0]] = (votes[hits[0]] ?: 0) + 1 }
+        val sorted = votes.entries.sortedByDescending { it.value }
+        val top = sorted.firstOrNull(); val second = sorted.getOrNull(1)?.value ?: 0
+        ctxLang = if (top != null && top.value >= 2 && top.value >= 2 * second) top.key else null
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -1096,6 +1121,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         if (!KeyboardPrefs.suggestions || st.plain || urlNow()) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
+        detectLang()
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
         // the touch model needs the touch of every letter and the key positions; a word that was not touched letter by letter is judged without it
         val tc: KeyboardDictionary.TouchCtx? = if (typed.isNotEmpty() && touchPts.size >= typed.length && st.letterRects.isNotEmpty()) {
@@ -1148,7 +1174,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val lower = typed.lowercase(loc)
         val codes = dictCodes(code)
-        val comp = codes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.take(5)
+        // candidates come from the sentence's language; a word that is valid in any language of the keyboard is still left alone (valid below)
+        val candCodes = if (ctxLang != null) codes.take(1) else codes
+        val comp = candCodes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.take(5)
         val maxCost = if (KeyboardLayouts.dict(code) == "tr") (if (lower.length >= 5) .8f else .65f) else if (lower.length >= 4) 1.3f else .7f
         // a learned slip never turns a real word into a rarer one ("tak" into something else because both were typed once): it must lead to a clearly likelier word
         val learned = KeyboardDictionary.typoFix(this, lower)?.takeIf { l ->
@@ -1160,7 +1188,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val ratioLimit = ((100 - KeyboardPrefs.autoRatio) / 100f * maxOf(lower.length, 4)).coerceAtMost(1.2f)
         val limit = maxOf(if (lower.length >= 8) maxCost + .5f else maxCost, ratioLimit)
         // the fast pass (completions only) gives the bar its words at once; the full pass with the corrections follows and replaces it
-        val corr = if (!fast && lower.length >= 2) (codes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5, tc) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
+        val corr = if (!fast && lower.length >= 2) (candCodes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5, tc) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
             (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else if (fast && learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
