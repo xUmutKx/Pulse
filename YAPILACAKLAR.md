@@ -1401,7 +1401,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟡 10.3 (yıldızlar %15 büyütüldü, hap büyüdü; ilerleme çubuğu güncelleme sıklığı 400 ms'den 100 ms'ye indi) Yıldız dokunma alanı + %15 büyüt, ilerleme çubuğu akıcılığı
 - 🟡 10.4 Ruh hâli etiketleri: üzgün, sakin/dingin, nostaljik, romantik, öfkeli, hayalci eklendi (tür etiketi ve başlık sözcüklerinden, 1960-99 yılları nostaljik); kitaplık arayüzü, etiket düzenleme ve çevrimiçi etiket açık
 - 🔴 10.5 Çevrimiçi arama/çalma listesi: iki oynatıcı sorunu, gerçek sonuçlar
-- 🔴 10.6 Dinleme özeti (Wrapped benzeri): 3 aylık, aylık/yıllık, sanatçı/şarkı, süre, ruh hâli/tür, sayfalı tam ekran, görsel dışa aktarma, geçmiş yoksa kayıt tutma
+- 🟡 10.6 Müzik özeti (Extra apps): 6 sayfa (giriş, dakika, sanatçılar, şarkılar, saat/gün dağılımı, kart), 30 gün / 3 ay / 1 yıl, kartı PNG kaydetme. Dinleme kaydı bugünden başlıyor (geçmişi uydurulmaz). Ruh hâli/tür dağılımı, otomatik üç aylık özet ve paylaşma açık
 
 ### 11 White Noise
 - 🟡 11.0 (Meditation %5 azaltıldı) Waterfall, Gentle Rain, Wind Chimes iyileştirme; Meditation %5 azalt; Seaside aynı; yeni doğa sesleri; profiller ikonlu; kişisel karışım
@@ -1494,3 +1494,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.211 Temperature tool: a history card with the battery and processor lines for today, yesterday and two days ago, the range of each and the hottest moment; readings are noted once a minute while Pulse runs and kept three days (derlenmedi)
 - 1.0.212 Media tools: a PDF tab that joins several PDFs into one and cuts a range of pages out of one (the pages are drawn as pictures, so the text cannot be selected; said on the screen); saved in Download/Pulse (derlenmedi)
 - 1.0.213 Music: six more moods next to energetic, chill, focus and happy: sad, calm, nostalgic, romantic, angry and dreamy (found from the genre tag and the title in English and Turkish; songs from the 60s to the 90s count as nostalgic); each gets its own mix and can be chosen in the mix settings (derlenmedi)
+- 1.0.214 Music recap (Extra apps): from now on every real listening is noted with its time; the recap shows pages to swipe through (minutes, top artists, top songs, the hours and days you listen, a card) for the last 30 days, 3 months or a year, and saves the card as a PNG in Download/Pulse; it says from which day the notes count (derlenmedi)
