@@ -125,12 +125,13 @@ fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false
         val r = if (t.id == "win10") 4.dp else t.radius
         Box(modifier.clip(RoundedCornerShape(r)).background(t.bg).then(if (t.bevel) Modifier.bevel(true) else Modifier.border(1.dp, t.line, RoundedCornerShape(r))).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
             if (icon != null) { Icon(icon, null, Modifier.size(16.dp), tint = if (danger) Color(0xFFB00020) else t.text); Spacer(Modifier.width(6.dp)) }
-            Text(text, color = if (danger) Color(0xFFB00020) else t.text, fontSize = 13.sp)
+            Text(text, color = InWinBtnText.current ?: if (danger) Color(0xFFB00020) else t.text, fontSize = 13.sp)
         }
     } else {
         // single outline, no accent fill: the same for every look
         val shape = if (t.material) CircleShape else RoundedCornerShape(if (t.id == "win11") 6.dp else t.radius.coerceAtMost(12.dp))
-        val fg = if (danger) Color(0xFFC42B1C) else t.text
+        // inside a Windows dialog button the colour is the one that reads on that button (white on the accent fill)
+        val fg = InWinBtnText.current ?: if (danger) Color(0xFFC42B1C) else t.text
         if (t.material && InMatDialogBtn.current) {
             // a Material 3 dialog action: a text button, no frame
             Box(modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
