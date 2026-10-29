@@ -130,6 +130,7 @@ fun GeneralSettings() {
         }
     }
     PCard { AppIconChooser() }
+    PermissionKeepCard()
     DataBackupCard()
     ExtraAppsCard()
 }
@@ -850,3 +851,40 @@ private val FC_APP = mapOf("CalculatorLauncher" to "calculator", "FilesLauncher"
     "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes",
     "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "ExtraStoreLauncher" to "store")
 private val FC_PAGE = mapOf("downloads" to "download", "files" to "files")
+
+
+/**
+ * Android 11+ takes the permissions of an app that was not opened for months ("Pause app activity if unused" / permission auto-reset): the accessibility,
+ * notification, usage and overlay grants then vanish. This card shows whether Pulse is exempt and sets it: with root the exemption is written directly (the
+ * same appop the system screen writes), without root the system screen of Pulse opens, where the switch is turned off by hand.
+ */
+@Composable
+private fun PermissionKeepCard() {
+    if (android.os.Build.VERSION.SDK_INT < 30) return
+    val ctx = LocalContext.current
+    fun exempt() = runCatching { ctx.packageManager.isAutoRevokeWhitelisted }.getOrDefault(false)
+    var on by remember { mutableStateOf(exempt()) }
+    var note by remember { mutableStateOf("") }
+    // coming back from the system screen: read the state again
+    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) on = exempt() }
+        lifecycle.addObserver(ob); onDispose { lifecycle.removeObserver(ob) }
+    }
+    PCard {
+        SwitchRow(tr("Keep permissions", "İzinleri koru"),
+            tr("Stops Android from taking Pulse's permissions back when it is not opened for a while", "Pulse bir süre açılmazsa Android'in izinlerini geri almasını engeller"), on) { want ->
+            if (Shell.root == true) {
+                Thread {
+                    val r = Shell.runRoot("cmd appops set ${ctx.packageName} AUTO_REVOKE_PERMISSIONS_IF_UNUSED " + (if (want) "ignore" else "allow") + "; echo __OK")
+                    android.os.Handler(android.os.Looper.getMainLooper()).post { on = exempt(); note = if (r.contains("__OK") && on == want) "" else tr("The system did not take it.", "Sistem kabul etmedi.") }
+                }.start()
+            } else {
+                note = tr("Turn off \"Pause app activity if unused\" on the screen that opens.", "Açılan ekranda \"Kullanılmıyorsa uygulama etkinliğini duraklat\" seçeneğini kapat.")
+                runCatching { ctx.startActivity(Intent(Intent.ACTION_AUTO_REVOKE_PERMISSIONS, android.net.Uri.parse("package:" + ctx.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    .onFailure { runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + ctx.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+            }
+        }
+        if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
+    }
+}
