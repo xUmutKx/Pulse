@@ -189,9 +189,39 @@ object KeyboardDictionary {
         if (w.length < 2 || w.any { it.isDigit() }) return
         // behind another word and still capitalised: a name, so the suggestions give it its capital again
         if (!prev.isNullOrEmpty() && word[0].isUpperCase() && word.drop(1).none { it.isUpperCase() }) forms[w] = word
-        user[w] = (user[w] ?: 0) + 1
-        if (!prev.isNullOrEmpty()) { val m = pairs.getOrPut(prev.lowercase(Locale.ROOT)) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
+        // the learning mode: words (the vocabulary and the names), sentences (which word follows which), both, or nothing
+        if (KeyboardPrefs.learnWords || (user[w] ?: 0) > 0) user[w] = (user[w] ?: 0) + 1
+        if (KeyboardPrefs.learnPairs && !prev.isNullOrEmpty()) { val m = pairs.getOrPut(prev.lowercase(Locale.ROOT)) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
         if (++dirty >= 25) saveUser(c)
+    }
+
+    /** The words kept for the person, the most used first (the "Learned words" list of the settings). */
+    fun userWords(): List<Pair<String, Int>> = user.entries.map { it.key to it.value }.sortedWith(compareByDescending<Pair<String, Int>> { it.second }.thenBy { it.first })
+
+    /** One learned word forgotten (and the pairs that lead to it). */
+    fun removeUser(c: Context, w: String) {
+        if (!userLoaded) loadUser(c)
+        val k = w.lowercase(Locale.ROOT)
+        user.remove(k); forms.remove(k); typos.entries.removeAll { it.value == k }
+        pairs.values.forEach { it.remove(k) }
+        dirty = 1; saveUser(c)
+    }
+
+    /** A word added by hand: known from now on (counted three times), so it is never "corrected" away. */
+    fun addUser(c: Context, w: String) {
+        val k = w.trim().lowercase(Locale.ROOT)
+        if (k.length < 2 || k.any { it.isDigit() || it.isWhitespace() }) return
+        if (!userLoaded) loadUser(c)
+        user[k] = maxOf(user[k] ?: 0, 3)
+        if (w.trim()[0].isUpperCase()) forms[k] = w.trim()
+        dirty = 1; saveUser(c)
+    }
+
+    /** The learned words as plain text, one per line (the export), and the other way (the import). */
+    fun exportUser(): String = userWords().joinToString("\n") { it.first }
+    fun importText(c: Context, text: String): Int {
+        val ws = text.lines().map { it.trim() }.filter { it.length in 2..30 && it.none { ch -> ch.isWhitespace() || ch.isDigit() } }
+        importUser(c, ws); return ws.size
     }
 
     /** A word the person is known to use (a contact name, a word of the phone's dictionary): counted [times] times. */
