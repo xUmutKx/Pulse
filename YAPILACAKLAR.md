@@ -1344,3 +1344,109 @@ Screen recorder feature list (55 candidates)
 - 1.0.182 Keyboard settings: under each long-press choice (comma, period, key beside ?123) a small key shows what the press does, with the action's icon and its name, and both change with the choice (derlenmedi)
 - 1.0.183 Files settings: the preview is detailed — a root folder, a folder, a folder shown by name only, and a file changed earlier and today — each with its caption and the size, count and date the choices below give it (derlenmedi)
 - 1.0.184 Extra apps store: the list shows only the modules already downloaded (the rest stay in the store), without the short description under each name; on Windows 11 the rows have no card behind them, they sit on the see-through window (derlenmedi)
+
+---
+
+## 🆕 BÜYÜK PAKET (2026-10-29): tüm hatalar + yeni özellikler, tek koordineli sürüm
+Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenmedi). Bir madde bitince buradaki işaret güncellenir.
+
+### 1 Klavye (en yüksek öncelik)
+- 🔴 1.1 Noktalama sonrası kelime ekleme/silme hatası: sebep bulunacak (InputConnection/composing/seçim senkronu), eski düzeltme sonucu yeni metne uygulanmayacak, silinen kelime geri gelmeyecek
+- 🔴 1.2 Türkçe düzeltme motoru: kök+ek analizi, harf atlama/tekrar/yer değişimi, komşu tuş, ç ğ ı i ö ş ü, önceki-sonraki kelime bağlamı, emin değilse dokunma
+- 🔴 1.3 Türkçe/İngilizce cümle bağlamı ile ayrım (tek kelime dili değiştirmez), otomatik algı ve elle seçim ayrı
+- 🔴 1.4 Öğrenme modları (kelime / cümle / birleşik / kapalı), öğrenilenleri görme-silme-temizleme, özel sözlük, hariç tutma, geri alma, "doğru" işaretleme, dışa/içe aktarma
+- 🔴 1.5 Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
+- 🔴 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz
+- 🔴 1.7 E-posta kısayolu yalnız @ yazınca/çağrılınca, imleç noktasına ekler, önceki adı silmez, tuşa atanabilir
+- 🔴 1.8 Pano: ekran görüntüsü gerçek PNG/JPEG, raptiye ikonu, kısayol ikonu, Ctrl+X panoya, donanım klavyesi ve basılı tutma aynı geçmiş, kısayol alanında imleç
+
+### 2 Temalar / AMOLED
+- 🔴 2.1 Ayrı Material / Windows 11 / AMOLED siyah teması + AMOLED vurgu rengi; tüm ekranlar (çubuklar, hızlı panel, ayarlar, menüler, editörler, PDF/Office, müzik, ağ, geçmiş, pencereler, klavye); başka temanın rengi sızmasın
+- 🔴 2.2 Kontrast: Win11 End Task, indirme silme penceresi Delete/Cancel, otomatik metin/düğme rengi
+- 🔴 2.3 Tam siyah, vurgu, kart arka planı, saydam katman, kontrast, animasyon yoğunluğu seçenekleri
+
+### 3 Dosyalar / APK / ZIP / Office
+- 🔴 3.0 Recording/çağrı kayıtlarında 3 nokta menüsü ile paylaşma (diğer klasörler gibi)
+- 🔴 3.1 APK ayrıntı: Install tek satır, Browse/Install düzeni; APK/ZIP/diğer için tutarlı menü; seçim ekranlarında çoklu seçim; sil/kopyala/taşı/paylaş/arşivle
+- 🔴 3.2 Birden çok resmi tek PDF yapma, PDF sayfa/görsel düzenleme, dosya türüne göre araçlar, Tools bölümüne taşıma
+- 🔴 3.3 PowerPoint açma/görüntüleme/slayt gezme/düzenleme, Office araç çubukları, tam siyah tema
+
+### 4 Paylaşma / Kaydetme / Yedek
+- 🔴 4.0 Share / Save As kontrolü; Save As AMOLED'de gri-beyaz kalmasın; hata bildirimi
+- 🔴 4.1 Yedek küçültme: önbellek, müzik dosyası, kapaklar yedeklenmez; boyut gösterimi; eski yedekleri yönetme/silme
+
+### 5 Video oynatıcı
+- 🔴 5.0 Alt kontroller için yarı saydam katman, beyaz ikon kontrastı, 3 nokta menüsü düzeni, Cast düğmesi (gerçek), dokunma alanları
+
+### 6 Saat uygulaması
+- 🔴 6.0 Lucid kaynağı/lisansı incelenecek (ZIP projede yoksa açıkça belirtilecek); alarm, geri sayım, kronometre, dünya saatleri, temalar, widget
+- 🔴 6.1 Alarm AlarmManager.setAlarmClock ile, boot sonrası yeniden kurma; zorla durdurma sınırı açıkça yazılacak
+
+### 7 Network Manager
+- 🔴 7.1 Günlük/haftalık/aylık kullanım, grafik, pasta, uygulama bazlı, Wi-Fi/mobil ayrı (gerçek NetworkStatsManager)
+- 🔴 7.2 Uygulama başına mobil/Wi-Fi engelleme (root iptables/cmd netpolicy), mevcut durum
+- 🔴 7.3 Ağ türü değiştirme: "Phone didn't take it" nedeni, desteklenmeyeni gizle, izin/modem hatası ayrımı, sahte başarı yok
+
+### 8 Extra Apps menüsü
+- 🟡 8.0 Görünürlük anahtarları (uzun basma ile gizleme yapıldı); ızgara düzeni + liste seçeneği, App Info/Open düğmesi kaldırma, Office kaldırma, kaydırma konumu koruma
+- 🟡 8.1 Mağaza: yalnız indirilenler (yapıldı); kurulu → aç, kurulu değil → Download, güncelleme bilgisi/sürüm karşılaştırma, APKMirror doğrudan sayfa
+
+### 9 Toolkit
+- 🔴 9.1 İnternet hız testi Toolkit'e taşınır (indirme/yükleme/gecikme, kayıt, geçmiş sayfası, hata), Quick Panel kısayolu
+- 🔴 9.2 Yüzen sayaç: küçük, geri sayım, başlat/duraklat/devam/sıfırla/kapat, görünüm, saydamlık, konum korunması
+
+### 10 Müzik
+- 🔴 10.1 Yedekte müzik/kapak çoğaltma yok
+- 🔴 10.2 Widget: yeniden boyutlandırmada düzen, kapağa/ada dokununca doğru oynatıcı, düğmeler gerçek durumu yönetir, 5 sn ileri/geri korunur, göster/gizle, ayar
+- 🔴 10.3 Yıldız dokunma alanı + %15 büyüt, ilerleme çubuğu akıcılığı
+- 🔴 10.4 Kitaplık arayüzü, daha çok ruh hâli etiketi, etiket görme/düzenleme, çevrimiçi etiket
+- 🔴 10.5 Çevrimiçi arama/çalma listesi: iki oynatıcı sorunu, gerçek sonuçlar
+- 🔴 10.6 Dinleme özeti (Wrapped benzeri): 3 aylık, aylık/yıllık, sanatçı/şarkı, süre, ruh hâli/tür, sayfalı tam ekran, görsel dışa aktarma, geçmiş yoksa kayıt tutma
+
+### 11 White Noise
+- 🔴 11.0 Waterfall, Gentle Rain, Wind Chimes iyileştirme; Meditation %5 azalt; Seaside aynı; yeni doğa sesleri; profiller ikonlu; kişisel karışım
+- 🔴 11.1 Bildirimde durdur, dokununca doğrudan Music Player, bildirim kaybolma nedeni
+
+### 12 İndirme yöneticisi
+- 🔴 12.0 Silinen dosya listede kalmasın, Delete/Cancel kontrastı, çoklu seçim + toplu silme, onay, silme doğrulama
+
+### 13 Uygulama geçmişi
+- 🔴 13.0 Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
+
+### 14 Gamepad
+- 🟡 14.0 Joystick konumu/boşluk (kısmen yapıldı); floating gamepad, boyut-konum ayarı
+
+### 15 Device paneli
+- 🔴 15.0 Overview üstüne cihaz kartı; Device menüsünden Folder Sizes tekrarını kaldır
+- 🔴 15.1 Sıcaklık: günlük görünüm, geçmiş, CPU/pil/termal ayrımı
+
+### 16 Root / izin / arka plan
+- 🔴 16.0 Otomatik izin sıfırlama, erişilebilirlik servisi yeniden başlatma, boot sonrası servisler, kapatma/atma/zorla durdurma ayrımı
+
+### 17 Motion Cues / Hızlı panel
+- 🔴 17.0 Motion Cues panel kapanana kadar sürsün, doğru geri dönüş ekranı, Quick Panel ikon/tema uyumu
+
+### 18 Launcher
+- 🔴 18.1 Windows Phone teması: sol panel sadeleştirme, Windows tuşu, tam ekran, widget yerleşimi, ayar dönüşünde liste başa atlamasın
+- 🔴 18.2 Windows 11: End Task, vurgu kontrastı, tutarlı menü
+- 🔴 18.3 Grafik tema: otomatik yardımcı kapatılabilir, Scientific/Programmer ikonları, tuş takımı %15 yukarı
+- 🔴 18.4 Launcher sesleri ayarı, tek sefer tetikleme
+- 🔴 18.5 Not widget'ı genel widget, boyut, Music başlığı belirgin, kategoriler, WMP widget düğmesi, önceki/sonraki
+- 🔴 18.6 Tüm uygulamada liste dönüşünde kaydırma/arama/filtre korunsun
+
+### 19 Paint / ikon üretici
+- 🔴 19.1 Paint: AMOLED, renk, kalem/sprey/sulu boya, kalınlık, silgi, geri al-yinele, PNG, tuval
+- 🔴 19.2 Material ikon üretici: arama, kategori, kontur/boyut/renk, PNG, kare çıktı, lisans
+
+### 20 Tarayıcı / WebView
+- 🔴 20.0 WebView sağlayıcı incelemesi, sistem geneli değiştirme sınırları, reklam engelleme + karanlık mod, uzantı desteği ayrımı
+
+### 21 Bildirim geçmişi / ikonlar
+- 🔴 21.0 Win11 tarzı saat ikonu, geçmiş çalışır, gereksiz 3 nokta menüleri, ayar başlıklarında ikon, büyük yazıları küçült
+
+### 22 Punk Store
+- 🔴 22.0 18 MB → 75 MB kurulum boyutu nedeni, kurulum yöntemi kalıcı, varsayılan root, root yoksa doğru hata
+
+### 23-24 Genel kalite ve teslim
+- 🔴 23.0 Gereksiz yeniden çizim, ikon önbelleği, tema/vurgu ortaklaştırma, ANR/çökme, boyut
+- 🔴 24.0 Birim testleri (klavye noktalama/dil), tek sürüm derleme, sonuç raporu (APK konumu/boyut, bağımlılık-lisans, mimari)
