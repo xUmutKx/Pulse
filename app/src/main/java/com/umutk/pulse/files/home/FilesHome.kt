@@ -231,7 +231,8 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
                             Box(box(Modifier.fillMaxWidth().height(96.dp)), contentAlignment = Alignment.Center) {
                                 val th = exThumb(f)
                                 if (th != null) androidx.compose.foundation.Image(th, null, Modifier.fillMaxSize().clip(RoundedCornerShape(if (mat) 14.dp else 0.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                                else PIcon("document", sub, 34.dp)
+                                else com.umutk.pulse.features.FileTypeBadge(f, size = 44.dp)
+                                if (th != null) com.umutk.pulse.features.FileTypeBadge(f, Modifier.align(Alignment.BottomStart).padding(5.dp), 22.dp)
                             }
                             Text(f.name, color = fg, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
                             Text(DateUtils.getRelativeTimeSpanString(f.lastModified(), System.currentTimeMillis(), DateUtils.DAY_IN_MILLIS).toString(), color = sub, fontSize = 12.sp, maxLines = 1)
