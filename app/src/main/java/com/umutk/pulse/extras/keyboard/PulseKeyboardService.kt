@@ -464,6 +464,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (tail.isNotEmpty()) c.commitText(tail, 1)
             c.endBatchEdit()
         }
+        // safety net: some fields drop or swallow the word in this edit. When the text before the cursor no longer holds the word, it is written back
+        // (once, only when it is really missing), so a space never leaves the word gone
+        runCatching {
+            val got = c.getTextBeforeCursor(out.length + tail.length, 0)?.toString()
+            if (got != null && got != out + tail && !got.contains(out)) {
+                if (tail.isNotEmpty() && got.endsWith(tail)) c.deleteSurroundingText(tail.length, 0)
+                c.commitText(out + tail, 1)
+            }
+        }
         peak?.let { pk ->
             val lc = lang.locale
             val a = pk.lowercase(lc); val b = typed.lowercase(lc)
