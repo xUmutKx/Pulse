@@ -1411,7 +1411,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟢 12.0 Silinen dosya listede kalmasın (2,5 sn'de bir kontrol), Delete/Cancel kontrastı, uzun basıp çoklu seçim + toplu silme, onay, silinemeyen dosya uyarısı
 
 ### 13 Uygulama geçmişi
-- 🟡 13.0 (ikonlar, pasta+liste birlikte, bugün/hafta/ay yapıldı; kategori raporu, dışa aktarma, süre sınırı, App Info/Force Stop ikonları sürüyor) Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
+- 🟡 13.0 (ikonlar, pasta+liste birlikte, bugün/hafta/ay, App Info/Force Stop/Extract/Uninstall ikonlu düğmeler ve uygulamanın kendi ikonu ayrıntıda yapıldı; kategori raporu, dışa aktarma, süre sınırı, App Info/Force Stop ikonları sürüyor) Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
 
 ### 14 Gamepad
 - 🟡 14.0 Joystick konumu/boşluk (kısmen yapıldı); floating gamepad, boyut-konum ayarı
@@ -1498,3 +1498,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.215 Extra apps list: a switch in its top right shows the apps as tiles (icon and name, three in a row) or as rows with their description; the choice is kept, and a long press still hides or shows an app (derlenmedi)
 - 1.0.216 Keyboard: an e-mail key that types "@" and a domain you choose (gmail.com by default) at the cursor, without touching what was typed before; it can sit on the bar, in the menu, in the extra key row, or on a long press of the comma, period or the key beside ?123 (derlenmedi)
 - 1.0.217 Widgets page: the Music category title is larger, in the accent colour, with its icon and a line under it (derlenmedi)
+- 1.0.218 App details: the app's own icon beside its name, and Open, App info, Force stop, Extract APK and Uninstall are icon buttons instead of words (derlenmedi)
