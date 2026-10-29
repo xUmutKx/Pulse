@@ -386,7 +386,7 @@ private val FC_PIC = mapOf("processes" to "processes", "performance" to "perform
     "services" to "services", "apps" to "apps", "download" to "download", "folder" to "files", "office" to "office", "recycle" to "recycle", "phone" to "device",
     "heart" to "health", "run" to "terminal", "settings" to "settings")
 
-private val FC_NAMED = mapOf("extraFiles" to "files", "extraPhotos" to "photos", "extraCalendar" to "calendar", "extraContacts" to "contacts", "extraPaint" to "paint", "extraArtCraft" to "artcraft",
+private val FC_NAMED = mapOf("extraOffice" to "office", "extraFiles" to "files", "extraPhotos" to "photos", "extraCalendar" to "calendar", "extraContacts" to "contacts", "extraPaint" to "paint", "extraArtCraft" to "artcraft",
     "extraMusic" to "music", "extraVideo" to "video", "extraWhiteNoise" to "whitenoise", "extraVoice" to "voice", "extraNotes" to "notes", "extraWeather" to "weather", "extraMessages" to "messages",
     "extraLauncher" to "launcher", "extraScreenRec" to "screenrec", "extraNotifHist" to "notifhist", "extraLocalSend" to "localsend", "extraStore" to "store")
 
