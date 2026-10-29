@@ -102,6 +102,8 @@ import androidx.compose.material.icons.rounded.AspectRatio as RAspectRatio
 import androidx.compose.material.icons.rounded.OpenWith as ROpenWith
 import androidx.compose.material.icons.rounded.Palette as RPalette
 import androidx.compose.material.icons.rounded.Pin as RPin
+import androidx.compose.material.icons.rounded.PushPin as RPushPin
+import androidx.compose.material.icons.rounded.Bolt as RBolt
 import androidx.compose.material.icons.rounded.Settings as RSettings
 import androidx.compose.material.icons.rounded.Spellcheck as RSpellcheck
 import androidx.compose.material.icons.rounded.TouchApp as RTouchApp
@@ -214,6 +216,8 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "OpenWith" -> Icons.Rounded.ROpenWith
         "Palette" -> Icons.Rounded.RPalette
         "Pin" -> Icons.Rounded.RPin
+        "PushPin" -> Icons.Rounded.RPushPin
+        "Bolt" -> Icons.Rounded.RBolt
         "Settings" -> Icons.Rounded.RSettings
         "Spellcheck" -> Icons.Rounded.RSpellcheck
         "TouchApp" -> Icons.Rounded.RTouchApp
