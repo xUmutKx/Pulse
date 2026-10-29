@@ -222,16 +222,25 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     var jump by remember { mutableStateOf(false) }; var jumpText by remember { mutableStateOf("") }
     val widthDp = LocalConfiguration.current.screenWidthDp.dp
     val pagePx = with(LocalDensity.current) { (widthDp * committed).roundToPx() }.coerceIn(300, 2400)
+    fun goto(i: Int) { scope.launch { list.animateScrollToItem(i.coerceIn(0, p.count - 1)) } }
+    val here = list.firstVisibleItemIndex
     val acts = listOf(
-        OAct(tr("Zoom in", "Yakınlaştır"), "View", Icons.Outlined.ZoomIn) { zoom = (zoom * 1.25f).coerceAtMost(4f) },
-        OAct(tr("Zoom out", "Uzaklaştır"), "View", Icons.Outlined.ZoomOut) { zoom = (zoom / 1.25f).coerceAtLeast(1f) },
-        OAct(tr("Go to page", "Sayfaya git"), "View", Icons.Outlined.FormatListNumbered) { jumpText = ""; jump = true },
-        OAct(tr("Pen", "Kalem"), "Edit", Icons.Outlined.Edit, on = tool == 1) { tool = if (tool == 1) 0 else 1 },
-        OAct(tr("Highlight", "Vurgu"), "Edit", Icons.Outlined.BorderColor, on = tool == 2) { tool = if (tool == 2) 0 else 2; if (tool == 2 && ci > 1) ci = 1 },
-        OAct(tr("Add text", "Yazı ekle"), "Edit", Icons.Outlined.TextFields, on = tool == 3) { tool = if (tool == 3) 0 else 3 },
-        OAct(tr("Edit text", "Metni düzenle"), "Edit", Icons.Outlined.EditNote, on = tool == 4) { tool = if (tool == 4) 0 else 4; if (tool == 4) ci = cols.size - 1 },
-        OAct(tr("Colour", "Renk"), "Edit", Icons.Outlined.Palette) { ci = (ci + 1) % cols.size },
-        OAct(tr("Undo", "Geri al"), "Edit", Icons.Outlined.Undo, enabled = anns.isNotEmpty()) { anns.removeAt(anns.size - 1) },
+        OAct(tr("Zoom in", "Yakınlaştır"), "View", Icons.Outlined.ZoomIn, cap = tr("Zoom", "Yakınlaştırma")) { zoom = (zoom * 1.25f).coerceAtMost(4f) },
+        OAct(tr("Zoom out", "Uzaklaştır"), "View", Icons.Outlined.ZoomOut, cap = tr("Zoom", "Yakınlaştırma")) { zoom = (zoom / 1.25f).coerceAtLeast(1f) },
+        OAct(tr("Fit width", "Genişliğe sığdır"), "View", Icons.Outlined.FitScreen, cap = tr("Zoom", "Yakınlaştırma"), enabled = zoom != 1f) { zoom = 1f },
+        OAct(tr("Go to page", "Sayfaya git"), "View", Icons.Outlined.FormatListNumbered, cap = tr("Pages", "Sayfalar")) { jumpText = ""; jump = true },
+        OAct(tr("First", "İlk"), "View", Icons.Outlined.FirstPage, cap = tr("Pages", "Sayfalar"), enabled = here > 0) { goto(0) },
+        OAct(tr("Previous", "Önceki"), "View", Icons.Outlined.KeyboardArrowUp, cap = tr("Pages", "Sayfalar"), enabled = here > 0) { goto(here - 1) },
+        OAct(tr("Next", "Sonraki"), "View", Icons.Outlined.KeyboardArrowDown, cap = tr("Pages", "Sayfalar"), enabled = here < p.count - 1) { goto(here + 1) },
+        OAct(tr("Last", "Son"), "View", Icons.Outlined.LastPage, cap = tr("Pages", "Sayfalar"), enabled = here < p.count - 1) { goto(p.count - 1) },
+        OAct(tr("Dark pages", "Koyu sayfalar"), "View", Icons.Outlined.DarkMode, on = OfficePrefs.darkPdf, cap = tr("Display", "Görünüm")) { OfficePrefs.setDarkPdf(ctx, !OfficePrefs.darkPdf) },
+        OAct(tr("Pen", "Kalem"), "Edit", Icons.Outlined.Edit, on = tool == 1, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 1) 0 else 1 },
+        OAct(tr("Highlight", "Vurgu"), "Edit", Icons.Outlined.BorderColor, on = tool == 2, cap = tr("Mark up", "İşaretle")) { tool = if (tool == 2) 0 else 2; if (tool == 2 && ci > 1) ci = 1 },
+        OAct(tr("Add text", "Yazı ekle"), "Edit", Icons.Outlined.TextFields, on = tool == 3, cap = tr("Text", "Yazı")) { tool = if (tool == 3) 0 else 3 },
+        OAct(tr("Edit text", "Metni düzenle"), "Edit", Icons.Outlined.EditNote, on = tool == 4, cap = tr("Text", "Yazı")) { tool = if (tool == 4) 0 else 4; if (tool == 4) ci = cols.size - 1 },
+        OAct(tr("Colour", "Renk"), "Edit", Icons.Outlined.Palette, cap = tr("Colour", "Renk")) { ci = (ci + 1) % cols.size },
+        OAct(tr("Undo", "Geri al"), "Edit", Icons.Outlined.Undo, enabled = anns.isNotEmpty(), cap = tr("Edit", "Düzenle")) { anns.removeAt(anns.size - 1) },
+        OAct(tr("Clear marks", "İşaretleri sil"), "Edit", Icons.Outlined.Delete, enabled = anns.isNotEmpty(), cap = tr("Edit", "Düzenle")) { anns.clear() },
         OAct(tr("Save a copy", "Kopya kaydet"), "File", Icons.Outlined.ContentCopy, png = "copy") {
             val snap = anns.toList(); val paint = android.graphics.Paint()
             doc.saveCopy({ out ->
@@ -251,7 +260,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         },
         OAct(tr("Close", "Kapat"), "File", Icons.Outlined.Close) { doc.close() },
     )
-    PdfChrome(theme, doc.name, acts, "${tr("Page", "Sayfa")} ${list.firstVisibleItemIndex + 1} / ${p.count}   ${(zoom * 100).toInt()}%", doc.close) {
+    CompositionLocalProvider(LocalOfRibbon provides ofCaptionRibbons(theme, acts)) { PdfChrome(theme, doc.name, acts, "${tr("Page", "Sayfa")} ${list.firstVisibleItemIndex + 1} / ${p.count}   ${(zoom * 100).toInt()}%", doc.close) {
         Box(Modifier.fillMaxSize().background(if (OfficePrefs.darkPdf) Color.Black else Color.Transparent).ofPinch { zoom = (zoom * it).coerceIn(1f, 4f) }) {
             Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
                 LazyColumn(Modifier.width(widthDp * zoom), state = list, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -260,7 +269,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
                 }
             }
         }
-    }
+    } }
     textAt?.let { (pg, x, y) ->
         WinAlert(onDismissRequest = { textAt = null }, title = { Text(if (tool == 4 || editing != null) tr("Edit text", "Metni düzenle") else tr("Add text", "Yazı ekle")) },
             text = { PField(textVal, { textVal = it }, "") },
