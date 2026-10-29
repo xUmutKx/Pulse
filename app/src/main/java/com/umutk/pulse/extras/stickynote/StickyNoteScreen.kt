@@ -41,12 +41,17 @@ fun StickyNoteScreen(back: () -> Unit) {
     val id = (ctx as? Activity)?.intent?.getStringExtra("note")
     var note by remember { mutableStateOf(StickyStore.get(ctx, id) ?: StickyStore.latest(ctx) ?: StickyStore.create(ctx)) }
     fun edit(n: StickyNote) { note = n; StickyStore.put(ctx, n) }
+    // a new note, and the delete of this one: the editor then shows the latest note left, or a fresh one
+    fun newNote() { note = StickyStore.create(ctx) }
+    fun delete() { StickyStore.remove(ctx, note.id); note = StickyStore.latest(ctx) ?: StickyStore.create(ctx) }
     val ink = Color(0xFF222222)
 
     Column(Modifier.fillMaxSize().background(Color(StickyStore.argb(note.color))).padding(16.dp)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", ink, 22.dp) }
             Spacer(Modifier.weight(1f))
+            Box(Modifier.size(36.dp).clickable { newNote() }, contentAlignment = Alignment.Center) { PIcon("add", ink, 20.dp) }
+            Box(Modifier.size(36.dp).clickable { delete() }, contentAlignment = Alignment.Center) { PIcon("delete", ink, 20.dp) }
             ExtraLookIcon(ink)
             StickyStore.colors.indices.forEach { i ->
                 Box(Modifier.padding(horizontal = 2.dp).size(24.dp).clip(CircleShape)

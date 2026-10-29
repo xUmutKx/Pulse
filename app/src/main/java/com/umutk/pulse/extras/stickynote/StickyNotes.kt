@@ -35,6 +35,17 @@ object StickyStore {
         val a = JSONArray()
         list.forEach { a.put(JSONObject().put("id", it.id).put("text", it.text).put("color", it.color)) }
         prefs(c).edit().putString("notes", a.toString()).apply()
+        // the widgets showing a note redraw at once, not at the next system refresh
+        runCatching { com.umutk.pulse.widgets.StickyNoteWidget.refresh(c) }
+    }
+
+    /** Deletes a note; the widgets that showed it go back to an empty note of their own. */
+    fun remove(c: Context, id: String) {
+        save(c, all(c).filter { it.id != id })
+        val p = prefs(c)
+        val ed = p.edit()
+        p.all.filter { it.key.startsWith("w") && it.value == id }.forEach { ed.remove(it.key) }
+        ed.apply()
     }
 
     fun put(c: Context, n: StickyNote) {

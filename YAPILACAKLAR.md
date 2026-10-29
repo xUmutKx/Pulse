@@ -1522,3 +1522,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - Yüklenen Archive.zip / Archive_1.zip (iki kopya): CodeAssist, Moon+ Reader Pro (APK açılımı), VeriSky (APK açılımı), CalibRaw, Vyxel Apps (GitHub uygulama mağazası, AGPL-3.0) — henüz incelenmedi
 - 1.0.239 Quick Settings: the Coin tile shows heads or tails (new ic_coin_heads/ic_coin_tails) and the Dice and Coin tiles flicker through a few pictures after a tap; "Pulse · Relay" in the system Share list for files, text and links to paired devices, and a Relay row in the Files share sheet (derlenmedi)
 - 1.0.240 Keyboard three-dot menu: the head row (back, settings, themes) is removed; Keys stays at the end of the grid (derlenmedi)
+- 1.0.241 Sticky notes: the widget redraws when its note changes; the editor can add a new note and delete the open one (its widget goes back to an empty note) (derlenmedi)
