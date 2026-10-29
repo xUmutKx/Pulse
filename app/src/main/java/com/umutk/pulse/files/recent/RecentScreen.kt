@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
@@ -52,7 +54,7 @@ fun RecentScreen(onOpen: (File) -> Unit, onClose: () -> Unit) {
         LazyColumn(Modifier.fillMaxSize()) {
             item { Head(tr("Recently opened", "Son açılanlar")) }
             if (recent.isEmpty()) item { Empty(tr("Nothing yet", "Henüz yok")) }
-            items(recent) { f -> Entry(f.name, f.parentFile?.name.orEmpty(), exDate(f.lastModified(), FilesPrefs.dateFmt)) { onOpen(f) } }
+            items(recent) { f -> Entry(f, f.parentFile?.name.orEmpty(), exDate(f.lastModified(), FilesPrefs.dateFmt)) { onOpen(f) } }
 
             item { Head(tr("New files", "Yeni gelenler")) }
             val list = arrivals
@@ -60,7 +62,7 @@ fun RecentScreen(onOpen: (File) -> Unit, onClose: () -> Unit) {
                 list == null -> Unit
                 list.isEmpty() && !RecentStore.canListAll(ctx) -> item { Empty(tr("No access", "Erişim yok")) }
                 list.isEmpty() -> item { Empty(tr("Nothing yet", "Henüz yok")) }
-                else -> items(list) { a -> Entry(a.name, File(a.path).parentFile?.name.orEmpty(), exDate(a.addedMs, FilesPrefs.dateFmt)) { onOpen(File(a.path)) } }
+                else -> items(list) { a -> Entry(File(a.path), File(a.path).parentFile?.name.orEmpty(), exDate(a.addedMs, FilesPrefs.dateFmt)) { onOpen(File(a.path)) } }
             }
         }
     }
@@ -73,9 +75,16 @@ private fun Head(t: String) = Text(t, Modifier.padding(start = 16.dp, top = 14.d
 private fun Empty(t: String) = Text(t, Modifier.padding(start = 16.dp, top = 6.dp, bottom = 6.dp), color = T.sub, fontSize = 13.sp)
 
 @Composable
-private fun Entry(name: String, folder: String, date: String, onClick: () -> Unit) {
+private fun Entry(file: File, folder: String, date: String, onClick: () -> Unit) {
+    val name = file.name
     Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        PIcon("filetypes", T.sub, 20.dp)
+        Box(Modifier.size(52.dp), contentAlignment = Alignment.Center) {
+            val th = com.umutk.pulse.features.exThumb(file)
+            if (th != null) {
+                androidx.compose.foundation.Image(th, null, Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
+                com.umutk.pulse.features.FileTypeBadge(file, Modifier.align(Alignment.BottomEnd).padding(2.dp), 18.dp)
+            } else com.umutk.pulse.features.FileTypeBadge(file, size = 40.dp)
+        }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
             Text(name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
