@@ -1517,3 +1517,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.234 Office title bar option works in every Office look and is optional: As the look draws it (default), Accent, App colour, AMOLED black (bar, tabs, ribbon, status bar) (derlenmedi)
 - 1.0.235 Office: AMOLED black option also covers Excel (formula bar, sheet tabs); an arrow in the title bar hides the whole top block by hand, a small handle at the top brings it back (derlenmedi)
 - 1.0.236 Files Share sheet: the apps that take the share in a row at the top, share as one zip (folders too), Bluetooth, copy names, copy paths, names as text; the file menu Share opens it too (derlenmedi)
+- 1.0.237 Files Share sheet: Nearby devices (Pulse LocalSend) row, and the nearby senders (Pulse LocalSend, LocalSend app, Quick Share) first in the app row (derlenmedi)
