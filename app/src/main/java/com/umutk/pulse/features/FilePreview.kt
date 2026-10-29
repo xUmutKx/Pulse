@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import com.umutk.pulse.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
@@ -119,17 +120,17 @@ private class Badge(val color: Color, val glyph: ImageVector)
 private fun badgeOf(f: File): Badge? {
     if (f.isDirectory) return null
     return when (f.extension.lowercase()) {
-        "pdf" -> Badge(Color(0xFFD93025), androidx.compose.material.icons.Icons.Outlined.PictureAsPdf)
-        "doc", "docx", "odt", "rtf", "dotx" -> Badge(Color(0xFF2B579A), androidx.compose.material.icons.Icons.Outlined.Description)
-        "xls", "xlsx", "ods", "csv", "tsv" -> Badge(Color(0xFF1E7145), androidx.compose.material.icons.Icons.Outlined.TableChart)
-        "ppt", "pptx", "odp" -> Badge(Color(0xFFD24726), androidx.compose.material.icons.Icons.Outlined.Slideshow)
-        "txt", "md", "log", "lrc" -> Badge(Color(0xFF757575), androidx.compose.material.icons.Icons.Outlined.Notes)
-        "zip", "rar", "7z", "tar", "gz", "bz2", "xz", "jar" -> Badge(Color(0xFF8D6E63), androidx.compose.material.icons.Icons.Outlined.FolderZip)
-        "mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma" -> Badge(Color(0xFF8E44AD), androidx.compose.material.icons.Icons.Outlined.MusicNote)
-        "mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v" -> Badge(Color(0xFFE91E63), androidx.compose.material.icons.Icons.Outlined.PlayArrow)
-        "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "svg" -> Badge(Color(0xFF00897B), androidx.compose.material.icons.Icons.Outlined.Image)
-        "apk", "apks", "xapk", "apkm" -> Badge(Color(0xFF3DDC84), androidx.compose.material.icons.Icons.Outlined.Android)
-        "json", "xml", "html", "js", "kt", "java", "py", "sh", "css", "yml", "yaml" -> Badge(Color(0xFF455A64), androidx.compose.material.icons.Icons.Outlined.Code)
+        "pdf" -> Badge(Color(0xFFD93025), Icons.Outlined.PictureAsPdf)
+        "doc", "docx", "odt", "rtf", "dotx" -> Badge(Color(0xFF2B579A), Icons.Outlined.Description)
+        "xls", "xlsx", "ods", "csv", "tsv" -> Badge(Color(0xFF1E7145), Icons.Outlined.TableChart)
+        "ppt", "pptx", "odp" -> Badge(Color(0xFFD24726), Icons.Outlined.Slideshow)
+        "txt", "md", "log", "lrc" -> Badge(Color(0xFF757575), Icons.Outlined.Notes)
+        "zip", "rar", "7z", "tar", "gz", "bz2", "xz", "jar" -> Badge(Color(0xFF8D6E63), Icons.Outlined.FolderZip)
+        "mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma" -> Badge(Color(0xFF8E44AD), Icons.Outlined.MusicNote)
+        "mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v" -> Badge(Color(0xFFE91E63), Icons.Outlined.PlayArrow)
+        "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "svg" -> Badge(Color(0xFF00897B), Icons.Outlined.Image)
+        "apk", "apks", "xapk", "apkm" -> Badge(Color(0xFF3DDC84), Icons.Outlined.Android)
+        "json", "xml", "html", "js", "kt", "java", "py", "sh", "css", "yml", "yaml" -> Badge(Color(0xFF455A64), Icons.Outlined.Code)
         else -> null
     }
 }
