@@ -1792,7 +1792,7 @@ private fun exUndo(u: ExUndo): String {
 }
 
 /** Sends [f] to a chooser: Share sends it, Open with opens it. Returns false when the file cannot be handed over. */
-private fun exHandOver(ctx: Context, f: File, share: Boolean): Boolean = runCatching {
+internal fun exHandOver(ctx: Context, f: File, share: Boolean): Boolean = runCatching {
     val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
     val mime = fileMime(f)
     val i = if (share) Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri) else Intent(Intent.ACTION_VIEW).setDataAndType(uri, mime)
