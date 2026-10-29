@@ -1405,7 +1405,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 
 ### 11 White Noise
 - 🟡 11.0 (Meditation %5 azaltıldı) Waterfall, Gentle Rain, Wind Chimes iyileştirme; Meditation %5 azalt; Seaside aynı; yeni doğa sesleri; profiller ikonlu; kişisel karışım
-- 🔴 11.1 Bildirimde durdur, dokununca doğrudan Music Player, bildirim kaybolma nedeni
+- 🟢 11.1 Bildirimde durdur, dokununca doğrudan Music Player, bildirim kaybolma nedeni
 
 ### 12 İndirme yöneticisi
 - 🟢 12.0 Silinen dosya listede kalmasın (2,5 sn'de bir kontrol), Delete/Cancel kontrastı, uzun basıp çoklu seçim + toplu silme, onay, silinemeyen dosya uyarısı
@@ -1466,3 +1466,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.189 Fixes: Good Lock list has Installed / Not installed / Updates tabs (tap opens the module, Download for the missing ones, the update check says why when it fails, release page from the feed); the launcher plays its start-up sound on every look once and never twice in a row; calculator Scientific and Programmer menu icons were missing (now Functions and Terminal); calculator keys sit higher (derlenmedi)
 - 1.0.190 Keyboard clipboard: screenshots from the keyboard are saved as real PNG/JPEG files (not ".img"); a cut or copy from the keyboard is added to the history at once; pinning uses a push-pin icon and shortcuts a bolt icon; the shortcut name field shows a caret (derlenmedi)
 - 1.0.191 App history: icons for total and screen-on, today / week / month, the ring and the list in one scroll; Storage page no longer repeats Folder sizes (it lives in Files); the Meditation mix is 5 percent quieter (derlenmedi)
+- 1.0.192 Ambient sound notification: it has a Stop button, and a tap opens the music player's sound page instead of the Pulse start page; the music keep-alive notification opens the player (derlenmedi)
