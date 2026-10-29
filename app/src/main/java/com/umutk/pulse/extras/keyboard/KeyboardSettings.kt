@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -248,7 +249,19 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Cursor control", "İmleç denetimi"), tr("Hold space and slide to move the cursor", "Boşluğa basılı tutup kaydırınca imleç gider"), KeyboardPrefs.cursorControl) { KeyboardPrefs.cursorControl = it; save() }
             Switch(tr("Quick delete", "Hızlı silme"), tr("Slide from the delete key to select and delete text", "Silme tuşundan kaydırarak seç ve sil"), KeyboardPrefs.quickDelete) { KeyboardPrefs.quickDelete = it; save() }
             Switch(tr("Emoji predictions", "Emoji tahminleri"), tr("Emoji on the suggestion bar", "Öneri çubuğunda emoji"), KeyboardPrefs.emojiPredictions) { KeyboardPrefs.emojiPredictions = it; save() }
-            Switch(tr("Learn from what I type", "Yazdıklarımdan öğren"), tr("Not in password, email and web address fields", "Parola, e-posta ve adres alanlarında kapalıdır"), KeyboardPrefs.learn) { KeyboardPrefs.learn = it; save() }
+            // what the keyboard learns from typing (never in password, e-mail and address fields)
+            Text(tr("Learning", "Öğrenme"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(1 to tr("Words", "Kelimeler"), 2 to tr("Sentences", "Cümleler"), 3 to tr("Both", "İkisi"), 0 to tr("Off", "Kapalı")).forEach { (m, n) ->
+                    PChip(KeyboardPrefs.learnMode == m, n) { KeyboardPrefs.learnMode = m; KeyboardPrefs.learn = m != 0; save() }
+                }
+            }
+            Text(when (KeyboardPrefs.learnMode) {
+                1 -> tr("Learns the words, names and corrections you confirm.", "Kelimeleri, özel isimleri ve onayladığın düzeltmeleri öğrenir.")
+                2 -> tr("Learns which words follow each other and your usual phrases.", "Hangi kelimenin hangisini izlediğini ve sık kullandığın ifadeleri öğrenir.")
+                3 -> tr("Learns both the words and how they follow each other.", "Hem kelimeleri hem birbirini izleyişlerini öğrenir.")
+                else -> tr("Nothing new is saved.", "Yeni hiçbir şey kaydedilmez.")
+            }, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
         }
 
         // feel
@@ -322,6 +335,43 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             if (taught.isNotEmpty()) Text(tr("Added: ", "Eklendi: ") + taught, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        }
+
+        // the learned words: look at them, forget one, add one by hand (a word added is never "corrected"), copy the list out and read one in
+        KbSection("edit", tr("Learned words", "Öğrenilen kelimeler")) {
+            remember { KeyboardDictionary.ensureUser(ctx) }
+            var addW by remember { mutableStateOf("") }
+            var q by remember { mutableStateOf("") }
+            var lnote by remember { mutableStateOf("") }
+            val all = remember(learned, rev) { KeyboardDictionary.userWords() }
+            val shownW = remember(all, q) { all.filter { q.isBlank() || it.first.contains(q.trim().lowercase()) }.take(120) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PField(addW, { addW = it }, tr("Add a word", "Kelime ekle"), Modifier.weight(1f))
+                PButton(tr("Add", "Ekle"), compact = true) { if (addW.trim().length >= 2) { KeyboardDictionary.addUser(ctx, addW); addW = ""; learned = KeyboardDictionary.learnedCount(); rev++ } }
+            }
+            PField(q, { q = it }, tr("Search the ${all.size} words", "${all.size} kelimede ara"), Modifier.fillMaxWidth().padding(top = 6.dp))
+            Column(Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
+                shownW.forEach { (w, n) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(w, color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text("$n", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(end = 10.dp))
+                        Box(Modifier.size(32.dp).clickable { KeyboardDictionary.removeUser(ctx, w); learned = KeyboardDictionary.learnedCount(); rev++ }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 18.dp) }
+                    }
+                }
+                if (shownW.isEmpty()) Text(tr("Nothing here yet", "Henüz yok"), color = T.sub, fontSize = 13.sp)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                PButton(tr("Copy the list", "Listeyi kopyala"), compact = true) {
+                    (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("words", KeyboardDictionary.exportUser()))
+                    lnote = tr("${all.size} words copied", "${all.size} kelime kopyalandı")
+                }
+                PButton(tr("Paste a list", "Liste yapıştır"), compact = true) {
+                    val t = (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty()
+                    val n = KeyboardDictionary.importText(ctx, t); learned = KeyboardDictionary.learnedCount(); rev++
+                    lnote = tr("$n words taken", "$n kelime alındı")
+                }
+            }
+            if (lnote.isNotEmpty()) Text(lnote, color = T.sub, fontSize = 12.sp)
         }
 
         // statistics: what the keyboard has learned and where the fingers land
