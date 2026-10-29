@@ -216,6 +216,16 @@ fun HistoryPage() {
             PChip(range == 1, tr("Today", "Bugün")) { range = 1 }
             PChip(range == 7, tr("Week", "Hafta")) { range = 7 }
             PChip(range == 30, tr("Month", "Ay")) { range = 30 }
+            Spacer(Modifier.weight(1f))
+            // the report as a spreadsheet file (app, package, category by the app's own declaration, minutes) in Download/Pulse
+            var note by remember { mutableStateOf("") }
+            val scope = rememberCoroutineScope()
+            Box(Modifier.size(36.dp).clickable {
+                scope.launch {
+                    note = runCatching { withContext(Dispatchers.IO) { exportUsage(ctx, rows, range) } }.getOrElse { tr("Could not save", "Kaydedilemedi") }
+                    android.widget.Toast.makeText(ctx, note, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }, contentAlignment = Alignment.Center) { PIcon("download", T.text, 20.dp) }
         }
         PCard {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
@@ -654,4 +664,22 @@ private fun IconStyleTile(cat: IconCat, id: String, selected: Boolean, onClick: 
             keys.forEach { k -> PIcon(k, T.text, 24.dp) }
         }
     }
+}
+
+
+/** The usage of the chosen range as a CSV: app, package, category, minutes; one line per app, with the total at the end. Returns the message to show. */
+private suspend fun exportUsage(ctx: android.content.Context, rows: List<UsageRow>, days: Int): String {
+    val pm = ctx.packageManager
+    fun cat(pkg: String): String = runCatching {
+        if (android.os.Build.VERSION.SDK_INT < 26) return@runCatching ""
+        val c = pm.getApplicationInfo(pkg, 0).category
+        if (c < 0) tr("Other", "Diğer") else android.content.pm.ApplicationInfo.getCategoryTitle(ctx, c)?.toString().orEmpty()
+    }.getOrDefault("")
+    fun q(t: String) = "\"" + t.replace("\"", "\"\"") + "\""
+    val sb = StringBuilder("app,package,category,minutes\n")
+    rows.forEach { sb.append(q(it.label)).append(',').append(q(it.pkg)).append(',').append(q(cat(it.pkg))).append(',').append(it.ms / 60_000L).append('\n') }
+    sb.append("total,,,").append(rows.sumOf { it.ms } / 60_000L).append('\n')
+    val name = "pulse-usage-${days}d-" + System.currentTimeMillis() / 1000 + ".csv"
+    docScanSave(ctx, name, "text/csv") { it.write(sb.toString().toByteArray()) }
+    return tr("Saved $name in Download/Pulse", "$name kaydedildi, Download/Pulse içinde")
 }
