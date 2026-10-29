@@ -335,6 +335,26 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             currentInputConnection?.finishComposingText()
             word.clear(); peak = null; lastCorrection = null; updateSuggestions()
         }
+        // the cursor came back to the end of a word (a tap behind it, or a delete that stopped there): the word opens again, so it stands in the middle of the bar
+        // with its own suggestions and the next letter goes on with it, instead of the bar moving on to a new word
+        reopenWordAtCursor(oldSelStart, newSelStart, newSelEnd)
+    }
+
+    private fun reopenWordAtCursor(oldStart: Int, newStart: Int, newEnd: Int) {
+        if (word.isNotEmpty() || newStart != newEnd || newStart <= 0 || newStart == oldStart) return
+        if (!KeyboardPrefs.suggestions || st.plain || emailField || urlNow() || st.panel != "keys") return
+        if (SystemClock.uptimeMillis() - editAt < 250) return
+        val c = currentInputConnection ?: return
+        val before = c.getTextBeforeCursor(40, 0)?.toString().orEmpty()
+        val after = c.getTextAfterCursor(1, 0)?.toString().orEmpty()
+        if (before.isEmpty() || !before.last().isLetter() || (after.isNotEmpty() && after[0].isLetter())) return
+        val w = before.takeLastWhile { it.isLetter() || it == '\'' }
+        if (w.isEmpty() || w.length > 30 || (before.length > w.length && before[before.length - w.length - 1].isLetterOrDigit())) return
+        editAt = SystemClock.uptimeMillis()
+        c.setComposingRegion(newStart - w.length, newStart)
+        word.append(w); touchPts.clear(); target = null; peak = null; lastCorrection = null
+        prevWord = before.dropLast(w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }.lowercase().ifEmpty { null }
+        updateSuggestions()
     }
 
     // ---- typing ------------------------------------------------------------------------------------------------------------------------------------
