@@ -453,8 +453,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
         }
-        // the word and what follows it (the space or the sign) go in with one commit: the field never shows the word gone with the space alone
-        c.commitText(out + tail, 1)
+        // the word and what follows it (the space or the sign) go in as one batch. The word is first closed where it stands, and only a corrected word is replaced by
+        // deleting exactly what was typed: a commit that "replaces the composing text" depends on the app agreeing where that text is, and some fields (web pages,
+        // editors that move the region) then wrote the sign over the word, deleted it, or put a second copy beside it
+        if (spaceBefore) c.commitText(out + tail, 1)
+        else {
+            c.beginBatchEdit()
+            c.finishComposingText()
+            if (out != typed) { c.deleteSurroundingText(typed.length, 0); c.commitText(out, 1) }
+            if (tail.isNotEmpty()) c.commitText(tail, 1)
+            c.endBatchEdit()
+        }
         peak?.let { pk ->
             val lc = lang.locale
             val a = pk.lowercase(lc); val b = typed.lowercase(lc)
