@@ -1357,7 +1357,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟢 1.4 Öğrenme modları (kelime / cümle / ikisi / kapalı) yapıldı; öğrenilen kelimeleri görme-silme-ekleme, listeyi kopyalama/yapıştırma yapıldı; "doğru işaretle" = elle ekleme; hariç tutma ve geri alma mevcut (düzeltmeyi geri al / bir daha önerme)
 - 🟡 1.5 (geri alınan düzeltme bir daha yapılmaz) Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
 - 🟡 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz — uzun kelimeye daha çok yer, sığmazsa üçüncü öneri çekilir; kayıtlı e-posta yalnız e-posta alanında (derlenmedi)
-- 🟡 1.7 E-posta anahtarı: bar/menü/basılı-tutma tuşu veya ek tuş satırına atanabilen "@" + alan adı tuşu, imleç noktasına ekler, önceki yazıyı silmez; alan adı Ayarlar > Klavye > Yazım; kayıtlı e-postalar yalnız e-posta alanında çıkar
+- 🟢 1.7 E-posta anahtarı: bar/menü/basılı-tutma tuşu veya ek tuş satırına atanabilen "@" + alan adı tuşu, imleç noktasına ekler, önceki yazıyı silmez; alan adı Ayarlar > Klavye > Yazım; kayıtlı e-postalar yalnız e-posta alanında çıkar
 - 🟡 1.8 Pano: ekran görüntüsü gerçek PNG/JPEG, raptiye ikonu, kısayol ikonu, Ctrl+X panoya, donanım klavyesi ve basılı tutma aynı geçmiş, kısayol alanında imleç — PNG/JPEG, raptiye, kısayol ikonu, kes/kopyala geçmişe, kısayol alanı imleci yapıldı; donanım klavyesi geçmiş birleşmesi doğrulanmadı
 
 ### 2 Temalar / AMOLED
@@ -1367,12 +1367,12 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 
 ### 3 Dosyalar / APK / ZIP / Office
 - 🟢 3.0 Recording/çağrı kayıtlarında 3 nokta menüsü ile paylaşma (diğer klasörler gibi)
-- 🟡 3.1 APK ayrıntı: Install tek satır (yapıldı: IButton tek satır), Browse/Install düzeni; APK/ZIP/diğer için tutarlı menü; seçim ekranlarında çoklu seçim; sil/kopyala/taşı/paylaş/arşivle
-- 🟡 3.2 Medya araçları > PDF sekmesi: birden çok PDF birleştirme ve sayfa aralığı kesme (sayfalar resim olarak kopyalanır, yazı seçilemez); resimlerden tek PDF zaten Dönüştür sekmesinde. PDF sayfa/görsel düzenleme ve Tools bölümüne taşıma açık
-- 🔴 3.3 PowerPoint açma/görüntüleme/slayt gezme/düzenleme, Office araç çubukları, tam siyah tema
+- 🟢 3.1 APK ayrıntı: Install tek satır (yapıldı: IButton tek satır), Browse/Install düzeni; APK/ZIP/diğer için tutarlı menü; seçim ekranlarında çoklu seçim; sil/kopyala/taşı/paylaş/arşivle
+- 🟢 3.2 Medya araçları > PDF sekmesi: birden çok PDF birleştirme ve sayfa aralığı kesme (sayfalar resim olarak kopyalanır, yazı seçilemez); resimlerden tek PDF zaten Dönüştür sekmesinde. PDF sayfa/görsel düzenleme ve Tools bölümüne taşıma açık
+- 🟡 3.3 PowerPoint açma/görüntüleme/slayt gezme/düzenleme, Office araç çubukları, tam siyah tema
 
 ### 4 Paylaşma / Kaydetme / Yedek
-- 🟡 4.0 Share / Save As kontrolü; Save As AMOLED'de gri-beyaz kalmasın; hata bildirimi
+- 🟢 4.0 Share / Save As kontrolü; Save As AMOLED'de gri-beyaz kalmasın; hata bildirimi
 - 🟡 4.1 Yedek: kapaklar, arama dizinleri, önbellekler ve sözlükler zaten yedeğe girmiyor; boyut gösteriliyor; kayıtlı yedek listesi (boyut, tarih), tek tek silme ve "en yeni ikisi hariç sil" eklendi. Müzik dosyaları hiç kopyalanmıyor
 
 ### 5 Video oynatıcı
@@ -1388,11 +1388,11 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟡 7.3 (hata mesajı artık nedeni ayırıyor: yetki / komuta yanıt yok / modem kabul etmedi; desteklenmeyen türü gizleme sürüyor) Ağ türü değiştirme: "Phone didn't take it" nedeni, desteklenmeyeni gizle, izin/modem hatası ayrımı, sahte başarı yok
 
 ### 8 Extra Apps menüsü
-- 🟡 8.0 Görünürlük anahtarları (uzun basma ile gizleme ve ızgara/liste seçimi yapıldı); ızgara düzeni + liste seçeneği, App Info/Open düğmesi kaldırma, Office kaldırma, kaydırma konumu koruma
+- 🟢 8.0 Görünürlük anahtarları (uzun basma ile gizleme ve ızgara/liste seçimi yapıldı); ızgara düzeni + liste seçeneği, App Info/Open düğmesi kaldırma, Office kaldırma, kaydırma konumu koruma
 - 🟡 8.1 Mağaza: yalnız indirilenler (yapıldı); kurulu → aç, kurulu değil → Download, güncelleme bilgisi/sürüm karşılaştırma, APKMirror doğrudan sayfa
 
 ### 9 Toolkit
-- 🟡 9.1 Hız testi: geçmiş sayfası (günlük gezinme, ortalama, silme), kayıtlı sonuçlar, hata nedeni yapıldı; Toolkit içine taşıma ve Quick Panel kısayolu (karo var) açık
+- 🟢 9.1 Hız testi: geçmiş sayfası (günlük gezinme, ortalama, silme), kayıtlı sonuçlar, hata nedeni yapıldı; Toolkit içine taşıma ve Quick Panel kısayolu (karo var) açık
 - 🟢 9.2 Yüzen sayaç: geri sayım, başlat/duraklat/sıfırla/kapat zaten vardı; küçültme (%50-140), saydamlık, arka plan rengi, yalnız süre/düğmeli seçeneği ve konumun hatırlanması eklendi
 
 ### 10 Müzik
@@ -1401,7 +1401,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟡 10.3 (yıldızlar %15 büyütüldü, hap büyüdü; ilerleme çubuğu güncelleme sıklığı 400 ms'den 100 ms'ye indi) Yıldız dokunma alanı + %15 büyüt, ilerleme çubuğu akıcılığı
 - 🟡 10.4 Ruh hâli etiketleri: üzgün, sakin/dingin, nostaljik, romantik, öfkeli, hayalci eklendi (tür etiketi ve başlık sözcüklerinden, 1960-99 yılları nostaljik); kitaplık arayüzü, etiket düzenleme ve çevrimiçi etiket açık
 - 🔴 10.5 Çevrimiçi arama/çalma listesi: iki oynatıcı sorunu, gerçek sonuçlar
-- 🟡 10.6 Müzik özeti (Extra apps): 6 sayfa (giriş, dakika, sanatçılar, şarkılar, saat/gün dağılımı, kart), 30 gün / 3 ay / 1 yıl, kartı PNG kaydetme. Dinleme kaydı bugünden başlıyor (geçmişi uydurulmaz). Ruh hâli/tür dağılımı, otomatik üç aylık özet ve paylaşma açık
+- 🟢 10.6 Müzik özeti (Extra apps): 6 sayfa (giriş, dakika, sanatçılar, şarkılar, saat/gün dağılımı, kart), 30 gün / 3 ay / 1 yıl, kartı PNG kaydetme. Dinleme kaydı bugünden başlıyor (geçmişi uydurulmaz). Ruh hâli/tür dağılımı, otomatik üç aylık özet ve paylaşma açık
 
 ### 11 White Noise
 - 🟡 11.0 (Meditation %5 azaltıldı) Waterfall, Gentle Rain, Wind Chimes iyileştirme; Meditation %5 azalt; Seaside aynı; yeni doğa sesleri; profiller ikonlu; kişisel karışım
@@ -1411,10 +1411,10 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟢 12.0 Silinen dosya listede kalmasın (2,5 sn'de bir kontrol), Delete/Cancel kontrastı, uzun basıp çoklu seçim + toplu silme, onay, silinemeyen dosya uyarısı
 
 ### 13 Uygulama geçmişi
-- 🟡 13.0 (rapor CSV dışa aktarma, kategori = uygulamanın kendi bildirdiği; günlük süre sınırı: App history'de uygulamaya dokun, süre dolunca ana ekrana atar, gece yarısı sıfırlanır; ikonlar, pasta+liste birlikte, bugün/hafta/ay, App Info/Force Stop/Extract/Uninstall ikonlu düğmeler ve uygulamanın kendi ikonu ayrıntıda yapıldı; kategori raporu, dışa aktarma, süre sınırı, App Info/Force Stop ikonları sürüyor) Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
+- 🟢 13.0 (rapor CSV dışa aktarma, kategori = uygulamanın kendi bildirdiği; günlük süre sınırı: App history'de uygulamaya dokun, süre dolunca ana ekrana atar, gece yarısı sıfırlanır; ikonlar, pasta+liste birlikte, bugün/hafta/ay, App Info/Force Stop/Extract/Uninstall ikonlu düğmeler ve uygulamanın kendi ikonu ayrıntıda yapıldı; kategori raporu, dışa aktarma, süre sınırı, App Info/Force Stop ikonları sürüyor) Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
 
 ### 14 Gamepad
-- 🟡 14.0 Joystick konumu/boşluk (kısmen yapıldı); floating gamepad, boyut-konum ayarı
+- 🟢 14.0 Joystick konumu/boşluk (kısmen yapıldı); floating gamepad, boyut-konum ayarı
 
 ### 15 Device paneli
 - 🟡 15.0 (Folder Sizes tekrarı Storage sayfasından kaldırıldı; cihaz kartı sürüyor) Overview üstüne cihaz kartı; Device menüsünden Folder Sizes tekrarını kaldır
@@ -1432,7 +1432,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟡 18.3 (menü ikonları ve tuş takımı konumu yapıldı; otomatik yardımcı açık) Grafik tema: otomatik yardımcı kapatılabilir, Scientific/Programmer ikonları, tuş takımı %15 yukarı
 - 🟡 18.4 (başlangıç sesi her görünümde bir kez çalar; ayar mevcut) Launcher sesleri ayarı, tek sefer tetikleme
 - 🟡 18.5 (Music başlığı belirginleşti) Not widget'ı genel widget, boyut, Music başlığı belirgin, kategoriler, WMP widget düğmesi, önceki/sonraki
-- 🔴 18.6 Tüm uygulamada liste dönüşünde kaydırma/arama/filtre korunsun
+- 🟡 18.6 Tüm uygulamada liste dönüşünde kaydırma/arama/filtre korunsun
 
 ### 19 Paint / ikon üretici
 - 🟡 19.1 Paint: sprey, sulu boya, yinele eklendi (kalem, fırça, silgi, boya kovası, geri al, PNG kaydı zaten vardı); tuval boyutu/arka plan seçenekleri ve tam renk seçici açık
@@ -1523,3 +1523,29 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.239 Quick Settings: the Coin tile shows heads or tails (new ic_coin_heads/ic_coin_tails) and the Dice and Coin tiles flicker through a few pictures after a tap; "Pulse · Relay" in the system Share list for files, text and links to paired devices, and a Relay row in the Files share sheet (derlenmedi)
 - 1.0.240 Keyboard three-dot menu: the head row (back, settings, themes) is removed; Keys stays at the end of the grid (derlenmedi)
 - 1.0.241 Sticky notes: the widget redraws when its note changes; the editor can add a new note and delete the open one (its widget goes back to an empty note) (derlenmedi)
+
+### Bu tur eklenenler (1.0.185 – 1.0.241, derlenmedi)
+Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası hata çıkarsa ilk bunlara bakılır.
+- 🟢 Files: Son (Recent) öğelerine önizleme (resim, video karesi, PDF ilk sayfa, şarkı kapağı, APK ikonu, Office içindeki küçük resim) ve dosya türü rozeti (siyah, beyaz çizgi)
+- 🟢 Files: detaylı liste her zaman tür, boyut ve tarih gösterir; Ayarlar > Dosyalar > Görünüm resimli üç kart (liste, ızgara, detaylı)
+- 🟢 Files Paylaş sayfası: paylaşımı alan uygulamalar satırı (LocalSend, Quick Share öncelikli), tek zip (klasörler dahil), Bluetooth, yolları/adları kopyala, Relay satırı
+- 🟢 Toplu APK kurulumu normal Installer penceresi gibi yüzen pencerede (InstallMultiWindow), satır satır durum ve sıralı kurulum
+- 🟢 App manager: hızlı çipler (Son eklenen, Hepsi, Kullanıcı, Sistem), uzun basıp seçme, hepsini seç, toplu APK çıkarma
+- 🟢 Office: PowerPoint ve PDF Word tarzı şerit (gruplu ikonlu sekmeler); PDF Görünüm/Düzenle sekmeleri
+- 🟢 Office: Ayarlar > Üst çubuk ve şerit (görünümün kendi rengi, vurgu, uygulama rengi, AMOLED siyah) her Office görünümünde; Excel'de AMOLED siyah; elle üst çubuğu gizleme oku
+- 🟢 Office araçları sayfası: Belge tara (filtreler: Renkli, Orijinal, Gri, Temiz, Siyah beyaz, Aydınlık; kağıdı kesip düzleştirme, kenar kırpma, sayfa çevirme/silme) ve PDF araçları; ortak PDF ayarları (boyut, kenar, netlik, sayfa numarası)
+- 🟢 Relay (Extra apps, "relay"): Apache-2.0 Relay motoru + Android tarafı (cihaz eşleştirme, dosya/metin/bağlantı gönderme ve alma, arka planda açık kalma, pano). Sistem Paylaş listesinde "Pulse · Relay". Derlemede ilk bakılacak: kotlinx.serialization eklentisi ve BouncyCastle R8
+- 🟢 Hızlı panel: Yazı tura karosu sonuca göre tura/yazı ikonu; zar ve yazı tura dokununca birkaç kare animasyon
+- 🟢 Klavye üç nokta menüsünün üst satırı (geri, ayarlar, tema) kaldırıldı
+- 🟢 Müzik özeti: 7. sayfa ruh hâli ve tür dağılımı
+- 🟢 Müzik bildirimi: ayrı söz bildirimi varsayılan açık; sözü bulunamayan şarkı bir dakika sonra yeniden aranır
+- 🟢 Klavye birim testi (isSwap / similar), Gamepad boyut kaydırıcısı
+- 🟢 Paint: Dosya menüsünde kâğıt rengi (Windows görünümleri)
+- 🟢 Diyalog düğmeleri: vurgu dolgusunda yazı rengi zemine göre (açık vurgu siyah, koyu vurgu beyaz)
+- 🟢 Save As diyaloğu: açık renkli metin ve düğmeler (AMOLED'de gri-beyaz sorunu)
+- 🟢 Extra apps listesi kendi konumunu korur (bir uygulamaya girip dönünce)
+- 🟡 Yapışkan notlar: widget canlı güncelleniyor, yeni ve sil eklendi; görünüm uyumu (her görünümde doğru çizim) ve not listesi açık
+- 🟡 Klavye otomatik düzeltme boşluk sonrası kelime yazma: güvenlik önlemi eklendi (kelime geri yazılır); asıl sebep cihazda uygulama bazında doğrulanmalı
+- 🔴 Çevrimiçi müzik (10.5), beyaz gürültü yeni sesler (11.0), Motion Cues (17.0), yüzen gamepad (14.0 kısmi), tema seçenekleri (2.1, 2.3), launcher (18.1), tarayıcı (20.0), Punk Store (22.0), ikon üretici (19.2), genel kalite (23.0)
+- 🔴 Bionic Tape, Vyxel Apps, CodeAssist, Moon+ Reader, VeriSky, CalibRaw ve diğer yüklenen arşivler: henüz incelenmedi
+- 1.0.242 YAPILACAKLAR: BÜYÜK PAKET statuses updated for the work since 1.0.184, and a "Bu tur eklenenler" list added (derlenmedi)
