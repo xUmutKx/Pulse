@@ -103,6 +103,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "goodlock" -> com.umutk.pulse.extras.goodlock.GoodLockHub(back)
         id == "buds" -> com.umutk.pulse.extras.buds.BudsScreen(back)
         id == "clock" -> com.umutk.pulse.extras.lucid.LucidClockScreen(back)
+        id == "radio" -> com.umutk.pulse.extras.radio.RadioScreen(back)
         id == "speedtest" -> com.umutk.pulse.extras.speedtest.SpeedTestScreen(back)
         id == "chargewatts" -> com.umutk.pulse.extras.charging.ChargingWattsScreen(back)
         id == "mediatools" -> com.umutk.pulse.extras.mediatools.MediaToolsScreen(back)
