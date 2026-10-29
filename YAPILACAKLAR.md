@@ -1358,7 +1358,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 1.5 Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
 - 🟡 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz — uzun kelimeye daha çok yer, sığmazsa üçüncü öneri çekilir; kayıtlı e-posta yalnız e-posta alanında (derlenmedi)
 - 🔴 1.7 E-posta kısayolu yalnız @ yazınca/çağrılınca, imleç noktasına ekler, önceki adı silmez, tuşa atanabilir
-- 🔴 1.8 Pano: ekran görüntüsü gerçek PNG/JPEG, raptiye ikonu, kısayol ikonu, Ctrl+X panoya, donanım klavyesi ve basılı tutma aynı geçmiş, kısayol alanında imleç
+- 🟡 1.8 Pano: ekran görüntüsü gerçek PNG/JPEG, raptiye ikonu, kısayol ikonu, Ctrl+X panoya, donanım klavyesi ve basılı tutma aynı geçmiş, kısayol alanında imleç — PNG/JPEG, raptiye, kısayol ikonu, kes/kopyala geçmişe, kısayol alanı imleci yapıldı; donanım klavyesi geçmiş birleşmesi doğrulanmadı
 
 ### 2 Temalar / AMOLED
 - 🔴 2.1 Ayrı Material / Windows 11 / AMOLED siyah teması + AMOLED vurgu rengi; tüm ekranlar (çubuklar, hızlı panel, ayarlar, menüler, editörler, PDF/Office, müzik, ağ, geçmiş, pencereler, klavye); başka temanın rengi sızmasın
@@ -1464,3 +1464,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 🔴 APK: Battery Supervisor, BigText, ChatNotes, Device Info, Groundd, Multi Toolbox, My Vinyl, Outplay, Punto, RadioSquare — her birinin özelliği incelenip Pulse'taki karşılığı/eksiği çıkarılacak
 - 1.0.188 Fixes: Install button stays on one line; End task is white on red; Downloads list drops files that were deleted, long press picks several rows with one delete question, Delete/Cancel buttons readable in every look; call recordings rows get a three-dot menu (share, copy path); video player: soft dark shade behind top and bottom controls, a Cast button (the phone screen-cast picker), the More menu no longer repeats speed, repeat and sleep timer; network type failure says why (permission, no answer, modem refused) (derlenmedi)
 - 1.0.189 Fixes: Good Lock list has Installed / Not installed / Updates tabs (tap opens the module, Download for the missing ones, the update check says why when it fails, release page from the feed); the launcher plays its start-up sound on every look once and never twice in a row; calculator Scientific and Programmer menu icons were missing (now Functions and Terminal); calculator keys sit higher (derlenmedi)
+- 1.0.190 Keyboard clipboard: screenshots from the keyboard are saved as real PNG/JPEG files (not ".img"); a cut or copy from the keyboard is added to the history at once; pinning uses a push-pin icon and shortcuts a bolt icon; the shortcut name field shows a caret (derlenmedi)

@@ -679,8 +679,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         when (id) {
             "selectAll" -> c.performContextMenuAction(android.R.id.selectAll)
-            "copy" -> c.performContextMenuAction(android.R.id.copy)
-            "cut" -> c.performContextMenuAction(android.R.id.cut)
+            "copy", "cut" -> {
+                // the selected text goes into the clipboard history right here too, so a cut or a copy is never missing from it (the system listener can be late or skipped)
+                val sel = c.getSelectedText(0)?.toString()?.trim()
+                c.performContextMenuAction(if (id == "cut") android.R.id.cut else android.R.id.copy)
+                if (!sel.isNullOrEmpty() && !st.incognito && !st.plain) st.clipItems = ClipStore.addText(this, sel)
+            }
             "paste" -> c.performContextMenuAction(android.R.id.paste)
             "undo" -> c.performContextMenuAction(android.R.id.undo)
             "redo" -> c.performContextMenuAction(android.R.id.redo)
