@@ -1761,7 +1761,7 @@ private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "he
 /** A small decoded picture for an image file, or null for anything else or when the device cannot decode it. */
 @Composable
 internal fun exThumb(f: File): ImageBitmap? {
-    if (!FilesPrefs.thumbs || f.extension.lowercase() !in EX_IMAGE_EXT) return null
+    if (!FilesPrefs.thumbs || !canPreview(f)) return null
     val ctx = LocalContext.current
     val first = remember(f.path) { Thumbs.cached(f) }
     return produceState(first, f.path) { if (value == null) value = Thumbs.load(ctx, f) }.value

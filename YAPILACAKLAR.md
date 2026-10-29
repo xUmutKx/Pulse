@@ -1504,3 +1504,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.221 Save as dialog: explicit text/button colours and window panel colour so AMOLED no longer shows grey/white (derlenmedi)
 - 1.0.222 Keyboard unit test (isSwap/similar); Gamepad size slider in keyboard settings; Music recap mood+genre page (7th); Extra apps list keeps its scroll; Paint paper colour (File menu, Windows looks) (derlenmedi)
 - 1.0.223 Build fixes: itemsIndexed import, TapeShelf accent, FlowRow opt-in (derlenmedi)
+- 1.0.224 Files: Recent items get previews (pictures, video frame, PDF first page, song cover, APK icon, Office/ODF thumbnail) and a small type badge (black, white line icon) on every file (derlenmedi)
