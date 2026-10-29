@@ -1452,3 +1452,13 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 24.0 Birim testleri (klavye noktalama/dil), tek sürüm derleme, sonuç raporu (APK konumu/boyut, bağımlılık-lisans, mimari)
 - 1.0.185 Keyboard: Space no longer writes a predicted word unless the field really ends in the last word typed; after a sign or a delete the remembered words are dropped, so no deleted or extra word comes back after a full stop or comma (derlenmedi)
 - 1.0.186 Keyboard bar: long words get more room and the third suggestion steps aside when three would not fit, so words are not cut with dots; saved e-mail addresses are no longer offered in ordinary text fields (derlenmedi)
+- 1.0.187 Keyboard: a new "Direction keys" layout (Settings > Keyboard): nine big keys, a tap types the centre letter and a drag towards a corner or side types the character shown there (English and Turkish letters, shift/caps/copy/cut/paste/undo/redo by swipe, emoji key with settings/menu/language/voice swipes, backspace with repeat, space with cursor drag) (derlenmedi)
+
+### 📦 Yüklenen dış uygulamalar (2026-10-29, birinci parti — ikinci parti gelecek)
+Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almadan önce denetlenecek (GPL-3.0 olanlar Pulse'ın lisansıyla uyuşmayabilir). Henüz hiçbirinden kod alınmadı.
+- 🔴 Baridmail-App (kaynak, Java): tek kullanımlık e-posta; gelen kutusu, çoklu hesap, bildirim servisi
+- 🔴 grabbit (kaynak, Kotlin): yt-dlp ön yüzü, biçim seçimi — Pulse'ta kendi YouTube indiricisi yazılmayacağı kuralı geçerli, yalnızca Extra Apps modülü adayı
+- 🔴 MetroWinLauncher (kaynak, GPL-3.0+): Windows Phone Start ekranı, canlı döşemeler, Action Center — launcher Windows Phone teması için referans
+- 🔴 relay (kaynak): telefon-bilgisayar dosya/pano aktarımı (yerel Wi-Fi)
+- 🔴 Savr (kaynak, GPLv3): yer imi uygulaması
+- 🔴 APK: Battery Supervisor, BigText, ChatNotes, Device Info, Groundd, Multi Toolbox, My Vinyl, Outplay, Punto, RadioSquare — her birinin özelliği incelenip Pulse'taki karşılığı/eksiği çıkarılacak
