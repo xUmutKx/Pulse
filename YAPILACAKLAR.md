@@ -1547,5 +1547,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 🟡 Yapışkan notlar: widget canlı güncelleniyor, yeni ve sil eklendi; görünüm uyumu (her görünümde doğru çizim) ve not listesi açık
 - 🟡 Klavye otomatik düzeltme boşluk sonrası kelime yazma: güvenlik önlemi eklendi (kelime geri yazılır); asıl sebep cihazda uygulama bazında doğrulanmalı
 - 🔴 Çevrimiçi müzik (10.5), beyaz gürültü yeni sesler (11.0), Motion Cues (17.0), yüzen gamepad (14.0 kısmi), tema seçenekleri (2.1, 2.3), launcher (18.1), tarayıcı (20.0), Punk Store (22.0), ikon üretici (19.2), genel kalite (23.0)
-- 🔴 Bionic Tape, Vyxel Apps, CodeAssist, Moon+ Reader, VeriSky, CalibRaw ve diğer yüklenen arşivler: henüz incelenmedi
+- 🔴 Vyxel Apps, CodeAssist, Moon+ Reader, VeriSky, CalibRaw ve diğer yüklenen arşivler: henüz incelenmedi
 - 1.0.242 YAPILACAKLAR: BÜYÜK PAKET statuses updated for the work since 1.0.184, and a "Bu tur eklenenler" list added (derlenmedi)
