@@ -121,7 +121,21 @@ private class PaintState {
         }
     }
 
-    fun clear() { push(); bmp.eraseColor(android.graphics.Color.WHITE); rev++ }
+    /** The colour of the sheet: New starts from it, and [cyclePaper] swaps it on the picture (white, black, cream, light blue). */
+    var paper by mutableIntStateOf(android.graphics.Color.WHITE)
+
+    fun clear() { push(); bmp.eraseColor(paper); rev++ }
+
+    fun cyclePaper() {
+        val list = listOf(android.graphics.Color.WHITE, android.graphics.Color.BLACK, 0xFFF5EBD0.toInt(), 0xFFDCEBFA.toInt())
+        val next = list[(list.indexOf(paper) + 1) % list.size]
+        push()
+        val px = IntArray(bmp.width * bmp.height)
+        bmp.getPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+        for (i in px.indices) if (px[i] == paper) px[i] = next
+        bmp.setPixels(px, 0, bmp.width, 0, 0, bmp.width, bmp.height)
+        paper = next; rev++
+    }
 
     /** Puts a picture on a new white sheet, shrunk to fit. */
     fun load(src: Bitmap) {
@@ -318,7 +332,7 @@ private fun WindowsPaint(st: PaintState, base: String, act: PaintActions) {
     val classic = base in CLASSIC_BASES
     val ctx = LocalContext.current
     var tab by remember { mutableStateOf("Home") }
-    val fileItems = listOf(tr("New", "Yeni") to act.new, tr("Open…", "Aç…") to act.open, tr("Save", "Kaydet") to act.save, tr("Exit", "Çıkış") to act.exit)
+    val fileItems = listOf(tr("New", "Yeni") to act.new, tr("Open…", "Aç…") to act.open, tr("Save", "Kaydet") to act.save, tr("Paper colour", "Kâğıt rengi") to { st.cyclePaper() }, tr("Exit", "Çıkış") to act.exit)
     val editItems = listOf(tr("Undo", "Geri al") to act.undo, tr("Redo", "Yinele") to { st.redo() }, tr("Clear Image", "Resmi temizle") to act.new)
     val widthItems = WIDTHS.map { w -> "${w.toInt()} px" to { st.size = w } }
     val colorItems = listOf("Black" to 0, "White" to 14, "Red" to 16, "Yellow" to 17, "Green" to 18, "Blue" to 20).map { (n, i) -> n to { st.color = PALETTE[i] } }
