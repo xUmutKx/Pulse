@@ -808,6 +808,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
             "gamepad" -> st.panel = if (st.panel == "gamepad") "keys" else "gamepad"
             "lang" -> lang()
+            // the e-mail key: "@" and the chosen domain go in at the cursor, nothing before it is touched
+            "email" -> { st.panel = "keys"; insertEmailDomain() }
             "voice" -> { st.panel = "keys"; voice() }
             "translate" -> {
                 st.panel = "keys"
@@ -1062,6 +1064,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         c.sendKeyEvent(KeyEvent(t, t, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, 0))
     }
 
+    /** "@gmail.com" (or the domain chosen in the settings) at the cursor. */
+    private fun insertEmailDomain() {
+        val c = currentInputConnection ?: return
+        finishWord("", false)
+        val d = KeyboardPrefs.emailDomain.trim().removePrefix("@").ifEmpty { "gmail.com" }
+        val before = c.getTextBeforeCursor(1, 0)?.toString().orEmpty()
+        // when an "@" is already there only the domain is added
+        c.commitText(if (before == "@") d else "@$d", 1)
+        afterText()
+    }
+
     override fun extraKey(id: String) {
         val d = ExtraKeys.byId(id) ?: return
         finishWord("", false); lastGlide = null; lastWasSpace = false
@@ -1071,6 +1084,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "win" -> st.win = (st.win + 1) % 3
             "shiftm" -> st.shiftMod = (st.shiftMod + 1) % 3
             "fn" -> st.fnOpen = !st.fnOpen
+            "email" -> insertEmailDomain()
             "selectAll", "copy", "cut", "paste", "undo", "redo" -> edit(id)
             // Alt + Tab: the phone's recent apps (the accessibility helper), as the editor cannot switch windows
             "tab" -> if (st.alt > 0) { com.umutk.pulse.extras.launcher.globalAction(this, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS); useModifiers() } else sendKey(d.code)
