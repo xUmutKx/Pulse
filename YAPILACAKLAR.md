@@ -1421,7 +1421,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 15.1 Sıcaklık: günlük görünüm, geçmiş, CPU/pil/termal ayrımı
 
 ### 16 Root / izin / arka plan
-- 🔴 16.0 Otomatik izin sıfırlama, erişilebilirlik servisi yeniden başlatma, boot sonrası servisler, kapatma/atma/zorla durdurma ayrımı
+- 🟡 16.0 (Ayarlar > "İzinleri koru" anahtarı: root ile appop yazar, rootsuz sistem ekranını açar) Otomatik izin sıfırlama, erişilebilirlik servisi yeniden başlatma, boot sonrası servisler, kapatma/atma/zorla durdurma ayrımı
 
 ### 17 Motion Cues / Hızlı panel
 - 🔴 17.0 Motion Cues panel kapanana kadar sürsün, doğru geri dönüş ekranı, Quick Panel ikon/tema uyumu
@@ -1442,7 +1442,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 20.0 WebView sağlayıcı incelemesi, sistem geneli değiştirme sınırları, reklam engelleme + karanlık mod, uzantı desteği ayrımı
 
 ### 21 Bildirim geçmişi / ikonlar
-- 🔴 21.0 Win11 tarzı saat ikonu, geçmiş çalışır, gereksiz 3 nokta menüleri, ayar başlıklarında ikon, büyük yazıları küçült
+- 🟡 21.0 (saat ikonu menüde yapıldı) Win11 tarzı saat ikonu, geçmiş çalışır, gereksiz 3 nokta menüleri, ayar başlıklarında ikon, büyük yazıları küçült
 
 ### 22 Punk Store
 - 🔴 22.0 18 MB → 75 MB kurulum boyutu nedeni, kurulum yöntemi kalıcı, varsayılan root, root yoksa doğru hata
@@ -1467,3 +1467,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.190 Keyboard clipboard: screenshots from the keyboard are saved as real PNG/JPEG files (not ".img"); a cut or copy from the keyboard is added to the history at once; pinning uses a push-pin icon and shortcuts a bolt icon; the shortcut name field shows a caret (derlenmedi)
 - 1.0.191 App history: icons for total and screen-on, today / week / month, the ring and the list in one scroll; Storage page no longer repeats Folder sizes (it lives in Files); the Meditation mix is 5 percent quieter (derlenmedi)
 - 1.0.192 Ambient sound notification: it has a Stop button, and a tap opens the music player's sound page instead of the Pulse start page; the music keep-alive notification opens the player (derlenmedi)
+- 1.0.193 Settings: a "Keep permissions" switch (Android's permission auto-reset exemption: written with root, otherwise the system screen opens); Notification history uses a clock icon in the app list (derlenmedi)
