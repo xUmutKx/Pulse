@@ -620,6 +620,7 @@ private fun TemperatureTool() {
             },
         ))
     }
+    TempHistoryCard(bat, cpu)
 }
 
 @Composable
