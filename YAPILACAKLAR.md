@@ -1351,7 +1351,7 @@ Screen recorder feature list (55 candidates)
 Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenmedi). Bir madde bitince buradaki işaret güncellenir.
 
 ### 1 Klavye (en yüksek öncelik)
-- 🔴 1.1 Noktalama sonrası kelime ekleme/silme hatası: sebep bulunacak (InputConnection/composing/seçim senkronu), eski düzeltme sonucu yeni metne uygulanmayacak, silinen kelime geri gelmeyecek
+- 🟡 1.1 Noktalama sonrası kelime ekleme/silme hatası: sebep bulunacak (InputConnection/composing/seçim senkronu), eski düzeltme sonucu yeni metne uygulanmayacak, silinen kelime geri gelmeyecek — ilk düzeltme: Space artık yalnız alan gerçekten son kelimeyle bitiyorsa tahmin ekler, noktalama/silme sonrası hatırlanan kelime unutulur (derlenmedi)
 - 🔴 1.2 Türkçe düzeltme motoru: kök+ek analizi, harf atlama/tekrar/yer değişimi, komşu tuş, ç ğ ı i ö ş ü, önceki-sonraki kelime bağlamı, emin değilse dokunma
 - 🔴 1.3 Türkçe/İngilizce cümle bağlamı ile ayrım (tek kelime dili değiştirmez), otomatik algı ve elle seçim ayrı
 - 🔴 1.4 Öğrenme modları (kelime / cümle / birleşik / kapalı), öğrenilenleri görme-silme-temizleme, özel sözlük, hariç tutma, geri alma, "doğru" işaretleme, dışa/içe aktarma
@@ -1450,3 +1450,4 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 ### 23-24 Genel kalite ve teslim
 - 🔴 23.0 Gereksiz yeniden çizim, ikon önbelleği, tema/vurgu ortaklaştırma, ANR/çökme, boyut
 - 🔴 24.0 Birim testleri (klavye noktalama/dil), tek sürüm derleme, sonuç raporu (APK konumu/boyut, bağımlılık-lisans, mimari)
+- 1.0.185 Keyboard: Space no longer writes a predicted word unless the field really ends in the last word typed; after a sign or a delete the remembered words are dropped, so no deleted or extra word comes back after a full stop or comma (derlenmedi)
