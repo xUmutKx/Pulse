@@ -282,7 +282,7 @@ private fun rememberPosition(engine: MusicPlayerEngine, st: PlaybackState): Stat
     LaunchedEffect(st.current, st.isPlaying) {
         while (true) {
             s.value = engine.positionMs to engine.durationMs
-            delay(if (st.isPlaying) 250L else 1000L)
+            delay(if (st.isPlaying) 120L else 1000L)
         }
     }
     return s

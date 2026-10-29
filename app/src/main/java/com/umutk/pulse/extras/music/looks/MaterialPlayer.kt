@@ -249,7 +249,7 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
     var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled || modesPrefs.getBoolean("queue_shuffled", false)) }
     var repeat by remember { mutableIntStateOf(engine.player.repeatMode) }
     LaunchedEffect(st.isPlaying, st.current) {
-        while (true) { if (!dragging) pos = engine.positionMs; dur = engine.durationMs; if (!st.isPlaying) break; delay(400) }
+        while (true) { if (!dragging) pos = engine.positionMs; dur = engine.durationMs; if (!st.isPlaying) break; delay(100) }
     }
 
     // sleep timer: minutes left, 0 = off
