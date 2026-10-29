@@ -249,6 +249,7 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Cursor control", "İmleç denetimi"), tr("Hold space and slide to move the cursor", "Boşluğa basılı tutup kaydırınca imleç gider"), KeyboardPrefs.cursorControl) { KeyboardPrefs.cursorControl = it; save() }
             Switch(tr("Quick delete", "Hızlı silme"), tr("Slide from the delete key to select and delete text", "Silme tuşundan kaydırarak seç ve sil"), KeyboardPrefs.quickDelete) { KeyboardPrefs.quickDelete = it; save() }
             Switch(tr("Emoji predictions", "Emoji tahminleri"), tr("Emoji on the suggestion bar", "Öneri çubuğunda emoji"), KeyboardPrefs.emojiPredictions) { KeyboardPrefs.emojiPredictions = it; save() }
+            Switch(tr("Detect the language of a sentence", "Cümlenin dilini algıla"), tr("The words of the sentence decide: a single English word does not switch the keyboard", "Cümlenin kelimeleri belirler: tek bir İngilizce kelime klavyeyi değiştirmez"), KeyboardPrefs.autoLang) { KeyboardPrefs.autoLang = it; save() }
             // what the keyboard learns from typing (never in password, e-mail and address fields)
             Text(tr("Learning", "Öğrenme"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
