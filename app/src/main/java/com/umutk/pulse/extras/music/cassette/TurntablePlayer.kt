@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music.cassette
 
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -129,7 +130,7 @@ fun TurntablePlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<
                     Text(tr("Files", "Dosyalar"), color = Color.White.copy(alpha = .8f), fontSize = 14.sp, modifier = Modifier.clickable { list = false; onOpen() }.padding(8.dp))
                 }
                 androidx.compose.foundation.lazy.LazyColumn(Modifier.padding(top = 6.dp).size(width = 320.dp, height = 420.dp)) {
-                    androidx.compose.foundation.lazy.itemsIndexed(library) { i, t ->
+                    itemsIndexed(library) { i, t ->
                         Text(t.title?.ifBlank { null } ?: t.path.substringAfterLast('/').substringBeforeLast('.'), color = Color.White, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.fillMaxWidth().clickable { engine.playQueue(library, i); list = false }.padding(vertical = 10.dp, horizontal = 6.dp))
                     }
