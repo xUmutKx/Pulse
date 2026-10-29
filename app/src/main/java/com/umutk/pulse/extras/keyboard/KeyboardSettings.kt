@@ -175,6 +175,7 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             Switch(tr("Split keys", "Bölünmüş tuşlar"), tr("A gap in the middle of the rows, for a tablet", "Satırların ortasında boşluk, tablet için"), KeyboardPrefs.split) { KeyboardPrefs.split = it; save() }
+            Switch(tr("Direction keys", "Yön tuşları"), tr("Nine big keys: drag a key towards a character to type it", "Dokunun veya bir karaktere doğru kaydırın: dokuz büyük tuş"), KeyboardPrefs.dirLayout) { KeyboardPrefs.dirLayout = it; save() }
             Switch(tr("Extra button", "Ek tuş"), tr("A compact bottom row with a Shift key at the left", "Solda Shift tuşu olan, daha sıkışık alt satır"), KeyboardPrefs.bottomShift) { KeyboardPrefs.bottomShift = it; save() }
             Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A narrower keyboard that slides sideways by the handle on top", "Üstteki tutamakla yana kayan, daha dar klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
             Switch(tr("Large key text", "Büyük tuş yazısı"), "", KeyboardPrefs.largeText) { KeyboardPrefs.largeText = it; save() }

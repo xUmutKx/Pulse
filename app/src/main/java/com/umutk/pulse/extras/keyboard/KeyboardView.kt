@@ -544,6 +544,8 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val lang = KeyboardLayouts.lang(if (st.lang in langs) st.lang else langs.first())
     val rows = KeyboardLayouts.letterRows(lang.code, up, digits)
     val n1 = rows[0].size.toFloat()
+    // the direction keyboard: nine swipe keys (letters page only; the symbol pages stay the ordinary ones)
+    if (KeyboardPrefs.dirLayout && st.page == 0) { ThumbPanel(th, st, act, keyH); return }
     if (KeyboardPrefs.proRow && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
     if (KeyboardPrefs.arrows) {
         // the key bar: Fn (its twelve keys open from it), Shift, the arrows, Home / End, Page up / down, Esc, Tab and the editing keys
