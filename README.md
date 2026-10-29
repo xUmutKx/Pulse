@@ -290,3 +290,4 @@ The APK is written to `app/build/outputs/apk/release/`. Every build (GitHub Acti
 - **Windows logos, wallpapers and other images** in `app/src/main/res/drawable-nodpi/`. The repository has no licence file for these yet, and their sources are not recorded here.
 
 Pulse's own code is licensed under the **GNU General Public License v3.0** (see [LICENSE](LICENSE)). Copyright (C) 2026 xUmutKx. The third-party parts above keep their own licences. GPL-3.0 also fits the bundled Universal Debloater list, which is GPL-3.0.
+- **Relay** (Apache-2.0, Vythera). The engine in `app/src/main/java/com/vythera/relay` (protocol, security, discovery, transfer, node) is the Relay project's own, copied as it is; the Android side (`extras/relay`) is Pulse's. The licence text is in `app/src/main/assets/licenses/relay-LICENSE.txt`.

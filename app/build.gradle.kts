@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -11,8 +12,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 637
-        versionName = "1.0.237"
+        versionCode = 638
+        versionName = "1.0.238"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
@@ -74,6 +75,8 @@ dependencies {
     compileOnly(files("libs/xposed-stub.jar")) // BlackOut (extras/blackout): the Xposed API classes come from LSPosed / Vector at run time
     implementation("androidx.datastore:datastore-preferences:1.1.1") // Lucid clock (extras/lucid): its settings
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3") // Lucid clock: viewModel() in Compose
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3") // Relay (extras/relay, Apache-2.0): its protocol messages
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.79") // Relay: the self-signed certificate of this device (mutual TLS)
     implementation("androidx.palette:palette-ktx:1.0.0") // Palette (extras/palette): the colours of a wallpaper
     implementation("androidx.work:work-runtime-ktx:2.9.1") // ServiceWatchdog: periodic CheckWorker (extras/watchdog); 2.10 needs compileSdk 35
     // Apache-2.0; builds the MMS PDU for attachments in Messages (Messages.kt). okhttp 2.x is left out: the system MMS stack sends it, and okio 3 is already in use
