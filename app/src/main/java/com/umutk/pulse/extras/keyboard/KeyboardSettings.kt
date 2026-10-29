@@ -220,6 +220,11 @@ fun KeyboardSettings(back: () -> Unit) {
             PSlider(KeyboardPrefs.sidePad / 40f, { KeyboardPrefs.sidePad = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Space between keys", "Tuşlar arası boşluk")}: ${KeyboardPrefs.keyGap} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.keyGap / 8f, { KeyboardPrefs.keyGap = (it * 8).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("?123 key narrower", "?123 tuşu daha dar")}: ${KeyboardPrefs.modeShrink}%", color = T.sub, fontSize = 12.sp)
+            PSlider(KeyboardPrefs.modeShrink / 40f, { KeyboardPrefs.modeShrink = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("Comma key narrower", "Virgül tuşu daha dar")}: ${KeyboardPrefs.commaShrink}%", color = T.sub, fontSize = 12.sp)
+            PSlider(KeyboardPrefs.commaShrink / 40f, { KeyboardPrefs.commaShrink = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
+            Text(tr("The space bar gets the room these keys leave.", "Space tuşu bu tuşların bıraktığı yeri alır."), color = T.sub, fontSize = 11.sp)
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("off" to tr("Full width", "Tam genişlik"), "left" to tr("Left hand", "Sol el"), "right" to tr("Right hand", "Sağ el")).forEach { (k, n) ->
                     PChip(KeyboardPrefs.oneHand == k, n) { KeyboardPrefs.oneHand = k; save() }

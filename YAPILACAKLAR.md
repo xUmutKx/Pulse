@@ -1550,3 +1550,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 🔴 Vyxel Apps, CodeAssist, Moon+ Reader, VeriSky, CalibRaw ve diğer yüklenen arşivler: henüz incelenmedi
 - 1.0.242 YAPILACAKLAR: BÜYÜK PAKET statuses updated for the work since 1.0.184, and a "Bu tur eklenenler" list added (derlenmedi)
 - 1.0.243 Keyboard: long press on the comma starts speech typing inside the keyboard (SpeechRecognizer, Pulse microphone permission), the keyboard stays up; the comma icon turns accent while listening; falls back to the voice keyboard when there is no permission or recognizer (derlenmedi)
+- 1.0.244 Keyboard key sizes: ?123 key 15% narrower and comma key 10% narrower by default (sliders in Settings > Keyboard > Size, 0-40%); the space bar takes the room (derlenmedi)
