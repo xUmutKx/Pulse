@@ -374,6 +374,9 @@ object ExtraRowsHidden {
     private fun sp(c: android.content.Context) = c.getSharedPreferences("store_rows", android.content.Context.MODE_PRIVATE)
     fun load(c: android.content.Context): Set<String> = sp(c).getStringSet("hidden", emptySet()).orEmpty().toSet()
     fun save(c: android.content.Context, keys: Set<String>) { sp(c).edit().putStringSet("hidden", keys).apply() }
+    /** The list of extra apps as tiles (icon and name) or as rows with their description. */
+    fun grid(c: android.content.Context) = sp(c).getBoolean("grid", false)
+    fun setGrid(c: android.content.Context, on: Boolean) { sp(c).edit().putBoolean("grid", on).apply() }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -426,7 +429,27 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Network usage", "Ağ kullanımı"), tr("Wi-Fi and mobile data, app by app", "Wi-Fi ve mobil veri, uygulama uygulama"), "speed", "tool:netusage") { openTool("netusage") },
     )
     val visible = rows.filter { showHidden || (it.place ?: it.name) !in hidden }
-    visible.forEach { r ->
+    // tiles or rows: the choice is kept
+    var grid by remember { mutableStateOf(ExtraRowsHidden.grid(ctx)) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Box(Modifier.size(40.dp).clickable { grid = !grid; ExtraRowsHidden.setGrid(ctx, grid) }, contentAlignment = Alignment.Center) { PIcon(if (grid) "menu" else "apps", T.text, 22.dp) }
+    }
+    if (grid) visible.chunked(3).forEach { line ->
+        Row(Modifier.fillMaxWidth()) {
+            line.forEach { r ->
+                val key = r.place ?: r.name
+                val isHidden = key in hidden
+                Column(Modifier.weight(1f).combinedClickable(onClick = { r.onClick() }, onLongClick = {
+                    hidden = if (isHidden) hidden - key else hidden + key
+                    ExtraRowsHidden.save(ctx, hidden)
+                }).alpha(if (isHidden) .45f else 1f).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    PIcon(r.icon, T.text, 34.dp)
+                    Text(r.name, color = T.text, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
+                }
+            }
+            repeat(3 - line.size) { Spacer(Modifier.weight(1f)) }
+        }
+    } else visible.forEach { r ->
         val key = r.place ?: r.name
         val isHidden = key in hidden
         Row(Modifier.fillMaxWidth().combinedClickable(onClick = { r.onClick() }, onLongClick = {

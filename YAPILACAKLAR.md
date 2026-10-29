@@ -1388,7 +1388,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟡 7.3 (hata mesajı artık nedeni ayırıyor: yetki / komuta yanıt yok / modem kabul etmedi; desteklenmeyen türü gizleme sürüyor) Ağ türü değiştirme: "Phone didn't take it" nedeni, desteklenmeyeni gizle, izin/modem hatası ayrımı, sahte başarı yok
 
 ### 8 Extra Apps menüsü
-- 🟡 8.0 Görünürlük anahtarları (uzun basma ile gizleme yapıldı); ızgara düzeni + liste seçeneği, App Info/Open düğmesi kaldırma, Office kaldırma, kaydırma konumu koruma
+- 🟡 8.0 Görünürlük anahtarları (uzun basma ile gizleme ve ızgara/liste seçimi yapıldı); ızgara düzeni + liste seçeneği, App Info/Open düğmesi kaldırma, Office kaldırma, kaydırma konumu koruma
 - 🟡 8.1 Mağaza: yalnız indirilenler (yapıldı); kurulu → aç, kurulu değil → Download, güncelleme bilgisi/sürüm karşılaştırma, APKMirror doğrudan sayfa
 
 ### 9 Toolkit
@@ -1495,3 +1495,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.212 Media tools: a PDF tab that joins several PDFs into one and cuts a range of pages out of one (the pages are drawn as pictures, so the text cannot be selected; said on the screen); saved in Download/Pulse (derlenmedi)
 - 1.0.213 Music: six more moods next to energetic, chill, focus and happy: sad, calm, nostalgic, romantic, angry and dreamy (found from the genre tag and the title in English and Turkish; songs from the 60s to the 90s count as nostalgic); each gets its own mix and can be chosen in the mix settings (derlenmedi)
 - 1.0.214 Music recap (Extra apps): from now on every real listening is noted with its time; the recap shows pages to swipe through (minutes, top artists, top songs, the hours and days you listen, a card) for the last 30 days, 3 months or a year, and saves the card as a PNG in Download/Pulse; it says from which day the notes count (derlenmedi)
+- 1.0.215 Extra apps list: a switch in its top right shows the apps as tiles (icon and name, three in a row) or as rows with their description; the choice is kept, and a long press still hides or shows an app (derlenmedi)
