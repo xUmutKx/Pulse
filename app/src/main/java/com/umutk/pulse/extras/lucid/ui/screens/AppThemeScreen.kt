@@ -745,6 +745,7 @@ fun AppThemeScreen(
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ColorSwatchGrid(
     selectedArgb: Long,

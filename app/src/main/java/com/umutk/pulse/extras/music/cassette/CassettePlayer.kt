@@ -246,7 +246,7 @@ private fun DrawScope.reel(c: Offset, r: Float, angle: Float, ink: Color) {
 private fun TapeShelf(library: List<Track>, st: PlaybackState, onPick: (Int) -> Unit, onFiles: () -> Unit, onClose: () -> Unit) {
     val cas = LocalCas.current
     // the colour of the deck on the dark shelf (a black deck uses its light ink)
-    val acc = if (acc.luminance() < .15f) cas.ink else acc
+    val acc = if (cas.deck.luminance() < .15f) cas.ink else cas.deck
     Column(Modifier.fillMaxSize().background(Color(0xF2121212)).padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Tapes", "Kasetler") + " · ${library.size}", color = acc, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))

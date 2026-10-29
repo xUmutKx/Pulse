@@ -1503,3 +1503,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.220 App history: the download icon saves the shown range as a CSV (app, package, category as the app declares it, minutes, total) in Download/Pulse (derlenmedi)
 - 1.0.221 Save as dialog: explicit text/button colours and window panel colour so AMOLED no longer shows grey/white (derlenmedi)
 - 1.0.222 Keyboard unit test (isSwap/similar); Gamepad size slider in keyboard settings; Music recap mood+genre page (7th); Extra apps list keeps its scroll; Paint paper colour (File menu, Windows looks) (derlenmedi)
+- 1.0.223 Build fixes: itemsIndexed import, TapeShelf accent, FlowRow opt-in (derlenmedi)
