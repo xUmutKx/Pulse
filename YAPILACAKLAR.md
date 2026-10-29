@@ -1373,7 +1373,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 
 ### 4 Paylaşma / Kaydetme / Yedek
 - 🔴 4.0 Share / Save As kontrolü; Save As AMOLED'de gri-beyaz kalmasın; hata bildirimi
-- 🔴 4.1 Yedek küçültme: önbellek, müzik dosyası, kapaklar yedeklenmez; boyut gösterimi; eski yedekleri yönetme/silme
+- 🟡 4.1 Yedek: kapaklar, arama dizinleri, önbellekler ve sözlükler zaten yedeğe girmiyor; boyut gösteriliyor; kayıtlı yedek listesi (boyut, tarih), tek tek silme ve "en yeni ikisi hariç sil" eklendi. Müzik dosyaları hiç kopyalanmıyor
 
 ### 5 Video oynatıcı
 - 🟢 5.0 (Cast = telefonun ekran yansıtma ekranı; videoyu devretmez) Alt kontroller için yarı saydam katman, beyaz ikon kontrastı, 3 nokta menüsü düzeni, Cast düğmesi (gerçek), dokunma alanları
@@ -1490,3 +1490,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.207 Keyboard: a sign or a number typed right after a word no longer replaces the word: the word is closed where it stands and the sign is added after it as one batch (before, the commit relied on the app replacing the composing text, which some fields do wrongly: the word vanished or a second word appeared); with 1.0.185 the predicted word is no longer written after a sign or a number (derlenmedi)
 - 1.0.208 Keyboard: Backspace right after an automatic correction takes it back (the word as typed opens again) and that correction is remembered as unwanted, even for swapped letters, so the same word is not corrected again; no space is added by itself after a sign any more (off by default, also for those who had it on; the typing setting can turn it on again) (derlenmedi)
 - 1.0.209 Music: the Poweramp rating stars are 15 percent larger with a taller touch pill (44 dp, five cells of 34 dp), and the progress bars of the Material, Poweramp and music page players refresh 3 to 4 times as often, so they move smoothly (derlenmedi)
+- 1.0.210 Backup: Settings > Data lists the saved backups with their size and date, deletes one, or deletes all but the newest two (derlenmedi)
