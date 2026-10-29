@@ -1508,3 +1508,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.225 File type badges in Files: black ground, white outline icon, thin white edge (were coloured); Windows 11 Fluent icons for Clock, Radio, Music recap, Charging power, Browser and Office in the ⋮ menu and the Extra apps list (derlenmedi)
 - 1.0.226 Keyboard: after Space/punctuation the word is checked and written back when the field swallowed it (derlenmedi)
 - 1.0.227 Files: Detailed list always shows type, size and date (also in folders set to names only); Settings > Files > View is a picture picker (list, grid, detailed) (derlenmedi)
+- 1.0.228 Lyrics: separate lyrics notification on by default, a song with no lyrics found is searched again after a minute (was never); widgets/notifications open the music app even when its old recents card has no window (derlenmedi)
