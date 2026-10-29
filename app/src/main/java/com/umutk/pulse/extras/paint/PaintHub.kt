@@ -73,7 +73,7 @@ import kotlin.math.max
 import kotlin.math.min
 
 /** The drawing tools, in the order of the tool box. */
-enum class PaintTool { PENCIL, BRUSH, ERASER, FILL, PICK, LINE, RECT, ELLIPSE }
+enum class PaintTool { PENCIL, BRUSH, ERASER, FILL, PICK, LINE, RECT, ELLIPSE, SPRAY, WATERCOLOR }
 
 /** The classic 28 colours of Paint: two rows of 14. */
 private val PALETTE = listOf(
@@ -83,12 +83,14 @@ private val PALETTE = listOf(
 
 private const val W = 900
 private const val H = 1200
-private const val UNDO_MAX = 10
+private const val UNDO_MAX = 20
 
 /** The picture, the undo steps and the pen. Every change to the bitmap bumps [rev] so the canvas draws it again. */
 private class PaintState {
     var bmp: Bitmap = blank()
     private val undoStack = ArrayDeque<Bitmap>()
+    private val redoStack = ArrayDeque<Bitmap>()
+    private val rnd = java.util.Random()
     var rev by mutableIntStateOf(0)
     var tool by mutableStateOf(PaintTool.PENCIL)
     var color by mutableIntStateOf(PALETTE[0])
@@ -103,9 +105,21 @@ private class PaintState {
     fun push() {
         undoStack.addLast(bmp.copy(Bitmap.Config.ARGB_8888, false))
         if (undoStack.size > UNDO_MAX) undoStack.removeFirst()
+        redoStack.clear()
     }
 
-    fun undo() { if (undoStack.isNotEmpty()) { bmp = undoStack.removeLast().copy(Bitmap.Config.ARGB_8888, true); rev++ } }
+    fun undo() { if (undoStack.isNotEmpty()) { redoStack.addLast(bmp.copy(Bitmap.Config.ARGB_8888, false)); bmp = undoStack.removeLast().copy(Bitmap.Config.ARGB_8888, true); rev++ } }
+    fun redo() { if (redoStack.isNotEmpty()) { undoStack.addLast(bmp.copy(Bitmap.Config.ARGB_8888, false)); bmp = redoStack.removeLast().copy(Bitmap.Config.ARGB_8888, true); rev++ } }
+
+    /** The spray: a cloud of small dots around the point, as many as the size asks for. */
+    private fun spray(p: Offset) {
+        val c = ACanvas(bmp); val paint = APaint().apply { isAntiAlias = true; this.color = this@PaintState.color; style = APaint.Style.FILL }
+        val r = max(4f, size * 2f)
+        repeat((r * 1.6f).toInt()) {
+            val a = rnd.nextDouble() * Math.PI * 2; val d = Math.sqrt(rnd.nextDouble()) * r
+            c.drawCircle(p.x + (Math.cos(a) * d).toFloat(), p.y + (Math.sin(a) * d).toFloat(), 1.2f, paint)
+        }
+    }
 
     fun clear() { push(); bmp.eraseColor(android.graphics.Color.WHITE); rev++ }
 
@@ -122,8 +136,10 @@ private class PaintState {
     private fun pen(): APaint = APaint().apply {
         isAntiAlias = tool != PaintTool.PENCIL
         style = APaint.Style.STROKE; strokeCap = APaint.Cap.ROUND; strokeJoin = APaint.Join.ROUND
-        strokeWidth = if (tool == PaintTool.PENCIL) 2f else max(1f, size)
+        // the watercolour: wide, see-through strokes that pile up into deeper colour where they cross
+        strokeWidth = if (tool == PaintTool.PENCIL) 2f else if (tool == PaintTool.WATERCOLOR) max(6f, size * 2.2f) else max(1f, size)
         this.color = if (tool == PaintTool.ERASER) android.graphics.Color.WHITE else this@PaintState.color
+        if (tool == PaintTool.WATERCOLOR) alpha = 38
     }
 
     fun tap(p: Offset) {
@@ -132,14 +148,16 @@ private class PaintState {
         when (tool) {
             PaintTool.FILL -> { push(); floodFill(bmp, x, y, color); rev++ }
             PaintTool.PICK -> color = bmp.getPixel(x, y) or (0xFF shl 24)
-            PaintTool.PENCIL, PaintTool.BRUSH, PaintTool.ERASER -> { push(); ACanvas(bmp).drawPoint(p.x, p.y, pen().apply { style = APaint.Style.FILL_AND_STROKE }); rev++ }
+            PaintTool.PENCIL, PaintTool.BRUSH, PaintTool.ERASER, PaintTool.WATERCOLOR -> { push(); ACanvas(bmp).drawPoint(p.x, p.y, pen().apply { style = APaint.Style.FILL_AND_STROKE }); rev++ }
+            PaintTool.SPRAY -> { push(); spray(p); rev++ }
             else -> Unit
         }
     }
 
     fun begin(p: Offset) {
         when (tool) {
-            PaintTool.PENCIL, PaintTool.BRUSH, PaintTool.ERASER -> { push(); last = p; ACanvas(bmp).drawPoint(p.x, p.y, pen().apply { style = APaint.Style.FILL_AND_STROKE }); rev++ }
+            PaintTool.PENCIL, PaintTool.BRUSH, PaintTool.ERASER, PaintTool.WATERCOLOR -> { push(); last = p; ACanvas(bmp).drawPoint(p.x, p.y, pen().apply { style = APaint.Style.FILL_AND_STROKE }); rev++ }
+            PaintTool.SPRAY -> { push(); last = p; spray(p); rev++ }
             PaintTool.LINE, PaintTool.RECT, PaintTool.ELLIPSE -> { push(); a = p; b = p }
             else -> Unit
         }
@@ -147,7 +165,8 @@ private class PaintState {
 
     fun move(p: Offset) {
         when (tool) {
-            PaintTool.PENCIL, PaintTool.BRUSH, PaintTool.ERASER -> { last?.let { ACanvas(bmp).drawLine(it.x, it.y, p.x, p.y, pen()) }; last = p; rev++ }
+            PaintTool.PENCIL, PaintTool.BRUSH, PaintTool.ERASER, PaintTool.WATERCOLOR -> { last?.let { ACanvas(bmp).drawLine(it.x, it.y, p.x, p.y, pen()) }; last = p; rev++ }
+            PaintTool.SPRAY -> { spray(p); last = p; rev++ }
             PaintTool.LINE, PaintTool.RECT, PaintTool.ELLIPSE -> b = p
             else -> Unit
         }
@@ -238,6 +257,7 @@ private fun PlainPaint(st: PaintState, act: PaintActions) {
             Text("Paint", color = T.text, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(start = 4.dp))
             ExtraLookIcon()
             Box(Modifier.size(44.dp).clickable { act.undo() }, contentAlignment = Alignment.Center) { PIcon(if (T.id == "win11") "paint_undo" else "undo", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { st.redo() }, contentAlignment = Alignment.Center) { PIcon("redo", T.text, 22.dp) }
             Box(Modifier.size(44.dp).clickable { act.new() }, contentAlignment = Alignment.Center) { PIcon(if (T.id == "win11") "paint_new" else "newfile", T.text, 22.dp) }
             Box(Modifier.size(44.dp).clickable { act.open() }, contentAlignment = Alignment.Center) { PIcon(if (T.id == "win11") "paint_open" else "folder", T.text, 22.dp) }
             Box(Modifier.size(44.dp).clickable { act.save() }, contentAlignment = Alignment.Center) { PIcon(if (T.id == "win11") "paint_save" else "save", T.text, 22.dp) }
@@ -299,7 +319,7 @@ private fun WindowsPaint(st: PaintState, base: String, act: PaintActions) {
     val ctx = LocalContext.current
     var tab by remember { mutableStateOf("Home") }
     val fileItems = listOf(tr("New", "Yeni") to act.new, tr("Open…", "Aç…") to act.open, tr("Save", "Kaydet") to act.save, tr("Exit", "Çıkış") to act.exit)
-    val editItems = listOf(tr("Undo", "Geri al") to act.undo, tr("Clear Image", "Resmi temizle") to act.new)
+    val editItems = listOf(tr("Undo", "Geri al") to act.undo, tr("Redo", "Yinele") to { st.redo() }, tr("Clear Image", "Resmi temizle") to act.new)
     val widthItems = WIDTHS.map { w -> "${w.toInt()} px" to { st.size = w } }
     val colorItems = listOf("Black" to 0, "White" to 14, "Red" to 16, "Yellow" to 17, "Green" to 18, "Blue" to 20).map { (n, i) -> n to { st.color = PALETTE[i] } }
     val status = if (classic) tr("For Help, click Help Topics on the Help Menu.", "Yardım için Yardım menüsünden Yardım Konuları'na tıklayın.") else "${W} × ${H} px"
@@ -458,6 +478,7 @@ private fun ToolGlyph(t: PaintTool, tint: Color) {
         val key = when (t) {
             PaintTool.PENCIL -> "paint_pencil"; PaintTool.BRUSH -> "paint_brush"; PaintTool.ERASER -> "paint_eraser"; PaintTool.FILL -> "paint_fill"
             PaintTool.PICK -> "paint_pick"; PaintTool.LINE -> "paint_line"; PaintTool.RECT -> "paint_rect"; PaintTool.ELLIPSE -> "paint_ellipse"
+            PaintTool.SPRAY -> "paint_fill"; PaintTool.WATERCOLOR -> "paint_brush"
         }
         PIcon(key, tint, 22.dp)
         return
@@ -475,6 +496,8 @@ private fun ToolGlyph(t: PaintTool, tint: Color) {
             PaintTool.LINE -> drawLine(tint, o(5f, 19f), o(19f, 5f), 2f * u)
             PaintTool.RECT -> drawRect(tint, o(4f, 6f), Size(16f * u, 12f * u), style = st)
             PaintTool.ELLIPSE -> drawOval(tint, o(4f, 6f), Size(16f * u, 12f * u), style = st)
+            PaintTool.SPRAY -> { drawRect(tint, o(4f, 12f), Size(7f * u, 9f * u), style = st); listOf(14f to 6f, 17f to 9f, 19f to 5f, 16f to 12f, 20f to 11f, 13f to 9f).forEach { (x, y) -> drawCircle(tint, 1.1f * u, o(x, y)) } }
+            PaintTool.WATERCOLOR -> { drawLine(tint, o(5f, 17f), o(15f, 7f), 4f * u); drawLine(tint, o(15f, 7f), o(19f, 3f), 2f * u); drawCircle(tint, 2.2f * u, o(8f, 21f)); drawCircle(tint, 1.4f * u, o(14f, 20f)) }
         }
     }
 }
