@@ -1404,20 +1404,20 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 10.6 Dinleme özeti (Wrapped benzeri): 3 aylık, aylık/yıllık, sanatçı/şarkı, süre, ruh hâli/tür, sayfalı tam ekran, görsel dışa aktarma, geçmiş yoksa kayıt tutma
 
 ### 11 White Noise
-- 🔴 11.0 Waterfall, Gentle Rain, Wind Chimes iyileştirme; Meditation %5 azalt; Seaside aynı; yeni doğa sesleri; profiller ikonlu; kişisel karışım
+- 🟡 11.0 (Meditation %5 azaltıldı) Waterfall, Gentle Rain, Wind Chimes iyileştirme; Meditation %5 azalt; Seaside aynı; yeni doğa sesleri; profiller ikonlu; kişisel karışım
 - 🔴 11.1 Bildirimde durdur, dokununca doğrudan Music Player, bildirim kaybolma nedeni
 
 ### 12 İndirme yöneticisi
 - 🟢 12.0 Silinen dosya listede kalmasın (2,5 sn'de bir kontrol), Delete/Cancel kontrastı, uzun basıp çoklu seçim + toplu silme, onay, silinemeyen dosya uyarısı
 
 ### 13 Uygulama geçmişi
-- 🔴 13.0 Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
+- 🟡 13.0 (ikonlar, pasta+liste birlikte, bugün/hafta/ay yapıldı; kategori raporu, dışa aktarma, süre sınırı, App Info/Force Stop ikonları sürüyor) Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
 
 ### 14 Gamepad
 - 🟡 14.0 Joystick konumu/boşluk (kısmen yapıldı); floating gamepad, boyut-konum ayarı
 
 ### 15 Device paneli
-- 🔴 15.0 Overview üstüne cihaz kartı; Device menüsünden Folder Sizes tekrarını kaldır
+- 🟡 15.0 (Folder Sizes tekrarı Storage sayfasından kaldırıldı; cihaz kartı sürüyor) Overview üstüne cihaz kartı; Device menüsünden Folder Sizes tekrarını kaldır
 - 🔴 15.1 Sıcaklık: günlük görünüm, geçmiş, CPU/pil/termal ayrımı
 
 ### 16 Root / izin / arka plan
@@ -1465,3 +1465,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.188 Fixes: Install button stays on one line; End task is white on red; Downloads list drops files that were deleted, long press picks several rows with one delete question, Delete/Cancel buttons readable in every look; call recordings rows get a three-dot menu (share, copy path); video player: soft dark shade behind top and bottom controls, a Cast button (the phone screen-cast picker), the More menu no longer repeats speed, repeat and sleep timer; network type failure says why (permission, no answer, modem refused) (derlenmedi)
 - 1.0.189 Fixes: Good Lock list has Installed / Not installed / Updates tabs (tap opens the module, Download for the missing ones, the update check says why when it fails, release page from the feed); the launcher plays its start-up sound on every look once and never twice in a row; calculator Scientific and Programmer menu icons were missing (now Functions and Terminal); calculator keys sit higher (derlenmedi)
 - 1.0.190 Keyboard clipboard: screenshots from the keyboard are saved as real PNG/JPEG files (not ".img"); a cut or copy from the keyboard is added to the history at once; pinning uses a push-pin icon and shortcuts a bolt icon; the shortcut name field shows a caret (derlenmedi)
+- 1.0.191 App history: icons for total and screen-on, today / week / month, the ring and the list in one scroll; Storage page no longer repeats Folder sizes (it lives in Files); the Meditation mix is 5 percent quieter (derlenmedi)

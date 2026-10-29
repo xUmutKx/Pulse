@@ -185,6 +185,8 @@ fun HistoryPage() {
     var notesOn by remember { mutableStateOf(NoteCount.enabled(ctx)) }
     var pie by remember { mutableStateOf(false) }
     var screenOnly by remember { mutableStateOf(false) }
+    // the range shown: today, the last 7 days, the last 30 days
+    var range by remember { mutableStateOf(1) }
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e ->
@@ -192,9 +194,9 @@ fun HistoryPage() {
         }
         lifecycle.addObserver(ob); onDispose { lifecycle.removeObserver(ob) }
     }
-    LaunchedEffect(granted, screenOnly) {
+    LaunchedEffect(granted, screenOnly, range) {
         while (granted) {
-            rows = withContext(Dispatchers.IO) { if (screenOnly) Extra.usageScreenOn(ctx) else Extra.usageToday(ctx) }
+            rows = withContext(Dispatchers.IO) { if (screenOnly) Extra.usageScreenOn(ctx, range) else Extra.usageToday(ctx, range) }
             unlocks = withContext(Dispatchers.IO) { Extra.unlocksToday(ctx) }
             delay(10000)
         }
@@ -203,10 +205,15 @@ fun HistoryPage() {
     val total = rows.sumOf { it.ms }
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) { Header("App history", "today") }
-            PChip(!screenOnly, tr("Total", "Toplam")) { screenOnly = false }
-            Spacer(Modifier.width(6.dp))
-            PChip(screenOnly, tr("Screen on", "Ekran açık")) { screenOnly = true }
+            Box(Modifier.weight(1f)) { Header("App history", when (range) { 1 -> tr("today", "bugün"); 7 -> tr("7 days", "7 gün"); else -> tr("30 days", "30 gün") }) }
+            // icons instead of the words: the phone (total) and the lit screen (screen on)
+            Box(Modifier.size(40.dp).clickable { screenOnly = false }, contentAlignment = Alignment.Center) { PIcon("apps", if (!screenOnly) Look.accent else T.sub, 22.dp) }
+            Box(Modifier.size(40.dp).clickable { screenOnly = true }, contentAlignment = Alignment.Center) { PIcon("phone", if (screenOnly) Look.accent else T.sub, 22.dp) }
+        }
+        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PChip(range == 1, tr("Today", "Bugün")) { range = 1 }
+            PChip(range == 7, tr("Week", "Hafta")) { range = 7 }
+            PChip(range == 30, tr("Month", "Ay")) { range = 30 }
         }
         PCard {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
@@ -225,26 +232,19 @@ fun HistoryPage() {
             }
         } else if (rows.isEmpty()) Center("Nothing recorded today")
         else {
-            PButton(if (pie) "Show list" else "Show pie chart", Modifier.fillMaxWidth()) { pie = !pie }
-            if (pie) {
-                val slices = rows.take(15).map { it.label to it.ms } +
-                    (rows.drop(15).sumOf { it.ms }.takeIf { it > 0 }?.let { listOf("Others" to it) }.orEmpty())
-                // the legend under the ring lists every slice, so the whole block scrolls instead of being cut at the ring's height
-                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-                    DonutChart(slices, Modifier.fillMaxWidth(), centerText = hms(total))
-                }
-            } else {
-                val top = rows.firstOrNull()?.ms?.coerceAtLeast(1) ?: 1
-                LazyColumn(Modifier.weight(1f)) {
-                    items(rows.take(80), key = { it.pkg }) { r ->
-                        Column(Modifier.padding(vertical = 6.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                AppIcon(r.pkg, 26.dp); Spacer(Modifier.width(8.dp))
-                                Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
-                                Text(hms(r.ms), color = T.sub, fontSize = 13.sp)
-                            }
-                            BarMeter(r.ms.toFloat() / top, Look.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
+            // the ring and the list together: one scroll, the ring on top, the apps with their bars under it
+            val slices = rows.take(12).map { it.label to it.ms } + (rows.drop(12).sumOf { it.ms }.takeIf { it > 0 }?.let { listOf(tr("Others", "Diğer") to it) }.orEmpty())
+            val top = rows.firstOrNull()?.ms?.coerceAtLeast(1) ?: 1
+            LazyColumn(Modifier.weight(1f)) {
+                item { Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { DonutChart(slices, Modifier.fillMaxWidth(), centerText = hms(total)) } }
+                items(rows.take(80), key = { it.pkg }) { r ->
+                    Column(Modifier.padding(vertical = 6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AppIcon(r.pkg, 26.dp); Spacer(Modifier.width(8.dp))
+                            Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
+                            Text(hms(r.ms), color = T.sub, fontSize = 13.sp)
                         }
+                        BarMeter(r.ms.toFloat() / top, Look.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
                     }
                 }
             }

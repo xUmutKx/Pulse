@@ -69,10 +69,11 @@ object Extra {
     }
 
     /** Foreground time per app today (needs the usage-access permission). */
-    fun usageToday(ctx: Context): List<UsageRow> {
+    fun usageToday(ctx: Context, days: Int = 1): List<UsageRow> {
         if (!usageGranted(ctx)) return emptyList()
         val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0) }
+        // [days] 1 is today, 7 the last week, 30 the last month (whole days, counted back from today)
+        val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); add(Calendar.DAY_OF_YEAR, -(days - 1)) }
         val pm = ctx.packageManager
         return usm.queryUsageStats(UsageStatsManager.INTERVAL_DAILY, cal.timeInMillis, System.currentTimeMillis())
             .filter { it.totalTimeInForeground > 0 }
@@ -84,10 +85,10 @@ object Extra {
     }
 
     /** Foreground time per app today counted only while the screen was on (screen-off playback, calls etc. dropped). */
-    fun usageScreenOn(ctx: Context): List<UsageRow> {
+    fun usageScreenOn(ctx: Context, days: Int = 1): List<UsageRow> {
         if (!usageGranted(ctx)) return emptyList()
         val usm = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
-        val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0) }
+        val cal = Calendar.getInstance().apply { set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0); add(Calendar.DAY_OF_YEAR, -(days - 1)) }
         val start = cal.timeInMillis; val now = System.currentTimeMillis()
         val ev = usm.queryEvents(start, now); val e = UsageEvents.Event()
         // pass 1: collect events
