@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import android.widget.Toast
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.alpha
@@ -186,6 +187,30 @@ private fun DataBackupCard() {
             PButton(tr("Import", "İçe aktar")) { open.launch(arrayOf("application/zip", "application/octet-stream")) }
         }
         if (status.isNotEmpty()) Text(status, color = T.sub, fontSize = 12.sp)
+        // the saved backups: how big each is, and a way to delete the old ones
+        var saved by remember { mutableStateOf<List<AutoBackup.Saved>>(emptyList()) }
+        var showSaved by remember { mutableStateOf(false) }
+        LaunchedEffect(lastAuto, showSaved) { saved = withContext(Dispatchers.IO) { AutoBackup.list(ctx) } }
+        val total = saved.sumOf { it.bytes }
+        Row(Modifier.fillMaxWidth().clickable { showSaved = !showSaved }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Saved backups", "Kayıtlı yedekler") + " · ${saved.size} · " + android.text.format.Formatter.formatShortFileSize(ctx, total), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            PIcon("chevron", T.sub, 20.dp, Modifier.rotate(if (showSaved) 180f else 0f))
+        }
+        if (showSaved) {
+            saved.forEach { b ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(b.name, color = T.text, fontSize = 13.sp, maxLines = 1)
+                        Text(android.text.format.Formatter.formatShortFileSize(ctx, b.bytes) + "  ·  " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(b.time)), color = T.sub, fontSize = 11.sp)
+                    }
+                    Box(Modifier.size(38.dp).clickable { scope.launch { withContext(Dispatchers.IO) { AutoBackup.delete(ctx, b) }; saved = withContext(Dispatchers.IO) { AutoBackup.list(ctx) } } }, contentAlignment = Alignment.Center) { PIcon("delete", T.sub, 20.dp) }
+                }
+            }
+            if (saved.isEmpty()) Text(tr("No backup saved yet.", "Henüz kayıtlı yedek yok."), color = T.sub, fontSize = 12.sp)
+            if (saved.size > 1) PButton(tr("Delete all but the newest two", "En yeni ikisi hariç hepsini sil"), compact = true) {
+                scope.launch { withContext(Dispatchers.IO) { saved.drop(2).forEach { AutoBackup.delete(ctx, it) } }; saved = withContext(Dispatchers.IO) { AutoBackup.list(ctx) } }
+            }
+        }
     }
     askImport?.let { uri ->
         PDialog(
