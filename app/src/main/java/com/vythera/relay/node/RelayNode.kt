@@ -446,7 +446,7 @@ class RelayNode(
                     val made = PeerConnection(tls.wrapClient(plain), isInbound = false, clock)
                     connection = made
                     made.authenticate(expected = device.fingerprint)
-                    continuation.resume(made) { _, unused: PeerConnection, _ -> unused.abort() }
+                    continuation.resume(made) { made.abort() }
                 } catch (error: Exception) {
                     connection?.close()
                     runCatching { plain.close() }
