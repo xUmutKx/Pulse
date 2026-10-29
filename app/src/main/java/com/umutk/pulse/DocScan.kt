@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
@@ -99,13 +100,72 @@ fun docScanBw(src: Bitmap): Bitmap {
     return Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888)
 }
 
+/** The looks a scanned page can have. */
+enum class DocFilter(val en: String, val tr: String) {
+    COLOUR("Colour", "Renkli"), ORIGINAL("Original", "Orijinal"), GREY("Grey", "Gri"), CLEAN("Clean", "Temiz"), BW("Black & white", "Siyah beyaz"), LIGHT("Light", "Aydınlık")
+}
+
+/** Applies [f] to a flattened page. */
+fun docScanFilter(src: Bitmap, f: DocFilter): Bitmap = when (f) {
+    DocFilter.COLOUR -> docScanColor(src)
+    DocFilter.ORIGINAL -> src
+    DocFilter.GREY -> docScanEnhance(src)
+    DocFilter.CLEAN -> docScanClean(src)
+    DocFilter.BW -> docScanBw(src)
+    DocFilter.LIGHT -> docScanLight(src)
+}
+
+/** Light: the colours stay, shadows are lifted and the paper goes white (a gamma and a gain on every channel). */
+fun docScanLight(src: Bitmap): Bitmap {
+    val w = src.width; val h = src.height
+    val px = IntArray(w * h).also { src.getPixels(it, 0, w, 0, 0, w, h) }
+    val lut = IntArray(256) { v -> (255.0 * Math.pow(v / 255.0, 0.62) * 1.08).toInt().coerceIn(0, 255) }
+    for (i in px.indices) { val c = px[i]; px[i] = (0xFF shl 24) or (lut[c shr 16 and 0xFF] shl 16) or (lut[c shr 8 and 0xFF] shl 8) or lut[c and 0xFF] }
+    return Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888)
+}
+
+/**
+ * Clean: each pixel is compared with the average of the area around it (an integral image), so an uneven light or a shadow across the page does not turn
+ * part of it grey or black. Paper goes white, writing keeps its grey strokes (not the hard black and white of the B&W look).
+ */
+fun docScanClean(src: Bitmap): Bitmap {
+    val w = src.width; val h = src.height
+    val px = IntArray(w * h).also { src.getPixels(it, 0, w, 0, 0, w, h) }
+    val g = IntArray(px.size) { i -> val c = px[i]; ((c shr 16 and 0xFF) * 299 + (c shr 8 and 0xFF) * 587 + (c and 0xFF) * 114) / 1000 }
+    val iw = w + 1
+    val integ = LongArray(iw * (h + 1))
+    for (y in 0 until h) { var row = 0L; for (x in 0 until w) { row += g[y * w + x]; integ[(y + 1) * iw + x + 1] = integ[y * iw + x + 1] + row } }
+    val r = (maxOf(w, h) / 24).coerceAtLeast(6)
+    for (y in 0 until h) {
+        val y0 = (y - r).coerceAtLeast(0); val y1 = (y + r + 1).coerceAtMost(h)
+        for (x in 0 until w) {
+            val x0 = (x - r).coerceAtLeast(0); val x1 = (x + r + 1).coerceAtMost(w)
+            val area = (x1 - x0) * (y1 - y0)
+            val mean = (integ[y1 * iw + x1] - integ[y0 * iw + x1] - integ[y1 * iw + x0] + integ[y0 * iw + x0]) / area
+            val v = g[y * w + x]
+            // at or above 92% of the local average: paper. Below it: darker the further it falls.
+            val o = if (v >= mean * 0.92) 255 else (255 - (mean * 0.92 - v) * 255 / (mean * 0.5 + 1)).toInt().coerceIn(0, 255)
+            px[y * w + x] = (0xFF shl 24) or (o shl 16) or (o shl 8) or o
+        }
+    }
+    return Bitmap.createBitmap(px, w, h, Bitmap.Config.ARGB_8888)
+}
+
+/** Cuts [pct] percent from every side of a flattened page (the rim of the table or a shadow the corner search left in). */
+fun docScanTrim(src: Bitmap, pct: Int): Bitmap {
+    if (pct <= 0) return src
+    val dx = (src.width * pct / 100f).toInt(); val dy = (src.height * pct / 100f).toInt()
+    if (src.width - 2 * dx < 100 || src.height - 2 * dy < 100) return src
+    return Bitmap.createBitmap(src, dx, dy, src.width - 2 * dx, src.height - 2 * dy)
+}
+
 /**
  * Finds the page in the photo and straightens it: the bright paper area is cut out from a small copy (a brightness threshold, the biggest connected
  * region), its four corners are the extremes along both diagonals, and a perspective warp turns that quadrilateral into a flat rectangle.
  * A photo where no clear page is found (the page fills the frame, or sits on a light table) is returned as it is.
  */
 fun docScanCrop(src: Bitmap): Bitmap {
-    val sc = 360f / maxOf(src.width, src.height)
+    val sc = 480f / maxOf(src.width, src.height)
     if (sc >= 1f) return src
     val sw = (src.width * sc).toInt().coerceAtLeast(8); val sh = (src.height * sc).toInt().coerceAtLeast(8)
     val small = Bitmap.createScaledBitmap(src, sw, sh, true)
@@ -151,10 +211,11 @@ fun docScanCrop(src: Bitmap): Bitmap {
 }
 
 /** One PDF page per scan, each page sized to its bitmap (pixels as points). */
-fun docScanWritePdf(pages: List<Bitmap>, out: OutputStream) {
+fun docScanWritePdf(pages: List<Bitmap>, out: OutputStream, o: OtOut? = null) {
     val doc = PdfDocument()
     try {
         pages.forEachIndexed { i, b ->
+            if (o != null) { doc.addPicturePage(b, i + 1, o); return@forEachIndexed }
             val page = doc.startPage(PdfDocument.PageInfo.Builder(b.width, b.height, i + 1).create())
             page.canvas.drawBitmap(b, 0f, 0f, null)
             doc.finishPage(page)
@@ -200,15 +261,16 @@ fun DocScanPage(onBack: () -> Unit) {
     var busy by remember { mutableStateOf(false) }
     var status by remember { mutableStateOf("") }
     // the pages are kept as the straightened photo; the look (colour, grey, black and white) is applied to the preview and when saving
-    var mode by remember { mutableIntStateOf(0) }
-    var autoCrop by remember { mutableStateOf(true) }
-    fun shape(b: Bitmap): Bitmap = when (mode) { 0 -> docScanColor(b); 1 -> docScanEnhance(b); else -> docScanBw(b) }
+    var mode by remember { mutableIntStateOf(OtPrefs.filter(ctx).coerceIn(0, DocFilter.entries.size - 1)) }
+    var autoCrop by remember { mutableStateOf(OtPrefs.autoCrop(ctx)) }
+    val trimPct = remember { OtPrefs.trim(ctx) }
+    fun shape(b: Bitmap): Bitmap = docScanFilter(b, DocFilter.entries[mode])
 
     // a camera photo or a picture from the gallery: both become a page the same way
     fun addPage(f: File) {
         busy = true
         scope.launch {
-            val page = withContext(Dispatchers.IO) { runCatching { docScanDecode(f).let { if (autoCrop) docScanCrop(it) else it } }.getOrNull() }
+            val page = withContext(Dispatchers.IO) { runCatching { docScanDecode(f).let { if (autoCrop) docScanTrim(docScanCrop(it), trimPct) else it } }.getOrNull() }
             f.delete()
             busy = false
             if (page == null) status = tr("Could not read the photo", "Fotoğraf okunamadı")
@@ -239,6 +301,12 @@ fun DocScanPage(onBack: () -> Unit) {
         }
     }
 
+    fun rotateLast(deg: Float) {
+        val i = pages.lastIndex; if (i < 0) return
+        val b = pages[i]
+        pages[i] = Bitmap.createBitmap(b, 0, 0, b.width, b.height, android.graphics.Matrix().apply { postRotate(deg) }, true)
+    }
+
     fun startShot() {
         if (busy) return
         // the photo goes to the app's own external files dir, which the "files" FileProvider already serves
@@ -259,11 +327,12 @@ fun DocScanPage(onBack: () -> Unit) {
             val list = withContext(Dispatchers.Default) { raw.map { shape(it) } }
             val last = list.last()
             val stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
-            val name = "scan-$stamp.${if (pdf) "pdf" else "png"}"
+            val base = OtPrefs.prefix(ctx).ifEmpty { "scan" }.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+            val name = "$base-$stamp.${if (pdf) "pdf" else "png"}"
             status = try {
                 withContext(Dispatchers.IO) {
                     docScanSave(ctx, name, if (pdf) "application/pdf" else "image/png") { out ->
-                        if (pdf) docScanWritePdf(list, out) else last.compress(Bitmap.CompressFormat.PNG, 100, out)
+                        if (pdf) docScanWritePdf(list, out, otOut(ctx)) else last.compress(Bitmap.CompressFormat.PNG, 100, out)
                     }
                 }
                 tr("Saved to Download/Pulse: $name", "Download/Pulse içine kaydedildi: $name")
@@ -291,12 +360,19 @@ fun DocScanPage(onBack: () -> Unit) {
         }
         // how the page looks, and whether the page is cut out of the photo
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PChip(mode == 0, tr("Colour", "Renkli")) { mode = 0 }
-            PChip(mode == 1, tr("Grey", "Gri")) { mode = 1 }
-            PChip(mode == 2, tr("Black & white", "Siyah beyaz")) { mode = 2 }
-            Spacer(Modifier.weight(1f))
-            Text(tr("Crop to page", "Sayfayı kırp"), color = T.sub, fontSize = 12.sp)
+            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                DocFilter.entries.forEachIndexed { i, f -> PChip(mode == i, tr(f.en, f.tr)) { mode = i } }
+            }
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Cut out and flatten the paper", "Kağıdı kes ve düzleştir"), color = T.sub, fontSize = 12.sp, modifier = Modifier.weight(1f))
             PSwitch(autoCrop, { autoCrop = it })
+        }
+        // the last page: turn it, or throw it away
+        if (pages.isNotEmpty()) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PButton(tr("Turn left", "Sola çevir"), Modifier.weight(1f), compact = true) { rotateLast(270f) }
+            PButton(tr("Turn right", "Sağa çevir"), Modifier.weight(1f), compact = true) { rotateLast(90f) }
+            PButton(tr("Remove page", "Sayfayı sil"), Modifier.weight(1f), compact = true, danger = true) { pages.removeAt(pages.lastIndex) }
         }
         if (!finished) {
             if (pages.isNotEmpty()) Text(tr("Add another page or finish?", "Başka sayfa eklensin mi, bitirilsin mi?"), color = T.sub, fontSize = 13.sp)

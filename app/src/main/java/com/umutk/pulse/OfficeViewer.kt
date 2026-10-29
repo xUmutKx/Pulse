@@ -31,6 +31,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Build
 import androidx.compose.material.icons.outlined.FolderOpen
 import androidx.compose.material.icons.outlined.Settings
 import com.umutk.pulse.Icon
@@ -360,13 +361,16 @@ fun OfficePage() {
     var newKind by remember { mutableStateOf<OfKind?>(null) }
     var nameText by remember { mutableStateOf("") }
     var scan by remember { mutableStateOf(false) }
+    var tools by remember { mutableStateOf(false) }
     var pdfTools by remember { mutableStateOf(false) }
     BackHandler(settings) { settings = false }
     BackHandler(browse) { browse = false }
     BackHandler(scan) { scan = false }
+    BackHandler(tools) { tools = false }
     BackHandler(pdfTools) { pdfTools = false }
     if (settings) { OfficeSettingsPage { settings = false }; return }
     if (scan) { DocScanPage { scan = false }; return }
+    if (tools) { OfficeToolsPage { tools = false }; return }
     if (pdfTools) { PdfToolsPage { pdfTools = false }; return }
     if (browse) {
         Column(Modifier.fillMaxSize()) {
@@ -388,9 +392,8 @@ fun OfficePage() {
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             PButton(tr("Open file", "Dosya aç"), Modifier.weight(1f), icon = Icons.Outlined.FolderOpen) { browse = true }
-            PButton(tr("Scan document", "Belge tara"), Modifier.weight(1f)) { scan = true }
+            PButton(tr("Office tools", "Office araçları"), Modifier.weight(1f), icon = Icons.Outlined.Build) { tools = true }
         }
-        PButton(tr("PDF Tools", "PDF araçları"), Modifier.fillMaxWidth()) { pdfTools = true }
         val recents = OfficePrefs.recent.mapNotNull { e -> e.split('\u0001').takeIf { it.size == 3 } }
         if (recents.isNotEmpty()) PCard {
             Text(tr("Recent", "Son kullanılanlar"), color = T.sub, fontSize = 12.sp)
