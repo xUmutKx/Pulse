@@ -228,6 +228,8 @@ fun monoWindow(t: PTheme): PTheme = if (t.dark) PTheme(t.id, t.name, true, c(0xF
 
 /** True inside the button slots of a Material dialog: PButton draws a plain text button there, as Material 3 dialogs do. */
 val InMatDialogBtn = androidx.compose.runtime.compositionLocalOf { false }
+/** The text colour a dialog button of the Windows looks is drawn in (white on the accent fill); PButton uses it instead of its own danger red, which vanished on the fill. */
+val InWinBtnText = androidx.compose.runtime.compositionLocalOf<Color?> { null }
 
 /** A Material AlertDialog drawn in the window look: its panel, text and corners. */
 @Composable
@@ -450,6 +452,7 @@ private fun WinButton(w: PTheme, primary: Boolean, content: @Composable () -> Un
     val text = if (accentFill) onAccent(fill) else if (w.id == "win11") w.text else if (w.id == "xp" || w.id == "win95") Color.Black else MaterialTheme.colorScheme.primary
     val radius = when (w.id) { "xp", "win7" -> 3.dp; "win11" -> 6.dp; "win10" -> 4.dp; else -> 0.dp }
     val edge = when (w.id) { "win95" -> Color.Black; "xp" -> Color(0xFF003C74); "win7" -> if (primary) Color(0xFF3C7FB1) else Color(0xFF707070); "win10" -> if (primary) Look.accent.copy(alpha = 1f) else Color(0xFFADADAD); else -> w.line }
+    androidx.compose.runtime.CompositionLocalProvider(InWinBtnText provides text) {
     MaterialTheme(colorScheme = MaterialTheme.colorScheme.copy(primary = text), typography = MaterialTheme.typography, shapes = MaterialTheme.shapes) {
         Box(Modifier.clip(RoundedCornerShape(radius)).onFocusChanged { focused = it.hasFocus }.drawBehind {
             val p = 1.dp.toPx(); val r = radius.toPx(); val wd = size.width; val ht = size.height
@@ -485,6 +488,7 @@ private fun WinButton(w: PTheme, primary: Boolean, content: @Composable () -> Un
             val bw = maxOf(pl.width, 75.dp.roundToPx()).coerceIn(c.minWidth, c.maxWidth); val bh = 23.dp.roundToPx()
             layout(bw, bh) { pl.place((bw - pl.width) / 2, (bh - pl.height) / 2) }
         })) { content() }
+    }
     }
 }
 
