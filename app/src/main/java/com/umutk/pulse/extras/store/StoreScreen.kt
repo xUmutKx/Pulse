@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -160,7 +161,7 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
         Column(Modifier.fillMaxSize()) {
             StoreHeader(tr("Extra apps", "Ek uygulamalar"), onBack, onSearch = null)
             // a plain list of the extra apps: the built-in ones, then any downloadable module, nothing above them
-            LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), state = ExtraListScroll.state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { BuiltinRows() }
                 // only the modules already downloaded are listed here; the rest stay in the store
                 items(entries.filter { inList(states[it.key] ?: ModuleState.NOT_INSTALLED) }, key = { it.key }) { e ->
@@ -494,3 +495,6 @@ private fun BuiltinRows() {
         PSwitch(notif, { notif = it; NotifHist.setEnabled(ctx, it) })
     }
 }
+
+/** The scroll position of the Extra apps list lives here, so it is where it was left after an app opened from it is closed. */
+object ExtraListScroll { val state = LazyListState() }

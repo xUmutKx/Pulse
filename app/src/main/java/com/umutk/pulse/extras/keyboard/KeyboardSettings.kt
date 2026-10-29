@@ -210,6 +210,8 @@ fun KeyboardSettings(back: () -> Unit) {
             PSlider((KeyboardPrefs.heightPct - 70) / 100f, { KeyboardPrefs.heightPct = 70 + (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Bottom space", "Alt boşluk")}: ${KeyboardPrefs.bottomPad} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.bottomPad / 60f, { KeyboardPrefs.bottomPad = (it * 60).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("Gamepad size", "Gamepad boyutu")}: ${KeyboardPrefs.padScale}%", color = T.sub, fontSize = 12.sp)
+            PSlider((KeyboardPrefs.padScale - 60) / 90f, { KeyboardPrefs.padScale = 60 + (it * 90).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Gamepad dead zone", "Gamepad ölü bölge")}: ${KeyboardPrefs.padDead}%", color = T.sub, fontSize = 12.sp)
             PSlider((KeyboardPrefs.padDead - 5) / 45f, { KeyboardPrefs.padDead = 5 + (it * 45).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Gamepad sticks height", "Gamepad joystick yüksekliği")}: ${KeyboardPrefs.padLift}", color = T.sub, fontSize = 12.sp)
