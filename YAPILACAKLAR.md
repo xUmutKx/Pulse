@@ -1356,7 +1356,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 1.3 Türkçe/İngilizce cümle bağlamı ile ayrım (tek kelime dili değiştirmez), otomatik algı ve elle seçim ayrı
 - 🔴 1.4 Öğrenme modları (kelime / cümle / birleşik / kapalı), öğrenilenleri görme-silme-temizleme, özel sözlük, hariç tutma, geri alma, "doğru" işaretleme, dışa/içe aktarma
 - 🔴 1.5 Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
-- 🔴 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz
+- 🟡 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz — uzun kelimeye daha çok yer, sığmazsa üçüncü öneri çekilir; kayıtlı e-posta yalnız e-posta alanında (derlenmedi)
 - 🔴 1.7 E-posta kısayolu yalnız @ yazınca/çağrılınca, imleç noktasına ekler, önceki adı silmez, tuşa atanabilir
 - 🔴 1.8 Pano: ekran görüntüsü gerçek PNG/JPEG, raptiye ikonu, kısayol ikonu, Ctrl+X panoya, donanım klavyesi ve basılı tutma aynı geçmiş, kısayol alanında imleç
 
@@ -1451,3 +1451,4 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 23.0 Gereksiz yeniden çizim, ikon önbelleği, tema/vurgu ortaklaştırma, ANR/çökme, boyut
 - 🔴 24.0 Birim testleri (klavye noktalama/dil), tek sürüm derleme, sonuç raporu (APK konumu/boyut, bağımlılık-lisans, mimari)
 - 1.0.185 Keyboard: Space no longer writes a predicted word unless the field really ends in the last word typed; after a sign or a delete the remembered words are dropped, so no deleted or extra word comes back after a full stop or comma (derlenmedi)
+- 1.0.186 Keyboard bar: long words get more room and the third suggestion steps aside when three would not fit, so words are not cut with dots; saved e-mail addresses are no longer offered in ordinary text fields (derlenmedi)
