@@ -1,0 +1,256 @@
+package com.umutk.pulse.extras.lucid
+
+import android.Manifest
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
+import androidx.core.content.ContextCompat
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.umutk.pulse.extras.lucid.data.prefs.SettingsDataStore
+import com.umutk.pulse.extras.lucid.receiver.AlarmReceiver
+import com.umutk.pulse.extras.lucid.receiver.AlarmScheduler
+import com.umutk.pulse.extras.lucid.receiver.AwakeCheckReceiver
+import com.umutk.pulse.extras.lucid.ui.theme.toColor
+import com.umutk.pulse.extras.lucid.service.AlarmAudioService
+import com.umutk.pulse.extras.lucid.service.NowBarNotification
+import com.umutk.pulse.extras.lucid.ui.ClockAppScaffold
+import com.umutk.pulse.extras.lucid.ui.theme.LucidAlarmTheme
+import com.umutk.pulse.extras.lucid.ui.viewmodel.AlarmViewModel
+import com.umutk.pulse.extras.lucid.ui.viewmodel.WorldClockViewModel
+
+class MainActivity : ComponentActivity() {
+
+    private val navRequest = mutableStateOf<Pair<String, Long>?>(null)
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        readRequestedTab(intent)
+
+        registerNotificationChannels()
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            ),
+            navigationBarStyle = SystemBarStyle.auto(
+                android.graphics.Color.TRANSPARENT,
+                android.graphics.Color.TRANSPARENT
+            )
+        )
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+        @Suppress("DEPRECATION")
+        window.statusBarColor = android.graphics.Color.TRANSPARENT
+        @Suppress("DEPRECATION")
+        window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+
+            @Suppress("DEPRECATION")
+            window.isNavigationBarContrastEnforced = false
+            @Suppress("DEPRECATION")
+            window.isStatusBarContrastEnforced = false
+        }
+
+        val settingsDataStore = SettingsDataStore(applicationContext)
+        val scheduler = AlarmScheduler(applicationContext)
+
+        setContent {
+            val alarmViewModel: AlarmViewModel = viewModel()
+            val worldClockViewModel: WorldClockViewModel = viewModel()
+
+            val notificationPermissionLauncher = rememberLauncherForActivityResult(
+                contract = ActivityResultContracts.RequestPermission(),
+                onResult = { }
+            )
+
+            LaunchedEffect(Unit) {
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val granted = ContextCompat.checkSelfPermission(
+                        this@MainActivity,
+                        Manifest.permission.POST_NOTIFICATIONS
+                    ) == PackageManager.PERMISSION_GRANTED
+                    if (!granted) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                }
+
+                if (!scheduler.canScheduleExactAlarms()) {
+                    runCatching {
+                        startActivity(scheduler.requestExactAlarmPermissionIntent())
+                    }
+                }
+
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE &&
+                    !scheduler.canUseFullScreenIntent()
+                ) {
+                    runCatching {
+                        scheduler.requestFullScreenIntentPermissionIntent()
+                            ?.let { startActivity(it) }
+                    }
+                }
+            }
+
+            val appFontStyle by settingsDataStore.appFontStyleFlow.collectAsState(
+                initial = com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.SYSTEM_DEFAULT
+            )
+            val accentColor by settingsDataStore.accentColorFlow.collectAsState(
+                initial = com.umutk.pulse.extras.lucid.data.prefs.AccentColor.DEFAULT
+            )
+            val backgroundPalette by settingsDataStore.backgroundPaletteFlow.collectAsState(
+                initial = com.umutk.pulse.extras.lucid.data.prefs.BackgroundPalette.OBSIDIAN
+            )
+            val backgroundCustomColor by settingsDataStore.backgroundCustomColorFlow.collectAsState(
+                initial = 0L
+            )
+            val uiScale by settingsDataStore.uiScaleFlow.collectAsState(
+                initial = com.umutk.pulse.extras.lucid.data.prefs.SettingsDataStore.DEFAULT_UI_SCALE
+            )
+            val themeMode by settingsDataStore.themeModeFlow.collectAsState(
+                initial = com.umutk.pulse.extras.lucid.data.prefs.ThemeMode.SYSTEM
+            )
+            val systemDark = isSystemInDarkTheme()
+            val darkTheme = when (themeMode) {
+                com.umutk.pulse.extras.lucid.data.prefs.ThemeMode.DARK -> true
+                com.umutk.pulse.extras.lucid.data.prefs.ThemeMode.LIGHT -> false
+                com.umutk.pulse.extras.lucid.data.prefs.ThemeMode.SYSTEM -> systemDark
+            }
+
+            val topBackground = remember(
+                backgroundPalette,
+                backgroundCustomColor,
+                darkTheme
+            ) {
+                val isCustom = backgroundPalette ==
+                    com.umutk.pulse.extras.lucid.data.prefs.BackgroundPalette.CUSTOM &&
+                    backgroundCustomColor != 0L
+                when {
+
+                    !darkTheme && !isCustom -> androidx.compose.ui.graphics.Color(0xFFFFFFFF)
+                    !darkTheme -> androidx.compose.ui.graphics.Color(backgroundCustomColor)
+                    isCustom -> androidx.compose.ui.graphics.Color(backgroundCustomColor)
+                    else -> backgroundPalette.toColor()
+                }
+            }
+            val topIsLight = topBackground.luminance() > 0.5f
+
+            LaunchedEffect(topIsLight) {
+                val window = this@MainActivity.window
+                WindowCompat.getInsetsController(window, window.decorView).apply {
+                    isAppearanceLightStatusBars = topIsLight
+                    isAppearanceLightNavigationBars = topIsLight
+                }
+            }
+
+            val baseDensity = LocalDensity.current
+            CompositionLocalProvider(
+                LocalDensity provides Density(
+                    density = baseDensity.density * uiScale,
+                    fontScale = baseDensity.fontScale * uiScale
+                )
+            ) {
+                LucidAlarmTheme(
+                    accentColor = accentColor,
+                    backgroundPalette = backgroundPalette,
+                    appFontStyle = appFontStyle,
+                    dark = darkTheme,
+                    settingsDataStore = settingsDataStore
+                ) {
+                    ClockAppScaffold(
+                        alarmViewModel = alarmViewModel,
+                        worldClockViewModel = worldClockViewModel,
+                        settingsDataStore = settingsDataStore,
+                        navRequest = navRequest.value,
+                        onNavRequestHandled = { navRequest.value = null }
+                    )
+                }
+            }
+        }
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        readRequestedTab(intent)
+    }
+
+    private fun readRequestedTab(intent: Intent?) {
+        if (intent == null) return
+        val tab = intent.getStringExtra(NowBarNotification.EXTRA_INITIAL_TAB) ?: return
+        navRequest.value = tab to System.currentTimeMillis()
+        intent.removeExtra(NowBarNotification.EXTRA_INITIAL_TAB)
+    }
+
+    private fun registerNotificationChannels() {
+        val notificationManager =
+            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+        runCatching {
+            notificationManager.deleteNotificationChannel("lucid_high_priority_alarm_channel")
+        }
+
+        val audioAttributes = android.media.AudioAttributes.Builder()
+            .setUsage(android.media.AudioAttributes.USAGE_ALARM)
+            .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        val alarmSound = android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM)
+            ?: android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION)
+
+        val firingAlarmChannel = NotificationChannel(
+            AlarmAudioService.ALARM_CHANNEL_ID,
+            "Firing Alarms",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "High priority alarm notifications and lock screen wakeups"
+            enableVibration(true)
+            vibrationPattern = longArrayOf(0, 500, 250, 500)
+            lockscreenVisibility = Notification.VISIBILITY_PUBLIC
+            setBypassDnd(true)
+            setSound(alarmSound, audioAttributes)
+        }
+
+        val upcomingAlarmChannel = NotificationChannel(
+            AlarmReceiver.UPCOMING_CHANNEL_ID,
+            "Upcoming Alarms",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply {
+            description = "Heads-up notification before scheduled alarms fire"
+            setShowBadge(false)
+        }
+
+        val awakeCheckChannel = NotificationChannel(
+            AwakeCheckReceiver.CHANNEL_ID,
+            "Awake Check",
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = "Post-dismiss check confirming you are awake"
+            setBypassDnd(true)
+        }
+
+        notificationManager.createNotificationChannels(
+            listOf(firingAlarmChannel, upcomingAlarmChannel, awakeCheckChannel)
+        )
+    }
+}

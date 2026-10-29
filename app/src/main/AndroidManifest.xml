@@ -52,6 +52,7 @@
     <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- music, video and ambient playback services (extras/watchdog, extras/music) -->
@@ -400,17 +401,25 @@
         <!-- the result of a PackageInstaller session (see features/Installer.kt); not exported, only Pulse starts sessions -->
         <receiver android:name="com.umutk.pulse.features.InstallReceiver" android:exported="false" />
         <receiver android:name="com.umutk.pulse.features.TimerReceiver" android:exported="false" />
-        <!-- the Clock's alarms (extras/clock): the system fires AlarmReceiver; a reboot or an update sets them again -->
-        <receiver android:name="com.umutk.pulse.extras.clock.AlarmReceiver" android:exported="false" />
-        <receiver android:name="com.umutk.pulse.extras.clock.AlarmBootReceiver" android:exported="true">
+        <!-- the Clock = Lucid Alarm (extras/lucid, GPL-3.0, DarkAspect1): ring screen, receivers and services -->
+        <activity android:name="com.umutk.pulse.extras.lucid.MainActivity" android:exported="false" android:theme="@style/Theme.Lucid" android:windowSoftInputMode="adjustResize" android:label="Clock" />
+        <activity android:name="com.umutk.pulse.extras.lucid.AlarmRingingActivity" android:exported="true" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showOnLockScreen="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@style/Theme.Lucid.Ringing" />
+        <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AlarmReceiver" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AwakeCheckReceiver" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.extras.lucid.receiver.NowBarActionReceiver" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.extras.lucid.receiver.BootReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
-                <action android:name="android.app.action.SCHEDULE_EXACT_ALARM_PERMISSION_STATE_CHANGED" />
             </intent-filter>
         </receiver>
-        <service android:name="com.umutk.pulse.extras.clock.AlarmRingService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
-        <activity android:name="com.umutk.pulse.extras.clock.AlarmRingActivity" android:exported="false" android:showWhenLocked="true" android:turnScreenOn="true" android:launchMode="singleTask" android:excludeFromRecents="true" android:taskAffinity="" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" />
+        <service android:name="com.umutk.pulse.extras.lucid.service.AlarmAudioService" android:foregroundServiceType="mediaPlayback" android:exported="false" />
+        <service android:name="com.umutk.pulse.extras.lucid.service.TimerService" android:foregroundServiceType="specialUse" android:exported="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="timer_and_stopwatch" />
+        </service>
+        <service android:name="com.umutk.pulse.extras.lucid.service.StopwatchService" android:foregroundServiceType="specialUse" android:exported="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="timer_and_stopwatch" />
+        </service>
         <!-- style picker opened when a widget is added or reconfigured (see widgets/WidgetConfig.kt); the launcher starts it, so it is exported -->
         <activity android:name="com.umutk.pulse.widgets.WidgetConfigActivity" android:exported="true" android:label="Widget style" android:theme="@style/Theme.Pulse.Floating">
             <intent-filter>

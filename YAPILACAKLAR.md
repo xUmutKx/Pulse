@@ -1379,7 +1379,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🟢 5.0 (Cast = telefonun ekran yansıtma ekranı; videoyu devretmez) Alt kontroller için yarı saydam katman, beyaz ikon kontrastı, 3 nokta menüsü düzeni, Cast düğmesi (gerçek), dokunma alanları
 
 ### 6 Saat uygulaması
-- 🟡 6.0 Saat (Extra apps): alarm (AlarmManager.setAlarmClock, tekrar günleri, erteleme, titreşim, tam ekran çalma ekranı, yeniden başlatmada geri kurulur), dünya saati, kronometre ve zamanlayıcı bir arada. Lucid (GPL-3.0, Pulse ile uyumlu) tasarım kaynağı; kod Pulse'un kendi. AMOLED/Material/Win11 temaları ve vurgu rengi Pulse'un ortak temasıyla gelir; Lucid'in özel zil sesi, animasyonlu arka plan, widget ve Nowbar özellikleri açık
+- 🟡 6.0 Saat (Extra apps) = Lucid Alarm kodu ve görünümüyle Pulse içine kopyalandı (extras/lucid, GPL-3.0). Depolama Room yerine JSON dosyası. Derlenmedi: Lucid compileSdk 35 / yeni Compose ile yazılmış, uyum hataları çıkabilir
 - 🟢 6.1 Alarm AlarmManager.setAlarmClock ile kuruldu, açılışta/güncellemede yeniden kurulur. Sınır: "Zorla durdur" yapılırsa hiçbir uygulamanın alarmı Pulse açılana kadar çalmaz (Android kuralı); cihazda denenmedi
 
 ### 7 Network Manager
@@ -1482,3 +1482,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 🔴 SoundPlus.apk (kapalı kaynak, StartApp reklam SDK'sı içeriyor): kod alınamaz; yalnız özellik referansı
 - 🔴 Bionic Tape ekran görüntüleri (kaset çalar görünümü): müzik oynatıcıya kaset görünümü fikri olarak not edildi
 - 1.0.201 New Clock (Extra apps): real system alarms (repeat days, snooze, vibration, an alarm screen over the lock screen, set again after a reboot), world clocks, and the stopwatch and timer in one place; Android asks for the exact-alarm and full-screen permissions and the screen says so when one is missing (derlenmedi)
+- 1.0.202 Clock is now Lucid Alarm itself (GPL-3.0, DarkAspect1): its code and look are copied into Pulse (alarms with groups, custom ring screens with wallpapers, fonts, colours and animated backgrounds, wake check, upcoming alerts, recycle bin, stopwatch with laps, timer with presets, world clock, Nowbar, backup and restore, its themes and accent colours); only the storage differs (a JSON file instead of Room). The simple clock written before is removed (derlenmedi)
