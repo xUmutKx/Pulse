@@ -1511,3 +1511,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.228 Lyrics: separate lyrics notification on by default, a song with no lyrics found is searched again after a minute (was never); widgets/notifications open the music app even when its old recents card has no window (derlenmedi)
 - 1.0.229 Dialog buttons in the Windows looks: End process / Cancel text takes the colour that reads on the button (white on the accent fill), not danger red (derlenmedi)
 - 1.0.230 Office tools: Scan document and PDF tools in one page with an icon; settings (page size A4/Letter/as picture, margin, sharpness, page numbers, scan start filter, trim, open after saving, name start); scan filters Colour/Original/Grey/Clean/B&W/Light, paper cut out and flattened with an edge trim, turn and remove page (derlenmedi)
+- 1.0.231 Dialog accent button (Win11): text is always white (derlenmedi)
