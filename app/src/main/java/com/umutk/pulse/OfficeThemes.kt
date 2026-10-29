@@ -25,6 +25,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -349,7 +351,10 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     val groups = (listOfNotNull("File".takeIf { fileOps != null }) + acts.map { it.group }.filter { it != "Quick" }).distinct()
     var tab by remember(groups) { mutableStateOf(if ("Home" in groups) "Home" else groups.firstOrNull { it != "File" } ?: "") }
     var menu by remember { mutableStateOf("") }
-    val (hid, tapWatch) = ofAutoHide()
+    val (autoHid, tapWatch) = ofAutoHide()
+    // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
+    var manualHid by remember { mutableStateOf(false) }
+    val hid = autoHid || manualHid
     Box(Modifier.fillMaxSize().then(tapWatch)) {
     Column(Modifier.fillMaxSize().background(if (t.classic) pal.ribbonBg else if (is17) below else pal.titleBg).then(if (is17) Modifier.navigationBarsPadding() else Modifier.systemBarsPadding())) {
         // title bar
@@ -393,6 +398,7 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
                 Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), titleInk) }
                 OfTile(t.kind, 22.dp, is17); Spacer(Modifier.width(8.dp))
                 OfTitle(title, titleInk)
+                Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(22.dp), titleInk) }
                 acts.filter { it.group == "Quick" }.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), titleInk) } }
             }
             Row(Modifier.fillMaxWidth().then(if (is17) Modifier.background(below) else Modifier).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
@@ -438,6 +444,11 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
         LaunchedEffect(dirty) { saved = was && !dirty; was = dirty }
         ClippyView(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 6.dp, bottom = 34.dp), saved)
     }
+    if (manualHid) Box(Modifier.fillMaxSize()) {
+        Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
+            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(20.dp), Color.White)
+        }
+    }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
     }
 }
@@ -480,7 +491,10 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val below = ofBelow(t)   // solid grey: translucent layers over the black window left dark text on black
     // text and icons always follow the strip they sit on: white on a dark strip, near-black on a light one
     val ink = ofInkOn(below)
-    val (hid, tapWatch) = ofAutoHide()
+    val (autoHid, tapWatch) = ofAutoHide()
+    // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
+    var manualHid by remember { mutableStateOf(false) }
+    val hid = autoHid || manualHid
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
     Box(Modifier.fillMaxSize().then(tapWatch)) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
@@ -489,6 +503,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), topInk) }
             OfTile(t.kind, 22.dp, true); Spacer(Modifier.width(8.dp))
             OfTitle(title, topInk)
+            Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(22.dp), topInk) }
             quick.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), topInk) } }
         }
         Row(Modifier.fillMaxWidth().background(below).horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
@@ -516,6 +531,11 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
         if (!hid) Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, color = ink.copy(alpha = .75f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+    if (manualHid) Box(Modifier.fillMaxSize()) {
+        Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
+            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(20.dp), Color.White)
         }
     }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
