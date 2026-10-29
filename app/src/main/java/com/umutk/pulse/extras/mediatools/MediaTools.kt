@@ -70,9 +70,10 @@ fun MediaToolsScreen(back: () -> Unit) {
             ToolTile("compress", tr("Compress", "Sıkıştır"), tab == 0, Modifier.weight(1f)) { tab = 0 }
             ToolTile("gif", "GIF", tab == 1, Modifier.weight(1f)) { tab = 1 }
             ToolTile("convert", tr("Convert", "Dönüştür"), tab == 2, Modifier.weight(1f)) { tab = 2 }
+            ToolTile("document", "PDF", tab == 3, Modifier.weight(1f)) { tab = 3 }
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            when (tab) { 0 -> CompressTab(); 1 -> GifTab(); else -> ConvertTab() }
+            when (tab) { 0 -> CompressTab(); 1 -> GifTab(); 3 -> PdfTab(); else -> ConvertTab() }
             Box(Modifier.size(24.dp))
         }
     }
