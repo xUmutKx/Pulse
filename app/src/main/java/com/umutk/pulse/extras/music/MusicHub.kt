@@ -94,7 +94,7 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 
 /** The four looks, in switcher order. Material is the default. */
-private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), SKINS("Media skins"), LYRICS("Lyrics") }
+private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), SKINS("Media skins"), LYRICS("Lyrics"), CASSETTE("Cassette") }
 
 private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE_PRIVATE)
 
@@ -191,6 +191,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it })
                     look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx, onSettings = { settingsOpen = true })
                     look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") })
+                    look == MusicLook.CASSETTE -> com.umutk.pulse.extras.music.cassette.CassettePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize())
                     look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
                     look == MusicLook.SKINS -> SkinsPage(engine, st, onOpen = { pick.launch(arrayOf("audio/*")) })
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
@@ -379,6 +380,7 @@ private enum class ThemeFamily(val en: String, val turkish: String, val look: Mu
     WMP("Windows Media Player 7", "Windows Media Player 7", MusicLook.WMP),
     SKINS("Media Player skins", "Medya oynatıcı kaplamaları", MusicLook.SKINS),
     LYRICS("Lyrics", "Sözler", MusicLook.LYRICS),
+    CASSETTE("Cassette", "Kaset", MusicLook.CASSETTE),
 }
 
 /** Look choice: family titles on top, only the chosen family's themes below. */
@@ -413,7 +415,7 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
             ThemeGrid(listOf(ThemeItem(family.name, tr(family.en, family.turkish)) { MiniLook(m, Modifier.fillMaxSize()) }), family.name, onSelect = { pick(family) })
         }
         ThemeFamily.SKINS -> ImgSkinGrid(skinPick) { skinPick = it; prefs(ctx).edit().putInt("img_skin", it).apply() }
-        ThemeFamily.POWERAMP -> Unit
+        ThemeFamily.POWERAMP, ThemeFamily.CASSETTE -> Unit
     }
 }
 
@@ -429,6 +431,8 @@ private fun familyMini(f: ThemeFamily, scheme: ColorScheme): MiniColors? = when 
     ThemeFamily.LYRICS -> MiniColors(SolidColor(Color.Black), Color(0xFF1A1A1A), Look.accent, Color.White.copy(alpha = .5f))
     // the Poweramp look: black, a dark panel and its blue accent
     ThemeFamily.POWERAMP -> MiniColors(SolidColor(Color.Black), Color(0xFF14161A), Color(0xFF2E8BFF), Color.White.copy(alpha = .5f))
+    // the cassette look: the yellow deck, the cream label and the dark keys
+    ThemeFamily.CASSETTE -> MiniColors(SolidColor(Color(0xFFF9C513)), Color(0xFFF4EFDC), Color(0xFF16130A), Color(0xFF3C4147))
 }
 
 /** A Windows Media Player 7 skin's own frame, visualisation and seek colours; flat, no gradient. */
