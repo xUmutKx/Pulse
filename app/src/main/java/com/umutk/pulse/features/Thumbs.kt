@@ -101,7 +101,7 @@ private fun previewOf(ctx: Context, f: File): Bitmap? {
         }.getOrNull()
         e in PV_VIDEO -> runCatching {
             val m = android.media.MediaMetadataRetriever()
-            try { m.setDataSource(f.path); m.getFrameAtTime(1_000_000L)?.let { Bitmap.createScaledBitmap(it, PX, (PX * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
+            try { m.setDataSource(f.path); m.getFrameAtTime(1_000_000L)?.let { Bitmap.createScaledBitmap(it, 480, (480 * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
         }.getOrNull()
         e in PV_AUDIO -> runCatching {
             val m = android.media.MediaMetadataRetriever()

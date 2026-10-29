@@ -443,9 +443,10 @@ class RelayNode(
                 try {
                     plain.tcpNoDelay = true
                     plain.connect(InetSocketAddress(endpoint.host, endpoint.port), CONNECT_TIMEOUT_MILLIS)
-                    connection = PeerConnection(tls.wrapClient(plain), isInbound = false, clock)
-                    connection.authenticate(expected = device.fingerprint)
-                    continuation.resume(connection) { _, unused, _ -> unused.abort() }
+                    val made = PeerConnection(tls.wrapClient(plain), isInbound = false, clock)
+                    connection = made
+                    made.authenticate(expected = device.fingerprint)
+                    continuation.resume(made) { _, unused: PeerConnection, _ -> unused.abort() }
                 } catch (error: Exception) {
                     connection?.close()
                     runCatching { plain.close() }
