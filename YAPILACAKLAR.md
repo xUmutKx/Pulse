@@ -1355,7 +1355,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 - 🔴 1.2 Türkçe düzeltme motoru: kök+ek analizi, harf atlama/tekrar/yer değişimi, komşu tuş, ç ğ ı i ö ş ü, önceki-sonraki kelime bağlamı, emin değilse dokunma
 - 🟢 1.3 (cümlenin kelimeleri oy verir, tek kelime dili değiştirmez, ayarda kapatılabilir) Türkçe/İngilizce cümle bağlamı ile ayrım (tek kelime dili değiştirmez), otomatik algı ve elle seçim ayrı
 - 🟢 1.4 Öğrenme modları (kelime / cümle / ikisi / kapalı) yapıldı; öğrenilen kelimeleri görme-silme-ekleme, listeyi kopyalama/yapıştırma yapıldı; "doğru işaretle" = elle ekleme; hariç tutma ve geri alma mevcut (düzeltmeyi geri al / bir daha önerme)
-- 🔴 1.5 Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
+- 🟡 1.5 (geri alınan düzeltme bir daha yapılmaz) Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
 - 🟡 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz — uzun kelimeye daha çok yer, sığmazsa üçüncü öneri çekilir; kayıtlı e-posta yalnız e-posta alanında (derlenmedi)
 - 🔴 1.7 E-posta kısayolu yalnız @ yazınca/çağrılınca, imleç noktasına ekler, önceki adı silmez, tuşa atanabilir
 - 🟡 1.8 Pano: ekran görüntüsü gerçek PNG/JPEG, raptiye ikonu, kısayol ikonu, Ctrl+X panoya, donanım klavyesi ve basılı tutma aynı geçmiş, kısayol alanında imleç — PNG/JPEG, raptiye, kısayol ikonu, kes/kopyala geçmişe, kısayol alanı imleci yapıldı; donanım klavyesi geçmiş birleşmesi doğrulanmadı
@@ -1428,9 +1428,9 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 
 ### 18 Launcher
 - 🔴 18.1 Windows Phone teması: sol panel sadeleştirme, Windows tuşu, tam ekran, widget yerleşimi, ayar dönüşünde liste başa atlamasın
-- 🔴 18.2 Windows 11: End Task, vurgu kontrastı, tutarlı menü
-- 🔴 18.3 Grafik tema: otomatik yardımcı kapatılabilir, Scientific/Programmer ikonları, tuş takımı %15 yukarı
-- 🔴 18.4 Launcher sesleri ayarı, tek sefer tetikleme
+- 🟡 18.2 (End Task yapıldı) Windows 11: End Task, vurgu kontrastı, tutarlı menü
+- 🟡 18.3 (menü ikonları ve tuş takımı konumu yapıldı; otomatik yardımcı açık) Grafik tema: otomatik yardımcı kapatılabilir, Scientific/Programmer ikonları, tuş takımı %15 yukarı
+- 🟡 18.4 (başlangıç sesi her görünümde bir kez çalar; ayar mevcut) Launcher sesleri ayarı, tek sefer tetikleme
 - 🔴 18.5 Not widget'ı genel widget, boyut, Music başlığı belirgin, kategoriler, WMP widget düğmesi, önceki/sonraki
 - 🔴 18.6 Tüm uygulamada liste dönüşünde kaydırma/arama/filtre korunsun
 
