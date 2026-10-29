@@ -1418,7 +1418,7 @@ Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenm
 
 ### 15 Device paneli
 - 🟡 15.0 (Folder Sizes tekrarı Storage sayfasından kaldırıldı; cihaz kartı sürüyor) Overview üstüne cihaz kartı; Device menüsünden Folder Sizes tekrarını kaldır
-- 🔴 15.1 Sıcaklık: günlük görünüm, geçmiş, CPU/pil/termal ayrımı
+- 🟡 15.1 Sıcaklık: pil ve işlemci ayrı çizgilerle, bugün/dün/evvelsi gün geçmişi, en sıcak an (dakikada bir kayıt, yalnız Pulse çalışırken); termal durum zaten ayrı gösteriliyor
 
 ### 16 Root / izin / arka plan
 - 🟡 16.0 (Ayarlar > "İzinleri koru" anahtarı: root ile appop yazar, rootsuz sistem ekranını açar) Otomatik izin sıfırlama, erişilebilirlik servisi yeniden başlatma, boot sonrası servisler, kapatma/atma/zorla durdurma ayrımı
@@ -1491,3 +1491,4 @@ Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almad
 - 1.0.208 Keyboard: Backspace right after an automatic correction takes it back (the word as typed opens again) and that correction is remembered as unwanted, even for swapped letters, so the same word is not corrected again; no space is added by itself after a sign any more (off by default, also for those who had it on; the typing setting can turn it on again) (derlenmedi)
 - 1.0.209 Music: the Poweramp rating stars are 15 percent larger with a taller touch pill (44 dp, five cells of 34 dp), and the progress bars of the Material, Poweramp and music page players refresh 3 to 4 times as often, so they move smoothly (derlenmedi)
 - 1.0.210 Backup: Settings > Data lists the saved backups with their size and date, deletes one, or deletes all but the newest two (derlenmedi)
+- 1.0.211 Temperature tool: a history card with the battery and processor lines for today, yesterday and two days ago, the range of each and the hottest moment; readings are noted once a minute while Pulse runs and kept three days (derlenmedi)
