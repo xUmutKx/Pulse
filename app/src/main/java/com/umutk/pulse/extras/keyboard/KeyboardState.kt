@@ -19,6 +19,8 @@ class KbState {
     var panel by mutableStateOf("keys")
     /** The height in pixels of the key panel as it is on screen: the emoji panel takes the same, so the keyboard keeps its size. */
     var keysH by mutableStateOf(0)
+    /** Speech typing: the words recognised so far (the panel shows them while listening). */
+    var voiceText by mutableStateOf("")
     /** The text typed in the emoji search (the keys type into it instead of the field); null when the search is not open. */
     var emojiQuery by mutableStateOf<String?>(null)
     var lang by mutableStateOf("en")
