@@ -155,7 +155,6 @@ object ToolPlace {
         Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "extra"),
         Tool("clock", "Clock", "Saat", "clock", true, "timer", Icons.Outlined.AccessTime, "extra"),
         Tool("relay", "Relay", "Relay", "relay", true, "send", Icons.Outlined.SyncAlt, "extra"),
-        Tool("recap", "Music recap", "Müzik özeti", "recap", true, "heart", Icons.Outlined.Equalizer, "extra"),
         Tool("speedtest", "Internet speed test", "İnternet hız testi", "speedtest", true, "speed", Icons.Outlined.Speed, "extra"),
         Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "settings", Icons.Outlined.Widgets, "extra"),
         Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "sensors", Icons.Outlined.Headphones, "extra"),

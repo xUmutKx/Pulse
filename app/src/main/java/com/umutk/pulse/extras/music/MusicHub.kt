@@ -127,6 +127,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
     var rev by remember { mutableIntStateOf(0) }
     var noiseOpen by remember { mutableStateOf(false) }
     var radioOpen by remember { mutableStateOf(false) }
+    var recapOpen by remember { mutableStateOf(false) }
     var onlineOpen by remember { mutableStateOf(false) }
     var spotifyOpen by remember { mutableStateOf(false) }
     var floating by remember { mutableStateOf(false) }
@@ -185,6 +186,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     Box(Modifier.size(40.dp).clickable { noiseOpen = true }, contentAlignment = Alignment.Center) { PIcon("volume", Color.White, 22.dp) }
                     // radio is reached from the player only (no Extra apps row)
                     Box(Modifier.size(40.dp).clickable { radioOpen = true }, contentAlignment = Alignment.Center) { PIcon("radio", Color.White, 22.dp) }
+                    Box(Modifier.size(40.dp).clickable { recapOpen = true }, contentAlignment = Alignment.Center) { PIcon("heart", Color.White, 22.dp) }
                     if (look != MusicLook.POWERAMP && look != MusicLook.MATERIAL) Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -207,7 +209,9 @@ private fun MusicHubBody(onBack: () -> Unit) {
             }
         }
         if (noiseOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.whitenoise.WhiteNoiseHub { noiseOpen = false } }
-        if (radioOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.radio.RadioScreen { radioOpen = false } }
+        // radio and the music recap open from the player, in its own dark look
+        if (radioOpen) Box(Modifier.fillMaxSize().background(Color.Black)) { com.umutk.pulse.extras.radio.RadioScreen({ radioOpen = false }, ink = Color.White, sub = Color.White.copy(alpha = .6f), accent = Color(0xFFC6FF3D)) }
+        if (recapOpen) Box(Modifier.fillMaxSize()) { com.umutk.pulse.extras.music.stats.RecapScreen { recapOpen = false } }
         if (onlineOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.playlists.OnlinePlaylistsHub { onlineOpen = false } }
         if (spotifyOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
         if (playlistsOpen) PlaylistsDialog(engine, st.queue) { playlistsOpen = false }
