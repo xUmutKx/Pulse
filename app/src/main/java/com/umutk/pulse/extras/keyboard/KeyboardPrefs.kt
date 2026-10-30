@@ -197,11 +197,14 @@ object KeyboardPrefs {
             toolbarItems = t.joinToString(","); p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
         }
         // one place for each tool: a tool on the bar is not in the menu too; the gamepad makes room for the key layout on the bar, and the microphone is gone (the comma holds voice typing)
-        if (p.getInt("menuVer", 0) < 9) {
-            val bar = toolbarItems.split(',').filter { it != "voice" }.map { if (it == "gamepad") "layout" else it }.distinct()
-            menuItems = (menuItems.split(',').filter { it != "voice" && it !in bar } + listOf("gamepad")).distinct().joinToString(",")
-            toolbarItems = bar.joinToString(",")
-            p.edit().putInt("menuVer", 9).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
+        // its own flag: the auto-space step below also moves the version on, so a version check here was skipped on those phones
+        if (!p.getBoolean("barMoved10", false)) {
+            val bar = toolbarItems.split(',').filter { it != "voice" && it != "arrows" }.map { if (it == "gamepad") "layout" else it }.toMutableList()
+            if ("auth" !in bar) bar.add(minOf(1, bar.size), "auth")
+            val bar2 = bar.distinct()
+            menuItems = (menuItems.split(',').filter { it != "voice" && it !in bar2 } + listOf("gamepad")).distinct().joinToString(",")
+            toolbarItems = bar2.joinToString(",")
+            p.edit().putBoolean("barMoved10", true).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
         }
         // no space is added by itself after a sign any more (it can be switched on again in the typing settings)
         if (p.getInt("menuVer", 0) < 9) { autoSpace = false; p.edit().putInt("menuVer", 9).putBoolean("autoSpace", false).apply() }

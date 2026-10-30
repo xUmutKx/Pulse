@@ -38,5 +38,5 @@ object ExtraKeys {
         "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito",
     )
     const val DEFAULT_MENU = "gamepad,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,layout"
-    const val DEFAULT_TOOLBAR = "layout,clip,menu,arrows,translate,settings"
+    const val DEFAULT_TOOLBAR = "layout,auth,clip,menu,translate,settings"
 }
