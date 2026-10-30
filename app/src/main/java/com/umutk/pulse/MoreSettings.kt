@@ -165,9 +165,9 @@ private fun DataBackupCard() {
         var lastAuto by remember { mutableStateOf(AutoBackup.lastRun(ctx)) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(tr("Back up every day", "Her gün yedekle"), color = T.text, fontSize = 14.sp)
-                Text(tr("Pulse and keyboard zips in Download/Pulse backup, the last 7 of each",
-                    "Pulse ve klavye zip'leri Download/Pulse backup içinde, her birinin son 7'si"), color = T.sub, fontSize = 12.sp)
+                Text(tr("Back up once a week", "Haftada 1 yedekle"), color = T.text, fontSize = 14.sp)
+                Text(tr("Pulse and keyboard zips in Download/Pulse backup, the last 4 of each",
+                    "Pulse ve klavye zip'leri Download/Pulse backup içinde, her birinin son 4'ü"), color = T.sub, fontSize = 12.sp)
                 if (lastAuto > 0) Text(tr("Last: ", "Son: ") + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(lastAuto)), color = T.sub, fontSize = 12.sp)
             }
             PSwitch(auto, { auto = it; AutoBackup.setEnabled(ctx, it) })
