@@ -1614,3 +1614,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Clock alarm sheet: black in the dark theme; the time wheel columns take the whole panel width, so a drag anywhere on it scrolls (derlenmedi)
 - (sonraki derlemede) Backup leaves out the bundled ambient sounds and Winamp skins (they ship with the app); the store has no download rows for them (derlenmedi)
 - (sonraki derlemede) Keyboard backup: texts always; clipboard pictures only when "Clipboard pictures in the backup" is on (default off) (derlenmedi)
+- (sonraki derlemede) Files: a picture inside a zip opens in Pulse's own viewer, not the "Open as" chooser (derlenmedi)

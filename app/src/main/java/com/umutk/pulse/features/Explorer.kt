@@ -1055,7 +1055,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         else if (r.dir) { arcCwd = "$p/" } else scope.launch {
                             val out = File(ctx.cacheDir, "arc/${System.nanoTime()}/${r.name}")
                             val ok = withContext(Dispatchers.IO) { runCatching { archiveExtractOne(af, p, out) }.getOrDefault(false) }
-                            if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
+                            // a picture inside an archive opens in Pulse's own viewer, not through the "Open as" chooser
+                            if (ok && out.extension.lowercase() in com.umutk.pulse.IMG_EXTS) com.umutk.pulse.imgOpen(ctx, out)
+                            else if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
                         }
                     },
                     onLongClick = { arcSel = if (picked) arcSel - p else arcSel + p },
