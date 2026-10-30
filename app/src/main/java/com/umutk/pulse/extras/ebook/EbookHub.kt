@@ -323,7 +323,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
         }
 
         if (bars && b != null) {
-            Row(Modifier.fillMaxWidth().background(th.bg.copy(alpha = .94f)).padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().background(th.bg).padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clickable { save(); onClose() }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 22.dp) }
                 Text(b.title, color = th.ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
                 Box(Modifier.size(40.dp).clickable { panel = "menu" }, contentAlignment = Alignment.Center) { Text("⋮", color = th.ink, fontSize = 22.sp) }
@@ -331,7 +331,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     PIcon("pin", if (bookmarked) th.ink else th.sub, 22.dp)
                 }
             }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(th.bg.copy(alpha = .94f)).padding(horizontal = 8.dp, vertical = 6.dp)) {
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(th.bg).padding(horizontal = 8.dp, vertical = 6.dp)) {
                 val count = if (b.pdf) 0 else b.chapters.size
                 Text(tr("Chapter ${chapter + 1} of ${count.coerceAtLeast(1)}", "Bölüm ${chapter + 1} / ${count.coerceAtLeast(1)}"), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp))
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
@@ -347,7 +347,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                                 "search" -> panel = "search"
                                 "speak" -> speaking = !speaking
                                 "auto" -> autoOn = !autoOn
-                                "options" -> panel = "options"
+                                "options" -> panel = "quick"
                                 "info" -> panel = "info"
                             }
                         }, contentAlignment = Alignment.Center) {
@@ -359,7 +359,22 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             }
         }
 
-        if (panel.isNotEmpty() && b != null) {
+        // the quick choices open as a small popup above the bar; the full options stay in the menu
+        if (panel == "quick" && b != null) {
+            Box(Modifier.fillMaxSize().clickable { panel = "" })
+            Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp).fillMaxWidth(.72f).clip(RoundedCornerShape(12.dp)).background(th.bg).border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(12.dp)).padding(vertical = 6.dp)) {
+                listOf(tr("Serif", "Serif"), tr("Sans", "Sans"), tr("Mono", "Mono")).forEachIndexed { i, name ->
+                    PopRow(name, fontIx == i, th) { fontIx = i; EbookPrefs.setFont(ctx, i) }
+                }
+                PopRow(tr("Larger text", "Büyük yazı"), false, th) { textSize = (textSize + 2).coerceAtMost(34); rp(ctx).edit().putInt("size", textSize).apply() }
+                PopRow(tr("Smaller text", "Küçük yazı"), false, th) { textSize = (textSize - 2).coerceAtLeast(12); rp(ctx).edit().putInt("size", textSize).apply() }
+                THEME_NAMES.forEachIndexed { i, name ->
+                    PopRow(name, !eink && themeIx == i, th) { eink = false; EbookPrefs.setEink(ctx, false); themeIx = i; rp(ctx).edit().putInt("theme", i).apply() }
+                }
+                PopRow(tr("E-ink", "E-mürekkep"), eink, th) { eink = !eink; EbookPrefs.setEink(ctx, eink) }
+            }
+        }
+        if (panel.isNotEmpty() && panel != "quick" && b != null) {
             val titleOf = when (panel) {
                 "menu" -> tr("Menu", "Menü"); "chapters" -> tr("Chapters", "Bölümler"); "bookmarks" -> tr("Bookmarks", "Yer imleri")
                 "search" -> tr("Search", "Ara"); "options" -> tr("Visual and control options", "Görünüm ve denetim"); "themes" -> tr("Themes", "Temalar")
@@ -612,3 +627,12 @@ private fun PdfPages(ctx: Context, uri: Uri, page: Int, th: Theme, forward: Bool
         Text("${idx + 1}/$count", color = Color.Gray, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
     }
 }
+
+@Composable
+private fun PopRow(label: String, on: Boolean, th: Theme, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = if (on) th.ink else th.sub, fontSize = 14.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
+        if (on) Text("✓", color = th.ink, fontSize = 14.sp)
+    }
+}
+
