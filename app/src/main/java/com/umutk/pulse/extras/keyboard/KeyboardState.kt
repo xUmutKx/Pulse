@@ -50,6 +50,8 @@ class KbState {
     var clips by mutableStateOf(listOf<String>())
     /** The kept clipboard: texts and pictures, pinned first. */
     var clipItems by mutableStateOf(listOf<ClipItem>())
+    /** Quick auth: the accounts and their codes right now (name, code). */
+    var authCodes by mutableStateOf(listOf<Pair<String, String>>())
     /** The small picture of the screenshot just taken: it waits in the right slot of the bar to be pasted. */
     var shotThumb by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     var recents by mutableStateOf(listOf<String>())
@@ -85,6 +87,8 @@ class KbPreview(val rect: Rect, val label: String, val alts: List<String> = empt
 
 /** What the keys do. The service implements it; the settings page draws the keyboard with an empty one. */
 interface KbActions {
+    /** Quick auth: a code is typed into the field. */
+    fun authPick(code: String) {}
     /** The translation bar: open, close, swap, from, to, apply. */
     fun transOp(op: String) {}
     /** Clipboard shortcuts: start naming one for an item, save it, cancel. */
