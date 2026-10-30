@@ -1,89 +1,119 @@
 package com.umutk.pulse.extras.weathermap
 
+import android.content.Context
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.navigationBarsPadding
-import androidx.compose.foundation.gestures.detectTransformGestures
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onSizeChanged
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.IntSize
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
+import com.umutk.pulse.extras.weather.Place
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
-import kotlin.math.PI
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.atan
+import kotlin.math.ceil
 import kotlin.math.cos
-import kotlin.math.exp
+import kotlin.math.floor
 import kotlin.math.ln
-import kotlin.math.sin
-import kotlin.math.sqrt
+import kotlin.math.pow
+import kotlin.math.PI
+import kotlin.math.roundToInt
+import kotlin.math.sinh
 import kotlin.math.tan
 
-/** The world map: OpenStreetMap tiles as the ground (Mercator, zoom 2), with the layers drawn over it. */
-private const val WORLD = 1024.0          // zoom 2: four 256 px tiles across, the same in both directions
-private const val STEP = 10               // degrees between sample points of the weather layers
+/*
+ * The weather map: a dark map (black sea edge, dark grey land) drawn in tiles that sharpen as you zoom in, with the weather
+ * layers over it. It opens on the place chosen in the weather page, zoomed in, and the grid of values follows the screen, so
+ * the seas and the coast get their own points. When a service fails the last values stay on the screen with their time.
+ */
 
 enum class MapLayer(val en: String, val trName: String) {
-    TEMP("Temperature", "Sıcaklık"), RAIN("Precipitation", "Yağış"), WIND("Wind", "Rüzgar"),
-    CLOUD("Clouds", "Bulut"), WAVE("Waves", "Dalga"), PLANE("Aircraft (live)", "Uçaklar (canlı)"),
-    RADAR("Rain radar (live)", "Yağış radarı (canlı)"), SATELLITE("Satellite (yesterday)", "Uydu (dün)"),
+    WIND("Wind", "Rüzgar"), WAVE("Waves", "Dalga"), CLOUD("Clouds", "Bulut"), PLANE("Aircraft (live)", "Uçaklar (canlı)"),
+    RADAR("Rain radar (live)", "Yağış radarı (canlı)"), TEMP("Temperature", "Sıcaklık"), RAIN("Precipitation", "Yağış"),
+    SATELLITE("Satellite (yesterday)", "Uydu (dün)"),
 }
 
-/** One sample point of a weather layer: where it is and its value (null when the service has none there). */
-class Sample(val lat: Double, val lon: Double, val value: Double?, val dir: Double? = null)
+/** The layers that are values on a grid of points (the others are pictures or live objects). */
+private fun MapLayer.isGrid() = this == MapLayer.WIND || this == MapLayer.WAVE || this == MapLayer.CLOUD || this == MapLayer.TEMP || this == MapLayer.RAIN
 
-/** Mercator position on the zoom-2 world square. */
-private fun px(lon: Double) = (lon + 180.0) / 360.0 * WORLD
-private fun py(lat: Double): Double {
+/** A value of a grid layer at one point; [dir] is the wind or wave direction in degrees, when the layer has one. */
+class Sample(val lat: Double, val lon: Double, val value: Double, val dir: Double?)
+
+/** A live aircraft: its place, heading, speed, height (metres, NaN when unknown), callsign and the country it is registered in. */
+class Plane(val lat: Double, val lon: Double, val track: Double, val kmh: Double, val metres: Double, val call: String, val country: String)
+
+/** Where the map looks: the centre in world units (0..1, Mercator) and the zoom. */
+private class MapPos(val cx: Double, val cy: Double, val zoom: Double)
+
+private const val TILE = 256.0
+private const val BASE_MAX_ZOOM = 18
+private const val RADAR_MAX_ZOOM = 7
+private const val SAT_MAX_ZOOM = 9
+
+/** Pixels per world unit at a zoom, in physical pixels: a tile of 256 dp is one screen tile at that zoom. */
+private fun pxPerWorld(zoom: Double, density: Float): Double = TILE * density * 2.0.pow(zoom)
+
+private fun wx(lon: Double) = (lon + 180.0) / 360.0
+private fun wy(lat: Double): Double {
     val r = Math.toRadians(lat.coerceIn(-85.0, 85.0))
-    return (1.0 - ln(tan(r) + 1.0 / cos(r)) / PI) / 2.0 * WORLD
+    return (1.0 - ln(tan(r) + 1.0 / cos(r)) / PI) / 2.0
 }
+private fun lonOf(x: Double): Double = x * 360.0 - 180.0
+private fun latOf(y: Double): Double = Math.toDegrees(atan(sinh(PI * (1.0 - 2.0 * y))))
+private fun wrapLon(lon: Double): Double = ((lon + 540.0) % 360.0) - 180.0
 
 private fun get(url: String): String? {
     val c = URL(url).openConnection() as HttpURLConnection
@@ -94,117 +124,126 @@ private fun get(url: String): String? {
     } catch (e: Exception) { null } finally { c.disconnect() }
 }
 
-/** Open-Meteo at the sample grid: the current values of one layer, one request per 200 points. */
-private object Grid {
-    private fun points(): List<Pair<Double, Double>> {
-        val out = ArrayList<Pair<Double, Double>>()
-        var lat = -80
-        while (lat <= 80) { var lon = -180; while (lon < 180) { out += lat.toDouble() to lon.toDouble(); lon += STEP }; lat += STEP }
-        return out
-    }
+private fun fetchTile(url: String): ImageBitmap? {
+    val c = URL(url).openConnection() as HttpURLConnection
+    return try {
+        c.connectTimeout = 10_000; c.readTimeout = 20_000
+        c.setRequestProperty("User-Agent", "Pulse/1.0 (weather map)")
+        if (c.responseCode !in 200..299) null else c.inputStream.use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
+    } catch (e: Exception) { null } finally { c.disconnect() }
+}
 
-    fun sample(layer: MapLayer): List<Sample> {
-        val pts = points()
-        val result = ArrayList<Sample>()
-        pts.chunked(200).forEach { chunk ->
-            val lats = chunk.joinToString(",") { it.first.toInt().toString() }
-            val lons = chunk.joinToString(",") { it.second.toInt().toString() }
-            val url = if (layer == MapLayer.WAVE) {
-                "https://marine-api.open-meteo.com/v1/marine?latitude=$lats&longitude=$lons&current=wave_height,wave_direction"
-            } else {
-                "https://api.open-meteo.com/v1/forecast?latitude=$lats&longitude=$lons&current=temperature_2m,precipitation,cloud_cover,wind_speed_10m,wind_direction_10m"
-            }
-            val body = get(url) ?: return@forEach
-            val arr = runCatching { JSONArray(body) }.getOrNull() ?: runCatching { JSONArray().put(JSONObject(body)) }.getOrNull() ?: return@forEach
-            for (i in 0 until arr.length()) {
-                val o = arr.optJSONObject(i) ?: continue
-                val cur = o.optJSONObject("current") ?: continue
-                val (lat, lon) = chunk[i]
-                val v: Double? = when (layer) {
-                    MapLayer.TEMP -> cur.optDouble("temperature_2m", Double.NaN).takeIf { !it.isNaN() }
-                    MapLayer.RAIN -> cur.optDouble("precipitation", Double.NaN).takeIf { !it.isNaN() }
-                    MapLayer.CLOUD -> cur.optDouble("cloud_cover", Double.NaN).takeIf { !it.isNaN() }
-                    MapLayer.WIND -> cur.optDouble("wind_speed_10m", Double.NaN).takeIf { !it.isNaN() }
-                    MapLayer.WAVE -> cur.optDouble("wave_height", Double.NaN).takeIf { !it.isNaN() }
-                    MapLayer.PLANE, MapLayer.RADAR, MapLayer.SATELLITE -> null
-                }
-                if (v == null) continue
-                val dir = when (layer) {
-                    MapLayer.WIND -> cur.optDouble("wind_direction_10m", Double.NaN).takeIf { !it.isNaN() }
-                    MapLayer.WAVE -> cur.optDouble("wave_direction", Double.NaN).takeIf { !it.isNaN() }
-                    else -> null
-                }
-                result += Sample(lat, lon, v, dir)
-            }
-        }
-        return result
+/** The tiles of the zoom level that cover the screen, as (zoom, column, row); the column is not wrapped, so the drawing stays in place. */
+private fun visibleTiles(p: MapPos, w: Float, h: Float, density: Float, maxZoom: Int): List<Triple<Int, Int, Int>> {
+    val z = ceil(p.zoom).toInt().coerceIn(0, maxZoom)
+    val n = (1 shl z).toDouble()
+    val ppu = pxPerWorld(p.zoom, density)
+    val x0 = p.cx - w / 2 / ppu; val x1 = p.cx + w / 2 / ppu
+    val y0 = p.cy - h / 2 / ppu; val y1 = p.cy + h / 2 / ppu
+    val out = ArrayList<Triple<Int, Int, Int>>()
+    val ty0 = floor(y0 * n).toInt().coerceAtLeast(0)
+    val ty1 = floor(y1 * n).toInt().coerceAtMost(n.toInt() - 1)
+    val tx0 = floor(x0 * n).toInt(); val tx1 = floor(x1 * n).toInt()
+    for (ty in ty0..ty1) for (tx in tx0..tx1) out += Triple(z, tx, ty)
+    return out
+}
+
+/** The key of a tile: zoom, column (wrapped around the world) and row. */
+private fun tileKey(z: Int, x: Int, y: Int): String {
+    val n = 1 shl z
+    return "$z/${((x % n) + n) % n}/$y"
+}
+
+private fun yesterday(): String = java.time.LocalDate.now(java.time.ZoneOffset.UTC).minusDays(1).toString()
+
+/** The URL of an overlay tile: RainViewer radar (its newest frame) or NASA GIBS satellite (yesterday's), both keyless. */
+private fun overlayUrl(layer: MapLayer, radarBase: String?, zxy: String): String? {
+    val parts = zxy.split('/')
+    if (parts.size != 3) return null
+    val (z, x, y) = parts
+    return when (layer) {
+        MapLayer.RADAR -> radarBase?.let { "$it/512/$z/$x/$y/2/1_1.png" }
+        MapLayer.SATELLITE -> "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/${yesterday()}/GoogleMapsCompatible_Level9/$z/$y/$x.jpg"
+        else -> null
     }
 }
 
-/** Live aircraft from OpenSky (no key, rate limited): position, heading and speed. */
-class Plane(val lat: Double, val lon: Double, val track: Double, val kmh: Double, val name: String)
+private fun radarBase(): String? {
+    val j = get("https://api.rainviewer.com/public/weather-maps.json")?.let { runCatching { JSONObject(it) }.getOrNull() } ?: return null
+    val past = j.optJSONObject("radar")?.optJSONArray("past") ?: return null
+    if (past.length() == 0) return null
+    return j.optString("host") + past.optJSONObject(past.length() - 1)?.optString("path").orEmpty()
+}
 
-private fun planes(): List<Plane> {
-    val body = get("https://opensky-network.org/api/states/all") ?: return emptyList()
-    val states = runCatching { JSONObject(body).optJSONArray("states") }.getOrNull() ?: return emptyList()
-    val out = ArrayList<Plane>()
-    for (i in 0 until states.length()) {
-        val s = states.optJSONArray(i) ?: continue
-        val lon = s.optDouble(5, Double.NaN); val lat = s.optDouble(6, Double.NaN)
-        if (lon.isNaN() || lat.isNaN() || s.optBoolean(8, false)) continue
-        out += Plane(lat, lon, s.optDouble(10, 0.0), s.optDouble(9, 0.0) * 3.6, s.optString(1).trim())
+/** The points of a grid over the screen: a step that gives about a dozen points across, from the finest that fits. */
+private class GridReq(val key: String, val points: List<Pair<Double, Double>>)
+
+private fun gridFor(p: MapPos, w: Float, h: Float, density: Float): GridReq {
+    val ppu = pxPerWorld(p.zoom, density)
+    val latTop = latOf(p.cy - h / 2 / ppu).coerceIn(-85.0, 85.0)
+    val latBottom = latOf(p.cy + h / 2 / ppu).coerceIn(-85.0, 85.0)
+    val lonLeft = lonOf(p.cx - w / 2 / ppu)
+    val lonRight = lonOf(p.cx + w / 2 / ppu)
+    val span = lonRight - lonLeft
+    val step = listOf(0.1, 0.2, 0.5, 1.0, 2.0, 5.0, 10.0, 20.0, 30.0).firstOrNull { span / it <= 12 } ?: 30.0
+    val latStart = floor(latBottom / step) * step
+    val lonStart = floor(lonLeft / step) * step
+    val pts = ArrayList<Pair<Double, Double>>()
+    var la = latStart
+    while (la <= latTop + 1e-9) {
+        var lo = lonStart
+        while (lo <= lonRight + 1e-9) { pts += la to wrapLon(lo); lo += step }
+        la += step
+    }
+    return GridReq("$step|${"%.2f".format(Locale.US, latStart)}|${"%.2f".format(Locale.US, lonStart)}|${pts.size}", pts)
+}
+
+/** Open-Meteo at the points: the current values of one layer, one request per 100 points. Null when the service fails. */
+private fun fetchGrid(layer: MapLayer, pts: List<Pair<Double, Double>>): List<Sample>? {
+    val out = ArrayList<Sample>()
+    for (chunk in pts.chunked(100)) {
+        val la = chunk.joinToString(",") { String.format(Locale.US, "%.2f", it.first) }
+        val lo = chunk.joinToString(",") { String.format(Locale.US, "%.2f", it.second) }
+        val url = if (layer == MapLayer.WAVE) {
+            "https://marine-api.open-meteo.com/v1/marine?latitude=$la&longitude=$lo&current=wave_height,wave_direction"
+        } else {
+            "https://api.open-meteo.com/v1/forecast?latitude=$la&longitude=$lo&current=temperature_2m,precipitation,cloud_cover,wind_speed_10m,wind_direction_10m"
+        }
+        val body = get(url) ?: return null
+        if (body.contains("\"error\"")) return null
+        val arr = runCatching { JSONArray(body) }.getOrNull() ?: runCatching { JSONArray().put(JSONObject(body)) }.getOrNull() ?: return null
+        for (i in 0 until arr.length()) {
+            val cur = arr.optJSONObject(i)?.optJSONObject("current") ?: continue
+            val v = when (layer) {
+                MapLayer.TEMP -> cur.optDouble("temperature_2m", Double.NaN)
+                MapLayer.RAIN -> cur.optDouble("precipitation", Double.NaN)
+                MapLayer.CLOUD -> cur.optDouble("cloud_cover", Double.NaN)
+                MapLayer.WIND -> cur.optDouble("wind_speed_10m", Double.NaN)
+                MapLayer.WAVE -> cur.optDouble("wave_height", Double.NaN)
+                else -> Double.NaN
+            }
+            if (v.isNaN() || i >= chunk.size) continue
+            val d = when (layer) {
+                MapLayer.WIND -> cur.optDouble("wind_direction_10m", Double.NaN)
+                MapLayer.WAVE -> cur.optDouble("wave_direction", Double.NaN)
+                else -> Double.NaN
+            }
+            out += Sample(chunk[i].first, chunk[i].second, v, d.takeIf { !it.isNaN() })
+        }
     }
     return out
 }
 
-/** The picture layers: RainViewer radar (the newest past frame) and NASA GIBS true-colour satellite (yesterday's). Both keyless. */
-private fun pictureTiles(layer: MapLayer): Pair<List<Tile>, Float> {
-    val out = ArrayList<Tile>()
-    val alpha: Float
-    if (layer == MapLayer.RADAR) {
-        alpha = 0.7f
-        val j = get("https://api.rainviewer.com/public/weather-maps.json")?.let { JSONObject(it) } ?: return emptyList<Tile>() to 0f
-        val host = j.optString("host")
-        val past = j.optJSONObject("radar")?.optJSONArray("past") ?: return emptyList<Tile>() to 0f
-        val path = past.optJSONObject(past.length() - 1)?.optString("path").orEmpty()
-        for (y in 0..3) for (x in 0..3) {
-            val c = URL("$host$path/256/2/$x/$y/2/1_1.png").openConnection() as HttpURLConnection
-            try {
-                c.setRequestProperty("User-Agent", "Pulse/1.0 (weather map)"); c.connectTimeout = 10_000; c.readTimeout = 20_000
-                val bmp = c.inputStream.use { BitmapFactory.decodeStream(it) } ?: continue
-                out += Tile(x, y, bmp.asImageBitmap())
-            } catch (e: Exception) { } finally { c.disconnect() }
-        }
-    } else {
-        alpha = 1f
-        val day = java.time.LocalDate.now(java.time.ZoneOffset.UTC).minusDays(1).toString()
-        for (y in 0..3) for (x in 0..3) {
-            val url = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/$day/GoogleMapsCompatible_Level9/2/$y/$x.jpg"
-            val c = URL(url).openConnection() as HttpURLConnection
-            try {
-                c.setRequestProperty("User-Agent", "Pulse/1.0 (weather map)"); c.connectTimeout = 10_000; c.readTimeout = 20_000
-                val bmp = c.inputStream.use { BitmapFactory.decodeStream(it) } ?: continue
-                out += Tile(x, y, bmp.asImageBitmap())
-            } catch (e: Exception) { } finally { c.disconnect() }
-        }
-    }
-    return out to alpha
-}
-
-/** One tile of the zoom-2 world: its column and row (0..3) and the picture. */
-class Tile(val x: Int, val y: Int, val img: ImageBitmap)
-
-/** The ground: the 16 OpenStreetMap tiles of the zoom-2 world. */
-private fun worldTiles(): List<Tile> {
-    val out = ArrayList<Tile>()
-    for (y in 0..3) for (x in 0..3) {
-        val c = URL("https://tile.openstreetmap.org/2/$x/$y.png").openConnection() as HttpURLConnection
-        try {
-            c.setRequestProperty("User-Agent", "Pulse/1.0 (weather map)")
-            c.connectTimeout = 10_000; c.readTimeout = 20_000
-            val bmp = c.inputStream.use { BitmapFactory.decodeStream(it) } ?: continue
-            out += Tile(x, y, bmp.asImageBitmap())
-        } catch (e: Exception) { } finally { c.disconnect() }
+/** Live aircraft from OpenSky (no key, rate limited). Null when the service fails. */
+private fun fetchPlanes(): List<Plane>? {
+    val body = get("https://opensky-network.org/api/states/all") ?: return null
+    val states = runCatching { JSONObject(body).optJSONArray("states") }.getOrNull() ?: return null
+    val out = ArrayList<Plane>(states.length())
+    for (i in 0 until states.length()) {
+        val s = states.optJSONArray(i) ?: continue
+        val lon = s.optDouble(5, Double.NaN); val lat = s.optDouble(6, Double.NaN)
+        if (lon.isNaN() || lat.isNaN() || s.optBoolean(8, false)) continue
+        out += Plane(lat, lon, s.optDouble(10, 0.0), s.optDouble(9, 0.0) * 3.6, s.optDouble(7, Double.NaN), s.optString(1).trim(), s.optString(2).trim())
     }
     return out
 }
@@ -216,121 +255,262 @@ private fun heat(layer: MapLayer, v: Double): Color {
         MapLayer.WIND -> (v / 80).coerceIn(0.0, 1.0)
         MapLayer.CLOUD -> (v / 100).coerceIn(0.0, 1.0)
         MapLayer.WAVE -> (v / 6).coerceIn(0.0, 1.0)
-        MapLayer.PLANE, MapLayer.RADAR, MapLayer.SATELLITE -> 0.0
+        else -> 0.0
     }
     // cold / calm is blue, warm / strong is red
-    return Color(red = t.toFloat(), green = 0.35f, blue = (1 - t).toFloat(), alpha = 0.6f)
+    return Color(red = t.toFloat(), green = 0.35f, blue = (1 - t).toFloat(), alpha = 0.7f)
 }
 
-/** Keeps the world covering the screen: no empty edge shows while zoomed in, and it stays centred when it is smaller than the screen. */
-private fun clampPan(x: Float, y: Float, zoom: Float, view: Size): Offset {
-    val world = view.width * zoom
-    val cx = x.coerceIn(view.width - world, 0f)
-    val cy = if (world <= view.height) (view.height - world) / 2f else y.coerceIn(view.height - world, 0f)
-    return Offset(cx, cy)
+private fun unitOf(layer: MapLayer): String = when (layer) {
+    MapLayer.TEMP -> "°C"; MapLayer.RAIN -> "mm"; MapLayer.WIND -> "km/h"; MapLayer.CLOUD -> "%"; MapLayer.WAVE -> "m"
+    else -> ""
+}
+
+/** One tile of a picture layer, drawn at its place on the screen. */
+private fun DrawScope.drawTile(img: ImageBitmap, z: Int, tx: Int, ty: Int, p: MapPos, ppu: Double, alpha: Float) {
+    val n = (1 shl z).toDouble()
+    val side = ppu / n
+    val left = size.width / 2 + (tx / n - p.cx) * ppu
+    val top = size.height / 2 + (ty / n - p.cy) * ppu
+    val l = floor(left).toInt(); val t = floor(top).toInt()
+    val r = kotlin.math.ceil(left + side).toInt(); val b = kotlin.math.ceil(top + side).toInt()
+    drawImage(img, dstOffset = IntOffset(l, t), dstSize = IntSize(r - l, b - t), alpha = alpha)
 }
 
 @Composable
-fun WeatherMapHub(onBack: () -> Unit) {
-    var layer by remember { mutableStateOf(MapLayer.TEMP) }
-    var retry by remember { mutableStateOf(0) }
-    val tiles by produceState<List<Tile>?>(null) { value = withContext(Dispatchers.IO) { worldTiles() } }
-    val picture by produceState<Pair<List<Tile>, Float>?>(null, layer, retry) {
-        value = null
-        value = if (layer == MapLayer.RADAR || layer == MapLayer.SATELLITE) withContext(Dispatchers.IO) { pictureTiles(layer) } else emptyList<Tile>() to 0f
-    }
-    val samples by produceState<List<Sample>?>(null, layer, retry) {
-        value = null
-        value = withContext(Dispatchers.IO) { if (layer == MapLayer.PLANE || layer == MapLayer.RADAR || layer == MapLayer.SATELLITE) emptyList() else Grid.sample(layer) }
-    }
-    val aircraft by produceState<List<Plane>?>(null, layer, retry) {
-        value = null
-        value = if (layer == MapLayer.PLANE) withContext(Dispatchers.IO) { planes() } else emptyList()
+fun WeatherMapHub(onBack: () -> Unit, at: Place?) {
+    val ctx = LocalContext.current
+    val density = LocalDensity.current.density
+    val prefs = remember { ctx.getSharedPreferences("weathermap", Context.MODE_PRIVATE) }
+    var layer by remember { mutableStateOf(MapLayer.entries.firstOrNull { it.name == prefs.getString("layer", "") } ?: MapLayer.WIND) }
+    var canvasSize by remember { mutableStateOf(Size.Zero) }
+    var pos by remember { mutableStateOf(MapPos(0.5, 0.5, 1.0)) }
+    var placed by remember { mutableStateOf(false) }
+    var info by remember { mutableStateOf<List<String>?>(null) }
+    var refresh by remember { mutableStateOf(0) }
+    val grids = remember { mutableStateMapOf<MapLayer, List<Sample>>() }
+    val stamps = remember { mutableStateMapOf<MapLayer, Long>() }
+    val baseTiles = remember { mutableStateMapOf<String, ImageBitmap>() }
+    val overTiles = remember { mutableStateMapOf<String, ImageBitmap>() }
+    var planes by remember { mutableStateOf<List<Plane>?>(null) }
+    var planeStamp by remember { mutableStateOf(0L) }
+    var radar by remember { mutableStateOf<String?>(null) }
+    var radarStamp by remember { mutableStateOf(0L) }
+
+    // the last values of each layer are kept on the phone: they show at once and stay when a request fails
+    LaunchedEffect(Unit) {
+        val saved = withContext(Dispatchers.IO) { MapLayer.entries.filter { it.isGrid() }.mapNotNull { l -> loadSaved(ctx, l)?.let { Triple(l, it.first, it.second) } } }
+        saved.forEach { (l, t, s) -> grids[l] = s; stamps[l] = t }
     }
 
-    // the map fills the screen: zoom 1 fits the world to the width, a pinch zooms in around the fingers, a drag moves the map
-    var view by remember { mutableStateOf(Size.Zero) }
-    var placed by remember { mutableStateOf(false) }
-    var zoom by remember { mutableStateOf(1f) }
-    var offX by remember { mutableStateOf(0f) }
-    var offY by remember { mutableStateOf(0f) }
+    // the map opens on the chosen place, zoomed in; without a place it shows the world
+    fun place(sz: Size) {
+        if (placed || sz.width <= 0f) return
+        placed = true
+        val a = at?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }
+        pos = if (a != null) MapPos(wx(a.lon), wy(a.lat), 5.0) else MapPos(0.5, 0.5, 1.0)
+    }
+
+    // the live layers: aircraft every minute, the radar frame every five minutes
+    LaunchedEffect(layer, refresh) {
+        if (layer != MapLayer.PLANE) return@LaunchedEffect
+        while (true) {
+            val p = withContext(Dispatchers.IO) { fetchPlanes() }
+            if (p != null) { planes = p; planeStamp = System.currentTimeMillis() }
+            delay(60_000)
+        }
+    }
+    LaunchedEffect(layer, refresh) {
+        if (layer != MapLayer.RADAR) return@LaunchedEffect
+        while (true) {
+            val b = withContext(Dispatchers.IO) { radarBase() }
+            if (b != null) { radar = b; radarStamp = System.currentTimeMillis(); overTiles.clear() }
+            delay(300_000)
+        }
+    }
+
+    // the values of the grid follow the screen: asked again a moment after the map stops moving
+    val grid = if (canvasSize.width > 0f && layer.isGrid()) gridFor(pos, canvasSize.width, canvasSize.height, density) else null
+    LaunchedEffect(layer, grid?.key, refresh) {
+        val g = grid ?: return@LaunchedEffect
+        delay(600)
+        val res = withContext(Dispatchers.IO) { fetchGrid(layer, g.points) }
+        if (res != null) {
+            val now = System.currentTimeMillis()
+            grids[layer] = res; stamps[layer] = now
+            withContext(Dispatchers.IO) { saveGrid(ctx, layer, now, res) }
+        }
+    }
+
+    // the tiles of the screen: the dark map, and the radar or satellite picture over it
+    val base = if (canvasSize.width > 0f) visibleTiles(pos, canvasSize.width, canvasSize.height, density, BASE_MAX_ZOOM) else emptyList()
+    val baseKeys = base.map { (z, x, y) -> tileKey(z, x, y) }
+    LaunchedEffect(baseKeys) {
+        val missing = baseKeys.filter { it !in baseTiles }
+        if (missing.isNotEmpty()) {
+            missing.map { k -> async(Dispatchers.IO) { k to fetchTile("https://basemaps.cartocdn.com/dark_all/$k@2x.png") } }
+                .awaitAll().forEach { (k, img) -> if (img != null) baseTiles[k] = img }
+        }
+        if (baseTiles.size > 160) baseTiles.keys.filter { it !in baseKeys }.forEach { baseTiles.remove(it) }
+    }
+    val overMax = when (layer) { MapLayer.RADAR -> RADAR_MAX_ZOOM; MapLayer.SATELLITE -> SAT_MAX_ZOOM; else -> -1 }
+    val overKeys = if (overMax < 0 || canvasSize.width <= 0f) emptyList()
+        else visibleTiles(pos, canvasSize.width, canvasSize.height, density, overMax).map { (z, x, y) -> "${layer.name}/${tileKey(z, x, y)}" }
+    LaunchedEffect(layer, radar, overKeys) {
+        if (overKeys.isEmpty()) return@LaunchedEffect
+        val missing = overKeys.filter { it !in overTiles }
+        if (missing.isNotEmpty()) {
+            missing.map { k -> async(Dispatchers.IO) { k to overlayUrl(layer, radar, k.substringAfter('/'))?.let { fetchTile(it) } } }
+                .awaitAll().forEach { (k, img) -> if (img != null) overTiles[k] = img }
+        }
+        if (overTiles.size > 160) overTiles.keys.filter { it !in overKeys }.forEach { overTiles.remove(it) }
+    }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Canvas(
             Modifier.fillMaxSize()
                 .onSizeChanged { sz ->
-                    view = Size(sz.width.toFloat(), sz.height.toFloat())
-                    if (!placed) { placed = true; clampPan(0f, (view.height - view.width) / 2f, 1f, view).let { offX = it.x; offY = it.y } }
+                    canvasSize = Size(sz.width.toFloat(), sz.height.toFloat())
+                    place(canvasSize)
                 }
                 .pointerInput(Unit) {
-                    detectTransformGestures { centroid, pan, gestureZoom, _ ->
-                        if (view.width <= 0f) return@detectTransformGestures
-                        val base = view.width / WORLD.toFloat()
-                        val newZoom = (zoom * gestureZoom).coerceIn(1f, 12f)
-                        // the point of the world under the fingers stays under them while zooming, then the drag moves the map
-                        val wx = (centroid.x - offX) / (base * zoom)
-                        val wy = (centroid.y - offY) / (base * zoom)
-                        zoom = newZoom
-                        clampPan(centroid.x - wx * base * newZoom + pan.x, centroid.y - wy * base * newZoom + pan.y, newZoom, view).let { offX = it.x; offY = it.y }
+                    detectTransformGestures { centroid, pan, zoomChange, _ ->
+                        val s = canvasSize
+                        if (s.width <= 0f) return@detectTransformGestures
+                        val p = pos
+                        val ppu = pxPerWorld(p.zoom, density)
+                        // the point under the fingers stays under them while zooming; then the drag moves the map
+                        val wxAt = p.cx + (centroid.x - s.width / 2) / ppu
+                        val wyAt = p.cy + (centroid.y - s.height / 2) / ppu
+                        val nz = (p.zoom + ln(zoomChange.toDouble()) / ln(2.0)).coerceIn(1.0, BASE_MAX_ZOOM.toDouble())
+                        val np = pxPerWorld(nz, density)
+                        val ncx = wxAt - (centroid.x + pan.x - s.width / 2) / np
+                        val ncy = wyAt - (centroid.y + pan.y - s.height / 2) / np
+                        pos = MapPos(ncx, ncy.coerceIn(0.0, 1.0), nz)
                     }
+                }
+                .pointerInput(Unit) {
+                    detectTapGestures(onTap = { tap ->
+                        val s = canvasSize
+                        val p = pos
+                        val ppu = pxPerWorld(p.zoom, density)
+                        fun screen(lat: Double, lon: Double) = Offset(((wx(lon) - p.cx) * ppu + s.width / 2).toFloat(), ((wy(lat) - p.cy) * ppu + s.height / 2).toFloat())
+                        val reach = 28.dp.toPx()
+                        info = if (layer == MapLayer.PLANE) {
+                            planes?.filter { (screen(it.lat, it.lon) - tap).getDistance() < reach }
+                                ?.minByOrNull { (screen(it.lat, it.lon) - tap).getDistance() }
+                                ?.let { pl ->
+                                    listOf(
+                                        pl.call.ifEmpty { "—" } + if (pl.country.isNotEmpty()) " · ${pl.country}" else "",
+                                        tr("Height ", "Yükseklik ") + if (pl.metres.isNaN()) "—" else "${(pl.metres * 3.28084).roundToInt()} ft (${pl.metres.roundToInt()} m)",
+                                        tr("Speed ", "Hız ") + "${pl.kmh.roundToInt()} km/h",
+                                        tr("Heading ", "Yön ") + "${pl.track.roundToInt()}°",
+                                    )
+                                }
+                        } else {
+                            grids[layer]?.filter { (screen(it.lat, it.lon) - tap).getDistance() < reach }
+                                ?.minByOrNull { (screen(it.lat, it.lon) - tap).getDistance() }
+                                ?.let { sm ->
+                                    listOfNotNull(
+                                        tr(layer.en, layer.trName) + ": " + String.format(Locale.US, "%.1f", sm.value) + " " + unitOf(layer),
+                                        sm.dir?.let { tr("Direction ", "Yön ") + "${it.roundToInt()}°" },
+                                        String.format(Locale.US, "%.2f, %.2f", sm.lat, sm.lon),
+                                    )
+                                }
+                        }
+                    })
                 }
         ) {
-            val kb = size.width / WORLD.toFloat()
-            val k = kb * zoom
-            translate(offX, offY) {
-                // the ground first: the four columns and rows of 256 px tiles
-                tiles?.forEach { t ->
-                    drawImage(t.img, dstOffset = IntOffset((t.x * 256 * k).toInt(), (t.y * 256 * k).toInt()), dstSize = IntSize((256 * k).toInt(), (256 * k).toInt()))
+            val p = pos
+            val ppu = pxPerWorld(p.zoom, density)
+            base.forEach { (z, tx, ty) -> baseTiles[tileKey(z, tx, ty)]?.let { drawTile(it, z, tx, ty, p, ppu, 1f) } }
+            if (overMax >= 0) visibleTiles(p, size.width, size.height, density, overMax).forEach { (z, tx, ty) ->
+                overTiles["${layer.name}/${tileKey(z, tx, ty)}"]?.let { drawTile(it, z, tx, ty, p, ppu, if (layer == MapLayer.RADAR) 0.7f else 1f) }
+            }
+            fun screenOf(lat: Double, lon: Double) = Offset(((wx(lon) - p.cx) * ppu + size.width / 2).toFloat(), ((wy(lat) - p.cy) * ppu + size.height / 2).toFloat())
+            if (layer.isGrid()) grids[layer]?.forEach { sm ->
+                val c = screenOf(sm.lat, sm.lon)
+                if (c.x < -20f || c.x > size.width + 20f || c.y < -20f || c.y > size.height + 20f) return@forEach
+                drawCircle(heat(layer, sm.value), radius = 7.dp.toPx(), center = c)
+                sm.dir?.let { d ->
+                    val r = Math.toRadians(d)
+                    val end = Offset(c.x + (kotlin.math.sin(r) * 14.dp.toPx()).toFloat(), c.y - (kotlin.math.cos(r) * 14.dp.toPx()).toFloat())
+                    drawLine(Color.White, c, end, strokeWidth = 1.5.dp.toPx())
                 }
-                // a picture layer (radar, satellite) lies over the ground
-                picture?.let { (list, a) -> list.forEach { t -> drawImage(t.img, dstOffset = IntOffset((t.x * 256 * k).toInt(), (t.y * 256 * k).toInt()), dstSize = IntSize((256 * k).toInt(), (256 * k).toInt()), alpha = a) } }
-                // the weather values as soft dots (wind and waves get a short tick for the direction)
-                samples?.forEach { sm ->
-                    val c = Offset((px(sm.lon) * k).toFloat(), (py(sm.lat) * k).toFloat())
-                    val v = sm.value ?: return@forEach
-                    drawCircle(heat(layer, v), radius = 9f * kb, center = c)
-                    sm.dir?.let { d ->
-                        val r = Math.toRadians(d)
-                        val end = Offset(c.x + (kotlin.math.sin(r) * 14 * kb).toFloat(), c.y - (kotlin.math.cos(r) * 14 * kb).toFloat())
-                        drawLine(Color.White, c, end, strokeWidth = 1.5f * kb)
-                    }
-                }
-                // live aircraft: a dot with a short heading line
-                aircraft?.forEach { p ->
-                    val c = Offset((px(p.lon) * k).toFloat(), (py(p.lat) * k).toFloat())
-                    drawCircle(Color(0xFFFFC107), radius = 2.5f * kb, center = c)
-                    val r = Math.toRadians(p.track)
-                    drawLine(Color(0xFFFFC107), c, Offset(c.x + (kotlin.math.sin(r) * 6 * kb).toFloat(), c.y - (kotlin.math.cos(r) * 6 * kb).toFloat()), strokeWidth = 1f * kb)
-                }
+            }
+            if (layer == MapLayer.PLANE) planes?.forEach { pl ->
+                val c = screenOf(pl.lat, pl.lon)
+                if (c.x < -10f || c.x > size.width + 10f || c.y < -10f || c.y > size.height + 10f) return@forEach
+                drawCircle(Color(0xFFFFC107), radius = 2.5.dp.toPx(), center = c)
+                val r = Math.toRadians(pl.track)
+                drawLine(Color(0xFFFFC107), c, Offset(c.x + (kotlin.math.sin(r) * 6.dp.toPx()).toFloat(), c.y - (kotlin.math.cos(r) * 6.dp.toPx()).toFloat()), strokeWidth = 1.dp.toPx())
             }
         }
 
-        // the controls float over the map: back and the layers at the top, the state at the bottom
+        // the controls float over the map: back and the layers at the top
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(40.dp).background(Color.Black.copy(alpha = .55f), CircleShape).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
+                Box(Modifier.size(40.dp).background(Color.Black.copy(alpha = .6f), CircleShape).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 MapLayer.entries.forEach { l ->
                     val on = l == layer
                     Text(tr(l.en, l.trName), color = if (on) Color.Black else Color.White, fontSize = 13.sp, maxLines = 1,
-                        modifier = Modifier.background(if (on) T.accent else Color.Black.copy(alpha = .55f), RoundedCornerShape(50))
-                            .clickable { layer = l }.padding(horizontal = 12.dp, vertical = 6.dp))
+                        modifier = Modifier.background(if (on) T.accent else Color.Black.copy(alpha = .6f), RoundedCornerShape(50))
+                            .clickable { layer = l; info = null; prefs.edit().putString("layer", l.name).apply() }.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
             }
         }
-        Text(
-            when {
-                layer == MapLayer.PLANE -> aircraft?.let { tr("${it.size} aircraft in the air (OpenSky)", "${it.size} uçak havada (OpenSky)") } ?: tr("Loading…", "Yükleniyor…")
-                layer == MapLayer.RADAR || layer == MapLayer.SATELLITE -> picture?.let { tr("${it.first.size} of 16 tiles", "16 karodan ${it.first.size}") } ?: tr("Loading…", "Yükleniyor…")
-                samples == null -> tr("Loading…", "Yükleniyor…")
-                samples!!.isEmpty() -> tr("Couldn't load the data", "Veri alınamadı")
-                else -> tr("${samples!!.size} points", "${samples!!.size} nokta")
-            },
-            color = Color.White, fontSize = 12.sp,
-            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 10.dp)
-                .background(Color.Black.copy(alpha = .55f), RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 4.dp)
-                .clickable { retry++ },
-        )
+
+        // the picked value or aircraft, above the status line; a tap on the map picks another
+        info?.let { lines ->
+            Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 64.dp)
+                .background(Color.Black.copy(alpha = .8f), RoundedCornerShape(12.dp)).padding(horizontal = 14.dp, vertical = 10.dp)) {
+                lines.forEachIndexed { i, line -> Text(line, color = Color.White, fontSize = if (i == 0) 15.sp else 13.sp, fontWeight = if (i == 0) FontWeight.SemiBold else FontWeight.Normal) }
+            }
+        }
+
+        // the state: what is shown and when its data came in; a tap asks again
+        val stamp = when (layer) {
+            MapLayer.PLANE -> planeStamp
+            MapLayer.RADAR -> radarStamp
+            MapLayer.SATELLITE -> 0L
+            else -> stamps[layer] ?: 0L
+        }
+        val when_ = if (stamp > 0L) " · " + tr("data ", "veri ") + SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date(stamp)) else ""
+        val status = when {
+            layer == MapLayer.PLANE -> planes?.let { tr("${it.size} aircraft · OpenSky", "${it.size} uçak · OpenSky") + when_ } ?: tr("Loading…", "Yükleniyor…")
+            layer == MapLayer.RADAR -> if (radar == null) tr("Loading…", "Yükleniyor…") else tr("Rain radar", "Yağış radarı") + when_
+            layer == MapLayer.SATELLITE -> tr("Satellite picture of ${yesterday()}", "${yesterday()} uydu görüntüsü")
+            else -> grids[layer]?.let { g ->
+                if (g.isEmpty()) tr("No data here", "Burada veri yok") + when_ else tr("${g.size} points", "${g.size} nokta") + when_
+            } ?: tr("Loading…", "Yükleniyor…")
+        }
+        Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(status, color = Color.White, fontSize = 12.sp, maxLines = 1,
+                modifier = Modifier.background(Color.Black.copy(alpha = .6f), RoundedCornerShape(50)).clickable { refresh++ }.padding(horizontal = 12.dp, vertical = 4.dp))
+            Text(tr("© OpenStreetMap · © CARTO", "© OpenStreetMap · © CARTO"), color = Color.White.copy(alpha = .5f), fontSize = 9.sp, modifier = Modifier.padding(top = 2.dp))
+        }
     }
 }
+
+private fun savedFile(c: Context, layer: MapLayer) = File(c.filesDir, "weathermap_${layer.name}.txt")
+
+/** The grid of a layer as it was last loaded: the time on the first line, then "lat lon value direction" lines. */
+private fun saveGrid(c: Context, layer: MapLayer, time: Long, list: List<Sample>) {
+    runCatching {
+        savedFile(c, layer).writeText(buildString {
+            append(time).append('\n')
+            list.forEach { append(it.lat).append(' ').append(it.lon).append(' ').append(it.value).append(' ').append(it.dir ?: "").append('\n') }
+        })
+    }
+}
+
+private fun loadSaved(c: Context, layer: MapLayer): Pair<Long, List<Sample>>? = runCatching {
+    val lines = savedFile(c, layer).readLines()
+    val time = lines[0].toLong()
+    time to lines.drop(1).map { l ->
+        val f = l.split(' ')
+        Sample(f[0].toDouble(), f[1].toDouble(), f[2].toDouble(), f.getOrNull(3)?.toDoubleOrNull())
+    }
+}.getOrNull()

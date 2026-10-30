@@ -1679,3 +1679,8 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books shelf search: a search icon filters the shelf by title (derlenmedi)
 - Keyboard quick auth: each account takes a third of the panel, the text is twice the size, more accounts scroll (derlenmedi)
 - Settings > General > Apps: the second Clock row (the optional tool row under the apps) is removed; Clock stays once in "Tools and life" (derlenmedi)
+- Weather map: opens on the chosen place (or the phone's place) zoomed to the region, not the whole world (derlenmedi)
+- Weather map: dark map from sharp tiles (@2x, sharper when zoomed in), black background, dark sea and land (derlenmedi)
+- Weather map: the values are a grid over the screen, so the coast and the seas get their own points (waves included) (derlenmedi)
+- Weather map: aircraft are tappable (callsign, country, height, speed, heading); the picked value shows for the grid layers (derlenmedi)
+- Weather map: the last values stay on the screen with their time when a service fails; the values are kept on the phone (derlenmedi)
