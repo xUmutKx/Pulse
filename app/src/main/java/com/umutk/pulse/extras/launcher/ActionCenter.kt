@@ -40,8 +40,13 @@ import androidx.compose.material.icons.outlined.VpnKey
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -131,10 +136,37 @@ fun ActionCenterPanel() {
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.End) {
             Text(tr("Collapse", "Daralt") + " ⌃", color = teal, fontSize = 16.sp, modifier = Modifier.clickable { ActionCenter.open = false }.padding(8.dp))
         }
-        Text(tr("No notifications", "Bildirim yok"), color = Color(0xFFCCCCCC), fontSize = 18.sp, modifier = Modifier.padding(start = 10.dp, top = 24.dp))
-        Spacer(Modifier.weight(1f))
+        WpNotifications(c)
         Box(Modifier.fillMaxWidth().height(24.dp).background(teal).clickable { ActionCenter.open = false }, contentAlignment = Alignment.Center) {
             Text("═", color = Color.White, fontSize = 14.sp)
+        }
+    }
+}
+
+/**
+ * The notifications of the Windows Phone action centre: the newest first, the app's name small above the title, a tap opens the app. They come from the
+ * notification history, which keeps them while it is switched on (Settings > Notification history).
+ */
+@Composable
+private fun ColumnScope.WpNotifications(c: Context) {
+    val entries by com.umutk.pulse.extras.notifhist.NotifHist.entries.collectAsState()
+    val on = com.umutk.pulse.extras.notifhist.NotifHist.enabled(c)
+    if (!on) Text(tr("Notifications are not kept yet. Turn on Notification history in Settings.", "Bildirimler henüz tutulmuyor. Ayarlar'dan Bildirim geçmişini aç."),
+        color = Color(0xFFCCCCCC), fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp, top = 16.dp))
+    else if (entries.isEmpty()) Text(tr("No notifications", "Bildirim yok"), color = Color(0xFFCCCCCC), fontSize = 18.sp, modifier = Modifier.padding(start = 10.dp, top = 24.dp))
+    else androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 8.dp)) {
+        items(entries.take(40)) { e ->
+            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 10.dp).clickable {
+                c.packageManager.getLaunchIntentForPackage(e.pkg)?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)?.let { c.startActivity(it) }
+                ActionCenter.open = false
+            }) {
+                Text(e.app, color = Color(0xFF00B7C3), fontSize = 12.sp, maxLines = 1)
+                if (e.title.isNotBlank()) Text(e.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (e.text.isNotBlank()) Text(e.text, color = Color(0xFFBBBBBB), fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        item {
+            Text(tr("Clear all", "Tümünü temizle"), color = Color(0xFF00B7C3), fontSize = 15.sp, modifier = Modifier.clickable { com.umutk.pulse.extras.notifhist.NotifHist.clear(c) }.padding(10.dp))
         }
     }
 }
