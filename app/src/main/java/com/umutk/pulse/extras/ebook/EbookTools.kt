@@ -42,6 +42,10 @@ object EbookPrefs {
     fun eink(c: Context): Boolean = p(c).getBoolean("eink", false)
     fun setEink(c: Context, on: Boolean) { p(c).edit().putBoolean("eink", on).apply() }
 
+    /** The shelf stands on a wooden background. */
+    fun wood(c: Context): Boolean = p(c).getBoolean("wood", true)
+    fun setWood(c: Context, on: Boolean) { p(c).edit().putBoolean("wood", on).apply() }
+
     /** Two rows for the reader's bottom bar. */
     fun double(c: Context): Boolean = p(c).getBoolean("double", false)
     fun setDouble(c: Context, on: Boolean) { p(c).edit().putBoolean("double", on).apply() }
