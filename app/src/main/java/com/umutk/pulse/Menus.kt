@@ -157,7 +157,6 @@ object ToolPlace {
         Tool("relay", "Relay", "Relay", "relay", true, "send", Icons.Outlined.SyncAlt, "extra"),
         Tool("recap", "Music recap", "Müzik özeti", "recap", true, "heart", Icons.Outlined.Equalizer, "extra"),
         Tool("speedtest", "Internet speed test", "İnternet hız testi", "speedtest", true, "speed", Icons.Outlined.Speed, "extra"),
-        Tool("chargewatts", "Charging power", "Şarj gücü", "chargewatts", true, "power", Icons.Outlined.BatteryChargingFull, "extra"),
         Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "settings", Icons.Outlined.Widgets, "extra"),
         Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "sensors", Icons.Outlined.Headphones, "extra"),
         Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "extra"),

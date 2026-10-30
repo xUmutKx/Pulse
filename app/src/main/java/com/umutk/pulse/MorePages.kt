@@ -144,6 +144,8 @@ fun DashboardPage() {
 fun BatteryPage() {
     val h by Sampler.history.collectAsState()
     LiveSections("Battery", 2000, top = {
+        // the charging power is part of the battery, not a tool of its own
+        com.umutk.pulse.extras.charging.ChargingPowerSection()
         PCard {
             Text("Current (mA)", color = T.sub, fontSize = 12.sp)
             Graph(listOf(h["ma"].orEmpty()), listOf(resColor("battery")), maxOf(500f, (h["ma"].orEmpty().maxOrNull() ?: 0f) * 1.2f), height = 80.dp)

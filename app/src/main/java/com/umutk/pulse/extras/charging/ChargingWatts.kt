@@ -91,10 +91,24 @@ class WattReader(private val c: Context) {
     fun minutesToFull(): Int = if (android.os.Build.VERSION.SDK_INT >= 28) bm.computeChargeTimeRemaining().let { if (it > 0) (it / 60_000L).toInt() else -1 } else -1
 }
 
+/** Charging power as a screen of its own (kept for the old route). */
 @Composable
 fun ChargingWattsScreen(back: () -> Unit) {
-    val ctx = LocalContext.current
     BackHandler { back() }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
+            Text(tr("Charging power", "Şarj gücü"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+        }
+        ChargingPowerSection()
+        Spacer(Modifier.height(16.dp))
+    }
+}
+
+/** The charging power card: the battery's live watts, the voltage and the graph. Used in Device > Battery. */
+@Composable
+fun ChargingPowerSection() {
+    val ctx = LocalContext.current
     val reader = remember { WattReader(ctx) }
     var s by remember { mutableStateOf<BatterySample?>(null) }
     var peakIn by remember { mutableDoubleStateOf(0.0) }
@@ -115,11 +129,7 @@ fun ChargingWattsScreen(back: () -> Unit) {
         }
     }
     val cur = s
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter)) {
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
-            Text(tr("Charging power", "Şarj gücü"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-        }
+    Column(Modifier.fillMaxWidth()) {
         if (cur == null) {
             Text(tr("This phone does not report the battery current, so the power cannot be shown.", "Bu telefon pil akımını bildirmiyor, güç gösterilemiyor."), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(16.dp))
             return@Column
@@ -150,9 +160,9 @@ fun ChargingWattsScreen(back: () -> Unit) {
             PowerGraph(graph)
         }
         Text(tr("Battery-side power: the wall adapter's figure is higher (conversion losses, and what the phone uses while it charges).", "Pil tarafındaki güç: duvar adaptörünün değeri daha yüksektir (dönüşüm kayıpları ve şarjda telefonun kendi harcaması)."), color = T.sub, fontSize = 11.sp, modifier = Modifier.padding(vertical = 8.dp))
-        Spacer(Modifier.height(16.dp))
     }
 }
+
 
 @Composable
 private fun Stat(value: String, label: String) {
