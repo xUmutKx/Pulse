@@ -1625,3 +1625,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) TempMail extra app: a random disposable address from mail.tm, its inbox and mail text; its own launcher icon (Material black, glyph white), in the store and the ⋮ menu (derlenmedi)
 - (sonraki derlemede) Extra apps: every app stays listed (also with its launcher icon); the "Show N hidden rows" line is removed (derlenmedi)
 - (sonraki derlemede) Weather map extra: world map (OpenStreetMap tiles) with temperature, precipitation, wind, clouds, waves (Open-Meteo) and live aircraft (OpenSky). Ships need an AIS key and are not included (derlenmedi)
+- (sonraki derlemede) Weather map: rain radar (RainViewer, newest frame) and satellite (NASA GIBS, yesterday) layers; both keyless (derlenmedi)
