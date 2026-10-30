@@ -163,11 +163,6 @@ open class ExtraToolActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // the clock is dark all over: its status bar gets the same colour, and light icons, so the time and the battery show on it
-        if (intent.getStringExtra("route") == "clock") {
-            window.statusBarColor = 0xFF0B0B16.toInt()
-            androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
-        }
         // every tool is one card in the recent apps: a second start of the same plain tool (any entry: menu, store, launcher, widget) brings the open one forward
         // a notification's request for a page of the music player is handed to the window in the process
         // several APKs picked in Files: the installer opens with them already read
