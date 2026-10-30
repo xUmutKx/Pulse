@@ -435,10 +435,8 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Toolkit", "Araç kutusu"), tr("A drawer of small utilities", "Küçük araçların bulunduğu çekmece"), "settings", "tool:toolkit") { openTool("toolkit") },
         BuiltinRow("Office", tr("Word, Excel, PowerPoint, PDF", "Word, Excel, PowerPoint, PDF"), "office", "tool:office") { openTool("office") },
         BuiltinRow(tr("Download manager", "İndirme yöneticisi"), tr("Downloads, pause and resume", "İndirmeler, duraklat ve devam ettir"), "download", "tool:download") { openTool("downloads") },
-        BuiltinRow(tr("App lock", "Uygulama kilidi"), tr("A PIN or fingerprint in front of apps", "Uygulamaların önünde PIN veya parmak izi"), "applock", "tool:applock") { openTool("applock") },
         BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health") { openTool("health") },
         BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
-        BuiltinRow(tr("Authenticator", "Kimlik doğrulayıcı"), tr("Two-factor codes", "İki adımlı doğrulama kodları"), "users", "tool:authenticator") { openTool("authenticator") },
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
     )
     // an app with its own launcher icon is listed on its own; the rest follow the per-row eye
