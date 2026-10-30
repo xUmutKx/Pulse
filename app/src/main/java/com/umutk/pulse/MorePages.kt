@@ -181,7 +181,7 @@ fun SecurityPage() {
                 ).forEach { (icon, label, go) ->
                     Column(Modifier.weight(1f).clickable { go() }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         PIcon(icon, T.accent, 26.dp)
-                        Text(label, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                        FitText(label, T.text, 13.sp, Modifier.padding(top = 6.dp), weight = FontWeight.Bold)
                     }
                 }
             }
