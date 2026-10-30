@@ -158,6 +158,14 @@ fun loadSmsThreads(c: Context, withNames: Boolean): List<SmsThread> {
             out[m.id] = SmsThread(m.id, addr, name, m.snippet, m.date)
         }
     }
+    // the texts Pulse keeps itself: a thread with a newer sent text moves to the top, and a new conversation is listed
+    for ((addr, body, date) in Outbox.latestPerAddress(c)) {
+        val old = out.values.firstOrNull { it.address == addr }
+        if (old == null) {
+            val id = -2L - (addr.hashCode().toLong() and 0x7fffffffL)
+            out[id] = SmsThread(id, addr, if (canNames) names.getOrPut(addr) { contactName(c, addr) } else null, body, date)
+        } else if (date > old.date) out[old.id] = SmsThread(old.id, old.address, old.name, body, date)
+    }
     out.values.forEach { it.unread = unread[it.id] ?: 0 }
     return out.values.sortedByDescending { it.date }
 }
@@ -220,6 +228,11 @@ object Outbox {
         return now
     }
     fun remove(c: Context, key: Long) { save(c, rows(c).filterNot { timeOf(it) == key }.toSet()) }
+    /** The newest outbox text of each address: (address, body, time). */
+    fun latestPerAddress(c: Context): List<Triple<String, String, Long>> = rows(c).mapNotNull { r ->
+        val p = r.split(SEP, limit = 3)
+        if (p.size < 3) null else Triple(p[1], p[2], timeOf(r))
+    }.groupBy { it.first }.map { (_, v) -> v.maxBy { it.third } }
     fun of(c: Context, address: String): List<SmsMsg> = rows(c).mapNotNull { r ->
         val p = r.split(SEP, limit = 3)
         if (p.size < 3 || p[1] != address) null else SmsMsg(p[2], true, timeOf(r))
@@ -442,10 +455,20 @@ fun MessagesScreen(back: () -> Unit) {
                 val addr = t.address
                 val pinned = addr in pins
                 val blocked = addr in blocks
-                if (addr.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(40.dp).clickable { pins = if (pinned) pins - addr else pins + addr; MsgPrefs.setPinned(ctx, pins) }, contentAlignment = Alignment.Center) { PIcon("pin", if (pinned) T.accent else T.sub, 22.dp) }
-                    Box(Modifier.size(40.dp).clickable { muted = if (addr in muted) muted - addr else muted + addr; MsgPrefs.setMuted(ctx, muted) }, contentAlignment = Alignment.Center) { PIcon("mute", if (addr in muted) T.accent else T.sub, 22.dp) }
-                    Box(Modifier.size(40.dp).clickable { blocks = if (blocked) blocks - addr else blocks + addr; MsgPrefs.setBlocked(ctx, blocks); if (!blocked) open = null }, contentAlignment = Alignment.Center) { PIcon("block", if (blocked) T.accent else T.sub, 22.dp) }
+                // one ⋮ for this contact: pin, mute and block are here, not as buttons of their own; block asks first
+                var threadMenu by remember { mutableStateOf(false) }
+                var blockAsk by remember { mutableStateOf(false) }
+                if (addr.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clickable { threadMenu = true }, contentAlignment = Alignment.Center) { PIcon("more", T.sub, 22.dp) }
+                    ThemedMenu(threadMenu, { threadMenu = false }) {
+                        ThemedMenuItem(if (pinned) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), { threadMenu = false; pins = if (pinned) pins - addr else pins + addr; MsgPrefs.setPinned(ctx, pins) }, iconKey = "pin")
+                        ThemedMenuItem(if (addr in muted) tr("Unmute", "Sesi aç") else tr("Mute", "Sessize al"), { threadMenu = false; muted = if (addr in muted) muted - addr else muted + addr; MsgPrefs.setMuted(ctx, muted) }, iconKey = "mute")
+                        ThemedMenuItem(if (blocked) tr("Unblock", "Engeli kaldır") else tr("Block", "Engelle"), { threadMenu = false; if (blocked) { blocks = blocks - addr; MsgPrefs.setBlocked(ctx, blocks) } else blockAsk = true }, iconKey = "block")
+                    }
+                    if (blockAsk) WinAlert(onDismissRequest = { blockAsk = false }, title = { Text(tr("Block this number?", "Bu numara engellensin mi?"), color = T.text) },
+                        text = { Text(addr, color = T.sub) },
+                        confirmButton = { PButton(tr("Block", "Engelle")) { blockAsk = false; blocks = blocks + addr; MsgPrefs.setBlocked(ctx, blocks); open = null } },
+                        dismissButton = { PButton(tr("Cancel", "İptal")) { blockAsk = false } })
                 }
                 if (threadSearch) PField(threadQuery, { threadQuery = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                 val list = msgs.orEmpty().filter { threadQuery.isBlank() || it.body.contains(threadQuery, true) }
