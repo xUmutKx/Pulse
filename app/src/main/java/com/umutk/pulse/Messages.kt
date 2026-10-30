@@ -158,6 +158,14 @@ fun loadSmsThreads(c: Context, withNames: Boolean): List<SmsThread> {
             out[m.id] = SmsThread(m.id, addr, name, m.snippet, m.date)
         }
     }
+    // the texts Pulse keeps itself: a thread with a newer sent text moves to the top, and a new conversation is listed
+    for ((addr, body, date) in Outbox.latestPerAddress(c)) {
+        val old = out.values.firstOrNull { it.address == addr }
+        if (old == null) {
+            val id = -2L - (addr.hashCode().toLong() and 0x7fffffffL)
+            out[id] = SmsThread(id, addr, if (canNames) names.getOrPut(addr) { contactName(c, addr) } else null, body, date)
+        } else if (date > old.date) out[old.id] = SmsThread(old.id, old.address, old.name, body, date)
+    }
     out.values.forEach { it.unread = unread[it.id] ?: 0 }
     return out.values.sortedByDescending { it.date }
 }
@@ -177,16 +185,59 @@ fun loadSmsThread(c: Context, tid: Long, address: String): List<SmsMsg> {
         while (cur.moveToNext()) out += SmsMsg(cur.getString(0).orEmpty(), cur.getInt(1) != Telephony.Sms.MESSAGE_TYPE_INBOX, cur.getLong(2))
     }
     if (byThread) out += MsgCore.loadMms(c, tid)
+    out += Outbox.of(c, address)
     out.sortBy { it.date }
     return out
 }
 
-/** Sends through the system SMS stack. The system stores the message, except when Pulse is the default SMS app (then Pulse does). False when the send is refused. */
-fun sendSms(c: Context, to: String, body: String): Boolean = runCatching {
-    val sm = smsManager(c)
-    sm.sendMultipartTextMessage(to, null, sm.divideMessage(body), null, null)
-    MsgCore.storeSent(c, to, body)
-}.isSuccess
+/** Sends through the system SMS stack. Every part reports back to [com.umutk.pulse.extras.messages.MsgSentReceiver]: the message is kept
+ *  (as Pulse's own sent message when Pulse is the default SMS app) only once the radio has really sent it, and a refusal is shown then.
+ *  False when the send is refused at once. */
+fun sendSms(c: Context, to: String, body: String): Boolean {
+    // the text shows in its thread at once; the report removes it again when the radio refuses it
+    val key = Outbox.add(c, to, body)
+    val ok = runCatching {
+        val sm = smsManager(c)
+        val parts = sm.divideMessage(body)
+        val base = (System.currentTimeMillis() and 0x7fffffffL).toInt()
+        val sent = parts.indices.map { i ->
+            val report = Intent(com.umutk.pulse.extras.messages.MsgSentReceiver.ACTION)
+                .setClass(c, com.umutk.pulse.extras.messages.MsgSentReceiver::class.java)
+                .putExtra("address", to).putExtra("body", body).putExtra("key", key).putExtra("last", i == parts.lastIndex)
+            android.app.PendingIntent.getBroadcast(c, base + i, report, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+        }
+        sm.sendMultipartTextMessage(to, null, parts, ArrayList(sent), null)
+        true
+    }.getOrDefault(false)
+    if (!ok) Outbox.remove(c, key)
+    return ok
+}
+
+/** Sent texts Pulse keeps itself: the system does not write a sent text when another app is the default SMS app, so the thread would show nothing. */
+object Outbox {
+    private const val SEP = '\u0001'
+    private fun sp(c: Context) = c.getSharedPreferences("msg_outbox", Context.MODE_PRIVATE)
+    private fun rows(c: Context): Set<String> = sp(c).getStringSet("rows", emptySet()).orEmpty()
+    private fun save(c: Context, r: Set<String>) { sp(c).edit().putStringSet("rows", r).apply() }
+    private fun timeOf(row: String) = row.substringBefore(SEP).toLongOrNull() ?: 0L
+
+    /** Adds a text, keeps the newest 500; returns its key, which [remove] takes. */
+    fun add(c: Context, address: String, body: String): Long {
+        val now = System.currentTimeMillis()
+        save(c, (rows(c).sortedBy { timeOf(it) }.takeLast(499) + "$now$SEP$address$SEP$body").toSet())
+        return now
+    }
+    fun remove(c: Context, key: Long) { save(c, rows(c).filterNot { timeOf(it) == key }.toSet()) }
+    /** The newest outbox text of each address: (address, body, time). */
+    fun latestPerAddress(c: Context): List<Triple<String, String, Long>> = rows(c).mapNotNull { r ->
+        val p = r.split(SEP, limit = 3)
+        if (p.size < 3) null else Triple(p[1], p[2], timeOf(r))
+    }.groupBy { it.first }.map { (_, v) -> v.maxBy { it.third } }
+    fun of(c: Context, address: String): List<SmsMsg> = rows(c).mapNotNull { r ->
+        val p = r.split(SEP, limit = 3)
+        if (p.size < 3 || p[1] != address) null else SmsMsg(p[2], true, timeOf(r))
+    }
+}
 
 /** Sends the file at [uri] (with [text] as its text) as MMS. The library builds the MMS PDU; the system MMS stack sends it.
  *  shortcut: the whole file is read into memory, and most carriers refuse MMS above about 300 KB. False when refused. */
@@ -298,16 +349,19 @@ fun MessagesScreen(back: () -> Unit) {
             th.name?.contains(query, true) == true || th.address.contains(query) || th.snippet.contains(query, true) }
         hit.sortedWith(compareByDescending<SmsThread> { it.address in pins }.thenByDescending { unreadFirst && it.unread > 0 })
     }
+    // a number typed in "New message" still shows the contact's name
+    val openName = remember(t?.address) { t?.let { it.name ?: contactName(ctx, it.address) } }
     val title = when {
         settings -> tr("Settings", "Ayarlar")
         newMode -> tr("New message", "Yeni mesaj")
-        t != null -> t.name ?: t.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
+        t != null -> openName ?: t.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
         else -> tr("Messages", "Mesajlar")
     }
 
     Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).statusBarsPadding().navigationBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            MessagesIcon("back") { goBack() }
+            // the arrow leads out of a thread, New message or Settings; the list has none (the system back still leaves)
+            if (t != null || newMode || settings) MessagesIcon("back") { goBack() }
             // a long press on the contact or number in a thread copies the number
             Box(Modifier.weight(1f)) {
                 Text(title, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,
@@ -392,7 +446,7 @@ fun MessagesScreen(back: () -> Unit) {
                                 onArchive = { archives = archives + th.address; MsgPrefs.setArchived(ctx, archives) },
                                 onBlock = { blocks = blocks + th.address; MsgPrefs.setBlocked(ctx, blocks) }) }
                         }
-                            Box(Modifier.align(Alignment.BottomEnd).padding(18.dp).size(56.dp).clip(CircleShape).background(T.accent).clickable { newMode = true; newTo = "" }, contentAlignment = Alignment.Center) { PIcon("add", androidx.compose.ui.graphics.Color.White, 26.dp) }
+                            Box(Modifier.align(Alignment.BottomEnd).padding(18.dp).size(56.dp).clip(CircleShape).background(T.accent).clickable { newMode = true; newTo = "" }, contentAlignment = Alignment.Center) { PIcon("add", onAccent(T.accent), 26.dp) }
                         }
                     }
                 }
@@ -401,10 +455,20 @@ fun MessagesScreen(back: () -> Unit) {
                 val addr = t.address
                 val pinned = addr in pins
                 val blocked = addr in blocks
-                if (addr.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(40.dp).clickable { pins = if (pinned) pins - addr else pins + addr; MsgPrefs.setPinned(ctx, pins) }, contentAlignment = Alignment.Center) { PIcon("pin", if (pinned) T.accent else T.sub, 22.dp) }
-                    Box(Modifier.size(40.dp).clickable { muted = if (addr in muted) muted - addr else muted + addr; MsgPrefs.setMuted(ctx, muted) }, contentAlignment = Alignment.Center) { PIcon("mute", if (addr in muted) T.accent else T.sub, 22.dp) }
-                    Box(Modifier.size(40.dp).clickable { blocks = if (blocked) blocks - addr else blocks + addr; MsgPrefs.setBlocked(ctx, blocks); if (!blocked) open = null }, contentAlignment = Alignment.Center) { PIcon("block", if (blocked) T.accent else T.sub, 22.dp) }
+                // one ⋮ for this contact: pin, mute and block are here, not as buttons of their own; block asks first
+                var threadMenu by remember { mutableStateOf(false) }
+                var blockAsk by remember { mutableStateOf(false) }
+                if (addr.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clickable { threadMenu = true }, contentAlignment = Alignment.Center) { PIcon("more", T.sub, 22.dp) }
+                    ThemedMenu(threadMenu, { threadMenu = false }) {
+                        ThemedMenuItem(if (pinned) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), { threadMenu = false; pins = if (pinned) pins - addr else pins + addr; MsgPrefs.setPinned(ctx, pins) }, iconKey = "pin")
+                        ThemedMenuItem(if (addr in muted) tr("Unmute", "Sesi aç") else tr("Mute", "Sessize al"), { threadMenu = false; muted = if (addr in muted) muted - addr else muted + addr; MsgPrefs.setMuted(ctx, muted) }, iconKey = "mute")
+                        ThemedMenuItem(if (blocked) tr("Unblock", "Engeli kaldır") else tr("Block", "Engelle"), { threadMenu = false; if (blocked) { blocks = blocks - addr; MsgPrefs.setBlocked(ctx, blocks) } else blockAsk = true }, iconKey = "block")
+                    }
+                    if (blockAsk) WinAlert(onDismissRequest = { blockAsk = false }, title = { Text(tr("Block this number?", "Bu numara engellensin mi?"), color = T.text) },
+                        text = { Text(addr, color = T.sub) },
+                        confirmButton = { PButton(tr("Block", "Engelle")) { blockAsk = false; blocks = blocks + addr; MsgPrefs.setBlocked(ctx, blocks); open = null } },
+                        dismissButton = { PButton(tr("Cancel", "İptal")) { blockAsk = false } })
                 }
                 if (threadSearch) PField(threadQuery, { threadQuery = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                 val list = msgs.orEmpty().filter { threadQuery.isBlank() || it.body.contains(threadQuery, true) }
@@ -454,10 +518,10 @@ fun MessagesScreen(back: () -> Unit) {
                     MessagesIcon("close") { attach.remove(addr) }
                 }
                 Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    MessagesIcon("attach") { pickFor = addr; pickFile.launch("*/*") }
+                    MessagesIcon("attach", black = true) { pickFor = addr; pickFile.launch("*/*") }
                     PField(draft, { drafts[addr] = it }, tr("Message", "Mesaj"), Modifier.weight(1f), onDone = { sendNow() })
                     Spacer(Modifier.width(8.dp))
-                    MessagesIcon("send") { sendNow() }
+                    MessagesIcon("send", black = true) { sendNow() }
                 }
             }
         }
@@ -465,8 +529,8 @@ fun MessagesScreen(back: () -> Unit) {
 }
 
 @Composable
-private fun MessagesIcon(key: String, onClick: () -> Unit) {
-    Box(Modifier.size(40.dp).clickable(onClick = onClick), contentAlignment = Alignment.Center) { PIcon(key, T.text, 22.dp) }
+private fun MessagesIcon(key: String, black: Boolean = false, onClick: () -> Unit) {
+    Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (black) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.Transparent).clickable(onClick = onClick), contentAlignment = Alignment.Center) { PIcon(key, if (black) androidx.compose.ui.graphics.Color.White else T.text, 22.dp) }
 }
 
 @Composable

@@ -51,7 +51,6 @@ internal val CONTROL_PANEL = listOf(
         CpItem("download", "Files by type", "Türe göre dosyalar", "Pictures, video, music, documents", "Resimler, videolar, müzik, belgeler", "typebreak"),
     )),
     CpGroup("Network and Internet", "Ağ ve İnternet", listOf(
-        CpItem("globe", "Network usage", "Ağ kullanımı", "Data used by each app", "Her uygulamanın kullandığı veri", "netusage"),
         CpItem("globe", "DNS and TTL", "DNS ve TTL", "Private DNS and packet TTL", "Özel DNS ve paket TTL", "dns"),
     )),
     CpGroup("Appearance and Personalization", "Görünüm ve Kişiselleştirme", listOf(

@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.alpha
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -157,9 +161,10 @@ fun ExtraStoreScreen(onBack: () -> Unit = {}) {
         Column(Modifier.fillMaxSize()) {
             StoreHeader(tr("Extra apps", "Ek uygulamalar"), onBack, onSearch = null)
             // a plain list of the extra apps: the built-in ones, then any downloadable module, nothing above them
-            LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            LazyColumn(Modifier.weight(1f).padding(horizontal = 16.dp), state = ExtraListScroll.state, verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 item { BuiltinRows() }
-                items(entries, key = { it.key }) { e ->
+                // only the modules already downloaded are listed here; the rest stay in the store
+                items(entries.filter { inList(states[it.key] ?: ModuleState.NOT_INSTALLED) }, key = { it.key }) { e ->
                     StoreRow(e, states[e.key] ?: ModuleState.NOT_INSTALLED, progress[e.key], errors[e.key],
                         onOpen = { openKey = e.key }, onRemove = { askRemove = it })
                 }
@@ -209,7 +214,6 @@ private fun StoreRow(e: StoreEntry, st: ModuleState, pct: Float?, error: String?
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Text(e.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                    Text(e.subtitle, color = T.sub, fontSize = 12.sp)
                 }
                 EntryAction(e, st, onRemove)
             }
@@ -366,14 +370,45 @@ private fun StoreDetail(
 /** [place]: "app:<alias>" or "tool:<id>" when the row has a switch for being listed in the right-hand ⋮ menu (Extra apps). */
 private class BuiltinRow(val name: String, val sub: String, val icon: String, val place: String? = null, val onClick: () -> Unit)
 
+/** The icon key of a row: in Windows 11 the Fluent picture of the tool or app ("tool:clock" -> tool_clock, "app:BrowserLauncher" -> extraBrowser), else the row's own key. */
+private fun rowKey(r: BuiltinRow): String {
+    if (!(T.id == "win11" && !T.material)) return r.icon
+    val p = r.place ?: return r.icon
+    val k = if (p.startsWith("tool:")) "tool_" + p.removePrefix("tool:") else "extra" + p.removePrefix("app:").removeSuffix("Launcher")
+    return if (com.umutk.pulse.FluentFilled.map.containsKey(k) || com.umutk.pulse.FluentPaths.map.containsKey(k)) k else r.icon
+}
+
+/** The rows of the Extra apps list the user hid (a long press on a row): kept by their place key, or the name when a row has none. */
+object ExtraRowsHidden {
+    private fun sp(c: android.content.Context) = c.getSharedPreferences("store_rows", android.content.Context.MODE_PRIVATE)
+    fun load(c: android.content.Context): Set<String> = sp(c).getStringSet("hidden", emptySet()).orEmpty().toSet()
+    fun save(c: android.content.Context, keys: Set<String>) { sp(c).edit().putStringSet("hidden", keys).apply() }
+    /** The list of extra apps as tiles (icon and name) or as rows with their description. */
+    fun grid(c: android.content.Context) = sp(c).getBoolean("grid", false)
+    fun setGrid(c: android.content.Context, on: Boolean) { sp(c).edit().putBoolean("grid", on).apply() }
+    /** Whether the ⋮ menu lists Extra apps at all; on by default. */
+    fun menuOn(c: android.content.Context) = sp(c).getBoolean("menu_on", true)
+    fun setMenuOn(c: android.content.Context, on: Boolean) { sp(c).edit().putBoolean("menu_on", on).apply() }
+    /** An app that has its own launcher icon switched on is started from its icon, so it is not listed here. */
+    fun launcherIconOn(c: android.content.Context, alias: String): Boolean =
+        c.packageManager.getComponentEnabledSetting(android.content.ComponentName(c, "com.umutk.pulse.$alias")) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
+}
+
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun BuiltinRows() {
     val ctx = LocalContext.current
+    var hidden by remember { mutableStateOf(ExtraRowsHidden.load(ctx)) }
+    var showHidden by remember { mutableStateOf(false) }
     val openTool = LocalOpenTool.current
+    var menuOn by remember { mutableStateOf(ExtraRowsHidden.menuOn(ctx)) }
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(tr("Show Extra apps in the ⋮ menu", "Ek uygulamaları ⋮ menüsünde göster"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        PSwitch(menuOn, { menuOn = it; ExtraRowsHidden.setMenuOn(ctx, it) })
+    }
     val rows = listOf(
         BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
         BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image", "app:VideoLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
-        BuiltinRow(tr("White noise", "Beyaz gürültü"), tr("Calm sounds you mix and loop", "Karıştırıp döngüye aldığın sakin sesler"), "volume", "app:WhiteNoiseLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "whitenoise") },
         BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder", "app:FilesLauncher") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },
         BuiltinRow(tr("Photos", "Fotoğraflar"), tr("Pictures and videos", "Resimler ve videolar"), "image", "app:PhotosLauncher") { launchExtra(ctx, "com.umutk.pulse.ImageViewActivity") },
         BuiltinRow(tr("Calendar", "Takvim"), tr("Events and reminders", "Etkinlikler ve hatırlatıcılar"), "calendar", "app:CalendarLauncher") { launchExtra(ctx, "com.umutk.pulse.CalendarActivity") },
@@ -388,10 +423,9 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Screen recorder", "Ekran kaydı"), tr("Record the screen", "Ekranı kaydet"), "record", "app:ScreenRecLauncher") { openTool("screenrec") },
         BuiltinRow(tr("Calculator", "Hesap makinesi"), tr("Standard, scientific, graphing (also 3D), converter", "Standart, bilimsel, grafik (3D dahil), dönüştürücü"), "calc", "app:CalculatorLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "calculator") },
         BuiltinRow(tr("Keyboard", "Klavye"), tr("Pulse keyboard: themes, swipe typing, autocorrect", "Pulse klavyesi: temalar, kaydırarak yazma, otomatik düzeltme"), "keyboard", "app:KeyboardLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "keyboard") },
-        BuiltinRow(tr("Speed test", "Hız testi"), tr("Internet speed: ping, download, upload, provider", "İnternet hızı: ping, indirme, yükleme, sağlayıcı"), "speed", "tool:speedtest") { openTool("speedtest") },
+        BuiltinRow(tr("Clock", "Saat"), tr("Alarms, world clock, stopwatch, timer", "Alarm, dünya saati, kronometre, zamanlayıcı"), "timer", "tool:clock") { openTool("clock") },
         BuiltinRow(tr("Buds manager", "Buds yöneticisi"), tr("Galaxy Buds: stop the music and noise control when taken out", "Galaxy Buds: çıkarınca müzik ve gürültü denetimi dursun"), "sensors", "tool:buds") { openTool("buds") },
         BuiltinRow("Paint", tr("Draw and edit pictures", "Resim çiz ve düzenle"), "palette", "app:PaintLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "paint") },
-        BuiltinRow("LocalSend", tr("Send files to nearby devices", "Yakındaki cihazlara dosya gönder"), "wifi", "app:LocalSendLauncher") { openTool("localsend") },
         BuiltinRow("BlackOut", tr("Greys to true black on AMOLED: LSPosed module, colour rules, dropper, dark pages", "AMOLED'de griler gerçek siyah: LSPosed modülü, renk kuralları, damlalık, koyu sayfalar"), "shield", "app:BlackOutLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "blackout") },
         BuiltinRow("Island", tr("A pill over the camera: the song, notifications, charger, headset, volume, torch and screenshots", "Kameranın üstünde bir hap: şarkı, bildirimler, şarj, kulaklık, ses, fener ve ekran görüntüleri"), "phone", "app:IslandLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "island") },
         BuiltinRow(tr("Voice", "Ses kaydı"), tr("Voice recordings", "Ses kayıtları"), "menu", "app:VoiceLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "voice") },
@@ -401,46 +435,59 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Toolkit", "Araç kutusu"), tr("A drawer of small utilities", "Küçük araçların bulunduğu çekmece"), "settings", "tool:toolkit") { openTool("toolkit") },
         BuiltinRow("Office", tr("Word, Excel, PowerPoint, PDF", "Word, Excel, PowerPoint, PDF"), "office", "tool:office") { openTool("office") },
         BuiltinRow(tr("Download manager", "İndirme yöneticisi"), tr("Downloads, pause and resume", "İndirmeler, duraklat ve devam ettir"), "download", "tool:download") { openTool("downloads") },
-        BuiltinRow(tr("App lock", "Uygulama kilidi"), tr("A PIN or fingerprint in front of apps", "Uygulamaların önünde PIN veya parmak izi"), "applock", "tool:applock") { openTool("applock") },
         BuiltinRow(tr("Health", "Sağlık"), tr("Steps, heart rate, sleep", "Adım, nabız, uyku"), "heart", "tool:health") { openTool("health") },
         BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
-        BuiltinRow(tr("Authenticator", "Kimlik doğrulayıcı"), tr("Two-factor codes", "İki adımlı doğrulama kodları"), "users", "tool:authenticator") { openTool("authenticator") },
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
-        BuiltinRow(tr("Network usage", "Ağ kullanımı"), tr("Wi-Fi and mobile data, app by app", "Wi-Fi ve mobil veri, uygulama uygulama"), "speed", "tool:netusage") { openTool("netusage") },
     )
-    rows.forEach { r ->
-        Row(Modifier.fillMaxWidth().clickable { r.onClick() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            PIcon(r.icon, T.text, 26.dp)
+    // an app with its own launcher icon is listed on its own; the rest follow the per-row eye
+    // a tool switched off in Settings > Extra apps is not listed here either
+    val visible = rows.filter { r -> val p = r.place.orEmpty(); !(p.startsWith("app:") && ExtraRowsHidden.launcherIconOn(ctx, p.removePrefix("app:"))) }
+        .filter { r -> val p = r.place.orEmpty(); !(p.startsWith("tool:") && com.umutk.pulse.ToolPlace.byId(p.removePrefix("tool:"))?.let { com.umutk.pulse.ToolPlace.where(ctx, it) == "hidden" } == true) }
+        .filter { showHidden || (it.place ?: it.name) !in hidden }
+    // tiles or rows: the choice is kept
+    var grid by remember { mutableStateOf(ExtraRowsHidden.grid(ctx)) }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        Box(Modifier.size(40.dp).clickable { grid = !grid; ExtraRowsHidden.setGrid(ctx, grid) }, contentAlignment = Alignment.Center) { PIcon(if (grid) "menu" else "apps", T.text, 22.dp) }
+    }
+    if (grid) visible.chunked(3).forEach { line ->
+        Row(Modifier.fillMaxWidth()) {
+            line.forEach { r ->
+                val key = r.place ?: r.name
+                val isHidden = key in hidden
+                Column(Modifier.weight(1f).combinedClickable(onClick = { r.onClick() }, onLongClick = {
+                    hidden = if (isHidden) hidden - key else hidden + key
+                    ExtraRowsHidden.save(ctx, hidden)
+                }).alpha(if (isHidden) .45f else 1f).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    PIcon(rowKey(r), T.text, 34.dp)
+                    Text(r.name, color = T.text, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
+                }
+            }
+            repeat(3 - line.size) { Spacer(Modifier.weight(1f)) }
+        }
+    } else visible.forEach { r ->
+        val key = r.place ?: r.name
+        val isHidden = key in hidden
+        Row(Modifier.fillMaxWidth().combinedClickable(onClick = { r.onClick() }, onLongClick = {
+            hidden = if (isHidden) hidden - key else hidden + key
+            ExtraRowsHidden.save(ctx, hidden)
+        }).alpha(if (isHidden) .45f else 1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon(rowKey(r), T.text, 26.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(r.name, color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                 Text(r.sub, color = T.sub, fontSize = 12.sp)
             }
-            // separate from the ⋮ menu's own chevron (Settings > Extra apps): this switch only decides whether the row is also listed there.
-            // AppPlace/ToolPlace keep their state in a mutableStateMapOf, so reading .where() here already recomposes the switch on a change.
-            r.place?.let { p ->
-                when {
-                    p.startsWith("app:") -> {
-                        val alias = p.removePrefix("app:")
-                        PSwitch(com.umutk.pulse.AppPlace.where(alias) != "hidden", { on -> com.umutk.pulse.AppPlace.set(ctx, alias, if (!on) "hidden" else if (com.umutk.pulse.AppPlace.where(alias) == "hidden") "menu" else com.umutk.pulse.AppPlace.where(alias)) })
-                    }
-                    p.startsWith("tool:") -> {
-                        val t = com.umutk.pulse.ToolPlace.byId(p.removePrefix("tool:"))
-                        if (t != null) PSwitch(com.umutk.pulse.ToolPlace.where(ctx, t) != "hidden", { on -> com.umutk.pulse.ToolPlace.set(ctx, t, if (!on) "hidden" else if (com.umutk.pulse.ToolPlace.where(ctx, t) == "hidden") "extra" else com.umutk.pulse.ToolPlace.where(ctx, t)) })
-                    }
-                }
+            // the eye: hides or shows this row here and in the ⋮ menu's Extra apps list (the long press does the same)
+            Box(Modifier.size(40.dp).clickable { hidden = if (isHidden) hidden - key else hidden + key; ExtraRowsHidden.save(ctx, hidden) }, contentAlignment = Alignment.Center) {
+                PIcon(if (isHidden) "eyeOff" else "eyeOn", T.sub, 20.dp)
             }
         }
     }
-    // off by default; when on, the page is listed in the ⋮ menu
-    var notif by remember { mutableStateOf(NotifHist.enabled(ctx)) }
-    Row(Modifier.fillMaxWidth().clickable { if (notif) openTool("notifhist") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        PIcon("info", T.text, 26.dp)
-        Spacer(Modifier.width(12.dp))
-        Column(Modifier.weight(1f)) {
-            Text(tr("Notification history", "Bildirim geçmişi"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Text(tr("Saves the notifications you get", "Aldığın bildirimleri kaydeder"), color = T.sub, fontSize = 12.sp)
-        }
-        PSwitch(notif, { notif = it; NotifHist.setEnabled(ctx, it) })
+    // the hidden rows: a line that shows them again (long press on a shown row hides it, on a hidden one brings it back)
+    if (hidden.isNotEmpty()) Row(Modifier.fillMaxWidth().clickable { showHidden = !showHidden }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(if (showHidden) tr("Hide the hidden rows", "Gizli satırları gizle") else tr("Show ${hidden.size} hidden rows", "${hidden.size} gizli satırı göster"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
     }
 }
+
+/** The scroll position of the Extra apps list lives here, so it is where it was left after an app opened from it is closed. */
+object ExtraListScroll { val state = LazyListState() }

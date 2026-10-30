@@ -139,10 +139,10 @@ fun WinampPlaylistWindow(
                     val col = if (on) c.current else c.normal
                     val fs = maxOf(9f * dpPer, 12f).sp
                     Text(
-                        "${i + 1}. ${trackLabel(t)}", color = col, fontFamily = FontFamily.SansSerif, fontSize = fs,
+                        "${i + 1}. ${trackLabel(t)}", color = col, fontFamily = com.umutk.pulse.BundledFonts.first { it.first == "Press Start 2P" }.second, fontSize = fs,
                         maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f),
                     )
-                    if (t.durationSec >= 0) Text(formatTime(t.durationSec * 1000), color = col, fontFamily = FontFamily.SansSerif, fontSize = fs, maxLines = 1)
+                    if (t.durationSec >= 0) Text(formatTime(t.durationSec * 1000), color = col, fontFamily = com.umutk.pulse.BundledFonts.first { it.first == "Press Start 2P" }.second, fontSize = fs, maxLines = 1)
                 }
             }
         }

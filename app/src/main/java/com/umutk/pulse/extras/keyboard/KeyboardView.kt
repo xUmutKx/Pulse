@@ -2,6 +2,7 @@
 package com.umutk.pulse.extras.keyboard
 
 import androidx.compose.material.icons.rounded.SwapHoriz
+import androidx.compose.material.icons.rounded.AlternateEmail
 import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material.icons.rounded.ChevronRight
@@ -266,7 +267,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
 private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
     Column(Modifier.onSizeChanged { if (p == "keys" && it.height > 0) st.keysH = it.height }) {
         when (p) {
-            "emoji" -> EmojiPanel(th, st, act, keyH)
+            // the emoji page is opaque: what is behind it (the gamepad, the arrows of the bar) does not show through
+            "emoji" -> Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "gamepad" -> GamepadPanel(th, act)
@@ -408,8 +410,13 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
             }
         } else {
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
-                st.slots.forEachIndexed { i, s ->
-                    Box(Modifier.weight(1f).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.slotLong(i) }), contentAlignment = Alignment.Center) {
+                // long words get more of the bar; when three would not fit whole, the last one steps aside so no word is cut with dots
+                val plainLen = st.slots.map { if (it.startsWith("\u0001") || it.startsWith("\u0002")) 0 else it.length }
+                val crowded = st.slots.count { it.isNotEmpty() } == 3 && plainLen.sum() > 26 && !st.slots[2].startsWith("\u0001") && !st.slots[2].startsWith("\u0002")
+                st.slots.forEachIndexed { i, s0 ->
+                    val s = if (crowded && i == 2) "" else s0
+                    val wt = if (s.isEmpty() && crowded && i == 2) 0.001f else (s.length / 9f).coerceIn(1f, 2.2f)
+                    Box(Modifier.weight(wt).fillMaxSize().combinedClickable(enabled = s.isNotEmpty(), onClick = { if (st.banAsk == i) act.banSlot(i) else act.slot(i) }, onLongClick = { act.longFeedback(); act.slotLong(i) }), contentAlignment = Alignment.Center) {
                         if (st.banAsk == i) Icon(Icons.Rounded.Block, tr("Never suggest", "Bir daha önerme"), tint = th.accent, modifier = Modifier.size(26.dp))
                         else if (s.startsWith("\u0002")) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
                             st.shotThumb?.let { Image(it, null, Modifier.size(26.dp).clip(RoundedCornerShape(5.dp)), contentScale = ContentScale.Crop) }
@@ -499,14 +506,14 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
     }
 }
 
-private fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
+internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
     "clip", "paste" -> kbIcon(th, "ContentPaste"); "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
     "theme" -> kbIcon(th, "Palette"); "settings" -> kbIcon(th, "Settings"); "lang", "languages" -> kbIcon(th, "Language"); "onehand" -> kbIcon(th, "TouchApp")
     "autocorrect" -> kbIcon(th, "Spellcheck"); "glide" -> kbIcon(th, "Gesture")
-    "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; else -> kbIcon(th, "Keyboard")
+    "voice" -> Icons.Rounded.Mic; "translate" -> Icons.Rounded.Translate; "email" -> Icons.Rounded.AlternateEmail; else -> kbIcon(th, "Keyboard")
 }
 
 /** What a long press on this kind of key does, from Settings > Keyboard. */
@@ -521,9 +528,10 @@ private fun runHold(a: KbActions, id: String) = when (id) { "emoji" -> a.emojiPa
 
 /** The small icon at the top of a key whose long press runs an action. */
 @Composable
-private fun androidx.compose.foundation.layout.BoxScope.HoldHint(th: KbTheme, kind: KeyKind) {
+private fun androidx.compose.foundation.layout.BoxScope.HoldHint(th: KbTheme, kind: KeyKind, listening: Boolean = false) {
     val h = holdOf(kind)
-    if (h != "none") Icon(toolIcon(th, h), null, tint = th.text.copy(alpha = .55f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(13.dp))
+    // the speech icon turns to the accent while it listens
+    if (h != "none") Icon(toolIcon(th, h), null, tint = if (listening) th.accent else th.text.copy(alpha = .7f), modifier = Modifier.align(Alignment.TopCenter).padding(top = 3.dp).size(15.dp))
 }
 
 private fun toolOn(id: String, st: KbState) = when (id) { "incognito" -> st.incognito; "autocorrect" -> KeyboardPrefs.autocorrect; "onehand" -> KeyboardPrefs.oneHand != "off"; "glide" -> KeyboardPrefs.glide; "arrows" -> KeyboardPrefs.arrows; "keyset" -> st.panel == "keyset"; "proRow" -> KeyboardPrefs.proRow; "numbers" -> KeyboardPrefs.numberRow; "layout" -> st.panel == "layout" || st.forceLayout != null; else -> false }
@@ -538,6 +546,8 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val lang = KeyboardLayouts.lang(if (st.lang in langs) st.lang else langs.first())
     val rows = KeyboardLayouts.letterRows(lang.code, up, digits)
     val n1 = rows[0].size.toFloat()
+    // the direction keyboard: nine swipe keys (letters page only; the symbol pages stay the ordinary ones)
+    if (KeyboardPrefs.dirLayout && st.page == 0) { ThumbPanel(th, st, act, keyH); return }
     if (KeyboardPrefs.proRow && !KeyboardPrefs.proBottom) ExtraRow(th, st, act, keyH)
     if (KeyboardPrefs.arrows) {
         // the key bar: Fn (its twelve keys open from it), Shift, the arrows, Home / End, Page up / down, Esc, Tab and the editing keys
@@ -595,10 +605,10 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     Box {
     Row(Modifier.fillMaxWidth()) {
         if (low && st.page == 0) Key(th, st, act, KbKey("", KeyKind.SHIFT, 1f), bh)
-        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, if (low) 1.0f else 1.2f), bh)
+        Key(th, st, act, KbKey(if (st.page == 0) "?123" else "abc", KeyKind.MODE, (if (low) 1.0f else 1.2f) * (1f - KeyboardPrefs.modeShrink / 100f)), bh)
         // the key beside ?123: the three-dot menu, the emoji panel, or nothing (the emoji stay under a long press on the comma)
         if (KeyboardPrefs.bottomKey != "none" && st.page == 0) Key(th, st, act, KbKey("", if (KeyboardPrefs.bottomKey == "emoji") KeyKind.EMOJI else KeyKind.MENU, 1f), bh)
-        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f, if (KeyboardPrefs.bottomKey == "emoji") KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), bh)
+        Key(th, st, act, KbKey(",", KeyKind.COMMA, 1f - KeyboardPrefs.commaShrink / 100f, if (KeyboardPrefs.bottomKey == "emoji") KeyboardLayouts.popupComma else listOf("😀") + KeyboardLayouts.popupComma), bh)
         Key(th, st, act, KbKey(if (KeyboardPrefs.spaceLabel) lang.name else "", KeyKind.SPACE, if (low) 4.25f else 4.3f), bh)
         Key(th, st, act, KbKey(".", KeyKind.PERIOD, 1f, KeyboardLayouts.popupPeriod), bh)
         Key(th, st, act, KbKey("", KeyKind.ENTER, 1.5f), bh)
@@ -897,7 +907,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                         Text(k.alts.first(), color = th.text.copy(alpha = .75f), fontSize = 11.sp, modifier = Modifier.align(Alignment.TopEnd).padding(top = 2.dp, end = 5.dp))
                     }
                     // a small icon above the comma or the period says what its long press does
-                    if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind)
+                    if ((k.kind == KeyKind.COMMA || k.kind == KeyKind.PERIOD) && !small) HoldHint(th, k.kind, st.listening)
                     Text(k.label, color = fg, fontSize = if (small) (fs.value * .82f).sp else fs, maxLines = 1)
                 }
             }
@@ -1098,12 +1108,6 @@ private fun MenuPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
     val ids = KeyboardPrefs.menuItems.split(',').filter { id -> ExtraKeys.menu.any { it.first == id } }
     val items = ids.map { id -> MenuItem(id, toolIcon(th, id), ExtraKeys.menu.first { it.first == id }.second, toolOn(id, st)) } + MenuItem("back", kbIcon(th, "Keyboard"), "Keys")
     Column(Modifier.fillMaxWidth().height(panelHeight(st, keyH)).background(th.menu)) {
-    // the head: back to the keys, and the two things looked for most (settings, themes) one tap away
-    Row(Modifier.fillMaxWidth().height(44.dp).padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        BarIcon(th, kbIcon(th, "ArrowBack")) { st.panel = "keys" }
-        BarIcon(th, kbIcon(th, "Settings")) { act.menu("settings") }
-        BarIcon(th, kbIcon(th, "Palette")) { act.menu("theme") }
-    }
     LazyVerticalGrid(GridCells.Fixed(4), Modifier.fillMaxWidth().weight(1f)) {
         items(items) { m ->
             Column(
@@ -1136,7 +1140,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 Text(tr("Cancel", "Vazgeç"), color = th.sub, fontSize = 14.sp, modifier = Modifier.clickable { act.clipShortcutCancel() }.padding(8.dp))
             }
             Row(Modifier.fillMaxWidth().height(36.dp).padding(horizontal = 12.dp).clip(RoundedCornerShape(10.dp)).background(th.special).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(if (naming.isEmpty()) tr("e.g. address", "örn. adres") else naming, color = if (naming.isEmpty()) th.sub else th.text, fontSize = 16.sp, maxLines = 1)
+                Text(if (naming.isEmpty()) "\u258F" + tr("e.g. address", "örn. adres") else naming + "\u258F", color = if (naming.isEmpty()) th.sub else th.text, fontSize = 16.sp, maxLines = 1)
             }
             Text(target?.text.orEmpty().replace('\n', ' '), color = th.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
             KeysPanel(th, st, act, keyH)
@@ -1155,8 +1159,8 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         }
         menuFor?.let { m ->
             Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(kbIcon(th, "Gesture"), tr("Pin", "Sabitle"), tint = if (m.pinned) th.accent else th.text, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp).padding(10.dp))
-                if (m.image == null) Icon(kbIcon(th, "TouchApp"), tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
+                Icon(kbIcon(th, "PushPin"), tr("Pin", "Sabitle"), tint = if (m.pinned) th.accent else th.text, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp).padding(10.dp))
+                if (m.image == null) Icon(kbIcon(th, "Bolt"), tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
                 Icon(kbIcon(th, "Check"), tr("Select", "Seç"), tint = th.text, modifier = Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp).padding(10.dp))
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 Text("✕", color = th.sub, fontSize = 16.sp, modifier = Modifier.clickable { menuFor = null }.padding(10.dp))
@@ -1185,7 +1189,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                         .combinedClickable(onClick = { if (selecting) sel = if (it2.id in sel) sel - it2.id else sel + it2.id else act.pasteClip(it2) }, onLongClick = { menuFor = it2 })
                         .padding(horizontal = 10.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(34.dp).clickable { act.clipPin(it2.id) }, contentAlignment = Alignment.Center) {
-                            Icon(kbIcon(th, "Gesture"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
+                            Icon(kbIcon(th, "PushPin"), null, tint = if (it2.pinned) th.accent else th.sub.copy(alpha = .5f), modifier = Modifier.size(18.dp))
                         }
                         if (it2.image != null) ClipThumb(it2.image) else Text(it2.text, color = th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         if (it2.image != null) androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))

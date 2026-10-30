@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="lucid_now_bar_background_desc">Now Bar background</string>
+    <string name="lucid_now_bar_badge_desc">Now Bar icon badge</string>
+    <string name="lucid_now_bar_divider_desc">Now Bar action separator</string>
+    <string name="lucid_now_bar_timer_icon_desc">Timer</string>
+    <string name="lucid_now_bar_stopwatch_icon_desc">Stopwatch</string>
+    <string name="lucid_now_bar_channel_timer">Timer</string>
+    <string name="lucid_now_bar_channel_stopwatch">Stopwatch</string>
+    <string name="lucid_now_bar_channel_description">Ongoing timer countdown</string>
+    <string name="lucid_now_bar_channel_stopwatch_description">Ongoing stopwatch</string>
+    <string name="lucid_timer_ringing_channel_name">Timer Alert</string>
+    <string name="lucid_timer_ringing_channel_description">Rings when a timer reaches zero</string>
+    <style name="Theme.Lucid" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.Lucid.Ringing" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:colorBackground">@android:color/black</item>
+    </style>
+</resources>

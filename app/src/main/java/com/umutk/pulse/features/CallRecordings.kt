@@ -135,6 +135,18 @@ internal fun CallPane(files: List<File>, onPlay: (File) -> Unit) {
                         Text(names[f].orEmpty(), color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(hm.format(Date(f.lastModified())) + "  ·  " + exSize(f.length()), color = T.sub, fontSize = 11.sp)
                     }
+                    // the three dots of every other folder's rows: share the recording or copy its path
+                    var more by remember { mutableStateOf(false) }
+                    Box {
+                        Box(Modifier.size(40.dp).clip(CircleShape).clickable { more = true }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("more", T.sub, 22.dp) }
+                        com.umutk.pulse.ThemedMenu(more, { more = false }) {
+                            com.umutk.pulse.ThemedMenuItem(tr("Share", "Paylaş"), { more = false; if (!exHandOver(ctx, f, true)) android.widget.Toast.makeText(ctx, tr("Could not share", "Paylaşılamadı"), android.widget.Toast.LENGTH_SHORT).show() }, iconKey = "share")
+                            com.umutk.pulse.ThemedMenuItem(tr("Copy the path", "Yolu kopyala"), {
+                                more = false
+                                (ctx.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("path", f.path))
+                            }, iconKey = "copy")
+                        }
+                    }
                 }
             }
         }

@@ -102,13 +102,23 @@ object Recommendations {
             "chill" to lowWords + listOf("lofi", "lo-fi", "downtempo", "easy listening"),
             "focus" to listOf("classical", "piano", "ambient", "instrumental", "soundtrack", "score", "study", "meditation"),
             "happy" to listOf("pop", "disco", "funk", "reggae", "latin", "dance", "summer", "happy"),
+            // more moods: sad, calm, nostalgic, romantic, angry, dreamy (genre tag and title words, English and Turkish)
+            "sad" to listOf("sad", "blues", "melanchol", "heartbreak", "tears", "cry", "lonely", "goodbye", "üzgün", "hüzün", "arabesk", "keder", "ayrılık", "gözyaşı"),
+            "calm" to listOf("calm", "soft", "gentle", "peace", "quiet", "acoustic", "slow", "lullaby", "sakin", "huzur", "ninni"),
+            "nostalgic" to listOf("oldies", "retro", "vintage", "classic rock", "70s", "80s", "90s", "60s", "nostalg", "throwback", "nostalji", "eski"),
+            "romantic" to listOf("love", "romance", "romantic", "ballad", "kiss", "heart", "aşk", "sevgi", "romantik", "sevda"),
+            "angry" to listOf("metal", "hardcore", "punk", "rage", "angry", "fight", "war", "grunge", "öfke", "isyan"),
+            "dreamy" to listOf("dream", "shoegaze", "ambient", "chillwave", "synthwave", "vaporwave", "space", "night", "rüya", "hayal"),
         )
     }
 
     /** The moods a track fits, from its genre tag and title; empty when they say nothing. A track can fit more than one. */
     fun moodsOf(t: Track): List<String> {
         val text = ((t.genre ?: "") + " " + (t.title ?: "")).lowercase()
-        return moodWords.filter { (_, words) -> words.any { it in text } }.keys.toList()
+        val found = moodWords.filter { (_, words) -> words.any { it in text } }.keys.toMutableList()
+        // a song from the 60s to the 90s also fits the nostalgic mood, whatever its tags say
+        if ("nostalgic" !in found && t.year in 1960..1999) found += "nostalgic"
+        return found
     }
 
     /**
@@ -124,7 +134,7 @@ object Recommendations {
             return tracks.shuffled(rnd).sortedByDescending { score(it) }.take(SECTION_SIZE * 3).shuffled(rnd).take(SECTION_SIZE)
         }
         val out = mutableListOf<PickSection>()
-        val order = if (partOfDay(today.hour) >= 2) listOf("chill", "focus", "happy", "energetic") else listOf("energetic", "happy", "focus", "chill")
+        val order = if (partOfDay(today.hour) >= 2) listOf("chill", "calm", "focus", "dreamy", "romantic", "sad", "nostalgic", "happy", "energetic", "angry") else listOf("energetic", "happy", "focus", "nostalgic", "romantic", "chill", "calm", "dreamy", "sad", "angry")
         for (m in order) {
             val tracks = library.filter { m in moodsOf(it) }
             if (tracks.size >= 3) out += PickSection(Pick.Mood(m), mix(tracks, m))

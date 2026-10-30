@@ -9,6 +9,8 @@ import androidx.compose.ui.geometry.Rect
 
 /** What the keyboard window shows: the keys, the bar above them and the pop-ups. The service fills it, the view draws it. */
 class KbState {
+    /** Speech typing is listening right now (the comma key shows it). */
+    var listening by mutableStateOf(false)
     /** 0 off, 1 the next letter, 2 caps lock. */
     var shift by mutableIntStateOf(0)
     /** 0 letters, 1 symbols, 2 more symbols. */
@@ -117,6 +119,8 @@ interface KbActions {
     fun pasteClip(item: ClipItem) {}
     /** A long press on a suggestion: it turns into the "never suggest again" button. */
     fun slotLong(i: Int) {}
+    /** A stronger buzz for a long press on a suggestion, so the hold is felt before the word changes. */
+    fun longFeedback() {}
     fun banSlot(i: Int) {}
     /** Deletes the word before the cursor (the held delete key, after the first letters). */
     fun deleteWord() {}

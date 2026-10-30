@@ -1326,3 +1326,258 @@ Screen recorder feature list (55 candidates)
 - 1.0.163 Keyboard: the long press of the comma, the period and the key beside ?123 now runs an action picked in Settings > Keyboard (voice typing, clipboard, gamepad, key layout, translate, emoji, language, menu, settings, theme, resize, incognito, or none to keep the key's own pop-up characters); each key wears a small icon of its action above it, like the comma's mic did. The comma stays voice typing by default, the others start on none. Extra apps: Punk Store (the author's own app, it was never inside Pulse) is listed as a linked app — Open when installed, its release page otherwise (derlendi)
 - 1.0.164 Launcher is back in Extra apps: its row (opens the launcher's settings) vanished from Settings > Extra apps when its old app-drawer alias was removed in 0.10.134; it is now a tool of the card with its own switch and the ⋮ Apps group lists it, on by default (derlendi)
 - 1.0.165 Punk Store is no longer listed in Extra apps (it was never part of Pulse). The switches of the Extra apps list now mean "shown": on for an app or tool placed anywhere (menu, Extra apps group, left menu), off only when hidden — before, a tool placed in the Extra apps group (Launcher among them) showed its switch off although it was listed (derlendi)
+- 1.0.166 (batch-1.0.166 branch) Files: the file-extension switch moved into the sort/filter popup, with a hidden-files switch beside it (the header row loses the ext icon). Volume keys: an open menu no longer lets volume down change the volume — the menu is not focusable any more, so the key reaches MainActivity and closes it. Keyboard: Gamepad and Clipboard trade places in the bar (gamepad first). Browser: a Share button opens a bottom sheet with Share link, Copy link and Open in another browser (derlenmedi)
+- 1.0.167 (batch-1.0.166 branch) Browser: the share sheet is taken back (it was meant for Files). Files: Share opens a bottom sheet with three options — share the files, copy their paths, share their names as text. Gamepad: a bigger panel (default 130%, taller), its buttons have no background any more (transparent, outlines only). Emoji page: opaque, so the gamepad and the bar behind it no longer show through (derlenmedi)
+- 1.0.168 Release bot: the release notes come from YAPILACAKLAR.md now (every entry since the previous release), not from the old RELEASE_NOTES.md that still said 1.0.149; the workflow actions moved to their current versions (checkout, setup-java, setup-gradle and upload-artifact v5), so the Node 20 warnings are gone (derlenmedi)
+- 1.0.169 Files: grid names no longer overlap (each tile clips to its own cell), the three dots sit in the tile's top corner instead of a row below. The view button opens a menu: List, Grid, Detailed list (with folder sizes and dates), and "Only for this folder" that remembers the view per folder. Gamepad: a dead zone slider (5-50%) and a sticks height slider in Settings > Keyboard. Extra apps: a long press on a row hides it from the list (a line at the bottom shows the hidden rows again; a long press brings one back) (derlenmedi)
+- 1.0.170 Keyboard: a long press on a suggestion now buzzes (a short, firmer pulse) as it starts, so the hold is felt before the word is saved or banned (derlenmedi)
+- 1.0.171 Files: date format has a fourth choice, the full day and time always (the Smart one still writes only the time for a file changed today). Settings > Files: sizes and dates in the rows can be switched off, and a live example (a folder and a file) at the top shows what the rows will look like with the choices below. The item count of folders can be switched off in settings, and per folder from the view menu ("Item count in folders here") (derlenmedi)
+- 1.0.172 Files: folder rows and file rows have their own size and date switches (Settings > Files: Folders: item count / size / date, Files: size / date); the item count of folders also per folder. Not done yet: a floating, draggable player window; the surroundings of the Winamp, Poweramp, AMOLED and Windows looks are to be transparent (not black) (derlenmedi)
+- 1.0.174 Messages: the attach and send buttons of the compose row have a black round background with a white glyph. Not changed yet: the lyrics notification, the keyboard plus key and the long-word keyboard issue (their description was unclear) (derlenmedi)
+- 1.0.175 Lyrics: the floating lyrics window has a fixed width of 90% of the screen and up to four lines, so a long line goes on to the next line instead of running off the screen (derlenmedi)
+- 1.0.176 Files: the view menu has "Names only here": in that folder the rows show the name alone (no size, date or count). The smart date writes the month in full (not a short form) (derlenmedi)
+- 1.0.177 Music player, Winamp look: the playlist window's track names and times use the pixel font (Press Start 2P) instead of the system sans font (derlenmedi)
+- 1.0.178 Music player: the side "Lyrics" tab on the Material and Windows looks is removed (lyrics still open from the notification) (derlenmedi)
+- 1.0.179 Music player, Material look: the back arrow at the left of an album or artist header is removed (the header still goes back when tapped, and the system back works) (derlenmedi)
+- 1.0.180 Music player, Material look: the settings button at the top right of the player is removed (the other looks keep theirs) (derlenmedi)
+- 1.0.181 Music player: the Poweramp look has a preview in the look choice (black, dark panel, blue accent); the look names wrap onto a second line instead of stretching one long line (derlenmedi)
+- 1.0.182 Keyboard settings: under each long-press choice (comma, period, key beside ?123) a small key shows what the press does, with the action's icon and its name, and both change with the choice (derlenmedi)
+- 1.0.183 Files settings: the preview is detailed — a root folder, a folder, a folder shown by name only, and a file changed earlier and today — each with its caption and the size, count and date the choices below give it (derlenmedi)
+- 1.0.184 Extra apps store: the list shows only the modules already downloaded (the rest stay in the store), without the short description under each name; on Windows 11 the rows have no card behind them, they sit on the see-through window (derlenmedi)
+
+---
+
+## 🆕 BÜYÜK PAKET (2026-10-29): tüm hatalar + yeni özellikler, tek koordineli sürüm
+Durum: 🔴 açık · 🟡 kısmen · 🟢 kodda hazır (hiçbiri cihazda denenmedi). Bir madde bitince buradaki işaret güncellenir.
+
+### 1 Klavye (en yüksek öncelik)
+- 🟡 1.1 Noktalama sonrası kelime ekleme/silme hatası: sebep bulunacak (InputConnection/composing/seçim senkronu), eski düzeltme sonucu yeni metne uygulanmayacak, silinen kelime geri gelmeyecek — ilk düzeltme: Space artık yalnız alan gerçekten son kelimeyle bitiyorsa tahmin ekler, noktalama/silme sonrası hatırlanan kelime unutulur (derlenmedi)
+- 🔴 1.2 Türkçe düzeltme motoru: kök+ek analizi, harf atlama/tekrar/yer değişimi, komşu tuş, ç ğ ı i ö ş ü, önceki-sonraki kelime bağlamı, emin değilse dokunma
+- 🟢 1.3 (cümlenin kelimeleri oy verir, tek kelime dili değiştirmez, ayarda kapatılabilir) Türkçe/İngilizce cümle bağlamı ile ayrım (tek kelime dili değiştirmez), otomatik algı ve elle seçim ayrı
+- 🟢 1.4 Öğrenme modları (kelime / cümle / ikisi / kapalı) yapıldı; öğrenilen kelimeleri görme-silme-ekleme, listeyi kopyalama/yapıştırma yapıldı; "doğru işaretle" = elle ekleme; hariç tutma ve geri alma mevcut (düzeltmeyi geri al / bir daha önerme)
+- 🟡 1.5 (geri alınan düzeltme bir daha yapılmaz) Gecikmeli düzeltme: yüksek güvenli düzeltme anında, öneri çubuğu ile metin senkron
+- 🟡 1.6 Öneri çubuğu: 2 tam öneri, üç nokta ile kesme yok, tekrar/alakasız yok, e-posta önerisi sürekli çıkmaz — uzun kelimeye daha çok yer, sığmazsa üçüncü öneri çekilir; kayıtlı e-posta yalnız e-posta alanında (derlenmedi)
+- 🟢 1.7 E-posta anahtarı: bar/menü/basılı-tutma tuşu veya ek tuş satırına atanabilen "@" + alan adı tuşu, imleç noktasına ekler, önceki yazıyı silmez; alan adı Ayarlar > Klavye > Yazım; kayıtlı e-postalar yalnız e-posta alanında çıkar
+- 🟡 1.8 Pano: ekran görüntüsü gerçek PNG/JPEG, raptiye ikonu, kısayol ikonu, Ctrl+X panoya, donanım klavyesi ve basılı tutma aynı geçmiş, kısayol alanında imleç — PNG/JPEG, raptiye, kısayol ikonu, kes/kopyala geçmişe, kısayol alanı imleci yapıldı; donanım klavyesi geçmiş birleşmesi doğrulanmadı
+
+### 2 Temalar / AMOLED
+- 🔴 2.1 Ayrı Material / Windows 11 / AMOLED siyah teması + AMOLED vurgu rengi; tüm ekranlar (çubuklar, hızlı panel, ayarlar, menüler, editörler, PDF/Office, müzik, ağ, geçmiş, pencereler, klavye); başka temanın rengi sızmasın
+- 🟡 2.2 Kontrast: End Task (kırmızı zemin beyaz yazı) ve indirme silme penceresi düğmeleri yapıldı; genel otomatik metin/düğme rengi taraması sürüyor
+- 🔴 2.3 Tam siyah, vurgu, kart arka planı, saydam katman, kontrast, animasyon yoğunluğu seçenekleri
+
+### 3 Dosyalar / APK / ZIP / Office
+- 🟢 3.0 Recording/çağrı kayıtlarında 3 nokta menüsü ile paylaşma (diğer klasörler gibi)
+- 🟢 3.1 APK ayrıntı: Install tek satır (yapıldı: IButton tek satır), Browse/Install düzeni; APK/ZIP/diğer için tutarlı menü; seçim ekranlarında çoklu seçim; sil/kopyala/taşı/paylaş/arşivle
+- 🟢 3.2 Medya araçları > PDF sekmesi: birden çok PDF birleştirme ve sayfa aralığı kesme (sayfalar resim olarak kopyalanır, yazı seçilemez); resimlerden tek PDF zaten Dönüştür sekmesinde. PDF sayfa/görsel düzenleme ve Tools bölümüne taşıma açık
+- 🟡 3.3 PowerPoint açma/görüntüleme/slayt gezme/düzenleme, Office araç çubukları, tam siyah tema
+
+### 4 Paylaşma / Kaydetme / Yedek
+- 🟢 4.0 Share / Save As kontrolü; Save As AMOLED'de gri-beyaz kalmasın; hata bildirimi
+- 🟡 4.1 Yedek: kapaklar, arama dizinleri, önbellekler ve sözlükler zaten yedeğe girmiyor; boyut gösteriliyor; kayıtlı yedek listesi (boyut, tarih), tek tek silme ve "en yeni ikisi hariç sil" eklendi. Müzik dosyaları hiç kopyalanmıyor
+
+### 5 Video oynatıcı
+- 🟢 5.0 (Cast = telefonun ekran yansıtma ekranı; videoyu devretmez) Alt kontroller için yarı saydam katman, beyaz ikon kontrastı, 3 nokta menüsü düzeni, Cast düğmesi (gerçek), dokunma alanları
+
+### 6 Saat uygulaması
+- 🟡 6.0 Saat (Extra apps) = Lucid Alarm kodu ve görünümüyle Pulse içine kopyalandı (extras/lucid, GPL-3.0). Depolama Room yerine JSON dosyası. Derlenmedi: Lucid compileSdk 35 / yeni Compose ile yazılmış, uyum hataları çıkabilir
+- 🟢 6.1 Alarm AlarmManager.setAlarmClock ile kuruldu, açılışta/güncellemede yeniden kurulur. Sınır: "Zorla durdur" yapılırsa hiçbir uygulamanın alarmı Pulse açılana kadar çalmaz (Android kuralı); cihazda denenmedi
+
+### 7 Network Manager
+- 🟢 7.1 Ağ kullanımı: gün (sayfa sayfa) / hafta / ay seçimi, pasta grafik, uygulama listesi, Wi-Fi ve mobil ayrı (NetworkStatsManager gerçek verisi)
+- 🟡 7.2 Uygulama başına mobil/Wi-Fi engelleme: root ile iptables (uygulamaya dokununca iki anahtar), kural geri okunur; rootsuz mümkün değil diye yazılır; yeniden başlatmada sayfa açılınca geri yüklenir (boot alıcısı yok); cihazda denenmedi
+- 🟡 7.3 (hata mesajı artık nedeni ayırıyor: yetki / komuta yanıt yok / modem kabul etmedi; desteklenmeyen türü gizleme sürüyor) Ağ türü değiştirme: "Phone didn't take it" nedeni, desteklenmeyeni gizle, izin/modem hatası ayrımı, sahte başarı yok
+
+### 8 Extra Apps menüsü
+- 🟢 8.0 Görünürlük anahtarları (uzun basma ile gizleme ve ızgara/liste seçimi yapıldı); ızgara düzeni + liste seçeneği, App Info/Open düğmesi kaldırma, Office kaldırma, kaydırma konumu koruma
+- 🟡 8.1 Mağaza: yalnız indirilenler (yapıldı); kurulu → aç, kurulu değil → Download, güncelleme bilgisi/sürüm karşılaştırma, APKMirror doğrudan sayfa
+
+### 9 Toolkit
+- 🟢 9.1 Hız testi: geçmiş sayfası (günlük gezinme, ortalama, silme), kayıtlı sonuçlar, hata nedeni yapıldı; Toolkit içine taşıma ve Quick Panel kısayolu (karo var) açık
+- 🟢 9.2 Yüzen sayaç: geri sayım, başlat/duraklat/sıfırla/kapat zaten vardı; küçültme (%50-140), saydamlık, arka plan rengi, yalnız süre/düğmeli seçeneği ve konumun hatırlanması eklendi
+
+### 10 Müzik
+- 🔴 10.1 Yedekte müzik/kapak çoğaltma yok
+- 🔴 10.2 Widget: yeniden boyutlandırmada düzen, kapağa/ada dokununca doğru oynatıcı, düğmeler gerçek durumu yönetir, 5 sn ileri/geri korunur, göster/gizle, ayar
+- 🟡 10.3 (yıldızlar %15 büyütüldü, hap büyüdü; ilerleme çubuğu güncelleme sıklığı 400 ms'den 100 ms'ye indi) Yıldız dokunma alanı + %15 büyüt, ilerleme çubuğu akıcılığı
+- 🟡 10.4 Ruh hâli etiketleri: üzgün, sakin/dingin, nostaljik, romantik, öfkeli, hayalci eklendi (tür etiketi ve başlık sözcüklerinden, 1960-99 yılları nostaljik); kitaplık arayüzü, etiket düzenleme ve çevrimiçi etiket açık
+- 🔴 10.5 Çevrimiçi arama/çalma listesi: iki oynatıcı sorunu, gerçek sonuçlar
+- 🟢 10.6 Müzik özeti (Extra apps): 6 sayfa (giriş, dakika, sanatçılar, şarkılar, saat/gün dağılımı, kart), 30 gün / 3 ay / 1 yıl, kartı PNG kaydetme. Dinleme kaydı bugünden başlıyor (geçmişi uydurulmaz). Ruh hâli/tür dağılımı, otomatik üç aylık özet ve paylaşma açık
+
+### 11 White Noise
+- 🟡 11.0 (Meditation %5 azaltıldı) Waterfall, Gentle Rain, Wind Chimes iyileştirme; Meditation %5 azalt; Seaside aynı; yeni doğa sesleri; profiller ikonlu; kişisel karışım
+- 🟢 11.1 Bildirimde durdur, dokununca doğrudan Music Player, bildirim kaybolma nedeni
+
+### 12 İndirme yöneticisi
+- 🟢 12.0 Silinen dosya listede kalmasın (2,5 sn'de bir kontrol), Delete/Cancel kontrastı, uzun basıp çoklu seçim + toplu silme, onay, silinemeyen dosya uyarısı
+
+### 13 Uygulama geçmişi
+- 🟢 13.0 (rapor CSV dışa aktarma, kategori = uygulamanın kendi bildirdiği; günlük süre sınırı: App history'de uygulamaya dokun, süre dolunca ana ekrana atar, gece yarısı sıfırlanır; ikonlar, pasta+liste birlikte, bugün/hafta/ay, App Info/Force Stop/Extract/Uninstall ikonlu düğmeler ve uygulamanın kendi ikonu ayrıntıda yapıldı; kategori raporu, dışa aktarma, süre sınırı, App Info/Force Stop ikonları sürüyor) Total/Screen On ikonları, pasta + liste, bugün/hafta/ay, kategori raporu, dışa aktarma, süre sınırı, liste önbelleği, App Info/Force Stop/Extract/Uninstall ikonlu, uygulama ikonu ayrıntıda
+
+### 14 Gamepad
+- 🟢 14.0 Joystick konumu/boşluk (kısmen yapıldı); floating gamepad, boyut-konum ayarı
+
+### 15 Device paneli
+- 🟡 15.0 (Folder Sizes tekrarı Storage sayfasından kaldırıldı; cihaz kartı sürüyor) Overview üstüne cihaz kartı; Device menüsünden Folder Sizes tekrarını kaldır
+- 🟡 15.1 Sıcaklık: pil ve işlemci ayrı çizgilerle, bugün/dün/evvelsi gün geçmişi, en sıcak an (dakikada bir kayıt, yalnız Pulse çalışırken); termal durum zaten ayrı gösteriliyor
+
+### 16 Root / izin / arka plan
+- 🟡 16.0 (Ayarlar > "İzinleri koru" anahtarı: root ile appop yazar, rootsuz sistem ekranını açar) Otomatik izin sıfırlama, erişilebilirlik servisi yeniden başlatma, boot sonrası servisler, kapatma/atma/zorla durdurma ayrımı
+
+### 17 Motion Cues / Hızlı panel
+- 🔴 17.0 Motion Cues panel kapanana kadar sürsün, doğru geri dönüş ekranı, Quick Panel ikon/tema uyumu
+
+### 18 Launcher
+- 🔴 18.1 Windows Phone teması: sol panel sadeleştirme, Windows tuşu, tam ekran, widget yerleşimi, ayar dönüşünde liste başa atlamasın
+- 🟡 18.2 (End Task yapıldı) Windows 11: End Task, vurgu kontrastı, tutarlı menü
+- 🟡 18.3 (menü ikonları ve tuş takımı konumu yapıldı; otomatik yardımcı açık) Grafik tema: otomatik yardımcı kapatılabilir, Scientific/Programmer ikonları, tuş takımı %15 yukarı
+- 🟡 18.4 (başlangıç sesi her görünümde bir kez çalar; ayar mevcut) Launcher sesleri ayarı, tek sefer tetikleme
+- 🟡 18.5 (Music başlığı belirginleşti) Not widget'ı genel widget, boyut, Music başlığı belirgin, kategoriler, WMP widget düğmesi, önceki/sonraki
+- 🟡 18.6 Tüm uygulamada liste dönüşünde kaydırma/arama/filtre korunsun
+
+### 19 Paint / ikon üretici
+- 🟡 19.1 Paint: sprey, sulu boya, yinele eklendi (kalem, fırça, silgi, boya kovası, geri al, PNG kaydı zaten vardı); tuval boyutu/arka plan seçenekleri ve tam renk seçici açık
+- 🔴 19.2 Material ikon üretici: arama, kategori, kontur/boyut/renk, PNG, kare çıktı, lisans
+
+### 20 Tarayıcı / WebView
+- 🔴 20.0 WebView sağlayıcı incelemesi, sistem geneli değiştirme sınırları, reklam engelleme + karanlık mod, uzantı desteği ayrımı
+
+### 21 Bildirim geçmişi / ikonlar
+- 🟡 21.0 (saat ikonu menüde yapıldı) Win11 tarzı saat ikonu, geçmiş çalışır, gereksiz 3 nokta menüleri, ayar başlıklarında ikon, büyük yazıları küçült
+
+### 22 Punk Store
+- 🔴 22.0 18 MB → 75 MB kurulum boyutu nedeni, kurulum yöntemi kalıcı, varsayılan root, root yoksa doğru hata
+
+### 23-24 Genel kalite ve teslim
+- 🔴 23.0 Gereksiz yeniden çizim, ikon önbelleği, tema/vurgu ortaklaştırma, ANR/çökme, boyut
+- 🟡 24.0 (klavye benzerlik/yer değiştirme birim testi eklendi) Birim testleri (klavye noktalama/dil), tek sürüm derleme, sonuç raporu (APK konumu/boyut, bağımlılık-lisans, mimari)
+- 1.0.185 Keyboard: Space no longer writes a predicted word unless the field really ends in the last word typed; after a sign or a delete the remembered words are dropped, so no deleted or extra word comes back after a full stop or comma (derlenmedi)
+- 1.0.186 Keyboard bar: long words get more room and the third suggestion steps aside when three would not fit, so words are not cut with dots; saved e-mail addresses are no longer offered in ordinary text fields (derlenmedi)
+- 1.0.187 Keyboard: a new "Direction keys" layout (Settings > Keyboard): nine big keys, a tap types the centre letter and a drag towards a corner or side types the character shown there (English and Turkish letters, shift/caps/copy/cut/paste/undo/redo by swipe, emoji key with settings/menu/language/voice swipes, backspace with repeat, space with cursor drag) (derlenmedi)
+
+### 📦 Yüklenen dış uygulamalar (2026-10-29, birinci parti — ikinci parti gelecek)
+Her biri için amaç çıkarılacak; kaynak zip'lerin lisansı Pulse'a kod almadan önce denetlenecek (GPL-3.0 olanlar Pulse'ın lisansıyla uyuşmayabilir). Henüz hiçbirinden kod alınmadı.
+- 🔴 Baridmail-App (kaynak, Java): tek kullanımlık e-posta; gelen kutusu, çoklu hesap, bildirim servisi
+- 🔴 grabbit (kaynak, Kotlin): yt-dlp ön yüzü, biçim seçimi — Pulse'ta kendi YouTube indiricisi yazılmayacağı kuralı geçerli, yalnızca Extra Apps modülü adayı
+- 🔴 MetroWinLauncher (kaynak, GPL-3.0+): Windows Phone Start ekranı, canlı döşemeler, Action Center — launcher Windows Phone teması için referans
+- 🔴 relay (kaynak): telefon-bilgisayar dosya/pano aktarımı (yerel Wi-Fi)
+- 🔴 Savr (kaynak, GPLv3): yer imi uygulaması
+- 🔴 APK: Battery Supervisor, BigText, ChatNotes, Device Info, Groundd, Multi Toolbox, My Vinyl, Outplay, Punto, RadioSquare — her birinin özelliği incelenip Pulse'taki karşılığı/eksiği çıkarılacak
+- 1.0.188 Fixes: Install button stays on one line; End task is white on red; Downloads list drops files that were deleted, long press picks several rows with one delete question, Delete/Cancel buttons readable in every look; call recordings rows get a three-dot menu (share, copy path); video player: soft dark shade behind top and bottom controls, a Cast button (the phone screen-cast picker), the More menu no longer repeats speed, repeat and sleep timer; network type failure says why (permission, no answer, modem refused) (derlenmedi)
+- 1.0.189 Fixes: Good Lock list has Installed / Not installed / Updates tabs (tap opens the module, Download for the missing ones, the update check says why when it fails, release page from the feed); the launcher plays its start-up sound on every look once and never twice in a row; calculator Scientific and Programmer menu icons were missing (now Functions and Terminal); calculator keys sit higher (derlenmedi)
+- 1.0.190 Keyboard clipboard: screenshots from the keyboard are saved as real PNG/JPEG files (not ".img"); a cut or copy from the keyboard is added to the history at once; pinning uses a push-pin icon and shortcuts a bolt icon; the shortcut name field shows a caret (derlenmedi)
+- 1.0.191 App history: icons for total and screen-on, today / week / month, the ring and the list in one scroll; Storage page no longer repeats Folder sizes (it lives in Files); the Meditation mix is 5 percent quieter (derlenmedi)
+- 1.0.192 Ambient sound notification: it has a Stop button, and a tap opens the music player's sound page instead of the Pulse start page; the music keep-alive notification opens the player (derlenmedi)
+- 1.0.193 Settings: a "Keep permissions" switch (Android's permission auto-reset exemption: written with root, otherwise the system screen opens); Notification history uses a clock icon in the app list (derlenmedi)
+- 1.0.194 Keyboard learning: choose what is learned (words, sentences, both, off); a Learned words list with search, delete, add by hand, copy out and paste in (derlenmedi)
+- 1.0.195 Keyboard: the language of a sentence is worked out from its words (two words of one language and twice the other's votes), so Turkish sentences are corrected as Turkish and one English word changes nothing; a switch turns the detection off (derlenmedi)
+- 1.0.196 Speed test: every finished test is saved; a history page (the clock icon) goes day by day with the averages and a delete for each test; a failed test says why (no internet, timeout, secure connection) (derlenmedi)
+- 1.0.197 Network usage: Day / Week / Month, a pie of the biggest apps for the week and the month, and a tap on an app opens two root switches (block mobile data / block Wi-Fi) that are read back from the firewall; without root it says Android has no other way (derlenmedi)
+- 1.0.198 Paint: a Spray tool (a cloud of dots, sized by the width) and a Watercolour tool (wide see-through strokes that deepen where they cross), Redo next to Undo, 20 undo steps (derlenmedi)
+- 1.0.199 Floating timer: smaller by default, a size slider, see-through slider, four background colours, a switch to show only the time or the buttons too, and it comes back where it was left (derlenmedi)
+- 1.0.200 Keyboard: when the cursor comes back to the end of a word (a tap behind it, or a delete that stops there) the word opens again and stands in the middle of the suggestion bar, and typing goes on with it instead of starting a new word. New tool Charging power (Extra apps): live watts into or out of the battery, voltage, current, temperature, peak in and out, a 60 second graph and the time to full, drawn with a cable of flowing dots (reading method after WattFlow, MIT) (derlenmedi)
+
+### 📦 Yüklenen dış uygulamalar — ikinci parti
+- 🟢 wattflow (MIT): Şarj gücü aracı olarak Pulse içine yazıldı (okuma yöntemi ondan, ekran Pulse'un), lisans metni assets/licenses içinde
+- 🟡 Lucid-Alarm (GPL-3.0, Pulse ile uyumlu): Saat modülü için kaynak; alarm, kronometre, zamanlayıcı, dünya saati, Nowbar. Pulse'a alarm + dünya saati olarak aktarılıyor
+- 🔴 SoundPlus.apk (kapalı kaynak, StartApp reklam SDK'sı içeriyor): kod alınamaz; yalnız özellik referansı
+- 🔴 Bionic Tape ekran görüntüleri (kaset çalar görünümü): müzik oynatıcıya kaset görünümü fikri olarak not edildi
+- 1.0.201 New Clock (Extra apps): real system alarms (repeat days, snooze, vibration, an alarm screen over the lock screen, set again after a reboot), world clocks, and the stopwatch and timer in one place; Android asks for the exact-alarm and full-screen permissions and the screen says so when one is missing (derlenmedi)
+- 1.0.202 Clock is now Lucid Alarm itself (GPL-3.0, DarkAspect1): its code and look are copied into Pulse (alarms with groups, custom ring screens with wallpapers, fonts, colours and animated backgrounds, wake check, upcoming alerts, recycle bin, stopwatch with laps, timer with presets, world clock, Nowbar, backup and restore, its themes and accent colours); only the storage differs (a JSON file instead of Room). The simple clock written before is removed (derlenmedi)
+- 1.0.203 Music player: a new Cassette look (a yellow tape deck: a cassette whose two reels turn while the music plays and whose tape moves from the left reel to the right with the song, a hand-written label with the song and artist, raised deck keys for previous / play-pause / next / eject, shuffle, repeat, volume, and a tape shelf that lists the library); drawn by Pulse after the cassette players of the 80s and the Bionic Tape screenshots, no code of another app (derlenmedi)
+- 1.0.204 Music player: Extra themes, listed together in the look picker: Cassette in six colours (yellow, red, blue, mint, pink, black), iPod with a working click wheel in five colours (menu list, previous, next, play/pause, turning the ring moves in the list or changes the volume), and Turntable in three (a record that turns, a tonearm that moves in with the song); more can be added to the same list (derlenmedi)
+- 1.0.205 App size: 75 wallpaper and splash pictures (drawable-nodpi) turned from JPEG to WebP (7.0 MB to 3.7 MB) and the 10 Windows Media Player skin pictures to lossless WebP (3.1 MB to 2.0 MB), 4.4 MB less in the APK with the same look (derlenmedi)
+- 1.0.206 New tools: Radio (Extra apps: search the open station directory, pick a country, play through the music player so it goes on in the background with the media notification, favourites; a failed search says why) and Big text (Toolkit: a message across the whole screen in huge letters, still or running like a signboard, six colour pairs, screen stays on) (derlenmedi)
+- 1.0.207 Keyboard: a sign or a number typed right after a word no longer replaces the word: the word is closed where it stands and the sign is added after it as one batch (before, the commit relied on the app replacing the composing text, which some fields do wrongly: the word vanished or a second word appeared); with 1.0.185 the predicted word is no longer written after a sign or a number (derlenmedi)
+- 1.0.208 Keyboard: Backspace right after an automatic correction takes it back (the word as typed opens again) and that correction is remembered as unwanted, even for swapped letters, so the same word is not corrected again; no space is added by itself after a sign any more (off by default, also for those who had it on; the typing setting can turn it on again) (derlenmedi)
+- 1.0.209 Music: the Poweramp rating stars are 15 percent larger with a taller touch pill (44 dp, five cells of 34 dp), and the progress bars of the Material, Poweramp and music page players refresh 3 to 4 times as often, so they move smoothly (derlenmedi)
+- 1.0.210 Backup: Settings > Data lists the saved backups with their size and date, deletes one, or deletes all but the newest two (derlenmedi)
+- 1.0.211 Temperature tool: a history card with the battery and processor lines for today, yesterday and two days ago, the range of each and the hottest moment; readings are noted once a minute while Pulse runs and kept three days (derlenmedi)
+- 1.0.212 Media tools: a PDF tab that joins several PDFs into one and cuts a range of pages out of one (the pages are drawn as pictures, so the text cannot be selected; said on the screen); saved in Download/Pulse (derlenmedi)
+- 1.0.213 Music: six more moods next to energetic, chill, focus and happy: sad, calm, nostalgic, romantic, angry and dreamy (found from the genre tag and the title in English and Turkish; songs from the 60s to the 90s count as nostalgic); each gets its own mix and can be chosen in the mix settings (derlenmedi)
+- 1.0.214 Music recap (Extra apps): from now on every real listening is noted with its time; the recap shows pages to swipe through (minutes, top artists, top songs, the hours and days you listen, a card) for the last 30 days, 3 months or a year, and saves the card as a PNG in Download/Pulse; it says from which day the notes count (derlenmedi)
+- 1.0.215 Extra apps list: a switch in its top right shows the apps as tiles (icon and name, three in a row) or as rows with their description; the choice is kept, and a long press still hides or shows an app (derlenmedi)
+- 1.0.216 Keyboard: an e-mail key that types "@" and a domain you choose (gmail.com by default) at the cursor, without touching what was typed before; it can sit on the bar, in the menu, in the extra key row, or on a long press of the comma, period or the key beside ?123 (derlenmedi)
+- 1.0.217 Widgets page: the Music category title is larger, in the accent colour, with its icon and a line under it (derlenmedi)
+- 1.0.218 App details: the app's own icon beside its name, and Open, App info, Force stop, Extract APK and Uninstall are icon buttons instead of words (derlenmedi)
+- 1.0.219 App history: a tap on an app sets a daily time limit (off, 15 min to 3 h); when the time is up the App lock helper sends the phone back to the home screen with a message, until midnight (needs usage access and the helper; background music and downloads go on) (derlenmedi)
+- 1.0.220 App history: the download icon saves the shown range as a CSV (app, package, category as the app declares it, minutes, total) in Download/Pulse (derlenmedi)
+- 1.0.221 Save as dialog: explicit text/button colours and window panel colour so AMOLED no longer shows grey/white (derlenmedi)
+- 1.0.222 Keyboard unit test (isSwap/similar); Gamepad size slider in keyboard settings; Music recap mood+genre page (7th); Extra apps list keeps its scroll; Paint paper colour (File menu, Windows looks) (derlenmedi)
+- 1.0.223 Build fixes: itemsIndexed import, TapeShelf accent, FlowRow opt-in (derlenmedi)
+- 1.0.224 Files: Recent items get previews (pictures, video frame, PDF first page, song cover, APK icon, Office/ODF thumbnail) and a small type badge (black, white line icon) on every file (derlenmedi)
+- 1.0.225 File type badges in Files: black ground, white outline icon, thin white edge (were coloured); Windows 11 Fluent icons for Clock, Radio, Music recap, Charging power, Browser and Office in the ⋮ menu and the Extra apps list (derlenmedi)
+- 1.0.226 Keyboard: after Space/punctuation the word is checked and written back when the field swallowed it (derlenmedi)
+- 1.0.227 Files: Detailed list always shows type, size and date (also in folders set to names only); Settings > Files > View is a picture picker (list, grid, detailed) (derlenmedi)
+- 1.0.228 Lyrics: separate lyrics notification on by default, a song with no lyrics found is searched again after a minute (was never); widgets/notifications open the music app even when its old recents card has no window (derlenmedi)
+- 1.0.229 Dialog buttons in the Windows looks: End process / Cancel text takes the colour that reads on the button (white on the accent fill), not danger red (derlenmedi)
+- 1.0.230 Office tools: Scan document and PDF tools in one page with an icon; settings (page size A4/Letter/as picture, margin, sharpness, page numbers, scan start filter, trim, open after saving, name start); scan filters Colour/Original/Grey/Clean/B&W/Light, paper cut out and flattened with an edge trim, turn and remove page (derlenmedi)
+- 1.0.231 Dialog accent button (Win11): text is always white (derlenmedi)
+- 1.0.232 Multi APK install is the same floating window as a single APK (InstallMultiWindow, from Files and InstallActivity): rows with state and tick, Install N apps; accent dialog buttons use black on a light accent and white on a dark one; App manager: quick chips Recent/All/User/System, long-press select, select all, Extract APKs (derlenmedi)
+- 1.0.233 Office: PowerPoint and PDF get the Word-style ribbon (groups with captions: PDF View Zoom/Pages/Display, Edit Mark up/Text/Colour/Edit with new Fit width, First/Prev/Next/Last, Dark pages, Clear marks; PPT Slides/Font/Paragraph/Clipboard/...); Settings > Office > Title bar and ribbon: accent colour (new default), app colour, AMOLED black for the bar and the ribbon strips (derlenmedi)
+- 1.0.234 Office title bar option works in every Office look and is optional: As the look draws it (default), Accent, App colour, AMOLED black (bar, tabs, ribbon, status bar) (derlenmedi)
+- 1.0.235 Office: AMOLED black option also covers Excel (formula bar, sheet tabs); an arrow in the title bar hides the whole top block by hand, a small handle at the top brings it back (derlenmedi)
+- 1.0.236 Files Share sheet: the apps that take the share in a row at the top, share as one zip (folders too), Bluetooth, copy names, copy paths, names as text; the file menu Share opens it too (derlenmedi)
+- 1.0.237 Files Share sheet: Nearby devices (Pulse LocalSend) row, and the nearby senders (Pulse LocalSend, LocalSend app, Quick Share) first in the app row (derlenmedi)
+- 1.0.238 Relay (Extra apps, tool "relay"): the Relay engine (Apache-2.0, 4800 lines, com.vythera.relay.*) copied into the app with kotlinx-serialization + BouncyCastle (bcpkix) added; Android side: RelayHost (identity, pairings, inbox Download/Pulse/Relay), RelayService (stay available, notifications), RelayScreen (devices, pairing code, send files/text, accept/decline/pause transfers, received text, connect by address, clipboard sync). Needs Android 10+. Derlenmedi: kotlin serialization plugin and BouncyCastle under R8 are the first things to check
+- Yüklenen Archive.zip / Archive_1.zip (iki kopya): CodeAssist, Moon+ Reader Pro (APK açılımı), VeriSky (APK açılımı), CalibRaw, Vyxel Apps (GitHub uygulama mağazası, AGPL-3.0) — henüz incelenmedi
+- 1.0.239 Quick Settings: the Coin tile shows heads or tails (new ic_coin_heads/ic_coin_tails) and the Dice and Coin tiles flicker through a few pictures after a tap; "Pulse · Relay" in the system Share list for files, text and links to paired devices, and a Relay row in the Files share sheet (derlenmedi)
+- 1.0.240 Keyboard three-dot menu: the head row (back, settings, themes) is removed; Keys stays at the end of the grid (derlenmedi)
+- 1.0.241 Sticky notes: the widget redraws when its note changes; the editor can add a new note and delete the open one (its widget goes back to an empty note) (derlenmedi)
+
+### Bu tur eklenenler (1.0.185 – 1.0.241, derlenmedi)
+Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası hata çıkarsa ilk bunlara bakılır.
+- 🟢 Files: Son (Recent) öğelerine önizleme (resim, video karesi, PDF ilk sayfa, şarkı kapağı, APK ikonu, Office içindeki küçük resim) ve dosya türü rozeti (siyah, beyaz çizgi)
+- 🟢 Files: detaylı liste her zaman tür, boyut ve tarih gösterir; Ayarlar > Dosyalar > Görünüm resimli üç kart (liste, ızgara, detaylı)
+- 🟢 Files Paylaş sayfası: paylaşımı alan uygulamalar satırı (LocalSend, Quick Share öncelikli), tek zip (klasörler dahil), Bluetooth, yolları/adları kopyala, Relay satırı
+- 🟢 Toplu APK kurulumu normal Installer penceresi gibi yüzen pencerede (InstallMultiWindow), satır satır durum ve sıralı kurulum
+- 🟢 App manager: hızlı çipler (Son eklenen, Hepsi, Kullanıcı, Sistem), uzun basıp seçme, hepsini seç, toplu APK çıkarma
+- 🟢 Office: PowerPoint ve PDF Word tarzı şerit (gruplu ikonlu sekmeler); PDF Görünüm/Düzenle sekmeleri
+- 🟢 Office: Ayarlar > Üst çubuk ve şerit (görünümün kendi rengi, vurgu, uygulama rengi, AMOLED siyah) her Office görünümünde; Excel'de AMOLED siyah; elle üst çubuğu gizleme oku
+- 🟢 Office araçları sayfası: Belge tara (filtreler: Renkli, Orijinal, Gri, Temiz, Siyah beyaz, Aydınlık; kağıdı kesip düzleştirme, kenar kırpma, sayfa çevirme/silme) ve PDF araçları; ortak PDF ayarları (boyut, kenar, netlik, sayfa numarası)
+- 🟢 Relay (Extra apps, "relay"): Apache-2.0 Relay motoru + Android tarafı (cihaz eşleştirme, dosya/metin/bağlantı gönderme ve alma, arka planda açık kalma, pano). Sistem Paylaş listesinde "Pulse · Relay". Derlemede ilk bakılacak: kotlinx.serialization eklentisi ve BouncyCastle R8
+- 🟢 Hızlı panel: Yazı tura karosu sonuca göre tura/yazı ikonu; zar ve yazı tura dokununca birkaç kare animasyon
+- 🟢 Klavye üç nokta menüsünün üst satırı (geri, ayarlar, tema) kaldırıldı
+- 🟢 Müzik özeti: 7. sayfa ruh hâli ve tür dağılımı
+- 🟢 Müzik bildirimi: ayrı söz bildirimi varsayılan açık; sözü bulunamayan şarkı bir dakika sonra yeniden aranır
+- 🟢 Klavye birim testi (isSwap / similar), Gamepad boyut kaydırıcısı
+- 🟢 Paint: Dosya menüsünde kâğıt rengi (Windows görünümleri)
+- 🟢 Diyalog düğmeleri: vurgu dolgusunda yazı rengi zemine göre (açık vurgu siyah, koyu vurgu beyaz)
+- 🟢 Save As diyaloğu: açık renkli metin ve düğmeler (AMOLED'de gri-beyaz sorunu)
+- 🟢 Extra apps listesi kendi konumunu korur (bir uygulamaya girip dönünce)
+- 🟡 Yapışkan notlar: widget canlı güncelleniyor, yeni ve sil eklendi; görünüm uyumu (her görünümde doğru çizim) ve not listesi açık
+- 🟡 Klavye otomatik düzeltme boşluk sonrası kelime yazma: güvenlik önlemi eklendi (kelime geri yazılır); asıl sebep cihazda uygulama bazında doğrulanmalı
+- 🔴 Çevrimiçi müzik (10.5), beyaz gürültü yeni sesler (11.0), Motion Cues (17.0), yüzen gamepad (14.0 kısmi), tema seçenekleri (2.1, 2.3), launcher (18.1), tarayıcı (20.0), Punk Store (22.0), ikon üretici (19.2), genel kalite (23.0)
+- 🔴 Vyxel Apps, CodeAssist, Moon+ Reader, VeriSky, CalibRaw ve diğer yüklenen arşivler: henüz incelenmedi
+- 1.0.242 YAPILACAKLAR: BÜYÜK PAKET statuses updated for the work since 1.0.184, and a "Bu tur eklenenler" list added (derlenmedi)
+- 1.0.243 Keyboard: long press on the comma starts speech typing inside the keyboard (SpeechRecognizer, Pulse microphone permission), the keyboard stays up; the comma icon turns accent while listening; falls back to the voice keyboard when there is no permission or recognizer (derlenmedi)
+- 1.0.244 Keyboard key sizes: ?123 key 15% narrower and comma key 10% narrower by default (sliders in Settings > Keyboard > Size, 0-40%); the space bar takes the room (derlenmedi)
+- 1.0.245 Extra apps: White noise and Notification history rows removed (White noise opens from the Music player's top bar, a volume button); the per-row switch is an eye that hides a row here and in the ⋮ menu; an app whose own launcher icon is on is not listed (it opens from its icon); "Show Extra apps in the ⋮ menu" switch, on by default; Launcher settings get "Open the launcher to test" (derlenmedi)
+- 1.0.246 Settings > Extra apps: tool rows show one Fluent glyph in the text colour (no coloured pictures); the switch on lists the tool in Extra apps, off hides it there and in the Apps group; Extra apps lists exactly the tools switched on (derlenmedi)
+- 1.0.247 Fluent colour icons for LocalSend (Send), Palette (Paint Brush), Keyboard, BlackOut and Island in Extra apps, the Apps settings and the Windows 11 rows; Send and Paint Brush are the official colour glyphs of the Fluent set, the other three are the filled glyph with a Fluent blue-violet gradient, rendered in the app (derlenmedi)
+- 1.0.248 Fluent colour pictures (gradient, rendered in the app) for the rest of the flat Fluent icons: the tools, the Extra apps and the pages (fc_ pictures for relay, clock, radio, recap, chargewatts, browser, mediatools, speedtest, buds, calculator, pages); the Apps settings tool rows use them (derlenmedi)
+- 1.0.249 Radio only from the Music player (a radio button on its top bar); removed from Extra apps, the ⋮ menu and Settings > Extra apps (derlenmedi)
+- 1.0.250 Charging power moved into Device > Battery (the card at the top of the battery page); the Extra apps row, the ⋮ entry and the Settings row are removed (derlenmedi)
+- 1.0.251 Radio inside the Music player takes the player's dark look (white text, lime accent); Music recap moved from Extra apps and the ⋮ menu to a button on the Music player top bar, reading the player's own play log (derlenmedi)
+- 1.0.252 Files share sheet: Relay and LocalSend are one entry ("Relay / LocalSend") that asks which one to open; they no longer appear twice in the app row (derlenmedi)
+- 1.0.253 Settings > Pages: a tap on a page name opens that page (the switch still decides the left menu) (derlenmedi)
+- 1.0.254 Relay and LocalSend only from Files (Files > More rows); removed from Extra apps and the ⋮ menu. Radio: two boombox skins drawn in the app (nostalgic wood and chrome, modern matte with a lit display), chosen with chips above the list (derlenmedi)
+- 1.0.255 Windows Phone start (WinPhone look): medium tiles with notifications turn over to the count of new items (from MetroWinLauncher's live tile idea, rewritten for Pulse). Phase 1 of the MetroWin port; action centre and metro lock screen not started (derlenmedi)
+- 1.0.256 Device > Overview: tapping CPU, Memory, Temperature, Battery, Storage or Network opens that part; Device > Network has Network usage and Internet speed test (the graph opens Network usage). Both are removed from Extra apps, the ⋮ menu, the Settings tool list, the launcher control panel and the Processes header double tap (derlenmedi)
+- 1.0.257 Windows Phone action centre: the notifications are listed (newest first, app name, title, text; a tap opens the app, Clear all), from the notification history; the Metro lock screen (phase 3) not done: Android does not let a launcher replace the lock screen (derlenmedi)
+- 1.0.258 Device > Overview: a Security card at the top ("Your phone is secure"; App lock, Authenticator, App history). These three are reached only from there: removed from the side menu, Settings lists, ⋮ menu and Extra apps (derlenmedi)
+- 1.0.259 Quick settings Coin and Dice: a tap lights the tile (ACTIVE, white) while the picture turns through its faces, then it settles on the result. Device > Overview: the "Your phone is secure" card is gone; a Security button sits under the Network card and opens Device > Security (App lock, Authenticator, App history) (derlenmedi)
+- 1.0.260 Build fix: two Fluent colour pictures had capital letters in their file names (fc_extraCalculator, fc_extraBrowser), which Android does not allow. Renamed to lowercase and the lookups lowercase the key (derlenmedi)
+- 1.0.261 Build fix: the Explorer share sheet called sendIntent before it was declared (openNearby moved below it) (derlenmedi)
+- 1.0.262 Messages: a sent SMS is kept only when the radio really sent it (each part reports back; "Not sent" when refused), the + button icon is readable on the accent, and a thread opened from New message shows the contact name (derlenmedi)
+- 1.0.263 Messages list: the back arrow is gone from the top bar (thread, New message and Settings keep it); the add button icon is readable on the accent (derlenmedi)
+- 1.0.264 Lyrics notification: plain lyrics (no timestamps) are no longer dropped; their lines share the song length evenly, so the notification follows the playing position (derlenmedi)
+- 1.0.265 Action centre: the Airplane mode tile switches airplane mode in place when Pulse has root or Shizuku; without them the settings page opens as before (derlenmedi)
+- 1.0.266 Messages: a sent text shows in its thread at once (kept in an in-app outbox, since the system does not write sent texts when another app is the default SMS app); a refused text is removed and "Not sent" is shown (derlenmedi)
+- 1.0.267 Motion cues: a tap on the thin top strip closes the open quick settings / notification panel (accessibility global action); the double tap still switches the cues off (derlenmedi)
+- 1.0.268 Lyrics: plain lyrics (no timestamps) are spread over the sounding part of the song: the silence at the start and end and the gaps are left out (decoded once per song, the loud 100 ms windows); without a readable file the whole length is used. Timed lyrics not changed here (the cause of the timed case is not found yet) (derlenmedi)
+- 1.0.269 Device > Security: a shield in a ring that fills with each protection on (App lock, Authenticator), "Your device is secured" in bold (or "Protection is off" when neither is on); the three tiles are bold too (derlenmedi)
+- (sonraki derlemede) RAM: the cover, video thumbnail and slide picture caches are bounded by bytes (12, 8 and 16 MB) instead of by count; a big picture now takes its real share (derlenmedi)
+- (sonraki derlemede) RAM: with the screen off the monitor loop (overlay, notification, alerts) reads every 5 s instead of every second; when no Pulse screen is in front the cover and video thumbnail caches are emptied (new PulseApp, onTrimMemory). Motion cues and the other services are not touched (derlenmedi)
+- (sonraki derlemede) Size: one APK per processor type (armeabi-v7a, arm64-v8a, x86_64) instead of one with all three; the release holds Pulse-<ver>-<abi>.apk and Pulse-<ver>-android5-<abi>.apk; the in-app updater picks the phone's own type (derlenmedi)
+- (sonraki derlemede) Size: 78 WebP pictures recompressed (lossless where smaller, lossy only when it looks the same); about 9.8 MB to 6.8 MB of pictures (derlenmedi)
+- (sonraki derlemede) Messages: sent texts move their conversation to the top and new ones are listed; the thread page has one ⋮ for pin, mute and block (block asks first) (derlenmedi)

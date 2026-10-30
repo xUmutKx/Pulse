@@ -825,7 +825,13 @@ object FilesPrefs {
     var thumbs by mutableStateOf(true)       // image thumbnails in the list
     var binary by mutableStateOf(false)      // sizes in KiB/MiB (1024) instead of KB/MB (1000)
     var openRecent by mutableStateOf(false)  // opening page: false = start folder, true = recent files
-    var dateFmt by mutableStateOf(0)         // 0 short, 1 long, 2 ISO
+    var dateFmt by mutableStateOf(0)         // 0 short, 1 long, 2 ISO, 3 always the day and the time
+    // what a folder row and a file row show under the name, each on its own
+    var folderSize by mutableStateOf(true)
+    var folderDate by mutableStateOf(true)
+    var fileSize by mutableStateOf(true)
+    var fileDate by mutableStateOf(true)
+    var infoCount by mutableStateOf(true)    // the number of items inside a folder row
     var foldersFirst by mutableStateOf(true)
     var openAsk by mutableStateOf(false)     // files open through the system chooser instead of Pulse's viewers
     var storageInfo by mutableStateOf(true)  // drawer: storage bar and free space
@@ -849,7 +855,7 @@ object FilesPrefs {
         start = p.getString("ex_start", "") ?: ""; hidden = p.getBoolean("ex_hidden", false); grid = p.getBoolean("ex_grid", false)
         icon = p.getInt("ex_icon", 1); confirm = p.getBoolean("ex_confirm", true); ext = p.getBoolean("ex_ext", true); sort = p.getInt("ex_sort_all", 0)
         stdFolders = p.getBoolean("ex_std", true); bookmarks = p.getBoolean("ex_bm", true)
-        thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0)
+        thumbs = p.getBoolean("ex_thumbs", true); previews = p.getBoolean("ex_prev", true); binary = p.getBoolean("ex_bin", false); dateFmt = p.getInt("ex_datefmt", 0); folderSize = p.getBoolean("ex_fold_size", true); folderDate = p.getBoolean("ex_fold_date", true); fileSize = p.getBoolean("ex_file_size", true); fileDate = p.getBoolean("ex_file_date", true); infoCount = p.getBoolean("ex_info_count", true)
         foldersFirst = p.getBoolean("ex_ff", true); openAsk = p.getBoolean("ex_ask", false); openRecent = p.getBoolean("ex_openrecent", false); storageInfo = p.getBoolean("ex_sinfo", true)
         cards = p.getBoolean("ex_cards", true); folderCards = p.getBoolean("ex_fcards", false); rowSep = p.getBoolean("ex_rowsep", false); alt = p.getBoolean("ex_alt", false); radius = p.getInt("ex_rad", 1)
         analysis = p.getBoolean("ex_analysis", false); startBrowse = p.getBoolean("ex_startbrowse", false); glass = p.getBoolean("ex_glass", true)
@@ -859,8 +865,28 @@ object FilesPrefs {
         sp(c).edit().putStringSet("ex_lib_off", libHidden).putBoolean("ex_glass", glass).apply()
         sp(c).edit().putString("ex_start", start).putBoolean("ex_hidden", hidden).putBoolean("ex_grid", grid).putInt("ex_icon", icon)
             .putBoolean("ex_confirm", confirm).putBoolean("ex_ext", ext).putInt("ex_sort_all", sort).putBoolean("ex_std", stdFolders).putBoolean("ex_bm", bookmarks)
-            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
+            .putBoolean("ex_thumbs", thumbs).putBoolean("ex_prev", previews).putBoolean("ex_bin", binary).putInt("ex_datefmt", dateFmt).putBoolean("ex_fold_size", folderSize).putBoolean("ex_fold_date", folderDate).putBoolean("ex_file_size", fileSize).putBoolean("ex_file_date", fileDate).putBoolean("ex_info_count", infoCount).putBoolean("ex_ff", foldersFirst).putBoolean("ex_rowsep", rowSep).putBoolean("ex_ask", openAsk).putBoolean("ex_openrecent", openRecent).putBoolean("ex_sinfo", storageInfo).putBoolean("ex_cards", cards).putBoolean("ex_fcards", folderCards).putBoolean("ex_alt", alt).putInt("ex_rad", radius).putBoolean("ex_analysis", analysis).putBoolean("ex_startbrowse", startBrowse).apply()
     }
+}
+
+/** The folders of the Files tab whose item count is set for that folder alone (path -> 0 off, 1 on); the rest follow the settings. */
+internal fun exReadCountMap(c: android.content.Context): Map<String, Int> = com.umutk.pulse.filesPrefs(c).getString("ex_count_dirs", "").orEmpty().lines().mapNotNull { line ->
+    val i = line.lastIndexOf('|'); if (i < 0) null else line.substring(i + 1).toIntOrNull()?.let { line.substring(0, i) to it }
+}.toMap()
+
+internal fun exWriteCountMap(c: android.content.Context, m: Map<String, Int>) =
+    com.umutk.pulse.filesPrefs(c).edit().putString("ex_count_dirs", m.map { "${it.key}|${it.value}" }.joinToString("\n")).apply()
+
+/** The line under a name in the rows: the item count of a folder, then its size and its date when those are switched on. */
+/** [all]: the detailed list, which always shows the size and the date, whatever the switches say. */
+internal fun exInfoParts(dir: Boolean, items: Int, size: Long?, ms: Long, count: Boolean = FilesPrefs.infoCount, all: Boolean = false): String {
+    val p = mutableListOf<String>()
+    val showSize = all || (if (dir) FilesPrefs.folderSize else FilesPrefs.fileSize)
+    val showDate = all || (if (dir) FilesPrefs.folderDate else FilesPrefs.fileDate)
+    if (dir && count) p += "$items ${tr("items", "öğe")}"
+    if (showSize) size?.let { p += exSize(it) }
+    if (showDate) p += exDate(ms, FilesPrefs.dateFmt)
+    return p.joinToString("  ·  ")
 }
 
 /** Settings > Files: collapsible sections (look, colours, language, files), every header and row with an icon of the look's pack. */
@@ -892,6 +918,29 @@ fun FilesSettings() {
     fun sp(c: android.content.Context) = com.umutk.pulse.filesPrefs(c)
     val top = android.os.Environment.getExternalStorageDirectory().path
     val folders = listOf("" to tr("Storage", "Depolama")) + listOf("DCIM", "Download", "Documents", "Pictures", "Music", "Movies").filter { java.io.File(top, it).isDirectory }.map { "$top/$it" to it }
+    // a detailed example: what a root folder, a folder, a folder shown by name only and files show under their names with these choices
+    com.umutk.pulse.PCard {
+        Text(tr("Preview", "Önizleme"), color = T.text, fontSize = 15.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold)
+        Text(tr("How the rows look with the choices below", "Aşağıdaki seçimlerle satırlar böyle görünür"), color = T.sub, fontSize = 12.sp)
+        val now = System.currentTimeMillis()
+        // one example row: an icon, the name, what the row shows under it, and the kind of place it stands for
+        @Composable fun Example(icon: String, name: String, sub: String, caption: String) {
+            Column(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                Text(caption, color = Look.accent, fontSize = 11.sp)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Ic(icon); Column(Modifier.weight(1f).padding(start = 12.dp)) {
+                        Text(name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        if (sub.isNotEmpty()) Text(sub, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+            }
+        }
+        Example("folder", "Internal storage", exInfoParts(true, 19, 19_300_000_000L, now - 3_600_000L), tr("Root folder", "Kök klasör"))
+        Example("folder", "Photos", exInfoParts(true, 115, 124_000_000L, now - 86_400_000L * 2), tr("A folder", "Bir klasör"))
+        Example("folder", "Download", "", tr("A folder with names only (set per folder)", "Yalnızca isim (klasöre özel)"))
+        Example("office", if (fp.ext) "Notes.txt" else "Notes", exInfoParts(false, 0, 2_300_000L, now - 86_400_000L * 2), tr("A file changed earlier", "Daha önce değişmiş dosya"))
+        Example("office", if (fp.ext) "Photo.jpg" else "Photo", exInfoParts(false, 0, 1_100_000L, now - 3_600_000L), tr("A file changed today", "Bugün değişmiş dosya"))
+    }
     com.umutk.pulse.PCard {
         Sec(tr("Look", "Görünüm"), "palette") {
         val looks = listOf("app" to tr("App theme", "Uygulama teması"), "material" to "Material You", "amoled" to "AMOLED black", "coloros" to "ColorOS", "win11" to "Windows 11",
@@ -932,7 +981,13 @@ fun FilesSettings() {
             Chips(tr("Start folder", "Başlangıç klasörü"), "folder", folders.map { it.second }, folders.indexOfFirst { it.first == fp.start }.coerceAtLeast(0)) { fp.start = folders[it].first }
             Chips(tr("Sort by", "Sıralama"), "sort", listOf(tr("Name", "Ad"), tr("Size", "Boyut"), tr("Date", "Tarih")), fp.sort / 2) { fp.sort = it * 2 + fp.sort % 2 }
             Chips(tr("Order", "Düzen"), "sort", listOf(tr("Ascending", "Artan"), tr("Descending", "Azalan")), fp.sort % 2) { fp.sort = fp.sort / 2 * 2 + it }
-            Chips(tr("View", "Görünüm"), "gridView", listOf(tr("List", "Liste"), tr("Grid", "Izgara")), if (fp.grid) 1 else 0) { fp.grid = it == 1 }
+            // the three views as small pictures: the picked one has the accent edge
+            val detail0 = com.umutk.pulse.filesPrefs(ctx).getInt("ex_detail", 0) == 1
+            var viewPick by androidx.compose.runtime.remember { androidx.compose.runtime.mutableIntStateOf(if (fp.grid) 1 else if (detail0) 2 else 0) }
+            ViewStylePicker(viewPick) { m ->
+                viewPick = m; fp.grid = m == 1
+                com.umutk.pulse.filesPrefs(ctx).edit().putInt("ex_detail", if (m == 2) 1 else 0).apply()
+            }
             Chips(tr("Icon size", "Simge boyutu"), "image", listOf(tr("Tiny", "En küçük"), tr("Small", "Küçük"), tr("Medium", "Orta"), tr("Large", "Büyük"), tr("Huge", "En büyük")), fp.icon / 2) { fp.icon = it * 2 + 1 }
             // files taken out of an archive for a copy or cut wait in the app's data until they are pasted; this is how long
             val ttl = listOf(15 to "15 min", 60 to "1 h", 360 to "6 h", 1440 to "1 day", 0 to tr("Never", "Hiç"))
@@ -954,8 +1009,13 @@ fun FilesSettings() {
             SwRow(tr("Thumbnails", "Küçük resimler"), "image", fp.thumbs) { fp.thumbs = it }
             SwRow(tr("Previews and type badges", "Önizleme ve tür rozetleri"), "image", fp.previews) { fp.previews = it }
             SwRow(tr("Folders first", "Önce klasörler"), "folder", fp.foldersFirst) { fp.foldersFirst = it }
+            SwRow(tr("Folders: item count", "Klasörler: öğe sayısı"), "folder", fp.infoCount) { fp.infoCount = it }
+            SwRow(tr("Folders: size", "Klasörler: boyut"), "sizes", fp.folderSize) { fp.folderSize = it }
+            SwRow(tr("Folders: date", "Klasörler: tarih"), "history", fp.folderDate) { fp.folderDate = it }
+            SwRow(tr("Files: size", "Dosyalar: boyut"), "sizes", fp.fileSize) { fp.fileSize = it }
+            SwRow(tr("Files: date", "Dosyalar: tarih"), "history", fp.fileDate) { fp.fileDate = it }
             Chips(tr("Size units", "Boyut birimi"), "sizes", listOf("KB · MB", "KiB · MiB"), if (fp.binary) 1 else 0) { fp.binary = it == 1 }
-            Chips(tr("Date format", "Tarih biçimi"), "history", listOf(exDate(1_700_000_000_000L, 0), exDate(1_700_000_000_000L, 1), exDate(1_700_000_000_000L, 2)), fp.dateFmt) { fp.dateFmt = it }
+            Chips(tr("Date format", "Tarih biçimi"), "history", listOf(tr("Smart", "Akıllı"), exDate(1_700_000_000_000L, 1), exDate(1_700_000_000_000L, 2), exDate(1_700_000_000_000L, 3)), fp.dateFmt) { fp.dateFmt = it }
             Chips(tr("Start page", "Açılış sayfası"), "folder", listOf(tr("Home", "Ana ekran"), tr("Recent", "Son")), if (fp.openRecent) 1 else 0) { fp.openRecent = it == 1 }
             Chips(tr("Open files", "Dosyaları aç"), "openFolder", listOf(tr("Pulse viewers", "Pulse görüntüleyiciler"), tr("Ask", "Sor")), if (fp.openAsk) 1 else 0) { fp.openAsk = it == 1 }
         }
@@ -1055,4 +1115,34 @@ internal fun joinParts(f: File): String {
         out.outputStream().buffered().use { o -> parts.forEach { p -> p.inputStream().use { it.copyTo(o) } } }
         tr("Joined ${parts.size} parts into ${out.name}", "${parts.size} parça ${out.name} olarak birleştirildi")
     }.getOrElse { out.delete(); tr("Could not join", "Birleştirilemedi") }
+}
+
+/** Settings > Files > View: list, grid and detailed list drawn as miniatures. */
+@Composable
+private fun ViewStylePicker(picked: Int, onPick: (Int) -> Unit) {
+    val names = listOf(tr("List", "Liste"), tr("Grid", "Izgara"), tr("Detailed list", "Detaylı liste"))
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(10.dp)) {
+        names.forEachIndexed { i, n ->
+            val on = i == picked
+            Column(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).border(if (on) 2.dp else 1.dp, if (on) Look.accent else T.sub.copy(alpha = .35f), RoundedCornerShape(12.dp)).clickable { onPick(i) }.padding(8.dp),
+                horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally) {
+                androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(64.dp)) {
+                    val ink = T.text.copy(alpha = .75f); val dim = T.sub.copy(alpha = .55f); val box = Look.accent.copy(alpha = .8f)
+                    val w = size.width; val h = size.height
+                    when (i) {
+                        0 -> repeat(4) { r -> val y = h * (0.06f + r * 0.24f)
+                            drawRoundRect(box, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(h * 0.16f, h * 0.16f), androidx.compose.ui.geometry.CornerRadius(3f))
+                            drawRoundRect(ink, androidx.compose.ui.geometry.Offset(h * 0.24f, y + h * 0.05f), androidx.compose.ui.geometry.Size(w * 0.55f, h * 0.06f), androidx.compose.ui.geometry.CornerRadius(3f)) }
+                        1 -> repeat(2) { r -> repeat(3) { c -> val sz = h * 0.4f; val gap = (w - 3 * sz) / 2f
+                            drawRoundRect(box, androidx.compose.ui.geometry.Offset(c * (sz + gap), r * (sz + h * 0.1f)), androidx.compose.ui.geometry.Size(sz, sz), androidx.compose.ui.geometry.CornerRadius(5f)) } }
+                        else -> repeat(3) { r -> val y = h * (0.04f + r * 0.32f)
+                            drawRoundRect(box, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Size(h * 0.24f, h * 0.24f), androidx.compose.ui.geometry.CornerRadius(3f))
+                            drawRoundRect(ink, androidx.compose.ui.geometry.Offset(h * 0.32f, y + h * 0.02f), androidx.compose.ui.geometry.Size(w * 0.5f, h * 0.07f), androidx.compose.ui.geometry.CornerRadius(3f))
+                            drawRoundRect(dim, androidx.compose.ui.geometry.Offset(h * 0.32f, y + h * 0.13f), androidx.compose.ui.geometry.Size(w * 0.35f, h * 0.05f), androidx.compose.ui.geometry.CornerRadius(3f)) }
+                    }
+                }
+                androidx.compose.material3.Text(n, color = T.text, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp), maxLines = 1)
+            }
+        }
+    }
 }

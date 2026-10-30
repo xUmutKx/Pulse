@@ -47,7 +47,7 @@ val pageGutter get() = if (T.material) 16.dp else 12.dp
 
 private fun material(k: String): ImageVector = when (k) {
     "add" -> Icons.Outlined.Add; "pin" -> Icons.Outlined.PushPin; "lock" -> Icons.Outlined.Lock; "unlock" -> Icons.Outlined.LockOpen
-    "undo" -> Icons.Outlined.Undo; "restore" -> Icons.Outlined.Restore; "share" -> Icons.Outlined.Share; "newfile" -> Icons.Outlined.NoteAdd
+    "undo" -> Icons.Outlined.Undo; "redo" -> Icons.Outlined.Redo; "restore" -> Icons.Outlined.Restore; "share" -> Icons.Outlined.Share; "newfile" -> Icons.Outlined.NoteAdd
     "image" -> Icons.Outlined.Image; "bell" -> Icons.Outlined.Notifications; "calendar" -> Icons.Outlined.CalendarMonth; "save" -> Icons.Outlined.Save
     "edit" -> Icons.Outlined.Edit; "record" -> Icons.Outlined.FiberManualRecord; "mic" -> Icons.Outlined.Mic; "speak" -> Icons.Outlined.VolumeUp
     "processes" -> Icons.Outlined.Apps; "apps" -> Icons.Outlined.Apps; "performance" -> Icons.Outlined.ShowChart; "history" -> Icons.Outlined.History
@@ -63,11 +63,11 @@ private fun material(k: String): ImageVector = when (k) {
     "copy" -> Icons.Outlined.ContentCopy; "move" -> Icons.Outlined.DriveFileMove; "rename" -> Icons.Outlined.DriveFileRenameOutline
     "home" -> Icons.Outlined.Home; "send" -> Icons.Outlined.Send; "language" -> Icons.Outlined.Language; "tune" -> Icons.Outlined.Tune; "keyboard" -> Icons.Outlined.Keyboard; "height" -> Icons.Outlined.Height; "emoji" -> Icons.Outlined.EmojiEmotions; "school" -> Icons.Outlined.School; "storage" -> Icons.Outlined.Storage; "video" -> Icons.Outlined.Movie; "gif" -> Icons.Outlined.Gif; "convert" -> Icons.Outlined.Transform; "compress" -> Icons.Outlined.Compress; "photos" -> Icons.Outlined.PhotoLibrary; "mute" -> Icons.Outlined.NotificationsOff; "block" -> Icons.Outlined.Block; "more" -> Icons.Outlined.MoreVert; "archive" -> Icons.Outlined.Archive; "call" -> Icons.Outlined.Call; "attach" -> Icons.Outlined.AttachFile
     "newfolder" -> Icons.Outlined.CreateNewFolder; "paste" -> Icons.Outlined.ContentPaste
-    "extract" -> Icons.Outlined.Archive; "view" -> Icons.Outlined.Visibility
+    "extract" -> Icons.Outlined.Archive; "view" -> Icons.Outlined.Visibility; "radio" -> Icons.Outlined.Radio; "shieldOk" -> Icons.Outlined.VerifiedUser; "eyeOn" -> Icons.Outlined.Visibility; "eyeOff" -> Icons.Outlined.VisibilityOff
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Straighten; "flash" -> Icons.Outlined.FlashlightOn
     "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "coin" -> Icons.Outlined.Paid; "clipboard" -> Icons.Outlined.ContentPaste
     "screenshot" -> Icons.Outlined.Screenshot; "sensors" -> Icons.Outlined.Sensors; "vibrate" -> Icons.Outlined.Vibration; "stopwatch" -> Icons.Outlined.Timer
-    "timer" -> Icons.Outlined.HourglassBottom; "calc" -> Icons.Outlined.Calculate; "scale" -> Icons.Outlined.AspectRatio; "power" -> Icons.Outlined.PowerSettingsNew
+    "timer" -> Icons.Outlined.HourglassBottom; "calc" -> Icons.Outlined.Calculate; "function" -> Icons.Outlined.Functions; "terminal" -> Icons.Outlined.Terminal; "scale" -> Icons.Outlined.AspectRatio; "power" -> Icons.Outlined.PowerSettingsNew
     "volume" -> Icons.Outlined.VolumeUp; "rotate" -> Icons.Outlined.ScreenRotation; "touch" -> Icons.Outlined.TouchApp; "motion" -> Icons.Outlined.Waves; "pointer" -> Icons.Outlined.Adjust
     "compass" -> Icons.Outlined.Explore; "level" -> Icons.Outlined.Balance; "flash" -> Icons.Outlined.FlashlightOn
     "light" -> Icons.Outlined.LightMode; "dice" -> Icons.Outlined.Casino; "coin" -> Icons.Outlined.MonetizationOn
@@ -95,12 +95,12 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     // the tools and extra apps wear the colour Fluent picture of their own (fc_*.png), else the filled Fluent glyph, never the thin outline
     if (fluent && (k.startsWith("tool_") || k.startsWith("extra"))) {
         val n = FC_NAMED[k] ?: k.removePrefix("tool_")
-        val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }
+        val id = remember(n) { ctx.resources.getIdentifier("fc_${n.lowercase()}", "drawable", ctx.packageName) }
         if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return }
         if (FluentFilled.map.containsKey(k)) { FluentColorGlyph2(k, size, modifier); return }
     }
     // Fluent colour: the colour pictures of the pages, then the coloured glyph
-    if (fluent && colour) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
+    if (fluent && colour) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_${n.lowercase()}", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
     if (fluent && colour) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
     if (k == "recycle" && !T.material) {
         if (fluent) ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
@@ -386,7 +386,7 @@ private val FC_PIC = mapOf("processes" to "processes", "performance" to "perform
     "services" to "services", "apps" to "apps", "download" to "download", "folder" to "files", "office" to "office", "recycle" to "recycle", "phone" to "device",
     "heart" to "health", "run" to "terminal", "settings" to "settings")
 
-private val FC_NAMED = mapOf("extraFiles" to "files", "extraPhotos" to "photos", "extraCalendar" to "calendar", "extraContacts" to "contacts", "extraPaint" to "paint", "extraArtCraft" to "artcraft",
+private val FC_NAMED = mapOf("extraOffice" to "office", "extraLocalSend" to "localsend", "extraKeyboard" to "keyboard", "extraPalette" to "palette", "extraBlackOut" to "blackout", "extraIsland" to "island", "extraFiles" to "files", "extraPhotos" to "photos", "extraCalendar" to "calendar", "extraContacts" to "contacts", "extraPaint" to "paint", "extraArtCraft" to "artcraft",
     "extraMusic" to "music", "extraVideo" to "video", "extraWhiteNoise" to "whitenoise", "extraVoice" to "voice", "extraNotes" to "notes", "extraWeather" to "weather", "extraMessages" to "messages",
     "extraLauncher" to "launcher", "extraScreenRec" to "screenrec", "extraNotifHist" to "notifhist", "extraLocalSend" to "localsend", "extraStore" to "store")
 

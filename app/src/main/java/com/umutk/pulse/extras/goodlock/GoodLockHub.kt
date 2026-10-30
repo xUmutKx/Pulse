@@ -78,14 +78,27 @@ private fun installed(c: Context): List<Module> {
         }.sortedBy { it.label.lowercase() }
 }
 
-/** What APKMirror's feed of Samsung's apps lists: title -> newest version number found in it. */
-private fun feedVersions(): Map<String, String> = runCatching {
+/** One entry of APKMirror's feed: the title, the version number found in it and the page of that release. */
+private class FeedItem(val title: String, val version: String, val link: String)
+
+/** The feed of Samsung's apps on APKMirror. [err] says why nothing came back (no network, blocked, an empty feed), so a failed check is not shown as "no updates". */
+private fun feedItems(err: (String) -> Unit): List<FeedItem> = runCatching {
     val cn = URL("https://www.apkmirror.com/apk/samsung-electronics-co-ltd/feed/").openConnection() as HttpURLConnection
     cn.connectTimeout = 10_000; cn.readTimeout = 15_000; cn.setRequestProperty("User-Agent", "Pulse/1.0 (github.com/xUmutKx/Pulse)")
+    val code = cn.responseCode
+    if (code != 200) { err("HTTP $code"); cn.disconnect(); return@runCatching emptyList<FeedItem>() }
     val xml = try { cn.inputStream.bufferedReader().use { it.readText() } } finally { cn.disconnect() }
-    Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL).findAll(xml).map { it.groupValues[1].replace("<![CDATA[", "").replace("]]>", "").trim() }
-        .mapNotNull { t -> Regex("\\d+(?:\\.\\d+)+").find(t)?.value?.let { v -> t to v } }.toMap()
-}.getOrDefault(emptyMap())
+    fun clean(t: String) = t.replace("<![CDATA[", "").replace("]]>", "").trim()
+    val items = Regex("<item>(.*?)</item>", RegexOption.DOT_MATCHES_ALL).findAll(xml).mapNotNull { m ->
+        val body = m.groupValues[1]
+        val t = Regex("<title>(.*?)</title>", RegexOption.DOT_MATCHES_ALL).find(body)?.groupValues?.get(1)?.let(::clean) ?: return@mapNotNull null
+        val l = Regex("<link>(.*?)</link>", RegexOption.DOT_MATCHES_ALL).find(body)?.groupValues?.get(1)?.let(::clean).orEmpty()
+        val v = Regex("\\d+(?:\\.\\d+)+").find(t)?.value ?: return@mapNotNull null
+        FeedItem(t, v, l)
+    }.toList()
+    if (items.isEmpty()) err("empty")
+    items
+}.getOrElse { err(it.javaClass.simpleName + (it.message?.let { m -> ": $m" } ?: "")); emptyList() }
 
 private fun newer(a: String, b: String): Boolean {
     val x = a.split('.').mapNotNull { it.toIntOrNull() }; val y = b.split('.').mapNotNull { it.toIntOrNull() }
@@ -98,7 +111,8 @@ fun GoodLockHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var mods by remember { mutableStateOf<List<Module>?>(null) }
-    var feed by remember { mutableStateOf<Map<String, String>>(emptyMap()) }
+    var feed by remember { mutableStateOf<List<FeedItem>>(emptyList()) }
+    var feedErr by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
     var tab by remember { mutableStateOf(0) }
     BackHandler { onBack() }
@@ -108,13 +122,17 @@ fun GoodLockHub(onBack: () -> Unit) {
         onDispose { ExtraKeys.volume = null }
     }
     fun reload() { scope.launch { mods = withContext(Dispatchers.IO) { installed(ctx) } } }
-    fun check() { scope.launch { checking = true; feed = withContext(Dispatchers.IO) { feedVersions() }; checking = false } }
+    fun check() { scope.launch { checking = true; feedErr = null; var e: String? = null; feed = withContext(Dispatchers.IO) { feedItems { e = it } }; feedErr = e; checking = false } }
     LaunchedEffect(Unit) { reload(); check() }
     // a module is outdated when the feed lists its name with a higher version
-    fun latest(m: Module): String? = feed.entries.filter { it.key.contains(m.label, true) }.map { it.value }.maxWithOrNull(Comparator { a, b -> if (newer(a, b)) 1 else if (newer(b, a)) -1 else 0 })
+    fun latestItem(label: String): FeedItem? = feed.filter { it.title.contains(label, true) }.maxWithOrNull(Comparator { a, b -> if (newer(a.version, b.version)) 1 else if (newer(b.version, a.version)) -1 else 0 })
+    fun latest(m: Module): String? = latestItem(m.label)?.version
     fun hasUpdate(m: Module): Boolean = latest(m)?.let { newer(it, m.version) } == true
     val list = mods.orEmpty()
-    val shown = if (tab == 1) list.filter { hasUpdate(it) } else list
+    // the names of the modules this phone does not have: a Download button (APKMirror's page of the newest release when the feed knows it)
+    val missing = NAMES.filter { n -> list.none { it.label.contains(n, true) } }
+    val updates = list.filter { hasUpdate(it) }
+    val tabs = listOf(tr("Installed", "Kurulu") + " (${list.size})", tr("Not installed", "Kurulu değil") + " (${missing.size})", tr("Updates", "Güncellemeler") + (updates.size.takeIf { it > 0 }?.let { " ($it)" } ?: ""))
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
@@ -122,35 +140,42 @@ fun GoodLockHub(onBack: () -> Unit) {
             Box(Modifier.size(40.dp).clickable { reload(); check() }, contentAlignment = Alignment.Center) { PIcon("refresh", T.text, 22.dp) }
             ExtraLookIcon()
         }
-        // two tabs: every module, and the ones with a newer version (with their number)
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf(tr("Modules", "Modüller") to 0, tr("Updates", "Güncellemeler") + (list.count { hasUpdate(it) }.takeIf { it > 0 }?.let { " ($it)" } ?: "") to 1).forEach { (label, i) ->
-                Text(label, color = if (tab == i) Color.White else T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium,
-                    modifier = Modifier.clip(RoundedCornerShape(20.dp)).background2(if (tab == i) Look.accent else T.panel).clickable { tab = i }.padding(horizontal = 16.dp, vertical = 8.dp))
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            tabs.forEachIndexed { i, label ->
+                Text(label, color = if (tab == i) Color.White else T.text, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1,
+                    modifier = Modifier.clip(RoundedCornerShape(20.dp)).background2(if (tab == i) Look.accent else T.panel).clickable { tab = i }.padding(horizontal = 12.dp, vertical = 8.dp))
             }
-            if (checking) Text("…", color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(start = 6.dp, top = 8.dp))
+            if (checking) Text("…", color = T.sub, fontSize = 14.sp)
         }
-        if (mods != null && list.isEmpty()) Text(tr("No Good Lock module found on this phone.", "Bu telefonda Good Lock modülü yok."), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
+        // a failed check is said out loud, never shown as "no updates"
+        feedErr?.let { Text(tr("The update check failed ($it). Versions shown are the installed ones only.", "Güncelleme denetimi başarısız ($it). Yalnızca kurulu sürümler gösteriliyor."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp)) }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(shown, key = { it.pkg }) { m ->
+            if (tab != 1) items(if (tab == 2) updates else list, key = { it.pkg }) { m ->
                 val upd = hasUpdate(m)
-                Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background2(T.panel).padding(14.dp)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        ModIcon(m.pkg)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(m.label, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(m.version + (latest(m)?.takeIf { upd }?.let { "  →  $it" } ?: ""), color = if (upd) Look.accent else T.sub, fontSize = 13.sp)
-                        }
-                        if (upd) Text(tr("Update", "Güncelle"), color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium,
-                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { openMirror(ctx, m.label) }.padding(6.dp))
+                // a tap opens the module itself
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background2(T.panel)
+                    .clickable { ctx.packageManager.getLaunchIntentForPackage(m.pkg)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ModIcon(m.pkg)
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(m.label, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(m.version + (latest(m)?.takeIf { upd }?.let { "  →  $it" } ?: ""), color = if (upd) Look.accent else T.sub, fontSize = 13.sp)
                     }
-                    Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Action("info", tr("App info", "Uygulama bilgisi")) { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", m.pkg, null)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                        Action("play", tr("Open", "Aç")) { ctx.packageManager.getLaunchIntentForPackage(m.pkg)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
-                        Action("globe", "APKMirror") {
-                            openMirror(ctx, m.label)
-                        }
+                    if (upd) Text(tr("Update", "Güncelle"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background2(Look.accent).clickable { openMirror(ctx, m.label, latestItem(m.label)?.link) }.padding(horizontal = 12.dp, vertical = 6.dp))
+                }
+            }
+            if (tab == 1) items(missing, key = { it }) { n ->
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background2(T.panel).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background2(T.sub.copy(alpha = .18f)), contentAlignment = Alignment.Center) { PIcon("apps", T.sub, 22.dp) }
+                    Spacer(Modifier.width(12.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(n, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        latestItem(n)?.let { Text(it.version, color = T.sub, fontSize = 13.sp) }
+                    }
+                    Row(Modifier.clip(RoundedCornerShape(10.dp)).background2(Look.accent).clickable { openMirror(ctx, n, latestItem(n)?.link) }.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon("download", Color.White, 16.dp); Spacer(Modifier.width(5.dp))
+                        Text(tr("Download", "İndir"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
                     }
                 }
             }
@@ -170,8 +195,10 @@ private fun Action(icon: String, label: String, onClick: () -> Unit) {
 
 private fun Modifier.background2(c: Color): Modifier = this.then(Modifier.background(c))
 
-private fun openMirror(ctx: Context, label: String) {
-    runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.apkmirror.com/?s=" + Uri.encode(label))).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+/** The page of the newest release when the feed gave one, else the search for the name. */
+private fun openMirror(ctx: Context, label: String, link: String? = null) {
+    val url = link?.takeIf { it.startsWith("https://www.apkmirror.com/") } ?: ("https://www.apkmirror.com/?s=" + Uri.encode(label))
+    runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
 /** The module's own launcher picture. */

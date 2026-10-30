@@ -102,7 +102,12 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "troubleshoot" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.doctor.TroubleshootScreen(back) }
         id == "goodlock" -> com.umutk.pulse.extras.goodlock.GoodLockHub(back)
         id == "buds" -> com.umutk.pulse.extras.buds.BudsScreen(back)
+        id == "clock" -> com.umutk.pulse.extras.lucid.LucidClockScreen(back)
+        id == "radio" -> com.umutk.pulse.extras.radio.RadioScreen(back)
+        id == "relay" -> com.umutk.pulse.extras.relay.RelayScreen(back)
+        id == "recap" -> com.umutk.pulse.extras.music.stats.RecapScreen(back)
         id == "speedtest" -> com.umutk.pulse.extras.speedtest.SpeedTestScreen(back)
+        id == "chargewatts" -> com.umutk.pulse.extras.charging.ChargingWattsScreen(back)
         id == "mediatools" -> com.umutk.pulse.extras.mediatools.MediaToolsScreen(back)
         id == "netusage" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.NetUsageScreen(back) }
         id == "guide" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.GuidePage() }

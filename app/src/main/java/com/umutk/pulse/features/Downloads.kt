@@ -31,6 +31,13 @@ import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.border
+import androidx.compose.foundation.background
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -338,6 +345,14 @@ object Downloads {
         // after the writer has stopped, so it cannot bring the file back
         val running = t.job
         scope.launch { running?.join(); t.file.delete() }
+    }
+
+    /** A finished download whose file is gone (deleted in a file manager, an unmounted card) leaves the list: the list shows what is really there. */
+    fun prune() {
+        val gone = tasks.value.filter { it.state.value == DlState.DONE && !it.file.exists() }
+        if (gone.isEmpty()) return
+        tasks.update { l -> l - gone.toSet() }
+        persist()
     }
 
     /** Holds a running download: the transfer stops and the partial file stays, so [resume] continues it. */
@@ -921,6 +936,10 @@ private fun DownloadsContent() {
     val openTool = com.umutk.pulse.LocalOpenTool.current
     var cat by remember { mutableStateOf("All") }
     var sort by remember { mutableStateOf(0) }
+    // several rows chosen with a long press; the bar at the top deletes them all after one question
+    var chosen by remember { mutableStateOf(setOf<DlTask>()) }
+    var bulkAsk by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { while (true) { withContext(Dispatchers.IO) { Downloads.prune() }; chosen = chosen.filter { it in Downloads.tasks.value }.toSet(); kotlinx.coroutines.delay(2500) } }
     // Android 13+ hides notifications until the user allows them; the download still runs without
     val askNotes = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
@@ -934,6 +953,20 @@ private fun DownloadsContent() {
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         PHead("Downloads")
+        if (chosen.isNotEmpty()) PCard {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                Text("${chosen.size}", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Box(Modifier.clickable { chosen = list.filter { cat == "All" || category(it.file) == cat }.toSet() }) { PIcon("check", T.text, 22.dp) }
+                Box(Modifier.clickable { bulkAsk = true }) { PIcon("delete", Color(0xFFE5484D), 22.dp) }
+                Box(Modifier.clickable { chosen = emptySet() }) { PIcon("close", T.sub, 22.dp) }
+            }
+        }
+        if (bulkAsk) WinAlert(onDismissRequest = { bulkAsk = false }, warn = true,
+            title = { Text(tr("Delete ${chosen.size} downloads", "${chosen.size} indirmeyi sil")) },
+            text = { Text(tr("The files are deleted from the storage too.", "Dosyalar depolamadan da silinir.")) },
+            confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { val n = chosen.toList(); bulkAsk = false; chosen = emptySet(); n.forEach { Downloads.remove(it) }
+                findScope.launch { kotlinx.coroutines.delay(1500); val left = n.count { it.file.exists() }; if (left > 0) android.widget.Toast.makeText(ctx, tr("$left files could not be deleted", "$left dosya silinemedi"), android.widget.Toast.LENGTH_LONG).show() } } },
+            dismissButton = { DlDialogBtn(tr("Cancel", "Vazgeç"), false) { bulkAsk = false } })
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             Box(Modifier.clickable { Downloads.pauseAll() }) { PIcon("pause", T.text, 22.dp) }
             Box(Modifier.clickable { Downloads.resumeAll() }) { PIcon("play", T.text, 22.dp) }
@@ -1009,12 +1042,13 @@ private fun DownloadsContent() {
                 confirmButton = {}, dismissButton = { PButton(tr("Cancel", "İptal")) { found = null } })
         }
         if (list.isEmpty()) Text("No downloads", color = T.sub, fontSize = 13.sp)
-        list.filter { cat == "All" || category(it.file) == cat }.sortedWith(order).forEach { DownloadRow(it) }
+        list.filter { cat == "All" || category(it.file) == cat }.sortedWith(order).forEach { t -> DownloadRow(t, t in chosen, chosen.isNotEmpty()) { chosen = if (t in chosen) chosen - t else chosen + t } }
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
-private fun DownloadRow(t: DlTask) {
+private fun DownloadRow(t: DlTask, picked: Boolean, selecting: Boolean, toggle: () -> Unit) {
     val ctx = LocalContext.current
     val done by t.done.collectAsState()
     val total by t.total.collectAsState()
@@ -1028,7 +1062,8 @@ private fun DownloadRow(t: DlTask) {
         DlState.DONE -> "Done · ${Guard.gb(done)}"
         DlState.FAILED -> "Failed: $err"
     }
-    PCard(Modifier.fillMaxWidth().clickable(enabled = st == DlState.DONE) { Downloads.openFile(ctx, t.file) }) {
+    PCard(Modifier.fillMaxWidth().then(if (picked) Modifier.border(2.dp, com.umutk.pulse.Look.accent, RoundedCornerShape(8.dp)) else Modifier)
+        .combinedClickable(onLongClick = toggle) { if (selecting) toggle() else if (st == DlState.DONE) Downloads.openFile(ctx, t.file) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(t.file.name, color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -1046,10 +1081,19 @@ private fun DownloadRow(t: DlTask) {
             if (confirmDel) WinAlert(onDismissRequest = { confirmDel = false }, warn = true,
                 title = { Text(tr("Delete download", "İndirmeyi sil")) },
                 text = { Text(t.file.name) },
-                confirmButton = { Text(tr("Delete", "Sil"), Modifier.clickable { confirmDel = false; Downloads.remove(t) }.padding(8.dp)) },
-                dismissButton = { Text(tr("Cancel", "Vazgeç"), Modifier.clickable { confirmDel = false }.padding(8.dp)) })
+                confirmButton = { DlDialogBtn(tr("Delete", "Sil"), true) { confirmDel = false; Downloads.remove(t) } },
+                dismissButton = { DlDialogBtn(tr("Cancel", "Vazgeç"), false) { confirmDel = false } })
         }
         if (st == DlState.RUNNING || st == DlState.PAUSED) BarMeter(if (total > 0) done.toFloat() / total else 0f, T.text, Modifier.padding(top = 6.dp), h = 6.dp)
+    }
+}
+
+/** A button of a download dialog: the delete one is red with white text, the other has the window's own text colour, so both read in every look. */
+@Composable
+private fun DlDialogBtn(text: String, danger: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(6.dp)
+    Box(Modifier.clip(shape).background(if (danger) Color(0xFFC42B1C) else T.text.copy(alpha = .12f)).clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 8.dp), contentAlignment = Alignment.Center) {
+        Text(text, color = if (danger) Color.White else T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1)
     }
 }
 

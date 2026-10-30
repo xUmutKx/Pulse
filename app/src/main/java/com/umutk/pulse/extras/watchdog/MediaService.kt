@@ -62,7 +62,15 @@ abstract class MediaService : Service() {
         handler.post(beatTask)
     }
 
+    /** What a tap on the notification opens (the screen of this service's own player, not the Pulse start page). */
+    protected open fun openIntent(): Intent = Intent(this, MainActivity::class.java)
+
+    /** True: the notification carries a Stop button; [onStop] runs when it is pressed. */
+    protected open val hasStop: Boolean = false
+    protected open fun onStop() {}
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        if (intent?.action == ACTION_STOP) { onStop(); finish(); return START_NOT_STICKY }
         // Must be called within 5 seconds of a foreground start, so it comes first.
         try {
             if (android.os.Build.VERSION.SDK_INT >= 29) startForeground(notifId, notification(), ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK) else startForeground(notifId, notification())
@@ -84,8 +92,8 @@ abstract class MediaService : Service() {
     }
 
     private fun notification(): Notification {
-        val open = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
-        return NotificationCompat.Builder(this, CH)
+        val open = PendingIntent.getActivity(this, 0, openIntent().addFlags(Intent.FLAG_ACTIVITY_NEW_TASK), PendingIntent.FLAG_IMMUTABLE)
+        val b = NotificationCompat.Builder(this, CH)
             .setSmallIcon(android.R.drawable.ic_media_play)
             .setContentTitle("Pulse")
             .setContentText(title)
@@ -93,11 +101,14 @@ abstract class MediaService : Service() {
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(open)
-            .build()
+        if (hasStop) b.addAction(android.R.drawable.ic_media_pause, tr("Stop", "Durdur"),
+            PendingIntent.getService(this, 1, Intent(this, javaClass).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
+        return b.build()
     }
 
     companion object {
         private const val CH = "pulse_playback"
+        const val ACTION_STOP = "com.umutk.pulse.action.MEDIA_STOP"
         private const val BEAT_MS = 60_000L
 
         /** Starts [cls] in the foreground and keeps it alive. False when Android refused the start; the watchdog retries. */
@@ -128,6 +139,7 @@ abstract class MediaService : Service() {
 class MusicPlaybackService : MediaService() {
     override val title: String get() = tr("Playing music", "Müzik çalıyor")
     override val notifId = 9301
+    override fun openIntent(): Intent = Intent().setClassName(packageName, "$packageName.ExtraToolActivity").putExtra("route", "music").putExtra(com.umutk.pulse.extras.music.MusicPlaybackService.EXTRA_OPEN, "player")
     override fun onResume(last: QuickTileContract.LastPlayed?) {
         if (last?.kind != QuickTileContract.Kind.TRACK) return
         // Only a restart after music was playing at its last state change; a paused or closed player stays silent.
@@ -146,6 +158,10 @@ class VideoPlaybackService : MediaService() {
 class AmbientPlaybackService : MediaService() {
     override val title: String get() = tr("Ambient sound playing", "Ortam sesi çalıyor")
     override val notifId = 9303
+    // a tap opens the music player's own sound page; the Stop button ends the mix and the notification
+    override fun openIntent(): Intent = Intent().setClassName(packageName, "$packageName.ExtraToolActivity").putExtra("route", "music").putExtra(com.umutk.pulse.extras.music.MusicPlaybackService.EXTRA_OPEN, "noise")
+    override val hasStop = true
+    override fun onStop() { com.umutk.pulse.extras.ambient.AmbientMixer.stopAll() }
     // No onResume: a restart after Android killed the process must never start the last mix by itself.
     // The mix starts only from the page, the Quick panel tile or the widget (AmbientLast.toggle / AmbientMixer.load).
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {

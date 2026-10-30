@@ -138,7 +138,7 @@ fun OfSaveAsDialog(name: String, exts: List<String>, srcDir: File?, onDismiss: (
         (dir.listFiles()?.toList() ?: emptyList()).filter { !it.name.startsWith(".") && (it.isDirectory || exts.any { e -> it.name.endsWith(".$e", true) }) }
             .sortedWith(compareBy({ !it.isDirectory }, { it.name.lowercase() }))
     }
-    WinAlert(onDismissRequest = onDismiss, title = { androidx.compose.material3.Text(tr("Save as", "Farklı kaydet")) },
+    WinAlert(onDismissRequest = onDismiss, containerColor = LocalWindowLook.current.panel, title = { androidx.compose.material3.Text(tr("Save as", "Farklı kaydet"), color = T.text) },
         text = { androidx.compose.foundation.layout.Column(verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(6.dp)) {
             androidx.compose.foundation.layout.Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
                 androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.size(36.dp).clickable(enabled = dir.path != root.path) { dir.parentFile?.let { dir = it } }, contentAlignment = androidx.compose.ui.Alignment.Center) {
@@ -173,8 +173,8 @@ fun OfSaveAsDialog(name: String, exts: List<String>, srcDir: File?, onDismiss: (
             var f = File(dir, "$clean.$ext"); var n = 2
             while (!over && f.exists()) f = File(dir, "$clean ${n++}.$ext")
             onPick(f)
-        }) { androidx.compose.material3.Text(tr("Save", "Kaydet")) } },
-        dismissButton = { androidx.compose.material3.TextButton(onDismiss) { androidx.compose.material3.Text(tr("Cancel", "İptal")) } })
+        }) { androidx.compose.material3.Text(tr("Save", "Kaydet"), color = T.accent) } },
+        dismissButton = { androidx.compose.material3.TextButton(onDismiss) { androidx.compose.material3.Text(tr("Cancel", "İptal"), color = T.accent) } })
 }
 
 /**

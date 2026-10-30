@@ -33,8 +33,25 @@ class SpeedResult(val pingMs: Float, val jitterMs: Float, val down: Float, val u
     }
 }
 
+/** Every finished test is kept (the newest 300): the history page reads them, day by day. */
+object SpeedHistory {
+    private fun sp(c: Context) = c.getSharedPreferences("speedtest", Context.MODE_PRIVATE)
+    fun all(c: Context): List<SpeedResult> = runCatching {
+        val a = org.json.JSONArray(sp(c).getString("history", "[]"))
+        (0 until a.length()).map { i -> a.getJSONObject(i).let { o -> SpeedResult(o.getDouble("p").toFloat(), o.getDouble("j").toFloat(), o.getDouble("d").toFloat(), o.getDouble("u").toFloat(), o.optString("i"), o.optString("l"), o.optString("a"), o.optLong("t")) } }
+    }.getOrDefault(emptyList())
+    private fun write(c: Context, l: List<SpeedResult>) {
+        val a = org.json.JSONArray()
+        l.forEach { r -> a.put(JSONObject().put("p", r.pingMs.toDouble()).put("j", r.jitterMs.toDouble()).put("d", r.down.toDouble()).put("u", r.up.toDouble()).put("i", r.isp).put("l", r.place).put("a", r.ip).put("t", r.time)) }
+        sp(c).edit().putString("history", a.toString()).apply()
+    }
+    fun add(c: Context, r: SpeedResult) = write(c, (all(c) + r).sortedByDescending { it.time }.take(300))
+    fun remove(c: Context, time: Long) = write(c, all(c).filter { it.time != time })
+    fun clear(c: Context) = sp(c).edit().remove("history").apply()
+}
+
 /** Where the test is: [phase] is idle, ping, down, up, done or error; [value] is the number shown on the dial (ms for ping, Mbit/s for the others). */
-class SpeedLive(val phase: String, val value: Float, val ping: Float = 0f, val jitter: Float = 0f, val down: Float = 0f, val up: Float = 0f, val isp: String = "", val place: String = "", val ip: String = "")
+class SpeedLive(val phase: String, val value: Float, val ping: Float = 0f, val jitter: Float = 0f, val down: Float = 0f, val up: Float = 0f, val isp: String = "", val place: String = "", val ip: String = "", val why: String = "")
 
 /**
  * An internet speed test against Cloudflare's public test servers (no account, no key): the round trip time, the download over four streams and the upload over
@@ -52,9 +69,20 @@ object SpeedTest {
         val app = c.applicationContext
         job = scope.launch {
             live.value = SpeedLive("ping", 0f)
-            val r = runCatching { measure(app) }.getOrNull()
-            if (r != null) { r.save(app); live.value = SpeedLive("done", r.down, r.pingMs, r.jitterMs, r.down, r.up, r.isp, r.place, r.ip) }
-            else if (isActive) live.value = SpeedLive("error", 0f)
+            val res = runCatching { measure(app) }
+            val r = res.getOrNull()
+            if (r != null) { r.save(app); SpeedHistory.add(app, r); live.value = SpeedLive("done", r.down, r.pingMs, r.jitterMs, r.down, r.up, r.isp, r.place, r.ip) }
+            else if (isActive) {
+                // the reason is shown, never a made-up speed
+                val e = res.exceptionOrNull()
+                val why = when (e) {
+                    is java.net.UnknownHostException -> com.umutk.pulse.tr("The test server could not be found (no internet or DNS).", "Test sunucusu bulunamadı (internet yok ya da DNS sorunu).")
+                    is java.net.SocketTimeoutException -> com.umutk.pulse.tr("The connection timed out.", "Bağlantı zaman aşımına uğradı.")
+                    is javax.net.ssl.SSLException -> com.umutk.pulse.tr("A secure connection could not be made (check the phone's date and time).", "Güvenli bağlantı kurulamadı (telefonun tarih ve saatini kontrol et).")
+                    else -> com.umutk.pulse.tr("The test failed", "Test başarısız oldu") + (e?.message?.let { ": $it" } ?: "")
+                }
+                live.value = SpeedLive("error", 0f, why = why)
+            }
         }
     }
 

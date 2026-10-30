@@ -6,11 +6,13 @@ import android.graphics.Canvas
 import android.graphics.Color as AColor
 import android.util.LruCache
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.*
 import com.umutk.pulse.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
@@ -118,17 +120,17 @@ private class Badge(val color: Color, val glyph: ImageVector)
 private fun badgeOf(f: File): Badge? {
     if (f.isDirectory) return null
     return when (f.extension.lowercase()) {
-        "pdf" -> Badge(Color(0xFFD93025), Icons.Filled.PictureAsPdf)
-        "doc", "docx", "odt", "rtf", "dotx" -> Badge(Color(0xFF2B579A), Icons.Filled.Description)
-        "xls", "xlsx", "ods", "csv", "tsv" -> Badge(Color(0xFF1E7145), Icons.Filled.TableChart)
-        "ppt", "pptx", "odp" -> Badge(Color(0xFFD24726), Icons.Filled.Slideshow)
-        "txt", "md", "log", "lrc" -> Badge(Color(0xFF757575), Icons.Filled.Notes)
-        "zip", "rar", "7z", "tar", "gz", "bz2", "xz", "jar" -> Badge(Color(0xFF8D6E63), Icons.Filled.FolderZip)
-        "mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma" -> Badge(Color(0xFF8E44AD), Icons.Filled.MusicNote)
-        "mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v" -> Badge(Color(0xFFE91E63), Icons.Filled.PlayArrow)
-        "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "svg" -> Badge(Color(0xFF00897B), Icons.Filled.Image)
-        "apk", "apks", "xapk", "apkm" -> Badge(Color(0xFF3DDC84), Icons.Filled.Android)
-        "json", "xml", "html", "js", "kt", "java", "py", "sh", "css", "yml", "yaml" -> Badge(Color(0xFF455A64), Icons.Filled.Code)
+        "pdf" -> Badge(Color(0xFFD93025), Icons.Outlined.PictureAsPdf)
+        "doc", "docx", "odt", "rtf", "dotx" -> Badge(Color(0xFF2B579A), Icons.Outlined.Description)
+        "xls", "xlsx", "ods", "csv", "tsv" -> Badge(Color(0xFF1E7145), Icons.Outlined.TableChart)
+        "ppt", "pptx", "odp" -> Badge(Color(0xFFD24726), Icons.Outlined.Slideshow)
+        "txt", "md", "log", "lrc" -> Badge(Color(0xFF757575), Icons.Outlined.Notes)
+        "zip", "rar", "7z", "tar", "gz", "bz2", "xz", "jar" -> Badge(Color(0xFF8D6E63), Icons.Outlined.FolderZip)
+        "mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma" -> Badge(Color(0xFF8E44AD), Icons.Outlined.MusicNote)
+        "mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v" -> Badge(Color(0xFFE91E63), Icons.Outlined.PlayArrow)
+        "jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif", "svg" -> Badge(Color(0xFF00897B), Icons.Outlined.Image)
+        "apk", "apks", "xapk", "apkm" -> Badge(Color(0xFF3DDC84), Icons.Outlined.Android)
+        "json", "xml", "html", "js", "kt", "java", "py", "sh", "css", "yml", "yaml" -> Badge(Color(0xFF455A64), Icons.Outlined.Code)
         else -> null
     }
 }
@@ -139,7 +141,7 @@ fun ExBadged(f: File, size: androidx.compose.ui.unit.Dp, content: @Composable ()
     val b = if (FilesPrefs.previews) badgeOf(f) else null
     Box(Modifier.size(size), contentAlignment = Alignment.Center) {
         content()
-        if (b != null) Box(Modifier.align(Alignment.BottomEnd).size(17.dp).clip(if (com.umutk.pulse.T.material) RoundedCornerShape(50) else RoundedCornerShape(2.dp)).background(b.color), contentAlignment = Alignment.Center) {
+        if (b != null) Box(Modifier.align(Alignment.BottomEnd).size(17.dp).clip(if (com.umutk.pulse.T.material) RoundedCornerShape(50) else RoundedCornerShape(2.dp)).background(Color.Black).border(1.dp, Color.White.copy(alpha = .4f), if (com.umutk.pulse.T.material) RoundedCornerShape(50) else RoundedCornerShape(2.dp)), contentAlignment = Alignment.Center) {
             Icon(b.glyph, null, Modifier.size(12.dp), Color.White)
         }
     }

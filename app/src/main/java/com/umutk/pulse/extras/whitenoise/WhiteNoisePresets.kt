@@ -17,7 +17,7 @@ val BuiltInPresets = listOf(
     p("Seaside", "Sahil", "waves" to 55, "wind" to 20),
     p("Waterfall", "Şelale", "selale" to 40, "orman" to 20, "wind" to 10),
     p("Sleep", "Uyku", "rain" to 30, "white" to 30, "damlama" to 15),
-    p("Meditation", "Meditasyon", "bell" to 35, "wind" to 20),
+    p("Meditation", "Meditasyon", "bell" to 33, "wind" to 19),
     p("Night forest", "Gece ormanı", "orman" to 45, "wind" to 20, "damlama" to 10),
     p("Focus", "Odak", "coffee" to 25, "rain" to 20, "white" to 15),
     p("Rainforest", "Yağmur ormanı", "rain" to 45, "orman" to 45, "damlama" to 25),

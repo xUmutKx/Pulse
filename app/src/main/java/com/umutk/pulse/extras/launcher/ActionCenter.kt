@@ -40,8 +40,13 @@ import androidx.compose.material.icons.outlined.VpnKey
 import androidx.compose.material.icons.outlined.Wifi
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material3.Icon
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +60,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.ExtraToolActivity
+import com.umutk.pulse.Shell
 import com.umutk.pulse.tr
 
 /** The Windows 10 Mobile action center: the quick tiles, "Collapse" and the notification area. It opens with a pull down from the top edge. */
@@ -67,6 +73,13 @@ internal class QTile(val icon: ImageVector, val en: String, val trName: String, 
 
 private fun settings(a: String): (Context) -> Unit = { c -> runCatching { c.startActivity(Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
 
+/** Flips airplane mode in place when the phone gives Pulse root or Shizuku; without them the settings page opens, as Android does not let an app switch it. */
+private fun airplane(c: Context) {
+    if (Shell.root != true && Shell.shizuku != 2) return settings(Settings.ACTION_AIRPLANE_MODE_SETTINGS)(c)
+    val on = Settings.Global.getInt(c.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
+    Thread { Shell.run("cmd connectivity airplane-mode ${if (on) "disable" else "enable"}") }.start()
+}
+
 internal val QUICK = listOf(
     QTile(Icons.Outlined.SignalCellularAlt, "Cellular", "Hücresel", settings(Settings.ACTION_WIRELESS_SETTINGS)),
     QTile(Icons.Outlined.WifiTethering, "Mobile hotspot", "Mobil erişim noktası", settings("android.settings.TETHER_SETTINGS")),
@@ -74,7 +87,7 @@ internal val QUICK = listOf(
     QTile(Icons.Outlined.BrightnessAuto, "Automatic", "Otomatik", settings(Settings.ACTION_DISPLAY_SETTINGS)),
     QTile(Icons.Outlined.VpnKey, "VPN", "VPN", settings(Settings.ACTION_VPN_SETTINGS)),
     QTile(Icons.Outlined.LocationOn, "Location", "Konum", settings(Settings.ACTION_LOCATION_SOURCE_SETTINGS)),
-    QTile(Icons.Outlined.AirplanemodeActive, "Airplane mode", "Uçak modu", settings(Settings.ACTION_AIRPLANE_MODE_SETTINGS)),
+    QTile(Icons.Outlined.AirplanemodeActive, "Airplane mode", "Uçak modu", ::airplane),
     QTile(Icons.Outlined.CameraAlt, "Camera", "Kamera", { c -> runCatching { c.startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
     QTile(Icons.Outlined.Cast, "Connect", "Bağlan", settings(Settings.ACTION_CAST_SETTINGS)),
     QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)),
@@ -131,10 +144,37 @@ fun ActionCenterPanel() {
         Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.End) {
             Text(tr("Collapse", "Daralt") + " ⌃", color = teal, fontSize = 16.sp, modifier = Modifier.clickable { ActionCenter.open = false }.padding(8.dp))
         }
-        Text(tr("No notifications", "Bildirim yok"), color = Color(0xFFCCCCCC), fontSize = 18.sp, modifier = Modifier.padding(start = 10.dp, top = 24.dp))
-        Spacer(Modifier.weight(1f))
+        WpNotifications(c)
         Box(Modifier.fillMaxWidth().height(24.dp).background(teal).clickable { ActionCenter.open = false }, contentAlignment = Alignment.Center) {
             Text("═", color = Color.White, fontSize = 14.sp)
+        }
+    }
+}
+
+/**
+ * The notifications of the Windows Phone action centre: the newest first, the app's name small above the title, a tap opens the app. They come from the
+ * notification history, which keeps them while it is switched on (Settings > Notification history).
+ */
+@Composable
+private fun ColumnScope.WpNotifications(c: Context) {
+    val entries by com.umutk.pulse.extras.notifhist.NotifHist.entries.collectAsState()
+    val on = com.umutk.pulse.extras.notifhist.NotifHist.enabled(c)
+    if (!on) Text(tr("Notifications are not kept yet. Turn on Notification history in Settings.", "Bildirimler henüz tutulmuyor. Ayarlar'dan Bildirim geçmişini aç."),
+        color = Color(0xFFCCCCCC), fontSize = 14.sp, modifier = Modifier.padding(start = 10.dp, top = 16.dp))
+    else if (entries.isEmpty()) Text(tr("No notifications", "Bildirim yok"), color = Color(0xFFCCCCCC), fontSize = 18.sp, modifier = Modifier.padding(start = 10.dp, top = 24.dp))
+    else androidx.compose.foundation.lazy.LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 8.dp)) {
+        items(entries.take(40)) { e ->
+            Column(Modifier.fillMaxWidth().padding(vertical = 8.dp, horizontal = 10.dp).clickable {
+                c.packageManager.getLaunchIntentForPackage(e.pkg)?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)?.let { c.startActivity(it) }
+                ActionCenter.open = false
+            }) {
+                Text(e.app, color = Color(0xFF00B7C3), fontSize = 12.sp, maxLines = 1)
+                if (e.title.isNotBlank()) Text(e.title, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                if (e.text.isNotBlank()) Text(e.text, color = Color(0xFFBBBBBB), fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+        }
+        item {
+            Text(tr("Clear all", "Tümünü temizle"), color = Color(0xFF00B7C3), fontSize = 15.sp, modifier = Modifier.clickable { com.umutk.pulse.extras.notifhist.NotifHist.clear(c) }.padding(10.dp))
         }
     }
 }

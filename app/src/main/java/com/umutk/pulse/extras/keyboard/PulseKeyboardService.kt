@@ -155,7 +155,32 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var seenPrimary = ""
 
     /** The word lists used together: the layout's own, then those of the other languages in use (a Turkish keyboard that also corrects English). */
-    private fun dictCodes(code: String): List<String> = (listOf(KeyboardLayouts.dict(code)) + KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }).distinct()
+    private fun dictCodes(code: String): List<String> {
+        val all = (listOf(KeyboardLayouts.dict(code)) + KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }).distinct()
+        // the language of the sentence under way goes first (see detectLang)
+        val c = ctxLang
+        return if (c != null && c in all) listOf(c) + all.filter { it != c } else all
+    }
+
+    /** The language of the sentence being written, from its last words; null when it is mixed or too short to tell (then every language of the keyboard counts alike). */
+    @Volatile private var ctxLang: String? = null
+
+    /**
+     * One English word does not turn a Turkish sentence English: the words of the sentence so far vote, each word that belongs to exactly one of the keyboard's
+     * languages counts for it, and a language leads only with at least two such words and twice the votes of the other. The word being typed is not counted.
+     */
+    private fun detectLang() {
+        val langs = KeyboardPrefs.langList().map { KeyboardLayouts.dict(it) }.distinct()
+        if (!KeyboardPrefs.autoLang || langs.size < 2) { ctxLang = null; return }
+        val tb = currentInputConnection?.getTextBeforeCursor(140, 0)?.toString().orEmpty()
+        val sentence = tb.takeLastWhile { it !in ".!?\n" }
+        val ws = sentence.split(Regex("[^\\p{L}']+")).filter { it.length >= 3 }.let { if (word.isNotEmpty()) it.dropLast(1) else it }.takeLast(6)
+        val votes = HashMap<String, Int>()
+        ws.forEach { w -> val low = w.lowercase(lang.locale); val hits = langs.filter { KeyboardDictionary.isWord(it, low) }; if (hits.size == 1) votes[hits[0]] = (votes[hits[0]] ?: 0) + 1 }
+        val sorted = votes.entries.sortedByDescending { it.value }
+        val top = sorted.firstOrNull(); val second = sorted.getOrNull(1)?.value ?: 0
+        ctxLang = if (top != null && top.value >= 2 && top.value >= 2 * second) top.key else null
+    }
 
     override fun onCreate() {
         super.onCreate()
@@ -222,6 +247,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     override fun onDestroy() {
+        runCatching { recognizer?.destroy() }; recognizer = null
         clipboard?.removePrimaryClipChangedListener(clipListener)
         runCatching { contentResolver.unregisterContentObserver(shotObserver) }
         KeyboardDictionary.saveUser(this)
@@ -310,6 +336,26 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             currentInputConnection?.finishComposingText()
             word.clear(); peak = null; lastCorrection = null; updateSuggestions()
         }
+        // the cursor came back to the end of a word (a tap behind it, or a delete that stopped there): the word opens again, so it stands in the middle of the bar
+        // with its own suggestions and the next letter goes on with it, instead of the bar moving on to a new word
+        reopenWordAtCursor(oldSelStart, newSelStart, newSelEnd)
+    }
+
+    private fun reopenWordAtCursor(oldStart: Int, newStart: Int, newEnd: Int) {
+        if (word.isNotEmpty() || newStart != newEnd || newStart <= 0 || newStart == oldStart) return
+        if (!KeyboardPrefs.suggestions || st.plain || emailField || urlNow() || st.panel != "keys") return
+        if (SystemClock.uptimeMillis() - editAt < 250) return
+        val c = currentInputConnection ?: return
+        val before = c.getTextBeforeCursor(40, 0)?.toString().orEmpty()
+        val after = c.getTextAfterCursor(1, 0)?.toString().orEmpty()
+        if (before.isEmpty() || !before.last().isLetter() || (after.isNotEmpty() && after[0].isLetter())) return
+        val w = before.takeLastWhile { it.isLetter() || it == '\'' }
+        if (w.isEmpty() || w.length > 30 || (before.length > w.length && before[before.length - w.length - 1].isLetterOrDigit())) return
+        editAt = SystemClock.uptimeMillis()
+        c.setComposingRegion(newStart - w.length, newStart)
+        word.append(w); touchPts.clear(); target = null; peak = null; lastCorrection = null
+        prevWord = before.dropLast(w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }.lowercase().ifEmpty { null }
+        updateSuggestions()
     }
 
     // ---- typing ------------------------------------------------------------------------------------------------------------------------------------
@@ -379,6 +425,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             dotEnd = ch in "!?" || dotOk
             lastWasSpace = false
             if (ch in ".!?") lastCorrection = null
+            prevWord = null; prevWord2 = null
             afterText()
         }
     }
@@ -402,13 +449,31 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val lw = typed.lowercase(lang.locale)
             if (sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 3))) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
         }
-        // the word and what follows it (the space or the sign) go in with one commit: the field never shows the word gone with the space alone
-        c.commitText(out + tail, 1)
+        // the word and what follows it (the space or the sign) go in as one batch. The word is first closed where it stands, and only a corrected word is replaced by
+        // deleting exactly what was typed: a commit that "replaces the composing text" depends on the app agreeing where that text is, and some fields (web pages,
+        // editors that move the region) then wrote the sign over the word, deleted it, or put a second copy beside it
+        if (spaceBefore) c.commitText(out + tail, 1)
+        else {
+            c.beginBatchEdit()
+            c.finishComposingText()
+            if (out != typed) { c.deleteSurroundingText(typed.length, 0); c.commitText(out, 1) }
+            if (tail.isNotEmpty()) c.commitText(tail, 1)
+            c.endBatchEdit()
+        }
+        // safety net: some fields drop or swallow the word in this edit. When the text before the cursor no longer holds the word, it is written back
+        // (once, only when it is really missing), so a space never leaves the word gone
+        runCatching {
+            val got = c.getTextBeforeCursor(out.length + tail.length, 0)?.toString()
+            if (got != null && got != out + tail && !got.contains(out)) {
+                if (tail.isNotEmpty() && got.endsWith(tail)) c.deleteSurroundingText(tail.length, 0)
+                c.commitText(out + tail, 1)
+            }
+        }
         peak?.let { pk ->
             val lc = lang.locale
             val a = pk.lowercase(lc); val b = typed.lowercase(lc)
@@ -445,8 +510,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 lastWasSpace = false; punctTyped = false; afterText(); return
             }
         }
-        if (word.isEmpty() && KeyboardPrefs.quickPrediction && !st.plain && slotWords[1].isNotEmpty() && prevWord != null) {
-            c.commitText(slotWords[1] + " ", 1); prevWord = slotWords[1]; lastWasSpace = true; spaceTap = now; afterText(); return
+        // the predicted word is only added when the field really ends in the word we remember (not after a sign, a deleted word, a paste or a moved cursor):
+        // otherwise Space would write words the user never asked for
+        if (word.isEmpty() && KeyboardPrefs.quickPrediction && !st.plain && slotWords[1].isNotEmpty() && prevWord != null && c.getSelectedText(0).isNullOrEmpty()) {
+            val tail = c.getTextBeforeCursor(prevWord!!.length + 1, 0)?.toString().orEmpty()
+            val ends = tail.length == prevWord!!.length + 1 && tail.last() == ' ' && tail.dropLast(1).equals(prevWord, true)
+            if (ends && !punctTyped) {
+                c.commitText(slotWords[1] + " ", 1); prevWord = slotWords[1]; lastWasSpace = true; spaceTap = now; afterText(); return
+            }
         }
         // the correction and the space go in as one edit, so the field never shows the word gone for a moment
         if (!finishWord(" ", true, " ")) c.commitText(" ", 1)
@@ -479,6 +550,20 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             lastGlide = null
             if (before == "$g ") { c.deleteSurroundingText(g.length + 1, 0); afterText(); return }
         }
+        // right after an automatic correction, Backspace takes it back: the word as it was typed opens again, and that correction is remembered as unwanted,
+        // so the same word is not corrected the same way the next time
+        val lc = lastCorrection
+        if (lc != null && word.isEmpty() && c.getSelectedText(0).isNullOrEmpty()) {
+            val n = lc.corrected.length + lc.sep.length
+            if (c.getTextBeforeCursor(n, 0)?.toString() == lc.corrected + lc.sep) {
+                lastCorrection = null
+                if (!st.incognito) KeyboardDictionary.reject(this, lc.original, lc.corrected)
+                c.beginBatchEdit(); c.deleteSurroundingText(n, 0); c.setComposingText(lc.original, 1); c.endBatchEdit()
+                editAt = SystemClock.uptimeMillis()
+                word.append(lc.original); touchPts.clear(); target = null; peak = null
+                updateSuggestions(); return
+            }
+        }
         if (word.isNotEmpty()) {
             editAt = SystemClock.uptimeMillis()
             if (peak == null && word.length >= 3) peak = word.toString()
@@ -501,6 +586,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+        // text was deleted that the remembered words may have belonged to: they are forgotten, so no old prediction is written back
+        prevWord = null; prevWord2 = null; lastCorrection = null; lastGlide = null
         updateCaps(); updateSuggestions()
     }
 
@@ -555,6 +642,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         return true
+    }
+
+    override fun longFeedback() {
+        if (!KeyboardPrefs.haptic) return
+        val vib = getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator ?: return
+        if (!vib.hasVibrator()) return
+        if (android.os.Build.VERSION.SDK_INT >= 26) vib.vibrate(android.os.VibrationEffect.createOneShot(28, android.os.VibrationEffect.DEFAULT_AMPLITUDE))
+        else @Suppress("DEPRECATION") vib.vibrate(28)
     }
 
     override fun slotLong(i: Int) {
@@ -662,8 +757,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         finishWord("", false)
         when (id) {
             "selectAll" -> c.performContextMenuAction(android.R.id.selectAll)
-            "copy" -> c.performContextMenuAction(android.R.id.copy)
-            "cut" -> c.performContextMenuAction(android.R.id.cut)
+            "copy", "cut" -> {
+                // the selected text goes into the clipboard history right here too, so a cut or a copy is never missing from it (the system listener can be late or skipped)
+                val sel = c.getSelectedText(0)?.toString()?.trim()
+                c.performContextMenuAction(if (id == "cut") android.R.id.cut else android.R.id.copy)
+                if (!sel.isNullOrEmpty() && !st.incognito && !st.plain) st.clipItems = ClipStore.addText(this, sel)
+            }
             "paste" -> c.performContextMenuAction(android.R.id.paste)
             "undo" -> c.performContextMenuAction(android.R.id.undo)
             "redo" -> c.performContextMenuAction(android.R.id.redo)
@@ -719,6 +818,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
             "gamepad" -> st.panel = if (st.panel == "gamepad") "keys" else "gamepad"
             "lang" -> lang()
+            // the e-mail key: "@" and the chosen domain go in at the cursor, nothing before it is touched
+            "email" -> { st.panel = "keys"; insertEmailDomain() }
             "voice" -> { st.panel = "keys"; voice() }
             "translate" -> {
                 st.panel = "keys"
@@ -841,9 +942,54 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun hide() { finishWord("", false); requestHideSelf(0) }
 
-    /** Hands the field over to the device's own voice typing (Google); the keyboard comes back when it is done. */
+    private var recognizer: android.speech.SpeechRecognizer? = null
+    private var voiceFallbackDone = false
+
+    /**
+     * Speech typing: listens right here, in the keyboard, and writes what was said into the field; the keyboard stays up. Needs the microphone
+     * permission of Pulse. Without it (or without a recognizer on the phone) the device's own voice keyboard is opened as before.
+     */
     override fun voice() {
         finishWord("", false)
+        if (st.listening) { stopListening(); return }
+        val granted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted || !android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { switchToVoiceKeyboard(); return }
+        val tag = if (lang.code == "tr") "tr-TR" else "en-US"
+        val rec = recognizer ?: android.speech.SpeechRecognizer.createSpeechRecognizer(this).also { recognizer = it }
+        rec.setRecognitionListener(object : android.speech.RecognitionListener {
+            override fun onReadyForSpeech(params: android.os.Bundle?) { st.listening = true }
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() { st.listening = false }
+            override fun onError(error: Int) {
+                st.listening = false
+                // no match is not an error worth a message; a missing recognizer falls back to the voice keyboard once
+                if (error == android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == android.speech.SpeechRecognizer.ERROR_NO_MATCH || error == android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT) return
+                if (!voiceFallbackDone && error == android.speech.SpeechRecognizer.ERROR_CLIENT) { voiceFallbackDone = true; switchToVoiceKeyboard() }
+            }
+            override fun onResults(results: android.os.Bundle?) {
+                st.listening = false
+                val text = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                if (text.isNotBlank()) { currentInputConnection?.commitText(text.trim() + " ", 1); afterText() }
+            }
+            override fun onPartialResults(partial: android.os.Bundle?) {}
+            override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+        })
+        val i = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, tag)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        runCatching { rec.startListening(i) }.onFailure { st.listening = false; switchToVoiceKeyboard() }
+    }
+
+    private fun stopListening() {
+        st.listening = false
+        runCatching { recognizer?.stopListening() }
+    }
+
+    /** The device's own voice keyboard, when speech typing in Pulse is not possible. */
+    private fun switchToVoiceKeyboard() {
         val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as android.view.inputmethod.InputMethodManager
         val voice = imm.enabledInputMethodList.firstOrNull { ime ->
             ime.packageName != packageName && (0 until ime.subtypeCount).any { ime.getSubtypeAt(it).mode == "voice" }
@@ -973,6 +1119,17 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         c.sendKeyEvent(KeyEvent(t, t, if (down) KeyEvent.ACTION_DOWN else KeyEvent.ACTION_UP, code, 0))
     }
 
+    /** "@gmail.com" (or the domain chosen in the settings) at the cursor. */
+    private fun insertEmailDomain() {
+        val c = currentInputConnection ?: return
+        finishWord("", false)
+        val d = KeyboardPrefs.emailDomain.trim().removePrefix("@").ifEmpty { "gmail.com" }
+        val before = c.getTextBeforeCursor(1, 0)?.toString().orEmpty()
+        // when an "@" is already there only the domain is added
+        c.commitText(if (before == "@") d else "@$d", 1)
+        afterText()
+    }
+
     override fun extraKey(id: String) {
         val d = ExtraKeys.byId(id) ?: return
         finishWord("", false); lastGlide = null; lastWasSpace = false
@@ -982,6 +1139,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "win" -> st.win = (st.win + 1) % 3
             "shiftm" -> st.shiftMod = (st.shiftMod + 1) % 3
             "fn" -> st.fnOpen = !st.fnOpen
+            "email" -> insertEmailDomain()
             "selectAll", "copy", "cut", "paste", "undo", "redo" -> edit(id)
             // Alt + Tab: the phone's recent apps (the accessibility helper), as the editor cannot switch windows
             "tab" -> if (st.alt > 0) { com.umutk.pulse.extras.launcher.globalAction(this, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_RECENTS); useModifiers() } else sendKey(d.code)
@@ -1075,6 +1233,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
         }
         if (!KeyboardPrefs.suggestions || st.plain || urlNow()) { st.slots = listOf("", "", ""); slotWords = arrayOf("", "", ""); target = null; return }
+        detectLang()
         val typed = word.toString(); val code = st.lang; val l = lang; val prev = prevWord; val prev2 = prevWord2; val up = st.shift > 0
         // the touch model needs the touch of every letter and the key positions; a word that was not touched letter by letter is judged without it
         val tc: KeyboardDictionary.TouchCtx? = if (typed.isNotEmpty() && touchPts.size >= typed.length && st.letterRects.isNotEmpty()) {
@@ -1107,8 +1266,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) {
                 // a shortcut of the clipboard: the name typed offers the whole text in the middle
-                val sc = if (typed.length >= 2) (KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale))
-                    ?: emailsSaved().firstOrNull { it.startsWith(typed.lowercase(l.locale)) && it.length > typed.length }) else null
+                // saved e-mail addresses are offered only in e-mail fields (above) or after an "@", never while ordinary words are typed
+                val sc = if (typed.length >= 2) KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale)) else null
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
                 else { target = res.third; targetFor = typed; slotWords = res.second; st.slots = res.first }
                 showClipSlot()
@@ -1127,7 +1286,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val lower = typed.lowercase(loc)
         val codes = dictCodes(code)
-        val comp = codes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.take(5)
+        // candidates come from the sentence's language; a word that is valid in any language of the keyboard is still left alone (valid below)
+        val candCodes = if (ctxLang != null) codes.take(1) else codes
+        val comp = candCodes.flatMap { KeyboardDictionary.complete(it, lower, 6) }.sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.take(5)
         val maxCost = if (KeyboardLayouts.dict(code) == "tr") (if (lower.length >= 5) .8f else .65f) else if (lower.length >= 4) 1.3f else .7f
         // a learned slip never turns a real word into a rarer one ("tak" into something else because both were typed once): it must lead to a clearly likelier word
         val learned = KeyboardDictionary.typoFix(this, lower)?.takeIf { l ->
@@ -1139,7 +1300,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val ratioLimit = ((100 - KeyboardPrefs.autoRatio) / 100f * maxOf(lower.length, 4)).coerceAtMost(1.2f)
         val limit = maxOf(if (lower.length >= 8) maxCost + .5f else maxCost, ratioLimit)
         // the fast pass (completions only) gives the bar its words at once; the full pass with the corrections follows and replaces it
-        val corr = if (!fast && lower.length >= 2) (codes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5, tc) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
+        val corr = if (!fast && lower.length >= 2) (candCodes.flatMap { KeyboardDictionary.correct(it, lower, limit, 5, tc) } + (if (tr) KeyboardDictionary.trCorrect(lower, 4, tc) else emptyList()) +
             (if (learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList())).sortedByDescending { it.score + KeyboardDictionary.pairBoost(prev, it.word, prev2) }.distinctBy { it.word }.take(6) else if (fast && learned != null) listOf(KeyboardDictionary.Cand(learned, 40f, 0f)) else emptyList()
         val valid = learned == null && codes.any { KeyboardDictionary.isWord(it, lower) }
         // the word the space key puts in: a near word, unless the typed one is already a word or too short to guess
@@ -1164,7 +1325,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (lower[i] == lower[i + 1]) null else {
                 val w = lower.substring(0, i) + lower[i + 1] + lower[i] + lower.substring(i + 2)
                 val s = codes.maxOf { KeyboardDictionary.baseScore(it, w) }
-                if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < 3) KeyboardDictionary.Cand(w, s, .6f) else null
+                if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < 1) KeyboardDictionary.Cand(w, s, .6f) else null
             }
         }.maxByOrNull { it.score }
         val fix = swapFix ?: fix0 ?: if (!fast && !valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null

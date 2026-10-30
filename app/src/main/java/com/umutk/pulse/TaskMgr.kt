@@ -115,9 +115,9 @@ fun ProcessesPage() {
             if (selRow != null && win95Authentic) PButton("End Task") { if (Cfg.confirmKill) ask = selRow else end(selRow) }
             else if (selRow != null) {
                 val shape = RoundedCornerShape(if (T.material) 50 else 6)
-                Box(Modifier.shadow(8.dp, shape, clip = false).clip(shape).background(T.text.copy(alpha = .06f)).border(1.dp, T.text.copy(alpha = .45f), shape)
+                Box(Modifier.shadow(8.dp, shape, clip = false).clip(shape).background(Color(0xFFC42B1C)).border(1.dp, Color.White.copy(alpha = .35f), shape)
                     .clickable { if (Cfg.confirmKill) ask = selRow else end(selRow) }.padding(horizontal = 14.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
-                    Text("End task", color = Color(0xFFC42B1C), fontSize = 13.sp)
+                    Text("End task", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                 }
             }
         }
@@ -135,11 +135,7 @@ fun ProcessesPage() {
                 HeadCell("${s.cpu}%", "CPU", "cpu", sort == "cpu", heatBg(s.cpu / 100f)) { sort = "cpu" }
                 HeadCell("$memPct%", "Memory", "mem", sort == "mem", heatBg(memPct / 100f)) { sort = "mem" }
                 HeadCell(rate((s.down + s.up).toFloat()), "Network", "net", sort == "net", resColor("net").copy(alpha = .25f)) {
-                    // a tap sorts, a double tap opens Network usage
                     sort = "net"
-                    val now = System.currentTimeMillis()
-                    if (now - NetTap.last < 400) openTool("netusage")
-                    NetTap.last = now
                 }
                 HeadCell("$diskPct%", "Storage", "disk", sort == "disk", resColor("disk").copy(alpha = .25f)) { sort = "disk" }
                 HeadCell("", "Status", "status", false, Color.Transparent) {}

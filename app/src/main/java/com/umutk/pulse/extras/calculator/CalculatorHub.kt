@@ -149,7 +149,7 @@ fun CalculatorHub(back: () -> Unit) {
                 Text(shown, color = T.text, fontSize = if (shown.length > 12) 40.sp else 64.sp, fontWeight = FontWeight.Light, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
             }
             RoundPad(listOf(listOf("C", "⌫", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("( )", "0", ".", "="))) { press(it) }
-            Spacer(Modifier.height(14.dp))
+            Spacer(Modifier.height(48.dp))
             return@Column
         }
         // display
@@ -167,7 +167,7 @@ fun CalculatorHub(back: () -> Unit) {
             listOf("MC", "MR", "M+", "M−"), listOf("%", "CE", "C", "⌫"), listOf("1/x", "x²", "√", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("±", "0", ".", "="),
         )
         CalcPad(rows, classic, Modifier.weight(1f)) { press(it) }
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(44.dp))
     }
 }
 
