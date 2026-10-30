@@ -23,4 +23,4 @@ fi
 "$G/bin/gradle" assembleRelease --no-daemon -Dorg.gradle.jvmargs=-Xmx3g -Pkotlin.daemon.jvmargs=-Xmx3g \
   -Pandroid.aapt2FromMavenOverride=$PREFIX/bin/aapt2 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
 mkdir -p ~/storage/downloads 2>/dev/null || true
-cp app/build/outputs/apk/release/app-release.apk /sdcard/Download/Pulse.apk && echo "APK: /sdcard/Download/Pulse.apk"
+cp "$(ls app/build/outputs/apk/release/app-arm64-v8a-release.apk 2>/dev/null || ls app/build/outputs/apk/release/app-*-release.apk | head -n 1)" /sdcard/Download/Pulse.apk && echo "APK: /sdcard/Download/Pulse.apk"

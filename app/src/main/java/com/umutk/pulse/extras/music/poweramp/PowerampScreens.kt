@@ -1002,15 +1002,15 @@ private fun AudioInfoDialog(track: Track, style: PowerampStyle, onEdit: (() -> U
 private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean, onFavourite: (() -> Unit)?, style: PowerampStyle, modifier: Modifier) {
     var picking by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf<Int?>(null) }
-    val cellPx = with(LocalDensity.current) { 30.dp.toPx() }
+    val cellPx = with(LocalDensity.current) { 34.dp.toPx() }
     val slop = LocalViewConfiguration.current.touchSlop
     val shown = preview ?: rating
     // the pill grows sideways, the stars slide in from the left and the star slides out to the right
     // a rated song keeps its stars on show (filled, as many as it was given); an unrated one is the single favourite star
-    val width by animateDpAsState(if (picking) 158.dp else if (rating > 0) (rating * 17 + 14).dp else 36.dp, label = "ratingWidth")
+    val width by animateDpAsState(if (picking) 182.dp else if (rating > 0) (rating * 20 + 18).dp else 44.dp, label = "ratingWidth")
     Box(
-        modifier.height(36.dp).width(width)
-            .clip(RoundedCornerShape(18.dp)).background(Color.Black.copy(alpha = .5f))
+        modifier.height(44.dp).width(width)
+            .clip(RoundedCornerShape(22.dp)).background(Color.Black.copy(alpha = .5f))
             // no wait: the five stars open on touch and a slide along them picks the rating; a tap without a slide toggles the favourite
             .pointerInput(onRate, onFavourite) {
                 awaitEachGesture {
@@ -1037,7 +1037,7 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 repeat(5) { i ->
-                    Icon(if (i < shown) Icons.Rounded.Star else Icons.Rounded.StarBorder, null, tint = style.accent, modifier = Modifier.size(30.dp))
+                    Icon(if (i < shown) Icons.Rounded.Star else Icons.Rounded.StarBorder, null, tint = style.accent, modifier = Modifier.size(34.dp))
                 }
             }
         }
@@ -1046,8 +1046,8 @@ private fun RatingStar(rating: Int, onRate: ((Int) -> Unit)?, favourite: Boolean
             enter = slideInHorizontally { it / 2 } + fadeIn(),
             exit = slideOutHorizontally { it / 2 } + fadeOut(),
         ) {
-            if (rating > 0) Row(verticalAlignment = Alignment.CenterVertically) { repeat(rating.coerceAtMost(5)) { Icon(Icons.Rounded.Star, null, tint = style.accent, modifier = Modifier.size(17.dp)) } }
-            else Icon(if (favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favourite", "Favori"), tint = if (favourite) style.accent else Color.White, modifier = Modifier.size(20.dp))
+            if (rating > 0) Row(verticalAlignment = Alignment.CenterVertically) { repeat(rating.coerceAtMost(5)) { Icon(Icons.Rounded.Star, null, tint = style.accent, modifier = Modifier.size(20.dp)) } }
+            else Icon(if (favourite) Icons.Rounded.Star else Icons.Rounded.StarBorder, tr("Favourite", "Favori"), tint = if (favourite) style.accent else Color.White, modifier = Modifier.size(23.dp))
         }
     }
 }

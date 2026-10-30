@@ -13,6 +13,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Equalizer
+import androidx.compose.material.icons.outlined.Radio
+import androidx.compose.material.icons.outlined.SyncAlt
+import androidx.compose.material.icons.outlined.AccessTime
+import androidx.compose.material.icons.outlined.BatteryChargingFull
 import androidx.compose.material.icons.outlined.Apps
 import androidx.compose.material.icons.outlined.Headphones
 import androidx.compose.material.icons.outlined.Speed
@@ -119,7 +125,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             // the standalone apps that are switched on in Settings > Apps open from here too
             *builtinApps(ctx) { openTool(it) }.toTypedArray(),
             // every extra app, the ones switched off included, in one list
-            MenuEntry(tr("Extra apps", "Ekstra uygulamalar"), icon = Icons.Outlined.Apps, key = "extraStore") { openTool("extrastore") },
+            *(if (com.umutk.pulse.extras.store.ExtraRowsHidden.menuOn(ctx)) listOf(MenuEntry(tr("Extra apps", "Ekstra uygulamalar"), icon = Icons.Outlined.Apps, key = "extraStore") { openTool("extrastore") }) else emptyList()).toTypedArray(),
         )),
     )
     return MenuHost(tops) {
@@ -142,15 +148,12 @@ object ToolPlace {
         Tool("toolkit", "Toolkit", "Araç kutusu", "toolkit", true, "settings", Icons.Outlined.Build, "extra"),
         Tool("office", "Office", "Office", "office", false, "document", Icons.Outlined.Description, "extra"),
         Tool("download", "Download manager", "İndirme yöneticisi", "downloads", false, "download", Icons.Outlined.Download, "extra"),
-        Tool("applock", "App lock", "Uygulama kilidi", "applock", false, "applock", Icons.Outlined.Lock, "extra"),
         Tool("health", "Health", "Sağlık", "health", false, "heart", Icons.Outlined.Favorite, "extra"),
         Tool("installer", "APK installer", "APK yükleyici", "installer", true, "download", Icons.Outlined.SystemUpdate, "extra"),
         Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
-        Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "extra"),
-        Tool("speedtest", "Internet speed test", "İnternet hız testi", "speedtest", true, "speed", Icons.Outlined.Speed, "extra"),
+        Tool("clock", "Clock", "Saat", "clock", true, "timer", Icons.Outlined.AccessTime, "extra"),
         Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "settings", Icons.Outlined.Widgets, "extra"),
         Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "sensors", Icons.Outlined.Headphones, "extra"),
-        Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "extra"),
         // the launcher's settings: its Extra apps row (Settings card and the ⋮ Apps group) left with the old "HomeLauncher" alias in 0.10.134 and is back, on by default
         Tool("launcher", "Launcher", "Ana ekran", "launcher", true, "apps", Icons.Outlined.Apps, "extra"),
     )
@@ -167,7 +170,7 @@ object ToolPlace {
     fun extraTools(c: Context): List<Tool> = all.filter { where(c, it) == "extra" }
     /** The entries of the overflow menu's Extra apps group: the same tools as the Extra apps card. */
     fun extraEntries(c: Context, go: (String) -> Unit, open: (String) -> Unit): List<MenuEntry> =
-        extraTools(c).map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
+        extraTools(c).filter { "tool:${it.id}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(c) }.map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
     /** The tools that already have a left-menu page (their own switch in Settings > Pages): they are not added to the side twice. */
     fun hasPage(t: Tool) = t.target in setOf("office", "downloads", "health")
     fun byId(id: String): Tool? = all.firstOrNull { it.id == id }
@@ -200,11 +203,10 @@ object AppPlace {
         App("MessagesLauncher", "Messages", "Mesajlar", "chat", Icons.Outlined.Message) { _, o -> o("messages") },
         App("ScreenRecLauncher", "Screen recorder", "Ekran kaydı", "record", Icons.Outlined.FiberManualRecord) { _, o -> o("screenrec") },
         App("KeyboardLauncher", "Keyboard", "Klavye", "keyboard", Icons.Outlined.Keyboard) { c, _ -> launchExtra(c, TOOL, "keyboard") },
-        App("LocalSendLauncher", "LocalSend", "LocalSend", "wifi", Icons.Outlined.Wifi) { _, o -> o("localsend") },
         App("PaletteLauncher", "Palette", "Palette", "image", Icons.Outlined.Palette) { _, o -> o("palette") },
         App("BlackOutLauncher", "BlackOut", "BlackOut", "shield", Icons.Outlined.DarkMode) { _, o -> o("blackout") },
         App("IslandLauncher", "Island", "Ada", "phone", Icons.Outlined.PhoneAndroid) { _, o -> o("island") },
-        App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "bell", Icons.Outlined.Notifications) { _, o -> o("notifhist") },
+        App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "history", Icons.Outlined.History) { _, o -> o("notifhist") },
     )
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
@@ -224,7 +226,7 @@ object AppPlace {
 
 /** The standalone apps placed in the top-right Apps menu, as menu entries: each opens its own window. */
 private fun builtinApps(ctx: Context, openTool: (String) -> Unit): List<MenuEntry> =
-    AppPlace.all.filter { a -> AppPlace.where(a.alias) == "menu" && (a.alias == "CalculatorLauncher" || ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
+    AppPlace.all.filter { a -> "app:${a.alias}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(ctx) && AppPlace.where(a.alias) == "menu" && (a.alias == "CalculatorLauncher" || ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
 
 private val EXTRA_APPS get() = tr("Apps", "Uygulamalar")
 

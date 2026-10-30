@@ -49,6 +49,10 @@
     <uses-permission android:name="android.permission.SET_WALLPAPER" />
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <!-- music, video and ambient playback services (extras/watchdog, extras/music) -->
@@ -78,6 +82,7 @@
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="audio/*" /></intent>
     </queries>
     <application
+        android:name=".PulseApp"
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher"
@@ -397,6 +402,25 @@
         <!-- the result of a PackageInstaller session (see features/Installer.kt); not exported, only Pulse starts sessions -->
         <receiver android:name="com.umutk.pulse.features.InstallReceiver" android:exported="false" />
         <receiver android:name="com.umutk.pulse.features.TimerReceiver" android:exported="false" />
+        <!-- the Clock = Lucid Alarm (extras/lucid, GPL-3.0, DarkAspect1): ring screen, receivers and services -->
+        <activity android:name="com.umutk.pulse.extras.lucid.MainActivity" android:exported="false" android:theme="@style/Theme.Lucid" android:windowSoftInputMode="adjustResize" android:label="Clock" />
+        <activity android:name="com.umutk.pulse.extras.lucid.AlarmRingingActivity" android:exported="true" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showOnLockScreen="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@style/Theme.Lucid.Ringing" />
+        <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AlarmReceiver" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AwakeCheckReceiver" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.extras.lucid.receiver.NowBarActionReceiver" android:exported="false" />
+        <receiver android:name="com.umutk.pulse.extras.lucid.receiver.BootReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+        <service android:name="com.umutk.pulse.extras.lucid.service.AlarmAudioService" android:foregroundServiceType="mediaPlayback" android:exported="false" />
+        <service android:name="com.umutk.pulse.extras.lucid.service.TimerService" android:foregroundServiceType="specialUse" android:exported="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="timer_and_stopwatch" />
+        </service>
+        <service android:name="com.umutk.pulse.extras.lucid.service.StopwatchService" android:foregroundServiceType="specialUse" android:exported="false">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="timer_and_stopwatch" />
+        </service>
         <!-- style picker opened when a widget is added or reconfigured (see widgets/WidgetConfig.kt); the launcher starts it, so it is exported -->
         <activity android:name="com.umutk.pulse.widgets.WidgetConfigActivity" android:exported="true" android:label="Widget style" android:theme="@style/Theme.Pulse.Floating">
             <intent-filter>
@@ -596,6 +620,10 @@
         <service android:name="com.umutk.pulse.extras.music.CoverRepairService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.ZipService" android:exported="false" android:foregroundServiceType="dataSync" />
         <service android:name="com.umutk.pulse.features.FileOpService" android:exported="false" android:foregroundServiceType="dataSync" />
+        <!-- Relay (extras/relay): keeps the phone listening for files and text from paired devices while the app is closed -->
+        <service android:name="com.umutk.pulse.extras.relay.RelayService" android:exported="false" android:foregroundServiceType="specialUse">
+            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="local network file transfer, listens for paired devices" />
+        </service>
         <service android:name="com.umutk.pulse.features.InstallService" android:exported="false" android:foregroundServiceType="specialUse">
             <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="installs that carry on in the background" />
         </service>
@@ -637,6 +665,15 @@
         </service>
         <!-- "Pulse · LocalSend" in the Share list: the devices of the network are shown there and a tap sends the files (an alternative to Quick Share) -->
         <activity android:name="com.umutk.pulse.extras.localsend.LocalSendShareActivity" android:exported="true" android:label="Pulse · LocalSend" android:icon="@drawable/ic_qs_localsend" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="*/*" />
+            </intent-filter>
+        </activity>
+        <!-- "Pulse · Relay" in the system Share list: files, text and links to a paired Relay device (extras/relay/RelayShareActivity.kt) -->
+        <activity android:name="com.umutk.pulse.extras.relay.RelayShareActivity" android:exported="true" android:label="Pulse · Relay" android:icon="@drawable/ic_qs_localsend" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="">
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <action android:name="android.intent.action.SEND_MULTIPLE" />
@@ -1399,6 +1436,7 @@
         <receiver android:name="com.umutk.pulse.extras.messages.SmsReceivedReceiver" android:exported="true" android:permission="android.permission.BROADCAST_SMS">
             <intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter>
         </receiver>
+        <receiver android:name="com.umutk.pulse.extras.messages.MsgSentReceiver" android:exported="false" />
         <receiver android:name="com.android.mms.transaction.PushReceiver" android:exported="true" android:permission="android.permission.BROADCAST_WAP_PUSH">
             <intent-filter>
                 <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER" />

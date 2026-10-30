@@ -47,8 +47,8 @@ object LiveLyrics {
     fun floating(c: Context) = prefs(c).getBoolean("floating", false)
     // on by default: the current lyric line is the notification text whenever the track has synced lyrics
     fun notification(c: Context) = prefs(c).getBoolean("notification", true)
-    // a notification of its own for the lyrics, beside the media one (off by default)
-    fun separate(c: Context) = prefs(c).getBoolean("separate", false)
+    // a notification of its own for the lyrics, beside the media one (on by default: the lyrics are right there in the shade)
+    fun separate(c: Context) = prefs(c).getBoolean("separate", true)
     /** Lyrics found online are written as a .lrc beside the song. */
     fun saveLrc(c: Context) = prefs(c).getBoolean("save_lrc", true)
     /** Also written into the MP3's tag; this rewrites the song file, so it is off until asked for. */
@@ -71,18 +71,37 @@ object LiveLyrics {
 
     // one track at a time: the lyrics of the last track asked for
     private var slot: Pair<String, LyricsResult?>? = null
+    private var slotAt = 0L
 
     /** Synced lyrics of [t]: the embedded tag or a sidecar .lrc / .txt first, then the saved and online ones. Null when none. */
     suspend fun resultFor(ctx: Context, t: Track): LyricsResult? {
-        slot?.takeIf { it.first == t.path }?.let { return it.second }
+        // a song that has lyrics keeps them; one that had none (the network was not up yet, the search came back empty) is looked up again after a minute
+        slot?.takeIf { it.first == t.path && (it.second != null || android.os.SystemClock.uptimeMillis() - slotAt < 60_000L) }?.let { return it.second }
         val (artist, title) = guessArtistTitle(t)
         val r = withContext(Dispatchers.IO) {
             Lyrics.localRecord(t.path, title, artist)?.let { Lyrics.toResult(it, "local") }
                 ?: Lyrics.forTrack(ctx, title, artist, t.album, t.durationSec * 1000L, t.path)
         }
-        val synced = r?.takeIf { it.synced }
-        slot = t.path to synced
-        return synced
+        // plain lyrics: the lines are spread over the sounding part of the song (the silences are left out)
+        val timed = r?.let { if (it.synced) it else spread(it, t.durationSec * 1000L, withContext(Dispatchers.IO) { ActiveSound.of(t.path) }) }
+        slot = t.path to timed; slotAt = android.os.SystemClock.uptimeMillis()
+        return timed
+    }
+
+    /**
+     * Plain lyrics (no timestamps): the lines share the sounding part of the song evenly ([sound] = its loud moments), or the whole
+     * length when that is not known. Each line gets the moment its share starts at.
+     */
+    fun spread(r: LyricsResult, durMs: Long, sound: LongArray?): LyricsResult? {
+        val lines = r.lines.filter { it.text.isNotBlank() }
+        val n = lines.size
+        if (n == 0) return null
+        val at: (Int) -> Long = when {
+            sound != null && sound.isNotEmpty() -> { i -> sound[(i.toLong() * sound.size / n).toInt()] }
+            durMs > 0L -> { i -> durMs * i / n }
+            else -> return null
+        }
+        return LyricsResult(lines.mapIndexed { i, l -> LyricLine(at(i), l.text) }, true, r.source)
     }
 
     /**

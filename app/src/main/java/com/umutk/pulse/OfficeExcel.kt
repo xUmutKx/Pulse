@@ -479,7 +479,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
     if (st.present) XPresent(st, book, sh, ev, t) else ExcelChrome(t, doc.name + if (doc.dirty) " *" else "", acts, status, doc.close) {
         Column(Modifier.fillMaxSize()) {
             // formula bar
-            val fieldBg = if (t.dark) Color(0xFF3B3B3B) else Color.White; val fieldInk = if (t.dark) Color.White else Color.Black
+            val fieldBg = if (OfficePrefs.bars == 3) Color(0xFF111111) else if (t.dark) Color(0xFF3B3B3B) else Color.White; val fieldInk = if (t.dark) Color.White else Color.Black
             val fr = remember { FocusRequester() }
             LaunchedEffect(st.focusReq) { if (st.focusReq > 0 && ed) runCatching { fr.requestFocus() } }
             var text by remember(st.r, st.c, st.ver, st.sheet) { mutableStateOf(xRaw(sh.cells[xKey(st.r, st.c)])) }
@@ -506,7 +506,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
             Box(Modifier.weight(1f).fillMaxWidth().clipToBounds()) {
                 XGrid(st, book, sh, ev, t, onPic = { sh.picsDirty = true; doc.dirty = true; st.ver++ })
                 st.menu?.let { o ->
-                    val mbg = if (t.dark) Color(0xFF2B2B2B) else Color.White; val mi = if (t.dark) Color.White else Color.Black
+                    val mbg = if (OfficePrefs.bars == 3) Color.Black else if (t.dark) Color(0xFF2B2B2B) else Color.White; val mi = if (t.dark) Color.White else Color.Black
                     Box(Modifier.offset { IntOffset(o.x.toInt(), o.y.toInt()) }) {
                         DropdownMenu(true, { st.menu = null }, modifier = Modifier.background(mbg)) {
                             fun go(f: () -> Unit): () -> Unit = { st.menu = null; f() }
@@ -558,7 +558,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
             }
         }
         if (dlg.isNotEmpty()) {
-            val bg = if (t.dark) Color(0xFF2B2B2B) else Color.White; val ink = if (t.dark) Color.White else Color.Black
+            val bg = if (OfficePrefs.bars == 3) Color.Black else if (t.dark) Color(0xFF2B2B2B) else Color.White; val ink = if (t.dark) Color.White else Color.Black
             com.umutk.pulse.WinAlert(onDismissRequest = { dlg = "" }, confirmButton = {}, containerColor = bg, text = {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     if (dlg == "size") X_SIZES.chunked(4).forEach { row ->

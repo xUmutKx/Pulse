@@ -25,6 +25,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.outlined.KeyboardArrowDown
+import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FolderOpen
@@ -133,7 +135,18 @@ fun ofResolveId(id: String): String {
 /** Flat dark variant of the app colour (dark looks tint their chrome with it instead of grey). */
 fun ofDarkTint(c: Color, f: Float) = androidx.compose.ui.graphics.lerp(c, Color.Black, f)
 
+/** The chosen title bar colour laid over a look's own palette ([OfficePrefs.bars]): 0 leaves the look as it is; 1 accent, 2 the app's colour, 3 AMOLED black for the bar, the tabs, the ribbon and the status bar. */
 fun ofPal(id: String, k: OfKind): OfPal {
+    val b = ofPalBase(id, k)
+    return when (OfficePrefs.bars) {
+        1 -> OfPal(Look.accent.copy(alpha = 1f), onAccent(Look.accent), b.tabBg, b.tabInk, b.tabSelBg, b.tabSelInk, b.ribbonBg, b.ink, b.line, b.canvas, b.paper, b.statusBg, b.statusInk, b.accent)
+        2 -> OfPal(k.brand, ofInkOn(k.brand), b.tabBg, b.tabInk, b.tabSelBg, b.tabSelInk, b.ribbonBg, b.ink, b.line, b.canvas, b.paper, b.statusBg, b.statusInk, b.accent)
+        3 -> OfPal(Color.Black, Color.White, Color.Black, Color.White, Color(0xFF1C1C1C), Color.White, Color.Black, Color.White, Color(0xFF2A2A2A), Color.Black, b.paper, Color.Black, Color(0xFF9E9E9E), b.accent)
+        else -> b
+    }
+}
+
+private fun ofPalBase(id: String, k: OfKind): OfPal {
     val a = k.accent
     return when (ofResolveId(id)) {
         "amoled" -> OfPal(Color.Black, Color.White, Color.Black, Color.White, Color.Black, Look.accent,
@@ -175,7 +188,7 @@ fun ofPal(id: String, k: OfKind): OfPal {
 class OfTheme(val kind: OfKind, val id: String) {
     val rid = ofResolveId(id)
     val base = rid.removeSuffix("d")
-    val dark = rid.endsWith("d") || rid == "amoled" || ((rid == "material" || rid == "oneui" || rid == "coloros") && Look.current.dark)
+    val dark = OfficePrefs.bars == 3 || rid.endsWith("d") || rid == "amoled" || ((rid == "material" || rid == "oneui" || rid == "coloros") && Look.current.dark)
     val classic = base == "2003" || base == "95"
     val pal = ofPal(rid, kind)
     val accent get() = kind.accent
@@ -194,6 +207,8 @@ object OfficePrefs {
     var iconAccent by mutableStateOf(false)
     /** Dark PDF pages (smart invert), separate from darkPages and off by default */
     var darkPdf by mutableStateOf(false)
+    /** The title bar of every Office look: 0 as the look draws it, 1 the accent colour, 2 the app's own colour (Word blue, PDF red ...), 3 AMOLED black (the tabs, the ribbon and the status bar turn black too). */
+    var bars by mutableStateOf(0)
     /** Dark page colours (ARGB): background and text */
     var pageBg by mutableStateOf(0xFF000000.toInt())
     var pageFg by mutableStateOf(0xFFFFFFFF.toInt())
@@ -210,6 +225,7 @@ object OfficePrefs {
         dir = p.getString("dir", "Documents") ?: "Documents"
         ClippyPrefs.load(c)
         iconAccent = p.getBoolean("icon_accent", false); darkPages = p.getBoolean("dark_pages", false); darkPdf = if (p.contains("dark_pdf")) p.getBoolean("dark_pdf", false) else p.getBoolean("dark_pages", false)
+        bars = p.getInt("bars_v2", 0)
         pageBg = p.getInt("page_bg", 0xFF000000.toInt()); pageFg = p.getInt("page_fg", 0xFFFFFFFF.toInt())
         recent = (p.getString("recent", "") ?: "").split('\n').filter { it.isNotBlank() }
     }
@@ -217,6 +233,7 @@ object OfficePrefs {
     fun applyAll(c: Context, id: String) { val e = sp(c).edit(); OfKind.values().forEach { themes[it] = id; e.putString("theme_${it.name}", id) }; e.apply() }
     fun setIconAccent(c: Context, on: Boolean) { iconAccent = on; sp(c).edit().putBoolean("icon_accent", on).apply() }
     fun setDarkPages(c: Context, on: Boolean) { darkPages = on; sp(c).edit().putBoolean("dark_pages", on).apply(); if (!sp(c).contains("dark_pdf")) darkPdf = on } // PDF follows until its own switch is touched
+    fun setBars(c: Context, v: Int) { bars = v; sp(c).edit().putInt("bars_v2", v).apply() }
     fun setDarkPdf(c: Context, on: Boolean) { darkPdf = on; sp(c).edit().putBoolean("dark_pdf", on).apply() }
     fun setPageBg(c: Context, v: Int) { pageBg = v; sp(c).edit().putInt("page_bg", v).apply() }
     fun setPageFg(c: Context, v: Int) { pageFg = v; sp(c).edit().putInt("page_fg", v).apply() }
@@ -281,8 +298,39 @@ fun ofAutoHide(): Pair<Boolean, Modifier> {
 /** Optional own ribbon body per tab name (modern looks only); the Word screen provides its stacked Home ribbon through it. */
 val LocalOfRibbon = compositionLocalOf<Map<String, @Composable () -> Unit>> { emptyMap() }
 
+/**
+ * The Word-style ribbon of every tab that has captions: the actions of a tab are grouped by [OAct.cap] (in the order they appear), each group a row of icon cells with
+ * its label under the icon, a thin line between groups and the group's name under it. Tabs where no action has a caption are left to the plain row.
+ */
+fun ofCaptionRibbons(t: OfTheme, acts: List<OAct>): Map<String, @Composable () -> Unit> =
+    acts.filter { it.group != "File" && it.group != "Quick" }.groupBy { it.group }.filter { (_, l) -> l.any { it.cap != null } }.mapValues { (tab, l) ->
+        val groups = l.groupBy { it.cap ?: tab }.toList()
+        val body: @Composable () -> Unit = {
+            val pal = t.pal
+            val ink = ofInkOn(if (t.base == "365" || t.base == "2017") ofBelow(t) else pal.ribbonBg)
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.Top) {
+                groups.forEachIndexed { gi, (cap, items) ->
+                    if (gi > 0) Box(Modifier.padding(horizontal = 5.dp).width(1.dp).height(64.dp).background(pal.line))
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row {
+                            items.forEach { a ->
+                                Column(Modifier.width(54.dp).clip(RoundedCornerShape(4.dp)).background(if (a.on) pal.accent.copy(alpha = .22f) else Color.Transparent).alpha(if (a.enabled) 1f else .4f)
+                                    .clickable(enabled = a.enabled, onClick = a.click).padding(vertical = 3.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(a.icon, a.label, Modifier.size(22.dp), ink)
+                                    Text(a.label, color = ink, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                        }
+                        Text(cap, color = ink.copy(alpha = .6f), fontSize = 9.sp, maxLines = 1)
+                    }
+                }
+            }
+        }
+        body
+    }
+
 /** One ribbon button / menu item. [group] becomes the ribbon tab (modern looks) or the menu (2003 / 95). [png] is a ThemeIcons key tried first in the 2003 / 95 looks. */
-class OAct(val label: String, val group: String, val icon: ImageVector, val on: Boolean = false, val enabled: Boolean = true, val png: String? = null, val click: () -> Unit)
+class OAct(val label: String, val group: String, val icon: ImageVector, val on: Boolean = false, val enabled: Boolean = true, val png: String? = null, val cap: String? = null, val click: () -> Unit)
 
 /**
  * The shared themed window: title bar, ribbon tabs + ribbon (365 / 2017 / 2013) or menu bar + toolbar (2003 / 95), canvas and status bar.
@@ -303,15 +351,18 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     val groups = (listOfNotNull("File".takeIf { fileOps != null }) + acts.map { it.group }.filter { it != "Quick" }).distinct()
     var tab by remember(groups) { mutableStateOf(if ("Home" in groups) "Home" else groups.firstOrNull { it != "File" } ?: "") }
     var menu by remember { mutableStateOf("") }
-    val (hid, tapWatch) = ofAutoHide()
+    val (autoHid, tapWatch) = ofAutoHide()
+    // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
+    var manualHid by remember { mutableStateOf(false) }
+    val hid = autoHid || manualHid
     Box(Modifier.fillMaxSize().then(tapWatch)) {
     Column(Modifier.fillMaxSize().background(if (t.classic) pal.ribbonBg else if (is17) below else pal.titleBg).then(if (is17) Modifier.navigationBarsPadding() else Modifier.systemBarsPadding())) {
         // title bar
         if (!hid) if (t.classic) {
-            val band = if (t.base == "95") Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))) else Brush.horizontalGradient(listOf(Color(0xFF0058EE), Color(0xFF3A93FF)))
+            val band = if (OfficePrefs.bars != 0) Brush.horizontalGradient(listOf(pal.titleBg, pal.titleBg)) else if (t.base == "95") Brush.horizontalGradient(listOf(Color(0xFF000080), Color(0xFF1084D0))) else Brush.horizontalGradient(listOf(Color(0xFF0058EE), Color(0xFF3A93FF)))
             Row(Modifier.fillMaxWidth().height(30.dp).background(band).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 OfLogo(t.kind, 18.dp); Spacer(Modifier.width(6.dp))
-                Text(title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(title, color = if (OfficePrefs.bars != 0) pal.titleInk else Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                 Box(Modifier.size(22.dp).then(if (t.base == "95") Modifier.background(Color(0xFFC0C0C0)).bevel(true) else Modifier.clip(RoundedCornerShape(3.dp)).background(Color(0xFFD9543C)).border(1.dp, Color.White, RoundedCornerShape(3.dp))).clickable(onClick = onBack), contentAlignment = Alignment.Center) {
                     Icon(Icons.Outlined.Close, null, Modifier.size(14.dp), if (t.base == "95") Color.Black else Color.White)
                 }
@@ -342,11 +393,12 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
                 }
             }
         } else {
-            val titleInk = if (is17) Color.White else pal.titleInk
-            Row(Modifier.fillMaxWidth().then(if (is17) Modifier.background(brand).statusBarsPadding() else Modifier).height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+            val titleInk = if (is17) ofInkOn(ofTop(t)) else pal.titleInk
+            Row(Modifier.fillMaxWidth().then(if (is17) Modifier.background(ofTop(t)).statusBarsPadding() else Modifier).height(44.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), titleInk) }
                 OfTile(t.kind, 22.dp, is17); Spacer(Modifier.width(8.dp))
                 OfTitle(title, titleInk)
+                Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(22.dp), titleInk) }
                 acts.filter { it.group == "Quick" }.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), titleInk) } }
             }
             Row(Modifier.fillMaxWidth().then(if (is17) Modifier.background(below) else Modifier).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
@@ -392,6 +444,11 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
         LaunchedEffect(dirty) { saved = was && !dirty; was = dirty }
         ClippyView(Modifier.align(Alignment.BottomEnd).navigationBarsPadding().padding(end = 6.dp, bottom = 34.dp), saved)
     }
+    if (manualHid) Box(Modifier.fillMaxSize()) {
+        Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
+            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(20.dp), Color.White)
+        }
+    }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
     }
 }
@@ -417,7 +474,7 @@ val OfKind.brand: Color get() = when (this) { OfKind.WORD -> Color(0xFF2B579A); 
  */
 @Composable
 fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, onBack: () -> Unit, tabs: List<String>? = null, extra: (@Composable () -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    val pal = t.pal; val view = LocalView.current; val brand = t.kind.brand
+    val pal = t.pal; val view = LocalView.current; val brand = t.kind.brand; val top = ofTop(t); val topInk = ofInkOn(top)
     SideEffect {
         val w = (view.context as Activity).window
         WindowCompat.getInsetsController(w, view).apply { val (bt, bb) = ofBars(t); isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
@@ -434,16 +491,20 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val below = ofBelow(t)   // solid grey: translucent layers over the black window left dark text on black
     // text and icons always follow the strip they sit on: white on a dark strip, near-black on a light one
     val ink = ofInkOn(below)
-    val (hid, tapWatch) = ofAutoHide()
+    val (autoHid, tapWatch) = ofAutoHide()
+    // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
+    var manualHid by remember { mutableStateOf(false) }
+    val hid = autoHid || manualHid
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
     Box(Modifier.fillMaxSize().then(tapWatch)) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
         if (!hid) Column {
-        Row(Modifier.fillMaxWidth().background(brand).statusBarsPadding().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), Color.White) }
+        Row(Modifier.fillMaxWidth().background(top).statusBarsPadding().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), topInk) }
             OfTile(t.kind, 22.dp, true); Spacer(Modifier.width(8.dp))
-            OfTitle(title, Color.White)
-            quick.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), Color.White) } }
+            OfTitle(title, topInk)
+            Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(22.dp), topInk) }
+            quick.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), topInk) } }
         }
         Row(Modifier.fillMaxWidth().background(below).horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
             groups.forEach { g ->
@@ -472,6 +533,11 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             Text(status, color = ink.copy(alpha = .75f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
+    if (manualHid) Box(Modifier.fillMaxSize()) {
+        Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
+            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(20.dp), Color.White)
+        }
+    }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
     }
     }
@@ -492,15 +558,18 @@ class OfFileOps(
 val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 
 
+/** The title bar colour of the 365 and 2017 windows (their own is the app's colour): the accent colour, the app's colour, or black (Settings > Office). */
+internal fun ofTop(t: OfTheme): Color = when (OfficePrefs.bars) { 3 -> Color.Black; 1 -> Look.accent.copy(alpha = 1f); else -> t.kind.brand }
+
 /** Colour of everything under the brand title bar: white, or near-black in the dark looks. Looks that have their own surfaces keep the ribbon colour. */
-internal fun ofBelow(t: OfTheme) = if (t.base == "365") Color(0xFF2B2B2B) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
+internal fun ofBelow(t: OfTheme) = if (OfficePrefs.bars == 3) Color.Black else if (t.base == "365") Color(0xFF2B2B2B) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
 
 /** Opaque colours of the system status bar (top) and navigation bar (bottom): exactly what the chrome shows in the title bar and in the bottom-most (status) bar, translucent layers composited over the canvas. */
 fun ofBars(t: OfTheme): Pair<Color, Color> {
     val pal = t.pal
     return when {
-        t.base == "365" -> t.kind.brand to ofBelow(t) // opaque: a see-through layer over the black window made dark ink vanish
-        t.base == "2017" -> t.kind.brand to ofBelow(t)
+        t.base == "365" -> ofTop(t) to ofBelow(t) // opaque: a see-through layer over the black window made dark ink vanish
+        t.base == "2017" -> ofTop(t) to ofBelow(t)
         t.classic -> pal.ribbonBg to pal.statusBg
         else -> pal.titleBg to pal.statusBg
     }
@@ -522,7 +591,7 @@ private fun ofFileItems(acts: List<OAct>, onBack: () -> Unit, showInfo: () -> Un
     val ops = LocalOfFile.current ?: return emptyList()
     fun isClose(a: OAct) = a.label == "Close" || a.label == tr("Close", "Kapat")
     val own = acts.filter { it.group == "File" }.map { a ->
-        if (a.label == "Save" || a.label == tr("Save", "Kaydet")) OAct(a.label, a.group, a.icon, a.on, a.enabled && ops.dirty(), a.png, a.click) else a
+        if (a.label == "Save" || a.label == tr("Save", "Kaydet")) OAct(a.label, a.group, a.icon, a.on, a.enabled && ops.dirty(), a.png, a.cap, a.click) else a
     }
     val extra = buildList {
         val cp = own.firstOrNull { it.label == "Save a copy" || it.label == tr("Save a copy", "Kopya kaydet") }
@@ -802,6 +871,13 @@ fun OfficeSettings() {
         SetRow({ OfSuiteLogo(20.dp, tint = T.text) }, tr("Office icon colour", "Office simge rengi"),
             if (OfficePrefs.iconAccent) tr("Accent", "Vurgu") else tr("Black outline", "Siyah çerçeve"), { icDlg = true })
         if (icDlg) SetPickDialog(tr("Office icon colour", "Office simge rengi"), listOf(false to tr("Black outline", "Siyah çerçeve"), true to tr("Accent", "Vurgu")), OfficePrefs.iconAccent, { OfficePrefs.setIconAccent(ctx, it) }, { icDlg = false })
+    }
+    PCard {
+        var barsDlg by remember { mutableStateOf(false) }
+        val barNames = listOf(0 to tr("As the look draws it", "Görünümün kendi rengi"), 1 to tr("Accent colour", "Vurgu rengi"), 2 to tr("App colour (Word blue, PDF red ...)", "Uygulama rengi (Word mavi, PDF kırmızı ...)"), 3 to tr("AMOLED black (bar, tabs, ribbon)", "AMOLED siyah (üst çubuk, sekmeler, şerit)"))
+        SetRow({ Box(Modifier.size(20.dp).background(when (OfficePrefs.bars) { 3 -> Color.Black; 2 -> Color(0xFF2B579A); 1 -> Look.accent; else -> Color(0xFF8A8A8A) }, androidx.compose.foundation.shape.CircleShape).border(1.dp, T.line, androidx.compose.foundation.shape.CircleShape)) },
+            tr("Title bar and ribbon", "Üst çubuk ve şerit"), barNames.first { it.first == OfficePrefs.bars }.second, { barsDlg = true })
+        if (barsDlg) SetPickDialog(tr("Title bar and ribbon", "Üst çubuk ve şerit"), barNames, OfficePrefs.bars, { OfficePrefs.setBars(ctx, it) }, { barsDlg = false })
     }
     PCard {
         Row(verticalAlignment = Alignment.CenterVertically) {

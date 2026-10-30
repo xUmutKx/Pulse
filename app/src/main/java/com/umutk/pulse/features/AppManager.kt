@@ -9,6 +9,8 @@ import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.widget.Toast
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -232,6 +234,7 @@ private fun AmSection(title: String) {
     Text(title, color = Look.accent, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp, bottom = 2.dp))
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun AppManagerScreen(onOpen: (String) -> Unit) {
     val ctx = LocalContext.current
@@ -256,6 +259,10 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
     var filterOpen by remember { mutableStateOf(false) }
     var debloat by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    // a long press picks apps; once something is picked a tap picks too
+    var picked by remember { mutableStateOf(setOf<String>()) }
+    var note by remember { mutableStateOf("") }
+    var extracting by remember { mutableStateOf(false) }
 
     // the descriptions of what each app is live in Debloat, not here
     LaunchedEffect(Unit) { rows = withContext(Dispatchers.IO) { loadAmRows(ctx) } }
@@ -329,6 +336,31 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
                     Text("Debloat", color = T.text, fontSize = 13.sp)
                 }
             }
+            // the quick filters
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                PChip(show == AmShow.RECENT_INSTALL, tr("Recent", "Son eklenen")) { show = if (show == AmShow.RECENT_INSTALL) AmShow.ALL else AmShow.RECENT_INSTALL }
+                PChip(show == AmShow.ALL, tr("All", "Hepsi")) { show = AmShow.ALL }
+                PChip(show == AmShow.USER, tr("User", "Kullanıcı")) { show = AmShow.USER }
+                PChip(show == AmShow.SYSTEM, tr("System", "Sistem")) { show = AmShow.SYSTEM }
+            }
+            if (picked.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(Modifier.size(36.dp).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 20.dp) }
+                Text("${picked.size}", color = T.text, fontSize = 14.sp)
+                Spacer(Modifier.weight(1f))
+                PButton(tr("Select all", "Hepsini seç"), compact = true) { picked = shown.map { it.pkg }.toSet() }
+                PButton(if (extracting) tr("Extracting...", "Çıkarılıyor...") else tr("Extract APKs", "APK'ları çıkar"), compact = true) {
+                    if (extracting) return@PButton
+                    val list = picked.toList(); extracting = true; note = ""
+                    scope.launch {
+                        var ok = 0
+                        withContext(Dispatchers.IO) { list.forEach { pkg -> if (extractApp(ctx, pkg).startsWith("Saved")) ok++ } }
+                        extracting = false
+                        note = tr("$ok of ${list.size} apps extracted to ${ApkExtract.path(ctx)}", "${list.size} uygulamanın $ok tanesi çıkarıldı: ${ApkExtract.path(ctx)}")
+                        picked = emptySet()
+                    }
+                }
+            }
+            if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 PField(query, { query = it }, "Search", Modifier.weight(1f))
                 // one tap clears what was typed
@@ -336,8 +368,10 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
             }
         }
         items(shown, key = { it.pkg }) { a ->
-            // a tap opens the app's details; picking several apps lives in Debloat
-            PCard(Modifier.clickable { onOpen(a.pkg) }) {
+            // a tap opens the app's details (or picks it once something is picked); a long press picks
+            val on = a.pkg in picked
+            PCard(Modifier.combinedClickable(onClick = { if (picked.isNotEmpty()) picked = if (on) picked - a.pkg else picked + a.pkg else onOpen(a.pkg) },
+                onLongClick = { picked = if (on) picked - a.pkg else picked + a.pkg }).then(if (on) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     AppIcon(a.pkg, 36.dp)
                     Spacer(Modifier.width(10.dp))

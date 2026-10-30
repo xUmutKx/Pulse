@@ -28,7 +28,7 @@ class SkinState(
 class Hit(val id: String, val r: RectF)
 
 /**
- * A window skin that is a picture (assets/wmskins/<id>.png, the player with its music removed) with the live parts drawn over it: the text, the cover, the
+ * A window skin that is a picture (assets/wmskins/<id>.webp, the player with its music removed) with the live parts drawn over it: the text, the cover, the
  * seek bar and the play button. One drawing serves the player page and the widget, so they look the same.
  */
 abstract class ImgSkin(val id: String, val name: String, val w: Int, val h: Int, val hits: List<Hit>) {
@@ -44,7 +44,7 @@ object ImgSkins {
 
     /** The skin's picture. */
     fun base(ctx: Context, s: ImgSkin): Bitmap? = cache[s.id] ?: runCatching {
-        ctx.assets.open("wmskins/${s.id}.png").use { BitmapFactory.decodeStream(it) }
+        ctx.assets.open("wmskins/${s.id}.webp").use { BitmapFactory.decodeStream(it) }
     }.getOrNull()?.also { cache[s.id] = it }
 
     /** The skin and its picture painted into [c] (a canvas in skin pixels). */

@@ -12,6 +12,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.withContext
 import java.io.File
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
 import java.security.MessageDigest
 
 /** Small picture previews for the file list: memory cache, then a disk cache in cacheDir/thumbs, then a sampled decode. */
@@ -55,7 +60,7 @@ object Thumbs {
         val bmp = runCatching { if (disk.exists()) BitmapFactory.decodeFile(disk.path) else null }.getOrNull()
             ?: runCatching {
                 // keeps the aspect ratio and reads the EXIF rotation; HEIC included
-                (if (android.os.Build.VERSION.SDK_INT >= 29) ThumbnailUtils.createImageThumbnail(f, Size(PX, PX), null) else decodeSmall(f)).also { b ->
+                (previewOf(ctx, f) ?: if (android.os.Build.VERSION.SDK_INT >= 29) ThumbnailUtils.createImageThumbnail(f, Size(PX, PX), null) else decodeSmall(f)).also { b ->
                     runCatching { disk.outputStream().use { b.compress(if (android.os.Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else @Suppress("DEPRECATION") Bitmap.CompressFormat.WEBP, 92, it) } }
                 }
             }.getOrNull()
@@ -70,4 +75,72 @@ private fun decodeSmall(f: File): Bitmap {
     var step = 1
     while (maxOf(o.outWidth, o.outHeight) / (step * 2) >= 256) step *= 2
     return BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = step }) ?: throw java.io.IOException("unreadable")
+}
+
+private val PV_IMAGE = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
+private val PV_VIDEO = setOf("mp4", "mkv", "webm", "3gp", "mov", "avi", "m4v")
+private val PV_AUDIO = setOf("mp3", "m4a", "flac", "ogg", "opus", "wav", "aac")
+private val PV_ZIPDOC = setOf("docx", "xlsx", "pptx", "odt", "ods", "odp")
+
+/** Whether a preview can be made for [f]: pictures, video frames, the first page of a PDF, the cover of a song, an APK's icon, the thumbnail inside an Office / Open Document file. */
+fun canPreview(f: File): Boolean = f.extension.lowercase().let { it in PV_IMAGE || it in PV_VIDEO || it in PV_AUDIO || it in PV_ZIPDOC || it == "pdf" || it == "apk" }
+
+/** A preview for the kinds that are not plain pictures; null for a picture (the caller decodes it) or when nothing could be made. */
+private fun previewOf(ctx: Context, f: File): Bitmap? {
+    val e = f.extension.lowercase()
+    return when {
+        e == "pdf" -> runCatching {
+            android.os.ParcelFileDescriptor.open(f, android.os.ParcelFileDescriptor.MODE_READ_ONLY).use { fd ->
+                android.graphics.pdf.PdfRenderer(fd).use { r ->
+                    r.openPage(0).use { pg ->
+                        val w = 480; val h = (w * pg.height / pg.width.toFloat()).toInt().coerceIn(120, 960)
+                        Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888).also { b -> b.eraseColor(android.graphics.Color.WHITE); pg.render(b, null, null, android.graphics.pdf.PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY) }
+                    }
+                }
+            }
+        }.getOrNull()
+        e in PV_VIDEO -> runCatching {
+            val m = android.media.MediaMetadataRetriever()
+            try { m.setDataSource(f.path); m.getFrameAtTime(1_000_000L)?.let { Bitmap.createScaledBitmap(it, 480, (480 * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
+        }.getOrNull()
+        e in PV_AUDIO -> runCatching {
+            val m = android.media.MediaMetadataRetriever()
+            try { m.setDataSource(f.path); m.embeddedPicture?.let { BitmapFactory.decodeByteArray(it, 0, it.size) } } finally { m.release() }
+        }.getOrNull()
+        e == "apk" -> runCatching {
+            val pm = ctx.packageManager
+            val info = pm.getPackageArchiveInfo(f.path, 0)?.applicationInfo ?: return@runCatching null
+            info.sourceDir = f.path; info.publicSourceDir = f.path
+            val d = info.loadIcon(pm)
+            Bitmap.createBitmap(192, 192, Bitmap.Config.ARGB_8888).also { b -> val c = android.graphics.Canvas(b); d.setBounds(0, 0, 192, 192); d.draw(c) }
+        }.getOrNull()
+        e in PV_ZIPDOC -> runCatching {
+            java.util.zip.ZipFile(f).use { z ->
+                val en = listOf("docProps/thumbnail.jpeg", "docProps/thumbnail.png", "Thumbnails/thumbnail.png").firstNotNullOfOrNull { z.getEntry(it) }
+                en?.let { z.getInputStream(it).use { i -> BitmapFactory.decodeStream(i) } }
+            }
+        }.getOrNull()
+        else -> null
+    }
+}
+
+/** The key of the line icon for a kind of file. */
+fun fileTypeKey(f: File): String = when (f.extension.lowercase()) {
+    in PV_IMAGE -> "image"
+    in PV_VIDEO -> "video"
+    in PV_AUDIO -> "volume"
+    "zip", "rar", "7z", "tar", "gz", "bz2", "xz" -> "archive"
+    "xls", "xlsx", "ods", "csv" -> "table"
+    "apk", "xapk", "apks" -> "apps"
+    else -> "document"
+}
+
+/** The small type mark of a file: white line icon on pure black. */
+@androidx.compose.runtime.Composable
+fun FileTypeBadge(f: File, modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier, size: androidx.compose.ui.unit.Dp = 22.dp) {
+    androidx.compose.foundation.layout.Box(
+        modifier.size(size).clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp)).background(androidx.compose.ui.graphics.Color.Black)
+            .border(1.dp, androidx.compose.ui.graphics.Color.White.copy(alpha = .35f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp)),
+        contentAlignment = androidx.compose.ui.Alignment.Center,
+    ) { com.umutk.pulse.PIcon(fileTypeKey(f), androidx.compose.ui.graphics.Color.White, size * 0.62f) }
 }

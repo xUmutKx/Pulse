@@ -1,0 +1,42 @@
+package com.umutk.pulse.extras.lucid.repository
+
+import com.umutk.pulse.extras.lucid.data.TrashedZone
+import com.umutk.pulse.extras.lucid.data.ZoneDao
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.withContext
+
+class WorldClockRepository(private val zoneDao: ZoneDao) {
+
+    val trashedZones: Flow<List<TrashedZone>> = zoneDao.getTrashedZones()
+
+    suspend fun trashZones(zoneIds: List<String>) = withContext(Dispatchers.IO) {
+        if (zoneIds.isEmpty()) return@withContext
+        val now = System.currentTimeMillis()
+        zoneDao.insertAll(zoneIds.distinct().map { TrashedZone(zoneId = it, deletedAt = now) })
+    }
+
+    suspend fun restoreZones(zoneIds: List<String>) = withContext(Dispatchers.IO) {
+        if (zoneIds.isNotEmpty()) zoneDao.deleteByIds(zoneIds)
+    }
+
+    suspend fun deletePermanently(zoneIds: List<String>) = withContext(Dispatchers.IO) {
+        if (zoneIds.isNotEmpty()) zoneDao.deleteByIds(zoneIds)
+    }
+
+    suspend fun emptyTrash() = withContext(Dispatchers.IO) {
+        zoneDao.emptyTrash()
+    }
+
+    suspend fun purgeExpired(): List<String> = withContext(Dispatchers.IO) {
+        val threshold = System.currentTimeMillis() - TrashedZone.RECYCLE_BIN_RETENTION_MILLIS
+        val expired = zoneDao.getExpiredTrashedZones(threshold)
+        if (expired.isNotEmpty()) {
+            val ids = expired.map { it.zoneId }
+            zoneDao.deleteByIds(ids)
+            ids
+        } else {
+            emptyList()
+        }
+    }
+}
