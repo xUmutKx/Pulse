@@ -154,7 +154,6 @@ object ToolPlace {
         Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
         Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "extra"),
         Tool("clock", "Clock", "Saat", "clock", true, "timer", Icons.Outlined.AccessTime, "extra"),
-        Tool("radio", "Radio", "Radyo", "radio", true, "volume", Icons.Outlined.Radio, "extra"),
         Tool("relay", "Relay", "Relay", "relay", true, "send", Icons.Outlined.SyncAlt, "extra"),
         Tool("recap", "Music recap", "Müzik özeti", "recap", true, "heart", Icons.Outlined.Equalizer, "extra"),
         Tool("speedtest", "Internet speed test", "İnternet hız testi", "speedtest", true, "speed", Icons.Outlined.Speed, "extra"),

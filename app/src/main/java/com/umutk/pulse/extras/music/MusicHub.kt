@@ -126,6 +126,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
     var settingsOpen by remember { mutableStateOf(false) }
     var rev by remember { mutableIntStateOf(0) }
     var noiseOpen by remember { mutableStateOf(false) }
+    var radioOpen by remember { mutableStateOf(false) }
     var onlineOpen by remember { mutableStateOf(false) }
     var spotifyOpen by remember { mutableStateOf(false) }
     var floating by remember { mutableStateOf(false) }
@@ -182,6 +183,8 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     // white noise opens from here; playlists sit in the library
                     // Poweramp carries its own settings button at the right end of its tab bar
                     Box(Modifier.size(40.dp).clickable { noiseOpen = true }, contentAlignment = Alignment.Center) { PIcon("volume", Color.White, 22.dp) }
+                    // radio is reached from the player only (no Extra apps row)
+                    Box(Modifier.size(40.dp).clickable { radioOpen = true }, contentAlignment = Alignment.Center) { PIcon("radio", Color.White, 22.dp) }
                     if (look != MusicLook.POWERAMP && look != MusicLook.MATERIAL) Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
                 }
                 Spacer(Modifier.height(8.dp))
@@ -204,6 +207,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
             }
         }
         if (noiseOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.whitenoise.WhiteNoiseHub { noiseOpen = false } }
+        if (radioOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.radio.RadioScreen { radioOpen = false } }
         if (onlineOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.playlists.OnlinePlaylistsHub { onlineOpen = false } }
         if (spotifyOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
         if (playlistsOpen) PlaylistsDialog(engine, st.queue) { playlistsOpen = false }
