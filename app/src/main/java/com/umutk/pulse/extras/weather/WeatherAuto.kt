@@ -22,6 +22,7 @@ class WeatherRefreshWorker(private val app: Context, params: WorkerParameters) :
             val aqi = WeatherApi.airQuality(place.lat, place.lon)
             WeatherStore.saveCache(app, place.name, raw, aqi, WeatherApi.extras(place.lat, place.lon, WeatherStore.source(app) == "mgm", WeatherStore.combine(app)))
             WeatherWidgets.refreshAll(app)
+            WeatherReport.maybePost(app)
         }
         // the transparent clock-weather widget keeps its own copy per place
         runCatching { com.umutk.pulse.widgets.WeatherClearWidget().fetchAll(app) }
