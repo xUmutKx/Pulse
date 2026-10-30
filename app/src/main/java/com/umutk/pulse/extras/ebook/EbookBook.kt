@@ -129,6 +129,11 @@ object Ebook {
         p(c).edit().putString("at_$uri", "$chapter,$page").apply()
     }
 
+    /** How far the book was read, in per cent (the chapter reached out of all of them), for the shelf. */
+    fun pct(c: Context, uri: String): Int = p(c).getInt("pct_$uri", 0)
+
+    fun savePct(c: Context, uri: String, v: Int) { p(c).edit().putInt("pct_$uri", v.coerceIn(0, 100)).apply() }
+
     fun bookmarks(c: Context, uri: String): List<String> =
         p(c).getString("bm_$uri", "").orEmpty().split('|').filter { it.isNotBlank() }
 
