@@ -871,7 +871,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             "onehand" -> { KeyboardPrefs.oneHand = when (KeyboardPrefs.oneHand) { "off" -> "right"; "right" -> "left"; else -> "off" }; KeyboardPrefs.save(this) }
             "arrows" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
             "keyset" -> st.panel = if (st.panel == "keyset") "keys" else "keyset"
-            "layout" -> st.panel = if (st.panel == "layout") "keys" else "layout"
+            "layout" -> { KeyboardPrefs.arrows = !KeyboardPrefs.arrows; KeyboardPrefs.save(this) }
             "numbers" -> { KeyboardPrefs.numberRow = !KeyboardPrefs.numberRow; KeyboardPrefs.save(this) }
             "proRow" -> { KeyboardPrefs.proRow = !KeyboardPrefs.proRow; KeyboardPrefs.save(this) }
             "glide" -> { KeyboardPrefs.glide = !KeyboardPrefs.glide; KeyboardPrefs.save(this) }
@@ -983,15 +983,42 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      */
     override fun voice() {
         finishWord("", false)
-        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { switchToVoiceKeyboard(); return }
+        if (st.panel == "voice") { stopListening(); st.panel = "keys"; return }
+        val granted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
+        if (!granted || !android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { switchToVoiceKeyboard(); return }
         val tag = if (lang.code == "tr") "tr-TR" else "en-US"
-        // the words come back to this keyboard; the phone's own listening screen opens over the field, the keyboard stays up
-        VoiceTypeBus.sink = { text -> currentInputConnection?.commitText(text, 1); afterText() }
-        VoiceTypeBus.pending.takeIf { it.isNotEmpty() }?.let { VoiceTypeBus.pending = ""; currentInputConnection?.commitText(it, 1); afterText() }
-        runCatching {
-            startActivity(android.content.Intent(this, com.umutk.pulse.extras.keyboard.VoiceTypeActivity::class.java)
-                .putExtra("tag", tag).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-        }.onFailure { switchToVoiceKeyboard() }
+        val rec = recognizer ?: android.speech.SpeechRecognizer.createSpeechRecognizer(this).also { recognizer = it }
+        // the keyboard's own listening panel covers the keys; the words are written into the field as they are recognised
+        st.voiceText = ""
+        st.panel = "voice"
+        rec.setRecognitionListener(object : android.speech.RecognitionListener {
+            override fun onReadyForSpeech(params: android.os.Bundle?) { st.listening = true }
+            override fun onBeginningOfSpeech() {}
+            override fun onRmsChanged(rmsdB: Float) {}
+            override fun onBufferReceived(buffer: ByteArray?) {}
+            override fun onEndOfSpeech() { st.listening = false }
+            override fun onError(error: Int) {
+                st.listening = false
+                st.panel = "keys"
+                if (!voiceFallbackDone && error == android.speech.SpeechRecognizer.ERROR_CLIENT) { voiceFallbackDone = true; switchToVoiceKeyboard() }
+            }
+            override fun onResults(results: android.os.Bundle?) {
+                st.listening = false
+                st.panel = "keys"
+                val text = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+                if (text.isNotBlank()) { currentInputConnection?.commitText(text.trim() + " ", 1); afterText() }
+            }
+            override fun onPartialResults(partial: android.os.Bundle?) {
+                st.voiceText = partial?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            }
+            override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
+        })
+        val i = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, tag)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
+        runCatching { rec.startListening(i) }.onFailure { st.listening = false; st.panel = "keys"; switchToVoiceKeyboard() }
     }
 
     private fun stopListening() {

@@ -24,7 +24,7 @@ object ExtraKeys {
     /** The tools the bar above the keys can hold: id and name. */
     val toolbar = listOf(
         "auth" to "Quick auth", "clip" to "Clipboard", "gamepad" to "Gamepad", "emoji" to "Emoji", "voice" to "Voice typing", "translate" to "Translate", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
-        "menu" to "Menu", "email" to "E-mail @", "resize" to "Resize", "incognito" to "Incognito", "arrows" to "Key bar", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
+        "menu" to "Menu", "email" to "E-mail @", "resize" to "Resize", "incognito" to "Incognito", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
     )
     /** The tiles the menu behind the three dots can hold. */
     val menu = listOf(
