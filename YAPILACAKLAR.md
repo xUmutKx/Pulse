@@ -1582,3 +1582,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Size: 78 WebP pictures recompressed (lossless where smaller, lossy only when it looks the same); about 9.8 MB to 6.8 MB of pictures (derlenmedi)
 - (sonraki derlemede) Messages: sent texts move their conversation to the top and new ones are listed; the thread page has one ⋮ for pin, mute and block (block asks first) (derlenmedi)
 - (sonraki derlemede) Size: the per-ABI APK split is taken back (it saved no measurable size); one APK per build again, the updater takes the one release asset (derlenmedi)
+- (sonraki derlemede) Extra apps is always in the ⋮ menu; the "Show Extra apps in the ⋮ menu" switch is removed (derlenmedi)
