@@ -1603,3 +1603,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Music library: the mood mixes (Angry, Daily...) are only in the Mix maker; the Mix maker is a compact DJ-set panel: moods, sources, length and one round play button (derlenmedi)
 - (sonraki derlemede) Office: the title bar and ribbon colour also paints the status bar and the navigation bar (AMOLED black covers the status bar) (derlenmedi)
 - (sonraki derlemede) Clock: the status bar is the same black as the screen (derlenmedi)
+- (sonraki derlemede) Office: the hide/show arrows of the title bar are a short pull bar; keyboard clipboard: a tapped text is pasted and also put on the phone clipboard again (derlenmedi)

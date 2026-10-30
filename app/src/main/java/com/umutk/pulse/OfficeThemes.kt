@@ -402,7 +402,7 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
                 Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), titleInk) }
                 OfTile(t.kind, 22.dp, is17); Spacer(Modifier.width(8.dp))
                 OfTitle(title, titleInk)
-                Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(22.dp), titleInk) }
+                Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(titleInk)) }
                 acts.filter { it.group == "Quick" }.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), titleInk) } }
             }
             Row(Modifier.fillMaxWidth().then(if (is17) Modifier.background(below) else Modifier).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
@@ -450,7 +450,7 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     }
     if (manualHid) Box(Modifier.fillMaxSize()) {
         Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
-            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(20.dp), Color.White)
+            Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(Color.White))
         }
     }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
@@ -510,7 +510,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), topInk) }
             OfTile(t.kind, 22.dp, true); Spacer(Modifier.width(8.dp))
             OfTitle(title, topInk)
-            Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(22.dp), topInk) }
+            Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(topInk)) }
             quick.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), topInk) } }
         }
         Row(Modifier.fillMaxWidth().background(below).horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
@@ -542,7 +542,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     }
     if (manualHid) Box(Modifier.fillMaxSize()) {
         Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
-            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(20.dp), Color.White)
+            Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(Color.White))
         }
     }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
