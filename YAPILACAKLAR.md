@@ -1663,3 +1663,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.278 Books: a reader menu (⋮), theme cards, visual and control options, customise bar buttons with order, book information, reading progress on the shelf; Books listed in Extra apps(derlendi)
 - (derlenmedi) Keyboard: key layout rows evenly spaced with an icon each (no gamepad or key bar there); the lock and the clipboard swapped in the bar; a comma behind a word gets its space again (the space setting had turned it off); two words run together are split before other corrections
 - (derlenmedi) Books: the empty shelf finds the books in the phone's Books and Download folders, and has an add button
+- (derlenmedi) Windows 11 extra apps list: Books uses the Fluent book glyph

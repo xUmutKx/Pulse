@@ -688,7 +688,7 @@ private fun ExtraAppsCard() {
     // Windows 11 glyph per app (FluentPaths keys; Fluent UI System Icons, MIT License, Microsoft)
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
         "PaintLauncher" to "extraPaint", "ClockLauncher" to "extraClock", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
-        "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "EbookLauncher" to "extraNotes", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
+        "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "EbookLauncher" to "book", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
         "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
     // the alias is disabled in the manifest, so "on" is only the enabled state: the default one does not put an icon on the home screen
