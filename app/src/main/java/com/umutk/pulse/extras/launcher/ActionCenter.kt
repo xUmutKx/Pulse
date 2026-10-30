@@ -60,6 +60,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.ExtraToolActivity
+import com.umutk.pulse.Shell
 import com.umutk.pulse.tr
 
 /** The Windows 10 Mobile action center: the quick tiles, "Collapse" and the notification area. It opens with a pull down from the top edge. */
@@ -72,6 +73,13 @@ internal class QTile(val icon: ImageVector, val en: String, val trName: String, 
 
 private fun settings(a: String): (Context) -> Unit = { c -> runCatching { c.startActivity(Intent(a).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
 
+/** Flips airplane mode in place when the phone gives Pulse root or Shizuku; without them the settings page opens, as Android does not let an app switch it. */
+private fun airplane(c: Context) {
+    if (Shell.root != true && Shell.shizuku != 2) return settings(Settings.ACTION_AIRPLANE_MODE_SETTINGS)(c)
+    val on = Settings.Global.getInt(c.contentResolver, Settings.Global.AIRPLANE_MODE_ON, 0) == 1
+    Thread { Shell.run("cmd connectivity airplane-mode ${if (on) "disable" else "enable"}") }.start()
+}
+
 internal val QUICK = listOf(
     QTile(Icons.Outlined.SignalCellularAlt, "Cellular", "Hücresel", settings(Settings.ACTION_WIRELESS_SETTINGS)),
     QTile(Icons.Outlined.WifiTethering, "Mobile hotspot", "Mobil erişim noktası", settings("android.settings.TETHER_SETTINGS")),
@@ -79,7 +87,7 @@ internal val QUICK = listOf(
     QTile(Icons.Outlined.BrightnessAuto, "Automatic", "Otomatik", settings(Settings.ACTION_DISPLAY_SETTINGS)),
     QTile(Icons.Outlined.VpnKey, "VPN", "VPN", settings(Settings.ACTION_VPN_SETTINGS)),
     QTile(Icons.Outlined.LocationOn, "Location", "Konum", settings(Settings.ACTION_LOCATION_SOURCE_SETTINGS)),
-    QTile(Icons.Outlined.AirplanemodeActive, "Airplane mode", "Uçak modu", settings(Settings.ACTION_AIRPLANE_MODE_SETTINGS)),
+    QTile(Icons.Outlined.AirplanemodeActive, "Airplane mode", "Uçak modu", ::airplane),
     QTile(Icons.Outlined.CameraAlt, "Camera", "Kamera", { c -> runCatching { c.startActivity(Intent(MediaStore.INTENT_ACTION_STILL_IMAGE_CAMERA).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }),
     QTile(Icons.Outlined.Cast, "Connect", "Bağlan", settings(Settings.ACTION_CAST_SETTINGS)),
     QTile(Icons.Outlined.BatterySaver, "Battery saver", "Pil tasarrufu", settings(Settings.ACTION_BATTERY_SAVER_SETTINGS)),
