@@ -17,6 +17,12 @@ object KeyboardDictionary {
     private class Lex(val words: Array<String>, val score: FloatArray) {
         val sorted: IntArray = words.indices.sortedBy { words[it] }.toIntArray()
         val index: HashMap<String, Int> = HashMap<String, Int>(words.size * 2).also { m -> words.forEachIndexed { i, w -> m[w] = i } }
+        // the word numbers by length (up to 28 letters, the longest a correction looks at): a correction only reads the lengths near the typed word
+        val byLen: Array<IntArray> = run {
+            val lists = Array(29) { ArrayList<Int>() }
+            words.forEachIndexed { i, w -> if (w.length <= 28) lists[w.length].add(i) }
+            Array(29) { lists[it].toIntArray() }
+        }
     }
 
     private val lexes = ConcurrentHashMap<String, Lex>()
@@ -362,7 +368,8 @@ object KeyboardDictionary {
             if (cost > maxCost) return
             best += Cand(w, base - 4f * cost, cost)
         }
-        for (i in lx.words.indices) consider(lx.words[i], lx.score[i])
+        // only the words one or two letters longer or shorter than the typed one can be within reach
+        for (len in maxOf(1, t.length - 2)..minOf(28, t.length + 2)) for (i in lx.byLen[len]) consider(lx.words[i], lx.score[i])
         user.forEach { (w, _) -> if (best.none { it.word == w }) consider(w, score(lang, w)) }
         return best.sortedByDescending { it.score }.take(n)
     }
