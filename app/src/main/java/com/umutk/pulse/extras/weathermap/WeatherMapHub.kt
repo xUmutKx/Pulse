@@ -1,7 +1,9 @@
 package com.umutk.pulse.extras.weathermap
 
 import android.content.Context
+import android.content.Intent
 import android.graphics.BitmapFactory
+import android.net.Uri
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -459,6 +461,13 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place?) {
                         modifier = Modifier.background(if (on) T.accent else Color.Black.copy(alpha = .6f), RoundedCornerShape(50))
                             .clickable { layer = l; info = null; prefs.edit().putString("layer", l.name).apply() }.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
+                // the ships are MarineTraffic's own live map: it opens in the browser at the place on the screen, not inside Pulse
+                Text(tr("Ships (MarineTraffic) ↗", "Gemiler (MarineTraffic) ↗"), color = Color.White, fontSize = 13.sp, maxLines = 1,
+                    modifier = Modifier.background(Color.Black.copy(alpha = .6f), RoundedCornerShape(50)).clickable {
+                        val url = String.format(Locale.US, "https://www.marinetraffic.com/en/ais/home/centerx:%.3f/centery:%.3f/zoom:%d",
+                            lonOf(pos.cx), latOf(pos.cy), pos.zoom.roundToInt().coerceIn(1, 18))
+                        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                    }.padding(horizontal = 12.dp, vertical = 6.dp))
             }
         }
 

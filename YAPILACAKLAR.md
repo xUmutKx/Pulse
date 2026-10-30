@@ -1684,3 +1684,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Weather map: the values are a grid over the screen, so the coast and the seas get their own points (waves included) (derlenmedi)
 - Weather map: aircraft are tappable (callsign, country, height, speed, heading); the picked value shows for the grid layers (derlenmedi)
 - Weather map: the last values stay on the screen with their time when a service fails; the values are kept on the phone (derlenmedi)
+- Weather map: "Gemiler (MarineTraffic)" chip opens marinetraffic.com in the browser at the map's place and zoom (no data is taken from the site) (derlenmedi)
