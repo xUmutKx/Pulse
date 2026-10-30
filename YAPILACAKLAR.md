@@ -1560,3 +1560,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.251 Radio inside the Music player takes the player's dark look (white text, lime accent); Music recap moved from Extra apps and the ⋮ menu to a button on the Music player top bar, reading the player's own play log (derlenmedi)
 - 1.0.252 Files share sheet: Relay and LocalSend are one entry ("Relay / LocalSend") that asks which one to open; they no longer appear twice in the app row (derlenmedi)
 - 1.0.253 Settings > Pages: a tap on a page name opens that page (the switch still decides the left menu) (derlenmedi)
+- 1.0.254 Relay and LocalSend only from Files (Files > More rows); removed from Extra apps and the ⋮ menu. Radio: two boombox skins drawn in the app (nostalgic wood and chrome, modern matte with a lit display), chosen with chips above the list (derlenmedi)
