@@ -323,6 +323,18 @@ private fun LayoutPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit
                 if (on) Icon(kbIcon(th, "Check"), null, tint = th.accent, modifier = Modifier.size(20.dp))
             }
         }
+        // the key bar, the gamepad and the key set open from here too
+        val keyBarOn = KeyboardPrefs.arrows
+        Row(Modifier.fillMaxWidth().height(keyH * .85f).clickable { KeyboardPrefs.arrows = !keyBarOn; KeyboardPrefs.saveFloat(); st.panel = "keys" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Key bar", "Tuş çubuğu"), color = if (keyBarOn) th.accent else th.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+            if (keyBarOn) Icon(kbIcon(th, "Check"), null, tint = th.accent, modifier = Modifier.size(20.dp))
+        }
+        Row(Modifier.fillMaxWidth().height(keyH * .85f).clickable { st.panel = "gamepad" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Gamepad", "Oyun kumandası"), color = th.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        }
+        Row(Modifier.fillMaxWidth().height(keyH * .85f).clickable { st.panel = "keyset" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Key set", "Tuş seti"), color = th.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        }
     }
 }
 
