@@ -56,6 +56,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.compositeOver
@@ -503,18 +504,23 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val ink = ofInkOn(below)
     val (autoHid, tapWatch) = ofAutoHide()
     // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
-    var manualHid by remember { mutableStateOf(false) }
-    val hid = autoHid || manualHid
+    // the top block is a drop-down: pull the thin grip under it down from its middle to open it, push it up to close it
+    var pull by remember { mutableStateOf(1f) }
+    var blockH by remember { mutableStateOf(0) }
+    val openP = if (autoHid) 0f else pull
+    val hid = openP < .5f
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
     // a tap on the screen (anywhere the page or the background takes it) shows or hides the top block, like the bar does
-    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { manualHid = !manualHid }) }) {
+    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { pull = if (pull > .5f) 0f else 1f }) }) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
-        if (!hid) Column {
+        // the top block shows only the part pulled out; its top edge stays fixed
+        Box(Modifier.fillMaxWidth().height(with(LocalDensity.current) { (blockH * openP).toDp() }).clipToBounds()) {
+        Column(Modifier.fillMaxWidth().wrapContentHeight(align = Alignment.Top, unbounded = true).onSizeChanged { blockH = it.height }) {
         Row(Modifier.fillMaxWidth().background(top).statusBarsPadding().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), topInk) }
             OfTile(t.kind, 22.dp, true); Spacer(Modifier.width(8.dp))
             OfTitle(title, topInk)
-            Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(topInk)) }
+            Box(Modifier.size(40.dp).clickable { pull = 0f }, contentAlignment = Alignment.Center) { Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(topInk)) }
             quick.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), topInk) } }
         }
         Row(Modifier.fillMaxWidth().background(below).horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
@@ -539,14 +545,21 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
         }
         extra?.invoke()
         }
+        }
+        // the grip: a thin line under the top block, pulled down from its middle to open it and pushed up to close it
+        if (openP == 0f) Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(below))
+        Box(Modifier.fillMaxWidth().height(14.dp).background(below)
+            .pointerInput(Unit) {
+                androidx.compose.foundation.gestures.detectVerticalDragGestures(onDragEnd = { pull = if (pull > .5f) 1f else 0f }) { change, drag ->
+                    change.consume(); pull = (pull + drag / blockH.coerceAtLeast(1)).coerceIn(0f, 1f)
+                }
+            }
+            .clickable { pull = if (pull > .5f) 0f else 1f }, contentAlignment = Alignment.Center) {
+            Box(Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(50)).background(ink.copy(alpha = .5f)))
+        }
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
         if (!hid) Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, color = ink.copy(alpha = .75f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-    if (manualHid) Box(Modifier.fillMaxSize()) {
-        Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
-            Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(Color.White))
         }
     }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
