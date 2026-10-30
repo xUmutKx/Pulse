@@ -1561,3 +1561,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.252 Files share sheet: Relay and LocalSend are one entry ("Relay / LocalSend") that asks which one to open; they no longer appear twice in the app row (derlenmedi)
 - 1.0.253 Settings > Pages: a tap on a page name opens that page (the switch still decides the left menu) (derlenmedi)
 - 1.0.254 Relay and LocalSend only from Files (Files > More rows); removed from Extra apps and the ⋮ menu. Radio: two boombox skins drawn in the app (nostalgic wood and chrome, modern matte with a lit display), chosen with chips above the list (derlenmedi)
+- 1.0.255 Windows Phone start (WinPhone look): medium tiles with notifications turn over to the count of new items (from MetroWinLauncher's live tile idea, rewritten for Pulse). Phase 1 of the MetroWin port; action centre and metro lock screen not started (derlenmedi)
