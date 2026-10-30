@@ -776,7 +776,8 @@ private fun ExtraAppsCard() {
                 val pageColor = if (T.id == "win11" && IconStyle.of(IconCat.MENU) != "line") fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
                 Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (pageColor != 0) Image(painterResource(pageColor), null, Modifier.size(30.dp)) else if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }
                 Spacer(Modifier.width(12.dp))
-                Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                // a tap on the name opens that page; the switch only decides whether it is in the left menu
+                Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable { com.umutk.pulse.widgets.WidgetOpen.page = p.id })
                 PSwitch(p.id !in Opt.hidden, { on -> Opt.hidden = if (on) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) })
             }
         }
