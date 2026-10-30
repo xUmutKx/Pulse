@@ -246,7 +246,8 @@ private fun sizeText(b: Long) = if (b >= 1L shl 30) "%.1f GB".format(b / 1073741
 
 /** Shared, persisted column widths of the Processes table (header and rows read the same state). */
 private object ColW {
-    private val def = mapOf("name" to 170, "cpu" to 64, "mem" to 84, "net" to 96, "disk" to 84, "status" to 76, "pid" to 60, "user" to 84, "virt" to 84, "prio" to 64, "ppid" to 64)
+    // CPU, Memory and Network are wide enough by default to read their values; the name column takes the rest
+    private val def = mapOf("name" to 150, "cpu" to 84, "mem" to 116, "net" to 124, "disk" to 96, "status" to 76, "pid" to 60, "user" to 84, "virt" to 84, "prio" to 64, "ppid" to 64)
     private val map = mutableStateMapOf<String, Float>()
     private var loaded = false
     fun load(ctx: android.content.Context) {
