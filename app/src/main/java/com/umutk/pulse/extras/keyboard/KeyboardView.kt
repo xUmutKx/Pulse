@@ -1,6 +1,7 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.umutk.pulse.extras.keyboard
 
+import androidx.compose.material.icons.rounded.Key
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.AlternateEmail
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -272,6 +273,7 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "gamepad" -> GamepadPanel(th, act)
+            "auth" -> AuthPanel(th, st, act)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
             "layout" -> LayoutPanel(th, st, keyH)
@@ -507,7 +509,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Key; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
@@ -1275,5 +1277,22 @@ private fun ShiftGlyph(state: Int, color: Color) {
         }
         if (state == 2) drawPath(arrow, color) else drawPath(arrow, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w, join = androidx.compose.ui.graphics.StrokeJoin.Round))
         if (state >= 1) drawRoundRect(color, androidx.compose.ui.geometry.Offset(9f * u, 19.5f * u), androidx.compose.ui.geometry.Size(6f * u, 2.2f * u), androidx.compose.ui.geometry.CornerRadius(u))
+    }
+}
+
+/** Quick auth: the accounts of Pulse Authenticator with their codes; a tap types the code. */
+@Composable
+private fun AuthPanel(th: KbTheme, st: KeyboardState, act: KbActions) {
+    Column(Modifier.fillMaxWidth().height(280.dp).background(th.bg).padding(8.dp)) {
+        if (st.authCodes.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Text(tr("No accounts yet: add them in Pulse Authenticator", "Henüz hesap yok: Pulse Kimlik doğrulayıcı'da ekle"), color = th.sub, fontSize = 13.sp)
+        } else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+            items(st.authCodes) { (name, code) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(th.key).clickable { act.authPick(code) }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(name, color = th.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(code, color = th.accent, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                }
+            }
+        }
     }
 }
