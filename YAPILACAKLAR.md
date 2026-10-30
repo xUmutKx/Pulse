@@ -1584,3 +1584,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Size: the per-ABI APK split is taken back (it saved no measurable size); one APK per build again, the updater takes the one release asset (derlenmedi)
 - (sonraki derlemede) Extra apps is always in the ⋮ menu; the "Show Extra apps in the ⋮ menu" switch is removed (derlenmedi)
 - (sonraki derlemede) Clock: its own launcher icon, switched on in Settings > Extra apps like the calculator (ClockLauncher alias, clock glyph); the Extra apps row for Clock follows that switch (derlenmedi)
+- (sonraki derlemede) Extra apps: the hide eye and the long press that hid rows are removed; a tool no longer has a hide switch (its place is still set with the chevron); the launcher icon switch of each app stays (derlenmedi)
