@@ -1302,11 +1302,11 @@ private fun ShiftGlyph(state: Int, color: Color) {
 @Composable
 private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
     Column(Modifier.fillMaxWidth().height(keyH).background(th.bg).padding(8.dp)) {
+        // a second clock: the codes are checked each second, and each account shows how long its code has left
+        val now by androidx.compose.runtime.produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); act.authTick(); delay(1000) } }
         if (st.authCodes.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(tr("No accounts yet: add them in Pulse Authenticator", "Henüz hesap yok: Pulse Kimlik doğrulayıcı'da ekle"), color = th.sub, fontSize = 13.sp)
         } else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-            // a second clock: the codes are checked each second, and each account shows how long its code has left
-            val now by androidx.compose.runtime.produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); act.authTick(); delay(1000) } }
             itemsIndexed(st.authCodes) { i, (name, code) ->
                 val period = st.authPeriods.getOrElse(i) { 30 }.coerceAtLeast(1)
                 val left = period - ((now / 1000L) % period).toInt()
