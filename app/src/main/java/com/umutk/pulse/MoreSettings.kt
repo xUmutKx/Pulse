@@ -873,7 +873,7 @@ internal fun ExtraDefaultRow(alias: String) {
 
 /** Colour Fluent picture res/drawable-nodpi/fc_<key>.png (Fluent UI System Icons colour set, MIT, rendered at 144 px); 0 when there is none. */
 internal fun fluentColorRes(ctx: android.content.Context, key: String): Int =
-    if (key.isEmpty()) 0 else ctx.resources.getIdentifier("fc_$key", "drawable", ctx.packageName)
+    if (key.isEmpty()) 0 else ctx.resources.getIdentifier("fc_${key.lowercase()}", "drawable", ctx.packageName)
 
 private val FC_APP = mapOf("CalculatorLauncher" to "calculator", "FilesLauncher" to "files", "PhotosLauncher" to "photos", "CalendarLauncher" to "calendar", "ContactsLauncher" to "contacts", "PaintLauncher" to "paint",
     "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "IslandLauncher" to "island", "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes",
