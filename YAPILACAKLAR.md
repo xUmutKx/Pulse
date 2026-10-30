@@ -1641,3 +1641,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Office: the top bar is fully hidden again; only the thin line stays (no band), tapping or pulling it brings the bar back (derlenmedi)
 - (sonraki derlemede) Office: the top bar handle is a down-pointing chevron instead of the thin line (derlenmedi)
 - (sonraki derlemede) TempMail: no crash without network or on a bad answer; TempMail is no longer listed in Extra apps (derlenmedi)
+- (sonraki derlemede) Weather map: no longer listed in Extra apps; it opens from the globe button on the weather page (derlenmedi)
