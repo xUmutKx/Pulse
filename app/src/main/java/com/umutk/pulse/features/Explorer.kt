@@ -547,6 +547,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         // music files play right here, in a thin player at the bottom, not in another app
         if (f.extension.lowercase() in EX_AUDIO) { recents = exAddRecent(ctx, f); ExAudio.play(f); return }
         if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpen(ctx, f, if (ctx is com.umutk.pulse.FilesActivity) "material" else null); return }
+        if (f.extension.lowercase() in com.umutk.pulse.RAW_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.rawOpen(ctx, f); return }
         if (f.extension.lowercase() in com.umutk.pulse.IMG_EXTS || f.extension.lowercase() in setOf("heic", "heif", "avif")) {
             recents = exAddRecent(ctx, f)
             if (!exOpenInGallery(ctx, f)) com.umutk.pulse.imgOpen(ctx, f)
