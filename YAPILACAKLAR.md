@@ -1658,3 +1658,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.277 Media tools: a Cut tab (cut a video or audio file between two times, or keep only its sound; the streams are copied without re-encoding) (derlendi)
 - 1.0.277 Web music: Spotify and YouTube Music as web players inside Pulse (their own sign-in, one view per service, kept while switching); a small Extra app, no native code, so the app does not grow (runs while the screen is in front; Google may refuse sign-in in a web view)(derlendi)
 - 1.0.277 Web music is now opened from the music player's online button (Settings > 'Web müzik: YouTube Music, Spotify'), not an extra app; the version is back at 1.0.276 (the 1.0.277 bump was undone)(derlendi)
+- (derlenmedi) Messages: opening a conversation clears its notification and marks its messages read, so the new-message count goes

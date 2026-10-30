@@ -336,6 +336,13 @@ fun MessagesScreen(back: () -> Unit) {
     fun goBack() { if (settings) settings = false else if (newMode) newMode = false else if (open != null) open = null else back() }
 
     LaunchedEffect(Unit) { if (!granted) ask.launch(MESSAGE_PERMS) }
+    // a conversation that is open is read: its notification goes and its unread count is cleared
+    LaunchedEffect(open?.address) {
+        val addr = open?.address ?: return@LaunchedEffect
+        com.umutk.pulse.extras.messages.MsgNotifier.cancel(ctx, addr)
+        withContext(Dispatchers.IO) { MsgCore.markRead(ctx, addr) }
+        reload++
+    }
     BackHandler { goBack() }
     // a new incoming or sent SMS reloads the lists without the user doing anything
     DisposableEffect(granted) {
