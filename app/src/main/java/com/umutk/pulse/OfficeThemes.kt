@@ -359,7 +359,8 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
     var manualHid by remember { mutableStateOf(false) }
     val hid = autoHid || manualHid
-    Box(Modifier.fillMaxSize().then(tapWatch)) {
+    // a tap on the screen (anywhere the page or the background takes it) shows or hides the top block, like the bar does
+    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { manualHid = !manualHid }) }) {
     Column(Modifier.fillMaxSize().background(if (t.classic) pal.ribbonBg else if (is17) below else pal.titleBg).then(if (is17) Modifier.navigationBarsPadding() else Modifier.systemBarsPadding())) {
         // title bar
         if (!hid) if (t.classic) {
@@ -503,7 +504,8 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     var manualHid by remember { mutableStateOf(false) }
     val hid = autoHid || manualHid
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
-    Box(Modifier.fillMaxSize().then(tapWatch)) {
+    // a tap on the screen (anywhere the page or the background takes it) shows or hides the top block, like the bar does
+    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { manualHid = !manualHid }) }) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
         if (!hid) Column {
         Row(Modifier.fillMaxWidth().background(top).statusBarsPadding().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
