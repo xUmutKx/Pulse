@@ -395,11 +395,12 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     ) {
         BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
         if (st.toolbar) {
-            // the bar has room for a set number of icons (Settings > Keyboard > Icons on the bar); more of them scroll
+            // the icons share the width evenly; only when they would be smaller than a finger's reach does the row scroll
+            val shown = KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }
             BoxWithConstraints(Modifier.weight(1f)) {
-                val slot = maxWidth / KeyboardPrefs.barSlots
+                val slot = if (shown.isEmpty()) maxWidth else maxOf(44.dp, maxWidth / shown.size)
                 Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
-                    KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }.forEach { id ->
+                    shown.forEach { id ->
                         Box(Modifier.width(slot), contentAlignment = Alignment.Center) {
                             BarIcon(th, toolIcon(th, id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
                         }
