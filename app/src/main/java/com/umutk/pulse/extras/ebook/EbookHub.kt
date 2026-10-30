@@ -17,6 +17,9 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.border
@@ -168,7 +171,10 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             note = ""
         }
     }
-    Column(Modifier.fillMaxSize().background(T.panel).padding(horizontal = 12.dp, vertical = 10.dp)) {
+    var wood by remember { mutableStateOf(EbookPrefs.wood(ctx)) }
+    Box(Modifier.fillMaxSize()) {
+    if (wood) WoodBackground(Modifier.matchParentSize())
+    Column(Modifier.fillMaxSize().then(if (wood) Modifier else Modifier.background(T.panel)).padding(horizontal = 12.dp, vertical = 10.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 24.dp) }
             Text(tr("Books", "Kitaplar"), color = T.text, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(start = 4.dp))
@@ -179,6 +185,10 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(tr("Show reading progress on the cover", "Kapakta okuma ilerlemesi"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 PSwitch(showProgress, { showProgress = it; EbookPrefs.setShowProgress(ctx, it) })
+            }
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Use woody background", "Ahşap arka plan"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                PSwitch(wood, { wood = it; EbookPrefs.setWood(ctx, it) })
             }
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(tr("Book cover size: $cover", "Kapak boyutu: $cover"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
@@ -215,11 +225,12 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                             Text(b.title.take(1).uppercase(), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                             if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
                         }
-                        Text(b.title, color = T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width((cover + 8).dp).padding(top = 4.dp))
+                        Text(b.title, color = if (wood) Color(0xFFF6E7CC) else T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width((cover + 8).dp).padding(top = 4.dp))
                     }
                 }
             }
         }
+    }
     }
 }
 
@@ -667,6 +678,26 @@ private fun PopRow(label: String, on: Boolean, th: Theme, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = if (on) th.ink else th.sub, fontSize = 14.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
         if (on) Text("✓", color = th.ink, fontSize = 14.sp)
+    }
+}
+
+/** A wooden shelf background, drawn (no picture is stored): the grain of planks, lighter at the top. */
+@Composable
+private fun WoodBackground(modifier: Modifier) {
+    Canvas(modifier) {
+        drawRect(Brush.verticalGradient(listOf(Color(0xFF9C6B3C), Color(0xFF7A4E2A), Color(0xFF8A5C32))))
+        // the grain: long soft lines of different strength, drawn the same way every time
+        var seed = 7
+        fun rnd(): Float { seed = (seed * 1103515245 + 12345) and 0x7fffffff; return (seed % 1000) / 1000f }
+        repeat(60) {
+            val y = rnd() * size.height
+            val a = .05f + rnd() * .12f
+            drawLine(Color.Black.copy(alpha = a), Offset(0f, y), Offset(size.width, y + (rnd() - .5f) * 14f), strokeWidth = 1f + rnd() * 2.5f)
+        }
+        // the shelf boards: a darker line every 160 dp
+        val step = 160.dp.toPx()
+        var yb = step
+        while (yb < size.height) { drawRect(Color.Black.copy(alpha = .35f), Offset(0f, yb), Size(size.width, 4.dp.toPx())); yb += step }
     }
 }
 
