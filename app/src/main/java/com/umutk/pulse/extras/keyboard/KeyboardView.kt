@@ -393,9 +393,15 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     ) {
         BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
         if (st.toolbar) {
-            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }.forEach { id ->
-                    BarIcon(th, toolIcon(th, id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
+            // the bar has room for a set number of icons (Settings > Keyboard > Icons on the bar); more of them scroll
+            BoxWithConstraints(Modifier.weight(1f)) {
+                val slot = maxWidth / KeyboardPrefs.barSlots
+                Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                    KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }.forEach { id ->
+                        Box(Modifier.width(slot), contentAlignment = Alignment.Center) {
+                            BarIcon(th, toolIcon(th, id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
+                        }
+                    }
                 }
             }
             // the three dots always sit at the right end, drawn in Fluent
