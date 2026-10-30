@@ -3,6 +3,7 @@ package com.umutk.pulse
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import android.app.Activity
+import androidx.compose.ui.graphics.toArgb
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -343,7 +344,10 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     val is17 = t.base == "2017"; val brand = t.kind.brand; val below = ofBelow(t)
     SideEffect {
         val w = (view.context as Activity).window
-        WindowCompat.getInsetsController(w, view).apply { val (bt, bb) = ofBars(t); isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
+        // the system bars take the title bar's colour too: the status bar is painted, not left to the phone's theme
+        val (bt, bb) = ofBars(t)
+        w.statusBarColor = bt.toArgb(); w.navigationBarColor = bb.toArgb()
+        WindowCompat.getInsetsController(w, view).apply { isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
     }
     val fileOps = LocalOfFile.current
     var fileOpen by remember { mutableStateOf(false) }; var info by remember { mutableStateOf(false) }
@@ -477,7 +481,10 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val pal = t.pal; val view = LocalView.current; val brand = t.kind.brand; val top = ofTop(t); val topInk = ofInkOn(top)
     SideEffect {
         val w = (view.context as Activity).window
-        WindowCompat.getInsetsController(w, view).apply { val (bt, bb) = ofBars(t); isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
+        // the system bars take the title bar's colour too: the status bar is painted, not left to the phone's theme
+        val (bt, bb) = ofBars(t)
+        w.statusBarColor = bt.toArgb(); w.navigationBarColor = bb.toArgb()
+        WindowCompat.getInsetsController(w, view).apply { isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
     }
     val quick = acts.filter { it.group == "Quick" }
     val fileOps = LocalOfFile.current
