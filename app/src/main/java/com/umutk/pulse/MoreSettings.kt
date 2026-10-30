@@ -645,7 +645,7 @@ private fun ExtraAppsCard() {
         Triple("VideoLauncher", R.drawable.ic_video, tr("Video", "Video")),
         Triple("WhiteNoiseLauncher", R.drawable.ic_whitenoise, tr("White noise", "Beyaz gürültü")),
         Triple("VoiceLauncher", R.drawable.mat_voice, tr("Voice recorder", "Ses kaydedici")),
-        Triple("NotesLauncher", "EbookLauncher", R.drawable.mat_notes, tr("Notes", "Notlar")),
+        Triple("NotesLauncher", R.drawable.mat_notes, tr("Notes", "Notlar")),
         Triple("EbookLauncher", R.drawable.mat_notes, tr("Books", "Kitaplar")),
         Triple("WeatherLauncher", R.drawable.mat_weather, tr("Weather", "Hava durumu")),
         Triple("MessagesLauncher", R.drawable.mat_messages, tr("Messages", "Mesajlar")),
@@ -659,7 +659,7 @@ private fun ExtraAppsCard() {
     )
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
-        (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "VoiceLauncher"),
+        (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),
         (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher"),
         (tr("Tools and life", "Araçlar ve günlük")) to listOf("CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "CalendarLauncher", "ContactsLauncher"),
         (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "PaletteLauncher", "BlackOutLauncher", "IslandLauncher"),
