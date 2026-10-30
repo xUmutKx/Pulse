@@ -450,6 +450,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (st.shift == 1) st.shift = 0
             updateSuggestions()
         } else {
+            // a second comma right behind a comma (or the comma and its space) is dropped: one comma stays
+            if (ch == ',' && word.isEmpty() && c.getTextBeforeCursor(2, 0)?.toString()?.let { it.endsWith(",") || it == ", " } == true) return
             // a word is only mended when the space key ends it: a period, comma or bracket leaves what was typed as it is
             // a full stop behind a word of the dictionary ends a sentence (not in addresses, passwords or numbers): the space and the capital come with the next letter
             val before = word.toString().lowercase(lang.locale)
