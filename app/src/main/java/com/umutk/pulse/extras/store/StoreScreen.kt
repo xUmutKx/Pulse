@@ -386,8 +386,8 @@ private fun rowKey(r: BuiltinRow): String {
 /** The rows of the Extra apps list the user hid (a long press on a row): kept by their place key, or the name when a row has none. */
 object ExtraRowsHidden {
     private fun sp(c: android.content.Context) = c.getSharedPreferences("store_rows", android.content.Context.MODE_PRIVATE)
-    // no row is hidden any more (the eye and the long press are gone); the launcher icon switch is what places an app
-    fun load(c: android.content.Context): Set<String> = emptySet()
+    /** The rows hidden with a long press: they leave Extra apps and the ⋮ menu; a first start shows everything. */
+    fun load(c: android.content.Context): Set<String> = sp(c).getStringSet("hidden", emptySet()).orEmpty().toSet()
     fun save(c: android.content.Context, keys: Set<String>) { sp(c).edit().putStringSet("hidden", keys).apply() }
     /** The list of extra apps as tiles (icon and name) or as rows with their description. */
     fun grid(c: android.content.Context) = sp(c).getBoolean("grid", false)
@@ -448,6 +448,8 @@ private fun BuiltinRows() {
     // tiles or rows: the choice is kept
     var grid by remember { mutableStateOf(ExtraRowsHidden.grid(ctx)) }
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+        // the eye shows the hidden rows too (dimmed); a long press on a row hides it or brings it back
+        Box(Modifier.size(40.dp).clickable { showHidden = !showHidden }, contentAlignment = Alignment.Center) { PIcon(if (showHidden) "eyeOn" else "eyeOff", T.text, 22.dp) }
         Box(Modifier.size(40.dp).clickable { grid = !grid; ExtraRowsHidden.setGrid(ctx, grid) }, contentAlignment = Alignment.Center) { PIcon(if (grid) "menu" else "apps", T.text, 22.dp) }
     }
     if (grid) visible.chunked(3).forEach { line ->
@@ -455,7 +457,10 @@ private fun BuiltinRows() {
             line.forEach { r ->
                 val key = r.place ?: r.name
                 val isHidden = key in hidden
-                Column(Modifier.weight(1f).clickable { r.onClick() }.padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.weight(1f).combinedClickable(onClick = { r.onClick() }, onLongClick = {
+                    hidden = if (isHidden) hidden - key else hidden + key
+                    ExtraRowsHidden.save(ctx, hidden)
+                }).alpha(if (isHidden) .45f else 1f).padding(vertical = 10.dp, horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     PIcon(rowKey(r), T.text, 34.dp)
                     Text(r.name, color = T.text, fontSize = 12.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
                 }
@@ -465,7 +470,10 @@ private fun BuiltinRows() {
     } else visible.forEach { r ->
         val key = r.place ?: r.name
         val isHidden = key in hidden
-        Row(Modifier.fillMaxWidth().clickable { r.onClick() }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().combinedClickable(onClick = { r.onClick() }, onLongClick = {
+            hidden = if (isHidden) hidden - key else hidden + key
+            ExtraRowsHidden.save(ctx, hidden)
+        }).alpha(if (isHidden) .45f else 1f).padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon(rowKey(r), T.text, 26.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
