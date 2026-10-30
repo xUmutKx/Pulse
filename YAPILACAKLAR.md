@@ -1670,3 +1670,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.279 Clock: the background glow is off by default (plain black at the top); the switch in Settings turns it back on(derlendi)
 - 1.0.279 Books: the bar's visual options open as a small popup above the bar (font, text size, theme, e-ink); the bars are solid so the page text no longer shows through them(derlendi)
 - 1.0.279 Books: eight reader themes, a two-row bottom bar option, shelf tabs (My shelf, Recent, Favorites), cover size, favourite switch in book information(derlendi)
+- 1.0.279 Books: the shelf stands on a drawn wooden background (switch "Ahşap arka plan" in the shelf options, on by default)(derlendi)
