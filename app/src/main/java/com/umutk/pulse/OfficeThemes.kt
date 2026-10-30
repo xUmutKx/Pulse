@@ -570,10 +570,10 @@ val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 
 
 /** The title bar colour of the 365 and 2017 windows (their own is the app's colour): the accent colour, the app's colour, or black (Settings > Office). */
-internal fun ofTop(t: OfTheme): Color = when (OfficePrefs.bars) { 3 -> Color.Black; 1 -> Look.accent.copy(alpha = 1f); else -> t.kind.brand }
+internal fun ofTop(t: OfTheme): Color = if (t.base == "amoled") Color.Black else when (OfficePrefs.bars) { 3 -> Color.Black; 1 -> Look.accent.copy(alpha = 1f); else -> t.kind.brand }
 
 /** Colour of everything under the brand title bar: white, or near-black in the dark looks. Looks that have their own surfaces keep the ribbon colour. */
-internal fun ofBelow(t: OfTheme) = if (OfficePrefs.bars == 3) Color.Black else if (t.base == "365") Color(0xFF2B2B2B) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
+internal fun ofBelow(t: OfTheme) = if (OfficePrefs.bars == 3 || t.base == "amoled") Color.Black else if (t.base == "365") Color(0xFF2B2B2B) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
 
 /** Opaque colours of the system status bar (top) and navigation bar (bottom): exactly what the chrome shows in the title bar and in the bottom-most (status) bar, translucent layers composited over the canvas. */
 fun ofBars(t: OfTheme): Pair<Color, Color> {
