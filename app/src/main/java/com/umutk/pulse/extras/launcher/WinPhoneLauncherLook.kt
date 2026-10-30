@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.launcher
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -28,6 +30,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,6 +51,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.tr
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Accent colours of the Windows Phone start screen; an app keeps its colour in every list. */
@@ -234,6 +238,25 @@ class WinPhoneLauncherLook(
 
 
 /**
+ * A live tile face: when the app has notifications waiting, the tile turns over every few seconds, from its picture to the count of new items
+ * (the tiles start one after another, so the screen does not turn in step). Without notifications it stays on the picture.
+ */
+@Composable
+private fun FlipFace(count: Int, index: Int, front: @Composable () -> Unit) {
+    var back by remember { mutableStateOf(false) }
+    LaunchedEffect(count > 0) {
+        back = false
+        if (count > 0) { delay(300L + index * 450L); while (true) { back = !back; delay(3500L) } }
+    }
+    Crossfade(targetState = back && count > 0, animationSpec = tween(450), label = "flip") { showBack ->
+        if (showBack) Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.Center) {
+            Text("$count", color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+            Text(tr("new", "yeni"), color = Color.White, fontSize = 13.sp)
+        } else front()
+    }
+}
+
+/**
  * The Windows Phone start screen: square tiles (small 1x1, medium 2x2) and wide ones (4x2), four units across. They are laid out by themselves, a long press
  * on a tile gives it another size.
  */
@@ -277,9 +300,11 @@ fun WinPhoneTiles(state: LauncherState, apps: List<LaunchApp>, edge: Dp, modifie
                             LaunchAppPicture(t.app, h * .5f, Color.Transparent, Color.White)
                             Spacer(Modifier.width(16.dp))
                             Text(t.app.label, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        } else Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
-                            LaunchAppPicture(t.app, w * .4f, Color.Transparent, Color.White)
-                            Text(t.app.label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        } else FlipFace(if (LauncherPrefs.badges) LauncherBadges.counts[t.app.pkg] ?: 0 else 0, placed.indexOf(t)) {
+                            Column(Modifier.fillMaxSize().padding(10.dp), verticalArrangement = Arrangement.SpaceBetween) {
+                                LaunchAppPicture(t.app, w * .4f, Color.Transparent, Color.White)
+                                Text(t.app.label, color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            }
                         }
                     }
                 }
