@@ -401,11 +401,6 @@ private fun BuiltinRows() {
     var hidden by remember { mutableStateOf(ExtraRowsHidden.load(ctx)) }
     var showHidden by remember { mutableStateOf(false) }
     val openTool = LocalOpenTool.current
-    var menuOn by remember { mutableStateOf(ExtraRowsHidden.menuOn(ctx)) }
-    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(tr("Show Extra apps in the ⋮ menu", "Ek uygulamaları ⋮ menüsünde göster"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        PSwitch(menuOn, { menuOn = it; ExtraRowsHidden.setMenuOn(ctx, it) })
-    }
     val rows = listOf(
         BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
         BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image", "app:VideoLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
