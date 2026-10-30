@@ -368,6 +368,8 @@ fun WeatherHub(onBack: () -> Unit) {
                     d += tr("Sunshine", "Güneşlenme") to "%.1f h".format(today.sun)
                 }
                 if (f.aqi >= 0) d += tr("Air quality", "Hava kalitesi") to "${f.aqi} · ${WeatherFmt.aqi(f.aqi)}"
+                // an odd count leaves one tile alone on its row: the dew point fills the gap, so the grid is even
+                if (d.size % 2 == 1) d += tr("Dew point", "Çiy noktası") to t(f.dew)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     d.chunked(2).forEach { r ->
                         Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
