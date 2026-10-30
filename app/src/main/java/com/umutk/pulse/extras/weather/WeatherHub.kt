@@ -84,6 +84,7 @@ fun WeatherHub(onBack: () -> Unit) {
     var showList by remember { mutableStateOf(false) }
     var allDays by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var showMap by remember { mutableStateOf(false) }
     var source by remember { mutableStateOf(WeatherStore.source(ctx)) }
     var skin by remember { mutableStateOf(WeatherStore.skin(ctx)) }
     val devicePlace = Place(tr("My location", "Konumum"), 0.0, 0.0, device = true)
@@ -137,7 +138,7 @@ fun WeatherHub(onBack: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { WeatherAuto.ensure(ctx) }
-    BackHandler { if (showSettings) showSettings = false else if (searching) searching = false else if (showList) showList = false else onBack() }
+    BackHandler { if (showMap) showMap = false else if (showSettings) showSettings = false else if (searching) searching = false else if (showList) showList = false else onBack() }
     // first paint from the cache, then one refresh for a saved city or the phone's place when it is allowed
     LaunchedEffect(Unit) {
         val p = place
@@ -158,6 +159,10 @@ fun WeatherHub(onBack: () -> Unit) {
         val cur = order.indexOfFirst { p -> place?.let { q -> if (q.device) p.device else (!p.device && p.lat == q.lat && p.lon == q.lon) } == true }.coerceAtLeast(0)
         val to = (cur + delta).coerceIn(0, order.lastIndex)
         if (to != cur) { val p = order[to]; if (p.device) useDevice() else load(p) }
+    }
+    if (showMap) {
+        com.umutk.pulse.extras.weathermap.WeatherMapHub(onBack = { showMap = false })
+        return
     }
     if (showSettings) {
         WeatherSettings(fg, sub, bgBrush, skin, imp, source, alerts, WeatherStore.combine(ctx), { WeatherStore.setCombine(ctx, it); place?.let { p -> load(p) } },
@@ -194,6 +199,7 @@ fun WeatherHub(onBack: () -> Unit) {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(tr("Weather", "Hava durumu"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp))
                 com.umutk.pulse.ExtraLookIcon(fg)
+                Box(Modifier.size(40.dp).clickable { showMap = true }, contentAlignment = Alignment.Center) { PIcon("globe", fg, 22.dp) }
                 Box(Modifier.size(40.dp).clickable { showList = true }, contentAlignment = Alignment.Center) { PIcon("details", fg, 22.dp) }
                 Box(Modifier.size(40.dp).clickable { place?.let { load(it) } }, contentAlignment = Alignment.Center) { PIcon("refresh", fg, 22.dp) }
                 Box(Modifier.size(40.dp).clickable { showSettings = true }, contentAlignment = Alignment.Center) { PIcon("settings", fg, 22.dp) }
