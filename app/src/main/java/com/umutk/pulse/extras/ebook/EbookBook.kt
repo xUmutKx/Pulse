@@ -16,7 +16,7 @@ class Para(val text: String, val heading: Boolean)
 class Chapter(val title: String, val paras: List<Para>)
 
 /** A book on the shelf: [uri] is what is opened again, [pdf] says which kind of reader it needs. */
-class Book(val uri: String, val title: String, val author: String, val pdf: Boolean, val chapters: List<Chapter>)
+data class Book(val uri: String, val title: String, val author: String, val pdf: Boolean, val chapters: List<Chapter>)
 
 object Ebook {
     val EXTS = listOf("epub", "txt", "pdf")
