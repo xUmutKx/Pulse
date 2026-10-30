@@ -1647,3 +1647,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Keyboard: a second comma right behind a comma is dropped, one comma stays (derlenmedi)
 - (sonraki derlemede) Keyboard: the correction for the bar reads only the words of the nearby lengths instead of the whole dictionary each keystroke, so the corrected word comes sooner (derlenmedi)
 - (sonraki derlemede) Keyboard bar: the gamepad on the bar is replaced by the key layout; a tool is in one place only (bar or menu); the microphone (voice typing) is removed from the bar and the menu, the comma keeps it (derlenmedi)
+- (sonraki derlemede) Keyboard: Settings > Keyboard > 'Icons on the bar' sets how many icons the top bar has room for (default 7, the rest scroll); a letter typed in place of the space (z x c v b n m) splits the two words ('selamncanım' -> 'selam canım') (derlenmedi)

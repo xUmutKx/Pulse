@@ -282,15 +282,17 @@ object KeyboardDictionary {
     fun splitWords(code: String, w: String): String? {
         if (w.length < 5 || w.length > 24) return null
         var best: String? = null; var bestScore = -1f
-        for (i in 1 until w.length) {
-            val a = w.substring(0, i); val b = w.substring(i)
-            if ((a.length < 3 && a !in shortWords) || (b.length < 3 && b !in shortWords)) continue
-            if (!isWord(code, a) || !isWord(code, b)) continue
+        fun pair(a: String, b: String) {
+            if ((a.length < 3 && a !in shortWords) || (b.length < 3 && b !in shortWords)) return
+            if (!isWord(code, a) || !isWord(code, b)) return
             // both parts must be common words (a brand or a rare word that happens to split is left alone)
-            if (score(code, a) < 8f || score(code, b) < 8f) continue
+            if (score(code, a) < 8f || score(code, b) < 8f) return
             val sc = minOf(score(code, a), score(code, b)) + (a.length + b.length) * .05f
             if (sc > bestScore) { bestScore = sc; best = "$a $b" }
         }
+        for (i in 1 until w.length) pair(w.substring(0, i), w.substring(i))
+        // a letter typed in place of the space, one of the keys under the thumb (z x c v b n m): "selamncanım" is "selam canım"
+        for (i in 3 until w.length - 2) if (w[i] in "zxcvbnm") pair(w.substring(0, i), w.substring(i + 1))
         return best
     }
 
