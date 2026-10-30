@@ -374,7 +374,12 @@ private class BuiltinRow(val name: String, val sub: String, val icon: String, va
 private fun rowKey(r: BuiltinRow): String {
     if (!(T.id == "win11" && !T.material)) return r.icon
     val p = r.place ?: return r.icon
-    val k = if (p.startsWith("tool:")) "tool_" + p.removePrefix("tool:") else "extra" + p.removePrefix("app:").removeSuffix("Launcher")
+    // Good Lock has no tool_ glyph of its own: the Fluent grid stands for it (as in the ⋮ menu's icon map)
+    val k = when {
+        p == "tool:goodlock" -> "gridView"
+        p.startsWith("tool:") -> "tool_" + p.removePrefix("tool:")
+        else -> "extra" + p.removePrefix("app:").removeSuffix("Launcher")
+    }
     return if (com.umutk.pulse.FluentFilled.map.containsKey(k) || com.umutk.pulse.FluentPaths.map.containsKey(k)) k else r.icon
 }
 
