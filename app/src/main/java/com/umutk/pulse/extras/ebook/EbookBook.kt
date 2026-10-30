@@ -129,6 +129,19 @@ object Ebook {
         p(c).edit().putString("at_$uri", "$chapter,$page").apply()
     }
 
+    /** When the book was last opened (0 = never), for the Recent list. */
+    fun opened(c: Context, uri: String): Long = p(c).getLong("open_$uri", 0L)
+    fun touch(c: Context, uri: String) { p(c).edit().putLong("open_$uri", System.currentTimeMillis()).apply() }
+
+    /** The favourites: a set of the book uris. */
+    fun isFavorite(c: Context, uri: String): Boolean = p(c).getStringSet("favs", emptySet())?.contains(uri) == true
+    fun toggleFavorite(c: Context, uri: String): Boolean {
+        val set = HashSet(p(c).getStringSet("favs", emptySet()).orEmpty())
+        val on = if (set.contains(uri)) { set.remove(uri); false } else { set.add(uri); true }
+        p(c).edit().putStringSet("favs", set).apply()
+        return on
+    }
+
     /** How far the book was read, in per cent (the chapter reached out of all of them), for the shelf. */
     fun pct(c: Context, uri: String): Int = p(c).getInt("pct_$uri", 0)
 

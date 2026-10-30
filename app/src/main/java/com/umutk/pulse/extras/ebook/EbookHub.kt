@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -69,11 +70,18 @@ private class Theme(val bg: Color, val ink: Color, val sub: Color)
 
 private val READER_THEMES = listOf(
     Theme(Color(0xFFF5F2EA), Color(0xFF1E1E1E), Color(0xFF6B6B6B)),   // day
-    Theme(Color(0xFFEAD9B5), Color(0xFF3B2F1E), Color(0xFF7A6A4E)),   // sepia
+    Theme(Color(0xFFFFFFFF), Color(0xFF111111), Color(0xFF777777)),   // pure white
+    Theme(Color(0xFFF3E6C8), Color(0xFF3B2F1E), Color(0xFF7A6A4E)),   // sand
+    Theme(Color(0xFFE9E7E2), Color(0xFF2A2A2A), Color(0xFF6A6A6A)),   // paper grey
     Theme(Color(0xFF1C1C1E), Color(0xFFD8D8D8), Color(0xFF8E8E93)),   // night
-    Theme(Color(0xFF000000), Color(0xFFC8C8C8), Color(0xFF7A7A7A)),   // AMOLED black
+    Theme(Color(0xFF000000), Color(0xFFC8C8C8), Color(0xFF7A7A7A)),   // true black
+    Theme(Color(0xFF2B3340), Color(0xFFD6DCE5), Color(0xFF8F9AAA)),   // slate
+    Theme(Color(0xFF262626), Color(0xFFCFCFCF), Color(0xFF8A8A8A)),   // charcoal
 )
-private val THEME_NAMES = listOf(tr("Day", "Gündüz"), tr("Sepia", "Sepya"), tr("Night", "Gece"), tr("AMOLED black", "AMOLED siyah"))
+private val THEME_NAMES = listOf(
+    tr("Day", "Gündüz"), tr("Pure white", "Saf beyaz"), tr("Sand", "Kum"), tr("Paper grey", "Kâğıt gri"),
+    tr("Night", "Gece"), tr("True black", "Tam siyah"), tr("Slate", "Arduvaz"), tr("Charcoal", "Kömür"),
+)
 
 private fun rp(c: Context) = c.getSharedPreferences("ebook_reader", Context.MODE_PRIVATE)
 
@@ -141,6 +149,14 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     var note by remember { mutableStateOf("") }
     var showOpts by remember { mutableStateOf(false) }
     var showProgress by remember { mutableStateOf(EbookPrefs.showProgress(ctx)) }
+    var cover by remember { mutableStateOf(EbookPrefs.cover(ctx)) }
+    // the tabs: the whole shelf, the books opened lately, the favourites
+    var tab by remember { mutableStateOf(0) }
+    val listed = when (tab) {
+        1 -> shelf.filter { Ebook.opened(ctx, it.uri) > 0L }.sortedByDescending { Ebook.opened(ctx, it.uri) }
+        2 -> shelf.filter { Ebook.isFavorite(ctx, it.uri) }
+        else -> shelf
+    }
     BackHandler { onBack() }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
@@ -164,8 +180,19 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 Text(tr("Show reading progress on the cover", "Kapakta okuma ilerlemesi"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
                 PSwitch(showProgress, { showProgress = it; EbookPrefs.setShowProgress(ctx, it) })
             }
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Book cover size: $cover", "Kapak boyutu: $cover"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Text("−", color = T.text, fontSize = 18.sp, modifier = Modifier.clickable { cover = (cover - 8).coerceAtLeast(60); EbookPrefs.setCover(ctx, cover) }.padding(horizontal = 12.dp))
+                Text("+", color = T.text, fontSize = 18.sp, modifier = Modifier.clickable { cover = (cover + 8).coerceAtMost(130); EbookPrefs.setCover(ctx, cover) }.padding(horizontal = 12.dp))
+            }
         }
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            listOf(tr("My shelf", "Rafım"), tr("Recent", "Son okunanlar"), tr("Favorites", "Favoriler")).forEachIndexed { i, name ->
+                Text(name, color = if (tab == i) T.accent else T.sub, fontSize = 14.sp, fontWeight = if (tab == i) FontWeight.SemiBold else FontWeight.Normal,
+                    modifier = Modifier.clickable { tab = i }.padding(vertical = 6.dp))
+            }
+        }
         if (shelf.isEmpty()) {
             Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(tr("No books yet", "Henüz kitap yok"), color = T.sub, fontSize = 14.sp)
@@ -181,14 +208,14 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             }
         } else {
             LazyVerticalGrid(columns = GridCells.Adaptive(96.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
-                items(shelf) { b ->
+                items(listed) { b ->
                     Column(Modifier.clickable { onOpen(b) }, horizontalAlignment = Alignment.CenterHorizontally) {
                         // the cover is drawn from the title: a card in a colour of its own, the first letter on it
-                        Box(Modifier.size(84.dp, 118.dp).clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(cover.dp, (cover * 1.4f).dp).clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
                             Text(b.title.take(1).uppercase(), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                             if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
                         }
-                        Text(b.title, color = T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width(92.dp).padding(top = 4.dp))
+                        Text(b.title, color = T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width((cover + 8).dp).padding(top = 4.dp))
                     }
                 }
             }
@@ -206,6 +233,7 @@ private fun scanBooks(): List<Book> {
     }
 }
 
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
 private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     val ctx = LocalContext.current
@@ -213,13 +241,15 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     val measurer = rememberTextMeasurer()
     val uri = Uri.parse(start.uri)
     var book by remember { mutableStateOf<Book?>(null) }
-    LaunchedEffect(start.uri) { book = withContext(Dispatchers.IO) { Ebook.open(ctx, uri) } }
+    LaunchedEffect(start.uri) { book = withContext(Dispatchers.IO) { Ebook.open(ctx, uri) }; Ebook.touch(ctx, start.uri) }
     val b = book
 
     var themeIx by remember { mutableStateOf(rp(ctx).getInt("theme", 0)) }
     var textSize by remember { mutableStateOf(rp(ctx).getInt("size", 18)) }
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
     var anim by remember { mutableStateOf(EbookPrefs.anim(ctx)) }
+    var dbl by remember { mutableStateOf(EbookPrefs.double(ctx)) }
+    var fav by remember { mutableStateOf(Ebook.isFavorite(ctx, start.uri)) }
     var fontIx by remember { mutableStateOf(EbookPrefs.font(ctx)) }
     var autoOn by remember { mutableStateOf(false) }
     var speaking by remember { mutableStateOf(false) }
@@ -334,7 +364,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(th.bg).padding(horizontal = 8.dp, vertical = 6.dp)) {
                 val count = if (b.pdf) 0 else b.chapters.size
                 Text(tr("Chapter ${chapter + 1} of ${count.coerceAtLeast(1)}", "Bölüm ${chapter + 1} / ${count.coerceAtLeast(1)}"), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp))
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, maxItemsInEachRow = if (EbookPrefs.double(ctx)) (barIds.size + 1) / 2 else Int.MAX_VALUE) {
                     barIds.forEach { id ->
                         val t = BAR_TOOLS.firstOrNull { it.third == id } ?: return@forEach
                         val on = when (id) { "speak" -> speaking; "auto" -> autoOn; else -> false }
@@ -453,6 +483,9 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                             SettingRow(tr("E-ink look", "E-mürekkep görünüm"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) }
                         }
                         item {
+                            SettingRow(tr("Double-line layout", "Çift satır düzeni"), th) { PSwitch(dbl, { dbl = it; EbookPrefs.setDouble(ctx, it) }) }
+                        }
+                        item {
                             SettingRow(tr("Page animation", "Sayfa animasyonu"), th) { PSwitch(anim, { anim = it; EbookPrefs.setAnim(ctx, it) }) }
                         }
                         item { Text(tr("Brightness", "Parlaklık"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp)) }
@@ -504,6 +537,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         InfoLine(tr("Current chapter", "Şu anki bölüm"), b.chapters.getOrNull(chapter)?.title ?: "-", th)
                         InfoLine(tr("Progress", "İlerleme"), "${Ebook.pct(ctx, start.uri)}%", th)
                         InfoLine(tr("Bookmarks", "Yer imleri"), "${Ebook.bookmarks(ctx, start.uri).size}", th)
+                        SettingRow(tr("Favorite", "Favori"), th) { PSwitch(fav, { fav = Ebook.toggleFavorite(ctx, start.uri) }) }
                     }
                     else -> Unit
                 }
