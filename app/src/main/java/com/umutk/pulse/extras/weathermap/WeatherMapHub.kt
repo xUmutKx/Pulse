@@ -242,7 +242,7 @@ fun WeatherMapHub(onBack: () -> Unit) {
             MapLayer.entries.forEach { l ->
                 val on = l == layer
                 Text(tr(l.en, l.trName), color = if (on) Color.Black else T.text, fontSize = 13.sp, maxLines = 1,
-                    modifier = Modifier.background(if (on) T.accent else T.key, RoundedCornerShape(50))
+                    modifier = Modifier.background(if (on) T.accent else T.text.copy(alpha = 0.12f), RoundedCornerShape(50))
                         .clickable { layer = l }.padding(horizontal = 12.dp, vertical = 6.dp))
             }
         }
