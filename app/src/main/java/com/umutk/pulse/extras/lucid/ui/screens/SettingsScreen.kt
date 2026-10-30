@@ -477,7 +477,7 @@ fun SettingsScreen(
 
                         // the coloured glow behind the dark screens: on by default, off gives plain black
                         val glowPrefs = context.getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE)
-                        var glowOn by remember { mutableStateOf(glowPrefs.getBoolean("on", true)) }
+                        var glowOn by remember { mutableStateOf(glowPrefs.getBoolean("on", false)) }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,

@@ -37,7 +37,7 @@ fun OneUiAppBackground(
     modifier: Modifier = Modifier
 ) {
     // the coloured glow of the dark background can be switched off in Settings (it is plain black then)
-    val glowOn = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE).getBoolean("on", true)
+    val glowOn = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE).getBoolean("on", false)
     val glowColor = if (glowOn) accentColor else Color(0xFF040408)
     Canvas(modifier = modifier.fillMaxSize()) {
         if (dark && !glowOn) {
