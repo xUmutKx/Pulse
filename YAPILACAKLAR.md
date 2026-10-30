@@ -1612,3 +1612,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Keyboard: e-mail domain suggestions (@gmail.com ...) appear only after an "@" is typed; they no longer replace ordinary words (derlenmedi)
 - (sonraki derlemede) Keyboard Quick auth: a Quick auth key (⋮ menu and bar list) shows the Pulse Authenticator codes in a panel; a tap types the code; the "fingerprint first" setting is off by default (derlenmedi)
 - (sonraki derlemede) Clock alarm sheet: black in the dark theme; the time wheel columns take the whole panel width, so a drag anywhere on it scrolls (derlenmedi)
+- (sonraki derlemede) Backup leaves out the bundled ambient sounds and Winamp skins (they ship with the app); the store has no download rows for them (derlenmedi)
