@@ -1637,3 +1637,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Office: the AMOLED look stays black in the Office and PDF windows, the title bar colour setting no longer paints it red (derlenmedi)
 - (sonraki derlemede) Office: with the AMOLED look the title bar and the grey strip under it are black too (derlenmedi)
 - (sonraki derlemede) Office: with the AMOLED look or the black title bar setting, the app colours (File tab, toggled buttons, splash, Excel selection accent) go grey too, not only the bar (derlenmedi)
+- (sonraki derlemede) Office (Word, Excel, PDF...): the top bar no longer hides into a black pill; a thin grip stays under it, pulled down from its middle to open the bar (its top edge stays fixed), pushed up to close it (derlenmedi)
