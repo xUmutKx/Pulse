@@ -42,6 +42,14 @@ object EbookPrefs {
     fun eink(c: Context): Boolean = p(c).getBoolean("eink", false)
     fun setEink(c: Context, on: Boolean) { p(c).edit().putBoolean("eink", on).apply() }
 
+    /** The reading progress shown on the covers of the shelf. */
+    fun showProgress(c: Context): Boolean = p(c).getBoolean("showProgress", true)
+    fun setShowProgress(c: Context, on: Boolean) { p(c).edit().putBoolean("showProgress", on).apply() }
+
+    /** Whether the page turns with its slide and fade. */
+    fun anim(c: Context): Boolean = p(c).getBoolean("anim", true)
+    fun setAnim(c: Context, on: Boolean) { p(c).edit().putBoolean("anim", on).apply() }
+
     /** Seconds per page while the autoscroll runs. */
     fun autoSeconds(c: Context): Int = p(c).getInt("auto", 10)
     fun setAutoSeconds(c: Context, v: Int) { p(c).edit().putInt("auto", v.coerceIn(3, 120)).apply() }
