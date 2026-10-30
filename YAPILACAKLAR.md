@@ -1628,3 +1628,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.274 Weather map: rain radar (RainViewer, newest frame) and satellite (NASA GIBS, yesterday) layers; both keyless (derlendi)
 - 1.0.274 Keyboard: speech typing is a panel over the keys (words come in as recognised); the layout key shows and hides the key bar; the lock key is Quick auth, the keyboard height (derlendi)
 - 1.0.274 Keyboard: the layout key opens a panel with the key layouts, the key bar, the gamepad and the key set (derlendi)
+- (sonraki derlemede) Weather notification: no emoji; the hours are one under the other (time, temperature, chance of rain) (derlenmedi)
