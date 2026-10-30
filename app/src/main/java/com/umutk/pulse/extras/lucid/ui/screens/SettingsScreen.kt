@@ -484,7 +484,7 @@ fun SettingsScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text(text = "Background glow", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "Background glow (off = AMOLED black)", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
                                 Text(text = if (glowOn) "The colour glow at the top of the dark screens" else "Plain black background", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                             Switch(checked = glowOn, onCheckedChange = { on -> glowOn = on; glowPrefs.edit().putBoolean("on", on).apply() })
