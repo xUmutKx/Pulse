@@ -73,6 +73,9 @@ fun renameVideo(ctx: Context, v: VideoItem, newName: String): Boolean = try {
     ctx.contentResolver.update(v.uri, cv, null, null) > 0
 } catch (e: SecurityException) { false } catch (e: Exception) { false }
 
+/** Drops the cached video thumbnails (the app went to the background); they are loaded again when needed. */
+internal fun trimVideoThumbs() { thumbs.evictAll() }
+
 // about 8 MB of thumbnails, by bytes
 private val thumbs = object : LruCache<String, ImageBitmap>(8 * 1024 * 1024) {
     override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
