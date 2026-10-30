@@ -99,7 +99,7 @@ fun VerticalWheelTimePicker(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant,
+        color = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else MaterialTheme.colorScheme.surfaceVariant,
         tonalElevation = 2.dp
     ) {
         Box(
@@ -130,7 +130,7 @@ fun VerticalWheelTimePicker(
                     onItemSelected = { index ->
                         emitUpdatedTime(hourItems[index], selectedMinute, isPm)
                     },
-                    modifier = Modifier.width(88.dp)
+                    modifier = Modifier.weight(1f)
                 )
 
                 Text(
@@ -160,7 +160,7 @@ fun VerticalWheelTimePicker(
                         }
                         emitUpdatedTime(currentDisplayHour, minuteItems[index], isPm)
                     },
-                    modifier = Modifier.width(88.dp)
+                    modifier = Modifier.weight(1f)
                 )
 
                 if (!is24Hour) {
