@@ -343,7 +343,7 @@ class OAct(val label: String, val group: String, val icon: ImageVector, val on: 
 fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, onBack: () -> Unit, content: @Composable BoxScope.() -> Unit) {
     if (t.base == "365") { OfChromeM365(t, title, acts, status, onBack, content = content); return }
     val pal = t.pal; val view = LocalView.current; val ctx = LocalContext.current
-    val is17 = t.base == "2017"; val brand = t.kind.brand; val below = ofBelow(t)
+    val is17 = t.base == "2017"; val brand = ofBrand(t); val below = ofBelow(t)
     SideEffect {
         val w = (view.context as Activity).window
         // the system bars take the title bar's colour too: the status bar is painted, not left to the phone's theme
@@ -481,7 +481,7 @@ val OfKind.brand: Color get() = when (this) { OfKind.WORD -> Color(0xFF2B579A); 
  */
 @Composable
 fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, onBack: () -> Unit, tabs: List<String>? = null, extra: (@Composable () -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    val pal = t.pal; val view = LocalView.current; val brand = t.kind.brand; val top = ofTop(t); val topInk = ofInkOn(top)
+    val pal = t.pal; val view = LocalView.current; val brand = ofBrand(t); val top = ofTop(t); val topInk = ofInkOn(top)
     SideEffect {
         val w = (view.context as Activity).window
         // the system bars take the title bar's colour too: the status bar is painted, not left to the phone's theme
@@ -573,6 +573,9 @@ val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 internal fun ofTop(t: OfTheme): Color = if (t.base == "amoled") Color.Black else when (OfficePrefs.bars) { 3 -> Color.Black; 1 -> Look.accent.copy(alpha = 1f); else -> t.kind.brand }
 
 /** Colour of everything under the brand title bar: white, or near-black in the dark looks. Looks that have their own surfaces keep the ribbon colour. */
+/** The app colour for the chrome (File tab, the on-state of the toggles, the opening screen): black-grey in the AMOLED look or with the black title bar. */
+internal fun ofBrand(t: OfTheme): Color = if (t.base == "amoled" || OfficePrefs.bars == 3) Color(0xFF2B2B2B) else t.kind.brand
+
 internal fun ofBelow(t: OfTheme) = if (OfficePrefs.bars == 3 || t.base == "amoled") Color.Black else if (t.base == "365") Color(0xFF2B2B2B) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
 
 /** Opaque colours of the system status bar (top) and navigation bar (bottom): exactly what the chrome shows in the title bar and in the bottom-most (status) bar, translucent layers composited over the canvas. */
@@ -702,7 +705,7 @@ fun OfSplash(t: OfTheme, file: String = "") {
     val e = enter.value
     if (base == "365" || base == "2017") {
         // 365: rounded box, logo pops in, wave of dots. 2017: square box, title fades up, thin progress line
-        val bg = if (dk) androidx.compose.ui.graphics.lerp(k.brand, Color.Black, .62f) else k.brand
+        val bg = if (dk) androidx.compose.ui.graphics.lerp(ofBrand(t), Color.Black, .62f) else ofBrand(t)
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Box(Modifier.size(300.dp, 190.dp).clip(RoundedCornerShape(if (base == "365") 10.dp else 0.dp)).background(bg)) {
                 Row(Modifier.align(Alignment.TopStart).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -736,7 +739,7 @@ fun OfSplash(t: OfTheme, file: String = "") {
                 Canvas(Modifier.fillMaxSize().graphicsLayer { translationX = (1f - e) * size.width }) {
                     val w = size.width; val h = size.height
                     val sw = androidx.compose.ui.graphics.Path().apply { moveTo(w * .25f, h); cubicTo(w * .5f, h * .62f, w * .75f, h * .8f, w, h * .5f); lineTo(w, h); close() }
-                    drawPath(sw, Brush.horizontalGradient(listOf(k.brand.copy(alpha = .15f), k.brand)))
+                    drawPath(sw, Brush.horizontalGradient(listOf(ofBrand(t).copy(alpha = .15f), ofBrand(t))))
                 }
                 Column(Modifier.padding(start = 18.dp, top = 20.dp).alpha(e)) {
                     Text("Microsoft®", color = tx.copy(alpha = .75f), fontSize = 11.sp)

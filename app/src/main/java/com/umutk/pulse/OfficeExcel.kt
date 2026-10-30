@@ -727,7 +727,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
         val c0 = colAt(gx); var c1 = c0; while (c1 < nCols - 1 && colX[c1 + 1] - gx < W - hdrW) c1++
         val r0 = (gy / rowH).toInt().coerceAtLeast(0); val r1 = (((gy + H - hdrH) / rowH).toInt() + 1).coerceAtMost(nRows - 1)
         val m365 = t.base == "365"
-        val acc = (if (m365) t.kind.brand else pal.accent).toArgb(); val ink = (if (m365) Color(0xFFEDEDED) else pal.ink).toArgb(); val line = (if (m365) Color(0xFF5A5A5A) else pal.line).toArgb()
+        val acc = (if (m365) ofBrand(t) else pal.accent).toArgb(); val ink = (if (m365) Color(0xFFEDEDED) else pal.ink).toArgb(); val line = (if (m365) Color(0xFF5A5A5A) else pal.line).toArgb()
         drawIntoCanvas { cv ->
             val n = cv.nativeCanvas
             val dk = OfficePrefs.darkPages
