@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.messages
 
+import android.app.Activity
 import android.app.Service
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -100,3 +101,13 @@ class MsgComposeActivity : ExtraToolActivity()
 
 /** The conversation shown as a chat bubble above other apps. */
 class MsgBubbleActivity : ExtraToolActivity()
+
+/** Report of one SMS part: a part the radio did not send shows "Not sent"; the message is stored as sent once its last part went out. */
+class MsgSentReceiver : BroadcastReceiver() {
+    override fun onReceive(c: Context, i: Intent) {
+        if (resultCode != Activity.RESULT_OK) { Toast.makeText(c, tr("Not sent", "Gönderilemedi"), Toast.LENGTH_SHORT).show(); return }
+        if (!i.getBooleanExtra("last", false)) return
+        MsgCore.storeSent(c, i.getStringExtra("address").orEmpty(), i.getStringExtra("body").orEmpty())
+    }
+    companion object { const val ACTION = "com.umutk.pulse.SMS_SENT" }
+}

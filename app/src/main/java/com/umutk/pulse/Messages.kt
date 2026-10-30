@@ -181,12 +181,22 @@ fun loadSmsThread(c: Context, tid: Long, address: String): List<SmsMsg> {
     return out
 }
 
-/** Sends through the system SMS stack. The system stores the message, except when Pulse is the default SMS app (then Pulse does). False when the send is refused. */
+/** Sends through the system SMS stack. Every part reports back to [com.umutk.pulse.extras.messages.MsgSentReceiver]: the message is kept
+ *  (as Pulse's own sent message when Pulse is the default SMS app) only once the radio has really sent it, and a refusal is shown then.
+ *  False when the send is refused at once. */
 fun sendSms(c: Context, to: String, body: String): Boolean = runCatching {
     val sm = smsManager(c)
-    sm.sendMultipartTextMessage(to, null, sm.divideMessage(body), null, null)
-    MsgCore.storeSent(c, to, body)
-}.isSuccess
+    val parts = sm.divideMessage(body)
+    val base = (System.currentTimeMillis() and 0x7fffffffL).toInt()
+    val sent = parts.indices.map { i ->
+        val report = Intent(com.umutk.pulse.extras.messages.MsgSentReceiver.ACTION)
+            .setClass(c, com.umutk.pulse.extras.messages.MsgSentReceiver::class.java)
+            .putExtra("address", to).putExtra("body", body).putExtra("last", i == parts.lastIndex)
+        android.app.PendingIntent.getBroadcast(c, base + i, report, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+    }
+    sm.sendMultipartTextMessage(to, null, parts, ArrayList(sent), null)
+    true
+}.getOrDefault(false)
 
 /** Sends the file at [uri] (with [text] as its text) as MMS. The library builds the MMS PDU; the system MMS stack sends it.
  *  shortcut: the whole file is read into memory, and most carriers refuse MMS above about 300 KB. False when refused. */
@@ -298,10 +308,12 @@ fun MessagesScreen(back: () -> Unit) {
             th.name?.contains(query, true) == true || th.address.contains(query) || th.snippet.contains(query, true) }
         hit.sortedWith(compareByDescending<SmsThread> { it.address in pins }.thenByDescending { unreadFirst && it.unread > 0 })
     }
+    // a number typed in "New message" still shows the contact's name
+    val openName = remember(t?.address) { t?.let { it.name ?: contactName(ctx, it.address) } }
     val title = when {
         settings -> tr("Settings", "Ayarlar")
         newMode -> tr("New message", "Yeni mesaj")
-        t != null -> t.name ?: t.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
+        t != null -> openName ?: t.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
         else -> tr("Messages", "Mesajlar")
     }
 
@@ -392,7 +404,7 @@ fun MessagesScreen(back: () -> Unit) {
                                 onArchive = { archives = archives + th.address; MsgPrefs.setArchived(ctx, archives) },
                                 onBlock = { blocks = blocks + th.address; MsgPrefs.setBlocked(ctx, blocks) }) }
                         }
-                            Box(Modifier.align(Alignment.BottomEnd).padding(18.dp).size(56.dp).clip(CircleShape).background(T.accent).clickable { newMode = true; newTo = "" }, contentAlignment = Alignment.Center) { PIcon("add", androidx.compose.ui.graphics.Color.White, 26.dp) }
+                            Box(Modifier.align(Alignment.BottomEnd).padding(18.dp).size(56.dp).clip(CircleShape).background(T.accent).clickable { newMode = true; newTo = "" }, contentAlignment = Alignment.Center) { PIcon("add", onAccent(T.accent), 26.dp) }
                         }
                     }
                 }
