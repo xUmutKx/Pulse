@@ -22,7 +22,8 @@ object DataBackup {
     private val SKIP_PREFS = setOf("spotify.xml", "applock.xml")
 
     /** What the backup leaves out of files/: things Pulse downloads or builds again by itself (covers, search indexes, word lists, the store, caches), temp and broken files, and anything over [MAX_FILE]. Everything else the user made is in. */
-    private val DROP = setOf("covers", "artist_art", "lyrics-cache", "lyrics-hits", "lyrics_index.gz", "music_library.tsv", "widget_blur_bg.jpg", "store", "kbd", "restore")
+    // the bundled packs (ambient sounds, Winamp skins) ship with the app, so the backup leaves them out
+    private val DROP = setOf("covers", "artist_art", "lyrics-cache", "lyrics-hits", "lyrics_index.gz", "music_library.tsv", "widget_blur_bg.jpg", "store", "kbd", "restore", "extras/ambient", "extras/skins")
     private const val MAX_FILE = 100L * 1024 * 1024
     private fun keepFile(rel: String, size: Long) =
         size <= MAX_FILE && DROP.none { rel == it || rel.startsWith("$it/") } && !rel.endsWith(".tmp") && !rel.endsWith(".bad") && !rel.startsWith("autobackup.")
