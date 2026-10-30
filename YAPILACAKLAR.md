@@ -1665,3 +1665,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (derlenmedi) Books: the empty shelf finds the books in the phone's Books and Download folders, and has an add button
 - (derlenmedi) Windows 11 extra apps list: Books uses the Fluent book glyph
 - (derlenmedi) Quick auth: every account shows the seconds left and a bar that empties with its code; the codes roll over each period. Books: the settings button at the top of the shelf
+- (derlenmedi) Buds manager: a Fluent speaker icon; tapping its name opens the Buds manager screen (also when it is not placed in the Extra apps card)
