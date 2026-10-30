@@ -8,7 +8,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.ui.geometry.Size
@@ -216,39 +221,62 @@ private fun heat(layer: MapLayer, v: Double): Color {
     return Color(red = t.toFloat(), green = 0.35f, blue = (1 - t).toFloat(), alpha = 0.6f)
 }
 
+/** Keeps the world covering the screen: no empty edge shows while zoomed in, and it stays centred when it is smaller than the screen. */
+private fun clampPan(x: Float, y: Float, zoom: Float, view: Size): Offset {
+    val world = view.width * zoom
+    val cx = x.coerceIn(view.width - world, 0f)
+    val cy = if (world <= view.height) (view.height - world) / 2f else y.coerceIn(view.height - world, 0f)
+    return Offset(cx, cy)
+}
+
 @Composable
 fun WeatherMapHub(onBack: () -> Unit) {
     var layer by remember { mutableStateOf(MapLayer.TEMP) }
+    var retry by remember { mutableStateOf(0) }
     val tiles by produceState<List<Tile>?>(null) { value = withContext(Dispatchers.IO) { worldTiles() } }
-    val picture by produceState<Pair<List<Tile>, Float>?>(null, layer) {
+    val picture by produceState<Pair<List<Tile>, Float>?>(null, layer, retry) {
         value = null
         value = if (layer == MapLayer.RADAR || layer == MapLayer.SATELLITE) withContext(Dispatchers.IO) { pictureTiles(layer) } else emptyList<Tile>() to 0f
     }
-    val samples by produceState<List<Sample>?>(null, layer) {
+    val samples by produceState<List<Sample>?>(null, layer, retry) {
         value = null
         value = withContext(Dispatchers.IO) { if (layer == MapLayer.PLANE || layer == MapLayer.RADAR || layer == MapLayer.SATELLITE) emptyList() else Grid.sample(layer) }
     }
-    val aircraft by produceState<List<Plane>?>(null, layer) {
+    val aircraft by produceState<List<Plane>?>(null, layer, retry) {
         value = null
         value = if (layer == MapLayer.PLANE) withContext(Dispatchers.IO) { planes() } else emptyList()
     }
 
-    Column(Modifier.fillMaxSize().background(T.panel).padding(horizontal = 12.dp, vertical = 10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 24.dp) }
-            Text(tr("Weather map", "Hava haritası"), color = T.text, fontSize = 18.sp, modifier = Modifier.padding(start = 4.dp))
-        }
-        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            MapLayer.entries.forEach { l ->
-                val on = l == layer
-                Text(tr(l.en, l.trName), color = if (on) Color.Black else T.text, fontSize = 13.sp, maxLines = 1,
-                    modifier = Modifier.background(if (on) T.accent else T.text.copy(alpha = 0.12f), RoundedCornerShape(50))
-                        .clickable { layer = l }.padding(horizontal = 12.dp, vertical = 6.dp))
-            }
-        }
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).background(Color.Black)) {
-            Canvas(Modifier.fillMaxSize()) {
-                val k = (size.width / WORLD).toFloat()
+    // the map fills the screen: zoom 1 fits the world to the width, a pinch zooms in around the fingers, a drag moves the map
+    var view by remember { mutableStateOf(Size.Zero) }
+    var placed by remember { mutableStateOf(false) }
+    var zoom by remember { mutableStateOf(1f) }
+    var offX by remember { mutableStateOf(0f) }
+    var offY by remember { mutableStateOf(0f) }
+
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
+        Canvas(
+            Modifier.fillMaxSize()
+                .onSizeChanged { sz ->
+                    view = Size(sz.width.toFloat(), sz.height.toFloat())
+                    if (!placed) { placed = true; clampPan(0f, (view.height - view.width) / 2f, 1f, view).let { offX = it.x; offY = it.y } }
+                }
+                .pointerInput(Unit) {
+                    detectTransformGestures { centroid, pan, gestureZoom, _ ->
+                        if (view.width <= 0f) return@detectTransformGestures
+                        val base = view.width / WORLD.toFloat()
+                        val newZoom = (zoom * gestureZoom).coerceIn(1f, 12f)
+                        // the point of the world under the fingers stays under them while zooming, then the drag moves the map
+                        val wx = (centroid.x - offX) / (base * zoom)
+                        val wy = (centroid.y - offY) / (base * zoom)
+                        zoom = newZoom
+                        clampPan(centroid.x - wx * base * newZoom + pan.x, centroid.y - wy * base * newZoom + pan.y, newZoom, view).let { offX = it.x; offY = it.y }
+                    }
+                }
+        ) {
+            val kb = size.width / WORLD.toFloat()
+            val k = kb * zoom
+            translate(offX, offY) {
                 // the ground first: the four columns and rows of 256 px tiles
                 tiles?.forEach { t ->
                     drawImage(t.img, dstOffset = IntOffset((t.x * 256 * k).toInt(), (t.y * 256 * k).toInt()), dstSize = IntSize((256 * k).toInt(), (256 * k).toInt()))
@@ -259,32 +287,49 @@ fun WeatherMapHub(onBack: () -> Unit) {
                 samples?.forEach { sm ->
                     val c = Offset((px(sm.lon) * k).toFloat(), (py(sm.lat) * k).toFloat())
                     val v = sm.value ?: return@forEach
-                    drawCircle(heat(layer, v), radius = 9f * k, center = c)
+                    drawCircle(heat(layer, v), radius = 9f * kb, center = c)
                     sm.dir?.let { d ->
                         val r = Math.toRadians(d)
-                        val end = Offset(c.x + (kotlin.math.sin(r) * 14 * k).toFloat(), c.y - (kotlin.math.cos(r) * 14 * k).toFloat())
-                        drawLine(Color.White, c, end, strokeWidth = 1.5f * k)
+                        val end = Offset(c.x + (kotlin.math.sin(r) * 14 * kb).toFloat(), c.y - (kotlin.math.cos(r) * 14 * kb).toFloat())
+                        drawLine(Color.White, c, end, strokeWidth = 1.5f * kb)
                     }
                 }
                 // live aircraft: a dot with a short heading line
                 aircraft?.forEach { p ->
                     val c = Offset((px(p.lon) * k).toFloat(), (py(p.lat) * k).toFloat())
-                    drawCircle(Color(0xFFFFC107), radius = 2.5f * k, center = c)
+                    drawCircle(Color(0xFFFFC107), radius = 2.5f * kb, center = c)
                     val r = Math.toRadians(p.track)
-                    drawLine(Color(0xFFFFC107), c, Offset(c.x + (kotlin.math.sin(r) * 6 * k).toFloat(), c.y - (kotlin.math.cos(r) * 6 * k).toFloat()), strokeWidth = 1f * k)
+                    drawLine(Color(0xFFFFC107), c, Offset(c.x + (kotlin.math.sin(r) * 6 * kb).toFloat(), c.y - (kotlin.math.cos(r) * 6 * kb).toFloat()), strokeWidth = 1f * kb)
                 }
             }
         }
-        Spacer(Modifier.height(6.dp))
+
+        // the controls float over the map: back and the layers at the top, the state at the bottom
+        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).background(Color.Black.copy(alpha = .55f), CircleShape).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                MapLayer.entries.forEach { l ->
+                    val on = l == layer
+                    Text(tr(l.en, l.trName), color = if (on) Color.Black else Color.White, fontSize = 13.sp, maxLines = 1,
+                        modifier = Modifier.background(if (on) T.accent else Color.Black.copy(alpha = .55f), RoundedCornerShape(50))
+                            .clickable { layer = l }.padding(horizontal = 12.dp, vertical = 6.dp))
+                }
+            }
+        }
         Text(
             when {
                 layer == MapLayer.PLANE -> aircraft?.let { tr("${it.size} aircraft in the air (OpenSky)", "${it.size} uçak havada (OpenSky)") } ?: tr("Loading…", "Yükleniyor…")
                 layer == MapLayer.RADAR || layer == MapLayer.SATELLITE -> picture?.let { tr("${it.first.size} of 16 tiles", "16 karodan ${it.first.size}") } ?: tr("Loading…", "Yükleniyor…")
                 samples == null -> tr("Loading…", "Yükleniyor…")
-                samples!!.isEmpty() -> tr("No data (no network?)", "Veri yok (ağ yok mu?)")
+                samples!!.isEmpty() -> tr("Couldn't load the data", "Veri alınamadı")
                 else -> tr("${samples!!.size} points", "${samples!!.size} nokta")
             },
-            color = T.sub, fontSize = 12.sp,
+            color = Color.White, fontSize = 12.sp,
+            modifier = Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 10.dp)
+                .background(Color.Black.copy(alpha = .55f), RoundedCornerShape(50)).padding(horizontal = 12.dp, vertical = 4.dp)
+                .clickable { retry++ },
         )
     }
 }
