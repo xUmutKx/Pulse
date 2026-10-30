@@ -1588,3 +1588,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Messages: a long press on a conversation picks it (no pop-up); with some picked, a bar above the list has pin, mute, archive and delete for all of them; the ⋮ of a conversation opens on the right
 - (sonraki derlemede) Keyboard: a long press on the comma opens the phone's own listening screen (see-through VoiceTypeActivity); the keyboard stays and the words are typed into the field (derlenmedi)
 - (sonraki derlemede) Keyboard: the comma hold (voice typing) no longer opens the ; : ' " pop-up when the finger moves (the pop-up came from the drag path) (derlenmedi)
+- (sonraki derlemede) Weather: when the chosen service does not answer, the other services are tried in turn (no empty card); the value cards no longer keep a blank second line under the title (derlenmedi)

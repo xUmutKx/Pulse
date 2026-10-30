@@ -159,7 +159,7 @@ fun PressureCard(hpa: Double, fg: Color, sub: Color, modifier: Modifier) {
 @Composable
 fun ValueCard(title: String, value: String, note: String, fg: Color, sub: Color, modifier: Modifier) {
     WxCard(title, fg, sub, modifier) {
-        Text(note, color = sub, fontSize = 13.sp, minLines = 2, maxLines = 2)
+        Text(note, color = sub, fontSize = 13.sp, maxLines = 2)
         Spacer(Modifier.height(18.dp))
         Text(value, color = fg, fontSize = 28.sp, fontWeight = FontWeight.Medium)
     }
