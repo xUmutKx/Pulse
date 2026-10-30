@@ -13,6 +13,7 @@ import androidx.core.app.RemoteInput
 import com.klinker.android.send_message.MmsReceivedReceiver
 import com.umutk.pulse.ExtraToolActivity
 import com.umutk.pulse.MsgPrefs
+import com.umutk.pulse.Outbox
 import com.umutk.pulse.sendSms
 import com.umutk.pulse.tr
 
@@ -102,12 +103,18 @@ class MsgComposeActivity : ExtraToolActivity()
 /** The conversation shown as a chat bubble above other apps. */
 class MsgBubbleActivity : ExtraToolActivity()
 
-/** Report of one SMS part: a part the radio did not send shows "Not sent"; the message is stored as sent once its last part went out. */
+/** Report of one SMS part: a refused part removes the text from the thread and says so; once the last part went out the text is stored (when Pulse is the default app). */
 class MsgSentReceiver : BroadcastReceiver() {
     override fun onReceive(c: Context, i: Intent) {
-        if (resultCode != Activity.RESULT_OK) { Toast.makeText(c, tr("Not sent", "Gönderilemedi"), Toast.LENGTH_SHORT).show(); return }
-        if (!i.getBooleanExtra("last", false)) return
+        val key = i.getLongExtra("key", 0L)
+        if (resultCode != Activity.RESULT_OK) {
+            Outbox.remove(c, key)
+            Toast.makeText(c, tr("Not sent", "Gönderilemedi"), Toast.LENGTH_SHORT).show()
+            return
+        }
+        if (!i.getBooleanExtra("last", false) || !MsgCore.isDefault(c)) return
         MsgCore.storeSent(c, i.getStringExtra("address").orEmpty(), i.getStringExtra("body").orEmpty())
+        Outbox.remove(c, key)
     }
     companion object { const val ACTION = "com.umutk.pulse.SMS_SENT" }
 }
