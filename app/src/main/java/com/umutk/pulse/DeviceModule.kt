@@ -22,7 +22,7 @@ private class Sub(val id: String, val label: String)
 private val Subs = listOf(
     Sub("overview", "Overview"), Sub("system", "System"), Sub("cpu", "CPU"), Sub("memory", "Memory"), Sub("storage", "Storage"),
     Sub("battery", "Battery"), Sub("network", "Network"), Sub("thermal", "Thermal"), Sub("display", "Display"), Sub("camera", "Camera"),
-    Sub("sensors", "Sensors"), Sub("media", "Media & DRM"), Sub("features", "Features"), Sub("props", "Properties"), Sub("bench", "Benchmark"),
+    Sub("sensors", "Sensors"), Sub("media", "Media & DRM"), Sub("features", "Features"), Sub("props", "Properties"), Sub("bench", "Benchmark"), Sub("security", "Security"),
 )
 
 /** Everything about the phone itself in one module, grouped like the parts of a computer: tabs along the top instead of a long menu. */
@@ -55,6 +55,7 @@ fun DeviceModule() {
                 "media" -> LiveSections("Media & DRM", 0) { Hw.media() }
                 "features" -> FeaturesPage()
                 "props" -> PropsPage()
+                "security" -> SecurityPage()
                 else -> BenchPage()
             }
         }

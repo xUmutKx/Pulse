@@ -214,6 +214,8 @@ open class ToolkitTile : TileService() {
     /** Pictures shown one after the other for a moment after a tap (the die rolling, the coin turning); null for none. */
     open fun flicker(): List<Int>? = null
     private var frame: Int? = null
+    // true while the pictures run after a tap: the tile is ACTIVE (white) so the change is seen on the tile itself
+    private var flashing = false
     /** Repaint period while the panel is open, for readings that change on their own; 0 = only on open and tap. */
     open val refreshMs: Long get() = 0L
     /** The tile's own job, done in the panel. Returns true to repaint; a tile without one opens its tool. */
@@ -245,7 +247,7 @@ open class ToolkitTile : TileService() {
         val noSensor = sensor?.let { sensorMgr.getDefaultSensor(it) == null } == true
         qsTile?.apply {
             label = tr(name, trName)
-            state = when { noSensor -> Tile.STATE_UNAVAILABLE; (if (sensor != null) live else active()) -> Tile.STATE_ACTIVE; else -> Tile.STATE_INACTIVE }
+            state = when { noSensor -> Tile.STATE_UNAVAILABLE; (if (sensor != null) live else (flashing || active())) -> Tile.STATE_ACTIVE; else -> Tile.STATE_INACTIVE }
             subtitleCompat = when { noSensor -> tr("No sensor", "Sensör yok"); sensor != null && !live -> tr("Off", "Kapalı"); else -> subtitleFor(null) }
             (frame ?: picture)?.let { icon = Icon.createWithResource(this@ToolkitTile, it) }
             updateTile()
@@ -262,9 +264,10 @@ open class ToolkitTile : TileService() {
         if (!act()) return
         val f = flicker()
         if (f.isNullOrEmpty()) { paint(); return }
-        // the result is already stored: the tile shows a few pictures, then settles on the real one
+        // the result is already stored: the tile lights up and shows a few pictures, then settles on the real one
+        flashing = true
         var i = 0
-        val step = object : Runnable { override fun run() { if (i < f.size) { frame = f[i++]; paint(); main.postDelayed(this, 80) } else { frame = null; paint() } } }
+        val step = object : Runnable { override fun run() { if (i < f.size) { frame = f[i++]; paint(); main.postDelayed(this, 80) } else { frame = null; flashing = false; paint() } } }
         main.removeCallbacks(step); main.post(step)
     }
 }

@@ -93,29 +93,6 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
     val ramPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead("Overview", if (s.root) "root" else "")
-        // security: the lock, the codes and the history of the phone, all in one place
-        val openTool = com.umutk.pulse.LocalOpenTool.current
-        PCard {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                PIcon("shieldOk", resColor("battery"), 34.dp)
-                Column(Modifier.padding(start = 12.dp)) {
-                    Text(tr("Your phone is secure", "Telefonunuz güvende"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                    Text(tr("App lock, codes and history", "Uygulama kilidi, kodlar ve geçmiş"), color = T.sub, fontSize = 12.sp)
-                }
-            }
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf(
-                    Triple("applock", tr("App lock", "Uygulama kilidi"), { openTool("applock") }),
-                    Triple("users", tr("Authenticator", "Kimlik doğrulayıcı"), { openTool("authenticator") }),
-                    Triple("history", tr("App history", "Uygulama geçmişi"), { com.umutk.pulse.widgets.WidgetOpen.page = "history" }),
-                ).forEach { (icon, label, go) ->
-                    Column(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(T.bg).clickable { go() }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        PIcon(icon, T.accent, 24.dp)
-                        Text(label, color = T.text, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
-                    }
-                }
-            }
-        }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { onOpen("cpu") }
             Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { onOpen("memory") }
@@ -133,6 +110,7 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
             Row { Text("↓ ${rate(s.down.toFloat())}", color = resColor("net"), fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("↑ ${rate(s.up.toFloat())}", color = resColor("net"), fontSize = 16.sp) }
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 70.dp)
         }
+        PButton(tr("Security", "Güvenlik"), Modifier.fillMaxWidth()) { onOpen("security") }
         PCard {
             Text("Processor history (60 s)", color = T.sub, fontSize = 12.sp)
             Graph(listOf(h["cpu"].orEmpty()), listOf(resColor("cpu")), 100f, height = 70.dp)
@@ -160,6 +138,29 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
             Text("${Guard.gb(total - free)} of ${Guard.gb(total)} used · ${Guard.gb(free)} free", color = T.sub, fontSize = 12.sp)
         }
         Spacer(Modifier.height(12.dp))
+    }
+}
+
+/** App lock, Authenticator and App history, kept together on their own Device tab. */
+@Composable
+fun SecurityPage() {
+    val openTool = com.umutk.pulse.LocalOpenTool.current
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        PCard {
+            Text(tr("Security", "Güvenlik"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    Triple("applock", tr("App lock", "Uygulama kilidi"), { openTool("applock") }),
+                    Triple("users", tr("Authenticator", "Kimlik doğrulayıcı"), { openTool("authenticator") }),
+                    Triple("history", tr("App history", "Uygulama geçmişi"), { com.umutk.pulse.widgets.WidgetOpen.page = "history" }),
+                ).forEach { (icon, label, go) ->
+                    Column(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(T.bg).clickable { go() }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        PIcon(icon, T.accent, 24.dp)
+                        Text(label, color = T.text, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
+        }
     }
 }
 
