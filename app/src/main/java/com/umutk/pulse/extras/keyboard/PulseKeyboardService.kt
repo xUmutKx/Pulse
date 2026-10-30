@@ -136,7 +136,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         finishWord("", false)
         val path = item.image
-        if (path == null) { c.commitText(item.text, 1); st.panel = "keys"; afterText(); return }
+        // a text goes in and is also the copied text again (the phone's clipboard), so it can be pasted from anywhere
+        if (path == null) { c.commitText(item.text, 1); clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("", item.text)); st.panel = "keys"; afterText(); return }
         val info = currentInputEditorInfo
         val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
         val ok = types.any { it.startsWith("image/") || it == "*/*" }
