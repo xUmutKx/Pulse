@@ -1667,3 +1667,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (derlenmedi) Quick auth: every account shows the seconds left and a bar that empties with its code; the codes roll over each period. Books: the settings button at the top of the shelf
 - (derlenmedi) Buds manager: a Fluent speaker icon; tapping its name opens the Buds manager screen (also when it is not placed in the Extra apps card)
 - (derlenmedi) Good Lock: a Fluent grid icon in the Extra apps card
+- (derlenmedi) Clock: the background glow is off by default (plain black at the top); the switch in Settings turns it back on
