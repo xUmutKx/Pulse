@@ -110,7 +110,7 @@ fun GeneralSettings() {
     PCard {
         Text("Start page", color = T.sub, fontSize = 12.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Pages.forEach { p -> PChip(Opt.startPage == p.id, p.label) { Opt.startPage = p.id; Opt.save(ctx) } }
+            Pages.filter { it.id !in SecurityOnly }.forEach { p -> PChip(Opt.startPage == p.id, p.label) { Opt.startPage = p.id; Opt.save(ctx) } }
         }
     }
     PCard {
@@ -771,7 +771,7 @@ private fun ExtraAppsCard() {
             }
         }
         // the app's own pages: shown in the left menu or hidden
-        Pages.forEach { p ->
+        Pages.filter { it.id !in SecurityOnly }.forEach { p ->
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                 val pageColor = if (T.id == "win11" && IconStyle.of(IconCat.MENU) != "line") fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
                 Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (pageColor != 0) Image(painterResource(pageColor), null, Modifier.size(30.dp)) else if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }

@@ -243,6 +243,9 @@ object SplashGate { var splashed by mutableStateOf(false); var soundDone = false
 
 class Pg(val id: String, val label: String, val icon: String)
 
+/** Pages that are opened from one place only (Device > Overview > Security), not from the side menu or the settings lists. */
+val SecurityOnly = setOf("history")
+
 val Pages = listOf(
     Pg("processes", "Processes", "processes"),
     Pg("performance", "Performance", "performance"),
@@ -260,7 +263,7 @@ val Pages = listOf(
     Pg("terminal", "Terminal", "run"),
 )
 // the built-in pages (Settings > Pages) plus the optional tools placed on the side (Settings > Tool places)
-private val visible get() = Pages.filter { it.id !in Opt.hidden && (it.id != "recycle" || Opt.recycle) } + ToolPlace.sidePages() + AppPlace.sidePages()
+private val visible get() = Pages.filter { it.id !in Opt.hidden && it.id !in SecurityOnly && (it.id != "recycle" || Opt.recycle) } + ToolPlace.sidePages() + AppPlace.sidePages()
 private val SettingsPg = Pg("settings", "Settings", "settings")
 
 @Composable

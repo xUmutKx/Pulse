@@ -5,6 +5,7 @@ import com.umutk.pulse.features.NetworksSection
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
 import com.umutk.pulse.PButton
 import androidx.compose.foundation.horizontalScroll
@@ -92,6 +93,29 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
     val ramPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead("Overview", if (s.root) "root" else "")
+        // security: the lock, the codes and the history of the phone, all in one place
+        val openTool = com.umutk.pulse.LocalOpenTool.current
+        PCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PIcon("shieldOk", resColor("battery"), 34.dp)
+                Column(Modifier.padding(start = 12.dp)) {
+                    Text(tr("Your phone is secure", "Telefonunuz güvende"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text(tr("App lock, codes and history", "Uygulama kilidi, kodlar ve geçmiş"), color = T.sub, fontSize = 12.sp)
+                }
+            }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    Triple("applock", tr("App lock", "Uygulama kilidi"), { openTool("applock") }),
+                    Triple("users", tr("Authenticator", "Kimlik doğrulayıcı"), { openTool("authenticator") }),
+                    Triple("history", tr("App history", "Uygulama geçmişi"), { com.umutk.pulse.widgets.WidgetOpen.page = "history" }),
+                ).forEach { (icon, label, go) ->
+                    Column(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(T.bg).clickable { go() }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        PIcon(icon, T.accent, 24.dp)
+                        Text(label, color = T.text, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
+        }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { onOpen("cpu") }
             Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { onOpen("memory") }
