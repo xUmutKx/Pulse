@@ -49,13 +49,13 @@ private const val K_UP = 19; private const val K_DOWN = 20; private const val K_
 private const val K_A = 96; private const val K_B = 97; private const val K_X = 99; private const val K_Y = 100
 private const val K_L1 = 102; private const val K_R1 = 103; private const val K_L2 = 104; private const val K_R2 = 105
 private const val K_START = 108; private const val K_SELECT = 109; private const val K_MODE = 110
-private val LEFT_STICK = intArrayOf(51, 29, 47, 32)   // W A S D
-private val RIGHT_STICK = intArrayOf(37, 38, 39, 40)  // I J K L (up, left, down, right)
+private val LEFT_STICK = intArrayOf(K_UP, K_LEFT, K_DOWN, K_RIGHT)   // the arrow keys, like the D-pad: never letters
+private val RIGHT_STICK = intArrayOf(K_UP, K_LEFT, K_DOWN, K_RIGHT)
 
 /**
  * A game controller on the keyboard's own panel: D-pad, A B X Y, Select / Home / Start, L1 L2 R1 R2 and two sticks, drawn over whatever the
  * game shows (no board behind it). Every control holds its key while the finger is down, so movement is continuous and several can be pressed
- * at once. An input method can only send keys, not analog axes: the left stick sends W A S D, the right one I J K L, the D-pad the arrow keys.
+ * at once. An input method can only send keys, not analog axes: both sticks and the D-pad send the arrow keys.
  * Its size follows the screen (wide when the phone lies sideways, narrower upright) and the − / + beside the shoulder buttons scale it.
  */
 @Composable

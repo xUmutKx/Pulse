@@ -103,7 +103,7 @@ object KeyboardPrefs {
     var commaHold by mutableStateOf("voice")
     /** The gamepad sticks: the dead zone (percent of a stick's reach before it sends a key) and how far up the sticks sit (dp at 1 percent of the panel). */
     var padDead by mutableStateOf(28)
-    var padLift by mutableStateOf(0)
+    var padLift by mutableStateOf(14)
     var periodHold by mutableStateOf("none")
     var bottomHold by mutableStateOf("none")
 
@@ -177,7 +177,7 @@ object KeyboardPrefs {
             if ("gamepad" !in menuItems.split(',')) menuItems = menuItems.split(',').toMutableList().also { l -> val i = l.indexOf("clip"); l.add(if (i >= 0) i + 1 else 0, "gamepad") }.joinToString(",")
             p.edit().putInt("menuVer", 7).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
         }
-        padScale = p.getInt("padScale", 130); padDead = p.getInt("padDead", 28); padLift = p.getInt("padLift", 0)
+        padScale = p.getInt("padScale", 130); padDead = p.getInt("padDead", 28); padLift = p.getInt("padLift", 14)
         commaHold = p.getString("commaHold", "voice") ?: "voice"; periodHold = p.getString("periodHold", "none") ?: "none"; bottomHold = p.getString("bottomHold", "none") ?: "none"
         // the clipboard and the gamepad trade places in the bar: the gamepad is the first key now
         if (p.getInt("menuVer", 0) < 8) {
