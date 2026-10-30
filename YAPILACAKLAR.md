@@ -1677,3 +1677,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books shelf: the ≡ button opens a drawer (Recent list, My Shelf, My Favorites, My Files; Options, About, Day/Night Theme, Exit at the bottom); the gear is gone (derlenmedi)
 - Books shelf Options: a full page (My Shelf, Color, App sections) with woody background, progress, cover size, main folder, import, empty shelf, AMOLED, page animation, e-ink (derlenmedi)
 - Books shelf search: a search icon filters the shelf by title (derlenmedi)
+- Keyboard quick auth: each account takes a third of the panel, the text is twice the size, more accounts scroll (derlenmedi)
+- Settings > General > Apps: the second Clock row (the optional tool row under the apps) is removed; Clock stays once in "Tools and life" (derlenmedi)

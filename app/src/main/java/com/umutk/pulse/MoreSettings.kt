@@ -736,7 +736,8 @@ private fun ExtraAppsCard() {
         }
         }
         // the optional tools: the switch shows one in this card; the chevron folds the four places (menu, this card, left menu, Settings only)
-        ToolPlace.all.forEach { t ->
+        // Clock is listed once, as its app row above; its tool row here would be the second clock
+        ToolPlace.all.filter { it.id != "clock" }.forEach { t ->
             var open by remember(t.id) { mutableStateOf(false) }
             val cur = ToolPlace.where(ctx, t)
             val shownHere = cur == "extra"
