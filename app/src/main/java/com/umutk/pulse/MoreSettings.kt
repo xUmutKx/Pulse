@@ -740,9 +740,8 @@ private fun ExtraAppsCard() {
             Column(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                     // Windows 11: the Fluent vector of the tool, one glyph per tool (the PNG pack is bypassed, it has black glyphs)
-                    val toolColor = if (T.id == "win11" && IconStyle.of(IconCat.TOOLS) != "line") fluentColorRes(ctx, if (t.id == "extrastore") "store" else t.id) else 0
-                    if (toolColor != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(toolColor), null, Modifier.size(30.dp)) }
-                    else if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", FluentFilled.color("tool_${t.id}"), 24.dp) } else {
+                    // Windows 11: one Fluent glyph in the text colour, like the other rows here (the coloured pictures are not used on this page)
+                    if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", T.text, 24.dp) } else {
                         // Office and Download manager get the black launcher tile with a white outline glyph (dark: accent glyph)
                         val tile = when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
                         if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
@@ -757,6 +756,7 @@ private fun ExtraAppsCard() {
                         else ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("start", t.target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
                     })
                     PIcon("chevron", T.sub, 20.dp, Modifier.clickable { open = !open }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (open) 180f else 0f })
+                    // on: the tool is listed in Extra apps (and the Apps group of the ⋮ menu); off: it is hidden from both
                     PSwitch(shownHere, { on -> ToolPlace.set(ctx, t, if (on) "extra" else "hidden"); rev++ })
                 }
                 // where it shows, one radio per place with the place's icon: the overflow menu, the Apps group, the left menu, nowhere (Settings only)
