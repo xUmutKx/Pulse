@@ -81,6 +81,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
+    // the space that came by itself behind a comma: Backspace takes it away with the comma
+    private var commaSpace = false
     /** The word as it stood before the user started deleting letters of it: if the corrected form ends as a real word, the first form was a typo. */
     private var peak: String? = null
     // a letter was typed right behind "word." with no space: the space and a capital are put in when the word ends, unless it is an address
@@ -400,6 +402,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.trans) { st.transIn += s; scheduleTrans(); return }
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
+        commaSpace = false
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
         var ch = s[0]
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
@@ -454,6 +457,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (!finishWord(s, false, s)) c.commitText(s, 1)
             punctTyped = ch in ",;!?:" || dotOk
             dotEnd = ch in "!?" || dotOk
+            // a comma behind a word is followed by a space at once (not in numbers, addresses, passwords or web addresses)
+            if (ch == ',' && KeyboardPrefs.autoSpace && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true) {
+                c.commitText(" ", 1); commaSpace = true; punctTyped = false
+            }
             lastWasSpace = false
             if (ch in ".!?") lastCorrection = null
             prevWord = null; prevWord2 = null
@@ -584,7 +591,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // right after an automatic correction, Backspace takes it back: the word as it was typed opens again, and that correction is remembered as unwanted,
         // so the same word is not corrected the same way the next time
         val lc = lastCorrection
-        if (lc != null && word.isEmpty() && c.getSelectedText(0).isNullOrEmpty()) {
+        // only a correction made by the space key is taken back: a comma or full stop is deleted by itself
+        if (lc != null && lc.sep == " " && word.isEmpty() && c.getSelectedText(0).isNullOrEmpty()) {
             val n = lc.corrected.length + lc.sep.length
             if (c.getTextBeforeCursor(n, 0)?.toString() == lc.corrected + lc.sep) {
                 lastCorrection = null
@@ -616,7 +624,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 updateCaps(); updateSuggestions(); return
             }
         }
-        if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+        if (commaSpace && tb.endsWith(", ") && c.getSelectedText(0).isNullOrEmpty()) { commaSpace = false; c.deleteSurroundingText(2, 0) }
+        else if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         // text was deleted that the remembered words may have belonged to: they are forgotten, so no old prediction is written back
         prevWord = null; prevWord2 = null; lastCorrection = null; lastGlide = null
         updateCaps(); updateSuggestions()
