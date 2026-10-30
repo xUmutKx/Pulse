@@ -362,7 +362,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                             Text("+", color = th.ink, fontSize = 20.sp, modifier = Modifier.clickable { autoSec = (autoSec + 2).coerceAtMost(120); EbookPrefs.setAutoSeconds(ctx, autoSec) }.padding(horizontal = 10.dp))
                         }
                         Text(tr("Brightness", "Parlaklık"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                        PSlider(if (brightness < 0f) .5f else brightness, { brightness = it; setBrightness(ctx, it) }, 0f..1f)
+                        PSlider(if (brightness < 0f) .5f else brightness, { brightness = it; setBrightness(ctx, it) }, 0f..1f, onDone = {})
                         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
                             Text(tr("E-ink look", "E-mürekkep görünüm"), color = th.ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
                             PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) })
