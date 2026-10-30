@@ -154,10 +154,8 @@ object ToolPlace {
         Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
         Tool("authenticator", "Authenticator", "Kimlik doğrulayıcı", "authenticator", true, "users", Icons.Outlined.Key, "extra"),
         Tool("clock", "Clock", "Saat", "clock", true, "timer", Icons.Outlined.AccessTime, "extra"),
-        Tool("speedtest", "Internet speed test", "İnternet hız testi", "speedtest", true, "speed", Icons.Outlined.Speed, "extra"),
         Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "settings", Icons.Outlined.Widgets, "extra"),
         Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "sensors", Icons.Outlined.Headphones, "extra"),
-        Tool("netusage", "Network usage", "Ağ kullanımı", "netusage", true, "speed", Icons.Outlined.DataUsage, "extra"),
         // the launcher's settings: its Extra apps row (Settings card and the ⋮ Apps group) left with the old "HomeLauncher" alias in 0.10.134 and is back, on by default
         Tool("launcher", "Launcher", "Ana ekran", "launcher", true, "apps", Icons.Outlined.Apps, "extra"),
     )

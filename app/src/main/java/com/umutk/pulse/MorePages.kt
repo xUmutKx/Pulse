@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import com.umutk.pulse.PButton
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -70,8 +71,8 @@ fun LiveSections(title: String, everyMs: Long = 3000, top: @Composable ColumnSco
 }
 
 @Composable
-private fun Tile(label: String, value: String, color: Color, frac: Float, modifier: Modifier) {
-    PCard(modifier) {
+private fun Tile(label: String, value: String, color: Color, frac: Float, modifier: Modifier, onClick: () -> Unit = {}) {
+    PCard(modifier.clickable { onClick() }) {
         Text(label, color = T.sub, fontSize = 12.sp)
         FitText(value, T.text, 24.sp)
         BarMeter(frac, color)
@@ -81,7 +82,7 @@ private fun Tile(label: String, value: String, color: Color, frac: Float, modifi
 // ---------------------------------------------------------------- dashboard
 
 @Composable
-fun DashboardPage() {
+fun DashboardPage(onOpen: (String) -> Unit = {}) {
     val ctx = LocalContext.current
     val s by Sampler.snap.collectAsState()
     val h by Sampler.history.collectAsState()
@@ -92,18 +93,18 @@ fun DashboardPage() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead("Overview", if (s.root) "root" else "")
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f))
-            Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f))
+            Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { onOpen("cpu") }
+            Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { onOpen("memory") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f))
-            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f))
+            Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f)) { onOpen("thermal") }
+            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f)) { onOpen("battery") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f))
+            Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f)) { onOpen("storage") }
             Tile("Graphics", if (s.gpu >= 0) "%${s.gpu}" else "—", resColor("gpu"), s.gpu.coerceAtLeast(0) / 100f, Modifier.weight(1f))
         }
-        PCard {
+        PCard(Modifier.clickable { onOpen("network") }) {
             Text("Network", color = T.sub, fontSize = 12.sp)
             Row { Text("↓ ${rate(s.down.toFloat())}", color = resColor("net"), fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("↑ ${rate(s.up.toFloat())}", color = resColor("net"), fontSize = 16.sp) }
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 70.dp)
@@ -159,12 +160,18 @@ fun BatteryPage() {
 fun NetworkPage() {
     val h by Sampler.history.collectAsState()
     val scope = rememberCoroutineScope()
+    val openTool = com.umutk.pulse.LocalOpenTool.current
     var results by remember { mutableStateOf<List<String>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
     LiveSections("Network", 4000, top = {
-        PCard {
+        // the graph opens the two network tools: they are reached from here only
+        PCard(Modifier.clickable { openTool("netusage") }) {
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 80.dp)
             Text("Orange: download · Blue: upload", color = T.sub, fontSize = 11.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PButton(tr("Network usage", "Ağ kullanımı"), Modifier.weight(1f)) { openTool("netusage") }
+            PButton(tr("Internet speed test", "İnternet hız testi"), Modifier.weight(1f)) { openTool("speedtest") }
+        }
         }
         PCard {
             Text("Latency test", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
