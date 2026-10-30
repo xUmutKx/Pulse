@@ -258,7 +258,7 @@ private val WIN11_MENU_KEY = mapOf(
     "APK installer" to "tool_installer", "Device troubleshoot" to "tool_troubleshoot", "Authenticator" to "tool_authenticator", "Network usage" to "tool_netusage",
     "Screen cover" to "tool_cover", "Store" to "extraStore", "Settings" to "settings", "DNS" to "globe",
     // these two fell through to a "tool_goodlock"/"tool_buds" key with no glyph behind it and drew nothing in Win11
-    "Good Lock" to "gridView", "Buds manager" to "sensors", "Launcher" to "gridView", "Ana ekran" to "gridView",
+    "Good Lock" to "gridView", "Buds manager" to "volume", "Launcher" to "gridView", "Ana ekran" to "gridView",
 )
 
 /**
