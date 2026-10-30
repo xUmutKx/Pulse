@@ -1648,9 +1648,9 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.276 Keyboard: the correction for the bar reads only the words of the nearby lengths instead of the whole dictionary each keystroke, so the corrected word comes sooner (derlendi)
 - 1.0.276 Keyboard bar: the gamepad on the bar is replaced by the key layout; a tool is in one place only (bar or menu); the microphone (voice typing) is removed from the bar and the menu, the comma keeps it (derlendi)
 - 1.0.276 Keyboard: Settings > Keyboard > 'Icons on the bar' sets how many icons the top bar has room for (default 7, the rest scroll); a letter typed in place of the space (z x c v b n m) splits the two words ('selamncanım' -> 'selam canım') (derlendi)
-- (sırada) FFmpeg: a tool in Pulse that runs ffmpeg on the phone's files (convert, cut, extract audio), using the ffmpeg build the user uploads (license to check first: LGPL/GPL build decides how it can ship)
-- (sırada) RAW editor: Gallery edit gets a RAW editor (DNG, CR2, NEF, ARW, ...); "Open with Lightroom" from the gallery opens Pulse's RAW editor; normal photos are edited in the same place (the uploaded RAW editor's code is to be checked for licence before use)
-- (sırada) Music: a YouTube Music and a Spotify web player inside the music player (WebView); ToS of both services limit background playback and web scraping, so this needs a decision before building
+- 1.0.279 (sırada) FFmpeg: a tool in Pulse that runs ffmpeg on the phone's files (convert, cut, extract audio), using the ffmpeg build the user uploads (license to check first: LGPL/GPL build decides how it can ship)
+- 1.0.279 (sırada) RAW editor: Gallery edit gets a RAW editor (DNG, CR2, NEF, ARW, ...); "Open with Lightroom" from the gallery opens Pulse's RAW editor; normal photos are edited in the same place (the uploaded RAW editor's code is to be checked for licence before use)
+- 1.0.279 (sırada) Music: a YouTube Music and a Spotify web player inside the music player (WebView); ToS of both services limit background playback and web scraping, so this needs a decision before building
 - 1.0.277 Books: a new e-book reader extra app (EPUB, TXT, PDF): a shelf with covers from the title, tap zones (left/right third turns the page, middle shows the bars), a slide-and-fade page turn, four reader themes, text size, chapters, bookmarks and book information; the place is remembered (derlendi)
 - 1.0.277 Books: the bottom bar is chosen in the Options (any of nine tools), a search in the book, autoscroll with a set speed, read aloud (system speech), brightness, font choice (serif, sans, mono) and an e-ink look (black on white, no animation)(derlendi)
 - 1.0.277 Private (incognito) tab in the browser: nothing kept after it is closed or switched off (cookies, storage, cache), a menu row, and a hat mark at the bottom middle; the keyboard shows the same hat mark at its bottom middle while incognito(derlendi)
@@ -1661,12 +1661,12 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.278 Messages: opening a conversation clears its notification and marks its messages read, so the new-message count goes(derlendi)
 - 1.0.278 Keyboard bar: the icons share the bar's width evenly (the slots slider is gone); the gamepad becomes the key layout and the lock (Quick auth) is on the bar, moved once for every phone (own flag, the auto-space step had skipped it); the bar's default is layout, auth, clip, menu, translate, settings(derlendi)
 - 1.0.278 Books: a reader menu (⋮), theme cards, visual and control options, customise bar buttons with order, book information, reading progress on the shelf; Books listed in Extra apps(derlendi)
-- (derlenmedi) Keyboard: key layout rows evenly spaced with an icon each (no gamepad or key bar there); the lock and the clipboard swapped in the bar; a comma behind a word gets its space again (the space setting had turned it off); two words run together are split before other corrections
-- (derlenmedi) Books: the empty shelf finds the books in the phone's Books and Download folders, and has an add button
-- (derlenmedi) Windows 11 extra apps list: Books uses the Fluent book glyph
-- (derlenmedi) Quick auth: every account shows the seconds left and a bar that empties with its code; the codes roll over each period. Books: the settings button at the top of the shelf
-- (derlenmedi) Buds manager: a Fluent speaker icon; tapping its name opens the Buds manager screen (also when it is not placed in the Extra apps card)
-- (derlenmedi) Good Lock: a Fluent grid icon in the Extra apps card
-- (derlenmedi) Clock: the background glow is off by default (plain black at the top); the switch in Settings turns it back on
-- (derlenmedi) Books: the bar's visual options open as a small popup above the bar (font, text size, theme, e-ink); the bars are solid so the page text no longer shows through them
-- (derlenmedi) Books: eight reader themes, a two-row bottom bar option, shelf tabs (My shelf, Recent, Favorites), cover size, favourite switch in book information
+- 1.0.279 Keyboard: key layout rows evenly spaced with an icon each (no gamepad or key bar there); the lock and the clipboard swapped in the bar; a comma behind a word gets its space again (the space setting had turned it off); two words run together are split before other corrections(derlendi)
+- 1.0.279 Books: the empty shelf finds the books in the phone's Books and Download folders, and has an add button(derlendi)
+- 1.0.279 Windows 11 extra apps list: Books uses the Fluent book glyph(derlendi)
+- 1.0.279 Quick auth: every account shows the seconds left and a bar that empties with its code; the codes roll over each period. Books: the settings button at the top of the shelf(derlendi)
+- 1.0.279 Buds manager: a Fluent speaker icon; tapping its name opens the Buds manager screen (also when it is not placed in the Extra apps card)(derlendi)
+- 1.0.279 Good Lock: a Fluent grid icon in the Extra apps card(derlendi)
+- 1.0.279 Clock: the background glow is off by default (plain black at the top); the switch in Settings turns it back on(derlendi)
+- 1.0.279 Books: the bar's visual options open as a small popup above the bar (font, text size, theme, e-ink); the bars are solid so the page text no longer shows through them(derlendi)
+- 1.0.279 Books: eight reader themes, a two-row bottom bar option, shelf tabs (My shelf, Recent, Favorites), cover size, favourite switch in book information(derlendi)
