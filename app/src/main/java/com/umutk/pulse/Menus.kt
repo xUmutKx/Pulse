@@ -170,7 +170,8 @@ object ToolPlace {
     fun extraTools(c: Context): List<Tool> = all.filter { where(c, it) == "extra" }
     /** The entries of the overflow menu's Extra apps group: the same tools as the Extra apps card. */
     fun extraEntries(c: Context, go: (String) -> Unit, open: (String) -> Unit): List<MenuEntry> =
-        extraTools(c).filter { "tool:${it.id}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(c) }.map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
+        // Clock is listed by its own launcher switch (the builtin apps), not as a tool, so it is not listed twice
+        extraTools(c).filter { it.id != "clock" && "tool:${it.id}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(c) }.map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
     /** The tools that already have a left-menu page (their own switch in Settings > Pages): they are not added to the side twice. */
     fun hasPage(t: Tool) = t.target in setOf("office", "downloads", "health")
     fun byId(id: String): Tool? = all.firstOrNull { it.id == id }
@@ -227,7 +228,7 @@ object AppPlace {
 
 /** The standalone apps placed in the top-right Apps menu, as menu entries: each opens its own window. */
 private fun builtinApps(ctx: Context, openTool: (String) -> Unit): List<MenuEntry> =
-    AppPlace.all.filter { a -> "app:${a.alias}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(ctx) && AppPlace.where(a.alias) == "menu" && (a.alias == "CalculatorLauncher" || ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
+    AppPlace.all.filter { a -> "app:${a.alias}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(ctx) && AppPlace.where(a.alias) == "menu" && (a.alias == "CalculatorLauncher" || ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED) }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
 
 private val EXTRA_APPS get() = tr("Apps", "Uygulamalar")
 
