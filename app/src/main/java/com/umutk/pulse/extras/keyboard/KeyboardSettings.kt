@@ -433,6 +433,7 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             // everything the keyboard knows about the person in one file, and back
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Switch(tr("Clipboard pictures in the backup", "Yedekte pano resimleri"), tr("Off: texts only; the pictures make the backup big", "Kapalı: yalnız metinler; resimler yedeği büyütür"), KeyboardPrefs.backupPictures) { KeyboardPrefs.backupPictures = it; save() }
                 PButton(tr("Export data", "Veriyi dışa aktar"), compact = true) { exportData.launch("Pulse-keyboard-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) + ".zip") }
                 PButton(tr("Import data", "Veriyi içe aktar"), compact = true) { importData.launch(arrayOf("application/zip", "application/octet-stream", "*/*")) }
             }
