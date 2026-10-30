@@ -20,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -141,22 +142,46 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
     }
 }
 
-/** App lock, Authenticator and App history, kept together on their own Device tab. */
+/** App lock, Authenticator and App history on their own Device tab: a shield and a ring that shows how many of the two protections are on. */
 @Composable
 fun SecurityPage() {
+    val ctx = LocalContext.current
     val openTool = com.umutk.pulse.LocalOpenTool.current
+    val lockedApps = com.umutk.pulse.features.AppLock.locked.size
+    val accounts = remember { runCatching { com.umutk.pulse.features.AuthStore.load(ctx).size }.getOrDefault(0) }
+    val on = (if (lockedApps > 0) 1 else 0) + (if (accounts > 0) 1 else 0)
+    val ok = on > 0
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PCard {
-            Text(tr("Security", "Güvenlik"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(104.dp), contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.size(104.dp)) {
+                        val stroke = 12.dp.toPx()
+                        val inset = stroke / 2
+                        val arc = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+                        val at = androidx.compose.ui.geometry.Offset(inset, inset)
+                        drawArc(Look.accent.copy(alpha = .18f), -90f, 360f, false, at, arc, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+                        drawArc(Look.accent, -90f, 360f * on / 2f, false, at, arc, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+                    }
+                    PIcon("shieldOk", if (ok) Look.accent else T.sub, 44.dp)
+                }
+                Column(Modifier.padding(start = 16.dp).weight(1f)) {
+                    Text(if (ok) tr("Your device is secured", "Cihazınız güvende") else tr("Protection is off", "Koruma kapalı"),
+                        color = T.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("$on of 2 protections on", "2 korumadan $on tanesi açık"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+            }
+        }
+        PCard {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf(
                     Triple("applock", tr("App lock", "Uygulama kilidi"), { openTool("applock") }),
                     Triple("users", tr("Authenticator", "Kimlik doğrulayıcı"), { openTool("authenticator") }),
                     Triple("history", tr("App history", "Uygulama geçmişi"), { com.umutk.pulse.widgets.WidgetOpen.page = "history" }),
                 ).forEach { (icon, label, go) ->
-                    Column(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(T.bg).clickable { go() }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        PIcon(icon, T.accent, 24.dp)
-                        Text(label, color = T.text, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+                    Column(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(T.bg).clickable { go() }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        PIcon(icon, T.accent, 26.dp)
+                        Text(label, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
                     }
                 }
             }
