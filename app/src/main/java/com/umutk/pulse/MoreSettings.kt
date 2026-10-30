@@ -873,7 +873,7 @@ internal fun fluentColorRes(ctx: android.content.Context, key: String): Int =
     if (key.isEmpty()) 0 else ctx.resources.getIdentifier("fc_$key", "drawable", ctx.packageName)
 
 private val FC_APP = mapOf("CalculatorLauncher" to "calculator", "FilesLauncher" to "files", "PhotosLauncher" to "photos", "CalendarLauncher" to "calendar", "ContactsLauncher" to "contacts", "PaintLauncher" to "paint",
-    "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes",
+    "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "IslandLauncher" to "island", "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes",
     "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "ExtraStoreLauncher" to "store")
 private val FC_PAGE = mapOf("downloads" to "download", "files" to "files")
 
