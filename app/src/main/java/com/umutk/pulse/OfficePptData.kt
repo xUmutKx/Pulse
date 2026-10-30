@@ -73,7 +73,10 @@ class PptModel(val file: File) {
     private val removed = linkedSetOf<String>()
     var cx = 9144000f; var cy = 5143500f
     private val presPart: String
-    private val bmps = LruCache<String, ImageBitmap>(12)
+    // about 16 MB of slide pictures, by bytes
+    private val bmps = object : LruCache<String, ImageBitmap>(16 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    }
     private val ctxs = HashMap<String, Ctx>()
     private val blobs = LinkedHashMap<String, ByteArray>()
     private val newExts = linkedSetOf<String>()

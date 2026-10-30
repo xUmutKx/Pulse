@@ -73,7 +73,10 @@ fun renameVideo(ctx: Context, v: VideoItem, newName: String): Boolean = try {
     ctx.contentResolver.update(v.uri, cv, null, null) > 0
 } catch (e: SecurityException) { false } catch (e: Exception) { false }
 
-private val thumbs = object : LruCache<String, ImageBitmap>(160) {}
+// about 8 MB of thumbnails, by bytes
+private val thumbs = object : LruCache<String, ImageBitmap>(8 * 1024 * 1024) {
+    override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+}
 
 /** Thumbnail of a MediaStore video, loaded off the main thread; null while loading or when none exists. */
 @Composable
