@@ -82,9 +82,16 @@ object LiveLyrics {
             Lyrics.localRecord(t.path, title, artist)?.let { Lyrics.toResult(it, "local") }
                 ?: Lyrics.forTrack(ctx, title, artist, t.album, t.durationSec * 1000L, t.path)
         }
-        val synced = r?.takeIf { it.synced }
-        slot = t.path to synced; slotAt = android.os.SystemClock.uptimeMillis()
-        return synced
+        val timed = r?.let { if (it.synced) it else spread(it, t.durationSec * 1000L) }
+        slot = t.path to timed; slotAt = android.os.SystemClock.uptimeMillis()
+        return timed
+    }
+
+    /** Plain lyrics (no timestamps): the lines share the song's length evenly, so the line shown is the one at the same share of the song. */
+    fun spread(r: LyricsResult, durMs: Long): LyricsResult? {
+        val lines = r.lines.filter { it.text.isNotBlank() }
+        if (lines.isEmpty() || durMs <= 0L) return null
+        return LyricsResult(lines.mapIndexed { i, l -> LyricLine(durMs * i / lines.size, l.text) }, true, r.source)
     }
 
     /**
