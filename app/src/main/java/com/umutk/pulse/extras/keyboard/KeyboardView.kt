@@ -262,6 +262,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         if (KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
         Trail(th, st)
         Preview(th, st)
+        // private typing: the hat mark sits at the bottom middle, so it is seen whatever the keyboard shows
+        if (st.incognito) com.umutk.pulse.extras.IncognitoGlyph(th.sub, 16.dp, Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp))
     }
 }
 
