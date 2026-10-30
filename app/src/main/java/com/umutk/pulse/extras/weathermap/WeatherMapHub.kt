@@ -32,11 +32,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
@@ -69,6 +73,7 @@ import kotlin.math.cos
 import kotlin.math.floor
 import kotlin.math.ln
 import kotlin.math.pow
+import kotlin.math.sin
 import kotlin.math.PI
 import kotlin.math.roundToInt
 import kotlin.math.sinh
@@ -248,17 +253,62 @@ private fun fetchPlanes(): List<Plane>? {
     return out
 }
 
-private fun heat(layer: MapLayer, v: Double): Color {
-    val t = when (layer) {
-        MapLayer.TEMP -> ((v + 20) / 60).coerceIn(0.0, 1.0)
-        MapLayer.RAIN -> (v / 5).coerceIn(0.0, 1.0)
-        MapLayer.WIND -> (v / 80).coerceIn(0.0, 1.0)
-        MapLayer.CLOUD -> (v / 100).coerceIn(0.0, 1.0)
-        MapLayer.WAVE -> (v / 6).coerceIn(0.0, 1.0)
-        else -> 0.0
+/** The lowest and the highest value of each grid layer's colour scale. */
+private fun rangeOf(layer: MapLayer): Pair<Double, Double> = when (layer) {
+    MapLayer.TEMP -> -20.0 to 40.0
+    MapLayer.RAIN -> 0.0 to 5.0
+    MapLayer.WIND -> 0.0 to 100.0
+    MapLayer.CLOUD -> 0.0 to 100.0
+    MapLayer.WAVE -> 0.0 to 6.0
+    else -> 0.0 to 1.0
+}
+
+/** The rainbow of the scales, from the lowest value (violet) to the highest (red). */
+private val SCALE = listOf(Color(0xFF3B0E9A), Color(0xFF1E5BD8), Color(0xFF1FB5E0), Color(0xFF27C080), Color(0xFFB8E03A), Color(0xFFF5D120), Color(0xFFF08A1C), Color(0xFFE0302A))
+
+private fun scaleAt(t: Float): Color {
+    val x = t.coerceIn(0f, 1f) * (SCALE.size - 1)
+    val i = floor(x).toInt().coerceAtMost(SCALE.size - 2)
+    return lerp(SCALE[i], SCALE[i + 1], x - i)
+}
+
+private fun valueColor(layer: MapLayer, v: Double): Color {
+    val (lo, hi) = rangeOf(layer)
+    val t = ((v - lo) / (hi - lo)).toFloat()
+    // the cloud cover is a grey veil: the more cloud, the whiter
+    if (layer == MapLayer.CLOUD) return Color.White.copy(alpha = 0.1f + 0.7f * t.coerceIn(0f, 1f))
+    return scaleAt(t).copy(alpha = 0.85f)
+}
+
+/** A wind or wave arrow: the reports give the direction the air or water comes from, so the arrow points the other way. */
+private fun DrawScope.drawArrow(c: Offset, fromDeg: Double, len: Float, color: Color) {
+    val r = Math.toRadians(fromDeg + 180.0)
+    val dx = sin(r).toFloat()
+    val dy = -cos(r).toFloat()
+    val tip = Offset(c.x + dx * len, c.y + dy * len)
+    drawLine(color, c, tip, strokeWidth = 1.5.dp.toPx())
+    val baseX = tip.x - dx * len * 0.4f
+    val baseY = tip.y - dy * len * 0.4f
+    val side = len * 0.25f
+    val head = Path().apply {
+        moveTo(tip.x, tip.y)
+        lineTo(baseX - dy * side, baseY + dx * side)
+        lineTo(baseX + dy * side, baseY - dx * side)
+        close()
     }
-    // cold / calm is blue, warm / strong is red
-    return Color(red = t.toFloat(), green = 0.35f, blue = (1 - t).toFloat(), alpha = 0.7f)
+    drawPath(head, color)
+}
+
+/** The colour scale of a grid layer: its highest value on top, its lowest at the bottom, with the unit. */
+@Composable
+private fun ScaleLegend(layer: MapLayer, modifier: Modifier) {
+    val (lo, hi) = rangeOf(layer)
+    val colors = if (layer == MapLayer.CLOUD) listOf(Color.White.copy(alpha = 0.8f), Color.White.copy(alpha = 0.1f)) else SCALE.reversed()
+    Column(modifier.padding(end = 10.dp), horizontalAlignment = Alignment.End) {
+        Text("${hi.roundToInt()} ${unitOf(layer)}", color = Color.White, fontSize = 11.sp)
+        Box(Modifier.padding(vertical = 4.dp).size(12.dp, 170.dp).clip(RoundedCornerShape(6.dp)).background(Brush.verticalGradient(colors)))
+        Text("${lo.roundToInt()} ${unitOf(layer)}", color = Color.White, fontSize = 11.sp)
+    }
 }
 
 private fun unitOf(layer: MapLayer): String = when (layer) {
@@ -431,12 +481,8 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place?) {
             if (layer.isGrid()) grids[layer]?.forEach { sm ->
                 val c = screenOf(sm.lat, sm.lon)
                 if (c.x < -20f || c.x > size.width + 20f || c.y < -20f || c.y > size.height + 20f) return@forEach
-                drawCircle(heat(layer, sm.value), radius = 7.dp.toPx(), center = c)
-                sm.dir?.let { d ->
-                    val r = Math.toRadians(d)
-                    val end = Offset(c.x + (kotlin.math.sin(r) * 14.dp.toPx()).toFloat(), c.y - (kotlin.math.cos(r) * 14.dp.toPx()).toFloat())
-                    drawLine(Color.White, c, end, strokeWidth = 1.5.dp.toPx())
-                }
+                drawCircle(valueColor(layer, sm.value), radius = 6.dp.toPx(), center = c)
+                if (layer == MapLayer.WIND || layer == MapLayer.WAVE) sm.dir?.let { drawArrow(c, it, 14.dp.toPx(), Color.White) }
             }
             if (layer == MapLayer.PLANE) planes?.forEach { pl ->
                 val c = screenOf(pl.lat, pl.lon)
@@ -446,6 +492,8 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place?) {
                 drawLine(Color(0xFFFFC107), c, Offset(c.x + (kotlin.math.sin(r) * 6.dp.toPx()).toFloat(), c.y - (kotlin.math.cos(r) * 6.dp.toPx()).toFloat()), strokeWidth = 1.dp.toPx())
             }
         }
+
+        if (layer.isGrid()) ScaleLegend(layer, Modifier.align(Alignment.CenterEnd))
 
         // the controls float over the map: back and the layers at the top
         Column(Modifier.fillMaxWidth().statusBarsPadding().padding(horizontal = 10.dp, vertical = 8.dp)) {

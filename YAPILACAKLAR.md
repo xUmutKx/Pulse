@@ -1684,3 +1684,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Weather map: the values are a grid over the screen, so the coast and the seas get their own points (waves included) (derlenmedi)
 - Weather map: aircraft are tappable (callsign, country, height, speed, heading); the picked value shows for the grid layers (derlenmedi)
 - Weather map: the last values stay on the screen with their time when a service fails; the values are kept on the phone (derlenmedi)
+- Weather map: wind, waves and clouds have a colour scale with its unit at the right edge; wind and wave arrows point where the air or water goes (1.0.280 (derlenmedi))
