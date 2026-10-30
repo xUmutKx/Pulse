@@ -1609,3 +1609,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Clock: Background glow off is pure AMOLED black (#000000), no tint (derlenmedi)
 - (sonraki derlemede) Keyboard gamepad: both sticks send the arrow keys (no letters); the sticks sit higher by default (derlenmedi)
 - (sonraki derlemede) Keyboard top bar: the gamepad key becomes the layout key (the gamepad stays in the ⋮ menu). Quick auth / saved passwords and TOTP from the keyboard not started (derlenmedi)
+- (sonraki derlemede) Keyboard: e-mail domain suggestions (@gmail.com ...) appear only after an "@" is typed; they no longer replace ordinary words (derlenmedi)
