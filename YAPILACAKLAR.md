@@ -1634,3 +1634,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.275 README: the screenshots are one block of full-height pictures (420 px, no header row); the More screenshots block is merged into it (derlendi)
 - (sonraki derlemede) Weather map: the map fills the screen, pinch to zoom and drag to move; back and the layers float over it; the empty state reads 'Couldn't load the data' and a tap retries (derlenmedi)
 - (sonraki derlemede) Alarms: the selection bar's buttons are white on the dark look; with the background glow off the bar is plain black with a thin edge (derlenmedi)
+- (sonraki derlemede) Office: the AMOLED look stays black in the Office and PDF windows, the title bar colour setting no longer paints it red (derlenmedi)

@@ -139,6 +139,8 @@ fun ofDarkTint(c: Color, f: Float) = androidx.compose.ui.graphics.lerp(c, Color.
 /** The chosen title bar colour laid over a look's own palette ([OfficePrefs.bars]): 0 leaves the look as it is; 1 accent, 2 the app's colour, 3 AMOLED black for the bar, the tabs, the ribbon and the status bar. */
 fun ofPal(id: String, k: OfKind): OfPal {
     val b = ofPalBase(id, k)
+    // the AMOLED look stays black whatever the title bar colour is set to (the app colour would paint the PDF red)
+    if (ofResolveId(id) == "amoled") return b
     return when (OfficePrefs.bars) {
         1 -> OfPal(Look.accent.copy(alpha = 1f), onAccent(Look.accent), b.tabBg, b.tabInk, b.tabSelBg, b.tabSelInk, b.ribbonBg, b.ink, b.line, b.canvas, b.paper, b.statusBg, b.statusInk, b.accent)
         2 -> OfPal(k.brand, ofInkOn(k.brand), b.tabBg, b.tabInk, b.tabSelBg, b.tabSelInk, b.ribbonBg, b.ink, b.line, b.canvas, b.paper, b.statusBg, b.statusInk, b.accent)
