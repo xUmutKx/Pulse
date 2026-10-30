@@ -177,6 +177,11 @@ object KeyboardPrefs {
             if ("gamepad" !in menuItems.split(',')) menuItems = menuItems.split(',').toMutableList().also { l -> val i = l.indexOf("clip"); l.add(if (i >= 0) i + 1 else 0, "gamepad") }.joinToString(",")
             p.edit().putInt("menuVer", 7).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
         }
+        // the gamepad key of the top bar is the keyboard layout key now; the gamepad stays in the ⋮ menu
+        if (p.getInt("menuVer", 0) < 8) {
+            toolbarItems = toolbarItems.split(',').map { if (it == "gamepad") "layout" else it }.distinct().joinToString(",")
+            p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
+        }
         padScale = p.getInt("padScale", 130); padDead = p.getInt("padDead", 28); padLift = p.getInt("padLift", 14)
         commaHold = p.getString("commaHold", "voice") ?: "voice"; periodHold = p.getString("periodHold", "none") ?: "none"; bottomHold = p.getString("bottomHold", "none") ?: "none"
         // the clipboard and the gamepad trade places in the bar: the gamepad is the first key now
