@@ -42,6 +42,14 @@ object EbookPrefs {
     fun eink(c: Context): Boolean = p(c).getBoolean("eink", false)
     fun setEink(c: Context, on: Boolean) { p(c).edit().putBoolean("eink", on).apply() }
 
+    /** Two rows for the reader's bottom bar. */
+    fun double(c: Context): Boolean = p(c).getBoolean("double", false)
+    fun setDouble(c: Context, on: Boolean) { p(c).edit().putBoolean("double", on).apply() }
+
+    /** The cover width of the shelf, in dp (the height is 1.4 times it). */
+    fun cover(c: Context): Int = p(c).getInt("cover", 84)
+    fun setCover(c: Context, v: Int) { p(c).edit().putInt("cover", v.coerceIn(60, 130)).apply() }
+
     /** The reading progress shown on the covers of the shelf. */
     fun showProgress(c: Context): Boolean = p(c).getBoolean("showProgress", true)
     fun setShowProgress(c: Context, on: Boolean) { p(c).edit().putBoolean("showProgress", on).apply() }
