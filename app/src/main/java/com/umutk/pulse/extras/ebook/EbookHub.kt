@@ -39,7 +39,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.umutk.pulse.PSlider
+import com.umutk.pulse.PSwitch
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -182,57 +187,88 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
 
     var themeIx by remember { mutableStateOf(rp(ctx).getInt("theme", 0)) }
     var textSize by remember { mutableStateOf(rp(ctx).getInt("size", 18)) }
-    val th = READER_THEMES[themeIx]
+    var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
+    var fontIx by remember { mutableStateOf(EbookPrefs.font(ctx)) }
+    var autoOn by remember { mutableStateOf(false) }
+    var speaking by remember { mutableStateOf(false) }
+    val th = if (eink) Theme(Color.White, Color.Black, Color(0xFF555555)) else READER_THEMES[themeIx]
+    val family = when (fontIx) { 1 -> FontFamily.SansSerif; 2 -> FontFamily.Monospace; else -> FontFamily.Serif }
     var chapter by remember { mutableStateOf(Ebook.place(ctx, start.uri).first) }
     var page by remember { mutableStateOf(Ebook.place(ctx, start.uri).second) }
     var forward by remember { mutableStateOf(true) }
     var bars by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf("") }
     var bookmarked by remember { mutableStateOf(Ebook.bookmarks(ctx, start.uri).contains("$chapter,$page")) }
-    BackHandler { if (panel.isNotEmpty()) panel = "" else { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() } }
+    var query by remember { mutableStateOf("") }
+    var brightness by remember { mutableStateOf(-1f) }
+    var barIds by remember { mutableStateOf(EbookPrefs.bar(ctx)) }
+    var autoSec by remember { mutableStateOf(EbookPrefs.autoSeconds(ctx)) }
+    // the page's text, read aloud; a page read to its end turns to the next one
+    val curText = remember { arrayOf("") }
+    val pageTurner = remember { mutableStateOf<(() -> Unit)?>(null) }
+    val speaker = remember { Speaker(ctx) { if (speaking) pageTurner.value?.invoke() } }
+    DisposableEffect(Unit) { onDispose { speaker.shutdown(); setBrightness(ctx, -1f) } }
+    BackHandler {
+        if (panel.isNotEmpty()) panel = ""
+        else { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }
+    }
+    fun save() = Ebook.savePlace(ctx, start.uri, chapter, page)
 
     Box(Modifier.fillMaxSize().background(th.bg)) {
         if (b == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("Opening…", "Açılıyor…"), color = th.sub, fontSize = 14.sp) }
         } else if (b.pdf) {
             PdfPages(ctx, uri, page, th, forward,
-                onTurn = { d -> forward = d > 0; page = (page + d).coerceAtLeast(0) },
+                onTurn = { d -> forward = d > 0; page = (page + d).coerceAtLeast(0); save() },
                 onTap = { bars = !bars })
         } else {
             val chapters = b.chapters
             if (chapter !in chapters.indices) chapter = 0
-            // the pages of the chapter at the reader's size: laid out again when the size or the book changes
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val wPx = with(density) { maxWidth.roundToPx() }
                 val hPx = with(density) { maxHeight.roundToPx() }
-                val bodyStyle = TextStyle(fontSize = textSize.sp, lineHeight = (textSize * 1.5f).sp, color = th.ink)
-                val headStyle = TextStyle(fontSize = (textSize + 4).sp, lineHeight = ((textSize + 4) * 1.4f).sp, color = th.ink, fontWeight = FontWeight.Bold)
-                val pages by produceState<List<List<Para>>?>(null, chapter, textSize, wPx, hPx, themeIx) {
+                val bodyStyle = TextStyle(fontFamily = family, fontSize = textSize.sp, lineHeight = (textSize * 1.5f).sp, color = th.ink)
+                val headStyle = TextStyle(fontFamily = family, fontSize = (textSize + 4).sp, lineHeight = ((textSize + 4) * 1.4f).sp, color = th.ink, fontWeight = FontWeight.Bold)
+                val pages by produceState<List<List<Para>>?>(null, chapter, textSize, fontIx, wPx, hPx, themeIx) {
                     value = null
                     value = withContext(Dispatchers.Default) {
                         paginate(measurer, chapters.getOrNull(chapter)?.paras.orEmpty(), wPx - with(density) { 40.dp.roundToPx() }, hPx - with(density) { 90.dp.roundToPx() }, bodyStyle, headStyle, with(density) { 10.dp.toPx() })
                     }
                 }
                 val list = pages
-                // a page past the end (or -1, the last page of the chapter before) is set once the chapter is laid out
-                LaunchedEffect(list) {
-                    if (list != null && list.isNotEmpty() && (page < 0 || page >= list.size)) page = if (page < 0) list.size - 1 else list.size - 1
-                }
+                // a page past the end (or -1: the last page of the chapter before) is set once the chapter is laid out
+                LaunchedEffect(list) { if (list != null && list.isNotEmpty() && (page < 0 || page >= list.size)) page = list.size - 1 }
                 val shown = if (list == null) 0 else page.coerceIn(0, (list.size - 1).coerceAtLeast(0))
                 val cur = list?.getOrNull(shown).orEmpty()
+                curText[0] = cur.joinToString(" ") { it.text }
                 val key = chapter.toLong() * 100000L + shown
+                // the next page, or the next chapter; used by the tap zones, the autoscroll and the speech
+                fun next() {
+                    forward = true
+                    if (list != null && page < list.size - 1) page++ else if (chapter < chapters.size - 1) { chapter++; page = 0 }
+                    bookmarked = Ebook.bookmarks(ctx, start.uri).contains("$chapter,$page")
+                    save()
+                }
+                fun prev() {
+                    forward = false
+                    if (page > 0) page-- else if (chapter > 0) { chapter--; page = -1 }
+                    bookmarked = Ebook.bookmarks(ctx, start.uri).contains("$chapter,$page")
+                    save()
+                }
+                pageTurner.value = { next() }
+                LaunchedEffect(autoOn, key) { if (autoOn) { kotlinx.coroutines.delay(autoSec * 1000L); if (autoOn) next() } }
+                LaunchedEffect(speaking, key) { if (speaking) speaker.speak(curText[0]) else speaker.stop() }
                 AnimatedContent(
                     targetState = key,
                     transitionSpec = {
-                        if (forward) (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { -it / 5 } + fadeOut(tween(260)))
+                        if (eink) (fadeIn(tween(0)) togetherWith fadeOut(tween(0)))
+                        else if (forward) (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { -it / 5 } + fadeOut(tween(260)))
                         else (slideInHorizontally(tween(260)) { -it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { it / 5 } + fadeOut(tween(260)))
                     },
                     label = "page",
                 ) { _ ->
                     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 44.dp), verticalArrangement = Arrangement.Top) {
-                        cur.forEach { p ->
-                            Text(p.text, style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 10.dp))
-                        }
+                        cur.forEach { p -> Text(p.text, style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 10.dp)) }
                     }
                 }
                 // the three zones of the page: the left third goes back, the right third forward, the middle shows the bars
@@ -240,72 +276,114 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     detectTapGestures(onTap = { o ->
                         val w = size.width
                         when {
-                            o.x < w / 3f -> {
-                                forward = false
-                                if (page > 0) page-- else if (chapter > 0) { chapter--; page = -1 }
-                            }
-                            o.x > w * 2f / 3f -> {
-                                forward = true
-                                if (list != null && page < list.size - 1) page++ else if (chapter < chapters.size - 1) { chapter++; page = 0 }
-                            }
+                            o.x < w / 3f -> prev()
+                            o.x > w * 2f / 3f -> next()
                             else -> bars = !bars
                         }
-                        bookmarked = Ebook.bookmarks(ctx, start.uri).contains("$chapter,$page")
-                        Ebook.savePlace(ctx, start.uri, chapter, page)
                     })
                 })
-                val total = chapters.size.coerceAtLeast(1)
-                Text("${chapter + 1}/$total", color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
+                Text("${chapter + 1}/${chapters.size.coerceAtLeast(1)}", color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
+                if (autoOn) Text(tr("Autoscroll", "Otomatik"), color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
             }
         }
 
         if (bars && b != null) {
-            // top bar: back, the title and the bookmark
             Row(Modifier.fillMaxWidth().background(th.bg.copy(alpha = .94f)).padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(40.dp).clickable { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 22.dp) }
+                Box(Modifier.size(40.dp).clickable { save(); onClose() }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 22.dp) }
                 Text(b.title, color = th.ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
-                Box(Modifier.size(40.dp).clickable {
-                    bookmarked = Ebook.toggleBookmark(ctx, start.uri, chapter, page)
-                }, contentAlignment = Alignment.Center) { PIcon("pin", if (bookmarked) th.ink else th.sub, 22.dp) }
+                Box(Modifier.size(40.dp).clickable { bookmarked = Ebook.toggleBookmark(ctx, start.uri, chapter, page) }, contentAlignment = Alignment.Center) {
+                    PIcon("pin", if (bookmarked) th.ink else th.sub, 22.dp)
+                }
             }
-            // bottom bar: the position, and the tools (chapters, size, theme, bookmarks, book information)
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(th.bg.copy(alpha = .94f)).padding(horizontal = 8.dp, vertical = 6.dp)) {
                 val count = if (b.pdf) 0 else b.chapters.size
                 Text(tr("Chapter ${chapter + 1} of ${count.coerceAtLeast(1)}", "Bölüm ${chapter + 1} / ${count.coerceAtLeast(1)}"), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp))
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                    ToolIcon("details", th) { panel = "chapters" }
-                    ToolIcon("text", th) { textSize = (textSize + if (textSize >= 26) -8 else 2); rp(ctx).edit().putInt("size", textSize).apply() }
-                    ToolIcon("pin", th) { themeIx = (themeIx + 1) % READER_THEMES.size; rp(ctx).edit().putInt("theme", themeIx).apply() }
-                    ToolIcon("details", th) { panel = "bookmarks" }
-                    ToolIcon("info", th) { panel = "info" }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                    barIds.forEach { id ->
+                        val t = BAR_TOOLS.firstOrNull { it.third == id } ?: return@forEach
+                        val on = when (id) { "speak" -> speaking; "auto" -> autoOn; else -> false }
+                        Box(Modifier.size(44.dp).clickable {
+                            when (id) {
+                                "chapters" -> panel = "chapters"
+                                "text" -> { textSize = (textSize + if (textSize >= 26) -8 else 2); rp(ctx).edit().putInt("size", textSize).apply() }
+                                "theme" -> { themeIx = (themeIx + 1) % READER_THEMES.size; rp(ctx).edit().putInt("theme", themeIx).apply() }
+                                "bookmarks" -> panel = "bookmarks"
+                                "search" -> panel = "search"
+                                "speak" -> speaking = !speaking
+                                "auto" -> autoOn = !autoOn
+                                "options" -> panel = "options"
+                                "info" -> panel = "info"
+                            }
+                        }, contentAlignment = Alignment.Center) {
+                            if (id == "text") Text("Aa", color = if (on) th.bg else th.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            else PIcon(if (id == "speak" && speaking) "pause" else t.first, if (on) th.ink else th.ink.copy(alpha = .8f), 22.dp)
+                        }
+                    }
                 }
             }
         }
 
-        // the panels: chapters, bookmarks and the book's information (plain lists, in the reader's colours)
         if (panel.isNotEmpty() && b != null) {
-            Column(Modifier.align(Alignment.Center).fillMaxWidth(.9f).fillMaxHeight(.7f).clip(RoundedCornerShape(12.dp)).background(th.bg).padding(14.dp)) {
+            Column(Modifier.align(Alignment.Center).fillMaxWidth(.92f).fillMaxHeight(.8f).clip(RoundedCornerShape(12.dp)).background(th.bg).padding(14.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(when (panel) { "chapters" -> tr("Chapters", "Bölümler"); "bookmarks" -> tr("Bookmarks", "Yer imleri"); else -> tr("Book information", "Kitap bilgisi") },
+                    Text(when (panel) {
+                        "chapters" -> tr("Chapters", "Bölümler"); "bookmarks" -> tr("Bookmarks", "Yer imleri"); "search" -> tr("Search", "Ara")
+                        "options" -> tr("Options", "Seçenekler"); else -> tr("Book information", "Kitap bilgisi") },
                         color = th.ink, fontSize = 17.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     Box(Modifier.size(36.dp).clickable { panel = "" }, contentAlignment = Alignment.Center) { PIcon("close", th.ink, 20.dp) }
                 }
                 Spacer(Modifier.height(8.dp))
                 when (panel) {
-                    "chapters" -> LazyColumnList(b.chapters.mapIndexed { i, c -> "${i + 1}. ${c.title}" }, th) { i -> chapter = i; page = 0; forward = true; panel = ""; bars = false }
+                    "chapters" -> ReaderList(b.chapters.mapIndexed { i, c -> "${i + 1}. ${c.title}" }, th) { i -> chapter = i; page = 0; forward = true; panel = ""; bars = false; save() }
                     "bookmarks" -> {
                         val marks = Ebook.bookmarks(ctx, start.uri)
                         if (marks.isEmpty()) Text(tr("No bookmarks", "Yer imi yok"), color = th.sub, fontSize = 13.sp)
-                        else LazyColumnList(marks.map { m -> "${m.substringBefore(',').toInt() + 1}. ${b.chapters.getOrNull(m.substringBefore(',').toInt())?.title.orEmpty()}" }, th) { i ->
-                            val m = marks[i].split(','); chapter = m[0].toInt(); page = m[1].toInt(); forward = true; panel = ""; bars = false
+                        else ReaderList(marks.map { m -> val c = m.substringBefore(',').toInt(); "${c + 1}. ${b.chapters.getOrNull(c)?.title.orEmpty()}" }, th) { i ->
+                            val m = marks[i].split(','); chapter = m[0].toInt(); page = m[1].toInt(); forward = true; panel = ""; bars = false; save()
+                        }
+                    }
+                    "search" -> {
+                        OutlinedField(query, th, tr("Word or phrase", "Kelime veya cümle")) { query = it }
+                        val hits = remember(query) { searchBook(b.chapters, query) }
+                        if (query.isNotBlank() && hits.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), color = th.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                        ReaderList(hits.map { "${it.first + 1}. ${it.second}" }, th) { i -> chapter = hits[i].first; page = 0; forward = true; panel = ""; bars = false; save() }
+                    }
+                    "options" -> {
+                        Text(tr("Font", "Yazı tipi"), color = th.sub, fontSize = 12.sp)
+                        Row(Modifier.padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                            listOf(tr("Serif", "Serif"), tr("Sans", "Sans"), tr("Mono", "Mono")).forEachIndexed { i, name ->
+                                Text(name, color = if (fontIx == i) th.bg else th.ink, fontSize = 13.sp,
+                                    modifier = Modifier.clip(RoundedCornerShape(50)).background(if (fontIx == i) th.ink else th.ink.copy(alpha = .1f)).clickable { fontIx = i; EbookPrefs.setFont(ctx, i) }.padding(horizontal = 12.dp, vertical = 6.dp))
+                            }
+                        }
+                        Text(tr("Autoscroll: $autoSec s per page", "Otomatik kaydırma: sayfa başına $autoSec sn"), color = th.ink, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("−", color = th.ink, fontSize = 20.sp, modifier = Modifier.clickable { autoSec = (autoSec - 2).coerceAtLeast(3); EbookPrefs.setAutoSeconds(ctx, autoSec) }.padding(horizontal = 10.dp))
+                            Text("+", color = th.ink, fontSize = 20.sp, modifier = Modifier.clickable { autoSec = (autoSec + 2).coerceAtMost(120); EbookPrefs.setAutoSeconds(ctx, autoSec) }.padding(horizontal = 10.dp))
+                        }
+                        Text(tr("Brightness", "Parlaklık"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                        PSlider(if (brightness < 0f) .5f else brightness, { brightness = it; setBrightness(ctx, it) }, 0f..1f)
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 6.dp)) {
+                            Text(tr("E-ink look", "E-mürekkep görünüm"), color = th.ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                            PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) })
+                        }
+                        Text(tr("Show on the bar", "Alt çubukta"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
+                        BAR_TOOLS.forEach { t ->
+                            val on = t.third in barIds
+                            Row(Modifier.fillMaxWidth().clickable {
+                                barIds = if (on) barIds - t.third else barIds + t.third
+                                EbookPrefs.setBar(ctx, barIds)
+                            }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text(t.second, color = th.ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                                Text(if (on) "✓" else "", color = th.ink, fontSize = 15.sp)
+                            }
                         }
                     }
                     else -> {
-                        val chapterCount = b.chapters.size
                         Text(b.title, color = th.ink, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
                         if (b.author.isNotEmpty()) Text(b.author, color = th.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp))
                         Spacer(Modifier.height(10.dp))
-                        Text(tr("Chapters: $chapterCount", "Bölüm: $chapterCount"), color = th.ink, fontSize = 13.sp)
+                        Text(tr("Chapters: ${b.chapters.size}", "Bölüm: ${b.chapters.size}"), color = th.ink, fontSize = 13.sp)
                         Text(tr("Theme: ${THEME_NAMES[themeIx]}", "Tema: ${THEME_NAMES[themeIx]}"), color = th.ink, fontSize = 13.sp)
                         Text(tr("Text size: $textSize", "Yazı boyutu: $textSize"), color = th.ink, fontSize = 13.sp)
                     }
@@ -316,7 +394,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
 }
 
 @Composable
-private fun LazyColumnList(items: List<String>, th: Theme, onPick: (Int) -> Unit) {
+private fun ReaderList(items: List<String>, th: Theme, onPick: (Int) -> Unit) {
     androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize()) {
         itemsIndexed(items) { i, t ->
             Text(t, color = th.ink, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
@@ -326,13 +404,13 @@ private fun LazyColumnList(items: List<String>, th: Theme, onPick: (Int) -> Unit
 }
 
 @Composable
-private fun ToolIcon(name: String, th: Theme, onClick: () -> Unit) {
-    Box(Modifier.size(44.dp).clickable { onClick() }, contentAlignment = Alignment.Center) {
-        when (name) {
-            "text" -> Text("Aa", color = th.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-            else -> PIcon(name, th.ink, 22.dp)
-        }
-    }
+private fun OutlinedField(value: String, th: Theme, hint: String, onChange: (String) -> Unit) {
+    androidx.compose.foundation.text.BasicTextField(
+        value = value, onValueChange = onChange, singleLine = true,
+        textStyle = TextStyle(color = th.ink, fontSize = 15.sp),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(th.ink.copy(alpha = .08f)).padding(10.dp),
+        decorationBox = { inner -> if (value.isEmpty()) Text(hint, color = th.sub, fontSize = 15.sp); inner() },
+    )
 }
 
 /** A PDF: each page is drawn by the system's renderer at the width of the screen, one at a time. */
