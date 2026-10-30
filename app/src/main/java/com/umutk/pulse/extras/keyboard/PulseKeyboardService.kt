@@ -951,36 +951,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      */
     override fun voice() {
         finishWord("", false)
-        if (st.listening) { stopListening(); return }
-        val granted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (!granted || !android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { switchToVoiceKeyboard(); return }
+        if (!android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { switchToVoiceKeyboard(); return }
         val tag = if (lang.code == "tr") "tr-TR" else "en-US"
-        val rec = recognizer ?: android.speech.SpeechRecognizer.createSpeechRecognizer(this).also { recognizer = it }
-        rec.setRecognitionListener(object : android.speech.RecognitionListener {
-            override fun onReadyForSpeech(params: android.os.Bundle?) { st.listening = true }
-            override fun onBeginningOfSpeech() {}
-            override fun onRmsChanged(rmsdB: Float) {}
-            override fun onBufferReceived(buffer: ByteArray?) {}
-            override fun onEndOfSpeech() { st.listening = false }
-            override fun onError(error: Int) {
-                st.listening = false
-                // no match is not an error worth a message; a missing recognizer falls back to the voice keyboard once
-                if (error == android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == android.speech.SpeechRecognizer.ERROR_NO_MATCH || error == android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT) return
-                if (!voiceFallbackDone && error == android.speech.SpeechRecognizer.ERROR_CLIENT) { voiceFallbackDone = true; switchToVoiceKeyboard() }
-            }
-            override fun onResults(results: android.os.Bundle?) {
-                st.listening = false
-                val text = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
-                if (text.isNotBlank()) { currentInputConnection?.commitText(text.trim() + " ", 1); afterText() }
-            }
-            override fun onPartialResults(partial: android.os.Bundle?) {}
-            override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
-        })
-        val i = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, tag)
-            .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        runCatching { rec.startListening(i) }.onFailure { st.listening = false; switchToVoiceKeyboard() }
+        // the words come back to this keyboard; the phone's own listening screen opens over the field, the keyboard stays up
+        VoiceTypeBus.sink = { text -> currentInputConnection?.commitText(text, 1); afterText() }
+        VoiceTypeBus.pending.takeIf { it.isNotEmpty() }?.let { VoiceTypeBus.pending = ""; currentInputConnection?.commitText(it, 1); afterText() }
+        runCatching {
+            startActivity(android.content.Intent(this, com.umutk.pulse.extras.keyboard.VoiceTypeActivity::class.java)
+                .putExtra("tag", tag).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        }.onFailure { switchToVoiceKeyboard() }
     }
 
     private fun stopListening() {
