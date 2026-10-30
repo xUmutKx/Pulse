@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.Equalizer
 import androidx.compose.material.icons.outlined.Radio
 import androidx.compose.material.icons.outlined.SyncAlt
