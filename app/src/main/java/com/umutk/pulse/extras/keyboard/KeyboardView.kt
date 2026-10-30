@@ -1282,7 +1282,7 @@ private fun ShiftGlyph(state: Int, color: Color) {
 
 /** Quick auth: the accounts of Pulse Authenticator with their codes; a tap types the code. */
 @Composable
-private fun AuthPanel(th: KbTheme, st: KeyboardState, act: KbActions) {
+private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions) {
     Column(Modifier.fillMaxWidth().height(280.dp).background(th.bg).padding(8.dp)) {
         if (st.authCodes.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(tr("No accounts yet: add them in Pulse Authenticator", "Henüz hesap yok: Pulse Kimlik doğrulayıcı'da ekle"), color = th.sub, fontSize = 13.sp)
