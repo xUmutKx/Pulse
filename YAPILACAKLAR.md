@@ -1620,3 +1620,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Processes: CPU, Memory and Network columns wider by default (derlenmedi)
 - (sonraki derlemede) Processes: the name column is back to its width; CPU, Memory and Network narrower by default (derlenmedi)
 - (sonraki derlemede) Weather notification: one line every six hours, and at once when rain is likely in the next two hours; on by default, switch in the weather settings (derlenmedi)
+- (sonraki derlemede) Motion cues: a tap on the top strip collapses the quick panel with root (cmd statusbar collapse), and the accessibility action when there is no root (derlenmedi)
