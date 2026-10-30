@@ -1559,3 +1559,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.250 Charging power moved into Device > Battery (the card at the top of the battery page); the Extra apps row, the ⋮ entry and the Settings row are removed (derlenmedi)
 - 1.0.251 Radio inside the Music player takes the player's dark look (white text, lime accent); Music recap moved from Extra apps and the ⋮ menu to a button on the Music player top bar, reading the player's own play log (derlenmedi)
 - 1.0.252 Files share sheet: Relay and LocalSend are one entry ("Relay / LocalSend") that asks which one to open; they no longer appear twice in the app row (derlenmedi)
+- 1.0.253 Settings > Pages: a tap on a page name opens that page (the switch still decides the left menu) (derlenmedi)
