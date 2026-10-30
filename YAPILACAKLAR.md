@@ -1605,3 +1605,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Clock: the status bar is the same black as the screen (derlenmedi)
 - (sonraki derlemede) Office: the hide/show arrows of the title bar are a short pull bar; keyboard clipboard: a tapped text is pasted and also put on the phone clipboard again (derlenmedi)
 - (sonraki derlemede) Office: a tap anywhere on the screen (not on a button or text) shows or hides the top block (derlenmedi)
+- (sonraki derlemede) BlackOut: when the system UI shows (Circle to Search), the Google search colours are re-applied at once, so the grey flash is shorter (derlenmedi)
