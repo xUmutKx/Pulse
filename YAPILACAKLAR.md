@@ -1636,3 +1636,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Alarms: the selection bar's buttons are white on the dark look; with the background glow off the bar is plain black with a thin edge (derlenmedi)
 - (sonraki derlemede) Office: the AMOLED look stays black in the Office and PDF windows, the title bar colour setting no longer paints it red (derlenmedi)
 - (sonraki derlemede) Office: with the AMOLED look the title bar and the grey strip under it are black too (derlenmedi)
+- (sonraki derlemede) Office: with the AMOLED look or the black title bar setting, the app colours (File tab, toggled buttons, splash, Excel selection accent) go grey too, not only the bar (derlenmedi)
