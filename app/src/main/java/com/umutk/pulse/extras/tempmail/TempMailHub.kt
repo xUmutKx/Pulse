@@ -52,7 +52,11 @@ private object Mail {
     fun token(c: Context) = p(c).getString("token", "").orEmpty()
     fun save(c: Context, addr: String, pw: String, tok: String) { p(c).edit().putString("address", addr).putString("password", pw).putString("token", tok).apply() }
 
-    fun call(method: String, path: String, body: JSONObject?, token: String?): JSONObject? {
+    /** One request to mail.tm; no network, a refused request or a bad answer gives null instead of an exception that would close the app. */
+    fun call(method: String, path: String, body: JSONObject?, token: String?): JSONObject? =
+        try { request(method, path, body, token) } catch (e: Exception) { null }
+
+    private fun request(method: String, path: String, body: JSONObject?, token: String?): JSONObject? {
         val c = URL(BASE + path).openConnection() as HttpURLConnection
         try {
             c.requestMethod = method
@@ -108,7 +112,7 @@ fun TempMailHub(onBack: () -> Unit) {
         val tok = Mail.token(ctx)
         if (tok.isEmpty()) return
         busy = true
-        msgs = withContext(Dispatchers.IO) { Mail.inbox(tok) } ?: emptyList()
+        msgs = withContext(Dispatchers.IO) { runCatching { Mail.inbox(tok) }.getOrNull() } ?: emptyList()
         busy = false
     }
 

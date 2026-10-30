@@ -1640,3 +1640,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Office (Word, Excel, PDF...): the top bar no longer hides into a black pill; a thin grip stays under it, pulled down from its middle to open the bar (its top edge stays fixed), pushed up to close it (derlenmedi)
 - (sonraki derlemede) Office: the top bar is fully hidden again; only the thin line stays (no band), tapping or pulling it brings the bar back (derlenmedi)
 - (sonraki derlemede) Office: the top bar handle is a down-pointing chevron instead of the thin line (derlenmedi)
+- (sonraki derlemede) TempMail: no crash without network or on a bad answer; TempMail is no longer listed in Extra apps (derlenmedi)
