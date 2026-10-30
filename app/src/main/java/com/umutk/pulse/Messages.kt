@@ -319,7 +319,8 @@ fun MessagesScreen(back: () -> Unit) {
 
     Column(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).statusBarsPadding().navigationBarsPadding().imePadding()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            MessagesIcon("back") { goBack() }
+            // the arrow leads out of a thread, New message or Settings; the list has none (the system back still leaves)
+            if (t != null || newMode || settings) MessagesIcon("back") { goBack() }
             // a long press on the contact or number in a thread copies the number
             Box(Modifier.weight(1f)) {
                 Text(title, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1,

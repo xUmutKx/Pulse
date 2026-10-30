@@ -1569,3 +1569,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.260 Build fix: two Fluent colour pictures had capital letters in their file names (fc_extraCalculator, fc_extraBrowser), which Android does not allow. Renamed to lowercase and the lookups lowercase the key (derlenmedi)
 - 1.0.261 Build fix: the Explorer share sheet called sendIntent before it was declared (openNearby moved below it) (derlenmedi)
 - 1.0.262 Messages: a sent SMS is kept only when the radio really sent it (each part reports back; "Not sent" when refused), the + button icon is readable on the accent, and a thread opened from New message shows the contact name (derlenmedi)
+- 1.0.263 Messages list: the back arrow is gone from the top bar (thread, New message and Settings keep it); the add button icon is readable on the accent (derlenmedi)
