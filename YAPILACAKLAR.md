@@ -1607,3 +1607,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Office: a tap anywhere on the screen (not on a button or text) shows or hides the top block (derlenmedi)
 - (sonraki derlemede) BlackOut: when the system UI shows (Circle to Search), the Google search colours are re-applied at once, so the grey flash is shorter (derlenmedi)
 - (sonraki derlemede) Clock: Background glow off is pure AMOLED black (#000000), no tint (derlenmedi)
+- (sonraki derlemede) Keyboard gamepad: both sticks send the arrow keys (no letters); the sticks sit higher by default (derlenmedi)
