@@ -160,7 +160,6 @@ s.textContent = css;
 document.documentElement.appendChild(s);
 })();"""
 
-@Composable
 /** A private (incognito) tab: nothing it does is kept after it is closed or switched off. Only the open page lives on. */
 private fun wipePrivate() {
     runCatching {
@@ -169,6 +168,7 @@ private fun wipePrivate() {
     }
 }
 
+@Composable
 fun BrowserHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
     var priv by remember { mutableStateOf(BrowserPrefs.privateNow) }
