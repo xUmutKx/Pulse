@@ -85,7 +85,9 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     // App lock: the Windows 11 / One UI / ColorOS / classic packs have their own padlock; the tile with a padlock is for the vector looks
     val k = if (k0 == "applock" && T.id in setOf("win11", "oneui", "coloros", "win95", "xp", "win7")) "lock" else k0
     // Material / AMOLED use the flat line icon (mat_office.xml below); the other looks keep their own Office logo
-    if (k == "office" && T.id !in setOf("material", "amoled")) { OfSuiteLogo(size, modifier, tint); return }
+    // the Office suite logo is the colour picture: a line style in Windows 11 draws the thin outline like the other icons
+    val lineOffice = T.id == "win11" && !T.material && (LocalIconStyleOverride.current ?: IconStyle.of(IconCat.MENU)) == "line"
+    if (k == "office" && T.id !in setOf("material", "amoled") && !lineOffice) { OfSuiteLogo(size, modifier, tint); return }
     if (k == "applock") { com.umutk.pulse.applock.AppLockIcon(tint, size, modifier); return }
     // Windows 11: every icon group has its own style (IconStyle): original, Fluent colour or line
     val cat = if (k.startsWith("tool_")) IconCat.TOOLS else if (k.startsWith("extra")) IconCat.APPS else IconCat.MENU
