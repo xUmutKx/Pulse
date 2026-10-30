@@ -1,6 +1,7 @@
 package com.umutk.pulse
 
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import android.app.Activity
 import androidx.compose.ui.graphics.toArgb
@@ -507,6 +508,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     // the top block is a drop-down: pull the thin grip under it down from its middle to open it, push it up to close it
     var pull by remember { mutableStateOf(1f) }
     var blockH by remember { mutableStateOf(0) }
+    val gripDrag = androidx.compose.foundation.gestures.rememberDraggableState { d -> pull = (pull + d / blockH.coerceAtLeast(1)).coerceIn(0f, 1f) }
     val openP = if (autoHid) 0f else pull
     val hid = openP < .5f
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
@@ -550,11 +552,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
         // closed: the bar is gone and only this line stays where the arrow was
         if (openP == 0f) Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars))
         Box(Modifier.fillMaxWidth().height(14.dp).background(if (openP == 0f) Color.Transparent else below)
-            .pointerInput(Unit) {
-                androidx.compose.foundation.gestures.detectVerticalDragGestures(onDragEnd = { pull = if (pull > .5f) 1f else 0f }) { change, drag ->
-                    change.consume(); pull = (pull + drag / blockH.coerceAtLeast(1)).coerceIn(0f, 1f)
-                }
-            }
+            .draggable(orientation = androidx.compose.foundation.gestures.Orientation.Vertical, state = gripDrag, onDragStopped = { pull = if (pull > .5f) 1f else 0f })
             .clickable { pull = if (pull > .5f) 0f else 1f }, contentAlignment = Alignment.Center) {
             OfChevron(ink.copy(alpha = .6f))
         }
