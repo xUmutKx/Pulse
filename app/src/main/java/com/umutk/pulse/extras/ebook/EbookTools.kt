@@ -46,6 +46,14 @@ object EbookPrefs {
     fun wood(c: Context): Boolean = p(c).getBoolean("wood", true)
     fun setWood(c: Context, on: Boolean) { p(c).edit().putBoolean("wood", on).apply() }
 
+    /** The dark themes use pure black. */
+    fun amoled(c: Context): Boolean = p(c).getBoolean("amoled", false)
+    fun setAmoled(c: Context, on: Boolean) { p(c).edit().putBoolean("amoled", on).apply() }
+
+    /** The reader picks the day or the night theme by the time of day when the book opens. */
+    fun autoTheme(c: Context): Boolean = p(c).getBoolean("autoTheme", false)
+    fun setAutoTheme(c: Context, on: Boolean) { p(c).edit().putBoolean("autoTheme", on).apply() }
+
     /** Two rows for the reader's bottom bar. */
     fun double(c: Context): Boolean = p(c).getBoolean("double", false)
     fun setDouble(c: Context, on: Boolean) { p(c).edit().putBoolean("double", on).apply() }
