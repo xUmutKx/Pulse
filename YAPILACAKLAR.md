@@ -1592,3 +1592,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Weather detail cards: an odd number of tiles gets the dew point, so the grid is even (derlenmedi)
 - (sonraki derlemede) Clock: its launcher switch now reads the real enabled state (before, the default state looked on); the ⋮ menu lists Clock only while its launcher icon is on, once (derlenmedi)
 - (sonraki derlemede) Clock: the purple glow at the top of the dark screens has a switch in the clock settings (Background glow); off = plain black (derlenmedi)
+- (sonraki derlemede) Settings > Extra apps: the Good Lock row uses the Fluent grid icon in Windows 11 (derlenmedi)
