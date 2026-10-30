@@ -106,6 +106,7 @@ fun RadioScreen(back: () -> Unit, ink: Color? = null, sub: Color? = null, accent
     var q by remember { mutableStateOf("") }
     var country by remember { mutableStateOf(java.util.Locale.getDefault().country.uppercase().ifBlank { "" }) }
     var showFav by remember { mutableStateOf(false) }
+    var skin by remember { mutableStateOf(ctx.getSharedPreferences("radio", android.content.Context.MODE_PRIVATE).getInt("skin", 0)) }
     var list by remember { mutableStateOf<List<Station>>(emptyList()) }
     var err by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
@@ -122,12 +123,15 @@ fun RadioScreen(back: () -> Unit, ink: Color? = null, sub: Color? = null, accent
             Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", tx, 20.dp) }
             Text(tr("Radio", "Radyo"), color = tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         }
+        // the boombox picture (nostalgic or modern) above the search, when a skin is chosen
+        if (skin != 0) RadioSkinHeader(skin, st.isPlaying && playing)
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             PField(q, { q = it }, tr("Search a station", "İstasyon ara"), Modifier.weight(1f), onDone = { showFav = false; go++ })
             Box(Modifier.size(44.dp).clickable { showFav = false; go++ }, contentAlignment = Alignment.Center) { PIcon("search", tx, 22.dp) }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip(showFav, tr("Favourites", "Favoriler")) { showFav = !showFav }
+            RadioSkins.names.forEachIndexed { i, n -> PChip(skin == i, n) { skin = i; ctx.getSharedPreferences("radio", android.content.Context.MODE_PRIVATE).edit().putInt("skin", i).apply() } }
             listOf("" to tr("World", "Dünya"), "TR" to "Türkiye", "US" to "USA", "GB" to "UK", "DE" to "Deutschland", "FR" to "France", "IT" to "Italia", "ES" to "España", "NL" to "Nederland", "JP" to "日本").forEach { (c, n) -> PChip(!showFav && country == c, n) { showFav = false; country = c } }
         }
         if (err.isNotEmpty() && !showFav) Text(err, color = androidx.compose.ui.graphics.Color(0xFFE5484D), fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
