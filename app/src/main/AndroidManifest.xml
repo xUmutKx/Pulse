@@ -82,6 +82,7 @@
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="audio/*" /></intent>
     </queries>
     <application
+        android:name=".PulseApp"
         android:allowBackup="false"
         android:usesCleartextTraffic="true"
         android:icon="@mipmap/ic_launcher"

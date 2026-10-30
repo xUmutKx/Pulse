@@ -102,7 +102,9 @@ class MonitorService : Service() {
             if (Opt.notifOn) getSystemService(NotificationManager::class.java).notify(ID, build(text))
             alerts()
             if (!Opt.ovOn && !Opt.notifOn && Opt.alertTemp == 0 && Opt.alertBat == 0 && Opt.alertRam == 0) { stopSelf(); return }
-            delay(maxOf(1000L, Sampler.interval))
+            // the screen is off: nothing is looked at, so the readings and the alert checks come every 5 s instead of every second
+            val off = !getSystemService(android.os.PowerManager::class.java).isInteractive
+            delay(maxOf(if (off) 5000L else 1000L, Sampler.interval))
         }
     }
 
