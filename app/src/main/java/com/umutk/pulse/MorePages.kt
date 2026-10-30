@@ -179,7 +179,7 @@ fun SecurityPage() {
                     Triple("users", tr("Authenticator", "Kimlik doğrulayıcı"), { openTool("authenticator") }),
                     Triple("history", tr("App history", "Uygulama geçmişi"), { com.umutk.pulse.widgets.WidgetOpen.page = "history" }),
                 ).forEach { (icon, label, go) ->
-                    Column(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(T.bg).clickable { go() }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(Modifier.weight(1f).clickable { go() }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         PIcon(icon, T.accent, 26.dp)
                         Text(label, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
                     }
