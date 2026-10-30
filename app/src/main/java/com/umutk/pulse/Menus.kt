@@ -15,6 +15,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
 import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Equalizer
 import androidx.compose.material.icons.outlined.Radio
 import androidx.compose.material.icons.outlined.SyncAlt
@@ -194,6 +195,7 @@ object AppPlace {
         App("PaintLauncher", "Paint", "Paint", "palette", Icons.Outlined.Brush) { c, _ -> launchExtra(c, TOOL, "paint") },
         App("CalculatorLauncher", "Calculator", "Hesap makinesi", "calc", Icons.Outlined.Calculate) { c, _ -> launchExtra(c, TOOL, "calculator") },
         App("ClockLauncher", "Clock", "Saat", "clock", Icons.Outlined.AccessTime) { c, _ -> launchExtra(c, TOOL, "clock") },
+        App("EbookLauncher", "Books", "Kitaplar", "book", Icons.Outlined.MenuBook) { c, _ -> launchExtra(c, TOOL, "ebook") },
         App("ArtCraftLauncher", "ArtCraft", "ArtCraft", "palette", Icons.Outlined.Palette) { c, _ -> launchExtra(c, "com.umutk.pulse.ArtCraftActivity") },
         App("BrowserLauncher", "Browser", "Tarayıcı", "globe", Icons.Outlined.Public) { c, _ -> launchExtra(c, TOOL, "browser") },
         App("OfficeLauncher", "Office", "Office", "document", Icons.Outlined.Description) { c, _ -> launchExtra(c, TOOL, "office") },

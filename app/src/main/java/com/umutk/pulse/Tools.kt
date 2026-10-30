@@ -118,6 +118,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "voice" -> com.umutk.pulse.extras.voice.VoiceHub(back)
         id == "notes" -> com.umutk.pulse.extras.notes.NotesHub(back)
         id == "tempmail" -> com.umutk.pulse.extras.tempmail.TempMailHub(back)
+        id == "ebook" -> com.umutk.pulse.extras.ebook.EbookHub(back)
         id == "weathermap" -> com.umutk.pulse.extras.weathermap.WeatherMapHub(back)
         id == "weather" -> com.umutk.pulse.extras.weather.WeatherHub(back)
         id == "paint" -> com.umutk.pulse.extras.paint.PaintHub(back)
