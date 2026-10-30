@@ -33,6 +33,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.Color
 import com.umutk.pulse.Look
 import com.umutk.pulse.PCard
 import com.umutk.pulse.PChip
@@ -95,8 +96,10 @@ private fun saveFavs(c: Context, l: List<Station>) {
  * with the media notification), and keep favourites. Nothing is shown when the directory cannot be reached, with the reason.
  */
 @Composable
-fun RadioScreen(back: () -> Unit) {
+fun RadioScreen(back: () -> Unit, ink: Color? = null, sub: Color? = null, accent: Color? = null) {
     val ctx = LocalContext.current
+    // the colours of the screen it is shown in (the music player's own look inside it), else the app's theme
+    val tx = ink ?: T.text; val sb = sub ?: T.sub; val ac = accent ?: Look.accent
     BackHandler { back() }
     val engine = remember { MusicPlayerEngine.get(ctx) }
     val st by engine.state.collectAsState()
@@ -116,33 +119,33 @@ fun RadioScreen(back: () -> Unit) {
     val playing = st.current?.path?.startsWith("http") == true
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 20.dp) }
-            Text(tr("Radio", "Radyo"), color = T.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            Box(Modifier.size(40.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", tx, 20.dp) }
+            Text(tr("Radio", "Radyo"), color = tx, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             PField(q, { q = it }, tr("Search a station", "İstasyon ara"), Modifier.weight(1f), onDone = { showFav = false; go++ })
-            Box(Modifier.size(44.dp).clickable { showFav = false; go++ }, contentAlignment = Alignment.Center) { PIcon("search", T.text, 22.dp) }
+            Box(Modifier.size(44.dp).clickable { showFav = false; go++ }, contentAlignment = Alignment.Center) { PIcon("search", tx, 22.dp) }
         }
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip(showFav, tr("Favourites", "Favoriler")) { showFav = !showFav }
             listOf("" to tr("World", "Dünya"), "TR" to "Türkiye", "US" to "USA", "GB" to "UK", "DE" to "Deutschland", "FR" to "France", "IT" to "Italia", "ES" to "España", "NL" to "Nederland", "JP" to "日本").forEach { (c, n) -> PChip(!showFav && country == c, n) { showFav = false; country = c } }
         }
         if (err.isNotEmpty() && !showFav) Text(err, color = androidx.compose.ui.graphics.Color(0xFFE5484D), fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
-        if (busy && !showFav) Text("…", color = T.sub, fontSize = 16.sp, modifier = Modifier.padding(8.dp))
+        if (busy && !showFav) Text("…", color = sb, fontSize = 16.sp, modifier = Modifier.padding(8.dp))
         val shown = if (showFav) fav else list
         LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-            if (showFav && fav.isEmpty()) item { Text(tr("No favourite yet.", "Henüz favori yok."), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(12.dp)) }
+            if (showFav && fav.isEmpty()) item { Text(tr("No favourite yet.", "Henüz favori yok."), color = sb, fontSize = 14.sp, modifier = Modifier.padding(12.dp)) }
             items(shown, key = { it.id.ifBlank { it.url } }) { s ->
                 val on = st.current?.path == s.url
                 val isFav = fav.any { it.id == s.id }
                 Row(Modifier.fillMaxWidth().clickable { engine.playQueue(listOf(Track(s.url, s.name, artist = listOf(s.country, s.tags).filter { it.isNotBlank() }.joinToString(" · "))), 0) }.padding(vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon(if (on && st.isPlaying) "pause" else "play", if (on) Look.accent else T.sub, 22.dp)
+                    PIcon(if (on && st.isPlaying) "pause" else "play", if (on) ac else sb, 22.dp)
                     Column(Modifier.weight(1f).padding(horizontal = 10.dp)) {
-                        Text(s.name, color = if (on) Look.accent else T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(listOf(s.country, s.tags, if (s.bitrate > 0) "${s.bitrate} kbps" else "").filter { it.isNotBlank() }.joinToString(" · "), color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(s.name, color = if (on) ac else tx, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(listOf(s.country, s.tags, if (s.bitrate > 0) "${s.bitrate} kbps" else "").filter { it.isNotBlank() }.joinToString(" · "), color = sb, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                     Box(Modifier.size(40.dp).clickable { fav = if (isFav) fav.filter { it.id != s.id } else fav + s; saveFavs(ctx, fav) }, contentAlignment = Alignment.Center) {
-                        PIcon("heart", if (isFav) Look.accent else T.sub, 20.dp)
+                        PIcon("heart", if (isFav) ac else sb, 20.dp)
                     }
                 }
             }
@@ -150,10 +153,10 @@ fun RadioScreen(back: () -> Unit) {
         if (playing) PCard {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(st.current?.title ?: "", color = T.text, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(tr("Radio", "Radyo"), color = T.sub, fontSize = 12.sp)
+                    Text(st.current?.title ?: "", color = tx, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(tr("Radio", "Radyo"), color = sb, fontSize = 12.sp)
                 }
-                Box(Modifier.size(44.dp).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) { PIcon(if (st.isPlaying) "pause" else "play", T.text, 26.dp) }
+                Box(Modifier.size(44.dp).clickable { engine.togglePlayPause() }, contentAlignment = Alignment.Center) { PIcon(if (st.isPlaying) "pause" else "play", tx, 26.dp) }
             }
         }
     }

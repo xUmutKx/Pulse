@@ -1557,3 +1557,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.248 Fluent colour pictures (gradient, rendered in the app) for the rest of the flat Fluent icons: the tools, the Extra apps and the pages (fc_ pictures for relay, clock, radio, recap, chargewatts, browser, mediatools, speedtest, buds, calculator, pages); the Apps settings tool rows use them (derlenmedi)
 - 1.0.249 Radio only from the Music player (a radio button on its top bar); removed from Extra apps, the ⋮ menu and Settings > Extra apps (derlenmedi)
 - 1.0.250 Charging power moved into Device > Battery (the card at the top of the battery page); the Extra apps row, the ⋮ entry and the Settings row are removed (derlenmedi)
+- 1.0.251 Radio inside the Music player takes the player's dark look (white text, lime accent); Music recap moved from Extra apps and the ⋮ menu to a button on the Music player top bar, reading the player's own play log (derlenmedi)
