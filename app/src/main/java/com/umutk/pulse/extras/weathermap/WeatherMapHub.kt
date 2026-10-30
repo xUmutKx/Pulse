@@ -317,6 +317,27 @@ private fun unitOf(layer: MapLayer): String = when (layer) {
     else -> ""
 }
 
+/** The outline of an aircraft pointing north, in units of its half length (x to the right, y down). */
+private val PLANE_SHAPE = listOf(
+    0f to -1f, 0.12f to -0.3f, 1f to 0.15f, 1f to 0.35f, 0.12f to 0.2f, 0.1f to 0.8f, 0.35f to 1f,
+    0f to 0.9f, -0.35f to 1f, -0.1f to 0.8f, -0.12f to 0.2f, -1f to 0.35f, -1f to 0.15f, -0.12f to -0.3f,
+)
+
+/** An aircraft icon at its place, turned to its heading (degrees clockwise from north). */
+private fun DrawScope.drawPlane(c: Offset, headingDeg: Double, half: Float, color: Color) {
+    val r = Math.toRadians(headingDeg)
+    val sn = sin(r).toFloat()
+    val cs = cos(r).toFloat()
+    val path = Path()
+    PLANE_SHAPE.forEachIndexed { i, (x, y) ->
+        val px = c.x + (x * cs - y * sn) * half
+        val py = c.y + (x * sn + y * cs) * half
+        if (i == 0) path.moveTo(px, py) else path.lineTo(px, py)
+    }
+    path.close()
+    drawPath(path, color)
+}
+
 /** One tile of a picture layer, drawn at its place on the screen. */
 private fun DrawScope.drawTile(img: ImageBitmap, z: Int, tx: Int, ty: Int, p: MapPos, ppu: Double, alpha: Float) {
     val n = (1 shl z).toDouble()
@@ -354,12 +375,14 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
         saved.forEach { (l, t, s) -> grids[l] = s; stamps[l] = t }
     }
 
-    // the map opens on the chosen place, zoomed in; without a place it shows the world
+    // the map opens flat on the whole world, the width of the screen; the place chip zooms to the chosen place
     fun place(sz: Size) {
         if (placed || sz.width <= 0f) return
         placed = true
-        val a = (at ?: WeatherStore.savedPlace(ctx))?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }
-        pos = if (a != null) MapPos(wx(a.lon), wy(a.lat), 5.0) else MapPos(0.5, 0.5, 1.0)
+        pos = MapPos(0.5, 0.5, (ln(sz.width / (TILE * density)) / ln(2.0)).coerceAtLeast(1.0))
+    }
+    val homeView = remember(at) {
+        (at ?: WeatherStore.savedPlace(ctx))?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }?.let { MapPos(wx(it.lon), wy(it.lat), 5.0) }
     }
 
     // the live layers: aircraft every minute, the radar frame every five minutes
@@ -488,9 +511,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
             if (layer == MapLayer.PLANE) planes?.forEach { pl ->
                 val c = screenOf(pl.lat, pl.lon)
                 if (c.x < -10f || c.x > size.width + 10f || c.y < -10f || c.y > size.height + 10f) return@forEach
-                drawCircle(Color(0xFFFFC107), radius = 2.5.dp.toPx(), center = c)
-                val r = Math.toRadians(pl.track)
-                drawLine(Color(0xFFFFC107), c, Offset(c.x + (kotlin.math.sin(r) * 6.dp.toPx()).toFloat(), c.y - (kotlin.math.cos(r) * 6.dp.toPx()).toFloat()), strokeWidth = 1.dp.toPx())
+                drawPlane(c, pl.track, 5.dp.toPx(), Color(0xFFFFC107))
             }
         }
 
@@ -502,6 +523,10 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
                 Box(Modifier.size(40.dp).background(Color.Black.copy(alpha = .6f), CircleShape).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                homeView?.let { home ->
+                    Text(tr("My place", "Konumum"), color = Color.White, fontSize = 13.sp, maxLines = 1,
+                        modifier = Modifier.background(Color.Black.copy(alpha = .6f), RoundedCornerShape(50)).clickable { pos = home; info = null }.padding(horizontal = 12.dp, vertical = 6.dp))
+                }
                 MapLayer.entries.forEach { l ->
                     val on = l == layer
                     Text(tr(l.en, l.trName), color = if (on) Color.Black else Color.White, fontSize = 13.sp, maxLines = 1,

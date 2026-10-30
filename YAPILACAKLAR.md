@@ -1685,3 +1685,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Weather map: aircraft are tappable (callsign, country, height, speed, heading); the picked value shows for the grid layers (derlenmedi)
 - Weather map: the last values stay on the screen with their time when a service fails; the values are kept on the phone (derlenmedi)
 - Weather map: wind, waves and clouds have a colour scale with its unit at the right edge; wind and wave arrows point where the air or water goes (1.0.280 (derlendi))
+- Weather map: aircraft are drawn as aircraft icons turned to their heading (derlenmedi)
+- Weather map: opens flat on the whole world; "Konumum" chip zooms to the chosen place (derlenmedi)
+- Weather settings: the OpenWeatherMap source is labelled "OpenWeatherMap" without "(your key)" (derlenmedi)
