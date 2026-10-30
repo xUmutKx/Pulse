@@ -135,11 +135,7 @@ fun ProcessesPage() {
                 HeadCell("${s.cpu}%", "CPU", "cpu", sort == "cpu", heatBg(s.cpu / 100f)) { sort = "cpu" }
                 HeadCell("$memPct%", "Memory", "mem", sort == "mem", heatBg(memPct / 100f)) { sort = "mem" }
                 HeadCell(rate((s.down + s.up).toFloat()), "Network", "net", sort == "net", resColor("net").copy(alpha = .25f)) {
-                    // a tap sorts, a double tap opens Network usage
                     sort = "net"
-                    val now = System.currentTimeMillis()
-                    if (now - NetTap.last < 400) openTool("netusage")
-                    NetTap.last = now
                 }
                 HeadCell("$diskPct%", "Storage", "disk", sort == "disk", resColor("disk").copy(alpha = .25f)) { sort = "disk" }
                 HeadCell("", "Status", "status", false, Color.Transparent) {}

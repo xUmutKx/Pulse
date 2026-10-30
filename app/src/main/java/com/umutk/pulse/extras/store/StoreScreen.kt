@@ -424,7 +424,6 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Calculator", "Hesap makinesi"), tr("Standard, scientific, graphing (also 3D), converter", "Standart, bilimsel, grafik (3D dahil), dönüştürücü"), "calc", "app:CalculatorLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "calculator") },
         BuiltinRow(tr("Keyboard", "Klavye"), tr("Pulse keyboard: themes, swipe typing, autocorrect", "Pulse klavyesi: temalar, kaydırarak yazma, otomatik düzeltme"), "keyboard", "app:KeyboardLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "keyboard") },
         BuiltinRow(tr("Clock", "Saat"), tr("Alarms, world clock, stopwatch, timer", "Alarm, dünya saati, kronometre, zamanlayıcı"), "timer", "tool:clock") { openTool("clock") },
-        BuiltinRow(tr("Speed test", "Hız testi"), tr("Internet speed: ping, download, upload, provider", "İnternet hızı: ping, indirme, yükleme, sağlayıcı"), "speed", "tool:speedtest") { openTool("speedtest") },
         BuiltinRow(tr("Buds manager", "Buds yöneticisi"), tr("Galaxy Buds: stop the music and noise control when taken out", "Galaxy Buds: çıkarınca müzik ve gürültü denetimi dursun"), "sensors", "tool:buds") { openTool("buds") },
         BuiltinRow("Paint", tr("Draw and edit pictures", "Resim çiz ve düzenle"), "palette", "app:PaintLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "paint") },
         BuiltinRow("BlackOut", tr("Greys to true black on AMOLED: LSPosed module, colour rules, dropper, dark pages", "AMOLED'de griler gerçek siyah: LSPosed modülü, renk kuralları, damlalık, koyu sayfalar"), "shield", "app:BlackOutLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "blackout") },
@@ -441,7 +440,6 @@ private fun BuiltinRows() {
         BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
         BuiltinRow(tr("Authenticator", "Kimlik doğrulayıcı"), tr("Two-factor codes", "İki adımlı doğrulama kodları"), "users", "tool:authenticator") { openTool("authenticator") },
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
-        BuiltinRow(tr("Network usage", "Ağ kullanımı"), tr("Wi-Fi and mobile data, app by app", "Wi-Fi ve mobil veri, uygulama uygulama"), "speed", "tool:netusage") { openTool("netusage") },
     )
     // an app with its own launcher icon is listed on its own; the rest follow the per-row eye
     // a tool switched off in Settings > Extra apps is not listed here either
