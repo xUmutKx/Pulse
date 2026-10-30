@@ -41,7 +41,7 @@ fun DeviceModule() {
         }
         Box(Modifier.weight(1f)) {
             when (sub) {
-                "overview" -> DashboardPage()
+                "overview" -> DashboardPage(onOpen = { sub = it })
                 "system" -> LiveSections("System", 5000) { Hw.system(it) }
                 "cpu" -> CoresPage()
                 "memory" -> LiveSections("Memory", 2000) { Hw.memory(it) }
