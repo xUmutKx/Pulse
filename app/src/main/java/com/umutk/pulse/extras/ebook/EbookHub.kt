@@ -56,6 +56,7 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
+import java.io.File
 import kotlinx.coroutines.withContext
 
 /*
@@ -166,8 +167,17 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
         }
         if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
         if (shelf.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(tr("No books yet", "Henüz kitap yok"), color = T.sub, fontSize = 14.sp)
+                Spacer(Modifier.height(12.dp))
+                com.umutk.pulse.PButton(tr("Find books on this phone", "Telefondaki kitapları bul"), compact = true) {
+                    // the folders books usually live in: Books and Download on the phone's storage
+                    val found = scanBooks()
+                    shelf = found.also { shelfSave(ctx, it) }
+                    note = if (found.isEmpty()) tr("No EPUB, TXT or PDF in Books or Download", "Books ve Download klasöründe EPUB, TXT veya PDF yok") else ""
+                }
+                Spacer(Modifier.height(8.dp))
+                com.umutk.pulse.PButton(tr("Add a book", "Kitap ekle"), compact = true) { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }
             }
         } else {
             LazyVerticalGrid(columns = GridCells.Adaptive(96.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
@@ -183,6 +193,16 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** The books found in the phone's Books and Download folders (by name; a book is read when it is opened). */
+private fun scanBooks(): List<Book> {
+    val root = android.os.Environment.getExternalStorageDirectory()
+    return listOf(File(root, "Books"), File(root, "Download")).flatMap { dir ->
+        dir.listFiles()?.filter { it.isFile && Ebook.isBook(it.name) }?.sortedBy { it.name.lowercase() }?.map { f ->
+            Book(Uri.fromFile(f).toString(), f.name.substringBeforeLast('.'), "", f.name.endsWith(".pdf", true), emptyList())
+        }.orEmpty()
     }
 }
 
