@@ -132,6 +132,36 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun clipClear() { st.clipItems = ClipStore.clear(this) }
 
     /** A kept item into the field: a text is typed, a picture is handed over as content when the field takes pictures. */
+    override fun authPick(code: String) {
+        currentInputConnection?.commitText(code, 1)
+        st.panel = "keys"
+        afterText()
+    }
+
+    /** Quick auth: the fingerprint first when the setting asks for it, then the codes of the accounts (computed now). */
+    private fun openAuth() {
+        if (!KeyboardPrefs.authLock || android.os.Build.VERSION.SDK_INT < 28) { showAuth(); return }
+        val cancel = android.os.CancellationSignal()
+        val prompt = android.hardware.biometrics.BiometricPrompt.Builder(this)
+            .setTitle(com.umutk.pulse.tr("Quick auth", "Hızlı kimlik doğrulama"))
+            .setDescription(com.umutk.pulse.tr("Confirm it is you to see the codes", "Kodları görmek için kimliğini doğrula"))
+            .setNegativeButton(com.umutk.pulse.tr("Cancel", "İptal"), mainExecutor) { _, _ -> cancel.cancel() }
+            .build()
+        prompt.authenticate(cancel, mainExecutor, object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) { showAuth() }
+        })
+    }
+
+    private fun showAuth() {
+        val now = System.currentTimeMillis() / 1000L
+        val accounts = runCatching { com.umutk.pulse.features.AuthStore.load(this) }.getOrDefault(emptyList())
+        st.authCodes = accounts.map { a ->
+            val name = if (a.issuer.isBlank()) a.name else "${a.issuer} · ${a.name}"
+            name to runCatching { com.umutk.pulse.features.Totp.code(com.umutk.pulse.features.Totp.base32Decode(a.secret), now, a.digits, a.period, a.algo) }.getOrDefault("------")
+        }
+        st.panel = "auth"
+    }
+
     override fun pasteClip(item: ClipItem) {
         val c = currentInputConnection ?: return
         finishWord("", false)
@@ -817,6 +847,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         when (id) {
             "menu" -> st.panel = if (st.panel == "menu") "keys" else "menu"
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
+            "auth" -> if (st.panel == "auth") st.panel = "keys" else openAuth()
             "gamepad" -> st.panel = if (st.panel == "gamepad") "keys" else "gamepad"
             "lang" -> lang()
             // the e-mail key: "@" and the chosen domain go in at the cursor, nothing before it is touched

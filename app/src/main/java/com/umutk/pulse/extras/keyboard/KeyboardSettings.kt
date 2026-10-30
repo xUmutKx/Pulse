@@ -234,6 +234,7 @@ fun KeyboardSettings(back: () -> Unit) {
 
         // typing
         KbSection("edit", tr("Typing", "Yazım")) {
+            Switch(tr("Quick auth: fingerprint first", "Hızlı kimlik: önce parmak izi"), tr("Off: the codes show at once", "Kapalı: kodlar hemen görünür"), KeyboardPrefs.authLock) { KeyboardPrefs.authLock = it; save() }
             Switch(tr("Suggestions", "Öneriler"), tr("Three words above the keys", "Tuşların üstünde üç kelime"), KeyboardPrefs.suggestions) { KeyboardPrefs.suggestions = it; save() }
             Switch(tr("Autocorrect", "Otomatik düzeltme"), tr("Words are corrected to the middle suggestion as you type", "Yazdıkça kelime ortadaki öneriye düzeltilir"), KeyboardPrefs.autocorrect) { KeyboardPrefs.autocorrect = it; save() }
             Text("${tr("Strength", "Güç")}: " + listOf(tr("Modest", "Ölçülü"), tr("Normal", "Normal"), tr("Aggressive", "Sert"), tr("Very aggressive", "Çok sert"))[KeyboardPrefs.autoLevel.coerceIn(0, 3)], color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
