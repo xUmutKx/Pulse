@@ -105,6 +105,69 @@ fun RecommendationHome(
     }
 }
 
+/** A mood mix is shown by the album most of its songs come from, like an album suggestion; the other rows keep their names. */
+private fun rowTitle(s: PickSection): String {
+    if (s.pick !is Pick.Mood) return title(s.pick)
+    val album = s.tracks.mapNotNull { it.album?.takeIf { a -> a.isNotBlank() } }.groupingBy { it }.eachCount().maxByOrNull { it.value }
+    return if (album != null && album.value >= 2) album.key else title(s.pick)
+}
+
+private fun title(p: Pick): String = when (p) {
+    is Pick.Artist -> tr("Top artist: ${p.name}", "En çok dinlenen: ${p.name}")
+    is Pick.Playlist -> tr("Playlist: ${p.name}", "Çalma listesi: ${p.name}")
+    is Pick.Time -> when (p.part) {
+        0 -> tr("Morning picks", "Sabah seçimleri")
+        1 -> tr("Afternoon picks", "Öğleden sonra seçimleri")
+        2 -> tr("Evening picks", "Akşam seçimleri")
+        else -> tr("Night picks", "Gece seçimleri")
+    }
+    is Pick.Energy -> if (p.high) tr("High energy", "Yüksek enerji") else tr("Calm", "Sakin")
+    is Pick.Mood -> when (p.mood) {
+        "energetic" -> tr("Energetic mix", "Enerjik mix")
+        "chill" -> tr("Chill mix", "Sakin mix")
+        "focus" -> tr("Focus mix", "Odak mix")
+        "happy" -> tr("Happy mix", "Neşeli mix")
+        "sad" -> tr("Sad mix", "Hüzünlü mix")
+        "calm" -> tr("Calm mix", "Dingin mix")
+        "nostalgic" -> tr("Nostalgic mix", "Nostaljik mix")
+        "romantic" -> tr("Romantic mix", "Romantik mix")
+        "angry" -> tr("Angry mix", "Öfkeli mix")
+        "dreamy" -> tr("Dreamy mix", "Hayalci mix")
+        else -> tr("Daily mix", "Günlük mix")
+    }
+}
+
+@Composable
+private fun Tile(
+    t: Track,
+    playing: Boolean,
+    ink: Color,
+    dim: Color,
+    tile: Color,
+    accent: Color,
+    shape: androidx.compose.ui.graphics.Shape,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val art = rememberTrackArt(t)
+    Column(modifier.clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(shape).background(tile), contentAlignment = Alignment.Center) {
+            if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            else PIcon("note", if (playing) accent else dim, 28.dp)
+        }
+        androidx.compose.material3.Text(
+            t.displayName(), color = if (playing) accent else ink, fontSize = 13.sp, maxLines = 1,
+            overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+        )
+    }
+}
+
+
+/** The moods the mix maker offers; the keys are the ones [Recommendations.moodsOf] returns. */
+private val MIX_MOODS = listOf("energetic" to ("Energetic" to "Enerjik"), "chill" to ("Chill" to "Sakin"), "focus" to ("Focus" to "Odak"), "happy" to ("Happy" to "Neşeli"), "sad" to ("Sad" to "Hüzünlü"), "calm" to ("Calm" to "Dingin"), "nostalgic" to ("Nostalgic" to "Nostaljik"), "romantic" to ("Romantic" to "Romantik"), "angry" to ("Angry" to "Öfkeli"), "dreamy" to ("Dreamy" to "Hayalci"))
+private val MIX_SOURCES = listOf("all" to ("Everything" to "Hepsi"), "fav" to ("Favourites" to "Favoriler"), "rated" to ("Best rated" to "En yüksek puanlı"), "top" to ("Most played" to "En çok çalınan"), "fresh" to ("Not heard lately" to "Uzun süredir dinlenmeyen"))
+
+
 /** The mix maker: a compact DJ-set panel: moods, sources and length in one card, and one round play button to make the mix. */
 @Composable
 private fun MixMaker(library: List<Track>, ink: Color, dim: Color, tile: Color, accent: Color, onMake: (List<Track>) -> Unit) {
