@@ -38,7 +38,8 @@ object KeyboardBackup {
             ZipOutputStream(raw.buffered()).use { z ->
                 z.putNextEntry(ZipEntry(PREFS)); z.write(prefsJson(c).toByteArray()); z.closeEntry(); n++
                 files.forEach { f -> File(c.filesDir, f).takeIf { it.exists() }?.let { z.putNextEntry(ZipEntry(f)); it.inputStream().use { i -> i.copyTo(z) }; z.closeEntry(); n++ } }
-                File(c.filesDir, "clips").listFiles()?.forEach { p -> z.putNextEntry(ZipEntry("clips/" + p.name)); p.inputStream().use { i -> i.copyTo(z) }; z.closeEntry(); n++ }
+                // the clipboard pictures only when the setting asks for them; the texts are in the backup anyway
+                if (KeyboardPrefs.backupPictures) File(c.filesDir, "clips").listFiles()?.forEach { p -> z.putNextEntry(ZipEntry("clips/" + p.name)); p.inputStream().use { i -> i.copyTo(z) }; z.closeEntry(); n++ }
             }
         }
         return n
