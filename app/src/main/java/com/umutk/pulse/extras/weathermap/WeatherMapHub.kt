@@ -66,6 +66,7 @@ private const val STEP = 10               // degrees between sample points of th
 enum class MapLayer(val en: String, val trName: String) {
     TEMP("Temperature", "Sıcaklık"), RAIN("Precipitation", "Yağış"), WIND("Wind", "Rüzgar"),
     CLOUD("Clouds", "Bulut"), WAVE("Waves", "Dalga"), PLANE("Aircraft (live)", "Uçaklar (canlı)"),
+    RADAR("Rain radar (live)", "Yağış radarı (canlı)"), SATELLITE("Satellite (yesterday)", "Uydu (dün)"),
 }
 
 /** One sample point of a weather layer: where it is and its value (null when the service has none there). */
@@ -119,7 +120,7 @@ private object Grid {
                     MapLayer.CLOUD -> cur.optDouble("cloud_cover", Double.NaN).takeIf { !it.isNaN() }
                     MapLayer.WIND -> cur.optDouble("wind_speed_10m", Double.NaN).takeIf { !it.isNaN() }
                     MapLayer.WAVE -> cur.optDouble("wave_height", Double.NaN).takeIf { !it.isNaN() }
-                    MapLayer.PLANE -> null
+                    MapLayer.PLANE, MapLayer.RADAR, MapLayer.SATELLITE -> null
                 }
                 if (v == null) continue
                 val dir = when (layer) {
@@ -150,6 +151,40 @@ private fun planes(): List<Plane> {
     return out
 }
 
+/** The picture layers: RainViewer radar (the newest past frame) and NASA GIBS true-colour satellite (yesterday's). Both keyless. */
+private fun pictureTiles(layer: MapLayer): Pair<List<Tile>, Float> {
+    val out = ArrayList<Tile>()
+    val alpha: Float
+    if (layer == MapLayer.RADAR) {
+        alpha = 0.7f
+        val j = get("https://api.rainviewer.com/public/weather-maps.json")?.let { JSONObject(it) } ?: return emptyList<Tile>() to 0f
+        val host = j.optString("host")
+        val past = j.optJSONObject("radar")?.optJSONArray("past") ?: return emptyList<Tile>() to 0f
+        val path = past.optJSONObject(past.length() - 1)?.optString("path").orEmpty()
+        for (y in 0..3) for (x in 0..3) {
+            val c = URL("$host$path/256/2/$x/$y/2/1_1.png").openConnection() as HttpURLConnection
+            try {
+                c.setRequestProperty("User-Agent", "Pulse/1.0 (weather map)"); c.connectTimeout = 10_000; c.readTimeout = 20_000
+                val bmp = c.inputStream.use { BitmapFactory.decodeStream(it) } ?: continue
+                out += Tile(x, y, bmp.asImageBitmap())
+            } catch (e: Exception) { } finally { c.disconnect() }
+        }
+    } else {
+        alpha = 1f
+        val day = java.time.LocalDate.now(java.time.ZoneOffset.UTC).minusDays(1).toString()
+        for (y in 0..3) for (x in 0..3) {
+            val url = "https://gibs.earthdata.nasa.gov/wmts/epsg3857/best/MODIS_Terra_CorrectedReflectance_TrueColor/default/$day/GoogleMapsCompatible_Level9/2/$y/$x.jpg"
+            val c = URL(url).openConnection() as HttpURLConnection
+            try {
+                c.setRequestProperty("User-Agent", "Pulse/1.0 (weather map)"); c.connectTimeout = 10_000; c.readTimeout = 20_000
+                val bmp = c.inputStream.use { BitmapFactory.decodeStream(it) } ?: continue
+                out += Tile(x, y, bmp.asImageBitmap())
+            } catch (e: Exception) { } finally { c.disconnect() }
+        }
+    }
+    return out to alpha
+}
+
 /** One tile of the zoom-2 world: its column and row (0..3) and the picture. */
 class Tile(val x: Int, val y: Int, val img: ImageBitmap)
 
@@ -175,7 +210,7 @@ private fun heat(layer: MapLayer, v: Double): Color {
         MapLayer.WIND -> (v / 80).coerceIn(0.0, 1.0)
         MapLayer.CLOUD -> (v / 100).coerceIn(0.0, 1.0)
         MapLayer.WAVE -> (v / 6).coerceIn(0.0, 1.0)
-        MapLayer.PLANE -> 0.0
+        MapLayer.PLANE, MapLayer.RADAR, MapLayer.SATELLITE -> 0.0
     }
     // cold / calm is blue, warm / strong is red
     return Color(red = t.toFloat(), green = 0.35f, blue = (1 - t).toFloat(), alpha = 0.6f)
@@ -185,9 +220,13 @@ private fun heat(layer: MapLayer, v: Double): Color {
 fun WeatherMapHub(onBack: () -> Unit) {
     var layer by remember { mutableStateOf(MapLayer.TEMP) }
     val tiles by produceState<List<Tile>?>(null) { value = withContext(Dispatchers.IO) { worldTiles() } }
+    val picture by produceState<Pair<List<Tile>, Float>?>(null, layer) {
+        value = null
+        value = if (layer == MapLayer.RADAR || layer == MapLayer.SATELLITE) withContext(Dispatchers.IO) { pictureTiles(layer) } else emptyList<Tile>() to 0f
+    }
     val samples by produceState<List<Sample>?>(null, layer) {
         value = null
-        value = withContext(Dispatchers.IO) { if (layer == MapLayer.PLANE) emptyList() else Grid.sample(layer) }
+        value = withContext(Dispatchers.IO) { if (layer == MapLayer.PLANE || layer == MapLayer.RADAR || layer == MapLayer.SATELLITE) emptyList() else Grid.sample(layer) }
     }
     val aircraft by produceState<List<Plane>?>(null, layer) {
         value = null
@@ -214,6 +253,8 @@ fun WeatherMapHub(onBack: () -> Unit) {
                 tiles?.forEach { t ->
                     drawImage(t.img, dstOffset = IntOffset((t.x * 256 * k).toInt(), (t.y * 256 * k).toInt()), dstSize = IntSize((256 * k).toInt(), (256 * k).toInt()))
                 }
+                // a picture layer (radar, satellite) lies over the ground
+                picture?.let { (list, a) -> list.forEach { t -> drawImage(t.img, dstOffset = IntOffset((t.x * 256 * k).toInt(), (t.y * 256 * k).toInt()), dstSize = IntSize((256 * k).toInt(), (256 * k).toInt()), alpha = a) } }
                 // the weather values as soft dots (wind and waves get a short tick for the direction)
                 samples?.forEach { sm ->
                     val c = Offset((px(sm.lon) * k).toFloat(), (py(sm.lat) * k).toFloat())
@@ -238,6 +279,7 @@ fun WeatherMapHub(onBack: () -> Unit) {
         Text(
             when {
                 layer == MapLayer.PLANE -> aircraft?.let { tr("${it.size} aircraft in the air (OpenSky)", "${it.size} uçak havada (OpenSky)") } ?: tr("Loading…", "Yükleniyor…")
+                layer == MapLayer.RADAR || layer == MapLayer.SATELLITE -> picture?.let { tr("${it.first.size} of 16 tiles", "16 karodan ${it.first.size}") } ?: tr("Loading…", "Yükleniyor…")
                 samples == null -> tr("Loading…", "Yükleniyor…")
                 samples!!.isEmpty() -> tr("No data (no network?)", "Veri yok (ağ yok mu?)")
                 else -> tr("${samples!!.size} points", "${samples!!.size} nokta")
