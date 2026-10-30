@@ -125,7 +125,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             // the standalone apps that are switched on in Settings > Apps open from here too
             *builtinApps(ctx) { openTool(it) }.toTypedArray(),
             // every extra app, the ones switched off included, in one list
-            *(if (com.umutk.pulse.extras.store.ExtraRowsHidden.menuOn(ctx)) listOf(MenuEntry(tr("Extra apps", "Ekstra uygulamalar"), icon = Icons.Outlined.Apps, key = "extraStore") { openTool("extrastore") }) else emptyList()).toTypedArray(),
+            MenuEntry(tr("Extra apps", "Ekstra uygulamalar"), icon = Icons.Outlined.Apps, key = "extraStore") { openTool("extrastore") },
         )),
     )
     return MenuHost(tops) {
