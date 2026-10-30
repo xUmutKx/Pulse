@@ -1437,6 +1437,7 @@
             <intent-filter><action android:name="android.provider.Telephony.SMS_RECEIVED" /></intent-filter>
         </receiver>
         <receiver android:name="com.umutk.pulse.extras.messages.MsgSentReceiver" android:exported="false" />
+        <activity android:name="com.umutk.pulse.extras.keyboard.VoiceTypeActivity" android:exported="false" android:noHistory="true" android:excludeFromRecents="true" android:taskAffinity="" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <receiver android:name="com.android.mms.transaction.PushReceiver" android:exported="true" android:permission="android.permission.BROADCAST_WAP_PUSH">
             <intent-filter>
                 <action android:name="android.provider.Telephony.WAP_PUSH_DELIVER" />
