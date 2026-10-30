@@ -197,6 +197,14 @@ object KeyboardPrefs {
             toolbarItems = t.joinToString(","); p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
         }
         // one place for each tool: a tool on the bar is not in the menu too; the gamepad makes room for the key layout on the bar, and the microphone is gone (the comma holds voice typing)
+        // the lock and the clipboard change places in the bar (once)
+        if (!p.getBoolean("swapLock11", false)) {
+            val t = toolbarItems.split(',').toMutableList()
+            val a = t.indexOf("auth"); val c = t.indexOf("clip")
+            if (a >= 0 && c >= 0) { t[a] = "clip"; t[c] = "auth" }
+            toolbarItems = t.joinToString(",")
+            p.edit().putBoolean("swapLock11", true).putString("toolbarItems", toolbarItems).apply()
+        }
         // its own flag: the auto-space step below also moves the version on, so a version check here was skipped on those phones
         if (!p.getBoolean("barMoved10", false)) {
             val bar = toolbarItems.split(',').filter { it != "voice" && it != "arrows" }.map { if (it == "gamepad") "layout" else it }.toMutableList()
