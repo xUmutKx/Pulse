@@ -1619,3 +1619,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Keyboard backup: clipboard pictures are never in it; the switch is removed (derlenmedi)
 - (sonraki derlemede) Processes: CPU, Memory and Network columns wider by default (derlenmedi)
 - (sonraki derlemede) Processes: the name column is back to its width; CPU, Memory and Network narrower by default (derlenmedi)
+- (sonraki derlemede) Weather notification: one line every six hours, and at once when rain is likely in the next two hours; on by default, switch in the weather settings (derlenmedi)

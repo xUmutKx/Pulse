@@ -514,6 +514,16 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
             Text(tr("Severe weather alerts", "Sert hava uyarıları"), color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
             PSwitch(alerts, onAlerts)
         }
+        // the report in the notification shade: every six hours, and at once when rain is coming
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        var report by remember { mutableStateOf(WeatherReport.enabled(ctx)) }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Weather notification", "Hava durumu bildirimi"), color = fg, fontSize = 16.sp)
+                Text(tr("Every six hours, and when rain is coming", "Altı saatte bir ve yağmur geleceğinde"), color = sub, fontSize = 12.sp)
+            }
+            PSwitch(report, { report = it; WeatherReport.setEnabled(ctx, it) })
+        }
         Text(tr("MGM gives the station values of now and the first hours for places in Turkey; the 96 hours and 16 days come from Open-Meteo.", "MGM, Türkiye'deki yerler için şu anın ve ilk saatlerin istasyon değerlerini verir; 96 saat ve 16 gün Open-Meteo'dan gelir."), color = sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
     }
     when (ask) {
