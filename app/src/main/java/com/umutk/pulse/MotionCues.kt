@@ -163,6 +163,8 @@ class MotionCueService : Service() {
                         val slop = 48f * d
                         if (ev.eventTime - downAt < 350 && Math.hypot((ev.x - downX).toDouble(), (ev.y - downY).toDouble()) < slop) {
                             // a tap closes the quick settings / notification panel that is open under it
+                            // with root the shade is collapsed by the system itself (no accessibility permission needed); without it the accessibility action does it
+                            Thread { runCatching { Runtime.getRuntime().exec(arrayOf("su", "-c", "cmd statusbar collapse")).waitFor() } }.start()
                             com.umutk.pulse.extras.launcher.globalAction(applicationContext, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE)
                             if (ev.eventTime - lastTap < 600) { lastTap = 0L; stopSelf() } else lastTap = ev.eventTime
                         } else lastTap = 0L
