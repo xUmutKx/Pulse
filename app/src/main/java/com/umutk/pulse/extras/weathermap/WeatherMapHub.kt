@@ -53,6 +53,7 @@ import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import com.umutk.pulse.extras.weather.Place
+import com.umutk.pulse.extras.weather.WeatherStore
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -328,7 +329,7 @@ private fun DrawScope.drawTile(img: ImageBitmap, z: Int, tx: Int, ty: Int, p: Ma
 }
 
 @Composable
-fun WeatherMapHub(onBack: () -> Unit, at: Place?) {
+fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     val ctx = LocalContext.current
     val density = LocalDensity.current.density
     val prefs = remember { ctx.getSharedPreferences("weathermap", Context.MODE_PRIVATE) }
@@ -357,7 +358,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place?) {
     fun place(sz: Size) {
         if (placed || sz.width <= 0f) return
         placed = true
-        val a = at?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }
+        val a = (at ?: WeatherStore.savedPlace(ctx))?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }
         pos = if (a != null) MapPos(wx(a.lon), wy(a.lat), 5.0) else MapPos(0.5, 0.5, 1.0)
     }
 
