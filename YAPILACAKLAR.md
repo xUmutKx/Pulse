@@ -1644,3 +1644,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Weather map: no longer listed in Extra apps; it opens from the globe button on the weather page (derlenmedi)
 - (sonraki derlemede) TempMail: now uses the driftz temp mail API (as in the Baridmail app, MIT): a random address on one of its domains, no sign-up; network calls off the main thread and never close the app (derlenmedi)
 - (sonraki derlemede) Keyboard: Backspace after a comma deletes only the comma (no word is taken back); a comma behind a word is followed by a space at once, and Backspace takes that space with the comma (derlenmedi)
+- (sonraki derlemede) Keyboard: a second comma right behind a comma is dropped, one comma stays (derlenmedi)
