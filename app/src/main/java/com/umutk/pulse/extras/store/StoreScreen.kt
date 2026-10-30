@@ -449,7 +449,9 @@ private fun BuiltinRows() {
         BuiltinRow(tr("Network usage", "Ağ kullanımı"), tr("Wi-Fi and mobile data, app by app", "Wi-Fi ve mobil veri, uygulama uygulama"), "speed", "tool:netusage") { openTool("netusage") },
     )
     // an app with its own launcher icon is listed on its own; the rest follow the per-row eye
+    // a tool switched off in Settings > Extra apps is not listed here either
     val visible = rows.filter { r -> val p = r.place.orEmpty(); !(p.startsWith("app:") && ExtraRowsHidden.launcherIconOn(ctx, p.removePrefix("app:"))) }
+        .filter { r -> val p = r.place.orEmpty(); !(p.startsWith("tool:") && com.umutk.pulse.ToolPlace.byId(p.removePrefix("tool:"))?.let { com.umutk.pulse.ToolPlace.where(ctx, it) == "hidden" } == true) }
         .filter { showHidden || (it.place ?: it.name) !in hidden }
     // tiles or rows: the choice is kept
     var grid by remember { mutableStateOf(ExtraRowsHidden.grid(ctx)) }
