@@ -161,7 +161,7 @@ fun WeatherHub(onBack: () -> Unit) {
         if (to != cur) { val p = order[to]; if (p.device) useDevice() else load(p) }
     }
     if (showMap) {
-        com.umutk.pulse.extras.weathermap.WeatherMapHub(onBack = { showMap = false })
+        com.umutk.pulse.extras.weathermap.WeatherMapHub(onBack = { showMap = false }, at = place)
         return
     }
     if (showSettings) {
