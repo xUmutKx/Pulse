@@ -300,7 +300,7 @@ fun BrowserHub(onBack: () -> Unit) {
         BackHandler { exitFullscreenVideo() }
         key(fv) { Box(Modifier.fillMaxSize().background(Color.Black)) { AndroidView(modifier = Modifier.fillMaxSize(), factory = { fv }) } }
     }
-        if (priv) com.umutk.pulse.extras.IncognitoGlyph(T.sub, 16.dp, Modifier.align(Alignment.BottomCenter).padding(bottom = 4.dp))
+        if (priv) com.umutk.pulse.extras.IncognitoGlyph(T.sub.copy(alpha = .5f), 26.dp, Modifier.align(Alignment.Center))
     }
 
     if (sheet) WinAlert(
