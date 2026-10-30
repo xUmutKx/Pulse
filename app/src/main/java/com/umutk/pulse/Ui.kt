@@ -95,12 +95,12 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     // the tools and extra apps wear the colour Fluent picture of their own (fc_*.png), else the filled Fluent glyph, never the thin outline
     if (fluent && (k.startsWith("tool_") || k.startsWith("extra"))) {
         val n = FC_NAMED[k] ?: k.removePrefix("tool_")
-        val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }
+        val id = remember(n) { ctx.resources.getIdentifier("fc_${n.lowercase()}", "drawable", ctx.packageName) }
         if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return }
         if (FluentFilled.map.containsKey(k)) { FluentColorGlyph2(k, size, modifier); return }
     }
     // Fluent colour: the colour pictures of the pages, then the coloured glyph
-    if (fluent && colour) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_$n", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
+    if (fluent && colour) FC_PIC[k]?.let { n -> val id = remember(n) { ctx.resources.getIdentifier("fc_${n.lowercase()}", "drawable", ctx.packageName) }; if (id != 0) { Image(painterResource(id), null, modifier.size(size)); return } }
     if (fluent && colour) { val fk = if (k == "recycle") "trash" else k; if (FluentColor.map.containsKey(fk)) { FluentColorGlyph(fk, tint, size, modifier); return } }
     if (k == "recycle" && !T.material) {
         if (fluent) ThemeIcons.bitmap(ctx, "win11", "trash")?.let { Image(it, null, modifier.size(size)); return }
