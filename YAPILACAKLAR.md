@@ -1589,3 +1589,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Keyboard: a long press on the comma opens the phone's own listening screen (see-through VoiceTypeActivity); the keyboard stays and the words are typed into the field (derlenmedi)
 - (sonraki derlemede) Keyboard: the comma hold (voice typing) no longer opens the ; : ' " pop-up when the finger moves (the pop-up came from the drag path) (derlenmedi)
 - (sonraki derlemede) Weather: when the chosen service does not answer, the other services are tried in turn (no empty card); the value cards no longer keep a blank second line under the title (derlenmedi)
+- (sonraki derlemede) Weather detail cards: an odd number of tiles gets the dew point, so the grid is even (derlenmedi)
