@@ -1622,3 +1622,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Weather notification: one line every six hours, and at once when rain is likely in the next two hours; on by default, switch in the weather settings (derlenmedi)
 - (sonraki derlemede) Motion cues: a tap on the top strip collapses the quick panel with root (cmd statusbar collapse), and the accessibility action when there is no root (derlenmedi)
 - (sonraki derlemede) Weather notification: the next six hours with their sky icon, temperature and rain chance (derlenmedi)
+- (sonraki derlemede) TempMail extra app: a random disposable address from mail.tm, its inbox and mail text; its own launcher icon (Material black, glyph white), in the store and the ⋮ menu (derlenmedi)
