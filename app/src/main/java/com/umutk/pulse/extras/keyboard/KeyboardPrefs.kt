@@ -193,6 +193,13 @@ object KeyboardPrefs {
             if (i >= 0 && g == i + 1) { t[i] = "gamepad"; t[g] = "clip" }
             toolbarItems = t.joinToString(","); p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
         }
+        // one place for each tool: a tool on the bar is not in the menu too; the gamepad makes room for the key layout on the bar, and the microphone is gone (the comma holds voice typing)
+        if (p.getInt("menuVer", 0) < 9) {
+            val bar = toolbarItems.split(',').filter { it != "voice" }.map { if (it == "gamepad") "layout" else it }.distinct()
+            menuItems = (menuItems.split(',').filter { it != "voice" && it !in bar } + listOf("gamepad")).distinct().joinToString(",")
+            toolbarItems = bar.joinToString(",")
+            p.edit().putInt("menuVer", 9).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
+        }
         // no space is added by itself after a sign any more (it can be switched on again in the typing settings)
         if (p.getInt("menuVer", 0) < 9) { autoSpace = false; p.edit().putInt("menuVer", 9).putBoolean("autoSpace", false).apply() }
         haptic = p.getBoolean("haptic", haptic); bright = p.getInt("bright", 100); bottomBright = p.getInt("bottomBright", 100); topBright = p.getInt("topBright", 100); bottomShift = p.getBoolean("bottomShift", false); dirLayout = p.getBoolean("dirLayout", false); rgb = p.getInt("rgb", 0); clipHours = p.getInt("clipKeep", clipHours); commaSlip = p.getBoolean("commaSlip2", false); keyFx = p.getInt("keyFx", 0); boardFx = p.getInt("boardFx", 0); motionFx = p.getInt("motionFx", 0); soundKind = p.getInt("soundKind", 0); hapticMs = p.getInt("hapticMs", hapticMs); sound = p.getBoolean("sound", sound)

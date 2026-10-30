@@ -1646,3 +1646,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Keyboard: Backspace after a comma deletes only the comma (no word is taken back); a comma behind a word is followed by a space at once, and Backspace takes that space with the comma (derlenmedi)
 - (sonraki derlemede) Keyboard: a second comma right behind a comma is dropped, one comma stays (derlenmedi)
 - (sonraki derlemede) Keyboard: the correction for the bar reads only the words of the nearby lengths instead of the whole dictionary each keystroke, so the corrected word comes sooner (derlenmedi)
+- (sonraki derlemede) Keyboard bar: the gamepad on the bar is replaced by the key layout; a tool is in one place only (bar or menu); the microphone (voice typing) is removed from the bar and the menu, the comma keeps it (derlenmedi)
