@@ -1593,3 +1593,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Clock: its launcher switch now reads the real enabled state (before, the default state looked on); the ⋮ menu lists Clock only while its launcher icon is on, once (derlenmedi)
 - (sonraki derlemede) Clock: the purple glow at the top of the dark screens has a switch in the clock settings (Background glow); off = plain black (derlenmedi)
 - (sonraki derlemede) Settings > Extra apps: the Good Lock row uses the Fluent grid icon in Windows 11 (derlenmedi)
+- (sonraki derlemede) Device > Security: the three tiles have no box behind them (transparent, as before) (derlenmedi)
