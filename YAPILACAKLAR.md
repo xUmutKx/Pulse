@@ -1669,3 +1669,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (derlenmedi) Good Lock: a Fluent grid icon in the Extra apps card
 - (derlenmedi) Clock: the background glow is off by default (plain black at the top); the switch in Settings turns it back on
 - (derlenmedi) Books: the bar's visual options open as a small popup above the bar (font, text size, theme, e-ink); the bars are solid so the page text no longer shows through them
+- (derlenmedi) Books: eight reader themes, a two-row bottom bar option, shelf tabs (My shelf, Recent, Favorites), cover size, favourite switch in book information
