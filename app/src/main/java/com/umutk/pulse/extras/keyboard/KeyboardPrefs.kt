@@ -106,8 +106,6 @@ object KeyboardPrefs {
     var padLift by mutableStateOf(14)
     /** Quick auth asks for the fingerprint before it shows the codes (off: it shows them at once). */
     var authLock by mutableStateOf(false)
-    /** The clipboard pictures go into the backup too (off: texts only, the pictures are big). */
-    var backupPictures by mutableStateOf(false)
     var periodHold by mutableStateOf("none")
     var bottomHold by mutableStateOf("none")
 
@@ -186,7 +184,7 @@ object KeyboardPrefs {
             toolbarItems = toolbarItems.split(',').map { if (it == "gamepad") "layout" else it }.distinct().joinToString(",")
             p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
         }
-        padScale = p.getInt("padScale", 130); padDead = p.getInt("padDead", 28); padLift = p.getInt("padLift", 14); authLock = p.getBoolean("authLock", false); backupPictures = p.getBoolean("backupPictures", false)
+        padScale = p.getInt("padScale", 130); padDead = p.getInt("padDead", 28); padLift = p.getInt("padLift", 14); authLock = p.getBoolean("authLock", false)
         commaHold = p.getString("commaHold", "voice") ?: "voice"; periodHold = p.getString("periodHold", "none") ?: "none"; bottomHold = p.getString("bottomHold", "none") ?: "none"
         // the clipboard and the gamepad trade places in the bar: the gamepad is the first key now
         if (p.getInt("menuVer", 0) < 8) {
@@ -205,7 +203,7 @@ object KeyboardPrefs {
             .putString("theme", theme)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
             .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
-            .putString("langs", langs).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putBoolean("backupPictures", backupPictures).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
+            .putString("langs", langs).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)

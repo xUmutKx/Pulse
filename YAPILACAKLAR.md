@@ -1616,3 +1616,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Keyboard backup: texts always; clipboard pictures only when "Clipboard pictures in the backup" is on (default off) (derlenmedi)
 - (sonraki derlemede) Files: a picture inside a zip opens in Pulse's own viewer, not the "Open as" chooser (derlenmedi)
 - (sonraki derlemede) Automatic backup: once a week (default on), the last 4 copies of the Pulse and keyboard zips (derlenmedi)
+- (sonraki derlemede) Keyboard backup: clipboard pictures are never in it; the switch is removed (derlenmedi)
