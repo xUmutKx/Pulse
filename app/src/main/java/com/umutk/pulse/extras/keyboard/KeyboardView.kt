@@ -776,6 +776,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     val big = key.kind == KeyKind.CHAR || key.kind == KeyKind.COMMA || key.kind == KeyKind.PERIOD
                     if (big && KeyboardPrefs.keyPopups) st.preview = KbPreview(rect, key.label)
                     var long = false
+                    // a key whose long press runs an action (the comma's voice typing): the pop-up characters never open for it
+                    var held = false
                     var sel = -1
                     var spaceDragged = false
                     var lastStep = 0
@@ -808,7 +810,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 // the comma, the period and the key beside ?123 run the action chosen for them in Settings; "none" leaves the key's own pop-up characters
                                 KeyKind.COMMA, KeyKind.PERIOD, KeyKind.MENU, KeyKind.EMOJI, KeyKind.LANG -> {
                                     val h = holdOf(key.kind)
-                                    if (h != "none") { long = true; st.preview = null; a.feedback(); runHold(a, h) }
+                                    if (h != "none") { long = true; held = true; st.preview = null; a.feedback(); runHold(a, h) }
                                     else if (!glide && key.alts.isNotEmpty() && big) { long = true; sel = 0; st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback() }
                                     due = Long.MAX_VALUE / 2
                                 }
@@ -869,7 +871,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 val step = (dx / 12.dp.toPx()).toInt()
                                 if (step != lastStep) { a.moveCursor(step - lastStep); lastStep = step }
                             }
-                            long && key.alts.isNotEmpty() -> {
+                            long && !held && key.alts.isNotEmpty() -> {
                                 val count = key.alts.size
                                 val w = minOf(POPUP_W.dp.toPx(), st.rootW * .96f / count)
                                 val left = popupLeft(rect, count, st.rootW, w)

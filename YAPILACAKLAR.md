@@ -1587,3 +1587,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Extra apps: the hide eye and the long press that hid rows are removed; a tool no longer has a hide switch (its place is still set with the chevron); the launcher icon switch of each app stays (derlenmedi)
 - (sonraki derlemede) Messages: a long press on a conversation picks it (no pop-up); with some picked, a bar above the list has pin, mute, archive and delete for all of them; the ⋮ of a conversation opens on the right
 - (sonraki derlemede) Keyboard: a long press on the comma opens the phone's own listening screen (see-through VoiceTypeActivity); the keyboard stays and the words are typed into the field (derlenmedi)
+- (sonraki derlemede) Keyboard: the comma hold (voice typing) no longer opens the ; : ' " pop-up when the finger moves (the pop-up came from the drag path) (derlenmedi)
