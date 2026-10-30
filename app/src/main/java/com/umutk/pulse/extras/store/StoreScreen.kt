@@ -408,6 +408,7 @@ private fun BuiltinRows() {
     var showHidden by remember { mutableStateOf(false) }
     val openTool = LocalOpenTool.current
     val rows = listOf(
+        BuiltinRow(tr("Web music", "Web müzik"), tr("Spotify and YouTube Music as web players, with their own sign-in", "Spotify ve YouTube Music web oynatıcıları, kendi girişleriyle"), "play", "app:WebMusicLauncher") { openTool("webmusic") },
         BuiltinRow(tr("Music player", "Müzik çalar"), tr("Poweramp and Winamp looks, lyrics inside", "Poweramp ve Winamp görünümleri, içinde şarkı sözleri"), "play", "app:MusicLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "music") },
         BuiltinRow(tr("Video", "Video"), tr("Plays video files", "Video dosyalarını oynatır"), "image", "app:VideoLauncher") { launchExtra(ctx, "com.umutk.pulse.ExtraToolActivity", "video") },
         BuiltinRow(tr("Files", "Dosyalar"), tr("File explorer", "Dosya gezgini"), "folder", "app:FilesLauncher") { launchExtra(ctx, "com.umutk.pulse.FilesActivity") },

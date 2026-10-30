@@ -1541,6 +1541,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".WebMusicLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_music" android:roundIcon="@mipmap/ic_music" android:label="Web music">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".EbookLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_notes" android:roundIcon="@mipmap/ic_ad_notes" android:label="Books">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

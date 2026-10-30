@@ -114,6 +114,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "authenticator" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AuthenticatorScreen(back) }
         id == "video" -> com.umutk.pulse.extras.video.VideoHub(back)
         id == "music" -> com.umutk.pulse.extras.music.MusicHub(back)
+        id == "webmusic" -> com.umutk.pulse.extras.music.WebMusicHub(back)
         id == "whitenoise" -> com.umutk.pulse.extras.whitenoise.WhiteNoiseHub(back)
         id == "voice" -> com.umutk.pulse.extras.voice.VoiceHub(back)
         id == "notes" -> com.umutk.pulse.extras.notes.NotesHub(back)
