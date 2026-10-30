@@ -36,6 +36,9 @@ fun OneUiAppBackground(
     accentColor: Color = MaterialTheme.colorScheme.primary,
     modifier: Modifier = Modifier
 ) {
+    // the coloured glow of the dark background can be switched off in Settings (it is plain black then)
+    val glowOn = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE).getBoolean("on", true)
+    val glowColor = if (glowOn) accentColor else Color(0xFF040408)
     Canvas(modifier = modifier.fillMaxSize()) {
         if (dark) {
 
@@ -43,10 +46,10 @@ fun OneUiAppBackground(
 
             drawRect(
                 brush = Brush.radialGradient(
-                    0.00f to lerp(Color(0xFF040408), accentColor, 0.25f),
-                    0.28f to lerp(Color(0xFF040408), accentColor, 0.18f),
-                    0.55f to lerp(Color(0xFF030306), accentColor, 0.10f),
-                    0.80f to lerp(Color(0xFF020204), accentColor, 0.04f),
+                    0.00f to lerp(Color(0xFF040408), glowColor, 0.25f),
+                    0.28f to lerp(Color(0xFF040408), glowColor, 0.18f),
+                    0.55f to lerp(Color(0xFF030306), glowColor, 0.10f),
+                    0.80f to lerp(Color(0xFF020204), glowColor, 0.04f),
                     1.00f to Color(0xFF010103),
                     center = Offset(size.width * 0.50f, size.height * 0.36f),
                     radius = size.maxDimension * 0.78f
