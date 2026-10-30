@@ -475,6 +475,26 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                         )
 
+                        // the coloured glow behind the dark screens: on by default, off gives plain black
+                        val glowPrefs = context.getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE)
+                        var glowOn by remember { mutableStateOf(glowPrefs.getBoolean("on", true)) }
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = "Background glow", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = if (glowOn) "The colour glow at the top of the dark screens" else "Plain black background", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(checked = glowOn, onCheckedChange = { on -> glowOn = on; glowPrefs.edit().putBoolean("on", on).apply() })
+                        }
+
+                        HorizontalDivider(
+                            modifier = Modifier.padding(vertical = 12.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
+                        )
+
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
