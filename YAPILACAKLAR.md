@@ -1601,3 +1601,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Clock hidden in the settings no longer shows in the ⋮ menu; Good Lock shows its Fluent grid icon in the tool rows too (derlenmedi)
 - (sonraki derlemede) Extra apps: a long press hides a row again (saved); an eye beside the view toggle shows the hidden rows dimmed; a first start shows everything (derlenmedi)
 - (sonraki derlemede) Music library: the mood mixes (Angry, Daily...) are only in the Mix maker; the Mix maker is a compact DJ-set panel: moods, sources, length and one round play button (derlenmedi)
+- (sonraki derlemede) Office: the title bar and ribbon colour also paints the status bar and the navigation bar (AMOLED black covers the status bar) (derlenmedi)
