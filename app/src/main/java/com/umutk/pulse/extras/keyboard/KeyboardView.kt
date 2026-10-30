@@ -189,6 +189,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.lazy.itemsIndexed
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
@@ -1304,10 +1305,21 @@ private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         if (st.authCodes.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
             Text(tr("No accounts yet: add them in Pulse Authenticator", "Henüz hesap yok: Pulse Kimlik doğrulayıcı'da ekle"), color = th.sub, fontSize = 13.sp)
         } else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-            items(st.authCodes) { (name, code) ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(th.key).clickable { act.authPick(code) }.padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            // a second clock: the codes are checked each second, and each account shows how long its code has left
+            val now by androidx.compose.runtime.produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); act.authTick(); delay(1000) } }
+            itemsIndexed(st.authCodes) { i, (name, code) ->
+                val period = st.authPeriods.getOrElse(i) { 30 }.coerceAtLeast(1)
+                val left = period - ((now / 1000L) % period).toInt()
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(th.key).clickable { act.authPick(code) }) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(name, color = th.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                     Text(code, color = th.accent, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                    Text("  $left", color = if (left <= 5) th.accent else th.sub, fontSize = 12.sp)
+                }
+                // the bar under the code empties as the code runs out
+                Box(Modifier.fillMaxWidth().height(3.dp).background(th.sub.copy(alpha = .2f))) {
+                    Box(Modifier.fillMaxWidth(left / period.toFloat()).height(3.dp).background(th.accent))
+                }
                 }
             }
         }
