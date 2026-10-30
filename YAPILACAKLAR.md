@@ -1627,3 +1627,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Weather map extra: world map (OpenStreetMap tiles) with temperature, precipitation, wind, clouds, waves (Open-Meteo) and live aircraft (OpenSky). Ships need an AIS key and are not included (derlenmedi)
 - (sonraki derlemede) Weather map: rain radar (RainViewer, newest frame) and satellite (NASA GIBS, yesterday) layers; both keyless (derlenmedi)
 - (sonraki derlemede) Keyboard: speech typing is a panel over the keys (words come in as recognised); the layout key shows and hides the key bar; the lock key is Quick auth, the keyboard height (derlenmedi)
+- (sonraki derlemede) Keyboard: the layout key opens a panel with the key layouts, the key bar, the gamepad and the key set (derlenmedi)
