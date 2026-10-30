@@ -520,7 +520,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
             Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), topInk) }
             OfTile(t.kind, 22.dp, true); Spacer(Modifier.width(8.dp))
             OfTitle(title, topInk)
-            Box(Modifier.size(40.dp).clickable { pull = 0f }, contentAlignment = Alignment.Center) { Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(topInk)) }
+            Box(Modifier.size(40.dp).clickable { pull = 0f }, contentAlignment = Alignment.Center) { OfChevron(topInk) }
             quick.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), topInk) } }
         }
         Row(Modifier.fillMaxWidth().background(below).horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
@@ -556,7 +556,7 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
                 }
             }
             .clickable { pull = if (pull > .5f) 0f else 1f }, contentAlignment = Alignment.Center) {
-            Box(Modifier.width(40.dp).height(4.dp).clip(RoundedCornerShape(50)).background(ink.copy(alpha = .5f)))
+            OfChevron(ink.copy(alpha = .6f))
         }
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
         if (!hid) Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -587,6 +587,16 @@ val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 internal fun ofTop(t: OfTheme): Color = if (t.base == "amoled") Color.Black else when (OfficePrefs.bars) { 3 -> Color.Black; 1 -> Look.accent.copy(alpha = 1f); else -> t.kind.brand }
 
 /** Colour of everything under the brand title bar: white, or near-black in the dark looks. Looks that have their own surfaces keep the ribbon colour. */
+/** A chevron pointing down: the handle of the Microsoft 365 top bar, pulled down to open it and pushed up to close it. */
+@Composable
+internal fun OfChevron(color: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier.size(20.dp, 12.dp)) {
+        val w = size.width; val h = size.height; val sw = 2.dp.toPx()
+        drawLine(color, androidx.compose.ui.geometry.Offset(w * .08f, h * .12f), androidx.compose.ui.geometry.Offset(w * .5f, h * .9f), strokeWidth = sw, cap = androidx.compose.ui.graphics.StrokeCap.Square)
+        drawLine(color, androidx.compose.ui.geometry.Offset(w * .5f, h * .9f), androidx.compose.ui.geometry.Offset(w * .92f, h * .12f), strokeWidth = sw, cap = androidx.compose.ui.graphics.StrokeCap.Square)
+    }
+}
+
 /** The app colour for the chrome (File tab, the on-state of the toggles, the opening screen): black-grey in the AMOLED look or with the black title bar. */
 internal fun ofBrand(t: OfTheme): Color = if (t.base == "amoled" || OfficePrefs.bars == 3) Color(0xFF2B2B2B) else t.kind.brand
 
