@@ -2280,6 +2280,11 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
     val files = picks.filter { it.isFile }
     val folders = picks.any { it.isDirectory }
     fun done(msg: String) { note(msg); onDismiss() }
+    var nearbyPick by remember { mutableStateOf(false) }
+    fun openNearby(cls: String, name: String) {
+        val ok = runCatching { ctx.startActivity(sendIntent(files).setClassName(ctx, cls)) }.isSuccess
+        done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not open $name", "$name açılamadı"))
+    }
     fun sendIntent(list: List<File>): Intent {
         val uris = ArrayList<android.net.Uri>(list.map { FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", it) })
         val mimes = list.map { fileMime(it) }.distinct()
@@ -2296,7 +2301,7 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
         targets = withContext(Dispatchers.IO) {
             val pm = ctx.packageManager
             runCatching {
-                pm.queryIntentActivities(sendIntent(files), 0).distinctBy { it.activityInfo.packageName }
+                pm.queryIntentActivities(sendIntent(files), 0).filter { !it.activityInfo.name.endsWith("LocalSendShareActivity") && !it.activityInfo.name.endsWith("RelayShareActivity") }.distinctBy { it.activityInfo.packageName }
                     // the nearby-device senders come first: Pulse's LocalSend, the LocalSend app, Quick Share
                     .sortedBy { ri -> val n = ri.activityInfo.name; val pk = ri.activityInfo.packageName
                         when { n.endsWith("LocalSendShareActivity") -> 0; n.endsWith("RelayShareActivity") -> 0; pk == "org.localsend.localsend_app" -> 1; n.contains("nearby.sharing") -> 2; pk == "com.samsung.android.app.sharelive" -> 3; else -> 4 } }
@@ -2307,6 +2312,14 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
             }.getOrDefault(emptyList())
         }
     }
+    if (nearbyPick) WinAlert(onDismissRequest = { nearbyPick = false }, title = { Text(tr("Send to nearby devices with", "Yakındaki cihazlara şununla gönder"), color = T.text) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                PButton("Relay", Modifier.fillMaxWidth()) { nearbyPick = false; openNearby("com.umutk.pulse.extras.relay.RelayShareActivity", "Relay") }
+                PButton("LocalSend", Modifier.fillMaxWidth()) { nearbyPick = false; openNearby("com.umutk.pulse.extras.localsend.LocalSendShareActivity", "LocalSend") }
+            }
+        },
+        confirmButton = {}, dismissButton = null)
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = T.panel) {
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Text(if (picks.size == 1) picks[0].name else tr("${picks.size} items", "${picks.size} öğe"), Modifier.padding(horizontal = 20.dp, vertical = 4.dp), color = T.sub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -2328,14 +2341,7 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
                     val ok = if (files.size == 1) exHandOver(ctx, files[0], true) else exShareMany(ctx, files)
                     done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not share", "Paylaşılamadı"))
                 })
-                if (files.isNotEmpty()) add(Triple("wifi", tr("Nearby devices (LocalSend)", "Yakındaki cihazlar (LocalSend)")) {
-                    val ok = runCatching { ctx.startActivity(sendIntent(files).setClassName(ctx, "com.umutk.pulse.extras.localsend.LocalSendShareActivity")) }.isSuccess
-                    done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not open LocalSend", "LocalSend açılamadı"))
-                })
-                if (files.isNotEmpty() && com.umutk.pulse.extras.relay.RelayHost.supported()) add(Triple("send", tr("Relay (paired devices)", "Relay (eşleşmiş cihazlar)")) {
-                    val ok = runCatching { ctx.startActivity(sendIntent(files).setClassName(ctx, "com.umutk.pulse.extras.relay.RelayShareActivity")) }.isSuccess
-                    done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not open Relay", "Relay açılamadı"))
-                })
+                if (files.isNotEmpty()) add(Triple("wifi", tr("Relay / LocalSend (nearby devices)", "Relay / LocalSend (yakındaki cihazlar)")) { nearbyPick = true })
                 add(Triple("archive", tr("Share as one zip (folders too)", "Tek zip olarak paylaş (klasörler dahil)")) {
                     note(tr("Zipping…", "Zipleniyor…"))
                     scope.launch {
