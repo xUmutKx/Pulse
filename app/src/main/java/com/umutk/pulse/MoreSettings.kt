@@ -755,7 +755,7 @@ private fun ExtraAppsCard() {
                         } else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon(t.key, T.text, 22.dp) }
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text(tr(t.en, t.trName), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable(enabled = shownHere) {
+                    Text(tr(t.en, t.trName), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable {
                         // a tool screen opens on top; a page-based one opens the main app on its page
                         if (t.isTool) openTool(t.target)
                         else ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("start", t.target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
