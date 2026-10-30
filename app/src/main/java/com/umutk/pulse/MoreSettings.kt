@@ -690,7 +690,8 @@ private fun ExtraAppsCard() {
         "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
         "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
-    fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    // the alias is disabled in the manifest, so "on" is only the enabled state: the default one does not put an icon on the home screen
+    fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
     val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }
     var rev by remember { mutableIntStateOf(0) }
     var placeOpen by remember { mutableStateOf<String?>(null) }
