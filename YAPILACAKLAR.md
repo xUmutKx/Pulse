@@ -1571,3 +1571,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.262 Messages: a sent SMS is kept only when the radio really sent it (each part reports back; "Not sent" when refused), the + button icon is readable on the accent, and a thread opened from New message shows the contact name (derlenmedi)
 - 1.0.263 Messages list: the back arrow is gone from the top bar (thread, New message and Settings keep it); the add button icon is readable on the accent (derlenmedi)
 - 1.0.264 Lyrics notification: plain lyrics (no timestamps) are no longer dropped; their lines share the song length evenly, so the notification follows the playing position (derlenmedi)
+- 1.0.265 Action centre: the Airplane mode tile switches airplane mode in place when Pulse has root or Shizuku; without them the settings page opens as before (derlenmedi)
