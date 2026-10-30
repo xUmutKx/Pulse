@@ -547,8 +547,9 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
         }
         }
         // the grip: a thin line under the top block, pulled down from its middle to open it and pushed up to close it
-        if (openP == 0f) Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(below))
-        Box(Modifier.fillMaxWidth().height(14.dp).background(below)
+        // closed: the bar is gone and only this line stays where the arrow was
+        if (openP == 0f) Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars))
+        Box(Modifier.fillMaxWidth().height(14.dp).background(if (openP == 0f) Color.Transparent else below)
             .pointerInput(Unit) {
                 androidx.compose.foundation.gestures.detectVerticalDragGestures(onDragEnd = { pull = if (pull > .5f) 1f else 0f }) { change, drag ->
                     change.consume(); pull = (pull + drag / blockH.coerceAtLeast(1)).coerceIn(0f, 1f)
