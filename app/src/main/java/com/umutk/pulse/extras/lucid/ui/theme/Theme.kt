@@ -40,7 +40,10 @@ fun OneUiAppBackground(
     val glowOn = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE).getBoolean("on", true)
     val glowColor = if (glowOn) accentColor else Color(0xFF040408)
     Canvas(modifier = modifier.fillMaxSize()) {
-        if (dark) {
+        if (dark && !glowOn) {
+            // glow off: pure AMOLED black, no tint at all
+            drawRect(color = Color.Black)
+        } else if (dark) {
 
             drawRect(color = Color(0xFF020205))
 
