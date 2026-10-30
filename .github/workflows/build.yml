@@ -37,7 +37,7 @@ jobs:
       - uses: actions/upload-artifact@v5
         with:
           name: pulse-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: app/build/outputs/apk/release/*.apk
       - name: Publish the release
         if: github.event_name == 'workflow_dispatch' && inputs.release
         env:
@@ -45,10 +45,12 @@ jobs:
         run: |
           VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           # the build above is the Android 5 and up one; the normal one (Android 12 and up, the same code) is built now
-          cp app/build/outputs/apk/release/app-release.apk "Pulse-$VER-android5.apk"
+          # one APK per processor type (app-<abi>-release.apk): armeabi-v7a, arm64-v8a, x86_64
+          copy_abis() { for f in app/build/outputs/apk/release/app-*-release.apk; do abi=$(basename "$f" -release.apk); cp "$f" "Pulse-$VER$1-${abi#app-}.apk"; done; }
+          copy_abis "-android5"
           gradle assembleRelease -PpulseMinSdk=31 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon
-          cp app/build/outputs/apk/release/app-release.apk "Pulse-$VER.apk"
+          copy_abis ""
           # the notes: every YAPILACAKLAR.md entry from the version after the last release up to this one
           PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
           python3 -I .github/release_notes.py "$VER" "$PREV" > RELEASE_NOTES.md
-          gh release create "v$VER" "Pulse-$VER.apk" "Pulse-$VER-android5.apk" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          gh release create "v$VER" Pulse-"$VER"-*.apk --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
