@@ -441,9 +441,9 @@ private fun BuiltinRows() {
         BuiltinRow(tr("APK installer", "APK yükleyici"), tr("Installs an APK with its own window", "Bir APK'yı kendi penceresiyle kurar"), "download", "tool:installer") { openTool("installer") },
         BuiltinRow("Good Lock", tr("Samsung's modules: installed versions and updates", "Samsung'un modülleri: kurulu sürümler ve güncellemeler"), "settings", "tool:goodlock") { openTool("goodlock") },
     )
-    // an app with its own launcher icon is listed on its own; the rest follow the per-row eye
+    // every app stays listed here, with or without its launcher icon; a long press hides a row, the eye shows the hidden ones
     // a tool switched off in Settings > Extra apps is not listed here either
-    val visible = rows.filter { r -> val p = r.place.orEmpty(); !(p.startsWith("app:") && ExtraRowsHidden.launcherIconOn(ctx, p.removePrefix("app:"))) }
+    val visible = rows
         .filter { r -> val p = r.place.orEmpty(); !(p.startsWith("tool:") && com.umutk.pulse.ToolPlace.byId(p.removePrefix("tool:"))?.let { com.umutk.pulse.ToolPlace.where(ctx, it) == "hidden" } == true) }
         .filter { showHidden || (it.place ?: it.name) !in hidden }
     // tiles or rows: the choice is kept
@@ -482,10 +482,6 @@ private fun BuiltinRows() {
                 Text(r.sub, color = T.sub, fontSize = 12.sp)
             }
         }
-    }
-    // the hidden rows: a line that shows them again (long press on a shown row hides it, on a hidden one brings it back)
-    if (hidden.isNotEmpty()) Row(Modifier.fillMaxWidth().clickable { showHidden = !showHidden }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(if (showHidden) tr("Hide the hidden rows", "Gizli satırları gizle") else tr("Show ${hidden.size} hidden rows", "${hidden.size} gizli satırı göster"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
     }
 }
 
