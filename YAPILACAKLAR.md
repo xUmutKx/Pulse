@@ -1615,3 +1615,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Backup leaves out the bundled ambient sounds and Winamp skins (they ship with the app); the store has no download rows for them (derlenmedi)
 - (sonraki derlemede) Keyboard backup: texts always; clipboard pictures only when "Clipboard pictures in the backup" is on (default off) (derlenmedi)
 - (sonraki derlemede) Files: a picture inside a zip opens in Pulse's own viewer, not the "Open as" chooser (derlenmedi)
+- (sonraki derlemede) Automatic backup: once a week (default on), the last 4 copies of the Pulse and keyboard zips (derlenmedi)
