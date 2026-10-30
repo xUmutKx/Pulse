@@ -43,10 +43,23 @@ object WeatherApi {
     private fun provider(): String = appCtx?.let { WeatherStore.source(it) } ?: "om"
     private fun openMeteo() = provider().let { it == "om" || it == "mgm" }
 
-    fun forecast(lat: Double, lon: Double): String = when (provider()) {
-        "metno" -> WeatherProviders.metno(lat, lon)
-        "owm" -> WeatherProviders.owm(lat, lon, appCtx?.let { WeatherStore.owmKey(it) }.orEmpty())
-        else -> forecastOm(lat, lon)
+    fun forecast(lat: Double, lon: Double): String {
+        // the chosen service first; when it does not answer, the others in turn, so the card still gets the data of one that does
+        val first = provider()
+        val order = listOf(first) + listOf("om", "metno").filter { it != first }
+        var last: Throwable? = null
+        for (p in order) {
+            val r = runCatching {
+                when (p) {
+                    "metno" -> WeatherProviders.metno(lat, lon)
+                    "owm" -> WeatherProviders.owm(lat, lon, appCtx?.let { WeatherStore.owmKey(it) }.orEmpty())
+                    else -> forecastOm(lat, lon)
+                }
+            }
+            r.getOrNull()?.let { return it }
+            last = r.exceptionOrNull()
+        }
+        throw last ?: IllegalStateException("no weather service answered")
     }
 
     private fun forecastOm(lat: Double, lon: Double): String {
