@@ -1581,3 +1581,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Size: one APK per processor type (armeabi-v7a, arm64-v8a, x86_64) instead of one with all three; the release holds Pulse-<ver>-<abi>.apk and Pulse-<ver>-android5-<abi>.apk; the in-app updater picks the phone's own type (derlenmedi)
 - (sonraki derlemede) Size: 78 WebP pictures recompressed (lossless where smaller, lossy only when it looks the same); about 9.8 MB to 6.8 MB of pictures (derlenmedi)
 - (sonraki derlemede) Messages: sent texts move their conversation to the top and new ones are listed; the thread page has one ⋮ for pin, mute and block (block asks first) (derlenmedi)
+- (sonraki derlemede) Size: the per-ABI APK split is taken back (it saved no measurable size); one APK per build again, the updater takes the one release asset (derlenmedi)
