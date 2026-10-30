@@ -33,14 +33,29 @@ object WeatherReport {
         val timeDue = now - sp.getLong("at", 0L) >= SIX_HOURS
         if (!rainDue && !timeDue) return
         val warn = if (rainDue) tr("Rain likely at ${clock(rainSoon!!.time)} (${rainSoon.rain}%)", "Yağmur bekleniyor, ${clock(rainSoon.time)} (%${rainSoon.rain})") else ""
-        val line = "%.0f°  ·  %s".format(f.temp, WeatherApi.condition(f.code))
-        val text = if (warn.isEmpty()) line else "$line\n$warn"
+        // now, then the next hours with their picture: the time, the sky as an icon, the temperature and the chance of rain
+        val nowLine = "%s %.0f°  %s".format(emoji(f.code), f.temp, WeatherApi.condition(f.code))
+        val hours = f.hours.drop(1).take(6).joinToString("\n") { h -> "${clock(h.time)}  ${emoji(h.code)}  %.0f°  ·  %d%%".format(h.temp, h.rain) }
+        val text = listOf(nowLine, hours, warn).filter { it.isNotEmpty() }.joinToString("\n")
         post(c, f.place, text)
         sp.edit().putLong("at", now).apply()
         if (rainDue) sp.edit().putLong("rainAt", now).apply()
     }
 
     private fun clock(t: String) = t.substringAfter('T', "").take(5)
+
+    /** The sky of a WMO weather code as an icon. */
+    private fun emoji(code: Int): String = when (code) {
+        0 -> "☀️"
+        1, 2 -> "⛅"
+        3 -> "☁️"
+        45, 48 -> "🌫️"
+        51, 53, 55, 56, 57 -> "🌦️"
+        61, 63, 65, 66, 67, 80, 81, 82 -> "🌧️"
+        71, 73, 75, 77, 85, 86 -> "❄️"
+        95, 96, 99 -> "⛈️"
+        else -> "🌡️"
+    }
 
     private fun post(c: Context, place: String, text: String) {
         val nm = c.getSystemService(NotificationManager::class.java)
