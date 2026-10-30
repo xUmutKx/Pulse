@@ -263,7 +263,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         Trail(th, st)
         Preview(th, st)
         // private typing: the hat mark sits at the bottom middle, so it is seen whatever the keyboard shows
-        if (st.incognito) com.umutk.pulse.extras.IncognitoGlyph(th.sub, 16.dp, Modifier.align(Alignment.BottomCenter).padding(bottom = 2.dp))
+        if (st.incognito) com.umutk.pulse.extras.IncognitoGlyph(th.sub.copy(alpha = .5f), 26.dp, Modifier.align(Alignment.Center))
     }
 }
 
