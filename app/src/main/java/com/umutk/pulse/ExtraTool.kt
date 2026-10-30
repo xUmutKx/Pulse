@@ -230,7 +230,6 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("ClockLauncher") -> "clock"
             n.endsWith("TempMailLauncher") -> "tempmail"
             n.endsWith("EbookLauncher") -> "ebook"
-            n.endsWith("WebMusicLauncher") -> "webmusic"
             n.endsWith("MessagesLauncher") || n.endsWith("MsgComposeActivity") || n.endsWith("MsgBubbleActivity") -> "messages"
             n.endsWith("ScreenRecLauncher") -> "screenrec"
             n.endsWith("NotifHistLauncher") -> "notifhist"
