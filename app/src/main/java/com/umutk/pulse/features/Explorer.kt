@@ -2281,10 +2281,6 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
     val folders = picks.any { it.isDirectory }
     fun done(msg: String) { note(msg); onDismiss() }
     var nearbyPick by remember { mutableStateOf(false) }
-    fun openNearby(cls: String, name: String) {
-        val ok = runCatching { ctx.startActivity(sendIntent(files).setClassName(ctx, cls)) }.isSuccess
-        done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not open $name", "$name açılamadı"))
-    }
     fun sendIntent(list: List<File>): Intent {
         val uris = ArrayList<android.net.Uri>(list.map { FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", it) })
         val mimes = list.map { fileMime(it) }.distinct()
@@ -2293,6 +2289,10 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
             else Intent(Intent.ACTION_SEND_MULTIPLE).setType(mime).putParcelableArrayListExtra(Intent.EXTRA_STREAM, uris)
         i.clipData = ClipData.newRawUri("", uris[0]).also { cd -> uris.drop(1).forEach { cd.addItem(ClipData.Item(it)) } }
         return i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+    fun openNearby(cls: String, name: String) {
+        val ok = runCatching { ctx.startActivity(sendIntent(files).setClassName(ctx, cls)) }.isSuccess
+        done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not open $name", "$name açılamadı"))
     }
     // the apps that take this share, read off the main thread
     var targets by remember { mutableStateOf<List<ShareTarget>>(emptyList()) }
