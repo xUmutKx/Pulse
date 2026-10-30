@@ -92,8 +92,8 @@ fun rawOpen(ctx: Context, f: File) {
     val i = if (installed) {
         val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
         Intent(Intent.ACTION_VIEW).setDataAndType(uri, "image/*").setPackage(RAW_EDITOR)
-            .setClipData(android.content.ClipData.newRawUri("", uri))
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            .apply { clipData = android.content.ClipData.newRawUri("", uri) }
     } else Intent(Intent.ACTION_VIEW, Uri.parse(RAW_EDITOR_PAGE))
     if (ctx !is Activity) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     try { ctx.startActivity(i) } catch (e: Exception) { Toast.makeText(ctx, tr("No app can open this file", "Bu dosyayı açacak uygulama yok"), Toast.LENGTH_SHORT).show() }
