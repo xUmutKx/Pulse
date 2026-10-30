@@ -228,7 +228,7 @@ object AppPlace {
 
 /** The standalone apps placed in the top-right Apps menu, as menu entries: each opens its own window. */
 private fun builtinApps(ctx: Context, openTool: (String) -> Unit): List<MenuEntry> =
-    AppPlace.all.filter { a -> "app:${a.alias}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(ctx) && AppPlace.where(a.alias) == "menu" && (a.alias == "CalculatorLauncher" || ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED) }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
+    AppPlace.all.filter { a -> "app:${a.alias}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(ctx) && AppPlace.where(a.alias) == "menu" && !(a.alias == "ClockLauncher" && ToolPlace.byId("clock")?.let { ToolPlace.where(ctx, it) } == "hidden") && (a.alias == "CalculatorLauncher" || ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED) }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
 
 private val EXTRA_APPS get() = tr("Apps", "Uygulamalar")
 
