@@ -277,9 +277,11 @@ fun AlarmEditSheet(
         }
     }
 
+    // AMOLED: in the dark theme the sheet is pure black, the same as the screen behind it
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
+        containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor,
         dragHandle = {
             BottomSheetDefaults.DragHandle(
                 width = 32.dp,
