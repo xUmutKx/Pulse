@@ -14,7 +14,6 @@ android {
         targetSdk = 34
         versionCode = 669
         versionName = "1.0.269"
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
     // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
@@ -30,6 +29,15 @@ android {
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = signingConfigs.getByName("pulse")
+        }
+    }
+    // one APK per processor type, each smaller than the all-in-one; a phone takes its own (the updater picks by Build.SUPPORTED_ABIS)
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86_64")
+            isUniversalApk = false
         }
     }
     compileOptions {
