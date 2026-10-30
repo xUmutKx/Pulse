@@ -177,6 +177,7 @@ fun loadSmsThread(c: Context, tid: Long, address: String): List<SmsMsg> {
         while (cur.moveToNext()) out += SmsMsg(cur.getString(0).orEmpty(), cur.getInt(1) != Telephony.Sms.MESSAGE_TYPE_INBOX, cur.getLong(2))
     }
     if (byThread) out += MsgCore.loadMms(c, tid)
+    out += Outbox.of(c, address)
     out.sortBy { it.date }
     return out
 }
@@ -184,19 +185,46 @@ fun loadSmsThread(c: Context, tid: Long, address: String): List<SmsMsg> {
 /** Sends through the system SMS stack. Every part reports back to [com.umutk.pulse.extras.messages.MsgSentReceiver]: the message is kept
  *  (as Pulse's own sent message when Pulse is the default SMS app) only once the radio has really sent it, and a refusal is shown then.
  *  False when the send is refused at once. */
-fun sendSms(c: Context, to: String, body: String): Boolean = runCatching {
-    val sm = smsManager(c)
-    val parts = sm.divideMessage(body)
-    val base = (System.currentTimeMillis() and 0x7fffffffL).toInt()
-    val sent = parts.indices.map { i ->
-        val report = Intent(com.umutk.pulse.extras.messages.MsgSentReceiver.ACTION)
-            .setClass(c, com.umutk.pulse.extras.messages.MsgSentReceiver::class.java)
-            .putExtra("address", to).putExtra("body", body).putExtra("last", i == parts.lastIndex)
-        android.app.PendingIntent.getBroadcast(c, base + i, report, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+fun sendSms(c: Context, to: String, body: String): Boolean {
+    // the text shows in its thread at once; the report removes it again when the radio refuses it
+    val key = Outbox.add(c, to, body)
+    val ok = runCatching {
+        val sm = smsManager(c)
+        val parts = sm.divideMessage(body)
+        val base = (System.currentTimeMillis() and 0x7fffffffL).toInt()
+        val sent = parts.indices.map { i ->
+            val report = Intent(com.umutk.pulse.extras.messages.MsgSentReceiver.ACTION)
+                .setClass(c, com.umutk.pulse.extras.messages.MsgSentReceiver::class.java)
+                .putExtra("address", to).putExtra("body", body).putExtra("key", key).putExtra("last", i == parts.lastIndex)
+            android.app.PendingIntent.getBroadcast(c, base + i, report, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
+        }
+        sm.sendMultipartTextMessage(to, null, parts, ArrayList(sent), null)
+        true
+    }.getOrDefault(false)
+    if (!ok) Outbox.remove(c, key)
+    return ok
+}
+
+/** Sent texts Pulse keeps itself: the system does not write a sent text when another app is the default SMS app, so the thread would show nothing. */
+object Outbox {
+    private const val SEP = '\u0001'
+    private fun sp(c: Context) = c.getSharedPreferences("msg_outbox", Context.MODE_PRIVATE)
+    private fun rows(c: Context): Set<String> = sp(c).getStringSet("rows", emptySet()).orEmpty()
+    private fun save(c: Context, r: Set<String>) { sp(c).edit().putStringSet("rows", r).apply() }
+    private fun timeOf(row: String) = row.substringBefore(SEP).toLongOrNull() ?: 0L
+
+    /** Adds a text, keeps the newest 500; returns its key, which [remove] takes. */
+    fun add(c: Context, address: String, body: String): Long {
+        val now = System.currentTimeMillis()
+        save(c, (rows(c).sortedBy { timeOf(it) }.takeLast(499) + "$now$SEP$address$SEP$body").toSet())
+        return now
     }
-    sm.sendMultipartTextMessage(to, null, parts, ArrayList(sent), null)
-    true
-}.getOrDefault(false)
+    fun remove(c: Context, key: Long) { save(c, rows(c).filterNot { timeOf(it) == key }.toSet()) }
+    fun of(c: Context, address: String): List<SmsMsg> = rows(c).mapNotNull { r ->
+        val p = r.split(SEP, limit = 3)
+        if (p.size < 3 || p[1] != address) null else SmsMsg(p[2], true, timeOf(r))
+    }
+}
 
 /** Sends the file at [uri] (with [text] as its text) as MMS. The library builds the MMS PDU; the system MMS stack sends it.
  *  shortcut: the whole file is read into memory, and most carriers refuse MMS above about 300 KB. False when refused. */
