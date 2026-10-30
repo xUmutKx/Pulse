@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- an envelope in white line, the same look as the other extra apps' glyphs -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineJoin="round"
+        android:pathData="M3,6 H21 V18 H3 Z" />
+    <path android:strokeColor="#FFFFFFFF" android:strokeWidth="1.6" android:strokeLineJoin="round"
+        android:pathData="M3,6 L12,13 L21,6" />
+</vector>
