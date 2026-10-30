@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -49,6 +50,7 @@ import com.umutk.pulse.PChip
 import com.umutk.pulse.PDialog
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
+import androidx.compose.material3.Icon
 import com.umutk.pulse.PSlider
 import com.umutk.pulse.PSwitch
 import com.umutk.pulse.Look
@@ -163,8 +165,18 @@ fun KeyboardSettings(back: () -> Unit) {
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     ExtraKeys.hold.forEach { (k, n) -> PChip(get() == k, if (k == "none") tr("None", "Yok") else n) { set(k); save() } }
                 }
+                // a small key with what its long press does: the action's icon and its name, both change with the choice
+                val chosen = get()
+                Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Box(Modifier.size(44.dp).clip(RoundedCornerShape(8.dp)).background(T.text.copy(alpha = .14f)), contentAlignment = Alignment.Center) {
+                        Text(label.substringAfter(" ").substringBefore(" ").take(3), color = T.text, fontSize = 13.sp)
+                    }
+                    if (chosen != "none") Icon(com.umutk.pulse.extras.keyboard.toolIcon(keyboardThemeNow(), chosen), null, tint = T.text, modifier = Modifier.size(20.dp))
+                    Text(ExtraKeys.hold.firstOrNull { it.first == chosen }?.second ?: tr("None", "Yok"), color = T.text, fontSize = 13.sp)
+                }
             }
             Switch(tr("Split keys", "Bölünmüş tuşlar"), tr("A gap in the middle of the rows, for a tablet", "Satırların ortasında boşluk, tablet için"), KeyboardPrefs.split) { KeyboardPrefs.split = it; save() }
+            Switch(tr("Direction keys", "Yön tuşları"), tr("Nine big keys: drag a key towards a character to type it", "Dokunun veya bir karaktere doğru kaydırın: dokuz büyük tuş"), KeyboardPrefs.dirLayout) { KeyboardPrefs.dirLayout = it; save() }
             Switch(tr("Extra button", "Ek tuş"), tr("A compact bottom row with a Shift key at the left", "Solda Shift tuşu olan, daha sıkışık alt satır"), KeyboardPrefs.bottomShift) { KeyboardPrefs.bottomShift = it; save() }
             Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A narrower keyboard that slides sideways by the handle on top", "Üstteki tutamakla yana kayan, daha dar klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
             Switch(tr("Large key text", "Büyük tuş yazısı"), "", KeyboardPrefs.largeText) { KeyboardPrefs.largeText = it; save() }
@@ -198,10 +210,21 @@ fun KeyboardSettings(back: () -> Unit) {
             PSlider((KeyboardPrefs.heightPct - 70) / 100f, { KeyboardPrefs.heightPct = 70 + (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Bottom space", "Alt boşluk")}: ${KeyboardPrefs.bottomPad} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.bottomPad / 60f, { KeyboardPrefs.bottomPad = (it * 60).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("Gamepad size", "Gamepad boyutu")}: ${KeyboardPrefs.padScale}%", color = T.sub, fontSize = 12.sp)
+            PSlider((KeyboardPrefs.padScale - 60) / 90f, { KeyboardPrefs.padScale = 60 + (it * 90).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("Gamepad dead zone", "Gamepad ölü bölge")}: ${KeyboardPrefs.padDead}%", color = T.sub, fontSize = 12.sp)
+            PSlider((KeyboardPrefs.padDead - 5) / 45f, { KeyboardPrefs.padDead = 5 + (it * 45).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("Gamepad sticks height", "Gamepad joystick yüksekliği")}: ${KeyboardPrefs.padLift}", color = T.sub, fontSize = 12.sp)
+            PSlider(KeyboardPrefs.padLift / 40f, { KeyboardPrefs.padLift = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Side space", "Yan boşluk")}: ${KeyboardPrefs.sidePad} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.sidePad / 40f, { KeyboardPrefs.sidePad = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Space between keys", "Tuşlar arası boşluk")}: ${KeyboardPrefs.keyGap} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.keyGap / 8f, { KeyboardPrefs.keyGap = (it * 8).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("?123 key narrower", "?123 tuşu daha dar")}: ${KeyboardPrefs.modeShrink}%", color = T.sub, fontSize = 12.sp)
+            PSlider(KeyboardPrefs.modeShrink / 40f, { KeyboardPrefs.modeShrink = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
+            Text("${tr("Comma key narrower", "Virgül tuşu daha dar")}: ${KeyboardPrefs.commaShrink}%", color = T.sub, fontSize = 12.sp)
+            PSlider(KeyboardPrefs.commaShrink / 40f, { KeyboardPrefs.commaShrink = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
+            Text(tr("The space bar gets the room these keys leave.", "Space tuşu bu tuşların bıraktığı yeri alır."), color = T.sub, fontSize = 11.sp)
             Row(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 listOf("off" to tr("Full width", "Tam genişlik"), "left" to tr("Left hand", "Sol el"), "right" to tr("Right hand", "Sağ el")).forEach { (k, n) ->
                     PChip(KeyboardPrefs.oneHand == k, n) { KeyboardPrefs.oneHand = k; save() }
@@ -233,7 +256,22 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Cursor control", "İmleç denetimi"), tr("Hold space and slide to move the cursor", "Boşluğa basılı tutup kaydırınca imleç gider"), KeyboardPrefs.cursorControl) { KeyboardPrefs.cursorControl = it; save() }
             Switch(tr("Quick delete", "Hızlı silme"), tr("Slide from the delete key to select and delete text", "Silme tuşundan kaydırarak seç ve sil"), KeyboardPrefs.quickDelete) { KeyboardPrefs.quickDelete = it; save() }
             Switch(tr("Emoji predictions", "Emoji tahminleri"), tr("Emoji on the suggestion bar", "Öneri çubuğunda emoji"), KeyboardPrefs.emojiPredictions) { KeyboardPrefs.emojiPredictions = it; save() }
-            Switch(tr("Learn from what I type", "Yazdıklarımdan öğren"), tr("Not in password, email and web address fields", "Parola, e-posta ve adres alanlarında kapalıdır"), KeyboardPrefs.learn) { KeyboardPrefs.learn = it; save() }
+            Switch(tr("Detect the language of a sentence", "Cümlenin dilini algıla"), tr("The words of the sentence decide: a single English word does not switch the keyboard", "Cümlenin kelimeleri belirler: tek bir İngilizce kelime klavyeyi değiştirmez"), KeyboardPrefs.autoLang) { KeyboardPrefs.autoLang = it; save() }
+            // the e-mail key (put it on the bar, in the menu, or on a long press): the domain it types after "@"
+            PField(KeyboardPrefs.emailDomain, { KeyboardPrefs.emailDomain = it.trim(); save() }, tr("E-mail key adds (e.g. gmail.com)", "E-posta tuşu ekler (örn. gmail.com)"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
+            // what the keyboard learns from typing (never in password, e-mail and address fields)
+            Text(tr("Learning", "Öğrenme"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf(1 to tr("Words", "Kelimeler"), 2 to tr("Sentences", "Cümleler"), 3 to tr("Both", "İkisi"), 0 to tr("Off", "Kapalı")).forEach { (m, n) ->
+                    PChip(KeyboardPrefs.learnMode == m, n) { KeyboardPrefs.learnMode = m; KeyboardPrefs.learn = m != 0; save() }
+                }
+            }
+            Text(when (KeyboardPrefs.learnMode) {
+                1 -> tr("Learns the words, names and corrections you confirm.", "Kelimeleri, özel isimleri ve onayladığın düzeltmeleri öğrenir.")
+                2 -> tr("Learns which words follow each other and your usual phrases.", "Hangi kelimenin hangisini izlediğini ve sık kullandığın ifadeleri öğrenir.")
+                3 -> tr("Learns both the words and how they follow each other.", "Hem kelimeleri hem birbirini izleyişlerini öğrenir.")
+                else -> tr("Nothing new is saved.", "Yeni hiçbir şey kaydedilmez.")
+            }, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
         }
 
         // feel
@@ -307,6 +345,43 @@ fun KeyboardSettings(back: () -> Unit) {
                 }
             }
             if (taught.isNotEmpty()) Text(tr("Added: ", "Eklendi: ") + taught, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        }
+
+        // the learned words: look at them, forget one, add one by hand (a word added is never "corrected"), copy the list out and read one in
+        KbSection("edit", tr("Learned words", "Öğrenilen kelimeler")) {
+            remember { KeyboardDictionary.ensureUser(ctx) }
+            var addW by remember { mutableStateOf("") }
+            var q by remember { mutableStateOf("") }
+            var lnote by remember { mutableStateOf("") }
+            val all = remember(learned, rev) { KeyboardDictionary.userWords() }
+            val shownW = remember(all, q) { all.filter { q.isBlank() || it.first.contains(q.trim().lowercase()) }.take(120) }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                PField(addW, { addW = it }, tr("Add a word", "Kelime ekle"), Modifier.weight(1f))
+                PButton(tr("Add", "Ekle"), compact = true) { if (addW.trim().length >= 2) { KeyboardDictionary.addUser(ctx, addW); addW = ""; learned = KeyboardDictionary.learnedCount(); rev++ } }
+            }
+            PField(q, { q = it }, tr("Search the ${all.size} words", "${all.size} kelimede ara"), Modifier.fillMaxWidth().padding(top = 6.dp))
+            Column(Modifier.fillMaxWidth().heightIn(max = 260.dp).verticalScroll(rememberScrollState())) {
+                shownW.forEach { (w, n) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(w, color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                        Text("$n", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(end = 10.dp))
+                        Box(Modifier.size(32.dp).clickable { KeyboardDictionary.removeUser(ctx, w); learned = KeyboardDictionary.learnedCount(); rev++ }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 18.dp) }
+                    }
+                }
+                if (shownW.isEmpty()) Text(tr("Nothing here yet", "Henüz yok"), color = T.sub, fontSize = 13.sp)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 6.dp)) {
+                PButton(tr("Copy the list", "Listeyi kopyala"), compact = true) {
+                    (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("words", KeyboardDictionary.exportUser()))
+                    lnote = tr("${all.size} words copied", "${all.size} kelime kopyalandı")
+                }
+                PButton(tr("Paste a list", "Liste yapıştır"), compact = true) {
+                    val t = (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).primaryClip?.getItemAt(0)?.coerceToText(ctx)?.toString().orEmpty()
+                    val n = KeyboardDictionary.importText(ctx, t); learned = KeyboardDictionary.learnedCount(); rev++
+                    lnote = tr("$n words taken", "$n kelime alındı")
+                }
+            }
+            if (lnote.isNotEmpty()) Text(lnote, color = T.sub, fontSize = 12.sp)
         }
 
         // statistics: what the keyboard has learned and where the fingers land
@@ -497,3 +572,6 @@ private fun ItemPicker(all: List<Pair<String, String>>, csv: String, onChange: (
         rest.forEach { (id, n) -> PChip(false, "+ $n") { push((chosen + id).joinToString(",")) } }
     }
 }
+
+/** The keyboard's theme as the settings draw it: the one the keyboard uses now. */
+private fun keyboardThemeNow(): KbTheme = KeyboardThemes.of(KeyboardPrefs.theme, true)

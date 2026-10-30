@@ -162,6 +162,8 @@ class MotionCueService : Service() {
                     android.view.MotionEvent.ACTION_UP -> {
                         val slop = 48f * d
                         if (ev.eventTime - downAt < 350 && Math.hypot((ev.x - downX).toDouble(), (ev.y - downY).toDouble()) < slop) {
+                            // a tap closes the quick settings / notification panel that is open under it
+                            com.umutk.pulse.extras.launcher.globalAction(applicationContext, android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_DISMISS_NOTIFICATION_SHADE)
                             if (ev.eventTime - lastTap < 600) { lastTap = 0L; stopSelf() } else lastTap = ev.eventTime
                         } else lastTap = 0L
                     }

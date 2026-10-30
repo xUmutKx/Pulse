@@ -50,8 +50,14 @@ import kotlinx.coroutines.withContext
 import kotlin.math.abs
 import kotlin.math.roundToInt
 
+/** Drops the cached covers (the app went to the background); they are read again when needed. */
+internal fun trimArtCache() { ArtCache.map.evictAll(); ArtCache.none.clear() }
+
 private object ArtCache {
-    val map = LruCache<String, ImageBitmap>(48)
+    // bounded by bytes (about 12 MB of pixels), not by count: a large cover costs much more than a small one
+    val map = object : LruCache<String, ImageBitmap>(12 * 1024 * 1024) {
+        override fun sizeOf(key: String, value: ImageBitmap) = value.width * value.height * 4
+    }
     val none = HashSet<String>() // tracks known to have no cover, so lists do not reopen the file each frame
 }
 

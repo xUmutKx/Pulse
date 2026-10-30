@@ -77,4 +77,28 @@ object AutoBackup {
             ?.sortedByDescending { it.name }?.drop(KEEP)?.forEach { it.delete() }
         return ok
     }
+
+    /** One saved backup the user can see and delete. [id] is the MediaStore uri (Android 10+) or the file path. */
+    class Saved(val name: String, val bytes: Long, val time: Long, val id: String)
+
+    /** The backups in Download/Pulse backup that this install can see, newest first. */
+    fun list(c: Context): List<Saved> = runCatching {
+        if (Build.VERSION.SDK_INT >= 29) {
+            val out = ArrayList<Saved>()
+            c.contentResolver.query(MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+                arrayOf(MediaStore.MediaColumns._ID, MediaStore.MediaColumns.DISPLAY_NAME, MediaStore.MediaColumns.SIZE, MediaStore.MediaColumns.DATE_MODIFIED),
+                "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ? AND ${MediaStore.MediaColumns.DISPLAY_NAME} LIKE ?", arrayOf(Environment.DIRECTORY_DOWNLOADS + "/" + FOLDER + "%", "pulse-%"), null)?.use { q ->
+                while (q.moveToNext()) out += Saved(q.getString(1), q.getLong(2), q.getLong(3) * 1000L, android.content.ContentUris.withAppendedId(MediaStore.Downloads.EXTERNAL_CONTENT_URI, q.getLong(0)).toString())
+            }
+            out.sortedByDescending { it.time }
+        } else {
+            val dir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), FOLDER)
+            dir.listFiles { f -> f.name.startsWith("pulse-") }?.map { Saved(it.name, it.length(), it.lastModified(), it.path) }?.sortedByDescending { it.time }.orEmpty()
+        }
+    }.getOrDefault(emptyList())
+
+    /** Deletes one saved backup; true when it is gone. */
+    fun delete(c: Context, s: Saved): Boolean = runCatching {
+        if (Build.VERSION.SDK_INT >= 29) c.contentResolver.delete(android.net.Uri.parse(s.id), null, null) > 0 else File(s.id).delete()
+    }.getOrDefault(false)
 }

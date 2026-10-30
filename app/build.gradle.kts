@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {
@@ -11,9 +12,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 565
-        versionName = "1.0.165"
-        ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
+        versionCode = 670
+        versionName = "1.0.270"
         resourceConfigurations += listOf("en", "tr")
     }
     // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
@@ -31,6 +31,15 @@ android {
             signingConfig = signingConfigs.getByName("pulse")
         }
     }
+    // one APK per processor type, each smaller than the all-in-one; a phone takes its own (the updater picks by Build.SUPPORTED_ABIS)
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("armeabi-v7a", "arm64-v8a", "x86_64")
+            isUniversalApk = false
+        }
+    }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
@@ -39,7 +48,7 @@ android {
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
     lint { checkOnly += setOf("NewApi"); abortOnError = false; textReport = true; textOutput = file("lint-newapi.txt") }
     buildFeatures { compose = true; aidl = true }
-    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class") } // the last two: BouncyCastle ships them in several jars
 }
 
 dependencies {
@@ -72,6 +81,10 @@ dependencies {
     implementation("androidx.media3:media3-effect:1.4.1")
     implementation("androidx.media3:media3-ui:1.4.1") // PlayerView in extras/video
     compileOnly(files("libs/xposed-stub.jar")) // BlackOut (extras/blackout): the Xposed API classes come from LSPosed / Vector at run time
+    implementation("androidx.datastore:datastore-preferences:1.1.1") // Lucid clock (extras/lucid): its settings
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.3") // Lucid clock: viewModel() in Compose
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3") // Relay (extras/relay, Apache-2.0): its protocol messages
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.79") // Relay: the self-signed certificate of this device (mutual TLS)
     implementation("androidx.palette:palette-ktx:1.0.0") // Palette (extras/palette): the colours of a wallpaper
     implementation("androidx.work:work-runtime-ktx:2.9.1") // ServiceWatchdog: periodic CheckWorker (extras/watchdog); 2.10 needs compileSdk 35
     // Apache-2.0; builds the MMS PDU for attachments in Messages (Messages.kt). okhttp 2.x is left out: the system MMS stack sends it, and okio 3 is already in use

@@ -54,7 +54,8 @@ fun storeStyle(t: PTheme = T): StoreStyle = when {
 fun StoreRowShell(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     val t = T
     when (storeShell(t)) {
-        StoreShell.CARD -> PCard(modifier.fillMaxWidth()) { content() }
+        // Windows 11: no card behind the row, it sits on the see-through window
+        StoreShell.CARD -> if (t.id == "win11") Column(modifier.fillMaxWidth()) { content() } else PCard(modifier.fillMaxWidth()) { content() }
         StoreShell.FLAT -> Column(modifier.fillMaxWidth()) {
             Box(Modifier.padding(vertical = 10.dp)) { content() }
             Box(Modifier.fillMaxWidth().height(1.dp).background(t.line))

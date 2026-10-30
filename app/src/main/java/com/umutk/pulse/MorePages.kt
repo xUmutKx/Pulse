@@ -5,7 +5,9 @@ import com.umutk.pulse.features.NetworksSection
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.border
 import androidx.compose.foundation.background
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.clickable
+import com.umutk.pulse.PButton
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,6 +20,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
@@ -70,8 +73,8 @@ fun LiveSections(title: String, everyMs: Long = 3000, top: @Composable ColumnSco
 }
 
 @Composable
-private fun Tile(label: String, value: String, color: Color, frac: Float, modifier: Modifier) {
-    PCard(modifier) {
+private fun Tile(label: String, value: String, color: Color, frac: Float, modifier: Modifier, onClick: () -> Unit = {}) {
+    PCard(modifier.clickable { onClick() }) {
         Text(label, color = T.sub, fontSize = 12.sp)
         FitText(value, T.text, 24.sp)
         BarMeter(frac, color)
@@ -81,7 +84,7 @@ private fun Tile(label: String, value: String, color: Color, frac: Float, modifi
 // ---------------------------------------------------------------- dashboard
 
 @Composable
-fun DashboardPage() {
+fun DashboardPage(onOpen: (String) -> Unit = {}) {
     val ctx = LocalContext.current
     val s by Sampler.snap.collectAsState()
     val h by Sampler.history.collectAsState()
@@ -92,22 +95,23 @@ fun DashboardPage() {
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead("Overview", if (s.root) "root" else "")
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f))
-            Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f))
+            Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { onOpen("cpu") }
+            Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { onOpen("memory") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f))
-            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f))
+            Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f)) { onOpen("thermal") }
+            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f)) { onOpen("battery") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f))
+            Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f)) { onOpen("storage") }
             Tile("Graphics", if (s.gpu >= 0) "%${s.gpu}" else "—", resColor("gpu"), s.gpu.coerceAtLeast(0) / 100f, Modifier.weight(1f))
         }
-        PCard {
+        PCard(Modifier.clickable { onOpen("network") }) {
             Text("Network", color = T.sub, fontSize = 12.sp)
             Row { Text("↓ ${rate(s.down.toFloat())}", color = resColor("net"), fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("↑ ${rate(s.up.toFloat())}", color = resColor("net"), fontSize = 16.sp) }
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 70.dp)
         }
+        PButton(tr("Security", "Güvenlik"), Modifier.fillMaxWidth()) { onOpen("security") }
         PCard {
             Text("Processor history (60 s)", color = T.sub, fontSize = 12.sp)
             Graph(listOf(h["cpu"].orEmpty()), listOf(resColor("cpu")), 100f, height = 70.dp)
@@ -138,12 +142,61 @@ fun DashboardPage() {
     }
 }
 
+/** App lock, Authenticator and App history on their own Device tab: a shield and a ring that shows how many of the two protections are on. */
+@Composable
+fun SecurityPage() {
+    val ctx = LocalContext.current
+    val openTool = com.umutk.pulse.LocalOpenTool.current
+    val lockedApps = com.umutk.pulse.features.AppLock.locked.size
+    val accounts = remember { runCatching { com.umutk.pulse.features.AuthStore.load(ctx).size }.getOrDefault(0) }
+    val on = (if (lockedApps > 0) 1 else 0) + (if (accounts > 0) 1 else 0)
+    val ok = on > 0
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        PCard {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(104.dp), contentAlignment = Alignment.Center) {
+                    Canvas(Modifier.size(104.dp)) {
+                        val stroke = 12.dp.toPx()
+                        val inset = stroke / 2
+                        val arc = androidx.compose.ui.geometry.Size(size.width - stroke, size.height - stroke)
+                        val at = androidx.compose.ui.geometry.Offset(inset, inset)
+                        drawArc(Look.accent.copy(alpha = .18f), -90f, 360f, false, at, arc, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+                        drawArc(Look.accent, -90f, 360f * on / 2f, false, at, arc, style = androidx.compose.ui.graphics.drawscope.Stroke(stroke))
+                    }
+                    PIcon("shieldOk", if (ok) Look.accent else T.sub, 44.dp)
+                }
+                Column(Modifier.padding(start = 16.dp).weight(1f)) {
+                    Text(if (ok) tr("Your device is secured", "Cihazınız güvende") else tr("Protection is off", "Koruma kapalı"),
+                        color = T.text, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("$on of 2 protections on", "2 korumadan $on tanesi açık"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 4.dp))
+                }
+            }
+        }
+        PCard {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(
+                    Triple("applock", tr("App lock", "Uygulama kilidi"), { openTool("applock") }),
+                    Triple("users", tr("Authenticator", "Kimlik doğrulayıcı"), { openTool("authenticator") }),
+                    Triple("history", tr("App history", "Uygulama geçmişi"), { com.umutk.pulse.widgets.WidgetOpen.page = "history" }),
+                ).forEach { (icon, label, go) ->
+                    Column(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(T.bg).clickable { go() }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        PIcon(icon, T.accent, 26.dp)
+                        Text(label, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(top = 6.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------- battery / network / thermal
 
 @Composable
 fun BatteryPage() {
     val h by Sampler.history.collectAsState()
     LiveSections("Battery", 2000, top = {
+        // the charging power is part of the battery, not a tool of its own
+        com.umutk.pulse.extras.charging.ChargingPowerSection()
         PCard {
             Text("Current (mA)", color = T.sub, fontSize = 12.sp)
             Graph(listOf(h["ma"].orEmpty()), listOf(resColor("battery")), maxOf(500f, (h["ma"].orEmpty().maxOrNull() ?: 0f) * 1.2f), height = 80.dp)
@@ -157,12 +210,18 @@ fun BatteryPage() {
 fun NetworkPage() {
     val h by Sampler.history.collectAsState()
     val scope = rememberCoroutineScope()
+    val openTool = com.umutk.pulse.LocalOpenTool.current
     var results by remember { mutableStateOf<List<String>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
     LiveSections("Network", 4000, top = {
-        PCard {
+        // the graph opens the two network tools: they are reached from here only
+        PCard(Modifier.clickable { openTool("netusage") }) {
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 80.dp)
             Text("Orange: download · Blue: upload", color = T.sub, fontSize = 11.sp)
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            PButton(tr("Network usage", "Ağ kullanımı"), Modifier.weight(1f)) { openTool("netusage") }
+            PButton(tr("Internet speed test", "İnternet hız testi"), Modifier.weight(1f)) { openTool("speedtest") }
+        }
         }
         PCard {
             Text("Latency test", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
@@ -384,14 +443,6 @@ fun PropsPage() {
 
 @Composable
 fun StoragePage() {
-    val scope = rememberCoroutineScope()
-    var folders by remember { mutableStateOf<List<Pair<String, Long>>?>(null) }
-    var busy by remember { mutableStateOf(false) }
-    LiveSections("Storage", 0, top = {
-        PCard {
-            Text("Folder sizes", color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-            PButton(if (busy) "Calculating…" else "Calculate") { if (!busy) { busy = true; scope.launch { folders = withContext(Dispatchers.IO) { Hw.folderSizes() }; busy = false } } }
-            folders?.let { f -> if (f.isEmpty()) Text("Could not read (storage permission may be needed)", color = T.sub, fontSize = 12.sp) else InfoRows(f.map { it.first to "%.1f MB".format(it.second / 1048576f) }) }
-        }
-    }) { Hw.storage(it) }
+    // the folder sizes moved to the Files app (Folder sizes), so they are not repeated here
+    LiveSections("Storage", 0) { Hw.storage(it) }
 }

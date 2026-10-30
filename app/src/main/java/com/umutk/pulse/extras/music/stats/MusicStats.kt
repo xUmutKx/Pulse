@@ -31,6 +31,8 @@ object MusicStats {
         }
         all.put(path, o)
         sp(c).edit().putString("t", all.toString()).apply()
+        // every real listening is also noted with its time, for the recap (a Poweramp import adds plays without listening: ms = 0, not noted)
+        if (ms > 0) PlayLog.add(c, System.currentTimeMillis(), ms, path, title ?: path.substringAfterLast('/').substringBeforeLast('.'), artist ?: "", counted)
     }
 
     fun all(c: Context): List<TrackStat> {

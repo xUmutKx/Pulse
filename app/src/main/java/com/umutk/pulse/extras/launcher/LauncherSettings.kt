@@ -96,6 +96,10 @@ fun LauncherSettings(back: () -> Unit) {
             Box(Modifier.size(40.dp).clickable { if (cat.isNotEmpty()) cat = "" else back() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
             Text(if (cat.isEmpty()) tr("Launcher", "Ana ekran") else LAUNCHER_CATS.first { it.key == cat }.let { tr(it.en, it.trName) }, color = T.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
         }
+        // to try the launcher as it is: starts its own screen (the home screen itself is only ever the default home app)
+        if (cat.isEmpty()) PButton(tr("Open the launcher to test", "Test için launcher'ı aç"), Modifier.fillMaxWidth().padding(bottom = 8.dp)) {
+            runCatching { ctx.startActivity(Intent().setClassName(ctx.packageName, "com.umutk.pulse.extras.launcher.LauncherActivity").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
         // the first page is the list of categories; each one opens as a page of its own
         if (cat.isEmpty()) LAUNCHER_CATS.forEach { k ->
             Row(Modifier.fillMaxWidth().clickable { cat = k.key }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {

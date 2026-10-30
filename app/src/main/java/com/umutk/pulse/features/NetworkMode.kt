@@ -79,6 +79,17 @@ object NetMode {
         else -> nr or lte or g3 or g2
     }
 
+    /** Tells apart a refused permission from a modem or ROM that did not take the change, from the last answers (no false "Done"). */
+    fun why(c: Context): String {
+        val d = lastDiag
+        return when {
+            Shell.root != true && !Shell.shizukuOk() -> tr("No root or Shizuku: Android lets only the system change the network type.", "Root veya Shizuku yok: ağ türünü yalnızca sistem değiştirebilir.")
+            d.contains("SecurityException", true) || d.contains("permission", true) || d.contains("not allowed", true) -> tr("The system refused: the permission is missing.", "Sistem reddetti: yetki eksik.")
+            d.contains("allowed=") && !d.lineSequence().first { it.startsWith("allowed=") }.contains(Regex("\\d")) -> tr("This phone does not answer the network type command.", "Bu telefon ağ türü komutuna yanıt vermiyor.")
+            else -> tr("The command ran, but the modem did not take this type (the phone or the carrier may not support it).", "Komut çalıştı ama modem bu türü kabul etmedi (telefon veya operatör desteklemiyor olabilir).")
+        }
+    }
+
     /** What the phone answered to the last change: the commands' own output and the values read back, so a refusal can be seen. */
     @Volatile var lastDiag = ""
 
@@ -127,7 +138,7 @@ fun NetworkModeTool() {
             Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(tr(m.en, m.trName) + if (cur == m.id) "  ✓" else "", color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f).clickable {
                     status = tr("Switching…", "Değiştiriliyor…")
-                    NetMode.apply(ctx, m.id) { ok -> cur = NetMode.current(ctx); status = if (ok) tr("Done", "Tamam") else tr("The phone did not take it. Root is needed, and some phones ignore this setting.", "Telefon kabul etmedi. Root gerekir, bazı telefonlar bu ayarı yok sayar.") }
+                    NetMode.apply(ctx, m.id) { ok -> cur = NetMode.current(ctx); status = if (ok) tr("Done", "Tamam") else NetMode.why(ctx) }
                 }.padding(vertical = 8.dp))
                 // the tile cycles through the modes that carry the switch
                 PSwitch(m.id in cyc, { on -> cyc = (if (on) cyc + m.id else cyc - m.id).distinct().ifEmpty { listOf(m.id) }; NetMode.setCycle(ctx, cyc) })

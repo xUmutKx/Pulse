@@ -24,6 +24,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import android.widget.Toast
+import androidx.compose.ui.draw.rotate
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.ui.draw.alpha
@@ -109,7 +110,7 @@ fun GeneralSettings() {
     PCard {
         Text("Start page", color = T.sub, fontSize = 12.sp)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Pages.forEach { p -> PChip(Opt.startPage == p.id, p.label) { Opt.startPage = p.id; Opt.save(ctx) } }
+            Pages.filter { it.id !in SecurityOnly }.forEach { p -> PChip(Opt.startPage == p.id, p.label) { Opt.startPage = p.id; Opt.save(ctx) } }
         }
     }
     PCard {
@@ -130,6 +131,7 @@ fun GeneralSettings() {
         }
     }
     PCard { AppIconChooser() }
+    PermissionKeepCard()
     DataBackupCard()
     ExtraAppsCard()
 }
@@ -185,6 +187,30 @@ private fun DataBackupCard() {
             PButton(tr("Import", "İçe aktar")) { open.launch(arrayOf("application/zip", "application/octet-stream")) }
         }
         if (status.isNotEmpty()) Text(status, color = T.sub, fontSize = 12.sp)
+        // the saved backups: how big each is, and a way to delete the old ones
+        var saved by remember { mutableStateOf<List<AutoBackup.Saved>>(emptyList()) }
+        var showSaved by remember { mutableStateOf(false) }
+        LaunchedEffect(lastAuto, showSaved) { saved = withContext(Dispatchers.IO) { AutoBackup.list(ctx) } }
+        val total = saved.sumOf { it.bytes }
+        Row(Modifier.fillMaxWidth().clickable { showSaved = !showSaved }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Saved backups", "Kayıtlı yedekler") + " · ${saved.size} · " + android.text.format.Formatter.formatShortFileSize(ctx, total), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+            PIcon("chevron", T.sub, 20.dp, Modifier.rotate(if (showSaved) 180f else 0f))
+        }
+        if (showSaved) {
+            saved.forEach { b ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(b.name, color = T.text, fontSize = 13.sp, maxLines = 1)
+                        Text(android.text.format.Formatter.formatShortFileSize(ctx, b.bytes) + "  ·  " + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(b.time)), color = T.sub, fontSize = 11.sp)
+                    }
+                    Box(Modifier.size(38.dp).clickable { scope.launch { withContext(Dispatchers.IO) { AutoBackup.delete(ctx, b) }; saved = withContext(Dispatchers.IO) { AutoBackup.list(ctx) } } }, contentAlignment = Alignment.Center) { PIcon("delete", T.sub, 20.dp) }
+                }
+            }
+            if (saved.isEmpty()) Text(tr("No backup saved yet.", "Henüz kayıtlı yedek yok."), color = T.sub, fontSize = 12.sp)
+            if (saved.size > 1) PButton(tr("Delete all but the newest two", "En yeni ikisi hariç hepsini sil"), compact = true) {
+                scope.launch { withContext(Dispatchers.IO) { saved.drop(2).forEach { AutoBackup.delete(ctx, it) } }; saved = withContext(Dispatchers.IO) { AutoBackup.list(ctx) } }
+            }
+        }
     }
     askImport?.let { uri ->
         PDialog(
@@ -714,9 +740,10 @@ private fun ExtraAppsCard() {
             Column(Modifier.fillMaxWidth()) {
                 Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                     // Windows 11: the Fluent vector of the tool, one glyph per tool (the PNG pack is bypassed, it has black glyphs)
-                    val toolColor = if (T.id == "win11" && IconStyle.of(IconCat.TOOLS) != "line") fluentColorRes(ctx, if (t.id == "extrastore") "store" else t.id) else 0
+                    // Windows 11: the Fluent colour picture of the tool (fc_<id>), else the Fluent glyph in the text colour
+                    val toolColor = if (T.id == "win11") fluentColorRes(ctx, if (t.id == "extrastore") "store" else t.id) else 0
                     if (toolColor != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(toolColor), null, Modifier.size(30.dp)) }
-                    else if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", FluentFilled.color("tool_${t.id}"), 24.dp) } else {
+                    else if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", T.text, 24.dp) } else {
                         // Office and Download manager get the black launcher tile with a white outline glyph (dark: accent glyph)
                         val tile = when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
                         if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
@@ -731,6 +758,7 @@ private fun ExtraAppsCard() {
                         else ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("start", t.target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
                     })
                     PIcon("chevron", T.sub, 20.dp, Modifier.clickable { open = !open }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (open) 180f else 0f })
+                    // on: the tool is listed in Extra apps (and the Apps group of the ⋮ menu); off: it is hidden from both
                     PSwitch(shownHere, { on -> ToolPlace.set(ctx, t, if (on) "extra" else "hidden"); rev++ })
                 }
                 // where it shows, one radio per place with the place's icon: the overflow menu, the Apps group, the left menu, nowhere (Settings only)
@@ -743,12 +771,13 @@ private fun ExtraAppsCard() {
             }
         }
         // the app's own pages: shown in the left menu or hidden
-        Pages.forEach { p ->
+        Pages.filter { it.id !in SecurityOnly }.forEach { p ->
             Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
                 val pageColor = if (T.id == "win11" && IconStyle.of(IconCat.MENU) != "line") fluentColorRes(ctx, FC_PAGE[p.id] ?: p.id) else 0
                 Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { if (pageColor != 0) Image(painterResource(pageColor), null, Modifier.size(30.dp)) else if (T.id == "win11" && FluentFilled.map.containsKey("page_${p.icon}")) FluentGlyph("page_${p.icon}", FluentFilled.color("page_${p.icon}"), 24.dp) else PIcon(p.icon, T.text, 22.dp) }
                 Spacer(Modifier.width(12.dp))
-                Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+                // a tap on the name opens that page; the switch only decides whether it is in the left menu
+                Text(p.label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable { com.umutk.pulse.widgets.WidgetOpen.page = p.id })
                 PSwitch(p.id !in Opt.hidden, { on -> Opt.hidden = if (on) Opt.hidden - p.id else Opt.hidden + p.id; Opt.save(ctx) })
             }
         }
@@ -844,9 +873,46 @@ internal fun ExtraDefaultRow(alias: String) {
 
 /** Colour Fluent picture res/drawable-nodpi/fc_<key>.png (Fluent UI System Icons colour set, MIT, rendered at 144 px); 0 when there is none. */
 internal fun fluentColorRes(ctx: android.content.Context, key: String): Int =
-    if (key.isEmpty()) 0 else ctx.resources.getIdentifier("fc_$key", "drawable", ctx.packageName)
+    if (key.isEmpty()) 0 else ctx.resources.getIdentifier("fc_${key.lowercase()}", "drawable", ctx.packageName)
 
 private val FC_APP = mapOf("CalculatorLauncher" to "calculator", "FilesLauncher" to "files", "PhotosLauncher" to "photos", "CalendarLauncher" to "calendar", "ContactsLauncher" to "contacts", "PaintLauncher" to "paint",
-    "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes",
+    "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "IslandLauncher" to "island", "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes",
     "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "ExtraStoreLauncher" to "store")
 private val FC_PAGE = mapOf("downloads" to "download", "files" to "files")
+
+
+/**
+ * Android 11+ takes the permissions of an app that was not opened for months ("Pause app activity if unused" / permission auto-reset): the accessibility,
+ * notification, usage and overlay grants then vanish. This card shows whether Pulse is exempt and sets it: with root the exemption is written directly (the
+ * same appop the system screen writes), without root the system screen of Pulse opens, where the switch is turned off by hand.
+ */
+@Composable
+private fun PermissionKeepCard() {
+    if (android.os.Build.VERSION.SDK_INT < 30) return
+    val ctx = LocalContext.current
+    fun exempt() = runCatching { ctx.packageManager.isAutoRevokeWhitelisted }.getOrDefault(false)
+    var on by remember { mutableStateOf(exempt()) }
+    var note by remember { mutableStateOf("") }
+    // coming back from the system screen: read the state again
+    val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+    DisposableEffect(lifecycle) {
+        val ob = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) on = exempt() }
+        lifecycle.addObserver(ob); onDispose { lifecycle.removeObserver(ob) }
+    }
+    PCard {
+        SwitchRow(tr("Keep permissions", "İzinleri koru"),
+            tr("Stops Android from taking Pulse's permissions back when it is not opened for a while", "Pulse bir süre açılmazsa Android'in izinlerini geri almasını engeller"), on) { want ->
+            if (Shell.root == true) {
+                Thread {
+                    val r = Shell.runRoot("cmd appops set ${ctx.packageName} AUTO_REVOKE_PERMISSIONS_IF_UNUSED " + (if (want) "ignore" else "allow") + "; echo __OK")
+                    android.os.Handler(android.os.Looper.getMainLooper()).post { on = exempt(); note = if (r.contains("__OK") && on == want) "" else tr("The system did not take it.", "Sistem kabul etmedi.") }
+                }.start()
+            } else {
+                note = tr("Turn off \"Pause app activity if unused\" on the screen that opens.", "Açılan ekranda \"Kullanılmıyorsa uygulama etkinliğini duraklat\" seçeneğini kapat.")
+                runCatching { ctx.startActivity(Intent(Intent.ACTION_AUTO_REVOKE_PERMISSIONS, android.net.Uri.parse("package:" + ctx.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    .onFailure { runCatching { ctx.startActivity(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, android.net.Uri.parse("package:" + ctx.packageName)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+            }
+        }
+        if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp)
+    }
+}

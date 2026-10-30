@@ -31,8 +31,13 @@ object LauncherSounds {
     }
 
     /** The look's start-up sound whatever the launcher's setting says: for the Pulse app's own opening (its option is off until it is switched on). */
+    private var lastStart = 0L
     fun play(c: Context, lookId: String) {
         val res = startRes(key(lookId)).takeIf { it != 0 } ?: return
+        // the same start-up sound is never played twice in a row (two screens asking at once, or a screen redrawn)
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastStart < 4000L) return
+        lastStart = now
         runCatching {
             MediaPlayer().apply {
                 setAudioAttributes(attrs)

@@ -125,12 +125,13 @@ fun PButton(text: String, modifier: Modifier = Modifier, danger: Boolean = false
         val r = if (t.id == "win10") 4.dp else t.radius
         Box(modifier.clip(RoundedCornerShape(r)).background(t.bg).then(if (t.bevel) Modifier.bevel(true) else Modifier.border(1.dp, t.line, RoundedCornerShape(r))).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
             if (icon != null) { Icon(icon, null, Modifier.size(16.dp), tint = if (danger) Color(0xFFB00020) else t.text); Spacer(Modifier.width(6.dp)) }
-            Text(text, color = if (danger) Color(0xFFB00020) else t.text, fontSize = 13.sp)
+            Text(text, color = InWinBtnText.current ?: if (danger) Color(0xFFB00020) else t.text, fontSize = 13.sp)
         }
     } else {
         // single outline, no accent fill: the same for every look
         val shape = if (t.material) CircleShape else RoundedCornerShape(if (t.id == "win11") 6.dp else t.radius.coerceAtMost(12.dp))
-        val fg = if (danger) Color(0xFFC42B1C) else t.text
+        // inside a Windows dialog button the colour is the one that reads on that button (white on the accent fill)
+        val fg = InWinBtnText.current ?: if (danger) Color(0xFFC42B1C) else t.text
         if (t.material && InMatDialogBtn.current) {
             // a Material 3 dialog action: a text button, no frame
             Box(modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp), contentAlignment = Alignment.Center) {
@@ -185,6 +186,9 @@ fun HistoryPage() {
     var notesOn by remember { mutableStateOf(NoteCount.enabled(ctx)) }
     var pie by remember { mutableStateOf(false) }
     var screenOnly by remember { mutableStateOf(false) }
+    // the range shown: today, the last 7 days, the last 30 days
+    var range by remember { mutableStateOf(1) }
+    var limitFor by remember { mutableStateOf<Pair<String, String>?>(null) }
     val lifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
     DisposableEffect(lifecycle) {
         val ob = androidx.lifecycle.LifecycleEventObserver { _, e ->
@@ -192,21 +196,37 @@ fun HistoryPage() {
         }
         lifecycle.addObserver(ob); onDispose { lifecycle.removeObserver(ob) }
     }
-    LaunchedEffect(granted, screenOnly) {
+    LaunchedEffect(granted, screenOnly, range) {
         while (granted) {
-            rows = withContext(Dispatchers.IO) { if (screenOnly) Extra.usageScreenOn(ctx) else Extra.usageToday(ctx) }
+            rows = withContext(Dispatchers.IO) { if (screenOnly) Extra.usageScreenOn(ctx, range) else Extra.usageToday(ctx, range) }
             unlocks = withContext(Dispatchers.IO) { Extra.unlocksToday(ctx) }
             delay(10000)
         }
     }
     LaunchedEffect(Unit) { while (true) { notes = NoteCount.today(ctx); delay(5000) } }
     val total = rows.sumOf { it.ms }
+    limitFor?.let { (pk, lb) -> com.umutk.pulse.applock.AppLimitDialog(pk, lb) { limitFor = null } }
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.weight(1f)) { Header("App history", "today") }
-            PChip(!screenOnly, tr("Total", "Toplam")) { screenOnly = false }
-            Spacer(Modifier.width(6.dp))
-            PChip(screenOnly, tr("Screen on", "Ekran açık")) { screenOnly = true }
+            Box(Modifier.weight(1f)) { Header("App history", when (range) { 1 -> tr("today", "bugün"); 7 -> tr("7 days", "7 gün"); else -> tr("30 days", "30 gün") }) }
+            // icons instead of the words: the phone (total) and the lit screen (screen on)
+            Box(Modifier.size(40.dp).clickable { screenOnly = false }, contentAlignment = Alignment.Center) { PIcon("apps", if (!screenOnly) Look.accent else T.sub, 22.dp) }
+            Box(Modifier.size(40.dp).clickable { screenOnly = true }, contentAlignment = Alignment.Center) { PIcon("phone", if (screenOnly) Look.accent else T.sub, 22.dp) }
+        }
+        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            PChip(range == 1, tr("Today", "Bugün")) { range = 1 }
+            PChip(range == 7, tr("Week", "Hafta")) { range = 7 }
+            PChip(range == 30, tr("Month", "Ay")) { range = 30 }
+            Spacer(Modifier.weight(1f))
+            // the report as a spreadsheet file (app, package, category by the app's own declaration, minutes) in Download/Pulse
+            var note by remember { mutableStateOf("") }
+            val scope = rememberCoroutineScope()
+            Box(Modifier.size(36.dp).clickable {
+                scope.launch {
+                    note = runCatching { withContext(Dispatchers.IO) { exportUsage(ctx, rows, range) } }.getOrElse { tr("Could not save", "Kaydedilemedi") }
+                    android.widget.Toast.makeText(ctx, note, android.widget.Toast.LENGTH_LONG).show()
+                }
+            }, contentAlignment = Alignment.Center) { PIcon("download", T.text, 20.dp) }
         }
         PCard {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
@@ -225,26 +245,21 @@ fun HistoryPage() {
             }
         } else if (rows.isEmpty()) Center("Nothing recorded today")
         else {
-            PButton(if (pie) "Show list" else "Show pie chart", Modifier.fillMaxWidth()) { pie = !pie }
-            if (pie) {
-                val slices = rows.take(15).map { it.label to it.ms } +
-                    (rows.drop(15).sumOf { it.ms }.takeIf { it > 0 }?.let { listOf("Others" to it) }.orEmpty())
-                // the legend under the ring lists every slice, so the whole block scrolls instead of being cut at the ring's height
-                Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState()), horizontalAlignment = Alignment.CenterHorizontally) {
-                    DonutChart(slices, Modifier.fillMaxWidth(), centerText = hms(total))
-                }
-            } else {
-                val top = rows.firstOrNull()?.ms?.coerceAtLeast(1) ?: 1
-                LazyColumn(Modifier.weight(1f)) {
-                    items(rows.take(80), key = { it.pkg }) { r ->
-                        Column(Modifier.padding(vertical = 6.dp)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                AppIcon(r.pkg, 26.dp); Spacer(Modifier.width(8.dp))
-                                Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
-                                Text(hms(r.ms), color = T.sub, fontSize = 13.sp)
-                            }
-                            BarMeter(r.ms.toFloat() / top, Look.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
+            // the ring and the list together: one scroll, the ring on top, the apps with their bars under it
+            val slices = rows.take(12).map { it.label to it.ms } + (rows.drop(12).sumOf { it.ms }.takeIf { it > 0 }?.let { listOf(tr("Others", "Diğer") to it) }.orEmpty())
+            val top = rows.firstOrNull()?.ms?.coerceAtLeast(1) ?: 1
+            LazyColumn(Modifier.weight(1f)) {
+                item { Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) { DonutChart(slices, Modifier.fillMaxWidth(), centerText = hms(total)) } }
+                items(rows.take(80), key = { it.pkg }) { r ->
+                    // a tap sets a daily time limit for the app
+                    Column(Modifier.clickable { limitFor = r.pkg to r.label }.padding(vertical = 6.dp)) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            AppIcon(r.pkg, 26.dp); Spacer(Modifier.width(8.dp))
+                            Text(r.label, Modifier.weight(1f), color = T.text, fontSize = 14.sp, maxLines = 1)
+                            if (com.umutk.pulse.applock.AppLimits.minutes(ctx, r.pkg) > 0) { PIcon("timer", Look.accent, 16.dp); Spacer(Modifier.width(6.dp)) }
+                            Text(hms(r.ms), color = T.sub, fontSize = 13.sp)
                         }
+                        BarMeter(r.ms.toFloat() / top, Look.accent, Modifier.padding(start = 34.dp, top = 4.dp), h = 4.dp)
                     }
                 }
             }
@@ -650,4 +665,22 @@ private fun IconStyleTile(cat: IconCat, id: String, selected: Boolean, onClick: 
             keys.forEach { k -> PIcon(k, T.text, 24.dp) }
         }
     }
+}
+
+
+/** The usage of the chosen range as a CSV: app, package, category, minutes; one line per app, with the total at the end. Returns the message to show. */
+private suspend fun exportUsage(ctx: android.content.Context, rows: List<UsageRow>, days: Int): String {
+    val pm = ctx.packageManager
+    fun cat(pkg: String): String = runCatching {
+        if (android.os.Build.VERSION.SDK_INT < 26) return@runCatching ""
+        val c = pm.getApplicationInfo(pkg, 0).category
+        if (c < 0) tr("Other", "Diğer") else android.content.pm.ApplicationInfo.getCategoryTitle(ctx, c)?.toString().orEmpty()
+    }.getOrDefault("")
+    fun q(t: String) = "\"" + t.replace("\"", "\"\"") + "\""
+    val sb = StringBuilder("app,package,category,minutes\n")
+    rows.forEach { sb.append(q(it.label)).append(',').append(q(it.pkg)).append(',').append(q(cat(it.pkg))).append(',').append(it.ms / 60_000L).append('\n') }
+    sb.append("total,,,").append(rows.sumOf { it.ms } / 60_000L).append('\n')
+    val name = "pulse-usage-${days}d-" + System.currentTimeMillis() / 1000 + ".csv"
+    docScanSave(ctx, name, "text/csv") { it.write(sb.toString().toByteArray()) }
+    return tr("Saved $name in Download/Pulse", "$name kaydedildi, Download/Pulse içinde")
 }

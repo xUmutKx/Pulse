@@ -231,7 +231,8 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
                             Box(box(Modifier.fillMaxWidth().height(96.dp)), contentAlignment = Alignment.Center) {
                                 val th = exThumb(f)
                                 if (th != null) androidx.compose.foundation.Image(th, null, Modifier.fillMaxSize().clip(RoundedCornerShape(if (mat) 14.dp else 0.dp)), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-                                else PIcon("document", sub, 34.dp)
+                                else com.umutk.pulse.features.FileTypeBadge(f, size = 44.dp)
+                                if (th != null) com.umutk.pulse.features.FileTypeBadge(f, Modifier.align(Alignment.BottomStart).padding(5.dp), 22.dp)
                             }
                             Text(f.name, color = fg, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
                             Text(DateUtils.getRelativeTimeSpanString(f.lastModified(), System.currentTimeMillis(), DateUtils.DAY_IN_MILLIS).toString(), color = sub, fontSize = 12.sp, maxLines = 1)
@@ -330,6 +331,8 @@ fun FilesMorePage(onTab: (String) -> Unit) {
         Triple("disk", tr("Folder sizes", "Klasör boyutları"), tr("Where the storage went, folder by folder", "Depolama nereye gitti, klasör klasör")) to { onTab("tree") },
         Triple("filetypes", tr("File types", "Dosya türleri"), tr("Pictures, videos, audio, documents, archives, apps", "Resimler, videolar, ses, belgeler, arşivler, uygulamalar")) to { onTab("types") },
         Triple("clean", tr("Clean cache", "Önbelleği temizle"), tr("Junk of apps that is safe to delete", "Uygulamaların silinmesi güvenli artıkları")) to { onTab("cache") },
+        Triple("send", tr("Relay", "Relay"), tr("Files, text and links to your devices on this Wi-Fi", "Bu Wi-Fi'daki cihazlarına dosya, metin ve bağlantı")) to { openTool("relay") },
+        Triple("wifi", tr("LocalSend", "LocalSend"), tr("Send files to nearby devices", "Yakındaki cihazlara dosya gönder")) to { openTool("localsend") },
         Triple("settings", tr("Settings", "Ayarlar"), tr("Look and behaviour of Files", "Dosyalar'ın görünümü ve davranışı")) to { openTool("files_settings") },
     )
     androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp)) {
