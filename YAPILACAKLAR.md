@@ -1597,3 +1597,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derlemede) Device > Security: the tile labels stay on one line (they shrink to fit) (derlenmedi)
 - (sonraki derlemede) Device > Overview: the tabs that have a tile on the page (CPU, Memory, Thermal, Battery, Network, Storage) are not repeated in the tab row there (derlenmedi)
 - (sonraki derlemede) Windows 11 line icon style: the Office icon in the left menu is the line outline too, not the colour logo (derlenmedi)
+- (sonraki derlemede) Windows 11 settings: Mica (new) and Acrylic (new) are no longer offered in the theme list; the icon groups show their styles at once (one tap picks) (derlenmedi)
