@@ -191,6 +191,7 @@ object AppPlace {
         App("ContactsLauncher", "Contacts", "Kişiler", "person", Icons.Outlined.Person) { c, _ -> launchExtra(c, "com.umutk.pulse.ContactsActivity") },
         App("PaintLauncher", "Paint", "Paint", "palette", Icons.Outlined.Brush) { c, _ -> launchExtra(c, TOOL, "paint") },
         App("CalculatorLauncher", "Calculator", "Hesap makinesi", "calc", Icons.Outlined.Calculate) { c, _ -> launchExtra(c, TOOL, "calculator") },
+        App("ClockLauncher", "Clock", "Saat", "clock", Icons.Outlined.AccessTime) { c, _ -> launchExtra(c, TOOL, "clock") },
         App("ArtCraftLauncher", "ArtCraft", "ArtCraft", "palette", Icons.Outlined.Palette) { c, _ -> launchExtra(c, "com.umutk.pulse.ArtCraftActivity") },
         App("BrowserLauncher", "Browser", "Tarayıcı", "globe", Icons.Outlined.Public) { c, _ -> launchExtra(c, TOOL, "browser") },
         App("OfficeLauncher", "Office", "Office", "document", Icons.Outlined.Description) { c, _ -> launchExtra(c, TOOL, "office") },

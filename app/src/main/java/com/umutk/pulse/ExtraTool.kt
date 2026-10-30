@@ -222,6 +222,7 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("BrowserLauncher") -> "browser"
             n.endsWith("OfficeLauncher") -> "office"
             n.endsWith("CalculatorLauncher") -> "calculator"
+            n.endsWith("ClockLauncher") -> "clock"
             n.endsWith("MessagesLauncher") || n.endsWith("MsgComposeActivity") || n.endsWith("MsgBubbleActivity") -> "messages"
             n.endsWith("ScreenRecLauncher") -> "screenrec"
             n.endsWith("NotifHistLauncher") -> "notifhist"
