@@ -312,30 +312,24 @@ private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.comp
 /** A chosen layout, over whatever the field itself would ask for. "Default" clears the pick, so the field decides again. */
 @Composable
 private fun LayoutPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit.Dp) {
-    val options = listOf(null to tr("Default", "Varsayılan"), "numpad" to tr("Numbers", "Sayılar"), "game" to tr("Game controls", "Oyun tuşları"))
-    Column(Modifier.fillMaxWidth().height(keyH * 4f), verticalArrangement = Arrangement.Center) {
-        Text(tr("Key layout", "Tuş düzeni"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp, bottom = 4.dp))
-        options.forEach { (v, label) ->
+    // each layout has its own icon; the rows share the height evenly
+    val options = listOf(Triple(null, tr("Default", "Varsayılan"), "Keyboard"), Triple("numpad", tr("Numbers", "Sayılar"), "Pin"), Triple("game", tr("Game controls", "Oyun tuşları"), "SportsEsports"))
+    Column(Modifier.fillMaxWidth().height(keyH * 4f), verticalArrangement = Arrangement.SpaceEvenly) {
+        Text(tr("Key layout", "Tuş düzeni"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp))
+        options.forEach { (v, label, icon) ->
             val on = st.forceLayout == v
             Row(
-                Modifier.fillMaxWidth().height(keyH * .85f).clickable { st.forceLayout = v; st.panel = "keys" }.padding(horizontal = 14.dp),
+                Modifier.fillMaxWidth().clickable { st.forceLayout = v; st.panel = "keys" }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(label, color = if (on) th.accent else th.text, fontSize = 16.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, modifier = Modifier.weight(1f))
+                Icon(kbIcon(th, icon), null, tint = if (on) th.accent else th.text, modifier = Modifier.size(22.dp))
+                Text(label, color = if (on) th.accent else th.text, fontSize = 16.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, modifier = Modifier.weight(1f).padding(start = 12.dp))
                 if (on) Icon(kbIcon(th, "Check"), null, tint = th.accent, modifier = Modifier.size(20.dp))
             }
         }
-        // the key bar, the gamepad and the key set open from here too
-        val keyBarOn = KeyboardPrefs.arrows
-        Row(Modifier.fillMaxWidth().height(keyH * .85f).clickable { KeyboardPrefs.arrows = !keyBarOn; KeyboardPrefs.saveFloat(); st.panel = "keys" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Key bar", "Tuş çubuğu"), color = if (keyBarOn) th.accent else th.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
-            if (keyBarOn) Icon(kbIcon(th, "Check"), null, tint = th.accent, modifier = Modifier.size(20.dp))
-        }
-        Row(Modifier.fillMaxWidth().height(keyH * .85f).clickable { st.panel = "gamepad" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Gamepad", "Oyun kumandası"), color = th.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
-        }
-        Row(Modifier.fillMaxWidth().height(keyH * .85f).clickable { st.panel = "keyset" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Key set", "Tuş seti"), color = th.text, fontSize = 16.sp, modifier = Modifier.weight(1f))
+        Row(Modifier.fillMaxWidth().clickable { st.panel = "keyset" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(kbIcon(th, "Keyboard"), null, tint = th.text, modifier = Modifier.size(22.dp))
+            Text(tr("Key set", "Tuş seti"), color = th.text, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
         }
     }
 }

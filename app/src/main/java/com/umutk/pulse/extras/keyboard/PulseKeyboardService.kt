@@ -460,7 +460,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             punctTyped = ch in ",;!?:" || dotOk
             dotEnd = ch in "!?" || dotOk
             // a comma behind a word is followed by a space at once (not in numbers, addresses, passwords or web addresses)
-            if (ch == ',' && KeyboardPrefs.autoSpace && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true) {
+            if (ch == ',' && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true) {
                 c.commitText(" ", 1); commaSpace = true; punctTyped = false
             }
             lastWasSpace = false
@@ -1378,7 +1378,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < 1) KeyboardDictionary.Cand(w, s, .6f) else null
             }
         }.maxByOrNull { it.score }
-        val fix = swapFix ?: fix0 ?: if (!fast && !valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
+        // two words that run together (a key typed for the space among them) are split before any other mending
+        val split = if (!fast && !valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
+        val fix = swapFix ?: split ?: fix0
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
         val emoji = if (KeyboardPrefs.emojiPredictions) (KeyboardDictionary.emoji(lower) ?: EmojiData.forWord(lower)) else null
         val mid: String; val left: String; val right: String
