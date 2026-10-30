@@ -21,9 +21,9 @@ fun IncognitoGlyph(tint: Color, size: Dp = 18.dp, modifier: Modifier = Modifier)
         drawRoundRect(tint, Offset(w * .04f, h * .50f), Size(w * .92f, h * .14f), CornerRadius(h * .07f))
         drawRoundRect(tint, Offset(w * .24f, h * .10f), Size(w * .52f, h * .44f), CornerRadius(h * .10f))
         // the glasses: two rings and the bridge between them
-        val stroke = Stroke(width = w * .09f)
+        val stroke = Stroke(width = w * .15f)
         drawCircle(tint, radius = w * .16f, center = Offset(w * .32f, h * .80f), style = stroke)
         drawCircle(tint, radius = w * .16f, center = Offset(w * .68f, h * .80f), style = stroke)
-        drawLine(tint, Offset(w * .48f, h * .78f), Offset(w * .52f, h * .78f), strokeWidth = w * .09f)
+        drawLine(tint, Offset(w * .48f, h * .78f), Offset(w * .52f, h * .78f), strokeWidth = w * .15f)
     }
 }
