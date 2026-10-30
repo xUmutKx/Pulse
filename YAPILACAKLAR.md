@@ -1664,3 +1664,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (derlenmedi) Keyboard: key layout rows evenly spaced with an icon each (no gamepad or key bar there); the lock and the clipboard swapped in the bar; a comma behind a word gets its space again (the space setting had turned it off); two words run together are split before other corrections
 - (derlenmedi) Books: the empty shelf finds the books in the phone's Books and Download folders, and has an add button
 - (derlenmedi) Windows 11 extra apps list: Books uses the Fluent book glyph
+- (derlenmedi) Quick auth: every account shows the seconds left and a bar that empties with its code; the codes roll over each period. Books: the settings button at the top of the shelf

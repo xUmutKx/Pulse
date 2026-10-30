@@ -155,14 +155,22 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     private fun showAuth() {
+        refreshAuth()
+        st.panel = "auth"
+    }
+
+    /** The codes of every account for the current time, with the period of each (a code changes when its period ends). */
+    private fun refreshAuth() {
         val now = System.currentTimeMillis() / 1000L
         val accounts = runCatching { com.umutk.pulse.features.AuthStore.load(this) }.getOrDefault(emptyList())
         st.authCodes = accounts.map { a ->
             val name = if (a.issuer.isBlank()) a.name else "${a.issuer} · ${a.name}"
             name to runCatching { com.umutk.pulse.features.Totp.code(com.umutk.pulse.features.Totp.base32Decode(a.secret), now, a.digits, a.period, a.algo) }.getOrDefault("------")
         }
-        st.panel = "auth"
+        st.authPeriods = accounts.map { it.period }
     }
+
+    override fun authTick() { if (st.panel == "auth") refreshAuth() }
 
     override fun pasteClip(item: ClipItem) {
         val c = currentInputConnection ?: return

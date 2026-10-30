@@ -156,7 +156,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 24.dp) }
             Text(tr("Books", "Kitaplar"), color = T.text, fontSize = 18.sp, modifier = Modifier.weight(1f).padding(start = 4.dp))
-            Box(Modifier.size(40.dp).clickable { showOpts = !showOpts }, contentAlignment = Alignment.Center) { PIcon("tune", T.text, 22.dp) }
+            Box(Modifier.size(40.dp).clickable { showOpts = !showOpts }, contentAlignment = Alignment.Center) { PIcon("settings", T.text, 22.dp) }
             Box(Modifier.size(40.dp).clickable { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }, contentAlignment = Alignment.Center) { PIcon("add", T.text, 24.dp) }
         }
         if (showOpts) Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
