@@ -199,8 +199,6 @@ fun KeyboardSettings(back: () -> Unit) {
                 if (KeyboardPrefs.proRow2) ItemPicker(ExtraKeys.all.map { it.id to it.label }, KeyboardPrefs.proKeys2) { KeyboardPrefs.proKeys2 = it; save() }
             }
             Text(tr("Toolbar", "Araç çubuğu"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
-            Text("${tr("Icons on the bar", "Üst çubukta ikon")}: ${KeyboardPrefs.barSlots}", color = T.sub, fontSize = 12.sp)
-            PSlider((KeyboardPrefs.barSlots - 3) / 6f, { KeyboardPrefs.barSlots = 3 + (it * 6).roundToInt() }, 0f..1f, onDone = { save() })
             ItemPicker(ExtraKeys.toolbar, KeyboardPrefs.toolbarItems) { KeyboardPrefs.toolbarItems = it; KeyboardPrefs.menuItems = KeyboardPrefs.menuItems.split(',').filter { id -> id !in it.split(',') }.joinToString(","); save() }
             Text(tr("Menu (the three dots)", "Menü (üç nokta)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
             ItemPicker(ExtraKeys.menu, KeyboardPrefs.menuItems) { KeyboardPrefs.menuItems = it; KeyboardPrefs.toolbarItems = KeyboardPrefs.toolbarItems.split(',').filter { id -> id !in it.split(',') }.joinToString(","); save() }
