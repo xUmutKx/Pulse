@@ -426,7 +426,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var amoled by remember { mutableStateOf(EbookPrefs.amoled(ctx)) }
     var autoTheme by remember { mutableStateOf(EbookPrefs.autoTheme(ctx)) }
     var themeIx by remember { mutableStateOf(if (EbookPrefs.autoTheme(ctx)) autoIndex() else rp(ctx).getInt("theme", DAY_THEME)) }
-    var textSize by remember { mutableStateOf(rp(ctx).getInt("size", 18)) }
+    var textSize by remember { mutableStateOf(rp(ctx).getInt("size", 22)) }
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
     var anim by remember { mutableStateOf(EbookPrefs.anim(ctx)) }
     var dbl by remember { mutableStateOf(EbookPrefs.double(ctx)) }
