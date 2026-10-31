@@ -1759,3 +1759,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader: Control page has a Speech engine row that lists the engines on the phone (Google's included); the choice applies when a book is opened (derlenmedi)
 - Books reader: the last line of a page is no longer cut off (the page measure matches the drawn spacing and keeps a margin) (derlenmedi)
 - Books: My Favorites has its icon; the drawer header is plain text; Find free books (Project Gutenberg, public domain, Turkish first) downloads into Books and adds to the shelf (derlenmedi)
+- Books find: results show covers in a grid; one tap downloads the book and opens it in the reader (derlenmedi)
