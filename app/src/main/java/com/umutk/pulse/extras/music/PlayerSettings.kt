@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.music
 
+import com.umutk.pulse.extras.ui.FlatSection
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.horizontalScroll
@@ -81,7 +82,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var bass by remember { mutableIntStateOf(engine.equalizer.bassBoost) }
     var virt by remember { mutableIntStateOf(engine.equalizer.virtualizer) }
 
-    if (cat == "audio") SettingsSection(tr("Sound", "Ses")) {
+    if (cat == "audio") FlatSection(tr("Sound", "Ses")) {
         SliderRow("${tr("Pre-amp", "Ön yükseltici")}  ${if (preamp > 0) "+" else ""}$preamp dB", preamp.toFloat(), -12f..12f) { preamp = it.toInt(); MusicSettings.setPreamp(c, preamp); push() }
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             listOf(tr("Off", "Kapalı"), "ReplayGain", tr("Album", "Albüm")).forEachIndexed { i, l -> PChip(rg == i, l) { rg = i; MusicSettings.setReplayGain(c, i); push() } }
@@ -99,7 +100,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var hidden by remember { mutableStateOf(MusicSettings.showHidden(c)) }
     var excluded by remember { mutableStateOf(MusicSettings.excluded(c).sorted()) }
     var newDir by remember { mutableStateOf("") }
-    if (cat == "library") SettingsSection(tr("Library", "Kütüphane")) {
+    if (cat == "library") FlatSection(tr("Library", "Kütüphane")) {
         SliderRow("${tr("Shortest track", "En kısa parça")}  $minSec s", minSec.toFloat(), 0f..120f) { minSec = it.toInt(); MusicSettings.setMinSeconds(c, minSec) }
         SwitchRow(tr("Hidden folders", "Gizli klasörler"), hidden) { hidden = it; MusicSettings.setShowHidden(c, it) }
         excluded.forEach { d ->
@@ -162,7 +163,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             importNote = r.getOrNull()?.let { (l, n) -> tr("Saved: $l playlists, $n songs with a rating or plays", "Kaydedildi: $l çalma listesi, puanlı ya da dinlenmiş $n şarkı") } ?: tr("The backup could not be written", "Yedek yazılamadı")
         }
     }
-    if (cat == "library") SettingsSection(tr("Poweramp backup", "Poweramp yedeği")) {
+    if (cat == "library") FlatSection(tr("Poweramp backup", "Poweramp yedeği")) {
         SwitchRow(tr("Write covers into the songs too (MP3)", "Kapakları şarkıların kendisine de yaz (MP3)"), embedCovers) { embedCovers = it }
         Row(Modifier.fillMaxWidth().clickable { pickBackup.launch(arrayOf("*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             PIcon("download", T.text, 22.dp)
@@ -213,7 +214,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     var onlineTags by remember { mutableStateOf(MusicSettings.onlineTags(c)) }
     var btAuto by remember { mutableStateOf(BluetoothAutoplay.enabled(c)) }
     val askBt = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
-    if (cat in setOf("library", "look", "art", "bt", "misc", "audio")) SettingsSection(tr("Playback", "Çalma")) {
+    if (cat in setOf("library", "look", "art", "bt", "misc", "audio")) FlatSection(tr("Playback", "Çalma")) {
         if (cat == "library") SwitchRow(tr("Resume last queue", "Son kuyruğa devam"), resume) { resume = it; MusicSettings.setResume(c, it) }
         if (cat == "look") SwitchRow(tr("Swipe cover to change track", "Kapakta kaydırarak parça değiştir"), coverSwipe) { coverSwipe = it; CoverGestures.setSwipeChangesTrack(c, it) }
         if (cat == "art") SwitchRow(tr("Download missing album art", "Eksik albüm kapaklarını internetten indir"), onlineCovers) {
@@ -277,11 +278,11 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     }
 
     if (cat == "notif") {
-        SettingsSection(tr("Cover", "Kapak"), startOpen = true) { SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) } }
-        com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
+        FlatSection(tr("Cover", "Kapak"), startOpen = true) { SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) } }
+        com.umutk.pulse.extras.music.notif.NotificationFlatSection()
     }
-    if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
-    if (cat == "misc") SettingsSection(tr("Widgets", "Widget'lar")) {
+    if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsFlatSection()
+    if (cat == "misc") FlatSection(tr("Widgets", "Widget'lar")) {
         var bgMode by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.bg(c)) }
         var artPct by remember { mutableFloatStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.artPct(c).toFloat()) }
         Text(tr("Widget background", "Widget arka planı"), color = T.sub, fontSize = 12.sp)
@@ -308,7 +309,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         SwitchRow(tr("Round cover", "Yuvarlak kapak"), circle) { circle = it; com.umutk.pulse.extras.music.widgets.WidgetOpts.setArtCircle(c, it); com.umutk.pulse.extras.music.widgets.WidgetOpts.refresh(c) }
     }
 
-    if (which == SettingsFor.POWERAMP && cat == "background") SettingsSection("Poweramp") {
+    if (which == SettingsFor.POWERAMP && cat == "background") FlatSection("Poweramp") {
         // the skin gallery (families on top) lives in the music theme picker of MusicHub
         // the now-playing backdrop; the preview shows both choices (every other page is black)
         PlayerBgPicker(c)
