@@ -1743,3 +1743,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Weather: a 0% chance of rain is shown in the hourly and daily lists (it was blank) (derlenmedi)
 - Weather map: opens centred on the chosen place or the phone's place, zoomed in; without a place the world is zoomed to fill the whole screen (no black bands) (derlenmedi)
 - Weather map aircraft: the last loaded aircraft stay on the map when it is closed and opened again, no blank wait for the first load (derlenmedi)
+- Lyrics: found lyrics are written beside the song as .lrc / .txt (no more copies in the app's data or cache); the copies already kept move beside their songs once, the rest of the old copies are removed
+- Settings > About > Storage: where Pulse keeps its data and cache, what each part is for, its size, and a delete button for each (derlenmedi)
