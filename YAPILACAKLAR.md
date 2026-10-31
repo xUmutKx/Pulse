@@ -1748,3 +1748,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Lyrics: found lyrics go into the song's tag when the file takes it (MP3); otherwise a .lrc beside the song, untimed lyrics too (no .txt) (1.0.287 (derlendi))
 - Lyrics on the lock screen: the full-screen lyrics view no longer takes the keyboard or touches (the PIN and unlock swipe stay usable), closes itself if it fails, and the option is off by default (derlenmedi)
 - Lyrics on the lock screen: the view is translucent with a light scrim (it turned the screen black before) (derlenmedi)
+- Lyrics on the lock screen and AOD: a strip of text at the bottom with a soft shadow and no background, over the lock screen (no full window); shows the song's name until a line is ready (derlenmedi)
