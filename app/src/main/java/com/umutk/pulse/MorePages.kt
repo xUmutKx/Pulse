@@ -111,7 +111,26 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
             Row { Text("↓ ${rate(s.down.toFloat())}", color = resColor("net"), fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("↑ ${rate(s.up.toFloat())}", color = resColor("net"), fontSize = 16.sp) }
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 70.dp)
         }
-        PButton(tr("Security", "Güvenlik"), Modifier.fillMaxWidth()) { onOpen("security") }
+        // Security: a card like the others, with its main facts; a tap opens the full page (root gives the protected ones too)
+        val secRows by androidx.compose.runtime.produceState<List<Pair<String, String>>?>(null) {
+            value = withContext(Dispatchers.IO) { runCatching { Hw.system(ctx).firstOrNull { it.title == "Security" }?.rows.orEmpty() }.getOrDefault(emptyList()) }
+        }
+        PCard(Modifier.fillMaxWidth().clickable { onOpen("security") }) {
+            Text(tr("Security", "Güvenlik"), color = T.sub, fontSize = 12.sp)
+            val rows = secRows
+            if (rows == null) Text(tr("Reading…", "Okunuyor…"), color = T.sub, fontSize = 13.sp)
+            else rows.filter { it.first in setOf("SELinux", "Verified boot", "Encryption", "Bootloader lock", "Root") }.chunked(2).forEach { pair ->
+                Row(Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    pair.forEach { (k, v) ->
+                        Column(Modifier.weight(1f)) {
+                            Text(k, color = T.sub, fontSize = 11.sp)
+                            Text(v, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                        }
+                    }
+                    if (pair.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
         PCard {
             Text("Processor history (60 s)", color = T.sub, fontSize = 12.sp)
             Graph(listOf(h["cpu"].orEmpty()), listOf(resColor("cpu")), 100f, height = 70.dp)
