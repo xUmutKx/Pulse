@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -30,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
@@ -84,8 +87,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             listOf(tr("Off", "Kapalı"), "ReplayGain", tr("Album", "Albüm")).forEachIndexed { i, l -> PChip(rg == i, l) { rg = i; MusicSettings.setReplayGain(c, i); push() } }
         }
         if (rg > 0) SliderRow("${tr("Untagged files", "Etiketsiz dosyalar")}  $rgFb dB", rgFb.toFloat(), -15f..0f) { rgFb = it.toInt(); MusicSettings.setRgFallback(c, rgFb); push() }
-        SliderRow("${tr("Fade between tracks", "Parçalar arası geçiş")}  ${if (xfade == 0) tr("off", "kapalı") else "$xfade s"}", xfade.toFloat(), 0f..12f) { xfade = it.toInt(); MusicSettings.setCrossfade(c, xfade); push() }
-        if (xfade > 0) FadeCurve(xfade)
+        FadeCurve(xfade) { xfade = it; MusicSettings.setCrossfade(c, it); push() }
         SwitchRow(tr("Skip silence", "Sessizliği atla"), skipSil) { skipSil = it; MusicSettings.setSkipSilence(c, it); push() }
         SliderRow("${tr("Speed", "Hız")}  ${"%.2f".format(speed)}x", speed, .5f..2f) { speed = (Math.round(it * 20) / 20f); MusicSettings.setSpeed(c, speed); push() }
         SwitchRow(tr("Pitch follows speed", "Ton hızı izler"), pitch) { pitch = it; MusicSettings.setPitchFollows(c, it); push() }
@@ -372,25 +374,44 @@ private fun PowerampLineRow(c: Context) {
     if (open) SetPickDialog(title, LineChoice.entries.map { it to it.label() }, cur, { cur = it; PowerampLineAction.setLongPress(c, it) }, { open = false })
 }
 
-/** The fade between two tracks as a graph: the old track fades out (falling line), the new one fades in (rising line), over the set seconds. */
+/**
+ * The crossfade setting as a graph, and the control itself: drag across it to set the seconds (0 to 12). The old track falls to silence
+ * while the new one rises; the band in the middle is as wide as the fade is long, 0 is a plain cut.
+ */
 @Composable
-private fun FadeCurve(seconds: Int) {
-    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
-        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(64.dp)) {
+private fun FadeCurve(seconds: Int, onChange: (Int) -> Unit) {
+    val set by androidx.compose.runtime.rememberUpdatedState(onChange)
+    fun secAt(x: Float, w: Float): Int = Math.round(x / w * 12f).coerceIn(0, 12)
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
+        Text(tr("Fade between tracks", "Parçalar arası geçiş") + "  " + (if (seconds == 0) tr("off", "kapalı") else "$seconds s"), color = T.text, fontSize = 15.sp)
+        Spacer(Modifier.height(6.dp))
+        androidx.compose.foundation.Canvas(
+            Modifier.fillMaxWidth().height(72.dp)
+                .pointerInput(Unit) {
+                    androidx.compose.foundation.gestures.detectDragGestures(onDragStart = { set(secAt(it.x, size.width.toFloat())) }) { change, _ ->
+                        change.consume()
+                        set(secAt(change.position.x, size.width.toFloat()))
+                    }
+                },
+        ) {
             val w = size.width; val h = size.height
             val mid = w / 2f
-            val out = androidx.compose.ui.graphics.Path().apply { moveTo(0f, 0f); lineTo(mid, h) }
-            val inn = androidx.compose.ui.graphics.Path().apply { moveTo(mid, h); lineTo(w, 0f) }
-            // a baseline and the middle, where one track gives way to the other
-            drawLine(T.sub.copy(alpha = .35f), androidx.compose.ui.geometry.Offset(0f, h), androidx.compose.ui.geometry.Offset(w, h), strokeWidth = 1.dp.toPx())
+            // the band: the fade is as long as the seconds say, out to the left of the middle and in to the right
+            val half = (w / 2f) * seconds / 12f
+            val top = h * .12f; val bottom = h * .88f
+            val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
             drawLine(T.sub.copy(alpha = .35f), androidx.compose.ui.geometry.Offset(mid, 0f), androidx.compose.ui.geometry.Offset(mid, h), strokeWidth = 1.dp.toPx())
-            drawPath(out, T.sub, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
-            drawPath(inn, T.text, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            // full volume before and after the fade
+            drawLine(T.sub.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(0f, top), androidx.compose.ui.geometry.Offset(mid - half, top), strokeWidth = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            drawLine(T.sub.copy(alpha = .5f), androidx.compose.ui.geometry.Offset(mid + half, top), androidx.compose.ui.geometry.Offset(w, top), strokeWidth = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round)
+            val out = androidx.compose.ui.graphics.Path().apply { moveTo(mid - half, top); lineTo(mid, bottom) }
+            val inn = androidx.compose.ui.graphics.Path().apply { moveTo(mid, bottom); lineTo(mid + half, top) }
+            drawPath(out, T.sub, style = stroke)
+            drawPath(inn, T.text, style = stroke)
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(tr("Out", "Çıkış") + "  ${seconds}s", color = T.sub, fontSize = 12.sp)
+            Text(tr("Out", "Çıkış"), color = T.sub, fontSize = 12.sp)
             Text(tr("In", "Giriş"), color = T.sub, fontSize = 12.sp)
         }
     }
 }
-
