@@ -278,7 +278,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     }
 
     if (cat == "notif") {
-        FlatSection(tr("Cover", "Kapak"), startOpen = true) { SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) } }
+        FlatSection(tr("Cover", "Kapak")) { SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) } }
         com.umutk.pulse.extras.music.notif.NotificationFlatSection()
     }
     if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsFlatSection()
