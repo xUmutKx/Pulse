@@ -33,6 +33,12 @@ val BAR_TOOLS = listOf(
     Triple("info", tr("Book information", "Kitap bilgisi"), "info"),
 )
 
+/** The places books are found in before the user adds any: Project Gutenberg, Turkish first and then all languages. */
+val BUILT_IN_SOURCES = listOf(
+    "Project Gutenberg · Turkish" to BookFind.GUTENDEX,
+    "Project Gutenberg · all" to "https://www.gutenberg.org/ebooks/search.opds/?query={q}",
+)
+
 /** The bottom bar at first: the buttons Moon Reader shows checked. */
 private const val DEFAULT_BAR = "orient,daynight,speak,auto,chapters,text,custom"
 
@@ -102,6 +108,24 @@ object EbookPrefs {
     /** Seconds per page while the autoscroll runs. */
     fun autoSeconds(c: Context): Int = p(c).getInt("auto", 10)
     fun setAutoSeconds(c: Context, v: Int) { p(c).edit().putInt("auto", v.coerceIn(3, 120)).apply() }
+
+    /** The places to find books in: the built-in ones, then the ones added by the user as (name, address with {q}). */
+    fun sources(c: Context): List<Pair<String, String>> = BUILT_IN_SOURCES + customSources(c)
+
+    fun customSources(c: Context): List<Pair<String, String>> =
+        (p(c).getString("customSources", "") ?: "").lines().filter { it.contains('\t') }.map { it.substringBefore('\t') to it.substringAfter('\t') }
+
+    /** Adds a source; the address must hold {q} (where the search goes). */
+    fun addSource(c: Context, name: String, url: String) {
+        val clean = { s: String -> s.replace('\t', ' ').replace('\n', ' ').trim() }
+        val all = customSources(c) + (clean(name).ifEmpty { url } to clean(url))
+        p(c).edit().putString("customSources", all.joinToString("\n") { "${clean(it.first)}\t${clean(it.second)}" }).apply()
+    }
+
+    fun removeSource(c: Context, index: Int) {
+        val all = customSources(c).toMutableList().also { if (index in it.indices) it.removeAt(index) }
+        p(c).edit().putString("customSources", all.joinToString("\n") { "${it.first}\t${it.second}" }).apply()
+    }
 
     /** The speech engine (its package) the reader uses; empty for the automatic choice (Samsung's when there is one). Applies when a book is opened. */
     fun ttsEngine(c: Context): String = p(c).getString("ttsEngine", "") ?: ""

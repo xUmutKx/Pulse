@@ -1760,3 +1760,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader: the last line of a page is no longer cut off (the page measure matches the drawn spacing and keeps a margin) (derlenmedi)
 - Books: My Favorites has its icon; the drawer header is plain text; Find free books (Project Gutenberg, public domain, Turkish first) downloads into Books and adds to the shelf (derlenmedi)
 - Books find: results show covers in a grid; one tap downloads the book and opens it in the reader (derlenmedi)
+- Books find: sources can be added (a name and an address with {q}; OPDS catalogues and JSON like Gutenberg's); Gutenberg has a Turkish and an all-languages source; a long press removes an added source (derlenmedi)
