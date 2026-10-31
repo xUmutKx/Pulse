@@ -561,7 +561,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 val pages by produceState<List<List<Para>>?>(null, chapter, textSize, fontIx, wPx, hPx, themeIx) {
                     value = null
                     value = withContext(Dispatchers.Default) {
-                        paginate(measurer, chapters.getOrNull(chapter)?.paras.orEmpty(), wPx - with(density) { 40.dp.roundToPx() }, hPx - with(density) { 90.dp.roundToPx() }, bodyStyle, headStyle, with(density) { 10.dp.toPx() })
+                        paginate(measurer, chapters.getOrNull(chapter)?.paras.orEmpty(), wPx - with(density) { 40.dp.roundToPx() }, hPx - with(density) { 96.dp.roundToPx() }, bodyStyle, headStyle, with(density) { 14.dp.toPx() })
                     }
                 }
                 val list = pages
