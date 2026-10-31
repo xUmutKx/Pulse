@@ -1838,3 +1838,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Lucid fonts: distinctive bundled fonts (Bodoni Moda, DM Serif, Montagu Slab, Juliett, Neonderthaw, Edu Beginner, Kode Mono, Jersey 10, League Gothic, Tourney, Super Power, Tilt Neon, Stick No Bills, Segments) with a sample card for each
 - derlenmedi: Lucid fonts in Settings: app font and alarm clock font as the same cards; the clock uses the same fonts as the app
 - derlenmedi: Alarm font choices (clock, dismiss, snooze, and the per-alarm overrides) are font cards
+- derlenmedi: Book search: Gutenberg Turkish results first, then the English ones of the same search

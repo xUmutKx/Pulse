@@ -23,7 +23,13 @@ object BookFind {
     /** The books of [source] whose title or author matches [q]. Throws when there is no connection. */
     fun search(source: String, q: String): List<Found> {
         val term = URLEncoder.encode(q.trim(), "UTF-8")
-        if (source == GUTENDEX) return gutendex(get("https://gutendex.com/books/?languages=tr&search=$term"))
+        if (source == GUTENDEX) {
+            // Turkish first, then the English books of the same search (only books whose copyright has ended are in the catalogue)
+            val turkish = gutendex(get("https://gutendex.com/books/?languages=tr&search=$term"))
+            val english = runCatching { gutendex(get("https://gutendex.com/books/?languages=en&search=$term")) }.getOrDefault(emptyList())
+            val seen = HashSet<String>()
+            return (turkish + english).filter { seen.add(it.title.lowercase()) }
+        }
         val url = source.replace("{q}", term)
         val text = get(url).trimStart()
         return if (text.startsWith("{")) gutendex(text) else opds(text, url)
