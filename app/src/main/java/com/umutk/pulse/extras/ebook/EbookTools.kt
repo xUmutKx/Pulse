@@ -78,6 +78,10 @@ object EbookPrefs {
     fun cover(c: Context): Int = p(c).getInt("cover", 84)
     fun setCover(c: Context, v: Int) { p(c).edit().putInt("cover", v.coerceIn(60, 130)).apply() }
 
+    /** Books in a row on the shelf: 0 fits as many as the width allows (more in landscape), else the number chosen. */
+    fun perRow(c: Context): Int = p(c).getInt("perRow", 0)
+    fun setPerRow(c: Context, v: Int) { p(c).edit().putInt("perRow", v).apply() }
+
     /** The reading progress shown on the covers of the shelf. */
     fun showProgress(c: Context): Boolean = p(c).getBoolean("showProgress", true)
     fun setShowProgress(c: Context, on: Boolean) { p(c).edit().putBoolean("showProgress", on).apply() }
