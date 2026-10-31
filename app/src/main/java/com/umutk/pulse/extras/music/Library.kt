@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -18,6 +19,7 @@ object MusicLibrary {
     val permission: String =
         if (Build.VERSION.SDK_INT >= 33) Manifest.permission.READ_MEDIA_AUDIO else Manifest.permission.READ_EXTERNAL_STORAGE
 
+    private val warmScope = kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.SupervisorJob() + Dispatchers.IO)
     private val _tracks = MutableStateFlow<List<Track>>(emptyList())
     val tracks: StateFlow<List<Track>> = _tracks.asStateFlow()
 
@@ -36,6 +38,9 @@ object MusicLibrary {
         val list = MusicTags.apply(app, scan(app))
         if (list.isNotEmpty() || _tracks.value.isNotEmpty()) {
             _tracks.value = list
+            // the lyrics index is read in the background right after every scan, not only when the music page is open:
+            // the first lyrics search then finds the songs at once (songs already read are skipped)
+            warmScope.launch { runCatching { com.umutk.pulse.extras.lyrics.Lyrics.warmIndex(app, list) } }
             runCatching { cacheFile(app).writeText(list.joinToString("\n") { t ->
                 listOf(t.path, t.title.orEmpty(), t.durationSec, t.artist.orEmpty(), t.album.orEmpty(), t.albumId, t.genre.orEmpty(), t.year, t.composer.orEmpty(), t.dateAdded).joinToString("\t") { it.toString().replace('\t', ' ').replace('\n', ' ') }
             }) }
