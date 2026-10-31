@@ -447,7 +447,7 @@ private fun scanBooks(): List<Book> {
 
 /** The panels of the reader's ⋮ menu that open as a full page; each goes back to the menu. */
 
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
+@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     val ctx = LocalContext.current
@@ -953,6 +953,7 @@ private fun animName(style: Int): String = when (style) {
     else -> tr("Instant", "Anında")
 }
 
+@Composable
 private fun ReaderRow(label: String, th: Theme, mark: String = "", icon: String = "", onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         if (icon == "text") Text("Aa", color = th.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(20.dp).padding(end = 14.dp))
