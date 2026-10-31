@@ -1839,3 +1839,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Lucid fonts in Settings: app font and alarm clock font as the same cards; the clock uses the same fonts as the app
 - derlenmedi: Alarm font choices (clock, dismiss, snooze, and the per-alarm overrides) are font cards
 - derlenmedi: Book search: Gutenberg Turkish results first, then the English ones of the same search
+- derlenmedi: Books: a PDF with text is read as a text book, reflowed to the reader's pages; opening a file runs off the main thread
