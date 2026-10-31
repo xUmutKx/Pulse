@@ -1826,3 +1826,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Keyboard: Shift is the arrow again; a space after , . ? ! is not doubled when one already follows the cursor
 - derlenmedi: Keyboard Turkish: a name followed by a Turkish ending takes its apostrophe (Adana'da, Pelin'den); a list of Turkish names and places
 - derlenmedi: Quick settings Keyboard tile: turns the floating keyboard on and brings it up
+- derlenmedi: Turkish name list extended (about 430 names and places); the rest of the 2000 needs a list from the user or an allowed source
