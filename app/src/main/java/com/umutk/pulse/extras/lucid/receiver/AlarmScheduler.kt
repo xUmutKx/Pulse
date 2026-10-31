@@ -31,6 +31,21 @@ class AlarmScheduler(private val context: Context) {
      */
     fun canDrawOverApps(): Boolean = Settings.canDrawOverlays(context)
 
+    /**
+     * With root the app grants its own alarm permissions (display over other apps, full-screen notifications) through appops,
+     * so no settings page opens. Returns true when root answered; does nothing when both are already allowed.
+     */
+    fun grantByRoot(): Boolean {
+        if (canDrawOverApps() && canUseFullScreenIntent()) return true
+        val uid = runCatching { com.umutk.pulse.Shell.runRoot("id -u").trim() }.getOrDefault("")
+        if (uid != "0") return false
+        val pkg = context.packageName
+        runCatching {
+            com.umutk.pulse.Shell.runRoot("appops set $pkg SYSTEM_ALERT_WINDOW allow; appops set $pkg USE_FULL_SCREEN_INTENT allow")
+        }
+        return true
+    }
+
     fun requestDrawOverAppsIntent(): Intent =
         Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
 
