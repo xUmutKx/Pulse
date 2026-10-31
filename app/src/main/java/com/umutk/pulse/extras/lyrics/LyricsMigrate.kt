@@ -24,12 +24,9 @@ object LyricsMigrate {
 
     private fun sha(s: String) = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
 
-    /** Writes [body] beside [audio] as .lrc (synced) or .txt, unless the song has one; true when the song has its lyrics now. */
-    private fun beside(audio: String, body: String, synced: Boolean): Boolean {
-        val f = File(audio.substringBeforeLast('.') + if (synced) ".lrc" else ".txt")
-        if (f.exists()) return true
-        return runCatching { f.writeText(body, Charsets.UTF_8) }.isSuccess
-    }
+    /** Keeps [body] with the song (its tag, else a .lrc beside it); true when the song has its lyrics now. */
+    private fun beside(audio: String, body: String, @Suppress("UNUSED_PARAMETER") synced: Boolean): Boolean =
+        Lyrics.keepText(audio, body, "saved")
 
     private fun moveAll(app: Context, tracks: List<Track>) {
         val saved = File(app.filesDir, "lyrics-saved")
