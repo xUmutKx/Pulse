@@ -170,6 +170,14 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     val ctx = LocalContext.current
     var shelf by remember { mutableStateOf(shelfLoad(ctx)) }
     var note by remember { mutableStateOf("") }
+    // books whose file was deleted outside Pulse leave the shelf
+    LaunchedEffect(Unit) {
+        val gone = withContext(Dispatchers.IO) { shelf.filter { !bookExists(ctx, it) } }
+        if (gone.isNotEmpty()) {
+            shelf = shelf.filter { b -> gone.none { it.uri == b.uri } }.also { shelfSave(ctx, it) }
+            note = tr("Books deleted outside Pulse were removed from the shelf", "Pulse dışında silinen kitaplar raftan kaldırıldı")
+        }
+    }
     // "" the shelf, "options" the options page
     var screen by remember { mutableStateOf("") }
     var drawer by remember { mutableStateOf(false) }
@@ -376,6 +384,13 @@ private fun DrawerBottom(icon: String, label: String, onClick: () -> Unit) {
     }
 }
 
+/** Whether a book's file is still there: it may have been deleted outside Pulse. */
+private fun bookExists(c: Context, b: Book): Boolean = runCatching {
+    val u = Uri.parse(b.uri)
+    if (u.scheme == "file") File(u.path.orEmpty()).exists()
+    else c.contentResolver.openInputStream(u)?.use { true } ?: false
+}.getOrDefault(false)
+
 /** The books found in the phone's Books and Download folders (by name; a book is read when it is opened). */
 private fun scanBooks(): List<Book> {
     val root = android.os.Environment.getExternalStorageDirectory()
@@ -397,7 +412,14 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     val measurer = rememberTextMeasurer()
     val uri = Uri.parse(start.uri)
     var book by remember { mutableStateOf<Book?>(null) }
-    LaunchedEffect(start.uri) { book = withContext(Dispatchers.IO) { Ebook.open(ctx, uri) }; Ebook.touch(ctx, start.uri) }
+    LaunchedEffect(start.uri) {
+        val opened = withContext(Dispatchers.IO) { runCatching { Ebook.open(ctx, uri) }.getOrNull() }
+        if (opened == null) {
+            // the file is gone (deleted outside Pulse): the book leaves the shelf and the reader closes
+            shelfSave(ctx, shelfLoad(ctx).filter { it.uri != start.uri })
+            onClose()
+        } else { book = opened; Ebook.touch(ctx, start.uri) }
+    }
     val b = book
 
     var amoled by remember { mutableStateOf(EbookPrefs.amoled(ctx)) }
