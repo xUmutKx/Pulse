@@ -1691,3 +1691,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Keyboard quick auth: each account is as tall as its text (no longer a third of the panel), so the panel is not left empty; more accounts scroll (derlenmedi)
 - Books shelf: AMOLED mode gives the shelf a pure black background (it replaces the wooden one) (derlenmedi)
 - Keyboard quick auth: the seconds number is gone from each account; the bar under the code shows the time left (derlenmedi)
+- Video player More menu: a dark bottom panel above the progress bar with an icon per action (no radio circles), so it reads over white pictures (derlenmedi)
