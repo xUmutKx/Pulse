@@ -615,7 +615,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 }
                 Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
                     listOf(tr("Serif", "Serif"), tr("Sans", "Sans"), tr("Mono", "Mono")).forEachIndexed { i, name ->
-                        Text(name, color = if (fontIx == i) th.ink else th.sub, fontSize = 14.sp,
+                        Text(name, color = if (fontIx == i) th.ink else th.sub, fontSize = 14.sp, fontFamily = fontOf(i),
                             fontWeight = if (fontIx == i) FontWeight.SemiBold else FontWeight.Normal,
                             modifier = Modifier.clickable { fontIx = i; EbookPrefs.setFont(ctx, i) }.padding(8.dp))
                     }
@@ -647,7 +647,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             Box(Modifier.fillMaxSize().clickable { panel = "" })
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp).fillMaxWidth(.72f).clip(RoundedCornerShape(12.dp)).background(th.bg).border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(12.dp)).padding(vertical = 6.dp)) {
                 listOf(tr("Serif", "Serif"), tr("Sans", "Sans"), tr("Mono", "Mono")).forEachIndexed { i, name ->
-                    PopRow(name, fontIx == i, th) { fontIx = i; EbookPrefs.setFont(ctx, i) }
+                    PopRow(name, fontIx == i, th, fontOf(i)) { fontIx = i; EbookPrefs.setFont(ctx, i) }
                 }
                 PopRow(tr("Larger text", "Büyük yazı"), false, th) { textSize = (textSize + 2).coerceAtMost(34); rp(ctx).edit().putInt("size", textSize).apply() }
                 PopRow(tr("Smaller text", "Küçük yazı"), false, th) { textSize = (textSize - 2).coerceAtLeast(12); rp(ctx).edit().putInt("size", textSize).apply() }
@@ -702,7 +702,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     "visual" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         SectionTitle(tr("Font", "Yazı tipi"), th)
                         listOf(tr("Serif", "Serif"), tr("Sans", "Sans"), tr("Mono", "Mono")).forEachIndexed { i, name ->
-                            PopRow(name, fontIx == i, th) { fontIx = i; EbookPrefs.setFont(ctx, i) }
+                            PopRow(name, fontIx == i, th, fontOf(i)) { fontIx = i; EbookPrefs.setFont(ctx, i) }
                         }
                         SectionTitle(tr("Text", "Metin"), th)
                         SettingRow(tr("Text size: $textSize", "Yazı boyutu: $textSize"), th) {
@@ -777,6 +777,19 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         ReaderList(hits.map { "${it.first + 1}. ${it.second}" }, th) { i -> chapter = hits[i].first; page = 0; forward = true; panel = ""; bars = false; save() }
                     }
                     "bar" -> LazyColumn(Modifier.fillMaxSize()) {
+                        item {
+                            // the bar as it is now: the chosen buttons in their order
+                            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(10.dp)).background(th.ink.copy(alpha = .06f))
+                                .horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                barIds.forEach { id ->
+                                    val t = BAR_TOOLS.firstOrNull { it.third == id } ?: return@forEach
+                                    Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                                        if (id == "text") Text("Aa", color = th.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                        else PIcon(t.first, th.ink, 22.dp)
+                                    }
+                                }
+                            }
+                        }
                         item {
                             SettingRow(tr("Double-line layout", "Çift satır düzeni"), th) { PSwitch(dbl, { dbl = it; EbookPrefs.setDouble(ctx, it) }) }
                         }
@@ -947,10 +960,13 @@ private fun PdfPages(ctx: Context, uri: Uri, page: Int, th: Theme, forward: Bool
     }
 }
 
+/** The face of a font choice: 0 serif, 1 sans-serif, 2 monospace. */
+private fun fontOf(i: Int): FontFamily = when (i) { 1 -> FontFamily.SansSerif; 2 -> FontFamily.Monospace; else -> FontFamily.Serif }
+
 @Composable
-private fun PopRow(label: String, on: Boolean, th: Theme, onClick: () -> Unit) {
+private fun PopRow(label: String, on: Boolean, th: Theme, family: FontFamily = FontFamily.Default, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = if (on) th.ink else th.sub, fontSize = 14.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
+        Text(label, color = if (on) th.ink else th.sub, fontSize = 14.sp, fontFamily = family, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
         if (on) Text("✓", color = th.ink, fontSize = 14.sp)
     }
 }
