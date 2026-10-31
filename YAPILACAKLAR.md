@@ -1741,3 +1741,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader themes: Space (stars over a night sky), Sakura (cherry branches with blossoms) and Sakura night; the pictures are drawn, not stored (derlenmedi)
 - Books reader: Options is no longer in the ⋮ menu (it can still be put on the bar) (derlenmedi)
 - Weather: a 0% chance of rain is shown in the hourly and daily lists (it was blank) (derlenmedi)
+- Weather map: opens centred on the chosen place or the phone's place, zoomed in; without a place the world is zoomed to fill the whole screen (no black bands) (derlenmedi)
