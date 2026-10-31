@@ -103,10 +103,20 @@ object EbookPrefs {
     fun autoSeconds(c: Context): Int = p(c).getInt("auto", 10)
     fun setAutoSeconds(c: Context, v: Int) { p(c).edit().putInt("auto", v.coerceIn(3, 120)).apply() }
 
+    /** The speech engine (its package) the reader uses; empty for the automatic choice (Samsung's when there is one). Applies when a book is opened. */
+    fun ttsEngine(c: Context): String = p(c).getString("ttsEngine", "") ?: ""
+    fun setTtsEngine(c: Context, pkg: String) { p(c).edit().putString("ttsEngine", pkg).apply() }
+
     /** The reading speed of the voice: 1 is the engine's normal speed; the default is a little slower than that. */
     fun speechRate(c: Context): Float = p(c).getFloat("speechRate", 0.85f)
     fun setSpeechRate(c: Context, v: Float) { p(c).edit().putFloat("speechRate", v.coerceIn(0.5f, 1.6f)).apply() }
 }
+
+/** The speech engines installed on the phone, as (package, name). Found from the system's list of engines; no root. */
+fun ttsEngines(c: Context): List<Pair<String, String>> =
+    c.packageManager.queryIntentServices(android.content.Intent("android.intent.action.TTS_SERVICE"), 0)
+        .map { it.serviceInfo.packageName to it.loadLabel(c.packageManager).toString() }
+        .distinctBy { it.first }
 
 /** Reads a page aloud with the system's speech engine; [onDone] runs on the main thread when the page is read. */
 class Speaker(c: Context, private val onDone: () -> Unit) {
@@ -117,10 +127,11 @@ class Speaker(c: Context, private val onDone: () -> Unit) {
     var onRange: ((Int, Int) -> Unit)? = null
 
     init {
-        // the Samsung speech engine when the phone has it, else the phone's own
+        // the engine the reader is set to; else the Samsung speech engine when the phone has it, else the phone's own
         val listener = TextToSpeech.OnInitListener { status -> ready = status == TextToSpeech.SUCCESS }
-        val samsung = listOf("com.samsung.SMT").firstOrNull { pkg -> runCatching { c.packageManager.getPackageInfo(pkg, 0) }.isSuccess }
-        tts = if (samsung != null) TextToSpeech(c.applicationContext, listener, samsung) else TextToSpeech(c.applicationContext, listener)
+        val chosen = EbookPrefs.ttsEngine(c).takeIf { e -> e.isNotEmpty() && ttsEngines(c).any { it.first == e } }
+            ?: listOf("com.samsung.SMT").firstOrNull { pkg -> runCatching { c.packageManager.getPackageInfo(pkg, 0) }.isSuccess }
+        tts = if (chosen != null) TextToSpeech(c.applicationContext, listener, chosen) else TextToSpeech(c.applicationContext, listener)
         tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {}
             override fun onDone(utteranceId: String?) { Handler(Looper.getMainLooper()).post(onDone) }
