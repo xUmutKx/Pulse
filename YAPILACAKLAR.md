@@ -1716,3 +1716,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Files grid: the rows sit one under the other (they were stacked on top of each other inside a box, which put the names on top of each other) (derlenmedi)
 - Files: Relay and LocalSend are tiles of the share sheet (first in the row) and no longer rows of Files More (derlenmedi)
 - Files: the Search tab opens the search bar at the top over every folder (derlenmedi)
+- Files: the Share tab is one page with Relay and LocalSend (each opens inside Files); the Search tab searches the whole phone from a name index kept in memory, so results come at once (derlenmedi)
