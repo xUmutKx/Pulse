@@ -250,11 +250,12 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
             if (st != null) sp.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, st + LiveLyrics.bold(trio.second).length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         val boldLine = android.text.SpannableString(LiveLyrics.collapsed(ctx, trio.second)).also { it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
-        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) }) else Unit
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.deleteNotificationChannel("pulse_lyrics")
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics2", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_DEFAULT).apply { setSound(null, null); enableVibration(false) }) else Unit
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").putExtra("notif_open", "lyrics").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         // the album cover beside the text, read once per song (this runs on the lyrics tick, not on the main thread)
         if (artFor != t.path) { artFor = t.path; art = runCatching { (com.umutk.pulse.extras.music.trackArtLocal(ctx, t) ?: com.umutk.pulse.extras.music.trackArt(ctx, t))?.asAndroidBitmap() }.getOrNull() }
-        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
+        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics2").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
             .setContentTitle(LiveLyrics.titled(ctx, t.title ?: t.path.substringAfterLast('/'))).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
             .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT)
             // public: the lock screen shows the lines, not only "notification hidden"
@@ -270,6 +271,93 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         LiveLyrics.notifLine = null
         LiveLyrics.currentLine = null
         lastLineText = null; lastLineTrack = null
+    }
+}
+
+/** The live lyrics in the music settings: one row that opens the page with all the options. */
+@Composable
+fun LiveLyricsSettingsSection() {
+    var page by remember { mutableStateOf(false) }
+    if (page) LiveLyricsPage { page = false }
+    else SettingsSection(tr("Live lyrics", "Canlı sözler")) {
+        Row(Modifier.fillMaxWidth().clickable { page = true }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Lyrics: player, notification, lock screen, floating window", "Sözler: oynatıcı, bildirim, kilit ekranı, yüzen pencere"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            com.umutk.pulse.PIcon("chevron", T.sub, 20.dp)
+        }
+    }
+}
+
+/** Every live lyrics option, on one page: the preview, where the lyrics show, the look and the lyric files. */
+@Composable
+private fun LiveLyricsPage(onBack: () -> Unit) {
+    val c = LocalContext.current
+    var player by remember { mutableStateOf(LiveLyrics.player(c)) }
+    var floating by remember { mutableStateOf(LiveLyrics.floating(c)) }
+    var notif by remember { mutableStateOf(LiveLyrics.notification(c)) }
+    var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
+    var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
+    var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
+    var save by remember { mutableStateOf(LiveLyrics.saveLrc(c)) }
+    var emb by remember { mutableStateOf(LiveLyrics.embed(c)) }
+    var autoAll by remember { mutableStateOf(LyricsAuto.on(c)) }
+    var consec by remember { mutableStateOf(LyricsShare.consecutive(c)) }
+    var st by remember { mutableStateOf(LyricsAuto.status(c)) }
+    androidx.compose.runtime.LaunchedEffect(autoAll) { while (true) { st = LyricsAuto.status(c); kotlinx.coroutines.delay(2000) } }
+    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", T.text, 22.dp) }
+            Text(tr("Live lyrics", "Canlı sözler"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        }
+        // the preview: the lines on pure black, as the lock screen shows them
+        LockLyricsPreview(emph)
+        SettingsSection(tr("Where", "Nerede"), startOpen = true) {
+            SwitchRow(tr("Show in player", "Oynatıcıda göster"), player) { player = it; LiveLyrics.set(c, "player", it) }
+            SwitchRow(tr("Show in notification", "Bildirimde göster"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
+            SwitchRow(tr("Show lyrics on the lock screen", "Sözleri kilit ekranında göster"), lock) { lock = it; LiveLyrics.set(c, "lock_screen", it) }
+            SwitchRow(tr("Show floating", "Yüzen pencerede göster"), floating) {
+                floating = it; LiveLyrics.set(c, "floating", it)
+                if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)
+            }
+            Text(tr("Always-on display: needs the LSPosed module, not in this build yet", "Ambiyans ekranı: LSPosed modülü gerekir, bu sürümde yok"), color = T.sub, fontSize = 12.sp)
+        }
+        SettingsSection(tr("Look", "Görünüm"), startOpen = true) {
+            Row(Modifier.horizontalScroll(androidx.compose.foundation.rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf("underline" to tr("Underlined title", "Başlık altı çizili"), "thin" to tr("Thin line, bold when open", "İnce satır, açılınca kalın"), "bold" to tr("Always bold", "Hep kalın")).forEach { (k, n) ->
+                    com.umutk.pulse.PChip(emph == k, n) { emph = k; LiveLyrics.setEmphasis(c, k); com.umutk.pulse.extras.music.MusicPlaybackService.relayout() }
+                }
+            }
+            SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
+        }
+        SettingsSection(tr("Files and sharing", "Dosyalar ve paylaşım"), startOpen = true) {
+            SwitchRow(tr("Save found lyrics as a .lrc file beside the song", "Bulunan sözleri şarkının yanına .lrc dosyası olarak kaydet"), save) { save = it; LiveLyrics.set(c, "save_lrc", it) }
+            SwitchRow(tr("Also write into the song's tag (MP3, rewrites the file)", "Şarkının etiketine de yaz (MP3, dosyayı yeniden yazar)"), emb) { emb = it; LiveLyrics.set(c, "embed_tag", it) }
+            SwitchRow(tr("Find lyrics for the whole library in the background", "Tüm kütüphane için sözleri arka planda bul"), autoAll) { autoAll = it; LyricsAuto.setOn(c, it) }
+            if (st.second > 0) Text(tr("${st.first} of ${st.second} songs looked at, ${st.third} with lyrics", "${st.second} şarkıdan ${st.first} tanesine bakıldı, ${st.third} tanesinin sözü var"), color = T.sub, fontSize = 12.sp)
+            com.umutk.pulse.PButton(tr("Search now", "Şimdi ara"), compact = true) { LyricsAuto.runNow(c); autoAll = true }
+            SwitchRow(tr("Share: only lines that follow each other", "Paylaşım: yalnız ardışık satırlar"), consec) { consec = it; LyricsShare.setConsecutive(c, it) }
+        }
+    }
+}
+
+/** A preview of the lock screen and of the always-on display: a large clock, the date, and the lyric lines in the space under them, on pure black. */
+@Composable
+fun LockLyricsPreview(emphasis: String) {
+    val now = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date()) }
+    val day = remember { java.text.SimpleDateFormat("EEE, MMMM d", java.util.Locale.getDefault()).format(java.util.Date()) }
+    val current = if (emphasis == "thin") FontWeight.Normal else FontWeight.Bold
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(18.dp)).background(Color.Black).padding(vertical = 20.dp, horizontal = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        // the lock screen: the time large, the date under it, then the lines in the free space
+        Text(now, color = Color(0xFFB0B0B0), fontSize = 88.sp, fontWeight = FontWeight.Light, letterSpacing = (-4).sp, maxLines = 1)
+        Text(day, color = Color(0xFF9A9A9A), fontSize = 14.sp)
+        Spacer(Modifier.height(18.dp))
+        Text(tr("A line before", "Önceki satır"), color = Color(0xFF6E6E6E), fontSize = 14.sp, textAlign = TextAlign.Center)
+        Text("\u25BA " + tr("The line now playing", "Şu an çalan satır"), color = Color.White, fontSize = 18.sp, fontWeight = current, textAlign = TextAlign.Center)
+        Text(tr("A line after", "Sonraki satır"), color = Color(0xFF6E6E6E), fontSize = 14.sp, textAlign = TextAlign.Center)
+        Spacer(Modifier.height(24.dp))
+        // the always-on display: the clock dim, the one line under it
+        Text(now, color = Color(0xFF4A4A4A), fontSize = 40.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp, maxLines = 1)
+        Text("\u25BA " + tr("The line now playing", "Şu an çalan satır"), color = Color(0xFF8A8A8A), fontSize = 13.sp, textAlign = TextAlign.Center)
     }
 }
 
