@@ -944,7 +944,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             val fs = (big * (.85f + .15f * KeyboardPrefs.heightPct / 100f)).sp
             when (k.kind) {
-                KeyKind.SHIFT -> Text(tr("Shift", "Shift"), color = fg, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
+                KeyKind.SHIFT -> ShiftGlyph(st.shift, fg)
                 KeyKind.DELETE -> Icon(kbIcon(th, "Backspace"), null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.ENTER -> Icon(when (st.enter) { "send" -> kbIcon(th, "Send"); "search" -> kbIcon(th, "Search"); "go", "done" -> kbIcon(th, "Check"); "next" -> kbIcon(th, "ArrowForward"); else -> kbIcon(th, "KeyboardReturn") }, null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.EMOJI -> { Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
