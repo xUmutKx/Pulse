@@ -1136,20 +1136,28 @@ private fun PdfPages(ctx: Context, uri: Uri, page: Int, th: Theme, forward: Bool
     val density = LocalDensity.current
     BoxWithConstraints(Modifier.fillMaxSize().background(Color.White)) {
         val wPx = with(density) { maxWidth.roundToPx() }
-        val count = r?.pageCount ?: 0
+        // a renderer that was closed (the page turned away) or a damaged file must not stop the screen: no pages then
+        val count = runCatching { r?.pageCount ?: 0 }.getOrDefault(0)
         val idx = page.coerceIn(0, (count - 1).coerceAtLeast(0))
         val bmp by produceState<Bitmap?>(null, idx, wPx, r) {
             value = null
-            value = if (r == null || count == 0) null else withContext(Dispatchers.IO) {
-                synchronized(r) {
-                    val pg = r.openPage(idx)
-                    val h = (wPx * pg.height / pg.width.toFloat()).toInt().coerceAtLeast(1)
-                    val out = Bitmap.createBitmap(wPx, h, Bitmap.Config.ARGB_8888)
-                    out.eraseColor(android.graphics.Color.WHITE)
-                    pg.render(out, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
-                    pg.close()
-                    out
-                }
+            // a page that cannot be drawn (a damaged file, memory, a renderer closed meanwhile) shows as blank, it does not close the app
+            value = if (r == null || count == 0 || wPx <= 0) null else withContext(Dispatchers.IO) {
+                runCatching {
+                    synchronized(r) {
+                        val pg = r.openPage(idx)
+                        try {
+                            val h = (wPx * pg.height / pg.width.toFloat()).toInt().coerceAtLeast(1)
+                            val out = Bitmap.createBitmap(wPx, h, Bitmap.Config.ARGB_8888)
+                            out.eraseColor(android.graphics.Color.WHITE)
+                            pg.render(out, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                            out
+                        } finally {
+                            // the page is always closed, or the next page cannot be opened
+                            pg.close()
+                        }
+                    }
+                }.getOrNull()
             }
         }
         AnimatedContent(targetState = idx, transitionSpec = {
