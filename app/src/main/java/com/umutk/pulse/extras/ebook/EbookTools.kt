@@ -22,7 +22,6 @@ val BAR_TOOLS = listOf(
     Triple("speak", tr("Speak", "Sesli oku"), "speak"),
     Triple("sort", tr("Autoscroll", "Otomatik kaydır"), "auto"),
     Triple("details", tr("Chapters", "Bölümler"), "chapters"),
-    Triple("bookmark", tr("Bookmarks", "Yer imleri"), "bookmarks"),
     Triple("flash", tr("Brightness", "Parlaklık"), "brightness"),
     Triple("text", tr("Font Size", "Yazı boyutu"), "text"),
     Triple("search", tr("Search", "Ara"), "search"),
