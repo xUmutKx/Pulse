@@ -205,8 +205,10 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     }
     val th = shelfTheme()
     Box(Modifier.fillMaxSize()) {
-        if (wood) WoodBackground(Modifier.matchParentSize())
-        Column(Modifier.fillMaxSize().then(if (wood) Modifier else Modifier.background(T.panel)).padding(horizontal = 12.dp, vertical = 10.dp)) {
+        // AMOLED is a pure black shelf; otherwise the wooden background, or the look's panel colour
+        val shelfWood = wood && !amoled
+        if (shelfWood) WoodBackground(Modifier.matchParentSize())
+        Column(Modifier.fillMaxSize().then(if (shelfWood) Modifier else Modifier.background(if (amoled) Color.Black else T.panel)).padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (screen.isEmpty()) {
                     Box(Modifier.size(40.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 24.dp) }
@@ -276,7 +278,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                                     Text(b.title.take(1).uppercase(), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                                     if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
                                 }
-                                Text(b.title, color = if (wood) Color(0xFFF6E7CC) else T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width((cover + 8).dp).padding(top = 4.dp))
+                                Text(b.title, color = if (shelfWood) Color(0xFFF6E7CC) else T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width((cover + 8).dp).padding(top = 4.dp))
                             }
                         }
                     }
