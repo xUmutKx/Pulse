@@ -329,7 +329,7 @@ private fun LayoutPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit
                 Modifier.fillMaxWidth().clickable { if (v == "gamepad") st.panel = "gamepad" else { st.forceLayout = v; st.panel = "keys" } }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Icon(kbIcon(th, icon), null, tint = if (on) th.accent else th.text, modifier = Modifier.size(22.dp))
+                Icon(if (icon == "SportsEsports") Icons.Rounded.SportsEsports else kbIcon(th, icon), null, tint = if (on) th.accent else th.text, modifier = Modifier.size(22.dp))
                 Text(label, color = if (on) th.accent else th.text, fontSize = 16.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, modifier = Modifier.weight(1f).padding(start = 12.dp))
                 if (on) Icon(kbIcon(th, "Check"), null, tint = th.accent, modifier = Modifier.size(20.dp))
             }

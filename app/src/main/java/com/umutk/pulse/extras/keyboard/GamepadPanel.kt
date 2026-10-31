@@ -70,6 +70,17 @@ internal fun GamepadPanel(th: KbTheme, act: KbActions) {
         val fit = minOf(if (land) cfg.screenHeightDp * .7f else cfg.screenWidthDp * .7f, w * .6f)
         val u = (fit * scale / 100f).coerceAtMost(w * .5f).dp
         Column(Modifier.fillMaxWidth()) {
+            // the shoulder buttons at the very top: L1 and L2 on the left, R1 and R2 on the right
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Column(Modifier.padding(start = u * .06f), verticalArrangement = Arrangement.spacedBy(u * .03f)) {
+                    PadBtn(th, act, K_L1, u * .22f, u * .1f, round = false, label = "L1")
+                    PadBtn(th, act, K_L2, u * .22f, u * .1f, round = false, label = "L2")
+                }
+                Column(Modifier.padding(end = u * .06f), verticalArrangement = Arrangement.spacedBy(u * .03f)) {
+                    PadBtn(th, act, K_R1, u * .22f, u * .1f, round = false, label = "R1")
+                    PadBtn(th, act, K_R2, u * .22f, u * .1f, round = false, label = "R2")
+                }
+            }
             // the top: the D-pad on the left, the face buttons on the right, Select, Home and Start between them
             Row(Modifier.fillMaxWidth().height(u * .5f), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.padding(start = u * .06f).size(u * .5f)) {
@@ -97,22 +108,12 @@ internal fun GamepadPanel(th: KbTheme, act: KbActions) {
                 PadStick(th, act, u * .4f, LEFT_STICK, Modifier.padding(start = u * .1f))
                 PadStick(th, act, u * .4f, RIGHT_STICK, Modifier.padding(end = u * .1f))
             }
-            // the shoulder buttons on either side of the size control
-            Row(Modifier.fillMaxWidth().padding(top = u * .04f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
-                Column(verticalArrangement = Arrangement.spacedBy(u * .03f)) {
-                    PadBtn(th, act, K_L1, u * .22f, u * .1f, round = false, label = "L1")
-                    PadBtn(th, act, K_L2, u * .22f, u * .1f, round = false, label = "L2")
-                }
-                Spacer(Modifier.width(u * .05f))
+            // the size control sits in the middle at the bottom
+            Row(Modifier.fillMaxWidth().padding(top = u * .04f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u * .02f)) {
                     PadMini(th, u * .1f, "+") { scale = (scale + 10).coerceAtMost(150); KeyboardPrefs.padScale = scale; KeyboardPrefs.saveFloat() }
                     Text("$scale%", color = th.text, fontSize = (u.value * .06f).coerceAtLeast(9f).sp)
                     PadMini(th, u * .1f, "−") { scale = (scale - 10).coerceAtLeast(60); KeyboardPrefs.padScale = scale; KeyboardPrefs.saveFloat() }
-                }
-                Spacer(Modifier.width(u * .05f))
-                Column(verticalArrangement = Arrangement.spacedBy(u * .03f)) {
-                    PadBtn(th, act, K_R1, u * .22f, u * .1f, round = false, label = "R1")
-                    PadBtn(th, act, K_R2, u * .22f, u * .1f, round = false, label = "R2")
                 }
             }
         }
