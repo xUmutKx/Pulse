@@ -1823,3 +1823,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Keyboard recent emoji: pictures made of characters (block shading, multi-line art) are no longer kept there
 - 1.0.292 Keyboard: pictures made of characters (block shading, multi-line art) are no longer kept in the recent emoji
 - 1.0.292 Alarm clock: Windows 95, XP, 7 and 11 faces; alarm ringing screen with the Lucid look
+- derlenmedi: Keyboard: Shift is the arrow again; a space after , . ? ! is not doubled when one already follows the cursor
