@@ -117,7 +117,11 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
             value = withContext(Dispatchers.IO) { runCatching { Hw.system(ctx).firstOrNull { it.title == "Security" }?.rows.orEmpty() }.getOrDefault(emptyList()) }
         }
         PCard(Modifier.fillMaxWidth().clickable { onOpen("security") }) {
-            Text(tr("Security", "Güvenlik"), color = T.sub, fontSize = 12.sp)
+            // the title with its shield, drawn for the look like the other icons of the page
+            androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
+                PIcon("shieldOk", T.sub, 16.dp)
+                Text(tr("Security", "Güvenlik"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 6.dp))
+            }
             val rows = secRows
             if (rows == null) Text(tr("Reading…", "Okunuyor…"), color = T.sub, fontSize = 13.sp)
             else rows.filter { it.first in setOf("SELinux", "Verified boot", "Encryption", "Bootloader lock", "Root") }.chunked(2).forEach { pair ->
