@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.lucid.ui.components
 
+import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
+import com.umutk.pulse.extras.lucid.ui.theme.FontCards
 import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.BackHandler
@@ -1150,27 +1152,7 @@ fun AlarmAppearanceEditor(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = clockFont.isBlank(),
-                        colors = selectedChipColors(),
-                        shape = SelectionChipShape,
-                        onClick = { clockFont = ""; clockFontPath = "" },
-                        label = { Text("Inherit") }
-                    )
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = clockFont == font.name,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = {
-                                clockFont = font.name
-                                if (font != RingingClockFont.CUSTOM_FILE) clockFontPath = ""
-                            },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(listOf("") + RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }.map { it.name }, clockFont, { if (it.isEmpty()) "Inherit" else RingingClockFont.valueOf(it).label }, { if (it.isEmpty()) null else clockFontFamilyOf(RingingClockFont.valueOf(it)) }) { v -> clockFont = v; clockFontPath = "" }
                 if (clockFont == RingingClockFont.CUSTOM_FILE.name) {
                     OutlinedButton(
                         onClick = { pickClockFont() },
@@ -1345,30 +1327,7 @@ fun AlarmAppearanceEditor(
             ) {
                 Text("Snooze Button", style = MaterialTheme.typography.titleLarge)
                 Text("Font", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = ovSnoozeFont.isBlank(),
-                        colors = selectedChipColors(),
-                        shape = SelectionChipShape,
-                        onClick = {
-                            ovSnoozeFont = ""
-                            ovSnoozeFontPath = ""
-                        },
-                        label = { Text("Inherit") }
-                    )
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = ovSnoozeFont == font.name,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = {
-                                ovSnoozeFont = font.name
-                                if (font != RingingClockFont.CUSTOM_FILE) ovSnoozeFontPath = ""
-                            },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(listOf("") + RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }.map { it.name }, ovSnoozeFont, { if (it.isEmpty()) "Inherit" else RingingClockFont.valueOf(it).label }, { if (it.isEmpty()) null else clockFontFamilyOf(RingingClockFont.valueOf(it)) }) { v -> ovSnoozeFont = v; ovSnoozeFontPath = "" }
                 if (ovSnoozeFont == RingingClockFont.CUSTOM_FILE.name) {
                     OutlinedButton(
                         onClick = { pickSnoozeFont() },
@@ -1427,30 +1386,7 @@ fun AlarmAppearanceEditor(
             ) {
                 Text("Dismiss Button", style = MaterialTheme.typography.titleLarge)
                 Text("Font", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(
-                        selected = ovDismissFont.isBlank(),
-                        colors = selectedChipColors(),
-                        shape = SelectionChipShape,
-                        onClick = {
-                            ovDismissFont = ""
-                            ovDismissFontPath = ""
-                        },
-                        label = { Text("Inherit") }
-                    )
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = ovDismissFont == font.name,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = {
-                                ovDismissFont = font.name
-                                if (font != RingingClockFont.CUSTOM_FILE) ovDismissFontPath = ""
-                            },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(listOf("") + RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }.map { it.name }, ovDismissFont, { if (it.isEmpty()) "Inherit" else RingingClockFont.valueOf(it).label }, { if (it.isEmpty()) null else clockFontFamilyOf(RingingClockFont.valueOf(it)) }) { v -> ovDismissFont = v; ovDismissFontPath = "" }
                 if (ovDismissFont == RingingClockFont.CUSTOM_FILE.name) {
                     OutlinedButton(
                         onClick = { pickDismissFont() },
