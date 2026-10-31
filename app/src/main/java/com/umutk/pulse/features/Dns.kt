@@ -121,7 +121,8 @@ class DnsTile : TileService() {
             updateTile()
         }
     }
-    override fun onClick() { try { click0() } finally { com.umutk.pulse.features.TilePop.play(this) } }
+    // no tap animation here: the picture frames of the pop left the DNS tile with a wrong background, so the tap only switches
+    override fun onClick() { click0() }
     private fun click0() {
         if (busy) return
         val (m, h) = Dns.current(this)
