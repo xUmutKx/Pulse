@@ -67,7 +67,7 @@ fun trackArt(ctx: Context, track: Track): ImageBitmap? {
     ArtCache.map.get(key)?.let { return it }
     if (synchronized(ArtCache.none) { key in ArtCache.none }) return null
     // a cover the user picked or one found online wins over the embedded picture; both are saved on disk, so they survive a restart
-    val bmp = PowerampCovers.saved(ctx, key) ?: embeddedArt(ctx, key) ?: CoverFetch.find(ctx, track)
+    val bmp = PowerampCovers.savedSmall(ctx, key) ?: embeddedArt(ctx, key) ?: CoverFetch.find(ctx, track)
     // a skipped lookup on the main thread is not remembered as "no cover"
     if (bmp != null) ArtCache.map.put(key, bmp) else if (Looper.myLooper() != Looper.getMainLooper()) synchronized(ArtCache.none) { ArtCache.none += key }
     return bmp
@@ -110,18 +110,18 @@ internal fun embeddedArt(ctx: Context, key: String): ImageBitmap? {
 fun trackArtLocal(ctx: Context, track: Track): ImageBitmap? {
     val key = track.path
     ArtCache.map.get(key)?.let { return it }
-    val bmp = PowerampCovers.saved(ctx, key) ?: embeddedArt(ctx, key)
+    val bmp = PowerampCovers.savedSmall(ctx, key) ?: embeddedArt(ctx, key)
     if (bmp != null) ArtCache.map.put(key, bmp)
     return bmp
 }
 
 /** Cover of [t] as composable state; null while loading or when the track has none. The local cover comes first, the online search only after it found nothing. */
-/** Decoded covers kept in memory by path, so a track change shows the cover at once instead of the previous one while the new one loads. */
-private val artMem = object : LinkedHashMap<String, ImageBitmap>(16, .75f, true) { override fun removeEldestEntry(e: MutableMap.MutableEntry<String, ImageBitmap>?) = size > 30 }
-@Synchronized private fun artCached(path: String?): ImageBitmap? = path?.let { artMem[it] }
+// Decoded covers are kept in ArtCache (bounded by bytes), so a list row that scrolls back into view shows its cover at once
+// instead of decoding the file again. A count-bounded map of full pictures held megabytes per entry and made long lists stutter.
+private fun artCached(path: String?): ImageBitmap? = path?.let { ArtCache.map.get(it) }
 /** Drops every cached copy of the cover of [path] (a cover was just picked for it). */
-@Synchronized internal fun dropArt(path: String) { artMem.remove(path); forgetArt(path) }
-@Synchronized private fun artKeep(path: String, b: ImageBitmap) { artMem[path] = b }
+internal fun dropArt(path: String) = forgetArt(path)
+private fun artKeep(path: String, b: ImageBitmap) { ArtCache.map.put(path, b) }
 
 /** The cover of [t]: the one in memory at once, else read off the main thread (saved and embedded art first, then the internet). Never the cover of the previous track. */
 @Composable
