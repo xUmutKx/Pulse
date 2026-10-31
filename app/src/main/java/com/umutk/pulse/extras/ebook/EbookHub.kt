@@ -52,6 +52,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import com.umutk.pulse.PButton
@@ -87,7 +88,7 @@ private val READER_THEMES = listOf(
     Theme(Color(0xFFFFFFFF), Color(0xFF111111), Color(0xFF777777)),   // pure white
     Theme(Color(0xFFF3E6C8), Color(0xFF3B2F1E), Color(0xFF7A6A4E)),   // sand
     Theme(Color(0xFFE9E7E2), Color(0xFF2A2A2A), Color(0xFF6A6A6A)),   // paper grey
-    Theme(Color(0xFF1C1C1E), Color(0xFFD8D8D8), Color(0xFF8E8E93)),   // night
+    Theme(Color(0xFF000000), Color(0xFFD8D8D8), Color(0xFF8E8E93)),   // night (AMOLED black)
     Theme(Color(0xFF000000), Color(0xFFC8C8C8), Color(0xFF7A7A7A)),   // true black
     Theme(Color(0xFF2B3340), Color(0xFFD6DCE5), Color(0xFF8F9AAA)),   // slate
     Theme(Color(0xFF262626), Color(0xFFCFCFCF), Color(0xFF8A8A8A)),   // charcoal
@@ -484,7 +485,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             BoxWithConstraints(Modifier.fillMaxSize()) {
                 val wPx = with(density) { maxWidth.roundToPx() }
                 val hPx = with(density) { maxHeight.roundToPx() }
-                val bodyStyle = TextStyle(fontFamily = family, fontSize = textSize.sp, lineHeight = (textSize * 1.5f).sp, color = th.ink)
+                val bodyStyle = TextStyle(fontFamily = family, fontSize = textSize.sp, lineHeight = (textSize * 1.6f).sp, color = th.ink)
                 val headStyle = TextStyle(fontFamily = family, fontSize = (textSize + 4).sp, lineHeight = ((textSize + 4) * 1.4f).sp, color = th.ink, fontWeight = FontWeight.Bold)
                 val pages by produceState<List<List<Para>>?>(null, chapter, textSize, fontIx, wPx, hPx, themeIx) {
                     value = null
@@ -525,7 +526,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     label = "page",
                 ) { _ ->
                     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 44.dp), verticalArrangement = Arrangement.Top) {
-                        cur.forEach { p -> Text(p.text, style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 10.dp)) }
+                        cur.forEach { p -> Text(p.text, style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp)) }
                     }
                 }
                 // the three zones of the page: the left third goes back, the right third forward, the middle shows the bars
@@ -550,7 +551,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 Text(b.title, color = th.ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
                 Box(Modifier.size(40.dp).clickable { panel = "menu" }, contentAlignment = Alignment.Center) { Text("⋮", color = th.ink, fontSize = 22.sp) }
                 Box(Modifier.size(40.dp).clickable { bookmarked = Ebook.toggleBookmark(ctx, start.uri, chapter, page) }, contentAlignment = Alignment.Center) {
-                    PIcon("pin", if (bookmarked) th.ink else th.sub, 22.dp)
+                    PIcon("bookmark", if (bookmarked) th.ink else th.sub, 22.dp)
                 }
             }
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(th.bg).padding(horizontal = 8.dp, vertical = 6.dp)) {
@@ -570,8 +571,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         Box(Modifier.size(44.dp).clickable {
                             when (id) {
                                 "chapters" -> panel = "chapters"
-                                "text" -> { textSize = (textSize + if (textSize >= 26) -8 else 2); rp(ctx).edit().putInt("size", textSize).apply() }
-                                "theme" -> pickTheme((themeIx + 1) % READER_THEMES.size)
+                                "text" -> panel = "sizepop"
+                                "theme" -> panel = "themepop"
                                 "bookmarks" -> panel = "bookmarks"
                                 "search" -> panel = "search"
                                 "speak" -> speaking = !speaking
@@ -590,6 +591,47 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
         }
 
         // the quick choices open as a small popup above the bar; the full options stay in the menu
+        // the text size and the font, above the bar
+        if (panel == "sizepop" && b != null) {
+            Box(Modifier.fillMaxSize().clickable { panel = "" })
+            Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp).fillMaxWidth(.9f).clip(RoundedCornerShape(14.dp)).background(th.bg)
+                .border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(14.dp)).padding(16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("A", color = th.ink, fontSize = 13.sp)
+                    PSlider(textSize.toFloat(), { textSize = it.roundToInt(); rp(ctx).edit().putInt("size", textSize).apply() }, 12f..34f,
+                        modifier = Modifier.weight(1f).padding(horizontal = 10.dp), onDone = {})
+                    Text("A", color = th.ink, fontSize = 22.sp)
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                    listOf(tr("Serif", "Serif"), tr("Sans", "Sans"), tr("Mono", "Mono")).forEachIndexed { i, name ->
+                        Text(name, color = if (fontIx == i) th.ink else th.sub, fontSize = 14.sp,
+                            fontWeight = if (fontIx == i) FontWeight.SemiBold else FontWeight.Normal,
+                            modifier = Modifier.clickable { fontIx = i; EbookPrefs.setFont(ctx, i) }.padding(8.dp))
+                    }
+                }
+            }
+        }
+        // the themes, above the bar: a swatch per theme, then the AMOLED and e-ink switches
+        if (panel == "themepop" && b != null) {
+            Box(Modifier.fillMaxSize().clickable { panel = "" })
+            Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp).fillMaxWidth(.94f).clip(RoundedCornerShape(14.dp)).background(th.bg)
+                .border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(14.dp)).padding(14.dp)) {
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    READER_THEMES.forEachIndexed { i, t ->
+                        val picked = !eink && themeIx == i
+                        Column(Modifier.width(64.dp).clickable { pickTheme(i) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.size(56.dp, 40.dp).clip(RoundedCornerShape(8.dp)).background(t.bg)
+                                .border(if (picked) 2.dp else 1.dp, if (picked) Color(0xFF3D8BFF) else t.sub.copy(alpha = .4f), RoundedCornerShape(8.dp)),
+                                contentAlignment = Alignment.Center) { Text("Aa", color = t.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold) }
+                            Text(THEME_NAMES[i], color = th.sub, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                        }
+                    }
+                }
+                Spacer(Modifier.height(10.dp))
+                SettingRow(tr("Use AMOLED dark mode", "AMOLED koyu mod"), th) { PSwitch(amoled, { amoled = it; EbookPrefs.setAmoled(ctx, it) }) }
+                SettingRow(tr("E-ink look", "E-mürekkep görünüm"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) }
+            }
+        }
         if (panel == "quick" && b != null) {
             Box(Modifier.fillMaxSize().clickable { panel = "" })
             Column(Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp).fillMaxWidth(.72f).clip(RoundedCornerShape(12.dp)).background(th.bg).border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(12.dp)).padding(vertical = 6.dp)) {
@@ -625,7 +667,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
         }
 
         // the pages of the menu and the lists: each fills the reader, with its title and a back arrow
-        if (panel.isNotEmpty() && panel != "quick" && panel != "menu" && b != null) {
+        if (panel.isNotEmpty() && panel != "quick" && panel != "menu" && panel != "sizepop" && panel != "themepop" && b != null) {
             val titleOf = when (panel) {
                 "visual" -> tr("Visual Options", "Görünüm seçenekleri"); "control" -> tr("Control Options", "Denetim seçenekleri")
                 "misc" -> tr("Miscellaneous", "Diğer"); "themes" -> tr("Themes", "Temalar"); "ops" -> tr("More Operations", "Diğer işlemler")
