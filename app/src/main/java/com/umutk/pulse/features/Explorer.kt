@@ -1093,9 +1093,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             val tile = ((24 + FilesPrefs.icon.coerceIn(0, 9) * 5) * 3 / 2 + 8).dp
             val cols = ((maxWidth + gap) / (tile + gap)).toInt().coerceAtLeast(1)
             val cell = (maxWidth - gap * (cols - 1)) / cols
-            shownNow.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                r.forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { item(f) } }
-            } }
+            // the rows go one under the other: a box would stack them on top of each other
+            Column(Modifier.fillMaxWidth()) {
+                shownNow.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    r.forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { item(f) } }
+                } }
+            }
         } else shownNow.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shownNow.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
         Spacer(Modifier.height(88.dp))
         }
