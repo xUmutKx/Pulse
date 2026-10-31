@@ -1767,3 +1767,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Radio and white noise: drawn pictures instead of the grey placeholder (radio in the media notification; white noise in its notification) (derlenmedi)
 - Lyrics search: the lyrics on the phone show at once; the online catalogue is added after them (derlenmedi)
 - Extra apps: a tool set to hidden (eye icon) leaves the ⋮ menu and the Tools/Apps groups but stays listed on the Extra apps page; hiding a row there is still by long press (derlenmedi)
+- Quick panel: a Floating timer tile (shows or hides the floating timer; opens the overlay permission when missing) (derlenmedi)
