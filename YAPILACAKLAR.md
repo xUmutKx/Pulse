@@ -1723,3 +1723,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Weather: wttr.in (no key, worldwide) is a fallback service after Open-Meteo and MET Norway (1.0.282 (derlendi))
 - Music: "Show lyrics on the lock screen" (on by default): the lyric notification is public, so the lock screen shows the lines; a black preview in the live lyrics settings (derlenmedi)
 - Device overview: Security is a card like the others, with SELinux, verified boot, encryption, bootloader lock and root (root gives the protected values); a tap opens the full page (derlenmedi)
+- LockArt (LSPosed module, Apache-2.0, ELCesarMaat; Spotify lyrics part adapted from LyricProvider, Apache-2.0) copied as a standalone project in extras/lockart: lock screen art, lock screen and AOD lyrics from Spotify. It is not part of Pulse's Gradle build; it builds with its own gradlew. Pulse integration (Pulse's own player lyrics into it) not done yet (derlenmedi)
