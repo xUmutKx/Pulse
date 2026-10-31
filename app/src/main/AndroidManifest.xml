@@ -1735,5 +1735,7 @@
             <intent-filter><action android:name="android.accessibilityservice.AccessibilityService" /></intent-filter>
             <meta-data android:name="android.accessibilityservice" android:resource="@xml/blackout_watch" />
         </service>
+        <!-- the keyboard's "Picture to ASCII" tool: opened from the keyboard, copies its text picture to the clipboard -->
+        <activity android:name="com.umutk.pulse.extras.keyboard.AsciiMakerActivity" android:exported="false" android:label="Picture to ASCII" android:taskAffinity="" android:excludeFromRecents="true" />
     </application>
 </manifest>
