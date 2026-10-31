@@ -7,7 +7,9 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -981,23 +983,51 @@ fun AlarmAppearanceEditor(
                         },
                         label = { Text("Inherit (global)") }
                     )
-                    RingingBackgroundStyle.entries.forEach { option ->
-                        FilterChip(
-                            selected = backgroundStyle == option.name,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = {
-                                backgroundStyle = option.name
-                                if (option != RingingBackgroundStyle.CUSTOM_IMAGE) backgroundUri = ""
-                                if (option != RingingBackgroundStyle.VIDEO) videoUri = ""
-                                if (option != RingingBackgroundStyle.CUSTOM_IMAGE &&
-                                    option != RingingBackgroundStyle.VIDEO
-                                ) {
-                                    showBackgroundSheet = false
+                }
+                // every style as a live preview card: the real background drawn small, so the choice is seen before it is picked
+                androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    items(RingingBackgroundStyle.entries) { option ->
+                        val selected = backgroundStyle == option.name
+                        val cardShape = RoundedCornerShape(16.dp)
+                        Column(
+                            modifier = Modifier
+                                .width(112.dp)
+                                .clip(cardShape)
+                                .border(
+                                    if (selected) 2.dp else 1.dp,
+                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                    cardShape
+                                )
+                                .clickable {
+                                    backgroundStyle = option.name
+                                    if (option != RingingBackgroundStyle.CUSTOM_IMAGE) backgroundUri = ""
+                                    if (option != RingingBackgroundStyle.VIDEO) videoUri = ""
+                                    if (option != RingingBackgroundStyle.CUSTOM_IMAGE &&
+                                        option != RingingBackgroundStyle.VIDEO
+                                    ) {
+                                        showBackgroundSheet = false
+                                    }
                                 }
-                            },
-                            label = { Text(option.label) }
-                        )
+                        ) {
+                            Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                                if (option == RingingBackgroundStyle.CUSTOM_IMAGE || option == RingingBackgroundStyle.VIDEO) {
+                                    Text("Your file", style = MaterialTheme.typography.labelMedium)
+                                } else {
+                                    AlarmLockBackground(
+                                        style = option,
+                                        imageUri = null,
+                                        dark = true,
+                                        modifier = Modifier.fillMaxSize()
+                                    ) {}
+                                }
+                            }
+                            Text(
+                                option.label,
+                                style = MaterialTheme.typography.labelMedium,
+                                maxLines = 2,
+                                modifier = Modifier.fillMaxWidth().padding(8.dp)
+                            )
+                        }
                     }
                 }
                 if (backgroundStyle == RingingBackgroundStyle.CUSTOM_IMAGE.name ||
