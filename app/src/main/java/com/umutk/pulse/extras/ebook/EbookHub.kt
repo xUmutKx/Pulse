@@ -830,7 +830,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                             // the customise button always stays on, last in the bar (EbookPrefs.pinned)
                             val toggle = { if (t.third != "custom") { barIds = EbookPrefs.pinned(if (on) barIds - t.third else barIds + t.third); EbookPrefs.setBar(ctx, barIds) } }
                             Row(Modifier.fillMaxWidth().clickable { toggle() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                PCheck(on, toggle)
+                                PCheck(on) { toggle() }
                                 Box(Modifier.padding(start = 10.dp).size(20.dp), contentAlignment = Alignment.Center) {
                                     if (t.third == "text") Text("Aa", color = th.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
                                     else PIcon(t.first, th.ink, 20.dp)
