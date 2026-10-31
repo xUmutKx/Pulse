@@ -293,7 +293,8 @@ fun MenuOverflow(host: MenuHost, color: Color) {
     var open by remember { mutableStateOf(false) }
     var seenMore by remember { mutableIntStateOf(ChromeKeys.moreTick) }
     LaunchedEffect(ChromeKeys.moreTick) { if (ChromeKeys.moreTick != seenMore) { seenMore = ChromeKeys.moreTick; open = !open } }
-    var extra by rememberSaveable { mutableStateOf(false) }
+    // Extra apps stays open when the menu opens; the other groups are shown as they are
+    var extra by rememberSaveable { mutableStateOf(true) }
     val w = LocalWindowLook.current
     Box {
         MoreIcon(color, 22.dp, Modifier.clickable { open = true }.padding(horizontal = 8.dp, vertical = 2.dp))
