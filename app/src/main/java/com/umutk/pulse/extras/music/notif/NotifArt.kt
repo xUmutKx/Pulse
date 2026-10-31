@@ -28,7 +28,9 @@ class NotifArt(private val ctx: Context) : BitmapLoader {
 
     override fun loadBitmapFromMetadata(metadata: MediaMetadata): ListenableFuture<Bitmap>? {
         val path = metadata.extras?.getString(KEY_PATH)
-        if (path == null || path.startsWith("http")) return base.loadBitmapFromMetadata(metadata)
+        // an internet radio station has no cover: a drawn radio picture instead of the grey placeholder
+        if (path != null && path.startsWith("http")) return SettableFuture.create<Bitmap>().also { it.set(GeneratedArt.make(GeneratedArt.Kind.RADIO)) }
+        if (path == null) return base.loadBitmapFromMetadata(metadata)
         val f = SettableFuture.create<Bitmap>()
         Thread {
             val own = runCatching { trackArt(ctx, Track(path, metadata.title?.toString(), artist = metadata.artist?.toString(), album = metadata.albumTitle?.toString()))?.asAndroidBitmap() }.getOrNull()

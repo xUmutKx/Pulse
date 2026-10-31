@@ -165,9 +165,9 @@ private fun DataBackupCard() {
         var lastAuto by remember { mutableStateOf(AutoBackup.lastRun(ctx)) }
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(tr("Back up every day", "Her gün yedekle"), color = T.text, fontSize = 14.sp)
-                Text(tr("Pulse and keyboard zips in Download/Pulse backup, the last 7 of each",
-                    "Pulse ve klavye zip'leri Download/Pulse backup içinde, her birinin son 7'si"), color = T.sub, fontSize = 12.sp)
+                Text(tr("Back up once a week", "Haftada 1 yedekle"), color = T.text, fontSize = 14.sp)
+                Text(tr("Pulse and keyboard zips in Download/Pulse backup, the last 4 of each",
+                    "Pulse ve klavye zip'leri Download/Pulse backup içinde, her birinin son 4'ü"), color = T.sub, fontSize = 12.sp)
                 if (lastAuto > 0) Text(tr("Last: ", "Son: ") + java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.SHORT, java.text.DateFormat.SHORT).format(java.util.Date(lastAuto)), color = T.sub, fontSize = 12.sp)
             }
             PSwitch(auto, { auto = it; AutoBackup.setEnabled(ctx, it) })
@@ -619,7 +619,7 @@ internal fun disableExtraAppsOnFreshInstall(ctx: android.content.Context) {
     val pi = pm.getPackageInfo(ctx.packageName, 0)
     val prefs = ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE)
     if (pi.firstInstallTime != pi.lastUpdateTime || prefs.getBoolean("extraAppsOff", false)) return
-    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "PaintLauncher", "CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "ExtraStoreLauncher").forEach {
+    listOf("FilesLauncher", "PhotosLauncher", "CalendarLauncher", "ContactsLauncher", "PaintLauncher", "CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "EbookLauncher", "WeatherLauncher", "MessagesLauncher", "ScreenRecLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "ExtraStoreLauncher", "ClockLauncher").forEach {
         // a missing alias throws on startup, so one bad name must not stop the rest (or the app)
         runCatching { pm.setComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse." + it), android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED, android.content.pm.PackageManager.DONT_KILL_APP) }
     }
@@ -639,12 +639,14 @@ private fun ExtraAppsCard() {
         Triple("ContactsLauncher", R.drawable.ic_contacts, tr("Contacts", "Kişiler")),
         Triple("PaintLauncher", R.drawable.mat_palette, "Paint"),
         Triple("CalculatorLauncher", R.drawable.ic_qs_calc, tr("Calculator", "Hesap makinesi")),
+        Triple("ClockLauncher", R.drawable.ic_ad_clock_fg, tr("Clock", "Saat")),
         Triple("ArtCraftLauncher", R.drawable.mat_palette, "ArtCraft"),
         Triple("MusicLauncher", R.drawable.ic_music, tr("Music player", "Müzik çalar")),
         Triple("VideoLauncher", R.drawable.ic_video, tr("Video", "Video")),
         Triple("WhiteNoiseLauncher", R.drawable.ic_whitenoise, tr("White noise", "Beyaz gürültü")),
         Triple("VoiceLauncher", R.drawable.mat_voice, tr("Voice recorder", "Ses kaydedici")),
         Triple("NotesLauncher", R.drawable.mat_notes, tr("Notes", "Notlar")),
+        Triple("EbookLauncher", R.drawable.mat_notes, tr("Books", "Kitaplar")),
         Triple("WeatherLauncher", R.drawable.mat_weather, tr("Weather", "Hava durumu")),
         Triple("MessagesLauncher", R.drawable.mat_messages, tr("Messages", "Mesajlar")),
         Triple("ScreenRecLauncher", R.drawable.mat_record, tr("Screen recorder", "Ekran kaydı")),
@@ -657,13 +659,13 @@ private fun ExtraAppsCard() {
     )
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
-        (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "VoiceLauncher"),
+        (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),
         (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher"),
-        (tr("Tools and life", "Araçlar ve günlük")) to listOf("CalculatorLauncher", "WeatherLauncher", "CalendarLauncher", "ContactsLauncher"),
+        (tr("Tools and life", "Araçlar ve günlük")) to listOf("CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "CalendarLauncher", "ContactsLauncher"),
         (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "PaletteLauncher", "BlackOutLauncher", "IslandLauncher"),
     )
-    val routeOf = mapOf("MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "PaintLauncher" to "paint",
-        "CalculatorLauncher" to "calculator", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "IslandLauncher" to "island")
+    val routeOf = mapOf("MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "EbookLauncher" to "ebook", "PaintLauncher" to "paint",
+        "CalculatorLauncher" to "calculator", "ClockLauncher" to "clock", "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "IslandLauncher" to "island")
     val ownActivity = mapOf("FilesLauncher" to "FilesActivity", "CalendarLauncher" to "CalendarActivity", "ContactsLauncher" to "ContactsActivity", "ArtCraftLauncher" to "ArtCraftActivity")
     /** Asks the launcher to put this app on the home screen; the shortcut opens the app directly, whether or not its app-drawer icon is switched on. */
     fun pinToHome(alias: String, label: String, icon: Int) {
@@ -677,7 +679,7 @@ private fun ExtraAppsCard() {
         }
         // the app's own launcher picture (the adaptive icon), so every shortcut on the home screen looks like its app, not like Pulse
         val mip = mapOf("FilesLauncher" to "ic_files", "PhotosLauncher" to "ic_photos", "CalendarLauncher" to "ic_calendar", "ContactsLauncher" to "ic_contacts", "MusicLauncher" to "ic_music", "VideoLauncher" to "ic_video",
-            "PaintLauncher" to "ic_ad_paint", "CalculatorLauncher" to "ic_ad_calc", "ArtCraftLauncher" to "ic_ad_artcraft", "WhiteNoiseLauncher" to "ic_ad_noise", "VoiceLauncher" to "ic_ad_voice", "NotesLauncher" to "ic_ad_notes",
+            "PaintLauncher" to "ic_ad_paint", "ClockLauncher" to "ic_ad_clock", "CalculatorLauncher" to "ic_ad_calc", "ArtCraftLauncher" to "ic_ad_artcraft", "WhiteNoiseLauncher" to "ic_ad_noise", "VoiceLauncher" to "ic_ad_voice", "NotesLauncher" to "ic_ad_notes",
             "WeatherLauncher" to "ic_ad_weather", "MessagesLauncher" to "ic_ad_messages", "ScreenRecLauncher" to "ic_ad_record", "NotifHistLauncher" to "ic_ad_notif", "LocalSendLauncher" to "ic_ad_localsend", "KeyboardLauncher" to "ic_ad_keyboard", "ExtraStoreLauncher" to "ic_ad_extras")
         val res = mip[alias]?.let { ctx.resources.getIdentifier(it, "mipmap", ctx.packageName) } ?: 0
         val ic = if (res != 0) android.graphics.drawable.Icon.createWithResource(ctx, res) else android.graphics.drawable.Icon.createWithResource(ctx, icon)
@@ -685,11 +687,12 @@ private fun ExtraAppsCard() {
     }
     // Windows 11 glyph per app (FluentPaths keys; Fluent UI System Icons, MIT License, Microsoft)
     val fluent = mapOf("FilesLauncher" to "extraFiles", "PhotosLauncher" to "extraPhotos", "CalendarLauncher" to "extraCalendar", "ContactsLauncher" to "extraContacts",
-        "PaintLauncher" to "extraPaint", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
-        "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
+        "PaintLauncher" to "extraPaint", "ClockLauncher" to "extraClock", "CalculatorLauncher" to "extraCalculator", "ArtCraftLauncher" to "extraArtCraft", "MusicLauncher" to "extraMusic", "VideoLauncher" to "extraVideo", "WhiteNoiseLauncher" to "extraWhiteNoise",
+        "VoiceLauncher" to "extraVoice", "NotesLauncher" to "extraNotes", "EbookLauncher" to "book", "WeatherLauncher" to "extraWeather", "MessagesLauncher" to "extraMessages",
         "ScreenRecLauncher" to "extraScreenRec", "NotifHistLauncher" to "extraNotifHist", "LocalSendLauncher" to "extraLocalSend", "KeyboardLauncher" to "extraKeyboard", "PaletteLauncher" to "extraPalette", "BlackOutLauncher" to "extraBlackOut", "IslandLauncher" to "extraIsland", "ExtraStoreLauncher" to "extraStore")
     fun cn(a: String) = android.content.ComponentName(ctx, "com.umutk.pulse." + a)
-    fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED
+    // the alias is disabled in the manifest, so "on" is only the enabled state: the default one does not put an icon on the home screen
+    fun shown(a: String) = pm.getComponentEnabledSetting(cn(a)) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED
     val state = remember { mutableStateMapOf<String, Boolean>().apply { apps.forEach { put(it.first, shown(it.first)) } } }
     var rev by remember { mutableIntStateOf(0) }
     var placeOpen by remember { mutableStateOf<String?>(null) }
@@ -733,7 +736,8 @@ private fun ExtraAppsCard() {
         }
         }
         // the optional tools: the switch shows one in this card; the chevron folds the four places (menu, this card, left menu, Settings only)
-        ToolPlace.all.forEach { t ->
+        // Clock is listed once, as its app row above; its tool row here would be the second clock
+        ToolPlace.all.filter { it.id != "clock" }.forEach { t ->
             var open by remember(t.id) { mutableStateOf(false) }
             val cur = ToolPlace.where(ctx, t)
             val shownHere = cur == "extra"
@@ -743,7 +747,7 @@ private fun ExtraAppsCard() {
                     // Windows 11: the Fluent colour picture of the tool (fc_<id>), else the Fluent glyph in the text colour
                     val toolColor = if (T.id == "win11") fluentColorRes(ctx, if (t.id == "extrastore") "store" else t.id) else 0
                     if (toolColor != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(toolColor), null, Modifier.size(30.dp)) }
-                    else if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph("tool_${t.id}", T.text, 24.dp) } else {
+                    else if (T.id == "win11") Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph(if (t.id == "goodlock") "gridView" else "tool_${t.id}", T.text, 24.dp) } else {
                         // Office and Download manager get the black launcher tile with a white outline glyph (dark: accent glyph)
                         val tile = when (t.id) { "office" -> R.drawable.ic_tile_office; "download" -> R.drawable.ic_tile_download; else -> 0 }
                         if (tile != 0) Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(if (T.dark) androidx.compose.ui.graphics.Color.Black else androidx.compose.ui.graphics.Color.White), contentAlignment = Alignment.Center) {
@@ -752,14 +756,12 @@ private fun ExtraAppsCard() {
                         } else Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { PIcon(t.key, T.text, 22.dp) }
                     }
                     Spacer(Modifier.width(12.dp))
-                    Text(tr(t.en, t.trName), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable(enabled = shownHere) {
+                    Text(tr(t.en, t.trName), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).clickable {
                         // a tool screen opens on top; a page-based one opens the main app on its page
                         if (t.isTool) openTool(t.target)
                         else ctx.startActivity(Intent(ctx, MainActivity::class.java).putExtra("start", t.target).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP))
                     })
                     PIcon("chevron", T.sub, 20.dp, Modifier.clickable { open = !open }.padding(horizontal = 6.dp).graphicsLayer { rotationZ = if (open) 180f else 0f })
-                    // on: the tool is listed in Extra apps (and the Apps group of the ⋮ menu); off: it is hidden from both
-                    PSwitch(shownHere, { on -> ToolPlace.set(ctx, t, if (on) "extra" else "hidden"); rev++ })
                 }
                 // where it shows, one radio per place with the place's icon: the overflow menu, the Apps group, the left menu, nowhere (Settings only)
                 if (open) PlaceChoice(cur, buildList {
@@ -875,8 +877,8 @@ internal fun ExtraDefaultRow(alias: String) {
 internal fun fluentColorRes(ctx: android.content.Context, key: String): Int =
     if (key.isEmpty()) 0 else ctx.resources.getIdentifier("fc_${key.lowercase()}", "drawable", ctx.packageName)
 
-private val FC_APP = mapOf("CalculatorLauncher" to "calculator", "FilesLauncher" to "files", "PhotosLauncher" to "photos", "CalendarLauncher" to "calendar", "ContactsLauncher" to "contacts", "PaintLauncher" to "paint",
-    "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "IslandLauncher" to "island", "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes",
+private val FC_APP = mapOf("CalculatorLauncher" to "calculator", "ClockLauncher" to "clock", "FilesLauncher" to "files", "PhotosLauncher" to "photos", "CalendarLauncher" to "calendar", "ContactsLauncher" to "contacts", "PaintLauncher" to "paint",
+    "LocalSendLauncher" to "localsend", "KeyboardLauncher" to "keyboard", "PaletteLauncher" to "palette", "BlackOutLauncher" to "blackout", "IslandLauncher" to "island", "ArtCraftLauncher" to "artcraft", "MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "EbookLauncher" to "notes",
     "WeatherLauncher" to "weather", "MessagesLauncher" to "messages", "ScreenRecLauncher" to "screenrec", "NotifHistLauncher" to "notifhist", "ExtraStoreLauncher" to "store")
 private val FC_PAGE = mapOf("downloads" to "download", "files" to "files")
 

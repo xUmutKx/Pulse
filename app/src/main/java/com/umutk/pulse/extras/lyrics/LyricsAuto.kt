@@ -34,11 +34,8 @@ class LyricsBackfillWorker(private val app: Context, params: WorkerParameters) :
             val local = t.path.takeIf { !it.contains("://") }
             val r = runCatching { Lyrics.forTrack(app, title, artist, t.album, t.durationSec * 1000L, local) }.getOrNull()
             if (r != null) {
+                // forTrack has kept the found lyrics with the song already
                 found++
-                if (local != null && r.source in setOf("lrclib", "ovh", "cache")) {
-                    if (LiveLyrics.saveLrc(app)) Lyrics.saveSidecar(local, r)
-                    if (LiveLyrics.embed(app)) Lyrics.embedMp3(local, r)
-                }
             }
             if (i % 10 == 0) LyricsAuto.progress(app, i + 1, list.size, found)
             // the service is asked about two songs a second at most

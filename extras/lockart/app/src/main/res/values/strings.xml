@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Inglés: idioma por defecto. El español está en values-es; cualquier otro idioma usa este. -->
+<resources>
+    <string name="app_name">Lock Screen Art</string>
+    <string name="xposed_description">Shows the album art of the music playing on the lock screen, like Android 10 and custom ROMs, plus synced Spotify lyrics. Built for the Android 17 Scene Container.</string>
+
+    <string name="subtitle">LSPosed module for System UI</string>
+
+    <string name="status_waiting_title">Looking for System UI…</string>
+    <string name="status_waiting_body">Checking that the module is loaded</string>
+    <string name="status_on_title">Active in System UI</string>
+    <plurals name="status_on_body">
+        <item quantity="one">%d media session</item>
+        <item quantity="other">%d media sessions</item>
+    </plurals>
+    <string name="status_off_title">System UI is not responding</string>
+    <string name="status_off_body">Enable the module in LSPosed with the “System UI” scope and restart System UI.</string>
+    <string name="status_no_view_title">Loaded, but no view</string>
+    <string name="status_no_view_body">System UI responded but couldn’t find the lock screen. Restart it.</string>
+
+    <string name="caption_now">Now on %1$s</string>
+    <string name="caption_now_lyrics">Now on %1$s · %2$d lines of lyrics</string>
+    <string name="caption_silent">Nothing playing · sample preview</string>
+    <string name="caption_sample">Sample preview</string>
+    <string name="sample_track">Your music</string>
+
+    <string name="group_art">Album art</string>
+    <string name="group_playback">While playing</string>
+    <string name="group_lyrics">Lyrics</string>
+    <string name="group_aod">Ambient display</string>
+    <string name="group_system">System</string>
+
+    <string name="enabled_title">Show album art</string>
+    <string name="enabled_hint">Over the wallpaper, below the clock and notifications</string>
+    <string name="paused_title">Keep when paused</string>
+    <string name="paused_hint">Don’t remove it when the music is paused</string>
+    <string name="music_mode_title">Music mode</string>
+    <string name="music_mode_hint">While playing: no player or notifications on the lock screen, and the song under the clock. The player is still there when you pull down the shade</string>
+    <string name="aod_title">Lyrics on ambient display</string>
+    <string name="aod_hint">When you turn off the screen while something with lyrics plays, it stays in ambient mode showing the lyrics. Without music it follows your settings. Uses more battery</string>
+    <string name="aod_toggle_title">Lock screen toggle</string>
+    <string name="aod_toggle_hint">A subtle moon above the lyrics to turn ambient display lyrics on or off instantly</string>
+    <string name="lyrics_title">Spotify lyrics</string>
+    <string name="lyrics_hint">Synced word by word on the lock screen</string>
+    <string name="anim_title">Line change animation</string>
+    <string name="anim_hint">The preview uses the same drawing as the lock screen</string>
+    <string name="anim_scroll">Scroll</string>
+    <string name="anim_fade">Fade</string>
+    <string name="anim_zoom">Zoom</string>
+    <string name="anim_none">None</string>
+    <string name="blur_title">Blur</string>
+    <string name="blur_none">Sharp</string>
+    <string name="dim_title">Veil</string>
+    <string name="dim_value">%1$d %%</string>
+    <string name="auto_veil_title">Automatic veil</string>
+    <string name="auto_veil_hint">White when your lock screen wallpaper uses dark text</string>
+
+    <string name="restart">Restart System UI</string>
+    <string name="restart_hint">Needed after enabling or updating the module</string>
+    <string name="restarting">Restarting System UI…</string>
+    <string name="scope_title">Enable in Spotify</string>
+    <string name="scope_hint">LSPosed will ask permission to load the module in Spotify; then close and reopen Spotify</string>
+    <string name="scope_approved">Done: close and reopen Spotify to load the lyrics</string>
+    <string name="scope_failed">LSPosed rejected the request: %1$s</string>
+    <string name="credits_title">Credits</string>
+    <string name="credits_body">Spotify lyrics adapted from the spotify-music provider of LyricProvider (tomakino, Apache-2.0), with ideas from SuperLyric (HChenX). Class lookup with DexKit (LuckyPray, LGPL-3.0 / Apache-2.0). The lyrics come from Spotify and are used with your own session, only on your phone.</string>
+    <string name="no_root">This app has no root: grant it in KernelSU or restart the phone.</string>
+
+    <!-- Original sample lines for the animation preview (not from any song). -->
+    <string-array name="sample_lyrics">
+        <item>This is how each line changes</item>
+        <item>while the song keeps playing</item>
+        <item>the next one slowly rises</item>
+        <item>and the last one fades away</item>
+        <item>so you never lose your place</item>
+    </string-array>
+</resources>

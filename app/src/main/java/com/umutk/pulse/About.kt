@@ -114,6 +114,8 @@ fun AboutPage() {
                 Text("No data is shared. Pulse reads your phone's numbers on the phone and keeps them there. The only network use is the latency test, and only when you press Start. Authenticator secrets never leave the phone.", color = T.text, fontSize = 13.sp)
             }
         }
+        // where the data and the cache are, what each part is for, and a delete button for each
+        StorageCard()
         // licences and credits open on their own page
         PCard(Modifier.clickable { licences = true }) {
             Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {

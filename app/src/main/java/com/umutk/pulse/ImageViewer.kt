@@ -81,6 +81,24 @@ import kotlin.math.min
 /** Extensions the Pulse file manager hands to the photo viewer. */
 val IMG_EXTS = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")
 
+/** Camera RAW files: the picture is developed by the RAW editor (CalibRaw), not by the photo viewer. */
+val RAW_EXTS = setOf("dng", "cr2", "cr3", "nef", "nrw", "arw", "raf", "orf", "rw2", "pef", "srw")
+private const val RAW_EDITOR = "de.duecki.calibraw"
+private const val RAW_EDITOR_PAGE = "https://github.com/Duecki1/CalibRaw/releases/latest"
+
+/** Opens a RAW file in the RAW editor when it is installed (it takes the file from Pulse); otherwise its release page. */
+fun rawOpen(ctx: Context, f: File) {
+    val installed = runCatching { ctx.packageManager.getPackageInfo(RAW_EDITOR, 0); true }.getOrDefault(false)
+    val i = if (installed) {
+        val uri = FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", f)
+        Intent(Intent.ACTION_VIEW).setDataAndType(uri, "image/*").setPackage(RAW_EDITOR)
+            .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            .apply { clipData = android.content.ClipData.newRawUri("", uri) }
+    } else Intent(Intent.ACTION_VIEW, Uri.parse(RAW_EDITOR_PAGE))
+    if (ctx !is Activity) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    try { ctx.startActivity(i) } catch (e: Exception) { Toast.makeText(ctx, tr("No app can open this file", "Bu dosyayı açacak uygulama yok"), Toast.LENGTH_SHORT).show() }
+}
+
 /** One picture of the viewer: a local file (editable, deletable) or just a content / file URI from another app. */
 internal class ImgSrc(val uri: Uri, val file: File?, val name: String)
 

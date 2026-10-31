@@ -80,6 +80,10 @@ object MsgPrefs {
     private const val FILE = "pulse_messages"
     private fun p(c: Context) = c.getSharedPreferences(FILE, Context.MODE_PRIVATE)
     fun pinned(c: Context): Set<String> = p(c).getStringSet("pinned", null).orEmpty().toSet()
+    /** When the conversation with this address was last opened: its messages up to this time are read. Kept here because the phone
+     *  only lets the default SMS app mark messages read. */
+    fun readUpTo(c: Context, addr: String): Long = p(c).getLong("read_$addr", 0L)
+    fun setReadUpTo(c: Context, addr: String, t: Long) { p(c).edit().putLong("read_$addr", t).apply() }
     fun blocked(c: Context): Set<String> = p(c).getStringSet("blocked", null).orEmpty().toSet()
     fun setPinned(c: Context, s: Set<String>) { p(c).edit().putStringSet("pinned", s.toSet()).apply() }
     fun setBlocked(c: Context, s: Set<String>) { p(c).edit().putStringSet("blocked", s.toSet()).apply() }
@@ -136,15 +140,18 @@ fun loadSmsThreads(c: Context, withNames: Boolean): List<SmsThread> {
     val out = LinkedHashMap<Long, SmsThread>()
     val unread = HashMap<Long, Int>()
     val names = HashMap<String, String?>()
+    val readTo = HashMap<String, Long>()
     val canNames = withNames && hasContactPermission(c)
     c.contentResolver.query(Telephony.Sms.CONTENT_URI,
         arrayOf(Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.READ, Telephony.Sms.TYPE),
         null, null, "${Telephony.Sms.DATE} DESC")?.use { cur ->
         while (cur.moveToNext()) {
             val tid = cur.getLong(0)
-            if (cur.getInt(4) == 0 && cur.getInt(5) == Telephony.Sms.MESSAGE_TYPE_INBOX) unread[tid] = (unread[tid] ?: 0) + 1
-            if (tid in out) continue
             val addr = cur.getString(1).orEmpty()
+            // a message is unread when the phone says so and it is newer than the last time Pulse opened its conversation
+            val upTo = readTo.getOrPut(addr) { MsgPrefs.readUpTo(c, addr) }
+            if (cur.getInt(4) == 0 && cur.getInt(5) == Telephony.Sms.MESSAGE_TYPE_INBOX && cur.getLong(3) > upTo) unread[tid] = (unread[tid] ?: 0) + 1
+            if (tid in out) continue
             val name = if (canNames && addr.isNotEmpty()) names.getOrPut(addr) { contactName(c, addr) } else null
             out[tid] = SmsThread(tid, addr, name, cur.getString(2).orEmpty(), cur.getLong(3))
         }
@@ -190,6 +197,15 @@ fun loadSmsThread(c: Context, tid: Long, address: String): List<SmsMsg> {
     return out
 }
 
+/** Deletes every text of the given conversations (the system stores them, so only the default SMS app may). False when refused. */
+fun deleteThreads(c: Context, addrs: Set<String>): Boolean = runCatching {
+    addrs.forEach { a ->
+        c.contentResolver.delete(Telephony.Sms.CONTENT_URI, "${Telephony.Sms.ADDRESS} = ?", arrayOf(a))
+        Outbox.forget(c, a)
+    }
+    true
+}.getOrDefault(false)
+
 /** Sends through the system SMS stack. Every part reports back to [com.umutk.pulse.extras.messages.MsgSentReceiver]: the message is kept
  *  (as Pulse's own sent message when Pulse is the default SMS app) only once the radio has really sent it, and a refusal is shown then.
  *  False when the send is refused at once. */
@@ -228,6 +244,7 @@ object Outbox {
         return now
     }
     fun remove(c: Context, key: Long) { save(c, rows(c).filterNot { timeOf(it) == key }.toSet()) }
+    fun forget(c: Context, address: String) { save(c, rows(c).filterNot { it.split(SEP, limit = 3).getOrNull(1) == address }.toSet()) }
     /** The newest outbox text of each address: (address, body, time). */
     fun latestPerAddress(c: Context): List<Triple<String, String, Long>> = rows(c).mapNotNull { r ->
         val p = r.split(SEP, limit = 3)
@@ -289,6 +306,8 @@ fun MessagesScreen(back: () -> Unit) {
     val startIntent = remember { MsgCore.activityOf(ctx)?.intent }
     var open by remember { mutableStateOf<SmsThread?>(MsgCore.addressOf(startIntent)?.let { SmsThread(-1L, it, null, "", 0L) }) }
     var newMode by remember { mutableStateOf(false) }
+    // conversations picked by a long press, for the bulk actions above the list
+    var picked by remember { mutableStateOf(setOf<String>()) }
     var settings by remember { mutableStateOf(false) }
     var newTo by remember { mutableStateOf("") }
     var query by remember { mutableStateOf("") }
@@ -324,6 +343,16 @@ fun MessagesScreen(back: () -> Unit) {
     fun goBack() { if (settings) settings = false else if (newMode) newMode = false else if (open != null) open = null else back() }
 
     LaunchedEffect(Unit) { if (!granted) ask.launch(MESSAGE_PERMS) }
+    // a conversation that is open is read: its notification goes and its unread count is cleared
+    LaunchedEffect(open?.address) {
+        val addr = open?.address ?: return@LaunchedEffect
+        com.umutk.pulse.extras.messages.MsgNotifier.cancel(ctx, addr)
+        withContext(Dispatchers.IO) {
+            MsgCore.markRead(ctx, addr)
+            MsgPrefs.setReadUpTo(ctx, addr, System.currentTimeMillis())
+        }
+        reload++
+    }
     BackHandler { goBack() }
     // a new incoming or sent SMS reloads the lists without the user doing anything
     DisposableEffect(granted) {
@@ -437,10 +466,22 @@ fun MessagesScreen(back: () -> Unit) {
                     all == null -> Spacer(Modifier.weight(1f))
                     all.isEmpty() -> MessagesEmpty(Modifier.weight(1f), tr("No messages yet", "Henüz mesaj yok"))
                     else -> {
+                        if (picked.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            MessagesIcon("close") { picked = emptySet() }
+                            Text("${picked.size}", color = T.text, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(start = 8.dp))
+                            MessagesIcon("pin") { pins = if (picked.all { it in pins }) pins - picked else pins + picked; MsgPrefs.setPinned(ctx, pins); picked = emptySet() }
+                            MessagesIcon("mute") { muted = if (picked.all { it in muted }) muted - picked else muted + picked; MsgPrefs.setMuted(ctx, muted); picked = emptySet() }
+                            MessagesIcon("archive") { archives = archives + picked; MsgPrefs.setArchived(ctx, archives); picked = emptySet() }
+                            MessagesIcon("recycle") {
+                                if (deleteThreads(ctx, picked)) { picked = emptySet(); reload++ }
+                                else Toast.makeText(ctx, tr("Pulse must be the default SMS app to delete", "Silmek için Pulse varsayılan SMS uygulaması olmalı"), Toast.LENGTH_SHORT).show()
+                            }
+                        }
                         PField(query, { query = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                         if (shown.isEmpty()) MessagesEmpty(Modifier.weight(1f), tr("No matches", "Eşleşme yok"))
                         else Box(Modifier.weight(1f).fillMaxWidth()) { LazyColumn(Modifier.fillMaxSize()) {
-                            items(shown, key = { it.id }) { th -> MessagesThreadRow(th, pins, muted, { open = th },
+                            items(shown, key = { it.id }) { th -> MessagesThreadRow(th, pins, muted, { if (picked.isEmpty()) open = th else picked = if (th.address in picked) picked - th.address else picked + th.address },
+                                selected = th.address in picked, onPick = { picked = if (th.address in picked) picked - th.address else picked + th.address },
                                 onMute = { muted = if (th.address in muted) muted - th.address else muted + th.address; MsgPrefs.setMuted(ctx, muted) },
                                 onPin = { pins = if (th.address in pins) pins - th.address else pins + th.address; MsgPrefs.setPinned(ctx, pins) },
                                 onArchive = { archives = archives + th.address; MsgPrefs.setArchived(ctx, archives) },
@@ -459,11 +500,14 @@ fun MessagesScreen(back: () -> Unit) {
                 var threadMenu by remember { mutableStateOf(false) }
                 var blockAsk by remember { mutableStateOf(false) }
                 if (addr.isNotEmpty()) Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(40.dp).clickable { threadMenu = true }, contentAlignment = Alignment.Center) { PIcon("more", T.sub, 22.dp) }
+                    // the menu hangs from the ⋮ button itself, so it opens on the right, not at the screen's left edge
+                    Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    Box(Modifier.fillMaxSize().clickable { threadMenu = true }, contentAlignment = Alignment.Center) { PIcon("more", T.sub, 22.dp) }
                     ThemedMenu(threadMenu, { threadMenu = false }) {
                         ThemedMenuItem(if (pinned) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), { threadMenu = false; pins = if (pinned) pins - addr else pins + addr; MsgPrefs.setPinned(ctx, pins) }, iconKey = "pin")
                         ThemedMenuItem(if (addr in muted) tr("Unmute", "Sesi aç") else tr("Mute", "Sessize al"), { threadMenu = false; muted = if (addr in muted) muted - addr else muted + addr; MsgPrefs.setMuted(ctx, muted) }, iconKey = "mute")
                         ThemedMenuItem(if (blocked) tr("Unblock", "Engeli kaldır") else tr("Block", "Engelle"), { threadMenu = false; if (blocked) { blocks = blocks - addr; MsgPrefs.setBlocked(ctx, blocks) } else blockAsk = true }, iconKey = "block")
+                    }
                     }
                     if (blockAsk) WinAlert(onDismissRequest = { blockAsk = false }, title = { Text(tr("Block this number?", "Bu numara engellensin mi?"), color = T.text) },
                         text = { Text(addr, color = T.sub) },
@@ -556,11 +600,10 @@ private fun MessagesAvatar(label: String) {
 /** One conversation row. A long press opens its menu: pin, archive, block. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, muted: Set<String>, onOpen: () -> Unit, onPin: () -> Unit, onMute: () -> Unit, onArchive: () -> Unit, onBlock: () -> Unit) {
+private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, muted: Set<String>, onOpen: () -> Unit, onPin: () -> Unit, onMute: () -> Unit, onArchive: () -> Unit, onBlock: () -> Unit, selected: Boolean = false, onPick: () -> Unit = {}) {
     val label = th.name ?: th.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
-    var menu by remember { mutableStateOf(false) }
     Box(Modifier.fillMaxWidth()) {
-    Row(Modifier.fillMaxWidth().combinedClickable(onClick = onOpen, onLongClick = { menu = true }).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().background(if (selected) T.accent.copy(alpha = .18f) else androidx.compose.ui.graphics.Color.Transparent).combinedClickable(onClick = onOpen, onLongClick = onPick).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         MessagesAvatar(label)
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -579,12 +622,6 @@ private fun MessagesThreadRow(th: SmsThread, pins: Set<String>, muted: Set<Strin
                 Text("${th.unread}", color = onAccent(T.accent), fontSize = 11.sp)
             }
         }
-    }
-    ThemedMenu(menu, { menu = false }) {
-        ThemedMenuItem(if (th.address in pins) tr("Unpin", "Sabitlemeyi kaldır") else tr("Pin", "Sabitle"), { menu = false; onPin() }, iconKey = "pin")
-        ThemedMenuItem(if (th.address in muted) tr("Unmute", "Sesi aç") else tr("Mute", "Sessize al"), { menu = false; onMute() }, iconKey = "mute")
-        ThemedMenuItem(tr("Archive", "Arşivle"), { menu = false; onArchive() }, iconKey = "archive")
-        ThemedMenuItem(tr("Block", "Engelle"), { menu = false; onBlock() }, iconKey = "block")
     }
     }
 }

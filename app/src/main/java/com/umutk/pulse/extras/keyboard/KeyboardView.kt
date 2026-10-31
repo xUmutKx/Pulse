@@ -1,6 +1,8 @@
 @file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.umutk.pulse.extras.keyboard
+import androidx.compose.foundation.layout.Spacer
 
+import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.SwapHoriz
 import androidx.compose.material.icons.rounded.AlternateEmail
 import androidx.compose.foundation.gestures.animateScrollBy
@@ -187,6 +189,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
+import androidx.compose.foundation.lazy.itemsIndexed
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlin.math.abs
@@ -260,6 +263,8 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         if (KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
         Trail(th, st)
         Preview(th, st)
+        // private typing: the hat mark sits at the bottom middle, so it is seen whatever the keyboard shows
+        if (st.incognito) com.umutk.pulse.extras.IncognitoGlyph(th.sub.copy(alpha = .5f), 26.dp, Modifier.align(Alignment.Center))
     }
 }
 
@@ -272,6 +277,8 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "gamepad" -> GamepadPanel(th, act)
+            "auth" -> AuthPanel(th, st, act, keyH)
+            "voice" -> VoicePanel(th, st, act, keyH)
             "resize" -> ResizePanel(th, st, keyH)
             "keyset" -> KeysetPanel(th, st, act, keyH)
             "layout" -> LayoutPanel(th, st, keyH)
@@ -306,18 +313,25 @@ private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.comp
 /** A chosen layout, over whatever the field itself would ask for. "Default" clears the pick, so the field decides again. */
 @Composable
 private fun LayoutPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit.Dp) {
-    val options = listOf(null to tr("Default", "Varsayılan"), "numpad" to tr("Numbers", "Sayılar"), "game" to tr("Game controls", "Oyun tuşları"))
-    Column(Modifier.fillMaxWidth().height(keyH * 4f), verticalArrangement = Arrangement.Center) {
-        Text(tr("Key layout", "Tuş düzeni"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp, bottom = 4.dp))
-        options.forEach { (v, label) ->
-            val on = st.forceLayout == v
+    // each layout has its own icon; the rows share the height evenly
+    val options = listOf(Triple(null, tr("Default", "Varsayılan"), "Keyboard"), Triple("numpad", tr("Numbers", "Sayılar"), "Pin"), Triple("game", tr("Game controls", "Oyun tuşları"), "SportsEsports"), Triple("gamepad", tr("Gamepad", "Gamepad"), "SportsEsports"))
+    Column(Modifier.fillMaxWidth().height(keyH * 4f), verticalArrangement = Arrangement.SpaceEvenly) {
+        Text(tr("Key layout", "Tuş düzeni"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp))
+        options.forEach { (v, label, icon) ->
+            // the gamepad is one of the layouts: it opens its own panel
+            val on = if (v == "gamepad") st.panel == "gamepad" else st.forceLayout == v
             Row(
-                Modifier.fillMaxWidth().height(keyH * .85f).clickable { st.forceLayout = v; st.panel = "keys" }.padding(horizontal = 14.dp),
+                Modifier.fillMaxWidth().clickable { if (v == "gamepad") st.panel = "gamepad" else { st.forceLayout = v; st.panel = "keys" } }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(label, color = if (on) th.accent else th.text, fontSize = 16.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, modifier = Modifier.weight(1f))
+                Icon(kbIcon(th, icon), null, tint = if (on) th.accent else th.text, modifier = Modifier.size(22.dp))
+                Text(label, color = if (on) th.accent else th.text, fontSize = 16.sp, fontWeight = if (on) FontWeight.Medium else FontWeight.Normal, modifier = Modifier.weight(1f).padding(start = 12.dp))
                 if (on) Icon(kbIcon(th, "Check"), null, tint = th.accent, modifier = Modifier.size(20.dp))
             }
+        }
+        Row(Modifier.fillMaxWidth().clickable { st.panel = "keyset" }.padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(kbIcon(th, "Keyboard"), null, tint = th.text, modifier = Modifier.size(22.dp))
+            Text(tr("Key set", "Tuş seti"), color = th.text, fontSize = 16.sp, modifier = Modifier.weight(1f).padding(start = 12.dp))
         }
     }
 }
@@ -377,9 +391,16 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     ) {
         BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
         if (st.toolbar) {
-            Row(Modifier.weight(1f).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }.forEach { id ->
-                    BarIcon(th, toolIcon(th, id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
+            // the icons share the width evenly; only when they would be smaller than a finger's reach does the row scroll
+            val shown = KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }
+            BoxWithConstraints(Modifier.weight(1f)) {
+                val slot = if (shown.isEmpty()) maxWidth else maxOf(44.dp, maxWidth / shown.size)
+                Row(Modifier.horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+                    shown.forEach { id ->
+                        Box(Modifier.width(slot), contentAlignment = Alignment.Center) {
+                            BarIcon(th, toolIcon(th, id), on = toolOn(id, st)) { when (id) { "selectAll", "copy", "cut", "paste", "undo", "redo" -> act.edit(id); "emoji" -> act.emojiPanel(); "lang" -> act.lang(); else -> act.menu(id) } }
+                        }
+                    }
                 }
             }
             // the three dots always sit at the right end, drawn in Fluent
@@ -507,7 +528,7 @@ private fun BarIcon(th: KbTheme, icon: ImageVector, on: Boolean = false, onClick
 }
 
 internal fun toolIcon(th: KbTheme, id: String): ImageVector = when (id) {
-    "clip", "paste" -> kbIcon(th, "ContentPaste"); "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
+    "clip", "paste" -> kbIcon(th, "ContentPaste"); "auth" -> Icons.Rounded.Lock; "gamepad" -> Icons.Rounded.SportsEsports; "emoji" -> kbIcon(th, "EmojiEmotions"); "selectAll" -> kbIcon(th, "SelectAll"); "copy" -> kbIcon(th, "ContentCopy")
     "cut" -> kbIcon(th, "ContentCut"); "undo" -> kbIcon(th, "Undo"); "redo" -> kbIcon(th, "Redo"); "menu" -> kbIcon(th, "MoreHoriz"); "resize" -> kbIcon(th, "AspectRatio")
     "incognito" -> kbIcon(th, "VisibilityOff"); "arrows" -> kbIcon(th, "OpenWith"); "proRow" -> kbIcon(th, "Dashboard"); "keyset" -> kbIcon(th, "Keyboard"); "numbers" -> kbIcon(th, "Pin")
     "layout" -> kbIcon(th, "Dashboard")
@@ -776,6 +797,8 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                     val big = key.kind == KeyKind.CHAR || key.kind == KeyKind.COMMA || key.kind == KeyKind.PERIOD
                     if (big && KeyboardPrefs.keyPopups) st.preview = KbPreview(rect, key.label)
                     var long = false
+                    // a key whose long press runs an action (the comma's voice typing): the pop-up characters never open for it
+                    var held = false
                     var sel = -1
                     var spaceDragged = false
                     var lastStep = 0
@@ -808,7 +831,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 // the comma, the period and the key beside ?123 run the action chosen for them in Settings; "none" leaves the key's own pop-up characters
                                 KeyKind.COMMA, KeyKind.PERIOD, KeyKind.MENU, KeyKind.EMOJI, KeyKind.LANG -> {
                                     val h = holdOf(key.kind)
-                                    if (h != "none") { long = true; st.preview = null; a.feedback(); runHold(a, h) }
+                                    if (h != "none") { long = true; held = true; st.preview = null; a.feedback(); runHold(a, h) }
                                     else if (!glide && key.alts.isNotEmpty() && big) { long = true; sel = 0; st.preview = KbPreview(rect, key.label, key.alts, 0); a.feedback() }
                                     due = Long.MAX_VALUE / 2
                                 }
@@ -869,7 +892,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
                                 val step = (dx / 12.dp.toPx()).toInt()
                                 if (step != lastStep) { a.moveCursor(step - lastStep); lastStep = step }
                             }
-                            long && key.alts.isNotEmpty() -> {
+                            long && !held && key.alts.isNotEmpty() -> {
                                 val count = key.alts.size
                                 val w = minOf(POPUP_W.dp.toPx(), st.rootW * .96f / count)
                                 val left = popupLeft(rect, count, st.rootW, w)
@@ -1273,5 +1296,46 @@ private fun ShiftGlyph(state: Int, color: Color) {
         }
         if (state == 2) drawPath(arrow, color) else drawPath(arrow, color, style = androidx.compose.ui.graphics.drawscope.Stroke(width = w, join = androidx.compose.ui.graphics.StrokeJoin.Round))
         if (state >= 1) drawRoundRect(color, androidx.compose.ui.geometry.Offset(9f * u, 19.5f * u), androidx.compose.ui.geometry.Size(6f * u, 2.2f * u), androidx.compose.ui.geometry.CornerRadius(u))
+    }
+}
+
+/** Quick auth: the accounts of Pulse Authenticator with their codes; a tap types the code. */
+@Composable
+private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    // as tall as the keys: four rows of keys
+    Column(Modifier.fillMaxWidth().height(keyH * 4f).background(th.bg).padding(8.dp)) {
+        // a second clock: the codes are checked each second, and each account shows how long its code has left
+        val now by androidx.compose.runtime.produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); act.authTick(); delay(1000) } }
+        if (st.authCodes.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+            Text(tr("No accounts yet: add them in Pulse Authenticator", "Henüz hesap yok: Pulse Kimlik doğrulayıcı'da ekle"), color = th.sub, fontSize = 13.sp)
+        } else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+            itemsIndexed(st.authCodes) { i, (name, code) ->
+                val period = st.authPeriods.getOrElse(i) { 30 }.coerceAtLeast(1)
+                val left = period - ((now / 1000L) % period).toInt()
+                // each account is as tall as its text (twice the text of before), so the panel is not padded with empty space
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(th.key).clickable { act.authPick(code) }
+                    .padding(vertical = 16.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(name, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(code, color = th.accent, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    // the bar under the code empties as the code runs out
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(4.dp).background(th.sub.copy(alpha = .2f))) {
+                        Box(Modifier.fillMaxWidth(left / period.toFloat()).height(4.dp).background(th.accent))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Speech typing: the panel covers the keys while the phone listens; the words come in as they are recognised, a tap stops it. */
+@Composable
+private fun VoicePanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    Column(Modifier.fillMaxWidth().height(keyH).background(th.bg).clickable { act.voice() }.padding(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Icon(Icons.Rounded.Mic, null, tint = if (st.listening) th.accent else th.sub, modifier = Modifier.size(56.dp))
+        Spacer(Modifier.height(12.dp))
+        Text(st.voiceText.ifEmpty { tr("Listening… tap to stop", "Dinliyor… durdurmak için dokun") }, color = th.text, fontSize = 18.sp, textAlign = TextAlign.Center, maxLines = 4, overflow = TextOverflow.Ellipsis)
     }
 }

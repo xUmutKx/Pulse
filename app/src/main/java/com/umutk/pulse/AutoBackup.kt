@@ -12,14 +12,15 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * A copy of the data every day without asking: two zips in Download/Pulse backup, one of the app (DataBackup) and one of the keyboard (KeyboardBackup),
- * the last [KEEP] of each. They live outside the app's own folders, so they stay when the app is removed and installed again.
+ * A copy of the data every week without asking (on by default): two zips in Download/Pulse backup, one of the app (DataBackup) and one of the keyboard (KeyboardBackup),
+ * the last [KEEP] of each (about a month). They live outside the app's own folders, so they stay when the app is removed and installed again.
  * On/off and the time of the last run are plain marker files in filesDir, so every process (Pulse, the keyboard, the extra apps) sees the same.
  */
 object AutoBackup {
-    private const val KEEP = 7
+    private const val KEEP = 4
     private const val FOLDER = "Pulse backup"
-    private const val DAY = 20L * 3600_000L
+    // once a week, on by default
+    private const val WEEK = 6L * 24 * 3600_000L
 
     private fun off(c: Context) = File(c.filesDir, "autobackup.off")
     private fun stamp(c: Context) = File(c.filesDir, "autobackup.last")
@@ -30,7 +31,7 @@ object AutoBackup {
 
     /** Runs a backup if it is on and the last one is old enough. Blocking: call off the main thread. */
     @Synchronized fun maybeRun(c: Context) {
-        if (!enabled(c) || System.currentTimeMillis() - lastRun(c) < DAY) return
+        if (!enabled(c) || System.currentTimeMillis() - lastRun(c) < WEEK) return
         run(c)
     }
 

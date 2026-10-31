@@ -14,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Equalizer
 import androidx.compose.material.icons.outlined.Radio
 import androidx.compose.material.icons.outlined.SyncAlt
@@ -125,7 +127,7 @@ fun rememberMenus(go: (String) -> Unit): MenuHost {
             // the standalone apps that are switched on in Settings > Apps open from here too
             *builtinApps(ctx) { openTool(it) }.toTypedArray(),
             // every extra app, the ones switched off included, in one list
-            *(if (com.umutk.pulse.extras.store.ExtraRowsHidden.menuOn(ctx)) listOf(MenuEntry(tr("Extra apps", "Ekstra uygulamalar"), icon = Icons.Outlined.Apps, key = "extraStore") { openTool("extrastore") }) else emptyList()).toTypedArray(),
+            MenuEntry(tr("Extra apps", "Ekstra uygulamalar"), icon = Icons.Outlined.Apps, key = "extraStore") { openTool("extrastore") },
         )),
     )
     return MenuHost(tops) {
@@ -152,8 +154,8 @@ object ToolPlace {
         Tool("installer", "APK installer", "APK yükleyici", "installer", true, "download", Icons.Outlined.SystemUpdate, "extra"),
         Tool("troubleshoot", "Device troubleshoot", "Cihaz sorun giderme", "troubleshoot", true, "shieldOk", Icons.Outlined.HealthAndSafety, "hidden"),
         Tool("clock", "Clock", "Saat", "clock", true, "timer", Icons.Outlined.AccessTime, "extra"),
-        Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "settings", Icons.Outlined.Widgets, "extra"),
-        Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "sensors", Icons.Outlined.Headphones, "extra"),
+        Tool("goodlock", "Good Lock", "Good Lock", "goodlock", true, "gridView", Icons.Outlined.Widgets, "extra"),
+        Tool("buds", "Buds manager", "Buds yöneticisi", "buds", true, "volume", Icons.Outlined.Headphones, "extra"),
         // the launcher's settings: its Extra apps row (Settings card and the ⋮ Apps group) left with the old "HomeLauncher" alias in 0.10.134 and is back, on by default
         Tool("launcher", "Launcher", "Ana ekran", "launcher", true, "apps", Icons.Outlined.Apps, "extra"),
     )
@@ -170,7 +172,8 @@ object ToolPlace {
     fun extraTools(c: Context): List<Tool> = all.filter { where(c, it) == "extra" }
     /** The entries of the overflow menu's Extra apps group: the same tools as the Extra apps card. */
     fun extraEntries(c: Context, go: (String) -> Unit, open: (String) -> Unit): List<MenuEntry> =
-        extraTools(c).filter { "tool:${it.id}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(c) }.map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
+        // Clock is listed by its own launcher switch (the builtin apps), not as a tool, so it is not listed twice
+        extraTools(c).filter { it.id != "clock" && "tool:${it.id}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(c) }.map { t -> MenuEntry(tr(t.en, t.trName), icon = t.icon, key = t.key) { if (t.isTool) open(t.target) else go(t.target) } }
     /** The tools that already have a left-menu page (their own switch in Settings > Pages): they are not added to the side twice. */
     fun hasPage(t: Tool) = t.target in setOf("office", "downloads", "health")
     fun byId(id: String): Tool? = all.firstOrNull { it.id == id }
@@ -191,6 +194,8 @@ object AppPlace {
         App("ContactsLauncher", "Contacts", "Kişiler", "person", Icons.Outlined.Person) { c, _ -> launchExtra(c, "com.umutk.pulse.ContactsActivity") },
         App("PaintLauncher", "Paint", "Paint", "palette", Icons.Outlined.Brush) { c, _ -> launchExtra(c, TOOL, "paint") },
         App("CalculatorLauncher", "Calculator", "Hesap makinesi", "calc", Icons.Outlined.Calculate) { c, _ -> launchExtra(c, TOOL, "calculator") },
+        App("ClockLauncher", "Clock", "Saat", "clock", Icons.Outlined.AccessTime) { c, _ -> launchExtra(c, TOOL, "clock") },
+        App("EbookLauncher", "Books", "Kitaplar", "book", Icons.Outlined.MenuBook) { c, _ -> launchExtra(c, TOOL, "ebook") },
         App("ArtCraftLauncher", "ArtCraft", "ArtCraft", "palette", Icons.Outlined.Palette) { c, _ -> launchExtra(c, "com.umutk.pulse.ArtCraftActivity") },
         App("BrowserLauncher", "Browser", "Tarayıcı", "globe", Icons.Outlined.Public) { c, _ -> launchExtra(c, TOOL, "browser") },
         App("OfficeLauncher", "Office", "Office", "document", Icons.Outlined.Description) { c, _ -> launchExtra(c, TOOL, "office") },
@@ -226,7 +231,7 @@ object AppPlace {
 
 /** The standalone apps placed in the top-right Apps menu, as menu entries: each opens its own window. */
 private fun builtinApps(ctx: Context, openTool: (String) -> Unit): List<MenuEntry> =
-    AppPlace.all.filter { a -> "app:${a.alias}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(ctx) && AppPlace.where(a.alias) == "menu" && (a.alias == "CalculatorLauncher" || ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) != android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_DISABLED) }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
+    AppPlace.all.filter { a -> "app:${a.alias}" !in com.umutk.pulse.extras.store.ExtraRowsHidden.load(ctx) && AppPlace.where(a.alias) == "menu" && !(a.alias == "ClockLauncher" && ToolPlace.byId("clock")?.let { ToolPlace.where(ctx, it) } == "hidden") && (a.alias == "CalculatorLauncher" || ctx.packageManager.getComponentEnabledSetting(android.content.ComponentName(ctx, "com.umutk.pulse.${a.alias}")) == android.content.pm.PackageManager.COMPONENT_ENABLED_STATE_ENABLED) }.map { a -> MenuEntry(tr(a.en, a.trName), icon = a.icon, key = a.key) { a.run(ctx, openTool) } }
 
 private val EXTRA_APPS get() = tr("Apps", "Uygulamalar")
 
@@ -253,7 +258,7 @@ private val WIN11_MENU_KEY = mapOf(
     "APK installer" to "tool_installer", "Device troubleshoot" to "tool_troubleshoot", "Authenticator" to "tool_authenticator", "Network usage" to "tool_netusage",
     "Screen cover" to "tool_cover", "Store" to "extraStore", "Settings" to "settings", "DNS" to "globe",
     // these two fell through to a "tool_goodlock"/"tool_buds" key with no glyph behind it and drew nothing in Win11
-    "Good Lock" to "gridView", "Buds manager" to "sensors", "Launcher" to "gridView", "Ana ekran" to "gridView",
+    "Good Lock" to "gridView", "Buds manager" to "volume", "Launcher" to "gridView", "Ana ekran" to "gridView",
 )
 
 /**
