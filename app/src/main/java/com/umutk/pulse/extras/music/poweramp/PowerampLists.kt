@@ -223,7 +223,8 @@ fun LibraryScreen(
     when (node) {
         Lib.WhiteNoise, Lib.AllSounds -> { Box(modifier.fillMaxSize()) { WhiteNoiseHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
         Lib.OnlinePlaylists -> { Box(modifier.fillMaxSize()) { OnlinePlaylistsHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
-        Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.music.RadioHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
+        // the radio of the app (the one in the music screen's top bar)
+        Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.radio.RadioScreen(back = { node = Lib.Root }) }; return@LibraryScreen }
         else -> Unit
     }
     Column(modifier.fillMaxSize()) {
