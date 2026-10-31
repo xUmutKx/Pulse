@@ -100,9 +100,9 @@ object EbookPrefs {
     fun showProgress(c: Context): Boolean = p(c).getBoolean("showProgress", true)
     fun setShowProgress(c: Context, on: Boolean) { p(c).edit().putBoolean("showProgress", on).apply() }
 
-    /** Whether the page turns with its slide and fade. */
-    fun anim(c: Context): Boolean = p(c).getBoolean("anim", true)
-    fun setAnim(c: Context, on: Boolean) { p(c).edit().putBoolean("anim", on).apply() }
+    /** The page turn: 0 instant (the default), 1 slide, 2 scroll down like a printed page feeding, 3 flip (a small grow and fade). */
+    fun animStyle(c: Context): Int = p(c).getInt("animStyle", 0)
+    fun setAnimStyle(c: Context, v: Int) { p(c).edit().putInt("animStyle", v.coerceIn(0, 3)).apply() }
 
     /** Seconds per page while the autoscroll runs. */
     fun autoSeconds(c: Context): Int = p(c).getInt("auto", 10)

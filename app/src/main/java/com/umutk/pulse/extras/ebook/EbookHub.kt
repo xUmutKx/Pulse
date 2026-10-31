@@ -13,8 +13,12 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -207,7 +211,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     var wood by remember { mutableStateOf(EbookPrefs.wood(ctx)) }
     var perRow by remember { mutableStateOf(EbookPrefs.perRow(ctx)) }
     var amoled by remember { mutableStateOf(EbookPrefs.amoled(ctx)) }
-    var anim by remember { mutableStateOf(EbookPrefs.anim(ctx)) }
+    var animStyle by remember { mutableStateOf(EbookPrefs.animStyle(ctx)) }
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
     var dayNight by remember { mutableStateOf(rp(ctx).getInt("theme", DAY_THEME)) }
     // the lists of the drawer: the whole shelf, the books opened lately, the favourites
@@ -283,7 +287,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     item { SectionTitle(tr("Color", "Renk"), th) }
                     item { SettingRow(tr("Use AMOLED dark mode", "AMOLED koyu mod"), th) { PSwitch(amoled, { amoled = it; EbookPrefs.setAmoled(ctx, it) }) } }
                     item { SectionTitle(tr("App", "Uygulama"), th) }
-                    item { SettingRow(tr("Page animation", "Sayfa animasyonu"), th) { PSwitch(anim, { anim = it; EbookPrefs.setAnim(ctx, it) }) } }
+                    item { ReaderRow(tr("Page animation", "Sayfa animasyonu"), th, animName(animStyle)) { animStyle = (animStyle + 1) % 4; EbookPrefs.setAnimStyle(ctx, animStyle) } }
                     item { SettingRow(tr("E-ink screen mode", "E-mürekkep ekran"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) } }
                 }
             } else {
@@ -451,7 +455,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var themeIx by remember { mutableStateOf(if (EbookPrefs.autoTheme(ctx)) autoIndex() else rp(ctx).getInt("theme", DAY_THEME)) }
     var textSize by remember { mutableStateOf(rp(ctx).getInt("size", 15)) }
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
-    var anim by remember { mutableStateOf(EbookPrefs.anim(ctx)) }
+    var animStyle by remember { mutableStateOf(EbookPrefs.animStyle(ctx)) }
     var dbl by remember { mutableStateOf(EbookPrefs.double(ctx)) }
     var fav by remember { mutableStateOf(Ebook.isFavorite(ctx, start.uri)) }
     var fontIx by remember { mutableStateOf(EbookPrefs.font(ctx)) }
@@ -578,9 +582,14 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 AnimatedContent(
                     targetState = key,
                     transitionSpec = {
-                        if (eink || !anim) (fadeIn(tween(0)) togetherWith fadeOut(tween(0)))
-                        else if (forward) (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { -it / 5 } + fadeOut(tween(260)))
-                        else (slideInHorizontally(tween(260)) { -it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { it / 5 } + fadeOut(tween(260)))
+                        when (if (eink) 0 else animStyle) {
+                            1 -> if (forward) (slideInHorizontally(tween(260)) { it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { -it / 5 } + fadeOut(tween(260)))
+                                 else (slideInHorizontally(tween(260)) { -it / 5 } + fadeIn(tween(260))) togetherWith (slideOutHorizontally(tween(260)) { it / 5 } + fadeOut(tween(260)))
+                            // the next page feeds in from the top and the old one slides down out of the screen
+                            2 -> (slideInVertically(tween(320)) { -it } + fadeIn(tween(320))) togetherWith (slideOutVertically(tween(320)) { it } + fadeOut(tween(320)))
+                            3 -> (scaleIn(tween(220), initialScale = .9f) + fadeIn(tween(220))) togetherWith (scaleOut(tween(220), targetScale = .9f) + fadeOut(tween(220)))
+                            else -> (fadeIn(tween(0)) togetherWith fadeOut(tween(0)))
+                        }
                     },
                     label = "page",
                 ) { _ ->
@@ -742,7 +751,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                             StepButton("+", th) { textSize = (textSize + 2).coerceAtMost(34); rp(ctx).edit().putInt("size", textSize).apply() }
                         }
                         SettingRow(tr("E-ink look", "E-mürekkep görünüm"), th) { PSwitch(eink, { eink = it; EbookPrefs.setEink(ctx, it) }) }
-                        SettingRow(tr("Page animation", "Sayfa animasyonu"), th) { PSwitch(anim, { anim = it; EbookPrefs.setAnim(ctx, it) }) }
+                        ReaderRow(tr("Page animation", "Sayfa animasyonu"), th, animName(animStyle)) { animStyle = (animStyle + 1) % 4; EbookPrefs.setAnimStyle(ctx, animStyle) }
                     }
                     "control" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         SettingRow(tr("Autoscroll", "Otomatik kaydırma"), th) { PSwitch(autoOn, { autoOn = it }) }
@@ -882,6 +891,14 @@ private fun setOrientation(c: Context, o: Int) {
 
 /** One line of the reader's menu, with an optional mark at its end. */
 @Composable
+/** The name of a page turn, as the reader's row shows it. */
+private fun animName(style: Int): String = when (style) {
+    1 -> tr("Slide", "Kayma")
+    2 -> tr("Scroll down", "Aşağı kayma")
+    3 -> tr("Flip", "Çevirme")
+    else -> tr("Instant", "Anında")
+}
+
 private fun ReaderRow(label: String, th: Theme, mark: String = "", onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = th.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
