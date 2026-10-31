@@ -137,8 +137,20 @@ object Ebook {
      * The picture of a book on the shelf: the first page of a PDF, the cover picture of an EPUB. It is drawn once and kept as a PNG
      * in the app's files, named by the book's uri. Null when the book has no picture (the shelf then draws the letter).
      */
+    private fun coverKey(uri: String): String = java.security.MessageDigest.getInstance("MD5").digest((uri + "#v3").toByteArray()).joinToString("") { "%02x".format(it) }
+
+    /** A book leaves the shelf: its picture, favourite, progress and last-opened time go with it. The book file itself stays on the phone. */
+    fun forget(c: Context, uri: String) {
+        val key = coverKey(uri)
+        val dir = File(c.filesDir, "covers")
+        File(dir, "$key.png").delete()
+        File(dir, "$key.none").delete()
+        val favs = HashSet(p(c).getStringSet("favs", emptySet()).orEmpty()).apply { remove(uri) }
+        p(c).edit().putStringSet("favs", favs).remove("open_$uri").remove("pct_$uri").apply()
+    }
+
     fun cover(c: Context, book: Book): File? {
-        val key = java.security.MessageDigest.getInstance("MD5").digest((book.uri + "#v3").toByteArray()).joinToString("") { "%02x".format(it) }
+        val key = coverKey(book.uri)
         val dir = File(c.filesDir, "covers").apply { mkdirs() }
         val png = File(dir, "$key.png")
         val none = File(dir, "$key.none")
