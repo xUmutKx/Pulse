@@ -182,8 +182,8 @@ object Ebook {
                     ?.let { candidates += resolvePath(page, java.net.URLDecoder.decode(it, "UTF-8")) }
             } else candidates += full(href)
         }
-        // any picture whose name says cover
-        items.filter { (attr(it, "href") ?: "").contains("cover", true) && (attr(it, "media-type") ?: "").startsWith("image") }
+        // any picture whose name says cover, front or title
+        items.filter { ((attr(it, "href") ?: "") + (attr(it, "id") ?: "")).let { n -> n.contains("cover", true) || n.contains("front", true) || n.contains("title", true) } && (attr(it, "media-type") ?: "").startsWith("image") }
             .mapNotNullTo(candidates) { attr(it, "href")?.let { h -> full(h) } }
         for (path in candidates) {
             val bytes = zipEntry(c, uri) { it.equals(path, true) } ?: continue

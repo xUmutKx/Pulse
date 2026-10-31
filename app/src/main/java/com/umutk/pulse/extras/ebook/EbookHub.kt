@@ -307,7 +307,8 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                                 }
                                 Box(Modifier.size(cw, cw * 1.4f).clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
                                     val shown = pic
-                                    if (shown != null) Image(shown, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                    // the whole cover is shown (no cropping into a zoomed part); the card colour fills the rest
+                                    if (shown != null) Image(shown, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                                     else Text(b.title.take(1).uppercase(), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                                     if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
                                 }
