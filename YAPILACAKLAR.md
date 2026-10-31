@@ -1750,3 +1750,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Lyrics on the lock screen: the view is translucent with a light scrim (it turned the screen black before) (derlenmedi)
 - Lyrics on the lock screen and AOD: a strip of text at the bottom with a soft shadow and no background, over the lock screen (no full window); shows the song's name until a line is ready (derlenmedi)
 - Books reader page animation: instant by default; choices Slide, Scroll down (like a printed page feeding), Flip; tap the row to change (derlenmedi)
+- Books reader > Customize reader bar buttons: a popup over the reader; the box ticks a button for the bar, a tap on its name closes the popup and opens that button (Font Size opens the font popup) (derlenmedi)
