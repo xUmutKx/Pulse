@@ -1786,3 +1786,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.290 Playback keep-alive notification: minimum importance, no status-bar icon, no sound
 - derlenmedi: Music lists stutter while scrolling (Favourites and the other song lists): cover cache is now byte-bounded instead of 30 full-size pictures, and saved covers are read at most 512 px for the rows
 - derlenmedi: Lyrics search index is built in the background after every library scan (not only when the music page is open), so the first search is quick
+- derlenmedi: Lyrics search reads the phone's lyrics index at once; the index is filled in the background without blocking the search (the search no longer waits for the whole library to be read)

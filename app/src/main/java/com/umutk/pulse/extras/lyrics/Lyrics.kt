@@ -218,7 +218,8 @@ object Lyrics {
         val key = query.trim().lowercase() + if (online) "|net" else "|local"
         // the same phrase is not searched again (the online part is slow): kept for ten minutes
         searchMemo[key]?.takeIf { System.currentTimeMillis() - it.first < 10 * 60_000L }?.let { return it.second }
-        return searchByTextNow(ctx, query, online).also { if (it.isNotEmpty()) searchMemo[key] = System.currentTimeMillis() to it }
+        // only the online pass is kept: the phone's part can still grow while the index is being read
+        return searchByTextNow(ctx, query, online).also { if (online && it.isNotEmpty()) searchMemo[key] = System.currentTimeMillis() to it }
     }
 
     private val searchMemo = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<LyricHit>>>()
@@ -234,9 +235,9 @@ object Lyrics {
         }
         val seen = HashSet<String>()
         // device: lyrics files beside the music, then the lyrics saved from Pulse
-        // read once for the whole library (LyricsIndex), so a search does not open every song file again
+        // the index (LyricsIndex) is read in the background after each scan; a search takes what is indexed now, at once
         val tracks = MusicLibrary.tracks.value
-        val idx = LyricsIndex.ensure(app, tracks) { p -> sidecarText(p)?.let { stripStamps(it) } ?: embeddedText(p) }
+        val idx = LyricsIndex.snapshot(app)
         tracks.forEach { t ->
             val text = idx[t.path]?.takeIf { it.isNotEmpty() } ?: return@forEach
             val (a, ti) = t.artist.orEmpty() to (t.title ?: t.path.substringAfterLast('/').substringBeforeLast('.'))
