@@ -1831,3 +1831,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Keyboard Turkish: places with a head word take the apostrophe after the head (Ağrı Dağı'na, Van Gölü'ne)
 - derlenmedi: Alarm sheet: the vibrate and snooze switches are gone; both options always show
 - derlenmedi: Alarm sheet: the vibrate and snooze switches are gone; both options always show
+- derlenmedi: Alarm background sheet: the preview cards are a plain sideways row (no longer moving and clipped inside the sheet)

@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
@@ -920,8 +921,9 @@ fun AlarmCustomizationScreen(
             ) {
                     Text("Background Style", style = MaterialTheme.typography.titleLarge)
                     // every style as a live preview card: the real background drawn small, so the choice is seen before it is picked
-                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        items(RingingBackgroundStyle.entries) { style ->
+                    // a plain row that scrolls sideways: a lazy row inside the sheet's scrolling column moved and clipped the cards
+                    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        RingingBackgroundStyle.entries.forEach { style ->
                             val selected = background == style
                             val cardShape = RoundedCornerShape(16.dp)
                             Column(
