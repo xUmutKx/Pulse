@@ -426,7 +426,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var amoled by remember { mutableStateOf(EbookPrefs.amoled(ctx)) }
     var autoTheme by remember { mutableStateOf(EbookPrefs.autoTheme(ctx)) }
     var themeIx by remember { mutableStateOf(if (EbookPrefs.autoTheme(ctx)) autoIndex() else rp(ctx).getInt("theme", DAY_THEME)) }
-    var textSize by remember { mutableStateOf(rp(ctx).getInt("size", 22)) }
+    var textSize by remember { mutableStateOf(rp(ctx).getInt("size", 15)) }
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
     var anim by remember { mutableStateOf(EbookPrefs.anim(ctx)) }
     var dbl by remember { mutableStateOf(EbookPrefs.double(ctx)) }
@@ -449,11 +449,14 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var brightness by remember { mutableStateOf(-1f) }
     var barIds by remember { mutableStateOf(EbookPrefs.bar(ctx)) }
     var autoSec by remember { mutableStateOf(EbookPrefs.autoSeconds(ctx)) }
+    // the screen orientation of the reader: 0 follows the phone, 1 portrait, 2 landscape
+    var orientation by remember { mutableStateOf(rp(ctx).getInt("orient", 0)) }
+    LaunchedEffect(orientation) { setOrientation(ctx, orientation) }
     // the page's text, read aloud; a page read to its end turns to the next one
     val curText = remember { arrayOf("") }
     val pageTurner = remember { mutableStateOf<(() -> Unit)?>(null) }
     val speaker = remember { Speaker(ctx) { if (speaking) pageTurner.value?.invoke() } }
-    DisposableEffect(Unit) { onDispose { speaker.shutdown(); setBrightness(ctx, -1f) } }
+    DisposableEffect(Unit) { onDispose { speaker.shutdown(); setBrightness(ctx, -1f); setOrientation(ctx, 0) } }
     BackHandler {
         when {
             panel == "menu" -> panel = ""
@@ -470,6 +473,29 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     fun pickTheme(i: Int) {
         eink = false; EbookPrefs.setEink(ctx, false)
         themeIx = i; rp(ctx).edit().putInt("theme", i).apply()
+    }
+
+    // one place for what a bar button (or a row of the ⋮ menu) does
+    fun act(id: String) {
+        when (id) {
+            "orient" -> { orientation = (orientation + 1) % 3; rp(ctx).edit().putInt("orient", orientation).apply() }
+            "daynight" -> pickTheme(if (themeIx == NIGHT_THEME) DAY_THEME else NIGHT_THEME)
+            "speak" -> speaking = !speaking
+            "auto" -> autoOn = !autoOn
+            "chapters" -> panel = "chapters"
+            "bookmarks" -> panel = "bookmarks"
+            "brightness" -> panel = "control"
+            "text" -> panel = "sizepop"
+            "search" -> panel = "search"
+            "visual" -> panel = "visual"
+            "control" -> panel = "control"
+            "misc" -> panel = "misc"
+            "theme" -> panel = "themepop"
+            "options" -> panel = "quick"
+            "shutdown" -> { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }
+            "custom" -> panel = "bar"
+            "info" -> panel = "info"
+        }
     }
 
     Box(Modifier.fillMaxSize().background(th.bg)) {
@@ -569,17 +595,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         val t = BAR_TOOLS.firstOrNull { it.third == id } ?: return@forEach
                         val on = when (id) { "speak" -> speaking; "auto" -> autoOn; else -> false }
                         Box(Modifier.size(44.dp).clickable {
-                            when (id) {
-                                "chapters" -> panel = "chapters"
-                                "text" -> panel = "sizepop"
-                                "theme" -> panel = "themepop"
-                                "bookmarks" -> panel = "bookmarks"
-                                "search" -> panel = "search"
-                                "speak" -> speaking = !speaking
-                                "auto" -> autoOn = !autoOn
-                                "options" -> panel = "quick"
-                                "info" -> panel = "info"
-                            }
+                            act(id)
                         }, contentAlignment = Alignment.Center) {
                             if (id == "text") Text("Aa", color = if (on) th.bg else th.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             else PIcon(if (id == "speak" && speaking) "pause" else t.first, if (on) th.ink else th.ink.copy(alpha = .8f), 22.dp)
@@ -650,7 +666,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
         // the ⋮ menu: a list that drops from the top right, like the classic readers
         if (panel == "menu" && b != null) {
             Box(Modifier.fillMaxSize().clickable { panel = "" })
-            Column(Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp).width(260.dp).clip(RoundedCornerShape(8.dp)).background(th.bg).border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(8.dp)).padding(vertical = 6.dp)) {
+            Column(Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp).width(260.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()).clip(RoundedCornerShape(8.dp)).background(th.bg).border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(8.dp)).padding(vertical = 6.dp)) {
                 ReaderRow(tr("Visual Options", "Görünüm seçenekleri"), th) { panel = "visual" }
                 ReaderRow(tr("Control Options", "Denetim seçenekleri"), th) { panel = "control" }
                 ReaderRow(tr("Miscellaneous", "Diğer"), th) { panel = "misc" }
@@ -663,6 +679,10 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     ctx.startActivity(Intent.createChooser(i, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
                 ReaderRow(tr("Book information", "Kitap bilgisi"), th) { panel = "info" }
+                // the buttons that are not on the bottom bar wait here
+                val hidden = BAR_TOOLS.filter { it.third !in barIds && it.third != "custom" }
+                if (hidden.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(th.sub.copy(alpha = .3f)))
+                hidden.forEach { t -> ReaderRow(t.second, th) { panel = ""; act(t.third) } }
             }
         }
 
@@ -799,6 +819,17 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 }
             }
         }
+    }
+}
+
+/** Sets the orientation of the reader's window: 0 the phone decides, 1 portrait, 2 landscape. */
+private fun setOrientation(c: Context, o: Int) {
+    var ctx: Context? = c
+    while (ctx != null && ctx !is android.app.Activity) ctx = (ctx as? android.content.ContextWrapper)?.baseContext
+    (ctx as? android.app.Activity)?.requestedOrientation = when (o) {
+        1 -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+        2 -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+        else -> android.content.pm.ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
     }
 }
 
