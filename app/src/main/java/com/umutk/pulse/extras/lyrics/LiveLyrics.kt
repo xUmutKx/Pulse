@@ -64,7 +64,8 @@ object LiveLyrics {
     // on by default: the current lyric line is the notification text whenever the track has synced lyrics
     fun notification(c: Context) = prefs(c).getBoolean("notification", true)
     /** The lyric notification is shown on the lock screen too (its text, not only the title). */
-    fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", true)
+    // off until it has run on a phone: a full-screen view over the lock screen must never block the unlock
+    fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", false)
     // a notification of its own for the lyrics, beside the media one (on by default: the lyrics are right there in the shade)
     fun separate(c: Context) = prefs(c).getBoolean("separate", true)
     /** Lyrics found online are always written as a .lrc beside the song (not kept in the app's data or cache). */
