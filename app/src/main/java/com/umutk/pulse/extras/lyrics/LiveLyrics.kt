@@ -266,14 +266,17 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
             if (st != null) sp.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), st, st + LiveLyrics.bold(trio.second).length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         }
         val boldLine = android.text.SpannableString(LiveLyrics.collapsed(ctx, trio.second)).also { it.setSpan(android.text.style.StyleSpan(android.graphics.Typeface.BOLD), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
-        if (android.os.Build.VERSION.SDK_INT >= 26) nm.deleteNotificationChannel("pulse_lyrics")
-        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics2", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_DEFAULT).apply { setSound(null, null); enableVibration(false) }) else Unit
+        // low importance: the lyric line sits in the shade and never pops up over the screen (the channel is new, the old one kept its pop-up setting)
+        if (android.os.Build.VERSION.SDK_INT >= 26) { nm.deleteNotificationChannel("pulse_lyrics"); nm.deleteNotificationChannel("pulse_lyrics2") }
+        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics3", tr("Lyrics", "Sözler"), android.app.NotificationManager.IMPORTANCE_LOW).apply { setSound(null, null); enableVibration(false) }) else Unit
         val open = android.app.PendingIntent.getActivity(ctx, 4106, android.content.Intent().setClassName(ctx, "com.umutk.pulse.ExtraToolActivity").putExtra("route", "music").putExtra("notif_open", "lyrics").addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
         // the album cover beside the text, read once per song (this runs on the lyrics tick, not on the main thread)
         if (artFor != t.path) { artFor = t.path; art = runCatching { (com.umutk.pulse.extras.music.trackArtLocal(ctx, t) ?: com.umutk.pulse.extras.music.trackArt(ctx, t))?.asAndroidBitmap() }.getOrNull() }
-        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics2").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
+        nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics3").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
             .setContentTitle(LiveLyrics.titled(ctx, t.title ?: t.path.substringAfterLast('/'))).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
-            .setOngoing(true).setOnlyAlertOnce(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT)
+            .setOngoing(true).setOnlyAlertOnce(true).setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW)
+            // on the lock screen a tap cannot open Pulse (it would ask for the unlock and the screen locks again), so the line has no tap target there
+            .setContentIntent(if (lockedNow()) null else open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT)
             // public: the lock screen shows the lines, not only "notification hidden"
             .setVisibility(if (LiveLyrics.lockScreen(ctx)) androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC else androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE).build())
     }
