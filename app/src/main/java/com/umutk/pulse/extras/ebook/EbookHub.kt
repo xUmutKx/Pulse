@@ -481,6 +481,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     // the chapters page: 0 chapters, 1 bookmarks
     var listTab by remember { mutableStateOf(0) }
     var speechRate by remember { mutableStateOf(EbookPrefs.speechRate(ctx)) }
+    var ttsPkg by remember { mutableStateOf(EbookPrefs.ttsEngine(ctx)) }
+    val ttsList = remember { ttsEngines(ctx) }
     var bookmarked by remember { mutableStateOf(Ebook.bookmarks(ctx, start.uri).contains("$chapter,$page")) }
     var query by remember { mutableStateOf("") }
     var brightness by remember { mutableStateOf(-1f) }
@@ -771,6 +773,12 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         SettingRow(tr("Reading speed of the voice: ${"%.2f".format(speechRate)}", "Sesli okuma hızı: ${"%.2f".format(speechRate)}"), th) {
                             StepButton("−", th) { speechRate = (speechRate - .05f).coerceAtLeast(.5f); EbookPrefs.setSpeechRate(ctx, speechRate) }
                             StepButton("+", th) { speechRate = (speechRate + .05f).coerceAtMost(1.6f); EbookPrefs.setSpeechRate(ctx, speechRate) }
+                        }
+                        ReaderRow(tr("Speech engine", "Konuşma motoru"), th, ttsList.firstOrNull { it.first == ttsPkg }?.second ?: tr("Automatic", "Otomatik")) {
+                            // the engines the phone has, one after another; "automatic" is the first step
+                            val all = listOf("" to "") + ttsList
+                            val next = all[(all.indexOfFirst { it.first == ttsPkg }.coerceAtLeast(0) + 1) % all.size]
+                            ttsPkg = next.first; EbookPrefs.setTtsEngine(ctx, next.first)
                         }
                         ReaderRow(tr("Voice and speech engine", "Ses ve konuşma motoru"), th, "›") { openTtsSettings(ctx) }
                         SettingRow(tr("Seconds per page: $autoSec", "Sayfa başına saniye: $autoSec"), th) {
