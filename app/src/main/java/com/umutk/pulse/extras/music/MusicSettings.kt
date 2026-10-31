@@ -22,6 +22,9 @@ object MusicSettings {
     /** Fade length at each track change in seconds, 0 = off. */
     fun crossfade(c: Context) = sp(c).getInt("xfade", 0)
     fun setCrossfade(c: Context, s: Int) = sp(c).edit().putInt("xfade", s.coerceIn(0, 12)).apply()
+    /** When the sleep timer runs out, the track that is playing is finished first (the player stops at its end). */
+    fun sleepFinishTrack(c: Context) = sp(c).getBoolean("sleep_finish", false)
+    fun setSleepFinishTrack(c: Context, on: Boolean) = sp(c).edit().putBoolean("sleep_finish", on).apply()
 
     /** 0 off, 1 track gain, 2 album gain. */
     fun replayGain(c: Context) = sp(c).getInt("rg", 0)

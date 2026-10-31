@@ -85,6 +85,7 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
         }
         if (rg > 0) SliderRow("${tr("Untagged files", "Etiketsiz dosyalar")}  $rgFb dB", rgFb.toFloat(), -15f..0f) { rgFb = it.toInt(); MusicSettings.setRgFallback(c, rgFb); push() }
         SliderRow("${tr("Fade between tracks", "Parçalar arası geçiş")}  ${if (xfade == 0) tr("off", "kapalı") else "$xfade s"}", xfade.toFloat(), 0f..12f) { xfade = it.toInt(); MusicSettings.setCrossfade(c, xfade); push() }
+        if (xfade > 0) FadeCurve(xfade)
         SwitchRow(tr("Skip silence", "Sessizliği atla"), skipSil) { skipSil = it; MusicSettings.setSkipSilence(c, it); push() }
         SliderRow("${tr("Speed", "Hız")}  ${"%.2f".format(speed)}x", speed, .5f..2f) { speed = (Math.round(it * 20) / 20f); MusicSettings.setSpeed(c, speed); push() }
         SwitchRow(tr("Pitch follows speed", "Ton hızı izler"), pitch) { pitch = it; MusicSettings.setPitchFollows(c, it); push() }
@@ -260,6 +261,8 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 PChip(false, l) { if (m < 0) engine.setSleep(0, true) else engine.setSleep(m) }
             }
         }
+        if (cat == "audio") { var fin by remember { mutableStateOf(MusicSettings.sleepFinishTrack(c)) }
+            SwitchRow(tr("Finish the track when the timer runs out", "Süre dolunca parçayı bitir"), fin) { fin = it; MusicSettings.setSleepFinishTrack(c, it) } }
         if (cat == "art") Row(Modifier.clickable {
             val n = com.umutk.pulse.extras.music.poweramp.PowerampCovers.clearAll(c)
             android.widget.Toast.makeText(c, tr("$n covers cleared", "$n kapak silindi"), android.widget.Toast.LENGTH_SHORT).show()
@@ -368,3 +371,26 @@ private fun PowerampLineRow(c: Context) {
     }
     if (open) SetPickDialog(title, LineChoice.entries.map { it to it.label() }, cur, { cur = it; PowerampLineAction.setLongPress(c, it) }, { open = false })
 }
+
+/** The fade between two tracks as a graph: the old track fades out (falling line), the new one fades in (rising line), over the set seconds. */
+@Composable
+private fun FadeCurve(seconds: Int) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp)) {
+        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(64.dp)) {
+            val w = size.width; val h = size.height
+            val mid = w / 2f
+            val out = androidx.compose.ui.graphics.Path().apply { moveTo(0f, 0f); lineTo(mid, h) }
+            val inn = androidx.compose.ui.graphics.Path().apply { moveTo(mid, h); lineTo(w, 0f) }
+            // a baseline and the middle, where one track gives way to the other
+            drawLine(T.sub.copy(alpha = .35f), androidx.compose.ui.geometry.Offset(0f, h), androidx.compose.ui.geometry.Offset(w, h), strokeWidth = 1.dp.toPx())
+            drawLine(T.sub.copy(alpha = .35f), androidx.compose.ui.geometry.Offset(mid, 0f), androidx.compose.ui.geometry.Offset(mid, h), strokeWidth = 1.dp.toPx())
+            drawPath(out, T.sub, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+            drawPath(inn, T.text, style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5.dp.toPx(), cap = androidx.compose.ui.graphics.StrokeCap.Round))
+        }
+        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+            Text(tr("Out", "Çıkış") + "  ${seconds}s", color = T.sub, fontSize = 12.sp)
+            Text(tr("In", "Giriş"), color = T.sub, fontSize = 12.sp)
+        }
+    }
+}
+
