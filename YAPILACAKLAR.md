@@ -1704,3 +1704,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books shelf: the drawer is pure black too when AMOLED is on (1.0.281 (derlendi))
 - Books shelf: two or three covers in a row, sized to the width of the screen; the cover size option is gone (1.0.281 (derlendi))
 - Weather map: the base map is OpenStreetMap tiles darkened in the app (no "API key required" watermark from CARTO) (derlenmedi)
+- Books reader: the ⋮ button is always the rightmost one of the top bar; the back arrow of a menu page and the system back go straight to the book (derlenmedi)
