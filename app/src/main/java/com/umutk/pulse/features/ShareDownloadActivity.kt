@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -85,11 +86,36 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
     val found by produceState<LinkFinder.Result?>(null, url) { value = LinkFinder.find(url) }
     var chosen by remember { mutableStateOf<String?>(null) }
     val target = chosen ?: if (found is LinkFinder.Result.Direct || found is LinkFinder.Result.Failed) url else null
+    // the window stays open after "Download": it shows the download's progress until it is done; tapping outside or Back closes it
+    var started by remember { mutableStateOf<String?>(null) }
+    val tasks by Downloads.tasks.collectAsState()
+    val task = started?.let { s -> tasks.lastOrNull { it.url == s } }
     fun download() {
         val t = target ?: return
         Downloads.add(ctx, t)
+        started = t
         Toast.makeText(ctx, tr("Download started", "İndirme başladı"), Toast.LENGTH_SHORT).show()
-        close()
+    }
+    val progressBlock: @Composable () -> Unit = {
+        val tk = task
+        if (tk != null) {
+            val total = tk.total.collectAsState().value
+            val done = tk.done.collectAsState().value
+            val st = tk.state.collectAsState().value
+            val frac = if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else 0f
+            val label = when (st) {
+                DlState.DONE -> tr("Done", "Bitti")
+                DlState.FAILED -> tr("Failed", "Başarısız")
+                DlState.PAUSED -> tr("Paused", "Duraklatıldı")
+                else -> if (total > 0) "${(frac * 100).toInt()}%" else tr("Downloading…", "İndiriliyor…")
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(label, color = T.sub, fontSize = 12.sp)
+                Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(T.sub.copy(alpha = .25f))) {
+                    Box(Modifier.fillMaxWidth(if (st == DlState.DONE) 1f else frac).height(6.dp).background(T.accent))
+                }
+            }
+        }
     }
     fun openPulse() { Downloads.wanted = true; ctx.startActivity(Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); close() }
     val body: @Composable () -> Unit = {
@@ -114,8 +140,8 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
     }
     if (look.startsWith("win")) {
         // the Windows looks get a Windows dialog box
-        WinAlert(onDismissRequest = close, title = { Text(tr("Download", "İndir")) }, text = { body() },
-            confirmButton = { PButton(tr("Download", "İndir")) { download() } },
+        WinAlert(onDismissRequest = close, title = { Text(tr("Download", "İndir")) }, text = { body(); progressBlock() },
+            confirmButton = { PButton(tr("Download", "İndir")) { if (started == null) download() } },
             dismissButton = { Row { PButton(tr("Open Pulse", "Pulse'u aç")) { openPulse() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Cancel", "İptal")) { close() } } })
     } else {
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .35f)).clickable(onClick = close), contentAlignment = Alignment.BottomCenter) {
@@ -125,8 +151,9 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
                     ExtraLookIcon(T.text)
                 }
                 body()
+                progressBlock()
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    PButton(tr("Download", "İndir"), Modifier.weight(1f)) { download() }
+                    PButton(tr("Download", "İndir"), Modifier.weight(1f)) { if (started == null) download() }
                     PButton(tr("Open Pulse", "Pulse'u aç"), Modifier.weight(1f)) { openPulse() }
                 }
             }
