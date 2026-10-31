@@ -1000,22 +1000,52 @@ private fun SettingRow(label: String, th: Theme, trailing: @Composable () -> Uni
  * phone's Books folder, puts it on the shelf and opens it in the reader.
  */
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun FindPage(th: Theme, onOpened: (Book) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<BookFind.Found>?>(null) }
     var busy by remember { mutableStateOf("") }
+    var sources by remember { mutableStateOf(EbookPrefs.sources(ctx)) }
+    var srcIx by remember { mutableStateOf(0) }
+    var adding by remember { mutableStateOf(false) }
+    var newName by remember { mutableStateOf("") }
+    var newUrl by remember { mutableStateOf("") }
     val booksDir = File(android.os.Environment.getExternalStorageDirectory(), "Books")
     fun search() {
         if (query.isBlank()) return
         scope.launch {
             busy = tr("Searching...", "Aranıyor...")
-            results = withContext(Dispatchers.IO) { runCatching { BookFind.search(query) }.getOrNull() }
+            results = withContext(Dispatchers.IO) { runCatching { BookFind.search(sources[srcIx.coerceIn(0, sources.lastIndex)].second, query) }.getOrNull() }
             busy = if (results == null) tr("No connection", "Bağlantı yok") else ""
         }
     }
     Column(Modifier.fillMaxSize()) {
+        // the places to look in: tap one to pick it, hold an added one to remove it, the + adds one
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            sources.forEachIndexed { i, src ->
+                val on = i == srcIx
+                Text(src.first, color = if (on) th.bg else th.ink, fontSize = 12.sp, maxLines = 1,
+                    modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(if (on) th.ink else th.ink.copy(alpha = .08f))
+                        .combinedClickable(onClick = { srcIx = i }, onLongClick = {
+                            if (i >= BUILT_IN_SOURCES.size) { EbookPrefs.removeSource(ctx, i - BUILT_IN_SOURCES.size); sources = EbookPrefs.sources(ctx); srcIx = 0 }
+                        }).padding(horizontal = 12.dp, vertical = 6.dp))
+            }
+            Text("+", color = th.ink, fontSize = 14.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).background(th.ink.copy(alpha = .08f)).clickable { adding = !adding }.padding(horizontal = 12.dp, vertical = 6.dp))
+        }
+        if (adding) {
+            OutlinedField(newName, th, tr("Name", "Ad")) { newName = it }
+            OutlinedField(newUrl, th, "https://.../search?q={q}") { newUrl = it }
+            Text(tr("Add this source", "Bu kaynağı ekle"), color = th.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.clickable {
+                    if (newUrl.contains("{q}")) {
+                        EbookPrefs.addSource(ctx, newName, newUrl)
+                        sources = EbookPrefs.sources(ctx); srcIx = sources.lastIndex
+                        newName = ""; newUrl = ""; adding = false
+                    }
+                }.padding(vertical = 8.dp))
+        }
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedField(query, th, tr("Title or author", "Başlık veya yazar")) { query = it }
             Box(Modifier.size(40.dp).clickable { search() }, contentAlignment = Alignment.Center) { PIcon("search", th.ink, 22.dp) }
