@@ -51,6 +51,7 @@ private const val K_UP = 19; private const val K_DOWN = 20; private const val K_
 private const val K_A = 96; private const val K_B = 97; private const val K_X = 99; private const val K_Y = 100
 private const val K_L1 = 102; private const val K_R1 = 103; private const val K_L2 = 104; private const val K_R2 = 105
 private const val K_START = 108; private const val K_SELECT = 109; private const val K_MODE = 110
+private const val K_THUMBL = 106; private const val K_THUMBR = 107
 private val LEFT_STICK = intArrayOf(K_UP, K_LEFT, K_DOWN, K_RIGHT)   // the arrow keys, like the D-pad: never letters
 private val RIGHT_STICK = intArrayOf(K_UP, K_LEFT, K_DOWN, K_RIGHT)
 
@@ -64,7 +65,7 @@ private val RIGHT_STICK = intArrayOf(K_UP, K_LEFT, K_DOWN, K_RIGHT)
 internal fun GamepadPanel(th: KbTheme, act: KbActions) {
     val cfg = LocalConfiguration.current
     val land = cfg.orientation == Configuration.ORIENTATION_LANDSCAPE
-    var scale by remember { mutableStateOf(KeyboardPrefs.padScale) }
+    val scale = KeyboardPrefs.padScale
     BoxWithConstraints(Modifier.fillMaxWidth()) {
         val w = maxWidth.value
         val fit = minOf(if (land) cfg.screenHeightDp * .7f else cfg.screenWidthDp * .7f, w * .6f)
@@ -108,13 +109,10 @@ internal fun GamepadPanel(th: KbTheme, act: KbActions) {
                 PadStick(th, act, u * .4f, LEFT_STICK, Modifier.padding(start = u * .1f))
                 PadStick(th, act, u * .4f, RIGHT_STICK, Modifier.padding(end = u * .1f))
             }
-            // the size control sits in the middle at the bottom
-            Row(Modifier.fillMaxWidth().padding(top = u * .04f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u * .02f)) {
-                    PadMini(th, u * .1f, "+") { scale = (scale + 10).coerceAtMost(150); KeyboardPrefs.padScale = scale; KeyboardPrefs.saveFloat() }
-                    Text("$scale%", color = th.text, fontSize = (u.value * .06f).coerceAtLeast(9f).sp)
-                    PadMini(th, u * .1f, "−") { scale = (scale - 10).coerceAtLeast(60); KeyboardPrefs.padScale = scale; KeyboardPrefs.saveFloat() }
-                }
+            // the stick buttons: L3 under the left stick, R3 under the right one (pressing the stick)
+            Row(Modifier.fillMaxWidth().padding(top = u * .04f), horizontalArrangement = Arrangement.SpaceBetween) {
+                PadBtn(th, act, K_THUMBL, u * .22f, u * .1f, modifier = Modifier.padding(start = u * .1f), round = false, label = "L3")
+                PadBtn(th, act, K_THUMBR, u * .22f, u * .1f, modifier = Modifier.padding(end = u * .1f), round = false, label = "R3")
             }
         }
     }
@@ -193,13 +191,5 @@ private fun PadStick(th: KbTheme, act: KbActions, dia: Dp, keys: IntArray, modif
         contentAlignment = Alignment.Center,
     ) {
         Box(Modifier.offset { IntOffset(off.x.roundToInt(), off.y.roundToInt()) }.size(dia * .42f).clip(CircleShape).background(th.text.copy(alpha = .85f)))
-    }
-}
-
-/** The small − / + of the size control. */
-@Composable
-private fun PadMini(th: KbTheme, size: Dp, label: String, onClick: () -> Unit) {
-    Box(Modifier.size(size).clip(CircleShape).background(Color.Black.copy(alpha = .35f)).border(1.dp, th.text.copy(alpha = .7f), CircleShape).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-        Text(label, color = th.text, fontSize = (size.value * .6f).coerceAtLeast(9f).sp, fontWeight = FontWeight.Bold)
     }
 }
