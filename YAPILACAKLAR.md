@@ -1790,3 +1790,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Lock screen lyrics: two places (under the date, above the lock screen's bottom line) plus a position slider; the window follows the setting at once and the lyric line refreshes about five times a second while locked
 - derlenmedi: Keyboard symbols: Hearts and ribbons first with 30 new presets; Sky and weather no longer a tab (its entries spread over the others); Text and art last. Text and art: the keys type into its box, a tap copies a style or picture to the clipboard, ASCII pictures two per line with no box
 - derlenmedi: Music widget: the album cover opens the player directly (no trampoline), one request code per widget
+- derlenmedi: Floating keys removed (the key button over every app, its toolkit page and its quick settings tile)

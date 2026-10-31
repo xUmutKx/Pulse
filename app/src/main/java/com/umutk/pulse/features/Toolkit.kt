@@ -145,7 +145,6 @@ private val tools = listOf(
     Tool("Show touches", "Dokunma noktaları", "touch") { FlagTool("show_touches", tr("Show a dot under every finger", "Her parmağın altında nokta göster")) },
     Tool("Pointer location", "Dokunma çizgileri", "pointer") { FlagTool("pointer_location", tr("Show touch lines and coordinates", "Dokunma çizgilerini ve koordinatları göster")) },
     Tool("Motion cues", "Hareket noktaları", "motion") { MotionCueTool() },
-    Tool("Floating keys", "Yüzen tuşlar", "keyboard") { FloatingKeysTool() },
     Tool("Power menu", "Güç menüsü", "power") { PowerMenuTool() },
     Tool("Dink", "Dink", "dink") { Dink() },
     Tool("DNS", "DNS", "wifi") { DnsSettings() },
@@ -1063,21 +1062,6 @@ private fun MotionCueTool() {
         }
     }
     if (!canDraw) AccessNeededCard(tr("Motion cues", "Hareket noktaları"), tr("Needs the permission to display over other apps.", "Diğer uygulamaların üzerinde gösterme izni gerekir."))
-}
-
-@Composable
-private fun FloatingKeysTool() {
-    val ctx = LocalContext.current
-    val on = polled(500) { com.umutk.pulse.FloatingKeysService.running }
-    val canDraw = polled(1000) { com.umutk.pulse.Compat.canOverlay(ctx) }
-    PCard {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("A key button over every app: tap for the keyboard, hold for a small floating panel with Esc, Tab, Ctrl, arrows and the F keys (slide sideways for more)", "Her uygulamanın üstünde tuş düğmesi: dokununca klavye, basılı tutunca Esc, Tab, Ctrl, oklar ve F tuşlarının olduğu küçük yüzen panel (yana kaydırınca yenisi)"), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            PSwitch(on, { com.umutk.pulse.FloatingKeysService.toggle(ctx) })
-        }
-    }
-    if (!canDraw) AccessNeededCard(tr("Floating keys", "Yüzen tuşlar"), tr("Needs the permission to display over other apps.", "Diğer uygulamaların üzerinde gösterme izni gerekir."))
-    Text(tr("The keys are sent with the input command: they need root or Shizuku. Opening the keyboard needs the App Lock accessibility service.", "Tuşlar input komutuyla gönderilir: root veya Shizuku gerekir. Klavyeyi açmak için Uygulama Kilidi erişilebilirlik hizmeti gerekir."), color = T.sub, fontSize = 12.sp)
 }
 
 @Composable
