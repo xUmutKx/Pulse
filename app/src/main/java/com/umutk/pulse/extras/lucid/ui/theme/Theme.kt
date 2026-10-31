@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.core.view.WindowCompat
 import com.umutk.pulse.extras.lucid.data.prefs.AccentColor
@@ -135,6 +136,15 @@ fun LucidAlarmTheme(
         AppFontStyle.SYSTEM_DEFAULT -> FontFamily.SansSerif
         AppFontStyle.SERIF -> FontFamily.Serif
         AppFontStyle.CURSIVE -> FontFamily.Cursive
+        AppFontStyle.NEWSREADER -> FontFamily(Font(com.umutk.pulse.R.font.newsreader_regular))
+        AppFontStyle.MONTSERRAT -> FontFamily(Font(com.umutk.pulse.R.font.sb_montserrat))
+        AppFontStyle.PLAYFAIR -> FontFamily(Font(com.umutk.pulse.R.font.sb_playfair_display))
+        AppFontStyle.RUBIK -> FontFamily(Font(com.umutk.pulse.R.font.sb_rubik))
+        AppFontStyle.SAIRA -> FontFamily(Font(com.umutk.pulse.R.font.sb_saira))
+        AppFontStyle.LILITA -> FontFamily(Font(com.umutk.pulse.R.font.sb_lilita))
+        AppFontStyle.BEBAS -> FontFamily(Font(com.umutk.pulse.R.font.bebasneue_regular))
+        AppFontStyle.PACIFICO -> FontFamily(Font(com.umutk.pulse.R.font.pacifico_regular))
+        AppFontStyle.LOBSTER -> FontFamily(Font(com.umutk.pulse.R.font.lobster_regular))
         AppFontStyle.CUSTOM_FILE -> FontManager.fontFamilyFromPath(customAppFontPath)
     }
 
