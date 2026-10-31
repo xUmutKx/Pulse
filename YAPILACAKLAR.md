@@ -1766,3 +1766,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Music library Radio row opens the app's existing radio screen (the RadioHub copy is removed) (derlenmedi)
 - Radio and white noise: drawn pictures instead of the grey placeholder (radio in the media notification; white noise in its notification) (derlenmedi)
 - Lyrics search: the lyrics on the phone show at once; the online catalogue is added after them (derlenmedi)
+- Extra apps: a tool set to hidden (eye icon) leaves the ⋮ menu and the Tools/Apps groups but stays listed on the Extra apps page; hiding a row there is still by long press (derlenmedi)
