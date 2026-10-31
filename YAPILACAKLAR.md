@@ -1812,3 +1812,11 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Lucid look: One UI (default), Material and AMOLED black, chosen from Appearance with previews; One UI action buttons light grey; Delete asks for confirmation
 - derlenmedi: Windows 11 sidebar: the Office icon follows the outline style like the others
 - derlenmedi: Alarm clock styles: Windows 95, XP, 7 and 11 faces drawn with the app's own Windows clock pictures
+- 1.0.291 Music: sleep timer can finish the track that is playing first; crossfade is a real overlap with a draggable graph (default 3 s)
+- 1.0.291 Music lists: smoother scrolling (covers cached by size, saved covers read at 512 px)
+- 1.0.291 Lock screen lyrics: a phone preview, position presets and slider, hidden while a password or text field is focused
+- 1.0.291 Keyboard: opens on the QWERTY keys, Shift says Shift, floating keyboard drags both ways, space-bar slide moves faster and between lines, gamepad with L3 R3
+- 1.0.291 Player settings: groups open as full pages with icons (video) and no folding (music)
+- 1.0.291 Alarms: Lucid look (One UI, Material, AMOLED black) with previews, delete asks first, Windows 95/XP/7/11 clock faces, ringing screen back arrow and AMOLED black default
+- 1.0.291 App lock opens from the menu again and asks for the accessibility service
+- 1.0.291 Widgets: music cover opens the player directly; dice and coin tiles turn
