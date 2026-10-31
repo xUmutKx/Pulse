@@ -1722,3 +1722,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Weather: the page retries three times and then shows the last saved forecast for the place, not an error; the clock widget redraws every minute (1.0.282 (derlendi))
 - Weather: wttr.in (no key, worldwide) is a fallback service after Open-Meteo and MET Norway (1.0.282 (derlendi))
 - Music: "Show lyrics on the lock screen" (on by default): the lyric notification is public, so the lock screen shows the lines; a black preview in the live lyrics settings (derlenmedi)
+- Device overview: Security is a card like the others, with SELinux, verified boot, encryption, bootloader lock and root (root gives the protected values); a tap opens the full page (derlenmedi)
