@@ -33,12 +33,27 @@ object Ebook {
         val lower = name.lowercase()
         val fallback = name.substringBeforeLast('.')
         return when {
-            lower.endsWith(".pdf") -> Book(uri.toString(), fallback, "", true, emptyList())
+            // a PDF with text in it is read as a text book, reflowed to the reader's own pages (no page layout kept);
+            // a scanned PDF (no text) stays a page-by-page PDF
+            lower.endsWith(".pdf") -> pdfText(c, uri)?.let { paras -> Book(uri.toString(), fallback, "", false, listOf(Chapter(fallback, paras.map { Para(it, false) }))) }
+                ?: Book(uri.toString(), fallback, "", true, emptyList())
             lower.endsWith(".epub") -> c.contentResolver.openInputStream(uri)?.use { epub(it, fallback, uri.toString()) }
             lower.endsWith(".txt") -> c.contentResolver.openInputStream(uri)?.use { txt(it, fallback, uri.toString()) }
             else -> null
         }
     }
+
+    /** The paragraphs of a PDF's text (line ends joined, hyphens at a line end mended), or null when there is little or no text. Reads the file: call off the main thread. */
+    private fun pdfText(c: Context, uri: Uri): List<String>? = runCatching {
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(c.applicationContext)
+        c.contentResolver.openInputStream(uri)?.use { input ->
+            com.tom_roush.pdfbox.pdmodel.PDDocument.load(input).use { doc ->
+                val text = com.tom_roush.pdfbox.text.PDFTextStripper().getText(doc)
+                text.replace(Regex("-\\n(?=\\p{Ll})"), "").split(Regex("\\n\\s*\\n"))
+                    .map { it.replace(Regex("\\s+"), " ").trim() }.filter { it.length > 1 }
+            }
+        }
+    }.getOrNull()?.takeIf { p -> p.sumOf { it.length } > 200 }
 
     fun nameOf(c: Context, uri: Uri): String {
         runCatching {

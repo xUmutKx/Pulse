@@ -193,6 +193,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     val ctx = LocalContext.current
     var shelf by remember { mutableStateOf(shelfLoad(ctx)) }
     var note by remember { mutableStateOf("") }
+    val scope = rememberCoroutineScope()
     // books whose file was deleted outside Pulse leave the shelf
     LaunchedEffect(Unit) {
         val gone = withContext(Dispatchers.IO) { shelf.filter { !bookExists(ctx, it) } }
@@ -238,11 +239,14 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-        val book = Ebook.open(ctx, uri)
-        if (book == null) note = tr("This file cannot be read", "Bu dosya okunamıyor")
-        else {
-            shelf = (shelf.filter { it.uri != book.uri } + book.copy(chapters = emptyList())).also { shelfSave(ctx, it) }
-            note = ""
+        // reading a file (a PDF's text too) takes time: it is done off the main thread, then the shelf is updated
+        scope.launch {
+            val book = withContext(Dispatchers.IO) { runCatching { Ebook.open(ctx, uri) }.getOrNull() }
+            if (book == null) note = tr("This file cannot be read", "Bu dosya okunamıyor")
+            else {
+                shelf = (shelf.filter { it.uri != book.uri } + book.copy(chapters = emptyList())).also { shelfSave(ctx, it) }
+                note = ""
+            }
         }
     }
     val th = shelfTheme(dayNight == DAY_THEME, amoled)
