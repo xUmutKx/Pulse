@@ -1804,3 +1804,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Device overview: the phone picture is the owner's own photo when assets/device_photo.png exists; otherwise a drawing with the camera block
 - derlenmedi: App lock opens from the More menu and Extra apps (it had no route and showed a blank screen); with the accessibility service off, its settings open once so it can be switched on
 - derlenmedi: Player settings (video and music): groups open as full pages with no folding or arrows; the video player's index has an icon per group
+- derlenmedi: Alarm sheet: vibration and repeat limit on one line each (swipe sideways), snooze interval is a slider bar
