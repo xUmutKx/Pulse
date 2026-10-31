@@ -1755,3 +1755,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader: Bookmarks is merged into Chapters (two tabs on one page); every menu item has its icon, Font Size shows Aa (derlenmedi)
 - Books: favourites are set from the shelf (long press a book); the reader has no favourite button, no Miscellaneous page (derlenmedi)
 - Books reader: the Shutdown button is removed (derlenmedi)
+- Books reader speech: slower default (0.85) with a speed row on the Control page; the best offline voice of the engine is picked; holding the speak button or Control > Voice and speech engine opens the phone's speech settings (derlenmedi)

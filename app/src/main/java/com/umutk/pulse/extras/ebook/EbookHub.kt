@@ -480,6 +480,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var panel by remember { mutableStateOf("") }
     // the chapters page: 0 chapters, 1 bookmarks
     var listTab by remember { mutableStateOf(0) }
+    var speechRate by remember { mutableStateOf(EbookPrefs.speechRate(ctx)) }
     var bookmarked by remember { mutableStateOf(Ebook.bookmarks(ctx, start.uri).contains("$chapter,$page")) }
     var query by remember { mutableStateOf("") }
     var brightness by remember { mutableStateOf(-1f) }
@@ -650,9 +651,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     barIds.forEach { id ->
                         val t = BAR_TOOLS.firstOrNull { it.third == id } ?: return@forEach
                         val on = when (id) { "speak" -> speaking; "auto" -> autoOn; else -> false }
-                        Box(Modifier.size(44.dp).clickable {
-                            act(id)
-                        }, contentAlignment = Alignment.Center) {
+                        // holding the speak button opens the phone's speech settings (engine, voice, speed)
+                        Box(Modifier.size(44.dp).combinedClickable(onClick = { act(id) }, onLongClick = { if (id == "speak") openTtsSettings(ctx) }), contentAlignment = Alignment.Center) {
                             if (id == "text") Text("Aa", color = if (on) th.bg else th.ink, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                             else PIcon(if (id == "speak" && speaking) "pause" else t.first, if (on) th.ink else th.ink.copy(alpha = .8f), 22.dp)
                         }
@@ -768,6 +768,11 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     }
                     "control" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         SettingRow(tr("Autoscroll", "Otomatik kaydırma"), th) { PSwitch(autoOn, { autoOn = it }) }
+                        SettingRow(tr("Reading speed of the voice: ${"%.2f".format(speechRate)}", "Sesli okuma hızı: ${"%.2f".format(speechRate)}"), th) {
+                            StepButton("−", th) { speechRate = (speechRate - .05f).coerceAtLeast(.5f); EbookPrefs.setSpeechRate(ctx, speechRate) }
+                            StepButton("+", th) { speechRate = (speechRate + .05f).coerceAtMost(1.6f); EbookPrefs.setSpeechRate(ctx, speechRate) }
+                        }
+                        ReaderRow(tr("Voice and speech engine", "Ses ve konuşma motoru"), th, "›") { openTtsSettings(ctx) }
                         SettingRow(tr("Seconds per page: $autoSec", "Sayfa başına saniye: $autoSec"), th) {
                             StepButton("−", th) { autoSec = (autoSec - 2).coerceAtLeast(3); EbookPrefs.setAutoSeconds(ctx, autoSec) }
                             StepButton("+", th) { autoSec = (autoSec + 2).coerceAtMost(120); EbookPrefs.setAutoSeconds(ctx, autoSec) }
@@ -919,6 +924,12 @@ private fun setOrientation(c: Context, o: Int) {
 
 /** One line of the reader's menu, with an optional mark at its end. */
 @Composable
+/** The phone's speech settings (the engine, its voices and speed): no root needed, the voices are installed there. */
+private fun openTtsSettings(c: Context) {
+    runCatching { c.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        .onFailure { c.startActivity(Intent(android.provider.Settings.ACTION_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
 /** The name of a page turn, as the reader's row shows it. */
 private fun animName(style: Int): String = when (style) {
     1 -> tr("Slide", "Kayma")
