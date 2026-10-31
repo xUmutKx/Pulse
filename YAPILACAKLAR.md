@@ -1793,3 +1793,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Floating keys removed (the key button over every app, its toolkit page and its quick settings tile)
 - derlenmedi: Dice and coin flip quick settings tiles turn: eight frames of a tumbling die and a turning coin, then the result
 - derlenmedi: Keyboard: always opens on the QWERTY keys; the Shift key says Shift; the floating keyboard's handle is bigger and drags up/down as well as sideways
+- derlenmedi: Space bar slide: one swipe moves further (it speeds up the longer it goes), slide up or down moves the cursor to the line above or below at the same column, and a sensitivity slider in keyboard settings

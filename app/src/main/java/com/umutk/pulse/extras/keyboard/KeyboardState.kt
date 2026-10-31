@@ -82,6 +82,8 @@ class KbState {
     /** The finger's path while a word is swiped over the letters, in the window's pixels. */
     /** The finger of this touch swiped down to close the keyboard: the key under it must not type. */
     @Volatile var swiped = false
+    // the space key is being slid to move the cursor: a slide down then does not close the keyboard
+    @Volatile var cursorDrag = false
     var trail by mutableStateOf(listOf<Offset>())
     /** Where each letter key sits (window pixels), for following a swipe over the keys. */
     val letterRects = HashMap<String, Rect>()
@@ -116,6 +118,8 @@ interface KbActions {
     fun arrow(code: Int)
     fun edit(id: String)
     fun moveCursor(delta: Int)
+    /** The cursor goes to the line above (negative) or the line below, at the same column. */
+    fun moveLine(delta: Int) {}
     fun quickDeleteStart()
     fun quickDelete(chars: Int)
     fun quickDeleteEnd(apply: Boolean)
