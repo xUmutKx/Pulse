@@ -314,13 +314,14 @@ private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.comp
 @Composable
 private fun LayoutPanel(th: KbTheme, st: KbState, keyH: androidx.compose.ui.unit.Dp) {
     // each layout has its own icon; the rows share the height evenly
-    val options = listOf(Triple(null, tr("Default", "Varsayılan"), "Keyboard"), Triple("numpad", tr("Numbers", "Sayılar"), "Pin"), Triple("game", tr("Game controls", "Oyun tuşları"), "SportsEsports"))
+    val options = listOf(Triple(null, tr("Default", "Varsayılan"), "Keyboard"), Triple("numpad", tr("Numbers", "Sayılar"), "Pin"), Triple("game", tr("Game controls", "Oyun tuşları"), "SportsEsports"), Triple("gamepad", tr("Gamepad", "Gamepad"), "SportsEsports"))
     Column(Modifier.fillMaxWidth().height(keyH * 4f), verticalArrangement = Arrangement.SpaceEvenly) {
         Text(tr("Key layout", "Tuş düzeni"), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(start = 14.dp))
         options.forEach { (v, label, icon) ->
-            val on = st.forceLayout == v
+            // the gamepad is one of the layouts: it opens its own panel
+            val on = if (v == "gamepad") st.panel == "gamepad" else st.forceLayout == v
             Row(
-                Modifier.fillMaxWidth().clickable { st.forceLayout = v; st.panel = "keys" }.padding(horizontal = 14.dp),
+                Modifier.fillMaxWidth().clickable { if (v == "gamepad") st.panel = "gamepad" else { st.forceLayout = v; st.panel = "keys" } }.padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Icon(kbIcon(th, icon), null, tint = if (on) th.accent else th.text, modifier = Modifier.size(22.dp))
