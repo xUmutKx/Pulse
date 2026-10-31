@@ -1784,3 +1784,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.290 Good Lock: one screen, not-installed modules grouped with picture tiles, a tap opens the module itself
 - 1.0.290 Overview: phone picture and model name at the top; battery health from the measured capacity, or typed in
 - 1.0.290 Playback keep-alive notification: minimum importance, no status-bar icon, no sound
+- derlenmedi: Music lists stutter while scrolling (Favourites and the other song lists): cover cache is now byte-bounded instead of 30 full-size pictures, and saved covers are read at most 512 px for the rows
