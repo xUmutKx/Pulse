@@ -123,7 +123,7 @@ object Ebook {
      * in the app's files, named by the book's uri. Null when the book has no picture (the shelf then draws the letter).
      */
     fun cover(c: Context, book: Book): File? {
-        val key = java.security.MessageDigest.getInstance("MD5").digest((book.uri + "#v2").toByteArray()).joinToString("") { "%02x".format(it) }
+        val key = java.security.MessageDigest.getInstance("MD5").digest((book.uri + "#v3").toByteArray()).joinToString("") { "%02x".format(it) }
         val dir = File(c.filesDir, "covers").apply { mkdirs() }
         val png = File(dir, "$key.png")
         val none = File(dir, "$key.none")

@@ -99,22 +99,33 @@ object EbookPrefs {
 class Speaker(c: Context, private val onDone: () -> Unit) {
     private var ready = false
     private var tts: TextToSpeech? = null
+    /** The part of the text being read now: the start and the end, as characters of the text given to [speak]. */
+    var onRange: ((Int, Int) -> Unit)? = null
 
     init {
-        tts = TextToSpeech(c.applicationContext) { status ->
-            ready = status == TextToSpeech.SUCCESS
-            if (ready) tts?.language = Locale.getDefault()
-        }
+        // the Samsung speech engine when the phone has it, else the phone's own
+        val listener = TextToSpeech.OnInitListener { status -> ready = status == TextToSpeech.SUCCESS }
+        val samsung = listOf("com.samsung.SMT").firstOrNull { pkg -> runCatching { c.packageManager.getPackageInfo(pkg, 0) }.isSuccess }
+        tts = if (samsung != null) TextToSpeech(c.applicationContext, listener, samsung) else TextToSpeech(c.applicationContext, listener)
         tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {}
             override fun onDone(utteranceId: String?) { Handler(Looper.getMainLooper()).post(onDone) }
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String?) {}
+            @Suppress("OVERRIDE_DEPRECATION")
+            override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
+                Handler(Looper.getMainLooper()).post { onRange?.invoke(start, end) }
+            }
         })
     }
 
+    /** Turkish when the text has Turkish letters, else the phone's language. */
+    private fun localeOf(text: String): Locale =
+        if (text.any { it in "ğĞşŞıİ" }) Locale("tr", "TR") else Locale.getDefault()
+
     fun speak(text: String) {
         if (!ready || text.isBlank()) return
+        tts?.language = localeOf(text)
         tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "page")
     }
 
