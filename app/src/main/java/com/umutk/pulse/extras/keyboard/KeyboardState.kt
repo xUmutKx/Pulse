@@ -39,6 +39,9 @@ class KbState {
     // what is typed while the translation bar is open: the keys write here, not into the app's text box
     var transIn by mutableStateOf("")
     var transBusy by mutableStateOf(false)
+    // the "Text and art" page is open: the keys type into its box (the app's text box gets nothing), and the box shows what is typed
+    var artOn by mutableStateOf(false)
+    var artIn by mutableStateOf("")
     /** The password manager's suggestions (autofill), drawn by the system inside the bar; empty when there are none. */
     var inline by mutableStateOf(listOf<android.view.View>())
     /** The letters typed so far in the word under way (shown as a quoted slot when it differs from the middle one). */
