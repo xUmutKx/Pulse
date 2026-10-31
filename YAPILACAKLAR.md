@@ -1737,3 +1737,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader > Customize reader bar buttons: a tap anywhere on a row ticks the button (it no longer runs the function behind the panel); Font Size shows the Aa mark as in the bar preview (derlenmedi)
 - Books reader bar: Customize reader bar buttons stays on and always last, even after other buttons are added or moved (derlenmedi)
 - Books reader: Font Size is on the bottom bar by default (existing bars get it once); the ⋮ menu lists only the tools that are not on the bar, without Visual Options (it can still be added to the bar) (derlenmedi)
+- Books reader: Double-line layout is only on the Customize reader bar buttons page; the bar can now also hold Share, Favorite and E-ink (derlenmedi)

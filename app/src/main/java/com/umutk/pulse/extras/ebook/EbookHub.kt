@@ -510,6 +510,12 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             "shutdown" -> { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }
             "custom" -> panel = "bar"
             "info" -> panel = "info"
+            "share" -> b?.let { bk ->
+                val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, bk.title + if (bk.author.isNotEmpty()) " - " + bk.author else "")
+                ctx.startActivity(Intent.createChooser(i, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            "favorite" -> fav = Ebook.toggleFavorite(ctx, start.uri)
+            "eink" -> { eink = !eink; EbookPrefs.setEink(ctx, eink) }
         }
     }
 
@@ -696,11 +702,6 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 val hidden = BAR_TOOLS.filter { it.third !in barIds && it.third != "visual" }
                 hidden.forEach { t -> ReaderRow(t.second, th) { panel = ""; act(t.third) } }
                 if (hidden.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(th.sub.copy(alpha = .3f)))
-                ReaderRow(tr("Share…", "Paylaş…"), th) {
-                    panel = ""
-                    val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, b.title + if (b.author.isNotEmpty()) " - " + b.author else "")
-                    ctx.startActivity(Intent.createChooser(i, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-                }
             }
         }
 
@@ -749,7 +750,6 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         }
                     }
                     "misc" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        SettingRow(tr("Double-line layout", "Çift satır düzeni"), th) { PSwitch(dbl, { dbl = it; EbookPrefs.setDouble(ctx, it) }) }
                         ReaderRow(tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"), th, "›") { panel = "bar" }
                         SettingRow(tr("Favorite", "Favori"), th) { PSwitch(fav, { fav = Ebook.toggleFavorite(ctx, start.uri) }) }
                     }
