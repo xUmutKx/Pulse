@@ -46,12 +46,13 @@ object WeatherApi {
     fun forecast(lat: Double, lon: Double): String {
         // the chosen service first; when it does not answer, the others in turn, so the card still gets the data of one that does
         val first = provider()
-        val order = listOf(first) + listOf("om", "metno").filter { it != first }
+        val order = listOf(first) + listOf("om", "metno", "wttr").filter { it != first }
         var last: Throwable? = null
         for (p in order) {
             val r = runCatching {
                 when (p) {
                     "metno" -> WeatherProviders.metno(lat, lon)
+                    "wttr" -> WeatherProviders.wttr(lat, lon)
                     "owm" -> WeatherProviders.owm(lat, lon, appCtx?.let { WeatherStore.owmKey(it) }.orEmpty())
                     else -> forecastOm(lat, lon)
                 }

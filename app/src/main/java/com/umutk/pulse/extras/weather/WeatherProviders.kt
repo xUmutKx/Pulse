@@ -63,6 +63,44 @@ object WeatherProviders {
                 .put("precipitation_probability_max", dr).put("uv_index_max", du).put("sunrise", dsr).put("sunset", dss)).toString()
     }
 
+    // ---- wttr.in: no key, worldwide (the j1 report: the current conditions and three days of hours) -------------------------------------
+    /** The wttr.in weather codes (World Weather Online) as the forecast codes the app shows. */
+    private fun wttrCode(c: Int): Int = when (c) {
+        113 -> 0
+        116 -> 2
+        119, 122 -> 3
+        143, 248, 260 -> 45
+        200, 386, 389, 392, 395 -> 95
+        176, 263, 266, 293, 296, 353 -> 61
+        299, 302, 305, 308, 356, 359 -> 63
+        179, 182, 227, 230, 317, 320, 323, 326, 329, 332, 335, 338, 350, 368, 371, 374, 377 -> 73
+        else -> 3
+    }
+
+    fun wttr(lat: Double, lon: Double): String {
+        val j = JSONObject(WeatherApi.get("https://wttr.in/%.4f,%.4f?format=j1".format(java.util.Locale.US, lat, lon)))
+        val zone = ZoneId.systemDefault()
+        val c = j.getJSONArray("current_condition").getJSONObject(0)
+        val now = Now(LocalDateTime.now(zone).withMinute(0).withSecond(0).withNano(0),
+            c.getString("temp_C").toDouble(), c.getString("FeelsLikeC").toDouble(), c.getString("humidity").toInt(), wttrCode(c.getString("weatherCode").toInt()),
+            c.getString("windspeedKmph").toDouble(), c.getString("winddirDegree").toInt(), c.getString("pressure").toDouble(),
+            c.getString("cloudcover").toInt(), c.getString("precipMM").toDouble())
+        val hours = ArrayList<Hr>()
+        val days = j.getJSONArray("weather")
+        for (d in 0 until days.length()) {
+            val day = days.getJSONObject(d)
+            val date = LocalDate.parse(day.getString("date"))
+            val hs = day.getJSONArray("hourly")
+            for (h in 0 until hs.length()) {
+                val o = hs.getJSONObject(h)
+                // the time is HHMM as a number: "0", "300", "1500"
+                val hour = o.getString("time").toInt() / 100
+                hours += Hr(date.atTime(hour, 0), o.getString("tempC").toDouble(), wttrCode(o.getString("weatherCode").toInt()), o.getString("chanceofrain").toInt())
+            }
+        }
+        return build(now, hours.take(120), lat, lon, zone)
+    }
+
     // ---- MET Norway: no key -----------------------------------------------------------------------------------------------------------------
     fun metno(lat: Double, lon: Double): String {
         val body = WeatherApi.get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.4f&lon=%.4f".format(java.util.Locale.US, lat, lon))
