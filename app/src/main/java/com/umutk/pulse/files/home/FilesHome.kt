@@ -324,6 +324,35 @@ fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
 }
 
 
+/** Share: Relay and LocalSend, the two ways to send to devices nearby, on one page of Files; each opens its own screen here. */
+@Composable
+fun FilesSharePage(onBack: () -> Unit) {
+    var open by remember { mutableStateOf("") }
+    when (open) {
+        "relay" -> com.umutk.pulse.extras.relay.RelayScreen { open = "" }
+        "localsend" -> com.umutk.pulse.extras.localsend.LocalSendHub { open = "" }
+        else -> Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", T.text, 22.dp) }
+                Text(tr("Share", "Paylaş"), color = T.text, fontSize = 24.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 4.dp))
+            }
+            Spacer(Modifier.height(8.dp))
+            listOf(
+                Triple("send", tr("Relay", "Relay"), tr("Files, text and links to your devices on this Wi-Fi", "Bu Wi-Fi'daki cihazlarına dosya, metin ve bağlantı")) to { open = "relay" },
+                Triple("wifi", tr("LocalSend", "LocalSend"), tr("Send files to nearby devices", "Yakındaki cihazlara dosya gönder")) to { open = "localsend" },
+            ).forEach { (info, go) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp).background(T.panel, RoundedCornerShape(T.radius)).clickable { go() }.padding(horizontal = 14.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    com.umutk.pulse.PIcon(info.first, T.accent, 28.dp)
+                    Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
+                        Text(info.second, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                        Text(info.third, color = T.sub, fontSize = 12.sp)
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** "More" as a page of its own: every extra of Files as a row with its icon, a name and a line about it, in a fixed order. */
 @Composable
 fun FilesMorePage(onTab: (String) -> Unit) {

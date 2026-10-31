@@ -250,12 +250,12 @@ private fun FilesPageInner() {
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
                     "cache" -> CacheCleanerScreen(back)
+                    "share" -> com.umutk.pulse.files.home.FilesSharePage(onBack = { tab = "files" })
                     else -> ExplorerTab(full || !standalone, { tab = it }) { full = !full }
                 }
             }
             if (standalone) {
-                val ot = com.umutk.pulse.LocalOpenTool.current
-                com.umutk.pulse.files.home.FilesNavBar(tab, { tab = it }) { ot("localsend") }
+                com.umutk.pulse.files.home.FilesNavBar(tab, { tab = it }) { tab = "share" }
             }
         }
         }
@@ -497,10 +497,16 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     // the search looks under this folder; the button beside the field widens it to the whole storage
     var searchAll by remember { mutableStateOf(false) }
     // the Search tab of the standalone app opens the search over every folder
-    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openSearchAll) { if (com.umutk.pulse.files.home.FilesHomeNav.openSearchAll) { searchAll = true; com.umutk.pulse.files.home.FilesHomeNav.openSearchAll = false } }
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openSearchAll) {
+        if (com.umutk.pulse.files.home.FilesHomeNav.openSearchAll) {
+            searchAll = true; com.umutk.pulse.files.home.FilesHomeNav.openSearchAll = false
+            // the names of the whole phone are read now, so the first search answers at once
+            withContext(Dispatchers.IO) { if (FileIndex.isStale()) FileIndex.build(top) }
+        }
+    }
     LaunchedEffect(resultsFor, here, showHidden, searchAll) {
         found = null
-        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { if (searchAll) exFind(top, q, showHidden, 300_000) else exFind(dir, q, showHidden) } }
+        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { if (searchAll) { if (FileIndex.isStale()) FileIndex.build(top); FileIndex.search(q, showHidden) } else exFind(dir, q, showHidden) } }
     }
     // typing searches this folder and everything under it by itself, a moment after the last key
     LaunchedEffect(query, searchOpen) {
