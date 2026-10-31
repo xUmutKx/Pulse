@@ -8,6 +8,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.border
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -218,7 +222,9 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         // on the lock screen the line being sung and the next one are drawn in a small window (see LockLyricsOverlay), set from this
         // tick, so it keeps moving whether or not the screen was drawn; it goes away as soon as the phone is unlocked or the music stops
         val cur = st.current
-        if (LiveLyrics.lockScreen(ctx) && st.isPlaying && cur != null && lockedNow()) {
+        // the screen went off: the next unlock starts with the lyrics again (see LockLyricsOverlay.suppress)
+        if (!pm.isInteractive) LockLyricsOverlay.suppressed = false
+        if (LiveLyrics.lockScreen(ctx) && st.isPlaying && cur != null && lockedNow() && !LockLyricsOverlay.suppressed) {
             val lines = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, cur), engine.positionMs + AHEAD_MS)
             // a gap between two lines keeps the last one on screen instead of blinking the window out
             if (lines != null && lines.second.isNotBlank()) LockLyricsOverlay.show(ctx, lines.second, lines.third)
@@ -324,6 +330,8 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var notif by remember { mutableStateOf(LiveLyrics.notification(c)) }
     var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
     var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
+    // where the lock screen window starts (the preview and the slider share it)
+    var top by remember { mutableStateOf(LiveLyrics.lockTop(c)) }
     var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
     var autoAll by remember { mutableStateOf(LyricsAuto.on(c)) }
     var consec by remember { mutableStateOf(LyricsShare.consecutive(c)) }
@@ -335,7 +343,7 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
             Text(tr("Live lyrics", "Canlı sözler"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         }
         // the preview: the lines on pure black, as the lock screen shows them
-        LockLyricsPreview(emph)
+        LockScreenMock(emph, top)
         SettingsSection(tr("Where", "Nerede"), startOpen = true) {
             SwitchRow(tr("Show in player", "Oynatıcıda göster"), player) { player = it; LiveLyrics.set(c, "player", it) }
             SwitchRow(tr("Show in notification", "Bildirimde göster"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
@@ -347,7 +355,6 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
             }
             if (lock) {
                 // two places to start from, then a slider to move the window the rest of the way
-                var top by remember { mutableStateOf(LiveLyrics.lockTop(c)) }
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PChip(kotlin.math.abs(top - LiveLyrics.LOCK_UNDER_DATE) < .01f, tr("Under the date", "Tarih altı")) { top = LiveLyrics.LOCK_UNDER_DATE; LiveLyrics.setLockTop(c, top) }
                     PChip(kotlin.math.abs(top - LiveLyrics.LOCK_ABOVE_BOTTOM) < .01f, tr("Above the bottom line", "Alt satırın üstü")) { top = LiveLyrics.LOCK_ABOVE_BOTTOM; LiveLyrics.setLockTop(c, top) }
@@ -378,25 +385,33 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     }
 }
 
-/** A preview of the lock screen and of the always-on display: a large clock, the date, and the lyric lines in the space under them, on pure black. */
+/**
+ * The lock screen as a phone, on pure black: the clock and the date at the top, the lyric window where the slider puts it
+ * (it moves with the slider), and the lock screen's star line and media bar at the bottom for reference.
+ */
 @Composable
-fun LockLyricsPreview(emphasis: String) {
+fun LockScreenMock(emphasis: String, top: Float) {
     val now = remember { java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault()).format(java.util.Date()) }
     val day = remember { java.text.SimpleDateFormat("EEE, MMMM d", java.util.Locale.getDefault()).format(java.util.Date()) }
     val current = if (emphasis == "thin") FontWeight.Normal else FontWeight.Bold
-    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(18.dp)).background(Color.Black).padding(vertical = 20.dp, horizontal = 16.dp),
-        horizontalAlignment = Alignment.CenterHorizontally) {
-        // the lock screen: the time large, the date under it, then the lines in the free space
-        Text(now, color = Color(0xFFB0B0B0), fontSize = 88.sp, fontWeight = FontWeight.Light, letterSpacing = (-4).sp, maxLines = 1)
-        Text(day, color = Color(0xFF9A9A9A), fontSize = 14.sp)
-        Spacer(Modifier.height(18.dp))
-        Text(tr("A line before", "Önceki satır"), color = Color(0xFF6E6E6E), fontSize = 14.sp, textAlign = TextAlign.Center)
-        Text("\u25BA " + tr("The line now playing", "Şu an çalan satır"), color = Color.White, fontSize = 18.sp, fontWeight = current, textAlign = TextAlign.Center)
-        Text(tr("A line after", "Sonraki satır"), color = Color(0xFF6E6E6E), fontSize = 14.sp, textAlign = TextAlign.Center)
-        Spacer(Modifier.height(24.dp))
-        // the always-on display: the clock dim, the one line under it
-        Text(now, color = Color(0xFF4A4A4A), fontSize = 40.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp, maxLines = 1)
-        Text("\u25BA " + tr("The line now playing", "Şu an çalan satır"), color = Color(0xFF8A8A8A), fontSize = 13.sp, textAlign = TextAlign.Center)
+    Box(Modifier.fillMaxWidth().padding(vertical = 8.dp), contentAlignment = Alignment.Center) {
+        BoxWithConstraints(Modifier.size(170.dp, 340.dp).clip(RoundedCornerShape(26.dp)).background(Color.Black).border(2.dp, Color(0xFF2E2E2E), RoundedCornerShape(26.dp))) {
+            Column(Modifier.fillMaxWidth().padding(top = 26.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(now, color = Color(0xFFB0B0B0), fontSize = 40.sp, fontWeight = FontWeight.Light, letterSpacing = (-2).sp, maxLines = 1)
+                Text(day, color = Color(0xFF9A9A9A), fontSize = 10.sp, maxLines = 1)
+            }
+            // the lyric window: its top edge at the place the slider sets
+            Column(
+                Modifier.fillMaxWidth().padding(horizontal = 10.dp).offset(y = maxHeight * top)
+                    .clip(RoundedCornerShape(12.dp)).background(Color(0x73000000)).padding(horizontal = 8.dp, vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text("\u25BA  " + tr("The line now playing", "Şu an çalan satır"), color = Color.White, fontSize = 13.sp, fontWeight = current, textAlign = TextAlign.Center)
+                Text(tr("The line after", "Sonraki satır"), color = Color(0x88FFFFFF), fontSize = 10.sp, textAlign = TextAlign.Center)
+            }
+            Text("\u2727 \u00B7 \u2727", color = Color(0x66FFFFFF), fontSize = 10.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 44.dp))
+            Box(Modifier.align(Alignment.BottomCenter).padding(bottom = 14.dp).size(136.dp, 22.dp).clip(CircleShape).background(Color(0x40FFFFFF)))
+        }
     }
 }
 
