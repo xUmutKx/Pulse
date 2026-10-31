@@ -445,13 +445,14 @@ fun SettingsPage() {
                 if (T.tabs && T.id != "win10") Text("The 7 / XP / 95 themes stay light, as they were in their day; dark mode works in Windows 11, 10 and Material.", color = T.sub, fontSize = 11.sp)
                 if (T.id == "win11") {
                     Text(tr("Background", "Arka plan"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                    // previews instead of words: the background as it is drawn, the material as a panel over a picture
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        PChip(Opt.amoledBg, tr("Black (AMOLED)", "Siyah (AMOLED)")) { Opt.amoledBg = true; Opt.save(ctx) }
-                        PChip(!Opt.amoledBg, tr("Dark grey", "Koyu gri")) { Opt.amoledBg = false; Opt.save(ctx) }
+                        BackgroundPreview(tr("Black (AMOLED)", "Siyah (AMOLED)"), Color.Black, Opt.amoledBg) { Opt.amoledBg = true; Opt.save(ctx) }
+                        BackgroundPreview(tr("Dark grey", "Koyu gri"), Color(0xFF202020), !Opt.amoledBg) { Opt.amoledBg = false; Opt.save(ctx) }
                     }
                     Text("Window material (Windows 11 only)", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Effects.list.forEach { (id, n) -> PChip(Look.effect == id, n) { Cfg.setEffect(ctx, id) } }
+                        Effects.list.forEach { (id, n) -> MaterialPreview(id, n, Look.effect == id) { Cfg.setEffect(ctx, id) } }
                     }
                     // every icon group shows its styles at once: one tap picks a style
                     Text(tr("Icons (Windows 11)", "İkonlar (Windows 11)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
@@ -645,6 +646,7 @@ fun RootSettings() {
 @Composable
 private fun IconStyleTile(cat: IconCat, id: String, selected: Boolean, onClick: () -> Unit) {
     val keys = when (cat) {
+        IconCat.SIDEBAR -> listOf("settings", "folder", "image")
         IconCat.MENU -> listOf("settings", "folder", "image")
         IconCat.APPS -> listOf("extraFiles", "extraPhotos", "extraCalendar")
         IconCat.TOOLS -> listOf("tool_toolkit", "tool_installer", "tool_authenticator")
@@ -660,6 +662,43 @@ private fun IconStyleTile(cat: IconCat, id: String, selected: Boolean, onClick: 
     }
 }
 
+
+/** A small swatch of the Windows 11 background, the chosen one outlined in the accent. */
+@Composable
+private fun BackgroundPreview(label: String, bg: Color, selected: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    Column(Modifier.width(104.dp).clip(shape).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth().height(64.dp).clip(shape).background(bg).border(if (selected) 2.dp else 1.dp, if (selected) Look.accent else T.line, shape))
+        Text(label, color = T.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+    }
+}
+
+/**
+ * A small picture of a window material: a coloured backdrop with a panel over it. The panel is more see-through for the
+ * deeper-looking materials, and Acrylic and Glass get a bright edge, the way the real effect reads.
+ */
+@Composable
+private fun MaterialPreview(id: String, label: String, selected: Boolean, onClick: () -> Unit) {
+    val shape = RoundedCornerShape(10.dp)
+    val panel = when (id) {
+        "none" -> Color(0xFF2B2B2B).copy(alpha = 1f)
+        "mica" -> Color(0xFF2B2B2B).copy(alpha = .8f)
+        "micaAlt" -> Color(0xFF1E1E1E).copy(alpha = .7f)
+        "acrylic" -> Color(0xFFFFFFFF).copy(alpha = .12f)
+        else -> Color(0xFFFFFFFF).copy(alpha = .06f)
+    }
+    val edge = if (id == "acrylic" || id == "tabbed") Color.White.copy(alpha = .55f) else T.line
+    Column(Modifier.width(96.dp).clip(shape).clickable(onClick = onClick), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.fillMaxWidth().height(64.dp).clip(shape)
+            .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF3C6FA8), Color(0xFFB0532F), Color(0xFF5B2A7A))))
+            .border(if (selected) 2.dp else 1.dp, if (selected) Look.accent else T.line, shape),
+            contentAlignment = Alignment.Center) {
+            Box(Modifier.fillMaxWidth(.78f).height(40.dp).clip(RoundedCornerShape(8.dp)).background(panel)
+                .border(1.dp, edge, RoundedCornerShape(8.dp)))
+        }
+        Text(label, color = T.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+    }
+}
 
 /** The usage of the chosen range as a CSV: app, package, category, minutes; one line per app, with the total at the end. Returns the message to show. */
 private suspend fun exportUsage(ctx: android.content.Context, rows: List<UsageRow>, days: Int): String {

@@ -90,7 +90,7 @@ fun PIcon(k0: String, tint: Color, size: Dp = 22.dp, modifier: Modifier = Modifi
     if (k == "office" && T.id !in setOf("material", "amoled") && !lineOffice) { OfSuiteLogo(size, modifier, tint); return }
     if (k == "applock") { com.umutk.pulse.applock.AppLockIcon(tint, size, modifier); return }
     // Windows 11: every icon group has its own style (IconStyle): original, Fluent colour or line
-    val cat = if (k.startsWith("tool_")) IconCat.TOOLS else if (k.startsWith("extra")) IconCat.APPS else IconCat.MENU
+    val cat = if (k.startsWith("tool_")) IconCat.TOOLS else if (k.startsWith("extra")) IconCat.APPS else if (LocalInSidebar.current) IconCat.SIDEBAR else IconCat.MENU
     val st = if (T.id == "win11" && !T.material) (LocalIconStyleOverride.current ?: IconStyle.of(cat)) else "original"
     val fluent = T.id == "win11" && !T.material && st != "line"
     val colour = st == "colour"
@@ -407,7 +407,12 @@ private fun FluentColorGlyph2(key: String, size: androidx.compose.ui.unit.Dp, mo
 /** Set while a style preview is drawn: the icons inside use this style instead of the saved one. */
 val LocalIconStyleOverride = androidx.compose.runtime.compositionLocalOf<String?> { null }
 
+/** Set while the left sidebar draws its items: their icons follow the sidebar's own style. */
+val LocalInSidebar = androidx.compose.runtime.compositionLocalOf { false }
+
 enum class IconCat(val id: String, val en: String, val trName: String) {
+    // the left sidebar's own icons, apart from the menus and buttons above it
+    SIDEBAR("sidebar", "Left sidebar", "Sol menü"),
     MENU("menu", "Menus, pages and buttons", "Menüler, sayfalar ve düğmeler"),
     APPS("apps", "Apps", "Uygulamalar"),
     TOOLS("tools", "Tools", "Araçlar"),
