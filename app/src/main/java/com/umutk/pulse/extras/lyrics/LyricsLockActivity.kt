@@ -27,7 +27,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -52,7 +55,9 @@ class LyricsLockActivity : ComponentActivity() {
         }
         // the lock screen keeps the keyboard (the PIN) and every touch (the unlock swipe): this window only shows the lyrics
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
-        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        // a strip of text, not a full window: the width of the screen, its height is the text, at the bottom above the shortcuts
+        window.setLayout(WindowManager.LayoutParams.MATCH_PARENT, WindowManager.LayoutParams.WRAP_CONTENT)
+        window.setGravity(android.view.Gravity.BOTTOM)
         // a failure here must not hold the lock screen: the view closes instead
         runCatching { setContent { LockLyrics(onFinish = { finishAndRemoveTask() }) } }.onFailure { finishAndRemoveTask() }
     }
@@ -87,15 +92,19 @@ private fun LockLyrics(onFinish: () -> Unit) {
     val line = LiveLyrics.lineAt(result, position.toInt() + 700)
 
     Column(
-        // a light scrim only: the lock screen wallpaper and clock show through, the view never turns the screen black
-        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)).padding(horizontal = 24.dp),
+        // no background at all: the lock screen and the always-on clock show through, the lines have a soft shadow to stay readable
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp).padding(bottom = 150.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
+        val shadow = TextStyle(shadow = Shadow(Color.Black.copy(alpha = .9f), Offset(0f, 2f), 10f))
         if (line != null) {
-            Text(line.first.orEmpty(), color = Color.White.copy(alpha = .35f), fontSize = 22.sp, textAlign = TextAlign.Center)
-            Text(line.second, color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            Text(line.third.orEmpty(), color = Color.White.copy(alpha = .35f), fontSize = 22.sp, textAlign = TextAlign.Center)
+            Text(line.first.orEmpty(), color = Color.White.copy(alpha = .55f), fontSize = 20.sp, textAlign = TextAlign.Center, style = shadow)
+            Text(line.second, color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, style = shadow)
+            Text(line.third.orEmpty(), color = Color.White.copy(alpha = .55f), fontSize = 20.sp, textAlign = TextAlign.Center, style = shadow)
+        } else if (track != null) {
+            // no line yet: the song's name, so the view is never an empty strip
+            Text(track.title ?: track.path.substringAfterLast('/'), color = Color.White.copy(alpha = .7f), fontSize = 18.sp, textAlign = TextAlign.Center, style = shadow)
         }
     }
 }
