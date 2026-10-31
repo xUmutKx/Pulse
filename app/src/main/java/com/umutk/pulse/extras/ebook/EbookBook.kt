@@ -1,7 +1,11 @@
 package com.umutk.pulse.extras.ebook
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.graphics.pdf.PdfRenderer
 import android.net.Uri
+import java.io.File
 import java.io.InputStream
 import java.util.zip.ZipInputStream
 
@@ -113,6 +117,79 @@ object Ebook {
         .replace(Regex("&#x([0-9a-fA-F]+);")) { String(Character.toChars(it.groupValues[1].toInt(16))) }
         .replace(Regex("&#([0-9]+);")) { String(Character.toChars(it.groupValues[1].toInt())) }
         .replace("&nbsp;", " ").replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'").replace("&amp;", "&")
+
+    /**
+     * The picture of a book on the shelf: the first page of a PDF, the cover picture of an EPUB. It is drawn once and kept as a PNG
+     * in the app's files, named by the book's uri. Null when the book has no picture (the shelf then draws the letter).
+     */
+    fun cover(c: Context, book: Book): File? {
+        val key = java.security.MessageDigest.getInstance("MD5").digest(book.uri.toByteArray()).joinToString("") { "%02x".format(it) }
+        val dir = File(c.filesDir, "covers").apply { mkdirs() }
+        val png = File(dir, "$key.png")
+        val none = File(dir, "$key.none")
+        if (png.exists()) return png
+        if (none.exists()) return null
+        val ok = runCatching {
+            if (book.pdf) pdfFirstPage(c, Uri.parse(book.uri), png) else epubCover(c, Uri.parse(book.uri), png)
+        }.getOrDefault(false)
+        if (!ok) none.createNewFile()
+        return if (ok) png else null
+    }
+
+    /** The first page of a PDF, drawn at the width of a cover. */
+    private fun pdfFirstPage(c: Context, uri: Uri, out: File): Boolean {
+        val fd = c.contentResolver.openFileDescriptor(uri, "r") ?: return false
+        try {
+            val r = PdfRenderer(fd)
+            try {
+                if (r.pageCount == 0) return false
+                val pg = r.openPage(0)
+                try {
+                    val w = 480
+                    val h = (w * pg.height / pg.width.toFloat()).toInt().coerceAtLeast(1)
+                    val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+                    bmp.eraseColor(android.graphics.Color.WHITE)
+                    pg.render(bmp, null, null, PdfRenderer.Page.RENDER_MODE_FOR_DISPLAY)
+                    out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+                    bmp.recycle()
+                } finally { pg.close() }
+            } finally { r.close() }
+        } finally { fd.close() }
+        return true
+    }
+
+    /** The cover picture of an EPUB: the manifest item the package marks as the cover (EPUB 3 or EPUB 2 style). */
+    private fun epubCover(c: Context, uri: Uri, out: File): Boolean {
+        val container = zipEntry(c, uri) { it.equals("META-INF/container.xml", true) }?.toString(Charsets.UTF_8) ?: return false
+        val opfPath = Regex("full-path=\"([^\"]+)\"").find(container)?.groupValues?.get(1) ?: return false
+        val opf = zipEntry(c, uri) { it == opfPath }?.toString(Charsets.UTF_8) ?: return false
+        val dir = if (opfPath.contains('/')) opfPath.substringBeforeLast('/') + "/" else ""
+        val items = Regex("<item\\b[^>]*>").findAll(opf).map { it.value }.toList()
+        val coverId = Regex("<meta\\b[^>]*name=\"cover\"[^>]*>").find(opf)?.value?.let { attr(it, "content") }
+        val href = items.firstOrNull { it.contains("cover-image") }?.let { attr(it, "href") }
+            ?: coverId?.let { id -> items.firstOrNull { attr(it, "id") == id }?.let { attr(it, "href") } }
+            ?: return false
+        val path = dir + java.net.URLDecoder.decode(href, "UTF-8")
+        val bytes = zipEntry(c, uri) { it == path } ?: return false
+        val opts = BitmapFactory.Options().apply { inSampleSize = 4 }
+        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return false
+        out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+        bmp.recycle()
+        return true
+    }
+
+    /** The bytes of the first entry of the zip that [pick] takes, read by streaming (the book is not held in memory). */
+    private fun zipEntry(c: Context, uri: Uri, pick: (String) -> Boolean): ByteArray? {
+        c.contentResolver.openInputStream(uri)?.use { input ->
+            ZipInputStream(input).use { zip ->
+                while (true) {
+                    val e = zip.nextEntry ?: break
+                    if (!e.isDirectory && pick(e.name)) return zip.readBytes()
+                }
+            }
+        }
+        return null
+    }
 
     // ---- what the reader remembers per book (the place, the bookmarks, the reading time) -----------------------------------
 
