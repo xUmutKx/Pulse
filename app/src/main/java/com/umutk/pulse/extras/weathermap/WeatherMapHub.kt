@@ -434,14 +434,14 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
         saved.forEach { (l, t, s) -> grids[l] = s; stamps[l] = t }
     }
 
-    // the map opens flat on the whole world, the width of the screen; the place chip zooms to the chosen place
-    fun place(sz: Size) {
-        if (placed || sz.width <= 0f) return
-        placed = true
-        pos = MapPos(0.5, 0.5, (ln(sz.width / (TILE * density)) / ln(2.0)).coerceAtLeast(1.0))
-    }
     val homeView = remember(at) {
         (at ?: WeatherStore.savedPlace(ctx))?.takeIf { !(it.device && it.lat == 0.0 && it.lon == 0.0) }?.let { MapPos(wx(it.lon), wy(it.lat), 5.0) }
+    }
+    // the map opens on the chosen place (or the phone's place), zoomed in; without a place it shows the world, zoomed so it fills the whole screen
+    fun place(sz: Size) {
+        if (placed || sz.width <= 0f || sz.height <= 0f) return
+        placed = true
+        pos = homeView ?: MapPos(0.5, 0.5, (ln(maxOf(sz.width, sz.height) / (TILE * density)) / ln(2.0)).coerceAtLeast(1.0))
     }
 
     // the live layers: aircraft every minute, the radar frame every five minutes
