@@ -667,7 +667,10 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 ReaderRow(tr("Miscellaneous", "Diğer"), th) { panel = "misc" }
                 ReaderRow(tr("Themes", "Temalar"), th) { panel = "themes" }
                 Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(th.sub.copy(alpha = .3f)))
-                ReaderRow(tr("More Operations…", "Diğer işlemler…"), th) { panel = "ops" }
+                // the chapters, the bookmarks and the search open straight from the menu
+                ReaderRow(tr("Chapters", "Bölümler"), th) { panel = "chapters" }
+                ReaderRow(tr("Bookmarks", "Yer imleri"), th) { panel = "bookmarks" }
+                ReaderRow(tr("Search", "Ara"), th) { panel = "search" }
                 ReaderRow(tr("Share…", "Paylaş…"), th) {
                     panel = ""
                     val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, b.title + if (b.author.isNotEmpty()) " - " + b.author else "")
