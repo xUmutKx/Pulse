@@ -58,6 +58,8 @@ fun LucidClockScreen(back: () -> Unit) {
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         if (!scheduler.canScheduleExactAlarms()) runCatching { ctx.startActivity(scheduler.requestExactAlarmPermissionIntent().addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
         if (Build.VERSION.SDK_INT >= 34 && !scheduler.canUseFullScreenIntent()) runCatching { scheduler.requestFullScreenIntentPermissionIntent()?.let { ctx.startActivity(it.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) } }
+        // with "display over other apps" the alarm screen also opens while the phone is in use
+        if (!scheduler.canDrawOverApps()) runCatching { ctx.startActivity(scheduler.requestDrawOverAppsIntent().addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
     }
     val appFontStyle by settingsDataStore.appFontStyleFlow.collectAsState(initial = AppFontStyle.SYSTEM_DEFAULT)
     val accentColor by settingsDataStore.accentColorFlow.collectAsState(initial = AccentColor.DEFAULT)

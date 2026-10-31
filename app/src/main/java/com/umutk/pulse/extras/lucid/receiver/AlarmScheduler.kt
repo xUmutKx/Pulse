@@ -25,6 +25,15 @@ class AlarmScheduler(private val context: Context) {
         }
     }
 
+    /**
+     * "Display over other apps". With it the app may open the ringing screen from the background even while the phone is
+     * in use; without it Android only shows the alarm as a banner then.
+     */
+    fun canDrawOverApps(): Boolean = Settings.canDrawOverlays(context)
+
+    fun requestDrawOverAppsIntent(): Intent =
+        Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+
     fun canUseFullScreenIntent(): Boolean {
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             val notificationManager =
