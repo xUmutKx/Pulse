@@ -23,12 +23,12 @@ object ExtraKeys {
 
     /** The tools the bar above the keys can hold: id and name. */
     val toolbar = listOf(
-        "clip" to "Clipboard", "gamepad" to "Gamepad", "emoji" to "Emoji", "voice" to "Voice typing", "translate" to "Translate", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
-        "menu" to "Menu", "email" to "E-mail @", "resize" to "Resize", "incognito" to "Incognito", "arrows" to "Key bar", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
+        "auth" to "Quick auth", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "emoji" to "Emoji", "translate" to "Translate", "selectAll" to "Select all", "copy" to "Copy", "cut" to "Cut", "paste" to "Paste", "undo" to "Undo", "redo" to "Redo",
+        "menu" to "Menu", "email" to "E-mail @", "resize" to "Resize", "incognito" to "Incognito", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers", "theme" to "Theme", "settings" to "Settings", "lang" to "Language",
     )
     /** The tiles the menu behind the three dots can hold. */
     val menu = listOf(
-        "clip" to "Clipboard", "gamepad" to "Gamepad", "translate" to "Translate", "voice" to "Voice typing", "emoji" to "Emoji", "settings" to "Settings", "theme" to "Themes", "languages" to "Languages",
+        "auth" to "Quick auth", "clip" to "Clipboard", "gamepad" to "Gamepad", "translate" to "Translate", "emoji" to "Emoji", "settings" to "Settings", "theme" to "Themes", "languages" to "Languages",
         "resize" to "Resize", "incognito" to "Incognito", "autocorrect" to "Autocorrect", "onehand" to "One-handed", "arrows" to "Key bar", "proRow" to "Extra keys", "keyset" to "Key set", "numbers" to "Numbers",
         "glide" to "Swipe typing", "lang" to "Language", "layout" to "Key layout",
     )
@@ -37,6 +37,6 @@ object ExtraKeys {
         "none" to "None", "email" to "E-mail @", "voice" to "Voice typing", "clip" to "Clipboard", "gamepad" to "Gamepad", "layout" to "Key layout", "translate" to "Translate", "emoji" to "Emoji",
         "lang" to "Language", "menu" to "Menu", "settings" to "Settings", "theme" to "Theme", "resize" to "Resize", "incognito" to "Incognito",
     )
-    const val DEFAULT_MENU = "clip,gamepad,translate,voice,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,layout"
-    const val DEFAULT_TOOLBAR = "gamepad,clip,menu,arrows,translate,settings"
+    const val DEFAULT_MENU = "gamepad,emoji,settings,theme,languages,resize,incognito,autocorrect,onehand,arrows,proRow,keyset,numbers,glide,layout"
+    const val DEFAULT_TOOLBAR = "layout,clip,auth,menu,translate,settings"
 }

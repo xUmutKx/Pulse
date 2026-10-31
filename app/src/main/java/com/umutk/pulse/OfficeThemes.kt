@@ -1,8 +1,10 @@
 package com.umutk.pulse
 
 import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import android.app.Activity
+import androidx.compose.ui.graphics.toArgb
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -55,6 +57,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.compositeOver
@@ -138,6 +141,8 @@ fun ofDarkTint(c: Color, f: Float) = androidx.compose.ui.graphics.lerp(c, Color.
 /** The chosen title bar colour laid over a look's own palette ([OfficePrefs.bars]): 0 leaves the look as it is; 1 accent, 2 the app's colour, 3 AMOLED black for the bar, the tabs, the ribbon and the status bar. */
 fun ofPal(id: String, k: OfKind): OfPal {
     val b = ofPalBase(id, k)
+    // the AMOLED look stays black whatever the title bar colour is set to (the app colour would paint the PDF red)
+    if (ofResolveId(id) == "amoled") return b
     return when (OfficePrefs.bars) {
         1 -> OfPal(Look.accent.copy(alpha = 1f), onAccent(Look.accent), b.tabBg, b.tabInk, b.tabSelBg, b.tabSelInk, b.ribbonBg, b.ink, b.line, b.canvas, b.paper, b.statusBg, b.statusInk, b.accent)
         2 -> OfPal(k.brand, ofInkOn(k.brand), b.tabBg, b.tabInk, b.tabSelBg, b.tabSelInk, b.ribbonBg, b.ink, b.line, b.canvas, b.paper, b.statusBg, b.statusInk, b.accent)
@@ -340,10 +345,13 @@ class OAct(val label: String, val group: String, val icon: ImageVector, val on: 
 fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, onBack: () -> Unit, content: @Composable BoxScope.() -> Unit) {
     if (t.base == "365") { OfChromeM365(t, title, acts, status, onBack, content = content); return }
     val pal = t.pal; val view = LocalView.current; val ctx = LocalContext.current
-    val is17 = t.base == "2017"; val brand = t.kind.brand; val below = ofBelow(t)
+    val is17 = t.base == "2017"; val brand = ofBrand(t); val below = ofBelow(t)
     SideEffect {
         val w = (view.context as Activity).window
-        WindowCompat.getInsetsController(w, view).apply { val (bt, bb) = ofBars(t); isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
+        // the system bars take the title bar's colour too: the status bar is painted, not left to the phone's theme
+        val (bt, bb) = ofBars(t)
+        w.statusBarColor = bt.toArgb(); w.navigationBarColor = bb.toArgb()
+        WindowCompat.getInsetsController(w, view).apply { isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
     }
     val fileOps = LocalOfFile.current
     var fileOpen by remember { mutableStateOf(false) }; var info by remember { mutableStateOf(false) }
@@ -355,7 +363,8 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
     var manualHid by remember { mutableStateOf(false) }
     val hid = autoHid || manualHid
-    Box(Modifier.fillMaxSize().then(tapWatch)) {
+    // a tap on the screen (anywhere the page or the background takes it) shows or hides the top block, like the bar does
+    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { manualHid = !manualHid }) }) {
     Column(Modifier.fillMaxSize().background(if (t.classic) pal.ribbonBg else if (is17) below else pal.titleBg).then(if (is17) Modifier.navigationBarsPadding() else Modifier.systemBarsPadding())) {
         // title bar
         if (!hid) if (t.classic) {
@@ -398,7 +407,7 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
                 Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), titleInk) }
                 OfTile(t.kind, 22.dp, is17); Spacer(Modifier.width(8.dp))
                 OfTitle(title, titleInk)
-                Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(22.dp), titleInk) }
+                Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(titleInk)) }
                 acts.filter { it.group == "Quick" }.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), titleInk) } }
             }
             Row(Modifier.fillMaxWidth().then(if (is17) Modifier.background(below) else Modifier).horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp)) {
@@ -446,7 +455,7 @@ fun OfChromeBasic(t: OfTheme, title: String, acts: List<OAct>, status: String, o
     }
     if (manualHid) Box(Modifier.fillMaxSize()) {
         Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
-            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(20.dp), Color.White)
+            Box(Modifier.width(26.dp).height(4.dp).clip(RoundedCornerShape(50)).background(Color.White))
         }
     }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
@@ -474,10 +483,13 @@ val OfKind.brand: Color get() = when (this) { OfKind.WORD -> Color(0xFF2B579A); 
  */
 @Composable
 fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, onBack: () -> Unit, tabs: List<String>? = null, extra: (@Composable () -> Unit)? = null, content: @Composable BoxScope.() -> Unit) {
-    val pal = t.pal; val view = LocalView.current; val brand = t.kind.brand; val top = ofTop(t); val topInk = ofInkOn(top)
+    val pal = t.pal; val view = LocalView.current; val brand = ofBrand(t); val top = ofTop(t); val topInk = ofInkOn(top)
     SideEffect {
         val w = (view.context as Activity).window
-        WindowCompat.getInsetsController(w, view).apply { val (bt, bb) = ofBars(t); isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
+        // the system bars take the title bar's colour too: the status bar is painted, not left to the phone's theme
+        val (bt, bb) = ofBars(t)
+        w.statusBarColor = bt.toArgb(); w.navigationBarColor = bb.toArgb()
+        WindowCompat.getInsetsController(w, view).apply { isAppearanceLightStatusBars = bt.luminance() > .5f; isAppearanceLightNavigationBars = bb.luminance() > .5f }
     }
     val quick = acts.filter { it.group == "Quick" }
     val fileOps = LocalOfFile.current
@@ -493,17 +505,24 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
     val ink = ofInkOn(below)
     val (autoHid, tapWatch) = ofAutoHide()
     // the arrow in the title bar hides the whole top block by hand; the little handle at the top brings it back
-    var manualHid by remember { mutableStateOf(false) }
-    val hid = autoHid || manualHid
+    // the top block is a drop-down: pull the thin grip under it down from its middle to open it, push it up to close it
+    var pull by remember { mutableStateOf(1f) }
+    var blockH by remember { mutableStateOf(0) }
+    val gripDrag = androidx.compose.foundation.gestures.rememberDraggableState { d -> pull = (pull + d / blockH.coerceAtLeast(1)).coerceIn(0f, 1f) }
+    val openP = if (autoHid) 0f else pull
+    val hid = openP < .5f
     androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides ink) {
-    Box(Modifier.fillMaxSize().then(tapWatch)) {
+    // a tap on the screen (anywhere the page or the background takes it) shows or hides the top block, like the bar does
+    Box(Modifier.fillMaxSize().then(tapWatch).pointerInput(Unit) { detectTapGestures(onTap = { pull = if (pull > .5f) 0f else 1f }) }) {
     Column(Modifier.fillMaxSize().background(below).navigationBarsPadding()) {
-        if (!hid) Column {
+        // the top block shows only the part pulled out; its top edge stays fixed
+        Box(Modifier.fillMaxWidth().height(with(LocalDensity.current) { (blockH * openP).toDp() }).clipToBounds()) {
+        Column(Modifier.fillMaxWidth().wrapContentHeight(align = Alignment.Top, unbounded = true).onSizeChanged { blockH = it.height }) {
         Row(Modifier.fillMaxWidth().background(top).statusBarsPadding().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp).clickable(onClick = onBack), contentAlignment = Alignment.Center) { Icon(Icons.Outlined.ArrowBack, null, Modifier.size(22.dp), topInk) }
             OfTile(t.kind, 22.dp, true); Spacer(Modifier.width(8.dp))
             OfTitle(title, topInk)
-            Box(Modifier.size(40.dp).clickable { manualHid = true }, contentAlignment = Alignment.Center) { Icon(Icons.Outlined.KeyboardArrowUp, null, Modifier.size(22.dp), topInk) }
+            Box(Modifier.size(40.dp).clickable { pull = 0f }, contentAlignment = Alignment.Center) { OfChevron(topInk) }
             quick.forEach { a -> Box(Modifier.size(40.dp).alpha(if (a.enabled) 1f else .4f).clickable(enabled = a.enabled, onClick = a.click), contentAlignment = Alignment.Center) { Icon(a.icon, null, Modifier.size(20.dp), topInk) } }
         }
         Row(Modifier.fillMaxWidth().background(below).horizontalScroll(rememberScrollState()).padding(horizontal = 4.dp)) {
@@ -528,14 +547,18 @@ fun OfChromeM365(t: OfTheme, title: String, acts: List<OAct>, status: String, on
         }
         extra?.invoke()
         }
+        }
+        // the grip: a thin line under the top block, pulled down from its middle to open it and pushed up to close it
+        // closed: the bar is gone and only this line stays where the arrow was
+        if (openP == 0f) Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars))
+        Box(Modifier.fillMaxWidth().height(14.dp).background(if (openP == 0f) Color.Transparent else below)
+            .draggable(orientation = androidx.compose.foundation.gestures.Orientation.Vertical, state = gripDrag, onDragStopped = { pull = if (pull > .5f) 1f else 0f })
+            .clickable { pull = if (pull > .5f) 0f else 1f }, contentAlignment = Alignment.Center) {
+            OfChevron(ink.copy(alpha = .6f))
+        }
         Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().background(pal.canvas), content = content)
         if (!hid) Row(Modifier.fillMaxWidth().height(24.dp).background(below).border(1.dp, pal.line).padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(status, color = ink.copy(alpha = .75f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-    }
-    if (manualHid) Box(Modifier.fillMaxSize()) {
-        Box(Modifier.align(Alignment.TopCenter).statusBarsPadding().padding(top = 2.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = .55f)).clickable { manualHid = false }.padding(horizontal = 16.dp, vertical = 2.dp)) {
-            Icon(Icons.Outlined.KeyboardArrowDown, null, Modifier.size(20.dp), Color.White)
         }
     }
     OfFileLayer(t, fileItems, fileOpen, { fileOpen = false }, info) { info = false }
@@ -559,10 +582,23 @@ val LocalOfFile = staticCompositionLocalOf<OfFileOps?> { null }
 
 
 /** The title bar colour of the 365 and 2017 windows (their own is the app's colour): the accent colour, the app's colour, or black (Settings > Office). */
-internal fun ofTop(t: OfTheme): Color = when (OfficePrefs.bars) { 3 -> Color.Black; 1 -> Look.accent.copy(alpha = 1f); else -> t.kind.brand }
+internal fun ofTop(t: OfTheme): Color = if (t.base == "amoled") Color.Black else when (OfficePrefs.bars) { 3 -> Color.Black; 1 -> Look.accent.copy(alpha = 1f); else -> t.kind.brand }
 
 /** Colour of everything under the brand title bar: white, or near-black in the dark looks. Looks that have their own surfaces keep the ribbon colour. */
-internal fun ofBelow(t: OfTheme) = if (OfficePrefs.bars == 3) Color.Black else if (t.base == "365") Color(0xFF2B2B2B) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
+/** A chevron pointing down: the handle of the Microsoft 365 top bar, pulled down to open it and pushed up to close it. */
+@Composable
+internal fun OfChevron(color: Color, modifier: Modifier = Modifier) {
+    androidx.compose.foundation.Canvas(modifier.size(20.dp, 12.dp)) {
+        val w = size.width; val h = size.height; val sw = 2.dp.toPx()
+        drawLine(color, androidx.compose.ui.geometry.Offset(w * .08f, h * .12f), androidx.compose.ui.geometry.Offset(w * .5f, h * .9f), strokeWidth = sw, cap = androidx.compose.ui.graphics.StrokeCap.Square)
+        drawLine(color, androidx.compose.ui.geometry.Offset(w * .5f, h * .9f), androidx.compose.ui.geometry.Offset(w * .92f, h * .12f), strokeWidth = sw, cap = androidx.compose.ui.graphics.StrokeCap.Square)
+    }
+}
+
+/** The app colour for the chrome (File tab, the on-state of the toggles, the opening screen): black-grey in the AMOLED look or with the black title bar. */
+internal fun ofBrand(t: OfTheme): Color = if (t.base == "amoled" || OfficePrefs.bars == 3) Color(0xFF2B2B2B) else t.kind.brand
+
+internal fun ofBelow(t: OfTheme) = if (OfficePrefs.bars == 3 || t.base == "amoled") Color.Black else if (t.base == "365") Color(0xFF2B2B2B) else if (t.base == "2017") (if (t.dark) ofDarkTint(t.kind.brand, .8f) else Color.White) else t.pal.ribbonBg
 
 /** Opaque colours of the system status bar (top) and navigation bar (bottom): exactly what the chrome shows in the title bar and in the bottom-most (status) bar, translucent layers composited over the canvas. */
 fun ofBars(t: OfTheme): Pair<Color, Color> {
@@ -691,7 +727,7 @@ fun OfSplash(t: OfTheme, file: String = "") {
     val e = enter.value
     if (base == "365" || base == "2017") {
         // 365: rounded box, logo pops in, wave of dots. 2017: square box, title fades up, thin progress line
-        val bg = if (dk) androidx.compose.ui.graphics.lerp(k.brand, Color.Black, .62f) else k.brand
+        val bg = if (dk) androidx.compose.ui.graphics.lerp(ofBrand(t), Color.Black, .62f) else ofBrand(t)
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Box(Modifier.size(300.dp, 190.dp).clip(RoundedCornerShape(if (base == "365") 10.dp else 0.dp)).background(bg)) {
                 Row(Modifier.align(Alignment.TopStart).padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -725,7 +761,7 @@ fun OfSplash(t: OfTheme, file: String = "") {
                 Canvas(Modifier.fillMaxSize().graphicsLayer { translationX = (1f - e) * size.width }) {
                     val w = size.width; val h = size.height
                     val sw = androidx.compose.ui.graphics.Path().apply { moveTo(w * .25f, h); cubicTo(w * .5f, h * .62f, w * .75f, h * .8f, w, h * .5f); lineTo(w, h); close() }
-                    drawPath(sw, Brush.horizontalGradient(listOf(k.brand.copy(alpha = .15f), k.brand)))
+                    drawPath(sw, Brush.horizontalGradient(listOf(ofBrand(t).copy(alpha = .15f), ofBrand(t))))
                 }
                 Column(Modifier.padding(start = 18.dp, top = 20.dp).alpha(e)) {
                     Text("Microsoft®", color = tx.copy(alpha = .75f), fontSize = 11.sp)

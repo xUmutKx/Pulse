@@ -25,13 +25,16 @@ private val Subs = listOf(
     Sub("sensors", "Sensors"), Sub("media", "Media & DRM"), Sub("features", "Features"), Sub("props", "Properties"), Sub("bench", "Benchmark"), Sub("security", "Security"),
 )
 
+private val OverviewTileSubs = setOf("cpu", "memory", "thermal", "battery", "network", "storage")
+
 /** Everything about the phone itself in one module, grouped like the parts of a computer: tabs along the top instead of a long menu. */
 @Composable
 fun DeviceModule() {
     var sub by rememberSaveable { mutableStateOf("overview") }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
-            Subs.forEach { p ->
+            // on Overview the parts that have a tile below are not repeated up here (the tile opens them)
+            Subs.filter { p -> !(sub == "overview" && p.id in OverviewTileSubs) }.forEach { p ->
                 val on = sub == p.id
                 Column(Modifier.clickable { sub = p.id }.padding(horizontal = 10.dp, vertical = 6.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     FitText(p.label, if (on) Look.accent else T.sub, 13.sp, weight = if (on) FontWeight.SemiBold else FontWeight.Normal)

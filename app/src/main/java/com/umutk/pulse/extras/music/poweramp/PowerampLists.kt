@@ -2,6 +2,7 @@ package com.umutk.pulse.extras.music.poweramp
 
 import com.umutk.pulse.extras.music.foldHas
 import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.Radio
 import androidx.compose.material.icons.rounded.Shuffle
 import com.umutk.pulse.extras.music.shownArtist
 
@@ -124,6 +125,7 @@ private sealed interface Lib {
     object WhiteNoise : Lib
     object AllSounds : Lib
     object OnlinePlaylists : Lib
+    object Radio : Lib
     /** 0 most played, 1 recently played, 2 last added */
     class Quick(val kind: Int) : Lib
     object Playlists : Lib
@@ -208,6 +210,7 @@ fun LibraryScreen(
         Lib.WhiteNoise -> tr("White noise", "Beyaz gürültü")
         Lib.AllSounds -> tr("All sounds", "Tüm sesler")
         Lib.OnlinePlaylists -> tr("Online playlists", "Çevrimiçi çalma listeleri")
+        Lib.Radio -> tr("Radio", "Radyo")
         Lib.Playlists -> tr("Playlists", "Çalma listeleri")
         is Lib.Playlist -> n.name
         is Lib.M3u -> n.name
@@ -220,6 +223,8 @@ fun LibraryScreen(
     when (node) {
         Lib.WhiteNoise, Lib.AllSounds -> { Box(modifier.fillMaxSize()) { WhiteNoiseHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
         Lib.OnlinePlaylists -> { Box(modifier.fillMaxSize()) { OnlinePlaylistsHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
+        // the radio of the app (the one in the music screen's top bar)
+        Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.radio.RadioScreen(back = { node = Lib.Root }) }; return@LibraryScreen }
         else -> Unit
     }
     Column(modifier.fillMaxSize()) {
@@ -247,6 +252,7 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.NewReleases, Color(0xFF6BC08A), Lib.Quick(2) to quickNames[2]),
                     Triple(Icons.Rounded.Air, Color(0xFF4FA3C7), Lib.WhiteNoise to tr("White noise", "Beyaz gürültü")),
                     Triple(Icons.Rounded.Cloud, Color(0xFF7A8FD9), Lib.OnlinePlaylists to tr("Online playlists", "Çevrimiçi çalma listeleri")),
+                    Triple(Icons.Rounded.Radio, Color(0xFFD9785B), Lib.Radio to tr("Radio", "Radyo")),
                     Triple(Icons.Rounded.Album, Color(0xFFD96B6B), Lib.Cat(0) to catNames[0]),
                     Triple(Icons.Rounded.Person, Color(0xFFD98A5B), Lib.Cat(1) to catNames[1]),
                     Triple(Icons.Rounded.Piano, Color(0xFF9B6BD9), Lib.Cat(2) to catNames[2]),
@@ -294,7 +300,7 @@ fun LibraryScreen(
                 )
                 itemsIndexed(hidden) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
             }
-            Lib.WhiteNoise, Lib.AllSounds, Lib.OnlinePlaylists -> Unit // shown above
+            Lib.WhiteNoise, Lib.AllSounds, Lib.OnlinePlaylists, Lib.Radio -> Unit // shown above
             Lib.Playlists -> PlaylistsPage(queue, style, onOpenFile = { node = Lib.M3u(it.path, it.name) }, onOpen = { node = Lib.Playlist(it) })
             is Lib.M3u -> {
                 val l by androidx.compose.runtime.produceState(emptyList<Track>(), n.path) {
@@ -490,6 +496,8 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
         if (query.trim().length < 3) { lyricsBusy = false; return@LaunchedEffect }
         delay(600)
         lyricsBusy = true
+        // the phone's lyrics first (instant), then the online catalogue
+        lyricHits = Lyrics.searchByText(ctx, query, online = false)
         lyricHits = Lyrics.searchByText(ctx, query)
         lyricsBusy = false
     }

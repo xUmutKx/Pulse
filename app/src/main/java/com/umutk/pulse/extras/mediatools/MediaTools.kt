@@ -71,9 +71,10 @@ fun MediaToolsScreen(back: () -> Unit) {
             ToolTile("gif", "GIF", tab == 1, Modifier.weight(1f)) { tab = 1 }
             ToolTile("convert", tr("Convert", "Dönüştür"), tab == 2, Modifier.weight(1f)) { tab = 2 }
             ToolTile("document", "PDF", tab == 3, Modifier.weight(1f)) { tab = 3 }
+            ToolTile("play", tr("Cut", "Kes"), tab == 4, Modifier.weight(1f)) { tab = 4 }
         }
         Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            when (tab) { 0 -> CompressTab(); 1 -> GifTab(); 3 -> PdfTab(); else -> ConvertTab() }
+            when (tab) { 0 -> CompressTab(); 1 -> GifTab(); 3 -> PdfTab(); 4 -> CutTab(); else -> ConvertTab() }
             Box(Modifier.size(24.dp))
         }
     }

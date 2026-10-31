@@ -453,18 +453,12 @@ fun SettingsPage() {
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Effects.list.forEach { (id, n) -> PChip(Look.effect == id, n) { Cfg.setEffect(ctx, id) } }
                     }
-                    // one collapsed row per icon group; open a group to pick its style
+                    // every icon group shows its styles at once: one tap picks a style
                     Text(tr("Icons (Windows 11)", "İkonlar (Windows 11)"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
-                    var iconOpen by remember { mutableStateOf<String?>(null) }
                     IconCat.entries.forEach { cat ->
                         val cur = IconStyle.of(cat)
-                        val curName = IconStyle.choices(cat).firstOrNull { it.first == cur }?.let { tr(it.second, it.third) } ?: ""
-                        Row(Modifier.fillMaxWidth().clickable { iconOpen = if (iconOpen == cat.id) null else cat.id }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                            Text(tr(cat.en, cat.trName), color = T.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                            Text(curName, color = T.sub, fontSize = 12.sp)
-                            PIcon("chevron", T.sub, 18.dp, Modifier.padding(start = 6.dp).graphicsLayer { rotationZ = if (iconOpen == cat.id) 180f else 0f })
-                        }
-                        if (iconOpen == cat.id) Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(tr(cat.en, cat.trName), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                        Row(Modifier.horizontalScroll(rememberScrollState()).padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                             IconStyle.choices(cat).forEach { (id, _, _) -> IconStyleTile(cat, id, cur == id) { Cfg.setIconStyle(ctx, cat, id) } }
                         }
                     }
@@ -494,7 +488,6 @@ fun SettingsPage() {
                 Text("Windows", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
                 ThemeRow(byId("win11", "win10")); ThemeRow(byId("win7", "xp"))
                 ThemeRow(byId("win95"), center = true)
-                ThemeRow(byId("mica2", "acrylic2"))
                 Row(Modifier.fillMaxWidth().clickable { ThemeFold.open = !ThemeFold.open }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Other colors", "Diğer renkler"), color = T.sub, fontSize = 13.sp, modifier = Modifier.weight(1f))
                     PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = if (ThemeFold.open) 180f else 0f })

@@ -11,6 +11,7 @@ import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -103,6 +104,7 @@ import androidx.compose.ui.layout.boundsInParent
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -1516,12 +1518,14 @@ private fun SelectionActionBar(
         }
         Spacer(modifier = Modifier.height(8.dp))
 
+        // with the glow off the dark screens are plain black, and the bar goes black with them (a thin edge keeps it visible)
+        val plainBlack = !lightMode && !LocalContext.current.getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE).getBoolean("on", true)
         Surface(
-            border = null,
-            color = if (lightMode) {
-                Color(0xFFFFFFFF)
-            } else {
-                MaterialTheme.colorScheme.surfaceContainerHighest
+            border = if (plainBlack) BorderStroke(1.dp, Color.White.copy(alpha = .18f)) else null,
+            color = when {
+                lightMode -> Color(0xFFFFFFFF)
+                plainBlack -> Color.Black
+                else -> MaterialTheme.colorScheme.surfaceContainerHighest
             },
             contentColor = MaterialTheme.colorScheme.primary,
             shape = RoundedCornerShape(999.dp),
@@ -1579,17 +1583,19 @@ private fun SelectionAction(
             .padding(horizontal = 8.dp, vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
+        // the dark bar wears white buttons; the light bar keeps the accent
+        val actionColor = if (MaterialTheme.colorScheme.background.luminance() > 0.5f) MaterialTheme.colorScheme.primary else Color.White
         Icon(
             imageVector = icon,
             contentDescription = label,
             modifier = Modifier.size(20.dp),
-            tint = MaterialTheme.colorScheme.primary
+            tint = actionColor
         )
         Spacer(modifier = Modifier.height(2.dp))
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(fontSize = 10.sp),
-            color = MaterialTheme.colorScheme.primary,
+            color = actionColor,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )

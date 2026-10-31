@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Una funda con el vinilo asomando; todo dentro de la zona segura (radio 33 alrededor de 54,54). -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FF0B0A09"
+        android:pathData="M42,52 a20,20 0 1,0 40,0 a20,20 0 1,0 -40,0" />
+    <path android:strokeColor="#FF2E2B28" android:strokeWidth="0.8"
+        android:pathData="M48,52 a14,14 0 1,0 28,0 a14,14 0 1,0 -28,0" />
+    <path android:fillColor="@color/icon_label"
+        android:pathData="M55,52 a7,7 0 1,0 14,0 a7,7 0 1,0 -14,0" />
+    <path android:fillColor="#FF1C1A18"
+        android:pathData="M60.8,52 a1.2,1.2 0 1,0 2.4,0 a1.2,1.2 0 1,0 -2.4,0" />
+    <path android:fillColor="#FFEFEBE3" android:pathData="M26,36 h32 v32 h-32 z" />
+    <path android:strokeColor="@color/icon_label" android:strokeWidth="2"
+        android:pathData="M31,62 h14" />
+</vector>

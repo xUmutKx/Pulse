@@ -99,11 +99,15 @@ object KeyboardPrefs {
     var toolbarItems by mutableStateOf(ExtraKeys.DEFAULT_TOOLBAR)
     /** The size of the gamepad panel in percent (60..150): it follows the screen, this scales it. */
     var padScale by mutableStateOf(130)
+    // how many icons the bar above the keys has room for (the rest scroll)
+    var barSlots by mutableStateOf(7)
     /** The long-press action of the comma, the period and the key beside ?123 (ExtraKeys.hold ids). */
     var commaHold by mutableStateOf("voice")
     /** The gamepad sticks: the dead zone (percent of a stick's reach before it sends a key) and how far up the sticks sit (dp at 1 percent of the panel). */
     var padDead by mutableStateOf(28)
-    var padLift by mutableStateOf(0)
+    var padLift by mutableStateOf(14)
+    /** Quick auth asks for the fingerprint before it shows the codes (off: it shows them at once). */
+    var authLock by mutableStateOf(false)
     var periodHold by mutableStateOf("none")
     var bottomHold by mutableStateOf("none")
 
@@ -177,7 +181,13 @@ object KeyboardPrefs {
             if ("gamepad" !in menuItems.split(',')) menuItems = menuItems.split(',').toMutableList().also { l -> val i = l.indexOf("clip"); l.add(if (i >= 0) i + 1 else 0, "gamepad") }.joinToString(",")
             p.edit().putInt("menuVer", 7).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
         }
-        padScale = p.getInt("padScale", 130); padDead = p.getInt("padDead", 28); padLift = p.getInt("padLift", 0)
+        // the gamepad key of the top bar is the keyboard layout key now; the gamepad stays in the ⋮ menu
+        if (p.getInt("menuVer", 0) < 8) {
+            toolbarItems = toolbarItems.split(',').map { if (it == "gamepad") "layout" else it }.distinct().joinToString(",")
+            p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
+        }
+        barSlots = p.getInt("barSlots", 7).coerceIn(3, 9)
+        padScale = p.getInt("padScale", 130); padDead = p.getInt("padDead", 28); padLift = p.getInt("padLift", 14); authLock = p.getBoolean("authLock", false)
         commaHold = p.getString("commaHold", "voice") ?: "voice"; periodHold = p.getString("periodHold", "none") ?: "none"; bottomHold = p.getString("bottomHold", "none") ?: "none"
         // the clipboard and the gamepad trade places in the bar: the gamepad is the first key now
         if (p.getInt("menuVer", 0) < 8) {
@@ -185,6 +195,24 @@ object KeyboardPrefs {
             val i = t.indexOf("clip"); val g = t.indexOf("gamepad")
             if (i >= 0 && g == i + 1) { t[i] = "gamepad"; t[g] = "clip" }
             toolbarItems = t.joinToString(","); p.edit().putInt("menuVer", 8).putString("toolbarItems", toolbarItems).apply()
+        }
+        // one place for each tool: a tool on the bar is not in the menu too; the gamepad makes room for the key layout on the bar, and the microphone is gone (the comma holds voice typing)
+        // the lock and the clipboard change places in the bar (once)
+        if (!p.getBoolean("swapLock11", false)) {
+            val t = toolbarItems.split(',').toMutableList()
+            val a = t.indexOf("auth"); val c = t.indexOf("clip")
+            if (a >= 0 && c >= 0) { t[a] = "clip"; t[c] = "auth" }
+            toolbarItems = t.joinToString(",")
+            p.edit().putBoolean("swapLock11", true).putString("toolbarItems", toolbarItems).apply()
+        }
+        // its own flag: the auto-space step below also moves the version on, so a version check here was skipped on those phones
+        if (!p.getBoolean("barMoved10", false)) {
+            val bar = toolbarItems.split(',').filter { it != "voice" && it != "arrows" }.map { if (it == "gamepad") "layout" else it }.toMutableList()
+            if ("auth" !in bar) bar.add(minOf(1, bar.size), "auth")
+            val bar2 = bar.distinct()
+            menuItems = (menuItems.split(',').filter { it != "voice" && it !in bar2 } + listOf("gamepad")).distinct().joinToString(",")
+            toolbarItems = bar2.joinToString(",")
+            p.edit().putBoolean("barMoved10", true).putString("toolbarItems", toolbarItems).putString("menuItems", menuItems).apply()
         }
         // no space is added by itself after a sign any more (it can be switched on again in the typing settings)
         if (p.getInt("menuVer", 0) < 9) { autoSpace = false; p.edit().putInt("menuVer", 9).putBoolean("autoSpace", false).apply() }
@@ -196,7 +224,7 @@ object KeyboardPrefs {
             .putString("theme", theme)
             .putInt("cBg", cBg).putInt("cKey", cKey).putInt("cText", cText).putInt("cSpecial", cSpecial).putInt("cAccent", cAccent).putInt("cMenu", cMenu).putInt("cRadius", cRadius)
             .putInt("heightPct", heightPct).putInt("autoRatio", autoRatio).putInt("autoLevel", autoLevel).putInt("sidePad", sidePad).putInt("bottomPad", bottomPad).putInt("keyGap", keyGap).putInt("modeShrink", modeShrink).putInt("commaShrink", commaShrink).putString("oneHand", oneHand)
-            .putString("langs", langs).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
+            .putString("langs", langs).putInt("barSlots", barSlots).putInt("padScale", padScale).putInt("padDead", padDead).putInt("padLift", padLift).putBoolean("authLock", authLock).putString("commaHold", commaHold).putString("periodHold", periodHold).putString("bottomHold", bottomHold)
             .putBoolean("numberRow", numberRow).putBoolean("arrows", arrows).putBoolean("emojiKey", emojiKey).putString("bottomKey2", bottomKey).putBoolean("largeText", largeText)
             .putBoolean("keyPopups", keyPopups).putBoolean("longPressSymbols", longPressSymbols).putBoolean("spaceLabel", spaceLabel)
             .putBoolean("suggestions", suggestions).putBoolean("autocorrect", autocorrect).putBoolean("undoOnBackspace", undoOnBackspace)

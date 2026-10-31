@@ -43,6 +43,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Flip
@@ -684,18 +688,18 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         "enc" -> PickDialog(tr("Encoding", "Kodlama"), encodings.map { it to (it == prefs.subEnc) }, { dlg = "subopt" }) { i -> prefs.subEnc = encodings[i]; applySub(); dlg = "subopt" }
         "more" -> {
             // only what the bottom bar does not already do (speed, repeat and the sleep timer have their own buttons there)
-            val acts = listOf(
-                "shuffle" to tr("Shuffle", "Karıştır") + ": " + (if (shuffle) tr("On", "Açık") else tr("Off", "Kapalı")),
-                "bg" to tr("Background audio", "Arka plan sesi") + ": " + (if (bg) tr("On", "Açık") else tr("Off", "Kapalı")),
-                "eq" to tr("Equalizer", "Ekolayzır"),
-                "cast" to tr("Cast the screen", "Ekranı yansıt"),
-                "info" to tr("Info", "Bilgi"),
-                "share" to tr("Share", "Paylaş"),
-                "zoom" to tr("Reset zoom", "Yakınlaştırmayı sıfırla"),
+            val moreItems = listOf(
+                MoreItem("shuffle", "sort", tr("Shuffle", "Karıştır"), if (shuffle) tr("On", "Açık") else tr("Off", "Kapalı")),
+                MoreItem("bg", "volume", tr("Background audio", "Arka plan sesi"), if (bg) tr("On", "Açık") else tr("Off", "Kapalı")),
+                MoreItem("eq", "tune", tr("Equalizer", "Ekolayzır"), ""),
+                MoreItem("cast", "phone", tr("Cast", "Yansıt"), ""),
+                MoreItem("info", "info", tr("Info", "Bilgi"), ""),
+                MoreItem("share", "share", tr("Share", "Paylaş"), ""),
+                MoreItem("zoom", "scale", tr("Reset zoom", "Yakınlaştırmayı sıfırla"), ""),
             )
-            PickDialog(tr("More", "Daha fazla"), acts.map { it.second to false }, { dlg = null }) { i ->
+            MoreSheet(moreItems, { dlg = null }) { key ->
                 dlg = null
-                when (acts[i].first) {
+                when (key) {
                     "shuffle" -> { shuffle = !shuffle; player.shuffleModeEnabled = shuffle }
                     "bg" -> { bg = !bg; prefs.bg = bg }
                     "eq" -> dlg = "eq"
@@ -753,6 +757,35 @@ private fun SubOptions(p: VideoPrefs, delayMs: Long, hasExt: Boolean, onDelay: (
         confirmButton = { PButton(tr("OK", "Tamam"), onClick = onDismiss) },
     )
 }
+
+/** One line of the More sheet: its key, its icon, its name and, for a switch, its state. */
+private class MoreItem(val key: String, val icon: String, val name: String, val state: String)
+
+/**
+ * The More menu: a dark panel at the bottom of the screen, above the progress bar, with an icon for each action. It stays dark
+ * over a white picture, so its text reads on any video.
+ */
+@Composable
+private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+    Popup(alignment = Alignment.BottomCenter, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)).background(Color(0xF2101010))
+            .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 12.dp)) {
+            items.chunked(4).forEach { row ->
+                Row(Modifier.fillMaxWidth()) {
+                    row.forEach { item ->
+                        Column(Modifier.weight(1f).clickable { onPick(item.key) }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            PIcon(item.icon, Color.White, 26.dp)
+                            Text(if (item.state.isEmpty()) item.name else item.name + "\n" + item.state, color = Color.White, fontSize = 12.sp,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
+                        }
+                    }
+                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                }
+            }
+        }
+    }
+}
+
 
 /** A list of radio rows in the look's own window. */
 @Composable

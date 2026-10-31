@@ -84,6 +84,7 @@ fun WeatherHub(onBack: () -> Unit) {
     var showList by remember { mutableStateOf(false) }
     var allDays by remember { mutableStateOf(false) }
     var showSettings by remember { mutableStateOf(false) }
+    var showMap by remember { mutableStateOf(false) }
     var source by remember { mutableStateOf(WeatherStore.source(ctx)) }
     var skin by remember { mutableStateOf(WeatherStore.skin(ctx)) }
     val devicePlace = Place(tr("My location", "Konumum"), 0.0, 0.0, device = true)
@@ -97,17 +98,29 @@ fun WeatherHub(onBack: () -> Unit) {
             } else {
                 val res = runCatching {
                     withContext(Dispatchers.IO) {
-                        val raw = WeatherApi.forecast(spot.lat, spot.lon)
-                        val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
-                        val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm", WeatherStore.combine(ctx))
-                        WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
-                        WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
+                        // three tries, a little longer apart each time; the services in turn are inside forecast()
+                        var last: Throwable? = null
+                        repeat(3) { i ->
+                            runCatching {
+                                val raw = WeatherApi.forecast(spot.lat, spot.lon)
+                                val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
+                                val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm", WeatherStore.combine(ctx))
+                                WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
+                                WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
+                            }.onSuccess { return@withContext it }.onFailure { last = it; kotlinx.coroutines.delay(2000L * (i + 1)) }
+                        }
+                        throw last ?: IllegalStateException("no forecast")
                     }
                 }
                 res.onSuccess {
                     fc = it; place = spot; WeatherStore.setPlace(ctx, spot)
                     WeatherWidgets.refreshAll(ctx)
-                }.onFailure { error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" } }
+                }.onFailure {
+                    // the last forecast saved for this place stays on the screen, with its time, instead of an error
+                    val saved = WeatherStore.cached(ctx)?.takeIf { f -> f.place == spot.name }
+                    if (saved != null) { fc = saved; place = spot; error = "" }
+                    else error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" }
+                }
             }
             busy = false
         }
@@ -137,7 +150,7 @@ fun WeatherHub(onBack: () -> Unit) {
     }
 
     LaunchedEffect(Unit) { WeatherAuto.ensure(ctx) }
-    BackHandler { if (showSettings) showSettings = false else if (searching) searching = false else if (showList) showList = false else onBack() }
+    BackHandler { if (showMap) showMap = false else if (showSettings) showSettings = false else if (searching) searching = false else if (showList) showList = false else onBack() }
     // first paint from the cache, then one refresh for a saved city or the phone's place when it is allowed
     LaunchedEffect(Unit) {
         val p = place
@@ -158,6 +171,10 @@ fun WeatherHub(onBack: () -> Unit) {
         val cur = order.indexOfFirst { p -> place?.let { q -> if (q.device) p.device else (!p.device && p.lat == q.lat && p.lon == q.lon) } == true }.coerceAtLeast(0)
         val to = (cur + delta).coerceIn(0, order.lastIndex)
         if (to != cur) { val p = order[to]; if (p.device) useDevice() else load(p) }
+    }
+    if (showMap) {
+        com.umutk.pulse.extras.weathermap.WeatherMapHub(onBack = { showMap = false }, at = place)
+        return
     }
     if (showSettings) {
         WeatherSettings(fg, sub, bgBrush, skin, imp, source, alerts, WeatherStore.combine(ctx), { WeatherStore.setCombine(ctx, it); place?.let { p -> load(p) } },
@@ -192,9 +209,9 @@ fun WeatherHub(onBack: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                PIcon("back", fg, 22.dp, Modifier.clickable { if (searching) searching = false else onBack() })
                 Text(tr("Weather", "Hava durumu"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp))
                 com.umutk.pulse.ExtraLookIcon(fg)
+                Box(Modifier.size(40.dp).clickable { showMap = true }, contentAlignment = Alignment.Center) { PIcon("globe", fg, 22.dp) }
                 Box(Modifier.size(40.dp).clickable { showList = true }, contentAlignment = Alignment.Center) { PIcon("details", fg, 22.dp) }
                 Box(Modifier.size(40.dp).clickable { place?.let { load(it) } }, contentAlignment = Alignment.Center) { PIcon("refresh", fg, 22.dp) }
                 Box(Modifier.size(40.dp).clickable { showSettings = true }, contentAlignment = Alignment.Center) { PIcon("settings", fg, 22.dp) }
@@ -290,7 +307,7 @@ fun WeatherHub(onBack: () -> Unit) {
                             Text(if (midnight) runCatching { LocalDate.parse(h.time.take(10)).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault("") else WeatherFmt.clock(h.time), color = if (midnight) fg else sub, fontSize = 12.sp, fontWeight = if (midnight) FontWeight.Medium else FontWeight.Normal)
                             WeatherGlyph(h.code, 30.dp, day = h.time.length < 16 || h.time.substring(11, 13).toIntOrNull()?.let { it in 6..19 } != false)
                             Text(t(h.temp), color = fg, fontSize = 15.sp)
-                            Text(if (h.rain > 0) "${h.rain}%" else "", color = sub, fontSize = 10.sp)
+                            Text(if (h.rain >= 0) "${h.rain}%" else "", color = sub, fontSize = 10.sp)
                         }
                     }
                 }
@@ -305,7 +322,7 @@ fun WeatherHub(onBack: () -> Unit) {
                     )
                     WeatherGlyph(d.code, 28.dp)
                     Spacer(Modifier.width(10.dp))
-                    Text(if (d.rain > 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
+                    Text(if (d.rain >= 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
                     Spacer(Modifier.weight(1f))
                     Text("${t(d.min)} / ${t(d.max)}", color = fg, fontSize = 15.sp)
                 }
@@ -368,6 +385,8 @@ fun WeatherHub(onBack: () -> Unit) {
                     d += tr("Sunshine", "Güneşlenme") to "%.1f h".format(today.sun)
                 }
                 if (f.aqi >= 0) d += tr("Air quality", "Hava kalitesi") to "${f.aqi} · ${WeatherFmt.aqi(f.aqi)}"
+                // an odd count leaves one tile alone on its row: the dew point fills the gap, so the grid is even
+                if (d.size % 2 == 1) d += tr("Dew point", "Çiy noktası") to t(f.dew)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     d.chunked(2).forEach { r ->
                         Row(Modifier.height(androidx.compose.foundation.layout.IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -481,7 +500,7 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
                             onSkin: (String) -> Unit, onUnits: (Boolean) -> Unit, onSource: (String) -> Unit, onAlerts: (Boolean) -> Unit, onBack: () -> Unit) {
     var ask by remember { mutableStateOf("") }
     val skins = listOf("sky" to tr("Sky (follows the weather)", "Gökyüzü (havaya göre)"), "amoled" to "AMOLED", "app" to tr("App look", "Uygulama teması"))
-    val sources = listOf("om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "metno" to tr("MET Norway (no key)", "MET Norway (anahtarsız)"), "owm" to tr("OpenWeatherMap (your key)", "OpenWeatherMap (kendi anahtarınız)"))
+    val sources = listOf("om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "metno" to tr("MET Norway (no key)", "MET Norway (anahtarsız)"), "owm" to "OpenWeatherMap")
     val wctx = LocalContext.current
     @Composable fun Row2(title: String, value: String, onClick: () -> Unit) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -511,6 +530,16 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Severe weather alerts", "Sert hava uyarıları"), color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
             PSwitch(alerts, onAlerts)
+        }
+        // the report in the notification shade: every six hours, and at once when rain is coming
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        var report by remember { mutableStateOf(WeatherReport.enabled(ctx)) }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Weather notification", "Hava durumu bildirimi"), color = fg, fontSize = 16.sp)
+                Text(tr("Every six hours, and when rain is coming", "Altı saatte bir ve yağmur geleceğinde"), color = sub, fontSize = 12.sp)
+            }
+            PSwitch(report, { report = it; WeatherReport.setEnabled(ctx, it) })
         }
         Text(tr("MGM gives the station values of now and the first hours for places in Turkey; the 96 hours and 16 days come from Open-Meteo.", "MGM, Türkiye'deki yerler için şu anın ve ilk saatlerin istasyon değerlerini verir; 96 saat ve 16 gün Open-Meteo'dan gelir."), color = sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
     }

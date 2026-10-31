@@ -163,6 +163,11 @@ open class ExtraToolActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // the clock's status bar is the same black as the screen behind it, with light icons
+        if (intent.getStringExtra("route") == "clock") {
+            window.statusBarColor = 0xFF020205.toInt()
+            androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).isAppearanceLightStatusBars = false
+        }
         // every tool is one card in the recent apps: a second start of the same plain tool (any entry: menu, store, launcher, widget) brings the open one forward
         // a notification's request for a page of the music player is handed to the window in the process
         // several APKs picked in Files: the installer opens with them already read
@@ -222,6 +227,9 @@ open class ExtraToolActivity : ComponentActivity() {
             n.endsWith("BrowserLauncher") -> "browser"
             n.endsWith("OfficeLauncher") -> "office"
             n.endsWith("CalculatorLauncher") -> "calculator"
+            n.endsWith("ClockLauncher") -> "clock"
+            n.endsWith("TempMailLauncher") -> "tempmail"
+            n.endsWith("EbookLauncher") -> "ebook"
             n.endsWith("MessagesLauncher") || n.endsWith("MsgComposeActivity") || n.endsWith("MsgBubbleActivity") -> "messages"
             n.endsWith("ScreenRecLauncher") -> "screenrec"
             n.endsWith("NotifHistLauncher") -> "notifhist"

@@ -19,6 +19,8 @@ class KbState {
     var panel by mutableStateOf("keys")
     /** The height in pixels of the key panel as it is on screen: the emoji panel takes the same, so the keyboard keeps its size. */
     var keysH by mutableStateOf(0)
+    /** Speech typing: the words recognised so far (the panel shows them while listening). */
+    var voiceText by mutableStateOf("")
     /** The text typed in the emoji search (the keys type into it instead of the field); null when the search is not open. */
     var emojiQuery by mutableStateOf<String?>(null)
     var lang by mutableStateOf("en")
@@ -50,6 +52,10 @@ class KbState {
     var clips by mutableStateOf(listOf<String>())
     /** The kept clipboard: texts and pictures, pinned first. */
     var clipItems by mutableStateOf(listOf<ClipItem>())
+    /** Quick auth: the accounts and their codes right now (name, code). */
+    var authCodes by mutableStateOf(listOf<Pair<String, String>>())
+    /** The period (seconds) of each code above, in the same order. */
+    var authPeriods by mutableStateOf(listOf<Int>())
     /** The small picture of the screenshot just taken: it waits in the right slot of the bar to be pasted. */
     var shotThumb by mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
     var recents by mutableStateOf(listOf<String>())
@@ -85,6 +91,10 @@ class KbPreview(val rect: Rect, val label: String, val alts: List<String> = empt
 
 /** What the keys do. The service implements it; the settings page draws the keyboard with an empty one. */
 interface KbActions {
+    /** Quick auth: a code is typed into the field. */
+    fun authPick(code: String) {}
+    /** Quick auth: called every second while the panel shows, so the codes roll over with their periods. */
+    fun authTick() {}
     /** The translation bar: open, close, swap, from, to, apply. */
     fun transOp(op: String) {}
     /** Clipboard shortcuts: start naming one for an item, save it, cancel. */

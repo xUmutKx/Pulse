@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 354" width="760" height="354" font-family="-apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+  <title>Dónde dibuja LockArt la carátula y las letras</title>
+  <style>
+    .card { fill: #ffffff; stroke: #d0d7de; }
+    .l { fill: #f6f8fa; stroke: #8c959f; }
+    .art { fill: #fbefff; stroke: #8250df; }
+    .veil { fill: #eaeef2; stroke: #8c959f; stroke-dasharray: 4 3; }
+    .k { fill: #1f2328; font-size: 13px; font-weight: 600; }
+    .s { fill: #59636e; font-size: 12px; }
+    .n { fill: #59636e; font-size: 12px; font-weight: 600; }
+  </style>
+  <rect class="card" x="0.5" y="0.5" width="759" height="353" rx="8"/>
+  <text class="s" x="30" y="30">De arriba (lo que ves primero) a abajo</text>
+
+  <text class="n" x="30" y="70">1</text>
+  <rect class="art" x="50" y="46" width="680" height="44" rx="6"/>
+  <text class="k" x="66" y="66" fill="#8250df">Letras sincronizadas y luna de pantalla ambiente (LockArt)</text>
+  <text class="s" x="66" y="83">Último hijo de WindowRootView: no las tapan las notificaciones y se ven en AOD</text>
+
+  <text class="n" x="30" y="124">2</text>
+  <rect class="l" x="50" y="100" width="680" height="44" rx="6"/>
+  <text class="k" x="66" y="120">Reloj, smartspace, notificaciones, bouncer y huella</text>
+  <text class="s" x="66" y="137">Escena Compose de SystemUI; el modo música oculta el reproductor y las notificaciones</text>
+
+  <text class="n" x="30" y="178">3</text>
+  <rect class="veil" x="50" y="154" width="680" height="44" rx="6"/>
+  <text class="k" x="66" y="174">Velo negro o blanco (0–80 %)</text>
+  <text class="s" x="66" y="191">Para que el reloj y las notificaciones se lean sobre cualquier carátula</text>
+
+  <text class="n" x="30" y="232">4</text>
+  <rect class="art" x="50" y="208" width="680" height="44" rx="6"/>
+  <text class="k" x="66" y="228" fill="#8250df">Carátula de la música (LockArt)</text>
+  <text class="s" x="66" y="245">Índice 0 de WindowRootView, a pantalla completa, con desenfoque opcional</text>
+
+  <text class="n" x="30" y="286">5</text>
+  <rect class="l" x="50" y="262" width="680" height="44" rx="6"/>
+  <text class="k" x="66" y="282">Fondo de pantalla de bloqueo</text>
+  <text class="s" x="66" y="299">Otra ventana; queda tapado mientras hay carátula</text>
+
+  <text class="s" x="30" y="336">La opacidad de 1, 3 y 4 sigue cada paso de KeyguardTransitionRepository: encender, AOD y desbloquear.</text>
+</svg>
