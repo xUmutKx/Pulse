@@ -43,17 +43,17 @@ object Lyrics {
             ((localPath?.let { readEmbedded(it) }) ?: readSidecar(localPath.orEmpty(), title) ?: localPath?.let { LyricsStore(app).load(it, artist, title)?.let { r -> toResult(r, "saved") } })
                 ?.let { return@withContext it }
             val key = "t|${artist.trim().lowercase()}|${title.trim().lowercase()}"
-            cacheGet(app, key)?.let { return@withContext it }
             // a song that had no lyrics online is not asked again for three days
             if (missed(app, key)) return@withContext null
-            val client = LrclibClient(LyricsCache(File(app.cacheDir, "lyrics")))
+            val client = LrclibClient(LyricsCache(null))
             val sec = (durationMs / 1000).toInt().takeIf { it > 0 }
             val asked = runCatching { smartFind(client, title, artist, album, sec)?.let { it to (if (it.second) "ovh" else "lrclib") }?.let { it.first.first to it.second } }
             // a network error is not "no lyrics": nothing is remembered then; an answer without lyrics is remembered
             lastError = asked.exceptionOrNull()?.let { "${it.javaClass.simpleName}: ${it.message}" }
             val rec = asked.getOrNull() ?: return@withContext null.also { if (asked.isSuccess) markMiss(app, key) }
             val r = toResult(rec.first, rec.second) ?: return@withContext null
-            cachePut(app, key, rec.first.syncedLyrics ?: rec.first.plainLyrics.orEmpty(), rec.second)
+            // the found lyrics go beside the song (a .lrc or .txt), not into the app's data or cache
+            localPath?.takeIf { !it.contains("://") }?.let { saveSidecar(it, r) }
             r
         }
 
@@ -204,23 +204,7 @@ object Lyrics {
         // the same phrase is not searched again (the online part is slow): kept for ten minutes
         searchMemo[key]?.takeIf { System.currentTimeMillis() - it.first < 10 * 60_000L }?.let { return it.second }
         // kept on disk too (a day): the same phrase after a restart is answered at once, not searched again
-        diskMemo(ctx, key)?.let { searchMemo[key] = System.currentTimeMillis() to it; return it }
-        return searchByTextNow(ctx, query).also { if (it.isNotEmpty()) { searchMemo[key] = System.currentTimeMillis() to it; saveMemo(ctx, key, it) } }
-    }
-
-    private fun memoFile(c: Context, key: String) = File(c.cacheDir, "lyrics-search/" + sha(key) + ".json")
-
-    private fun diskMemo(c: Context, key: String): List<LyricHit>? = runCatching {
-        val f = memoFile(c, key).takeIf { it.isFile && System.currentTimeMillis() - it.lastModified() < 24 * 3600_000L } ?: return null
-        val a = JSONArray(f.readText())
-        List(a.length()) { i -> a.getJSONObject(i).let { o -> LyricHit(o.getString("t"), o.getString("a"), o.optString("b").ifEmpty { null }, o.getString("l"), o.optString("n").ifEmpty { null }, o.getString("i")) } }
-    }.getOrNull()
-
-    private fun saveMemo(c: Context, key: String, hits: List<LyricHit>) {
-        runCatching {
-            val a = JSONArray(); hits.forEach { h -> a.put(JSONObject().put("t", h.title).put("a", h.artist).put("b", h.before.orEmpty()).put("l", h.line).put("n", h.after.orEmpty()).put("i", h.id)) }
-            memoFile(c, key).apply { parentFile?.mkdirs() }.writeText(a.toString())
-        }
+        return searchByTextNow(ctx, query).also { if (it.isNotEmpty()) searchMemo[key] = System.currentTimeMillis() to it }
     }
 
     private val searchMemo = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<LyricHit>>>()
@@ -253,7 +237,7 @@ object Lyrics {
         }
         // online: LRCLIB searches titles and artists, so this finds a song when the phrase is part of its name or the artist is typed too
         runCatching {
-            LrclibClient(LyricsCache(File(app.cacheDir, "lyrics"))).search(query.trim()).filter { it.hasLyrics }.forEach { r ->
+            LrclibClient(LyricsCache(null)).search(query.trim()).filter { it.hasLyrics }.forEach { r ->
                 if (!seen.add("${r.artistName.lowercase()}|${r.trackName.lowercase()}")) return@forEach
                 test(r.trackName, r.artistName, stripStamps(r.syncedLyrics ?: r.plainLyrics ?: return@forEach), hitId(app, r))
             }
@@ -265,7 +249,7 @@ object Lyrics {
         val app = ctx.applicationContext
         when {
             hit.id.startsWith("file:") -> hit.id.removePrefix("file:").let { readEmbedded(it) ?: readSidecar(it) }
-            hit.id.startsWith("rec:") -> runCatching { LyricsRecord.fromJson(JSONObject(File(hitDir(app), hit.id.removePrefix("rec:") + ".json").readText())) }.getOrNull()?.let { toResult(it, "hit") }
+            hit.id.startsWith("rec:") -> hitRecords[hit.id.removePrefix("rec:")]?.let { toResult(it, "hit") }
             else -> null
         }
     }
@@ -374,18 +358,10 @@ object Lyrics {
     // ---- disk cache: filesDir/lyrics-cache/<sha>.txt, first line "source", rest the text ----
 
     private fun sha(s: String) = MessageDigest.getInstance("SHA-256").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }.take(32)
-    private fun cacheFile(c: Context, key: String) = File(c.filesDir, "lyrics-cache").apply { mkdirs() }.let { File(it, sha(key) + ".txt") }
-
-    private fun cacheGet(c: Context, key: String): LyricsResult? = runCatching {
-        val t = cacheFile(c, key).takeIf { it.isFile }?.readText() ?: return null
-        fromText(t.substringAfter('\n'), "cache")
-    }.getOrNull()
-
     /** The lyrics of a song that were wrong: the downloaded copy, the saved one and the .lrc / .txt beside the file go, and it is not looked up again for a while. */
     fun forget(ctx: Context, path: String?, title: String, artist: String) {
         val app = ctx.applicationContext
         val key = "t|${artist.trim().lowercase()}|${title.trim().lowercase()}"
-        runCatching { cacheFile(app, key).delete() }
         if (path != null && !path.contains("://")) {
             runCatching { val st = LyricsStore(app); st.load(path, artist, title)?.let { st.delete(it, path) } }
             runCatching { File(path.substringBeforeLast('.') + ".lrc").delete(); File(path.substringBeforeLast('.') + ".txt").delete() }
@@ -397,17 +373,12 @@ object Lyrics {
     private fun missed(c: Context, key: String) = System.currentTimeMillis() - missPrefs(c).getLong(sha(key), 0L) < 3L * 24 * 3600 * 1000
     private fun markMiss(c: Context, key: String) = missPrefs(c).edit().putLong(sha(key), System.currentTimeMillis()).apply()
 
-    private fun cachePut(c: Context, key: String, text: String, source: String) {
-        if (text.isNotBlank()) runCatching { cacheFile(c, key).writeText(source + "\n" + text) }
-    }
-
-    private fun hitDir(c: Context) = File(c.filesDir, "lyrics-hits").apply { mkdirs() }
+    // the lyrics of the search hits of this session, by hit id: kept in memory only, not on the phone
+    private val hitRecords = java.util.concurrent.ConcurrentHashMap<String, LyricsRecord>()
 
     private fun hitId(c: Context, r: LyricsRecord): String {
         val id = sha("${r.artistName}|${r.trackName}|${r.id}".lowercase())
-        val o = JSONObject().put("id", r.id).put("trackName", r.trackName).put("artistName", r.artistName)
-            .put("plainLyrics", r.plainLyrics ?: "").put("syncedLyrics", r.syncedLyrics ?: "")
-        runCatching { File(hitDir(c), "$id.json").writeText(o.toString()) }
+        hitRecords[id] = r
         return "rec:$id"
     }
 }
