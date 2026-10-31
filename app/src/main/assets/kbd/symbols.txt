@@ -1,168 +1,196 @@
 #Patterns
-##Text and art
-𝐇𝐢 𝐭𝐞𝐬𝐭	text style bold
-𝐻𝑖 𝑡𝑒𝑠𝑡	text style italic
-𝑯𝒊 𝒕𝒆𝒔𝒕	text style bold italic
-ℋ𝒾 𝓉ℯ𝓈𝓉	text style script
-𝓗𝓲 𝓽𝓮𝓼𝓽	text style bold script
-ℌ𝔦 𝔱𝔢𝔰𝔱	text style fraktur
-𝕳𝖎 𝖙𝖊𝖘𝖙	text style bold fraktur
-ℍ𝕚 𝕥𝕖𝕤𝕥	text style double-struck
-𝖧𝗂 𝗍𝖾𝗌𝗍	text style sans
-𝗛𝗶 𝘁𝗲𝘀𝘁	text style sans bold
-𝘏𝘪 𝘵𝘦𝘴𝘵	text style sans italic
-𝙃𝙞 𝙩𝙚𝙨𝙩	text style sans bold italic
-𝙷𝚒 𝚝𝚎𝚜𝚝	text style monospace
-Ｈｉ　ｔｅｓｔ	text style fullwidth
-Ⓗⓘ ⓣⓔⓢⓣ	text style circled
-ʜɪ ᴛᴇꜱᴛ	text style small caps
-tset iH	text style reversed
-H i t e s t	text style spaced
-✧ Hi test ✧	text style sparkle
-•´¯`•. ❀ 𝐇𝐢 𝐭𝐞𝐬𝐭 ❀ .•`¯´•	text style frame
-░░░░░░░▄▄████▄▄▄░░░░░░▄▄██████▄▄⏎░░░░░██▓▓▓▓▓▓▒▓▓██░░▓█▓▓▓▓▒░▒▒▓▓██⏎░░░██▓▓▓▓▓▓▓▓▓▒░▓▓███▓▓▓▓▓▒▒▒░░▒▓▓█⏎░░██▓▓▓▓▓▓▓▓▓▓▓▒▒▓▓█▓▓▓▓▓▓▓▓▓▓▒░░▓▓█⏎░▒█▓▓▓▓▓▓▓▓▓▓▓▓▓▓██▓██▓▓▓▓▓▓▓▓▓▒░░▓▓█⏎░█▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░▒▓█⏎░█▓▓▓▓▓▓▓▓▓▓▓▓████░████▓▓▓▓▓▓▓▓▓▒░░▓██⏎█▓▓▓▓▓▓▓▓▓▓▓▓██░░░░░░░██▓▓▓▓▓▓▓▓▓░░▓▓█⏎█▓▓▓▓▓▓▓▓▓▓▓▓▓░░█░░░█░░▓▓▓▓▓▓▓▓▓▓▒░▓▓█▒⏎█▓▓▓▓▓▓▓▓▓▓▓▓▓░█▒█░█▒█░▓▓▓▓▓▓	ascii art block shading
-   .--.⏎ .-(    ).⏎(___.__)__)	ascii art cloud
-.--.⏎(   ).-.⏎(___(__) )	ascii art cloud big
-  .-~~~-.⏎ .~       ~.⏎(___________)⏎  ' ' ' ' '	ascii art cloud rain
-  \ | /⏎-- O --⏎  / | \⏎   .--.⏎ .(    ).⏎(_________)	ascii art cloud sun
-  _  ⏎ (_)  __⏎    (___)	ascii art cloud small
-   _  _ ⏎ _( )( )_⏎(_________)	ascii art cloud wide
-    .-.⏎  .(   ).⏎ (_______)	ascii art cloud float
- .-. .-.⏎(   )   )⏎ (__.__.__)	ascii art cloud trio
-  .--.⏎ .(    ).⏎(___(__))⏎  /  /  /⏎ /  /  /	ascii art cloud storm
- _~~_⏎(    )~⏎ (__ __)	ascii art cloud puff
-  .::.   .::.⏎ :::::.:::::⏎ :::::::::::⏎  ':::::::'⏎    ':::'⏎      ':'	ascii art heart
- .-. .-.⏎(   v   )⏎ \       /⏎  \     /⏎   \   /⏎    \ /⏎     v	ascii art heart small
-  /\  /\⏎ /  \/  \⏎ \      /⏎  \    /⏎   \  /⏎    \/	ascii art heart line
- .-. .-.⏎(   v   )⏎ ` - - '⏎   \   /⏎    \ /⏎     v	ascii art heart arrow
-<3 <3⏎<3  <3  <3⏎ <3  <3⏎  <3	ascii art two hearts
-  **   **⏎ *  * *  *⏎ *   *   *⏎  *       *⏎   *     *⏎    *   *⏎      *	ascii art heart plain
- /\/\⏎(  v  )⏎ \    /⏎  \  /⏎   \/	ascii art heart mini
-<3   <3⏎  <3 <3⏎   <3	ascii art heart box
-<3 <3 <3 <3 <3	ascii art hearts row
- .-. .-.⏎(   V   )⏎ \   /\⏎  \ /  \⏎   V	ascii art broken heart
-     /\⏎    /  \⏎   /____\⏎   |  _ |⏎   | |_||	ascii art house
-    /\⏎   /  \⏎  /____\⏎  | [] |⏎  |____|	ascii art house simple
-    __/\__⏎   /      \⏎  |  []  |⏎  |___||__|	ascii art house door
-      /\⏎     /  \⏎  __/____\__⏎ |  ___ __ |⏎ |_|__|__|_|	ascii art cottage
-   ___⏎  /   \⏎ /_____\⏎ |  _  |⏎ |_| |_|	ascii art home
-  |_|_|_|_|⏎  |  ___  |⏎  | |   | |⏎  |_|___|_|	ascii art castle
-    /\⏎   /  \⏎  /____\⏎ /      \⏎/________\	ascii art tent
-   _____⏎  /     \⏎ /_______\⏎ |_______|	ascii art igloo
-    \ | /⏎  -- (O) --⏎    / | \	ascii art sun
- \ | /⏎- ( ) -⏎ / | \	ascii art sun small
-  \   |   /⏎   \  |  /⏎----(  )----⏎   /  |  \⏎  /   |   \	ascii art sun rays
-   _..._⏎ .:::::::.⏎:::::::::⏎':::::::'⏎  ':::'	ascii art moon
-   .-.⏎  (  .⏎  (   )⏎   '-'	ascii art moon crescent
-  .  *  .⏎    _⏎   (_)  *⏎  .  *	ascii art moon star
- \ | /    _⏎- (O) -  (_)⏎ / | \	ascii art sun moon
-    *⏎   ***⏎*********⏎ ******⏎  ****⏎ *   *	ascii art star
-  *⏎ ***⏎*****⏎ ***⏎ *  *	ascii art star small
-*  .  *   .  *⏎   .  *  .   *⏎*   .  *   .	ascii art stars
-    /\⏎   /  \⏎ /\    /\⏎/  \  /  \⏎  \/  \/	ascii art star outline
-  \ | /⏎-- * --⏎  / | \	ascii art sparkle
-  \  |  /⏎ --  *  --⏎  /  |  \	ascii art star burst
-  /\_/\⏎ ( o.o )⏎  > ^ <	ascii art cat
-  |\__/,|   (`\⏎_ _|  _  |.--.⏎( T   _ ) (`\ )	ascii art cat sit
- /\_/\⏎( o o )⏎==_Y_==	ascii art cat face
-  /\__/\⏎ ( o  o )⏎ (  "  )⏎  )   (~	ascii art cat tail
-  |\---/|⏎  | ,_, |⏎   \_`_/	ascii art kitty
- /\_/\⏎( ^.^ )⏎ (")	ascii art cat smile
-  / \__⏎ (    @\___⏎ /         O⏎/   (_____/⏎/_____/   U	ascii art dog
-  __⏎ o'')}____//⏎ `_/        )⏎ (_(  _(_/	ascii art dog face
-   _⏎  //\⏎  V  \⏎   \  \_⏎    \,'.`-.⏎     |\ `. `.	ascii art bird
-  ,_,⏎ (O,O)⏎ (   )⏎  " "	ascii art owl
-  ><>⏎><(((*>	ascii art fish
-   __⏎ _/  \__/\⏎<  o    __\⏎ \_____/	ascii art fish big
-    _____⏎  _/     \_⏎ <  o   o  >⏎  \_______/	ascii art turtle
-\  /   \ /  \⏎   \   (O)  /⏎   /  /\  \	ascii art butterfly
-   __⏎  /  \⏎  \__/___⏎  (  ( @)_)	ascii art snail
-     .-"""-.⏎   _/       \_⏎  (  o     \_)⏎   \__/\___/	ascii art whale
-  (\ /)⏎ (='.'=)⏎ (")_(")	ascii art crab
-     __⏎    /  \⏎   /    \__⏎  |  o     /⏎  |_____/	ascii art elephant
-    /\⏎   /  \⏎  /    \⏎ /______\⏎    ||	ascii art tree
-   .-.⏎  (   )⏎ (_____)⏎    |⏎   _|_	ascii art tree round
-    /\⏎   /  \⏎  /    \⏎ /______\⏎    ||⏎    ||	ascii art pine
-  \ | /⏎-- (*) --⏎  / | \⏎   |	ascii art flower
-   @⏎  @@@⏎   @⏎   |⏎  \|/	ascii art flower stem
-  _ ⏎ | |⏎_| |_⏎\   /⏎ |_|	ascii art cactus
-  \|/⏎  \|/⏎  |__|⏎  |  |⏎  |__|	ascii art plant pot
-  ( (⏎   ) )⏎ ........⏎ |      |]⏎ \      /⏎  `----'	ascii art coffee
- ___⏎[___]⏎ |   |]⏎  \_/	ascii art tea cup
-   ._._.⏎  .|_|_|.⏎  |_____|⏎  |_____|	ascii art cake
-    /\⏎   /__\⏎  |  o|⏎   \_o/	ascii art pizza
-   __⏎  /  \⏎ /    \⏎ \_  _/	ascii art apple
-   _____⏎  /     \⏎-----+-----⏎     |⏎  \__/	ascii art umbrella
-  ' ' ' '⏎ ' ' ' ' ⏎  ' ' ' '	ascii art rain
-  *  .  *⏎ .  *  .⏎  *  .  *	ascii art snow
-   _.-''-._⏎ .' .-''-. '.⏎/  /      \  \	ascii art rainbow
-    /\⏎   /  \  /\⏎  /    \/  \⏎ /          \	ascii art mountain
-~~~~~~~~⏎  ~~~~~~⏎ ~~~~~~~~	ascii art wave
-_   _   _⏎( )_( )_( )⏎~~~~~~~~~~	ascii art sea waves
-    ___⏎  _/   \_⏎-------------⏎~~~~~~~~~~~	ascii art sunset
-    |\⏎    | \⏎    |  \⏎____|___\______⏎ \________/	ascii art boat
-     |\⏎     | \⏎     |  \⏎     |___\⏎  ___|___|___⏎  \_________/	ascii art sailboat
-   __⏎ _|__|__⏎|  _  _  |⏎'-(_)---(_)-'	ascii art car
-   ____⏎ _|  |_⏎|______|⏎ O    O	ascii art train
-    /\⏎   /  \⏎  |    |⏎  |____|⏎  /_  _\⏎ /_/  \_\	ascii art rocket
-      __⏎ ___  //⏎(____)\\⏎  ----	ascii art plane
-:-)	ascii art smiley
-  .-""-.⏎ /  ^  ^ \⏎|  \__/  |⏎ \  ___  /⏎  '-----'	ascii art smile face
- _____⏎/     \⏎| ^ ^ |⏎|  ^  |⏎ \_____/	ascii art happy face
-   ___⏎ /   \⏎| ^ ~ |⏎ \ ~ /⏎  '-'	ascii art face wink
- .-"""-.⏎/ _   _ \⏎| (_) (_) |⏎|   ___   |⏎ \  \_/  /⏎  '-----'	ascii art sad face
-    _⏎   ( )⏎  _|_|_⏎ / / \ \⏎    |⏎   / \	ascii art peace
-  .--.⏎ (    )-----⏎  '--'  |  |	ascii art key
-   .-.⏎  |   |⏎ .-------.⏎ |  (_)  |⏎ '-------'	ascii art lock
- _______⏎|\     /|⏎| \   / |⏎|  \_/  |⏎|_______|	ascii art envelope
-  .  .  .⏎ /|\/|\/|\⏎|_________|	ascii art crown
-   ___⏎  /   \⏎ | o o |⏎  \ ^ /⏎  |___|	ascii art skull
-  .---.⏎  |   |⏎  |   |⏎__|___|⏎  |   |__	ascii art music note
-  _    _⏎ ( )  ( )⏎  |    |⏎  |    |⏎__|____|__	ascii art music two
-   ___⏎  (___)⏎   |||⏎  /   \	ascii art guitar
-  _________⏎ |  _   _  |⏎ | (_) (_)|⏎ |_________|	ascii art camera
-##Sky and weather
+##Hearts and ribbons
+♡ ⋆｡˚ ❀ ˚｡⋆ ♡	pattern cute heart ribbon belt dots copy paste cool
+୨୧ ┈┈┈ ♡ ┈┈┈ ୨୧	pattern cute heart ribbon belt dots copy paste cool
+⋆˚✿˖° ♡ °˖✿˚⋆	pattern cute heart ribbon belt dots copy paste cool
+﹏﹏﹏ ♡ ﹏﹏﹏	pattern cute heart ribbon belt dots copy paste cool
+︶︶︶ ♡ ︶︶︶	pattern cute heart ribbon belt dots copy paste cool
+⋆⁺₊ ♡ ₊⁺⋆	pattern cute heart ribbon belt dots copy paste cool
+❀･ﾟ♡ﾟ･❀	pattern cute heart ribbon belt dots copy paste cool
+ᯓ ♡ ᯓ ★	pattern cute heart ribbon belt dots copy paste cool
+✧･ﾟ: *✧･ﾟ:* ♡ *:･ﾟ✧*:･ﾟ✧	pattern cute heart ribbon belt dots copy paste cool
+♡ ・゜゜・。。・゜゜♡	pattern cute heart ribbon belt dots copy paste cool
+♡･ﾟ: *✧･ﾟ:*	pattern cute heart ribbon belt dots copy paste cool
+⊹ ˚ ♡ ˚ ⊹	pattern cute heart ribbon belt dots copy paste cool
+ᡣ𐭩 ♡ ᡣ𐭩	pattern cute heart ribbon belt dots copy paste cool
+୨ৎ ♡ ୨ৎ	pattern cute heart ribbon belt dots copy paste cool
+𓏲 ♡ ࣪ ִֶָ	pattern cute heart ribbon belt dots copy paste cool
+⋆ ˚｡⋆୨♡୧⋆ ˚｡⋆	pattern cute heart ribbon belt dots copy paste cool
+♡₊˚ 🎀・₊✧	pattern cute heart ribbon belt dots copy paste cool
+🎀 ⋆.˚ ♡ ˚.⋆ 🎀	pattern cute heart ribbon belt dots copy paste cool
+ദ്ദി ˉ͈̀꒳ˉ͈́ )✧ ♡	pattern cute heart ribbon belt dots copy paste cool
+⟡ ♡ ⟡	pattern cute heart ribbon belt dots copy paste cool
+♡ ⌒⌒⌒ ♡ ⌒⌒⌒ ♡	pattern cute heart ribbon belt dots copy paste cool
+╰┈♡➤	pattern cute heart ribbon belt dots copy paste cool
+◦•●♡●•◦	pattern cute heart ribbon belt dots copy paste cool
+·˚ ༘ ♡ ⋆｡˚	pattern cute heart ribbon belt dots copy paste cool
+♡ ✿ ★ ✿ ♡	pattern cute heart ribbon belt dots copy paste cool
+✿ ♡ ❀ ♡ ✿	pattern cute heart ribbon belt dots copy paste cool
+★彡 ♡ 彡★	pattern cute heart ribbon belt dots copy paste cool
+⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆ ♡	pattern cute heart ribbon belt dots copy paste cool
+ʚ ♡ ɞ	pattern cute heart ribbon belt dots copy paste cool
+༉‧₊˚ ♡ ˚₊‧༉	pattern cute heart ribbon belt dots copy paste cool
+♡ ─────── ♡	pattern heart ribbon line copy paste cool
+•°♡°• ♡ •°♡°•	pattern heart dots copy paste cool
+˚₊· ͟͟͟͟͟͟͟͟͟͟ ♡ ͟͟͟͟͟͟͟͟͟͟ ·₊˚	pattern heart underline copy paste cool
+♡ · ˚ . ♡ . ˚ · ♡	pattern heart dots copy paste cool
+⋆ ♡ ⋆ ♡ ⋆ ♡ ⋆	pattern heart star copy paste cool
+♡⸝⸝ ⋆ ⋆ ⸝⸝♡	pattern heart star copy paste cool
+ෆ♡ ˚ ꒰ ♡ ꒱ ˚	pattern heart copy paste cool
+┊ ♡ ┊	pattern heart line copy paste cool
+♡・゜・。。・゜゜・。。・゜♡	pattern heart dots copy paste cool
+‧₊˚ ♡ ˚₊‧	pattern heart copy paste cool
+*･ﾟ♡･ﾟ*	pattern heart sparkle copy paste cool
+⋆｡°✩ ♡ ✩°｡⋆	pattern heart star copy paste cool
+ʚ♡ɞ	pattern heart copy paste cool
+♡ ˚ ⊹ ˚ ♡ ⊹ ♡ ˚ ⊹ ˚ ♡	pattern heart copy paste cool
+ꔫ ♡ ꔫ	pattern heart copy paste cool
+〜♡〜♡〜♡〜	pattern heart wave copy paste cool
+♡.｡.:*･ﾟ♡･ﾟ*:.｡.♡	pattern heart sparkle copy paste cool
+¸„.-•~¹°”ˆ˜¨ ♡ ¨˜ˆ”°¹~•-.„¸	pattern heart copy paste cool
+ı♡ı♡ı♡ı♡ı	pattern heart copy paste cool
+♡*:･ﾟ✧*:･ﾟ♡	pattern heart sparkle copy paste cool
+☆.。.:*･♡ ♡･*:.｡.☆	pattern heart star copy paste cool
+❀ ♡ ❀ ♡ ❀	pattern heart flower copy paste cool
+ᝰ♡ ᝰ	pattern heart copy paste cool
+₊˚⊹ ♡ ⊹˚₊	pattern heart copy paste cool
+⋆˙⟡ ♡ ⟡˙⋆	pattern heart star copy paste cool
+˚✧₊⁎♡⁎⁺˳✧༚	pattern heart sparkle copy paste cool
+꒰ ˘ ⌣ ˘ ꒱ ♡	pattern heart face copy paste cool
+ʕ ♡ ʔ	pattern heart bear copy paste cool
+(｡♥︎‿♥︎｡)	pattern heart face copy paste cool
+ᥫ᭡ ♡ ᥫ᭡	pattern heart copy paste cool
+♡ ⋆｡˚ ✩ ˚｡⋆ ♡	pattern heart star copy paste cool
+##Cute faces
+(˶ᵔ ᵕ ᵔ˶) ♡	pattern cute heart face copy paste cool kawaii
+(๑˃ᴗ˂)ﻭ ♡	pattern cute heart face copy paste cool kawaii
+꒰ ˶•ᴗ•˶ ꒱ ♡	pattern cute heart face copy paste cool kawaii
+(｡♥︎‿♥︎｡)	pattern cute heart face copy paste cool kawaii
+(◍•ᴗ•◍)❤︎	pattern cute heart face copy paste cool kawaii
+(´｡• ᵕ •｡`) ♡	pattern cute heart face copy paste cool kawaii
+૮ ˶ᵔ ᵕ ᵔ˶ ა ♡	pattern cute heart face copy paste cool kawaii
+( ˘ ³˘)♥︎	pattern cute heart face copy paste cool kawaii
+(づ｡◕‿‿◕｡)づ ♡	pattern cute heart face copy paste cool kawaii
+(≧◡≦) ♡	pattern cute heart face copy paste cool kawaii
+(´,,•ω•,,)♡	pattern cute heart face copy paste cool kawaii
+♡(ӦｖӦ｡)	pattern cute heart face copy paste cool kawaii
+(*ˊᵕˋ*)♡	pattern cute heart face copy paste cool kawaii
+ଘ(੭ˊᵕˋ)੭* ੈ♡‧₊˚	pattern cute heart face copy paste cool kawaii
+(˶˃ ᵕ ˂˶) .ᐟ.ᐟ	pattern cute heart face copy paste cool kawaii
+₍ᐢ. .ᐢ₎ ♡	pattern cute heart face copy paste cool kawaii
+(⸝⸝> ᴗ•⸝⸝) ♡	pattern cute heart face copy paste cool kawaii
+( ˶ˆᗜˆ˵ ) ♡	pattern cute heart face copy paste cool kawaii
+(｡•̀ᴗ-)✧ ♡	pattern cute heart face copy paste cool kawaii
+(•ᴗ•)♡	pattern cute heart face copy paste cool kawaii
+ʕ•ᴥ•ʔ♡	pattern cute heart face copy paste cool kawaii
+(ᵔᴥᵔ) ♡	pattern cute heart face copy paste cool kawaii
+(◡‿◡✿) ♡	pattern cute heart face copy paste cool kawaii
+ʕ ˘͡˘ ᴥ˘͡˘ʔ ♡	pattern cute heart face copy paste cool kawaii
+(˘ε˘ ) ♡	pattern cute heart face copy paste cool kawaii
+(๑>ᴗ<๑) ♡	pattern cute heart face copy paste cool kawaii
+( ◜‿◝ )♡	pattern cute heart face copy paste cool kawaii
+(∩^o^)⊃━☆♡	pattern cute heart face copy paste cool kawaii
+⸜(｡˃ ᵕ ˂ )⸝♡	pattern cute heart face copy paste cool kawaii
+(≡^∇^≡) ♡	pattern cute heart face copy paste cool kawaii
 ☀︎ ⋆ ☁︎ ⋆ ☽	sky sun cloud moon stars
-˚☀︎˚ ⋆ ☁︎ ⋆ ˚☽˚	sky sun cloud moon
-⋆˚☁︎˚⋆	sky cloud stars
-☾⋆.˚ ✧ .⋆☾	moon stars night sky
-⋆｡°✩ ☾ ✩°｡⋆	moon stars night sky
-˖☁︎ ˚ ⋆⁺₊	sky cloud pattern
-⊹ ˚☽ ⋆ ☁︎ ⋆ ˚☀︎ ⊹	sky sun moon cloud
 ☁︎ ˚. ⋆ ☂︎ ⋆ .˚ ☁︎	rain cloud sky pattern
-❄︎ ⋆ ˚ ☁︎ ˚ ⋆ ❄︎	snow cloud sky pattern
-⚡︎ ˚ ☁︎ ˚ ⚡︎	storm cloud lightning pattern
-(◕‿◕)☀︎	sun face kaomoji
-(˘ ³˘)☁︎	cloud face kaomoji
-(っ˘ω˘ς)☂︎	umbrella rain kaomoji
-(˘ω˘)☾	moon sleepy kaomoji
 (￣∇￣)☀︎	sunny kaomoji
-(¬‿¬)☁︎	cloud kaomoji
-(⊙_⊙)⚡︎	lightning kaomoji
-(｡•̀ᴗ-)✧ ☾	moon night kaomoji
-☾ ˚｡⋆ ✶ ⋆｡˚ ☾	moon stars night pattern
-＼(^o^)／ ☀︎	sun happy kaomoji
-⋆˚☁︎ ˚ ⋆ ˚☁︎ ⋆˚	cloud pattern
 ⋆.ೃ࿔☁︎ ݁ ˖*༄	cloud sky pattern
-☾⋆ ݁˖ ✶ ⋆.ೃ࿔ ☽	moon stars night pattern
-˚☁︎ ⋆.ೃ࿔ *:･ﾟ✧	cloud stars sky pattern
-⋆｡˚☁︎˚｡⋆ ☾ ⋆｡˚	cloud moon pattern
-݁˖ ☀︎ ⋆.ೃ࿔ ☁︎ ݁ ˖	sun cloud sky pattern
-⋆˚࿔ ☽ ˚⋆	moon pattern
-･ﾟ✧ ☾ ✧ﾟ･	moon stars night pattern
 ᯓ☁︎ ˖ ⋆ ˖ ☾	cloud moon pattern
-༄ ☁︎ ⋆ ☽ ࿔*:･ﾟ	cloud moon pattern
-꒰ ☁︎ ꒱ ⋆˚	cloud pattern
-⊹ ☾ ˖ ⋆ ☁︎ ⊹ ࿔	moon cloud pattern
-✶ ☁︎ ⋆.ೃ ✶	cloud stars pattern
-˖ ☽ ⋆ ݁ ☁︎ ݁ ⋆ ☾ ˖	moon cloud pattern
-⋆.˚ ☁︎ ˚.⋆ ☽ ⋆.˚	cloud moon pattern
 𓇼 ☁︎ ⋆ ☾ 𓇼	cloud moon pattern
+##Classics
+˖ ᡣ𐭩 ⊹ ࣪ ౨ৎ˚₊	pattern modifier letter plus sign
+⋆˚࿔ ⊹ ˖	pattern star operator
+ᡣ𐭩 ౨ৎ ˚ ₊	pattern mongolian letter sibe ka
+⋆.˚ ✮ ⋆.˚	pattern star operator
+𓂃 ࣪ ִֶָ ☾.	pattern egyptian hieroglyph d013
+ᯓ★	pattern batak letter simalungun ra
+꒰ ᵔ ᵕ ᵔ ꒱	pattern yi radical shy
+₍ᐢ. .ᐢ₎	pattern subscript left parenthesis
+૮ ˶ᵔ ᵕ ᵔ˶ ა	pattern gujarati digit eight
+(˶ᵔ ᵕ ᵔ˶)	pattern left parenthesis
+ʕ•ᴥ•ʔ	pattern latin letter pharyngeal voiced fricative
+ᓚᘏᗢ	pattern canadian syllabics la
+૮₍ ˶•⤙•˶ ₎ა	pattern gujarati digit eight
+૮ ˘ᴥ˘ ა	pattern gujarati digit eight
+₍⸍⸌̣ʷ̣̫⸍̣⸌₎	pattern subscript left parenthesis
+⋆⁺₊⋆ ☾ ⋆⁺₊⋆	pattern star operator
+୨୧ ┈┈┈┈┈┈┈┈ ୨୧	pattern oriya digit two
+⌒⌒⌒⌒⌒	pattern arc
+ꕤ ⋆ ꕤ	pattern vai syllable za
+▬▬▬▬▬▬▬▬▬▬	pattern black rectangle
+╰┈➤	pattern box drawings light arc up and right
+┈┈┈┈┈┈┈┈┈┈┈┈	pattern box drawings light quadruple dash horizontal
+•·.·´¯`·.·• •·.·´¯`·.·•	pattern bullet
+『 』	pattern left white corner bracket
+「 」	pattern left corner bracket
+【 】	pattern left black lenticular bracket
+꧁ ꧂	pattern javanese left rerenggan
+༺ ༻	pattern tibetan mark gug rtags gyon
+⟦ ⟧	pattern mathematical left white square bracket
+❝ ❞	pattern heavy double turned comma quotation mark ornament
+❛ ❜	pattern heavy single turned comma quotation mark ornament
+〝 〞	pattern reversed double prime quotation mark
+☆ ミ	pattern white star
+☾ ˖ ✦	pattern last quarter moon
+ˏˋ ˎˊ	pattern modifier letter low acute accent
+⊹ ˚ ₊	pattern hermitian conjugate matrix
+୨ৎ	pattern oriya digit two
+ꪜ	pattern tai viet letter low po
+ᰔ	pattern lepcha letter bla
+𓆩⟡𓆪	pattern egyptian hieroglyph l006
+𓆸	pattern egyptian hieroglyph m009
+𖤐	pattern bamum letter phase-d ngkeuri
+𖧷	pattern bamum letter phase-e pi
+𑁍	pattern brahmi punctuation lotus
+ꕥ	pattern vai syllable zha
+⚝	pattern outlined white star
+⛤	pattern pentagram
+ꗃ	pattern vai syllable bo
+꒰ ˶• ༝ •˶꒱	pattern yi radical shy
+ʕ·ᴥ·ʔ	pattern latin letter pharyngeal voiced fricative
+⋆˙⟡	pattern star operator
+✦•┈┈┈┈•✦	pattern black four pointed star
+•°¯`•• ••´¯°•	pattern bullet
+◦•●◉✿ ✿◉●•◦	pattern white bullet
+▁▂▃▄▅▆▇█	pattern lower one eighth block
+╰☆╮	pattern box drawings light arc up and right
+░▒▓█▓▒░	pattern light shade
+⊹₊ ⋆	pattern hermitian conjugate matrix
+ᨒ ⁺ ˖	pattern buginese letter la
+★彡	pattern black star
+彡★	pattern cjk unified ideograph-5f61
+❀⊱	pattern white florette
+⊰❀	pattern precedes under relation
+✿•*¨*•.¸¸.•*¨*•✿	pattern black florette
+꧁༺ ༻꧂	pattern javanese left rerenggan
+╭┈ ➤	pattern box drawings light arc down and right
+┊ ┊ ┊ ┊	pattern box drawings light quadruple dash vertical
+— ✦ —	pattern em dash
+– ⋆ –	pattern en dash
+⸜ ⸝	pattern left low paraphrase bracket
+⌇⌇⌇	pattern wavy line
+⎯⎯⎯ ⋆ ⎯⎯⎯	pattern horizontal line extension
+◇ ◆ ◇	pattern white diamond
+▹▸▹▸	pattern white right-pointing small triangle
+⁂	pattern asterism
+※	pattern reference mark
+❖	pattern black diamond minus white x
+⌘	pattern place of interest sign
+⎔	pattern software-function symbol
+⍟	pattern apl functional symbol circle star
+⚚	pattern staff of hermes
+☽ ☾	pattern first quarter moon
+ᵔ ᵕ ᵔ	pattern modifier letter small top half o
+ᵒ̴̶̷᷄ ᵕ ᵒ̴̶̷᷅	pattern modifier letter small o
+˘ᴗ˘	pattern breve
+•ᴗ•	pattern bullet
+˚☀︎˚ ⋆ ☁︎ ⋆ ˚☽˚	sky sun cloud moon
+❄︎ ⋆ ˚ ☁︎ ˚ ⋆ ❄︎	snow cloud sky pattern
+(¬‿¬)☁︎	cloud kaomoji
+☾⋆ ݁˖ ✶ ⋆.ೃ࿔ ☽	moon stars night pattern
+༄ ☁︎ ⋆ ☽ ࿔*:･ﾟ	cloud moon pattern
 ⸝⋆ ☁︎ ⋆ ☽⸝	cloud moon pattern
-⋆˖⁺ ☁︎ ‧₊˚ ☾ ˚₊‧	cloud moon sky pattern
-࿔ ☀︎ ˖ ⋆ ☁︎ ⋆ ˖ ࿔	sun cloud sky pattern
-✧ ☾ ⋆ ☁︎ ⋆ ☀︎ ✧	sun moon cloud pattern
-˚ ༘ ☾ ⋆｡ ☁︎ ｡⋆ ☀︎ ༘ ˚	sun moon cloud pattern
 ##Themes
 ❀ ◠◡◠ (◠‿◠) ₊˚	turtle shell kaomoji turtle
 ✩ ⚑ ꒱	ship sea waves pattern ship
@@ -564,155 +592,12 @@ _   _   _⏎( )_( )_( )⏎~~~~~~~~~~	ascii art sea waves
 *:･ﾟ ✦ ❃ ✿	pattern turtle turtle preset
 ◖ ❄︎ 〰〰 ꕥ	pattern sky sky preset
 ⊹ ✦ ✧ ≋	pattern sky sky preset
-##Classics
-˖ ᡣ𐭩 ⊹ ࣪ ౨ৎ˚₊	pattern modifier letter plus sign
-⋆˚࿔ ⊹ ˖	pattern star operator
-ᡣ𐭩 ౨ৎ ˚ ₊	pattern mongolian letter sibe ka
-⋆.˚ ✮ ⋆.˚	pattern star operator
-𓂃 ࣪ ִֶָ ☾.	pattern egyptian hieroglyph d013
-ᯓ★	pattern batak letter simalungun ra
-꒰ ᵔ ᵕ ᵔ ꒱	pattern yi radical shy
-₍ᐢ. .ᐢ₎	pattern subscript left parenthesis
-૮ ˶ᵔ ᵕ ᵔ˶ ა	pattern gujarati digit eight
-(˶ᵔ ᵕ ᵔ˶)	pattern left parenthesis
-ʕ•ᴥ•ʔ	pattern latin letter pharyngeal voiced fricative
-ᓚᘏᗢ	pattern canadian syllabics la
-૮₍ ˶•⤙•˶ ₎ა	pattern gujarati digit eight
-૮ ˘ᴥ˘ ა	pattern gujarati digit eight
-₍⸍⸌̣ʷ̣̫⸍̣⸌₎	pattern subscript left parenthesis
-⋆⁺₊⋆ ☾ ⋆⁺₊⋆	pattern star operator
-୨୧ ┈┈┈┈┈┈┈┈ ୨୧	pattern oriya digit two
-⌒⌒⌒⌒⌒	pattern arc
-ꕤ ⋆ ꕤ	pattern vai syllable za
-▬▬▬▬▬▬▬▬▬▬	pattern black rectangle
-╰┈➤	pattern box drawings light arc up and right
-┈┈┈┈┈┈┈┈┈┈┈┈	pattern box drawings light quadruple dash horizontal
-•·.·´¯`·.·• •·.·´¯`·.·•	pattern bullet
-『 』	pattern left white corner bracket
-「 」	pattern left corner bracket
-【 】	pattern left black lenticular bracket
-꧁ ꧂	pattern javanese left rerenggan
-༺ ༻	pattern tibetan mark gug rtags gyon
-⟦ ⟧	pattern mathematical left white square bracket
-❝ ❞	pattern heavy double turned comma quotation mark ornament
-❛ ❜	pattern heavy single turned comma quotation mark ornament
-〝 〞	pattern reversed double prime quotation mark
-☆ ミ	pattern white star
-☾ ˖ ✦	pattern last quarter moon
-ˏˋ ˎˊ	pattern modifier letter low acute accent
-⊹ ˚ ₊	pattern hermitian conjugate matrix
-୨ৎ	pattern oriya digit two
-ꪜ	pattern tai viet letter low po
-ᰔ	pattern lepcha letter bla
-𓆩⟡𓆪	pattern egyptian hieroglyph l006
-𓆸	pattern egyptian hieroglyph m009
-𖤐	pattern bamum letter phase-d ngkeuri
-𖧷	pattern bamum letter phase-e pi
-𑁍	pattern brahmi punctuation lotus
-ꕥ	pattern vai syllable zha
-⚝	pattern outlined white star
-⛤	pattern pentagram
-ꗃ	pattern vai syllable bo
-꒰ ˶• ༝ •˶꒱	pattern yi radical shy
-ʕ·ᴥ·ʔ	pattern latin letter pharyngeal voiced fricative
-⋆˙⟡	pattern star operator
-✦•┈┈┈┈•✦	pattern black four pointed star
-•°¯`•• ••´¯°•	pattern bullet
-◦•●◉✿ ✿◉●•◦	pattern white bullet
-▁▂▃▄▅▆▇█	pattern lower one eighth block
-╰☆╮	pattern box drawings light arc up and right
-░▒▓█▓▒░	pattern light shade
-⊹₊ ⋆	pattern hermitian conjugate matrix
-ᨒ ⁺ ˖	pattern buginese letter la
-★彡	pattern black star
-彡★	pattern cjk unified ideograph-5f61
-❀⊱	pattern white florette
-⊰❀	pattern precedes under relation
-✿•*¨*•.¸¸.•*¨*•✿	pattern black florette
-꧁༺ ༻꧂	pattern javanese left rerenggan
-╭┈ ➤	pattern box drawings light arc down and right
-┊ ┊ ┊ ┊	pattern box drawings light quadruple dash vertical
-— ✦ —	pattern em dash
-– ⋆ –	pattern en dash
-⸜ ⸝	pattern left low paraphrase bracket
-⌇⌇⌇	pattern wavy line
-⎯⎯⎯ ⋆ ⎯⎯⎯	pattern horizontal line extension
-◇ ◆ ◇	pattern white diamond
-▹▸▹▸	pattern white right-pointing small triangle
-⁂	pattern asterism
-※	pattern reference mark
-❖	pattern black diamond minus white x
-⌘	pattern place of interest sign
-⎔	pattern software-function symbol
-⍟	pattern apl functional symbol circle star
-⚚	pattern staff of hermes
-☽ ☾	pattern first quarter moon
-ᵔ ᵕ ᵔ	pattern modifier letter small top half o
-ᵒ̴̶̷᷄ ᵕ ᵒ̴̶̷᷅	pattern modifier letter small o
-˘ᴗ˘	pattern breve
-•ᴗ•	pattern bullet
-##Cute faces
-(˶ᵔ ᵕ ᵔ˶) ♡	pattern cute heart face copy paste cool kawaii
-(๑˃ᴗ˂)ﻭ ♡	pattern cute heart face copy paste cool kawaii
-꒰ ˶•ᴗ•˶ ꒱ ♡	pattern cute heart face copy paste cool kawaii
-(｡♥︎‿♥︎｡)	pattern cute heart face copy paste cool kawaii
-(◍•ᴗ•◍)❤︎	pattern cute heart face copy paste cool kawaii
-(´｡• ᵕ •｡`) ♡	pattern cute heart face copy paste cool kawaii
-૮ ˶ᵔ ᵕ ᵔ˶ ა ♡	pattern cute heart face copy paste cool kawaii
-( ˘ ³˘)♥︎	pattern cute heart face copy paste cool kawaii
-(づ｡◕‿‿◕｡)づ ♡	pattern cute heart face copy paste cool kawaii
-(≧◡≦) ♡	pattern cute heart face copy paste cool kawaii
-(´,,•ω•,,)♡	pattern cute heart face copy paste cool kawaii
-♡(ӦｖӦ｡)	pattern cute heart face copy paste cool kawaii
-(*ˊᵕˋ*)♡	pattern cute heart face copy paste cool kawaii
-ଘ(੭ˊᵕˋ)੭* ੈ♡‧₊˚	pattern cute heart face copy paste cool kawaii
-(˶˃ ᵕ ˂˶) .ᐟ.ᐟ	pattern cute heart face copy paste cool kawaii
-₍ᐢ. .ᐢ₎ ♡	pattern cute heart face copy paste cool kawaii
-(⸝⸝> ᴗ•⸝⸝) ♡	pattern cute heart face copy paste cool kawaii
-( ˶ˆᗜˆ˵ ) ♡	pattern cute heart face copy paste cool kawaii
-(｡•̀ᴗ-)✧ ♡	pattern cute heart face copy paste cool kawaii
-(•ᴗ•)♡	pattern cute heart face copy paste cool kawaii
-ʕ•ᴥ•ʔ♡	pattern cute heart face copy paste cool kawaii
-(ᵔᴥᵔ) ♡	pattern cute heart face copy paste cool kawaii
-(◡‿◡✿) ♡	pattern cute heart face copy paste cool kawaii
-ʕ ˘͡˘ ᴥ˘͡˘ʔ ♡	pattern cute heart face copy paste cool kawaii
-(˘ε˘ ) ♡	pattern cute heart face copy paste cool kawaii
-(๑>ᴗ<๑) ♡	pattern cute heart face copy paste cool kawaii
-( ◜‿◝ )♡	pattern cute heart face copy paste cool kawaii
-(∩^o^)⊃━☆♡	pattern cute heart face copy paste cool kawaii
-⸜(｡˃ ᵕ ˂ )⸝♡	pattern cute heart face copy paste cool kawaii
-(≡^∇^≡) ♡	pattern cute heart face copy paste cool kawaii
-##Hearts and ribbons
-♡ ⋆｡˚ ❀ ˚｡⋆ ♡	pattern cute heart ribbon belt dots copy paste cool
-୨୧ ┈┈┈ ♡ ┈┈┈ ୨୧	pattern cute heart ribbon belt dots copy paste cool
-⋆˚✿˖° ♡ °˖✿˚⋆	pattern cute heart ribbon belt dots copy paste cool
-﹏﹏﹏ ♡ ﹏﹏﹏	pattern cute heart ribbon belt dots copy paste cool
-︶︶︶ ♡ ︶︶︶	pattern cute heart ribbon belt dots copy paste cool
-⋆⁺₊ ♡ ₊⁺⋆	pattern cute heart ribbon belt dots copy paste cool
-❀･ﾟ♡ﾟ･❀	pattern cute heart ribbon belt dots copy paste cool
-ᯓ ♡ ᯓ ★	pattern cute heart ribbon belt dots copy paste cool
-✧･ﾟ: *✧･ﾟ:* ♡ *:･ﾟ✧*:･ﾟ✧	pattern cute heart ribbon belt dots copy paste cool
-♡ ・゜゜・。。・゜゜♡	pattern cute heart ribbon belt dots copy paste cool
-♡･ﾟ: *✧･ﾟ:*	pattern cute heart ribbon belt dots copy paste cool
-⊹ ˚ ♡ ˚ ⊹	pattern cute heart ribbon belt dots copy paste cool
-ᡣ𐭩 ♡ ᡣ𐭩	pattern cute heart ribbon belt dots copy paste cool
-୨ৎ ♡ ୨ৎ	pattern cute heart ribbon belt dots copy paste cool
-𓏲 ♡ ࣪ ִֶָ	pattern cute heart ribbon belt dots copy paste cool
-⋆ ˚｡⋆୨♡୧⋆ ˚｡⋆	pattern cute heart ribbon belt dots copy paste cool
-♡₊˚ 🎀・₊✧	pattern cute heart ribbon belt dots copy paste cool
-🎀 ⋆.˚ ♡ ˚.⋆ 🎀	pattern cute heart ribbon belt dots copy paste cool
-ദ്ദി ˉ͈̀꒳ˉ͈́ )✧ ♡	pattern cute heart ribbon belt dots copy paste cool
-⟡ ♡ ⟡	pattern cute heart ribbon belt dots copy paste cool
-♡ ⌒⌒⌒ ♡ ⌒⌒⌒ ♡	pattern cute heart ribbon belt dots copy paste cool
-╰┈♡➤	pattern cute heart ribbon belt dots copy paste cool
-◦•●♡●•◦	pattern cute heart ribbon belt dots copy paste cool
-·˚ ༘ ♡ ⋆｡˚	pattern cute heart ribbon belt dots copy paste cool
-♡ ✿ ★ ✿ ♡	pattern cute heart ribbon belt dots copy paste cool
-✿ ♡ ❀ ♡ ✿	pattern cute heart ribbon belt dots copy paste cool
-★彡 ♡ 彡★	pattern cute heart ribbon belt dots copy paste cool
-⋆｡ﾟ☁︎｡⋆｡ ﾟ☾ ﾟ｡⋆ ♡	pattern cute heart ribbon belt dots copy paste cool
-ʚ ♡ ɞ	pattern cute heart ribbon belt dots copy paste cool
-༉‧₊˚ ♡ ˚₊‧༉	pattern cute heart ribbon belt dots copy paste cool
+⋆˚☁︎˚⋆	sky cloud stars
+⚡︎ ˚ ☁︎ ˚ ⚡︎	storm cloud lightning pattern
+(⊙_⊙)⚡︎	lightning kaomoji
+˚☁︎ ⋆.ೃ࿔ *:･ﾟ✧	cloud stars sky pattern
+꒰ ☁︎ ꒱ ⋆˚	cloud pattern
+⋆˖⁺ ☁︎ ‧₊˚ ☾ ˚₊‧	cloud moon sky pattern
 ##Lines
 ━━ ✿ ━━	pattern box drawings heavy horizontal
 ━━ ♡ ━━	pattern box drawings heavy horizontal
@@ -744,6 +629,12 @@ _   _   _⏎( )_( )_( )⏎~~~~~~~~~~	ascii art sea waves
 ༻━ ⚘ ━༺	pattern tibetan mark gug rtags gyas
 ༻━ ღ ━༺	pattern tibetan mark gug rtags gyas
 ༻━ ✩ ━༺	pattern tibetan mark gug rtags gyas
+☾⋆.˚ ✧ .⋆☾	moon stars night sky
+(◕‿◕)☀︎	sun face kaomoji
+(｡•̀ᴗ-)✧ ☾	moon night kaomoji
+⋆｡˚☁︎˚｡⋆ ☾ ⋆｡˚	cloud moon pattern
+⊹ ☾ ˖ ⋆ ☁︎ ⊹ ࿔	moon cloud pattern
+࿔ ☀︎ ˖ ⋆ ☁︎ ⋆ ˖ ࿔	sun cloud sky pattern
 ##Wings
 ⋆｡˚ ❀ ˚｡⋆	pattern star operator
 ⋆｡˚ ☾ ˚｡⋆	pattern star operator
@@ -793,6 +684,12 @@ _   _   _⏎( )_( )_( )⏎~~~~~~~~~~	ascii art sea waves
 ︶꒦꒷ ❀ ꒷꒦︶	pattern presentation form for vertical right parenthesis
 ︶꒦꒷ ☾ ꒷꒦︶	pattern presentation form for vertical right parenthesis
 ︶꒦꒷ ❁ ꒷꒦︶	pattern presentation form for vertical right parenthesis
+⋆｡°✩ ☾ ✩°｡⋆	moon stars night sky
+(˘ ³˘)☁︎	cloud face kaomoji
+☾ ˚｡⋆ ✶ ⋆｡˚ ☾	moon stars night pattern
+݁˖ ☀︎ ⋆.ೃ࿔ ☁︎ ݁ ˖	sun cloud sky pattern
+✶ ☁︎ ⋆.ೃ ✶	cloud stars pattern
+✧ ☾ ⋆ ☁︎ ⋆ ☀︎ ✧	sun moon cloud pattern
 ##Brackets
 ꒰ ✿ ꒱	pattern yi radical shy
 ꒰ ♡ ꒱	pattern yi radical shy
@@ -830,6 +727,12 @@ _   _   _⏎( )_( )_( )⏎~~~~~~~~~~	ascii art sea waves
 ﹝ ✿ ﹞	pattern small left tortoise shell bracket
 ﹝ ♡ ﹞	pattern small left tortoise shell bracket
 ﹝ ✦ ﹞	pattern small left tortoise shell bracket
+˖☁︎ ˚ ⋆⁺₊	sky cloud pattern
+(っ˘ω˘ς)☂︎	umbrella rain kaomoji
+＼(^o^)／ ☀︎	sun happy kaomoji
+⋆˚࿔ ☽ ˚⋆	moon pattern
+˖ ☽ ⋆ ݁ ☁︎ ݁ ⋆ ☾ ˖	moon cloud pattern
+˚ ༘ ☾ ⋆｡ ☁︎ ｡⋆ ☀︎ ༘ ˚	sun moon cloud pattern
 ##Long
 ⋆｡˚ ꒰ ✿ ꒱ ˚｡⋆	pattern star operator
 ⋆｡˚ ⊱ ❀ ⊰ ˚｡⋆	pattern star operator
@@ -855,6 +758,133 @@ _   _   _⏎( )_( )_( )⏎~~~~~~~~~~	ascii art sea waves
 ⋆⁺₊⋆ 『 ★ 』 ⋆₊⁺⋆	pattern star operator
 ⋆⁺₊⋆ ⸜ ⚘ ⸝ ⋆₊⁺⋆	pattern star operator
 ⋆⁺₊⋆ 『 ✿ 』 ⋆₊⁺⋆	pattern star operator
+⊹ ˚☽ ⋆ ☁︎ ⋆ ˚☀︎ ⊹	sky sun moon cloud
+(˘ω˘)☾	moon sleepy kaomoji
+⋆˚☁︎ ˚ ⋆ ˚☁︎ ⋆˚	cloud pattern
+･ﾟ✧ ☾ ✧ﾟ･	moon stars night pattern
+⋆.˚ ☁︎ ˚.⋆ ☽ ⋆.˚	cloud moon pattern
+##Text and art
+𝐇𝐢 𝐭𝐞𝐬𝐭	text style bold
+𝐻𝑖 𝑡𝑒𝑠𝑡	text style italic
+𝑯𝒊 𝒕𝒆𝒔𝒕	text style bold italic
+ℋ𝒾 𝓉ℯ𝓈𝓉	text style script
+𝓗𝓲 𝓽𝓮𝓼𝓽	text style bold script
+ℌ𝔦 𝔱𝔢𝔰𝔱	text style fraktur
+𝕳𝖎 𝖙𝖊𝖘𝖙	text style bold fraktur
+ℍ𝕚 𝕥𝕖𝕤𝕥	text style double-struck
+𝖧𝗂 𝗍𝖾𝗌𝗍	text style sans
+𝗛𝗶 𝘁𝗲𝘀𝘁	text style sans bold
+𝘏𝘪 𝘵𝘦𝘴𝘵	text style sans italic
+𝙃𝙞 𝙩𝙚𝙨𝙩	text style sans bold italic
+𝙷𝚒 𝚝𝚎𝚜𝚝	text style monospace
+Ｈｉ　ｔｅｓｔ	text style fullwidth
+Ⓗⓘ ⓣⓔⓢⓣ	text style circled
+ʜɪ ᴛᴇꜱᴛ	text style small caps
+tset iH	text style reversed
+H i t e s t	text style spaced
+✧ Hi test ✧	text style sparkle
+•´¯`•. ❀ 𝐇𝐢 𝐭𝐞𝐬𝐭 ❀ .•`¯´•	text style frame
+░░░░░░░▄▄████▄▄▄░░░░░░▄▄██████▄▄⏎░░░░░██▓▓▓▓▓▓▒▓▓██░░▓█▓▓▓▓▒░▒▒▓▓██⏎░░░██▓▓▓▓▓▓▓▓▓▒░▓▓███▓▓▓▓▓▒▒▒░░▒▓▓█⏎░░██▓▓▓▓▓▓▓▓▓▓▓▒▒▓▓█▓▓▓▓▓▓▓▓▓▓▒░░▓▓█⏎░▒█▓▓▓▓▓▓▓▓▓▓▓▓▓▓██▓██▓▓▓▓▓▓▓▓▓▒░░▓▓█⏎░█▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░▒▓█⏎░█▓▓▓▓▓▓▓▓▓▓▓▓████░████▓▓▓▓▓▓▓▓▓▒░░▓██⏎█▓▓▓▓▓▓▓▓▓▓▓▓██░░░░░░░██▓▓▓▓▓▓▓▓▓░░▓▓█⏎█▓▓▓▓▓▓▓▓▓▓▓▓▓░░█░░░█░░▓▓▓▓▓▓▓▓▓▓▒░▓▓█▒⏎█▓▓▓▓▓▓▓▓▓▓▓▓▓░█▒█░█▒█░▓▓▓▓▓▓	ascii art block shading
+   .--.⏎ .-(    ).⏎(___.__)__)	ascii art cloud
+.--.⏎(   ).-.⏎(___(__) )	ascii art cloud big
+  .-~~~-.⏎ .~       ~.⏎(___________)⏎  ' ' ' ' '	ascii art cloud rain
+  \ | /⏎-- O --⏎  / | \⏎   .--.⏎ .(    ).⏎(_________)	ascii art cloud sun
+  _  ⏎ (_)  __⏎    (___)	ascii art cloud small
+   _  _ ⏎ _( )( )_⏎(_________)	ascii art cloud wide
+    .-.⏎  .(   ).⏎ (_______)	ascii art cloud float
+ .-. .-.⏎(   )   )⏎ (__.__.__)	ascii art cloud trio
+  .--.⏎ .(    ).⏎(___(__))⏎  /  /  /⏎ /  /  /	ascii art cloud storm
+ _~~_⏎(    )~⏎ (__ __)	ascii art cloud puff
+  .::.   .::.⏎ :::::.:::::⏎ :::::::::::⏎  ':::::::'⏎    ':::'⏎      ':'	ascii art heart
+ .-. .-.⏎(   v   )⏎ \       /⏎  \     /⏎   \   /⏎    \ /⏎     v	ascii art heart small
+  /\  /\⏎ /  \/  \⏎ \      /⏎  \    /⏎   \  /⏎    \/	ascii art heart line
+ .-. .-.⏎(   v   )⏎ ` - - '⏎   \   /⏎    \ /⏎     v	ascii art heart arrow
+<3 <3⏎<3  <3  <3⏎ <3  <3⏎  <3	ascii art two hearts
+  **   **⏎ *  * *  *⏎ *   *   *⏎  *       *⏎   *     *⏎    *   *⏎      *	ascii art heart plain
+ /\/\⏎(  v  )⏎ \    /⏎  \  /⏎   \/	ascii art heart mini
+<3   <3⏎  <3 <3⏎   <3	ascii art heart box
+<3 <3 <3 <3 <3	ascii art hearts row
+ .-. .-.⏎(   V   )⏎ \   /\⏎  \ /  \⏎   V	ascii art broken heart
+     /\⏎    /  \⏎   /____\⏎   |  _ |⏎   | |_||	ascii art house
+    /\⏎   /  \⏎  /____\⏎  | [] |⏎  |____|	ascii art house simple
+    __/\__⏎   /      \⏎  |  []  |⏎  |___||__|	ascii art house door
+      /\⏎     /  \⏎  __/____\__⏎ |  ___ __ |⏎ |_|__|__|_|	ascii art cottage
+   ___⏎  /   \⏎ /_____\⏎ |  _  |⏎ |_| |_|	ascii art home
+  |_|_|_|_|⏎  |  ___  |⏎  | |   | |⏎  |_|___|_|	ascii art castle
+    /\⏎   /  \⏎  /____\⏎ /      \⏎/________\	ascii art tent
+   _____⏎  /     \⏎ /_______\⏎ |_______|	ascii art igloo
+    \ | /⏎  -- (O) --⏎    / | \	ascii art sun
+ \ | /⏎- ( ) -⏎ / | \	ascii art sun small
+  \   |   /⏎   \  |  /⏎----(  )----⏎   /  |  \⏎  /   |   \	ascii art sun rays
+   _..._⏎ .:::::::.⏎:::::::::⏎':::::::'⏎  ':::'	ascii art moon
+   .-.⏎  (  .⏎  (   )⏎   '-'	ascii art moon crescent
+  .  *  .⏎    _⏎   (_)  *⏎  .  *	ascii art moon star
+ \ | /    _⏎- (O) -  (_)⏎ / | \	ascii art sun moon
+    *⏎   ***⏎*********⏎ ******⏎  ****⏎ *   *	ascii art star
+  *⏎ ***⏎*****⏎ ***⏎ *  *	ascii art star small
+*  .  *   .  *⏎   .  *  .   *⏎*   .  *   .	ascii art stars
+    /\⏎   /  \⏎ /\    /\⏎/  \  /  \⏎  \/  \/	ascii art star outline
+  \ | /⏎-- * --⏎  / | \	ascii art sparkle
+  \  |  /⏎ --  *  --⏎  /  |  \	ascii art star burst
+  /\_/\⏎ ( o.o )⏎  > ^ <	ascii art cat
+  |\__/,|   (`\⏎_ _|  _  |.--.⏎( T   _ ) (`\ )	ascii art cat sit
+ /\_/\⏎( o o )⏎==_Y_==	ascii art cat face
+  /\__/\⏎ ( o  o )⏎ (  "  )⏎  )   (~	ascii art cat tail
+  |\---/|⏎  | ,_, |⏎   \_`_/	ascii art kitty
+ /\_/\⏎( ^.^ )⏎ (")	ascii art cat smile
+  / \__⏎ (    @\___⏎ /         O⏎/   (_____/⏎/_____/   U	ascii art dog
+  __⏎ o'')}____//⏎ `_/        )⏎ (_(  _(_/	ascii art dog face
+   _⏎  //\⏎  V  \⏎   \  \_⏎    \,'.`-.⏎     |\ `. `.	ascii art bird
+  ,_,⏎ (O,O)⏎ (   )⏎  " "	ascii art owl
+  ><>⏎><(((*>	ascii art fish
+   __⏎ _/  \__/\⏎<  o    __\⏎ \_____/	ascii art fish big
+    _____⏎  _/     \_⏎ <  o   o  >⏎  \_______/	ascii art turtle
+\  /   \ /  \⏎   \   (O)  /⏎   /  /\  \	ascii art butterfly
+   __⏎  /  \⏎  \__/___⏎  (  ( @)_)	ascii art snail
+     .-"""-.⏎   _/       \_⏎  (  o     \_)⏎   \__/\___/	ascii art whale
+  (\ /)⏎ (='.'=)⏎ (")_(")	ascii art crab
+     __⏎    /  \⏎   /    \__⏎  |  o     /⏎  |_____/	ascii art elephant
+    /\⏎   /  \⏎  /    \⏎ /______\⏎    ||	ascii art tree
+   .-.⏎  (   )⏎ (_____)⏎    |⏎   _|_	ascii art tree round
+    /\⏎   /  \⏎  /    \⏎ /______\⏎    ||⏎    ||	ascii art pine
+  \ | /⏎-- (*) --⏎  / | \⏎   |	ascii art flower
+   @⏎  @@@⏎   @⏎   |⏎  \|/	ascii art flower stem
+  _ ⏎ | |⏎_| |_⏎\   /⏎ |_|	ascii art cactus
+  \|/⏎  \|/⏎  |__|⏎  |  |⏎  |__|	ascii art plant pot
+  ( (⏎   ) )⏎ ........⏎ |      |]⏎ \      /⏎  `----'	ascii art coffee
+ ___⏎[___]⏎ |   |]⏎  \_/	ascii art tea cup
+   ._._.⏎  .|_|_|.⏎  |_____|⏎  |_____|	ascii art cake
+    /\⏎   /__\⏎  |  o|⏎   \_o/	ascii art pizza
+   __⏎  /  \⏎ /    \⏎ \_  _/	ascii art apple
+   _____⏎  /     \⏎-----+-----⏎     |⏎  \__/	ascii art umbrella
+  ' ' ' '⏎ ' ' ' ' ⏎  ' ' ' '	ascii art rain
+  *  .  *⏎ .  *  .⏎  *  .  *	ascii art snow
+   _.-''-._⏎ .' .-''-. '.⏎/  /      \  \	ascii art rainbow
+    /\⏎   /  \  /\⏎  /    \/  \⏎ /          \	ascii art mountain
+~~~~~~~~⏎  ~~~~~~⏎ ~~~~~~~~	ascii art wave
+_   _   _⏎( )_( )_( )⏎~~~~~~~~~~	ascii art sea waves
+    ___⏎  _/   \_⏎-------------⏎~~~~~~~~~~~	ascii art sunset
+    |\⏎    | \⏎    |  \⏎____|___\______⏎ \________/	ascii art boat
+     |\⏎     | \⏎     |  \⏎     |___\⏎  ___|___|___⏎  \_________/	ascii art sailboat
+   __⏎ _|__|__⏎|  _  _  |⏎'-(_)---(_)-'	ascii art car
+   ____⏎ _|  |_⏎|______|⏎ O    O	ascii art train
+    /\⏎   /  \⏎  |    |⏎  |____|⏎  /_  _\⏎ /_/  \_\	ascii art rocket
+      __⏎ ___  //⏎(____)\\⏎  ----	ascii art plane
+:-)	ascii art smiley
+  .-""-.⏎ /  ^  ^ \⏎|  \__/  |⏎ \  ___  /⏎  '-----'	ascii art smile face
+ _____⏎/     \⏎| ^ ^ |⏎|  ^  |⏎ \_____/	ascii art happy face
+   ___⏎ /   \⏎| ^ ~ |⏎ \ ~ /⏎  '-'	ascii art face wink
+ .-"""-.⏎/ _   _ \⏎| (_) (_) |⏎|   ___   |⏎ \  \_/  /⏎  '-----'	ascii art sad face
+    _⏎   ( )⏎  _|_|_⏎ / / \ \⏎    |⏎   / \	ascii art peace
+  .--.⏎ (    )-----⏎  '--'  |  |	ascii art key
+   .-.⏎  |   |⏎ .-------.⏎ |  (_)  |⏎ '-------'	ascii art lock
+ _______⏎|\     /|⏎| \   / |⏎|  \_/  |⏎|_______|	ascii art envelope
+  .  .  .⏎ /|\/|\/|\⏎|_________|	ascii art crown
+   ___⏎  /   \⏎ | o o |⏎  \ ^ /⏎  |___|	ascii art skull
+  .---.⏎  |   |⏎  |   |⏎__|___|⏎  |   |__	ascii art music note
+  _    _⏎ ( )  ( )⏎  |    |⏎  |    |⏎__|____|__	ascii art music two
+   ___⏎  (___)⏎   |||⏎  /   \	ascii art guitar
+  _________⏎ |  _   _  |⏎ | (_) (_)|⏎ |_________|	ascii art camera
 #Flowers
 ✿	black florette
 ❀	white florette

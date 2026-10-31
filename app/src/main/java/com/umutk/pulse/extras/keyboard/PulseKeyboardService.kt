@@ -408,6 +408,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it + s; return } }
         st.clipName?.let { if (st.panel == "clip") { if (s.all { ch -> ch.isLetterOrDigit() }) st.clipName = it + s; return } }
         if (st.trans) { st.transIn += s; scheduleTrans(); return }
+        if (st.artOn) { st.artIn += s; return }
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
         commaSpace = false
@@ -550,6 +551,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.emojiQuery?.let { if (st.panel == "emoji") { if (it.isNotEmpty() && !it.endsWith(" ")) st.emojiQuery = "$it "; return } }
         if (st.clipName != null && st.panel == "clip") return
         if (st.trans) { if (st.transIn.isNotEmpty() && !st.transIn.endsWith(" ")) st.transIn += " "; return }
+        if (st.artOn) { st.artIn += " "; return }
         val now = SystemClock.uptimeMillis()
         if (word.isEmpty() && lastWasSpace && KeyboardPrefs.quickPeriod && !st.plain && now - spaceTap < 600) {
             val before = c.getTextBeforeCursor(2, 0)
@@ -592,6 +594,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.emojiQuery?.let { if (st.panel == "emoji") { st.emojiQuery = it.dropLast(1); return } }
         st.clipName?.let { if (st.panel == "clip") { st.clipName = it.dropLast(1); return } }
         if (st.trans && st.transIn.isNotEmpty()) { st.transIn = st.transIn.dropLast(1); scheduleTrans(); return }
+        if (st.artOn) { if (st.artIn.isNotEmpty()) st.artIn = st.artIn.dropLast(1); return }
         lastWasSpace = false
         lastGlide?.let { g ->
             val before = c.getTextBeforeCursor(g.length + 1, 0)?.toString()
