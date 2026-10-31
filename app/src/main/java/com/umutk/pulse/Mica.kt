@@ -31,7 +31,6 @@ object Effects {
         "micaAlt" to "Mica Alt",
         "acrylic" to "Acrylic",
         "tabbed" to "Glass",
-        "blur" to "Blur",
     )
 }
 
