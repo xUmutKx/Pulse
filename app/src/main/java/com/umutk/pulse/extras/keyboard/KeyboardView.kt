@@ -1301,7 +1301,8 @@ private fun ShiftGlyph(state: Int, color: Color) {
 /** Quick auth: the accounts of Pulse Authenticator with their codes; a tap types the code. */
 @Composable
 private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
-    Column(Modifier.fillMaxWidth().height(keyH).background(th.bg).padding(8.dp)) {
+    // as tall as the keys: four rows of keys
+    Column(Modifier.fillMaxWidth().height(keyH * 4f).background(th.bg).padding(8.dp)) {
         // a second clock: the codes are checked each second, and each account shows how long its code has left
         val now by androidx.compose.runtime.produceState(System.currentTimeMillis()) { while (true) { value = System.currentTimeMillis(); act.authTick(); delay(1000) } }
         if (st.authCodes.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
