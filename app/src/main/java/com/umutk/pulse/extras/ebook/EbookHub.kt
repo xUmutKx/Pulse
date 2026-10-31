@@ -199,6 +199,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     LaunchedEffect(Unit) {
         val gone = withContext(Dispatchers.IO) { shelf.filter { !bookExists(ctx, it) } }
         if (gone.isNotEmpty()) {
+            gone.forEach { Ebook.forget(ctx, it.uri) }
             shelf = shelf.filter { b -> gone.none { it.uri == b.uri } }.also { shelfSave(ctx, it) }
             note = tr("Books deleted outside Pulse were removed from the shelf", "Pulse dışında silinen kitaplar raftan kaldırıldı")
         }
@@ -310,7 +311,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                                 shelf = (shelf + found).also { shelfSave(ctx, it) }
                                 note = if (found.isEmpty()) tr("No new books in Books or Download", "Books ve Download'da yeni kitap yok") else ""
                             }
-                            PButton(tr("Empty shelf", "Rafı boşalt"), compact = true) { shelf = emptyList(); shelfSave(ctx, emptyList()); note = "" }
+                            PButton(tr("Empty shelf", "Rafı boşalt"), compact = true) { shelf.forEach { Ebook.forget(ctx, it.uri) }; shelf = emptyList(); shelfSave(ctx, emptyList()); note = "" }
                         }
                     }
                     item { SectionTitle(tr("Color", "Renk"), th) }
@@ -399,7 +400,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 title = bk.title,
                 text = tr("Remove this book from the shelf? The file stays on the phone.", "Bu kitap raftan kaldırılsın mı? Dosya telefonda kalır."),
                 confirm = tr("Remove", "Kaldır"),
-                onConfirm = { shelf = shelf.filter { it.uri != bk.uri }.also { shelfSave(ctx, it) }; askRemove = null },
+                onConfirm = { Ebook.forget(ctx, bk.uri); shelf = shelf.filter { it.uri != bk.uri }.also { shelfSave(ctx, it) }; askRemove = null },
                 onDismiss = { askRemove = null },
             )
         }
@@ -407,7 +408,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             title = tr("${picked.size} books", "${picked.size} kitap"),
             text = tr("Remove the selected books from the shelf? The files stay on the phone.", "Seçili kitaplar raftan kaldırılsın mı? Dosyalar telefonda kalır."),
             confirm = tr("Remove", "Kaldır"),
-            onConfirm = { shelf = shelf.filter { it.uri !in picked }.also { shelfSave(ctx, it) }; picked = emptySet(); askBulk = false },
+            onConfirm = { picked.forEach { Ebook.forget(ctx, it) }; shelf = shelf.filter { it.uri !in picked }.also { shelfSave(ctx, it) }; picked = emptySet(); askBulk = false },
             onDismiss = { askBulk = false },
         )
         if (about) PDialog(
