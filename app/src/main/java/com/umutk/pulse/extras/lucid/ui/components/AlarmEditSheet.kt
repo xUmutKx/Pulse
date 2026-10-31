@@ -464,15 +464,7 @@ fun AlarmEditSheet(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Vibrate", style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = vibrationEnabled, onCheckedChange = { vibrationEnabled = it })
-                }
-                if (vibrationEnabled) {
+                run {
                     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         AlarmVibrationPreset.entries.forEach { preset ->
                              FilterChip(
@@ -486,15 +478,7 @@ fun AlarmEditSheet(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("Snooze", style = MaterialTheme.typography.bodyLarge)
-                    Switch(checked = snoozeEnabled, onCheckedChange = { snoozeEnabled = it })
-                }
-                if (snoozeEnabled) {
+                run {
                     Text(
                         text = "Interval",
                         style = MaterialTheme.typography.labelLarge,
