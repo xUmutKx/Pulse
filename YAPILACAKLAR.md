@@ -1847,3 +1847,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.293 derlenmedi: Books shelf menu: plain rows (a tap does the action), no radio buttons
 - 1.0.293 derlenmedi: Store: clearing the cache keeps the downloads set to "Keep downloaded file"
 - 1.0.293 derlenmedi: Build fix: duplicate BouncyCastle classes removed from the release (pdfbox-android)
+- 1.0.294 derlenmedi: Artist pictures are scaled to 512 px JPEG when saved; pictures stored before are shrunk once in the background after a library scan (the 60 MB folder)
+- 1.0.294 derlenmedi: Build fix: SettingsScreen had one extra closing brace (the general section) and a missing tr import; AlarmCustomizationScreen had a bad matchParentSize import

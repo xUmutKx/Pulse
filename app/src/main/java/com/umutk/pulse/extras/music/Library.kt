@@ -41,6 +41,8 @@ object MusicLibrary {
             // the lyrics index is read in the background right after every scan, not only when the music page is open:
             // the first lyrics search then finds the songs at once (songs already read are skipped)
             warmScope.launch { runCatching { com.umutk.pulse.extras.lyrics.Lyrics.warmIndex(app, list) } }
+            // artist pictures saved before the size rule are scaled down once (the list shows them small anyway)
+            warmScope.launch { runCatching { ArtistArt.shrinkStored(app) } }
             runCatching { cacheFile(app).writeText(list.joinToString("\n") { t ->
                 listOf(t.path, t.title.orEmpty(), t.durationSec, t.artist.orEmpty(), t.album.orEmpty(), t.albumId, t.genre.orEmpty(), t.year, t.composer.orEmpty(), t.dateAdded).joinToString("\t") { it.toString().replace('\t', ' ').replace('\n', ' ') }
             }) }
