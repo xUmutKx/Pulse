@@ -32,6 +32,15 @@ object LockLyricsOverlay {
 
     val showing get() = box != null
 
+    /** Set while a password, PIN or text field has the focus on the lock screen: the lyrics then stay away. Cleared when the screen goes off. */
+    @Volatile var suppressed = false
+
+    /** A password or text field took the focus on the lock screen: the window goes at once and stays away until the screen goes off. */
+    fun suppress(ctx: Context) {
+        suppressed = true
+        hide(ctx)
+    }
+
     /** Shows the window (or updates its two lines). Returns false when no window can be drawn (no accessibility layer, no overlay permission). */
     fun show(ctx: Context, current: String, upcoming: String?): Boolean {
         val app = ctx.applicationContext
