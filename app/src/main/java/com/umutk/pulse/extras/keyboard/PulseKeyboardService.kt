@@ -313,6 +313,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         st.inline = emptyList(); st.emojiQuery = null
+        st.forceLayout = null; st.panel = "keys"
         st.clipItems = ClipStore.load(this)
         // the settings may have changed the language since the last field
         KeyboardPrefs.load(this)

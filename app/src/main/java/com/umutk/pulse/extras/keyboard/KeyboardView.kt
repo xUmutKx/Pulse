@@ -243,14 +243,19 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         }
     }) {
         Column(
-            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.7f).align(Alignment.TopStart).offset { IntOffset((st.rootW * .3f * KeyboardPrefs.floatX).roundToInt(), 0) }
+            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.7f).align(Alignment.TopStart).offset { IntOffset((st.rootW * .3f * KeyboardPrefs.floatX).roundToInt(), -(rootH * .5f * KeyboardPrefs.floatY).roundToInt()) }
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             // the floating keyboard is narrower and slides sideways by its handle
-            if (KeyboardPrefs.floating) Box(Modifier.fillMaxWidth().height(20.dp).pointerInput(Unit) {
-                detectHorizontalDragGestures(onDragEnd = { KeyboardPrefs.saveFloat() }) { c, dx -> c.consume(); KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f) }
-            }, contentAlignment = Alignment.Center) { Box(Modifier.width(44.dp).height(5.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .6f))) }
+            if (KeyboardPrefs.floating) Box(Modifier.fillMaxWidth().height(34.dp).pointerInput(Unit) {
+                // dragged sideways and up or down: the keyboard follows the finger in both directions
+                androidx.compose.foundation.gestures.detectDragGestures(onDragEnd = { KeyboardPrefs.saveFloat() }) { c, d ->
+                    c.consume()
+                    KeyboardPrefs.floatX = (KeyboardPrefs.floatX + d.x / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                    KeyboardPrefs.floatY = (KeyboardPrefs.floatY - d.y / (rootH * .5f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                }
+            }, contentAlignment = Alignment.Center) { Box(Modifier.width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f))) }
             if (!st.numpad) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
@@ -917,7 +922,7 @@ private fun RowScope.Key(th: KbTheme, st: KbState, act: KbActions, k: KbKey, key
             val big = if (KeyboardPrefs.largeText) 27f else 22f
             val fs = (big * (.85f + .15f * KeyboardPrefs.heightPct / 100f)).sp
             when (k.kind) {
-                KeyKind.SHIFT -> ShiftGlyph(st.shift, fg)
+                KeyKind.SHIFT -> Text(tr("Shift", "Shift"), color = fg, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1)
                 KeyKind.DELETE -> Icon(kbIcon(th, "Backspace"), null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.ENTER -> Icon(when (st.enter) { "send" -> kbIcon(th, "Send"); "search" -> kbIcon(th, "Search"); "go", "done" -> kbIcon(th, "Check"); "next" -> kbIcon(th, "ArrowForward"); else -> kbIcon(th, "KeyboardReturn") }, null, tint = fg, modifier = Modifier.size(26.dp))
                 KeyKind.EMOJI -> { Icon(kbIcon(th, "EmojiEmotions"), null, tint = fg, modifier = Modifier.size(24.dp)); HoldHint(th, k.kind) }
