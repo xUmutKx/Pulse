@@ -1310,9 +1310,9 @@ private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
             itemsIndexed(st.authCodes) { i, (name, code) ->
                 val period = st.authPeriods.getOrElse(i) { 30 }.coerceAtLeast(1)
                 val left = period - ((now / 1000L) % period).toInt()
-                // each account takes a third of the panel, twice the text of before; more accounts scroll
-                Column(Modifier.fillMaxWidth().height((keyH - 16.dp) / 3 - 8.dp).padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(th.key).clickable { act.authPick(code) },
-                    verticalArrangement = Arrangement.Center) {
+                // each account is as tall as its text (twice the text of before), so the panel is not padded with empty space
+                Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(th.key).clickable { act.authPick(code) }
+                    .padding(vertical = 10.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(name, color = th.text, fontSize = 28.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         Text(code, color = th.accent, fontSize = 36.sp, fontWeight = FontWeight.SemiBold)
