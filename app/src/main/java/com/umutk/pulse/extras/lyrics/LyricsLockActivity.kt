@@ -50,8 +50,10 @@ class LyricsLockActivity : ComponentActivity() {
             @Suppress("DEPRECATION")
             window.addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED or WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON)
         }
-        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        setContent { LockLyrics(onFinish = { finishAndRemoveTask() }) }
+        // the lock screen keeps the keyboard (the PIN) and every touch (the unlock swipe): this window only shows the lyrics
+        window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+        // a failure here must not hold the lock screen: the view closes instead
+        runCatching { setContent { LockLyrics(onFinish = { finishAndRemoveTask() }) } }.onFailure { finishAndRemoveTask() }
     }
 }
 
