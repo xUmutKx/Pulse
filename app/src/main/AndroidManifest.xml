@@ -405,7 +405,7 @@
         <!-- the Clock = Lucid Alarm (extras/lucid, GPL-3.0, DarkAspect1): ring screen, receivers and services -->
         <activity android:name="com.umutk.pulse.extras.lucid.MainActivity" android:exported="false" android:theme="@style/Theme.Lucid" android:windowSoftInputMode="adjustResize" android:label="Clock" />
         <!-- lyrics over the lock screen (the full-screen notification of the lyrics ticker opens it while locked) -->
-        <activity android:name="com.umutk.pulse.extras.lyrics.LyricsLockActivity" android:exported="false" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@android:style/Theme.Black.NoTitleBar.Fullscreen" />
+        <activity android:name="com.umutk.pulse.extras.lyrics.LyricsLockActivity" android:exported="false" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@android:style/Theme.Translucent.NoTitleBar.Fullscreen" />
         <activity android:name="com.umutk.pulse.extras.lucid.AlarmRingingActivity" android:exported="true" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showOnLockScreen="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@style/Theme.Lucid.Ringing" />
         <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AlarmReceiver" android:exported="false" />
         <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AwakeCheckReceiver" android:exported="false" />

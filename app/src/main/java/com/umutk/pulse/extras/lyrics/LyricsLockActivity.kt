@@ -52,6 +52,7 @@ class LyricsLockActivity : ComponentActivity() {
         }
         // the lock screen keeps the keyboard (the PIN) and every touch (the unlock swipe): this window only shows the lyrics
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE)
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
         // a failure here must not hold the lock screen: the view closes instead
         runCatching { setContent { LockLyrics(onFinish = { finishAndRemoveTask() }) } }.onFailure { finishAndRemoveTask() }
     }
@@ -86,7 +87,8 @@ private fun LockLyrics(onFinish: () -> Unit) {
     val line = LiveLyrics.lineAt(result, position.toInt() + 700)
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color.Black).padding(horizontal = 24.dp),
+        // a light scrim only: the lock screen wallpaper and clock show through, the view never turns the screen black
+        modifier = Modifier.fillMaxSize().background(Color.Black.copy(alpha = .35f)).padding(horizontal = 24.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
