@@ -1729,3 +1729,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books shelf: a book without a cover picture (EPUB, TXT) shows its first page of text as the cover (1.0.283 (derlendi))
 - Compile fix: missing Arrangement and fillMaxSize imports in LiveLyrics.kt (1.0.283 build failed on them)
 - Music settings: all live lyrics options are on one page opened from one row (Diğer > Canlı sözler); the crash from the nested scroll is gone (1.0.284 (derlendi))
+- Lyrics on the lock screen: the lyrics notification moves to a channel of default importance (the low one was hidden on the lock screen); the previews show a large clock, the date and the lines under it, and a dim always-on version (derlenmedi)
