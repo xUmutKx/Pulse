@@ -1751,3 +1751,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Lyrics on the lock screen and AOD: a strip of text at the bottom with a soft shadow and no background, over the lock screen (no full window); shows the song's name until a line is ready (derlenmedi)
 - Books reader page animation: instant by default; choices Slide, Scroll down (like a printed page feeding), Flip; tap the row to change (derlenmedi)
 - Books reader > Customize reader bar buttons: a popup over the reader; the box ticks a button for the bar, a tap on its name closes the popup and opens that button (Font Size opens the font popup) (derlenmedi)
+- Books reader ⋮ menu: each item has its icon; E-ink and Brightness are out of the menu (Brightness is in Control Options); Share moved to Book information; Share and E-ink are no longer bar buttons (derlenmedi)

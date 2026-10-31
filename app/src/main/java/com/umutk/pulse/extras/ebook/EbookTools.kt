@@ -34,9 +34,7 @@ val BAR_TOOLS = listOf(
     Triple("power", tr("Shutdown", "Kapat"), "shutdown"),
     Triple("more", tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"), "custom"),
     Triple("info", tr("Book information", "Kitap bilgisi"), "info"),
-    Triple("share", tr("Share", "Paylaş"), "share"),
     Triple("heart", tr("Favorite", "Favori"), "favorite"),
-    Triple("book", tr("E-ink look", "E-mürekkep"), "eink"),
 )
 
 /** The bottom bar at first: the buttons Moon Reader shows checked. */
@@ -57,7 +55,8 @@ object EbookPrefs {
             val ids = (pr.getString("bar", DEFAULT_BAR) ?: "").split(',').filter { it.isNotBlank() }
             pr.edit().putString("bar", (ids + "text").distinct().joinToString(",")).putInt("barVer", 3).apply()
         }
-        return pinned((pr.getString("bar", DEFAULT_BAR) ?: "").split(',').filter { it.isNotBlank() })
+        // ids of buttons that were removed from the list are dropped
+        return pinned((pr.getString("bar", DEFAULT_BAR) ?: "").split(',').filter { id -> BAR_TOOLS.any { it.third == id } })
     }
     fun setBar(c: Context, ids: List<String>) { p(c).edit().putString("bar", pinned(ids).joinToString(",")).apply() }
 
