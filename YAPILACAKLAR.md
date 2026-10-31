@@ -1794,3 +1794,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Dice and coin flip quick settings tiles turn: eight frames of a tumbling die and a turning coin, then the result
 - derlenmedi: Keyboard: always opens on the QWERTY keys; the Shift key says Shift; the floating keyboard's handle is bigger and drags up/down as well as sideways
 - derlenmedi: Space bar slide: one swipe moves further (it speeds up the longer it goes), slide up or down moves the cursor to the line above or below at the same column, and a sensitivity slider in keyboard settings
+- derlenmedi: Layout list: Game controls and Gamepad have a gamepad icon; gamepad shoulder buttons L1 L2 R1 R2 moved to the top corners, the size control stays in the middle at the bottom
