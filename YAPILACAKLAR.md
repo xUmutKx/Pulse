@@ -1728,3 +1728,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books shelf: a book without a picture shows its title on the card instead of the first letter; the Alice EPUB sent has no cover image inside the file (its manifest names cover.jpg, which is missing from the zip) (1.0.283 (derlendi))
 - Books shelf: a book without a cover picture (EPUB, TXT) shows its first page of text as the cover (1.0.283 (derlendi))
 - Compile fix: missing Arrangement and fillMaxSize imports in LiveLyrics.kt (1.0.283 build failed on them)
+- Music settings: all live lyrics options are on one page opened from one row (Diğer > Canlı sözler); the crash from the nested scroll is gone (derlenmedi)
