@@ -1765,3 +1765,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Music library: Radio category (Turkish stations from Radio Browser, search by name; a tap plays the stream) (derlenmedi)
 - Music library Radio row opens the app's existing radio screen (the RadioHub copy is removed) (derlenmedi)
 - Radio and white noise: drawn pictures instead of the grey placeholder (radio in the media notification; white noise in its notification) (derlenmedi)
+- Lyrics search: the lyrics on the phone show at once; the online catalogue is added after them (derlenmedi)

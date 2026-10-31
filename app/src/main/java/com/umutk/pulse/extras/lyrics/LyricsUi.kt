@@ -113,8 +113,11 @@ fun LyricsSearchScreen(onOpen: (LyricHit) -> Unit, onClose: () -> Unit) {
         if (q.trim().length < 3) { hits = emptyList(); busy = false; return@LaunchedEffect }
         delay(600)
         busy = true
+        // the phone's lyrics first (instant), then the online catalogue added under them
+        hits = Lyrics.searchByText(ctx, q, online = false)
+        done = true
         hits = Lyrics.searchByText(ctx, q)
-        busy = false; done = true
+        busy = false
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
