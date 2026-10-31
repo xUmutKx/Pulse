@@ -1778,3 +1778,9 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.289 Launcher: Pulse's accent and pop-up style no longer leak into the launcher's windows
 - 1.0.289 Windows 11 look: its own icon style for the left sidebar, preview cards for background and window material, Blur removed from the window material list
 - 1.0.289 Alarm appearance: live preview cards for every background style
+- 1.0.290 Lock-screen lyrics: a small window with the line and the next one, instead of a full-screen view that hid the lock screen and froze; taps reach the lock screen
+- 1.0.290 Lyrics notification: low importance (no pop-up), no tap target on the lock screen
+- 1.0.290 Extra apps menu opens expanded; shared-link window stays open with download progress until done
+- 1.0.290 Good Lock: one screen, not-installed modules grouped with picture tiles, a tap opens the module itself
+- 1.0.290 Overview: phone picture and model name at the top; battery health from the measured capacity, or typed in
+- 1.0.290 Playback keep-alive notification: minimum importance, no status-bar icon, no sound
