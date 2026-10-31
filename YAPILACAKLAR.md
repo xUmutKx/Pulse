@@ -1810,3 +1810,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Alarm ringing customisation sheets are pure black in the dark look
 - derlenmedi: Alarm ringing: default background is AMOLED black; the glow switch turns the glow on and off on the ringing screen
 - derlenmedi: Lucid look: One UI (default), Material and AMOLED black, chosen from Appearance with previews; One UI action buttons light grey; Delete asks for confirmation
+- derlenmedi: Windows 11 sidebar: the Office icon follows the outline style like the others
