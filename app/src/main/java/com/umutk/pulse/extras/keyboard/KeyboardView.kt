@@ -80,6 +80,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.drag
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -250,10 +251,16 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             // the floating keyboard is narrower and slides sideways by its handle
             if (KeyboardPrefs.floating) Box(Modifier.fillMaxWidth().height(34.dp).pointerInput(Unit) {
                 // dragged sideways and up or down: the keyboard follows the finger in both directions
-                androidx.compose.foundation.gestures.detectDragGestures(onDragEnd = { KeyboardPrefs.saveFloat() }) { c, d ->
-                    c.consume()
-                    KeyboardPrefs.floatX = (KeyboardPrefs.floatX + d.x / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f)
-                    KeyboardPrefs.floatY = (KeyboardPrefs.floatY - d.y / (rootH * .5f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                awaitEachGesture {
+                    val d = awaitFirstDown(requireUnconsumed = false)
+                    drag(d.id) { c ->
+                        c.consume()
+                        val dx = c.position.x - c.previousPosition.x
+                        val dy = c.position.y - c.previousPosition.y
+                        KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                        KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH * .5f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                    }
+                    KeyboardPrefs.saveFloat()
                 }
             }, contentAlignment = Alignment.Center) { Box(Modifier.width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f))) }
             if (!st.numpad) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
