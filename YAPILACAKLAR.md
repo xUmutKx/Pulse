@@ -1769,3 +1769,12 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Extra apps: a tool set to hidden (eye icon) leaves the ⋮ menu and the Tools/Apps groups but stays listed on the Extra apps page; hiding a row there is still by long press (1.0.288 (derlendi))
 - Quick panel: a Floating timer tile (shows or hides the floating timer; opens the overlay permission when missing) (1.0.288 (derlendi))
 - Motion cues: a tap on the top strip closes the quick panel through the same shell route as the rest of Pulse (root or Shizuku) and the accessibility service (1.0.288 (derlendi))
+- 1.0.289 Lock-screen lyrics: one line in the player's lyric font and size, the next line under it in a darker grey, on a soft dark backdrop placed at the wallpaper's peak; the frozen-line bug is fixed
+- 1.0.289 Books: the Find free books search field keeps its search button on screen, and the keyboard's search key searches
+- 1.0.289 Weather notification: a pop-up (heads-up) report with text sky symbols, bold figures, the next three hours, and a five-day report every twelve hours
+- 1.0.289 Keyboard: sky and weather presets, many more themed presets (turtles, ships, Egyptian, sky, stars, flowers), ASCII art presets drawn whole and scaled to fit
+- 1.0.289 Keyboard: a "Text and art" page with your own text in every Unicode style, and a Picture to ASCII tool (quality and invert)
+- 1.0.289 Alarm: the editor starts at the phone's current time, no drag bar in AMOLED, tighter spacing; the ringing screen opens on every ring; overlay permission is requested and granted by root when available
+- 1.0.289 Launcher: Pulse's accent and pop-up style no longer leak into the launcher's windows
+- 1.0.289 Windows 11 look: its own icon style for the left sidebar, preview cards for background and window material, Blur removed from the window material list
+- 1.0.289 Alarm appearance: live preview cards for every background style

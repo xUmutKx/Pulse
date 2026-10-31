@@ -246,8 +246,21 @@ object LauncherPrefs {
 
     /** Puts the launcher's look on the shared Look before the first frame (AppLookGuard.leave restores Pulse's). */
     fun apply() {
+        // Pulse's own accent, pop-up style and light/dark are kept aside and put back when the launcher stops; the launcher
+        // uses its look's own colours, so Pulse's accent (white on Material) no longer leaks into the Task Manager window
+        if (savedPulse == null) savedPulse = Triple(Look.accentIdx, Look.mode, Look.windowTheme)
         Look.theme = Themes.firstOrNull { it.id == look } ?: Themes.first { it.id == "material" }
+        Look.accentIdx = -1
+        Look.windowTheme = "win"
         // the Windows 11 desktop is dark (Mica), so the pages inside its windows are dark too
-        if (look == "win11") Look.mode = "dark"
+        Look.mode = if (look == "win11") "dark" else "system"
+    }
+
+    private var savedPulse: Triple<Int, String, String>? = null
+
+    /** Gives Pulse back its own accent, light/dark and pop-up style, taken aside by [apply]. */
+    fun restorePulse() {
+        savedPulse?.let { (accent, mode, win) -> Look.accentIdx = accent; Look.mode = mode; Look.windowTheme = win }
+        savedPulse = null
     }
 }

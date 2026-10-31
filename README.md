@@ -2,13 +2,23 @@
 
 ### Pulse
 
-<p align="center">
-<img src="docs/screenshots/keyboard.jpg" height="420" alt="Pulse keyboard settings"> <img src="docs/screenshots/blackout.jpg" height="420" alt="BlackOut"> <img src="docs/screenshots/buds-manager.jpg" height="420" alt="Buds manager"> <img src="docs/screenshots/system-font.jpg" height="420" alt="System font"> <img src="docs/screenshots/win11-flyout.jpg" height="420" alt="Windows 11 look: flyout"> <img src="docs/screenshots/win11-desktop.jpg" height="420" alt="Windows 11 look: desktop"> <img src="docs/screenshots/calculator.jpg" height="420" alt="Calculator"> <img src="docs/screenshots/weather.jpg" height="420" alt="Weather"> <img src="docs/screenshots/files.jpg" height="420" alt="Files"> <img src="docs/screenshots/music-player.jpg" height="420" alt="Music player">
-</p>
+| Pulse keyboard settings | BlackOut | Buds manager | System font | Windows 11 look: flyout |
+|---|---|---|---|---|
+| <img src="docs/screenshots/keyboard.jpg" width="170" alt="Pulse keyboard settings"> | <img src="docs/screenshots/blackout.jpg" width="170" alt="BlackOut"> | <img src="docs/screenshots/buds-manager.jpg" width="170" alt="Buds manager"> | <img src="docs/screenshots/system-font.jpg" width="170" alt="System font"> | <img src="docs/screenshots/win11-flyout.jpg" width="170" alt="Windows 11 look: flyout"> |
 
-<p align="center">
-<img src="docs/screenshots/processes.png" height="420" alt="Processes"> <img src="docs/screenshots/performance.png" height="420" alt="Performance"> <img src="docs/screenshots/overview.png" height="420" alt="Overview"> <img src="docs/screenshots/cores.png" height="420" alt="CPU cores"> <img src="docs/screenshots/win95-performance.png" height="420" alt="Windows 95 Performance"> <img src="docs/screenshots/win7-startup.png" height="420" alt="Windows 7 Startup apps"> <img src="docs/screenshots/xp-widgets.png" height="420" alt="Windows XP widgets"> <img src="docs/screenshots/win7-gadgets.png" height="420" alt="Windows 7 gadgets"> <img src="docs/screenshots/app-manager.png" height="420" alt="App manager">
-</p>
+| Windows 11 look: desktop | Calculator | Weather | Files | Music player |
+|---|---|---|---|---|
+| <img src="docs/screenshots/win11-desktop.jpg" width="170" alt="Windows 11 look: desktop"> | <img src="docs/screenshots/calculator.jpg" width="170" alt="Calculator"> | <img src="docs/screenshots/weather.jpg" width="170" alt="Weather"> | <img src="docs/screenshots/files.jpg" width="170" alt="Files"> | <img src="docs/screenshots/music-player.jpg" width="170" alt="Music player"> |
+
+### More screenshots
+
+| Processes | Performance | Overview | CPU cores | Windows 95 Performance |
+|---|---|---|---|---|
+| <img src="docs/screenshots/processes.png" width="170" alt="Processes"> | <img src="docs/screenshots/performance.png" width="170" alt="Performance"> | <img src="docs/screenshots/overview.png" width="170" alt="Overview"> | <img src="docs/screenshots/cores.png" width="170" alt="CPU cores"> | <img src="docs/screenshots/win95-performance.png" width="170" alt="Windows 95 Performance"> |
+
+| Windows 7 Startup apps | Windows XP widgets | Windows 7 gadgets | App manager |
+|---|---|---|---|
+| <img src="docs/screenshots/win7-startup.png" width="170" alt="Windows 7 Startup apps"> | <img src="docs/screenshots/xp-widgets.png" width="170" alt="Windows XP widgets"> | <img src="docs/screenshots/win7-gadgets.png" width="170" alt="Windows 7 gadgets"> | <img src="docs/screenshots/app-manager.png" width="170" alt="App manager"> |
 
 
 **An all-in-one toolbox for Android, in the style of Windows or Material.** Pulse is a task manager that shows live CPU, memory, storage, network, battery and temperature, and it has tools for the rest of the phone: a file explorer, an APK installer, a downloads manager, an app manager with a debloater, home-screen widgets, a terminal and a toolkit of small utilities.

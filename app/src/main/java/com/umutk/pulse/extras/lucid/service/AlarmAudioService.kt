@@ -225,10 +225,9 @@ class AlarmAudioService : Service() {
                 }
 
                 serviceScope.launch { startAudioAndVibration() }
-                if (replacingOngoingAlarm) {
-
-                    bringRingingActivityForward()
-                }
+                // open the ringing screen at once, not only when an alarm replaces another: while the phone is in use Android
+                // turns the full-screen notification into a banner, so the screen needs this direct start (the activity is single-instance)
+                bringRingingActivityForward()
                 refreshNotificationFromDatabase()
             }
         }
