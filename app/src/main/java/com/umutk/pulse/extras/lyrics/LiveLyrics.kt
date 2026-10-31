@@ -1,7 +1,15 @@
 package com.umutk.pulse.extras.lyrics
 
 import androidx.compose.ui.unit.dp
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
 import android.content.Context
 import android.provider.Settings
@@ -47,6 +55,8 @@ object LiveLyrics {
     fun floating(c: Context) = prefs(c).getBoolean("floating", false)
     // on by default: the current lyric line is the notification text whenever the track has synced lyrics
     fun notification(c: Context) = prefs(c).getBoolean("notification", true)
+    /** The lyric notification is shown on the lock screen too (its text, not only the title). */
+    fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", true)
     // a notification of its own for the lyrics, beside the media one (on by default: the lyrics are right there in the shade)
     fun separate(c: Context) = prefs(c).getBoolean("separate", true)
     /** Lyrics found online are written as a .lrc beside the song. */
@@ -238,7 +248,9 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         if (artFor != t.path) { artFor = t.path; art = runCatching { (com.umutk.pulse.extras.music.trackArtLocal(ctx, t) ?: com.umutk.pulse.extras.music.trackArt(ctx, t))?.asAndroidBitmap() }.getOrNull() }
         nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
             .setContentTitle(LiveLyrics.titled(ctx, t.title ?: t.path.substringAfterLast('/'))).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
-            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT).build())
+            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT)
+            // public: the lock screen shows the lines, not only "notification hidden"
+            .setVisibility(if (LiveLyrics.lockScreen(ctx)) androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC else androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE).build())
     }
 
     private fun clearNote() { if (noteText != null) { noteText = null; nm.cancel(4106) } }
@@ -268,6 +280,10 @@ fun LiveLyricsSettingsSection() {
             if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)
         }
         SwitchRow(tr("Show in notification", "Bildirimde göster"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
+        var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
+        SwitchRow(tr("Show lyrics on the lock screen", "Sözleri kilit ekranında göster"), lock) { lock = it; LiveLyrics.set(c, "lock_screen", it) }
+        // how the lock screen card looks: the lines on a black ground, the current one bold
+        LockLyricsPreview(LiveLyrics.emphasis(c))
         // a second notification of its own: the current line with the one before and after it
         var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
         var save by remember { mutableStateOf(LiveLyrics.saveLrc(c)) }
@@ -290,5 +306,19 @@ fun LiveLyricsSettingsSection() {
         com.umutk.pulse.PButton(tr("Search now", "Şimdi ara"), compact = true) { LyricsAuto.runNow(c); autoAll = true }
         var consec by remember { mutableStateOf(LyricsShare.consecutive(c)) }
         SwitchRow(tr("Share: only lines that follow each other", "Paylaşım: yalnız ardışık satırlar"), consec) { consec = it; LyricsShare.setConsecutive(c, it) }
+    }
+}
+
+/** A preview of the lock screen card: the title, the current line bold and the lines around it dim, on pure black. */
+@Composable
+fun LockLyricsPreview(emphasis: String) {
+    val c = LocalContext.current
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp).clip(RoundedCornerShape(18.dp)).background(Color.Black).padding(16.dp)) {
+        Text(tr("Song title · Artist", "Şarkı adı · Sanatçı"), color = Color(0xFFB0B0B0), fontSize = 12.sp, maxLines = 1)
+        Spacer(Modifier.height(8.dp))
+        Text(tr("A line before", "Önceki satır"), color = Color(0xFF6E6E6E), fontSize = 15.sp)
+        Text("\u25BA " + tr("The line now playing", "Şu an çalan satır"), color = Color.White, fontSize = 22.sp,
+            fontWeight = if (emphasis == "thin") FontWeight.Normal else FontWeight.Bold)
+        Text(tr("A line after", "Sonraki satır"), color = Color(0xFF6E6E6E), fontSize = 15.sp)
     }
 }
