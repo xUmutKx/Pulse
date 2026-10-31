@@ -143,7 +143,7 @@ fun AlarmCustomizationScreen(
 
     var isInitialized by remember { mutableStateOf(false) }
 
-    var background by remember { mutableStateOf(RingingBackgroundStyle.STARFIELD) }
+    var background by remember { mutableStateOf(RingingBackgroundStyle.AMOLED_BLACK) }
     var backgroundImageUri by remember { mutableStateOf("") }
     var backgroundVideoUri by remember { mutableStateOf("") }
     var clockStyle by remember { mutableStateOf(RingingClockStyle.HORIZONTAL_DIGITAL) }

@@ -146,7 +146,7 @@ class AlarmRingingActivity : ComponentActivity() {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
             val ringingBackground by settingsDataStore.ringingBackgroundFlow.collectAsState(
-                initial = RingingBackgroundStyle.STARFIELD
+                initial = RingingBackgroundStyle.AMOLED_BLACK
             )
             val ringingSolidColor by settingsDataStore.ringingSolidColorFlow.collectAsState(
                 initial = 0L
@@ -291,7 +291,7 @@ fun AlarmRingingScreen(
     }
 
     val backgroundStyle by settingsDataStore.ringingBackgroundFlow.collectAsState(
-        initial = RingingBackgroundStyle.STARFIELD
+        initial = RingingBackgroundStyle.AMOLED_BLACK
     )
     val backgroundImageUri by settingsDataStore.ringingBackgroundImageUriFlow.collectAsState(
         initial = ""

@@ -174,7 +174,7 @@ fun AlarmAppearanceEditor(
     val density = LocalDensity.current
 
     val globalBackground by settingsDataStore.ringingBackgroundFlow.collectAsState(
-        initial = RingingBackgroundStyle.STARFIELD
+        initial = RingingBackgroundStyle.AMOLED_BLACK
     )
     val globalBackgroundImageUri by settingsDataStore.ringingBackgroundImageUriFlow.collectAsState(
         initial = ""
