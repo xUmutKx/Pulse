@@ -1825,3 +1825,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.292 Alarm clock: Windows 95, XP, 7 and 11 faces; alarm ringing screen with the Lucid look
 - derlenmedi: Keyboard: Shift is the arrow again; a space after , . ? ! is not doubled when one already follows the cursor
 - derlenmedi: Keyboard Turkish: a name followed by a Turkish ending takes its apostrophe (Adana'da, Pelin'den); a list of Turkish names and places
+- derlenmedi: Quick settings Keyboard tile: turns the floating keyboard on and brings it up

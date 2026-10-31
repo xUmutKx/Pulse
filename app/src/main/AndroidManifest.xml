@@ -682,6 +682,10 @@
                 <data android:mimeType="*/*" />
             </intent-filter>
         </activity>
+        <service android:name="com.umutk.pulse.extras.keyboard.KeyboardTile" android:exported="true" android:label="Keyboard" android:icon="@drawable/ic_qs_keys"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
         <service android:name="com.umutk.pulse.extras.localsend.LocalSendTile" android:exported="true" android:label="LocalSend" android:icon="@drawable/ic_qs_localsend"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
@@ -720,6 +724,7 @@
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
         </service>
         <!-- opens a tool page, bringing the one that is already open to the front instead of starting another (notifications and widgets use it) -->
+        <activity android:name="com.umutk.pulse.extras.keyboard.KeyboardFloatActivity" android:exported="false" android:theme="@android:style/Theme.Translucent.NoTitleBar" android:excludeFromRecents="true" android:taskAffinity="" android:noHistory="true" />
         <activity android:name=".ToolOpenActivity" android:exported="false" android:theme="@android:style/Theme.NoDisplay" android:excludeFromRecents="true" android:taskAffinity="" android:noHistory="true" />
         <!-- screen cover tile (features/CoverTile): needs the overlay permission, the tile opens that page until it is granted -->
         <service android:name="com.umutk.pulse.features.CoverTile" android:exported="true" android:label="Screen cover" android:icon="@drawable/ic_qs_cover"
