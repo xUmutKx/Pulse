@@ -20,7 +20,7 @@ object MusicSettings {
     fun setOnlineTags(c: Context, on: Boolean) = sp(c).edit().putBoolean("online_tags", on).apply()
 
     /** Fade length at each track change in seconds, 0 = off. */
-    fun crossfade(c: Context) = sp(c).getInt("xfade", 0)
+    fun crossfade(c: Context) = sp(c).getInt("xfade", 3)
     fun setCrossfade(c: Context, s: Int) = sp(c).edit().putInt("xfade", s.coerceIn(0, 12)).apply()
     /** When the sleep timer runs out, the track that is playing is finished first (the player stops at its end). */
     fun sleepFinishTrack(c: Context) = sp(c).getBoolean("sleep_finish", false)

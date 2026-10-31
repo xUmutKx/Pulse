@@ -1798,3 +1798,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Gamepad: zoom buttons removed, L3 and R3 under the sticks, black ground. Private-typing hat only on the keys page, bigger and faint, showing again for a moment after each key
 - derlenmedi: Sleep timer: a Finish the track first option; when the time runs out the current track is finished first. Crossfade: a graph of the fade out and fade in under the fade slider
 - derlenmedi: Crossfade graph is the crossfade setting itself: drag across it to set 0 to 12 seconds; the fade band widens with the seconds
+- derlenmedi: Default fade between tracks is 3 seconds
