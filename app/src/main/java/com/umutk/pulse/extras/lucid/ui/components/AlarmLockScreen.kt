@@ -150,7 +150,7 @@ fun ringingBackgroundBrush(style: RingingBackgroundStyle): Brush = when (style) 
     RingingBackgroundStyle.CUSTOM_IMAGE,
     RingingBackgroundStyle.VIDEO,
     RingingBackgroundStyle.DYNAMIC_FLUID,
-    RingingBackgroundStyle.STARFIELD,
+    RingingBackgroundStyle.AMOLED_BLACK,
     RingingBackgroundStyle.INTERACTIVE_GRADIENT,
     RingingBackgroundStyle.AURORA,
     RingingBackgroundStyle.FIREFLIES,
@@ -382,12 +382,15 @@ fun AmoledGlowBackground(
         label = "pulse"
     )
 
+    // the glow switch (Settings > Background glow): off is plain AMOLED black, on adds the coloured glow
+    val glowOn = androidx.compose.ui.platform.LocalContext.current
+        .getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE).getBoolean("on", false)
     Box(
         modifier = modifier
             .background(Color.Black)
             .fillMaxSize()
     ) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
+        if (glowOn) Canvas(modifier = Modifier.fillMaxSize()) {
             val center = Offset(size.width / 2f, size.height / 2f)
             drawRect(
                 brush = Brush.radialGradient(

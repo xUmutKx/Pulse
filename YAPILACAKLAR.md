@@ -1808,3 +1808,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Alarm ringing screen customisation: a back arrow at the top left
 - derlenmedi: Alarm ringing background sheet: each style is a live preview card
 - derlenmedi: Alarm ringing customisation sheets are pure black in the dark look
+- derlenmedi: Alarm ringing: default background is AMOLED black; the glow switch turns the glow on and off on the ringing screen

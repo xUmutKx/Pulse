@@ -458,9 +458,9 @@ class SettingsDataStore(private val context: Context) {
     }
 
     val ringingBackgroundFlow: Flow<RingingBackgroundStyle> = context.settingsDataStore.data.map { prefs ->
-        val raw = prefs[KEY_RINGING_BACKGROUND] ?: RingingBackgroundStyle.STARFIELD.name
+        val raw = prefs[KEY_RINGING_BACKGROUND] ?: RingingBackgroundStyle.AMOLED_BLACK.name
         runCatching { RingingBackgroundStyle.valueOf(raw) }
-            .getOrDefault(RingingBackgroundStyle.STARFIELD)
+            .getOrDefault(RingingBackgroundStyle.AMOLED_BLACK)
     }
 
     val ringingBackgroundImageUriFlow: Flow<String> = context.settingsDataStore.data.map { prefs ->
