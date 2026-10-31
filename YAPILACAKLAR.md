@@ -1753,3 +1753,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader > Customize reader bar buttons: a popup over the reader; the box ticks a button for the bar, a tap on its name closes the popup and opens that button (Font Size opens the font popup) (derlenmedi)
 - Books reader ⋮ menu: each item has its icon; E-ink and Brightness are out of the menu (Brightness is in Control Options); Share moved to Book information; Share and E-ink are no longer bar buttons (derlenmedi)
 - Books reader: Bookmarks is merged into Chapters (two tabs on one page); every menu item has its icon, Font Size shows Aa (derlenmedi)
+- Books: favourites are set from the shelf (long press a book); the reader has no favourite button, no Miscellaneous page (derlenmedi)
