@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.music
 
+import androidx.compose.foundation.gestures.drag
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import com.umutk.pulse.extras.ui.FlatSection
 import androidx.compose.foundation.background
 import androidx.compose.ui.draw.clip
@@ -279,9 +282,9 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
 
     if (cat == "notif") {
         FlatSection(tr("Cover", "Kapak")) { SwitchRow(tr("Cover in notification", "Bildirimde kapak"), nArt) { nArt = it; MusicSettings.setNotificationArt(c, it) } }
-        com.umutk.pulse.extras.music.notif.NotificationFlatSection()
+        com.umutk.pulse.extras.music.notif.NotificationSettingsSection()
     }
-    if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsFlatSection()
+    if (cat == "misc") com.umutk.pulse.extras.lyrics.LiveLyricsSettingsSection()
     if (cat == "misc") FlatSection(tr("Widgets", "Widget'lar")) {
         var bgMode by remember { mutableStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.bg(c)) }
         var artPct by remember { mutableFloatStateOf(com.umutk.pulse.extras.music.widgets.WidgetOpts.artPct(c).toFloat()) }
@@ -389,9 +392,10 @@ private fun FadeCurve(seconds: Int, onChange: (Int) -> Unit) {
         androidx.compose.foundation.Canvas(
             Modifier.fillMaxWidth().height(72.dp)
                 .pointerInput(Unit) {
-                    androidx.compose.foundation.gestures.detectDragGestures(onDragStart = { set(secAt(it.x, size.width.toFloat())) }) { change, _ ->
-                        change.consume()
-                        set(secAt(change.position.x, size.width.toFloat()))
+                    awaitEachGesture {
+                        val d = awaitFirstDown(requireUnconsumed = false)
+                        set(secAt(d.position.x, size.width.toFloat()))
+                        drag(d.id) { c -> c.consume(); set(secAt(c.position.x, size.width.toFloat())) }
                     }
                 },
         ) {
