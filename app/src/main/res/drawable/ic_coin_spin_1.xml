@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Quick Settings coin turning, frame 1 -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android" android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <group android:pivotX="12" android:pivotY="12" android:scaleX="0.924">
+    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
+        android:pathData="M12,2a10,10 0 1 0 0,20a10,10 0 1 0 0,-20z M12,4.5a7.5,7.5 0 1 1 0,15a7.5,7.5 0 1 1 0,-15z M12,7.2 L13.2,10.6 L16.8,10.7 L13.9,12.8 L14.9,16.3 L12,14.2 L9.1,16.3 L10.1,12.8 L7.2,10.7 L10.8,10.6 z" />
+    </group>
+</vector>
