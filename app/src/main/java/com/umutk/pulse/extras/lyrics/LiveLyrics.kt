@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.T
+import com.umutk.pulse.PChip
 import com.umutk.pulse.extras.music.MusicPlayerEngine
 import com.umutk.pulse.extras.music.MusicSettings
 import com.umutk.pulse.extras.music.Track
@@ -81,6 +82,12 @@ object LiveLyrics {
     fun titled(c: Context, title: CharSequence): CharSequence =
         if (emphasis(c) != "underline") title else android.text.SpannableString(title).also { it.setSpan(android.text.style.UnderlineSpan(), 0, it.length, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
     fun set(c: Context, key: String, on: Boolean) = prefs(c).edit().putBoolean(key, on).apply()
+
+    /** Where the lock screen lyrics window starts, as a share of the screen height from the top. Default: just above the lock screen's bottom line. */
+    const val LOCK_UNDER_DATE = 0.56f
+    const val LOCK_ABOVE_BOTTOM = 0.74f
+    fun lockTop(c: Context): Float = prefs(c).getFloat("lock_top", LOCK_ABOVE_BOTTOM).coerceIn(0.10f, 0.90f)
+    fun setLockTop(c: Context, v: Float) = prefs(c).edit().putFloat("lock_top", v.coerceIn(0.10f, 0.90f)).apply()
 
     /** The line the notification shows now; null hides it. Read by [com.umutk.pulse.extras.music.notif.NotifProvider]. */
     @Volatile var notifLine: String? = null
@@ -191,8 +198,9 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         scope.launch {
             while (isActive) {
                 runCatching { tick() }
-                // a line must reach the notification as it is sung: twice a second while playing
-                delay(if (engine.state.value.isPlaying) 500L else 2_000L)
+                // a line must reach the notification as it is sung: twice a second while playing, five times a second for the lock screen lyrics
+                val lockLyrics = LiveLyrics.lockScreen(ctx) && engine.state.value.isPlaying && lockedNow()
+                delay(if (lockLyrics) 200L else if (engine.state.value.isPlaying) 500L else 2_000L)
             }
         }
     }
@@ -336,6 +344,16 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
                 // the lyrics are a small window: the accessibility layer (Cover) or the overlay permission has to be there for it
                 if (it && com.umutk.pulse.features.CoverAccessibilityService.instance == null && !com.umutk.pulse.Compat.canOverlay(c))
                     runCatching { c.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${c.packageName}")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+            if (lock) {
+                // two places to start from, then a slider to move the window the rest of the way
+                var top by remember { mutableStateOf(LiveLyrics.lockTop(c)) }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    PChip(kotlin.math.abs(top - LiveLyrics.LOCK_UNDER_DATE) < .01f, tr("Under the date", "Tarih altı")) { top = LiveLyrics.LOCK_UNDER_DATE; LiveLyrics.setLockTop(c, top) }
+                    PChip(kotlin.math.abs(top - LiveLyrics.LOCK_ABOVE_BOTTOM) < .01f, tr("Above the bottom line", "Alt satırın üstü")) { top = LiveLyrics.LOCK_ABOVE_BOTTOM; LiveLyrics.setLockTop(c, top) }
+                }
+                Text(tr("Position", "Konum"), color = T.sub, fontSize = 12.sp)
+                com.umutk.pulse.PSlider(top, { top = it; LiveLyrics.setLockTop(c, it) }, 0.10f..0.90f, onDone = {})
             }
             SwitchRow(tr("Show floating", "Yüzen pencerede göster"), floating) {
                 floating = it; LiveLyrics.set(c, "floating", it)
