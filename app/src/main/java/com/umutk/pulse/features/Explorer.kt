@@ -496,6 +496,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var resultsFor by remember { mutableStateOf<String?>(null) }
     // the search looks under this folder; the button beside the field widens it to the whole storage
     var searchAll by remember { mutableStateOf(false) }
+    // the Search tab of the standalone app opens the search over every folder
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openSearchAll) { if (com.umutk.pulse.files.home.FilesHomeNav.openSearchAll) { searchAll = true; com.umutk.pulse.files.home.FilesHomeNav.openSearchAll = false } }
     LaunchedEffect(resultsFor, here, showHidden, searchAll) {
         found = null
         found = resultsFor?.let { q -> withContext(Dispatchers.IO) { if (searchAll) exFind(top, q, showHidden, 300_000) else exFind(dir, q, showHidden) } }
