@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
+import com.umutk.pulse.extras.lucid.ui.theme.FontCards
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.items
@@ -1091,17 +1093,7 @@ fun AlarmCustomizationScreen(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = clockFont == font,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = { clockFont = font },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }, clockFont, { it.label }, { clockFontFamilyOf(it) }) { clockFont = it }
                 if (clockFont == RingingClockFont.CUSTOM_FILE) {
                     OutlinedButton(
                         onClick = { pickClockFont() },
@@ -1294,17 +1286,7 @@ fun AlarmCustomizationScreen(
             ) {
                 Text("Dismiss Button", style = MaterialTheme.typography.titleLarge)
                 Text("Font", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = dismissFont == font,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = { dismissFont = font },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }, dismissFont, { it.label }, { clockFontFamilyOf(it) }) { dismissFont = it }
                 if (dismissFont == RingingClockFont.CUSTOM_FILE) {
                     OutlinedButton(
                         onClick = { pickDismissFont() },
@@ -1356,17 +1338,7 @@ fun AlarmCustomizationScreen(
             ) {
                 Text("Snooze Button", style = MaterialTheme.typography.titleLarge)
                 Text("Font", style = MaterialTheme.typography.titleMedium)
-                FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    RingingClockFont.entries.forEach { font ->
-                        FilterChip(
-                            selected = snoozeFont == font,
-                            colors = selectedChipColors(),
-                            shape = SelectionChipShape,
-                            onClick = { snoozeFont = font },
-                            label = { Text(font.label) }
-                        )
-                    }
-                }
+                                FontCards(RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }, snoozeFont, { it.label }, { clockFontFamilyOf(it) }) { snoozeFont = it }
                 if (snoozeFont == RingingClockFont.CUSTOM_FILE) {
                     OutlinedButton(
                         onClick = { pickSnoozeFont() },
