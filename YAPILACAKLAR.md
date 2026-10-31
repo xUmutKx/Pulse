@@ -1835,3 +1835,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Alarm background sheet: tapping a preview selects it (a clear layer takes the tap)
 - derlenmedi: Lucid app fonts: Newsreader, Montserrat, Playfair Display, Rubik, Saira, Lilita One, Bebas Neue, Pacifico, Lobster (bundled files)
 - derlenmedi: Lucid app fonts: Newsreader, Montserrat, Playfair Display, Rubik, Saira, Lilita One, Bebas Neue, Pacifico, Lobster (bundled files)
+- derlenmedi: Lucid fonts: distinctive bundled fonts (Bodoni Moda, DM Serif, Montagu Slab, Juliett, Neonderthaw, Edu Beginner, Kode Mono, Jersey 10, League Gothic, Tourney, Super Power, Tilt Neon, Stick No Bills, Segments) with a sample card for each

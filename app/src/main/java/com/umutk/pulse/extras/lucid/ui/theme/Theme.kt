@@ -132,21 +132,7 @@ fun LucidAlarmTheme(
         customBackgroundArgb = customBackgroundArgb
     )
 
-    val appFontFamily = when (appFontStyle) {
-        AppFontStyle.SYSTEM_DEFAULT -> FontFamily.SansSerif
-        AppFontStyle.SERIF -> FontFamily.Serif
-        AppFontStyle.CURSIVE -> FontFamily.Cursive
-        AppFontStyle.NEWSREADER -> FontFamily(Font(com.umutk.pulse.R.font.newsreader_regular))
-        AppFontStyle.MONTSERRAT -> FontFamily(Font(com.umutk.pulse.R.font.sb_montserrat))
-        AppFontStyle.PLAYFAIR -> FontFamily(Font(com.umutk.pulse.R.font.sb_playfair_display))
-        AppFontStyle.RUBIK -> FontFamily(Font(com.umutk.pulse.R.font.sb_rubik))
-        AppFontStyle.SAIRA -> FontFamily(Font(com.umutk.pulse.R.font.sb_saira))
-        AppFontStyle.LILITA -> FontFamily(Font(com.umutk.pulse.R.font.sb_lilita))
-        AppFontStyle.BEBAS -> FontFamily(Font(com.umutk.pulse.R.font.bebasneue_regular))
-        AppFontStyle.PACIFICO -> FontFamily(Font(com.umutk.pulse.R.font.pacifico_regular))
-        AppFontStyle.LOBSTER -> FontFamily(Font(com.umutk.pulse.R.font.lobster_regular))
-        AppFontStyle.CUSTOM_FILE -> FontManager.fontFamilyFromPath(customAppFontPath)
-    }
+    val appFontFamily = appFontFamilyOf(appFontStyle) ?: FontManager.fontFamilyFromPath(customAppFontPath)
 
     val clockFontFamily = when (clockFontStyle) {
         RingingClockFont.SYSTEM_DEFAULT -> FontFamily.SansSerif
