@@ -68,6 +68,12 @@ object NetMode {
     private val lte = bit(13) or bit(19)
     private val nr = bit(20)
 
+    /** The names the phone prints for the types of a mask (its allowed-network-types list), e.g. "LTE", "NR". */
+    private val typeNames = mapOf(1 to "GPRS", 2 to "EDGE", 3 to "UMTS", 4 to "CDMA", 5 to "EVDO_0", 6 to "EVDO_A", 7 to "1xRTT", 8 to "HSDPA",
+        9 to "HSUPA", 10 to "HSPA", 11 to "IDEN", 12 to "EVDO_B", 13 to "LTE", 14 to "EHRPD", 15 to "HSPA+", 16 to "GSM", 17 to "TD_SCDMA", 18 to "IWLAN",
+        19 to "LTE_CA", 20 to "NR")
+    fun namesOf(mask: Long): Set<String> = typeNames.filter { (t, _) -> mask and bit(t) != 0L }.values.toSet()
+
     /** The allowed-network-types bitmask (TelephonyManager.NETWORK_TYPE_BITMASK_*) of a mode; newer phones follow this and not the old setting. */
     fun mask(mode: Int): Long = when (mode) {
         23 -> nr
@@ -85,7 +91,7 @@ object NetMode {
         return when {
             Shell.root != true && !Shell.shizukuOk() -> tr("No root or Shizuku: Android lets only the system change the network type.", "Root veya Shizuku yok: ağ türünü yalnızca sistem değiştirebilir.")
             d.contains("SecurityException", true) || d.contains("permission", true) || d.contains("not allowed", true) -> tr("The system refused: the permission is missing.", "Sistem reddetti: yetki eksik.")
-            d.contains("allowed=") && !d.lineSequence().first { it.startsWith("allowed=") }.contains(Regex("\\d")) -> tr("This phone does not answer the network type command.", "Bu telefon ağ türü komutuna yanıt vermiyor.")
+            d.lineSequence().none { it.startsWith("allowed=") && it.length > 8 } -> tr("This phone does not answer the network type command.", "Bu telefon ağ türü komutuna yanıt vermiyor.")
             else -> tr("The command ran, but the modem did not take this type (the phone or the carrier may not support it).", "Komut çalıştı ama modem bu türü kabul etmedi (telefon veya operatör desteklemiyor olabilir).")
         }
     }
@@ -100,19 +106,21 @@ object NetMode {
         Thread {
             // the phone service takes the allowed types directly (Android 13+); older phones only read the global setting above
             val m = mask(mode)
+            val subs = "\$(content query --uri content://telephony/siminfo --projection _id 2>/dev/null | sed -n 's/.*_id=\\([0-9]*\\).*/\\1/p')"
             val cmd = "for k in preferred_network_mode preferred_network_mode1 preferred_network_mode2; do settings put global \$k $mode; done; " +
-                "for s in 0 1; do cmd phone set-allowed-network-types-for-users -s \$s $m; done; cmd phone set-allowed-network-types-for-users $m" +
+                "for s in $subs; do cmd phone set-allowed-network-types-for-users -s \$s $m; done; cmd phone set-allowed-network-types-for-users $m" +
                 (if (air) "; cmd connectivity airplane-mode enable; sleep 1; cmd connectivity airplane-mode disable" else "") + "; echo __OK"
             val out = if (Shell.root == true) Shell.runRoot(cmd) else Shell.run(cmd)
             // read back what the phone really holds now
-            val back = (if (Shell.root == true) Shell.runRoot("echo sdk=\$(getprop ro.build.version.sdk); echo setting=\$(settings get global preferred_network_mode); echo allowed=\$(cmd phone get-allowed-network-types-for-users 2>&1 | head -3); echo net=\$(getprop gsm.network.type)")
-                else Shell.run("echo setting=\$(settings get global preferred_network_mode); echo allowed=\$(cmd phone get-allowed-network-types-for-users 2>&1 | head -3); echo net=\$(getprop gsm.network.type)")).trim()
+            val back = (if (Shell.root == true) Shell.runRoot("echo sdk=\$(getprop ro.build.version.sdk); echo setting=\$(settings get global preferred_network_mode); echo allowed=\$(cmd phone get-allowed-network-types-for-users 2>&1 | tr '\\n' '|'); echo net=\$(getprop gsm.network.type)")
+                else Shell.run("echo setting=\$(settings get global preferred_network_mode); echo allowed=\$(cmd phone get-allowed-network-types-for-users 2>&1 | tr '\\n' '|'); echo net=\$(getprop gsm.network.type)")).trim()
             // current(app) == mode only proves the legacy global setting we just wrote ourselves stuck — trivially true with root, so it always said
             // "Done" even when the phone's radio never actually changed. The allowed-types readback is the one line the modem itself reports back,
             // so an honest "worked" means that line actually carries the mask we asked for.
             val allowedLine = back.lineSequence().firstOrNull { it.startsWith("allowed=") }.orEmpty()
             val noError = !out.contains("Exception", true) && !out.contains("not found", true) && !allowedLine.contains("Exception", true)
-            val ok = out.contains("__OK") && noError && allowedLine.contains(m.toString())
+            val got = allowedLine.substringAfter("allowed=", "").split('|').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+            val ok = out.contains("__OK") && noError && got.isNotEmpty() && namesOf(m).containsAll(got)
             lastDiag = "want mode $mode, mask $m\n" + out.trim().lines().filter { it != "__OK" }.takeLast(8).joinToString("\n") + "\n" + back
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(ok) }
         }.start()
