@@ -1717,3 +1717,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Files: Relay and LocalSend are tiles of the share sheet (first in the row) and no longer rows of Files More (derlenmedi)
 - Files: the Search tab opens the search bar at the top over every folder (derlenmedi)
 - Files: the Share tab is one page with Relay and LocalSend (each opens inside Files); the Search tab searches the whole phone from a name index kept in memory, so results come at once (derlenmedi)
+- Books: Day/Night switches the shelf and the drawer between a light and a dark look; the drawer header reads "Book reader" in a readable colour (derlenmedi)

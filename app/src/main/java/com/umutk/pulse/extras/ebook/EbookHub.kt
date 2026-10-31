@@ -68,6 +68,7 @@ import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PIcon
+import com.umutk.pulse.onAccent
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
@@ -163,7 +164,11 @@ fun EbookHub(onBack: () -> Unit) {
 }
 
 /** The colours of the shelf's own pages: the look of Pulse. */
-private fun shelfTheme() = Theme(T.panel, T.text, T.sub)
+private fun shelfTheme(day: Boolean, amoled: Boolean) = when {
+    day -> Theme(Color(0xFFF5F2EA), Color(0xFF1E1E1E), Color(0xFF6B6B6B))
+    amoled -> Theme(Color.Black, T.text, T.sub)
+    else -> Theme(T.panel, T.text, T.sub)
+}
 
 @Composable
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
@@ -220,25 +225,25 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             note = ""
         }
     }
-    val th = shelfTheme()
+    val th = shelfTheme(dayNight == DAY_THEME, amoled)
     Box(Modifier.fillMaxSize()) {
         // AMOLED is a pure black shelf; otherwise the wooden background, or the look's panel colour
         val shelfWood = wood && !amoled
         if (shelfWood) WoodBackground(Modifier.matchParentSize())
-        Column(Modifier.fillMaxSize().then(if (shelfWood) Modifier else Modifier.background(if (amoled) Color.Black else T.panel)).padding(horizontal = 12.dp, vertical = 10.dp)) {
+        Column(Modifier.fillMaxSize().then(if (shelfWood) Modifier else Modifier.background(th.bg)).padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (screen.isEmpty()) {
-                    Box(Modifier.size(40.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 24.dp) }
+                    Box(Modifier.size(40.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { PIcon("menu", th.ink, 24.dp) }
                 } else {
-                    Box(Modifier.size(40.dp).clickable { screen = "" }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 24.dp) }
+                    Box(Modifier.size(40.dp).clickable { screen = "" }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 24.dp) }
                 }
-                Text(if (screen == "options") tr("Options", "Seçenekler") else title, color = T.text, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                Text(if (screen == "options") tr("Options", "Seçenekler") else title, color = th.ink, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
                 if (screen.isEmpty()) {
-                    Box(Modifier.size(40.dp).clickable { searching = !searching; if (!searching) query = "" }, contentAlignment = Alignment.Center) { PIcon("search", T.text, 22.dp) }
-                    Box(Modifier.size(40.dp).clickable { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }, contentAlignment = Alignment.Center) { PIcon("add", T.text, 24.dp) }
+                    Box(Modifier.size(40.dp).clickable { searching = !searching; if (!searching) query = "" }, contentAlignment = Alignment.Center) { PIcon("search", th.ink, 22.dp) }
+                    Box(Modifier.size(40.dp).clickable { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }, contentAlignment = Alignment.Center) { PIcon("add", th.ink, 24.dp) }
                 }
             }
-            if (note.isNotEmpty()) Text(note, color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
+            if (note.isNotEmpty()) Text(note, color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
 
             if (screen == "options") {
                 LazyColumn(Modifier.weight(1f)) {
@@ -267,7 +272,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 if (searching) PField(query, { query = it }, tr("Search the shelf", "Rafta ara"), Modifier.fillMaxWidth().padding(top = 6.dp))
                 if (shelf.isEmpty()) {
                     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(tr("No books yet", "Henüz kitap yok"), color = T.sub, fontSize = 14.sp)
+                        Text(tr("No books yet", "Henüz kitap yok"), color = th.sub, fontSize = 14.sp)
                         Spacer(Modifier.height(12.dp))
                         PButton(tr("Find books on this phone", "Telefondaki kitapları bul"), compact = true) {
                             // the folders books usually live in: Books and Download on the phone's storage
@@ -279,7 +284,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                         PButton(tr("Add a book", "Kitap ekle"), compact = true) { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }
                     }
                 } else if (listed.isEmpty()) {
-                    Text(tr("Nothing here", "Burada boş"), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
+                    Text(tr("Nothing here", "Burada boş"), color = th.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
                 } else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                     // two or three books in a row; the covers grow to fill the width
                     val cols = if (maxWidth < 300.dp) 2 else 3
@@ -297,7 +302,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                                     else Text(b.title.take(1).uppercase(), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                                     if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
                                 }
-                                Text(b.title, color = if (shelfWood) Color(0xFFF6E7CC) else T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width(cw).padding(top = 4.dp))
+                                Text(b.title, color = if (shelfWood) Color(0xFFF6E7CC) else th.ink, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width(cw).padding(top = 4.dp))
                             }
                         }
                     }
@@ -347,39 +352,40 @@ private fun ShelfDrawer(
     onDayNight: () -> Unit, onExit: () -> Unit, onClose: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)).clickable { onClose() })
-    Column(Modifier.fillMaxHeight().width(280.dp).background(if (amoled) Color.Black else T.panel)) {
+    val th = shelfTheme(dayNight == DAY_THEME, amoled)
+    Column(Modifier.fillMaxHeight().width(280.dp).background(th.bg)) {
         Box(Modifier.fillMaxWidth().height(120.dp).background(T.accent), contentAlignment = Alignment.BottomStart) {
-            Text(tr("Books", "Kitaplar"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
+            Text(tr("Book reader", "Kitap okuyucu"), color = onAccent(T.accent), fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
         }
-        DrawerRow("sort", tr("Recent list", "Son okunanlar"), tab == 1, false) { onTab(1) }
-        DrawerRow("book", tr("My Shelf", "Rafım"), tab == 0, false) { onTab(0) }
-        DrawerRow(null, tr("My Favorites", "Favorilerim"), tab == 2, true) { onTab(2) }
-        DrawerRow("add", tr("My Files", "Dosyalarım"), false, false, onFiles)
+        DrawerRow(th, "sort", tr("Recent list", "Son okunanlar"), tab == 1, false) { onTab(1) }
+        DrawerRow(th, "book", tr("My Shelf", "Rafım"), tab == 0, false) { onTab(0) }
+        DrawerRow(th, null, tr("My Favorites", "Favorilerim"), tab == 2, true) { onTab(2) }
+        DrawerRow(th, "add", tr("My Files", "Dosyalarım"), false, false, onFiles)
         Spacer(Modifier.weight(1f))
-        Box(Modifier.fillMaxWidth().height(1.dp).background(T.sub.copy(alpha = .3f)))
+        Box(Modifier.fillMaxWidth().height(1.dp).background(th.sub.copy(alpha = .3f)))
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-            DrawerBottom("settings", tr("Options", "Seçenekler"), onOptions)
-            DrawerBottom("info", tr("About", "Hakkında"), onAbout)
-            DrawerBottom("palette", if (dayNight == NIGHT_THEME) tr("Night Theme", "Gece teması") else tr("Day Theme", "Gündüz teması"), onDayNight)
-            DrawerBottom("power", tr("Exit", "Çıkış"), onExit)
+            DrawerBottom(th, "settings", tr("Options", "Seçenekler"), onOptions)
+            DrawerBottom(th, "info", tr("About", "Hakkında"), onAbout)
+            DrawerBottom(th, "palette", if (dayNight == NIGHT_THEME) tr("Night Theme", "Gece teması") else tr("Day Theme", "Gündüz teması"), onDayNight)
+            DrawerBottom(th, "power", tr("Exit", "Çıkış"), onExit)
         }
     }
 }
 
 @Composable
-private fun DrawerRow(icon: String?, label: String, on: Boolean, indent: Boolean, onClick: () -> Unit) {
+private fun DrawerRow(th: Theme, icon: String?, label: String, on: Boolean, indent: Boolean, onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(start = if (indent) 60.dp else 16.dp, end = 16.dp, top = 14.dp, bottom = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (icon != null) PIcon(icon, if (on) T.accent else T.text, 22.dp)
-        Text(label, color = if (on) T.accent else T.text, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
+        if (icon != null) PIcon(icon, if (on) T.accent else th.ink, 22.dp)
+        Text(label, color = if (on) T.accent else th.ink, fontSize = 15.sp, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal,
             modifier = Modifier.padding(start = if (icon != null) 16.dp else 0.dp))
     }
 }
 
 @Composable
-private fun DrawerBottom(icon: String, label: String, onClick: () -> Unit) {
+private fun DrawerBottom(th: Theme, icon: String, label: String, onClick: () -> Unit) {
     Column(Modifier.clickable { onClick() }.padding(horizontal = 6.dp, vertical = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        PIcon(icon, T.sub, 22.dp)
-        Text(label, color = T.sub, fontSize = 11.sp, textAlign = TextAlign.Center)
+        PIcon(icon, th.sub, 22.dp)
+        Text(label, color = th.sub, fontSize = 11.sp, textAlign = TextAlign.Center)
     }
 }
 
