@@ -195,6 +195,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     var showProgress by remember { mutableStateOf(EbookPrefs.showProgress(ctx)) }
     var cover by remember { mutableStateOf(EbookPrefs.cover(ctx)) }
     var wood by remember { mutableStateOf(EbookPrefs.wood(ctx)) }
+    var perRow by remember { mutableStateOf(EbookPrefs.perRow(ctx)) }
     var amoled by remember { mutableStateOf(EbookPrefs.amoled(ctx)) }
     var anim by remember { mutableStateOf(EbookPrefs.anim(ctx)) }
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
@@ -249,6 +250,13 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 LazyColumn(Modifier.weight(1f)) {
                     item { SectionTitle(tr("My Shelf", "Rafım"), th) }
                     item { SettingRow(tr("Use woody background", "Ahşap arka plan"), th) { PSwitch(wood, { wood = it; EbookPrefs.setWood(ctx, it) }) } }
+                    item {
+                        val label = if (perRow == 0) tr("auto", "otomatik") else "$perRow"
+                        SettingRow(tr("Books in a row: $label", "Satırda kitap: $label"), th) {
+                            StepButton("−", th) { perRow = if (perRow <= 2) 0 else perRow - 1; EbookPrefs.setPerRow(ctx, perRow) }
+                            StepButton("+", th) { perRow = if (perRow == 0) 2 else (perRow + 1).coerceAtMost(6); EbookPrefs.setPerRow(ctx, perRow) }
+                        }
+                    }
                     item { SettingRow(tr("Show reading progress on book cover", "Kapakta okuma ilerlemesi"), th) { PSwitch(showProgress, { showProgress = it; EbookPrefs.setShowProgress(ctx, it) }) } }
                     item { SettingRow(tr("Main folder", "Ana klasör"), th) { Text("/sdcard/Books", color = th.sub, fontSize = 13.sp) } }
                     item {
@@ -287,7 +295,8 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     Text(tr("Nothing here", "Burada boş"), color = th.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
                 } else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
                     // two or three books in a row; the covers grow to fill the width
-                    val cols = if (maxWidth < 300.dp) 2 else 3
+                    // as many covers as the width takes (a landscape screen gets more), unless a number is chosen
+                    val cols = if (perRow > 0) perRow else (maxWidth / 130.dp).toInt().coerceAtLeast(2)
                     val cw = ((maxWidth - 10.dp * (cols - 1)) / cols).coerceAtMost(200.dp)
                     LazyVerticalGrid(columns = GridCells.Fixed(cols), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
                         items(listed) { b ->
