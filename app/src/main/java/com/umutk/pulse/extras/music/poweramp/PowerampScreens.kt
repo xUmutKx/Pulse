@@ -1068,6 +1068,11 @@ private fun SleepDialog(current: Int, style: PowerampStyle, onSet: (Int, Boolean
             Spacer(Modifier.height(14.dp))
             SleepKnob(value, style, Modifier.size(168.dp)) { value = it }
             Spacer(Modifier.height(14.dp))
+            // the timer can wait for the track that is playing to end, instead of stopping in the middle of it
+            val ctx = LocalContext.current
+            var finish by remember { mutableStateOf(com.umutk.pulse.extras.music.MusicSettings.sleepFinishTrack(ctx)) }
+            SleepChip(tr("Finish the track first", "Önce parçayı bitir"), finish, style) { finish = !finish; com.umutk.pulse.extras.music.MusicSettings.setSleepFinishTrack(ctx, finish) }
+            Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SleepChip(tr("Off", "Kapalı"), false, style) { onSet(0, false); onClose() }
                 SleepChip(tr("End of track", "Parça sonu"), false, style) { onSet(0, true); onClose() }

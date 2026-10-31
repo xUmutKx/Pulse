@@ -141,11 +141,22 @@ class MusicPlayerEngine private constructor(context: Context) {
                 }
                 if (sleepEndAt > 0) {
                     val left = sleepEndAt - System.currentTimeMillis()
+                    val finish = MusicSettings.sleepFinishTrack(app)
                     _sleep.value = left.coerceAtLeast(0L)
-                    AudioGain.sleepFade = (left / 10_000f).coerceIn(0f, 1f)
-                    if (left <= 0) { sleepEndAt = 0; _sleep.value = 0; pause(); AudioGain.sleepFade = 1f }
+                    // the last ten seconds fade out, unless the timer waits for the track to end (then the music plays on at full volume)
+                    AudioGain.sleepFade = if (finish) 1f else (left / 10_000f).coerceIn(0f, 1f)
+                    if (left <= 0) {
+                        sleepEndAt = 0
+                        AudioGain.sleepFade = 1f
+                        if (finish) { player.pauseAtEndOfMediaItems = true; _sleep.value = -1L }
+                        else { _sleep.value = 0; pause() }
+                    }
                 }
-            } else AudioGain.fade = 1f
+            } else {
+                AudioGain.fade = 1f
+                // the track ended and the player paused itself at its end: the sleep timer is done
+                if (player.pauseAtEndOfMediaItems && _sleep.value < 0) { player.pauseAtEndOfMediaItems = false; _sleep.value = 0 }
+            }
             main2.postDelayed(this, 200L)
         }
     }
