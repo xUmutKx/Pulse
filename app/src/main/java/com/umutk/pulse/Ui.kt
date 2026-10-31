@@ -46,7 +46,7 @@ val T get() = Look.current
 val pageGutter get() = if (T.material) 16.dp else 12.dp
 
 private fun material(k: String): ImageVector = when (k) {
-    "add" -> Icons.Outlined.Add; "pin" -> Icons.Outlined.PushPin; "lock" -> Icons.Outlined.Lock; "unlock" -> Icons.Outlined.LockOpen
+    "add" -> Icons.Outlined.Add; "pin" -> Icons.Outlined.PushPin; "bookmark" -> Icons.Outlined.Bookmark; "lock" -> Icons.Outlined.Lock; "unlock" -> Icons.Outlined.LockOpen
     "undo" -> Icons.Outlined.Undo; "redo" -> Icons.Outlined.Redo; "restore" -> Icons.Outlined.Restore; "share" -> Icons.Outlined.Share; "newfile" -> Icons.Outlined.NoteAdd
     "image" -> Icons.Outlined.Image; "bell" -> Icons.Outlined.Notifications; "calendar" -> Icons.Outlined.CalendarMonth; "save" -> Icons.Outlined.Save
     "edit" -> Icons.Outlined.Edit; "record" -> Icons.Outlined.FiberManualRecord; "mic" -> Icons.Outlined.Mic; "speak" -> Icons.Outlined.VolumeUp
