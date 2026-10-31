@@ -401,7 +401,6 @@ private fun scanBooks(): List<Book> {
 }
 
 /** The panels of the reader's ⋮ menu that open as a full page; each goes back to the menu. */
-private val MENU_PAGES = setOf("visual", "control", "misc", "themes", "ops", "info")
 
 @OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 @Composable
@@ -457,9 +456,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     DisposableEffect(Unit) { onDispose { speaker.shutdown(); setBrightness(ctx, -1f); setOrientation(ctx, 0) } }
     BackHandler {
         when {
-            panel == "menu" -> panel = ""
-            panel in MENU_PAGES -> panel = "menu"
-            panel == "bar" -> panel = "misc"
+            // back from any page of the menu (or the menu itself) goes straight to the book
             panel.isNotEmpty() -> panel = ""
             else -> { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }
         }
@@ -573,10 +570,10 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             Row(Modifier.fillMaxWidth().background(th.bg).padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(40.dp).clickable { save(); onClose() }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 22.dp) }
                 Text(b.title, color = th.ink, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 4.dp))
-                Box(Modifier.size(40.dp).clickable { panel = "menu" }, contentAlignment = Alignment.Center) { Text("⋮", color = th.ink, fontSize = 22.sp) }
                 Box(Modifier.size(40.dp).clickable { bookmarked = Ebook.toggleBookmark(ctx, start.uri, chapter, page) }, contentAlignment = Alignment.Center) {
                     PIcon("bookmark", if (bookmarked) th.ink else th.sub, 22.dp)
                 }
+                Box(Modifier.size(40.dp).clickable { panel = "menu" }, contentAlignment = Alignment.Center) { Text("⋮", color = th.ink, fontSize = 22.sp) }
             }
             Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(th.bg).padding(horizontal = 8.dp, vertical = 6.dp)) {
                 val count = if (b.pdf) 0 else b.chapters.size
@@ -692,10 +689,9 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 "chapters" -> tr("Chapters", "Bölümler"); "bookmarks" -> tr("Bookmarks", "Yer imleri"); "search" -> tr("Search", "Ara")
                 "bar" -> tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"); "info" -> tr("Book information", "Kitap bilgisi"); else -> ""
             }
-            val backTo = if (panel == "bar") "misc" else if (panel in MENU_PAGES) "menu" else ""
             Column(Modifier.fillMaxSize().background(th.bg).padding(horizontal = 16.dp, vertical = 10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(40.dp).clickable { panel = backTo }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 22.dp) }
+                    Box(Modifier.size(40.dp).clickable { panel = "" }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 22.dp) }
                     Text(titleOf, color = th.ink, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp))
                 }
                 Spacer(Modifier.height(8.dp))
