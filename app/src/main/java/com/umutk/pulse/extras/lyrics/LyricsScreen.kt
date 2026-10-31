@@ -67,7 +67,7 @@ fun LyricsScreen(
     store: LyricsStore? = null,
 ) {
     val ctx = LocalContext.current
-    val client = remember { LrclibClient(LyricsCache(File(ctx.cacheDir, "lyrics"))) }
+    val client = remember { LrclibClient(LyricsCache(null)) }
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf(listOf(artist, title).filter { it.isNotBlank() }.joinToString(" ")) }
     var results by remember { mutableStateOf<List<LyricsRecord>>(emptyList()) }

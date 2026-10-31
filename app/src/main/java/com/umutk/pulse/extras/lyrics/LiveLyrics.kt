@@ -67,8 +67,8 @@ object LiveLyrics {
     fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", true)
     // a notification of its own for the lyrics, beside the media one (on by default: the lyrics are right there in the shade)
     fun separate(c: Context) = prefs(c).getBoolean("separate", true)
-    /** Lyrics found online are written as a .lrc beside the song. */
-    fun saveLrc(c: Context) = prefs(c).getBoolean("save_lrc", true)
+    /** Lyrics found online are always written as a .lrc beside the song (not kept in the app's data or cache). */
+    fun saveLrc(c: Context) = true
     /** Also written into the MP3's tag; this rewrites the song file, so it is off until asked for. */
     fun embed(c: Context) = prefs(c).getBoolean("embed_tag", false)
     /** How the notification tells the song's title from the lyric line: "underline" (title underlined, line bold), "thin" (the one-line view shows the line plain, the open view bold), "bold" (both bold). */
@@ -329,7 +329,6 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
     var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
     var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
-    var save by remember { mutableStateOf(LiveLyrics.saveLrc(c)) }
     var emb by remember { mutableStateOf(LiveLyrics.embed(c)) }
     var autoAll by remember { mutableStateOf(LyricsAuto.on(c)) }
     var consec by remember { mutableStateOf(LyricsShare.consecutive(c)) }
@@ -361,7 +360,6 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
             SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
         }
         SettingsSection(tr("Files and sharing", "Dosyalar ve paylaşım"), startOpen = true) {
-            SwitchRow(tr("Save found lyrics as a .lrc file beside the song", "Bulunan sözleri şarkının yanına .lrc dosyası olarak kaydet"), save) { save = it; LiveLyrics.set(c, "save_lrc", it) }
             SwitchRow(tr("Also write into the song's tag (MP3, rewrites the file)", "Şarkının etiketine de yaz (MP3, dosyayı yeniden yazar)"), emb) { emb = it; LiveLyrics.set(c, "embed_tag", it) }
             SwitchRow(tr("Find lyrics for the whole library in the background", "Tüm kütüphane için sözleri arka planda bul"), autoAll) { autoAll = it; LyricsAuto.setOn(c, it) }
             if (st.second > 0) Text(tr("${st.first} of ${st.second} songs looked at, ${st.third} with lyrics", "${st.second} şarkıdan ${st.first} tanesine bakıldı, ${st.third} tanesinin sözü var"), color = T.sub, fontSize = 12.sp)

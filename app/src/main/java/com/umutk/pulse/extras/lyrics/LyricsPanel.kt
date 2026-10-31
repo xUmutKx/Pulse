@@ -93,7 +93,7 @@ fun LyricsBody(rec: LyricsRecord, positionMs: Int, onSeek: ((Int) -> Unit)?, mod
 fun LyricsPanel(track: Track?, positionMs: Int, modifier: Modifier = Modifier, onSeek: ((Int) -> Unit)? = null) {
     val ctx = LocalContext.current
     val store = remember { LyricsStore(ctx) }
-    val client = remember { LrclibClient(LyricsCache(File(ctx.cacheDir, "lyrics"))) }
+    val client = remember { LrclibClient(LyricsCache(null)) }
     val scope = rememberCoroutineScope()
     var rec by remember { mutableStateOf<LyricsRecord?>(null) }
     var saved by remember { mutableStateOf(false) }
