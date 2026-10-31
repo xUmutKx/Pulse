@@ -1802,3 +1802,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Crossfade overlaps: the next track starts on a second player a few seconds before the end, the two fade against each other, then the next track takes over at the same place
 - derlenmedi: Security card on the Overview: a shield icon beside the title
 - derlenmedi: Device overview: the phone picture is the owner's own photo when assets/device_photo.png exists; otherwise a drawing with the camera block
+- derlenmedi: App lock opens from the More menu and Extra apps (it had no route and showed a blank screen); with the accessibility service off, its settings open once so it can be switched on
