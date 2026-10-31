@@ -718,9 +718,9 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             Box(Modifier.fillMaxSize().clickable { panel = "" })
             Column(Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp).width(260.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()).clip(RoundedCornerShape(8.dp)).background(th.bg).border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(8.dp)).padding(vertical = 6.dp)) {
                 // the buttons that are not on the bottom bar wait here; a button on the bar is not repeated in the menu
-                // (Visual Options and Options are not in the menu; they can still be put on the bar from the customise page)
-                val hidden = BAR_TOOLS.filter { it.third !in barIds && it.third != "visual" && it.third != "options" }
-                hidden.forEach { t -> ReaderRow(t.second, th) { panel = ""; act(t.third) } }
+                // (Visual Options, Options and Brightness are not in the menu: Brightness is in Control Options; they can still be put on the bar)
+                val hidden = BAR_TOOLS.filter { it.third !in barIds && it.third !in setOf("visual", "options", "brightness") }
+                hidden.forEach { t -> ReaderRow(t.second, th, icon = t.first) { panel = ""; act(t.third) } }
                 if (hidden.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(th.sub.copy(alpha = .3f)))
             }
         }
@@ -880,6 +880,11 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         InfoLine(tr("Progress", "İlerleme"), "${Ebook.pct(ctx, start.uri)}%", th)
                         InfoLine(tr("Bookmarks", "Yer imleri"), "${Ebook.bookmarks(ctx, start.uri).size}", th)
                         SettingRow(tr("Favorite", "Favori"), th) { PSwitch(fav, { fav = Ebook.toggleFavorite(ctx, start.uri) }) }
+                        // share lives with the book's information, not in the ⋮ menu
+                        ReaderRow(tr("Share…", "Paylaş…"), th, icon = "share") {
+                            val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, b.title + if (b.author.isNotEmpty()) " - " + b.author else "")
+                            ctx.startActivity(Intent.createChooser(i, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                        }
                     }
                     else -> Unit
                 }
@@ -909,8 +914,11 @@ private fun animName(style: Int): String = when (style) {
     else -> tr("Instant", "Anında")
 }
 
-private fun ReaderRow(label: String, th: Theme, mark: String = "", onClick: () -> Unit) {
+private fun ReaderRow(label: String, th: Theme, mark: String = "", icon: String = "", onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (icon.isNotEmpty()) {
+            PIcon(icon, th.ink, 20.dp, Modifier.padding(end = 14.dp))
+        }
         Text(label, color = th.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
         if (mark.isNotEmpty()) Text(mark, color = th.sub, fontSize = 18.sp)
     }
