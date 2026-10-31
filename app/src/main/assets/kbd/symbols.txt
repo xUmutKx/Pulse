@@ -1,4 +1,105 @@
 #Patterns
+##ASCII art
+   .--.⏎ .-(    ).⏎(___.__)__)	ascii art cloud
+.--.⏎(   ).-.⏎(___(__) )	ascii art cloud big
+  .-~~~-.⏎ .~       ~.⏎(___________)⏎  ' ' ' ' '	ascii art cloud rain
+  \ | /⏎-- O --⏎  / | \⏎   .--.⏎ .(    ).⏎(_________)	ascii art cloud sun
+  _  ⏎ (_)  __⏎    (___)	ascii art cloud small
+   _  _ ⏎ _( )( )_⏎(_________)	ascii art cloud wide
+    .-.⏎  .(   ).⏎ (_______)	ascii art cloud float
+ .-. .-.⏎(   )   )⏎ (__.__.__)	ascii art cloud trio
+  .--.⏎ .(    ).⏎(___(__))⏎  /  /  /⏎ /  /  /	ascii art cloud storm
+ _~~_⏎(    )~⏎ (__ __)	ascii art cloud puff
+  .::.   .::.⏎ :::::.:::::⏎ :::::::::::⏎  ':::::::'⏎    ':::'⏎      ':'	ascii art heart
+ .-. .-.⏎(   v   )⏎ \       /⏎  \     /⏎   \   /⏎    \ /⏎     v	ascii art heart small
+  /\  /\⏎ /  \/  \⏎ \      /⏎  \    /⏎   \  /⏎    \/	ascii art heart line
+ .-. .-.⏎(   v   )⏎ ` - - '⏎   \   /⏎    \ /⏎     v	ascii art heart arrow
+<3 <3⏎<3  <3  <3⏎ <3  <3⏎  <3	ascii art two hearts
+  **   **⏎ *  * *  *⏎ *   *   *⏎  *       *⏎   *     *⏎    *   *⏎      *	ascii art heart plain
+ /\/\⏎(  v  )⏎ \    /⏎  \  /⏎   \/	ascii art heart mini
+<3   <3⏎  <3 <3⏎   <3	ascii art heart box
+<3 <3 <3 <3 <3	ascii art hearts row
+ .-. .-.⏎(   V   )⏎ \   /\⏎  \ /  \⏎   V	ascii art broken heart
+     /\⏎    /  \⏎   /____\⏎   |  _ |⏎   | |_||	ascii art house
+    /\⏎   /  \⏎  /____\⏎  | [] |⏎  |____|	ascii art house simple
+    __/\__⏎   /      \⏎  |  []  |⏎  |___||__|	ascii art house door
+      /\⏎     /  \⏎  __/____\__⏎ |  ___ __ |⏎ |_|__|__|_|	ascii art cottage
+   ___⏎  /   \⏎ /_____\⏎ |  _  |⏎ |_| |_|	ascii art home
+  |_|_|_|_|⏎  |  ___  |⏎  | |   | |⏎  |_|___|_|	ascii art castle
+    /\⏎   /  \⏎  /____\⏎ /      \⏎/________\	ascii art tent
+   _____⏎  /     \⏎ /_______\⏎ |_______|	ascii art igloo
+    \ | /⏎  -- (O) --⏎    / | \	ascii art sun
+ \ | /⏎- ( ) -⏎ / | \	ascii art sun small
+  \   |   /⏎   \  |  /⏎----(  )----⏎   /  |  \⏎  /   |   \	ascii art sun rays
+   _..._⏎ .:::::::.⏎:::::::::⏎':::::::'⏎  ':::'	ascii art moon
+   .-.⏎  (  .⏎  (   )⏎   '-'	ascii art moon crescent
+  .  *  .⏎    _⏎   (_)  *⏎  .  *	ascii art moon star
+ \ | /    _⏎- (O) -  (_)⏎ / | \	ascii art sun moon
+    *⏎   ***⏎*********⏎ ******⏎  ****⏎ *   *	ascii art star
+  *⏎ ***⏎*****⏎ ***⏎ *  *	ascii art star small
+*  .  *   .  *⏎   .  *  .   *⏎*   .  *   .	ascii art stars
+    /\⏎   /  \⏎ /\    /\⏎/  \  /  \⏎  \/  \/	ascii art star outline
+  \ | /⏎-- * --⏎  / | \	ascii art sparkle
+  \  |  /⏎ --  *  --⏎  /  |  \	ascii art star burst
+  /\_/\⏎ ( o.o )⏎  > ^ <	ascii art cat
+  |\__/,|   (`\⏎_ _|  _  |.--.⏎( T   _ ) (`\ )	ascii art cat sit
+ /\_/\⏎( o o )⏎==_Y_==	ascii art cat face
+  /\__/\⏎ ( o  o )⏎ (  "  )⏎  )   (~	ascii art cat tail
+  |\---/|⏎  | ,_, |⏎   \_`_/	ascii art kitty
+ /\_/\⏎( ^.^ )⏎ (")	ascii art cat smile
+  / \__⏎ (    @\___⏎ /         O⏎/   (_____/⏎/_____/   U	ascii art dog
+  __⏎ o'')}____//⏎ `_/        )⏎ (_(  _(_/	ascii art dog face
+   _⏎  //\⏎  V  \⏎   \  \_⏎    \,'.`-.⏎     |\ `. `.	ascii art bird
+  ,_,⏎ (O,O)⏎ (   )⏎  " "	ascii art owl
+  ><>⏎><(((*>	ascii art fish
+   __⏎ _/  \__/\⏎<  o    __\⏎ \_____/	ascii art fish big
+    _____⏎  _/     \_⏎ <  o   o  >⏎  \_______/	ascii art turtle
+\  /   \ /  \⏎   \   (O)  /⏎   /  /\  \	ascii art butterfly
+   __⏎  /  \⏎  \__/___⏎  (  ( @)_)	ascii art snail
+     .-"""-.⏎   _/       \_⏎  (  o     \_)⏎   \__/\___/	ascii art whale
+  (\ /)⏎ (='.'=)⏎ (")_(")	ascii art crab
+     __⏎    /  \⏎   /    \__⏎  |  o     /⏎  |_____/	ascii art elephant
+    /\⏎   /  \⏎  /    \⏎ /______\⏎    ||	ascii art tree
+   .-.⏎  (   )⏎ (_____)⏎    |⏎   _|_	ascii art tree round
+    /\⏎   /  \⏎  /    \⏎ /______\⏎    ||⏎    ||	ascii art pine
+  \ | /⏎-- (*) --⏎  / | \⏎   |	ascii art flower
+   @⏎  @@@⏎   @⏎   |⏎  \|/	ascii art flower stem
+  _ ⏎ | |⏎_| |_⏎\   /⏎ |_|	ascii art cactus
+  \|/⏎  \|/⏎  |__|⏎  |  |⏎  |__|	ascii art plant pot
+  ( (⏎   ) )⏎ ........⏎ |      |]⏎ \      /⏎  `----'	ascii art coffee
+ ___⏎[___]⏎ |   |]⏎  \_/	ascii art tea cup
+   ._._.⏎  .|_|_|.⏎  |_____|⏎  |_____|	ascii art cake
+    /\⏎   /__\⏎  |  o|⏎   \_o/	ascii art pizza
+   __⏎  /  \⏎ /    \⏎ \_  _/	ascii art apple
+   _____⏎  /     \⏎-----+-----⏎     |⏎  \__/	ascii art umbrella
+  ' ' ' '⏎ ' ' ' ' ⏎  ' ' ' '	ascii art rain
+  *  .  *⏎ .  *  .⏎  *  .  *	ascii art snow
+   _.-''-._⏎ .' .-''-. '.⏎/  /      \  \	ascii art rainbow
+    /\⏎   /  \  /\⏎  /    \/  \⏎ /          \	ascii art mountain
+~~~~~~~~⏎  ~~~~~~⏎ ~~~~~~~~	ascii art wave
+_   _   _⏎( )_( )_( )⏎~~~~~~~~~~	ascii art sea waves
+    ___⏎  _/   \_⏎-------------⏎~~~~~~~~~~~	ascii art sunset
+    |\⏎    | \⏎    |  \⏎____|___\______⏎ \________/	ascii art boat
+     |\⏎     | \⏎     |  \⏎     |___\⏎  ___|___|___⏎  \_________/	ascii art sailboat
+   __⏎ _|__|__⏎|  _  _  |⏎'-(_)---(_)-'	ascii art car
+   ____⏎ _|  |_⏎|______|⏎ O    O	ascii art train
+    /\⏎   /  \⏎  |    |⏎  |____|⏎  /_  _\⏎ /_/  \_\	ascii art rocket
+      __⏎ ___  //⏎(____)\\⏎  ----	ascii art plane
+:-)	ascii art smiley
+  .-""-.⏎ /  ^  ^ \⏎|  \__/  |⏎ \  ___  /⏎  '-----'	ascii art smile face
+ _____⏎/     \⏎| ^ ^ |⏎|  ^  |⏎ \_____/	ascii art happy face
+   ___⏎ /   \⏎| ^ ~ |⏎ \ ~ /⏎  '-'	ascii art face wink
+ .-"""-.⏎/ _   _ \⏎| (_) (_) |⏎|   ___   |⏎ \  \_/  /⏎  '-----'	ascii art sad face
+    _⏎   ( )⏎  _|_|_⏎ / / \ \⏎    |⏎   / \	ascii art peace
+  .--.⏎ (    )-----⏎  '--'  |  |	ascii art key
+   .-.⏎  |   |⏎ .-------.⏎ |  (_)  |⏎ '-------'	ascii art lock
+ _______⏎|\     /|⏎| \   / |⏎|  \_/  |⏎|_______|	ascii art envelope
+  .  .  .⏎ /|\/|\/|\⏎|_________|	ascii art crown
+   ___⏎  /   \⏎ | o o |⏎  \ ^ /⏎  |___|	ascii art skull
+  .---.⏎  |   |⏎  |   |⏎__|___|⏎  |   |__	ascii art music note
+  _    _⏎ ( )  ( )⏎  |    |⏎  |    |⏎__|____|__	ascii art music two
+   ___⏎  (___)⏎   |||⏎  /   \	ascii art guitar
+  _________⏎ |  _   _  |⏎ | (_) (_)|⏎ |_________|	ascii art camera
 ##Sky and weather
 ☀︎ ⋆ ☁︎ ⋆ ☽	sky sun cloud moon stars
 ˚☀︎˚ ⋆ ☁︎ ⋆ ˚☽˚	sky sun cloud moon
