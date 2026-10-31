@@ -403,6 +403,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     // ---- typing ------------------------------------------------------------------------------------------------------------------------------------
 
     override fun type(s: String) {
+        st.keyTick++
         val c = currentInputConnection ?: return
         if (s.isEmpty()) return
         // the emoji search is open: the keys type into its box
