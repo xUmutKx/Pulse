@@ -295,7 +295,12 @@ class CoverAccessibilityService : android.accessibilityservice.AccessibilityServ
             androidx.core.content.ContextCompat.registerReceiver(this, power, android.content.IntentFilter().apply { addAction(Intent.ACTION_POWER_CONNECTED); addAction(Intent.ACTION_POWER_DISCONNECTED); addAction(Intent.ACTION_SCREEN_ON); addAction("com.umutk.pulse.action.GLOBAL") }, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         }
     }
-    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) { lastTouch = android.os.SystemClock.uptimeMillis() }
+    override fun onAccessibilityEvent(event: android.view.accessibility.AccessibilityEvent?) {
+        lastTouch = android.os.SystemClock.uptimeMillis()
+        // a password or text field got the focus (the PIN, the password, an edit): the lock screen lyrics step aside until the screen goes off
+        if (event?.eventType == android.view.accessibility.AccessibilityEvent.TYPE_VIEW_FOCUSED &&
+            (event.isPassword || event.className?.contains("EditText") == true)) com.umutk.pulse.extras.lyrics.LockLyricsOverlay.suppress(this)
+    }
     override fun onInterrupt() {}
     override fun onUnbind(intent: Intent?): Boolean { tick.removeCallbacks(idleCheck); if (instance === this) instance = null; runCatching { unregisterReceiver(power) }; return super.onUnbind(intent) }
     override fun onDestroy() { if (instance === this) instance = null; super.onDestroy() }
