@@ -1756,3 +1756,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books: favourites are set from the shelf (long press a book); the reader has no favourite button, no Miscellaneous page (derlenmedi)
 - Books reader: the Shutdown button is removed (derlenmedi)
 - Books reader speech: slower default (0.85) with a speed row on the Control page; the best offline voice of the engine is picked; holding the speak button or Control > Voice and speech engine opens the phone's speech settings (derlenmedi)
+- Books reader: Control page has a Speech engine row that lists the engines on the phone (Google's included); the choice applies when a book is opened (derlenmedi)
