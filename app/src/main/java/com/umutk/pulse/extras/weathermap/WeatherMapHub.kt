@@ -40,6 +40,10 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.*
+import androidx.compose.material3.Icon
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.lerp
@@ -319,6 +323,27 @@ private fun unitOf(layer: MapLayer): String = when (layer) {
     else -> ""
 }
 
+/** The icon of a layer on its chip. */
+private fun layerIcon(l: MapLayer): ImageVector = when (l) {
+    MapLayer.WIND -> Icons.Outlined.Air
+    MapLayer.WAVE -> Icons.Outlined.Waves
+    MapLayer.CLOUD -> Icons.Outlined.Cloud
+    MapLayer.PLANE -> Icons.Outlined.Flight
+    MapLayer.RADAR -> Icons.Outlined.Thunderstorm
+    MapLayer.TEMP -> Icons.Outlined.Thermostat
+    MapLayer.RAIN -> Icons.Outlined.WaterDrop
+    MapLayer.SATELLITE -> Icons.Outlined.SatelliteAlt
+}
+
+/** A round chip with an icon: black glass, the accent colour when it is the layer shown. */
+@Composable
+private fun LayerChip(icon: ImageVector, on: Boolean, onClick: () -> Unit) {
+    Box(Modifier.size(40.dp).background(if (on) T.accent else Color.Black.copy(alpha = .6f), CircleShape).clickable { onClick() },
+        contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = if (on) Color.Black else Color.White, modifier = Modifier.size(22.dp))
+    }
+}
+
 /** The outline of an aircraft pointing north, in units of its half length (x to the right, y down). */
 private val PLANE_SHAPE = listOf(
     0f to -1f, 0.12f to -0.3f, 1f to 0.15f, 1f to 0.35f, 0.12f to 0.2f, 0.1f to 0.8f, 0.35f to 1f,
@@ -344,13 +369,35 @@ private fun DrawScope.drawPlane(c: Offset, headingDeg: Double, half: Float, colo
  * The dark look of the ground: the OpenStreetMap tiles are turned to grey, darkened, with the sea a little bluer than the land.
  */
 private val DARK_MAP: ColorFilter = run {
-    val k = 0.3f
+    val k = 0.46f
     fun row(w: Float) = floatArrayOf(k * w * 0.2126f, k * w * 0.7152f, k * w * 0.0722f)
     val r = row(0.9f); val g = row(0.95f); val b = row(1.15f)
     ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(r[0], r[1], r[2], 0f, 0f, g[0], g[1], g[2], 0f, 0f, b[0], b[1], b[2], 0f, 0f, 0f, 0f, 0f, 1f, 0f)))
 }
 
 /** One tile of a picture layer, drawn at its place on the screen. */
+/** A tile that is not loaded yet: the part of the nearest loaded tile of a lower zoom that covers it, so the map never goes black. */
+private fun DrawScope.drawOrParent(tiles: Map<String, ImageBitmap>, z: Int, tx: Int, ty: Int, p: MapPos, ppu: Double, filter: ColorFilter?) {
+    tiles[tileKey(z, tx, ty)]?.let { drawTile(it, z, tx, ty, p, ppu, 1f, filter); return }
+    for (k in 1..4) {
+        val pz = z - k
+        if (pz < 0) return
+        val img = tiles[tileKey(pz, tx shr k, ty shr k)] ?: continue
+        val n = 1 shl k
+        val sw = img.width / n
+        val sh = img.height / n
+        val src = IntOffset((tx and (n - 1)) * sw, (ty and (n - 1)) * sh)
+        val d = 1.0 * (1 shl z)
+        val side = ppu / d
+        val left = size.width / 2 + (tx / d - p.cx) * ppu
+        val top = size.height / 2 + (ty / d - p.cy) * ppu
+        val l = floor(left).toInt(); val t = floor(top).toInt()
+        val r = ceil(left + side).toInt(); val b = ceil(top + side).toInt()
+        drawImage(img, srcOffset = src, srcSize = IntSize(sw, sh), dstOffset = IntOffset(l, t), dstSize = IntSize(r - l, b - t), colorFilter = filter)
+        return
+    }
+}
+
 private fun DrawScope.drawTile(img: ImageBitmap, z: Int, tx: Int, ty: Int, p: MapPos, ppu: Double, alpha: Float, filter: ColorFilter? = null) {
     val n = (1 shl z).toDouble()
     val side = ppu / n
@@ -509,7 +556,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
         ) {
             val p = pos
             val ppu = pxPerWorld(p.zoom, density)
-            base.forEach { (z, tx, ty) -> baseTiles[tileKey(z, tx, ty)]?.let { drawTile(it, z, tx, ty, p, ppu, 1f, DARK_MAP) } }
+            base.forEach { (z, tx, ty) -> drawOrParent(baseTiles, z, tx, ty, p, ppu, DARK_MAP) }
             if (overMax >= 0) visibleTiles(p, size.width, size.height, density, overMax).forEach { (z, tx, ty) ->
                 overTiles["${layer.name}/${tileKey(z, tx, ty)}"]?.let { drawTile(it, z, tx, ty, p, ppu, if (layer == MapLayer.RADAR) 0.7f else 1f) }
             }
@@ -517,7 +564,10 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
             if (layer.isGrid()) grids[layer]?.forEach { sm ->
                 val c = screenOf(sm.lat, sm.lon)
                 if (c.x < -20f || c.x > size.width + 20f || c.y < -20f || c.y > size.height + 20f) return@forEach
-                drawCircle(valueColor(layer, sm.value), radius = 6.dp.toPx(), center = c)
+                // a soft blob per value: the field reads as a heatmap, the cloud cover as soft white clouds
+                val reach = (if (layer == MapLayer.CLOUD) 34 else 22).dp.toPx()
+                val col = valueColor(layer, sm.value)
+                drawCircle(Brush.radialGradient(listOf(col, col.copy(alpha = 0f)), center = c, radius = reach), radius = reach, center = c)
                 if (layer == MapLayer.WIND || layer == MapLayer.WAVE) sm.dir?.let { drawArrow(c, it, 14.dp.toPx(), Color.White) }
             }
             if (layer == MapLayer.PLANE) planes?.forEach { pl ->
@@ -536,14 +586,10 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
             }
             Row(Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 homeView?.let { home ->
-                    Text(tr("My place", "Konumum"), color = Color.White, fontSize = 13.sp, maxLines = 1,
-                        modifier = Modifier.background(Color.Black.copy(alpha = .6f), RoundedCornerShape(50)).clickable { pos = home; info = null }.padding(horizontal = 12.dp, vertical = 6.dp))
+                    LayerChip(Icons.Outlined.MyLocation, false) { pos = home; info = null }
                 }
                 MapLayer.entries.forEach { l ->
-                    val on = l == layer
-                    Text(tr(l.en, l.trName), color = if (on) Color.Black else Color.White, fontSize = 13.sp, maxLines = 1,
-                        modifier = Modifier.background(if (on) T.accent else Color.Black.copy(alpha = .6f), RoundedCornerShape(50))
-                            .clickable { layer = l; info = null; prefs.edit().putString("layer", l.name).apply() }.padding(horizontal = 12.dp, vertical = 6.dp))
+                    LayerChip(layerIcon(l), l == layer) { layer = l; info = null; prefs.edit().putString("layer", l.name).apply() }
                 }
             }
         }

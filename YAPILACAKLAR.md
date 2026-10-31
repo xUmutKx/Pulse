@@ -1730,3 +1730,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Compile fix: missing Arrangement and fillMaxSize imports in LiveLyrics.kt (1.0.283 build failed on them)
 - Music settings: all live lyrics options are on one page opened from one row (Diğer > Canlı sözler); the crash from the nested scroll is gone (1.0.284 (derlendi))
 - Lyrics on the lock screen: the lyrics notification moves to a channel of default importance (the low one was hidden on the lock screen); the previews show a large clock, the date and the lines under it, and a dim always-on version (derlenmedi)
+- Weather map: the land is lighter; a tile not loaded yet shows part of the lower-zoom tile (no black map while zooming); values are soft blobs (heatmap, clouds as soft white); the layers are icon chips (derlenmedi)
