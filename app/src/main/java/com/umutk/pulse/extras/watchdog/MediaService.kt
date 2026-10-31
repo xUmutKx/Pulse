@@ -67,6 +67,8 @@ abstract class MediaService : Service() {
 
     /** True: the notification carries a Stop button; [onStop] runs when it is pressed. */
     protected open val hasStop: Boolean = false
+    /** The picture of the notification (a drawn one for the sounds that have no cover); none by default. */
+    protected open val art: android.graphics.Bitmap? get() = null
     protected open fun onStop() {}
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -101,6 +103,7 @@ abstract class MediaService : Service() {
             .setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setContentIntent(open)
+        art?.let { b.setLargeIcon(it) }
         if (hasStop) b.addAction(android.R.drawable.ic_media_pause, tr("Stop", "Durdur"),
             PendingIntent.getService(this, 1, Intent(this, javaClass).setAction(ACTION_STOP), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
         return b.build()
@@ -161,6 +164,8 @@ class AmbientPlaybackService : MediaService() {
     // a tap opens the music player's own sound page; the Stop button ends the mix and the notification
     override fun openIntent(): Intent = Intent().setClassName(packageName, "$packageName.ExtraToolActivity").putExtra("route", "music").putExtra(com.umutk.pulse.extras.music.MusicPlaybackService.EXTRA_OPEN, "noise")
     override val hasStop = true
+    override val art: android.graphics.Bitmap? get() = noiseArt
+    private val noiseArt by lazy { com.umutk.pulse.extras.music.notif.GeneratedArt.make(com.umutk.pulse.extras.music.notif.GeneratedArt.Kind.NOISE) }
     override fun onStop() { com.umutk.pulse.extras.ambient.AmbientMixer.stopAll() }
     // No onResume: a restart after Android killed the process must never start the last mix by itself.
     // The mix starts only from the page, the Quick panel tile or the widget (AmbientLast.toggle / AmbientMixer.load).
