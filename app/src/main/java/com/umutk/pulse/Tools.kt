@@ -73,6 +73,8 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "battery" -> BatteryHealthScreen(back)
         id == "health" -> HealthScreen(back)
         id == "toolkit" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.ToolkitPage() }
+        // the App lock page: opened from the More menu and the Extra apps group (it had no route, so it showed a blank screen)
+        id == "applock" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AppLockPage() }
         id == "extrastore" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.ui.MaxWidthBox { com.umutk.pulse.extras.store.ExtraStoreScreen(onBack = back) } }
         id == "installer" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.InstallerPage() }
         id == "cover" -> {
