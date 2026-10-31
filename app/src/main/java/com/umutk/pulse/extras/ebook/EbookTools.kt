@@ -17,21 +17,37 @@ import java.util.Locale
 
 /** Every tool the bottom bar can hold, with its icon and its name. */
 val BAR_TOOLS = listOf(
-    Triple("details", tr("Chapters", "Bölümler"), "chapters"),
-    Triple("text", tr("Text size", "Yazı boyutu"), "text"),
-    Triple("palette", tr("Theme", "Tema"), "theme"),
-    Triple("pin", tr("Bookmarks", "Yer imleri"), "bookmarks"),
-    Triple("search", tr("Search", "Ara"), "search"),
-    Triple("speak", tr("Read aloud", "Sesli oku"), "speak"),
+    Triple("rotate", tr("Screen Orientation", "Ekran yönü"), "orient"),
+    Triple("light", tr("Day/Night Mode", "Gündüz/Gece"), "daynight"),
+    Triple("speak", tr("Speak", "Sesli oku"), "speak"),
     Triple("sort", tr("Autoscroll", "Otomatik kaydır"), "auto"),
+    Triple("details", tr("Chapters", "Bölümler"), "chapters"),
+    Triple("bookmark", tr("Bookmarks", "Yer imleri"), "bookmarks"),
+    Triple("flash", tr("Brightness", "Parlaklık"), "brightness"),
+    Triple("text", tr("Font Size", "Yazı boyutu"), "text"),
+    Triple("search", tr("Search", "Ara"), "search"),
+    Triple("view", tr("Visual Options", "Görünüm seçenekleri"), "visual"),
+    Triple("level", tr("Control Options", "Denetim seçenekleri"), "control"),
+    Triple("touch", tr("Miscellaneous", "Diğer"), "misc"),
+    Triple("palette", tr("Themes", "Temalar"), "theme"),
     Triple("tune", tr("Options", "Seçenekler"), "options"),
+    Triple("power", tr("Shutdown", "Kapat"), "shutdown"),
+    Triple("more", tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"), "custom"),
     Triple("info", tr("Book information", "Kitap bilgisi"), "info"),
 )
+
+/** The bottom bar at first: the buttons Moon Reader shows checked. */
+private const val DEFAULT_BAR = "orient,daynight,speak,auto,chapters,custom"
 
 object EbookPrefs {
     private fun p(c: Context) = c.getSharedPreferences("ebook_reader", Context.MODE_PRIVATE)
 
-    fun bar(c: Context): List<String> = (p(c).getString("bar", "chapters,text,theme,bookmarks,info") ?: "").split(',').filter { it.isNotBlank() }
+    /** The buttons of the bottom bar, as they were chosen; version 2 brings the default of Moon Reader's list. */
+    fun bar(c: Context): List<String> {
+        val pr = p(c)
+        if (pr.getInt("barVer", 1) < 2) pr.edit().putString("bar", DEFAULT_BAR).putInt("barVer", 2).apply()
+        return (pr.getString("bar", DEFAULT_BAR) ?: "").split(',').filter { it.isNotBlank() }
+    }
     fun setBar(c: Context, ids: List<String>) { p(c).edit().putString("bar", ids.joinToString(",")).apply() }
 
     /** 0 serif, 1 sans-serif, 2 monospace. */
