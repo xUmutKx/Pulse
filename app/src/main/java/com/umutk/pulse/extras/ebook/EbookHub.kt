@@ -733,7 +733,14 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 "chapters" -> tr("Chapters", "Bölümler"); "bookmarks" -> tr("Bookmarks", "Yer imleri"); "search" -> tr("Search", "Ara")
                 "bar" -> tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"); "info" -> tr("Book information", "Kitap bilgisi"); else -> ""
             }
-            Column(Modifier.fillMaxSize().background(th.bg).padding(horizontal = 16.dp, vertical = 10.dp)) {
+            // the customise page is a popup over the reader (a tap outside closes it); the other pages fill the reader
+            val popup = panel == "bar"
+            if (popup) Box(Modifier.fillMaxSize().clickable { panel = "" })
+            Column(
+                (if (popup) Modifier.align(Alignment.Center).fillMaxWidth(.92f).heightIn(max = 600.dp).clip(RoundedCornerShape(14.dp)).background(th.bg)
+                    .border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(14.dp))
+                else Modifier.fillMaxSize().background(th.bg)).padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { panel = "" }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 22.dp) }
                     Text(titleOf, color = th.ink, fontSize = 17.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp))
@@ -838,13 +845,16 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                             // the whole row ticks the button (a tap on the name must not reach the reader under the panel)
                             // the customise button always stays on, last in the bar (EbookPrefs.pinned)
                             val toggle = { if (t.third != "custom") { barIds = EbookPrefs.pinned(if (on) barIds - t.third else barIds + t.third); EbookPrefs.setBar(ctx, barIds) } }
-                            Row(Modifier.fillMaxWidth().clickable { toggle() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                // the box ticks the button for the bar; a tap on the name opens that button's panel and closes the popup
                                 PCheck(on, { toggle() })
-                                Box(Modifier.padding(start = 10.dp).size(20.dp), contentAlignment = Alignment.Center) {
-                                    if (t.third == "text") Text("Aa", color = th.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
-                                    else PIcon(t.first, th.ink, 20.dp)
+                                Row(Modifier.weight(1f).clickable { if (t.third != "custom") { panel = ""; act(t.third) } }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.padding(start = 10.dp).size(20.dp), contentAlignment = Alignment.Center) {
+                                        if (t.third == "text") Text("Aa", color = th.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                        else PIcon(t.first, th.ink, 20.dp)
+                                    }
+                                    Text(t.second, color = th.ink, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
                                 }
-                                Text(t.second, color = th.ink, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
                                 if (on && t.third != "custom") {
                                     val at = barIds.indexOf(t.third)
                                     StepButton("▲", th) { if (at > 0) { barIds = EbookPrefs.pinned(barIds.toMutableList().also { it.add(at - 1, it.removeAt(at)) }); EbookPrefs.setBar(ctx, barIds) } }
