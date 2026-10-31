@@ -11,6 +11,9 @@ import android.os.Build
 import android.text.Layout
 import android.text.StaticLayout
 import android.text.TextPaint
+import com.umutk.pulse.extras.mediatools.transform
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 import org.xmlpull.v1.XmlPullParser
@@ -41,12 +44,40 @@ object Converter {
         "pdf" to listOf("txt"),
         "csv" to listOf("json"),
         "json" to listOf("csv"),
+        // video and music: the phone's own encoder (Media3), MP4 for video, AAC in an M4A for sound
+        "mp4" to listOf("m4a"),
+        "mkv" to listOf("mp4", "m4a"),
+        "webm" to listOf("mp4", "m4a"),
+        "mov" to listOf("mp4", "m4a"),
+        "3gp" to listOf("mp4", "m4a"),
+        "avi" to listOf("mp4", "m4a"),
+        "mp3" to listOf("m4a"),
+        "wav" to listOf("m4a"),
+        "ogg" to listOf("m4a"),
+        "flac" to listOf("m4a"),
+        "opus" to listOf("m4a"),
+        "aac" to listOf("m4a"),
     )
 
     /** The file types the converter can read. */
     val sources: Set<String> get() = targets.keys
 
     fun targetsFor(file: File): List<String> = targets[file.extension.lowercase()].orEmpty()
+
+    private val videoExts = setOf("mp4", "mkv", "webm", "mov", "3gp", "avi")
+    private val mediaExts = videoExts + setOf("mp3", "m4a", "aac", "wav", "ogg", "flac", "opus")
+
+    /** Converts any file: pictures and text on a background thread, video and sound through the phone's media encoder. */
+    suspend fun convertAny(c: Context, src: File, target: String): File {
+        val from = src.extension.lowercase()
+        if (from !in mediaExts) return withContext(Dispatchers.IO) { convert(c, src, target) }
+        if (target !in targets[from].orEmpty()) throw IllegalArgumentException("unsupported")
+        val out = freeName(src, target)
+        // a video to M4A keeps only its sound; a sound file has no picture to drop
+        val err = transform(c, android.net.Uri.fromFile(src), out, 0, 3_000_000, 0, audioOnly = target == "m4a" && from in videoExts)
+        if (err != null || !out.exists() || out.length() == 0L) { out.delete(); throw IllegalStateException(err ?: "empty") }
+        return out
+    }
 
     /** Converts [src] into [target] next to it, and returns the new file. Throws with a short message when it cannot. */
     fun convert(c: Context, src: File, target: String): File {

@@ -35,9 +35,7 @@ import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
 import com.umutk.pulse.tr
 import java.io.File
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** The converter: a file picked from the phone's own folders (this app's list, not the system's picker), then the format it becomes. */
 @OptIn(ExperimentalLayoutApi::class)
@@ -72,7 +70,7 @@ fun ConverterPage() {
                     busy = true
                     note = ""
                     scope.launch {
-                        val result = withContext(Dispatchers.IO) { runCatching { Converter.convert(ctx, file, target) } }
+                        val result = runCatching { Converter.convertAny(ctx, file, target) }
                         busy = false
                         note = result.fold(
                             { out -> tr("Saved next to the file: ${out.name}", "Dosyanın yanına kaydedildi: ${out.name}") },
