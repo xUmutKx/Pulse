@@ -1739,3 +1739,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader: Font Size is on the bottom bar by default (existing bars get it once); the ⋮ menu lists only the tools that are not on the bar, without Visual Options (it can still be added to the bar) (derlenmedi)
 - Books reader: Double-line layout is only on the Customize reader bar buttons page; the bar can now also hold Share, Favorite and E-ink (derlenmedi)
 - Books reader themes: Space (stars over a night sky), Sakura (cherry branches with blossoms) and Sakura night; the pictures are drawn, not stored (derlenmedi)
+- Books reader: Options is no longer in the ⋮ menu (it can still be put on the bar) (derlenmedi)
