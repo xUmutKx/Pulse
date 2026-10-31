@@ -1316,7 +1316,6 @@ private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
                         Text(name, color = th.text, fontSize = 28.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                         Text(code, color = th.accent, fontSize = 36.sp, fontWeight = FontWeight.SemiBold)
-                        Text("  $left", color = if (left <= 5) th.accent else th.sub, fontSize = 24.sp)
                     }
                     // the bar under the code empties as the code runs out
                     Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(6.dp).background(th.sub.copy(alpha = .2f))) {
