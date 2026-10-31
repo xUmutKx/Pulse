@@ -30,6 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.RoundedCornerShape
+import com.umutk.pulse.tr
 import com.umutk.pulse.Opt
 import kotlinx.coroutines.delay
 import java.io.File
@@ -195,6 +199,35 @@ fun BatteryHealthScreen(onBack: () -> Unit) {
             value = est?.let { (mah, n) -> if (designU > 0) "$mah of $designU mAh (${100L * mah / designU}%) · $n" else "$mah mAh · $n" },
             note = "Estimated from the charge counter while the phone charges or drains, ten percent at a time, like AccuBattery. The number after the dot is how many measurements it rests on; it becomes steadier with each full charge. Pulse has to be sampling (the monitor on) while that happens.",
         )
+        // the health: worked out from the measured capacity by default, or the number the user typed in
+        var manual by remember { mutableStateOf(BatteryLog.manualPct(ctx)?.toString().orEmpty()) }
+        val auto = remember(r) { BatteryLog.measuredPct(ctx) }
+        val shown = BatteryLog.manualPct(ctx)
+        Metric(
+            title = "Battery health",
+            value = when {
+                shown != null -> "$shown% (set by you)"
+                auto != null -> "$auto% (measured)"
+                else -> null
+            },
+            note = "Worked out from the measured capacity. Type your own figure below if you know it (for example from another app); clear it to go back to the measured one.",
+        )
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            androidx.compose.foundation.text.BasicTextField(
+                value = manual,
+                onValueChange = { v -> manual = v.filter { it.isDigit() }.take(3) },
+                singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = MaterialTheme.colorScheme.onSurface, fontSize = 15.sp),
+                modifier = Modifier.weight(1f).background(MaterialTheme.colorScheme.onSurface.copy(alpha = .08f), RoundedCornerShape(10.dp)).padding(10.dp),
+                decorationBox = { inner -> if (manual.isEmpty()) Text("Your health in %", color = MaterialTheme.colorScheme.onSurface.copy(alpha = .5f), fontSize = 14.sp); inner() },
+            )
+            Text(
+                tr("Save", "Kaydet"), color = MaterialTheme.colorScheme.onSurface, fontSize = 14.sp,
+                modifier = Modifier.background(MaterialTheme.colorScheme.onSurface.copy(alpha = .14f), RoundedCornerShape(10.dp)).clickable {
+                    BatteryLog.setManualPct(ctx, manual.toIntOrNull()?.takeIf { it in 1..150 })
+                }.padding(horizontal = 14.dp, vertical = 10.dp),
+            )
+        }
         Metric(
             title = "Temperature",
             value = r.tempC?.let { Opt.temp(it) },

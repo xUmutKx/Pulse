@@ -48,6 +48,20 @@ object BatteryLog {
 
     fun clear(c: Context) = p(c).edit().clear().apply()
 
+    /** The health the user typed in, in percent; null = none, the measured figure is shown. */
+    fun manualPct(c: Context): Int? = p(c).getInt("manual_pct", -1).takeIf { it in 1..150 }
+
+    fun setManualPct(c: Context, pct: Int?) {
+        p(c).edit().apply { if (pct == null) remove("manual_pct") else putInt("manual_pct", pct) }.apply()
+    }
+
+    /** The health in percent from the measured capacity and the design capacity, or null while either is unknown. */
+    fun measuredPct(c: Context): Int? {
+        val est = estimate(c) ?: return null
+        val design = designUah(c) / 1000
+        return if (design > 0) (100 * est.first / design).toInt() else null
+    }
+
     /** The capacity the battery had when new in µAh: the phone's own file, else the figure of the power profile, else 0. */
     fun designUah(c: Context): Long {
         runCatching { java.io.File("/sys/class/power_supply/battery/charge_full_design").readText().trim().toLong() }.getOrNull()?.takeIf { it > 0 }?.let { return it }

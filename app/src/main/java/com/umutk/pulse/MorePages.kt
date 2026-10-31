@@ -94,6 +94,7 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
     val ramPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead("Overview", if (s.root) "root" else "")
+        com.umutk.pulse.features.DeviceHeader()
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { onOpen("cpu") }
             Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { onOpen("memory") }
