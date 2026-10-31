@@ -1840,3 +1840,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Alarm font choices (clock, dismiss, snooze, and the per-alarm overrides) are font cards
 - derlenmedi: Book search: Gutenberg Turkish results first, then the English ones of the same search
 - derlenmedi: Books: a PDF with text is read as a text book, reflowed to the reader's pages; opening a file runs off the main thread
+- derlenmedi: Books: PDF page drawing no longer crashes the app (a failed page shows blank; the page is always closed)
