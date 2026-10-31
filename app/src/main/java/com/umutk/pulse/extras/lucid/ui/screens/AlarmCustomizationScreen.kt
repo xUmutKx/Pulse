@@ -19,6 +19,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -926,6 +927,15 @@ fun AlarmCustomizationScreen(
                         RingingBackgroundStyle.entries.forEach { style ->
                             val selected = background == style
                             val cardShape = RoundedCornerShape(16.dp)
+                            val select: () -> Unit = {
+                                background = style
+                                if (style != RingingBackgroundStyle.CUSTOM_IMAGE &&
+                                    style != RingingBackgroundStyle.VIDEO &&
+                                    style != RingingBackgroundStyle.SOLID_COLOR
+                                ) {
+                                    showBackgroundSheet = false
+                                }
+                            }
                             Column(
                                 modifier = Modifier
                                     .width(112.dp)
@@ -935,15 +945,7 @@ fun AlarmCustomizationScreen(
                                         if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                                         cardShape
                                     )
-                                    .clickable {
-                                        background = style
-                                        if (style != RingingBackgroundStyle.CUSTOM_IMAGE &&
-                                            style != RingingBackgroundStyle.VIDEO &&
-                                            style != RingingBackgroundStyle.SOLID_COLOR
-                                        ) {
-                                            showBackgroundSheet = false
-                                        }
-                                    }
+                                    .clickable(onClick = select)
                             ) {
                                 Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
                                     if (style == RingingBackgroundStyle.CUSTOM_IMAGE || style == RingingBackgroundStyle.VIDEO) {
@@ -956,6 +958,8 @@ fun AlarmCustomizationScreen(
                                             modifier = Modifier.fillMaxSize()
                                         ) {}
                                     }
+                                    // a clear layer on top takes the tap, so the live picture under it can never swallow it
+                                    Box(Modifier.matchParentSize().clickable(onClick = select))
                                 }
                                 Text(
                                     style.label,
