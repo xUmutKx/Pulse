@@ -130,10 +130,35 @@ object Ebook {
         if (png.exists()) return png
         if (none.exists()) return null
         val ok = runCatching {
-            if (book.pdf) pdfFirstPage(c, Uri.parse(book.uri), png) else epubCover(c, Uri.parse(book.uri), png)
+            if (book.pdf) pdfFirstPage(c, Uri.parse(book.uri), png)
+            // no picture inside an EPUB (or a TXT): the first page of the text, drawn like a page
+            else epubCover(c, Uri.parse(book.uri), png) || Ebook.open(c, Uri.parse(book.uri))?.let { textPage(it, png) } == true
         }.getOrDefault(false)
         if (!ok) none.createNewFile()
         return if (ok) png else null
+    }
+
+    /** The first page of the text, drawn on a paper-coloured page: the title, then the first paragraphs. */
+    private fun textPage(book: Book, out: File): Boolean {
+        val first = book.chapters.firstOrNull()?.paras?.joinToString("\n\n") { it.text }.orEmpty()
+        if (first.isBlank()) return false
+        val w = 480
+        val h = 720
+        val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+        val canvas = android.graphics.Canvas(bmp)
+        canvas.drawColor(android.graphics.Color.rgb(0xF5, 0xF2, 0xEA))
+        val paint = android.text.TextPaint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = android.graphics.Color.rgb(0x1E, 0x1E, 0x1E)
+            textSize = 24f
+        }
+        val text = book.title + "\n\n" + first
+        @Suppress("DEPRECATION")
+        val layout = android.text.StaticLayout(text, paint, w - 56, android.text.Layout.Alignment.ALIGN_NORMAL, 1.25f, 0f, false)
+        canvas.translate(28f, 36f)
+        layout.draw(canvas)
+        out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+        bmp.recycle()
+        return true
     }
 
     /** The first page of a PDF, drawn at the width of a cover. */
