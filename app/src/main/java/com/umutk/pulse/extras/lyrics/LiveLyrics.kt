@@ -257,7 +257,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
         if (artFor != t.path) { artFor = t.path; art = runCatching { (com.umutk.pulse.extras.music.trackArtLocal(ctx, t) ?: com.umutk.pulse.extras.music.trackArt(ctx, t))?.asAndroidBitmap() }.getOrNull() }
         nm.notify(4106, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics2").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music).setLargeIcon(art)
             .setContentTitle(LiveLyrics.titled(ctx, t.title ?: t.path.substringAfterLast('/'))).setContentText(boldLine).setStyle(androidx.core.app.NotificationCompat.BigTextStyle().bigText(bold))
-            .setOngoing(true).setOnlyAlertOnce(true).setSilent(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT)
+            .setOngoing(true).setOnlyAlertOnce(true).setContentIntent(open).setCategory(androidx.core.app.NotificationCompat.CATEGORY_TRANSPORT)
             // public: the lock screen shows the lines, not only "notification hidden"
             .setVisibility(if (LiveLyrics.lockScreen(ctx)) androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC else androidx.core.app.NotificationCompat.VISIBILITY_PRIVATE).build())
     }
