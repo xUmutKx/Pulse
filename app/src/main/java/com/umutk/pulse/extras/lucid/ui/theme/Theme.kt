@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.lucid.ui.theme
 
+import com.umutk.pulse.extras.lucid.ui.theme.LucidLookState
+import com.umutk.pulse.extras.lucid.ui.theme.LucidLook
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.Canvas
@@ -39,8 +41,12 @@ fun OneUiAppBackground(
     // the coloured glow of the dark background can be switched off in Settings (it is plain black then)
     val glowOn = androidx.compose.ui.platform.LocalContext.current.getSharedPreferences("lucid_glow", android.content.Context.MODE_PRIVATE).getBoolean("on", false)
     val glowColor = if (glowOn) accentColor else Color(0xFF040408)
+    val look = LucidLookState.current
     Canvas(modifier = modifier.fillMaxSize()) {
-        if (dark && !glowOn) {
+        if (dark && look == LucidLook.MATERIAL) {
+            // Material: the flat dark surface, no glow
+            drawRect(color = Color(0xFF1C1B1F))
+        } else if (dark && (!glowOn || look == LucidLook.AMOLED)) {
             // glow off: pure AMOLED black, no tint at all
             drawRect(color = Color.Black)
         } else if (dark) {
