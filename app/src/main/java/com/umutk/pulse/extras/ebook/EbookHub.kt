@@ -662,25 +662,15 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
         if (panel == "menu" && b != null) {
             Box(Modifier.fillMaxSize().clickable { panel = "" })
             Column(Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp).width(260.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()).clip(RoundedCornerShape(8.dp)).background(th.bg).border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(8.dp)).padding(vertical = 6.dp)) {
-                ReaderRow(tr("Visual Options", "Görünüm seçenekleri"), th) { panel = "visual" }
-                ReaderRow(tr("Control Options", "Denetim seçenekleri"), th) { panel = "control" }
-                ReaderRow(tr("Miscellaneous", "Diğer"), th) { panel = "misc" }
-                ReaderRow(tr("Themes", "Temalar"), th) { panel = "themes" }
-                Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(th.sub.copy(alpha = .3f)))
-                // the chapters, the bookmarks and the search open straight from the menu
-                ReaderRow(tr("Chapters", "Bölümler"), th) { panel = "chapters" }
-                ReaderRow(tr("Bookmarks", "Yer imleri"), th) { panel = "bookmarks" }
-                ReaderRow(tr("Search", "Ara"), th) { panel = "search" }
+                // the buttons that are not on the bottom bar wait here; a button on the bar is not repeated in the menu
+                val hidden = BAR_TOOLS.filter { it.third !in barIds }
+                hidden.forEach { t -> ReaderRow(t.second, th) { panel = ""; act(t.third) } }
+                if (hidden.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(th.sub.copy(alpha = .3f)))
                 ReaderRow(tr("Share…", "Paylaş…"), th) {
                     panel = ""
                     val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, b.title + if (b.author.isNotEmpty()) " - " + b.author else "")
                     ctx.startActivity(Intent.createChooser(i, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
                 }
-                ReaderRow(tr("Book information", "Kitap bilgisi"), th) { panel = "info" }
-                // the buttons that are not on the bottom bar wait here
-                val hidden = BAR_TOOLS.filter { it.third !in barIds && it.third != "custom" }
-                if (hidden.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(th.sub.copy(alpha = .3f)))
-                hidden.forEach { t -> ReaderRow(t.second, th) { panel = ""; act(t.third) } }
             }
         }
 
@@ -854,11 +844,20 @@ private fun ReaderRow(label: String, th: Theme, mark: String = "", onClick: () -
 
 @Composable
 private fun ThemeCard(t: Theme, name: String, picked: Boolean, modifier: Modifier, onClick: () -> Unit) {
-    Column(modifier.clip(RoundedCornerShape(10.dp)).background(t.bg)
+    Box(modifier.height(118.dp).clip(RoundedCornerShape(10.dp)).background(t.bg)
         .border(if (picked) 2.dp else 1.dp, if (picked) Color(0xFF3D8BFF) else t.sub.copy(alpha = .4f), RoundedCornerShape(10.dp))
-        .clickable { onClick() }.padding(12.dp)) {
-        Text("Aa", color = t.ink, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-        Text(name, color = t.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp))
+        .clickable { onClick() }) {
+        // the paper or the cloth of the theme, drawn as fine grain (the same every time)
+        Canvas(Modifier.fillMaxSize()) {
+            var seed = name.hashCode()
+            fun rnd(): Float { seed = (seed * 1103515245 + 12345) and 0x7fffffff; return (seed % 1000) / 1000f }
+            repeat(40) {
+                val y = rnd() * size.height
+                drawLine(t.ink.copy(alpha = .03f + rnd() * .05f), Offset(rnd() * size.width * .2f, y), Offset(size.width - rnd() * size.width * .2f, y + (rnd() - .5f) * 6f), strokeWidth = 1f + rnd())
+            }
+        }
+        Text("Aa", color = t.ink, fontSize = 32.sp, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.TopStart).padding(12.dp))
+        Text(name, color = t.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.align(Alignment.BottomStart).padding(10.dp))
     }
 }
 
