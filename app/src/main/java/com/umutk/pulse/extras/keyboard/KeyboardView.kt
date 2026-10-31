@@ -1079,6 +1079,34 @@ private fun familyIcon(id: String): ImageVector = when (id) {
     else -> Icons.Rounded.Apps
 }
 
+/**
+ * One ASCII picture, whole: the monospace text is measured and set to the largest size that fits the cell's width, so the
+ * picture keeps its shape and is never cut off. A tap copies the picture.
+ */
+@Composable
+private fun AsciiArtCell(text: String, th: KbTheme, act: KbActions) {
+    val measurer = androidx.compose.ui.text.rememberTextMeasurer()
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val base = 12f
+    val lines = text.count { it == '\n' } + 1
+    androidx.compose.foundation.layout.BoxWithConstraints(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(text) }.padding(6.dp)
+    ) {
+        val style = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = base.sp, lineHeight = (base * 1.1f).sp, color = th.text)
+        val widthPx = measurer.measure(text, style).size.width.toFloat()
+        val maxPx = with(density) { maxWidth.toPx() }
+        val size = if (widthPx > 0f) (base * maxPx / widthPx * .96f).coerceIn(4f, 22f) else base
+        Text(
+            text,
+            style = style.copy(fontSize = size.sp, lineHeight = (size * 1.1f).sp),
+            softWrap = false,
+            maxLines = lines,
+            overflow = TextOverflow.Clip,
+            modifier = Modifier.align(Alignment.Center),
+        )
+    }
+}
+
 /** The symbol tab: a row of icons for the families, a row of sub-categories when the family has some, and the signs; the search above finds a sign by its Unicode name. */
 @Composable
 private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
@@ -1093,7 +1121,11 @@ private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.F
         }
         // the presets vary in length: each one takes just its own width, so two or three share a line
         val wide = fam?.id == "Patterns"
-        if (wide) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val art = wide && subs.getOrNull(sub)?.first == "ASCII art"
+        // ASCII art: each picture is drawn whole, scaled to its cell's width (never cut), a tap copies it
+        if (art) LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            items(subs.getOrNull(sub)?.second.orEmpty()) { sg -> AsciiArtCell(sg.ch.replace("⏎", "\n"), th, act) }
+        } else if (wide) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
             // a long preset is shrunk to the width of the keyboard, so every one shows whole
             val room = maxWidth - 12.dp
             androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
