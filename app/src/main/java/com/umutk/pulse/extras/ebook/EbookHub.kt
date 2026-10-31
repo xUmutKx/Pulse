@@ -814,9 +814,14 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         }
                         itemsIndexed(BAR_TOOLS) { _, t ->
                             val on = t.third in barIds
-                            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                                PCheck(on, { barIds = if (on) barIds - t.third else barIds + t.third; EbookPrefs.setBar(ctx, barIds) })
-                                PIcon(t.first, th.ink, 20.dp, Modifier.padding(start = 10.dp))
+                            // the whole row ticks the button (a tap on the name must not reach the reader under the panel)
+                            val toggle = { barIds = if (on) barIds - t.third else barIds + t.third; EbookPrefs.setBar(ctx, barIds) }
+                            Row(Modifier.fillMaxWidth().clickable { toggle() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                PCheck(on, toggle)
+                                Box(Modifier.padding(start = 10.dp).size(20.dp), contentAlignment = Alignment.Center) {
+                                    if (t.third == "text") Text("Aa", color = th.ink, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+                                    else PIcon(t.first, th.ink, 20.dp)
+                                }
                                 Text(t.second, color = th.ink, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
                                 if (on) {
                                     val at = barIds.indexOf(t.third)
