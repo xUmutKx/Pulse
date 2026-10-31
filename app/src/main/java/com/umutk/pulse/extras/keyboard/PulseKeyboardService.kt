@@ -229,7 +229,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         owner = StandByOwner().also { it.start() }
         st.lang = KeyboardPrefs.langList().first()
         scope.launch(Dispatchers.IO) { runCatching { EmojiData.index(this@PulseKeyboardService) } }
-        st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.let { r -> if ('\n' in r) r.split('\n') else r.split(' ') }?.filter { it.isNotEmpty() } ?: emptyList()
+        st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.let { r -> if ('\n' in r) r.split('\n') else r.split(' ') }?.filter { it.isNotEmpty() && !isArt(it) } ?: emptyList()
         scope.launch(Dispatchers.IO) {
             KeyboardPrefs.langList().forEach { code ->
                 // a language without a word list fetches its own (when there is a connection)
@@ -1113,8 +1113,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val c = currentInputConnection ?: return
         finishWord("", false)
         c.commitText(e, 1)
-        st.recents = (listOf(e) + st.recents.filter { it != e }).take(30)
-        getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).edit().putString("recents", st.recents.joinToString("\n")).apply()
+        // pictures (block shading, multi-line art) are not kept in the recent emoji: they show as broken dots there
+        if (!isArt(e)) {
+            st.recents = (listOf(e) + st.recents.filter { it != e }).take(30)
+            getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).edit().putString("recents", st.recents.joinToString("\n")).apply()
+        }
         lastWasSpace = false
     }
 
@@ -1438,3 +1441,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         return Triple(listOf(left, mid, right), words, fix?.let { capped(cased(it.word, typed)) })
     }
 }
+
+/** A picture made of characters (block shading, several lines): not an emoji, so it is left out of the recent list. */
+private fun isArt(s: String): Boolean =
+    s.contains('\n') || s.contains('\u23CE') || s.any { it in '\u2580'..'\u259F' || it in '\u2800'..'\u28FF' }
