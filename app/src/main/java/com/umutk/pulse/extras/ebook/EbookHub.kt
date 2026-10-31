@@ -81,6 +81,8 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.launch
+import androidx.compose.runtime.rememberCoroutineScope
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -254,7 +256,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 } else {
                     Box(Modifier.size(40.dp).clickable { screen = "" }, contentAlignment = Alignment.Center) { PIcon("back", th.ink, 24.dp) }
                 }
-                Text(if (screen == "options") tr("Options", "Seçenekler") else title, color = th.ink, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                Text(if (screen == "options") tr("Options", "Seçenekler") else if (screen == "find") tr("Find free books", "Ücretsiz kitap bul") else title, color = th.ink, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
                 if (screen.isEmpty()) {
                     Box(Modifier.size(40.dp).clickable { searching = !searching; if (!searching) query = "" }, contentAlignment = Alignment.Center) { PIcon("search", th.ink, 22.dp) }
                     Box(Modifier.size(40.dp).clickable { pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) }, contentAlignment = Alignment.Center) { PIcon("add", th.ink, 24.dp) }
@@ -262,7 +264,11 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             }
             if (note.isNotEmpty()) Text(note, color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp))
 
-            if (screen == "options") {
+            if (screen == "find") FindPage(th) { book ->
+                shelf = (shelf.filter { it.uri != book.uri } + book.copy(chapters = emptyList())).also { shelfSave(ctx, it) }
+                screen = ""; tab = 0
+            }
+            else if (screen == "options") {
                 LazyColumn(Modifier.weight(1f)) {
                     item { SectionTitle(tr("My Shelf", "Rafım"), th) }
                     item { SettingRow(tr("Use woody background", "Ahşap arka plan"), th) { PSwitch(wood, { wood = it; EbookPrefs.setWood(ctx, it) }) } }
@@ -341,6 +347,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             dayNight = dayNight,
             onTab = { tab = it; screen = ""; drawer = false },
             onFiles = { drawer = false; pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) },
+            onFind = { drawer = false; screen = "find" },
             onOptions = { drawer = false; screen = "options" },
             onAbout = { drawer = false; about = true },
             onDayNight = {
@@ -380,19 +387,18 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
 @Composable
 private fun ShelfDrawer(
     tab: Int, dayNight: Int, amoled: Boolean,
-    onTab: (Int) -> Unit, onFiles: () -> Unit, onOptions: () -> Unit, onAbout: () -> Unit,
+    onTab: (Int) -> Unit, onFiles: () -> Unit, onFind: () -> Unit, onOptions: () -> Unit, onAbout: () -> Unit,
     onDayNight: () -> Unit, onExit: () -> Unit, onClose: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)).clickable { onClose() })
     val th = shelfTheme(dayNight == DAY_THEME, amoled)
     Column(Modifier.fillMaxHeight().width(280.dp).background(th.bg)) {
-        Box(Modifier.fillMaxWidth().height(120.dp).background(T.accent), contentAlignment = Alignment.BottomStart) {
-            Text(tr("Book reader", "Kitap okuyucu"), color = onAccent(T.accent), fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
-        }
+        Text(tr("Book reader", "Kitap okuyucu"), color = th.ink, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(start = 16.dp, top = 24.dp, bottom = 12.dp))
         DrawerRow(th, "sort", tr("Recent list", "Son okunanlar"), tab == 1, false) { onTab(1) }
         DrawerRow(th, "book", tr("My Shelf", "Rafım"), tab == 0, false) { onTab(0) }
-        DrawerRow(th, null, tr("My Favorites", "Favorilerim"), tab == 2, true) { onTab(2) }
+        DrawerRow(th, "heart", tr("My Favorites", "Favorilerim"), tab == 2, false) { onTab(2) }
         DrawerRow(th, "add", tr("My Files", "Dosyalarım"), false, false, onFiles)
+        DrawerRow(th, "search", tr("Find free books", "Ücretsiz kitap bul"), false, false, onFind)
         Spacer(Modifier.weight(1f))
         Box(Modifier.fillMaxWidth().height(1.dp).background(th.sub.copy(alpha = .3f)))
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
@@ -985,6 +991,54 @@ private fun SettingRow(label: String, th: Theme, trailing: @Composable () -> Uni
     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = th.ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
         trailing()
+    }
+}
+
+/**
+ * Find free books: a search of the public-domain catalogue (Turkish first), and a tap on a result downloads it into the
+ * phone's Books folder and puts it on the shelf through [onAdded].
+ */
+@Composable
+private fun FindPage(th: Theme, onAdded: (Book) -> Unit) {
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var query by remember { mutableStateOf("") }
+    var results by remember { mutableStateOf<List<BookFind.Found>?>(null) }
+    var busy by remember { mutableStateOf("") }
+    val booksDir = File(android.os.Environment.getExternalStorageDirectory(), "Books")
+    fun search() {
+        if (query.isBlank()) return
+        scope.launch {
+            busy = tr("Searching...", "Aranıyor...")
+            results = withContext(Dispatchers.IO) { runCatching { BookFind.search(query) }.getOrNull() }
+            busy = if (results == null) tr("No connection", "Bağlantı yok") else ""
+        }
+    }
+    Column(Modifier.fillMaxSize()) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            OutlinedField(query, th, tr("Title or author", "Başlık veya yazar")) { query = it }
+            Box(Modifier.size(40.dp).clickable { search() }, contentAlignment = Alignment.Center) { PIcon("search", th.ink, 22.dp) }
+        }
+        Text(tr("Only books whose copyright has ended, from Project Gutenberg. Turkish first.",
+            "Yalnızca telif süresi dolmuş kitaplar, Project Gutenberg'den. Önce Türkçe."), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
+        if (busy.isNotEmpty()) Text(busy, color = th.sub, fontSize = 13.sp)
+        if (results != null && results.isNullOrEmpty() && busy.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), color = th.sub, fontSize = 13.sp)
+        LazyColumn(Modifier.weight(1f)) {
+            itemsIndexed(results.orEmpty()) { _, f ->
+                Column(Modifier.fillMaxWidth().clickable {
+                    scope.launch {
+                        busy = tr("Downloading...", "İndiriliyor...")
+                        val file = withContext(Dispatchers.IO) { runCatching { BookFind.download(booksDir, f) }.getOrNull() }
+                        val book = file?.let { withContext(Dispatchers.IO) { Ebook.open(ctx, Uri.fromFile(it)) } }
+                        busy = ""
+                        if (book != null) onAdded(book) else busy = tr("This book cannot be downloaded", "Bu kitap indirilemiyor")
+                    }
+                }.padding(vertical = 10.dp)) {
+                    Text(f.title, color = th.ink, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    if (f.author.isNotEmpty()) Text(f.author, color = th.sub, fontSize = 13.sp)
+                }
+            }
+        }
     }
 }
 

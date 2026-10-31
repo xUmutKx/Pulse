@@ -1758,3 +1758,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader speech: slower default (0.85) with a speed row on the Control page; the best offline voice of the engine is picked; holding the speak button or Control > Voice and speech engine opens the phone's speech settings (derlenmedi)
 - Books reader: Control page has a Speech engine row that lists the engines on the phone (Google's included); the choice applies when a book is opened (derlenmedi)
 - Books reader: the last line of a page is no longer cut off (the page measure matches the drawn spacing and keeps a margin) (derlenmedi)
+- Books: My Favorites has its icon; the drawer header is plain text; Find free books (Project Gutenberg, public domain, Turkish first) downloads into Books and adds to the shelf (derlenmedi)
