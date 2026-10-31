@@ -107,8 +107,10 @@ fun AlarmEditSheet(
     onDismiss: () -> Unit,
     onSave: (AlarmEntity) -> Unit
 ) {
-    var hour by remember { mutableIntStateOf(initialAlarm?.hour ?: 8) }
-    var minute by remember { mutableIntStateOf(initialAlarm?.minute ?: 0) }
+    // a new alarm starts at the phone's current time, not at a fixed 08:00
+    val nowCal = remember { Calendar.getInstance() }
+    var hour by remember { mutableIntStateOf(initialAlarm?.hour ?: nowCal.get(Calendar.HOUR_OF_DAY)) }
+    var minute by remember { mutableIntStateOf(initialAlarm?.minute ?: nowCal.get(Calendar.MINUTE)) }
     var label by remember { mutableStateOf(initialAlarm?.label ?: "") }
     var groupName by remember { mutableStateOf(initialAlarm?.groupName ?: AlarmEntity.DEFAULT_GROUP) }
     var selectedDays by remember { mutableStateOf(initialAlarm?.daysOfWeek ?: emptySet()) }
@@ -282,13 +284,14 @@ fun AlarmEditSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
         containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor,
-        dragHandle = {
+        // AMOLED: no white bar at the top of the sheet (the sheet can still be dragged from its top edge)
+        dragHandle = if (androidx.compose.foundation.isSystemInDarkTheme()) null else ({
             BottomSheetDefaults.DragHandle(
                 width = 32.dp,
                 height = 4.dp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
             )
-        }
+        })
     ) {
         Column(
             modifier = Modifier
@@ -343,7 +346,8 @@ fun AlarmEditSheet(
                     .nestedScroll(consumeVerticalFlingConnection)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+                // tighter gaps, so the editor's options fit the screen with less scrolling
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 OutlinedTextField(
                     value = label,
