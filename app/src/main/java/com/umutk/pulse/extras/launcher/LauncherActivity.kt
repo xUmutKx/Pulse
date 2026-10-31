@@ -126,7 +126,7 @@ class LauncherActivity : ComponentActivity() {
     }
     override fun onStart() { enter(); super.onStart() }
     override fun onResume() { enter(); super.onResume() }
-    override fun onStop() { super.onStop(); AppLookGuard.leave(this) }
+    override fun onStop() { super.onStop(); LauncherPrefs.restorePulse(); AppLookGuard.leave(this) }
     override fun onDestroy() { super.onDestroy(); AppLookGuard.leave(this) }
 }
 
