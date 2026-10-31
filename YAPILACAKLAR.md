@@ -1762,3 +1762,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books find: results show covers in a grid; one tap downloads the book and opens it in the reader (derlenmedi)
 - Books find: sources can be added (a name and an address with {q}; OPDS catalogues and JSON like Gutenberg's); Gutenberg has a Turkish and an all-languages source; a long press removes an added source (derlenmedi)
 - Network type: the success check reads the phone's type names (it looked for numbers); the command also runs for each SIM id; DNS tile: no tap pop frames; dice tumbles in the air and lands; coin flip turns over in the air and lands (derlenmedi)
+- Music library: Radio category (Turkish stations from Radio Browser, search by name; a tap plays the stream) (derlenmedi)
