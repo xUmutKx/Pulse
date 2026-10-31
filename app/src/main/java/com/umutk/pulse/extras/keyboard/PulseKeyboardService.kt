@@ -456,7 +456,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val tp = st.touch; st.touch = null
             touchPts.add(tp); if (touchPts.size > 48) touchPts.removeAt(0)
             if (tp != null) st.letterRects[ch.lowercase()]?.let { r -> KeyboardDictionary.learnTouch(ch.lowercaseChar(), tp, r.center, r.width) }
-            if (lang.code == "tr") apostropheAfterName()
+            if (lang.code == "tr") apostropheAfterName(c)
             c.setComposingText(word, 1)
             lastCorrection = null
             if (st.shift == 1) st.shift = 0
@@ -1111,9 +1111,21 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     /** Turkish endings on a name take the apostrophe as the word is typed: Adana + da is Adana'da, Pelin + den is Pelin'den. */
-    private fun apostropheAfterName() {
+    private fun apostropheAfterName(c: android.view.inputmethod.InputConnection) {
         if (word.indexOf('\'') >= 0) return
         val w = word.toString().lowercase(lang.locale)
+        // a place with its head word, after a space: Ağrı Dağı'na, Van Gölü'ne, Ege Denizi'nden (the apostrophe goes after the head word)
+        val before = c.getTextBeforeCursor(word.length + 1, 0)?.toString().orEmpty()
+        if (before.length == word.length + 1 && before.first() == ' ') {
+            for (h in TR_GEO_HEADS) {
+                if (!w.startsWith(h)) continue
+                val rest = w.substring(h.length)
+                if (rest.isNotEmpty() && rest.length <= 4 && rest in TR_ENDINGS) {
+                    word.setLength(0); word.append(h.substring(0, 1).uppercase(lang.locale)).append(h.substring(1)).append('\'').append(rest)
+                    return
+                }
+            }
+        }
         for (cut in w.length - 1 downTo 3) {
             val rest = w.substring(cut)
             if (rest.length > 4) break
@@ -1468,4 +1480,6 @@ private fun spaceAfterCursor(c: android.view.inputmethod.InputConnection): Boole
     c.getTextAfterCursor(1, 0)?.firstOrNull()?.isWhitespace() == true
 
 /** The Turkish endings that follow a name (case, the locative, the ablative, with the vowel of the name); the apostrophe goes before them. */
-private val TR_ENDINGS = setOf("ı", "i", "u", "ü", "a", "e", "ya", "ye", "yı", "yi", "yu", "yü", "da", "de", "ta", "te", "dan", "den", "tan", "ten", "nın", "nin", "nun", "nün", "ın", "in", "un", "ün", "la", "le", "yla", "yle", "ndan", "nden", "nda", "nde")
+private val TR_GEO_HEADS = listOf("üniversitesi", "havalimanı", "köprüsü", "caddesi", "sokağı", "meydanı", "stadyumu", "parkı", "müzesi", "vadisi", "körfezi", "denizi", "boğazı", "ovası", "yaylası", "nehri", "gölü", "adası", "dağı")
+
+private val TR_ENDINGS = setOf("ı", "i", "u", "ü", "a", "e", "na", "ne", "nı", "ni", "nu", "nü", "ya", "ye", "yı", "yi", "yu", "yü", "da", "de", "ta", "te", "dan", "den", "tan", "ten", "nın", "nin", "nun", "nün", "ın", "in", "un", "ün", "la", "le", "yla", "yle", "ndan", "nden", "nda", "nde")
