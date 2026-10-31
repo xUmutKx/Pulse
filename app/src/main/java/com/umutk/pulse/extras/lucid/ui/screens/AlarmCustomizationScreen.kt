@@ -36,6 +36,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.Button
@@ -811,6 +812,14 @@ fun AlarmCustomizationScreen(
                 ) {
                     Text("Done")
                 }
+            }
+
+            // the back arrow at the top left: leaves the customisation, the same as the system back
+            androidx.compose.material3.IconButton(
+                onClick = onDone,
+                modifier = Modifier.align(Alignment.TopStart).statusBarsPadding().padding(start = 4.dp, top = 4.dp)
+            ) {
+                Icon(Icons.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
             }
 
             if (alarmLabelVisible) {
