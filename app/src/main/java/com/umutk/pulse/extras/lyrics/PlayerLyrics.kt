@@ -81,8 +81,7 @@ fun PlayerLyrics(
             }.getOrNull()
             value = false to r
             if (r != null && localPath != null && r.source in setOf("lrclib", "ovh", "cache")) withContext(Dispatchers.IO) {
-                if (LiveLyrics.saveLrc(ctx)) Lyrics.saveSidecar(localPath, r)
-                if (LiveLyrics.embed(ctx)) Lyrics.embedMp3(localPath, r)
+                Lyrics.keep(localPath, r)
             }
         }
         // 0 reading, 1 picking lines to share, 2 the card to share

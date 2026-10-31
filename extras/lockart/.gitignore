@@ -1,0 +1,19 @@
+# Generados
+build/
+app/build/
+.gradle/
+.kotlin/
+*.apk
+
+# Locales y secretos: nunca subir la clave de firma ni sus contraseñas
+local.properties
+keystore.properties
+*.keystore
+*.jks
+
+# Material de análisis (apps de terceros descompiladas)
+analisis/
+
+# IDE
+.idea/
+*.iml

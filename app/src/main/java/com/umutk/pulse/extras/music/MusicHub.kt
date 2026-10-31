@@ -212,7 +212,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
         // radio and the music recap open from the player, in its own dark look
         if (radioOpen) Box(Modifier.fillMaxSize().background(Color.Black)) { com.umutk.pulse.extras.radio.RadioScreen({ radioOpen = false }, ink = Color.White, sub = Color.White.copy(alpha = .6f), accent = Color(0xFFC6FF3D)) }
         if (recapOpen) Box(Modifier.fillMaxSize()) { com.umutk.pulse.extras.music.stats.RecapScreen { recapOpen = false } }
-        if (onlineOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.playlists.OnlinePlaylistsHub { onlineOpen = false } }
+        if (onlineOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { WebMusicHub { onlineOpen = false } }
         if (spotifyOpen) Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) { com.umutk.pulse.extras.spotify.SpotifyHub.Screen { spotifyOpen = false } }
         if (playlistsOpen) PlaylistsDialog(engine, st.queue) { playlistsOpen = false }
         // the settings are a full-screen page of their own (a dialog without the usual width limit), not a panel inside the player
@@ -259,7 +259,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     PIcon("heart", ink, 22.dp); Text("Spotify", color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                 }
                 Row(Modifier.fillMaxWidth().clickable { settingsOpen = false; onlineOpen = true }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PIcon("play", ink, 22.dp); Text(tr("YouTube / YT Music playlist", "YouTube / YT Music çalma listesi"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
+                    PIcon("play", ink, 22.dp); Text(tr("Web music: YouTube Music, Spotify", "Web müzik: YouTube Music, Spotify"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))
                 }
                 if (!granted) Row(Modifier.fillMaxWidth().clickable { askPermission.launch(MusicLibrary.permission) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                     PIcon("search", ink, 22.dp); Text(tr("Scan the phone's music", "Telefondaki müziği tara"), color = ink, fontSize = 16.sp, modifier = Modifier.padding(start = 12.dp))

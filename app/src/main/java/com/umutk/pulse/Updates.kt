@@ -61,12 +61,9 @@ object Updates {
                 val tag = j.optString("tag_name")
                 if (tag.isEmpty()) return@runCatching null
                 val apk = j.optJSONArray("assets")?.let { a ->
-                    // the release holds two builds (Android 12+ and the "android5" one), each for every processor type: each phone gets its own
-                    val apks = (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("name").endsWith(".apk") }
-                        .filter { (android.os.Build.VERSION.SDK_INT >= 31) != it.optString("name").contains("android5") }
-                    // the phone takes the first of its own processor types that the release has (an old release has no type in the name)
-                    val abi = android.os.Build.SUPPORTED_ABIS.firstOrNull { t -> apks.any { it.optString("name").contains(t) } }
-                    (apks.firstOrNull { abi != null && it.optString("name").contains(abi) } ?: apks.firstOrNull())?.optString("browser_download_url")
+                    (0 until a.length()).map { a.getJSONObject(it) }.filter { it.optString("name").endsWith(".apk") }
+                        // the release holds two builds: Android 12+ and the "android5" one; each phone gets its own
+                        .firstOrNull { (android.os.Build.VERSION.SDK_INT >= 31) != it.optString("name").contains("android5") }?.optString("browser_download_url")
                 }
                 val notes = j.optString("body").lines().map { it.trim().trimStart('#', '-', '*', ' ') }.filter { it.isNotEmpty() }.take(6)
                 Release(tag.trimStart('v', 'V'), notes, if (apk.isNullOrEmpty()) j.optString("html_url") else apk)

@@ -17,6 +17,12 @@ object KeyboardDictionary {
     private class Lex(val words: Array<String>, val score: FloatArray) {
         val sorted: IntArray = words.indices.sortedBy { words[it] }.toIntArray()
         val index: HashMap<String, Int> = HashMap<String, Int>(words.size * 2).also { m -> words.forEachIndexed { i, w -> m[w] = i } }
+        // the word numbers by length (up to 28 letters, the longest a correction looks at): a correction only reads the lengths near the typed word
+        val byLen: Array<IntArray> = run {
+            val lists = Array(29) { ArrayList<Int>() }
+            words.forEachIndexed { i, w -> if (w.length <= 28) lists[w.length].add(i) }
+            Array(29) { lists[it].toIntArray() }
+        }
     }
 
     private val lexes = ConcurrentHashMap<String, Lex>()
@@ -276,15 +282,17 @@ object KeyboardDictionary {
     fun splitWords(code: String, w: String): String? {
         if (w.length < 5 || w.length > 24) return null
         var best: String? = null; var bestScore = -1f
-        for (i in 1 until w.length) {
-            val a = w.substring(0, i); val b = w.substring(i)
-            if ((a.length < 3 && a !in shortWords) || (b.length < 3 && b !in shortWords)) continue
-            if (!isWord(code, a) || !isWord(code, b)) continue
+        fun pair(a: String, b: String) {
+            if ((a.length < 3 && a !in shortWords) || (b.length < 3 && b !in shortWords)) return
+            if (!isWord(code, a) || !isWord(code, b)) return
             // both parts must be common words (a brand or a rare word that happens to split is left alone)
-            if (score(code, a) < 8f || score(code, b) < 8f) continue
+            if (score(code, a) < 8f || score(code, b) < 8f) return
             val sc = minOf(score(code, a), score(code, b)) + (a.length + b.length) * .05f
             if (sc > bestScore) { bestScore = sc; best = "$a $b" }
         }
+        for (i in 1 until w.length) pair(w.substring(0, i), w.substring(i))
+        // a letter typed in place of the space, one of the keys under the thumb (z x c v b n m): "selamncanım" is "selam canım"
+        for (i in 3 until w.length - 2) if (w[i] in "zxcvbnm") pair(w.substring(0, i), w.substring(i + 1))
         return best
     }
 
@@ -362,7 +370,8 @@ object KeyboardDictionary {
             if (cost > maxCost) return
             best += Cand(w, base - 4f * cost, cost)
         }
-        for (i in lx.words.indices) consider(lx.words[i], lx.score[i])
+        // only the words one or two letters longer or shorter than the typed one can be within reach
+        for (len in maxOf(1, t.length - 2)..minOf(28, t.length + 2)) for (i in lx.byLen[len]) consider(lx.words[i], lx.score[i])
         user.forEach { (w, _) -> if (best.none { it.word == w }) consider(w, score(lang, w)) }
         return best.sortedByDescending { it.score }.take(n)
     }

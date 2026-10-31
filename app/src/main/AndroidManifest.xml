@@ -404,6 +404,8 @@
         <receiver android:name="com.umutk.pulse.features.TimerReceiver" android:exported="false" />
         <!-- the Clock = Lucid Alarm (extras/lucid, GPL-3.0, DarkAspect1): ring screen, receivers and services -->
         <activity android:name="com.umutk.pulse.extras.lucid.MainActivity" android:exported="false" android:theme="@style/Theme.Lucid" android:windowSoftInputMode="adjustResize" android:label="Clock" />
+        <!-- lyrics over the lock screen (the full-screen notification of the lyrics ticker opens it while locked) -->
+        <activity android:name="com.umutk.pulse.extras.lyrics.LyricsLockActivity" android:exported="false" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@style/Theme.LyricsLock" />
         <activity android:name="com.umutk.pulse.extras.lucid.AlarmRingingActivity" android:exported="true" android:launchMode="singleInstance" android:taskAffinity="" android:excludeFromRecents="true" android:noHistory="true" android:showOnLockScreen="true" android:showWhenLocked="true" android:turnScreenOn="true" android:theme="@style/Theme.Lucid.Ringing" />
         <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AlarmReceiver" android:exported="false" />
         <receiver android:name="com.umutk.pulse.extras.lucid.receiver.AwakeCheckReceiver" android:exported="false" />
@@ -804,6 +806,11 @@
         <service android:name=".TimerTile" android:exported="true" android:label="Timer" android:icon="@drawable/ic_qs_timer"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
             <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+        </service>
+        <service android:name="com.umutk.pulse.features.FloatingTimerTile" android:exported="true" android:label="Floating timer" android:icon="@drawable/ic_qs_timer"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter><action android:name="android.service.quicksettings.action.QS_TILE" /></intent-filter>
+            <meta-data android:name="android.service.quicksettings.TOGGLEABLE_TILE" android:value="true" />
         </service>
         <service android:name=".CalculatorTile" android:exported="true" android:label="Calculator" android:icon="@drawable/ic_qs_calc"
             android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
@@ -1530,6 +1537,24 @@
             </intent-filter>
         </activity-alias>
         <activity-alias android:name=".CalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_calc" android:roundIcon="@mipmap/ic_ad_calc" android:label="Calculator">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".ClockLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_clock" android:roundIcon="@mipmap/ic_ad_clock" android:label="Clock">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".EbookLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_notes" android:roundIcon="@mipmap/ic_ad_notes" android:label="Books">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+        <activity-alias android:name=".TempMailLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_tempmail" android:roundIcon="@mipmap/ic_ad_tempmail" android:label="TempMail">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />

@@ -113,8 +113,11 @@ fun LyricsSearchScreen(onOpen: (LyricHit) -> Unit, onClose: () -> Unit) {
         if (q.trim().length < 3) { hits = emptyList(); busy = false; return@LaunchedEffect }
         delay(600)
         busy = true
+        // the phone's lyrics first (instant), then the online catalogue added under them
+        hits = Lyrics.searchByText(ctx, q, online = false)
+        done = true
         hits = Lyrics.searchByText(ctx, q)
-        busy = false; done = true
+        busy = false
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -203,8 +206,7 @@ fun LyricsSheet(
         busy = false
         // found online: written beside the song when the settings say so
         if (r != null && localPath != null && r.source in setOf("lrclib", "ovh", "cache")) withContext(Dispatchers.IO) {
-            if (LiveLyrics.saveLrc(ctx)) Lyrics.saveSidecar(localPath, r)
-            if (LiveLyrics.embed(ctx)) Lyrics.embedMp3(localPath, r)
+            Lyrics.keep(localPath, r)
         }
     }
     Box(

@@ -81,6 +81,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
+    // the space that came by itself behind a comma: Backspace takes it away with the comma
+    private var commaSpace = false
     /** The word as it stood before the user started deleting letters of it: if the corrected form ends as a real word, the first form was a typo. */
     private var peak: String? = null
     // a letter was typed right behind "word." with no space: the space and a capital are put in when the word ends, unless it is an address
@@ -132,11 +134,50 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun clipClear() { st.clipItems = ClipStore.clear(this) }
 
     /** A kept item into the field: a text is typed, a picture is handed over as content when the field takes pictures. */
+    override fun authPick(code: String) {
+        currentInputConnection?.commitText(code, 1)
+        st.panel = "keys"
+        afterText()
+    }
+
+    /** Quick auth: the fingerprint first when the setting asks for it, then the codes of the accounts (computed now). */
+    private fun openAuth() {
+        if (!KeyboardPrefs.authLock || android.os.Build.VERSION.SDK_INT < 28) { showAuth(); return }
+        val cancel = android.os.CancellationSignal()
+        val prompt = android.hardware.biometrics.BiometricPrompt.Builder(this)
+            .setTitle(com.umutk.pulse.tr("Quick auth", "Hızlı kimlik doğrulama"))
+            .setDescription(com.umutk.pulse.tr("Confirm it is you to see the codes", "Kodları görmek için kimliğini doğrula"))
+            .setNegativeButton(com.umutk.pulse.tr("Cancel", "İptal"), mainExecutor) { _, _ -> cancel.cancel() }
+            .build()
+        prompt.authenticate(cancel, mainExecutor, object : android.hardware.biometrics.BiometricPrompt.AuthenticationCallback() {
+            override fun onAuthenticationSucceeded(result: android.hardware.biometrics.BiometricPrompt.AuthenticationResult) { showAuth() }
+        })
+    }
+
+    private fun showAuth() {
+        refreshAuth()
+        st.panel = "auth"
+    }
+
+    /** The codes of every account for the current time, with the period of each (a code changes when its period ends). */
+    private fun refreshAuth() {
+        val now = System.currentTimeMillis() / 1000L
+        val accounts = runCatching { com.umutk.pulse.features.AuthStore.load(this) }.getOrDefault(emptyList())
+        st.authCodes = accounts.map { a ->
+            val name = if (a.issuer.isBlank()) a.name else "${a.issuer} · ${a.name}"
+            name to runCatching { com.umutk.pulse.features.Totp.code(com.umutk.pulse.features.Totp.base32Decode(a.secret), now, a.digits, a.period, a.algo) }.getOrDefault("------")
+        }
+        st.authPeriods = accounts.map { it.period }
+    }
+
+    override fun authTick() { if (st.panel == "auth") refreshAuth() }
+
     override fun pasteClip(item: ClipItem) {
         val c = currentInputConnection ?: return
         finishWord("", false)
         val path = item.image
-        if (path == null) { c.commitText(item.text, 1); st.panel = "keys"; afterText(); return }
+        // a text goes in and is also the copied text again (the phone's clipboard), so it can be pasted from anywhere
+        if (path == null) { c.commitText(item.text, 1); clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("", item.text)); st.panel = "keys"; afterText(); return }
         val info = currentInputEditorInfo
         val types = if (info != null) androidx.core.view.inputmethod.EditorInfoCompat.getContentMimeTypes(info) else emptyArray()
         val ok = types.any { it.startsWith("image/") || it == "*/*" }
@@ -369,6 +410,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (st.trans) { st.transIn += s; scheduleTrans(); return }
         if (s.codePointCount(0, s.length) > 1 || Character.isSurrogate(s[0])) { finishWord("", false); c.commitText(s, 1); afterText(); return }
         lastGlide = null
+        commaSpace = false
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
         var ch = s[0]
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
@@ -416,6 +458,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (st.shift == 1) st.shift = 0
             updateSuggestions()
         } else {
+            // a second comma right behind a comma (or the comma and its space) is dropped: one comma stays
+            if (ch == ',' && word.isEmpty() && c.getTextBeforeCursor(2, 0)?.toString()?.let { it.endsWith(",") || it == ", " } == true) return
             // a word is only mended when the space key ends it: a period, comma or bracket leaves what was typed as it is
             // a full stop behind a word of the dictionary ends a sentence (not in addresses, passwords or numbers): the space and the capital come with the next letter
             val before = word.toString().lowercase(lang.locale)
@@ -423,6 +467,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (!finishWord(s, false, s)) c.commitText(s, 1)
             punctTyped = ch in ",;!?:" || dotOk
             dotEnd = ch in "!?" || dotOk
+            // a comma behind a word is followed by a space at once (not in numbers, addresses, passwords or web addresses)
+            if (ch == ',' && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true) {
+                c.commitText(" ", 1); commaSpace = true; punctTyped = false
+            }
             lastWasSpace = false
             if (ch in ".!?") lastCorrection = null
             prevWord = null; prevWord2 = null
@@ -553,7 +601,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // right after an automatic correction, Backspace takes it back: the word as it was typed opens again, and that correction is remembered as unwanted,
         // so the same word is not corrected the same way the next time
         val lc = lastCorrection
-        if (lc != null && word.isEmpty() && c.getSelectedText(0).isNullOrEmpty()) {
+        // only a correction made by the space key is taken back: a comma or full stop is deleted by itself
+        if (lc != null && lc.sep == " " && word.isEmpty() && c.getSelectedText(0).isNullOrEmpty()) {
             val n = lc.corrected.length + lc.sep.length
             if (c.getTextBeforeCursor(n, 0)?.toString() == lc.corrected + lc.sep) {
                 lastCorrection = null
@@ -585,7 +634,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 updateCaps(); updateSuggestions(); return
             }
         }
-        if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
+        if (commaSpace && tb.endsWith(", ") && c.getSelectedText(0).isNullOrEmpty()) { commaSpace = false; c.deleteSurroundingText(2, 0) }
+        else if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         // text was deleted that the remembered words may have belonged to: they are forgotten, so no old prediction is written back
         prevWord = null; prevWord2 = null; lastCorrection = null; lastGlide = null
         updateCaps(); updateSuggestions()
@@ -816,6 +866,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         when (id) {
             "menu" -> st.panel = if (st.panel == "menu") "keys" else "menu"
             "clip" -> st.panel = if (st.panel == "clip") "keys" else "clip"
+            "auth" -> if (st.panel == "auth") st.panel = "keys" else openAuth()
             "gamepad" -> st.panel = if (st.panel == "gamepad") "keys" else "gamepad"
             "lang" -> lang()
             // the e-mail key: "@" and the chosen domain go in at the cursor, nothing before it is touched
@@ -951,11 +1002,14 @@ class PulseKeyboardService : InputMethodService(), KbActions {
      */
     override fun voice() {
         finishWord("", false)
-        if (st.listening) { stopListening(); return }
+        if (st.panel == "voice") { stopListening(); st.panel = "keys"; return }
         val granted = checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) == android.content.pm.PackageManager.PERMISSION_GRANTED
         if (!granted || !android.speech.SpeechRecognizer.isRecognitionAvailable(this)) { switchToVoiceKeyboard(); return }
         val tag = if (lang.code == "tr") "tr-TR" else "en-US"
         val rec = recognizer ?: android.speech.SpeechRecognizer.createSpeechRecognizer(this).also { recognizer = it }
+        // the keyboard's own listening panel covers the keys; the words are written into the field as they are recognised
+        st.voiceText = ""
+        st.panel = "voice"
         rec.setRecognitionListener(object : android.speech.RecognitionListener {
             override fun onReadyForSpeech(params: android.os.Bundle?) { st.listening = true }
             override fun onBeginningOfSpeech() {}
@@ -964,23 +1018,26 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             override fun onEndOfSpeech() { st.listening = false }
             override fun onError(error: Int) {
                 st.listening = false
-                // no match is not an error worth a message; a missing recognizer falls back to the voice keyboard once
-                if (error == android.speech.SpeechRecognizer.ERROR_RECOGNIZER_BUSY || error == android.speech.SpeechRecognizer.ERROR_NO_MATCH || error == android.speech.SpeechRecognizer.ERROR_SPEECH_TIMEOUT) return
+                st.panel = "keys"
                 if (!voiceFallbackDone && error == android.speech.SpeechRecognizer.ERROR_CLIENT) { voiceFallbackDone = true; switchToVoiceKeyboard() }
             }
             override fun onResults(results: android.os.Bundle?) {
                 st.listening = false
+                st.panel = "keys"
                 val text = results?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
                 if (text.isNotBlank()) { currentInputConnection?.commitText(text.trim() + " ", 1); afterText() }
             }
-            override fun onPartialResults(partial: android.os.Bundle?) {}
+            override fun onPartialResults(partial: android.os.Bundle?) {
+                st.voiceText = partial?.getStringArrayList(android.speech.SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull().orEmpty()
+            }
             override fun onEvent(eventType: Int, params: android.os.Bundle?) {}
         })
         val i = android.content.Intent(android.speech.RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE_MODEL, android.speech.RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
             .putExtra(android.speech.RecognizerIntent.EXTRA_LANGUAGE, tag)
+            .putExtra(android.speech.RecognizerIntent.EXTRA_PARTIAL_RESULTS, true)
             .putExtra(android.speech.RecognizerIntent.EXTRA_MAX_RESULTS, 1)
-        runCatching { rec.startListening(i) }.onFailure { st.listening = false; switchToVoiceKeyboard() }
+        runCatching { rec.startListening(i) }.onFailure { st.listening = false; st.panel = "keys"; switchToVoiceKeyboard() }
     }
 
     private fun stopListening() {
@@ -1196,7 +1253,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val list = when {
             before.isEmpty() -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }.take(3)
             '@' in before -> domains.filter { it.startsWith("@" + before.substringAfterLast('@'), true) && it.length > before.substringAfterLast('@').length + 1 }.take(3)
-            else -> domains.take(3)
+            // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
+            else -> emptyList()
         }
         slotWords = arrayOf(list.getOrElse(0) { "" }, list.getOrElse(1) { "" }, list.getOrElse(2) { "" })
         st.slots = slotWords.toList()
@@ -1328,7 +1386,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 if (s >= 9f && !KeyboardDictionary.isBanned(w) && KeyboardDictionary.rejectCount(lower, w) < 1) KeyboardDictionary.Cand(w, s, .6f) else null
             }
         }.maxByOrNull { it.score }
-        val fix = swapFix ?: fix0 ?: if (!fast && !valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
+        // two words that run together (a key typed for the space among them) are split before any other mending
+        val split = if (!fast && !valid && !stretched && lower.length >= 6) codes.firstNotNullOfOrNull { KeyboardDictionary.splitWords(it, lower) }?.let { KeyboardDictionary.Cand(it, 0f, .5f) } else null
+        val fix = swapFix ?: split ?: fix0
         val others = (comp.map { it.word } + corr.map { it.word }).distinct().filter { it != lower && it != fix?.word && !KeyboardDictionary.isBanned(it) }
         val emoji = if (KeyboardPrefs.emojiPredictions) (KeyboardDictionary.emoji(lower) ?: EmojiData.forWord(lower)) else null
         val mid: String; val left: String; val right: String

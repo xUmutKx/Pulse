@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- black background, white line glyph: the default look of the extra apps' launcher icons -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/ic_app_bg" />
+    <foreground><inset android:drawable="@drawable/ic_ad_clock_fg" android:inset="30%" /></foreground>
+    <monochrome><inset android:drawable="@drawable/ic_ad_clock_fg" android:inset="30%" /></monochrome>
+</adaptive-icon>

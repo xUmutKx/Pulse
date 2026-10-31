@@ -250,12 +250,12 @@ private fun FilesPageInner() {
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
                     "cache" -> CacheCleanerScreen(back)
+                    "share" -> com.umutk.pulse.files.home.FilesSharePage(onBack = { tab = "files" })
                     else -> ExplorerTab(full || !standalone, { tab = it }) { full = !full }
                 }
             }
             if (standalone) {
-                val ot = com.umutk.pulse.LocalOpenTool.current
-                com.umutk.pulse.files.home.FilesNavBar(tab, { tab = it }) { ot("localsend") }
+                com.umutk.pulse.files.home.FilesNavBar(tab, { tab = it }) { tab = "share" }
             }
         }
         }
@@ -496,9 +496,17 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var resultsFor by remember { mutableStateOf<String?>(null) }
     // the search looks under this folder; the button beside the field widens it to the whole storage
     var searchAll by remember { mutableStateOf(false) }
+    // the Search tab of the standalone app opens the search over every folder
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openSearchAll) {
+        if (com.umutk.pulse.files.home.FilesHomeNav.openSearchAll) {
+            searchAll = true; com.umutk.pulse.files.home.FilesHomeNav.openSearchAll = false
+            // the names of the whole phone are read now, so the first search answers at once
+            withContext(Dispatchers.IO) { if (FileIndex.isStale()) FileIndex.build(top) }
+        }
+    }
     LaunchedEffect(resultsFor, here, showHidden, searchAll) {
         found = null
-        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { if (searchAll) exFind(top, q, showHidden, 300_000) else exFind(dir, q, showHidden) } }
+        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { if (searchAll) { if (FileIndex.isStale()) FileIndex.build(top); FileIndex.search(q, showHidden) } else exFind(dir, q, showHidden) } }
     }
     // typing searches this folder and everything under it by itself, a moment after the last key
     LaunchedEffect(query, searchOpen) {
@@ -547,6 +555,7 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
         // music files play right here, in a thin player at the bottom, not in another app
         if (f.extension.lowercase() in EX_AUDIO) { recents = exAddRecent(ctx, f); ExAudio.play(f); return }
         if (f.extension.lowercase() in com.umutk.pulse.OF_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.ofOpen(ctx, f, if (ctx is com.umutk.pulse.FilesActivity) "material" else null); return }
+        if (f.extension.lowercase() in com.umutk.pulse.RAW_EXTS) { recents = exAddRecent(ctx, f); com.umutk.pulse.rawOpen(ctx, f); return }
         if (f.extension.lowercase() in com.umutk.pulse.IMG_EXTS || f.extension.lowercase() in setOf("heic", "heif", "avif")) {
             recents = exAddRecent(ctx, f)
             if (!exOpenInGallery(ctx, f)) com.umutk.pulse.imgOpen(ctx, f)
@@ -1055,7 +1064,9 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
                         else if (r.dir) { arcCwd = "$p/" } else scope.launch {
                             val out = File(ctx.cacheDir, "arc/${System.nanoTime()}/${r.name}")
                             val ok = withContext(Dispatchers.IO) { runCatching { archiveExtractOne(af, p, out) }.getOrDefault(false) }
-                            if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
+                            // a picture inside an archive opens in Pulse's own viewer, not through the "Open as" chooser
+                            if (ok && out.extension.lowercase() in com.umutk.pulse.IMG_EXTS) com.umutk.pulse.imgOpen(ctx, out)
+                            else if (ok) openFile(out) else note = tr("Could not read the entry", "Öğe okunamadı")
                         }
                     },
                     onLongClick = { arcSel = if (picked) arcSel - p else arcSel + p },
@@ -1090,9 +1101,12 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             val tile = ((24 + FilesPrefs.icon.coerceIn(0, 9) * 5) * 3 / 2 + 8).dp
             val cols = ((maxWidth + gap) / (tile + gap)).toInt().coerceAtLeast(1)
             val cell = (maxWidth - gap * (cols - 1)) / cols
-            shownNow.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
-                r.forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { item(f) } }
-            } }
+            // the rows go one under the other: a box would stack them on top of each other
+            Column(Modifier.fillMaxWidth()) {
+                shownNow.chunked(cols).forEach { r -> Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(gap)) {
+                    r.forEach { f -> Box(Modifier.width(cell).clipToBounds(), contentAlignment = Alignment.TopCenter) { item(f) } }
+                } }
+            }
         } else shownNow.forEachIndexed { i, f -> item(f); if (FilesPrefs.rowSep && i < shownNow.lastIndex) Box(Modifier.fillMaxWidth().height(1.dp).background(T.line)) }
         Spacer(Modifier.height(88.dp))
         }
@@ -2254,7 +2268,7 @@ object ExDirSizes {
 }
 
 /** One app that takes a share: its name, its icon and the activity to start. */
-private class ShareTarget(val label: String, val icon: androidx.compose.ui.graphics.ImageBitmap?, val comp: android.content.ComponentName)
+private class ShareTarget(val label: String, val icon: androidx.compose.ui.graphics.ImageBitmap?, val comp: android.content.ComponentName, val key: String = "share")
 
 /** Puts [picks] (folders with everything inside) into one zip under the app's cache and returns it; the zip is named after the one item or after how many there are. */
 private fun exZipForShare(ctx: Context, picks: List<File>): File {
@@ -2280,7 +2294,6 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
     val files = picks.filter { it.isFile }
     val folders = picks.any { it.isDirectory }
     fun done(msg: String) { note(msg); onDismiss() }
-    var nearbyPick by remember { mutableStateOf(false) }
     fun sendIntent(list: List<File>): Intent {
         val uris = ArrayList<android.net.Uri>(list.map { FileProvider.getUriForFile(ctx, "${ctx.packageName}.files", it) })
         val mimes = list.map { fileMime(it) }.distinct()
@@ -2290,17 +2303,18 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
         i.clipData = ClipData.newRawUri("", uris[0]).also { cd -> uris.drop(1).forEach { cd.addItem(ClipData.Item(it)) } }
         return i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK)
     }
-    fun openNearby(cls: String, name: String) {
-        val ok = runCatching { ctx.startActivity(sendIntent(files).setClassName(ctx, cls)) }.isSuccess
-        done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not open $name", "$name açılamadı"))
-    }
     // the apps that take this share, read off the main thread
     var targets by remember { mutableStateOf<List<ShareTarget>>(emptyList()) }
     LaunchedEffect(files) {
         if (files.isEmpty()) return@LaunchedEffect
         targets = withContext(Dispatchers.IO) {
             val pm = ctx.packageManager
-            runCatching {
+            // Relay and LocalSend, Pulse's own nearby-device senders, are the first tiles
+            val nearby = listOf(
+                ShareTarget(tr("Relay", "Relay"), null, android.content.ComponentName(ctx, "com.umutk.pulse.extras.relay.RelayShareActivity"), "send"),
+                ShareTarget(tr("LocalSend", "LocalSend"), null, android.content.ComponentName(ctx, "com.umutk.pulse.extras.localsend.LocalSendShareActivity"), "wifi"),
+            )
+            nearby + runCatching {
                 pm.queryIntentActivities(sendIntent(files), 0).filter { !it.activityInfo.name.endsWith("LocalSendShareActivity") && !it.activityInfo.name.endsWith("RelayShareActivity") }.distinctBy { it.activityInfo.packageName }
                     // the nearby-device senders come first: Pulse's LocalSend, the LocalSend app, Quick Share
                     .sortedBy { ri -> val n = ri.activityInfo.name; val pk = ri.activityInfo.packageName
@@ -2312,14 +2326,6 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
             }.getOrDefault(emptyList())
         }
     }
-    if (nearbyPick) WinAlert(onDismissRequest = { nearbyPick = false }, title = { Text(tr("Send to nearby devices with", "Yakındaki cihazlara şununla gönder"), color = T.text) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                PButton("Relay", Modifier.fillMaxWidth()) { nearbyPick = false; openNearby("com.umutk.pulse.extras.relay.RelayShareActivity", "Relay") }
-                PButton("LocalSend", Modifier.fillMaxWidth()) { nearbyPick = false; openNearby("com.umutk.pulse.extras.localsend.LocalSendShareActivity", "LocalSend") }
-            }
-        },
-        confirmButton = {}, dismissButton = null)
     androidx.compose.material3.ModalBottomSheet(onDismissRequest = onDismiss, containerColor = T.panel) {
         Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
             Text(if (picks.size == 1) picks[0].name else tr("${picks.size} items", "${picks.size} öğe"), Modifier.padding(horizontal = 20.dp, vertical = 4.dp), color = T.sub, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -2331,7 +2337,7 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
                         done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not share", "Paylaşılamadı"))
                     }.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         val ic = t.icon
-                        if (ic != null) Image(ic, null, Modifier.size(44.dp)) else PIcon("share", T.text, 36.dp)
+                        if (ic != null) Image(ic, null, Modifier.size(44.dp)) else PIcon(t.key, T.text, 36.dp)
                         Text(t.label, color = T.text, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 3.dp))
                     }
                 }
@@ -2341,7 +2347,6 @@ private fun ExShareSheet(picks: List<File>, onDismiss: () -> Unit, note: (String
                     val ok = if (files.size == 1) exHandOver(ctx, files[0], true) else exShareMany(ctx, files)
                     done(if (ok) (if (folders) tr("Folders were left out", "Klasörler paylaşıma alınmadı") else "") else tr("Could not share", "Paylaşılamadı"))
                 })
-                if (files.isNotEmpty()) add(Triple("wifi", tr("Relay / LocalSend (nearby devices)", "Relay / LocalSend (yakındaki cihazlar)")) { nearbyPick = true })
                 add(Triple("archive", tr("Share as one zip (folders too)", "Tek zip olarak paylaş (klasörler dahil)")) {
                     note(tr("Zipping…", "Zipleniyor…"))
                     scope.launch {

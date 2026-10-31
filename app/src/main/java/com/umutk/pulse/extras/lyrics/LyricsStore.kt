@@ -36,21 +36,25 @@ class LyricsStore(ctx: Context) {
 
     fun isSaved(r: LyricsRecord) = File(dir, name(r)).isFile
 
-    /** Returns the sidecar file when one could be written. */
+    /**
+     * The lyrics go beside the song as a .lrc (synced) or .txt file. Only when that cannot be written (a stream, a read-only folder)
+     * a copy is kept here. Returns the sidecar file when one was written.
+     */
     fun save(r: LyricsRecord, audioPath: String?): File? {
+        val body = r.syncedLyrics ?: r.plainLyrics
+        if (audioPath != null && body != null && Lyrics.keepText(audioPath, body, "saved")) {
+            return File(audioPath.substringBeforeLast('.') + ".lrc")
+        }
         dir.mkdirs()
         val o = JSONObject().put("id", r.id).put("trackName", r.trackName).put("artistName", r.artistName)
             .put("albumName", r.albumName ?: "").put("instrumental", r.instrumental)
             .put("plainLyrics", r.plainLyrics ?: "").put("syncedLyrics", r.syncedLyrics ?: "")
         File(dir, name(r)).writeText(o.toString())
-        if (audioPath == null) return null
-        runCatching {
+        if (audioPath != null) runCatching {
             val m = if (links.isFile) JSONObject(links.readText()) else JSONObject()
             links.writeText(m.put(audioPath, name(r)).toString())
         }
-        val body = r.syncedLyrics ?: r.plainLyrics ?: return null
-        val side = File(audioPath.substringBeforeLast('.') + if (r.syncedLyrics != null) ".lrc" else ".txt")
-        return runCatching { side.writeText(body, Charsets.UTF_8); side }.getOrNull() // shortcut: silently skipped when storage is read-only
+        return null
     }
 
     fun delete(r: LyricsRecord, audioPath: String?) {

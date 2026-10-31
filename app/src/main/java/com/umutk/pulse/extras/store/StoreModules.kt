@@ -138,7 +138,8 @@ object StoreCatalog {
             }
         }
         val code = runCatching { com.umutk.pulse.Compat.longVersion(c.packageManager.getPackageInfo(c.packageName, 0)) }.getOrDefault(Long.MAX_VALUE)
-        return all.filter { it.minPulse <= code && it.id !in BUILT_IN_MODULES }
+        // the ambient sounds and the Winamp skins are in the app already: no download row for them
+        return all.filter { it.minPulse <= code && it.id !in BUILT_IN_MODULES && (it.paket ?: "") !in BUNDLED_PACKS && it.id !in BUNDLED_PACKS }
     }
 
     /** Asks GitHub with ETag, at most once a day unless [force]. Any failure keeps the saved list. */

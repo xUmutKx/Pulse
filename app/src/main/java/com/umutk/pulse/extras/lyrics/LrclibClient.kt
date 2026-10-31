@@ -109,12 +109,13 @@ class LrclibClient(private val cache: LyricsCache) {
 private fun qs(vararg pairs: Pair<String, String?>): String =
     pairs.mapNotNull { (k, v) -> v?.let { "$k=${URLEncoder.encode(it, "UTF-8")}" } }.joinToString("&")
 
-/** Disk cache, one JSON file per request key. shortcut: never expires and never trimmed, add a size cap and expiry if it grows. */
-class LyricsCache(private val dir: File) {
-    fun get(key: String): String? = File(dir, name(key)).takeIf { it.isFile }?.let { runCatching { it.readText() }.getOrNull() }
+/** Request cache, one JSON file per request key in [dir]. Null means no cache: the answers are not kept on the phone (the found lyrics are saved beside the song). */
+class LyricsCache(private val dir: File?) {
+    fun get(key: String): String? = dir?.let { File(it, name(key)) }?.takeIf { it.isFile }?.let { runCatching { it.readText() }.getOrNull() }
 
     fun put(key: String, value: String) {
-        runCatching { dir.mkdirs(); File(dir, name(key)).writeText(value) }
+        val d = dir ?: return
+        runCatching { d.mkdirs(); File(d, name(key)).writeText(value) }
     }
 
     private fun name(key: String) =

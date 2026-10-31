@@ -1,5 +1,6 @@
 package com.umutk.pulse.widgets
 
+import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
@@ -50,6 +51,14 @@ class WeatherClearWidget : PulseWidget() {
     }
 
     override fun onReceive(ctx: Context, intent: Intent) {
+        if (intent.action == ACTION_MINUTE) {
+            // the clock moves with the minute: the widgets are drawn again from the saved forecast (no network)
+            val mgr = AppWidgetManager.getInstance(ctx)
+            val ids = mgr.getAppWidgetIds(ComponentName(ctx, WeatherClearWidget::class.java))
+            if (ids.isEmpty()) ctx.getSystemService(AlarmManager::class.java)?.cancel(minutePending(ctx))
+            else ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
+            return
+        }
         if (intent.action == ACTION_NEXT) {
             val id = intent.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, 0)
             if (id != 0) {
@@ -66,6 +75,17 @@ class WeatherClearWidget : PulseWidget() {
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
         super.onUpdate(ctx, mgr, ids)
         refresh(ctx, goAsync())
+        scheduleMinute(ctx)
+    }
+
+    private fun minutePending(ctx: Context) = PendingIntent.getBroadcast(ctx, 9500,
+        Intent(ctx, WeatherClearWidget::class.java).setAction(ACTION_MINUTE), PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+
+    /** A repeating alarm every minute redraws the clock; the system may group the alarms a little when the phone sleeps. */
+    private fun scheduleMinute(ctx: Context) {
+        val am = ctx.getSystemService(AlarmManager::class.java) ?: return
+        val next = (System.currentTimeMillis() / 60_000L + 1) * 60_000L
+        am.setRepeating(AlarmManager.RTC, next, 60_000L, minutePending(ctx))
     }
 
     /** Fetches the places the placed widgets show when their saved copy is over 25 minutes old (the system asks every 30), then redraws them. */
@@ -151,5 +171,8 @@ class WeatherClearWidget : PulseWidget() {
     private fun prefs(c: Context) = c.getSharedPreferences("weather_clear_widget", Context.MODE_PRIVATE)
     private fun indexOf(c: Context, id: Int) = prefs(c).getInt("idx_$id", 0)
 
-    private companion object { const val ACTION_NEXT = "com.umutk.pulse.action.WEATHER_NEXT" }
+    private companion object {
+        const val ACTION_NEXT = "com.umutk.pulse.action.WEATHER_NEXT"
+        const val ACTION_MINUTE = "com.umutk.pulse.action.WEATHER_MINUTE"
+    }
 }

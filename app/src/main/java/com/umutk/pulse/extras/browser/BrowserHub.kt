@@ -66,6 +66,8 @@ import java.io.ByteArrayInputStream
  */
 object BrowserPrefs {
     private fun p(c: Context) = c.getSharedPreferences("browser", Context.MODE_PRIVATE)
+    /** The private tab of this run (not saved): it is never read back from the preferences. */
+    var privateNow = false
     fun home(c: Context): String = p(c).getString("home", "https://www.google.com").orEmpty().ifBlank { "https://www.google.com" }
     fun setHome(c: Context, v: String) = p(c).edit().putString("home", v).apply()
     fun darkMode(c: Context): Boolean = p(c).getBoolean("dark", true)
@@ -158,9 +160,19 @@ s.textContent = css;
 document.documentElement.appendChild(s);
 })();"""
 
+/** A private (incognito) tab: nothing it does is kept after it is closed or switched off. Only the open page lives on. */
+private fun wipePrivate() {
+    runCatching {
+        android.webkit.CookieManager.getInstance().removeAllCookies(null)
+        android.webkit.WebStorage.getInstance().deleteAllData()
+    }
+}
+
 @Composable
 fun BrowserHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
+    var priv by remember { mutableStateOf(BrowserPrefs.privateNow) }
+    DisposableEffect(Unit) { onDispose { if (BrowserPrefs.privateNow) { wipePrivate(); BrowserPrefs.privateNow = false } } }
     val startUrl = remember { BrowserNav.pendingUrl?.also { BrowserNav.pendingUrl = null } ?: BrowserPrefs.home(ctx) }
     var addr by remember { mutableStateOf(startUrl) }
     var pageUrl by remember { mutableStateOf(startUrl) }
@@ -178,6 +190,14 @@ fun BrowserHub(onBack: () -> Unit) {
     var userScript by remember { mutableStateOf(BrowserPrefs.userScript(ctx)) }
     var showScript by remember { mutableStateOf(false) }
     val webRef = remember { mutableStateOf<WebView?>(null) }
+    fun setPrivate(on: Boolean) {
+        priv = on; BrowserPrefs.privateNow = on
+        // cookies and the stored page data stay out while private; they are dropped again when it is switched off
+        android.webkit.CookieManager.getInstance().setAcceptCookie(!on)
+        webRef.value?.let { it.settings.domStorageEnabled = !on; it.settings.cacheMode = if (on) android.webkit.WebSettings.LOAD_NO_CACHE else android.webkit.WebSettings.LOAD_DEFAULT }
+        if (!on) { wipePrivate(); webRef.value?.clearCache(true) }
+        webRef.value?.reload()
+    }
     val darkState = rememberUpdatedState(dark)
     val adBlockState = rememberUpdatedState(adBlock)
     val userScriptState = rememberUpdatedState(userScriptOn to userScript)
@@ -237,7 +257,7 @@ fun BrowserHub(onBack: () -> Unit) {
                 WebView(c).apply {
                     layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
                     settings.javaScriptEnabled = true
-                    settings.domStorageEnabled = true
+                    settings.domStorageEnabled = !BrowserPrefs.privateNow
                     settings.setSupportZoom(true); settings.builtInZoomControls = true; settings.displayZoomControls = false
                     settings.mixedContentMode = android.webkit.WebSettings.MIXED_CONTENT_COMPATIBILITY_MODE
                     applyDark(this)
@@ -280,6 +300,7 @@ fun BrowserHub(onBack: () -> Unit) {
         BackHandler { exitFullscreenVideo() }
         key(fv) { Box(Modifier.fillMaxSize().background(Color.Black)) { AndroidView(modifier = Modifier.fillMaxSize(), factory = { fv }) } }
     }
+        if (priv) com.umutk.pulse.extras.IncognitoGlyph(T.sub.copy(alpha = .5f), 26.dp, Modifier.align(Alignment.Center))
     }
 
     if (sheet) WinAlert(
@@ -293,6 +314,10 @@ fun BrowserHub(onBack: () -> Unit) {
                 }
                 Row(Modifier.fillMaxWidth().clickable { BrowserPrefs.setHome(ctx, pageUrl); sheet = false }, verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Set current page as home", "Bu sayfayı ana sayfa yap"), color = T.text, fontSize = 14.sp)
+                }
+                Row(Modifier.fillMaxWidth().clickable { setPrivate(!priv); sheet = false }, verticalAlignment = Alignment.CenterVertically) {
+                    com.umutk.pulse.extras.IncognitoGlyph(if (priv) com.umutk.pulse.Look.accent else T.sub, 20.dp); Spacer(Modifier.width(10.dp))
+                    Text(tr("Private tab", "Gizli sekme") + if (priv) " ✓" else "", color = T.text, fontSize = 15.sp)
                 }
                 Row(Modifier.fillMaxWidth().clickable { showBookmarks = true; sheet = false }, verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Bookmark, null, Modifier.size(20.dp), T.sub); Spacer(Modifier.width(10.dp))

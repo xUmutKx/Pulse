@@ -1,4 +1,26 @@
 #Patterns
+##Sky and weather
+☀︎ ⋆ ☁︎ ⋆ ☽	sky sun cloud moon stars
+˚☀︎˚ ⋆ ☁︎ ⋆ ˚☽˚	sky sun cloud moon
+⋆˚☁︎˚⋆	sky cloud stars
+☾⋆.˚ ✧ .⋆☾	moon stars night sky
+⋆｡°✩ ☾ ✩°｡⋆	moon stars night sky
+˖☁︎ ˚ ⋆⁺₊	sky cloud pattern
+⊹ ˚☽ ⋆ ☁︎ ⋆ ˚☀︎ ⊹	sky sun moon cloud
+☁︎ ˚. ⋆ ☂︎ ⋆ .˚ ☁︎	rain cloud sky pattern
+❄︎ ⋆ ˚ ☁︎ ˚ ⋆ ❄︎	snow cloud sky pattern
+⚡︎ ˚ ☁︎ ˚ ⚡︎	storm cloud lightning pattern
+(◕‿◕)☀︎	sun face kaomoji
+(˘ ³˘)☁︎	cloud face kaomoji
+(っ˘ω˘ς)☂︎	umbrella rain kaomoji
+(˘ω˘)☾	moon sleepy kaomoji
+(￣∇￣)☀︎	sunny kaomoji
+(¬‿¬)☁︎	cloud kaomoji
+(⊙_⊙)⚡︎	lightning kaomoji
+(｡•̀ᴗ-)✧ ☾	moon night kaomoji
+☾ ˚｡⋆ ✶ ⋆｡˚ ☾	moon stars night pattern
+＼(^o^)／ ☀︎	sun happy kaomoji
+⋆˚☁︎ ˚ ⋆ ˚☁︎ ⋆˚	cloud pattern
 ##Classics
 ˖ ᡣ𐭩 ⊹ ࣪ ౨ৎ˚₊	pattern modifier letter plus sign
 ⋆˚࿔ ⊹ ˖	pattern star operator

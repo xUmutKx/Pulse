@@ -84,7 +84,12 @@ class AppWatch : AccessibilityService() {
         val pkg = e.packageName?.toString() ?: return
         val cls = e.className?.toString().orEmpty()
         // the system UI (shade, volume) is ignored, but the recents screen counts as leaving the app
-        if (pkg == "com.android.systemui" && !cls.contains("Recents", true)) { reassert(); return }
+        if (pkg == "com.android.systemui" && !cls.contains("Recents", true)) {
+            reassert()
+            // Circle to Search opens over the system UI: the Google search colours go back at once, so no default grey shows
+            if (::sp.isInitialized) io.execute { val g = "com.google.android.googlequicksearchbox"; if (RecolorRules.enabled(sp, g)) Overlays.reapply(sp, g) }
+            return
+        }
         if (pkg == "android" || pkg.contains("inputmethod") || pkg.contains("keyboard")) return
         if (pkg == current) {
             // a new screen of the same app (list -> note): only matters for the "inside a note" switch; dialogs and popups are not screens

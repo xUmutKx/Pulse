@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -49,13 +51,13 @@ private const val K_UP = 19; private const val K_DOWN = 20; private const val K_
 private const val K_A = 96; private const val K_B = 97; private const val K_X = 99; private const val K_Y = 100
 private const val K_L1 = 102; private const val K_R1 = 103; private const val K_L2 = 104; private const val K_R2 = 105
 private const val K_START = 108; private const val K_SELECT = 109; private const val K_MODE = 110
-private val LEFT_STICK = intArrayOf(51, 29, 47, 32)   // W A S D
-private val RIGHT_STICK = intArrayOf(37, 38, 39, 40)  // I J K L (up, left, down, right)
+private val LEFT_STICK = intArrayOf(K_UP, K_LEFT, K_DOWN, K_RIGHT)   // the arrow keys, like the D-pad: never letters
+private val RIGHT_STICK = intArrayOf(K_UP, K_LEFT, K_DOWN, K_RIGHT)
 
 /**
  * A game controller on the keyboard's own panel: D-pad, A B X Y, Select / Home / Start, L1 L2 R1 R2 and two sticks, drawn over whatever the
  * game shows (no board behind it). Every control holds its key while the finger is down, so movement is continuous and several can be pressed
- * at once. An input method can only send keys, not analog axes: the left stick sends W A S D, the right one I J K L, the D-pad the arrow keys.
+ * at once. An input method can only send keys, not analog axes: both sticks and the D-pad send the arrow keys.
  * Its size follows the screen (wide when the phone lies sideways, narrower upright) and the − / + beside the shoulder buttons scale it.
  */
 @Composable
@@ -67,41 +69,47 @@ internal fun GamepadPanel(th: KbTheme, act: KbActions) {
         val w = maxWidth.value
         val fit = minOf(if (land) cfg.screenHeightDp * .7f else cfg.screenWidthDp * .7f, w * .6f)
         val u = (fit * scale / 100f).coerceAtMost(w * .5f).dp
-        Box(Modifier.fillMaxWidth().height(u * 1.35f)) {
-            // the D-pad on the left, the face buttons on the right
-            Box(Modifier.align(Alignment.TopStart).padding(start = u * .06f, top = u * .03f).size(u * .5f)) {
-                PadBtn(th, act, K_UP, u * .18f, u * .18f, Modifier.align(Alignment.TopCenter), label = "▲")
-                PadBtn(th, act, K_DOWN, u * .18f, u * .18f, Modifier.align(Alignment.BottomCenter), label = "▼")
-                PadBtn(th, act, K_LEFT, u * .18f, u * .18f, Modifier.align(Alignment.CenterStart), label = "◀")
-                PadBtn(th, act, K_RIGHT, u * .18f, u * .18f, Modifier.align(Alignment.CenterEnd), label = "▶")
+        Column(Modifier.fillMaxWidth()) {
+            // the top: the D-pad on the left, the face buttons on the right, Select, Home and Start between them
+            Row(Modifier.fillMaxWidth().height(u * .5f), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.padding(start = u * .06f).size(u * .5f)) {
+                    PadBtn(th, act, K_UP, u * .18f, u * .18f, Modifier.align(Alignment.TopCenter), label = "▲")
+                    PadBtn(th, act, K_DOWN, u * .18f, u * .18f, Modifier.align(Alignment.BottomCenter), label = "▼")
+                    PadBtn(th, act, K_LEFT, u * .18f, u * .18f, Modifier.align(Alignment.CenterStart), label = "◄")
+                    PadBtn(th, act, K_RIGHT, u * .18f, u * .18f, Modifier.align(Alignment.CenterEnd), label = "►")
+                }
+                Spacer(Modifier.weight(1f))
+                Row(horizontalArrangement = Arrangement.spacedBy(u * .04f), verticalAlignment = Alignment.CenterVertically) {
+                    PadBtn(th, act, K_SELECT, u * .17f, u * .09f, round = false, label = "SEL")
+                    PadBtn(th, act, K_MODE, u * .13f, u * .13f, icon = Icons.Rounded.Home)
+                    PadBtn(th, act, K_START, u * .17f, u * .09f, round = false, label = "START")
+                }
+                Spacer(Modifier.weight(1f))
+                Box(Modifier.padding(end = u * .06f).size(u * .5f)) {
+                    PadBtn(th, act, K_Y, u * .18f, u * .18f, Modifier.align(Alignment.TopCenter), label = "Y")
+                    PadBtn(th, act, K_A, u * .18f, u * .18f, Modifier.align(Alignment.BottomCenter), label = "A")
+                    PadBtn(th, act, K_X, u * .18f, u * .18f, Modifier.align(Alignment.CenterStart), label = "X")
+                    PadBtn(th, act, K_B, u * .18f, u * .18f, Modifier.align(Alignment.CenterEnd), label = "B")
+                }
             }
-            Box(Modifier.align(Alignment.TopEnd).padding(end = u * .06f, top = u * .03f).size(u * .5f)) {
-                PadBtn(th, act, K_Y, u * .18f, u * .18f, Modifier.align(Alignment.TopCenter), label = "Y")
-                PadBtn(th, act, K_A, u * .18f, u * .18f, Modifier.align(Alignment.BottomCenter), label = "A")
-                PadBtn(th, act, K_X, u * .18f, u * .18f, Modifier.align(Alignment.CenterStart), label = "X")
-                PadBtn(th, act, K_B, u * .18f, u * .18f, Modifier.align(Alignment.CenterEnd), label = "B")
+            // the sticks under the D-pad and the face buttons
+            Row(Modifier.fillMaxWidth().padding(top = u * .04f), horizontalArrangement = Arrangement.SpaceBetween) {
+                PadStick(th, act, u * .4f, LEFT_STICK, Modifier.padding(start = u * .1f))
+                PadStick(th, act, u * .4f, RIGHT_STICK, Modifier.padding(end = u * .1f))
             }
-            // Select, Home, Start along the top middle
-            Row(Modifier.align(Alignment.TopCenter).padding(top = u * .05f), horizontalArrangement = Arrangement.spacedBy(u * .04f), verticalAlignment = Alignment.CenterVertically) {
-                PadBtn(th, act, K_SELECT, u * .17f, u * .09f, round = false, label = "SEL")
-                PadBtn(th, act, K_MODE, u * .13f, u * .13f, icon = Icons.Rounded.Home)
-                PadBtn(th, act, K_START, u * .17f, u * .09f, round = false, label = "START")
-            }
-            // the sticks at the bottom corners
-            val lift = (u * KeyboardPrefs.padLift / 100f)
-            PadStick(th, act, u * .4f, LEFT_STICK, Modifier.align(Alignment.BottomStart).padding(start = u * .1f, bottom = lift))
-            PadStick(th, act, u * .4f, RIGHT_STICK, Modifier.align(Alignment.BottomEnd).padding(end = u * .1f, bottom = lift))
-            // the shoulder buttons on either side of the size control, bottom middle
-            Row(Modifier.align(Alignment.BottomCenter).padding(bottom = u * .03f), horizontalArrangement = Arrangement.spacedBy(u * .05f), verticalAlignment = Alignment.Bottom) {
+            // the shoulder buttons on either side of the size control
+            Row(Modifier.fillMaxWidth().padding(top = u * .04f), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.Bottom) {
                 Column(verticalArrangement = Arrangement.spacedBy(u * .03f)) {
                     PadBtn(th, act, K_L1, u * .22f, u * .1f, round = false, label = "L1")
                     PadBtn(th, act, K_L2, u * .22f, u * .1f, round = false, label = "L2")
                 }
+                Spacer(Modifier.width(u * .05f))
                 Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(u * .02f)) {
                     PadMini(th, u * .1f, "+") { scale = (scale + 10).coerceAtMost(150); KeyboardPrefs.padScale = scale; KeyboardPrefs.saveFloat() }
                     Text("$scale%", color = th.text, fontSize = (u.value * .06f).coerceAtLeast(9f).sp)
                     PadMini(th, u * .1f, "−") { scale = (scale - 10).coerceAtLeast(60); KeyboardPrefs.padScale = scale; KeyboardPrefs.saveFloat() }
                 }
+                Spacer(Modifier.width(u * .05f))
                 Column(verticalArrangement = Arrangement.spacedBy(u * .03f)) {
                     PadBtn(th, act, K_R1, u * .22f, u * .1f, round = false, label = "R1")
                     PadBtn(th, act, K_R2, u * .22f, u * .1f, round = false, label = "R2")
