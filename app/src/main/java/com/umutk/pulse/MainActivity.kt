@@ -530,7 +530,10 @@ private fun NavItem(icon: String, label: String, on: Boolean, wide: Boolean, onC
         .clickable { onClick(Unit) }, verticalAlignment = Alignment.CenterVertically) {
         // Windows 11's little selection bar on the left edge
         Box(Modifier.width(3.dp).height(if (on) 18.dp else 0.dp).background(Look.accent, RoundedCornerShape(2.dp)))
-        Box(Modifier.width(if (wide) 36.dp else 42.dp), contentAlignment = Alignment.Center) { PIcon(icon, tint, 21.dp) }
+        Box(Modifier.width(if (wide) 36.dp else 42.dp), contentAlignment = Alignment.Center) {
+            // the sidebar's icons take the sidebar's own icon style
+            androidx.compose.runtime.CompositionLocalProvider(LocalInSidebar provides true) { PIcon(icon, tint, 21.dp) }
+        }
         if (wide) Text(label, color = tint, fontSize = 14.sp, maxLines = 1)
     }
 }
