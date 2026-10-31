@@ -311,9 +311,14 @@ class DiceTile : ToolkitTile() {
     // a tap rolls in the panel; the tile shows the face that came up
     override fun act(): Boolean { prefs.edit().putInt("dice_last", (1..6).random()).apply(); return true }
     override val picture: Int? get() = prefs.getInt("dice_last", 0).takeIf { it in 1..6 }?.let { DICE_FACES[it - 1] }
-    override fun flicker(): List<Int> = List(7) { DICE_FACES.random() }
+    // the die tumbles (eight frames, turning and changing face), then settles on the face that came up
+    override fun flicker(): List<Int> = DICE_SPIN.toList() + listOfNotNull(picture)
 }
 private val DICE_FACES = intArrayOf(R.drawable.ic_dice_1, R.drawable.ic_dice_2, R.drawable.ic_dice_3, R.drawable.ic_dice_4, R.drawable.ic_dice_5, R.drawable.ic_dice_6)
+private val DICE_SPIN = intArrayOf(R.drawable.ic_dice_spin_0, R.drawable.ic_dice_spin_1, R.drawable.ic_dice_spin_2, R.drawable.ic_dice_spin_3,
+    R.drawable.ic_dice_spin_4, R.drawable.ic_dice_spin_5, R.drawable.ic_dice_spin_6, R.drawable.ic_dice_spin_7)
+private val COIN_SPIN = intArrayOf(R.drawable.ic_coin_spin_0, R.drawable.ic_coin_spin_1, R.drawable.ic_coin_spin_2, R.drawable.ic_coin_spin_3,
+    R.drawable.ic_coin_spin_4, R.drawable.ic_coin_spin_5, R.drawable.ic_coin_spin_6, R.drawable.ic_coin_spin_7)
 @androidx.annotation.RequiresApi(24)
 class CoinTile : ToolkitTile() {
     override val start: String get() = "toolkit:coin"
@@ -323,7 +328,8 @@ class CoinTile : ToolkitTile() {
     override fun act(): Boolean { prefs.edit().putString("coin_last", if ((0..1).random() == 0) "Heads" else "Tails").apply(); return true }
     // the side that came up; before the first toss the tile shows heads
     override val picture: Int? get() = if (prefs.getString("coin_last", "Heads") == "Tails") R.drawable.ic_coin_tails else R.drawable.ic_coin_heads
-    override fun flicker(): List<Int> = List(7) { if (it % 2 == 0) R.drawable.ic_coin_heads else R.drawable.ic_coin_tails }
+    // the coin turns over (its width goes to the edge and back), then lands on the side that came up
+    override fun flicker(): List<Int> = COIN_SPIN.toList() + listOfNotNull(picture)
 }
 @androidx.annotation.RequiresApi(24)
 class ScreenshotTile : ToolkitTile() {
