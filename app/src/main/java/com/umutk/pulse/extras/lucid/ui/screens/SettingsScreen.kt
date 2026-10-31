@@ -1,5 +1,7 @@
+@file:OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import com.umutk.pulse.tr
 import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
 import com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf
 import com.umutk.pulse.extras.lucid.ui.theme.FontCards
@@ -769,7 +771,6 @@ fun SettingsScreen(
                                     }
                                 }                                }
                             }
-                        }
 
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),
