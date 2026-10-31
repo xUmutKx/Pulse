@@ -1714,3 +1714,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Keyboard: Gamepad is an entry of the Key layout list (the layout key opens it) (derlenmedi)
 - Gamepad: the sticks and the shoulder buttons with the size control come up under the D-pad and the face buttons; the left and right arrows are plain arrows, not emoji (derlenmedi)
 - Files grid: the rows sit one under the other (they were stacked on top of each other inside a box, which put the names on top of each other) (derlenmedi)
+- Files: Relay and LocalSend are tiles of the share sheet (first in the row) and no longer rows of Files More (derlenmedi)
