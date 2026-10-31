@@ -456,6 +456,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val tp = st.touch; st.touch = null
             touchPts.add(tp); if (touchPts.size > 48) touchPts.removeAt(0)
             if (tp != null) st.letterRects[ch.lowercase()]?.let { r -> KeyboardDictionary.learnTouch(ch.lowercaseChar(), tp, r.center, r.width) }
+            if (lang.code == "tr") apostropheAfterName()
             c.setComposingText(word, 1)
             lastCorrection = null
             if (st.shift == 1) st.shift = 0
@@ -1109,6 +1110,22 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (KeyboardPrefs.sound) { if (KeyboardPrefs.soundKind == 0) (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.playSoundEffect(AudioManager.FX_KEYPRESS_STANDARD, -1f) else KeyboardEffects.play(KeyboardPrefs.soundKind) }
     }
 
+    /** Turkish endings on a name take the apostrophe as the word is typed: Adana + da is Adana'da, Pelin + den is Pelin'den. */
+    private fun apostropheAfterName() {
+        if (word.indexOf('\'') >= 0) return
+        val w = word.toString().lowercase(lang.locale)
+        for (cut in w.length - 1 downTo 3) {
+            val rest = w.substring(cut)
+            if (rest.length > 4) break
+            val stem = w.substring(0, cut)
+            if (stem in KeyboardDictionary.properNouns && rest in TR_ENDINGS) {
+                val cap = stem.substring(0, 1).uppercase(lang.locale) + stem.substring(1)
+                word.setLength(0); word.append(cap).append('\'').append(rest)
+                return
+            }
+        }
+    }
+
     override fun emoji(e: String) {
         val c = currentInputConnection ?: return
         finishWord("", false)
@@ -1449,3 +1466,6 @@ private fun isArt(s: String): Boolean =
 /** A space already stands right after the cursor (the text after a mark was typed before), so the keyboard adds none. */
 private fun spaceAfterCursor(c: android.view.inputmethod.InputConnection): Boolean =
     c.getTextAfterCursor(1, 0)?.firstOrNull()?.isWhitespace() == true
+
+/** The Turkish endings that follow a name (case, the locative, the ablative, with the vowel of the name); the apostrophe goes before them. */
+private val TR_ENDINGS = setOf("ı", "i", "u", "ü", "a", "e", "ya", "ye", "yı", "yi", "yu", "yü", "da", "de", "ta", "te", "dan", "den", "tan", "ten", "nın", "nin", "nun", "nün", "ın", "in", "un", "ün", "la", "le", "yla", "yle", "ndan", "nden", "nda", "nde")
