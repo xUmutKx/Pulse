@@ -1820,3 +1820,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.291 Alarms: Lucid look (One UI, Material, AMOLED black) with previews, delete asks first, Windows 95/XP/7/11 clock faces, ringing screen back arrow and AMOLED black default
 - 1.0.291 App lock opens from the menu again and asks for the accessibility service
 - 1.0.291 Widgets: music cover opens the player directly; dice and coin tiles turn
+- derlenmedi: Keyboard recent emoji: pictures made of characters (block shading, multi-line art) are no longer kept there
