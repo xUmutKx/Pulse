@@ -1688,3 +1688,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Weather map: aircraft are drawn as aircraft icons turned to their heading (derlenmedi)
 - Weather map: opens flat on the whole world; "Konumum" chip zooms to the chosen place (derlenmedi)
 - Weather settings: the OpenWeatherMap source is labelled "OpenWeatherMap" without "(your key)" (derlenmedi)
+- Keyboard quick auth: each account is as tall as its text (no longer a third of the panel), so the panel is not left empty; more accounts scroll (derlenmedi)
