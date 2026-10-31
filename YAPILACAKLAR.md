@@ -1712,3 +1712,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Keyboard quick auth: smaller text (name 16sp, code 24sp), taller account cards; the panel keeps the keyboard's height (derlenmedi)
 - Keyboard quick auth: the panel is as tall as the keys (four rows), so it fills the keyboard window (derlenmedi)
 - Keyboard: Gamepad is an entry of the Key layout list (the layout key opens it) (derlenmedi)
+- Gamepad: the sticks and the shoulder buttons with the size control come up under the D-pad and the face buttons; the left and right arrows are plain arrows, not emoji (derlenmedi)
