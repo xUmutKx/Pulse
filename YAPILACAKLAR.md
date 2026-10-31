@@ -1708,3 +1708,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader ⋮ menu: Chapters, Bookmarks and Search open directly from the menu (no "More Operations" page in between) (derlenmedi)
 - Books reader: font choices are shown in their own face; the bar panel shows the bottom bar as it is now above the list (derlenmedi)
 - Books reader: the theme cards show a sample of the page (grain, the sample text and the name); the ⋮ menu lists only what is not on the bottom bar (plus Share) (derlenmedi)
+- Books shelf: EPUB covers are found also from the cover page and from pictures named cover; books that had no cover before are tried again (derlenmedi)
