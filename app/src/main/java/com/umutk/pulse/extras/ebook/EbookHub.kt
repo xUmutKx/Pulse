@@ -469,6 +469,10 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     val curText = remember { arrayOf("") }
     val pageTurner = remember { mutableStateOf<(() -> Unit)?>(null) }
     val speaker = remember { Speaker(ctx) { if (speaking) pageTurner.value?.invoke() } }
+    // the words being read, as a range of the page's text: they are highlighted
+    var spoken by remember { mutableStateOf(IntRange.EMPTY) }
+    var pageCount by remember { mutableStateOf(0) }
+    speaker.onRange = { s, e -> spoken = s until e }
     DisposableEffect(Unit) { onDispose { speaker.shutdown(); setBrightness(ctx, -1f); setOrientation(ctx, 0) } }
     BackHandler {
         when {
@@ -552,7 +556,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 }
                 pageTurner.value = { next() }
                 LaunchedEffect(autoOn, key) { if (autoOn) { kotlinx.coroutines.delay(autoSec * 1000L); if (autoOn) next() } }
-                LaunchedEffect(speaking, key) { if (speaking) speaker.speak(curText[0]) else speaker.stop() }
+                LaunchedEffect(speaking, key) { spoken = IntRange.EMPTY; if (speaking) speaker.speak(curText[0]) else speaker.stop() }
+                LaunchedEffect(list) { pageCount = list?.size ?: 0 }
                 AnimatedContent(
                     targetState = key,
                     transitionSpec = {
@@ -563,7 +568,13 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     label = "page",
                 ) { _ ->
                     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 44.dp), verticalArrangement = Arrangement.Top) {
-                        cur.forEach { p -> Text(p.text, style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp)) }
+                        // each paragraph; the words being read are highlighted
+                        var off = 0
+                        cur.forEach { p ->
+                            val start = off
+                            off += p.text.length + 1
+                            Text(highlighted(p.text, start, spoken, T.accent.copy(alpha = .35f)), style = if (p.heading) headStyle else bodyStyle, modifier = Modifier.padding(bottom = 14.dp))
+                        }
                     }
                 }
                 // the three zones of the page: the left third goes back, the right third forward, the middle shows the bars
@@ -577,7 +588,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         }
                     })
                 })
-                Text("${chapter + 1}/${chapters.size.coerceAtLeast(1)}", color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
+                Text("${shown + 1}/${(list?.size ?: 1).coerceAtLeast(1)}", color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomEnd).padding(12.dp))
                 if (autoOn) Text(tr("Autoscroll", "Otomatik"), color = th.sub, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomStart).padding(12.dp))
             }
         }
@@ -596,9 +607,11 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 // the reading slider: the chapters, with the share read in per cent
                 if (count > 1) Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     Text("‹", color = th.sub, fontSize = 22.sp, modifier = Modifier.clickable { if (chapter > 0) { chapter = chapter - 1; page = 0; forward = false; save() } }.padding(horizontal = 8.dp))
-                    PSlider(chapter.toFloat(), { chapter = it.roundToInt().coerceIn(0, count - 1); page = 0 }, 0f..(count - 1).toFloat(),
+                    // the slider moves through the pages of the chapter
+                    val last = (pageCount - 1).coerceAtLeast(1).toFloat()
+                    PSlider(page.coerceIn(0, (pageCount - 1).coerceAtLeast(0)).toFloat(), { page = it.roundToInt().coerceIn(0, (pageCount - 1).coerceAtLeast(0)) }, 0f..last,
                         modifier = Modifier.weight(1f), onDone = { save() })
-                    Text("${(chapter + 1) * 100 / count}%", color = th.ink, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 6.dp))
+                    Text("${(page + 1).coerceAtMost(pageCount.coerceAtLeast(1))}/${pageCount.coerceAtLeast(1)}", color = th.ink, fontSize = 13.sp, modifier = Modifier.padding(horizontal = 6.dp))
                     Text("›", color = th.sub, fontSize = 22.sp, modifier = Modifier.clickable { if (chapter < count - 1) { chapter = chapter + 1; page = 0; forward = true; save() } }.padding(horizontal = 8.dp))
                 }
                 FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, maxItemsInEachRow = if (dbl) (barIds.size + 1) / 2 else Int.MAX_VALUE) {
@@ -613,7 +626,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         }
                     }
                 }
-                Text(tr("Chapter ${chapter + 1} of ${count.coerceAtLeast(1)}", "Bölüm ${chapter + 1} / ${count.coerceAtLeast(1)}"), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp))
+                Text(tr("Page ${page + 1} of ${pageCount.coerceAtLeast(1)} · Chapter ${chapter + 1}", "Sayfa ${page + 1} / ${pageCount.coerceAtLeast(1)} · Bölüm ${chapter + 1}"), color = th.sub, fontSize = 11.sp, modifier = Modifier.padding(start = 6.dp))
             }
         }
 
@@ -1005,3 +1018,14 @@ private fun WoodBackground(modifier: Modifier) {
         while (yb < size.height) { drawRect(Color.Black.copy(alpha = .35f), Offset(0f, yb), Size(size.width, 4.dp.toPx())); yb += step }
     }
 }
+
+/** The text of a paragraph, its part that is read now (the range of the page's text, [start] being where the paragraph begins) set in a background. */
+private fun highlighted(text: String, start: Int, r: IntRange, color: Color): androidx.compose.ui.text.AnnotatedString =
+    androidx.compose.ui.text.buildAnnotatedString {
+        append(text)
+        if (!r.isEmpty()) {
+            val a = (r.first - start).coerceIn(0, text.length)
+            val b = (r.last + 1 - start).coerceIn(0, text.length)
+            if (b > a) addStyle(androidx.compose.ui.text.SpanStyle(background = color), a, b)
+        }
+    }
