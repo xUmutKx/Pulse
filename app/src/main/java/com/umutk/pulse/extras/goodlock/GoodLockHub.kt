@@ -5,7 +5,9 @@ import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.net.Uri
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,7 +25,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -35,14 +36,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.graphics.drawable.toBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.activity.compose.BackHandler
-import com.umutk.pulse.ExtraKeys
+import androidx.core.graphics.drawable.toBitmap
 import com.umutk.pulse.ExtraLookIcon
 import com.umutk.pulse.Look
 import com.umutk.pulse.PIcon
@@ -64,6 +63,18 @@ private class Module(val label: String, val pkg: String, val version: String, va
 private val NAMES = listOf("Good Lock", "QuickStar", "NavStar", "Keys Cafe", "LockStar", "ClockFace", "Home Up", "MultiStar", "NiceCatch", "Nice Shot", "One Hand Operation",
     "Theme Park", "Wonderland", "SoundAssistant", "RegiStar", "Routines+", "Edge lighting", "Pentastic", "Camera Assistant", "Display Assistant", "Battery Assistant",
     "Good Guardians", "Good Lock Plugin", "Edge Touch", "Wallpaper Classic", "Nice Lock", "Gallery Assistant", "Keyboard Assistant", "Dex Assistant", "Pattern Lock")
+
+/** The modules grouped by what they change, shown as the headings of the "Not installed" list. */
+private val CATEGORIES = listOf(
+    tr("Lock screen", "Kilit ekranı") to listOf("LockStar", "Nice Lock", "Pattern Lock", "Keys Cafe", "ClockFace"),
+    tr("Home and edge", "Ana ekran ve kenar") to listOf("Home Up", "Edge lighting", "Edge Touch", "NavStar", "Pentastic"),
+    tr("Quick panel and routines", "Hızlı panel ve rutinler") to listOf("QuickStar", "Routines+", "Good Guardians"),
+    tr("Camera and gallery", "Kamera ve galeri") to listOf("NiceCatch", "Nice Shot", "Camera Assistant", "Gallery Assistant"),
+    tr("Sound, display and battery", "Ses, ekran ve pil") to listOf("SoundAssistant", "Display Assistant", "Battery Assistant"),
+    tr("Look and theme", "Görünüm ve tema") to listOf("Theme Park", "Wonderland", "Wallpaper Classic"),
+    tr("Input and one hand", "Giriş ve tek el") to listOf("One Hand Operation", "Keyboard Assistant"),
+    tr("Other", "Diğer") to listOf("MultiStar", "RegiStar", "Dex Assistant", "Good Lock Plugin", "Good Lock"),
+)
 
 private fun installed(c: Context): List<Module> {
     val pm = c.packageManager
@@ -106,6 +117,10 @@ private fun newer(a: String, b: String): Boolean {
     return false
 }
 
+/**
+ * One screen: the installed modules first (a tap opens the module, an Update button when the feed has a newer one), then the
+ * modules this phone does not have, grouped by what they change, each with a Download button.
+ */
 @Composable
 fun GoodLockHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
@@ -114,13 +129,7 @@ fun GoodLockHub(onBack: () -> Unit) {
     var feed by remember { mutableStateOf<List<FeedItem>>(emptyList()) }
     var feedErr by remember { mutableStateOf<String?>(null) }
     var checking by remember { mutableStateOf(false) }
-    var tab by remember { mutableStateOf(0) }
     BackHandler { onBack() }
-    // volume down = the tab on the left, volume up = the tab on the right
-    DisposableEffect(Unit) {
-        ExtraKeys.volume = { up -> tab = if (up) 1 else 0; true }
-        onDispose { ExtraKeys.volume = null }
-    }
     fun reload() { scope.launch { mods = withContext(Dispatchers.IO) { installed(ctx) } } }
     fun check() { scope.launch { checking = true; feedErr = null; var e: String? = null; feed = withContext(Dispatchers.IO) { feedItems { e = it } }; feedErr = e; checking = false } }
     LaunchedEffect(Unit) { reload(); check() }
@@ -129,10 +138,12 @@ fun GoodLockHub(onBack: () -> Unit) {
     fun latest(m: Module): String? = latestItem(m.label)?.version
     fun hasUpdate(m: Module): Boolean = latest(m)?.let { newer(it, m.version) } == true
     val list = mods.orEmpty()
-    // the names of the modules this phone does not have: a Download button (APKMirror's page of the newest release when the feed knows it)
+    // the names of the modules this phone does not have, in their groups (a name in no group goes to "Other")
     val missing = NAMES.filter { n -> list.none { it.label.contains(n, true) } }
-    val updates = list.filter { hasUpdate(it) }
-    val tabs = listOf(tr("Installed", "Kurulu") + " (${list.size})", tr("Not installed", "Kurulu değil") + " (${missing.size})", tr("Updates", "Güncellemeler") + (updates.size.takeIf { it > 0 }?.let { " ($it)" } ?: ""))
+    val grouped = CATEGORIES.map { (title, names) -> title to names.filter { it in missing } }.toMutableList()
+    val placed = grouped.flatMap { it.second }.toSet()
+    val rest = missing.filter { it !in placed }
+    if (rest.isNotEmpty()) grouped[grouped.lastIndex] = grouped.last().first to (grouped.last().second + rest)
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", T.text, 22.dp) }
@@ -140,42 +151,42 @@ fun GoodLockHub(onBack: () -> Unit) {
             Box(Modifier.size(40.dp).clickable { reload(); check() }, contentAlignment = Alignment.Center) { PIcon("refresh", T.text, 22.dp) }
             ExtraLookIcon()
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            tabs.forEachIndexed { i, label ->
-                Text(label, color = if (tab == i) Color.White else T.text, fontSize = 13.sp, fontWeight = FontWeight.Medium, maxLines = 1,
-                    modifier = Modifier.clip(RoundedCornerShape(20.dp)).background2(if (tab == i) Look.accent else T.panel).clickable { tab = i }.padding(horizontal = 12.dp, vertical = 8.dp))
-            }
-            if (checking) Text("…", color = T.sub, fontSize = 14.sp)
-        }
         // a failed check is said out loud, never shown as "no updates"
         feedErr?.let { Text(tr("The update check failed ($it). Versions shown are the installed ones only.", "Güncelleme denetimi başarısız ($it). Yalnızca kurulu sürümler gösteriliyor."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 6.dp)) }
         LazyColumn(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (tab != 1) items(if (tab == 2) updates else list, key = { it.pkg }) { m ->
+            item { Heading(tr("Installed", "Kurulu") + " (${list.size})") }
+            items(list, key = { it.pkg }) { m ->
                 val upd = hasUpdate(m)
                 // a tap opens the module itself
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background2(T.panel)
-                    .clickable { ctx.packageManager.getLaunchIntentForPackage(m.pkg)?.let { ctx.startActivity(it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) } }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ModIcon(m.pkg)
+                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(T.panel)
+                    .clickable { openModule(ctx, m.pkg) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ModIcon(m.pkg, m.label)
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(m.label, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         Text(m.version + (latest(m)?.takeIf { upd }?.let { "  →  $it" } ?: ""), color = if (upd) Look.accent else T.sub, fontSize = 13.sp)
                     }
                     if (upd) Text(tr("Update", "Güncelle"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium,
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background2(Look.accent).clickable { openMirror(ctx, m.label, latestItem(m.label)?.link) }.padding(horizontal = 12.dp, vertical = 6.dp))
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Look.accent).clickable { openMirror(ctx, m.label, latestItem(m.label)?.link) }.padding(horizontal = 12.dp, vertical = 6.dp))
                 }
             }
-            if (tab == 1) items(missing, key = { it }) { n ->
-                Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background2(T.panel).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background2(T.sub.copy(alpha = .18f)), contentAlignment = Alignment.Center) { PIcon("apps", T.sub, 22.dp) }
-                    Spacer(Modifier.width(12.dp))
-                    Column(Modifier.weight(1f)) {
-                        Text(n, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        latestItem(n)?.let { Text(it.version, color = T.sub, fontSize = 13.sp) }
-                    }
-                    Row(Modifier.clip(RoundedCornerShape(10.dp)).background2(Look.accent).clickable { openMirror(ctx, n, latestItem(n)?.link) }.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("download", Color.White, 16.dp); Spacer(Modifier.width(5.dp))
-                        Text(tr("Download", "İndir"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            grouped.forEach { (title, names) ->
+                if (names.isNotEmpty()) {
+                    item { Heading(title) }
+                    items(names, key = { "n_$it" }) { n ->
+                        // no transparent panel behind the row: the picture and the Download button stand on the wallpaper
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            ModPlaceholder(n)
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text(n, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                latestItem(n)?.let { Text(it.version, color = T.sub, fontSize = 13.sp) }
+                            }
+                            Row(Modifier.clip(RoundedCornerShape(10.dp)).border(1.dp, Look.accent, RoundedCornerShape(10.dp)).clickable { openMirror(ctx, n, latestItem(n)?.link) }.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                PIcon("download", Look.accent, 16.dp); Spacer(Modifier.width(5.dp))
+                                Text(tr("Download", "İndir"), color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+                            }
+                        }
                     }
                 }
             }
@@ -185,27 +196,44 @@ fun GoodLockHub(onBack: () -> Unit) {
 }
 
 @Composable
-private fun Action(icon: String, label: String, onClick: () -> Unit) {
-    Row(Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClick).padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        PIcon(icon, Look.accent, 18.dp)
-        Spacer(Modifier.width(5.dp))
-        Text(label, color = Look.accent, fontSize = 12.sp)
+private fun Heading(text: String) {
+    Text(text, color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
+}
+
+/** A module's own picture when it is installed; the first letter on a colour of its name otherwise. */
+@Composable
+private fun ModIcon(pkg: String, label: String) {
+    val ctx = LocalContext.current
+    val bmp = remember(pkg) { runCatching { ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+    if (bmp != null) androidx.compose.foundation.Image(bmp, null, Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
+    else ModPlaceholder(label)
+}
+
+/** A picture stand-in for a module that is not installed: its first letter on its own colour. */
+@Composable
+private fun ModPlaceholder(name: String) {
+    val hue = (kotlin.math.abs(name.hashCode()) % 360).toFloat()
+    val tint = Color(android.graphics.Color.HSVToColor(floatArrayOf(hue, .5f, .7f)))
+    Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background(tint), contentAlignment = Alignment.Center) {
+        Text(name.take(1).uppercase(), color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold)
     }
 }
 
-private fun Modifier.background2(c: Color): Modifier = this.then(Modifier.background(c))
+/**
+ * The module's own screen: its launcher entry, else any screen it has, else the app's info page, so a tap always does something
+ * and never just starts Good Lock.
+ */
+private fun openModule(ctx: Context, pkg: String) {
+    val pm = ctx.packageManager
+    val launch = pm.getLaunchIntentForPackage(pkg)
+    val any = runCatching { pm.queryIntentActivities(Intent(Intent.ACTION_MAIN).setPackage(pkg), 0).firstOrNull()?.activityInfo }.getOrNull()
+    val intent = launch ?: any?.let { Intent(Intent.ACTION_MAIN).setClassName(it.packageName, it.name) }
+    if (intent != null && runCatching { ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    runCatching { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
 
 /** The page of the newest release when the feed gave one, else the search for the name. */
 private fun openMirror(ctx: Context, label: String, link: String? = null) {
     val url = link?.takeIf { it.startsWith("https://www.apkmirror.com/") } ?: ("https://www.apkmirror.com/?s=" + Uri.encode(label))
     runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
-}
-
-/** The module's own launcher picture. */
-@Composable
-private fun ModIcon(pkg: String) {
-    val ctx = LocalContext.current
-    val bmp = remember(pkg) { runCatching { ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
-    if (bmp != null) androidx.compose.foundation.Image(bmp, null, Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)))
-    else Box(Modifier.size(40.dp).clip(RoundedCornerShape(10.dp)).background2(T.panel), contentAlignment = Alignment.Center) { PIcon("apps", T.sub, 22.dp) }
 }
