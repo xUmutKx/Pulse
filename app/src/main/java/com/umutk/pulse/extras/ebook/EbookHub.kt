@@ -26,6 +26,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
@@ -164,6 +165,7 @@ fun EbookHub(onBack: () -> Unit) {
 private fun shelfTheme() = Theme(T.panel, T.text, T.sub)
 
 @Composable
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     val ctx = LocalContext.current
     var shelf by remember { mutableStateOf(shelfLoad(ctx)) }
@@ -171,6 +173,8 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     // "" the shelf, "options" the options page
     var screen by remember { mutableStateOf("") }
     var drawer by remember { mutableStateOf(false) }
+    // a long press on a book asks whether it leaves the shelf (the file itself stays on the phone)
+    var askRemove by remember { mutableStateOf<Book?>(null) }
     var about by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -276,7 +280,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 } else {
                     LazyVerticalGrid(columns = GridCells.Adaptive(96.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
                         items(listed) { b ->
-                            Column(Modifier.clickable { onOpen(b) }, horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(Modifier.combinedClickable(onClick = { onOpen(b) }, onLongClick = { askRemove = b }), horizontalAlignment = Alignment.CenterHorizontally) {
                                 // the cover is the first page of a PDF or the cover picture of an EPUB; a book with neither is a card with its first letter
                                 val pic by produceState<ImageBitmap?>(null, b.uri) {
                                     value = withContext(Dispatchers.IO) { Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
@@ -308,6 +312,15 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             onExit = onBack,
             onClose = { drawer = false },
         )
+        askRemove?.let { bk ->
+            PDialog(
+                title = bk.title,
+                text = tr("Remove this book from the shelf? The file stays on the phone.", "Bu kitap raftan kaldırılsın mı? Dosya telefonda kalır."),
+                confirm = tr("Remove", "Kaldır"),
+                onConfirm = { shelf = shelf.filter { it.uri != bk.uri }.also { shelfSave(ctx, it) }; askRemove = null },
+                onDismiss = { askRemove = null },
+            )
+        }
         if (about) PDialog(
             title = tr("Books", "Kitaplar"),
             text = tr("Your EPUB, TXT and PDF books, read on this phone. Nothing is uploaded.", "EPUB, TXT ve PDF kitaplarınız, bu telefonda okunur. Hiçbir şey yüklenmez."),
