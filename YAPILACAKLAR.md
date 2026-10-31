@@ -1768,3 +1768,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Lyrics search: the lyrics on the phone show at once; the online catalogue is added after them (derlenmedi)
 - Extra apps: a tool set to hidden (eye icon) leaves the ⋮ menu and the Tools/Apps groups but stays listed on the Extra apps page; hiding a row there is still by long press (derlenmedi)
 - Quick panel: a Floating timer tile (shows or hides the floating timer; opens the overlay permission when missing) (derlenmedi)
+- Motion cues: a tap on the top strip closes the quick panel through the same shell route as the rest of Pulse (root or Shizuku) and the accessibility service (derlenmedi)
