@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.extras.lucid.ui.theme.LucidLookState
 import com.umutk.pulse.extras.lucid.ui.theme.LucidLook
@@ -653,17 +655,38 @@ fun AppThemeScreen(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    // every font as a card that shows it: a sample line in that font, and its name under it
                     AppFontStyle.entries.forEach { style ->
                         val selected = appFontStyle == style
-                        FilterChip(
-                            selected = selected,
-                            onClick = {
-                                scope.launch { settingsDataStore.setAppFontStyle(style) }
-                            },
-                            shape = SelectionChipShape,
-                            label = { Text(style.label) },
-                            colors = selectedChipColors()
-                        )
+                        val cardShape = RoundedCornerShape(14.dp)
+                        Column(
+                            modifier = Modifier
+                                .width(124.dp)
+                                .clip(cardShape)
+                                .border(
+                                    if (selected) 2.dp else 1.dp,
+                                    if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                    cardShape
+                                )
+                                .clickable { scope.launch { settingsDataStore.setAppFontStyle(style) } }
+                                .padding(10.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "Aa 07:30",
+                                fontFamily = appFontFamilyOf(style) ?: FontFamily.SansSerif,
+                                fontSize = 22.sp,
+                                maxLines = 1,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                style.label,
+                                style = MaterialTheme.typography.labelSmall,
+                                maxLines = 1,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     }
                 }
                 if (appFontStyle == AppFontStyle.CUSTOM_FILE) {
