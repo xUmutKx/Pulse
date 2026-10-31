@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.lazy.items
 import android.app.Activity
 import android.content.Intent
 import androidx.activity.compose.BackHandler
@@ -914,23 +916,49 @@ fun AlarmCustomizationScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                     Text("Background Style", style = MaterialTheme.typography.titleLarge)
-                    FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        RingingBackgroundStyle.entries.forEach { style ->
-                            FilterChip(
-                                selected = background == style,
-                                colors = selectedChipColors(),
-                                shape = SelectionChipShape,
-                                onClick = {
-                                    background = style
-                                    if (style != RingingBackgroundStyle.CUSTOM_IMAGE &&
-                                        style != RingingBackgroundStyle.VIDEO &&
-                                        style != RingingBackgroundStyle.SOLID_COLOR
-                                    ) {
-                                        showBackgroundSheet = false
+                    // every style as a live preview card: the real background drawn small, so the choice is seen before it is picked
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        items(RingingBackgroundStyle.entries) { style ->
+                            val selected = background == style
+                            val cardShape = RoundedCornerShape(16.dp)
+                            Column(
+                                modifier = Modifier
+                                    .width(112.dp)
+                                    .clip(cardShape)
+                                    .border(
+                                        if (selected) 2.dp else 1.dp,
+                                        if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                                        cardShape
+                                    )
+                                    .clickable {
+                                        background = style
+                                        if (style != RingingBackgroundStyle.CUSTOM_IMAGE &&
+                                            style != RingingBackgroundStyle.VIDEO &&
+                                            style != RingingBackgroundStyle.SOLID_COLOR
+                                        ) {
+                                            showBackgroundSheet = false
+                                        }
                                     }
-                                },
-                                label = { Text(style.label) }
-                            )
+                            ) {
+                                Box(Modifier.fillMaxWidth().height(160.dp), contentAlignment = Alignment.Center) {
+                                    if (style == RingingBackgroundStyle.CUSTOM_IMAGE || style == RingingBackgroundStyle.VIDEO) {
+                                        Text("Your file", style = MaterialTheme.typography.labelMedium)
+                                    } else {
+                                        AlarmLockBackground(
+                                            style = style,
+                                            imageUri = null,
+                                            dark = true,
+                                            modifier = Modifier.fillMaxSize()
+                                        ) {}
+                                    }
+                                }
+                                Text(
+                                    style.label,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    maxLines = 2,
+                                    modifier = Modifier.fillMaxWidth().padding(8.dp)
+                                )
+                            }
                         }
                     }
                     if (background == RingingBackgroundStyle.SOLID_COLOR) {
