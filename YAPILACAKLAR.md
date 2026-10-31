@@ -1702,3 +1702,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Pulse "Save to…" panel: the accent is white (the look's own accent), not the chosen orange; Pulse gets its accent back when the panel closes (derlenmedi)
 - Books reader: default text size 15; the bottom bar offers Moon Reader's list (Screen Orientation, Day/Night, Speak, Autoscroll, Chapters, Bookmarks, Brightness, Font Size, Search, Visual/Control/Miscellaneous, Themes, Options, Shutdown, Customize, Book information); unchecked buttons appear in the ⋮ menu; sync, dual-page, tilt and reading ruler are not in the list yet (derlenmedi)
 - Books shelf: the drawer is pure black too when AMOLED is on (derlenmedi)
+- Books shelf: two or three covers in a row, sized to the width of the screen; the cover size option is gone (derlenmedi)
