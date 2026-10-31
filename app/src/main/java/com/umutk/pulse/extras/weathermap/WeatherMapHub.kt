@@ -36,6 +36,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.asImageBitmap
@@ -338,15 +340,25 @@ private fun DrawScope.drawPlane(c: Offset, headingDeg: Double, half: Float, colo
     drawPath(path, color)
 }
 
+/**
+ * The dark look of the ground: the OpenStreetMap tiles are turned to grey, darkened, with the sea a little bluer than the land.
+ */
+private val DARK_MAP: ColorFilter = run {
+    val k = 0.3f
+    fun row(w: Float) = floatArrayOf(k * w * 0.2126f, k * w * 0.7152f, k * w * 0.0722f)
+    val r = row(0.9f); val g = row(0.95f); val b = row(1.15f)
+    ColorFilter.colorMatrix(ColorMatrix(floatArrayOf(r[0], r[1], r[2], 0f, 0f, g[0], g[1], g[2], 0f, 0f, b[0], b[1], b[2], 0f, 0f, 0f, 0f, 0f, 1f, 0f)))
+}
+
 /** One tile of a picture layer, drawn at its place on the screen. */
-private fun DrawScope.drawTile(img: ImageBitmap, z: Int, tx: Int, ty: Int, p: MapPos, ppu: Double, alpha: Float) {
+private fun DrawScope.drawTile(img: ImageBitmap, z: Int, tx: Int, ty: Int, p: MapPos, ppu: Double, alpha: Float, filter: ColorFilter? = null) {
     val n = (1 shl z).toDouble()
     val side = ppu / n
     val left = size.width / 2 + (tx / n - p.cx) * ppu
     val top = size.height / 2 + (ty / n - p.cy) * ppu
     val l = floor(left).toInt(); val t = floor(top).toInt()
     val r = kotlin.math.ceil(left + side).toInt(); val b = kotlin.math.ceil(top + side).toInt()
-    drawImage(img, dstOffset = IntOffset(l, t), dstSize = IntSize(r - l, b - t), alpha = alpha)
+    drawImage(img, dstOffset = IntOffset(l, t), dstSize = IntSize(r - l, b - t), alpha = alpha, colorFilter = filter)
 }
 
 @Composable
@@ -422,7 +434,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     LaunchedEffect(baseKeys) {
         val missing = baseKeys.filter { it !in baseTiles }
         if (missing.isNotEmpty()) {
-            missing.map { k -> async(Dispatchers.IO) { k to fetchTile("https://basemaps.cartocdn.com/dark_all/$k@2x.png") } }
+            missing.map { k -> async(Dispatchers.IO) { k to fetchTile("https://tile.openstreetmap.org/$k.png") } }
                 .awaitAll().forEach { (k, img) -> if (img != null) baseTiles[k] = img }
         }
         if (baseTiles.size > 160) baseTiles.keys.filter { it !in baseKeys }.forEach { baseTiles.remove(it) }
@@ -497,7 +509,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
         ) {
             val p = pos
             val ppu = pxPerWorld(p.zoom, density)
-            base.forEach { (z, tx, ty) -> baseTiles[tileKey(z, tx, ty)]?.let { drawTile(it, z, tx, ty, p, ppu, 1f) } }
+            base.forEach { (z, tx, ty) -> baseTiles[tileKey(z, tx, ty)]?.let { drawTile(it, z, tx, ty, p, ppu, 1f, DARK_MAP) } }
             if (overMax >= 0) visibleTiles(p, size.width, size.height, density, overMax).forEach { (z, tx, ty) ->
                 overTiles["${layer.name}/${tileKey(z, tx, ty)}"]?.let { drawTile(it, z, tx, ty, p, ppu, if (layer == MapLayer.RADAR) 0.7f else 1f) }
             }
@@ -563,7 +575,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
         Column(Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(bottom = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             Text(status, color = Color.White, fontSize = 12.sp, maxLines = 1,
                 modifier = Modifier.background(Color.Black.copy(alpha = .6f), RoundedCornerShape(50)).clickable { refresh++ }.padding(horizontal = 12.dp, vertical = 4.dp))
-            Text(tr("© OpenStreetMap · © CARTO", "© OpenStreetMap · © CARTO"), color = Color.White.copy(alpha = .5f), fontSize = 9.sp, modifier = Modifier.padding(top = 2.dp))
+            Text("© OpenStreetMap contributors", color = Color.White.copy(alpha = .5f), fontSize = 9.sp, modifier = Modifier.padding(top = 2.dp))
         }
     }
 }
