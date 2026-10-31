@@ -74,6 +74,16 @@ internal object PowerampCovers {
     fun saved(c: Context, path: String): ImageBitmap? =
         fileFor(c, path).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() }
 
+    /** The saved cover at most about 512 px, for the song lists: a full-size picture takes megabytes for each row on screen. */
+    fun savedSmall(c: Context, path: String): ImageBitmap? {
+        val f = fileFor(c, path).takeIf { it.isFile } ?: return null
+        val o = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        BitmapFactory.decodeFile(f.path, o)
+        var s = 1
+        while (o.outWidth / (s * 2) >= 512) s *= 2
+        return BitmapFactory.decodeFile(f.path, BitmapFactory.Options().apply { inSampleSize = s })?.asImageBitmap()
+    }
+
     fun save(c: Context, path: String, jpg: ByteArray) {
         val f = fileFor(c, path)
         f.parentFile?.mkdirs()
