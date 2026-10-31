@@ -37,7 +37,7 @@ val BAR_TOOLS = listOf(
 )
 
 /** The bottom bar at first: the buttons Moon Reader shows checked. */
-private const val DEFAULT_BAR = "orient,daynight,speak,auto,chapters,custom"
+private const val DEFAULT_BAR = "orient,daynight,speak,auto,chapters,text,custom"
 
 /** The button that opens the bar customisation; it stays last in the bar. */
 private const val PINNED = "custom"
@@ -49,6 +49,11 @@ object EbookPrefs {
     fun bar(c: Context): List<String> {
         val pr = p(c)
         if (pr.getInt("barVer", 1) < 2) pr.edit().putString("bar", DEFAULT_BAR).putInt("barVer", 2).apply()
+        // version 3 puts the font size button on the bar (it was only in the ⋮ menu)
+        if (pr.getInt("barVer", 1) < 3) {
+            val ids = (pr.getString("bar", DEFAULT_BAR) ?: "").split(',').filter { it.isNotBlank() }
+            pr.edit().putString("bar", (ids + "text").distinct().joinToString(",")).putInt("barVer", 3).apply()
+        }
         return pinned((pr.getString("bar", DEFAULT_BAR) ?: "").split(',').filter { it.isNotBlank() })
     }
     fun setBar(c: Context, ids: List<String>) { p(c).edit().putString("bar", pinned(ids).joinToString(",")).apply() }
