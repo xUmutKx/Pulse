@@ -1726,3 +1726,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - LockArt (LSPosed module, Apache-2.0, ELCesarMaat; Spotify lyrics part adapted from LyricProvider, Apache-2.0) copied as a standalone project in extras/lockart: lock screen art, lock screen and AOD lyrics from Spotify. It is not part of Pulse's Gradle build; it builds with its own gradlew. Pulse integration (Pulse's own player lyrics into it) not done yet (derlenmedi)
 - Books shelf: covers are shown whole (fit, not cropped and zoomed); EPUB covers are also found by names with front or title (derlenmedi)
 - Books shelf: a book without a picture shows its title on the card instead of the first letter; the Alice EPUB sent has no cover image inside the file (its manifest names cover.jpg, which is missing from the zip) (derlenmedi)
+- Books shelf: a book without a cover picture (EPUB, TXT) shows its first page of text as the cover (derlenmedi)
+- Compile fix: missing Arrangement and fillMaxSize imports in LiveLyrics.kt (1.0.283 build failed on them)
