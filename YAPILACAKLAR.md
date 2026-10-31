@@ -1841,3 +1841,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Book search: Gutenberg Turkish results first, then the English ones of the same search
 - derlenmedi: Books: a PDF with text is read as a text book, reflowed to the reader's pages; opening a file runs off the main thread
 - derlenmedi: Books: PDF page drawing no longer crashes the app (a failed page shows blank; the page is always closed)
+- derlenmedi: Converter tool in the Toolkit: images (PNG, JPG, WEBP, BMP), TXT to PDF/EPUB/DOCX, DOCX to TXT/EPUB, EPUB to TXT, PDF to TXT, CSV to JSON and back; picks files with the app's own browser
