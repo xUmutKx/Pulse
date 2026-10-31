@@ -1792,3 +1792,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Music widget: the album cover opens the player directly (no trampoline), one request code per widget
 - derlenmedi: Floating keys removed (the key button over every app, its toolkit page and its quick settings tile)
 - derlenmedi: Dice and coin flip quick settings tiles turn: eight frames of a tumbling die and a turning coin, then the result
+- derlenmedi: Keyboard: always opens on the QWERTY keys; the Shift key says Shift; the floating keyboard's handle is bigger and drags up/down as well as sideways
