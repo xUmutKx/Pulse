@@ -443,8 +443,8 @@ private fun BuiltinRows() {
     )
     // every app stays listed here, with or without its launcher icon; a long press hides a row, the eye shows the hidden ones
     // a tool switched off in Settings > Extra apps is not listed here either
+    // the Tools / Apps / ⋮ menu placements only decide where a tool is listed outside this page; here it stays listed, even when it is set to hidden there
     val visible = rows
-        .filter { r -> val p = r.place.orEmpty(); !(p.startsWith("tool:") && com.umutk.pulse.ToolPlace.byId(p.removePrefix("tool:"))?.let { com.umutk.pulse.ToolPlace.where(ctx, it) == "hidden" } == true) }
         .filter { showHidden || (it.place ?: it.name) !in hidden }
     // tiles or rows: the choice is kept
     var grid by remember { mutableStateOf(ExtraRowsHidden.grid(ctx)) }
