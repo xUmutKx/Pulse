@@ -80,6 +80,10 @@ object MsgPrefs {
     private const val FILE = "pulse_messages"
     private fun p(c: Context) = c.getSharedPreferences(FILE, Context.MODE_PRIVATE)
     fun pinned(c: Context): Set<String> = p(c).getStringSet("pinned", null).orEmpty().toSet()
+    /** When the conversation with this address was last opened: its messages up to this time are read. Kept here because the phone
+     *  only lets the default SMS app mark messages read. */
+    fun readUpTo(c: Context, addr: String): Long = p(c).getLong("read_$addr", 0L)
+    fun setReadUpTo(c: Context, addr: String, t: Long) { p(c).edit().putLong("read_$addr", t).apply() }
     fun blocked(c: Context): Set<String> = p(c).getStringSet("blocked", null).orEmpty().toSet()
     fun setPinned(c: Context, s: Set<String>) { p(c).edit().putStringSet("pinned", s.toSet()).apply() }
     fun setBlocked(c: Context, s: Set<String>) { p(c).edit().putStringSet("blocked", s.toSet()).apply() }
@@ -136,15 +140,18 @@ fun loadSmsThreads(c: Context, withNames: Boolean): List<SmsThread> {
     val out = LinkedHashMap<Long, SmsThread>()
     val unread = HashMap<Long, Int>()
     val names = HashMap<String, String?>()
+    val readTo = HashMap<String, Long>()
     val canNames = withNames && hasContactPermission(c)
     c.contentResolver.query(Telephony.Sms.CONTENT_URI,
         arrayOf(Telephony.Sms.THREAD_ID, Telephony.Sms.ADDRESS, Telephony.Sms.BODY, Telephony.Sms.DATE, Telephony.Sms.READ, Telephony.Sms.TYPE),
         null, null, "${Telephony.Sms.DATE} DESC")?.use { cur ->
         while (cur.moveToNext()) {
             val tid = cur.getLong(0)
-            if (cur.getInt(4) == 0 && cur.getInt(5) == Telephony.Sms.MESSAGE_TYPE_INBOX) unread[tid] = (unread[tid] ?: 0) + 1
-            if (tid in out) continue
             val addr = cur.getString(1).orEmpty()
+            // a message is unread when the phone says so and it is newer than the last time Pulse opened its conversation
+            val upTo = readTo.getOrPut(addr) { MsgPrefs.readUpTo(c, addr) }
+            if (cur.getInt(4) == 0 && cur.getInt(5) == Telephony.Sms.MESSAGE_TYPE_INBOX && cur.getLong(3) > upTo) unread[tid] = (unread[tid] ?: 0) + 1
+            if (tid in out) continue
             val name = if (canNames && addr.isNotEmpty()) names.getOrPut(addr) { contactName(c, addr) } else null
             out[tid] = SmsThread(tid, addr, name, cur.getString(2).orEmpty(), cur.getLong(3))
         }
@@ -340,7 +347,10 @@ fun MessagesScreen(back: () -> Unit) {
     LaunchedEffect(open?.address) {
         val addr = open?.address ?: return@LaunchedEffect
         com.umutk.pulse.extras.messages.MsgNotifier.cancel(ctx, addr)
-        withContext(Dispatchers.IO) { MsgCore.markRead(ctx, addr) }
+        withContext(Dispatchers.IO) {
+            MsgCore.markRead(ctx, addr)
+            MsgPrefs.setReadUpTo(ctx, addr, System.currentTimeMillis())
+        }
         reload++
     }
     BackHandler { goBack() }
