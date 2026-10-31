@@ -39,6 +39,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.itemsIndexed
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.FlowRow
@@ -266,7 +267,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
 
             if (screen == "find") FindPage(th) { book ->
                 shelf = (shelf.filter { it.uri != book.uri } + book.copy(chapters = emptyList())).also { shelfSave(ctx, it) }
-                screen = ""; tab = 0
+                screen = ""; tab = 0; onOpen(book)
             }
             else if (screen == "options") {
                 LazyColumn(Modifier.weight(1f)) {
@@ -995,11 +996,11 @@ private fun SettingRow(label: String, th: Theme, trailing: @Composable () -> Uni
 }
 
 /**
- * Find free books: a search of the public-domain catalogue (Turkish first), and a tap on a result downloads it into the
- * phone's Books folder and puts it on the shelf through [onAdded].
+ * Find free books: a search of the public-domain catalogue, the results as covers. A tap downloads the book into the
+ * phone's Books folder, puts it on the shelf and opens it in the reader.
  */
 @Composable
-private fun FindPage(th: Theme, onAdded: (Book) -> Unit) {
+private fun FindPage(th: Theme, onOpened: (Book) -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var query by remember { mutableStateOf("") }
@@ -1023,19 +1024,27 @@ private fun FindPage(th: Theme, onAdded: (Book) -> Unit) {
             "Yalnızca telif süresi dolmuş kitaplar, Project Gutenberg'den. Önce Türkçe."), color = th.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 6.dp))
         if (busy.isNotEmpty()) Text(busy, color = th.sub, fontSize = 13.sp)
         if (results != null && results.isNullOrEmpty() && busy.isEmpty()) Text(tr("Nothing found", "Bulunamadı"), color = th.sub, fontSize = 13.sp)
-        LazyColumn(Modifier.weight(1f)) {
+        LazyVerticalGrid(columns = GridCells.Adaptive(104.dp), verticalArrangement = Arrangement.spacedBy(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.weight(1f)) {
             itemsIndexed(results.orEmpty()) { _, f ->
-                Column(Modifier.fillMaxWidth().clickable {
+                val cover by produceState<ImageBitmap?>(null, f.cover) {
+                    value = f.cover?.let { url -> withContext(Dispatchers.IO) { BookFind.image(url)?.asImageBitmap() } }
+                }
+                Column(Modifier.clickable {
+                    // one tap: download, then open it in the reader
                     scope.launch {
                         busy = tr("Downloading...", "İndiriliyor...")
                         val file = withContext(Dispatchers.IO) { runCatching { BookFind.download(booksDir, f) }.getOrNull() }
                         val book = file?.let { withContext(Dispatchers.IO) { Ebook.open(ctx, Uri.fromFile(it)) } }
                         busy = ""
-                        if (book != null) onAdded(book) else busy = tr("This book cannot be downloaded", "Bu kitap indirilemiyor")
+                        if (book != null) onOpened(book) else busy = tr("This book cannot be downloaded", "Bu kitap indirilemiyor")
                     }
-                }.padding(vertical = 10.dp)) {
-                    Text(f.title, color = th.ink, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    if (f.author.isNotEmpty()) Text(f.author, color = th.sub, fontSize = 13.sp)
+                }) {
+                    Box(Modifier.fillMaxWidth().aspectRatio(.7f).clip(RoundedCornerShape(6.dp)).background(coverColor(f.title)), contentAlignment = Alignment.Center) {
+                        cover?.let { Image(it, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize()) }
+                            ?: Text(f.title.take(1).uppercase(), color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.Bold)
+                    }
+                    Text(f.title, color = th.ink, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                    if (f.author.isNotEmpty()) Text(f.author, color = th.sub, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
         }

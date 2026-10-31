@@ -12,7 +12,7 @@ import java.net.URLEncoder
  * catalogue API (gutendex.com). Turkish books are preferred by the search; other languages are found too.
  */
 object BookFind {
-    class Found(val title: String, val author: String, val epub: String?, val txt: String?)
+    class Found(val title: String, val author: String, val epub: String?, val txt: String?, val cover: String?)
 
     /** The books whose title or author matches [q]. Throws when there is no connection. */
     fun search(q: String): List<Found> {
@@ -24,7 +24,7 @@ object BookFind {
             val authors = o.optJSONArray("authors")
             val author = if (authors == null) "" else (0 until authors.length()).joinToString(", ") { authors.getJSONObject(it).optString("name") }
             val txt = formats.keys().asSequence().firstOrNull { it.startsWith("text/plain") }?.let { formats.getString(it) }
-            Found(o.getString("title"), author, formats.optString("application/epub+zip").ifEmpty { null }, txt)
+            Found(o.getString("title"), author, formats.optString("application/epub+zip").ifEmpty { null }, txt, formats.optString("image/jpeg").ifEmpty { null })
         }
     }
 
@@ -45,6 +45,9 @@ object BookFind {
         c.readTimeout = 30_000
         return c.inputStream
     }
+
+    /** The cover picture of a book, or null when it cannot be loaded. */
+    fun image(url: String): android.graphics.Bitmap? = runCatching { android.graphics.BitmapFactory.decodeStream(open(url)) }.getOrNull()
 
     private fun get(url: String): String = open(url).bufferedReader().use { it.readText() }
 }
