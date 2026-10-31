@@ -1692,3 +1692,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books shelf: AMOLED mode gives the shelf a pure black background (it replaces the wooden one) (derlenmedi)
 - Keyboard quick auth: the seconds number is gone from each account; the bar under the code shows the time left (derlenmedi)
 - Video player More menu: a dark bottom panel above the progress bar with an icon per action (no radio circles), so it reads over white pictures (derlenmedi)
+- Books shelf: the cover is the first page of a PDF or the cover picture of an EPUB (saved once per book); a book without one keeps the letter card (derlenmedi)
