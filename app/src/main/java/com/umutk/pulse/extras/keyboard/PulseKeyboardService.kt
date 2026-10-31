@@ -428,7 +428,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                     c.deleteSurroundingText(n, 0); word.append(stem); punctTyped = false
                 }
             }
-            if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter()) {
+            if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter() && !spaceAfterCursor(c)) {
                 c.commitText(" ", 1)
                 // behind a full stop, ! or ? the next sentence starts with a capital
                 if (dotEnd && KeyboardPrefs.autoCap && word.isEmpty()) ch = ch.toString().uppercase(lang.locale).first()
@@ -471,7 +471,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             punctTyped = ch in ",;!?:" || dotOk
             dotEnd = ch in "!?" || dotOk
             // a comma behind a word is followed by a space at once (not in numbers, addresses, passwords or web addresses)
-            if (ch == ',' && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true) {
+            if (ch == ',' && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true && !spaceAfterCursor(c)) {
                 c.commitText(" ", 1); commaSpace = true; punctTyped = false
             }
             lastWasSpace = false
@@ -1445,3 +1445,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 /** A picture made of characters (block shading, several lines): not an emoji, so it is left out of the recent list. */
 private fun isArt(s: String): Boolean =
     s.contains('\n') || s.contains('\u23CE') || s.any { it in '\u2580'..'\u259F' || it in '\u2800'..'\u28FF' }
+
+/** A space already stands right after the cursor (the text after a mark was typed before), so the keyboard adds none. */
+private fun spaceAfterCursor(c: android.view.inputmethod.InputConnection): Boolean =
+    c.getTextAfterCursor(1, 0)?.firstOrNull()?.isWhitespace() == true
