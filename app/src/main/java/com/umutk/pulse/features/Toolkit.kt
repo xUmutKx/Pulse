@@ -126,6 +126,7 @@ private val tools = listOf(
     Tool("Flashlight", "El feneri", "flash") { Flashlight() },
     Tool("Lux meter", "Işık ölçer", "light") { LuxMeter() },
     Tool("Dice", "Zar", "dice") { Dice() },
+    Tool("Converter", "Dönüştürücü", "filetypes") { com.umutk.pulse.extras.convert.ConverterPage() },
     Tool("Coin flip", "Yazı tura", "coin") { CoinFlip() },
     Tool("Clipboard", "Pano", "clipboard") { ClipboardTool() },
     Tool("Screenshot", "Ekran görüntüsü", "screenshot") { ScreenshotTool() },
