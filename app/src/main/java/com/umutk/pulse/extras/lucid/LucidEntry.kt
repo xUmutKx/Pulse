@@ -65,6 +65,7 @@ fun LucidClockScreen(back: () -> Unit) {
     }
     val appFontStyle by settingsDataStore.appFontStyleFlow.collectAsState(initial = AppFontStyle.SYSTEM_DEFAULT)
     val accentColor by settingsDataStore.accentColorFlow.collectAsState(initial = AccentColor.DEFAULT)
+    androidx.compose.runtime.LaunchedEffect(Unit) { com.umutk.pulse.extras.lucid.ui.theme.LucidLookState.load(androidx.compose.ui.platform.LocalContext.current) }
     val backgroundPalette by settingsDataStore.backgroundPaletteFlow.collectAsState(initial = BackgroundPalette.OBSIDIAN)
     val uiScale by settingsDataStore.uiScaleFlow.collectAsState(initial = SettingsDataStore.DEFAULT_UI_SCALE)
     val themeMode by settingsDataStore.themeModeFlow.collectAsState(initial = ThemeMode.SYSTEM)
