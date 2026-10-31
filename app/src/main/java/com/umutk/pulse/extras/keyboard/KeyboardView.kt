@@ -1312,14 +1312,14 @@ private fun AuthPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 val left = period - ((now / 1000L) % period).toInt()
                 // each account is as tall as its text (twice the text of before), so the panel is not padded with empty space
                 Column(Modifier.fillMaxWidth().padding(vertical = 4.dp).clip(RoundedCornerShape(14.dp)).background(th.key).clickable { act.authPick(code) }
-                    .padding(vertical = 10.dp)) {
+                    .padding(vertical = 16.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(name, color = th.text, fontSize = 28.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        Text(code, color = th.accent, fontSize = 36.sp, fontWeight = FontWeight.SemiBold)
+                        Text(name, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        Text(code, color = th.accent, fontSize = 24.sp, fontWeight = FontWeight.SemiBold)
                     }
                     // the bar under the code empties as the code runs out
-                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(6.dp).background(th.sub.copy(alpha = .2f))) {
-                        Box(Modifier.fillMaxWidth(left / period.toFloat()).height(6.dp).background(th.accent))
+                    Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp).height(4.dp).background(th.sub.copy(alpha = .2f))) {
+                        Box(Modifier.fillMaxWidth(left / period.toFloat()).height(4.dp).background(th.accent))
                     }
                 }
             }
