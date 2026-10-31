@@ -44,9 +44,13 @@ object KeyboardDictionary {
 
     fun emoji(word: String): String? = emojiFor[word.lowercase(Locale.ROOT)]
 
+    /** Names of people and places (Turkish): a Turkish ending on one of them takes its apostrophe (Adana'da, Pelin'den). */
+    val properNouns = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+
     /** Reads the word list of [lang] (and the learned words once). Call from a background thread. */
     fun load(c: Context, code: String) {
         val lang = d(code)
+        if (lang == "tr") runCatching { c.assets.open("kbd/proper_tr.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) properNouns += it.trim().lowercase(Locale("tr", "TR")) } } }
         if (!userLoaded) loadUser(c)
         if (lexes.containsKey(lang)) return
         val ws = ArrayList<String>(); val sc = ArrayList<Float>()
