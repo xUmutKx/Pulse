@@ -1080,6 +1080,39 @@ private fun familyIcon(id: String): ImageVector = when (id) {
 }
 
 /**
+ * The "Text and art" page: a box for your own text, with every style of it below (a tap copies one), the picture-to-ASCII
+ * tool, and the ASCII pictures, each drawn whole.
+ */
+@Composable
+private fun TextAndArtPage(entries: List<KeyboardSymbols.Sign>, th: KbTheme, act: KbActions) {
+    val ctx = LocalContext.current
+    var typed by remember { mutableStateOf("") }
+    val styles = remember(typed) { FancyText.all(typed.ifBlank { "Hi test" }) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        androidx.compose.foundation.text.BasicTextField(
+            value = typed, onValueChange = { typed = it }, singleLine = true,
+            textStyle = androidx.compose.ui.text.TextStyle(color = th.text, fontSize = 15.sp),
+            decorationBox = { inner -> if (typed.isEmpty()) Text(tr("Type your text", "Metninizi yazın"), color = th.sub, fontSize = 14.sp); inner() },
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).padding(10.dp),
+        )
+        styles.forEach { (name, s) ->
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(s) }.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Clip, modifier = Modifier.weight(1f))
+                Text(name, color = th.sub, fontSize = 10.sp, maxLines = 1)
+            }
+        }
+        // the picture tool is its own screen: it copies the result, and the text box keeps what you typed
+        Text(
+            tr("Picture to ASCII", "Resimden ASCII"), color = th.text, fontSize = 14.sp,
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).border(1.dp, th.sub, RoundedCornerShape(10.dp))
+                .clickable { ctx.startActivity(android.content.Intent(ctx, com.umutk.pulse.extras.keyboard.AsciiMakerActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                .padding(10.dp),
+        )
+        entries.filter { it.name.startsWith("ascii art") }.forEach { sg -> AsciiArtCell(sg.ch.replace("⏎", "\n"), th, act) }
+    }
+}
+
+/**
  * One ASCII picture, whole: the monospace text is measured and set to the largest size that fits the cell's width, so the
  * picture keeps its shape and is never cut off. A tap copies the picture.
  */
@@ -1121,11 +1154,10 @@ private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.F
         }
         // the presets vary in length: each one takes just its own width, so two or three share a line
         val wide = fam?.id == "Patterns"
-        val art = wide && subs.getOrNull(sub)?.first == "ASCII art"
-        // ASCII art: each picture is drawn whole, scaled to its cell's width (never cut), a tap copies it
-        if (art) LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            items(subs.getOrNull(sub)?.second.orEmpty()) { sg -> AsciiArtCell(sg.ch.replace("⏎", "\n"), th, act) }
-        } else if (wide) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val textArt = wide && subs.getOrNull(sub)?.first == "Text and art"
+        // the text and art page: your own text in every style, the picture-to-ASCII tool, then the ASCII pictures
+        if (textArt) TextAndArtPage(subs.getOrNull(sub)?.second.orEmpty(), th, act)
+        else if (wide) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
             // a long preset is shrunk to the width of the keyboard, so every one shows whole
             val room = maxWidth - 12.dp
             androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
