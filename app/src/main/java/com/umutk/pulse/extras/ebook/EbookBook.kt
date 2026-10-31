@@ -123,7 +123,7 @@ object Ebook {
      * in the app's files, named by the book's uri. Null when the book has no picture (the shelf then draws the letter).
      */
     fun cover(c: Context, book: Book): File? {
-        val key = java.security.MessageDigest.getInstance("MD5").digest(book.uri.toByteArray()).joinToString("") { "%02x".format(it) }
+        val key = java.security.MessageDigest.getInstance("MD5").digest((book.uri + "#v2").toByteArray()).joinToString("") { "%02x".format(it) }
         val dir = File(c.filesDir, "covers").apply { mkdirs() }
         val png = File(dir, "$key.png")
         val none = File(dir, "$key.none")
@@ -158,24 +158,55 @@ object Ebook {
         return true
     }
 
-    /** The cover picture of an EPUB: the manifest item the package marks as the cover (EPUB 3 or EPUB 2 style). */
+    /**
+     * The cover picture of an EPUB. The package names it (EPUB 3 "cover-image", EPUB 2 meta "cover"); when it does not, the cover page
+     * is read for its picture, and failing that a picture whose name says cover is taken.
+     */
     private fun epubCover(c: Context, uri: Uri, out: File): Boolean {
         val container = zipEntry(c, uri) { it.equals("META-INF/container.xml", true) }?.toString(Charsets.UTF_8) ?: return false
         val opfPath = Regex("full-path=\"([^\"]+)\"").find(container)?.groupValues?.get(1) ?: return false
-        val opf = zipEntry(c, uri) { it == opfPath }?.toString(Charsets.UTF_8) ?: return false
-        val dir = if (opfPath.contains('/')) opfPath.substringBeforeLast('/') + "/" else ""
+        val opf = zipEntry(c, uri) { it.equals(opfPath, true) }?.toString(Charsets.UTF_8) ?: return false
         val items = Regex("<item\\b[^>]*>").findAll(opf).map { it.value }.toList()
+        fun full(href: String) = resolvePath(opfPath, java.net.URLDecoder.decode(href, "UTF-8"))
+        val candidates = ArrayList<String>()
         val coverId = Regex("<meta\\b[^>]*name=\"cover\"[^>]*>").find(opf)?.value?.let { attr(it, "content") }
-        val href = items.firstOrNull { it.contains("cover-image") }?.let { attr(it, "href") }
-            ?: coverId?.let { id -> items.firstOrNull { attr(it, "id") == id }?.let { attr(it, "href") } }
-            ?: return false
-        val path = dir + java.net.URLDecoder.decode(href, "UTF-8")
-        val bytes = zipEntry(c, uri) { it == path } ?: return false
-        val opts = BitmapFactory.Options().apply { inSampleSize = 4 }
-        val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: return false
-        out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
-        bmp.recycle()
-        return true
+        items.firstOrNull { it.contains("cover-image") }?.let { attr(it, "href") }?.let { candidates += full(it) }
+        coverId?.let { id -> items.firstOrNull { attr(it, "id") == id }?.let { attr(it, "href") }?.let { candidates += full(it) } }
+        // the cover page: its first picture
+        for (item in items.filter { (attr(it, "id") ?: "").contains("cover", true) || (attr(it, "href") ?: "").contains("cover", true) }) {
+            val href = attr(item, "href") ?: continue
+            if (href.endsWith(".xhtml", true) || href.endsWith(".html", true) || href.endsWith(".htm", true)) {
+                val page = resolvePath(opfPath, java.net.URLDecoder.decode(href, "UTF-8"))
+                val text = zipEntry(c, uri) { it.equals(page, true) }?.toString(Charsets.UTF_8) ?: continue
+                Regex("(?:src|href)=\"([^\"]+\\.(?:jpe?g|png|gif|webp))\"", RegexOption.IGNORE_CASE).find(text)?.groupValues?.get(1)
+                    ?.let { candidates += resolvePath(page, java.net.URLDecoder.decode(it, "UTF-8")) }
+            } else candidates += full(href)
+        }
+        // any picture whose name says cover
+        items.filter { (attr(it, "href") ?: "").contains("cover", true) && (attr(it, "media-type") ?: "").startsWith("image") }
+            .mapNotNullTo(candidates) { attr(it, "href")?.let { h -> full(h) } }
+        for (path in candidates) {
+            val bytes = zipEntry(c, uri) { it.equals(path, true) } ?: continue
+            val opts = BitmapFactory.Options().apply { inSampleSize = 4 }
+            val bmp = BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts) ?: continue
+            out.outputStream().use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+            bmp.recycle()
+            return true
+        }
+        return false
+    }
+
+    /** The path of [rel] as seen from the file [base] inside the zip (the ".." and "." parts are taken out). */
+    private fun resolvePath(base: String, rel: String): String {
+        val out = ArrayList<String>()
+        for (part in (base.substringBeforeLast('/', "") + "/" + rel).split('/')) {
+            when (part) {
+                "", "." -> {}
+                ".." -> if (out.isNotEmpty()) out.removeAt(out.size - 1)
+                else -> out += part
+            }
+        }
+        return out.joinToString("/")
     }
 
     /** The bytes of the first entry of the zip that [pick] takes, read by streaming (the book is not held in memory). */
