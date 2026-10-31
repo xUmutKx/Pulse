@@ -134,12 +134,7 @@ fun LucidAlarmTheme(
 
     val appFontFamily = appFontFamilyOf(appFontStyle) ?: FontManager.fontFamilyFromPath(customAppFontPath)
 
-    val clockFontFamily = when (clockFontStyle) {
-        RingingClockFont.SYSTEM_DEFAULT -> FontFamily.SansSerif
-        RingingClockFont.SERIF -> FontFamily.Serif
-        RingingClockFont.CURSIVE -> FontFamily.Cursive
-        RingingClockFont.CUSTOM_FILE -> FontManager.fontFamilyFromPath(clockCustomFontPath)
-    }
+    val clockFontFamily = clockFontFamilyOf(clockFontStyle) ?: FontManager.fontFamilyFromPath(clockCustomFontPath)
 
     val view = LocalView.current
     if (!view.isInEditMode) {
