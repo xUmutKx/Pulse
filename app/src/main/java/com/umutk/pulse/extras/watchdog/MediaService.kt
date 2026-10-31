@@ -54,8 +54,12 @@ abstract class MediaService : Service() {
 
     override fun onCreate() {
         super.onCreate()
-        if (android.os.Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java)
-            .createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Playback", "Oynatma"), NotificationManager.IMPORTANCE_LOW)) else Unit
+        // the keep-alive notification is the least important one: no icon in the status bar, no sound, no pop-up. A channel's
+        // importance cannot change once made, so the new channel has a new id and the old one is removed.
+        if (android.os.Build.VERSION.SDK_INT >= 26) getSystemService(NotificationManager::class.java).apply {
+            deleteNotificationChannel("pulse_playback")
+            createNotificationChannel(com.umutk.pulse.QuietChannel(CH, tr("Playback", "Oynatma"), NotificationManager.IMPORTANCE_MIN))
+        }
         // Keeps the CPU awake while the service runs; released in onDestroy. Needs WAKE_LOCK (already in the manifest).
         wake = getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "pulse:${javaClass.simpleName}")
             .apply { setReferenceCounted(false); acquire() }
@@ -110,7 +114,7 @@ abstract class MediaService : Service() {
     }
 
     companion object {
-        private const val CH = "pulse_playback"
+        private const val CH = "pulse_playback2"
         const val ACTION_STOP = "com.umutk.pulse.action.MEDIA_STOP"
         private const val BEAT_MS = 60_000L
 
