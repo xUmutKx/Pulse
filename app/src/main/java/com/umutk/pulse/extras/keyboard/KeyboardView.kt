@@ -1054,7 +1054,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             LaunchedEffect(pager.settledPage) { st.emojiTab = EMOJI_ORDER[pager.settledPage] }
             androidx.compose.foundation.pager.HorizontalPager(pager, Modifier.fillMaxWidth().weight(1f)) { pg ->
                 val page = EMOJI_ORDER[pg]
-                if (page == 11) { SymbolPage(th, act, fams, g, sub) { sub = it }; return@HorizontalPager }
+                if (page == 11) { SymbolPage(th, act, st, fams, g, sub) { sub = it }; return@HorizontalPager }
                 val list = if (page == 0) shownRecents.map { e -> all.firstOrNull { it.e == e } ?: EmojiItem(e, if (e.any { it.isLetterOrDigit() }) 10 else 0, "") }
                     else if (page == 10) all.filter { it.group >= 10 } else all.filter { it.group == page - 1 }
                 LazyVerticalGrid(GridCells.Adaptive(if (page == 10) 92.dp else 44.dp), Modifier.fillMaxSize()) {
@@ -1084,19 +1084,25 @@ private fun familyIcon(id: String): ImageVector = when (id) {
  * tool, and the ASCII pictures, each drawn whole.
  */
 @Composable
-private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, act: KbActions) {
+private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, st: KbState) {
     val ctx = LocalContext.current
-    var typed by remember { mutableStateOf("") }
+    // the keys of this keyboard write the text (the app's field is not touched), so the box only shows it
+    val typed = st.artIn
     val styles = remember(typed) { FancyText.all(typed.ifBlank { "Hi test" }) }
+    // the last thing copied is named for a moment, so a tap is seen
+    var copied by remember { mutableStateOf<String?>(null) }
+    androidx.compose.runtime.LaunchedEffect(copied) { if (copied != null) { delay(1200); copied = null } }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-        androidx.compose.foundation.text.BasicTextField(
-            value = typed, onValueChange = { typed = it }, singleLine = true,
-            textStyle = androidx.compose.ui.text.TextStyle(color = th.text, fontSize = 15.sp),
-            decorationBox = { inner -> if (typed.isEmpty()) Text(tr("Type your text", "Metninizi yazın"), color = th.sub, fontSize = 14.sp); inner() },
+        Text(
+            if (typed.isEmpty()) tr("Type your text", "Metninizi yazın") else typed + "▏",
+            color = if (typed.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).padding(10.dp),
         )
+        Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.Center) {
+            if (copied != null) Text(tr("Copied", "Kopyalandı"), color = th.sub, fontSize = 12.sp)
+        }
         styles.forEach { (name, s) ->
-            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(s) }.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { copyArt(ctx, s); copied = s }.padding(horizontal = 10.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Clip, modifier = Modifier.weight(1f))
                 Text(name, color = th.sub, fontSize = 10.sp, maxLines = 1)
             }
@@ -1108,8 +1114,22 @@ private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, act: KbActions) {
                 .clickable { ctx.startActivity(android.content.Intent(ctx, com.umutk.pulse.extras.keyboard.AsciiMakerActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 .padding(10.dp),
         )
-        entries.filter { it.name.startsWith("ascii art") }.forEach { sg -> AsciiArtCell(sg.ch.replace("⏎", "\n"), th, act) }
+        // the ASCII pictures: two to a line, each drawn whole, with no box around it
+        BoxWithConstraints(Modifier.fillMaxWidth()) {
+            val half = (maxWidth - 6.dp) / 2
+            androidx.compose.foundation.layout.FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                entries.filter { it.name.startsWith("ascii art") }.forEach { sg ->
+                    val art = sg.ch.replace("⏎", "\n")
+                    AsciiArtCell(art, th, Modifier.width(half)) { copyArt(ctx, art); copied = art }
+                }
+            }
+        }
     }
+}
+
+/** Puts [s] on the clipboard, so it can be pasted into any app. */
+private fun copyArt(ctx: android.content.Context, s: String) {
+    runCatching { (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Pulse", s)) }
 }
 
 /**
@@ -1117,14 +1137,12 @@ private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, act: KbActions) {
  * picture keeps its shape and is never cut off. A tap copies the picture.
  */
 @Composable
-private fun AsciiArtCell(text: String, th: KbTheme, act: KbActions) {
+private fun AsciiArtCell(text: String, th: KbTheme, modifier: Modifier, onCopy: () -> Unit) {
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     val density = androidx.compose.ui.platform.LocalDensity.current
     val base = 12f
     val lines = text.count { it == '\n' } + 1
-    androidx.compose.foundation.layout.BoxWithConstraints(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).clickable { act.emoji(text) }.padding(6.dp)
-    ) {
+    BoxWithConstraints(modifier.clickable { onCopy() }.padding(2.dp)) {
         val style = androidx.compose.ui.text.TextStyle(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace, fontSize = base.sp, lineHeight = (base * 1.1f).sp, color = th.text)
         val widthPx = measurer.measure(text, style).size.width.toFloat()
         val maxPx = with(density) { maxWidth.toPx() }
@@ -1142,7 +1160,7 @@ private fun AsciiArtCell(text: String, th: KbTheme, act: KbActions) {
 
 /** The symbol tab: a row of icons for the families, a row of sub-categories when the family has some, and the signs; the search above finds a sign by its Unicode name. */
 @Composable
-private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
+private fun SymbolPage(th: KbTheme, act: KbActions, st: KbState, fams: List<KeyboardSymbols.Family>, g: Int, sub: Int, onSub: (Int) -> Unit) {
     val fam = fams.getOrNull(g)
     Column(Modifier.fillMaxSize()) {
         val subs = fam?.subs.orEmpty()
@@ -1156,7 +1174,12 @@ private fun SymbolPage(th: KbTheme, act: KbActions, fams: List<KeyboardSymbols.F
         val wide = fam?.id == "Patterns"
         val textArt = wide && subs.getOrNull(sub)?.first == "Text and art"
         // the text and art page: your own text in every style, the picture-to-ASCII tool, then the ASCII pictures
-        if (textArt) TextAndArtPage(subs.getOrNull(sub)?.second.orEmpty(), th, act)
+        // the keys type into the text box only while this page is the one on screen (a neighbouring page is composed too)
+        androidx.compose.runtime.DisposableEffect(textArt, st.emojiTab, st.panel) {
+            st.artOn = textArt && st.emojiTab == 11 && st.panel == "emoji"
+            onDispose { st.artOn = false }
+        }
+        if (textArt) TextAndArtPage(subs.getOrNull(sub)?.second.orEmpty(), th, st)
         else if (wide) androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
             // a long preset is shrunk to the width of the keyboard, so every one shows whole
             val room = maxWidth - 12.dp
