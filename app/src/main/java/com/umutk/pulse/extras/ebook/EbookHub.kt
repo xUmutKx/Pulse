@@ -529,7 +529,6 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             "control" -> panel = "control"
             "theme" -> panel = "themepop"
             "options" -> panel = "quick"
-            "shutdown" -> { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }
             "custom" -> panel = "bar"
             "info" -> panel = "info"
             "share" -> b?.let { bk ->
