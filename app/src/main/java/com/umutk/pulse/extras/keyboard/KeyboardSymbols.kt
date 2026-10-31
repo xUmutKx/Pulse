@@ -19,7 +19,7 @@ object KeyboardSymbols {
         "Symbols" to ("Symbols" to "Semboller"), "Punctuation" to ("Punctuation" to "Noktalama"), "Currency" to ("Currency" to "Para"), "Numbers" to ("Numbers" to "Sayılar"),
         "Music" to ("Music" to "Müzik"), "Braille" to ("Braille" to "Braille"), "Cuneiform" to ("Cuneiform" to "Çivi yazısı"), "Hieroglyphs" to ("Hieroglyphs" to "Hiyeroglif"),
     )
-    private val subNames = mapOf("Cute faces" to "Tatlı yüzler", "Hearts and ribbons" to "Kalp ve kurdele", "Classics" to "Klasikler", "Lines" to "Çizgiler", "Wings" to "Kanatlar", "Brackets" to "Parantezler", "Long" to "Uzunlar")
+    private val subNames = mapOf("Cute faces" to "Tatlı yüzler", "Hearts and ribbons" to "Kalp ve kurdele", "Classics" to "Klasikler", "Lines" to "Çizgiler", "Wings" to "Kanatlar", "Brackets" to "Parantezler", "Long" to "Uzunlar", "Text and art" to "Yazı ve sanat")
 
     /** The name of a sub-category in the app's language (the Unicode block names stay English). */
     fun subName(en: String): String = com.umutk.pulse.tr(en, subNames[en] ?: en)
