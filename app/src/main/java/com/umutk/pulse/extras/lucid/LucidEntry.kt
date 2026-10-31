@@ -54,6 +54,8 @@ fun LucidClockScreen(back: () -> Unit) {
     val worldClockViewModel: WorldClockViewModel = viewModel()
     val notificationPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
     LaunchedEffect(Unit) {
+        // with root the alarm permissions are granted here, first; the settings pages below only open for what is still missing
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { scheduler.grantByRoot() }
         registerLucidChannels(ctx)
         if (Build.VERSION.SDK_INT >= 33 && ContextCompat.checkSelfPermission(ctx, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) notificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
         if (!scheduler.canScheduleExactAlarms()) runCatching { ctx.startActivity(scheduler.requestExactAlarmPermissionIntent().addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
