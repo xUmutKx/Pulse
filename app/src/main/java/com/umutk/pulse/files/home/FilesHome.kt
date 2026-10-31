@@ -331,8 +331,6 @@ fun FilesMorePage(onTab: (String) -> Unit) {
         Triple("disk", tr("Folder sizes", "Klasör boyutları"), tr("Where the storage went, folder by folder", "Depolama nereye gitti, klasör klasör")) to { onTab("tree") },
         Triple("filetypes", tr("File types", "Dosya türleri"), tr("Pictures, videos, audio, documents, archives, apps", "Resimler, videolar, ses, belgeler, arşivler, uygulamalar")) to { onTab("types") },
         Triple("clean", tr("Clean cache", "Önbelleği temizle"), tr("Junk of apps that is safe to delete", "Uygulamaların silinmesi güvenli artıkları")) to { onTab("cache") },
-        Triple("send", tr("Relay", "Relay"), tr("Files, text and links to your devices on this Wi-Fi", "Bu Wi-Fi'daki cihazlarına dosya, metin ve bağlantı")) to { openTool("relay") },
-        Triple("wifi", tr("LocalSend", "LocalSend"), tr("Send files to nearby devices", "Yakındaki cihazlara dosya gönder")) to { openTool("localsend") },
         Triple("settings", tr("Settings", "Ayarlar"), tr("Look and behaviour of Files", "Dosyalar'ın görünümü ve davranışı")) to { openTool("files_settings") },
     )
     androidx.compose.foundation.lazy.LazyColumn(Modifier.fillMaxSize().padding(horizontal = 16.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(vertical = 12.dp)) {
