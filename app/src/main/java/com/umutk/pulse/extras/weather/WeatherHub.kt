@@ -98,17 +98,29 @@ fun WeatherHub(onBack: () -> Unit) {
             } else {
                 val res = runCatching {
                     withContext(Dispatchers.IO) {
-                        val raw = WeatherApi.forecast(spot.lat, spot.lon)
-                        val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
-                        val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm", WeatherStore.combine(ctx))
-                        WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
-                        WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
+                        // three tries, a little longer apart each time; the services in turn are inside forecast()
+                        var last: Throwable? = null
+                        repeat(3) { i ->
+                            runCatching {
+                                val raw = WeatherApi.forecast(spot.lat, spot.lon)
+                                val aqi = WeatherApi.airQuality(spot.lat, spot.lon)
+                                val ex = WeatherApi.extras(spot.lat, spot.lon, source == "mgm", WeatherStore.combine(ctx))
+                                WeatherStore.saveCache(ctx, spot.name, raw, aqi, ex)
+                                WeatherApi.parse(spot.name, raw, System.currentTimeMillis(), aqi, ex)
+                            }.onSuccess { return@withContext it }.onFailure { last = it; kotlinx.coroutines.delay(2000L * (i + 1)) }
+                        }
+                        throw last ?: IllegalStateException("no forecast")
                     }
                 }
                 res.onSuccess {
                     fc = it; place = spot; WeatherStore.setPlace(ctx, spot)
                     WeatherWidgets.refreshAll(ctx)
-                }.onFailure { error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" } }
+                }.onFailure {
+                    // the last forecast saved for this place stays on the screen, with its time, instead of an error
+                    val saved = WeatherStore.cached(ctx)?.takeIf { f -> f.place == spot.name }
+                    if (saved != null) { fc = saved; place = spot; error = "" }
+                    else error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" }
+                }
             }
             busy = false
         }
