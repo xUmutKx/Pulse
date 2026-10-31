@@ -211,17 +211,19 @@ object Lyrics {
     }
 
     /** Songs whose lyrics contain [query] (LrcLrc rules: plain text is a phrase, commas are AND, words under 3 letters are ignored). */
-    suspend fun searchByText(ctx: Context, query: String): List<LyricHit> {
-        val key = query.trim().lowercase()
+    /**
+     * [online] false: only the lyrics on the phone (the index, instant); true: also the online catalogue (slower, a second pass).
+     */
+    suspend fun searchByText(ctx: Context, query: String, online: Boolean = true): List<LyricHit> {
+        val key = query.trim().lowercase() + if (online) "|net" else "|local"
         // the same phrase is not searched again (the online part is slow): kept for ten minutes
         searchMemo[key]?.takeIf { System.currentTimeMillis() - it.first < 10 * 60_000L }?.let { return it.second }
-        // kept on disk too (a day): the same phrase after a restart is answered at once, not searched again
-        return searchByTextNow(ctx, query).also { if (it.isNotEmpty()) searchMemo[key] = System.currentTimeMillis() to it }
+        return searchByTextNow(ctx, query, online).also { if (it.isNotEmpty()) searchMemo[key] = System.currentTimeMillis() to it }
     }
 
     private val searchMemo = java.util.concurrent.ConcurrentHashMap<String, Pair<Long, List<LyricHit>>>()
 
-    private suspend fun searchByTextNow(ctx: Context, query: String): List<LyricHit> = withContext(Dispatchers.IO) {
+    private suspend fun searchByTextNow(ctx: Context, query: String, online: Boolean): List<LyricHit> = withContext(Dispatchers.IO) {
         val app = ctx.applicationContext
         val q = LyricsSearchLogic.parse(query)
         if (q.isEmpty()) return@withContext emptyList()
@@ -248,7 +250,7 @@ object Lyrics {
             }
         }
         // online: LRCLIB searches titles and artists, so this finds a song when the phrase is part of its name or the artist is typed too
-        runCatching {
+        if (online) runCatching {
             LrclibClient(LyricsCache(null)).search(query.trim()).filter { it.hasLyrics }.forEach { r ->
                 if (!seen.add("${r.artistName.lowercase()}|${r.trackName.lowercase()}")) return@forEach
                 test(r.trackName, r.artistName, stripStamps(r.syncedLyrics ?: r.plainLyrics ?: return@forEach), hitId(app, r))

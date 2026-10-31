@@ -496,6 +496,8 @@ fun SearchScreen(library: List<Track>, current: Track?, style: PowerampStyle, on
         if (query.trim().length < 3) { lyricsBusy = false; return@LaunchedEffect }
         delay(600)
         lyricsBusy = true
+        // the phone's lyrics first (instant), then the online catalogue
+        lyricHits = Lyrics.searchByText(ctx, query, online = false)
         lyricHits = Lyrics.searchByText(ctx, query)
         lyricsBusy = false
     }
