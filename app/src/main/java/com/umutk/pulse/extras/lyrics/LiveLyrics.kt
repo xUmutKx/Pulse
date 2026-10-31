@@ -3,6 +3,12 @@ package com.umutk.pulse.extras.lyrics
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -269,6 +275,8 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
 @Composable
 fun LiveLyricsSettingsSection() {
     val c = LocalContext.current
+    var surfaces by remember { mutableStateOf(false) }
+    if (surfaces) { LyricsSurfacesScreen { surfaces = false }; return }
     var player by remember { mutableStateOf(LiveLyrics.player(c)) }
     var floating by remember { mutableStateOf(LiveLyrics.floating(c)) }
     var notif by remember { mutableStateOf(LiveLyrics.notification(c)) }
@@ -280,10 +288,11 @@ fun LiveLyricsSettingsSection() {
             if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)
         }
         SwitchRow(tr("Show in notification", "Bildirimde göster"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
-        var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
-        SwitchRow(tr("Show lyrics on the lock screen", "Sözleri kilit ekranında göster"), lock) { lock = it; LiveLyrics.set(c, "lock_screen", it) }
-        // how the lock screen card looks: the lines on a black ground, the current one bold
-        LockLyricsPreview(LiveLyrics.emphasis(c))
+        // the lock screen, the floating window and the always-on display: their own page with the preview
+        Row(Modifier.fillMaxWidth().clickable { surfaces = true }.padding(vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Lock screen, floating window and always-on display", "Kilit ekranı, yüzen pencere ve ambiyans"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f))
+            com.umutk.pulse.PIcon("chevron", T.sub, 20.dp)
+        }
         // a second notification of its own: the current line with the one before and after it
         var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
         var save by remember { mutableStateOf(LiveLyrics.saveLrc(c)) }
@@ -320,5 +329,38 @@ fun LockLyricsPreview(emphasis: String) {
         Text("\u25BA " + tr("The line now playing", "Şu an çalan satır"), color = Color.White, fontSize = 22.sp,
             fontWeight = if (emphasis == "thin") FontWeight.Normal else FontWeight.Bold)
         Text(tr("A line after", "Sonraki satır"), color = Color(0xFF6E6E6E), fontSize = 15.sp)
+    }
+}
+
+/** Where the lyrics show: the notification, a floating window, the lock screen and (with the LSPosed module) the always-on display. */
+@Composable
+fun LyricsSurfacesScreen(onBack: () -> Unit) {
+    val c = LocalContext.current
+    var notif by remember { mutableStateOf(LiveLyrics.notification(c)) }
+    var floating by remember { mutableStateOf(LiveLyrics.floating(c)) }
+    var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
+    var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", T.text, 22.dp) }
+            Text(tr("Lyrics on the lock screen", "Sözler kilit ekranında"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+        }
+        // the preview shows the lines as the lock screen will: on pure black, the current one set as chosen below
+        LockLyricsPreview(emph)
+        Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("underline" to tr("Underlined title", "Başlık altı çizili"), "thin" to tr("Thin", "İnce"), "bold" to tr("Bold", "Kalın")).forEach { (k, n) ->
+                com.umutk.pulse.PChip(emph == k, n) { emph = k; LiveLyrics.setEmphasis(c, k); com.umutk.pulse.extras.music.MusicPlaybackService.relayout() }
+            }
+        }
+        SettingsSection(tr("Where", "Nerede")) {
+            SwitchRow(tr("Notification", "Bildirim"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
+            SwitchRow(tr("Floating window", "Yüzen pencere"), floating) {
+                floating = it; LiveLyrics.set(c, "floating", it)
+                if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)
+            }
+            SwitchRow(tr("Lock screen", "Kilit ekranı"), lock) { lock = it; LiveLyrics.set(c, "lock_screen", it) }
+            // needs the LSPosed module (root): it is not in this build yet
+            Text(tr("Always-on display: needs the LSPosed module, not in this build yet", "Ambiyans ekranı: LSPosed modülü gerekir, bu sürümde yok"), color = T.sub, fontSize = 12.sp)
+        }
     }
 }
