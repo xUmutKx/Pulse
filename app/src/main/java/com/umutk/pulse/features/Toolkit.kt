@@ -32,7 +32,10 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
@@ -406,21 +409,34 @@ private fun Dice() {
     // the last roll is shared with the Quick Settings tile
     var face by remember { mutableIntStateOf(prefs(ctx).getInt("dice_last", 0).takeIf { it in 1..6 } ?: 1) }
     var rolling by remember { mutableStateOf(false) }
-    var spins by remember { mutableIntStateOf(0) }
-    val rot by animateFloatAsState(spins * 360f, tween(720, easing = FastOutSlowInEasing), label = "dice")
+    var shown by remember { mutableIntStateOf(face) }
+    // the die tumbles in the air: turns about three axes that slow down and land flat (multiples of 360), a rise and a fall
+    val tiltX = remember { Animatable(0f) }
+    val turnY = remember { Animatable(0f) }
+    val spinZ = remember { Animatable(0f) }
+    val lift = remember { Animatable(0f) }
     val pip = T.text
     PCard {
-        Box(Modifier.align(Alignment.CenterHorizontally).padding(12.dp).size(140.dp).graphicsLayer { rotationZ = rot }
+        Box(Modifier.align(Alignment.CenterHorizontally).padding(12.dp).size(140.dp)
+            .graphicsLayer { rotationX = tiltX.value; rotationY = turnY.value; rotationZ = spinZ.value; translationY = -lift.value * density; cameraDistance = 16f * density }
             .background(T.panel, RoundedCornerShape(22.dp)).border(2.dp, T.sub, RoundedCornerShape(22.dp))) {
             Canvas(Modifier.fillMaxSize().padding(22.dp)) {
-                PIPS[face - 1].forEach { s -> drawCircle(pip, size.width * .11f, Offset(size.width * (s % 3) / 2f, size.height * (s / 3) / 2f)) }
+                PIPS[shown - 1].forEach { s -> drawCircle(pip, size.width * .11f, Offset(size.width * (s % 3) / 2f, size.height * (s / 3) / 2f)) }
             }
         }
         ToolNote(if (rolling) "…" else "$face", T.text)
         PButton(tr("Roll", "At"), Modifier.fillMaxWidth()) {
             if (!rolling) scope.launch {
-                rolling = true; spins++
-                repeat(12) { face = Random.nextInt(1, 7); delay(60) }
+                rolling = true
+                val next = Random.nextInt(1, 7)
+                val a = launch { tiltX.animateTo(tiltX.value + 360f * Random.nextInt(2, 4), tween(1400, easing = LinearOutSlowInEasing)) }
+                val b = launch { turnY.animateTo(turnY.value + 360f * Random.nextInt(2, 4), tween(1400, easing = LinearOutSlowInEasing)) }
+                val c = launch { spinZ.animateTo(spinZ.value + 360f * Random.nextInt(1, 3), tween(1400, easing = LinearOutSlowInEasing)) }
+                val d = launch { lift.animateTo(0f, keyframes { durationMillis = 1400; 0f at 0; 150f at 600 using FastOutSlowInEasing; 0f at 1200; 14f at 1320; 0f at 1400 }) }
+                // the faces change while it is in the air, then it shows the rolled one
+                val e = launch { repeat(16) { shown = Random.nextInt(1, 7); delay(85) }; shown = next }
+                a.join(); b.join(); c.join(); d.join(); e.join()
+                face = next
                 prefs(ctx).edit().putInt("dice_last", face).apply()
                 rolling = false
             }
@@ -431,30 +447,37 @@ private fun Dice() {
 @Composable
 private fun CoinFlip() {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
     // prefs keep "Heads" / "Tails" (the tile translates them); the last result is shared with the tile
-    val first = remember { prefs(ctx).getString("coin_last", "Heads") != "Tails" }
-    var heads by remember { mutableStateOf(first) }
-    var turns by remember { mutableIntStateOf(0) } // half-turns since the screen opened
-    val rot by animateFloatAsState(turns * 180f, tween(1100, easing = FastOutSlowInEasing), label = "coin")
-    val half = ((rot + 90f) / 180f).toInt() // half-turns already shown
-    val showHeads = first xor (half % 2 == 1)
-    val settled = rot == turns * 180f
+    val startHeads = prefs(ctx).getString("coin_last", "Heads") != "Tails"
+    var heads by remember { mutableStateOf(startHeads) }
+    var flipping by remember { mutableStateOf(false) }
+    // the coin turns over in the air: 0 shows the heads side, 180 the tails side
+    val turn = remember { Animatable(if (startHeads) 0f else 180f) }
+    val lift = remember { Animatable(0f) }
+    val front = ((turn.value % 360f) + 360f) % 360f
+    val showHeads = front < 90f || front > 270f
     PCard {
         Box(Modifier.align(Alignment.CenterHorizontally).padding(8.dp).size(160.dp)
-            .graphicsLayer { rotationY = rot; cameraDistance = 14f * density }
+            .graphicsLayer { rotationX = turn.value; translationY = -lift.value * density; cameraDistance = 14f * density }
             .background(Look.accent, CircleShape).border(4.dp, Color.White.copy(alpha = .35f), CircleShape), contentAlignment = Alignment.Center) {
-            // the back of the coin is drawn mirrored; turning the text once more reads it the right way
-            Text(if (showHeads) tr("H", "T") else tr("T", "Y"), Modifier.graphicsLayer { rotationY = if (half % 2 == 1) 180f else 0f },
+            // the letter turns with the back of the coin, so it reads the right way round
+            Text(if (showHeads) tr("H", "T") else tr("T", "Y"), Modifier.graphicsLayer { rotationX = if (showHeads) 0f else 180f },
                 color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Bold)
         }
-        ToolNote(if (!settled) "…" else if (heads) tr("Heads", "Tura") else tr("Tails", "Yazı"), T.text)
+        ToolNote(if (flipping) "…" else if (heads) tr("Heads", "Tura") else tr("Tails", "Yazı"), T.text)
         PButton(tr("Flip", "At"), Modifier.fillMaxWidth()) {
-            if (settled) {
+            if (!flipping) scope.launch {
+                flipping = true
                 val result = Random.nextBoolean()
-                // at least six half-turns; an odd count lands on the other side
-                turns += 2 * Random.nextInt(3, 5) + if (result != heads) 1 else 0
+                // several full turns, then the side that was drawn: heads lands on 0, tails on 180
+                val target = turn.value - (turn.value % 360f) + 360f * Random.nextInt(4, 7) + if (result) 0f else 180f
+                val a = launch { turn.animateTo(target, tween(1500, easing = LinearOutSlowInEasing)) }
+                val b = launch { lift.animateTo(0f, keyframes { durationMillis = 1500; 0f at 0; 150f at 700 using FastOutSlowInEasing; 0f at 1500 }) }
+                a.join(); b.join()
                 heads = result
                 prefs(ctx).edit().putString("coin_last", if (result) "Heads" else "Tails").apply()
+                flipping = false
             }
         }
     }
