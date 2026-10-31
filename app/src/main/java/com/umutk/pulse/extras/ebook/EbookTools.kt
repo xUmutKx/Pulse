@@ -34,6 +34,9 @@ val BAR_TOOLS = listOf(
     Triple("power", tr("Shutdown", "Kapat"), "shutdown"),
     Triple("more", tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"), "custom"),
     Triple("info", tr("Book information", "Kitap bilgisi"), "info"),
+    Triple("share", tr("Share", "Paylaş"), "share"),
+    Triple("heart", tr("Favorite", "Favori"), "favorite"),
+    Triple("book", tr("E-ink look", "E-mürekkep"), "eink"),
 )
 
 /** The bottom bar at first: the buttons Moon Reader shows checked. */
