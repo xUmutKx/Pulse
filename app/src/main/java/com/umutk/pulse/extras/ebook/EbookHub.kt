@@ -937,8 +937,6 @@ private fun setOrientation(c: Context, o: Int) {
     }
 }
 
-/** One line of the reader's menu, with an optional mark at its end. */
-@Composable
 /** The phone's speech settings (the engine, its voices and speed): no root needed, the voices are installed there. */
 private fun openTtsSettings(c: Context) {
     runCatching { c.startActivity(Intent("com.android.settings.TTS_SETTINGS").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
@@ -953,6 +951,7 @@ private fun animName(style: Int): String = when (style) {
     else -> tr("Instant", "Anında")
 }
 
+/** One line of the reader's menu, with an optional mark at its end. */
 @Composable
 private fun ReaderRow(label: String, th: Theme, mark: String = "", icon: String = "", onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
