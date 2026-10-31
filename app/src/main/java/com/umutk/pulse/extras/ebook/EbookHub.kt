@@ -1047,7 +1047,8 @@ private fun FindPage(th: Theme, onOpened: (Book) -> Unit) {
                 }.padding(vertical = 8.dp))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedField(query, th, tr("Title or author", "Başlık veya yazar")) { query = it }
+            // the field takes the row's free width, so the search button stays on screen; the keyboard's search key also searches
+            OutlinedField(query, th, tr("Title or author", "Başlık veya yazar"), Modifier.weight(1f), { search() }) { query = it }
             Box(Modifier.size(40.dp).clickable { search() }, contentAlignment = Alignment.Center) { PIcon("search", th.ink, 22.dp) }
         }
         Text(tr("Only books whose copyright has ended, from Project Gutenberg. Turkish first.",
@@ -1105,11 +1106,13 @@ private fun ReaderList(items: List<String>, th: Theme, onPick: (Int) -> Unit) {
 }
 
 @Composable
-private fun OutlinedField(value: String, th: Theme, hint: String, onChange: (String) -> Unit) {
+private fun OutlinedField(value: String, th: Theme, hint: String, modifier: Modifier = Modifier.fillMaxWidth(), onSearch: (() -> Unit)? = null, onChange: (String) -> Unit) {
     androidx.compose.foundation.text.BasicTextField(
         value = value, onValueChange = onChange, singleLine = true,
         textStyle = TextStyle(color = th.ink, fontSize = 15.sp),
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp)).background(th.ink.copy(alpha = .08f)).padding(10.dp),
+        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { onSearch?.invoke() }),
+        modifier = modifier.clip(RoundedCornerShape(8.dp)).background(th.ink.copy(alpha = .08f)).padding(10.dp),
         decorationBox = { inner -> if (value.isEmpty()) Text(hint, color = th.sub, fontSize = 15.sp); inner() },
     )
 }
