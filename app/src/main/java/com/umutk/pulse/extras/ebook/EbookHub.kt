@@ -245,12 +245,6 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     item { SectionTitle(tr("My Shelf", "Rafım"), th) }
                     item { SettingRow(tr("Use woody background", "Ahşap arka plan"), th) { PSwitch(wood, { wood = it; EbookPrefs.setWood(ctx, it) }) } }
                     item { SettingRow(tr("Show reading progress on book cover", "Kapakta okuma ilerlemesi"), th) { PSwitch(showProgress, { showProgress = it; EbookPrefs.setShowProgress(ctx, it) }) } }
-                    item {
-                        SettingRow(tr("Book cover size: $cover", "Kapak boyutu: $cover"), th) {
-                            StepButton("−", th) { cover = (cover - 8).coerceAtLeast(60); EbookPrefs.setCover(ctx, cover) }
-                            StepButton("+", th) { cover = (cover + 8).coerceAtMost(130); EbookPrefs.setCover(ctx, cover) }
-                        }
-                    }
                     item { SettingRow(tr("Main folder", "Ana klasör"), th) { Text("/sdcard/Books", color = th.sub, fontSize = 13.sp) } }
                     item {
                         Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -286,21 +280,24 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     }
                 } else if (listed.isEmpty()) {
                     Text(tr("Nothing here", "Burada boş"), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 16.dp))
-                } else {
-                    LazyVerticalGrid(columns = GridCells.Adaptive(96.dp), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
+                } else BoxWithConstraints(Modifier.weight(1f).fillMaxWidth()) {
+                    // two or three books in a row; the covers grow to fill the width
+                    val cols = if (maxWidth < 300.dp) 2 else 3
+                    val cw = ((maxWidth - 10.dp * (cols - 1)) / cols).coerceAtMost(200.dp)
+                    LazyVerticalGrid(columns = GridCells.Fixed(cols), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
                         items(listed) { b ->
                             Column(Modifier.combinedClickable(onClick = { onOpen(b) }, onLongClick = { askRemove = b }), horizontalAlignment = Alignment.CenterHorizontally) {
                                 // the cover is the first page of a PDF or the cover picture of an EPUB; a book with neither is a card with its first letter
                                 val pic by produceState<ImageBitmap?>(null, b.uri) {
                                     value = withContext(Dispatchers.IO) { Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
                                 }
-                                Box(Modifier.size(cover.dp, (cover * 1.4f).dp).clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
+                                Box(Modifier.size(cw, cw * 1.4f).clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
                                     val shown = pic
                                     if (shown != null) Image(shown, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
                                     else Text(b.title.take(1).uppercase(), color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
                                     if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
                                 }
-                                Text(b.title, color = if (shelfWood) Color(0xFFF6E7CC) else T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width((cover + 8).dp).padding(top = 4.dp))
+                                Text(b.title, color = if (shelfWood) Color(0xFFF6E7CC) else T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width(cw).padding(top = 4.dp))
                             }
                         }
                     }
