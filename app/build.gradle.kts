@@ -45,7 +45,9 @@ android {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4") // java.time, Iterable.forEach ... on Android 5 to 7
-    implementation("com.tom-roush:pdfbox-android:2.0.27.0") // reads the text of a PDF for the book reader (text PDFs are reflowed)
+    implementation("com.tom-roush:pdfbox-android:2.0.27.0") { // reads the text of a PDF for the book reader (text PDFs are reflowed)
+        exclude(group = "org.bouncycastle") // the app already ships bcprov 1.79 (bcpkix below); the 1.72 copy clashes with it
+    }
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.autofill:autofill:1.1.0") // the password manager's suggestions inside the keyboard bar (inline autofill, Android 11+)
