@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.foundation.border
 import androidx.compose.foundation.lazy.items
 import android.app.Activity
@@ -890,7 +891,9 @@ fun AlarmCustomizationScreen(
     if (showBackgroundSheet) {
         ModalBottomSheet(
             onDismissRequest = { showBackgroundSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            // dark look: the sheet is pure black, not grey
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor
         ) {
 
             val consumeVerticalFlingConnection = remember {
@@ -1043,7 +1046,9 @@ fun AlarmCustomizationScreen(
     if (showClockSheet) {
         ModalBottomSheet(
             onDismissRequest = { showClockSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            // dark look: the sheet is pure black, not grey
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor
         ) {
             Column(
                 modifier = Modifier
@@ -1270,7 +1275,9 @@ fun AlarmCustomizationScreen(
     if (showDismissSheet) {
         ModalBottomSheet(
             onDismissRequest = { showDismissSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            // dark look: the sheet is pure black, not grey
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor
         ) {
             Column(
                 modifier = Modifier
@@ -1330,7 +1337,9 @@ fun AlarmCustomizationScreen(
     if (showSnoozeSheet) {
         ModalBottomSheet(
             onDismissRequest = { showSnoozeSheet = false },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            // dark look: the sheet is pure black, not grey
+            containerColor = if (androidx.compose.foundation.isSystemInDarkTheme()) Color.Black else BottomSheetDefaults.ContainerColor
         ) {
             Column(
                 modifier = Modifier
