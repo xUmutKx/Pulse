@@ -110,6 +110,15 @@ enum class AppFontStyle(val label: String) {
     SYSTEM_DEFAULT("System Modern"),
     SERIF("Editorial Serif"),
     CURSIVE("Minimalist Cursive"),
+    NEWSREADER("Newsreader"),
+    MONTSERRAT("Montserrat"),
+    PLAYFAIR("Playfair Display"),
+    RUBIK("Rubik"),
+    SAIRA("Saira"),
+    LILITA("Lilita One"),
+    BEBAS("Bebas Neue"),
+    PACIFICO("Pacifico"),
+    LOBSTER("Lobster"),
     CUSTOM_FILE("Custom File (.ttf/.otf/.apk)")
 }
 
