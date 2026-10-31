@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -472,10 +473,7 @@ fun AlarmEditSheet(
                     Switch(checked = vibrationEnabled, onCheckedChange = { vibrationEnabled = it })
                 }
                 if (vibrationEnabled) {
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         AlarmVibrationPreset.entries.forEach { preset ->
                              FilterChip(
                                  selected = vibrationPattern == preset.name,
@@ -502,31 +500,28 @@ fun AlarmEditSheet(
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        SNOOZE_INTERVAL_OPTIONS.forEach { minutes ->
-                             FilterChip(
-                                 selected = snoozeMinutes == minutes,
-                                 onClick = { snoozeMinutes = minutes },
-                                 shape = SelectionChipShape,
-                                 colors = selectedChipColors(),
-                                 label = {
-                                     Text(if (minutes == 0) "Default" else "${minutes}m")
-                                 }
-                             )
-                        }
+                                        val intervals = SNOOZE_INTERVAL_OPTIONS
+                    val at = intervals.indexOf(snoozeMinutes).coerceAtLeast(0)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Slider(
+                            value = at.toFloat(),
+                            onValueChange = { snoozeMinutes = intervals[it.roundToInt().coerceIn(0, intervals.lastIndex)] },
+                            valueRange = 0f..intervals.lastIndex.toFloat(),
+                            steps = intervals.size - 2,
+                            modifier = Modifier.weight(1f)
+                        )
+                        Text(
+                            if (snoozeMinutes == 0) "Default" else "${snoozeMinutes}m",
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.width(64.dp).padding(start = 8.dp)
+                        )
                     }
                     Text(
                         text = "Repeat limit",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    FlowRow(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
+                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         SNOOZE_LIMIT_OPTIONS.forEach { (limit, text) ->
                              FilterChip(
                                  selected = snoozeLimit == limit,
