@@ -203,6 +203,8 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     var drawer by remember { mutableStateOf(false) }
     // a long press on a book asks whether it leaves the shelf (the file itself stays on the phone)
     var askRemove by remember { mutableStateOf<Book?>(null) }
+    // a long press on a book: its favourite and removal (favourites are set here, on the shelf)
+    var askPick by remember { mutableStateOf<Book?>(null) }
     var about by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -314,7 +316,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     val cw = ((maxWidth - 10.dp * (cols - 1)) / cols).coerceAtMost(200.dp)
                     LazyVerticalGrid(columns = GridCells.Fixed(cols), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
                         items(listed) { b ->
-                            Column(Modifier.combinedClickable(onClick = { onOpen(b) }, onLongClick = { askRemove = b }), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Column(Modifier.combinedClickable(onClick = { onOpen(b) }, onLongClick = { askPick = b }), horizontalAlignment = Alignment.CenterHorizontally) {
                                 // the cover is the first page of a PDF or the cover picture of an EPUB; a book with neither is a card with its first letter
                                 val pic by produceState<ImageBitmap?>(null, b.uri) {
                                     value = withContext(Dispatchers.IO) { Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
@@ -348,6 +350,12 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             onExit = onBack,
             onClose = { drawer = false },
         )
+        askPick?.let { bk ->
+            com.umutk.pulse.extras.video.PickDialog(bk.title, listOf(tr("Favorite", "Favori") to Ebook.isFavorite(ctx, bk.uri), tr("Remove from shelf", "Raftan kaldır") to false), { askPick = null }) { i ->
+                if (i == 0) Ebook.toggleFavorite(ctx, bk.uri) else askRemove = bk
+                askPick = null
+            }
+        }
         askRemove?.let { bk ->
             PDialog(
                 title = bk.title,
@@ -457,7 +465,6 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var eink by remember { mutableStateOf(EbookPrefs.eink(ctx)) }
     var animStyle by remember { mutableStateOf(EbookPrefs.animStyle(ctx)) }
     var dbl by remember { mutableStateOf(EbookPrefs.double(ctx)) }
-    var fav by remember { mutableStateOf(Ebook.isFavorite(ctx, start.uri)) }
     var fontIx by remember { mutableStateOf(EbookPrefs.font(ctx)) }
     var autoOn by remember { mutableStateOf(false) }
     var speaking by remember { mutableStateOf(false) }
@@ -520,7 +527,6 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             "search" -> panel = "search"
             "visual" -> panel = "visual"
             "control" -> panel = "control"
-            "misc" -> panel = "misc"
             "theme" -> panel = "themepop"
             "options" -> panel = "quick"
             "shutdown" -> { Ebook.savePlace(ctx, start.uri, chapter, page); onClose() }
@@ -530,7 +536,6 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                 val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, bk.title + if (bk.author.isNotEmpty()) " - " + bk.author else "")
                 ctx.startActivity(Intent.createChooser(i, null).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             }
-            "favorite" -> fav = Ebook.toggleFavorite(ctx, start.uri)
             "eink" -> { eink = !eink; EbookPrefs.setEink(ctx, eink) }
         }
     }
@@ -731,7 +736,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
         if (panel.isNotEmpty() && panel != "quick" && panel != "menu" && panel != "sizepop" && panel != "themepop" && b != null) {
             val titleOf = when (panel) {
                 "visual" -> tr("Visual Options", "Görünüm seçenekleri"); "control" -> tr("Control Options", "Denetim seçenekleri")
-                "misc" -> tr("Miscellaneous", "Diğer"); "themes" -> tr("Themes", "Temalar"); "ops" -> tr("More Operations", "Diğer işlemler")
+                "themes" -> tr("Themes", "Temalar"); "ops" -> tr("More Operations", "Diğer işlemler")
                 "chapters" -> tr("Chapters and bookmarks", "Bölümler ve yer imleri"); "search" -> tr("Search", "Ara")
                 "bar" -> tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"); "info" -> tr("Book information", "Kitap bilgisi"); else -> ""
             }
@@ -777,10 +782,6 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                             Text(tr("Bars", "Çubuklar"), color = th.ink, fontSize = 13.sp)
                             Text(tr("Forward", "İleri"), color = th.ink, fontSize = 13.sp)
                         }
-                    }
-                    "misc" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        ReaderRow(tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"), th, "›") { panel = "bar" }
-                        SettingRow(tr("Favorite", "Favori"), th) { PSwitch(fav, { fav = Ebook.toggleFavorite(ctx, start.uri) }) }
                     }
                     "themes" -> LazyColumn(Modifier.fillMaxSize()) {
                         // one card per theme, drawn in its own colours; the e-ink card is the black-on-white look
@@ -893,7 +894,6 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         InfoLine(tr("Current chapter", "Şu anki bölüm"), b.chapters.getOrNull(chapter)?.title ?: "-", th)
                         InfoLine(tr("Progress", "İlerleme"), "${Ebook.pct(ctx, start.uri)}%", th)
                         InfoLine(tr("Bookmarks", "Yer imleri"), "${Ebook.bookmarks(ctx, start.uri).size}", th)
-                        SettingRow(tr("Favorite", "Favori"), th) { PSwitch(fav, { fav = Ebook.toggleFavorite(ctx, start.uri) }) }
                         // share lives with the book's information, not in the ⋮ menu
                         ReaderRow(tr("Share…", "Paylaş…"), th, icon = "share") {
                             val i = Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, b.title + if (b.author.isNotEmpty()) " - " + b.author else "")

@@ -27,13 +27,11 @@ val BAR_TOOLS = listOf(
     Triple("search", tr("Search", "Ara"), "search"),
     Triple("view", tr("Visual Options", "Görünüm seçenekleri"), "visual"),
     Triple("level", tr("Control Options", "Denetim seçenekleri"), "control"),
-    Triple("touch", tr("Miscellaneous", "Diğer"), "misc"),
     Triple("palette", tr("Themes", "Temalar"), "theme"),
     Triple("tune", tr("Options", "Seçenekler"), "options"),
     Triple("power", tr("Shutdown", "Kapat"), "shutdown"),
     Triple("more", tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"), "custom"),
     Triple("info", tr("Book information", "Kitap bilgisi"), "info"),
-    Triple("heart", tr("Favorite", "Favori"), "favorite"),
 )
 
 /** The bottom bar at first: the buttons Moon Reader shows checked. */
