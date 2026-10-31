@@ -815,7 +815,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                         itemsIndexed(BAR_TOOLS) { _, t ->
                             val on = t.third in barIds
                             // the whole row ticks the button (a tap on the name must not reach the reader under the panel)
-                            val toggle = { barIds = if (on) barIds - t.third else barIds + t.third; EbookPrefs.setBar(ctx, barIds) }
+                            // the customise button always stays on, last in the bar (EbookPrefs.pinned)
+                            val toggle = { if (t.third != "custom") { barIds = EbookPrefs.pinned(if (on) barIds - t.third else barIds + t.third); EbookPrefs.setBar(ctx, barIds) } }
                             Row(Modifier.fillMaxWidth().clickable { toggle() }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                 PCheck(on, toggle)
                                 Box(Modifier.padding(start = 10.dp).size(20.dp), contentAlignment = Alignment.Center) {
@@ -823,10 +824,10 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                                     else PIcon(t.first, th.ink, 20.dp)
                                 }
                                 Text(t.second, color = th.ink, fontSize = 14.sp, modifier = Modifier.weight(1f).padding(start = 10.dp))
-                                if (on) {
+                                if (on && t.third != "custom") {
                                     val at = barIds.indexOf(t.third)
-                                    StepButton("▲", th) { if (at > 0) { barIds = barIds.toMutableList().also { it.add(at - 1, it.removeAt(at)) }; EbookPrefs.setBar(ctx, barIds) } }
-                                    StepButton("▼", th) { if (at < barIds.size - 1) { barIds = barIds.toMutableList().also { it.add(at + 1, it.removeAt(at)) }; EbookPrefs.setBar(ctx, barIds) } }
+                                    StepButton("▲", th) { if (at > 0) { barIds = EbookPrefs.pinned(barIds.toMutableList().also { it.add(at - 1, it.removeAt(at)) }); EbookPrefs.setBar(ctx, barIds) } }
+                                    StepButton("▼", th) { if (at < barIds.size - 2) { barIds = EbookPrefs.pinned(barIds.toMutableList().also { it.add(at + 1, it.removeAt(at)) }); EbookPrefs.setBar(ctx, barIds) } }
                                 }
                             }
                         }
