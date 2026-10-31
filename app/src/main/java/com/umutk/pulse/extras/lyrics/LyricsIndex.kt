@@ -8,16 +8,23 @@ import java.io.File
 import java.util.zip.GZIPInputStream
 import java.util.zip.GZIPOutputStream
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 
 /**
  * The lyrics that are already on the phone (a .lrc / .txt beside the song, or inside its tag), read once and kept in one file.
  * Searching the lyrics then never opens a song file again: only the songs that are new since the last pass are read.
+ *
+ * Reading the files never holds the lock that a search takes: a search gets [snapshot] at once with the songs indexed so far,
+ * while [ensure] reads the rest in the background and adds them as it goes.
  */
 object LyricsIndex {
     private val text = HashMap<String, String>()
     private var loaded = false
     private val lock = Any()
+    // one background pass at a time (two scans must not read the same songs twice)
+    private val pass = Mutex()
 
     private fun file(c: Context) = File(c.filesDir, "lyrics_index.gz")
 
@@ -31,6 +38,7 @@ object LyricsIndex {
         }
     }
 
+    /** Writes the index. Called with the lock held. */
     private fun save(c: Context) = runCatching {
         val tmp = File(file(c).path + ".tmp")
         DataOutputStream(GZIPOutputStream(tmp.outputStream().buffered())).use { o ->
@@ -44,21 +52,32 @@ object LyricsIndex {
         tmp.renameTo(file(c))
     }
 
-    /** The index for [tracks]: the new ones are read now (off the main thread), the rest comes from the file. [read] gives a song's lyric text or null. */
-    suspend fun ensure(c: Context, tracks: List<Track>, read: (String) -> String?): Map<String, String> = withContext(Dispatchers.IO) {
-        synchronized(lock) {
-            load(c)
-            var changed = false
-            for (t in tracks) {
-                if (t.path in text) continue
-                text[t.path] = runCatching { read(t.path) }.getOrNull().orEmpty()
-                changed = true
+    /** The songs indexed so far, as a copy. Never reads a song file, so it returns at once. */
+    fun snapshot(c: Context): Map<String, String> = synchronized(lock) {
+        load(c)
+        HashMap(text)
+    }
+
+    /**
+     * Reads the songs of [tracks] that are not indexed yet (off the main thread) and saves the index every 200 songs.
+     * [read] gives a song's lyric text or null. Searches are not blocked while this runs.
+     */
+    suspend fun ensure(c: Context, tracks: List<Track>, read: (String) -> String?) = withContext(Dispatchers.IO) {
+        pass.withLock {
+            val todo = synchronized(lock) { load(c); tracks.map { it.path }.filter { it !in text } }
+            var n = 0
+            for (p in todo) {
+                // the file is read outside the lock, so a search is never waiting for it
+                val s = runCatching { read(p) }.getOrNull().orEmpty()
+                synchronized(lock) {
+                    text[p] = s
+                    if (++n % 200 == 0) save(c)
+                }
             }
-            if (changed) save(c)
-            text
+            if (n > 0) synchronized(lock) { save(c) }
         }
     }
 
     /** Lyrics written next to or inside [path] as the index knows them (empty before the first pass). */
-    fun has(path: String): Boolean = text[path]?.isNotEmpty() == true
+    fun has(path: String): Boolean = synchronized(lock) { text[path]?.isNotEmpty() == true }
 }
