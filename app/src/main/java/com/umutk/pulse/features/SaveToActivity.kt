@@ -64,9 +64,19 @@ class SaveToActivity : ComponentActivity() {
         return runCatching { contentResolver.query(u, null, null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(c.getColumnIndexOrThrow(OpenableColumns.DISPLAY_NAME)) else null } }.getOrNull() ?: "file"
     }
 
+    // the accent the Pulse look had: this small panel shows the look's own accent (white in Material), and Pulse gets its own back when it closes
+    private var savedAccent: Int? = null
+
+    override fun onDestroy() {
+        savedAccent?.let { com.umutk.pulse.Look.accentIdx = it }
+        super.onDestroy()
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Cfg.load(this); Opt.load(this)
+        savedAccent = com.umutk.pulse.Look.accentIdx
+        com.umutk.pulse.Look.accentIdx = -1
         val list = uris()
         if (list.isEmpty()) { finish(); return }
         // its own look, Material: it is a small panel over another app, and it must not wear whatever look Pulse has (Windows 11 mixed in before)

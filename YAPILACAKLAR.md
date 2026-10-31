@@ -1699,3 +1699,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader: the top bar's pin is a bookmark icon; the text button opens a size slider and the font choice above the bar; the palette button opens the theme swatches with AMOLED and e-ink switches above the bar (derlenmedi)
 - Books reader: the night theme is AMOLED black; the text has a little more line and paragraph space (derlenmedi)
 - Books reader: the default text size is 22 (was 18), like the Moon Reader comparison; a size already chosen is kept (derlenmedi)
+- Pulse "Save to…" panel: the accent is white (the look's own accent), not the chosen orange; Pulse gets its accent back when the panel closes (derlenmedi)
