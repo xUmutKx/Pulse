@@ -344,6 +344,9 @@ private fun LayerChip(icon: ImageVector, on: Boolean, onClick: () -> Unit) {
     }
 }
 
+/** The aircraft of the last successful load, kept while the app lives. */
+private var lastPlanes: List<Plane>? = null
+
 /** The outline of an aircraft pointing north, in units of its half length (x to the right, y down). */
 private val PLANE_SHAPE = listOf(
     0f to -1f, 0.12f to -0.3f, 1f to 0.15f, 1f to 0.35f, 0.12f to 0.2f, 0.1f to 0.8f, 0.35f to 1f,
@@ -423,7 +426,8 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     val stamps = remember { mutableStateMapOf<MapLayer, Long>() }
     val baseTiles = remember { mutableStateMapOf<String, ImageBitmap>() }
     val overTiles = remember { mutableStateMapOf<String, ImageBitmap>() }
-    var planes by remember { mutableStateOf<List<Plane>?>(null) }
+    // the aircraft of the last load stay until the next one: a map closed and opened again shows them at once
+    var planes by remember { mutableStateOf<List<Plane>?>(lastPlanes) }
     var planeStamp by remember { mutableStateOf(0L) }
     var radar by remember { mutableStateOf<String?>(null) }
     var radarStamp by remember { mutableStateOf(0L) }
@@ -449,7 +453,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
         if (layer != MapLayer.PLANE) return@LaunchedEffect
         while (true) {
             val p = withContext(Dispatchers.IO) { fetchPlanes() }
-            if (p != null) { planes = p; planeStamp = System.currentTimeMillis() }
+            if (p != null) { planes = p; lastPlanes = p; planeStamp = System.currentTimeMillis() }
             delay(60_000)
         }
     }
