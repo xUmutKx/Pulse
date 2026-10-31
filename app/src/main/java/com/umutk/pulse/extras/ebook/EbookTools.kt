@@ -102,10 +102,15 @@ object EbookPrefs {
     /** Seconds per page while the autoscroll runs. */
     fun autoSeconds(c: Context): Int = p(c).getInt("auto", 10)
     fun setAutoSeconds(c: Context, v: Int) { p(c).edit().putInt("auto", v.coerceIn(3, 120)).apply() }
+
+    /** The reading speed of the voice: 1 is the engine's normal speed; the default is a little slower than that. */
+    fun speechRate(c: Context): Float = p(c).getFloat("speechRate", 0.85f)
+    fun setSpeechRate(c: Context, v: Float) { p(c).edit().putFloat("speechRate", v.coerceIn(0.5f, 1.6f)).apply() }
 }
 
 /** Reads a page aloud with the system's speech engine; [onDone] runs on the main thread when the page is read. */
 class Speaker(c: Context, private val onDone: () -> Unit) {
+    private val app = c.applicationContext
     private var ready = false
     private var tts: TextToSpeech? = null
     /** The part of the text being read now: the start and the end, as characters of the text given to [speak]. */
@@ -132,10 +137,23 @@ class Speaker(c: Context, private val onDone: () -> Unit) {
     private fun localeOf(text: String): Locale =
         if (text.any { it in "ğĞşŞıİ" }) Locale("tr", "TR") else Locale.getDefault()
 
+    /** The best voice the engine has for [loc] that works without the net: the highest quality one. */
+    private fun pickVoice(t: TextToSpeech, loc: Locale) {
+        val best = runCatching { t.voices }.getOrNull()
+            ?.filter { it.locale.language == loc.language && !it.isNetworkConnectionRequired }
+            ?.maxByOrNull { it.quality }
+        if (best != null) runCatching { t.voice = best }
+    }
+
     fun speak(text: String) {
         if (!ready || text.isBlank()) return
-        tts?.language = localeOf(text)
-        tts?.speak(text, TextToSpeech.QUEUE_FLUSH, null, "page")
+        val t = tts ?: return
+        val loc = localeOf(text)
+        t.language = loc
+        pickVoice(t, loc)
+        // the speed chosen in the reader (the default is a little slower than the engine's own)
+        t.setSpeechRate(EbookPrefs.speechRate(app))
+        t.speak(text, TextToSpeech.QUEUE_FLUSH, null, "page")
     }
 
     fun stop() { tts?.stop() }
