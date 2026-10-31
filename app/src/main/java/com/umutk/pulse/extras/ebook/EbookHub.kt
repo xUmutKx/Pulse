@@ -692,7 +692,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             Box(Modifier.fillMaxSize().clickable { panel = "" })
             Column(Modifier.align(Alignment.TopEnd).padding(top = 52.dp, end = 8.dp).width(260.dp).heightIn(max = 560.dp).verticalScroll(rememberScrollState()).clip(RoundedCornerShape(8.dp)).background(th.bg).border(1.dp, th.sub.copy(alpha = .3f), RoundedCornerShape(8.dp)).padding(vertical = 6.dp)) {
                 // the buttons that are not on the bottom bar wait here; a button on the bar is not repeated in the menu
-                val hidden = BAR_TOOLS.filter { it.third !in barIds }
+                // (Visual Options is not in the menu; it can still be put on the bar from the customise page)
+                val hidden = BAR_TOOLS.filter { it.third !in barIds && it.third != "visual" }
                 hidden.forEach { t -> ReaderRow(t.second, th) { panel = ""; act(t.third) } }
                 if (hidden.isNotEmpty()) Box(Modifier.fillMaxWidth().padding(vertical = 4.dp).height(1.dp).background(th.sub.copy(alpha = .3f)))
                 ReaderRow(tr("Share…", "Paylaş…"), th) {
