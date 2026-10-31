@@ -142,6 +142,306 @@
 ≋ 𓂀 ᯓ	egyptian hieroglyph pattern egypt
 𓆩 ☀︎ ☁︎ ᯓ	sky weather pattern sky
 ❀ ✮ 𓆪	stars pattern stars
+٭ ☽ ✧ ☾ ⋆˚	pattern sky sky preset
+⸝⸝ ☀︎ ⊹	pattern sky sky preset
+⁂ ∙ ☀︎ ɞ	pattern sky sky preset
+·. 𓂃 ❀	pattern ship ship preset
+⊱ ☂︎·★ ✶	pattern stars stars preset
+˚₊ 𓂃 ⋆	pattern flower flower preset
+⸝⸝ ★ ೃ࿔	pattern stars stars preset
+٭ ◠◡◠·◠◡◠·◠◡◠ ⸝⸝	pattern turtle turtle preset
+⸜ ☽  ☥  ☂︎ ˚⋆	pattern sky sky preset
+*:･ﾟ (◠‿◠) ʚ	pattern turtle turtle preset
+✩ ⌒◡⌒ ⌒◡⌒ ✾ ⊱	pattern turtle turtle preset
+⁂ ☽ ˚⋆	pattern sky sky preset
+٭ (◠‿◠) 𓆣 ⊱	pattern egypt egypt preset
+⊹ ◠_◠ 𓊪 (◠‿◠) ✶	pattern turtle turtle preset
+⁂ 𓆣 ❀	pattern stars stars preset
+✿ ⎈ 𓋹 ≋	pattern ship ship preset
+❁ ⸱·〰〰 ❀	pattern dots dots preset
+❁ ☁︎  ☂︎  ⚡︎ ✧	pattern sky sky preset
+⊱ ☾ ᴗ◠ᴗ ✦ .·	pattern sky sky preset
+✶ ᴗ◠ᴗ 𓊪 ‧₊	pattern egypt egypt preset
+˖*༄ ◠ ◡ ◠ ◡·◠ ◡ ◠ ◡ ﾟ･	pattern turtle turtle preset
+ꕥ ☥  𓇼 ɞ	pattern egypt egypt preset
+⋆.ೃ࿔ ᴗ◠ᴗ ❁	pattern turtle turtle preset
+✧ ⚓︎  ❁  ⚓︎ ✧	pattern ship ship preset
+✧ ° ❃ 𓊪 ꕥ	pattern egypt egypt preset
+ꕥ ★·★·⸱ ˚⋆	pattern stars stars preset
+ᯓ ✾ ✾ ✾ ˚⋆	pattern flower flower preset
+⋆.ೃ࿔ ✦ ❀	pattern sky sky preset
+𓆩 〰〰·◠_◠ ⸝⸝	pattern turtle turtle preset
+·. ☂︎ ⚡︎ ❀	pattern sky sky preset
+⋆˚ ≈≈≈ ⚓︎ ❀	pattern ship ship preset
+⊱ 𓈖 ﾟ･	pattern egypt egypt preset
+*:･ﾟ ❀ ✮ ˚ ˚⋆	pattern dots dots preset
+٭ ☥ ❁	pattern egypt egypt preset
+⁂ 𓅓 ⊱	pattern egypt egypt preset
+⋆.ೃ࿔ ≈≈≈ ⋆ ʚ	pattern ship ship preset
+꒰ ✦  ✦ ⁂	pattern sky sky preset
+⸜ ⚓︎ 〰〰 ✦ ೃ࿔	pattern ship ship preset
+٭ ⚡︎ ✦ ⊱	pattern sky sky preset
+·. ✾ ‧₊	pattern flower flower preset
+ᯓ ☁︎ ⚡︎ ⁂	pattern sky sky preset
+˚⋆ ☥ 𓂀 ⊱	pattern egypt egypt preset
+ᯓ ☂︎·⌇⌇·ᴗ◠ᴗ ⋆˚	pattern sky sky preset
+˖*༄ ⚓︎·° ﾟ･	pattern dots dots preset
+✿ ☁︎ ⸝	pattern sky sky preset
+ʚ ⋅  ⎔ ⋆˚	pattern dots dots preset
+⋆˚ ✿  ⚡︎ ٭	pattern flower flower preset
+≋ ··✶·✩ ✶	pattern stars stars preset
+⊰ ☆ ✿	pattern stars stars preset
+✩ ✦  ˚  ✦ ⋆	pattern stars stars preset
+✶ ⚓︎ ⋆	pattern turtle turtle preset
+✶ ᴗ◠ᴗ ◠_◠ ⊹	pattern turtle turtle preset
+≋ ᵔ◡ᵔ·✮·✮ ꒱	pattern stars stars preset
+⋆˚ ✮ ⌒◡⌒ ✦ ⁂	pattern turtle turtle preset
+✶ ˚  𓂃 ٭	pattern stars stars preset
+✶ ⚓︎ ⚓︎ ʚ	pattern ship ship preset
+⋆˚ 𓃠 𓋹 ☥ ꒱	pattern egypt egypt preset
+✿ 𓆣  ⎔ ꕥ	pattern ship ship preset
+ꕥ ☽·✩ ⊰	pattern stars stars preset
+✶ ≈≈≈ ﾟ･	pattern ship ship preset
+꒰ ❃ ✿	pattern flower flower preset
+ɞ ⌒⌒◡ ⌒⌒◡ ꒱	pattern turtle turtle preset
+𓆩 ⎈ ೃ࿔	pattern stars stars preset
+𓆩 ☽ ⌒⌒◡ ɞ	pattern sky sky preset
+·. 𓂃  𓇼  ⎔ ✧	pattern egypt egypt preset
+ʚ 𓅓  ◠_◠ ɞ	pattern turtle turtle preset
+*:･ﾟ ⸱  ⋅ ʚ	pattern dots dots preset
+≋ ⋆ ꒱	pattern egypt egypt preset
+˚₊ ≋≋ ⎔ ꕥ	pattern ship ship preset
+◖ ꕤ ☀︎ ≋	pattern sky sky preset
+꒰ ✶·✮ ɞ	pattern stars stars preset
+꒰ ◠_◠ ⌒⌒◡ ₊˚	pattern turtle turtle preset
+✩ ❃ ⊱	pattern flower flower preset
+₊‧ ☾·✦·⌒◡⌒ ﾟ･	pattern sky sky preset
+*:･ﾟ ❄︎  ✦  ✧ ⸝⸝	pattern sky sky preset
+⸜ ✿ ❃ ɞ	pattern flower flower preset
+ɞ ❄︎ ⌒◡⌒ ❄︎ ꕥ	pattern sky sky preset
+·. ⎔·⌒⌒⌒·˚ ❀	pattern dots dots preset
+⊱ ≋≋ ❀	pattern ship ship preset
+✶ ◠ ◡ ◠ ◡ ٭	pattern turtle turtle preset
+✩ 𓈖 ✦ 𓅓 ⊹	pattern egypt egypt preset
+ʚ 𓅓  ❃ ⊹	pattern egypt egypt preset
+˚₊ ꕤ 𓂃 ❁	pattern egypt egypt preset
+˖*༄ ❁ ⁂	pattern flower flower preset
+❁ ᴗ◠ᴗ ༄	pattern turtle turtle preset
+✧ ⸱·☽ ‧₊	pattern dots dots preset
+✶ 𓋹 ᴗ◠ᴗ ᯓ	pattern egypt egypt preset
+⊰ ☂︎  ☾ ⊰	pattern sky sky preset
+⁂ ≈≈≈ ⌇⌇ ⊰	pattern ship ship preset
+·. ⚡︎ ᯓ	pattern sky sky preset
+ꕥ ◠◡◠ · ✩	pattern dots dots preset
+⸝⸝ ✿  ❃ ≋	pattern flower flower preset
+₊‧ ✩·𓈖 ꒱	pattern egypt egypt preset
+⊰ ✶ ✿ ⌒⌒⌒ ⸝⸝	pattern stars stars preset
+⊱ 𓆣 𓆪	pattern egypt egypt preset
+✶ ✦ ° ɞ	pattern dots dots preset
+✧ 𓂀 ≋≋ ⎔ ʚ	pattern ship ship preset
+⸝⸝ ·  ·  ★ ೃ࿔	pattern stars stars preset
+꒰ ❃·⌒⌒◡ .·	pattern flower flower preset
+⸜ ⚡︎  ⌒⌒⌒  ⌇⌇ ❀	pattern ship ship preset
+⊹ ❃  ✾  𓃠 ≋	pattern flower flower preset
+⋆.ೃ࿔ ⸱  °  ⚡︎ ⊱	pattern dots dots preset
+⋆.ೃ࿔ ꕤ ⊱	pattern flower flower preset
+ʚ 𓂃 ≋≋ 〰〰 ﾟ･	pattern ship ship preset
+⸝⸝ ☾ ɞ	pattern sky sky preset
+ɞ ◠◡◠ ✩	pattern turtle turtle preset
+✶ ⌒◡⌒ ☽ ﾟ･	pattern turtle turtle preset
+･ﾟ✧ ☂︎·· .·	pattern sky sky preset
+˚₊ 𓈖 ✾ ☽ ≋	pattern dots dots preset
+˖*༄ 𓊪  ❃ ✶	pattern sky sky preset
+˖*༄ °·∙ ꕥ	pattern dots dots preset
+❀ ≈≈≈ ⋅ ∙ ⸝	pattern dots dots preset
+ʚ ❀ ✿ ❁	pattern flower flower preset
+⊱ ◠_◠ ⎔ ‧₊	pattern ship ship preset
+⸜ ★ ✩	pattern sky sky preset
+⊰ (◠‿◠)·☁︎·⌒⌒◡ ✶	pattern turtle turtle preset
+⊱ ⚑ ⌒⌒⌒ ⸝⸝	pattern ship ship preset
+✧ 𓆣 ❁ ꕥ	pattern egypt egypt preset
+✩ ☽ ✾ ❀ ೃ࿔	pattern flower flower preset
+⊹ ❁ ˚ ✧ ⸝⸝	pattern stars stars preset
+✶ 𓈖·𓈖·𓇼 ✶	pattern egypt egypt preset
+⋆˚ ˚ ✧	pattern dots dots preset
+⁂ ꕤ ꕤ ⸝	pattern flower flower preset
+❀ ☀︎  (◠‿◠) ༄	pattern turtle turtle preset
+*:･ﾟ ✾·⸱ ‧₊	pattern dots dots preset
+ᯓ ✿ ❄︎ ❃ ‧₊	pattern sky sky preset
+❁ ✿ ◗	pattern flower flower preset
+⁂ 𓂃 ✩	pattern egypt egypt preset
+⸝⸝ ≈≈≈ ⊰	pattern dots dots preset
+˚⋆ ∙ ❄︎ .·	pattern dots dots preset
+⸜ ✩ 〰〰 ✶	pattern stars stars preset
+❀ 𓈖·⌇⌇·⚑ ≋	pattern ship ship preset
+⊹ ❁ ❀	pattern flower flower preset
+·. ᵔ◡ᵔ  ◠◡◠ ⊰	pattern flower flower preset
+·. 𓆣 ⎈ 𓆪	pattern flower flower preset
+˖*༄ ✶ ⚡︎ ˚⋆	pattern sky sky preset
+✶ ⎔ ≋≋ ⎔ ⋆	pattern ship ship preset
+❀ ☥ ❃ ✿	pattern egypt egypt preset
+≋ ⚡︎ ❁	pattern sky sky preset
+⸝⸝ • · ° ≋	pattern dots dots preset
+ᯓ ✩·✩·✶ ◗	pattern stars stars preset
+ᯓ ⸱·★ ʚ	pattern stars stars preset
+◖ ☽  ⚡︎  ✦ ٭	pattern ship ship preset
+⋆˚ ✿ ❀	pattern flower flower preset
+˚⋆ ⸱ ˚ ⋆	pattern dots dots preset
+◖ ᵔ◡ᵔ  ⌒◡⌒ ⊱	pattern turtle turtle preset
+ᯓ ᵔ◡ᵔ ﾟ･	pattern turtle turtle preset
+𓆩 ⚓︎  ⌇⌇ ⸝	pattern ship ship preset
+≋ 〰〰·☥·𓇼 ⊹	pattern egypt egypt preset
+･ﾟ✧ ⌒◡⌒ ◠◡◠ ⁂	pattern turtle turtle preset
+ʚ ☥ ❀ ⊰	pattern egypt egypt preset
+⸜ 𓋹  𓈖  𓂃 ʚ	pattern egypt egypt preset
+ʚ 𓆣 ⚡︎ ❀	pattern ship ship preset
+◖ ⎈ ☥ ❀	pattern stars stars preset
+ꕥ ☁︎ ᴗ◠ᴗ ❀ ✧	pattern flower flower preset
+✿ ★ ✮ ⸝⸝	pattern stars stars preset
+˚₊ ≈≈≈ ɞ	pattern ship ship preset
+✩ ✦  ★  ˚ ‧₊	pattern stars stars preset
+≋ ✾ ⊱	pattern flower flower preset
+ɞ ✶  ✦ ʚ	pattern stars stars preset
+⸜ °·° ⊱	pattern dots dots preset
+˖*༄ 𓋹 ✶	pattern egypt egypt preset
+❁ ❄︎ 〰〰 (◠‿◠) ೃ࿔	pattern ship ship preset
+₊‧ ⌒◡⌒  ◠◡◠ ﾟ･	pattern turtle turtle preset
+❁ ☂︎ ⋅ ɞ	pattern dots dots preset
+˚₊ ✦·⚡︎ ❀	pattern sky sky preset
+⸜ 𓃠 ✶	pattern egypt egypt preset
+ʚ ≋≋ ✩	pattern ship ship preset
+⋆˚ (◠‿◠) ✦ ⋆˚	pattern turtle turtle preset
+˚₊ 𓂀  𓆣 ꒱	pattern egypt egypt preset
+₊‧ 𓆣  ☥ ❁	pattern egypt egypt preset
+⸜ ✶·⌇⌇ ‧₊	pattern stars stars preset
+⊰ ☽ ✧ ༄	pattern sky sky preset
+✶ ☂︎ ✦ ˚⋆	pattern sky sky preset
+≋ ˚ 𓆣 ✮ ✶	pattern dots dots preset
+･ﾟ✧ ✮ ˚ ɞ	pattern stars stars preset
+ʚ ⎈ ᵔ◡ᵔ ‧₊	pattern ship ship preset
+⊱ 𓆣·𓅓·𓋹 ˚⋆	pattern egypt egypt preset
+❀ · ≋	pattern stars stars preset
+✶ ◠ ◡ ◠ ◡·ᴗ◠ᴗ·ᵔ◡ᵔ ⸝⸝	pattern turtle turtle preset
+·. ⌒⌒⌒  ≋≋ ✶	pattern ship ship preset
+꒰ ⎈·⚓︎ ⸝⸝	pattern ship ship preset
+⋆.ೃ࿔ ᴗ◠ᴗ  ⌇⌇ ⊱	pattern stars stars preset
+꒰ ❃ ꕤ ʚ	pattern flower flower preset
+≋ ❄︎ ☂︎ ⚡︎ ༄	pattern sky sky preset
+ɞ ⌒⌒⌒·❄︎ ﾟ･	pattern sky sky preset
+⊹ ✧·˚ ≋	pattern dots dots preset
+𓆩 ☥ ‧₊	pattern turtle turtle preset
+≋ ❄︎ ᴗ◠ᴗ ٭	pattern sky sky preset
+𓆩 ᴗ◠ᴗ ⸱ ᯓ	pattern turtle turtle preset
+≋ 𓆣 ❃ ˚⋆	pattern flower flower preset
+✧ 𓃠 ⁂	pattern dots dots preset
+˚₊ 𓊪  𓊪  ◠ ◡ ◠ ◡ ✧	pattern turtle turtle preset
+≋ ⚑ ☥ 𓂃 𓆪	pattern egypt egypt preset
+⋆.ೃ࿔ ·  ·  · ‧₊	pattern stars stars preset
+𓆩 𓂃 ꒱	pattern egypt egypt preset
+･ﾟ✧ ✾  ˚ ✶	pattern flower flower preset
+*:･ﾟ ✦  𓂃 ⸝⸝	pattern egypt egypt preset
+⸜ ᴗ◠ᴗ  ⸱ ﾟ･	pattern egypt egypt preset
+٭ ⌒⌒◡·⌒◡⌒·⌒⌒◡ ✩	pattern turtle turtle preset
+⸜ 𓇼 𓂃 ⁂	pattern egypt egypt preset
+*:･ﾟ ∙ ☆ ⁂	pattern stars stars preset
+⋆˚ ≈≈≈ ☽ ❁	pattern ship ship preset
+⸜ 𓆣 𓋹 𓂀 ₊˚	pattern egypt egypt preset
+⸝⸝ ⚓︎ 𓆪	pattern ship ship preset
+𓆩 〰〰 ≋≋ ✧	pattern ship ship preset
+⋆˚ ☆  ★ ꕥ	pattern stars stars preset
+*:･ﾟ ☀︎  ☾ ꒱	pattern sky sky preset
+⋆˚ ꕤ  ✾ ₊˚	pattern flower flower preset
+˖*༄ ⋆ ⊹	pattern stars stars preset
+･ﾟ✧ ⌒◡⌒  𓃠  ⌒⌒◡ ᯓ	pattern turtle turtle preset
+˚⋆ ° ˚⋆	pattern dots dots preset
+✶ ☁︎ ☥ ⸝⸝	pattern egypt egypt preset
+⋆.ೃ࿔ ☥ ﾟ･	pattern dots dots preset
+ɞ ᵔ◡ᵔ ⌒◡⌒ ⋆˚	pattern turtle turtle preset
+⋆.ೃ࿔ ❃·☂︎ ʚ	pattern egypt egypt preset
+⊰ ☽ ⋆˚	pattern egypt egypt preset
+⸜ ✮ ° ⋆	pattern dots dots preset
+ᯓ 〰〰·𓆣 ˚⋆	pattern ship ship preset
+⸝⸝ 𓂃 ₊˚	pattern egypt egypt preset
+ᯓ 𓋹 𓂃 ✶	pattern egypt egypt preset
+꒰ 𓋹·☥ ⊹	pattern egypt egypt preset
+˖*༄ · ˚⋆	pattern stars stars preset
+·. (◠‿◠)·◠_◠ ﾟ･	pattern turtle turtle preset
+❀ ⸱  ☂︎  ⚡︎ ≋	pattern sky sky preset
+ɞ ≋≋ 𓆪	pattern ship ship preset
+❁ • ☀︎ ❁	pattern ship ship preset
+⊱ ᵔ◡ᵔ ⌒⌒◡ ⌒⌒◡ ɞ	pattern turtle turtle preset
+₊‧ ✩  ˚  ✦ ༄	pattern stars stars preset
+ʚ 𓊪 𓅓 ❁	pattern egypt egypt preset
+⊹ · ˚ ⚑ ʚ	pattern dots dots preset
+꒰ ᴗ◠ᴗ  ˚ ◗	pattern dots dots preset
+◖ 𓅓 𓆣 ⊱	pattern egypt egypt preset
+˚₊ ✧ ✦ ⁂	pattern sky sky preset
+⊰ ✧ ≋	pattern turtle turtle preset
+⊹ ∙ ∙ ⊱	pattern dots dots preset
+⸝⸝ •·⸱·⋅ ꒱	pattern dots dots preset
+✧ ◠_◠ ✿ ⁂	pattern turtle turtle preset
+ꕥ ˚ • ☥ ⋆	pattern stars stars preset
+✶ ✾  ✿ ﾟ･	pattern flower flower preset
+˚₊ ◠◡◠ · 𓆪	pattern turtle turtle preset
+⸜ 〰〰  ❃ 𓆪	pattern flower flower preset
+𓆩 ☾ ☁︎ ⚡︎ ⊰	pattern sky sky preset
+✿ ☂︎·◠_◠ ꒱	pattern sky sky preset
+₊‧ ≋≋·☁︎·𓆣 ≋	pattern ship ship preset
+⸝⸝ ☥ ☥ ⌒⌒⌒ ✿	pattern egypt egypt preset
+𓆩 ☂︎ ☁︎ ⊹	pattern sky sky preset
+·. (◠‿◠) ✶	pattern sky sky preset
+ʚ · (◠‿◠) ✿	pattern turtle turtle preset
+✧ ❄︎ ☀︎ 𓆪	pattern sky sky preset
+⊰ ˚·(◠‿◠)·ᴗ◠ᴗ ˚⋆	pattern turtle turtle preset
+⋆˚ ✾ ❁ ⊱	pattern flower flower preset
+⋆˚ ⋆ ꒱	pattern stars stars preset
+·. ˚ ∙ ⋅ ꒱	pattern dots dots preset
+𓆩 ⌒⌒◡ ⋆	pattern turtle turtle preset
+✿ ☆ ꒱	pattern stars stars preset
+◖ ✮·✶ ⸝⸝	pattern stars stars preset
+✶ (◠‿◠) (◠‿◠) ❄︎ ✿	pattern turtle turtle preset
+✿ ⚑ ⚓︎ ◗	pattern ship ship preset
+⊰ ❀ ⊰	pattern ship ship preset
+⸝⸝ ⌒⌒⌒ ◗	pattern ship ship preset
+⁂ ⋆ ʚ	pattern stars stars preset
+˚₊ 𓃠 ⋆˚	pattern ship ship preset
+✶ ✧·⌒⌒◡ ⁂	pattern sky sky preset
+⸝⸝ ❀·ꕤ ₊˚	pattern flower flower preset
+⁂ ☥ 𓅓 ⋆	pattern egypt egypt preset
+◖ ⎈  ❀ ˚⋆	pattern ship ship preset
+ᯓ ⚡︎·☂︎·𓆣 𓆪	pattern turtle turtle preset
+꒰ 𓆣  · ೃ࿔	pattern stars stars preset
+⸝⸝ • ✶	pattern dots dots preset
+ɞ ★·⋆ ʚ	pattern stars stars preset
+٭ ✾  ◠_◠  ✿ 𓆪	pattern flower flower preset
+˖*༄ ❃ 𓈖 ᯓ	pattern egypt egypt preset
+≋ ✧ ∙ (◠‿◠) ༄	pattern dots dots preset
+˚⋆ ★·★·☆ ೃ࿔	pattern stars stars preset
+✩ ☁︎ ⸱ ∙ ꕥ	pattern dots dots preset
+𓆩 𓅓 ꕥ	pattern dots dots preset
+⁂ ⌇⌇ ⋆˚	pattern flower flower preset
+ᯓ ᵔ◡ᵔ·☂︎ ⋆˚	pattern sky sky preset
+˖*༄ 〰〰·☂︎·⚡︎ .·	pattern sky sky preset
+˚⋆ 𓂃 ◠_◠ ɞ	pattern turtle turtle preset
+𓆩 ✾·𓇼·⚑ ˚⋆	pattern flower flower preset
+⋆˚ ≋≋ ᯓ	pattern flower flower preset
+ʚ 𓂀 ⋆	pattern egypt egypt preset
+❀ ☁︎·⚡︎ ⸝	pattern sky sky preset
+≋ ☁︎ ❄︎ ꒱	pattern sky sky preset
+⸜ ◠_◠  ᵔ◡ᵔ 𓆪	pattern turtle turtle preset
+⸝⸝ ⌇⌇  ° ꒱	pattern dots dots preset
+･ﾟ✧ ◠_◠ 𓆣 ʚ	pattern turtle turtle preset
+⸜ ∙ ⎔ ⊱	pattern dots dots preset
+𓆩 〰〰  𓂀 ೃ࿔	pattern ship ship preset
+⊹ ✩·⋆·⚑ ₊˚	pattern stars stars preset
+⊱ ✦  ≈≈≈ ٭	pattern ship ship preset
+˖*༄ ✦  𓊪 ⋆	pattern egypt egypt preset
+ʚ 𓇼 ᴗ◠ᴗ ✶	pattern egypt egypt preset
+₊‧ ✩ ꕥ	pattern stars stars preset
+꒰ ☆ ★ ✶	pattern stars stars preset
+*:･ﾟ ✦ ❃ ✿	pattern turtle turtle preset
+◖ ❄︎ 〰〰 ꕥ	pattern sky sky preset
+⊹ ✦ ✧ ≋	pattern sky sky preset
 ##Classics
 ˖ ᡣ𐭩 ⊹ ࣪ ౨ৎ˚₊	pattern modifier letter plus sign
 ⋆˚࿔ ⊹ ˖	pattern star operator
