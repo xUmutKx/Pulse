@@ -147,7 +147,11 @@ enum class RingingClockStyle(val label: String) {
     BOLD_HORIZONTAL("Bold Horizontal"),
     BOLD_VERTICAL("Bold Vertical"),
     COMPACT_ANALOG("Compact Analog"),
-    NUMBERED_ANALOG("Numbered Analog");
+    NUMBERED_ANALOG("Numbered Analog"),
+    WIN95_CLOCK("Windows 95"),
+    WINXP_CLOCK("Windows XP"),
+    WIN7_CLOCK("Windows 7"),
+    WIN11_CLOCK("Windows 11");
 
     val isVertical: Boolean
         get() = this == VERTICAL_DIGITAL || this == BOLD_VERTICAL
@@ -156,7 +160,8 @@ enum class RingingClockStyle(val label: String) {
         get() = this == BOLD_HORIZONTAL || this == BOLD_VERTICAL
 
     val isAnalog: Boolean
-        get() = this == COMPACT_ANALOG || this == NUMBERED_ANALOG
+        get() = this == COMPACT_ANALOG || this == NUMBERED_ANALOG || this == WIN95_CLOCK ||
+            this == WINXP_CLOCK || this == WIN7_CLOCK || this == WIN11_CLOCK
 
     val isDigital: Boolean
         get() = !isAnalog
