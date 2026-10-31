@@ -44,6 +44,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -205,10 +206,13 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     // "" the shelf, "options" the options page
     var screen by remember { mutableStateOf("") }
     var drawer by remember { mutableStateOf(false) }
-    // a long press on a book asks whether it leaves the shelf (the file itself stays on the phone)
+    // the removal of one book asks first (the file itself stays on the phone)
     var askRemove by remember { mutableStateOf<Book?>(null) }
-    // a long press on a book: its favourite and removal (favourites are set here, on the shelf)
-    var askPick by remember { mutableStateOf<Book?>(null) }
+    // the ⋮ menu of one book: favourite, select, remove
+    var menuFor by remember { mutableStateOf<Book?>(null) }
+    // the books picked for a bulk action: a long press starts the picking, a tap adds or removes one
+    var picked by remember { mutableStateOf(setOf<String>()) }
+    var askBulk by remember { mutableStateOf(false) }
     var about by remember { mutableStateOf(false) }
     var searching by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
@@ -231,6 +235,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
     BackHandler {
         when {
             drawer -> drawer = false
+            picked.isNotEmpty() -> picked = emptySet()
             screen.isNotEmpty() -> screen = ""
             searching -> { searching = false; query = "" }
             else -> onBack()
@@ -255,7 +260,18 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
         val shelfWood = wood && !amoled
         if (shelfWood) WoodBackground(Modifier.matchParentSize())
         Column(Modifier.fillMaxSize().then(if (shelfWood) Modifier else Modifier.background(th.bg)).padding(horizontal = 12.dp, vertical = 10.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+            // while books are picked, the top bar acts on them: close, all, favourite, remove
+            if (picked.isNotEmpty()) Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { PIcon("close", th.ink, 22.dp) }
+                Text(tr("${picked.size} selected", "${picked.size} seçildi"), color = th.ink, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(start = 4.dp))
+                Text(tr("All", "Tümü"), color = th.ink, fontSize = 14.sp, modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { picked = listed.map { it.uri }.toSet() }.padding(horizontal = 8.dp, vertical = 8.dp))
+                Box(Modifier.size(40.dp).clickable {
+                    // all favourites go off when every picked book is one; otherwise the rest become favourites
+                    val allFav = picked.all { Ebook.isFavorite(ctx, it) }
+                    picked.forEach { if (Ebook.isFavorite(ctx, it) == allFav) Ebook.toggleFavorite(ctx, it) }
+                }, contentAlignment = Alignment.Center) { PIcon("heart", th.ink, 22.dp) }
+                Box(Modifier.size(40.dp).clickable { askBulk = true }, contentAlignment = Alignment.Center) { PIcon("recycle", th.ink, 22.dp) }
+            } else Row(verticalAlignment = Alignment.CenterVertically) {
                 if (screen.isEmpty()) {
                     Box(Modifier.size(40.dp).clickable { drawer = true }, contentAlignment = Alignment.Center) { PIcon("menu", th.ink, 24.dp) }
                 } else {
@@ -327,17 +343,25 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                     val cw = ((maxWidth - 10.dp * (cols - 1)) / cols).coerceAtMost(200.dp)
                     LazyVerticalGrid(columns = GridCells.Fixed(cols), verticalArrangement = Arrangement.spacedBy(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(top = 10.dp)) {
                         items(listed) { b ->
-                            Column(Modifier.combinedClickable(onClick = { onOpen(b) }, onLongClick = { askPick = b }), horizontalAlignment = Alignment.CenterHorizontally) {
+                            val sel = b.uri in picked
+                            // a tap opens the book, or picks it while books are picked; a long press picks it
+                            Column(Modifier.combinedClickable(onClick = { if (picked.isNotEmpty()) picked = if (sel) picked - b.uri else picked + b.uri else onOpen(b) }, onLongClick = { picked = picked + b.uri }), horizontalAlignment = Alignment.CenterHorizontally) {
                                 // the cover is the first page of a PDF or the cover picture of an EPUB; a book with neither is a card with its first letter
                                 val pic by produceState<ImageBitmap?>(null, b.uri) {
                                     value = withContext(Dispatchers.IO) { Ebook.cover(ctx, b)?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }
                                 }
-                                Box(Modifier.size(cw, cw * 1.4f).clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
+                                Box(Modifier.size(cw, cw * 1.4f)) {
+                                Box(Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)).background(coverColor(b.title)), contentAlignment = Alignment.Center) {
                                     val shown = pic
                                     // the whole cover is shown (no cropping into a zoomed part); the card colour fills the rest
                                     if (shown != null) Image(shown, contentDescription = null, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize())
                                     else Text(b.title, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center, maxLines = 5, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(8.dp))
                                     if (showProgress) Text("${Ebook.pct(ctx, b.uri)}%", color = Color.White, fontSize = 11.sp, modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 6.dp))
+                                }
+                                // a picked book is dimmed with a check; any other book has its ⋮ at the bottom-right corner
+                                if (sel) Box(Modifier.fillMaxSize().clip(RoundedCornerShape(6.dp)).background(Color.Black.copy(alpha = .35f)))
+                                if (sel) Box(Modifier.align(Alignment.TopEnd).padding(6.dp).size(24.dp).clip(CircleShape).background(th.ink), contentAlignment = Alignment.Center) { PIcon("check", th.bg, 16.dp) }
+                                if (!sel) Box(Modifier.align(Alignment.BottomEnd).padding(4.dp).size(32.dp).clip(CircleShape).background(Color.Black.copy(alpha = .5f)).clickable { menuFor = b }, contentAlignment = Alignment.Center) { PIcon("more", Color.White, 18.dp) }
                                 }
                                 Text(b.title, color = if (shelfWood) Color(0xFFF6E7CC) else th.ink, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.width(cw).padding(top = 4.dp))
                             }
@@ -362,11 +386,13 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             onExit = onBack,
             onClose = { drawer = false },
         )
-        askPick?.let { bk ->
-            com.umutk.pulse.extras.video.PickDialog(bk.title, listOf(tr("Favorite", "Favori") to Ebook.isFavorite(ctx, bk.uri), tr("Remove from shelf", "Raftan kaldır") to false), { askPick = null }) { i ->
-                if (i == 0) Ebook.toggleFavorite(ctx, bk.uri) else askRemove = bk
-                askPick = null
-            }
+        menuFor?.let { bk ->
+            val fav = Ebook.isFavorite(ctx, bk.uri)
+            ShelfMenu(th, bk.title, listOf(
+                Triple("heart", if (fav) tr("Remove from favorites", "Favorilerden çıkar") else tr("Add to favorites", "Favorilere ekle"), { Ebook.toggleFavorite(ctx, bk.uri) }),
+                Triple("check", tr("Select", "Seç"), { picked = picked + bk.uri }),
+                Triple("recycle", tr("Remove from shelf", "Raftan kaldır"), { askRemove = bk }),
+            ), onDismiss = { menuFor = null })
         }
         askRemove?.let { bk ->
             PDialog(
@@ -377,6 +403,13 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
                 onDismiss = { askRemove = null },
             )
         }
+        if (askBulk) PDialog(
+            title = tr("${picked.size} books", "${picked.size} kitap"),
+            text = tr("Remove the selected books from the shelf? The files stay on the phone.", "Seçili kitaplar raftan kaldırılsın mı? Dosyalar telefonda kalır."),
+            confirm = tr("Remove", "Kaldır"),
+            onConfirm = { shelf = shelf.filter { it.uri !in picked }.also { shelfSave(ctx, it) }; picked = emptySet(); askBulk = false },
+            onDismiss = { askBulk = false },
+        )
         if (about) PDialog(
             title = tr("Books", "Kitaplar"),
             text = tr("Your EPUB, TXT and PDF books, read on this phone. Nothing is uploaded.", "EPUB, TXT ve PDF kitaplarınız, bu telefonda okunur. Hiçbir şey yüklenmez."),
@@ -385,6 +418,23 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             onDismiss = { about = false },
             info = true,
         )
+    }
+}
+
+/** The ⋮ menu of one book: plain rows, a tap does the action (no radio buttons, no OK). */
+@Composable
+private fun ShelfMenu(th: Theme, title: String, items: List<Triple<String, String, () -> Unit>>, onDismiss: () -> Unit) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)).clickable { onDismiss() }, contentAlignment = Alignment.Center) {
+        Column(Modifier.padding(horizontal = 32.dp).fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(th.bg).clickable { }.padding(vertical = 8.dp)) {
+            Text(title, color = th.sub, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp))
+            items.forEach { (icon, label, act) ->
+                Row(Modifier.fillMaxWidth().clickable { act(); onDismiss() }.padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PIcon(icon, th.ink, 22.dp)
+                    Spacer(Modifier.width(16.dp))
+                    Text(label, color = th.ink, fontSize = 16.sp)
+                }
+            }
+        }
     }
 }
 

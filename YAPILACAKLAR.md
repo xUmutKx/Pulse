@@ -1843,3 +1843,7 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Books: PDF page drawing no longer crashes the app (a failed page shows blank; the page is always closed)
 - derlenmedi: Converter tool in the Toolkit: images (PNG, JPG, WEBP, BMP), TXT to PDF/EPUB/DOCX, DOCX to TXT/EPUB, EPUB to TXT, PDF to TXT, CSV to JSON and back; picks files with the app's own browser
 - derlenmedi: Converter: video (MP4, M4A sound) and sound (M4A) through the phone's media encoder
+- 1.0.293 derlenmedi: Books shelf: a long press picks a book; a ⋮ at each cover's bottom-right opens its menu (favourite, select, remove); with books picked the top bar does bulk favourite and remove
+- 1.0.293 derlenmedi: Books shelf menu: plain rows (a tap does the action), no radio buttons
+- 1.0.293 derlenmedi: Store: clearing the cache keeps the downloads set to "Keep downloaded file"
+- 1.0.293 derlenmedi: Build fix: duplicate BouncyCastle classes removed from the release (pdfbox-android)

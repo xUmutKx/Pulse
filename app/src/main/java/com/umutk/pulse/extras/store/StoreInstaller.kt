@@ -103,7 +103,10 @@ object StoreInstaller {
         val busy = progress.value.keys
         var n = 0L
         File(c.cacheDir, "installer").listFiles()?.forEach { f ->
-            if (busy.none { f.name.startsWith("store-$it.") }) { n += f.length(); f.delete() }
+            // a file the owner chose to keep ("Keep downloaded file") stays; the cache clear must not take it
+            val id = Regex("^store-(.+)\\.(apk|zip)$").find(f.name)?.groupValues?.get(1)
+            val kept = id != null && keepFile(c, id)
+            if (!kept && busy.none { f.name.startsWith("store-$it.") }) { n += f.length(); f.delete() }
         }
         return n
     }
