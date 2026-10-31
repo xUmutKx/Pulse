@@ -309,6 +309,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
         }
         if (drawer) ShelfDrawer(
             tab = tab,
+            amoled = amoled,
             dayNight = dayNight,
             onTab = { tab = it; screen = ""; drawer = false },
             onFiles = { drawer = false; pick.launch(arrayOf("application/epub+zip", "text/plain", "application/pdf")) },
@@ -344,12 +345,12 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
 /** The drawer of the shelf: the lists, the options, the day or night theme and the exit. */
 @Composable
 private fun ShelfDrawer(
-    tab: Int, dayNight: Int,
+    tab: Int, dayNight: Int, amoled: Boolean,
     onTab: (Int) -> Unit, onFiles: () -> Unit, onOptions: () -> Unit, onAbout: () -> Unit,
     onDayNight: () -> Unit, onExit: () -> Unit, onClose: () -> Unit,
 ) {
     Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)).clickable { onClose() })
-    Column(Modifier.fillMaxHeight().width(280.dp).background(T.panel)) {
+    Column(Modifier.fillMaxHeight().width(280.dp).background(if (amoled) Color.Black else T.panel)) {
         Box(Modifier.fillMaxWidth().height(120.dp).background(T.accent), contentAlignment = Alignment.BottomStart) {
             Text(tr("Books", "Kitaplar"), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(16.dp))
         }
