@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Solo esta app (misma firma) puede hacerle ping al gancho de SystemUI. -->
+    <permission
+        android:name="com.elcesarmaat.lockart.permission.CONFIG"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="com.elcesarmaat.lockart.permission.CONFIG" />
+
+    <!-- Para mostrar el nombre de la app que suena. -->
+    <queries>
+        <intent>
+            <action android:name="android.media.browse.MediaBrowserService" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".LockArtApp"
+        android:allowBackup="false"
+        android:description="@string/xposed_description"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
+        android:theme="@style/Theme.LockArt">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="de.robv.android.xposed.category.MODULE_SETTINGS" />
+            </intent-filter>
+        </activity>
+        <!-- Solo SystemUI (STATUS_BAR_SERVICE) puede pedir que se guarde el cambio del interruptor del bloqueo. -->
+        <receiver
+            android:name=".QuickToggleReceiver"
+            android:exported="true"
+            android:permission="android.permission.STATUS_BAR_SERVICE">
+            <intent-filter>
+                <action android:name="com.elcesarmaat.lockart.SET_AOD_LYRICS" />
+            </intent-filter>
+        </receiver>
+    </application>
+</manifest>

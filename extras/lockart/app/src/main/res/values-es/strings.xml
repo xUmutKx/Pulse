@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Carátula en bloqueo</string>
+    <string name="xposed_description">Muestra la carátula de la música en la pantalla de bloqueo, como en Android 10 y en las ROMs personalizadas. Hecho para el Scene Container de Android 17.</string>
+
+    <string name="subtitle">Módulo LSPosed para SystemUI</string>
+
+    <string name="status_waiting_title">Buscando SystemUI…</string>
+    <string name="status_waiting_body">Comprobando que el módulo esté cargado</string>
+    <string name="status_on_title">Activo en SystemUI</string>
+    <plurals name="status_on_body">
+        <item quantity="one">%d sesión multimedia</item>
+        <item quantity="other">%d sesiones multimedia</item>
+    </plurals>
+    <string name="status_off_title">SystemUI no responde</string>
+    <string name="status_off_body">Activa el módulo en LSPosed con el ámbito «Interfaz del sistema» y reinicia SystemUI.</string>
+    <string name="status_no_view_title">Cargado, pero sin vista</string>
+    <string name="status_no_view_body">SystemUI respondió, pero no encontró la pantalla de bloqueo. Reinícialo.</string>
+
+    <string name="caption_now">Ahora en %1$s</string>
+    <string name="caption_now_lyrics">Ahora en %1$s · letra de %2$d líneas</string>
+    <string name="caption_silent">Nada sonando · vista de ejemplo</string>
+    <string name="caption_sample">Vista de ejemplo</string>
+    <string name="sample_track">Tu música</string>
+
+    <string name="group_art">Carátula</string>
+    <string name="group_playback">Mientras suena</string>
+    <string name="group_lyrics">Letras</string>
+    <string name="group_aod">Pantalla ambiente</string>
+    <string name="group_system">Sistema</string>
+
+    <string name="enabled_title">Mostrar carátula</string>
+    <string name="enabled_hint">Sobre el fondo, debajo del reloj y las notificaciones</string>
+    <string name="paused_title">Mantener en pausa</string>
+    <string name="paused_hint">No quitarla al pausar la música</string>
+    <string name="music_mode_title">Modo música</string>
+    <string name="music_mode_hint">Mientras suena: sin reproductor ni notificaciones en el bloqueo, y la canción bajo el reloj. Al bajar el panel el reproductor sigue ahí</string>
+    <string name="aod_title">Letras en pantalla ambiente</string>
+    <string name="aod_hint">Al apagar la pantalla mientras suena algo con letra, la deja en modo ambiente mostrando las letras. Sin música vuelve a tus ajustes. Gasta más batería</string>
+    <string name="aod_toggle_title">Interruptor en el bloqueo</string>
+    <string name="aod_toggle_hint">Una luna discreta encima de las letras para activar o quitar las letras en pantalla ambiente al momento</string>
+    <string name="lyrics_title">Letras de Spotify</string>
+    <string name="lyrics_hint">Sincronizadas palabra por palabra en la pantalla de bloqueo</string>
+    <string name="anim_title">Animación al cambiar de línea</string>
+    <string name="anim_hint">La vista previa usa el mismo dibujo que el bloqueo</string>
+    <string name="anim_scroll">Subir</string>
+    <string name="anim_fade">Fundido</string>
+    <string name="anim_zoom">Zoom</string>
+    <string name="anim_none">Ninguna</string>
+    <string name="blur_title">Desenfoque</string>
+    <string name="blur_none">Nítida</string>
+    <string name="dim_title">Velo</string>
+    <string name="dim_value">%1$d %%</string>
+    <string name="auto_veil_title">Velo automático</string>
+    <string name="auto_veil_hint">Blanco si tu fondo de bloqueo usa texto oscuro</string>
+
+    <string name="restart">Reiniciar SystemUI</string>
+    <string name="restart_hint">Necesario tras activar o actualizar el módulo</string>
+    <string name="restarting">Reiniciando SystemUI…</string>
+    <string name="scope_title">Activar en Spotify</string>
+    <string name="scope_hint">LSPosed te pedirá permiso para cargar el módulo en Spotify; después cierra y abre Spotify</string>
+    <string name="scope_approved">Listo: cierra y vuelve a abrir Spotify para cargar las letras</string>
+    <string name="scope_failed">LSPosed no aceptó la petición: %1$s</string>
+    <string name="credits_title">Créditos</string>
+    <string name="credits_body">Letras de Spotify adaptadas del proveedor spotify-music de LyricProvider (tomakino, Apache-2.0), con ideas de SuperLyric (HChenX). Búsqueda de clases con DexKit (LuckyPray, LGPL-3.0 / Apache-2.0). Las letras vienen de Spotify y se usan con tu propia sesión, solo en tu teléfono.</string>
+    <string name="no_root">Esta app no tiene root: concédelo en KernelSU o reinicia el teléfono.</string>
+
+    <!-- Líneas de ejemplo propias para la vista previa de la animación (no son de ninguna canción). -->
+    <string-array name="sample_lyrics">
+        <item>Así cambia cada línea</item>
+        <item>mientras suena la canción</item>
+        <item>la siguiente sube despacio</item>
+        <item>y la anterior se despide</item>
+        <item>para no perder el hilo</item>
+    </string-array>
+</resources>
