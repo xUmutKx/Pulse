@@ -1694,3 +1694,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Video player More menu: a dark bottom panel above the progress bar with an icon per action (no radio circles), so it reads over white pictures (derlenmedi)
 - Books shelf: the cover is the first page of a PDF or the cover picture of an EPUB (saved once per book); a book without one keeps the letter card (derlenmedi)
 - Books shelf: a long press on a book asks to remove it from the shelf (the file stays on the phone) (derlenmedi)
+- Books: a book whose file was deleted outside Pulse leaves the shelf when the shelf opens; opening it removes it too (derlenmedi)
