@@ -186,6 +186,8 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun start() {
+        // the full-screen lyrics view of the older builds is gone: its notification must not be left behind
+        runCatching { nm.cancel(4107) }
         scope.launch {
             while (isActive) {
                 runCatching { tick() }
@@ -205,10 +207,14 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
             val trio = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, st.current!!), engine.positionMs + AHEAD_MS)
             postNote(st.current!!, trio)
         } else clearNote()
-        // on the lock screen the lyrics open as a full-screen view (no root needed); only for a song that has lyrics
+        // on the lock screen the line being sung and the next one are drawn in a small window (see LockLyricsOverlay), set from this
+        // tick, so it keeps moving whether or not the screen was drawn; it goes away as soon as the phone is unlocked or the music stops
         val cur = st.current
-        if (LiveLyrics.lockScreen(ctx) && st.isPlaying && cur != null && lockedNow() && LiveLyrics.resultFor(ctx, cur)?.lines?.isNotEmpty() == true) lockView(cur)
-        else lockViewOff()
+        if (LiveLyrics.lockScreen(ctx) && st.isPlaying && cur != null && lockedNow()) {
+            val lines = LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, cur), engine.positionMs + AHEAD_MS)
+            // a gap between two lines keeps the last one on screen instead of blinking the window out
+            if (lines != null && lines.second.isNotBlank()) LockLyricsOverlay.show(ctx, lines.second, lines.third)
+        } else LockLyricsOverlay.hide(ctx)
         var line = if (wanted && st.isPlaying) {
             st.current?.let { LiveLyrics.lineAt(LiveLyrics.resultFor(ctx, it), engine.positionMs + AHEAD_MS) }?.second?.takeIf { it.isNotBlank() }
         } else null
@@ -238,31 +244,8 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
 
     private val pm get() = ctx.getSystemService(android.os.PowerManager::class.java)
     private val km get() = ctx.getSystemService(android.app.KeyguardManager::class.java)
-    // the song whose lock screen view is up (its full-screen notification is posted once per song)
-    private var lockTrack: String? = null
-
     @Suppress("DEPRECATION")
     private fun lockedNow() = km.isKeyguardLocked || !pm.isInteractive
-
-    /** Opens [LyricsLockActivity] over the lock screen: a full-screen notification, once per song. */
-    private fun lockView(t: Track) {
-        if (lockTrack == t.path) return
-        // Android 14 and up: the full-screen view needs the user's permission; without it the lyrics stay in the notification
-        if (android.os.Build.VERSION.SDK_INT >= 34 && !nm.canUseFullScreenIntent()) return
-        lockTrack = t.path
-        if (android.os.Build.VERSION.SDK_INT >= 26) nm.createNotificationChannel(com.umutk.pulse.QuietChannel("pulse_lyrics_lock", tr("Lyrics on the lock screen", "Kilit ekranı sözleri"), android.app.NotificationManager.IMPORTANCE_HIGH).apply { setSound(null, null); enableVibration(false) })
-        val full = android.app.PendingIntent.getActivity(ctx, 4107, android.content.Intent(ctx, com.umutk.pulse.extras.lyrics.LyricsLockActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK), android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT)
-        nm.notify(4107, androidx.core.app.NotificationCompat.Builder(ctx, "pulse_lyrics_lock").setSmallIcon(com.umutk.pulse.R.drawable.ic_notif_music)
-            .setContentTitle(t.title ?: t.path.substringAfterLast('/')).setContentText(tr("Lyrics", "Sözler"))
-            .setOngoing(true).setOnlyAlertOnce(true).setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH)
-            .setFullScreenIntent(full, true).setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC).build())
-    }
-
-    private fun lockViewOff() {
-        if (lockTrack == null) return
-        lockTrack = null
-        nm.cancel(4107)
-    }
 
     private fun postNote(t: Track, trio: Triple<String?, String, String?>?) {
         val body = trio?.second?.takeIf { it.isNotBlank() } ?: return clearNote()
@@ -300,6 +283,7 @@ class LiveLyricsTicker(private val ctx: Context, private val engine: MusicPlayer
     fun stop() {
         clearNote()
         scope.cancel()
+        LockLyricsOverlay.hide(ctx)
         MiniLyrics.stop(ctx)
         LiveLyrics.notifLine = null
         LiveLyrics.currentLine = null
@@ -344,7 +328,12 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
         SettingsSection(tr("Where", "Nerede"), startOpen = true) {
             SwitchRow(tr("Show in player", "Oynatıcıda göster"), player) { player = it; LiveLyrics.set(c, "player", it) }
             SwitchRow(tr("Show in notification", "Bildirimde göster"), notif) { notif = it; LiveLyrics.set(c, "notification", it) }
-            SwitchRow(tr("Show lyrics on the lock screen", "Sözleri kilit ekranında göster"), lock) { lock = it; LiveLyrics.set(c, "lock_screen", it) }
+            SwitchRow(tr("Show lyrics on the lock screen", "Sözleri kilit ekranında göster"), lock) {
+                lock = it; LiveLyrics.set(c, "lock_screen", it)
+                // the lyrics are a small window: the accessibility layer (Cover) or the overlay permission has to be there for it
+                if (it && com.umutk.pulse.features.CoverAccessibilityService.instance == null && !com.umutk.pulse.Compat.canOverlay(c))
+                    runCatching { c.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${c.packageName}")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
             SwitchRow(tr("Show floating", "Yüzen pencerede göster"), floating) {
                 floating = it; LiveLyrics.set(c, "floating", it)
                 if (it) MiniLyrics.start(c) else MiniLyrics.stop(c)
