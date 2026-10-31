@@ -1,5 +1,7 @@
 package com.umutk.pulse.extras.lucid.ui.components
 
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.rotate
 import android.graphics.BitmapFactory
 import android.graphics.Paint
 import android.graphics.Rect
@@ -475,8 +477,7 @@ fun AlarmClockBox(
             ),
         contentAlignment = Alignment.Center
     ) {
-        val isAnalog = style == RingingClockStyle.COMPACT_ANALOG ||
-            style == RingingClockStyle.NUMBERED_ANALOG
+        val isAnalog = style.isAnalog
         val dialDiameter = min(maxWidth, maxHeight)
 
         val resolvedFontSize = if (!isAnalog && autoFit &&
@@ -880,6 +881,9 @@ fun RingingClockFace(
             }
         }
 
+        RingingClockStyle.WIN95_CLOCK, RingingClockStyle.WINXP_CLOCK, RingingClockStyle.WIN7_CLOCK, RingingClockStyle.WIN11_CLOCK ->
+            WindowsClockFace(style, hour, minute, dialDiameter)
+
         RingingClockStyle.NUMBERED_ANALOG -> {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Canvas(modifier = Modifier.size(dialDiameter)) {
@@ -1131,5 +1135,23 @@ fun Modifier.holdToRepeat(
                 }
             }
         )
+    }
+}
+
+/** A Windows clock face: its dial and hour and minute hands, drawn as the Windows clock of that version (the pictures of the app). */
+@Composable
+private fun WindowsClockFace(style: RingingClockStyle, hour: Int, minute: Int, size: androidx.compose.ui.unit.Dp) {
+    val (dial, hourHand, minuteHand) = when (style) {
+        RingingClockStyle.WIN95_CLOCK -> Triple(com.umutk.pulse.R.drawable.clk_w95_time_dial, com.umutk.pulse.R.drawable.clk_w95_time_hour, com.umutk.pulse.R.drawable.clk_w95_time_minute)
+        RingingClockStyle.WINXP_CLOCK -> Triple(com.umutk.pulse.R.drawable.clk_xp_clock_dial, com.umutk.pulse.R.drawable.clk_xp_clock_hour, com.umutk.pulse.R.drawable.clk_xp_clock_minute)
+        RingingClockStyle.WIN7_CLOCK -> Triple(com.umutk.pulse.R.drawable.clk_w7_clock_system_dial, com.umutk.pulse.R.drawable.clk_w7_clock_system_hour, com.umutk.pulse.R.drawable.clk_w7_clock_system_minute)
+        else -> Triple(com.umutk.pulse.R.drawable.clk_w11_clock_dial, com.umutk.pulse.R.drawable.clk_w11_clock_hour, com.umutk.pulse.R.drawable.clk_w11_clock_minute)
+    }
+    val hourDeg = (hour % 12 + minute / 60f) * 30f
+    val minuteDeg = minute * 6f
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        Image(androidx.compose.ui.res.painterResource(dial), null, Modifier.fillMaxSize())
+        Image(androidx.compose.ui.res.painterResource(hourHand), null, Modifier.fillMaxSize().graphicsLayer { rotationZ = hourDeg })
+        Image(androidx.compose.ui.res.painterResource(minuteHand), null, Modifier.fillMaxSize().graphicsLayer { rotationZ = minuteDeg })
     }
 }
