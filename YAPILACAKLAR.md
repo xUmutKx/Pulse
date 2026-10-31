@@ -1829,3 +1829,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Turkish name list extended (about 430 names and places); the rest of the 2000 needs a list from the user or an allowed source
 - derlenmedi: Turkish name list: more people's names and places
 - derlenmedi: Keyboard Turkish: places with a head word take the apostrophe after the head (Ağrı Dağı'na, Van Gölü'ne)
+- derlenmedi: Alarm sheet: the vibrate and snooze switches are gone; both options always show
