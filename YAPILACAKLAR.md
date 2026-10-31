@@ -1710,3 +1710,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Books reader: the theme cards show a sample of the page (grain, the sample text and the name); the ⋮ menu lists only what is not on the bottom bar (plus Share) (derlenmedi)
 - Books shelf: EPUB covers are found also from the cover page and from pictures named cover; books that had no cover before are tried again (derlenmedi)
 - Keyboard quick auth: smaller text (name 16sp, code 24sp), taller account cards; the panel keeps the keyboard's height (derlenmedi)
+- Keyboard quick auth: the panel is as tall as the keys (four rows), so it fills the keyboard window (derlenmedi)
