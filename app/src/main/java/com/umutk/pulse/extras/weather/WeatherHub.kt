@@ -307,7 +307,7 @@ fun WeatherHub(onBack: () -> Unit) {
                             Text(if (midnight) runCatching { LocalDate.parse(h.time.take(10)).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault("") else WeatherFmt.clock(h.time), color = if (midnight) fg else sub, fontSize = 12.sp, fontWeight = if (midnight) FontWeight.Medium else FontWeight.Normal)
                             WeatherGlyph(h.code, 30.dp, day = h.time.length < 16 || h.time.substring(11, 13).toIntOrNull()?.let { it in 6..19 } != false)
                             Text(t(h.temp), color = fg, fontSize = 15.sp)
-                            Text(if (h.rain > 0) "${h.rain}%" else "", color = sub, fontSize = 10.sp)
+                            Text(if (h.rain >= 0) "${h.rain}%" else "", color = sub, fontSize = 10.sp)
                         }
                     }
                 }
@@ -322,7 +322,7 @@ fun WeatherHub(onBack: () -> Unit) {
                     )
                     WeatherGlyph(d.code, 28.dp)
                     Spacer(Modifier.width(10.dp))
-                    Text(if (d.rain > 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
+                    Text(if (d.rain >= 0) "${d.rain}%" else "", color = sub, fontSize = 13.sp, modifier = Modifier.width(44.dp))
                     Spacer(Modifier.weight(1f))
                     Text("${t(d.min)} / ${t(d.max)}", color = fg, fontSize = 15.sp)
                 }
