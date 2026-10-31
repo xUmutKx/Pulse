@@ -1719,3 +1719,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Files: the Share tab is one page with Relay and LocalSend (each opens inside Files); the Search tab searches the whole phone from a name index kept in memory, so results come at once (derlenmedi)
 - Books: Day/Night switches the shelf and the drawer between a light and a dark look; the drawer header reads "Book reader" in a readable colour (derlenmedi)
 - Books shelf: books in a row is a setting (auto fills the width, in landscape too; or 2 to 6 chosen in Options) (derlenmedi)
+- Weather: the page retries three times and then shows the last saved forecast for the place, not an error; the clock widget redraws every minute (derlenmedi)
