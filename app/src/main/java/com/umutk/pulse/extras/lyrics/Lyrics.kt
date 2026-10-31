@@ -52,8 +52,8 @@ object Lyrics {
             lastError = asked.exceptionOrNull()?.let { "${it.javaClass.simpleName}: ${it.message}" }
             val rec = asked.getOrNull() ?: return@withContext null.also { if (asked.isSuccess) markMiss(app, key) }
             val r = toResult(rec.first, rec.second) ?: return@withContext null
-            // the found lyrics go beside the song (a .lrc or .txt), not into the app's data or cache
-            localPath?.takeIf { !it.contains("://") }?.let { saveSidecar(it, r) }
+            // the found lyrics are kept with the song, not in the app's data or cache
+            localPath?.takeIf { !it.contains("://") }?.let { keep(it, r) }
             r
         }
 
@@ -126,6 +126,18 @@ object Lyrics {
         if (best != null && best.second >= .62f) return best.first to false
         for (a in artists) for (t in titles) ovhLyrics(a, t)?.let { return it to true }
         return null
+    }
+
+    /**
+     * Keeps the lyrics with the song: inside its tag when the file takes it (MP3), else as a .lrc beside it (also for plain,
+     * untimed lyrics: the lines without times). True when they are kept.
+     */
+    fun keep(path: String, r: LyricsResult): Boolean = embedMp3(path, r) || saveSidecar(path, r)
+
+    /** [keep] for lyrics given as text (a saved record, a cache entry); true when they are kept, or a .lrc is there already. */
+    fun keepText(path: String, text: String, source: String): Boolean {
+        val r = fromText(text, source) ?: return false
+        return keep(path, r) || File(path.substringBeforeLast('.') + ".lrc").exists()
     }
 
     /** Writes [r] as a .lrc next to the song (synced or not), unless one is there already. True when a file was written. */

@@ -42,9 +42,8 @@ class LyricsStore(ctx: Context) {
      */
     fun save(r: LyricsRecord, audioPath: String?): File? {
         val body = r.syncedLyrics ?: r.plainLyrics
-        if (audioPath != null && body != null) {
-            val side = File(audioPath.substringBeforeLast('.') + if (r.syncedLyrics != null) ".lrc" else ".txt")
-            if (runCatching { side.writeText(body, Charsets.UTF_8) }.isSuccess) return side
+        if (audioPath != null && body != null && Lyrics.keepText(audioPath, body, "saved")) {
+            return File(audioPath.substringBeforeLast('.') + ".lrc")
         }
         dir.mkdirs()
         val o = JSONObject().put("id", r.id).put("trackName", r.trackName).put("artistName", r.artistName)

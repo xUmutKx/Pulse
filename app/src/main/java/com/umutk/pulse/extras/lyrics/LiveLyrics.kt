@@ -69,8 +69,8 @@ object LiveLyrics {
     fun separate(c: Context) = prefs(c).getBoolean("separate", true)
     /** Lyrics found online are always written as a .lrc beside the song (not kept in the app's data or cache). */
     fun saveLrc(c: Context) = true
-    /** Also written into the MP3's tag; this rewrites the song file, so it is off until asked for. */
-    fun embed(c: Context) = prefs(c).getBoolean("embed_tag", false)
+    /** The lyrics are written into the song's own tag when the format allows it (MP3); see [Lyrics.keep]. */
+    fun embed(c: Context) = true
     /** How the notification tells the song's title from the lyric line: "underline" (title underlined, line bold), "thin" (the one-line view shows the line plain, the open view bold), "bold" (both bold). */
     fun emphasis(c: Context) = prefs(c).getString("emphasis", "underline") ?: "underline"
     fun setEmphasis(c: Context, v: String) = prefs(c).edit().putString("emphasis", v).apply()
@@ -329,7 +329,6 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
     var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
     var sep by remember { mutableStateOf(LiveLyrics.separate(c)) }
-    var emb by remember { mutableStateOf(LiveLyrics.embed(c)) }
     var autoAll by remember { mutableStateOf(LyricsAuto.on(c)) }
     var consec by remember { mutableStateOf(LyricsShare.consecutive(c)) }
     var st by remember { mutableStateOf(LyricsAuto.status(c)) }
@@ -360,7 +359,6 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
             SwitchRow(tr("Separate lyrics notification", "Ayrı söz bildirimi"), sep) { sep = it; LiveLyrics.set(c, "separate", it) }
         }
         SettingsSection(tr("Files and sharing", "Dosyalar ve paylaşım"), startOpen = true) {
-            SwitchRow(tr("Also write into the song's tag (MP3, rewrites the file)", "Şarkının etiketine de yaz (MP3, dosyayı yeniden yazar)"), emb) { emb = it; LiveLyrics.set(c, "embed_tag", it) }
             SwitchRow(tr("Find lyrics for the whole library in the background", "Tüm kütüphane için sözleri arka planda bul"), autoAll) { autoAll = it; LyricsAuto.setOn(c, it) }
             if (st.second > 0) Text(tr("${st.first} of ${st.second} songs looked at, ${st.third} with lyrics", "${st.second} şarkıdan ${st.first} tanesine bakıldı, ${st.third} tanesinin sözü var"), color = T.sub, fontSize = 12.sp)
             com.umutk.pulse.PButton(tr("Search now", "Şimdi ara"), compact = true) { LyricsAuto.runNow(c); autoAll = true }
