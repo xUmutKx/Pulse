@@ -1,7 +1,15 @@
 package com.umutk.pulse.extras.lucid.ui.theme
 
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.umutk.pulse.R
 import com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle
 
