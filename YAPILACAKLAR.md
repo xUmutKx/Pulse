@@ -1800,3 +1800,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Crossfade graph is the crossfade setting itself: drag across it to set 0 to 12 seconds; the fade band widens with the seconds
 - derlenmedi: Default fade between tracks is 3 seconds
 - derlenmedi: Crossfade overlaps: the next track starts on a second player a few seconds before the end, the two fade against each other, then the next track takes over at the same place
+- derlenmedi: Security card on the Overview: a shield icon beside the title
