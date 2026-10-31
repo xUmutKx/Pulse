@@ -29,7 +29,6 @@ val BAR_TOOLS = listOf(
     Triple("level", tr("Control Options", "Denetim seçenekleri"), "control"),
     Triple("palette", tr("Themes", "Temalar"), "theme"),
     Triple("tune", tr("Options", "Seçenekler"), "options"),
-    Triple("power", tr("Shutdown", "Kapat"), "shutdown"),
     Triple("more", tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"), "custom"),
     Triple("info", tr("Book information", "Kitap bilgisi"), "info"),
 )
