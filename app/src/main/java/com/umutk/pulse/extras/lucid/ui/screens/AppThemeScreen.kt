@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import androidx.compose.ui.unit.sp
+import com.umutk.pulse.extras.lucid.ui.theme.LucidLookState
+import com.umutk.pulse.extras.lucid.ui.theme.LucidLook
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -233,6 +236,41 @@ fun AppThemeScreen(
                         maxLines = 1,
                         modifier = Modifier.weight(1f)
                     )
+                }
+            }
+            item(key = "look") {
+                SettingsSectionCard(title = "Look", icon = Icons.Outlined.Palette) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+                        LucidLook.entries.forEach { look ->
+                            val selected = LucidLookState.current == look
+                            val (bg, fg) = when (look) {
+                                LucidLook.ONE_UI -> Color(0xFF1B1B21) to Color(0xFFD4D4D8)
+                                LucidLook.MATERIAL -> Color(0xFF1C1B1F) to Color(0xFFE6E1E5)
+                                LucidLook.AMOLED -> Color.Black to Color.White
+                            }
+                            val cardShape = RoundedCornerShape(16.dp)
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(cardShape)
+                                    .border(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, cardShape)
+                                    .clickable { LucidLookState.set(context, look) }
+                            ) {
+                                // a small alarm screen in this look: the clock and the button
+                                Column(
+                                    modifier = Modifier.fillMaxWidth().height(120.dp).background(bg).padding(10.dp),
+                                    horizontalAlignment = Alignment.CenterHorizontally,
+                                    verticalArrangement = Arrangement.Center
+                                ) {
+                                    Text("07:30", color = fg, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                                    Spacer(Modifier.height(8.dp))
+                                    Box(Modifier.width(56.dp).height(16.dp).clip(RoundedCornerShape(50)).background(fg.copy(alpha = .25f)))
+                                }
+                                Text(look.label, style = MaterialTheme.typography.labelMedium, maxLines = 1,
+                                    modifier = Modifier.fillMaxWidth().padding(8.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+                            }
+                        }
+                    }
                 }
             }
             item {
