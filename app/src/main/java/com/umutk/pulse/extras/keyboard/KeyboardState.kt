@@ -84,6 +84,8 @@ class KbState {
     @Volatile var swiped = false
     // the space key is being slid to move the cursor: a slide down then does not close the keyboard
     @Volatile var cursorDrag = false
+    // counts the keys typed: the private-typing hat shows again after each one
+    var keyTick by mutableStateOf(0)
     var trail by mutableStateOf(listOf<Offset>())
     /** Where each letter key sits (window pixels), for following a swipe over the keys. */
     val letterRects = HashMap<String, Rect>()

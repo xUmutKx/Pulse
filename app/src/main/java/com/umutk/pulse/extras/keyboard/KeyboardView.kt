@@ -222,7 +222,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     var rootH by remember { mutableStateOf(0f) }
     val rootHue = LocalHue.current
     // the gamepad paints no board of its own: its buttons float over whatever the game shows
-    Box(modifier.fillMaxWidth().then(if (st.panel == "gamepad") Modifier else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
+    Box(modifier.fillMaxWidth().then(if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
         .then(if (KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
         .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(Unit) {
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
@@ -269,7 +269,12 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         Trail(th, st)
         Preview(th, st)
         // private typing: the hat mark sits at the bottom middle, so it is seen whatever the keyboard shows
-        if (st.incognito) com.umutk.pulse.extras.IncognitoGlyph(th.sub.copy(alpha = .5f), 26.dp, Modifier.align(Alignment.Center))
+        // private typing: a big faint hat behind the keys, only on the keys page; it shows for a moment after every key and fades out
+        if (st.incognito && st.panel == "keys") {
+            val hat = remember { androidx.compose.animation.core.Animatable(0f) }
+            LaunchedEffect(st.keyTick) { if (st.keyTick > 0) { hat.snapTo(.2f); hat.animateTo(0f, androidx.compose.animation.core.tween(1400)) } }
+            com.umutk.pulse.extras.IncognitoGlyph(th.sub, 96.dp, Modifier.align(Alignment.Center).graphicsLayer { alpha = hat.value })
+        }
     }
 }
 
