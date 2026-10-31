@@ -28,6 +28,7 @@ object LockLyricsOverlay {
     private var now: TextView? = null
     private var next: TextView? = null
     private var host: Context? = null
+    private var params: WindowManager.LayoutParams? = null
 
     val showing get() = box != null
 
@@ -35,9 +36,19 @@ object LockLyricsOverlay {
     fun show(ctx: Context, current: String, upcoming: String?): Boolean {
         val app = ctx.applicationContext
         if (box == null && !add(app)) return false
-        now?.text = current
+        // the place follows the setting at once, also while the window is up
+        val lp = params
+        val h = (host ?: app).resources.displayMetrics.heightPixels
+        val y = (h * LiveLyrics.lockTop(app)).toInt()
+        if (lp != null && lp.y != y) {
+            lp.y = y
+            runCatching { ((host ?: app).getSystemService(Context.WINDOW_SERVICE) as WindowManager).updateViewLayout(box, lp) }
+        }
+        // a line is set only when it changed: the window is not laid out again on every tick
+        if (now?.text?.toString() != current) now?.text = current
         val n = upcoming?.takeIf { it.isNotBlank() }
-        next?.text = n.orEmpty()
+        val nt = n.orEmpty()
+        if (next?.text?.toString() != nt) next?.text = nt
         next?.visibility = if (n != null) View.VISIBLE else View.GONE
         return true
     }
@@ -56,10 +67,11 @@ object LockLyricsOverlay {
                 WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
             PixelFormat.TRANSLUCENT,
         ).apply {
-            // its lower edge sits at the wallpaper's peak: a little over a quarter of the screen up from the bottom
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
-            y = (d.heightPixels * 0.27f).toInt()
+            // its top edge sits at the place the user chose (under the date, or just above the lock screen's bottom line)
+            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
+            y = (d.heightPixels * LiveLyrics.lockTop(app)).toInt()
         }
+        params = lp
         // the size is the lyrics size of the music player (its setting), a little under what the player draws
         val size = MusicSettings.lyricsFont(app).coerceIn(12, 30).toFloat()
         val pad = (12 * d.density).toInt()
@@ -88,6 +100,6 @@ object LockLyricsOverlay {
     fun hide(ctx: Context) {
         val v = box ?: return
         runCatching { ((host ?: ctx.applicationContext).getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(v) }
-        box = null; now = null; next = null; host = null
+        box = null; now = null; next = null; host = null; params = null
     }
 }
