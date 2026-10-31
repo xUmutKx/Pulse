@@ -152,7 +152,7 @@ fun ringingBackgroundBrush(style: RingingBackgroundStyle): Brush = when (style) 
     RingingBackgroundStyle.CUSTOM_IMAGE,
     RingingBackgroundStyle.VIDEO,
     RingingBackgroundStyle.DYNAMIC_FLUID,
-    RingingBackgroundStyle.AMOLED_BLACK,
+    RingingBackgroundStyle.STARFIELD,
     RingingBackgroundStyle.INTERACTIVE_GRADIENT,
     RingingBackgroundStyle.AURORA,
     RingingBackgroundStyle.FIREFLIES,

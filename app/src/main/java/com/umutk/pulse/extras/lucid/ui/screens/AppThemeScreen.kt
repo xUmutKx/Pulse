@@ -239,6 +239,7 @@ fun AppThemeScreen(
                 }
             }
             item(key = "look") {
+                val lookCtx = androidx.compose.ui.platform.LocalContext.current
                 SettingsSectionCard(title = "Look", icon = Icons.Outlined.Palette) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
                         LucidLook.entries.forEach { look ->
@@ -254,7 +255,7 @@ fun AppThemeScreen(
                                     .weight(1f)
                                     .clip(cardShape)
                                     .border(if (selected) 2.dp else 1.dp, if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline, cardShape)
-                                    .clickable { LucidLookState.set(context, look) }
+                                    .clickable { LucidLookState.set(lookCtx, look) }
                             ) {
                                 // a small alarm screen in this look: the clock and the button
                                 Column(
