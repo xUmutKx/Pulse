@@ -37,3 +37,8 @@
 -keep,includedescriptorclasses class com.vythera.relay.**$$serializer { *; }
 -dontwarn org.bouncycastle.**
 -dontwarn javax.naming.**
+
+# pdfbox-android (the book reader's PDF text) names optional libraries it never uses in Pulse: their classes are not in the app
+-dontwarn org.bouncycastle.**
+-dontwarn com.gemalto.**
+-dontwarn com.github.jaiimageio.**
