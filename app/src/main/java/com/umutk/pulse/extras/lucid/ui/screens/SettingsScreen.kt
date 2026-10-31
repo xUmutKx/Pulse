@@ -1,5 +1,9 @@
 package com.umutk.pulse.extras.lucid.ui.screens
 
+import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
+import com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf
+import com.umutk.pulse.extras.lucid.ui.theme.FontCards
+import com.umutk.pulse.extras.lucid.data.prefs.RingingClockFont
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
@@ -135,6 +139,7 @@ fun SettingsScreen(
         initial = AccentColor.DEFAULT.argb
     )
     val appFontStyle by settingsDataStore.appFontStyleFlow.collectAsState(initial = AppFontStyle.SYSTEM_DEFAULT)
+    val ringingClockFont by settingsDataStore.ringingClockFontFlow.collectAsState(initial = RingingClockFont.SYSTEM_DEFAULT)
 
     val volumePolicy by settingsDataStore.volumePolicyFlow.collectAsState(initial = VolumePolicy.UNIFIED)
     val unifiedVolume by settingsDataStore.unifiedVolumeFlow.collectAsState(initial = 0.85f)
@@ -748,54 +753,21 @@ fun SettingsScreen(
                                 onDismissRequest = { showAppFontMenu = false },
                                 modifier = Modifier.widthIn(min = 290.dp, max = 330.dp)
                             ) {
-                                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                                    AppFontStyle.entries.forEach { style ->
-                                        val isSelected = appFontStyle == style
-                                        val interactionSource = remember { MutableInteractionSource() }
-                                        val isPressed by interactionSource.collectIsPressedAsState()
-                                        val itemBg = when {
-                                            isSelected -> accentColor.copy(alpha = 0.14f)
-                                            isPressed -> if (isLight) Color.Black.copy(alpha = 0.06f) else Color.White.copy(alpha = 0.08f)
-                                            else -> Color.Transparent
-                                        }
-
-                                        Row(
-                                            modifier = Modifier
-                                                .fillMaxWidth()
-                                                .clip(RoundedCornerShape(12.dp))
-                                                .background(itemBg)
-                                                .clickable(
-                                                    interactionSource = interactionSource,
-                                                    indication = null
-                                                ) {
-                                                    showAppFontMenu = false
-                                                    if (style == AppFontStyle.CUSTOM_FILE) {
-                                                        appFontFilePickerLauncher.launch(FontManager.FONT_MIME_TYPES)
-                                                    } else {
-                                                        scope.launch { settingsDataStore.setAppFontStyle(style) }
-                                                    }
-                                                }
-                                                .padding(horizontal = 14.dp, vertical = 12.dp),
-                                            horizontalArrangement = Arrangement.SpaceBetween,
-                                            verticalAlignment = Alignment.CenterVertically
-                                        ) {
-                                            Text(
-                                                text = style.label,
-                                                fontSize = 15.sp,
-                                                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
-                                                color = if (isSelected) accentColor else (if (isLight) Color(0xFF111318) else Color.White)
-                                            )
-                                            if (isSelected) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.Check,
-                                                    contentDescription = null,
-                                                    tint = accentColor,
-                                                    modifier = Modifier.size(20.dp)
-                                                )
-                                            }
+                                Column(verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.padding(8.dp)) {
+                                    Text(tr("App font", "Uygulama yazı tipi"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                                    FontCards(AppFontStyle.entries, appFontStyle, { it.label }, { appFontFamilyOf(it) }) { style ->
+                                        if (style == AppFontStyle.CUSTOM_FILE) {
+                                            showAppFontMenu = false
+                                            appFontFilePickerLauncher.launch(FontManager.FONT_MIME_TYPES)
+                                        } else {
+                                            scope.launch { settingsDataStore.setAppFontStyle(style) }
                                         }
                                     }
-                                }
+                                    Text(tr("Alarm clock font", "Alarm saati yazı tipi"), color = MaterialTheme.colorScheme.onSurfaceVariant, fontSize = 13.sp)
+                                    FontCards(RingingClockFont.entries.filter { it != RingingClockFont.CUSTOM_FILE }, ringingClockFont, { it.label }, { clockFontFamilyOf(it) }) { font ->
+                                        scope.launch { settingsDataStore.setRingingClockFont(font) }
+                                    }
+                                }                                }
                             }
                         }
 

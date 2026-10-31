@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.lucid.ui.components
 
+import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.rotate
 import android.graphics.BitmapFactory
@@ -115,12 +116,7 @@ object AlarmLockPalette {
     )
 }
 
-fun ringingClockFontFamily(font: RingingClockFont): FontFamily = when (font) {
-    RingingClockFont.SYSTEM_DEFAULT -> FontFamily.SansSerif
-    RingingClockFont.SERIF -> FontFamily.Serif
-    RingingClockFont.CURSIVE -> FontFamily.Cursive
-    RingingClockFont.CUSTOM_FILE -> FontFamily.Default
-}
+fun ringingClockFontFamily(font: RingingClockFont): FontFamily = clockFontFamilyOf(font) ?: FontFamily.Default
 
 fun resolveRingingFontFamily(font: RingingClockFont, customFontPath: String?): FontFamily =
     if (font == RingingClockFont.CUSTOM_FILE) {

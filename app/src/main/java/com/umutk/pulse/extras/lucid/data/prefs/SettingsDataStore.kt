@@ -185,6 +185,20 @@ enum class RingingClockFont(val label: String) {
     SYSTEM_DEFAULT("System Modern"),
     SERIF("Editorial Serif"),
     CURSIVE("Minimalist Cursive"),
+    BODONI("Bodoni Moda"),
+    DM_SERIF("DM Serif Display"),
+    MONTAGU("Montagu Slab"),
+    JULIETT("Juliett"),
+    NEONDERTHAW("Neonderthaw"),
+    EDU("Edu Beginner"),
+    KODE_MONO("Kode Mono"),
+    JERSEY("Jersey 10"),
+    LEAGUE_GOTHIC("League Gothic"),
+    TOURNEY("Tourney"),
+    SUPER_POWER("Super Power"),
+    TILT_NEON("Tilt Neon"),
+    STICK("Stick No Bills"),
+    SEGMENTS("Segments"),
     CUSTOM_FILE("Custom File (.ttf/.otf/.apk)")
 }
 
