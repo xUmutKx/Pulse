@@ -24,6 +24,9 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -74,7 +77,9 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 import kotlinx.coroutines.withContext
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /*
  * Books: a shelf of the books (covers drawn from the title, nothing stored), a drawer with the shelf's lists and an options page,
@@ -82,7 +87,8 @@ import kotlin.math.roundToInt
  * opens the options as a list, like the classic readers; each option has its own page.
  */
 
-private class Theme(val bg: Color, val ink: Color, val sub: Color)
+/** [deco]: the picture behind the text, 0 none, 1 night sky with stars, 2 sakura, 3 sakura at night. */
+private class Theme(val bg: Color, val ink: Color, val sub: Color, val deco: Int = 0)
 
 private val READER_THEMES = listOf(
     Theme(Color(0xFFF5F2EA), Color(0xFF1E1E1E), Color(0xFF6B6B6B)),   // day
@@ -93,10 +99,14 @@ private val READER_THEMES = listOf(
     Theme(Color(0xFF000000), Color(0xFFC8C8C8), Color(0xFF7A7A7A)),   // true black
     Theme(Color(0xFF2B3340), Color(0xFFD6DCE5), Color(0xFF8F9AAA)),   // slate
     Theme(Color(0xFF262626), Color(0xFFCFCFCF), Color(0xFF8A8A8A)),   // charcoal
+    Theme(Color(0xFF05070F), Color(0xFFE6E9F2), Color(0xFF9AA3B8), 1),   // space
+    Theme(Color(0xFFFBF0F3), Color(0xFF3A2A30), Color(0xFF8C6E78), 2),   // sakura
+    Theme(Color(0xFF1E1620), Color(0xFFF0DCE4), Color(0xFFB89AA8), 3),   // sakura night
 )
 private val THEME_NAMES = listOf(
     tr("Day", "Gündüz"), tr("Pure white", "Saf beyaz"), tr("Sand", "Kum"), tr("Paper grey", "Kâğıt gri"),
     tr("Night", "Gece"), tr("True black", "Tam siyah"), tr("Slate", "Arduvaz"), tr("Charcoal", "Kömür"),
+    tr("Space", "Uzay"), tr("Sakura", "Sakura"), tr("Sakura night", "Sakura gece"),
 )
 /** The day and the night theme of the automatic switch. */
 private const val DAY_THEME = 0
@@ -449,7 +459,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var speaking by remember { mutableStateOf(false) }
     val base = READER_THEMES[themeIx]
     val th = if (eink) Theme(Color.White, Color.Black, Color(0xFF555555))
-        else if (amoled && base.bg.red + base.bg.green + base.bg.blue < .3f) Theme(Color.Black, base.ink, base.sub)
+        else if (amoled && base.bg.red + base.bg.green + base.bg.blue < .3f) Theme(Color.Black, base.ink, base.sub, base.deco)
         else base
     val family = when (fontIx) { 1 -> FontFamily.SansSerif; 2 -> FontFamily.Monospace; else -> FontFamily.Serif }
     var chapter by remember { mutableStateOf(Ebook.place(ctx, start.uri).first) }
@@ -520,6 +530,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     }
 
     Box(Modifier.fillMaxSize().background(th.bg)) {
+        if (th.deco != 0) ThemeDecor(th.deco, Modifier.fillMaxSize())
         if (b == null) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("Opening…", "Açılıyor…"), color = th.sub, fontSize = 14.sp) }
         } else if (b.pdf) {
@@ -883,8 +894,9 @@ private fun ThemeCard(t: Theme, name: String, picked: Boolean, modifier: Modifie
     Box(modifier.height(118.dp).clip(RoundedCornerShape(10.dp)).background(t.bg)
         .border(if (picked) 2.dp else 1.dp, if (picked) Color(0xFF3D8BFF) else t.sub.copy(alpha = .4f), RoundedCornerShape(10.dp))
         .clickable { onClick() }) {
-        // the paper or the cloth of the theme, drawn as fine grain (the same every time)
-        Canvas(Modifier.fillMaxSize()) {
+        // the paper or the cloth of the theme, drawn as fine grain (the same every time); the picture themes draw their picture
+        if (t.deco != 0) ThemeDecor(t.deco, Modifier.fillMaxSize())
+        else Canvas(Modifier.fillMaxSize()) {
             var seed = name.hashCode()
             fun rnd(): Float { seed = (seed * 1103515245 + 12345) and 0x7fffffff; return (seed % 1000) / 1000f }
             repeat(40) {
@@ -1003,6 +1015,52 @@ private fun PopRow(label: String, on: Boolean, th: Theme, family: FontFamily = F
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = if (on) th.ink else th.sub, fontSize = 14.sp, fontFamily = family, fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal, modifier = Modifier.weight(1f))
         if (on) Text("✓", color = th.ink, fontSize = 14.sp)
+    }
+}
+
+/**
+ * The picture of a reader theme, drawn in the top part of the page (no picture is stored, so it is the same every time):
+ * 1 the night sky with stars, 2 and 3 cherry branches with their blossoms (light, then night).
+ */
+@Composable
+private fun ThemeDecor(deco: Int, modifier: Modifier) {
+    Canvas(modifier) {
+        var seed = 11 + deco * 97
+        fun rnd(): Float { seed = (seed * 1103515245 + 12345) and 0x7fffffff; return (seed % 1000) / 1000f }
+        val top = size.height * .42f
+        if (deco == 1) {
+            drawRect(Brush.verticalGradient(listOf(Color(0xFF2A2F6B).copy(alpha = .35f), Color.Transparent), 0f, top))
+            repeat(170) {
+                val r = (.5f + rnd() * 1.6f).dp.toPx()
+                drawCircle(Color.White.copy(alpha = .25f + rnd() * .7f), r, Offset(rnd() * size.width, rnd() * top))
+            }
+            return@Canvas
+        }
+        val petal = if (deco == 2) Color(0xFFF2A3BA) else Color(0xFFC95F82)
+        val stem = if (deco == 2) Color(0xFF8A5A4E) else Color(0xFF6E4A4A)
+        fun flower(c: Offset, r: Float) {
+            repeat(5) { k ->
+                val a = k * 1.2566f + .3f
+                drawCircle(petal.copy(alpha = .85f), r, Offset(c.x + cos(a) * r * .9f, c.y + sin(a) * r * .9f))
+            }
+            drawCircle(Color(0xFFFFE08A).copy(alpha = .9f), r * .4f, c)
+        }
+        // two branches from the top corners, the blossoms set along them
+        val branches = listOf(Offset(0f, 0f) to Offset(size.width * .55f, top * .9f), Offset(size.width, 0f) to Offset(size.width * .4f, top * .6f))
+        branches.forEach { (from, to) ->
+            val path = Path().apply {
+                moveTo(from.x, from.y)
+                cubicTo(from.x + (to.x - from.x) * .2f, from.y + top * .3f, to.x, to.y - top * .2f, to.x, to.y)
+            }
+            drawPath(path, stem, style = Stroke(width = 4.dp.toPx(), cap = StrokeCap.Round))
+            repeat(9) {
+                val t = (it + rnd() * .6f) / 9f
+                val c = Offset(from.x + (to.x - from.x) * t + (rnd() - .5f) * 30.dp.toPx(), from.y + (to.y - from.y) * t + (rnd() - .5f) * 24.dp.toPx())
+                flower(c, (5f + rnd() * 4f).dp.toPx())
+            }
+        }
+        // a few petals drifting down
+        repeat(12) { flower(Offset(rnd() * size.width, rnd() * top), (2.5f + rnd() * 2f).dp.toPx()) }
     }
 }
 
