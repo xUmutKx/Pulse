@@ -1084,7 +1084,7 @@ private fun familyIcon(id: String): ImageVector = when (id) {
  * tool, and the ASCII pictures, each drawn whole.
  */
 @Composable
-private fun TextAndArtPage(entries: List<KeyboardSymbols.Sign>, th: KbTheme, act: KbActions) {
+private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, act: KbActions) {
     val ctx = LocalContext.current
     var typed by remember { mutableStateOf("") }
     val styles = remember(typed) { FancyText.all(typed.ifBlank { "Hi test" }) }
