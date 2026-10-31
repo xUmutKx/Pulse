@@ -1833,3 +1833,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - derlenmedi: Alarm sheet: the vibrate and snooze switches are gone; both options always show
 - derlenmedi: Alarm background sheet: the preview cards are a plain sideways row (no longer moving and clipped inside the sheet)
 - derlenmedi: Alarm background sheet: tapping a preview selects it (a clear layer takes the tap)
+- derlenmedi: Lucid app fonts: Newsreader, Montserrat, Playfair Display, Rubik, Saira, Lilita One, Bebas Neue, Pacifico, Lobster (bundled files)
