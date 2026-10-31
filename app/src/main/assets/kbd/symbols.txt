@@ -1,4 +1,26 @@
 #Patterns
+##Text styles
+𝐇𝐢 𝐭𝐞𝐬𝐭	text style bold
+𝐻𝑖 𝑡𝑒𝑠𝑡	text style italic
+𝑯𝒊 𝒕𝒆𝒔𝒕	text style bold italic
+ℋ𝒾 𝓉ℯ𝓈𝓉	text style script
+𝓗𝓲 𝓽𝓮𝓼𝓽	text style bold script
+ℌ𝔦 𝔱𝔢𝔰𝔱	text style fraktur
+𝕳𝖎 𝖙𝖊𝖘𝖙	text style bold fraktur
+ℍ𝕚 𝕥𝕖𝕤𝕥	text style double-struck
+𝖧𝗂 𝗍𝖾𝗌𝗍	text style sans
+𝗛𝗶 𝘁𝗲𝘀𝘁	text style sans bold
+𝘏𝘪 𝘵𝘦𝘴𝘵	text style sans italic
+𝙃𝙞 𝙩𝙚𝙨𝙩	text style sans bold italic
+𝙷𝚒 𝚝𝚎𝚜𝚝	text style monospace
+Ｈｉ　ｔｅｓｔ	text style fullwidth
+Ⓗⓘ ⓣⓔⓢⓣ	text style circled
+ʜɪ ᴛᴇꜱᴛ	text style small caps
+tset iH	text style reversed
+H i t e s t	text style spaced
+✧ Hi test ✧	text style sparkle
+•´¯`•. ❀ 𝐇𝐢 𝐭𝐞𝐬𝐭 ❀ .•`¯´•	text style frame
+░░░░░░░▄▄████▄▄▄░░░░░░▄▄██████▄▄⏎░░░░░██▓▓▓▓▓▓▒▓▓██░░▓█▓▓▓▓▒░▒▒▓▓██⏎░░░██▓▓▓▓▓▓▓▓▓▒░▓▓███▓▓▓▓▓▒▒▒░░▒▓▓█⏎░░██▓▓▓▓▓▓▓▓▓▓▓▒▒▓▓█▓▓▓▓▓▓▓▓▓▓▒░░▓▓█⏎░▒█▓▓▓▓▓▓▓▓▓▓▓▓▓▓██▓██▓▓▓▓▓▓▓▓▓▒░░▓▓█⏎░█▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▒░▒▓█⏎░█▓▓▓▓▓▓▓▓▓▓▓▓████░████▓▓▓▓▓▓▓▓▓▒░░▓██⏎█▓▓▓▓▓▓▓▓▓▓▓▓██░░░░░░░██▓▓▓▓▓▓▓▓▓░░▓▓█⏎█▓▓▓▓▓▓▓▓▓▓▓▓▓░░█░░░█░░▓▓▓▓▓▓▓▓▓▓▒░▓▓█▒⏎█▓▓▓▓▓▓▓▓▓▓▓▓▓░█▒█░█▒█░▓▓▓▓▓▓	ascii art block shading
 ##ASCII art
    .--.⏎ .-(    ).⏎(___.__)__)	ascii art cloud
 .--.⏎(   ).-.⏎(___(__) )	ascii art cloud big
