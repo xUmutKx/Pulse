@@ -1706,3 +1706,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Weather map: the base map is OpenStreetMap tiles darkened in the app (no "API key required" watermark from CARTO) (derlenmedi)
 - Books reader: the ⋮ button is always the rightmost one of the top bar; the back arrow of a menu page and the system back go straight to the book (derlenmedi)
 - Books reader ⋮ menu: Chapters, Bookmarks and Search open directly from the menu (no "More Operations" page in between) (derlenmedi)
+- Books reader: font choices are shown in their own face; the bar panel shows the bottom bar as it is now above the list (derlenmedi)
