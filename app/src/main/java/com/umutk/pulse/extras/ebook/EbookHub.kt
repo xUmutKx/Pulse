@@ -471,6 +471,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
     var forward by remember { mutableStateOf(true) }
     var bars by remember { mutableStateOf(false) }
     var panel by remember { mutableStateOf("") }
+    // the chapters page: 0 chapters, 1 bookmarks
+    var listTab by remember { mutableStateOf(0) }
     var bookmarked by remember { mutableStateOf(Ebook.bookmarks(ctx, start.uri).contains("$chapter,$page")) }
     var query by remember { mutableStateOf("") }
     var brightness by remember { mutableStateOf(-1f) }
@@ -511,8 +513,8 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             "daynight" -> pickTheme(if (themeIx == NIGHT_THEME) DAY_THEME else NIGHT_THEME)
             "speak" -> speaking = !speaking
             "auto" -> autoOn = !autoOn
-            "chapters" -> panel = "chapters"
-            "bookmarks" -> panel = "bookmarks"
+            "chapters" -> { listTab = 0; panel = "chapters" }
+            "bookmarks" -> { listTab = 1; panel = "chapters" }
             "brightness" -> panel = "control"
             "text" -> panel = "sizepop"
             "search" -> panel = "search"
@@ -730,7 +732,7 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
             val titleOf = when (panel) {
                 "visual" -> tr("Visual Options", "Görünüm seçenekleri"); "control" -> tr("Control Options", "Denetim seçenekleri")
                 "misc" -> tr("Miscellaneous", "Diğer"); "themes" -> tr("Themes", "Temalar"); "ops" -> tr("More Operations", "Diğer işlemler")
-                "chapters" -> tr("Chapters", "Bölümler"); "bookmarks" -> tr("Bookmarks", "Yer imleri"); "search" -> tr("Search", "Ara")
+                "chapters" -> tr("Chapters and bookmarks", "Bölümler ve yer imleri"); "search" -> tr("Search", "Ara")
                 "bar" -> tr("Customize reader bar buttons", "Okuma çubuğu düğmeleri"); "info" -> tr("Book information", "Kitap bilgisi"); else -> ""
             }
             // the customise page is a popup over the reader (a tap outside closes it); the other pages fill the reader
@@ -806,15 +808,27 @@ private fun ReaderScreen(start: Book, onClose: () -> Unit) {
                     }
                     "ops" -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                         ReaderRow(tr("Chapters", "Bölümler"), th, "›") { panel = "chapters" }
-                        ReaderRow(tr("Bookmarks", "Yer imleri"), th, "›") { panel = "bookmarks" }
+                        ReaderRow(tr("Bookmarks", "Yer imleri"), th, "›") { listTab = 1; panel = "chapters" }
                         ReaderRow(tr("Search", "Ara"), th, "›") { panel = "search" }
                     }
-                    "chapters" -> ReaderList(b.chapters.mapIndexed { i, c -> "${i + 1}. ${c.title}" }, th) { i -> chapter = i; page = 0; forward = true; panel = ""; bars = false; save() }
-                    "bookmarks" -> {
-                        val marks = Ebook.bookmarks(ctx, start.uri)
-                        if (marks.isEmpty()) Text(tr("No bookmarks", "Yer imi yok"), color = th.sub, fontSize = 13.sp)
-                        else ReaderList(marks.map { m -> val c = m.substringBefore(',').toInt(); "${c + 1}. ${b.chapters.getOrNull(c)?.title.orEmpty()}" }, th) { i ->
-                            val m = marks[i].split(','); chapter = m[0].toInt(); page = m[1].toInt(); forward = true; panel = ""; bars = false; save()
+                    // chapters and bookmarks in one list, switched by the two tabs on top
+                    "chapters" -> Column(Modifier.fillMaxSize()) {
+                        Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            listOf(tr("Chapters", "Bölümler"), tr("Bookmarks", "Yer imleri")).forEachIndexed { i, name ->
+                                Text(name, color = if (listTab == i) th.bg else th.ink, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                                    modifier = Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).background(if (listTab == i) th.ink else th.ink.copy(alpha = .06f))
+                                        .clickable { listTab = i }.padding(vertical = 10.dp), textAlign = TextAlign.Center)
+                            }
+                        }
+                        Box(Modifier.weight(1f)) {
+                            if (listTab == 0) ReaderList(b.chapters.mapIndexed { i, c -> "${i + 1}. ${c.title}" }, th) { i -> chapter = i; page = 0; forward = true; panel = ""; bars = false; save() }
+                            else {
+                                val marks = Ebook.bookmarks(ctx, start.uri)
+                                if (marks.isEmpty()) Text(tr("No bookmarks", "Yer imi yok"), color = th.sub, fontSize = 13.sp)
+                                else ReaderList(marks.map { m -> val c = m.substringBefore(',').toInt(); "${c + 1}. ${b.chapters.getOrNull(c)?.title.orEmpty()}" }, th) { i ->
+                                    val m = marks[i].split(','); chapter = m[0].toInt(); page = m[1].toInt(); forward = true; panel = ""; bars = false; save()
+                                }
+                            }
                         }
                     }
                     "search" -> {
@@ -916,9 +930,8 @@ private fun animName(style: Int): String = when (style) {
 
 private fun ReaderRow(label: String, th: Theme, mark: String = "", icon: String = "", onClick: () -> Unit) {
     Row(Modifier.fillMaxWidth().clickable { onClick() }.padding(horizontal = 16.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-        if (icon.isNotEmpty()) {
-            PIcon(icon, th.ink, 20.dp, Modifier.padding(end = 14.dp))
-        }
+        if (icon == "text") Text("Aa", color = th.ink, fontSize = 15.sp, fontWeight = FontWeight.Bold, modifier = Modifier.width(20.dp).padding(end = 14.dp))
+        else if (icon.isNotEmpty()) PIcon(icon, th.ink, 20.dp, Modifier.padding(end = 14.dp))
         Text(label, color = th.ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
         if (mark.isNotEmpty()) Text(mark, color = th.sub, fontSize = 18.sp)
     }
