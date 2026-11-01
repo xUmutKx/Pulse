@@ -1885,3 +1885,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.322 derlenmedi: Winamp look: the top bar has pixel buttons (VOL, RADIO, LIKE, SET) with a raised bevel; the back arrow is gone there
 - 1.0.323 derlenmedi: Winamp screen: spectrum analyzer and album cover windows; a full layout (two columns on wide screens) and an analyzer switch in the settings button
 - 1.0.324 derlenmedi: Winamp look: the media notification is a Winamp window (green title, pixel bevel buttons: prev, play/pause, next); 1.0.323 compile fix (Arrangement import)
+- 1.0.325 derlenmedi: Look and Feel cards: every label reserves two lines, so all the cards stay at the same height
