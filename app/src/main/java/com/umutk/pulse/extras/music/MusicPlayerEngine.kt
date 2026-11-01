@@ -248,9 +248,13 @@ class MusicPlayerEngine private constructor(context: Context) {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 cancelCrossfade()
                 if (MusicSettings.autoEq(app)) mediaItem?.mediaId?.let { id ->
-                    // the equalizer follows the genre of the new song
+                    // the equalizer follows the genre of the new song; a song without a genre tag is measured while it plays
                     val genre = MusicLibrary.tracks.value.firstOrNull { it.path == id }?.genre
                     runCatching { equalizer.usePresetForGenre(genre) }
+                    main.removeCallbacks(soundCheck)
+                    specSum.fill(0.0); specN = 0
+                    specNoGenre = genre.isNullOrBlank()
+                    if (specNoGenre) main.postDelayed(soundCheck, 250L)
                 }
                 mediaItem?.toTrack()?.let { t ->
                     // the Quick panel "last played" tile and ACTION_RESUME read this
@@ -357,6 +361,31 @@ class MusicPlayerEngine private constructor(context: Context) {
         override fun run() {
             com.umutk.pulse.extras.watchdog.ServiceHealth.beat(app, anchor)
             main.postDelayed(this, 60_000L)
+        }
+    }
+
+    // the sound of a song without a genre tag: the band levels are added up for its first 25 seconds, then the preset is chosen
+    private val specSum = DoubleArray(3)
+    private var specN = 0
+    private var specNoGenre = false
+    private val soundCheck = object : Runnable {
+        override fun run() {
+            if (!specNoGenre || !MusicSettings.autoEq(app)) return
+            if (player.isPlaying) {
+                val b = MusicLevels.snapshot()
+                if (b.any { it > 0f }) {
+                    for (i in 0 until 8) specSum[0] += b[i]
+                    for (i in 8 until 17) specSum[1] += b[i]
+                    for (i in 17 until 24) specSum[2] += b[i]
+                    specN++
+                }
+            }
+            if (specN >= 100) {
+                val n = specN.toDouble()
+                val low = specSum[0] / (n * 8); val mid = specSum[1] / (n * 9); val high = specSum[2] / (n * 7)
+                specNoGenre = false
+                runCatching { equalizer.usePresetForSound(low, mid, high) }
+            } else main.postDelayed(this, 250L)
         }
     }
 
