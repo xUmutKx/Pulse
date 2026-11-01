@@ -1872,3 +1872,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.309 derlenmedi: Torrent engine removed completely (the APK was 94 MB with it, 46 MB without); magnet and .torrent links are no longer handled by Pulse
 - 1.0.310 derlenmedi: Excel viewer: each row takes the height the file gives it, so a tall title row and wrapped text show in full (rows and columns are no longer one fixed size)
 - 1.0.311 derlenmedi: Quick settings keyboard tile is a switch: a tap turns the floating keyboard on, a second tap closes it and the keyboard goes back to its own setting
+- 1.0.312 derlenmedi: Quick settings keyboard tile opens the normal keyboard as its own window (not the floating one); a second tap closes it; the floating keyboard setting is no longer touched by the tile

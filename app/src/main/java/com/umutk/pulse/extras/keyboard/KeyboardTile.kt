@@ -23,16 +23,14 @@ class KeyboardTile : TileService() {
 
     override fun onClick() {
         KeyboardPrefs.load(this)
-        // a second tap puts the floating keyboard away: the float window closes and restores the floating setting the person had
+        // a second tap puts the keyboard away
         if (tileActive(this)) {
-            KeyboardFloatActivity.current?.finish() ?: restoreFloating(this)
+            KeyboardFloatActivity.current?.finish() ?: tileOff(this)
             qsTile?.apply { state = Tile.STATE_INACTIVE; updateTile() }
             return
         }
-        val sp = tilePrefs(this)
-        sp.edit().putBoolean("active", true).putBoolean("prev", KeyboardPrefs.floating).apply()
-        KeyboardPrefs.floating = true
-        KeyboardPrefs.save(this)
+        // the tile opens the normal keyboard as its own window; the floating setting of the keyboard is not touched
+        tilePrefs(this).edit().putBoolean("active", true).apply()
         qsTile?.apply { state = Tile.STATE_ACTIVE; updateTile() }
         val i = Intent(this, KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (android.os.Build.VERSION.SDK_INT >= 34) {
@@ -47,14 +45,8 @@ class KeyboardTile : TileService() {
 private fun tilePrefs(c: Context) = c.getSharedPreferences("pulse_kb_tile", Context.MODE_PRIVATE)
 private fun tileActive(c: Context) = tilePrefs(c).getBoolean("active", false)
 
-/** The floating setting goes back to what it was before the tile turned it on. */
-private fun restoreFloating(c: Context) {
-    val sp = tilePrefs(c)
-    sp.edit().putBoolean("active", false).apply()
-    KeyboardPrefs.load(c)
-    KeyboardPrefs.floating = sp.getBoolean("prev", false)
-    KeyboardPrefs.save(c)
-}
+/** The tile is off again (the window closed). */
+private fun tileOff(c: Context) = tilePrefs(c).edit().putBoolean("active", false).apply()
 
 /** A transparent window with one focused field: the keyboard comes up over it (as the floating keyboard) and the window closes when it is put away. */
 class KeyboardFloatActivity : Activity() {
@@ -63,8 +55,8 @@ class KeyboardFloatActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         if (current === this) current = null
-        // however the window closes (tile, back, the field left), the keyboard goes back to its own setting
-        if (tileActive(this)) restoreFloating(this)
+        // however the window closes (tile, back, the field left), the tile is off again
+        tileOff(this)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
