@@ -1850,3 +1850,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.294 derlenmedi: Artist pictures are scaled to 512 px JPEG when saved; pictures stored before are shrunk once in the background after a library scan (the 60 MB folder)
 - 1.0.294 derlenmedi: Build fix: SettingsScreen had one extra closing brace (the general section) and a missing tr import; AlarmCustomizationScreen had a bad matchParentSize import
 - 1.0.295 derlenmedi: Books: a book leaving the shelf (one, picked, emptied, or deleted outside Pulse) also removes its cover picture, favourite, progress and last-opened time; the book file stays
+- 1.0.296 derlenmedi: Keyboard: güzel and ipek (names that are ordinary words) are no longer capitalised or given an apostrophe; learned capitals for them are dropped
+- 1.0.296 derlenmedi: Keyboard: Adana'ya keeps its apostrophe at the space (no dictionary correction replaces it)
+- 1.0.296 derlenmedi: Keyboard: a name typed in lower case (adana) takes its capital when the word ends

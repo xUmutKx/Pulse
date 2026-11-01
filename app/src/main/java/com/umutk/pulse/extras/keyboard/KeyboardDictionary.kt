@@ -47,11 +47,16 @@ object KeyboardDictionary {
     /** Names of people and places (Turkish): a Turkish ending on one of them takes its apostrophe (Adana'da, Pelin'den). */
     val properNouns = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
+    /** Names that are also ordinary words (Güzel = beautiful, İpek = silk): never capitalised or given an apostrophe by the keyboard. */
+    val commonNames = setOf("mutlu", "zeki", "özgür", "adil", "onur", "hakkı", "sadık", "zafer", "duygu", "ömür", "hatun", "saygın", "güzel", "ipek")
+
     /** Reads the word list of [lang] (and the learned words once). Call from a background thread. */
     fun load(c: Context, code: String) {
         val lang = d(code)
-        if (lang == "tr") runCatching { c.assets.open("kbd/proper_tr.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) properNouns += it.trim().lowercase(Locale("tr", "TR")) } } }
+        if (lang == "tr") runCatching { c.assets.open("kbd/proper_tr.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) it.trim().lowercase(Locale("tr", "TR")).let { n -> if (n !in commonNames) properNouns += n } } } }
         if (!userLoaded) loadUser(c)
+        // a capital learned earlier for an ordinary word (Güzel) is dropped: the word is written as typed
+        commonNames.forEach { forms.remove(it) }
         if (lexes.containsKey(lang)) return
         val ws = ArrayList<String>(); val sc = ArrayList<Float>()
         // a list downloaded in the settings first, else the one inside the app
@@ -198,7 +203,7 @@ object KeyboardDictionary {
         val w = word.lowercase(Locale.ROOT)
         if (w.length < 2 || w.any { it.isDigit() }) return
         // behind another word and still capitalised: a name, so the suggestions give it its capital again
-        if (!prev.isNullOrEmpty() && word[0].isUpperCase() && word.drop(1).none { it.isUpperCase() }) forms[w] = word
+        if (!prev.isNullOrEmpty() && word[0].isUpperCase() && word.drop(1).none { it.isUpperCase() } && w !in commonNames) forms[w] = word
         // the learning mode: words (the vocabulary and the names), sentences (which word follows which), both, or nothing
         if (KeyboardPrefs.learnWords || (user[w] ?: 0) > 0) user[w] = (user[w] ?: 0) + 1
         if (KeyboardPrefs.learnPairs && !prev.isNullOrEmpty()) { val m = pairs.getOrPut(prev.lowercase(Locale.ROOT)) { ConcurrentHashMap() }; m[w] = (m[w] ?: 0) + 1 }
