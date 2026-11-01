@@ -574,7 +574,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     }
                     VBtn({ if (many) player.seekToNextMediaItem() else player.seekTo(player.currentPosition + step); poke++ }) { if (many) com.umutk.pulse.extras.ui.TIcon("next", Color.White, 26.dp, sk.icons) else Tag("+${prefs.dtapSec}", false, Color.White) }
                 }
-            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xB3000000)))).background(sk.bottom).pointerInput(Unit) { detectTapGestures {} }.then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
+            // the bottom bar is a see-through black fade over the picture, whatever the skin (the skin colour used to cover it)
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000)))).pointerInput(Unit) { detectTapGestures {} }.then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(clock(pos), color = fg, fontSize = 12.sp)
                     SkinSeek(pos.toFloat(), dur.toFloat(), sk, { seeking = true; pos = it.toLong(); poke++ }, { seeking = false; player.seekTo(pos) }, Modifier.weight(1f).padding(horizontal = 8.dp))
