@@ -755,7 +755,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         if (i == 2 && qc != null && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0001") == true) {
             currentInputConnection?.commitText(qc, 1)
-            if (--quickLeft <= 0) quickClip = null
+            // the copied text stays for two minutes (the time limit below), pasting it does not remove it
+            quickLeft--
             afterText(); return
         }
         val c = currentInputConnection ?: return
@@ -1350,7 +1351,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             return
         }
         val q = quickClip ?: return
-        // the copied text stays in the bar for two minutes; after that it is only in the clipboard
+        // the copied text stays in the bar for two minutes; after that it is only in the clipboard (a newer copy replaces it)
         if (SystemClock.uptimeMillis() - quickAt > 120_000L) { quickClip = null; return }
         if (word.isNotEmpty() || emailField || st.plain) return
         val label = "\u0001" + q.replace('\n', ' ').take(14) + if (q.length > 14) "…" else ""
