@@ -44,6 +44,8 @@ class KbState {
     var artIn by mutableStateOf("")
     /** The password manager's suggestions (autofill), drawn by the system inside the bar; empty when there are none. */
     var inline by mutableStateOf(listOf<android.view.View>())
+    /** The e-mail suggestions take the bar: centred for one or two, scrolling to the right for more. */
+    var emailBar by mutableStateOf(false)
     /** The letters typed so far in the word under way (shown as a quoted slot when it differs from the middle one). */
     var enter by mutableStateOf("newline")
     var dark by mutableStateOf(true)
