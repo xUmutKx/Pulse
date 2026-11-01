@@ -133,6 +133,16 @@ class MusicPlaybackService : MediaSessionService() {
     /** Opens the Music hub (the launcher alias routes to it); [open] names a sheet for the hub to show. */
     private fun hubIntent(open: String? = null) = Intent().setClassName(packageName, "$packageName.ExtraToolActivity").putExtra("route", "music").also { i -> open?.let { i.putExtra(EXTRA_OPEN, it) } }
 
+    /** The Winamp notification card's buttons come here as service commands. */
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        when (intent?.action) {
+            "pulse.winamp.prev" -> engine.previous()
+            "pulse.winamp.next" -> engine.next()
+            "pulse.winamp.play" -> if (engine.player.isPlaying) engine.pause() else engine.play()
+        }
+        return super.onStartCommand(intent, flags, startId)
+    }
+
     @androidx.annotation.OptIn(androidx.media3.common.util.UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
