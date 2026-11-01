@@ -165,6 +165,8 @@ fun WinampScreen(
                 skin, st.queue, st.index, onPick = engine::playAt, onClose = { showPl = false }, scaleDp = sEff,
                 onAdd = onAdd, onRemove = { engine.removeFromQueue(it) }, onOptions = onSettings,
             )
+            // closed with its X: only its title bar stays, and a tap on it opens the playlist again
+            else PlaylistTitleBar(sEff) { showPl = true }
         }
         val sideWins: @Composable () -> Unit = {
             if (showSpec) WinampSpectrum(levels, sEff, skin.vis)
@@ -228,6 +230,20 @@ fun WinampSkinSettings() {
     LaunchedEffect(Unit) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
     // the built-in Classic skin (grey-blue body, green LCD, bevelled buttons) is always the first tile
     SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }
+}
+
+/** The playlist window when it is closed: its title bar alone, a tap opens the window again. */
+@Composable
+private fun PlaylistTitleBar(scaleDp: Float, onOpen: () -> Unit) {
+    val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: FontFamily.Monospace
+    Box(
+        Modifier.width((WINAMP_W * scaleDp).dp).height((14 * scaleDp).dp).border(1.dp, Color(0xFF5A6070))
+            .background(Brush.verticalGradient(listOf(Color(0xFF8A93A8), Color(0xFF3E4556), Color(0xFF8A93A8))))
+            .clickable(onClick = onOpen),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(tr("WINAMP PLAYLIST", "WINAMP ÇALMA LİSTESİ"), color = Color(0xFFE8ECF5), fontSize = (10 * scaleDp).sp, fontFamily = pixel, maxLines = 1)
+    }
 }
 
 /** A Winamp-style window frame: a grey bevelled title bar with the title in the pixel font, and a dark body. */
