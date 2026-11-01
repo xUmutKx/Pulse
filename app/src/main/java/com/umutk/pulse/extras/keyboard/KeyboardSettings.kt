@@ -179,6 +179,14 @@ fun KeyboardSettings(back: () -> Unit) {
             Switch(tr("Direction keys", "Yön tuşları"), tr("Nine big keys: drag a key towards a character to type it", "Dokunun veya bir karaktere doğru kaydırın: dokuz büyük tuş"), KeyboardPrefs.dirLayout) { KeyboardPrefs.dirLayout = it; save() }
             Switch(tr("Extra button", "Ek tuş"), tr("A compact bottom row with a Shift key at the left", "Solda Shift tuşu olan, daha sıkışık alt satır"), KeyboardPrefs.bottomShift) { KeyboardPrefs.bottomShift = it; save() }
             Switch(tr("Floating keyboard", "Yüzen klavye"), tr("A keyboard you move anywhere on the screen by the handle on top", "Üstteki tutamakla ekranın her yerine taşınan klavye"), KeyboardPrefs.floating) { KeyboardPrefs.floating = it; save() }
+            // the accessibility keyboard: over any app, switched on here; turning it on sends the phone to its accessibility settings when Pulse is not on there yet
+            val accCtx = LocalContext.current
+            var accOn by remember { mutableStateOf(AccessKeyboard.on(accCtx)) }
+            Switch(tr("Floating keyboard (accessibility)", "Yüzen klavye (erişilebilirlik)"), tr("Over any app where you type. Pulse's accessibility keyboard must be on in the accessibility settings", "Yazdığınız her uygulamanın üstünde. Erişilebilirlik ayarlarında Pulse klavyesi açık olmalı"), accOn) {
+                accOn = it
+                AccessKeyboard.setOn(accCtx, it)
+                if (it && !AccessKeyboard.serviceEnabled(accCtx)) accCtx.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
             Switch(tr("Large key text", "Büyük tuş yazısı"), "", KeyboardPrefs.largeText) { KeyboardPrefs.largeText = it; save() }
             Switch(tr("Key pop-ups", "Tuş balonları"), "", KeyboardPrefs.keyPopups) { KeyboardPrefs.keyPopups = it; save() }
             Switch(tr("Long-press symbols", "Uzun basınca semboller"), tr("Accents and digits", "Aksanlar ve rakamlar"), KeyboardPrefs.longPressSymbols) { KeyboardPrefs.longPressSymbols = it; save() }
