@@ -180,8 +180,8 @@ fun WinampScreen(
         // the SET button (pixel, with a gear) opens the music player settings directly; the old background menu is gone
         val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: FontFamily.Monospace
         Row(Modifier.align(Alignment.TopEnd).padding(8.dp).height(22.dp).background(Color(0xFF3A3F4B)).border(1.dp, Color(0xFF1E2028)).clickable { onSettings() }.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Settings, null, tint = Color(0xFF00FF66), modifier = Modifier.size(14.dp))
-            Text(" SET", color = Color(0xFF00FF66), fontSize = 13.sp, fontFamily = pixel, maxLines = 1)
+            // a gear, not the word: it opens the music player settings
+            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Settings, tr("Player settings", "Oynatıcı ayarları"), tint = Color(0xFF00FF66), modifier = Modifier.size(16.dp))
         }
     }
 }
