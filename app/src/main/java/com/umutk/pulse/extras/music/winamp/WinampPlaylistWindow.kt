@@ -42,6 +42,7 @@ import com.umutk.pulse.tr
 private const val Z_CLOSE = 1
 private const val Z_ADD = 2
 private const val Z_REM = 3
+private const val Z_OPTS = 4
 
 /**
  * Playlist window, 275 skin pixels wide, framed with the pieces of pledit.bmp and listed in the colours of
@@ -61,6 +62,8 @@ fun WinampPlaylistWindow(
     scaleDp: Float = 0f,
     onAdd: () -> Unit = {},
     onRemove: (Int) -> Unit = {},
+    // LIST OPTS: opens the music player settings
+    onOptions: () -> Unit = {},
 ) {
     val dpPer = if (scaleDp > 0f) scaleDp else scale.toFloat()
     val sc = with(LocalDensity.current) { dpPer.dp.toPx() }
@@ -73,6 +76,7 @@ fun WinampPlaylistWindow(
             Zone(Z_CLOSE, 250f, 0f, 25f, 20f, padX = 4f), // no padY: the list rows sit on top of the window below it
             Zone(Z_ADD, 11f, bottom + 9f, 25f, 18f, padY = 6f, padX = 4f),
             Zone(Z_REM, 40f, bottom + 9f, 25f, 18f, padY = 6f, padX = 4f),
+            Zone(Z_OPTS, 228f, bottom + 9f, 25f, 18f, padY = 6f, padX = 4f),
         )
     }
     Box(modifier.size((WINAMP_W * dpPer).dp, (heightSkin * dpPer).dp)) {
@@ -82,6 +86,7 @@ fun WinampPlaylistWindow(
                     Z_CLOSE -> onClose()
                     Z_ADD -> onAdd()
                     Z_REM -> if (current in tracks.indices) onRemove(current)
+                    Z_OPTS -> onOptions()
                 }
             }.skinActions(
                 tr("Playlist", "Çalma listesi"),
