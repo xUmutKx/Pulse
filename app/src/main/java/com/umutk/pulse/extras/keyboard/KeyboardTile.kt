@@ -63,7 +63,10 @@ class KeyboardFloatActivity : Activity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         current = this
+        // only the keyboard shows: the window is 1 pixel, transparent, with no dimming behind it, and touches outside it reach the app
         window.setLayout(1, 1)
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT))
+        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
         window.addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL)
         val field = EditText(this).apply { alpha = 0f; isFocusableInTouchMode = true }
         setContentView(field)
