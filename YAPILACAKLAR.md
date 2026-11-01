@@ -1883,3 +1883,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.320 derlenmedi: Keyboard: two e-mail suggestions share the whole bar (nothing empty on the right); search-filter fields (YouTube Music search) get word suggestions
 - 1.0.321 derlenmedi: Winamp player: background choice (black, the track's cover, or the skin) filling the whole screen, set from a settings button at the top right
 - 1.0.322 derlenmedi: Winamp look: the top bar has pixel buttons (VOL, RADIO, LIKE, SET) with a raised bevel; the back arrow is gone there
+- 1.0.323 derlenmedi: Winamp screen: spectrum analyzer and album cover windows; a full layout (two columns on wide screens) and an analyzer switch in the settings button

@@ -28,6 +28,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.size
@@ -106,6 +110,8 @@ fun WinampScreen(
     // the background behind the windows: black, the playing track's cover, or the skin, filling the whole screen
     var bgMode by remember { mutableStateOf(prefs.getString("bg", "black") ?: "black") }
     var bgOpen by remember { mutableStateOf(false) }
+    var fullLayout by remember { mutableStateOf(prefs.getBoolean("full", false)) }
+    var showSpec by remember { mutableStateOf(prefs.getBoolean("spec", true)) }
     val art = com.umutk.pulse.extras.music.rememberTrackArt(st.current)
     var showPl by remember { mutableStateOf(true) }
     var showEq by remember { mutableStateOf(false) }
@@ -122,7 +128,10 @@ fun WinampScreen(
         if (bgImg != null) Image(bgImg, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alpha = .35f)
         // windows fill the width inside an 8 dp gutter on each side
         val s = ((maxWidth.value - 16f) / WINAMP_W).coerceIn(1f, 3f)
-        Column(Modifier.fillMaxSize().padding(horizontal = 8.dp).verticalScroll(rememberScrollState())) {
+        // the full layout: two columns side by side when the screen is wide enough (player, EQ and list left; analyzer and cover right)
+        val fullWide = fullLayout && maxWidth.value >= WINAMP_W * 2f + 24f
+        val sEff = if (fullWide) ((maxWidth.value - 24f) / 2f / WINAMP_W).coerceIn(1f, 3f) else s
+        val mainStack: @Composable () -> Unit = {
             WinampClassic(
                 skin = skin, track = st.current, playing = st.isPlaying, positionMs = pos, durationMs = dur,
                 levels = levels, volume = volume, wave = wave, scope = visScope,
@@ -134,7 +143,7 @@ fun WinampScreen(
                 onTogglePlaylist = { showPl = !showPl },
                 lyricsOn = lyricsOn, onLyrics = { lyricsOn = !lyricsOn },
                 onToggleEq = { showEq = !showEq; bands = eq.bandLevels },
-                scaleDp = s, shuffle = shuffle, repeat = repeat, eqOn = showEq, plOn = showPl, shade = shade,
+                scaleDp = sEff, shuffle = shuffle, repeat = repeat, eqOn = showEq, plOn = showPl, shade = shade,
                 onShuffle = { shuffle = !shuffle; engine.player.shuffleModeEnabled = shuffle },
                 onRepeat = {
                     repeat = !repeat
@@ -142,19 +151,30 @@ fun WinampScreen(
                 },
                 onShade = { shade = !shade },
             )
-            if (lyricsOn) WinampLyricsPane(skin, st.current, pos, { engine.seekTo(it) }, s)
+            if (lyricsOn) WinampLyricsPane(skin, st.current, pos, { engine.seekTo(it) }, sEff)
             if (showEq) WinampEqWindow(
                 skin = skin, enabled = eqEnabled, bandHz = eq.centerFrequenciesHz, range = eq.levelRange, levels = bands,
                 presets = eq.presetNames,
                 onEnabled = { eqEnabled = it; eq.setEnabled(it) },
                 onBand = { b, mb -> eq.setBandLevel(b, mb); bands = eq.bandLevels },
                 onPreset = { eq.usePreset(it); bands = eq.bandLevels },
-                onClose = { showEq = false }, scaleDp = s,
+                onClose = { showEq = false }, scaleDp = sEff,
             )
             if (showPl) WinampPlaylistWindow(
-                skin, st.queue, st.index, onPick = engine::playAt, onClose = { showPl = false }, scaleDp = s,
+                skin, st.queue, st.index, onPick = engine::playAt, onClose = { showPl = false }, scaleDp = sEff,
                 onAdd = onAdd, onRemove = { engine.removeFromQueue(it) },
             )
+        }
+        val sideWins: @Composable () -> Unit = {
+            if (showSpec) WinampSpectrum(levels, sEff)
+            WinampArt(art, sEff)
+        }
+        if (fullWide) Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { mainStack() }
+            Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) { sideWins() }
+        } else Column(Modifier.fillMaxSize().padding(horizontal = 8.dp).verticalScroll(rememberScrollState())) {
+            mainStack()
+            sideWins()
         }
         // the setting: the background choice opens from this button at the top right
         Row(Modifier.align(Alignment.TopEnd).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -163,6 +183,16 @@ fun WinampScreen(
                     modifier = Modifier.padding(horizontal = 4.dp).clip(RoundedCornerShape(8.dp))
                         .background(if (bgMode == k) Color(0x80FFFFFF) else Color(0x40000000))
                         .clickable { bgMode = k; prefs.edit().putString("bg", k).apply() }.padding(horizontal = 8.dp, vertical = 4.dp))
+            }
+            if (bgOpen) listOf("full" to tr("Full", "Tam"), "spec" to tr("Analyzer", "Analizör")).forEach { (k, label) ->
+                val on = if (k == "full") fullLayout else showSpec
+                Text(label, color = Color.White, fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp).clip(RoundedCornerShape(8.dp))
+                        .background(if (on) Color(0x80FFFFFF) else Color(0x40000000))
+                        .clickable {
+                            if (k == "full") { fullLayout = !fullLayout; prefs.edit().putBoolean("full", fullLayout).apply() }
+                            else { showSpec = !showSpec; prefs.edit().putBoolean("spec", showSpec).apply() }
+                        }.padding(horizontal = 8.dp, vertical = 4.dp))
             }
             Box(Modifier.size(32.dp).clip(CircleShape).background(Color(0x40000000)).clickable { bgOpen = !bgOpen }, contentAlignment = Alignment.Center) {
                 Icon(Icons.Rounded.Settings, tr("Background", "Arka plan"), tint = Color.White, modifier = Modifier.size(18.dp))
@@ -219,4 +249,42 @@ fun WinampSkinSettings() {
     LaunchedEffect(Unit) { skins = withContext(Dispatchers.IO) { installedSkins(ctx, turkish) } }
     // the built-in Classic skin (grey-blue body, green LCD, bevelled buttons) is always the first tile
     SkinStrip(skins, chosen) { chosen = it; prefs.edit().putString("skin", it).apply() }
+}
+
+/** A Winamp-style window frame: a grey bevelled title bar with the title in the pixel font, and a dark body. */
+@Composable
+private fun WinampPanel(title: String, scaleDp: Float, content: @Composable () -> Unit) {
+    val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: androidx.compose.ui.text.font.FontFamily.Monospace
+    Column(Modifier.width((WINAMP_W * scaleDp).dp).border(1.dp, Color(0xFF5A6070))) {
+        Box(Modifier.fillMaxWidth().height((14 * scaleDp).dp).background(Brush.verticalGradient(listOf(Color(0xFF8A93A8), Color(0xFF3E4556), Color(0xFF8A93A8)))), contentAlignment = Alignment.Center) {
+            Text(title, color = Color(0xFFE8ECF5), fontSize = (10 * scaleDp).sp, fontFamily = pixel, maxLines = 1)
+        }
+        Box(Modifier.fillMaxWidth().background(Color(0xFF0C0E13)).padding((4 * scaleDp).dp)) { content() }
+    }
+}
+
+/** The spectrum analyzer: one bar per band, green rising to yellow and red at the top. */
+@Composable
+private fun WinampSpectrum(levels: List<Float>, scaleDp: Float) {
+    WinampPanel(tr("SPECTRUM ANALYZER", "SPEKTRUM ANALİZÖR"), scaleDp) {
+        Canvas(Modifier.fillMaxWidth().height((100 * scaleDp).dp)) {
+            val n = levels.size.coerceAtLeast(1)
+            val bw = size.width / n
+            levels.forEachIndexed { i, v ->
+                val h = size.height * v.coerceIn(0f, 1f)
+                drawRect(Brush.verticalGradient(listOf(Color.Red, Color.Yellow, Color(0xFF00FF40)), startY = 0f, endY = size.height),
+                    topLeft = Offset(i * bw + 1f, size.height - h), size = Size((bw - 2f).coerceAtLeast(1f), h))
+            }
+        }
+    }
+}
+
+/** The album cover of the track playing, fitted in its window (a black square when there is none). */
+@Composable
+private fun WinampArt(art: ImageBitmap?, scaleDp: Float) {
+    WinampPanel(tr("ALBUM ART", "ALBÜM KAPAĞI"), scaleDp) {
+        Box(Modifier.fillMaxWidth().height((100 * scaleDp).dp), contentAlignment = Alignment.Center) {
+            if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
+        }
+    }
 }
