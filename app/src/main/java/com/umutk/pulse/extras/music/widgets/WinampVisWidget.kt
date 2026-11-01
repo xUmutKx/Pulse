@@ -18,6 +18,11 @@ import android.widget.RemoteViews
 import com.umutk.pulse.R
 import com.umutk.pulse.extras.music.MusicLevels
 import com.umutk.pulse.extras.music.MusicPlayerEngine
+import com.umutk.pulse.extras.music.skin.DefaultVis
+import com.umutk.pulse.extras.music.skin.installedSkins
+import com.umutk.pulse.extras.music.skin.loadWinampSkin
+import androidx.compose.ui.graphics.toArgb
+import kotlin.math.roundToInt
 
 /**
  * Winamp's visualizer window as a home-screen widget: the title row over 19 bars drawn in the classic
@@ -52,11 +57,7 @@ class WinampVisWidget : AppWidgetProvider() {
         private const val AREA_BOTTOM = 122f
         private const val SIDE = 12f
 
-        private const val BG = 0xFF0B0B0B.toInt()
-        private const val GREEN = 0xFF1EE81E.toInt()
-        private const val YELLOW = 0xFFF5E21C.toInt()
-        private const val RED = 0xFFE81E1E.toInt()
-        private const val TEXT = 0xFF1EE81E.toInt()
+        private const val BG_DEFAULT = 0xFF0B0B0B.toInt()
 
         /** A 300 ms redraw is smooth enough for the bars and keeps the widget's bitmap updates light. */
         private val loop = LiveLoop(300) { refresh(it) }
@@ -74,7 +75,7 @@ class WinampVisWidget : AppWidgetProvider() {
             val e = MusicPlayerEngine.ready(c)
             val st = e.state.value
             val title = st.current?.let { it.title ?: it.path.substringAfterLast('/') } ?: ""
-            val bmp = render(MusicLevels.snapshot(), title, bw, bh)
+            val bmp = render(MusicLevels.snapshot(), title, bw, bh, skinVis(c))
             return RemoteViews(c.packageName, R.layout.widget_winamp_vis).apply {
                 setImageViewBitmap(R.id.wv_img, bmp)
                 setOnClickPendingIntent(R.id.wv_img, pi(c, A_TOGGLE))
@@ -100,15 +101,15 @@ class WinampVisWidget : AppWidgetProvider() {
          * The visualizer window at the box size, letterboxed on black. [levels] are bar heights 0..1 (any count; resampled
          * to 19 bars). The picker passes a sample curve.
          */
-        fun render(levels: List<Float>, title: String, bw: Int, bh: Int): Bitmap {
+        fun render(levels: List<Float>, title: String, bw: Int, bh: Int, vis: List<Int> = skinVisDefault()): Bitmap {
             val out = Bitmap.createBitmap(bw, bh, Bitmap.Config.ARGB_8888)
             val cv = Canvas(out)
             // the window fills the whole widget edge to edge (stretched on its two axes), no black band around it
             cv.scale(bw / W.toFloat(), bh / H.toFloat())
             val p = Paint(Paint.ANTI_ALIAS_FLAG)
-            p.color = BG; cv.drawRect(0f, 0f, W.toFloat(), H.toFloat(), p)
+            p.color = vis[0]; cv.drawRect(0f, 0f, W.toFloat(), H.toFloat(), p)
 
-            val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = TEXT; textSize = 12f; typeface = Typeface.DEFAULT_BOLD }
+            val tp = TextPaint(Paint.ANTI_ALIAS_FLAG).apply { color = vis[18]; textSize = 12f; typeface = Typeface.DEFAULT_BOLD }
             cv.drawText(TextUtils.ellipsize(title, tp, W - 2 * SIDE, TextUtils.TruncateAt.END).toString(), SIDE, 14f, tp)
 
             val area = AREA_BOTTOM - AREA_TOP
@@ -121,17 +122,30 @@ class WinampVisWidget : AppWidgetProvider() {
                 val x = SIDE + i * (barW + gap)
                 for (k in 0 until lit) {
                     val frac = (k + 1f) / segs
-                    p.color = when {
-                        frac > .85f -> RED
-                        frac > .6f -> YELLOW
-                        else -> GREEN
-                    }
+                    // the skin's own bar colours: viscolor rows 2 (top, hottest) to 17 (bottom), the segment's height picks the row
+                    p.color = vis[(2 + ((1f - frac) * 15f).roundToInt()).coerceIn(2, 17)]
                     val top = AREA_BOTTOM - (k + 1) * (SEG_H + SEG_GAP) + SEG_GAP
                     cv.drawRect(x, top, x + barW, top + SEG_H, p)
                 }
             }
             return out
         }
+
+        private var visName = ""
+        private var visCache: List<Int> = emptyList()
+
+        /** The bar colours of the Winamp skin picked in the Winamp screen (read once per skin, not on every redraw). */
+        fun skinVis(c: Context): List<Int> {
+            val name = c.getSharedPreferences("winamp_look", Context.MODE_PRIVATE).getString("skin", "")?.ifEmpty { "base-2.91.wsz" } ?: "base-2.91.wsz"
+            if (name == visName && visCache.isNotEmpty()) return visCache
+            val file = runCatching { installedSkins(c).firstOrNull { it.file.name == name }?.file }.getOrNull()
+            val colours = file?.let { runCatching { loadWinampSkin(it) }.getOrNull() }?.vis?.map { it.toArgb() } ?: skinVisDefault()
+            visName = name; visCache = colours
+            return colours
+        }
+
+        /** The classic base skin's bars when no skin can be read: the green, yellow and red of the first Winamp widgets. */
+        fun skinVisDefault(): List<Int> = DefaultVis.map { it.toArgb() }
 
         private fun levelAt(levels: List<Float>, bar: Int): Float {
             if (levels.isEmpty()) return 0f

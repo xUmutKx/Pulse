@@ -530,6 +530,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     fun go(p: String) { ExScroll.live?.let { ExScroll.memo[here] = it.value }; freq = exBump(ctx, p); arcFile = null; arcCwd = ""; arcSel = emptySet(); here = p; sel = emptySet(); query = ""; recentView = false; searchOpen = false }
     // Browse pressed again in the bottom bar: back to the top folder from wherever we went into
     // the three lines on the home page open this drawer (the Browse tab's side list)
+    // a folder picked in the home page's folder list opens here
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.pendingDir) {
+        com.umutk.pulse.files.home.FilesHomeNav.pendingDir?.let { p -> resultsFor = null; go(p); com.umutk.pulse.files.home.FilesHomeNav.pendingDir = null }
+    }
     LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openDrawer) {
         if (com.umutk.pulse.files.home.FilesHomeNav.openDrawer) { drawer = true; com.umutk.pulse.files.home.FilesHomeNav.openDrawer = false }
     }
