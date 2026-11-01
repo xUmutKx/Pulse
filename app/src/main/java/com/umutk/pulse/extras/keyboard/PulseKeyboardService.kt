@@ -118,7 +118,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         } else {
             val t = item.coerceToText(this)?.toString()?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
-            if (!t.isNullOrEmpty()) { quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            // the newest copy wins the slot: a copied text takes it from a screenshot that is still shown
+            if (!t.isNullOrEmpty()) { shotItem = null; st.shotThumb = null; quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
@@ -285,7 +286,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val items = withContext(Dispatchers.IO) { ClipStore.addImage(this@PulseKeyboardService, uri) }
         st.clipItems = items
         val item = items.filter { it.image != null }.maxByOrNull { it.time } ?: return
-        shotItem = item; shotAt = SystemClock.uptimeMillis()
+        // the newest copy wins the slot: a screenshot takes it from a copied text
+        quickClip = null; shotItem = item; shotAt = SystemClock.uptimeMillis()
         st.shotThumb = withContext(Dispatchers.IO) { runCatching { android.graphics.BitmapFactory.decodeFile(item.image, android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 })?.asImageBitmap() }.getOrNull() }
         updateSuggestions()
     }
