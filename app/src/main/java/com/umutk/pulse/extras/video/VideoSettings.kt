@@ -150,6 +150,7 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
             val onOff = listOf(tr("Off", "Kapalı"), tr("On", "Açık"))
             if (cat == "skin") FlatSection(tr("Skin", "Kılıf")) { SkinPicker(prefs.skin) { prefs.skin = it; changed() } }
 
+            if (cat == "buttons") FlatSection(tr("Buttons on the player", "Oynatıcıdaki düğmeler")) { ButtonsEditor(prefs) { changed() } }
             if (cat == "player") FlatSection(tr("Player", "Oynatıcı")) {
                 Sw(tr("Resume position", "Kaldığı yerden"), { prefs.resumeOn }, { prefs.resumeOn = it }, done)
                 Sw(tr("Play next", "Sonrakini oynat"), { prefs.autoPlay }, { prefs.autoPlay = it }, done)
@@ -300,6 +301,7 @@ private class VideoCat(val key: String, val icon: String, val en: String, val tr
 private val VIDEO_CATS = listOf(
     VideoCat("skin", "palette", "Skin", "Kılıf"),
     VideoCat("player", "video", "Player", "Oynatıcı"),
+    VideoCat("buttons", "video", "Buttons", "Düğmeler"),
     VideoCat("gestures", "touch", "Gestures", "Hareketler"),
     VideoCat("audio", "volume", "Audio", "Ses"),
     VideoCat("subtitles", "language", "Subtitles", "Altyazı"),
