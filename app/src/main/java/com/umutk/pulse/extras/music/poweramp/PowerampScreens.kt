@@ -393,11 +393,10 @@ fun NowPlayingScreen(
                                 .clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp),
                         )
                         // artist and album only; no folder name here, so a blank tag shows no chip rather than "Audio"
-                        val sub = listOfNotNull(track.shownArtist(), track.album?.takeIf { it.isNotBlank() }).joinToString(" - ")
-                        if (sub.isNotEmpty()) Text(
-                            sub,
-                            color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp)
+                        val artistLine = track.shownArtist()
+                        val albumLine = track.album?.takeIf { it.isNotBlank() }
+                        if (artistLine.isNotEmpty() || albumLine != null) Row(
+                            Modifier.clip(chipShape).background(chipFill).padding(horizontal = 16.dp, vertical = 6.dp)
                                 .pointerInput(Unit) {
                                     detectTapGestures(onLongPress = {
                                         when (PowerampLineAction.longPress(ctx)) {
@@ -408,7 +407,19 @@ fun NowPlayingScreen(
                                         }
                                     })
                                 },
-                        )
+                        ) {
+                            // the artist opens that artist's page in the library; the album is only shown
+                            if (artistLine.isNotEmpty()) Text(
+                                artistLine,
+                                color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false).clickable { com.umutk.pulse.extras.music.MusicNav.artist = artistLine },
+                            )
+                            if (albumLine != null) Text(
+                                if (artistLine.isNotEmpty()) " - $albumLine" else albumLine,
+                                color = style.textDim, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                        }
                     }
                 }
             }

@@ -22,6 +22,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.VectorConverter
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.runtime.rememberCoroutineScope
 import kotlinx.coroutines.launch

@@ -185,6 +185,10 @@ fun LibraryScreen(
     var sortBy by remember { mutableIntStateOf(0) } // 0 title, 1 folder, 2 library order, 3 year, 4 stars
     var reversed by remember { mutableStateOf(false) }   // the other direction of the picked order
     var node by remember { mutableStateOf<Lib>(Lib.Root) }
+    // the player's artist line opens that artist's page here (the group of the artists list)
+    LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.artist) {
+        com.umutk.pulse.extras.music.MusicNav.artist?.let { node = Lib.Group(1, it); com.umutk.pulse.extras.music.MusicNav.artist = null }
+    }
     val fg = style.onBackdrop
     // the tree starts at the longest directory shared by every file
     val root = remember(tracks) {
@@ -242,7 +246,7 @@ fun LibraryScreen(
         val catKey: Any? = when (val n = node) {
             is Lib.Cat -> n.kind; is Lib.Group -> n.kind; Lib.Folders, is Lib.Folder -> "folders"; is Lib.Tree -> "tree"; else -> null
         }
-        if (node == Lib.Root || catKey != null) CatChips(catKey, root, style) { node = it }
+        if (node == Lib.Root || (catKey != null && node !is Lib.Group)) CatChips(catKey, root, style) { node = it }
         when (val n = node) {
             Lib.Root -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
                 val cats = listOf(
@@ -275,7 +279,10 @@ fun LibraryScreen(
                     itemsIndexed(groups) { _, (name, list) -> CatRow(catIcons[n.kind], Color(0xFF6E8BE8), name, style, count = list.size, art = list.firstOrNull(), artist = if (n.kind == 1) name else null) { node = Lib.Group(n.kind, name) } }
                 }
             }
-            is Lib.Group -> SongList(tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }, current, style, onPlay, onPlayTracks)
+            is Lib.Group -> {
+                val items = tracks.withIndex().filter { groupKey(it.value, n.kind) == n.key }
+                SongList(items, current, style, onPlay, onPlayTracks, top = { items.firstOrNull()?.value?.let { BigCover(it, style) } })
+            }
             Lib.Songs -> {
                 val stars = remember(tracks) { com.umutk.pulse.extras.music.stats.MusicStats.ratings(ctx) }
                 val items = remember(tracks, sortBy, reversed) {
@@ -389,7 +396,7 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
 
 /** A list of songs: icons on top play it in its order or shuffled; a tapped song starts this list from that song. */
 @Composable
-private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}) {
+private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}, top: (@Composable () -> Unit)? = null) {
     val songs = remember(items) { items.map { it.value } }
     val appCtx = androidx.compose.ui.platform.LocalContext.current.applicationContext
     val starMap = stars ?: remember { com.umutk.pulse.extras.music.stats.MusicStats.ratings(appCtx) }
@@ -417,12 +424,14 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
         }
     }
     if (cols == 1) LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
+        top?.let { p -> item { p() } }
         item { header() }
         itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }, trailing = {
             Box(Modifier.padding(end = 8.dp)) { stars5(t, 13.dp) }
         }) }
     } else androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Fixed(cols), Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 8.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        top?.let { p -> item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { p() } }
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { header() }
         gridItemsIndexed(items) { pos, (_, t) ->
             val art = rememberTrackArt(t)
@@ -435,6 +444,16 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
                 stars5(t, 11.dp)
             }
         }
+    }
+}
+
+/** The cover of an artist or album page: a square as wide as the screen, at the top. */
+@Composable
+private fun BigCover(t: Track, style: PowerampStyle) {
+    val art = rememberTrackArt(t)
+    Box(Modifier.fillMaxWidth().aspectRatio(1f).background(style.chip), contentAlignment = Alignment.Center) {
+        if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(64.dp))
     }
 }
 
