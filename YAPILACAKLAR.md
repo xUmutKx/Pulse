@@ -1866,3 +1866,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.303 derlenmedi: APK info dialog (Material): Cancel, Browse and Install stay on one line
 - 1.0.303 derlenmedi: Device picture: drawn as a Samsung S23 from the back (flat aluminium frame, camera island top left), not an iPhone
 - 1.0.304 derlenmedi: Download manager: a magnet link or a .torrent file opens in the torrent app on the phone (qBittorrent and similar); without one, the page says which to install
+- 1.0.305 derlenmedi: Magnet and .torrent links from the system's open-with menu open Pulse's download page and go to a torrent app on the phone (Pulse is left out of that choice)
