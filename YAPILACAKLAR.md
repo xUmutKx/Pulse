@@ -1863,3 +1863,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.300 derlenmedi: Excel viewer on a dark page: merged cells take the page ground (no white box), and every cell's text gets black or white when it would sit too close to its own background
 - 1.0.301 derlenmedi: Keyboard e-mail suggestions: up to eight addresses, most used first; one or two sit centred on the bar, more scroll to the right
 - 1.0.302 derlenmedi: Office: Save a copy asks where the copy goes (the document stays open); Save as is unchanged
+- 1.0.303 derlenmedi: APK info dialog (Material): Cancel, Browse and Install stay on one line
+- 1.0.303 derlenmedi: Device picture: drawn as a Samsung S23 from the back (flat aluminium frame, camera island top left), not an iPhone

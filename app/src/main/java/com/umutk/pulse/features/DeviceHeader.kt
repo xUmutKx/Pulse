@@ -54,25 +54,26 @@ fun DeviceHeader() {
         if (photo != null) {
             Image(photo, null, Modifier.height(170.dp))
         } else {
-            Canvas(Modifier.width(96.dp).height(168.dp)) {
+            // a Samsung Galaxy S23 seen from the back: a thin flat aluminium frame, a glass back, the camera island at the top left
+            Canvas(Modifier.width(84.dp).height(176.dp)) {
                 val w = size.width
                 val h = size.height
-                // the body: a flat frame with the rounded corners of the phone
-                drawRoundRect(color = Color(0xFF3A3A3C), size = size, cornerRadius = CornerRadius(w * .14f, w * .14f))
-                drawRoundRect(color = Color(0xFF8E8E93), topLeft = Offset(w * .03f, h * .03f), size = Size(w * .94f, h * .94f), cornerRadius = CornerRadius(w * .12f, w * .12f))
-                // the screen, with a thin black bezel
-                drawRoundRect(color = Color.Black, topLeft = Offset(w * .06f, h * .055f), size = Size(w * .88f, h * .89f), cornerRadius = CornerRadius(w * .1f, w * .1f))
-                drawRoundRect(color = Color(0xFF16181C), topLeft = Offset(w * .085f, h * .08f), size = Size(w * .83f, h * .84f), cornerRadius = CornerRadius(w * .07f, w * .07f))
-                // the camera block at the top left: a square with three lenses and the flash
-                val cam = Size(w * .42f, h * .2f)
-                drawRoundRect(color = Color(0xFF0B0B0D), topLeft = Offset(w * .13f, h * .1f), size = cam, cornerRadius = CornerRadius(w * .07f, w * .07f))
-                val lens = w * .065f
-                val lx = w * .13f + cam.width * .3f
-                val ly = h * .1f + cam.height * .36f
-                drawCircle(color = Color(0xFF2B2F36), radius = lens, center = Offset(lx, ly))
-                drawCircle(color = Color(0xFF2B2F36), radius = lens, center = Offset(lx + cam.width * .4f, ly))
-                drawCircle(color = Color(0xFF2B2F36), radius = lens * .8f, center = Offset(lx + cam.width * .2f, ly + cam.height * .42f))
-                drawCircle(color = Color(0xFFE8E2C8), radius = w * .02f, center = Offset(w * .13f + cam.width * .8f, h * .1f + cam.height * .24f))
+                // the aluminium frame: straight sides and small corners
+                drawRoundRect(color = Color(0xFF9EA3AD), size = size, cornerRadius = CornerRadius(w * .09f, w * .09f))
+                // the glass back, inside a thin edge
+                drawRoundRect(color = Color(0xFF1C1E24), topLeft = Offset(w * .035f, h * .03f), size = Size(w * .93f, h * .94f), cornerRadius = CornerRadius(w * .075f, w * .075f))
+                // the camera island: a square at the top left with a fine edge
+                val isl = Size(w * .46f, w * .46f)
+                val islTL = Offset(w * .1f, h * .075f)
+                drawRoundRect(color = Color(0xFF2A2D35), topLeft = Offset(islTL.x - 1.5f, islTL.y - 1.5f), size = Size(isl.width + 3f, isl.height + 3f), cornerRadius = CornerRadius(w * .1f, w * .1f))
+                drawRoundRect(color = Color(0xFF101216), topLeft = islTL, size = isl, cornerRadius = CornerRadius(w * .085f, w * .085f))
+                // three lenses in the island, the flash beside them
+                val lens = w * .085f
+                drawCircle(color = Color(0xFF30343D), radius = lens, center = Offset(islTL.x + isl.width * .3f, islTL.y + isl.height * .3f))
+                drawCircle(color = Color(0xFF0A0B0E), radius = lens * .62f, center = Offset(islTL.x + isl.width * .3f, islTL.y + isl.height * .3f))
+                drawCircle(color = Color(0xFF30343D), radius = lens * .8f, center = Offset(islTL.x + isl.width * .72f, islTL.y + isl.height * .3f))
+                drawCircle(color = Color(0xFF30343D), radius = lens * .8f, center = Offset(islTL.x + isl.width * .3f, islTL.y + isl.height * .72f))
+                drawCircle(color = Color(0xFFE9E3CC), radius = w * .03f, center = Offset(islTL.x + isl.width * .74f, islTL.y + isl.height * .74f))
             }
         }
         Text(phoneName(), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 6.dp))
