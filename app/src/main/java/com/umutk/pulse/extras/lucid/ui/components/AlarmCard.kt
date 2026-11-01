@@ -254,6 +254,13 @@ private fun reenableLabel(days: Set<Int>, hour: Int, minute: Int): String {
         target.add(Calendar.DAY_OF_YEAR, 1)
         guard++
     }
+    // the occurrence being turned off is the next one; the alarm comes back for the day after it (Sunday, Monday is off: Tuesday)
+    target.add(Calendar.DAY_OF_YEAR, 1)
+    guard = 0
+    while (guard < 8 && !days.contains(target.get(Calendar.DAY_OF_WEEK))) {
+        target.add(Calendar.DAY_OF_YEAR, 1)
+        guard++
+    }
     val tomorrow = (now.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
     val label = when {
         target.get(Calendar.YEAR) == now.get(Calendar.YEAR) &&
