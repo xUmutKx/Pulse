@@ -606,7 +606,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     }) { androidx.compose.material3.Icon(Icons.Outlined.Flip, null, Modifier.size(22.dp), tint = if (abA >= 0) sk.accent else fg) }
                     SkinBtn(sk, { dlg = "sleep" }) { PIcon("timer", if (sleepAt > 0 || sleepEnd) sk.accent else fg, 24.dp) }
                     SkinBtn(sk, { pipParams()?.let { pp -> runCatching { act?.enterPictureInPictureMode(pp) } } }) { androidx.compose.material3.Icon(Icons.Outlined.PictureInPictureAlt, null, Modifier.size(22.dp), tint = fg) }
-                    SkinBtn(sk, { dlg = "cast" }) { androidx.compose.material3.Icon(Icons.Outlined.Cast, null, Modifier.size(22.dp), tint = fg) }
                 }
             }
         }
