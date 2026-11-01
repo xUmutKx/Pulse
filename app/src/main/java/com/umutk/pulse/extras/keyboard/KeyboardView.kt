@@ -446,6 +446,8 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
                 else Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(scroll), horizontalArrangement = Arrangement.spacedBy(3.dp), verticalAlignment = Alignment.CenterVertically) { chips() }
                 if (!one) Box(Modifier.size(32.dp).clickable { sc.launch { scroll.animateScrollBy(260f) } }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.ChevronRight, null, tint = th.sub, modifier = Modifier.size(22.dp)) }
             }
+        } else if (st.emailBar) {
+            EmailChips(st, th, act)
         } else {
             Row(Modifier.weight(1f).fillMaxSize(), verticalAlignment = Alignment.CenterVertically) {
                 // long words get more of the bar; when three would not fit whole, the last one steps aside so no word is cut with dots
@@ -1451,5 +1453,21 @@ private fun VoicePanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
         Icon(Icons.Rounded.Mic, null, tint = if (st.listening) th.accent else th.sub, modifier = Modifier.size(56.dp))
         Spacer(Modifier.height(12.dp))
         Text(st.voiceText.ifEmpty { tr("Listening… tap to stop", "Dinliyor… durdurmak için dokun") }, color = th.text, fontSize = 18.sp, textAlign = TextAlign.Center, maxLines = 4, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/** The e-mail suggestions on the bar: the addresses used most, first. One or two sit in the middle; more scroll to the right. */
+@Composable
+private fun EmailChips(st: KbState, th: KbTheme, act: KbActions) {
+    val shown = st.slots.withIndex().filter { it.value.isNotEmpty() }
+    val chip: @Composable (Int, String) -> Unit = { i, s ->
+        Box(Modifier.clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 14.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+            Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+    }
+    if (shown.size <= 2) Row(Modifier.weight(1f).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
+        shown.forEach { (i, s) -> chip(i, s) }
+    } else Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        shown.forEach { (i, s) -> chip(i, s) }
     }
 }
