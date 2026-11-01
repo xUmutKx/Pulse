@@ -766,6 +766,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
                 val (txt, num) = xShow(book, ev, x, r, c)
                 if (txt.isEmpty()) return
                 tp.typeface = faces[(if (s.bold) 1 else 0) + (if (s.italic) 2 else 0)]; tp.color = if (s.color != 0) (if (dk && s.fill == 0 && Color(s.color).luminance() < .3f) OfficePrefs.pageFg else s.color) else if (hd && tb!!.look.head != 0) tb.look.headInk else if (dk && s.fill == 0) OfficePrefs.pageFg else Color.Black.toArgb()
+                tp.color = inkOn(tp.color, if (s.fill != 0) s.fill else if (OfficePrefs.darkPages) OfficePrefs.pageBgC.toArgb() else Color.White.toArgb())
                 tp.textSize = (13f * d * z * ((s.fsz.toFloatOrNull() ?: 11f) / 11f)).coerceIn(6f * d, 90f * d); tp.isUnderlineText = s.underline; tp.isStrikeThruText = s.strike
                 val base = tp.textSize * .35f
                 val w = tp.measureText(txt); val pad = 3f * d
@@ -804,7 +805,7 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
             for (m in sh.merges) {
                 if (m[0] > r1 || m[2] < r0 || m[1] > c1 || m[3] < c0) continue
                 val x0 = ox + colX[m[1].coerceAtMost(nCols)]; val x1 = ox + colX[(m[3] + 1).coerceAtMost(nCols)]; val y0 = oy + m[0] * rowH; val y1 = oy + (m[2] + 1) * rowH
-                fp.color = Color.White.toArgb(); n.drawRect(x0, y0, x1, y1, fp)
+                fp.color = if (OfficePrefs.darkPages) OfficePrefs.pageBgC.toArgb() else Color.White.toArgb(); n.drawRect(x0, y0, x1, y1, fp)
                 drawCell(sh.cells[xKey(m[0], m[1])], x0, y0, x1, y1, m[0], m[1], m[3])
                 fp.color = 0xFFD4D4D4.toInt(); fp.style = Paint.Style.STROKE; n.drawRect(x0, y0, x1, y1, fp); fp.style = Paint.Style.FILL
             }
@@ -852,4 +853,11 @@ private fun XGrid(st: XState, book: XBook, sh: XSheet, ev: XEval, t: OfTheme, ro
             }
         }
     }
+}
+
+/** The ink, or black / white when the ink would sit too close to its ground (white on white, black on black). */
+private fun inkOn(ink: Int, ground: Int): Int {
+    val a = Color(ink).luminance(); val b = Color(ground).luminance()
+    val hi = maxOf(a, b); val lo = minOf(a, b)
+    return if ((hi + .05f) / (lo + .05f) >= 3f) ink else if (b > .5f) Color.Black.toArgb() else Color.White.toArgb()
 }
