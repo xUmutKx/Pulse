@@ -46,6 +46,8 @@ object KeyboardDictionary {
 
     /** Names of people and places (Turkish): a Turkish ending on one of them takes its apostrophe (Adana'da, Pelin'den). */
     val properNouns = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
+    /** English first names and places (kbd/proper_en.txt): a typed one is written with its capital, as Turkish names are. */
+    val properNamesEn = java.util.Collections.newSetFromMap(ConcurrentHashMap<String, Boolean>())
 
     /** Names that are also ordinary words (Güzel = beautiful, İpek = silk): never capitalised or given an apostrophe by the keyboard. */
     val commonNames = setOf("mutlu", "zeki", "özgür", "adil", "onur", "hakkı", "sadık", "zafer", "duygu", "ömür", "hatun", "saygın", "güzel", "ipek")
@@ -53,6 +55,7 @@ object KeyboardDictionary {
     /** Reads the word list of [lang] (and the learned words once). Call from a background thread. */
     fun load(c: Context, code: String) {
         val lang = d(code)
+        if (lang == "en") runCatching { c.assets.open("kbd/proper_en.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) properNamesEn += it.trim().lowercase(Locale.ENGLISH) } } }
         if (lang == "tr") runCatching { c.assets.open("kbd/proper_tr.txt").bufferedReader().useLines { ls -> ls.forEach { if (it.isNotBlank()) it.trim().lowercase(Locale("tr", "TR")).let { n -> if (n !in commonNames) properNouns += n } } } }
         if (!userLoaded) loadUser(c)
         // a capital learned earlier for an ordinary word (Güzel) is dropped: the word is written as typed

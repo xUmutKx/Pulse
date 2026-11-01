@@ -512,6 +512,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
         if (lang.code == "tr" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(lang.locale).let { it in KeyboardDictionary.properNouns && it !in KeyboardDictionary.commonNames })
             out = typed.replaceFirstChar { it.titlecase(lang.locale) }
+        // an English first name or place typed in lower case is written with its capital (wendy -> Wendy, london -> London)
+        if (lang.code == "en" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(Locale.ENGLISH) in KeyboardDictionary.properNamesEn)
+            out = typed.replaceFirstChar { it.titlecase(Locale.ENGLISH) }
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
