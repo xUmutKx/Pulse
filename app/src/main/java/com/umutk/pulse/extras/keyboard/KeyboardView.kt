@@ -401,7 +401,7 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     val barHasContent = st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
     if (!barHasContent) { Box(Modifier.fillMaxWidth().height(0.dp)); return }
     Row(
-        Modifier.fillMaxWidth().height(44.dp).pointerInput(Unit) {
+        Modifier.fillMaxWidth().height(52.dp).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
             detectVerticalDragGestures(onDragEnd = { onRelease() }, onDragCancel = { onRelease() }) { change, dy -> change.consume(); onPull(dy) }
         },
