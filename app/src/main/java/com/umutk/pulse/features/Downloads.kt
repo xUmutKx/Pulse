@@ -294,7 +294,7 @@ object Downloads {
         app = c
         scope.launch {
             val dir = File(dirPath)
-            val name = if (isTorrent(url)) torrentName(url) else cleanName(Uri.parse(url).lastPathSegment) ?: "download"
+            val name = cleanName(Uri.parse(url).lastPathSegment) ?: "download"
             val t = try { DlTask(url, reserve(dir, name)) } catch (e: Exception) {
                 DlTask(url, File(dir, name)).apply { state.value = DlState.FAILED; error.value = "cannot write to ${dir.path}: ${e.message ?: e.javaClass.simpleName}" }
             }
@@ -337,17 +337,6 @@ object Downloads {
     }
 
     /** Stops a download (its partial file goes too) or removes a finished one together with its file. */
-    /** A magnet link, or a .torrent file (on the phone or on the web): the BitTorrent engine downloads it. */
-    fun isTorrent(url: String): Boolean = url.startsWith("magnet:", true) || url.substringBefore('?').endsWith(".torrent", true)
-
-    /** The name a torrent shows in the list: the magnet's display name, or the file's name. */
-    private fun torrentName(url: String): String =
-        if (url.startsWith("magnet:", true)) cleanName(Uri.parse(url).getQueryParameter("dn")) ?: "torrent"
-        else cleanName(Uri.parse(url).lastPathSegment) ?: "torrent.torrent"
-
-    /** The app context, for the work that needs the cache (torrent files). */
-    internal fun appContext(): Context? = app
-
     fun remove(t: DlTask) {
         t.cancelled = true
         tasks.update { it - t }
@@ -575,7 +564,6 @@ private fun open(url: String, range: String, ifRange: String? = null): HttpURLCo
  * for it without counting a try; it gives up after [RETRIES] failures in a row that brought no bytes.
  */
 private suspend fun DlTask.fetch() {
-    if (Downloads.isTorrent(url)) { torrentRun(); return }
     var tries = 0
     while (!cancelled && !paused) {
         val before = done.value
@@ -1162,48 +1150,3 @@ private fun looksLikeText(f: File): Boolean = runCatching {
         n > 0 && (0 until n).none { b[it] == 0.toByte() }
     }
 }.getOrDefault(false)
-
-/** The .torrent file of a torrent task: a web link is read into the cache first, a file:// link is read where it is. */
-private suspend fun DlTask.torrentFile(): java.io.File? {
-    if (url.startsWith("magnet:", true)) return null
-    val cache = java.io.File(Downloads.appContext()?.cacheDir ?: java.io.File(Downloads.dirPath), "torrents").apply { mkdirs() }
-    if (url.startsWith("http", true)) {
-        val f = java.io.File(cache, "${url.hashCode().toUInt()}.torrent")
-        java.net.URL(url).openStream().use { i -> f.outputStream().use { o -> i.copyTo(o) } }
-        return f
-    }
-    return java.io.File(Uri.parse(url).path ?: throw java.io.IOException("no torrent file"))
-}
-
-/** A magnet link or a .torrent file: the engine downloads it; the task follows the engine's progress until the torrent is whole, paused or removed. */
-private suspend fun DlTask.torrentRun() {
-    val dir = java.io.File(Downloads.dirPath).apply { mkdirs() }
-    try {
-        val file = withContext(Dispatchers.IO) { torrentFile() }
-        val hash = withContext(Dispatchers.IO) { TorrentEngine.start(url, file, dir) }
-        state.value = DlState.RUNNING
-        error.value = ""
-        while (!cancelled && !paused) {
-            withContext(Dispatchers.IO) { TorrentEngine.progress(hash) }?.let { (got, want, finished) ->
-                done.value = got
-                if (want > 0) total.value = want
-                if (finished) {
-                    state.value = DlState.DONE
-                    Downloads.persist()
-                    return
-                }
-            }
-            delay(1000)
-        }
-        // paused keeps the torrent in the engine (its pieces stay); removed takes it out and keeps the downloaded files
-        withContext(Dispatchers.IO) { if (cancelled) TorrentEngine.remove(hash, false) else TorrentEngine.pause(hash) }
-    } catch (e: CancellationException) {
-        throw e
-    } catch (e: Exception) {
-        if (!cancelled && !paused) {
-            error.value = e.message ?: e.javaClass.simpleName
-            state.value = DlState.FAILED
-            Downloads.persist()
-        }
-    }
-}
