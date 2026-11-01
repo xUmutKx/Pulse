@@ -344,7 +344,6 @@ fun AlarmEditSheet(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .nestedScroll(consumeVerticalFlingConnection)
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 20.dp),
                 // tighter gaps, so the editor's options fit the screen with less scrolling

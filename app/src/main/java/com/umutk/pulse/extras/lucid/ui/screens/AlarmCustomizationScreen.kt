@@ -916,7 +916,6 @@ fun AlarmCustomizationScreen(
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .nestedScroll(consumeVerticalFlingConnection)
                     .verticalScroll(rememberScrollState())
                     .padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
