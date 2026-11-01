@@ -268,8 +268,7 @@ class VideoPrefs(ctx: Context) {
     var showRecent by bool(g, "s_recent", true)
 
     // player
-    // "skin_v2": the Material skin is the default now; a skin picked before (under "skin") is not read again
-    var skin by str(g, "skin_v2", "material")
+    var skin by str(g, "skin", "next")
     var bg by bool(g, "bg", false)
     /** 0 fit, 1 stretch, 2 crop, 3 16:9, 4 4:3 */
     var aspect by int(g, "aspect", 0)
