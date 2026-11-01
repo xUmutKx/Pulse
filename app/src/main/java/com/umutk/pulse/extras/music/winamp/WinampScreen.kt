@@ -81,6 +81,7 @@ fun WinampScreen(
     modifier: Modifier = Modifier,
     onGetSkins: (() -> Unit)? = null,
     startLyrics: Boolean = false,
+    onSettings: () -> Unit = {},
 ) {
     val ctx = LocalContext.current
     val prefs = remember { ctx.getSharedPreferences("winamp_look", android.content.Context.MODE_PRIVATE) }
@@ -110,8 +111,6 @@ fun WinampScreen(
     var lyricsOn by remember { mutableStateOf(startLyrics) }
     // the background behind the windows: black, the playing track's cover, or the skin, filling the whole screen
     var bgMode by remember { mutableStateOf(prefs.getString("bg", "black") ?: "black") }
-    var bgOpen by remember { mutableStateOf(false) }
-    var fullLayout by remember { mutableStateOf(prefs.getBoolean("full", false)) }
     var showSpec by remember { mutableStateOf(prefs.getBoolean("spec", true)) }
     val art = com.umutk.pulse.extras.music.rememberTrackArt(st.current)
     var showPl by remember { mutableStateOf(true) }
@@ -178,29 +177,11 @@ fun WinampScreen(
             mainStack()
             sideWins()
         }
-        // the setting: the background choice opens from this button at the top right
-        Row(Modifier.align(Alignment.TopEnd).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-            if (bgOpen) listOf("black" to tr("Black", "Siyah"), "art" to tr("Cover", "Kapak"), "skin" to tr("Skin", "Skin")).forEach { (k, label) ->
-                Text(label, color = Color.White, fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp).clip(RoundedCornerShape(8.dp))
-                        .background(if (bgMode == k) Color(0x80FFFFFF) else Color(0x40000000))
-                        .clickable { bgMode = k; prefs.edit().putString("bg", k).apply() }.padding(horizontal = 8.dp, vertical = 4.dp))
-            }
-            if (bgOpen) listOf("full" to tr("Full", "Tam"), "spec" to tr("Analyzer", "Analizör")).forEach { (k, label) ->
-                val on = if (k == "full") fullLayout else showSpec
-                Text(label, color = Color.White, fontSize = 12.sp,
-                    modifier = Modifier.padding(horizontal = 4.dp).clip(RoundedCornerShape(8.dp))
-                        .background(if (on) Color(0x80FFFFFF) else Color(0x40000000))
-                        .clickable {
-                            if (k == "full") { fullLayout = !fullLayout; prefs.edit().putBoolean("full", fullLayout).apply() }
-                            else { showSpec = !showSpec; prefs.edit().putBoolean("spec", showSpec).apply() }
-                        }.padding(horizontal = 8.dp, vertical = 4.dp))
-            }
-            // a pixel SET button in the Winamp bevel style (no round gear)
-            val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: FontFamily.Monospace
-            Box(Modifier.height(22.dp).background(Color(0xFF3A3F4B)).border(1.dp, Color(0xFF1E2028)).clickable { bgOpen = !bgOpen }.padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                Text("SET", color = Color(0xFF00FF66), fontSize = 13.sp, fontFamily = pixel, maxLines = 1)
-            }
+        // the SET button (pixel, with a gear) opens the music player settings directly; the old background menu is gone
+        val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: FontFamily.Monospace
+        Row(Modifier.align(Alignment.TopEnd).padding(8.dp).height(22.dp).background(Color(0xFF3A3F4B)).border(1.dp, Color(0xFF1E2028)).clickable { onSettings() }.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Settings, null, tint = Color(0xFF00FF66), modifier = Modifier.size(14.dp))
+            Text(" SET", color = Color(0xFF00FF66), fontSize = 13.sp, fontFamily = pixel, maxLines = 1)
         }
     }
 }
