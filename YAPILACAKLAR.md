@@ -1862,3 +1862,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.299 derlenmedi: Alarm editor and alarm customisation: the scrolling part no longer swallows the scroll and the fling, so a swipe down carries on without lifting the finger
 - 1.0.300 derlenmedi: Excel viewer on a dark page: merged cells take the page ground (no white box), and every cell's text gets black or white when it would sit too close to its own background
 - 1.0.301 derlenmedi: Keyboard e-mail suggestions: up to eight addresses, most used first; one or two sit centred on the bar, more scroll to the right
+- 1.0.302 derlenmedi: Office: Save a copy asks where the copy goes (the document stays open); Save as is unchanged
