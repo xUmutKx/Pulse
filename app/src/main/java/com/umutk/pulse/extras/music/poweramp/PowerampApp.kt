@@ -87,6 +87,10 @@ fun PowerampApp(
     // the page the user was on last: a downward swipe on the cover goes back to it
     var lastTab by remember { mutableStateOf<PowerampTab?>(null) }
     LaunchedEffect(tab) { tab?.let { lastTab = it } }
+    // an artist asked from the player: the library page shows that artist
+    LaunchedEffect(com.umutk.pulse.extras.music.MusicNav.artist) {
+        if (com.umutk.pulse.extras.music.MusicNav.artist != null) tab = PowerampTab.LIBRARY
+    }
     var pos by remember { mutableIntStateOf(0) }
     var dur by remember { mutableIntStateOf(0) }
     var shuffle by remember { mutableStateOf(engine.player.shuffleModeEnabled) }

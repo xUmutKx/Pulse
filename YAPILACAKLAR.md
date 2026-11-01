@@ -1855,3 +1855,7 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.296 derlenmedi: Keyboard: a name typed in lower case (adana) takes its capital when the word ends
 - 1.0.297 derlenmedi: Alarm ringing screen: Dismiss stops the alarm only when dragged outward (a tap does nothing)
 - 1.0.297 derlenmedi: Alarm editor: the + (new group) and the Alert Options arrow are removed; Save and Cancel are pinned at the bottom, always on screen
+- 1.0.298 derlenmedi: Alarm ringing screen compile fix (the drag value's converter import)
+- 1.0.298 derlenmedi: Poweramp widget: the cover opens the music page directly
+- 1.0.298 derlenmedi: Player: the artist name opens that artist's page in the library; the album is shown after it
+- 1.0.298 derlenmedi: Library: the category bar is hidden on artist and album pages; the page starts with a square cover as wide as the screen, then Play and Shuffle, then the songs
