@@ -28,6 +28,17 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material3.Icon
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -92,6 +103,10 @@ fun WinampScreen(
     var visScope by remember { mutableStateOf(prefs.getBoolean("vis_scope", false)) }
 
     var lyricsOn by remember { mutableStateOf(false) }
+    // the background behind the windows: black, the playing track's cover, or the skin, filling the whole screen
+    var bgMode by remember { mutableStateOf(prefs.getString("bg", "black") ?: "black") }
+    var bgOpen by remember { mutableStateOf(false) }
+    val art = com.umutk.pulse.extras.music.rememberTrackArt(st.current)
     var showPl by remember { mutableStateOf(true) }
     var showEq by remember { mutableStateOf(false) }
     var shade by remember { mutableStateOf(false) }
@@ -102,7 +117,9 @@ fun WinampScreen(
     var eqEnabled by remember { mutableStateOf(eq.enabled) }
     var bands by remember { mutableStateOf(eq.bandLevels) }
 
-    BoxWithConstraints(modifier.fillMaxSize()) {
+    BoxWithConstraints(modifier.fillMaxSize().background(Color.Black)) {
+        val bgImg: ImageBitmap? = when (bgMode) { "art" -> art; "skin" -> skin.main; else -> null }
+        if (bgImg != null) Image(bgImg, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop, alpha = .35f)
         // windows fill the width inside an 8 dp gutter on each side
         val s = ((maxWidth.value - 16f) / WINAMP_W).coerceIn(1f, 3f)
         Column(Modifier.fillMaxSize().padding(horizontal = 8.dp).verticalScroll(rememberScrollState())) {
@@ -138,6 +155,18 @@ fun WinampScreen(
                 skin, st.queue, st.index, onPick = engine::playAt, onClose = { showPl = false }, scaleDp = s,
                 onAdd = onAdd, onRemove = { engine.removeFromQueue(it) },
             )
+        }
+        // the setting: the background choice opens from this button at the top right
+        Row(Modifier.align(Alignment.TopEnd).padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (bgOpen) listOf("black" to tr("Black", "Siyah"), "art" to tr("Cover", "Kapak"), "skin" to tr("Skin", "Skin")).forEach { (k, label) ->
+                Text(label, color = Color.White, fontSize = 12.sp,
+                    modifier = Modifier.padding(horizontal = 4.dp).clip(RoundedCornerShape(8.dp))
+                        .background(if (bgMode == k) Color(0x80FFFFFF) else Color(0x40000000))
+                        .clickable { bgMode = k; prefs.edit().putString("bg", k).apply() }.padding(horizontal = 8.dp, vertical = 4.dp))
+            }
+            Box(Modifier.size(32.dp).clip(CircleShape).background(Color(0x40000000)).clickable { bgOpen = !bgOpen }, contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Settings, tr("Background", "Arka plan"), tint = Color.White, modifier = Modifier.size(18.dp))
+            }
         }
     }
 }
