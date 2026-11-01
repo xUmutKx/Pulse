@@ -1859,3 +1859,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.298 derlenmedi: Poweramp widget: the cover opens the music page directly
 - 1.0.298 derlenmedi: Player: the artist name opens that artist's page in the library; the album is shown after it
 - 1.0.298 derlenmedi: Library: the category bar is hidden on artist and album pages; the page starts with a square cover as wide as the screen, then Play and Shuffle, then the songs
+- 1.0.299 derlenmedi: Alarm editor and alarm customisation: the scrolling part no longer swallows the scroll and the fling, so a swipe down carries on without lifting the finger
