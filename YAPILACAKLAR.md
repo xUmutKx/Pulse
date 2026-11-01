@@ -1865,3 +1865,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.302 derlenmedi: Office: Save a copy asks where the copy goes (the document stays open); Save as is unchanged
 - 1.0.303 derlenmedi: APK info dialog (Material): Cancel, Browse and Install stay on one line
 - 1.0.303 derlenmedi: Device picture: drawn as a Samsung S23 from the back (flat aluminium frame, camera island top left), not an iPhone
+- 1.0.304 derlenmedi: Download manager: a magnet link or a .torrent file opens in the torrent app on the phone (qBittorrent and similar); without one, the page says which to install

@@ -292,6 +292,8 @@ object Downloads {
     fun add(ctx: Context, url: String) {
         val c = ctx.applicationContext
         app = c
+        // a magnet link or a .torrent file goes to a torrent app on the phone (Pulse has no torrent engine of its own)
+        if (url.startsWith("magnet:", true) || url.substringBefore('?').endsWith(".torrent", true)) { openTorrent(c, url); return }
         scope.launch {
             val dir = File(dirPath)
             val name = cleanName(Uri.parse(url).lastPathSegment) ?: "download"
@@ -337,6 +339,14 @@ object Downloads {
     }
 
     /** Stops a download (its partial file goes too) or removes a finished one together with its file. */
+    /** Hands a magnet link or a .torrent file to the torrent app the phone has; without one, the page says what to install. */
+    private fun openTorrent(c: Context, url: String) {
+        try { c.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        catch (e: android.content.ActivityNotFoundException) {
+            android.widget.Toast.makeText(c, tr("Install a torrent app (for example qBittorrent) to download this link", "Bu bağlantıyı indirmek için bir torrent uygulaması kurun (örneğin qBittorrent)"), android.widget.Toast.LENGTH_LONG).show()
+        }
+    }
+
     fun remove(t: DlTask) {
         t.cancelled = true
         tasks.update { it - t }
