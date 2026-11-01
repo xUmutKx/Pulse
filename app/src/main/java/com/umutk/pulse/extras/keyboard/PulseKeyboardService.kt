@@ -493,7 +493,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         var out = typed
         // a correction is only made to the word the bar shows in the middle for exactly this typed word; an old suggestion (the bar had not caught up with the last letters) is never used
-        val t = target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
+        // a word with an apostrophe (Adana'ya) is kept as it is: the dictionary's suggestion for it has no apostrophe
+        val t = if (typed.contains('\'')) null else target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
         if (dotFix) {
@@ -502,6 +503,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
         if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
+        // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
+        if (lang.code == "tr" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(lang.locale).let { it in KeyboardDictionary.properNouns && it !in KeyboardDictionary.commonNames })
+            out = typed.replaceFirstChar { it.titlecase(lang.locale) }
         if (spaceBefore) {
             c.finishComposingText(); c.deleteSurroundingText(typed.length, 0); c.commitText(" ", 1)
             out = out.replaceFirstChar { it.titlecase(lang.locale) }
@@ -1130,7 +1134,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val rest = w.substring(cut)
             if (rest.length > 4) break
             val stem = w.substring(0, cut)
-            if (stem in KeyboardDictionary.properNouns && rest in TR_ENDINGS) {
+            if (stem in KeyboardDictionary.properNouns && stem !in KeyboardDictionary.commonNames && rest in TR_ENDINGS) {
                 val cap = stem.substring(0, 1).uppercase(lang.locale) + stem.substring(1)
                 word.setLength(0); word.append(cap).append('\'').append(rest)
                 return
