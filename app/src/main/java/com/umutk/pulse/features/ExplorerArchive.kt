@@ -603,9 +603,9 @@ internal fun ApkInfo(f: File, onClose: () -> Unit, onView: () -> Unit) {
                 androidx.compose.runtime.CompositionLocalProvider(androidx.compose.material3.LocalContentColor provides w.text) { textC() }
                 Spacer(Modifier.height(18.dp))
                 @Composable fun pill(label: String, fill: Color, ink: Color, go: () -> Unit) =
-                    Text(label, Modifier.clip(RoundedCornerShape(20.dp)).background(fill).clickable(onClick = go).padding(horizontal = 18.dp, vertical = 10.dp), color = ink, fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
-                    Text(tr("Cancel", "İptal"), Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClose).padding(horizontal = 14.dp, vertical = 10.dp), color = w.text.copy(alpha = .75f), fontSize = 14.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                    Text(label, Modifier.clip(RoundedCornerShape(20.dp)).background(fill).clickable(onClick = go).padding(horizontal = 14.dp, vertical = 10.dp), color = ink, fontSize = 14.sp, maxLines = 1, softWrap = false, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Cancel", "İptal"), Modifier.clip(RoundedCornerShape(20.dp)).clickable(onClick = onClose).padding(horizontal = 12.dp, vertical = 10.dp), color = w.text.copy(alpha = .75f), fontSize = 14.sp, maxLines = 1, softWrap = false, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
                     pill(tr("Browse", "Gözat"), w.text.copy(alpha = .09f), w.text, onView)
                     if (bundle) pill(tr("Save APKs", "APK'ları kaydet"), w.text.copy(alpha = .09f), w.text, save)
                     pill(tr("Install", "Yükle"), w.accent.copy(alpha = 1f), com.umutk.pulse.onAccent(w.accent.copy(alpha = 1f))) { onClose(); apkInstall(ctx, f) }
