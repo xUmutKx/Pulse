@@ -1870,3 +1870,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.306 derlenmedi: Download manager: magnet links and .torrent files download inside Pulse (libtorrent4j engine), no other app needed; the link appears in the list with its progress, pause and remove; Android 5 stays (minSdk 21)
 - 1.0.308 derlenmedi: Files home: Clean up removed; the title sits higher; an Analysis row under the title opens the storage by type; each storage kind opens its own list, Other opens every file that is in no kind; Recent shows at least five files (the newest on the phone fill it up)
 - 1.0.309 derlenmedi: Torrent engine removed completely (the APK was 94 MB with it, 46 MB without); magnet and .torrent links are no longer handled by Pulse
+- 1.0.310 derlenmedi: Excel viewer: each row takes the height the file gives it, so a tall title row and wrapped text show in full (rows and columns are no longer one fixed size)
