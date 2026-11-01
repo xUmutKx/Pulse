@@ -61,6 +61,8 @@ import java.io.File
 object FilesHomeNav {
     /** Set by the home page's three lines: the Browse tab opens its side drawer. */
     var openDrawer by mutableStateOf(false)
+    /** A folder picked in the home page's folder list: the Browse tab opens it (the home page stays put until then). */
+    var pendingDir by mutableStateOf<String?>(null)
     /** Set by the bottom bar's Search: the explorer opens its search field when it appears. */
     var openSearch by mutableStateOf(false)
     /** The Search tab searches the whole phone, not only the folder it is in. */
@@ -211,15 +213,26 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
         }
     }
 
+    // the three lines open a folder list here on the home page; only a picked folder goes to the Browse tab
+    var folderList by remember { mutableStateOf(false) }
+    val homeFolders = remember {
+        val root = Environment.getExternalStorageDirectory()
+        listOf(tr("Storage", "Dahili depolama") to root) + listOf("Download", "DCIM", "Pictures", "Documents", "Music").map { it to File(root, it) }
+    }
     LazyColumn(Modifier.fillMaxSize().background(bg).padding(horizontal = 18.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 0.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clickable { FilesHomeNav.openDrawer = true; onTab("files") }, contentAlignment = Alignment.Center) { PIcon("menu", fg, 24.dp) }
+                Box(Modifier.size(44.dp).clickable { folderList = !folderList }, contentAlignment = Alignment.Center) { PIcon("menu", fg, 24.dp) }
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom) {
                     Text(tr("Files", "Dosyalar"), color = fg, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                     Text(".", color = accent, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(Modifier.size(44.dp).clickable { onSettings() }, contentAlignment = Alignment.Center) { PIcon("settings", fg, 26.dp) }
+            }
+        }
+        if (folderList) items(homeFolders.filter { it.second.isDirectory }) { (label, dir) ->
+            Row(box(Modifier).clickable { FilesHomeNav.pendingDir = dir.path; folderList = false; onTab("files") }.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text(label, color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
             }
         }
         item {
