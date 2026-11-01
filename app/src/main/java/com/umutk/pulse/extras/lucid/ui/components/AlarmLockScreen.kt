@@ -17,7 +17,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.offset
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.spring
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -1040,6 +1048,46 @@ fun RingingActionPill(
             )
         )
     }
+}
+
+/**
+ * The alarm's Dismiss: a tap does nothing. The button is pressed and dragged outward; released far enough from where it started, the alarm stops.
+ * Released early, it springs back.
+ */
+@Composable
+fun DragDismissPill(
+    text: String,
+    onDismiss: () -> Unit,
+    containerColor: Color = AlarmLockPalette.DismissButton,
+    contentColor: Color = Color.White,
+    fontFamily: FontFamily? = null,
+    modifier: Modifier = Modifier
+) {
+    val offset = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
+    val scope = rememberCoroutineScope()
+    val threshold = with(LocalDensity.current) { 120.dp.toPx() }
+    RingingActionPill(
+        text = text,
+        onClick = { },
+        containerColor = containerColor,
+        contentColor = contentColor,
+        fontFamily = fontFamily,
+        modifier = modifier
+            .offset { IntOffset(offset.value.x.roundToInt(), offset.value.y.roundToInt()) }
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = {
+                        if (offset.value.getDistance() >= threshold) onDismiss()
+                        else scope.launch { offset.animateTo(Offset.Zero, spring()) }
+                    },
+                    onDragCancel = { scope.launch { offset.animateTo(Offset.Zero, spring()) } },
+                    onDrag = { change, drag ->
+                        change.consume()
+                        scope.launch { offset.snapTo(offset.value + drag) }
+                    }
+                )
+            }
+    )
 }
 
 @Composable
