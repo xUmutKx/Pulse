@@ -1868,3 +1868,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.304 derlenmedi: Download manager: a magnet link or a .torrent file opens in the torrent app on the phone (qBittorrent and similar); without one, the page says which to install
 - 1.0.305 derlenmedi: Magnet and .torrent links from the system's open-with menu open Pulse's download page and go to a torrent app on the phone (Pulse is left out of that choice)
 - 1.0.306 derlenmedi: Download manager: magnet links and .torrent files download inside Pulse (libtorrent4j engine), no other app needed; the link appears in the list with its progress, pause and remove; Android 5 stays (minSdk 21)
+- 1.0.308 derlenmedi: Files home: Clean up removed; the title sits higher; an Analysis row under the title opens the storage by type; each storage kind opens its own list, Other opens every file that is in no kind; Recent shows at least five files (the newest on the phone fill it up)
