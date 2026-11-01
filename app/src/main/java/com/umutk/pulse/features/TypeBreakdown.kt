@@ -99,7 +99,7 @@ internal class KindAcc {
 fun TypeBreakdownScreen(root: File, onBack: () -> Unit) {
     // a type tapped on the Files home page opens its list at once (one tap)
     var selected by remember(root) { mutableStateOf<FileKind?>(when (com.umutk.pulse.files.home.FilesHomeNav.kind) {
-        "images" -> FileKind.IMAGES; "videos" -> FileKind.VIDEO; "audio" -> FileKind.AUDIO; "docs" -> FileKind.DOCUMENTS; "archives" -> FileKind.ARCHIVES; "apps" -> FileKind.APPS; else -> null
+        "images" -> FileKind.IMAGES; "videos" -> FileKind.VIDEO; "audio" -> FileKind.AUDIO; "docs" -> FileKind.DOCUMENTS; "archives" -> FileKind.ARCHIVES; "apps" -> FileKind.APPS; "other" -> FileKind.OTHER; else -> null
     }.also { com.umutk.pulse.files.home.FilesHomeNav.kind = null }) }
     // a list opened from the Files home goes straight back there; only a list opened from the overview goes back to the overview
     val openedDirect = remember(root) { selected != null }
