@@ -36,10 +36,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.material3.Icon
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
@@ -130,7 +128,8 @@ fun WinampScreen(
         // windows fill the width inside an 8 dp gutter on each side
         val s = ((maxWidth.value - 16f) / WINAMP_W).coerceIn(1f, 3f)
         // the full layout: two columns side by side when the screen is wide enough (player, EQ and list left; analyzer and cover right)
-        val fullWide = fullLayout && maxWidth.value >= WINAMP_W * 2f + 24f
+        // turned sideways (wide screen): two columns, each window at its own size, never one long strip scaled up
+        val fullWide = maxWidth.value >= WINAMP_W * 2f + 24f
         val sEff = if (fullWide) ((maxWidth.value - 24f) / 2f / WINAMP_W).coerceIn(1f, 3f) else s
         val mainStack: @Composable () -> Unit = {
             WinampClassic(
@@ -195,8 +194,10 @@ fun WinampScreen(
                             else { showSpec = !showSpec; prefs.edit().putBoolean("spec", showSpec).apply() }
                         }.padding(horizontal = 8.dp, vertical = 4.dp))
             }
-            Box(Modifier.size(32.dp).clip(CircleShape).background(Color(0x40000000)).clickable { bgOpen = !bgOpen }, contentAlignment = Alignment.Center) {
-                Icon(Icons.Rounded.Settings, tr("Background", "Arka plan"), tint = Color.White, modifier = Modifier.size(18.dp))
+            // a pixel SET button in the Winamp bevel style (no round gear)
+            val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: FontFamily.Monospace
+            Box(Modifier.height(22.dp).background(Color(0xFF3A3F4B)).border(1.dp, Color(0xFF1E2028)).clickable { bgOpen = !bgOpen }.padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+                Text("SET", color = Color(0xFF00FF66), fontSize = 13.sp, fontFamily = pixel, maxLines = 1)
             }
         }
     }

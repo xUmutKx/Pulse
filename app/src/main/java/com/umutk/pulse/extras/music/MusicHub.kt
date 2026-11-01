@@ -182,11 +182,9 @@ private fun MusicHubBody(onBack: () -> Unit) {
         // the Material now-playing screen and Poweramp take the whole window: no header, no inset
         val fullNow = look == MusicLook.POWERAMP || (nowPlaying && look == MusicLook.MATERIAL)
         Column(Modifier.fillMaxSize().padding(horizontal = if (fullNow) 0.dp else 12.dp, vertical = if (fullNow) 0.dp else 8.dp)) {
-            if (!fullNow) {
-                // the Winamp look has its own pixel buttons on the same bar (no back arrow: the system back goes back)
-                if (look == MusicLook.WINAMP) WinampTopBar(
-                    onNoise = { noiseOpen = true }, onRadio = { radioOpen = true }, onRecap = { recapOpen = true }, onSettings = { settingsOpen = true },
-                ) else Row(verticalAlignment = Alignment.CenterVertically) {
+            // the Winamp look has no bar: its window starts at the top and its SET button sits in the window
+            if (!fullNow && look != MusicLook.WINAMP) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
                     Spacer(Modifier.weight(1f))
                     // white noise opens from here; playlists sit in the library
@@ -559,26 +557,3 @@ private fun PlaylistsDialog(engine: MusicPlayerEngine, queue: List<Track>, onClo
     )
 }
 
-/** The Winamp look's bar: four pixel buttons with a raised bevel, in the pixel font, at the right end. */
-@Composable
-private fun WinampTopBar(onNoise: () -> Unit, onRadio: () -> Unit, onRecap: () -> Unit, onSettings: () -> Unit) {
-    val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: androidx.compose.ui.text.font.FontFamily.Monospace
-    Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
-        listOf("VOL" to onNoise, "RADIO" to onRadio, "LIKE" to onRecap, "SET" to onSettings).forEach { (label, go) ->
-            Box(
-                Modifier.padding(horizontal = 2.dp).height(30.dp).drawBehind {
-                    // a raised grey bevel: light on the top and left, dark on the bottom and right
-                    drawRect(Color(0xFF3A3F4B))
-                    drawRect(Color(0xFFB8BEC8), Offset.Zero, androidx.compose.ui.geometry.Size(size.width, 2f))
-                    drawRect(Color(0xFFB8BEC8), Offset.Zero, androidx.compose.ui.geometry.Size(2f, size.height))
-                    drawRect(Color(0xFF1E2028), Offset(0f, size.height - 2f), androidx.compose.ui.geometry.Size(size.width, 2f))
-                    drawRect(Color(0xFF1E2028), Offset(size.width - 2f, 0f), androidx.compose.ui.geometry.Size(2f, size.height))
-                }.clickable(onClick = go).padding(horizontal = 9.dp),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(label, color = Color(0xFF00FF66), fontSize = 15.sp, fontFamily = pixel, maxLines = 1)
-            }
-        }
-    }
-}
