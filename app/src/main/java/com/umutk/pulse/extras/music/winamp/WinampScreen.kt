@@ -163,7 +163,7 @@ fun WinampScreen(
             )
             if (showPl) WinampPlaylistWindow(
                 skin, st.queue, st.index, onPick = engine::playAt, onClose = { showPl = false }, scaleDp = sEff,
-                onAdd = onAdd, onRemove = { engine.removeFromQueue(it) },
+                onAdd = onAdd, onRemove = { engine.removeFromQueue(it) }, onOptions = onSettings,
             )
         }
         val sideWins: @Composable () -> Unit = {
@@ -176,12 +176,6 @@ fun WinampScreen(
         } else Column(Modifier.fillMaxSize().padding(horizontal = 8.dp).verticalScroll(rememberScrollState())) {
             mainStack()
             sideWins()
-        }
-        // the SET button (pixel, with a gear) opens the music player settings directly; the old background menu is gone
-        val pixel = com.umutk.pulse.extras.lucid.ui.theme.appFontFamilyOf(com.umutk.pulse.extras.lucid.data.prefs.AppFontStyle.JERSEY) ?: FontFamily.Monospace
-        Row(Modifier.align(Alignment.TopEnd).padding(8.dp).height(22.dp).background(Color(0xFF3A3F4B)).border(1.dp, Color(0xFF1E2028)).clickable { onSettings() }.padding(horizontal = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            // a gear, not the word: it opens the music player settings
-            androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Rounded.Settings, tr("Player settings", "Oynatıcı ayarları"), tint = Color(0xFF00FF66), modifier = Modifier.size(16.dp))
         }
     }
 }
