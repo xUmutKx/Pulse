@@ -1874,3 +1874,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.311 derlenmedi: Quick settings keyboard tile is a switch: a tap turns the floating keyboard on, a second tap closes it and the keyboard goes back to its own setting
 - 1.0.312 derlenmedi: Quick settings keyboard tile opens the normal keyboard as its own window (not the floating one); a second tap closes it; the floating keyboard setting is no longer touched by the tile
 - 1.0.313 derlenmedi: Share download window: Open Pulse, Download and Cancel buttons; the progress is a thin line at the bottom; the palette icon is gone
+- 1.0.314 derlenmedi: Download popup shows the speed while it runs; Cancel asks for confirmation when a download is still going

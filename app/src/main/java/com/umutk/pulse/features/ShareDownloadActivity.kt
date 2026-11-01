@@ -102,12 +102,14 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
             val total = tk.total.collectAsState().value
             val done = tk.done.collectAsState().value
             val st = tk.state.collectAsState().value
+            val speed = tk.speed.collectAsState().value
             val frac = if (total > 0) (done.toFloat() / total).coerceIn(0f, 1f) else 0f
             val label = when (st) {
                 DlState.DONE -> tr("Done", "Bitti")
                 DlState.FAILED -> tr("Failed", "Başarısız")
                 DlState.PAUSED -> tr("Paused", "Duraklatıldı")
-                else -> if (total > 0) "${(frac * 100).toInt()}%" else tr("Downloading…", "İndiriliyor…")
+                // the speed shows while the download runs
+                else -> (if (total > 0) "${(frac * 100).toInt()}%" else tr("Downloading…", "İndiriliyor…")) + (if (speed > 0) " · " + speedText(speed) else "")
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(label, color = T.sub, fontSize = 12.sp)
@@ -117,6 +119,14 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
             }
         }
     }
+    var askCancel by remember { mutableStateOf(false) }
+    if (askCancel) com.umutk.pulse.PDialog(
+        title = tr("Cancel the download?", "İndirme iptal edilsin mi?"),
+        text = tr("The file that is part way is removed.", "Yarım kalan dosya silinir."),
+        confirm = tr("Cancel download", "İndirmeyi iptal et"),
+        onConfirm = { askCancel = false; task?.let { Downloads.remove(it) }; close() },
+        onDismiss = { askCancel = false },
+    )
     fun openPulse() { Downloads.wanted = true; ctx.startActivity(Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); close() }
     val body: @Composable () -> Unit = {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -153,13 +163,24 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
                     PButton(tr("Open Pulse", "Pulse'u aç"), Modifier.weight(1f)) { openPulse() }
                     PButton(tr("Download", "İndir"), Modifier.weight(1f)) { if (started == null) download() }
-                    PButton(tr("Cancel", "İptal"), Modifier.weight(1f)) { close() }
+                    PButton(tr("Cancel", "İptal"), Modifier.weight(1f)) {
+                        // a download that is still running asks first; it is removed only when the person confirms
+                        val running = task?.let { it.state.value == DlState.RUNNING || it.state.value == DlState.PAUSED } == true
+                        if (running) askCancel = true else close()
+                    }
                 }
                 // the progress is a thin line at the very bottom
                 progressBlock()
             }
         }
     }
+}
+
+/** A download speed for the window: KB/s or MB/s. */
+private fun speedText(b: Long): String = when {
+    b >= 1_048_576 -> "%.1f MB/s".format(b / 1_048_576.0)
+    b >= 1024 -> "%.0f KB/s".format(b / 1024.0)
+    else -> "$b B/s"
 }
 
 private fun Modifier.clip26() = this.then(Modifier.clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp)))
