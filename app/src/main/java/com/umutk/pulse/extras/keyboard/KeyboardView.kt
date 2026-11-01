@@ -244,7 +244,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         }
     }) {
         Column(
-            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.7f).align(Alignment.TopStart).offset { IntOffset((st.rootW * .3f * KeyboardPrefs.floatX).roundToInt(), -(rootH * .5f * KeyboardPrefs.floatY).roundToInt()) }
+            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.7f).align(Alignment.TopStart).offset { IntOffset(0, -(rootH * .5f * KeyboardPrefs.floatY).roundToInt()) }
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
@@ -255,9 +255,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                     val d = awaitFirstDown(requireUnconsumed = false)
                     drag(d.id) { c ->
                         c.consume()
-                        val dx = c.position.x - c.previousPosition.x
                         val dy = c.position.y - c.previousPosition.y
-                        KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f)
                         KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH * .5f).coerceAtLeast(1f)).coerceIn(0f, 1f)
                     }
                     KeyboardPrefs.saveFloat()
@@ -399,6 +397,8 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     if (st.trans) { TransBar(th, st, act); return }
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
+    val barHasContent = st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
+    if (!barHasContent) { Box(Modifier.fillMaxWidth().height(0.dp)); return }
     Row(
         Modifier.fillMaxWidth().height(44.dp).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
