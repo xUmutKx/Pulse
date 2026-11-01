@@ -35,6 +35,7 @@ import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import java.io.File
 import java.net.HttpURLConnection
+import org.json.JSONObject
 import java.net.URL
 import java.net.URLEncoder
 import java.util.zip.ZipInputStream
@@ -110,6 +111,73 @@ internal object YifySubs {
     }
 }
 
+/**
+ * opensubtitles.com (REST API). It covers TV episodes too: "Dexter S03E07" is searched by its title, season and episode.
+ * It needs the user's own API key (typed in the search dialog and kept on the phone); nothing is built in.
+ */
+internal object OpenSubs {
+    private const val API = "https://api.opensubtitles.com/api/v1"
+    private const val AGENT = "Pulse v1.0"
+    private val seRe = Regex("""(?i)\bs(\d{1,2})\s*e(\d{1,3})\b""")
+
+    fun key(c: Context): String = c.getSharedPreferences("video_subs", Context.MODE_PRIVATE).getString("os_key", "").orEmpty()
+    fun saveKey(c: Context, k: String) { c.getSharedPreferences("video_subs", Context.MODE_PRIVATE).edit().putString("os_key", k.trim()).apply() }
+
+    private fun conn(url: String, key: String?, post: String? = null): HttpURLConnection {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.connectTimeout = 15_000; c.readTimeout = 20_000
+        c.setRequestProperty("User-Agent", AGENT)
+        c.setRequestProperty("Accept", "application/json")
+        if (key != null) c.setRequestProperty("Api-Key", key)
+        if (post != null) {
+            c.requestMethod = "POST"; c.doOutput = true
+            c.setRequestProperty("Content-Type", "application/json")
+            c.outputStream.use { it.write(post.toByteArray(Charsets.UTF_8)) }
+        }
+        if (c.responseCode !in 200..299) { val code = c.responseCode; c.disconnect(); error("HTTP $code") }
+        return c
+    }
+
+    /** The search text without the SxxEyy part, and the season and episode numbers when the name has them. */
+    internal fun episodeOf(query: String): Triple<String, Int?, Int?> {
+        val m = seRe.find(query) ?: return Triple(query.trim(), null, null)
+        return Triple(query.removeRange(m.range).replace(Regex("\\s+"), " ").trim(), m.groupValues[1].toInt(), m.groupValues[2].toInt())
+    }
+
+    suspend fun search(query: String, lang: String, key: String): Result<List<SubHit>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val code = if (lang == "Turkish") "tr" else "en"
+            val (title, season, episode) = episodeOf(query)
+            val q = StringBuilder("$API/subtitles?query=${URLEncoder.encode(title, "UTF-8")}&languages=$code&order_by=download_count&order_direction=desc")
+            if (season != null) q.append("&season_number=$season")
+            if (episode != null) q.append("&episode_number=$episode")
+            val c = conn(q.toString(), key)
+            val text = try { c.inputStream.use { String(it.readBytes(), Charsets.UTF_8) } } finally { c.disconnect() }
+            val data = JSONObject(text).optJSONArray("data") ?: return@runCatching emptyList<SubHit>()
+            (0 until data.length()).mapNotNull { i ->
+                val a = data.getJSONObject(i).optJSONObject("attributes") ?: return@mapNotNull null
+                val fileId = a.optJSONArray("files")?.optJSONObject(0)?.optLong("file_id", 0L) ?: 0L
+                if (fileId <= 0L) return@mapNotNull null
+                SubHit("os:$fileId", a.optString("release", ""), a.optString("language", code), a.optDouble("ratings", 0.0).toInt())
+            }
+        }
+    }
+
+    /** Asks for the download link of the file, fetches the .srt and keeps it in the cache. */
+    suspend fun download(ctx: Context, hit: SubHit, key: String): Result<Uri> = withContext(Dispatchers.IO) {
+        runCatching {
+            val id = hit.slug.removePrefix("os:").toLong()
+            val c = conn("$API/download", key, post = """{"file_id":$id}""")
+            val link = try { JSONObject(String(c.inputStream.use { it.readBytes() }, Charsets.UTF_8)).getString("link") } finally { c.disconnect() }
+            val f = conn(link, null)
+            val bytes = try { f.inputStream.use { it.readBytes() } } finally { f.disconnect() }
+            val out = File(ctx.cacheDir, "osub_$id.srt")
+            out.writeBytes(bytes)
+            Uri.fromFile(out)
+        }
+    }
+}
+
 /** The search text from a file name: no folder, extension, dots or release tags (1080p, BluRay, x264, year...). */
 internal fun searchTitle(fileName: String): String {
     val base = fileName.substringBeforeLast('.').replace('.', ' ').replace('_', ' ')
@@ -129,6 +197,7 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
     val failed = tr("Failed. Check the connection and try again.", "Olmadı. Bağlantıyı kontrol edip yeniden deneyin.")
     var query by remember { mutableStateOf(searchTitle(fileName)) }
     var lang by remember { mutableStateOf(appLangName()) }
+    var apiKey by remember { mutableStateOf(OpenSubs.key(ctx)) }
     var hits by remember { mutableStateOf<List<SubHit>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
     var line by remember { mutableStateOf("") }
@@ -138,7 +207,8 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
         if (busy || query.isBlank()) return
         busy = true; err = false; hits = emptyList(); line = tr("Searching...", "Aranıyor...")
         scope.launch {
-            YifySubs.search(query.trim(), lang)
+            val k = OpenSubs.key(ctx)
+            (if (k.isNotBlank()) OpenSubs.search(query.trim(), lang, k) else YifySubs.search(query.trim(), lang))
                 .onSuccess { hits = it; line = if (it.isEmpty()) none else "" }
                 .onFailure { err = true; line = failed }
             busy = false
@@ -148,7 +218,7 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
         if (busy) return
         busy = true; err = false; line = tr("Downloading...", "İndiriliyor...")
         scope.launch {
-            YifySubs.download(ctx, h)
+            (if (h.slug.startsWith("os:")) OpenSubs.download(ctx, h, OpenSubs.key(ctx)) else YifySubs.download(ctx, h))
                 .onSuccess { onPick(it, h.release.ifBlank { "subtitle" }.replace('/', '_') + ".srt") }
                 .onFailure { err = true; line = failed; busy = false }
         }
@@ -160,6 +230,8 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
         text = {
             Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
                 PField(query, { query = it }, tr("Title", "Ad"), Modifier.fillMaxWidth(), onDone = { search() })
+                // the OpenSubtitles key (free at opensubtitles.com): with it the search finds TV episodes too
+                PField(apiKey, { apiKey = it; OpenSubs.saveKey(ctx, it) }, tr("OpenSubtitles API key", "OpenSubtitles API anahtarı"), Modifier.fillMaxWidth())
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     listOf("English" to tr("English", "İngilizce"), "Turkish" to tr("Turkish", "Türkçe")).forEach { (name, label) ->
                         Text(
