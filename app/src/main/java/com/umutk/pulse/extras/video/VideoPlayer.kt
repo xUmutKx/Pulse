@@ -407,6 +407,42 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         }
         return b.build()
     }
+
+    // what each button does (the bar and the ⋮ menu both call it)
+    fun runControl(id: String) {
+        when (id) {
+            "cc" -> dlg = "text"
+            "audio" -> dlg = "audio"
+            "rotate" -> { orient = (orient + 1) % 6; prefs.orient = orient; poke++; say("rotate", orientNames()[orient]) }
+            "repeat" -> {
+                rep = (rep + 1) % 3; prefs.repeat = rep; poke++
+                player.repeatMode = when (rep) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF }
+                say("rotate", repeatNames()[rep])
+            }
+            "ab" -> {
+                when {
+                    abA < 0 -> { abA = player.currentPosition; say("rotate", "A") }
+                    abB < 0 -> { abB = player.currentPosition.coerceAtLeast(abA + 500); say("rotate", "A-B") }
+                    else -> { abA = -1L; abB = -1L; say("rotate", tr("Off", "Kapalı")) }
+                }
+                poke++
+            }
+            "scale" -> { aspect = (aspect + 1) % 5; prefs.aspect = aspect; zoom = 1f; panX = 0f; panY = 0f; poke++; say("scale", aspectNames()[aspect]) }
+            "speed" -> dlg = "speed"
+            "sleep" -> dlg = "sleep"
+            "pip" -> pipParams()?.let { pp -> runCatching { act?.enterPictureInPictureMode(pp) } }
+            "lock" -> { locked = true; shown = true; poke++ }
+            "settings" -> settings = true
+        }
+    }
+    fun controlOn(id: String): Boolean = when (id) {
+        "cc" -> tracks.isTypeSelected(C.TRACK_TYPE_TEXT)
+        "repeat" -> rep != 0
+        "ab" -> abA >= 0
+        "speed" -> speed != 1f
+        "sleep" -> sleepAt > 0 || sleepEnd
+        else -> false
+    }
     LaunchedEffect(playing, vsize, bg, rev) { pipParams()?.let { pp -> runCatching { act?.setPictureInPictureParams(pp) } } }
 
     val audio = remember { ctx.getSystemService(Context.AUDIO_SERVICE) as AudioManager }
@@ -561,9 +597,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             ) {
                 SkinBtn(sk, onBack) { PIcon("back", tf, 24.dp) }
                 Text(items.getOrNull(cur)?.name.orEmpty(), Modifier.weight(1f), color = tf, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                SkinBtn(sk, { dlg = "audio" }) { PIcon("volume", tf, 24.dp) }
-                SkinBtn(sk, { dlg = "text" }) { Tag("CC", tracks.isTypeSelected(C.TRACK_TYPE_TEXT), tf, sk.accent) }
-                SkinBtn(sk, { settings = true }) { PIcon("settings", tf, 24.dp) }
                 SkinBtn(sk, { dlg = "more" }) { com.umutk.pulse.extras.ui.TIcon("more", tf, 22.dp, sk.icons) }
             }
                 Row(Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(20.dp)) {
@@ -582,31 +615,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     Text(if (remaining) "-" + clock(dur - pos) else clock(dur), Modifier.clickable { remaining = !remaining; prefs.showRemaining = remaining }, color = fg, fontSize = 12.sp)
                 }
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                    SkinBtn(sk, { locked = true; shown = true; poke++ }) { LockGlyph(fg) }
-                    SkinBtn(sk, { dlg = "speed" }) { Row(verticalAlignment = Alignment.CenterVertically) { PIcon("speed", if (speed != 1f) sk.accent else fg, 22.dp); Tag(speedName(speed), speed != 1f, fg, sk.accent) } }
-                    SkinBtn(sk, {
-                        aspect = (aspect + 1) % 5; prefs.aspect = aspect; zoom = 1f; panX = 0f; panY = 0f; poke++
-                        say("scale", aspectNames()[aspect])
-                    }) { PIcon("scale", fg, 24.dp) }
-                    SkinBtn(sk, {
-                        orient = (orient + 1) % 6; prefs.orient = orient; poke++
-                        say("rotate", orientNames()[orient])
-                    }) { PIcon("rotate", fg, 24.dp) }
-                    SkinBtn(sk, {
-                        rep = (rep + 1) % 3; prefs.repeat = rep; poke++
-                        player.repeatMode = when (rep) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF }
-                        say("rotate", repeatNames()[rep])
-                    }) { com.umutk.pulse.extras.ui.TIcon("repeat", if (rep != 0) sk.accent else fg, 22.dp, sk.icons) }
-                    SkinBtn(sk, {
-                        when {
-                            abA < 0 -> { abA = player.currentPosition; say("rotate", "A") }
-                            abB < 0 -> { abB = player.currentPosition.coerceAtLeast(abA + 500); say("rotate", "A-B") }
-                            else -> { abA = -1L; abB = -1L; say("rotate", tr("Off", "Kapalı")) }
-                        }
-                        poke++
-                    }) { androidx.compose.material3.Icon(Icons.Outlined.Flip, null, Modifier.size(22.dp), tint = if (abA >= 0) sk.accent else fg) }
-                    SkinBtn(sk, { dlg = "sleep" }) { PIcon("timer", if (sleepAt > 0 || sleepEnd) sk.accent else fg, 24.dp) }
-                    SkinBtn(sk, { pipParams()?.let { pp -> runCatching { act?.enterPictureInPictureMode(pp) } } }) { androidx.compose.material3.Icon(Icons.Outlined.PictureInPictureAlt, null, Modifier.size(22.dp), tint = fg) }
+                    barList(prefs.barButtons).forEach { id -> SkinBtn(sk, { runControl(id) }) { ControlGlyph(id, fg, sk, controlOn(id)) } }
                 }
             }
         }
@@ -688,7 +697,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         "enc" -> PickDialog(tr("Encoding", "Kodlama"), encodings.map { it to (it == prefs.subEnc) }, { dlg = "subopt" }) { i -> prefs.subEnc = encodings[i]; applySub(); dlg = "subopt" }
         "more" -> {
             // only what the bottom bar does not already do (speed, repeat and the sleep timer have their own buttons there)
-            val moreItems = listOf(
+            val moreItems = CONTROL_IDS.filter { it !in barList(prefs.barButtons) }.map { MoreItem("ctl_$it", "", controlName(it), "") } + listOf(
                 MoreItem("shuffle", "sort", tr("Shuffle", "Karıştır"), if (shuffle) tr("On", "Açık") else tr("Off", "Kapalı")),
                 MoreItem("bg", "volume", tr("Background audio", "Arka plan sesi"), if (bg) tr("On", "Açık") else tr("Off", "Kapalı")),
                 MoreItem("eq", "tune", tr("Equalizer", "Ekolayzır"), ""),
@@ -697,7 +706,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 MoreItem("share", "share", tr("Share", "Paylaş"), ""),
                 MoreItem("zoom", "scale", tr("Reset zoom", "Yakınlaştırmayı sıfırla"), ""),
             )
-            MoreSheet(moreItems, { dlg = null }) { key ->
+            MoreSheet(moreItems, { dlg = null }, sk) { key ->
                 dlg = null
                 when (key) {
                     "shuffle" -> { shuffle = !shuffle; player.shuffleModeEnabled = shuffle }
@@ -708,6 +717,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     "info" -> dlg = "info"
                     "share" -> items.getOrNull(cur)?.let { shareVideo(ctx, it) }
                     "zoom" -> { zoom = 1f; panX = 0f; panY = 0f }
+                    else -> if (key.startsWith("ctl_")) runControl(key.removePrefix("ctl_"))
                 }
             }
         }
@@ -766,7 +776,7 @@ private class MoreItem(val key: String, val icon: String, val name: String, val 
  * over a white picture, so its text reads on any video.
  */
 @Composable
-private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, onPick: (String) -> Unit) {
+private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, onPick: (String) -> Unit) {
     Popup(alignment = Alignment.BottomCenter, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)).background(Color(0xF2101010))
             .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 12.dp)) {
@@ -774,7 +784,8 @@ private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, onPick: (Str
                 Row(Modifier.fillMaxWidth()) {
                     row.forEach { item ->
                         Column(Modifier.weight(1f).clickable { onPick(item.key) }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                            PIcon(item.icon, Color.White, 26.dp)
+                            if (item.key.startsWith("ctl_")) ControlGlyph(item.key.removePrefix("ctl_"), Color.White, sk, false)
+                            else PIcon(item.icon, Color.White, 26.dp)
                             Text(if (item.state.isEmpty()) item.name else item.name + "\n" + item.state, color = Color.White, fontSize = 12.sp,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
                         }
