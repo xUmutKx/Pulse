@@ -81,6 +81,16 @@
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="text/*" /></intent>
         <intent><action android:name="android.intent.action.VIEW" /><data android:mimeType="audio/*" /></intent>
     </queries>
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="magnet" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:mimeType="application/x-bittorrent" />
+        </intent>
+    </queries>
     <application
         android:name=".PulseApp"
         android:allowBackup="false"
@@ -641,6 +651,19 @@
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
+            </intent-filter>
+        </activity>
+        <activity android:name="com.umutk.pulse.features.TorrentLinkActivity" android:exported="true" android:theme="@android:style/Theme.NoDisplay" android:excludeFromRecents="true" android:taskAffinity="">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="magnet" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="application/x-bittorrent" />
             </intent-filter>
         </activity>
         <activity android:name="com.umutk.pulse.FramedToolActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />

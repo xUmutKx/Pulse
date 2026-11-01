@@ -339,9 +339,18 @@ object Downloads {
     }
 
     /** Stops a download (its partial file goes too) or removes a finished one together with its file. */
-    /** Hands a magnet link or a .torrent file to the torrent app the phone has; without one, the page says what to install. */
-    private fun openTorrent(c: Context, url: String) {
-        try { c.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    /**
+     * Hands a magnet link or a .torrent file to a torrent app on the phone. Pulse itself is one of the handlers of these links now,
+     * so it is left out (no loop); without another app, the person is told which to install.
+     */
+    internal fun openTorrent(c: Context, url: String) {
+        val base = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+        val pkg = c.packageManager.queryIntentActivities(base, 0).map { it.activityInfo.packageName }.firstOrNull { it != c.packageName }
+        if (pkg == null) {
+            android.widget.Toast.makeText(c, tr("Install a torrent app (for example qBittorrent) to download this link", "Bu bağlantıyı indirmek için bir torrent uygulaması kurun (örneğin qBittorrent)"), android.widget.Toast.LENGTH_LONG).show()
+            return
+        }
+        try { c.startActivity(Intent(base).setPackage(pkg).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_GRANT_READ_URI_PERMISSION)) }
         catch (e: android.content.ActivityNotFoundException) {
             android.widget.Toast.makeText(c, tr("Install a torrent app (for example qBittorrent) to download this link", "Bu bağlantıyı indirmek için bir torrent uygulaması kurun (örneğin qBittorrent)"), android.widget.Toast.LENGTH_LONG).show()
         }
