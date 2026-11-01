@@ -78,6 +78,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var quickClip: String? = null
     private var quickAt = 0L
     private var quickLeft = 0
+    // the copied text leaves the bar after two minutes even when nothing is typed: the bar is refreshed then (it only refreshed on a key before)
+    private val quickExpiry = android.os.Handler(android.os.Looper.getMainLooper())
+    private val quickExpire = Runnable { if (quickClip != null && SystemClock.uptimeMillis() - quickAt >= 120_000L) { quickClip = null; updateSuggestions() } }
     private var lastEmail: String? = null
     private class Correction(val original: String, val corrected: String, val sep: String)
     private var lastCorrection: Correction? = null
@@ -115,7 +118,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         } else {
             val t = item.coerceToText(this)?.toString()?.trim()
             // a long copy used to skip the quick-paste slot entirely (nothing showed); it belongs there too, the bar label is cut short regardless of the length
-            if (!t.isNullOrEmpty()) { quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
+            if (!t.isNullOrEmpty()) { quickClip = t; quickAt = SystemClock.uptimeMillis(); quickLeft = 2; quickExpiry.removeCallbacks(quickExpire); quickExpiry.postDelayed(quickExpire, 120_000L); updateSuggestions(); st.clipItems = ClipStore.addText(this, t); if (t.length <= 600) st.clips = (listOf(t) + st.clips.filter { it != t }).take(20) }
         }
     }
 
