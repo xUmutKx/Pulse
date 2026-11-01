@@ -1882,3 +1882,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.319 derlenmedi: Files home Recent: the newest files on the phone first (downloads such as zip show at once), then the app's own recent list
 - 1.0.320 derlenmedi: Keyboard: two e-mail suggestions share the whole bar (nothing empty on the right); search-filter fields (YouTube Music search) get word suggestions
 - 1.0.321 derlenmedi: Winamp player: background choice (black, the track's cover, or the skin) filling the whole screen, set from a settings button at the top right
+- 1.0.322 derlenmedi: Winamp look: the top bar has pixel buttons (VOL, RADIO, LIKE, SET) with a raised bevel; the back arrow is gone there
