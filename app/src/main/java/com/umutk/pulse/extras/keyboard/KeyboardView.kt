@@ -1465,8 +1465,13 @@ private fun RowScope.EmailChips(st: KbState, th: KbTheme, act: KbActions) {
             Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
-    if (shown.size <= 2) Row(Modifier.weight(1f).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {
-        shown.forEach { (i, s) -> chip(i, s) }
+    // one or two: they share the whole bar, so nothing is left empty and a long address keeps its end in view
+    if (shown.size <= 2) Row(Modifier.weight(1f).fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        shown.forEach { (i, s) ->
+            Box(Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 10.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
+                Text(s, color = th.text, fontSize = 16.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            }
+        }
     } else Row(Modifier.weight(1f).fillMaxSize().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         shown.forEach { (i, s) -> chip(i, s) }
     }
