@@ -423,7 +423,7 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
                         .border(if (on) BorderStroke(2.dp, Look.accent) else BorderStroke(1.dp, ink.copy(alpha = .3f)), shape))
                 }
                 // a long name goes on to a second line instead of stretching the one line of the row
-                Text(tr(f.en, f.turkish), modifier = Modifier.widthIn(max = 96.dp), textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = if (on) Look.accent else ink.copy(alpha = .6f), fontSize = 14.sp, maxLines = 2,
+                Text(tr(f.en, f.turkish), modifier = Modifier.widthIn(max = 96.dp), minLines = 2, textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = if (on) Look.accent else ink.copy(alpha = .6f), fontSize = 14.sp, maxLines = 2,
                     fontWeight = if (on) FontWeight.SemiBold else FontWeight.Normal)
             }
         }
