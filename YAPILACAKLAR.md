@@ -1853,3 +1853,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.296 derlenmedi: Keyboard: güzel and ipek (names that are ordinary words) are no longer capitalised or given an apostrophe; learned capitals for them are dropped
 - 1.0.296 derlenmedi: Keyboard: Adana'ya keeps its apostrophe at the space (no dictionary correction replaces it)
 - 1.0.296 derlenmedi: Keyboard: a name typed in lower case (adana) takes its capital when the word ends
+- 1.0.297 derlenmedi: Alarm ringing screen: Dismiss stops the alarm only when dragged outward (a tap does nothing)
+- 1.0.297 derlenmedi: Alarm editor: the + (new group) and the Alert Options arrow are removed; Save and Cancel are pinned at the bottom, always on screen
