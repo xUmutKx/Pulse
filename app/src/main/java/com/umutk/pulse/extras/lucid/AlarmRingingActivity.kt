@@ -70,6 +70,7 @@ import com.umutk.pulse.extras.lucid.ui.components.AlarmClockBox
 import com.umutk.pulse.extras.lucid.ui.components.AlarmLockBackground
 import com.umutk.pulse.extras.lucid.ui.components.AlarmLockPalette
 import com.umutk.pulse.extras.lucid.ui.components.ClockDateText
+import com.umutk.pulse.extras.lucid.ui.components.DragDismissPill
 import com.umutk.pulse.extras.lucid.ui.components.RingingActionPill
 import com.umutk.pulse.extras.lucid.ui.components.SnoozePill
 import com.umutk.pulse.extras.lucid.ui.components.clockTextBrush
@@ -685,9 +686,9 @@ fun AlarmRingingScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                RingingActionPill(
+                DragDismissPill(
                     text = "Dismiss",
-                    onClick = onDismiss,
+                    onDismiss = onDismiss,
                     containerColor = if (dismissContainerColorLong != 0L) {
                         Color(dismissContainerColorLong.toInt())
                     } else {
