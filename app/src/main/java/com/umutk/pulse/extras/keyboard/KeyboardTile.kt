@@ -29,7 +29,8 @@ class KeyboardTile : TileService() {
             qsTile?.apply { state = Tile.STATE_INACTIVE; updateTile() }
             return
         }
-        // the tile opens the normal keyboard as its own window; the floating setting of the keyboard is not touched
+        // the tile opens the normal keyboard as its own window: the floating keyboard is put away (a float left over from before is cleared)
+        KeyboardPrefs.floating = false
         tilePrefs(this).edit().putBoolean("active", true).apply()
         qsTile?.apply { state = Tile.STATE_ACTIVE; updateTile() }
         val i = Intent(this, KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
