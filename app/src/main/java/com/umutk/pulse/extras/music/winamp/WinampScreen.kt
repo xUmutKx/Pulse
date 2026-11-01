@@ -80,6 +80,7 @@ fun WinampScreen(
     onAdd: () -> Unit,
     modifier: Modifier = Modifier,
     onGetSkins: (() -> Unit)? = null,
+    startLyrics: Boolean = false,
 ) {
     val ctx = LocalContext.current
     val prefs = remember { ctx.getSharedPreferences("winamp_look", android.content.Context.MODE_PRIVATE) }
@@ -105,7 +106,8 @@ fun WinampScreen(
     val wave by com.umutk.pulse.extras.music.rememberWave()
     var visScope by remember { mutableStateOf(prefs.getBoolean("vis_scope", false)) }
 
-    var lyricsOn by remember { mutableStateOf(false) }
+    // the Lyrics page of the Winamp look opens with the lyrics window already up (the same window as its own LYRICS button)
+    var lyricsOn by remember { mutableStateOf(startLyrics) }
     // the background behind the windows: black, the playing track's cover, or the skin, filling the whole screen
     var bgMode by remember { mutableStateOf(prefs.getString("bg", "black") ?: "black") }
     var bgOpen by remember { mutableStateOf(false) }
@@ -166,7 +168,7 @@ fun WinampScreen(
             )
         }
         val sideWins: @Composable () -> Unit = {
-            if (showSpec) WinampSpectrum(levels, sEff)
+            if (showSpec) WinampSpectrum(levels, sEff, skin.vis)
             WinampArt(art, sEff)
         }
         if (fullWide) Row(Modifier.fillMaxSize().padding(horizontal = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -267,14 +269,16 @@ private fun WinampPanel(title: String, scaleDp: Float, content: @Composable () -
 
 /** The spectrum analyzer: one bar per band, green rising to yellow and red at the top. */
 @Composable
-private fun WinampSpectrum(levels: List<Float>, scaleDp: Float) {
+private fun WinampSpectrum(levels: List<Float>, scaleDp: Float, vis: List<Color>) {
     WinampPanel(tr("SPECTRUM ANALYZER", "SPEKTRUM ANALİZÖR"), scaleDp) {
         Canvas(Modifier.fillMaxWidth().height((100 * scaleDp).dp)) {
             val n = levels.size.coerceAtLeast(1)
             val bw = size.width / n
+            val barBrush = Brush.verticalGradient(vis.subList(2, 18), startY = 0f, endY = size.height)
             levels.forEachIndexed { i, v ->
                 val h = size.height * v.coerceIn(0f, 1f)
-                drawRect(Brush.verticalGradient(listOf(Color.Red, Color.Yellow, Color(0xFF00FF40)), startY = 0f, endY = size.height),
+                // the skin's own bar colours (viscolor.txt rows 2 to 17, top to bottom); the default skin has the classic red-yellow-green
+                drawRect(barBrush,
                     topLeft = Offset(i * bw + 1f, size.height - h), size = Size((bw - 2f).coerceAtLeast(1f), h))
             }
         }
