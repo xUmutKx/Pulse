@@ -103,7 +103,11 @@ private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE
  * M3U import/export, resume of the last queue. Playback lives in [MusicPlayerEngine] / [MusicPlaybackService].
  */
 /** What a notification asks the open music page to show: "player" (the full player) or "lyrics". The page takes it and clears it. */
-object MusicNav { var request by androidx.compose.runtime.mutableStateOf<String?>(null) }
+object MusicNav {
+    var request by androidx.compose.runtime.mutableStateOf<String?>(null)
+    /** An artist whose page the library opens (the player's artist line asks for it). The library takes it and clears it. */
+    var artist by androidx.compose.runtime.mutableStateOf<String?>(null)
+}
 
 @Composable
 fun MusicHub(onBack: () -> Unit) = com.umutk.pulse.WithPlayerFont { MusicHubBody(onBack) }
