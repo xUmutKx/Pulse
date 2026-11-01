@@ -62,9 +62,9 @@ import com.umutk.pulse.extras.weather.Place
 import com.umutk.pulse.extras.weather.WeatherStore
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
@@ -136,13 +136,27 @@ private fun get(url: String): String? {
     } catch (e: Exception) { null } finally { c.disconnect() }
 }
 
-private fun fetchTile(url: String): ImageBitmap? {
+/** A tile from the disk cache when it is there, else downloaded and kept (a map opened again shows its tiles at once). */
+private fun fetchTile(url: String, dir: File): ImageBitmap? {
+    val name = java.security.MessageDigest.getInstance("MD5").digest(url.toByteArray()).joinToString("") { "%02x".format(it) }
+    val f = File(dir, name)
+    if (f.isFile && f.length() > 0L) BitmapFactory.decodeFile(f.path)?.let { return it.asImageBitmap() }
     val c = URL(url).openConnection() as HttpURLConnection
     return try {
         c.connectTimeout = 10_000; c.readTimeout = 20_000
         c.setRequestProperty("User-Agent", "Pulse/1.0 (weather map)")
-        if (c.responseCode !in 200..299) null else c.inputStream.use { BitmapFactory.decodeStream(it) }?.asImageBitmap()
+        if (c.responseCode !in 200..299) null else {
+            val bytes = c.inputStream.use { it.readBytes() }
+            runCatching { dir.mkdirs(); f.writeBytes(bytes) }
+            BitmapFactory.decodeByteArray(bytes, 0, bytes.size)?.asImageBitmap()
+        }
     } catch (e: Exception) { null } finally { c.disconnect() }
+}
+
+/** Tiles older than three days are removed from the cache (the satellite picture of each day has its own tiles). */
+private fun pruneTiles(dir: File) {
+    val old = System.currentTimeMillis() - 3L * 86_400_000L
+    dir.listFiles()?.forEach { if (it.lastModified() < old) it.delete() }
 }
 
 /** The tiles of the zoom level that cover the screen, as (zoom, column, row); the column is not wrapped, so the drawing stays in place. */
@@ -425,6 +439,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     val grids = remember { mutableStateMapOf<MapLayer, List<Sample>>() }
     val stamps = remember { mutableStateMapOf<MapLayer, Long>() }
     val baseTiles = remember { mutableStateMapOf<String, ImageBitmap>() }
+    val tileDir = remember { File(ctx.cacheDir, "weather_tiles").also { pruneTiles(it) } }
     val overTiles = remember { mutableStateMapOf<String, ImageBitmap>() }
     // the aircraft of the last load stay until the next one: a map closed and opened again shows them at once
     var planes by remember { mutableStateOf<List<Plane>?>(lastPlanes) }
@@ -484,9 +499,9 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     val baseKeys = base.map { (z, x, y) -> tileKey(z, x, y) }
     LaunchedEffect(baseKeys) {
         val missing = baseKeys.filter { it !in baseTiles }
-        if (missing.isNotEmpty()) {
-            missing.map { k -> async(Dispatchers.IO) { k to fetchTile("https://tile.openstreetmap.org/$k.png") } }
-                .awaitAll().forEach { (k, img) -> if (img != null) baseTiles[k] = img }
+        // each tile is shown the moment it has loaded, the slowest one does not hold the others back
+        coroutineScope {
+            missing.forEach { k -> launch { withContext(Dispatchers.IO) { fetchTile("https://tile.openstreetmap.org/$k.png", tileDir) }?.let { baseTiles[k] = it } } }
         }
         if (baseTiles.size > 160) baseTiles.keys.filter { it !in baseKeys }.forEach { baseTiles.remove(it) }
     }
@@ -496,9 +511,11 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
     LaunchedEffect(layer, radar, overKeys) {
         if (overKeys.isEmpty()) return@LaunchedEffect
         val missing = overKeys.filter { it !in overTiles }
-        if (missing.isNotEmpty()) {
-            missing.map { k -> async(Dispatchers.IO) { k to overlayUrl(layer, radar, k.substringAfter('/'))?.let { fetchTile(it) } } }
-                .awaitAll().forEach { (k, img) -> if (img != null) overTiles[k] = img }
+        coroutineScope {
+            missing.forEach { k -> launch {
+                val img = withContext(Dispatchers.IO) { overlayUrl(layer, radar, k.substringAfter('/'))?.let { fetchTile(it, tileDir) } }
+                if (img != null) overTiles[k] = img
+            } }
         }
         if (overTiles.size > 160) overTiles.keys.filter { it !in overKeys }.forEach { overTiles.remove(it) }
     }
