@@ -113,7 +113,9 @@ object LiveLyrics {
                 ?: Lyrics.forTrack(ctx, title, artist, t.album, t.durationSec * 1000L, t.path)
         }
         // plain lyrics: the lines are spread over the sounding part of the song (the silences are left out)
+        // a track with fewer than three lines (an instrumental, or an .lrc with a stub) shows no lyrics in the notification, the lock screen or the widget
         val timed = r?.let { if (it.synced) it else spread(it, t.durationSec * 1000L, withContext(Dispatchers.IO) { ActiveSound.of(t.path) }) }
+            ?.takeIf { res -> res.lines.count { it.text.isNotBlank() } >= 3 }
         slot = t.path to timed; slotAt = android.os.SystemClock.uptimeMillis()
         return timed
     }

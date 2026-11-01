@@ -270,8 +270,20 @@ fun NowPlayingScreen(
     var drag by remember { mutableStateOf<Float?>(null) }
     val shownMs = drag?.let { (it * durationMs).roundToInt() } ?: positionMs
     val rawProgress = if (durationMs > 0) (shownMs.toFloat() / durationMs).coerceIn(0f, 1f) else 0f
-    // eases the bar between the position polls; a drag follows the finger directly
-    val animProgress by animateFloatAsState(rawProgress, label = "seek")
+    // the bar moves every display frame (120 Hz on a 120 Hz screen): the last polled position is carried on by the frame clock while
+    // playing. Read only in the draw phase (SeekBar's progress lambda), so the page itself does not recompose every frame.
+    var frameNs by remember { mutableStateOf(0L) }
+    var anchorMs by remember { mutableStateOf(positionMs) }
+    var anchorNs by remember { mutableStateOf(0L) }
+    LaunchedEffect(positionMs) { anchorMs = positionMs; anchorNs = System.nanoTime() }
+    LaunchedEffect(playing) { while (playing) androidx.compose.runtime.withFrameNanos { frameNs = it } }
+    val liveFrac: () -> Float = {
+        val now = frameNs
+        if (drag == null && playing && durationMs > 0 && now > 0L && anchorNs > 0L) {
+            val ms = (anchorMs + (now - anchorNs) / 1_000_000L).coerceIn(0L, durationMs.toLong())
+            ms.toFloat() / durationMs
+        } else rawProgress
+    }
     val ctx = LocalContext.current
     // the lyrics button shows only when the track has lyrics on the device, unless the player setting keeps it always
     val hasLyrics by produceState(false, track?.path) {
@@ -454,7 +466,7 @@ fun NowPlayingScreen(
             // transport: play sits on the centre axis, previous and next on either side, over a tall waveform
             BoxWithConstraints(Modifier.fillMaxWidth().height(TRANSPORT_H + SEEK_EXTRA)) {
                 // the waveform sits in the same row, behind the buttons: it shows on both sides of play
-                val seekAt: () -> Float = { if (drag != null) rawProgress else animProgress }
+                val seekAt: () -> Float = liveFrac
                 val waveMod = Modifier.align(Alignment.Center).requiredWidth(maxWidth).fillMaxHeight()
                 SeekBar(
                     progress = seekAt,
