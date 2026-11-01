@@ -97,15 +97,20 @@ private val PARTS = listOf(
 
 /** The newest files on the phone, when the app may read them: the recent list is filled up with these. */
 private fun newestFiles(ctx: Context): List<File> {
-    if (!RecentStore.canListAll(ctx)) return emptyList()
-    return runCatching {
+    val fromStore = runCatching {
         val out = ArrayList<File>()
         ctx.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.Files.FileColumns.DATA),
-            "${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/.%'", null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT 12")?.use { c ->
-            while (c.moveToNext() && out.size < 12) c.getString(0)?.let { out += File(it) }
+            "${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/.%'", null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT 30")?.use { c ->
+            while (c.moveToNext()) c.getString(0)?.let { out += File(it) }
         }
-        out.filter { it.isFile }
+        out.filter { it.isFile && it.length() >= 0 }
     }.getOrDefault(emptyList())
+    if (fromStore.isNotEmpty()) return fromStore
+    // without the media index (no access): the newest files of the download and camera folders
+    val root = Environment.getExternalStorageDirectory()
+    return listOf(Environment.DIRECTORY_DOWNLOADS, Environment.DIRECTORY_DCIM, Environment.DIRECTORY_DOCUMENTS)
+        .flatMap { d -> File(root, d).listFiles()?.filter { it.isFile }?.toList().orEmpty() }
+        .sortedByDescending { it.lastModified() }
 }
 
 private class Stats(val total: Long, val free: Long, val parts: List<Part>, val other: Long)
@@ -194,7 +199,8 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
     // the last numbers show at once; the fresh ones come in behind them
     var stats by remember { mutableStateOf(StatsCache.get(ctx)) }
     androidx.compose.runtime.LaunchedEffect(Unit) { val n = withContext(Dispatchers.IO) { loadStats(ctx) }; StatsCache.put(ctx, n); stats = n }
-    val recentFiles = remember { (RecentStore.list(ctx).map { File(it) }.filter { it.isFile } + newestFiles(ctx)).distinctBy { it.path }.take(10) }
+    // the newest files on the phone first (a download shows at once), then the app's own recent list
+    val recentFiles = remember { (newestFiles(ctx) + RecentStore.list(ctx).map { File(it) }.filter { it.isFile }).distinctBy { it.path }.take(12) }
     var dirs by remember { mutableStateOf(RecentDirs.list(ctx).filter { File(it).isDirectory }) }
     fun box(m: Modifier): Modifier = if (mat) m.clip(RoundedCornerShape(14.dp)).background(tile) else m.background(tile).frame(T)
 
