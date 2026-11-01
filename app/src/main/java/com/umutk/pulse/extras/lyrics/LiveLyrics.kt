@@ -71,8 +71,9 @@ object LiveLyrics {
     /** The lyric notification is shown on the lock screen too (its text, not only the title). */
     // on by default (as the notification's lyrics are): the line shows on the lock screen for a track that has lyrics
     fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", true)
-    // a notification of its own for the lyrics, beside the media one (on by default: the lyrics are right there in the shade)
-    fun separate(c: Context) = prefs(c).getBoolean("separate", true)
+    // a notification of its own for the lyrics, beside the media one. Off by default: two notifications from one app collapse into one
+    // and the media notification (with its controls) disappeared; the lyric line sits in the media notification instead
+    fun separate(c: Context) = prefs(c).getBoolean("separate", false)
     /** Lyrics found online are always written as a .lrc beside the song (not kept in the app's data or cache). */
     fun saveLrc(c: Context) = true
     /** The lyrics are written into the song's own tag when the format allows it (MP3); see [Lyrics.keep]. */
