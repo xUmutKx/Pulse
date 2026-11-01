@@ -59,6 +59,8 @@ import java.io.File
 
 /** Where the bottom bar of the standalone Files app and the home page send the app. */
 object FilesHomeNav {
+    /** Set by the home page's three lines: the Browse tab opens its side drawer. */
+    var openDrawer by mutableStateOf(false)
     /** Set by the bottom bar's Search: the explorer opens its search field when it appears. */
     var openSearch by mutableStateOf(false)
     /** The Search tab searches the whole phone, not only the folder it is in. */
@@ -114,7 +116,6 @@ private fun partOf(media: Int, mime: String?): String? {
         media == 1 || m.startsWith("image/") -> "images"
         media == 3 || m.startsWith("video/") -> "videos"
         media == 2 || m.startsWith("audio/") -> "audio"
-        m == "application/vnd.android.package-archive" -> "apps"
         m in setOf("application/zip", "application/x-rar-compressed", "application/vnd.rar", "application/x-7z-compressed", "application/gzip", "application/x-tar", "application/x-bzip2", "application/x-xz") -> "archives"
         m == "application/pdf" || m.startsWith("text/") || m.startsWith("application/msword") || m.contains("officedocument") || m.contains("ms-excel") || m.contains("ms-powerpoint") || m == "application/rtf" -> "docs"
         else -> null
@@ -137,6 +138,23 @@ private object StatsCache {
     }
 }
 
+/** The installed apps: their total size and how many there are. With the usage access the size includes each app's data. */
+private fun installedApps(ctx: Context): Pair<Long, Int> {
+    val apps = runCatching { ctx.packageManager.getInstalledApplications(0) }.getOrDefault(emptyList())
+    val ops = ctx.getSystemService(Context.APP_OPS_SERVICE) as? android.app.AppOpsManager
+    @Suppress("DEPRECATION")
+    val usage = ops?.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), ctx.packageName) == android.app.AppOpsManager.MODE_ALLOWED
+    val ssm = if (android.os.Build.VERSION.SDK_INT >= 26) ctx.getSystemService(Context.STORAGE_STATS_SERVICE) as? android.app.usage.StorageStatsManager else null
+    var bytes = 0L
+    for (a in apps) {
+        val st = if (usage && ssm != null) runCatching {
+            ssm.queryStatsForPackage(android.os.storage.StorageManager.UUID_DEFAULT, a.packageName, android.os.Process.myUserHandle())
+        }.getOrNull() else null
+        bytes += if (st != null) st.appBytes + st.dataBytes + st.cacheBytes else File(a.sourceDir).length()
+    }
+    return bytes to apps.size
+}
+
 private fun loadStats(ctx: Context): Stats {
     val top = Environment.getExternalStorageDirectory()
     val st = runCatching { StatFs(top.path) }.getOrNull()
@@ -152,6 +170,9 @@ private fun loadStats(ctx: Context): Stats {
             }
         }
     }
+    // Apps: every installed app's size (its program, and its data when the usage access is on); the APK files are not apps
+    val apps = installedApps(ctx)
+    parts.first { it.key == "apps" }.also { it.bytes = apps.first; it.count = apps.second }
     val other = (total - free - parts.sumOf { it.bytes }).coerceAtLeast(0L)
     return Stats(total, free, parts, other)
 }
@@ -186,7 +207,8 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
 
     LazyColumn(Modifier.fillMaxSize().background(bg).padding(horizontal = 18.dp)) {
         item {
-            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 0.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp).clickable { FilesHomeNav.openDrawer = true; onTab("files") }, contentAlignment = Alignment.Center) { PIcon("menu", fg, 24.dp) }
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom) {
                     Text(tr("Files", "Dosyalar"), color = fg, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                     Text(".", color = accent, fontSize = 34.sp, fontWeight = FontWeight.Bold)
@@ -195,11 +217,6 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
             }
         }
         item {
-            // three lines under the title: the analysis, the storage split by type, with every file in it
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp).clickable { FilesHomeNav.kind = null; onTab("types") }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                PIcon("menu", accent, 22.dp)
-                Text("  " + tr("Analysis", "Analiz"), color = fg, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-            }
             Caption(tr("Storage", "Depolama"))
             val s = stats
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
@@ -279,7 +296,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
         }
         item { Caption(tr("Types", "Türler")) }
         items(stats?.parts.orEmpty().filter { it.bytes > 0 || it.count > 0 }, key = { it.key }) { p ->
-            Row(Modifier.fillMaxWidth().clickable { FilesHomeNav.kind = p.key; onTab("types") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clickable { FilesHomeNav.kind = null; onTab("types") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(if (mat) 14.dp else 4.dp)).background(p.color), contentAlignment = Alignment.Center) { PIcon(p.icon, Color.White, 28.dp) }
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(tr(p.en, p.tr), color = fg, fontSize = 18.sp)

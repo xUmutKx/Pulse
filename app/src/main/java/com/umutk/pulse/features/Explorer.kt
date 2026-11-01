@@ -529,6 +529,10 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
 
     fun go(p: String) { ExScroll.live?.let { ExScroll.memo[here] = it.value }; freq = exBump(ctx, p); arcFile = null; arcCwd = ""; arcSel = emptySet(); here = p; sel = emptySet(); query = ""; recentView = false; searchOpen = false }
     // Browse pressed again in the bottom bar: back to the top folder from wherever we went into
+    // the three lines on the home page open this drawer (the Browse tab's side list)
+    LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.openDrawer) {
+        if (com.umutk.pulse.files.home.FilesHomeNav.openDrawer) { drawer = true; com.umutk.pulse.files.home.FilesHomeNav.openDrawer = false }
+    }
     LaunchedEffect(com.umutk.pulse.files.home.FilesHomeNav.toRoot) { if (com.umutk.pulse.files.home.FilesHomeNav.toRoot) { com.umutk.pulse.files.home.FilesHomeNav.toRoot = false; resultsFor = null; go(top.path) } }
     // Back steps out of the current view first (selection, search, recents), then up one folder; only at the top does it leave the page
     androidx.activity.compose.BackHandler(enabled = resultsFor != null || searchOpen || arcFile != null || sel.isNotEmpty() || query.isNotBlank() || recentView || dir != top) {
