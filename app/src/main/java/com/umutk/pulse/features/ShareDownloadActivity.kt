@@ -111,8 +111,8 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(label, color = T.sub, fontSize = 12.sp)
-                Box(Modifier.fillMaxWidth().height(6.dp).clip(RoundedCornerShape(3.dp)).background(T.sub.copy(alpha = .25f))) {
-                    Box(Modifier.fillMaxWidth(if (st == DlState.DONE) 1f else frac).height(6.dp).background(T.accent))
+                Box(Modifier.fillMaxWidth().height(3.dp).clip(RoundedCornerShape(2.dp)).background(T.sub.copy(alpha = .25f))) {
+                    Box(Modifier.fillMaxWidth(if (st == DlState.DONE) 1f else frac).height(3.dp).background(T.accent))
                 }
             }
         }
@@ -148,14 +148,15 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
             Column(Modifier.fillMaxWidth().clip26().background(T.bg).clickable(enabled = false) {}.navigationBarsPadding().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(tr("Download", "İndir"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    ExtraLookIcon(T.text)
                 }
                 body()
-                progressBlock()
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    PButton(tr("Download", "İndir"), Modifier.weight(1f)) { if (started == null) download() }
                     PButton(tr("Open Pulse", "Pulse'u aç"), Modifier.weight(1f)) { openPulse() }
+                    PButton(tr("Download", "İndir"), Modifier.weight(1f)) { if (started == null) download() }
+                    PButton(tr("Cancel", "İptal"), Modifier.weight(1f)) { close() }
                 }
+                // the progress is a thin line at the very bottom
+                progressBlock()
             }
         }
     }
