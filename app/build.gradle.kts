@@ -12,8 +12,8 @@ android {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 709
-        versionName = "1.0.308"
+        versionCode = 710
+        versionName = "1.0.309"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
@@ -48,11 +48,6 @@ dependencies {
     implementation("com.tom-roush:pdfbox-android:2.0.27.0") { // reads the text of a PDF for the book reader (text PDFs are reflowed)
         exclude(group = "org.bouncycastle") // the app already ships bcprov 1.79 (bcpkix below); the 1.72 copy clashes with it
     }
-    // the BitTorrent engine of the download manager (features/TorrentEngine.kt): libtorrent4j, the library LibreTorrent is built on; minSdk stays 21
-    implementation("org.libtorrent4j:libtorrent4j:2.1.0-38")
-    implementation("org.libtorrent4j:libtorrent4j-android-arm:2.1.0-38")
-    implementation("org.libtorrent4j:libtorrent4j-android-arm64:2.1.0-38")
-    implementation("org.libtorrent4j:libtorrent4j-android-x86_64:2.1.0-38")
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.autofill:autofill:1.1.0") // the password manager's suggestions inside the keyboard bar (inline autofill, Android 11+)
