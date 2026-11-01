@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the Winamp look's media notification: a dark window with the title in green, and pixel bevel buttons -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:padding="6dp"
+    android:background="@drawable/notif_winamp_bg">
+
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:paddingStart="4dp">
+
+        <TextView
+            android:id="@+id/nw_title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="#FF00FF66"
+            android:textSize="14sp"
+            android:fontFamily="monospace" />
+
+        <TextView
+            android:id="@+id/nw_artist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:singleLine="true"
+            android:ellipsize="end"
+            android:textColor="#FF9FA8BC"
+            android:textSize="12sp"
+            android:fontFamily="monospace" />
+    </LinearLayout>
+
+    <ImageButton
+        android:id="@+id/nw_prev"
+        android:layout_width="40dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="2dp"
+        android:background="@drawable/winamp_btn"
+        android:src="@drawable/ic_winamp_prev"
+        android:scaleType="centerInside"
+        android:padding="6dp" />
+
+    <ImageButton
+        android:id="@+id/nw_play"
+        android:layout_width="40dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="2dp"
+        android:background="@drawable/winamp_btn"
+        android:src="@drawable/ic_winamp_play"
+        android:scaleType="centerInside"
+        android:padding="6dp" />
+
+    <ImageButton
+        android:id="@+id/nw_next"
+        android:layout_width="40dp"
+        android:layout_height="32dp"
+        android:layout_marginStart="2dp"
+        android:background="@drawable/winamp_btn"
+        android:src="@drawable/ic_winamp_next"
+        android:scaleType="centerInside"
+        android:padding="6dp" />
+</LinearLayout>
