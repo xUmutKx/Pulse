@@ -1878,3 +1878,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.315 derlenmedi: Floating keyboard stays in its column (no sideways slide; the handle moves it up and down); the suggestion bar takes no room when it has nothing to show; suggestions and autocorrect keep running
 - 1.0.316 derlenmedi: Alarm switched off on one day: "Turn back on for ..." names the occurrence after the one being turned off (Sunday, Monday off: Tuesday); keyboard tile opens the normal keyboard (a leftover floating mode is cleared)
 - 1.0.317 derlenmedi: Keyboard tile window: transparent, no dimming, touches outside pass to the app (fix for a black screen with touch taken)
+- 1.0.318 derlenmedi: Files home: title and settings at the top; the three lines open the Browse drawer; Analysis row removed; a type opens the analysis; Apps is the total of the installed apps (APK files are no longer counted as apps)
