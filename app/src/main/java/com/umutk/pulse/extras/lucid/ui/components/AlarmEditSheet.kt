@@ -410,12 +410,6 @@ fun AlarmEditSheet(
                             style = MaterialTheme.typography.titleMedium,
                             modifier = Modifier.weight(1f)
                         )
-                        FilledIconButton(onClick = {
-                            newGroupName = ""
-                            showNewGroupDialog = true
-                        }) {
-                            Icon(Icons.Filled.Add, contentDescription = "New group")
-                        }
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     FlowRow(
@@ -527,19 +521,6 @@ fun AlarmEditSheet(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Text("Alert Options", style = MaterialTheme.typography.bodyLarge)
-                        Icon(
-                            imageVector = if (advancedNotificationsExpanded) {
-                                Icons.Outlined.ExpandLess
-                            } else {
-                                Icons.Outlined.ExpandMore
-                            },
-                            contentDescription = if (advancedNotificationsExpanded) {
-                                "Collapse"
-                            } else {
-                                "Expand"
-                            },
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
                     }
                     if (advancedNotificationsExpanded) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -776,13 +757,18 @@ fun AlarmEditSheet(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    TextButton(onClick = onDismiss) { Text("Cancel") }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(onClick = {
+
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 20.dp),
+                horizontalArrangement = Arrangement.End
+            ) {
+                TextButton(onClick = onDismiss) { Text("Cancel") }
+                Spacer(modifier = Modifier.width(8.dp))
+                Button(onClick = {
                         val repeatDays = selectedDays.sorted().joinToString(",")
                         val resolvedGroup = groupName.ifBlank { AlarmEntity.DEFAULT_GROUP }
                         val resolvedAppearance =
@@ -875,11 +861,8 @@ fun AlarmEditSheet(
                         )
                         onSave(newAlarm)
                     }) {
-                        Text("Save")
-                    }
+                    Text("Save")
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
