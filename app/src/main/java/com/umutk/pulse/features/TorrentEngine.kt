@@ -5,7 +5,6 @@ import org.libtorrent4j.SessionHandle
 import org.libtorrent4j.SessionManager
 import org.libtorrent4j.TorrentInfo
 import org.libtorrent4j.swig.add_torrent_params
-import org.libtorrent4j.swig.error_code
 import java.io.File
 
 /**
@@ -42,9 +41,8 @@ object TorrentEngine {
         val hash = Sha1Hash.parseHex(hex)
         val h = s.find(hash)
         if (h != null && h.isValid) { h.resume(); return hex }
-        val ec = error_code()
-        val p = add_torrent_params.parse_magnet_uri(url, ec)
-        if (ec.failed()) throw IllegalArgumentException("the magnet link cannot be read")
+        // the magnet link is read by libtorrent4j's own parser (the same one LibreTorrent's tests use)
+        val p = org.libtorrent4j.AddTorrentParams.parseMagnetUri(url).swig()
         p.setSave_path(saveDir.absolutePath)
         s.swig().async_add_torrent(p)
         return hex
@@ -63,6 +61,7 @@ object TorrentEngine {
     /** Takes the torrent out of the engine; the files already downloaded stay unless [deleteFiles]. */
     fun remove(hash: String, deleteFiles: Boolean) {
         val s = session ?: return
-        s.find(Sha1Hash.parseHex(hash))?.let { s.remove(it, if (deleteFiles) SessionHandle.DELETE_FILES else 0) }
+        val h = s.find(Sha1Hash.parseHex(hash)) ?: return
+        if (deleteFiles) s.remove(h, SessionHandle.DELETE_FILES) else s.swig().remove_torrent(h.swig())
     }
 }
