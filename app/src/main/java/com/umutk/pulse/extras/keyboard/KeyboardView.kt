@@ -244,19 +244,20 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         }
     }) {
         Column(
-            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.7f).align(Alignment.TopStart).offset { IntOffset(0, -(rootH * .5f * KeyboardPrefs.floatY).roundToInt()) }
+            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.9f).align(Alignment.TopStart).offset { IntOffset((st.rootW * .1f * KeyboardPrefs.floatX).roundToInt(), -(rootH * .5f * KeyboardPrefs.floatY).roundToInt()) }
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
-            // the floating keyboard is narrower and slides sideways by its handle
+            // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (sideways and up or down)
             if (KeyboardPrefs.floating) Box(Modifier.fillMaxWidth().height(34.dp).pointerInput(Unit) {
-                // dragged sideways and up or down: the keyboard follows the finger in both directions
                 awaitEachGesture {
                     val d = awaitFirstDown(requireUnconsumed = false)
                     drag(d.id) { c ->
                         c.consume()
                         val dy = c.position.y - c.previousPosition.y
+                        val dx = c.position.x - c.previousPosition.x
                         KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH * .5f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                        KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .1f).coerceAtLeast(1f)).coerceIn(0f, 1f)
                     }
                     KeyboardPrefs.saveFloat()
                 }
