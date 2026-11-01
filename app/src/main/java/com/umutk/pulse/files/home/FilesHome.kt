@@ -93,6 +93,19 @@ private val PARTS = listOf(
     Part("apps", "Apps", "Uygulamalar", "apps", Color(0xFF46A758)),
 )
 
+/** The newest files on the phone, when the app may read them: the recent list is filled up with these. */
+private fun newestFiles(ctx: Context): List<File> {
+    if (!RecentStore.canListAll(ctx)) return emptyList()
+    return runCatching {
+        val out = ArrayList<File>()
+        ctx.contentResolver.query(MediaStore.Files.getContentUri("external"), arrayOf(MediaStore.Files.FileColumns.DATA),
+            "${MediaStore.Files.FileColumns.DATA} NOT LIKE '%/.%'", null, "${MediaStore.Files.FileColumns.DATE_MODIFIED} DESC LIMIT 12")?.use { c ->
+            while (c.moveToNext() && out.size < 12) c.getString(0)?.let { out += File(it) }
+        }
+        out.filter { it.isFile }
+    }.getOrDefault(emptyList())
+}
+
 private class Stats(val total: Long, val free: Long, val parts: List<Part>, val other: Long)
 
 private fun partOf(media: Int, mime: String?): String? {
@@ -160,7 +173,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
     // the last numbers show at once; the fresh ones come in behind them
     var stats by remember { mutableStateOf(StatsCache.get(ctx)) }
     androidx.compose.runtime.LaunchedEffect(Unit) { val n = withContext(Dispatchers.IO) { loadStats(ctx) }; StatsCache.put(ctx, n); stats = n }
-    val recentFiles = remember { RecentStore.list(ctx).map { File(it) }.filter { it.isFile }.take(12) }
+    val recentFiles = remember { (RecentStore.list(ctx).map { File(it) }.filter { it.isFile } + newestFiles(ctx)).distinctBy { it.path }.take(10) }
     var dirs by remember { mutableStateOf(RecentDirs.list(ctx).filter { File(it).isDirectory }) }
     fun box(m: Modifier): Modifier = if (mat) m.clip(RoundedCornerShape(14.dp)).background(tile) else m.background(tile).frame(T)
 
@@ -173,7 +186,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
 
     LazyColumn(Modifier.fillMaxSize().background(bg).padding(horizontal = 18.dp)) {
         item {
-            Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom) {
                     Text(tr("Files", "Dosyalar"), color = fg, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                     Text(".", color = accent, fontSize = 34.sp, fontWeight = FontWeight.Bold)
@@ -182,7 +195,12 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
             }
         }
         item {
-            Caption(tr("Storage", "Depolama"), tr("Clean up", "Temizle")) { onTab("cache") }
+            // three lines under the title: the analysis, the storage split by type, with every file in it
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp).clickable { FilesHomeNav.kind = null; onTab("types") }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                PIcon("menu", accent, 22.dp)
+                Text("  " + tr("Analysis", "Analiz"), color = fg, fontSize = 16.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
+            }
+            Caption(tr("Storage", "Depolama"))
             val s = stats
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Bottom) {
                 val freeGb = s?.free?.let { it / 1_073_741_824.0 }
@@ -210,10 +228,13 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
                 }
                 Spacer(Modifier.height(14.dp))
                 val legend = s.parts.filter { it.bytes > 0 }.map { Triple(it.color, tr(it.en, it.tr), exSize(it.bytes)) } + Triple(Color(0xFF8B8D98), tr("Other", "Diğer"), exSize(s.other)) + Triple(if (mat) Color(0xFF2A2A2A) else T.line, tr("Free", "Boş"), exSize(s.free))
-                legend.chunked(3).forEach { row ->
+                // each kind opens its own list; Other opens the files that are in no kind; Free opens nothing
+                val keys = s.parts.filter { it.bytes > 0 }.map { it.key } + listOf("other", "")
+                legend.mapIndexed { i, x -> i to x }.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-                        row.forEach { (c, n, v) ->
-                            Row(Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
+                        row.forEach { (i, x) ->
+                            val (c, n, v) = x
+                            Row(Modifier.weight(1f).clickable(enabled = keys[i].isNotEmpty()) { FilesHomeNav.kind = keys[i]; onTab("types") }, verticalAlignment = Alignment.CenterVertically) {
                                 Box(Modifier.size(12.dp).clip(RoundedCornerShape(3.dp)).background(c))
                                 Text(" $n", color = fg, fontSize = 14.sp, maxLines = 1)
                                 Text(" $v", color = sub, fontSize = 12.sp, fontFamily = mono, maxLines = 1)
