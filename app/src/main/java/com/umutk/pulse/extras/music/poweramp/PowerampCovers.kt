@@ -110,18 +110,27 @@ internal object PowerampCovers {
     internal fun missTime(c: Context, path: String): Long =
         fileFor(c, path).let { File(it.parentFile, it.nameWithoutExtension + ".miss") }.takeIf { it.isFile }?.lastModified() ?: 0L
 
+    /** The pictures the picker has downloaded: each one is fetched once, Apply saves this copy, and closing the picker drops the rest. */
+    private val fetched = LinkedHashMap<String, ByteArray>()
+
     fun fetch(url: String): ByteArray {
+        synchronized(fetched) { fetched[url] }?.let { return it }
         val con = URL(url).openConnection() as HttpURLConnection
-        try {
+        val bytes = try {
             con.connectTimeout = 10_000
             con.readTimeout = 10_000
             // MusicBrainz and the Cover Art Archive ask every program to say who it is
             con.setRequestProperty("User-Agent", "Pulse/1.0 (github.com/xUmutKx/Pulse)")
-            return con.inputStream.use { it.readBytes() }
+            con.inputStream.use { it.readBytes() }
         } finally {
             con.disconnect()
         }
+        synchronized(fetched) { fetched[url] = bytes; while (fetched.size > 40) fetched.remove(fetched.keys.first()) }
+        return bytes
     }
+
+    /** Forgets the downloaded pictures of the picker (the ones not applied are removed). */
+    fun dropFetched() = synchronized(fetched) { fetched.clear() }
 
     fun image(url: String): ImageBitmap? = runCatching {
         val b = fetch(url)
@@ -185,6 +194,8 @@ internal fun CoverArtDialog(track: Track, style: PowerampStyle, onSaved: () -> U
     var saving by remember { mutableStateOf(false) }
     // a tap on a picture opens it large first; Apply puts it on the song
     var chosen by remember { mutableStateOf<PowerampCovers.Hit?>(null) }
+    // the downloaded pictures stay only while the picker is open
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { PowerampCovers.dropFetched() } }
     LaunchedEffect(track.path, attempt) {
         hits = null
         hits = withContext(Dispatchers.IO) {
