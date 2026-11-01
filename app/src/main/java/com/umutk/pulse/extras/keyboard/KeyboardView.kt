@@ -1458,7 +1458,7 @@ private fun VoicePanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
 
 /** The e-mail suggestions on the bar: the addresses used most, first. One or two sit in the middle; more scroll to the right. */
 @Composable
-private fun EmailChips(st: KbState, th: KbTheme, act: KbActions) {
+private fun RowScope.EmailChips(st: KbState, th: KbTheme, act: KbActions) {
     val shown = st.slots.withIndex().filter { it.value.isNotEmpty() }
     val chip: @Composable (Int, String) -> Unit = { i, s ->
         Box(Modifier.clip(RoundedCornerShape(20.dp)).background(th.text.copy(alpha = .08f)).clickable { act.slot(i) }.padding(horizontal = 14.dp, vertical = 6.dp), contentAlignment = Alignment.Center) {
