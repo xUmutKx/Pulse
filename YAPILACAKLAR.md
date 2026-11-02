@@ -1894,4 +1894,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.330 derlendi: Game Hub: its own icon, games hidden in every launcher (pm hide), per-game profile (restrict in background, free memory), looks Amoled/Material/Windows; alarm dismiss copy follows the finger; keyboard English grammar fixes; alarm weekday label checked
 - 1.0.331 derlendi: Game Hub in the three-dot menu and the extra apps list; game profile; looks Amoled/Material/Windows
 - 1.0.332 derlendi: Settings search finds setting rows by their English or Turkish text (not only the categories); partial index of the main rows
-- 1.0.333 derlenmedi: Settings General no longer crashes on Windows 11 (Game Hub icon); video folders show at once from the media index; download dialog: Cancel, Open after the download, Download at the right
+- 1.0.333 derlendi: Settings General no longer crashes on Windows 11 (Game Hub icon); video folders show at once from the media index; download dialog: Cancel, Open after the download, Download at the right
