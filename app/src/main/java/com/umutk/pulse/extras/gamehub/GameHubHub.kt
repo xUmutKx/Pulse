@@ -83,6 +83,24 @@ private fun showHiddenInLibrary(c: Context): Boolean = prefs(c).getBoolean("show
 private fun customSet(c: Context): Set<String> = prefs(c).getStringSet("custom", emptySet()) ?: emptySet()
 private fun saveCustom(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("custom", s).apply() }
 
+/** A hidden game has no name or icon for the system: each one without a saved name is shown for a moment (pm unhide), its name and icon are kept, and it is hidden again. */
+private fun readHiddenInfo(c: Context) {
+    if (!Privilege.mode.let { it == Privilege.Mode.Root || it == Privilege.Mode.Shizuku }) return
+    val pm = c.packageManager
+    for (pkg in hiddenSet(c)) {
+        if (prefs(c).contains("name_$pkg")) continue
+        Privilege.run("pm unhide $pkg")
+        runCatching {
+            val label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+            prefs(c).edit().putString("name_$pkg", label).apply()
+            val bmp = pm.getApplicationIcon(pkg).toBitmap(128, 128)
+            iconFile(c, pkg).parentFile?.mkdirs()
+            iconFile(c, pkg).outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        }
+        Privilege.run("pm hide $pkg")
+    }
+}
+
 /** The games: the installed ones the system marks as games (Android 8 and later), and the hidden ones from the saved name. */
 private fun loadGames(c: Context): List<GameRow> {
     val pm = c.packageManager
@@ -299,9 +317,10 @@ fun GameHubHub(onBack: () -> Unit) {
     var times by remember { mutableStateOf(emptyMap<String, Long>()) }
     fun recheck() { Privilege.detect(); mode = Privilege.mode }
     LaunchedEffect(Unit) {
-        games = withContext(Dispatchers.IO) { loadGames(ctx) }
         withContext(Dispatchers.IO) { Privilege.detect() }
         mode = Privilege.mode
+        withContext(Dispatchers.IO) { readHiddenInfo(ctx) }
+        games = withContext(Dispatchers.IO) { loadGames(ctx) }
         if (mode != Privilege.Mode.None) withContext(Dispatchers.IO) { grantUsageAccess(ctx) }
         times = withContext(Dispatchers.IO) { playTimes(ctx, 7) }
     }
@@ -320,9 +339,12 @@ fun GameHubHub(onBack: () -> Unit) {
         }
         when (tab) {
             0 -> BoxWithConstraints(Modifier.fillMaxSize().padding(top = 8.dp)) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
-                    PChip(false, tr("+ Add", "+ Ekle")) { addOpen = true }
-                }
+                androidx.compose.material3.FloatingActionButton(
+                    onClick = { addOpen = true },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+                    containerColor = pal.accent,
+                    contentColor = pal.bg,
+                ) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Add, tr("Add", "Ekle")) }
                 val wide = maxWidth > maxHeight
                 if (!can) Text(tr("Hiding and profiles need root or Shizuku.", "Gizleme ve profiller root ya da Shizuku ister."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
                 Row(Modifier.fillMaxSize()) {
