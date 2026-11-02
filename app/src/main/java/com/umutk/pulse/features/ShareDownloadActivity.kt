@@ -160,14 +160,16 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
                     Text(tr("Download", "İndir"), color = T.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 }
                 body()
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
-                    PButton(tr("Open Pulse", "Pulse'u aç"), Modifier.weight(1f)) { openPulse() }
-                    PButton(tr("Download", "İndir"), Modifier.weight(1f)) { if (started == null) download() }
-                    PButton(tr("Cancel", "İptal"), Modifier.weight(1f)) {
+                // Cancel, then Open Pulse (only once the file is downloaded), and Download at the right end; the labels are never cut
+                val finished = task?.state?.value == DlState.DONE
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.fillMaxWidth()) {
+                    PButton(tr("Cancel", "İptal"), Modifier.weight(1f), compact = true) {
                         // a download that is still running asks first; it is removed only when the person confirms
                         val running = task?.let { it.state.value == DlState.RUNNING || it.state.value == DlState.PAUSED } == true
                         if (running) askCancel = true else close()
                     }
+                    if (finished) PButton(tr("Open", "Aç"), Modifier.weight(1f), compact = true) { openPulse() }
+                    PButton(tr("Download", "İndir"), Modifier.weight(1f), compact = true) { if (started == null) download() }
                 }
                 // the progress is a thin line at the very bottom
                 progressBlock()

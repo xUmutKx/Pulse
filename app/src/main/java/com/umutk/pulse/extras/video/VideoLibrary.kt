@@ -49,7 +49,7 @@ fun queryVideos(ctx: Context): List<VideoItem> {
             }
         }
     }
-    return out + unindexedVideos(out)
+    return out
 }
 
 private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v", "ts", "flv", "wmv", "mpg", "mpeg")
@@ -58,7 +58,7 @@ private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v", 
  * Videos the media index does not know (a file copied in by another app, or a folder the index skipped): found by walking
  * the shared storage. Files the index already lists (same name and size) are not added twice.
  */
-private fun unindexedVideos(known: List<VideoItem>): List<VideoItem> {
+internal fun unindexedVideos(known: List<VideoItem>): List<VideoItem> {
     val seen = known.mapTo(HashSet()) { it.name to it.size }
     val root = android.os.Environment.getExternalStorageDirectory()
     val out = ArrayList<VideoItem>()
