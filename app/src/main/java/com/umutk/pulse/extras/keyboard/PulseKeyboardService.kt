@@ -512,6 +512,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
         if (lang.code == "tr" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(lang.locale).let { it in KeyboardDictionary.properNouns && it !in KeyboardDictionary.commonNames })
             out = typed.replaceFirstChar { it.titlecase(lang.locale) }
+        // English grammar on the word just ended: a lone "i" and its contractions, and the common contractions typed without the apostrophe
+        if (lang.code == "en" && out == typed) EN_GRAMMAR[typed.lowercase(Locale.ENGLISH)]?.let { out = it }
         // an English first name or place typed in lower case is written with its capital (wendy -> Wendy, london -> London)
         if (lang.code == "en" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(Locale.ENGLISH) in KeyboardDictionary.properNamesEn)
             out = typed.replaceFirstChar { it.titlecase(Locale.ENGLISH) }
@@ -1301,6 +1303,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             info.inputType and InputType.TYPE_MASK_VARIATION !in listOf(InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
         st.shift = if (c.getCursorCapsMode(info.inputType) != 0 || (own && info.inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD == 0 && info.inputType and InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD == 0 && (!noAuto || untouched))) 1 else 0
     }
+
+    private val EN_GRAMMAR: Map<String, String> = mapOf(
+        "i" to "I", "im" to "I'm", "ive" to "I've", "ill" to "I'll", "id" to "I'd",
+        "dont" to "don't", "doesnt" to "doesn't", "didnt" to "didn't", "cant" to "can't", "wont" to "won't",
+        "wouldnt" to "wouldn't", "couldnt" to "couldn't", "shouldnt" to "shouldn't", "isnt" to "isn't", "arent" to "aren't",
+        "wasnt" to "wasn't", "werent" to "weren't", "hasnt" to "hasn't", "havent" to "haven't", "hadnt" to "hadn't",
+        "thats" to "that's", "whats" to "what's", "theres" to "there's", "heres" to "here's", "youre" to "you're",
+        "theyre" to "they're", "weve" to "we've", "youve" to "you've", "lets" to "let's", "hes" to "he's", "shes" to "she's",
+    )
 
     private fun cased(w: String, typed: String): String {
         // a word that is English and not Turkish is capitalised the English way (if -> If, not İf)
