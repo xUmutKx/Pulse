@@ -278,7 +278,7 @@ private fun GameCover(pkg: String, pal: Pal) {
 @Composable
 private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, onClick: () -> Unit) {
     Column(Modifier.padding(6.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.Start) {
-        Box(Modifier.fillMaxWidth().aspectRatio(0.75f).clip(RoundedCornerShape(14.dp))) { GameCover(g.pkg, pal) }
+        Box(Modifier.fillMaxWidth().aspectRatio(2.14f).clip(RoundedCornerShape(10.dp))) { GameCover(g.pkg, pal) }
         Spacer(Modifier.height(6.dp))
         Text(g.name, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 17.sp)
         if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 11.sp)
@@ -441,6 +441,8 @@ fun GameHubHub(onBack: () -> Unit) {
     var addOpen by remember { mutableStateOf(false) }
     var times by remember { mutableStateOf(emptyMap<String, Long>()) }
     var usage by remember { mutableStateOf(emptyMap<String, android.app.usage.UsageStats>()) }
+    var sort by remember { mutableStateOf(prefs(ctx).getInt("sort", 0)) }   // 0 name, 1 play time, 2 size
+    var sizes by remember { mutableStateOf(emptyMap<String, Long>()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 1)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
     LaunchedEffect(Unit) {
@@ -452,6 +454,7 @@ fun GameHubHub(onBack: () -> Unit) {
         if (mode != Privilege.Mode.None) withContext(Dispatchers.IO) { grantUsageAccess(ctx) }
         times = withContext(Dispatchers.IO) { playTimes(ctx, 7) }
         usage = withContext(Dispatchers.IO) { usageOf(ctx, 3650) }
+        sizes = withContext(Dispatchers.IO) { games.associate { it.pkg to appSize(ctx, it.pkg) } }
     }
     val can = mode != Privilege.Mode.None
     fun setHidden(pkg: String, want: Boolean) { if (setGameHidden(ctx, pkg, want)) hidden = hiddenSet(ctx) }
@@ -532,9 +535,15 @@ fun GameHubHub(onBack: () -> Unit) {
                     } else LazyVerticalGrid(
                         GridCells.Adaptive(gridDpOf(tileSize).dp),
                         Modifier.fillMaxSize().padding(horizontal = 10.dp),
-                        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 90.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 56.dp, bottom = 90.dp),
                     ) {
-                        items(shown, key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden) { profile = g } }
+                        items(sortGames(shown, sort, usage, sizes), key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden) { profile = g } }
+                    }
+                    // the sort row, like the library bar of a store: name, play time, size
+                    Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0 to tr("Name", "Ad"), 1 to tr("Play time", "Süre"), 2 to tr("Size", "Boyut")).forEach { (k, label) ->
+                            Chip(pal, if (sort == k) "● $label" else label) { sort = k; prefs(ctx).edit().putInt("sort", k).apply() }
+                        }
                     }
                     FloatingActionButton(
                         onClick = { addOpen = true },
@@ -607,7 +616,7 @@ fun GameHubHub(onBack: () -> Unit) {
     }
 }
 
-private fun gridDpOf(size: Int): Int = when (size) { 0 -> 130; 2 -> 210; else -> 165 }
+private fun gridDpOf(size: Int): Int = when (size) { 0 -> 150; 2 -> 240; else -> 190 }
 
 /** A small number card on the home page. */
 @Composable
@@ -622,4 +631,14 @@ private fun StatCard(pal: Pal, modifier: Modifier, label: String, value: String)
 @Composable
 private fun SectionTitle(pal: Pal, label: String) {
     Text(label, color = pal.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 22.dp, bottom = 8.dp))
+}
+
+/** The size of an app's APK in bytes (0 when it cannot be read). */
+private fun appSize(c: Context, pkg: String): Long = runCatching { java.io.File(c.packageManager.getApplicationInfo(pkg, 0).sourceDir).length() }.getOrDefault(0L)
+
+/** The library in the chosen order: name, the play time of the last years, or the size of the app. */
+private fun sortGames(list: List<GameRow>, sort: Int, usage: Map<String, android.app.usage.UsageStats>, sizes: Map<String, Long>): List<GameRow> = when (sort) {
+    1 -> list.sortedByDescending { usage[it.pkg]?.totalTimeInForeground ?: 0L }
+    2 -> list.sortedByDescending { sizes[it.pkg] ?: 0L }
+    else -> list
 }
