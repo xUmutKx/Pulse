@@ -33,6 +33,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -156,6 +157,13 @@ private fun readHiddenInfo(c: Context) {
 /** Whether the system still shows the app to Pulse (a hidden app cannot be found by its package name). */
 private fun visibleTo(c: Context, pkg: String): Boolean = runCatching { c.packageManager.getApplicationInfo(pkg, 0) }.isSuccess
 
+/** Games switched on in the old add list (before a switch meant hiding) are hidden now, once: each one is hidden and leaves that list. */
+private fun migrateAdded(c: Context) {
+    if (!Privilege.mode.let { it == Privilege.Mode.Root || it == Privilege.Mode.Shizuku }) return
+    val left = customSet(c).filter { pkg -> !setGameHidden(c, pkg, true, quiet = true) }.toSet()
+    if (left != customSet(c)) saveCustom(c, left)
+}
+
 /** The hidden list must match the system: a game listed as hidden that the system still shows is hidden again, and one that
  *  stays visible leaves the list, so the switch never says "hidden" for a game that is on the screen. Needs root or Shizuku. */
 private fun reconcileHidden(c: Context) {
@@ -191,7 +199,7 @@ private fun coverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gameh
 private fun iconFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/icon_" + pkg.replace('.', '_') + ".png")
 
 /** Hides or shows a game in every launcher through the root or Shizuku shell (pm hide / pm unhide). */
-private fun setGameHidden(c: Context, pkg: String, hide: Boolean): Boolean {
+private fun setGameHidden(c: Context, pkg: String, hide: Boolean, quiet: Boolean = false): Boolean {
     // the name and the icon are kept while the game is still visible to the system: afterwards it cannot be found by the system
     if (hide) runCatching {
         val pm = c.packageManager
@@ -205,7 +213,7 @@ private fun setGameHidden(c: Context, pkg: String, hide: Boolean): Boolean {
     // success: the shell ran and printed no error (the wording of pm differs between Android versions)
     val ok = out.code >= 0 && !Regex("(?i)error|exception|failure|unknown|denied").containsMatchIn(out.text)
     if (ok) saveHidden(c, if (hide) hiddenSet(c) + pkg else hiddenSet(c) - pkg)
-    else toast(c, tr("Not changed: ", "Değişmedi: ") + (out.text.ifBlank { tr("no answer from root or Shizuku", "root ya da Shizuku yanıt vermedi") }).take(140))
+    else if (!quiet) toast(c, tr("Not changed: ", "Değişmedi: ") + (out.text.ifBlank { tr("no answer from root or Shizuku", "root ya da Shizuku yanıt vermedi") }).take(140))
     return ok
 }
 
@@ -322,7 +330,8 @@ private fun GameCover(pkg: String, pal: Pal) {
 private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, info: String?, onClick: () -> Unit) {
     Column(Modifier.padding(6.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.Start) {
         Box(Modifier.fillMaxWidth().aspectRatio(2.14f).clip(RoundedCornerShape(pal.radius))) { GameCover(g.pkg, pal) }
-        if (info != null) Text(info, color = pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+        // the info line always takes its place, so a tile keeps its height when the sort changes
+        Box(Modifier.padding(top = 4.dp).height(16.dp)) { if (info != null) Text(info, color = pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
         Spacer(Modifier.height(4.dp))
         Text(g.name, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 17.sp)
         if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 11.sp)
@@ -461,11 +470,13 @@ private fun Chip(pal: Pal, label: String, onClick: () -> Unit) {
     }
 }
 
-/** Every app that opens (launchable), with a switch that adds it to the library or takes it out again. */
+/** The apps that open, and the hidden ones: a switch on an app hides it at once (it leaves every launcher and moves to the hidden list at the top), a switch on a hidden app shows it again. One scrolling list, so the hidden list never runs off the dialog. */
 @Composable
 private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit) {
     val ctx = LocalContext.current
-    val apps by produceState<List<GameRow>>(emptyList()) {
+    var tick by remember { mutableStateOf(0) }
+    var hiddenPkgs by remember { mutableStateOf(hiddenSet(ctx)) }
+    val apps by produceState<List<GameRow>>(emptyList(), tick) {
         value = withContext(Dispatchers.IO) {
             val pm = ctx.packageManager
             runCatching {
@@ -477,38 +488,34 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
         }
     }
     var query by remember { mutableStateOf("") }
-    var added by remember { mutableStateOf(customSet(ctx)) }
+    var hiddenOpen by remember { mutableStateOf(true) }
+    val hiddenList = hiddenPkgs.map { GameRow(it, prefs(ctx).getString("name_$it", null) ?: it) }.sortedBy { it.name.lowercase() }
+    val visible = apps.filter { it.pkg !in hiddenPkgs && it.name.contains(query, true) }
+    fun changed() { hiddenPkgs = hiddenSet(ctx); tick++; onChanged() }
     Dialog(onDismissRequest = onClose) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).clip(RoundedCornerShape(20.dp)).background(pal.card).padding(16.dp)) {
-            Text(tr("Add to the library", "Kütüphaneye ekle"), color = pal.text, fontSize = 18.sp)
-            var hiddenOpen by remember { mutableStateOf(true) }
-            var hiddenList by remember { mutableStateOf(hiddenSet(ctx).map { GameRow(it, prefs(ctx).getString("name_$it", null) ?: it) }.sortedBy { it.name.lowercase() }) }
-            Row(Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(12.dp)).background(pal.bg).clickable { hiddenOpen = !hiddenOpen }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(tr("Hidden", "Gizli") + " (" + hiddenList.size + ")", color = pal.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                FluentIcon(if (hiddenOpen) "up" else "down", pal.sub, 16.dp)
+        LazyColumn(Modifier.fillMaxWidth().fillMaxHeight(0.85f).clip(RoundedCornerShape(20.dp)).background(pal.card).padding(16.dp)) {
+            item { Text(tr("Add to the library", "Kütüphaneye ekle"), color = pal.text, fontSize = 18.sp) }
+            item {
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(12.dp)).background(pal.bg).clickable { hiddenOpen = !hiddenOpen }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Hidden", "Gizli") + " (" + hiddenList.size + ")", color = pal.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    FluentIcon(if (hiddenOpen) "up" else "down", pal.sub, 16.dp)
+                }
             }
-            if (hiddenOpen) hiddenList.forEach { h ->
+            if (hiddenOpen) items(hiddenList, key = { "h_" + it.pkg }) { h ->
                 Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                     GameIcon(h.pkg, pal)
                     Spacer(Modifier.width(10.dp))
                     Text(h.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                    PSwitch(true, { want ->
-                        if (setGameHidden(ctx, h.pkg, want)) { hiddenList = hiddenList.filter { it.pkg != h.pkg }; onChanged() }
-                    })
+                    PSwitch(true, { want -> if (!want && setGameHidden(ctx, h.pkg, false)) changed() })
                 }
             }
-            PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(vertical = 8.dp))
-            LazyColumn(Modifier.fillMaxSize()) {
-                items(apps.filter { it.name.contains(query, true) }, key = { it.pkg }) { a ->
-                    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                        GameIcon(a.pkg, pal)
-                        Spacer(Modifier.width(10.dp))
-                        Text(a.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                        PSwitch(a.pkg in added, { want ->
-                            val next = if (want) customSet(ctx) + a.pkg else customSet(ctx) - a.pkg
-                            saveCustom(ctx, next); added = next; onChanged()
-                        })
-                    }
+            item { PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(vertical = 8.dp)) }
+            items(visible, key = { it.pkg }) { a ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GameIcon(a.pkg, pal)
+                    Spacer(Modifier.width(10.dp))
+                    Text(a.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                    PSwitch(false, { want -> if (want && setGameHidden(ctx, a.pkg, true)) changed() })
                 }
             }
         }
@@ -542,10 +549,11 @@ fun GameHubHub(onBack: () -> Unit) {
     var sizes by remember { mutableStateOf(emptyMap<String, Long>()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 1)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
+    val gridState = rememberLazyGridState()
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) { Privilege.detect() }
         mode = Privilege.mode
-        withContext(Dispatchers.IO) { readHiddenInfo(ctx); reconcileHidden(ctx) }
+        withContext(Dispatchers.IO) { readHiddenInfo(ctx); migrateAdded(ctx); reconcileHidden(ctx) }
         games = withContext(Dispatchers.IO) { loadGames(ctx) }
         hidden = hiddenSet(ctx)
         if (mode != Privilege.Mode.None) withContext(Dispatchers.IO) { grantUsageAccess(ctx) }
@@ -619,6 +627,8 @@ fun GameHubHub(onBack: () -> Unit) {
                     Spacer(Modifier.height(24.dp))
                 }
                 1 -> Box(Modifier.fillMaxSize()) {
+                    // a new order starts at the top, so the list does not jump to a row that moved
+                    LaunchedEffect(sort, filter) { gridState.scrollToItem(0) }
                     val shown = games.filter { g ->
                         when (filter) {
                             1 -> g.pkg !in hidden
@@ -632,6 +642,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     } else LazyVerticalGrid(
                         GridCells.Adaptive(gridDpOf(tileSize).dp),
                         Modifier.fillMaxSize().padding(horizontal = 10.dp),
+                        state = gridState,
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 56.dp, bottom = 90.dp),
                     ) {
                         items(sortGames(shown, sort, usage, sizes), key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden, infoOf(g, sort, usage, sizes)) { profile = g } }
