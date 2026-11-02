@@ -130,6 +130,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "localsend" -> com.umutk.pulse.extras.localsend.LocalSendHub(back)
         id == "palette" -> com.umutk.pulse.extras.palette.PaletteHub(back)
         id == "blackout" -> com.umutk.pulse.extras.blackout.BlackOutHub(back)
+        id == "gamehub" -> com.umutk.pulse.extras.gamehub.GameHubHub(back)
         id == "island" -> com.umutk.pulse.extras.island.IslandHub(back)
         id == "keyboard" -> com.umutk.pulse.extras.keyboard.KeyboardSettings(back)
         id == "notifhist" -> com.umutk.pulse.extras.notifhist.NotifHistoryScreen(back)
