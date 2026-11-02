@@ -713,7 +713,8 @@ private fun ExtraAppsCard() {
                 // Windows 11: the app's own Fluent glyph (the real Fluent System Icons path); the other looks keep the drawable tile
                 // the colour Fluent picture of the app (Fluent UI System Icons, colour set); Windows 11 with the Line icon style keeps the thin glyph
                 val colorIcon = if (T.id == "win11" && IconStyle.of(IconCat.APPS) != "line") fluentColorRes(ctx, FC_APP[alias] ?: "") else 0
-                if (T.id == "win11" && colorIcon == 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent.getValue(alias), FluentFilled.color(fluent.getValue(alias)), 24.dp) }
+                // an app with no Fluent glyph of its own (Game Hub) takes the info glyph; a missing key must not crash the page
+                if (T.id == "win11" && colorIcon == 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { FluentGlyph(fluent[alias] ?: "info", FluentFilled.color(fluent[alias] ?: "info"), 24.dp) }
                 else if (colorIcon != 0) Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) { Image(painterResource(colorIcon), null, Modifier.size(30.dp)) }
                 else Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(androidx.compose.ui.graphics.Color.Black)) {
                     Image(painterResource(icon), null, Modifier.fillMaxSize().graphicsLayer { scaleX = 1.5f; scaleY = 1.5f })
