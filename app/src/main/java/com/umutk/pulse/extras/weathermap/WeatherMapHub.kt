@@ -503,7 +503,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
         coroutineScope {
             missing.forEach { k -> launch { withContext(Dispatchers.IO) { fetchTile("https://tile.openstreetmap.org/$k.png", tileDir) }?.let { baseTiles[k] = it } } }
         }
-        if (baseTiles.size > 160) baseTiles.keys.filter { it !in baseKeys }.forEach { baseTiles.remove(it) }
+        if (baseTiles.size > 700) baseTiles.keys.filter { it !in baseKeys }.forEach { baseTiles.remove(it) }
     }
     val overMax = when (layer) { MapLayer.RADAR -> RADAR_MAX_ZOOM; MapLayer.SATELLITE -> SAT_MAX_ZOOM; else -> -1 }
     val overKeys = if (overMax < 0 || canvasSize.width <= 0f) emptyList()
@@ -517,7 +517,7 @@ fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
                 if (img != null) overTiles[k] = img
             } }
         }
-        if (overTiles.size > 160) overTiles.keys.filter { it !in overKeys }.forEach { overTiles.remove(it) }
+        if (overTiles.size > 700) overTiles.keys.filter { it !in overKeys }.forEach { overTiles.remove(it) }
     }
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
