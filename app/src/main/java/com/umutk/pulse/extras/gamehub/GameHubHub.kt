@@ -156,9 +156,10 @@ private fun setGameHidden(c: Context, pkg: String, hide: Boolean): Boolean {
         iconFile(c, pkg).outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
     }
     val out = Privilege.run(if (hide) "pm hide $pkg" else "pm unhide $pkg")
-    val ok = out.code >= 0 && out.text.contains("new hidden state")
+    // success: the shell ran and printed no error (the wording of pm differs between Android versions)
+    val ok = out.code >= 0 && !Regex("(?i)error|exception|failure|unknown|denied").containsMatchIn(out.text)
     if (ok) saveHidden(c, if (hide) hiddenSet(c) + pkg else hiddenSet(c) - pkg)
-    else toast(c, tr("Could not change it. Root or Shizuku is needed.", "Değiştirilemedi. Root ya da Shizuku gerekir."))
+    else toast(c, tr("Not changed: ", "Değişmedi: ") + (out.text.ifBlank { tr("no answer from root or Shizuku", "root ya da Shizuku yanıt vermedi") }).take(140))
     return ok
 }
 
@@ -177,6 +178,13 @@ private fun setRestricted(c: Context, pkg: String, restrict: Boolean): Boolean {
 private fun freeMemory(c: Context) {
     val out = Privilege.run("am kill-all")
     toast(c, if (out.code >= 0) tr("Background apps closed", "Arka plan uygulamaları kapatıldı") else tr("Needs root or Shizuku", "Root ya da Shizuku gerekir"))
+}
+
+/** Opens the game itself (its launch activity). */
+private fun openGame(c: Context, pkg: String) {
+    val i = c.packageManager.getLaunchIntentForPackage(pkg)
+    if (i == null) toast(c, tr("This app cannot be opened from here", "Bu uygulama buradan açılamıyor"))
+    else runCatching { c.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
 private fun toast(c: Context, s: String) = Toast.makeText(c, s, Toast.LENGTH_SHORT).show()
@@ -235,8 +243,9 @@ private fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit.
 @Composable
 private fun GameCover(pkg: String, pal: Pal) {
     val ctx = LocalContext.current
-    val cover by produceState<ImageBitmap?>(null, pkg) {
-        value = withContext(Dispatchers.IO) { runCatching { coverFile(ctx, pkg).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }.getOrNull() }
+    val apkOnly = prefs(ctx).getInt("iconMode", 0) == 1
+    val cover by produceState<ImageBitmap?>(null, pkg, apkOnly) {
+        value = if (apkOnly) null else withContext(Dispatchers.IO) { runCatching { coverFile(ctx, pkg).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }.getOrNull() }
     }
     val icon by produceState<ImageBitmap?>(null, pkg) {
         value = withContext(Dispatchers.IO) {
@@ -283,6 +292,11 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time:
         }
     }
     Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (!can) Text(tr("Root or Shizuku is not connected: switches are off. Press Check again in Settings.", "Root ya da Shizuku bağlı değil: anahtarlar kapalı. Ayarlar'da Yeniden kontrol et'e bas."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(pal.accent).clickable { openGame(ctx, g.pkg) }.padding(12.dp), contentAlignment = Alignment.Center) {
+            Text(tr("Open game", "Oyunu aç"), color = pal.bg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
+        Spacer(Modifier.height(10.dp))
         key(coverTick) {
             Box(Modifier.fillMaxWidth(0.6f).clip(RoundedCornerShape(16.dp)).background(pal.bg), contentAlignment = Alignment.Center) { GameIcon(g.pkg, pal) }
         }
@@ -497,6 +511,12 @@ fun GameHubHub(onBack: () -> Unit) {
                     }
                     SettingRow(pal, tr("Show hidden games in All games", "Tüm oyunlarda gizlileri göster"), showHidden, true) { on ->
                         showHidden = on; prefs(ctx).edit().putBoolean("showHidden", on).apply()
+                    }
+                    SectionTitle(pal, tr("Icons", "Simgeler"))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0 to tr("Cover, else APK icon", "Kapak, yoksa APK simgesi"), 1 to tr("APK icon only", "Yalnız APK simgesi")).forEach { (k, label) ->
+                            Chip(pal, if (prefs(ctx).getInt("iconMode", 0) == k) "● $label" else label) { prefs(ctx).edit().putInt("iconMode", k).apply(); page = page }
+                        }
                     }
                     SectionTitle(pal, tr("Start page", "Açılış sayfası"))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
