@@ -1902,3 +1902,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.338 derlendi: Game Hub library: tall covers in a grid, the name under each game
 - 1.0.339 derlendi: Game Hub library in banner cards like a store, sort row (name, play time, size); game page as a store page with Play; artist pictures kept in memory; weather tiles kept longer; calculator figure wraps to two lines
 - 1.0.340 derlendi: Game Hub looks (Amoled, Material with system colours, Windows 95/XP/8/10/11) with previews in a dialog; size or play time under each banner; hidden list checked against the system
+- 1.0.341 derlenmedi: Game Hub add list: switch hides an app at once (pm hide), one scrolling list, games switched on before are hidden once, library keeps its place when the sort changes
