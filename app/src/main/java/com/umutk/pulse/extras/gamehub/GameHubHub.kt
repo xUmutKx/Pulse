@@ -58,6 +58,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -224,7 +225,7 @@ private fun hm(ms: Long): String {
 private fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit.Dp) {
     val paths = remember(key) { ((FluentPaths.map[key] ?: FluentPaths.map["info"]!!)).map { PathParser().parsePathString(it).toPath() } }
     Canvas(Modifier.size(size)) {
-        androidx.compose.ui.graphics.drawscope.scale(this, this.size.width / 24f, Offset.Zero) { paths.forEach { drawPath(it, tint) } }
+        scale(this.size.width / 24f, pivot = Offset.Zero) { paths.forEach { drawPath(it, tint) } }
     }
 }
 
