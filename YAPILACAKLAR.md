@@ -1896,4 +1896,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.332 derlendi: Settings search finds setting rows by their English or Turkish text (not only the categories); partial index of the main rows
 - 1.0.333 derlendi: Settings General no longer crashes on Windows 11 (Game Hub icon); video folders show at once from the media index; download dialog: Cancel, Open after the download, Download at the right
 - 1.0.334 derlendi: Game Hub: library grid, portrait panel dialog and landscape side panel, home page with the week's play time and a chart, hidden games keep name and icon
-- 1.0.335 derlenmedi: Game Hub: add any installed app to the library ("+ Add"), so it shows up with the games; the library works with hidden games too
+- 1.0.335 derlendi: Game Hub: add any installed app to the library ("+ Add"), so it shows up with the games; the library works with hidden games too
