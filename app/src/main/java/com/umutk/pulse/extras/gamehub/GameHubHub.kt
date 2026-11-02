@@ -76,6 +76,9 @@ private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVA
 private fun hiddenSet(c: Context): Set<String> = prefs(c).getStringSet("hidden", emptySet()) ?: emptySet()
 private fun saveHidden(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("hidden", s).apply() }
 private fun restrictOn(c: Context, pkg: String): Boolean = prefs(c).getBoolean("restrict_$pkg", false)
+/** Apps the person added to the library by hand (any app, not only the ones the system marks as games). */
+private fun customSet(c: Context): Set<String> = prefs(c).getStringSet("custom", emptySet()) ?: emptySet()
+private fun saveCustom(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("custom", s).apply() }
 
 /** The games: the installed ones the system marks as games (Android 8 and later), and the hidden ones from the saved name. */
 private fun loadGames(c: Context): List<GameRow> {
@@ -87,7 +90,10 @@ private fun loadGames(c: Context): List<GameRow> {
     }.getOrDefault(emptyList())
     val seen = installed.map { it.pkg }.toSet()
     val hiddenRows = hiddenSet(c).filter { it !in seen }.map { GameRow(it, prefs(c).getString("name_$it", null) ?: it) }
-    return (installed + hiddenRows).sortedBy { it.name.lowercase() }
+    val added = customSet(c).filter { it !in seen && it !in hiddenSet(c) }.mapNotNull { pkg ->
+        runCatching { GameRow(pkg, pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()) }.getOrNull()
+    }
+    return (installed + hiddenRows + added).distinctBy { it.pkg }.sortedBy { it.name.lowercase() }
 }
 
 /** The icon file of a hidden game (kept, because a hidden app has no icon for the system any more). */
@@ -210,6 +216,44 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time:
     }
 }
 
+/** Every app that opens (launchable), with a switch that adds it to the library or takes it out again. */
+@Composable
+private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit) {
+    val ctx = LocalContext.current
+    val apps by produceState<List<GameRow>>(emptyList()) {
+        value = withContext(Dispatchers.IO) {
+            val pm = ctx.packageManager
+            runCatching {
+                pm.getInstalledApplications(0)
+                    .filter { it.packageName != ctx.packageName && pm.getLaunchIntentForPackage(it.packageName) != null }
+                    .map { GameRow(it.packageName, pm.getApplicationLabel(it).toString()) }
+                    .sortedBy { it.name.lowercase() }
+            }.getOrDefault(emptyList())
+        }
+    }
+    var query by remember { mutableStateOf("") }
+    var added by remember { mutableStateOf(customSet(ctx)) }
+    Dialog(onDismissRequest = onClose) {
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).clip(RoundedCornerShape(18.dp)).background(pal.card).padding(14.dp)) {
+            Text(tr("Add to the library", "Kütüphaneye ekle"), color = pal.text, fontSize = 17.sp)
+            com.umutk.pulse.PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(vertical = 8.dp))
+            LazyColumn(Modifier.fillMaxSize()) {
+                items(apps.filter { it.name.contains(query, true) }, key = { it.pkg }) { a ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
+                        GameIcon(a.pkg, pal)
+                        Spacer(Modifier.width(10.dp))
+                        Text(a.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                        PSwitch(a.pkg in added, { want ->
+                            val next = if (want) customSet(ctx) + a.pkg else customSet(ctx) - a.pkg
+                            saveCustom(ctx, next); added = next; onChanged()
+                        })
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** Game Hub: the library (a grid; wide screens show a game's panel beside it), the home page with the play time, and the settings. */
 @Composable
 fun GameHubHub(onBack: () -> Unit) {
@@ -222,6 +266,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var mode by remember { mutableStateOf(Privilege.mode) }
     var selected by remember { mutableStateOf<String?>(null) }
     var profileOpen by remember { mutableStateOf(false) }
+    var addOpen by remember { mutableStateOf(false) }
     var times by remember { mutableStateOf(emptyMap<String, Long>()) }
     fun recheck() { Privilege.detect(); mode = Privilege.mode }
     LaunchedEffect(Unit) {
@@ -246,6 +291,9 @@ fun GameHubHub(onBack: () -> Unit) {
         }
         when (tab) {
             0 -> BoxWithConstraints(Modifier.fillMaxSize().padding(top = 8.dp)) {
+                Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 4.dp), horizontalArrangement = Arrangement.End) {
+                    PChip(false, tr("+ Add", "+ Ekle")) { addOpen = true }
+                }
                 val wide = maxWidth > maxHeight
                 if (!can) Text(tr("Hiding and profiles need root or Shizuku.", "Gizleme ve profiller root ya da Shizuku ister."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
                 Row(Modifier.fillMaxSize()) {
@@ -315,6 +363,7 @@ fun GameHubHub(onBack: () -> Unit) {
             }
         }
     }
+    if (addOpen) AddGamesDialog(pal, onClose = { addOpen = false }, onChanged = { games = loadGames(ctx) })
     // a tall screen: a game's panel opens in a dialog
     if (profileOpen && chosen != null) Dialog(onDismissRequest = { profileOpen = false }) {
         Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(pal.card)) {
