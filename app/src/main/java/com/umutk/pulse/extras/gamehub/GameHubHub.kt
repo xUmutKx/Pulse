@@ -67,19 +67,33 @@ private fun hiddenSet(c: Context): Set<String> = prefs(c).getStringSet("hidden",
 private fun saveHidden(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("hidden", s).apply() }
 private fun restrictOn(c: Context, pkg: String): Boolean = prefs(c).getBoolean("restrict_$pkg", false)
 
-/** The installed games: apps the system marks as games (Android 8 and later), not Pulse itself. */
+/** The games: the installed ones the system marks as games (Android 8 and later), and the hidden ones from the saved name. */
 private fun loadGames(c: Context): List<GameRow> {
     val pm = c.packageManager
-    return runCatching {
+    val installed = runCatching {
         pm.getInstalledApplications(0)
             .filter { ai -> ai.packageName != c.packageName && Build.VERSION.SDK_INT >= 26 && ai.category == ApplicationInfo.CATEGORY_GAME }
             .map { ai -> GameRow(ai.packageName, pm.getApplicationLabel(ai).toString()) }
-            .sortedBy { it.name.lowercase() }
     }.getOrDefault(emptyList())
+    val seen = installed.map { it.pkg }.toSet()
+    val hiddenRows = hiddenSet(c).filter { it !in seen }.map { GameRow(it, prefs(c).getString("name_$it", null) ?: it) }
+    return (installed + hiddenRows).sortedBy { it.name.lowercase() }
 }
+
+/** The icon file of a hidden game (kept, because a hidden app has no icon for the system any more). */
+private fun iconFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/icon_" + pkg.replace('.', '_') + ".png")
 
 /** Hides or shows a game in every launcher through the root or Shizuku shell (pm hide / pm unhide). */
 private fun setGameHidden(c: Context, pkg: String, hide: Boolean): Boolean {
+    // the name and the icon are kept while the game is still visible to the system: afterwards it cannot be found by the system
+    if (hide) runCatching {
+        val pm = c.packageManager
+        val label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString()
+        prefs(c).edit().putString("name_$pkg", label).apply()
+        val bmp = pm.getApplicationIcon(pkg).toBitmap(128, 128)
+        iconFile(c, pkg).parentFile?.mkdirs()
+        iconFile(c, pkg).outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+    }
     val out = Privilege.run(if (hide) "pm hide $pkg" else "pm unhide $pkg")
     val ok = out.code >= 0 && out.text.contains("new hidden state")
     if (ok) saveHidden(c, if (hide) hiddenSet(c) + pkg else hiddenSet(c) - pkg)
@@ -111,7 +125,13 @@ private fun toast(c: Context, s: String) = Toast.makeText(c, s, Toast.LENGTH_SHO
 private fun GameIcon(pkg: String, pal: Pal) {
     val ctx = LocalContext.current
     val img by produceState<ImageBitmap?>(null, pkg) {
-        value = withContext(Dispatchers.IO) { runCatching { ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val f = iconFile(ctx, pkg)
+                if (f.isFile) android.graphics.BitmapFactory.decodeFile(f.path).asImageBitmap()
+                else ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap()
+            }.getOrNull()
+        }
     }
     Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(pal.card), contentAlignment = Alignment.Center) {
         img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
