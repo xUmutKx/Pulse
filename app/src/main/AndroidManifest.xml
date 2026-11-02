@@ -1606,6 +1606,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
+        <activity-alias android:name=".GameHubLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/ic_ad_gamehub" android:roundIcon="@drawable/ic_ad_gamehub" android:label="Game Hub">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
         <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_blackout" android:roundIcon="@mipmap/ic_ad_blackout" android:label="BlackOut">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
