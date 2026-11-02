@@ -656,12 +656,13 @@ private fun ExtraAppsCard() {
         Triple("PaletteLauncher", R.drawable.mat_palette, "Palette"),
         Triple("BlackOutLauncher", R.drawable.ic_ad_blackout_fg, "BlackOut"),
         Triple("IslandLauncher", R.drawable.ic_ad_island_fg, "Island"),
+        Triple("GameHubLauncher", R.drawable.ic_ad_gamehub, "Game Hub"),
     )
     // the apps in catalogs: a heading before each group
     val catalog = listOf(
         (tr("Files and documents", "Dosyalar ve belgeler")) to listOf("FilesLauncher", "PhotosLauncher", "NotesLauncher", "EbookLauncher", "VoiceLauncher"),
         (tr("Media", "Medya")) to listOf("MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "ScreenRecLauncher", "PaintLauncher", "ArtCraftLauncher"),
-        (tr("Tools and life", "Araçlar ve günlük")) to listOf("CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "CalendarLauncher", "ContactsLauncher"),
+        (tr("Tools and life", "Araçlar ve günlük")) to listOf("GameHubLauncher", "CalculatorLauncher", "ClockLauncher", "WeatherLauncher", "CalendarLauncher", "ContactsLauncher"),
         (tr("Communication and system", "İletişim ve sistem")) to listOf("MessagesLauncher", "NotifHistLauncher", "LocalSendLauncher", "KeyboardLauncher", "PaletteLauncher", "BlackOutLauncher", "IslandLauncher"),
     )
     val routeOf = mapOf("MusicLauncher" to "music", "VideoLauncher" to "video", "WhiteNoiseLauncher" to "whitenoise", "VoiceLauncher" to "voice", "NotesLauncher" to "notes", "EbookLauncher" to "ebook", "PaintLauncher" to "paint",
