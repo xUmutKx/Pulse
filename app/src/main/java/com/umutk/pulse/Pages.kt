@@ -425,6 +425,17 @@ fun SettingsPage() {
                 var q by remember { mutableStateOf("") }
                 PField(q, { q = it }, tr("Search settings", "Ayarlarda ara"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
                 // the categories as a plain list: the icon, the name and what is inside (the way Poweramp's settings list its groups)
+                // a search finds the settings rows too (by their text), each one opens its category
+                if (q.isNotBlank()) {
+                    val rows = SETTINGS_ROWS.filter { (_, en, tu) -> en.contains(q, true) || tu.contains(q, true) }
+                    rows.forEach { (catId, en, tu) ->
+                        val catName = cats.firstOrNull { it.id == catId }?.title.orEmpty()
+                        Row(Modifier.fillMaxWidth().clickable { cat = catId }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Column(Modifier.weight(1f)) { Text(tr(en, tu), color = T.text, fontSize = 15.sp); Text(catName, color = T.sub, fontSize = 12.sp) }
+                            Text("›", color = T.sub, fontSize = 22.sp)
+                        }
+                    }
+                }
                 cats.filter { q.isBlank() || it.title.contains(q, true) || it.sub.contains(q, true) }.forEach { c ->
                     Row(Modifier.fillMaxWidth().clickable { cat = c.id }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { PIcon(c.icon, T.accent, 26.dp) }
