@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.fillMaxSize
@@ -298,7 +299,10 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time:
         }
         Spacer(Modifier.height(10.dp))
         key(coverTick) {
-            Box(Modifier.fillMaxWidth(0.6f).clip(RoundedCornerShape(16.dp)).background(pal.bg), contentAlignment = Alignment.Center) { GameIcon(g.pkg, pal) }
+            Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(pal.bg)) {
+                GameCover(g.pkg, pal)
+                Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, pal.card))))
+            }
         }
         Spacer(Modifier.height(10.dp))
         Text(g.name, color = pal.text, fontSize = 18.sp, textAlign = TextAlign.Center)
@@ -307,13 +311,17 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time:
             Chip(pal, tr("Change cover", "Kapağı değiştir")) { pick.launch("image/*") }
             Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
         }
-        SettingRow(pal, tr("Hidden from every launcher", "Her başlatıcıdan gizli"), hidden, can, onHidden)
         SettingRow(pal, tr("Restrict in background", "Arka planda kısıtla"), restrict, can) { want -> if (setRestricted(ctx, g.pkg, want)) restrict = want }
         Row(
-            Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(14.dp)).background(pal.accent.copy(alpha = .2f))
-                .clickable(enabled = can) { freeMemory(ctx) }.padding(12.dp),
+            Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(14.dp)).background(pal.accent)
+                .clickable { freeMemory(ctx) }.padding(14.dp),
             horizontalArrangement = Arrangement.Center,
-        ) { Text(tr("Free memory now", "Şimdi bellek boşalt"), color = pal.text, fontSize = 14.sp) }
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            FluentIcon("clean", pal.bg, 18.dp)
+            Spacer(Modifier.width(8.dp))
+            Text(tr("Free memory now", "Şimdi bellek boşalt"), color = pal.bg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        }
     }
 }
 
@@ -354,6 +362,22 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
     Dialog(onDismissRequest = onClose) {
         Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).clip(RoundedCornerShape(20.dp)).background(pal.card).padding(16.dp)) {
             Text(tr("Add to the library", "Kütüphaneye ekle"), color = pal.text, fontSize = 18.sp)
+            var hiddenOpen by remember { mutableStateOf(true) }
+            var hiddenList by remember { mutableStateOf(hiddenSet(ctx).map { GameRow(it, prefs(ctx).getString("name_$it", null) ?: it) }.sortedBy { it.name.lowercase() }) }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(12.dp)).background(pal.bg).clickable { hiddenOpen = !hiddenOpen }.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(tr("Hidden", "Gizli") + " (" + hiddenList.size + ")", color = pal.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                FluentIcon(if (hiddenOpen) "up" else "down", pal.sub, 16.dp)
+            }
+            if (hiddenOpen) hiddenList.forEach { h ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    GameIcon(h.pkg, pal)
+                    Spacer(Modifier.width(10.dp))
+                    Text(h.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                    PSwitch(true, { want ->
+                        if (setGameHidden(ctx, h.pkg, want)) { hiddenList = hiddenList.filter { it.pkg != h.pkg }; onChanged() }
+                    })
+                }
+            }
             PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(vertical = 8.dp))
             LazyColumn(Modifier.fillMaxSize()) {
                 items(apps.filter { it.name.contains(query, true) }, key = { it.pkg }) { a ->
