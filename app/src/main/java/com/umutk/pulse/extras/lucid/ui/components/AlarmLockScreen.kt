@@ -30,6 +30,7 @@ import kotlin.math.roundToInt
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -1067,28 +1068,38 @@ fun DragDismissPill(
     val offset = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
     val scope = rememberCoroutineScope()
     val threshold = with(LocalDensity.current) { 120.dp.toPx() }
-    RingingActionPill(
-        text = text,
-        onClick = { },
-        containerColor = containerColor,
-        contentColor = contentColor,
-        fontFamily = fontFamily,
-        modifier = modifier
-            .offset { IntOffset(offset.value.x.roundToInt(), offset.value.y.roundToInt()) }
-            .pointerInput(Unit) {
-                detectDragGestures(
-                    onDragEnd = {
-                        if (offset.value.getDistance() >= threshold) onDismiss()
-                        else scope.launch { offset.animateTo(Offset.Zero, spring()) }
-                    },
-                    onDragCancel = { scope.launch { offset.animateTo(Offset.Zero, spring()) } },
-                    onDrag = { change, drag ->
-                        change.consume()
-                        scope.launch { offset.snapTo(offset.value + drag) }
-                    }
-                )
-            }
-    )
+    // the button stays where it is; while the finger drags, a see-through white copy follows it, and it goes back when let go
+    Box(
+        modifier.pointerInput(Unit) {
+            detectDragGestures(
+                onDragEnd = {
+                    if (offset.value.getDistance() >= threshold) onDismiss()
+                    else scope.launch { offset.animateTo(Offset.Zero, spring()) }
+                },
+                onDragCancel = { scope.launch { offset.animateTo(Offset.Zero, spring()) } },
+                onDrag = { change, drag ->
+                    change.consume()
+                    scope.launch { offset.snapTo(offset.value + drag) }
+                }
+            )
+        }
+    ) {
+        RingingActionPill(
+            text = text,
+            onClick = { },
+            containerColor = containerColor,
+            contentColor = contentColor,
+            fontFamily = fontFamily,
+            modifier = Modifier.matchParentSize()
+        )
+        if (offset.value != Offset.Zero) Box(
+            Modifier
+                .matchParentSize()
+                .offset { IntOffset(offset.value.x.roundToInt(), offset.value.y.roundToInt()) }
+                .clip(RoundedCornerShape(50))
+                .background(Color.White.copy(alpha = .35f))
+        )
+    }
 }
 
 @Composable
