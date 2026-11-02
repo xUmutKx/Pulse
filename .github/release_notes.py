@@ -11,8 +11,10 @@ for line in open('YAPILACAKLAR.md', encoding='utf-8'):
         continue
     v = tuple(int(x) for x in m.group(1).split('.'))
     if prev < v <= cur:
+        # the build marker (derlendi / derlenmedi, Turkish) is not part of the note
         text = re.sub(r'\s*\((derlendi|derlenmedi)\)\s*$', '', m.group(2))
+        text = re.sub(r'^(derlendi|derlenmedi):?\s*', '', text)
         entries.append(f'- {m.group(1)} {text}')
 print(f'## Pulse {cur_s}\n')
 print('\n'.join(entries) if entries else 'Fixes and small changes.')
-print(f'\n**Which file:** `Pulse-{cur_s}.apk` is for Android 12 and newer. `Pulse-{cur_s}-android5.apk` is for older phones (Android 5 and newer). Both are signed with the fixed key in `ci/pulse.keystore`, so every release installs over the last one. Neither has been tested on every phone, so please report bugs.')
+print(f'\n**Which file:** `Pulse-{cur_s}.apk` is for Android 12 and newer. `Pulse-{cur_s}-android5.apk` is for older phones (Android 5 and newer). Neither has been tested on every phone, so please report bugs.')
