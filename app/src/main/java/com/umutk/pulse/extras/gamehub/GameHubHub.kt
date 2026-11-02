@@ -2,8 +2,13 @@ package com.umutk.pulse.extras.gamehub
 
 import android.content.Context
 import android.content.pm.ApplicationInfo
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,17 +18,29 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ModalDrawerSheet
+import androidx.compose.material3.ModalNavigationDrawer
+import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -31,33 +48,33 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.core.graphics.drawable.toBitmap
-import com.umutk.pulse.PChip
-import com.umutk.pulse.PIcon
+import com.umutk.pulse.FluentFilled
+import com.umutk.pulse.FluentPaths
+import com.umutk.pulse.PField
 import com.umutk.pulse.PSwitch
 import com.umutk.pulse.extras.blackout.Privilege
 import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 private const val PREFS = "gamehub"
@@ -201,29 +218,39 @@ private fun hm(ms: Long): String {
     return if (m >= 60) "${m / 60}h ${m % 60}m" else "${m}m"
 }
 
-/** One game as a tile of the library: its icon and name. */
+
+/** A Fluent glyph for the Game Hub's own pages: the same vector paths the rest of Pulse uses (Windows 11 looks). */
 @Composable
-private fun GameTile(g: GameRow, pal: Pal, selected: Boolean, hidden: Boolean, onClick: () -> Unit) {
+private fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit.Dp) {
+    val paths = remember(key) { ((FluentPaths.map[key] ?: FluentPaths.map["info"]!!)).map { PathParser().parsePathString(it).toPath() } }
+    Canvas(Modifier.size(size)) {
+        androidx.compose.ui.graphics.drawscope.scale(this, this.size.width / 24f, Offset.Zero) { paths.forEach { drawPath(it, tint) } }
+    }
+}
+
+/** One game as a card: its cover (or icon) and name, and a mark when it is hidden. */
+@Composable
+private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, onClick: () -> Unit) {
     Column(
-        Modifier.padding(6.dp).clip(RoundedCornerShape(14.dp))
-            .background(if (selected) pal.accent.copy(alpha = .18f) else pal.card)
-            .clickable(onClick = onClick).padding(vertical = 10.dp, horizontal = 6.dp),
+        Modifier.padding(6.dp).clip(RoundedCornerShape(16.dp)).background(pal.card).clickable(onClick = onClick).padding(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        GameIcon(g.pkg, pal)
+        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(pal.bg), contentAlignment = Alignment.Center) {
+            GameIcon(g.pkg, pal)
+        }
         Spacer(Modifier.height(6.dp))
-        Text(g.name, color = pal.text, fontSize = 12.sp, maxLines = 1, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+        Text(g.name, color = pal.text, fontSize = 13.sp, maxLines = 2, textAlign = TextAlign.Center)
         if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 10.sp)
     }
 }
 
-/** A game's panel: play time, hide and background switches, memory clean-up. Used beside the grid on a wide screen and in a dialog on a tall one. */
+/** A game's page: cover, play time, cover picture, hide and background switches, memory clean-up. */
 @Composable
 private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time: Long, onHidden: (Boolean) -> Unit) {
     val ctx = LocalContext.current
     var restrict by remember(g.pkg) { mutableStateOf(restrictOn(ctx, g.pkg)) }
     var coverTick by remember(g.pkg) { mutableStateOf(0) }
-    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val size = runCatching { ctx.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L }.getOrDefault(-1L)
             if (size > COVER_MAX) toast(ctx, tr("The picture is bigger than 3 MB", "Resim 3 MB'tan büyük"))
@@ -234,28 +261,41 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time:
             }
         }
     }
-    Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        key(coverTick) { GameIcon(g.pkg, pal) }
-        Spacer(Modifier.height(8.dp))
-        Text(g.name, color = pal.text, fontSize = 17.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
-        Text(tr("Played: ", "Oynanan: ") + (if (time > 0) hm(time) else tr("no data", "veri yok")), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
-        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PChip(false, tr("Change cover", "Kapağı değiştir")) { pick.launch("image/*") }
-            PChip(false, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
+    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        key(coverTick) {
+            Box(Modifier.fillMaxWidth(0.6f).clip(RoundedCornerShape(16.dp)).background(pal.bg), contentAlignment = Alignment.Center) { GameIcon(g.pkg, pal) }
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Hidden from every launcher", "Her başlatıcıdan gizli"), color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            PSwitch(hidden, onHidden, enabled = can)
+        Spacer(Modifier.height(10.dp))
+        Text(g.name, color = pal.text, fontSize = 18.sp, textAlign = TextAlign.Center)
+        Text(tr("Played this week: ", "Bu hafta: ") + (if (time > 0) hm(time) else tr("no data", "veri yok")), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Chip(pal, tr("Change cover", "Kapağı değiştir")) { pick.launch("image/*") }
+            Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("Restrict in background", "Arka planda kısıtla"), color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-            PSwitch(restrict, { want -> if (setRestricted(ctx, g.pkg, want)) restrict = want }, enabled = can)
-        }
+        SettingRow(pal, tr("Hidden from every launcher", "Her başlatıcıdan gizli"), hidden, can, onHidden)
+        SettingRow(pal, tr("Restrict in background", "Arka planda kısıtla"), restrict, can) { want -> if (setRestricted(ctx, g.pkg, want)) restrict = want }
         Row(
-            Modifier.fillMaxWidth().padding(top = 8.dp).clip(RoundedCornerShape(12.dp)).background(pal.accent.copy(alpha = .2f))
+            Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(14.dp)).background(pal.accent.copy(alpha = .2f))
                 .clickable(enabled = can) { freeMemory(ctx) }.padding(12.dp),
             horizontalArrangement = Arrangement.Center,
         ) { Text(tr("Free memory now", "Şimdi bellek boşalt"), color = pal.text, fontSize = 14.sp) }
+    }
+}
+
+/** A row with a label and a switch. */
+@Composable
+private fun SettingRow(pal: Pal, label: String, on: Boolean, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        PSwitch(on, onChange, enabled = enabled)
+    }
+}
+
+/** A small pill button. */
+@Composable
+private fun Chip(pal: Pal, label: String, onClick: () -> Unit) {
+    Box(Modifier.clip(RoundedCornerShape(20.dp)).background(pal.card).border(1.dp, pal.sub.copy(alpha = .35f), RoundedCornerShape(20.dp)).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 8.dp)) {
+        Text(label, color = pal.text, fontSize = 13.sp)
     }
 }
 
@@ -277,9 +317,9 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
     var query by remember { mutableStateOf("") }
     var added by remember { mutableStateOf(customSet(ctx)) }
     Dialog(onDismissRequest = onClose) {
-        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).clip(RoundedCornerShape(18.dp)).background(pal.card).padding(14.dp)) {
-            Text(tr("Add to the library", "Kütüphaneye ekle"), color = pal.text, fontSize = 17.sp)
-            com.umutk.pulse.PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(vertical = 8.dp))
+        Column(Modifier.fillMaxWidth().fillMaxHeight(0.85f).clip(RoundedCornerShape(20.dp)).background(pal.card).padding(16.dp)) {
+            Text(tr("Add to the library", "Kütüphaneye ekle"), color = pal.text, fontSize = 18.sp)
+            PField(query, { query = it }, tr("Search apps", "Uygulama ara"), Modifier.fillMaxWidth().padding(vertical = 8.dp))
             LazyColumn(Modifier.fillMaxSize()) {
                 items(apps.filter { it.name.contains(query, true) }, key = { it.pkg }) { a ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -297,146 +337,194 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
     }
 }
 
-/** Game Hub: the library (a grid; wide screens show a game's panel beside it), the home page with the play time, and the settings. */
+private val PAGE_TITLES = listOf("Home", "Library", "Settings")
+
+/**
+ * Game Hub: a side menu (Home, Library with its filters, Settings), the home page with the week's play time, the library as a
+ * grid of covers with a round add button, and the settings.
+ */
 @Composable
 fun GameHubHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val drawer = rememberDrawerState(DrawerValue.Closed)
     var theme by remember { mutableStateOf(prefs(ctx).getString("theme", "amoled") ?: "amoled") }
     val pal = palOf(theme)
-    var tab by remember { mutableStateOf(prefs(ctx).getInt("start", 0)) }
+    var page by remember { mutableStateOf(prefs(ctx).getInt("start", 1)) }   // 0 home, 1 library, 2 settings
+    var filter by remember { mutableStateOf(0) }                              // library: 0 all, 1 installed, 2 hidden
     var games by remember { mutableStateOf(emptyList<GameRow>()) }
     var hidden by remember { mutableStateOf(hiddenSet(ctx)) }
     var mode by remember { mutableStateOf(Privilege.mode) }
-    var selected by remember { mutableStateOf<String?>(null) }
-    var profileOpen by remember { mutableStateOf(false) }
+    var profile by remember { mutableStateOf<GameRow?>(null) }
     var addOpen by remember { mutableStateOf(false) }
-    // a settings change redraws the page
-    var gridTick by remember { mutableStateOf(0) }
-    // read here, so that a change of the settings redraws the library
-    if (gridTick < 0) return
     var times by remember { mutableStateOf(emptyMap<String, Long>()) }
-    fun recheck() { Privilege.detect(); mode = Privilege.mode }
+    var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 1)) }
+    var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) { Privilege.detect() }
         mode = Privilege.mode
         withContext(Dispatchers.IO) { readHiddenInfo(ctx) }
         games = withContext(Dispatchers.IO) { loadGames(ctx) }
+        hidden = hiddenSet(ctx)
         if (mode != Privilege.Mode.None) withContext(Dispatchers.IO) { grantUsageAccess(ctx) }
         times = withContext(Dispatchers.IO) { playTimes(ctx, 7) }
     }
     val can = mode != Privilege.Mode.None
     fun setHidden(pkg: String, want: Boolean) { if (setGameHidden(ctx, pkg, want)) hidden = hiddenSet(ctx) }
-    val chosen = games.firstOrNull { it.pkg == selected }
-    Column(Modifier.fillMaxSize().background(pal.bg)) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", pal.text, 22.dp) }
-            Text("Game Hub", color = pal.text, fontSize = 20.sp, modifier = Modifier.weight(1f))
-        }
-        Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            PChip(tab == 0, tr("Library", "Kütüphane")) { tab = 0 }
-            PChip(tab == 1, tr("Home", "Ana sayfa")) { tab = 1 }
-            PChip(tab == 2, tr("Settings", "Ayarlar")) { tab = 2 }
-        }
-        when (tab) {
-            0 -> BoxWithConstraints(Modifier.fillMaxSize().padding(top = 8.dp)) {
-                androidx.compose.material3.FloatingActionButton(
-                    onClick = { addOpen = true },
-                    modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-                    containerColor = pal.accent,
-                    contentColor = pal.bg,
-                ) { androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Outlined.Add, tr("Add", "Ekle")) }
-                val wide = maxWidth > maxHeight
-                if (!can) Text(tr("Hiding and profiles need root or Shizuku.", "Gizleme ve profiller root ya da Shizuku ister."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
-                Row(Modifier.fillMaxSize()) {
-                    val grid: @Composable () -> Unit = {
-                        if (games.isEmpty()) Text(tr("No games found on this phone.", "Bu telefonda oyun bulunamadı."), color = pal.sub, fontSize = 14.sp, modifier = Modifier.padding(14.dp))
-                        else LazyVerticalGrid(GridCells.Adaptive(gridDp(ctx).dp), Modifier.fillMaxSize().padding(horizontal = 8.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)) {
-                            items(games.filter { showHiddenInLibrary(ctx) || it.pkg !in hidden }, key = { it.pkg }) { g ->
-                                GameTile(g, pal, selected == g.pkg, g.pkg in hidden) {
-                                    selected = g.pkg
-                                    if (!wide) profileOpen = true
-                                }
+    fun go(p: Int) { page = p; prefs(ctx).edit().putInt("start", p).apply(); scope.launch { drawer.close() } }
+    fun setTheme(k: String) { theme = k; prefs(ctx).edit().putString("theme", k).apply() }
+
+    ModalNavigationDrawer(
+        drawerState = drawer,
+        drawerContent = {
+            ModalDrawerSheet(drawerContainerColor = pal.card, drawerContentColor = pal.text) {
+                Text("Game Hub", color = pal.text, fontSize = 20.sp, modifier = Modifier.padding(start = 24.dp, top = 24.dp, bottom = 12.dp))
+                NavigationDrawerItem(label = { Text(tr("Home", "Ana sayfa")) }, selected = page == 0, onClick = { go(0) },
+                    icon = { FluentIcon("home", pal.text, 22.dp) }, modifier = Modifier.padding(horizontal = 12.dp))
+                NavigationDrawerItem(label = { Text(tr("All games", "Tüm oyunlar")) }, selected = page == 1 && filter == 0,
+                    onClick = { filter = 0; go(1) }, icon = { FluentIcon("play", pal.text, 22.dp) }, modifier = Modifier.padding(horizontal = 12.dp))
+                NavigationDrawerItem(label = { Text(tr("Installed", "Yüklü")) }, selected = page == 1 && filter == 1,
+                    onClick = { filter = 1; go(1) }, icon = { FluentIcon("download", pal.text, 22.dp) }, modifier = Modifier.padding(horizontal = 12.dp))
+                NavigationDrawerItem(label = { Text(tr("Hidden", "Gizli")) }, selected = page == 1 && filter == 2,
+                    onClick = { filter = 2; go(1) }, icon = { FluentIcon("eyeOff", pal.text, 22.dp) }, modifier = Modifier.padding(horizontal = 12.dp))
+                NavigationDrawerItem(label = { Text(tr("Settings", "Ayarlar")) }, selected = page == 2, onClick = { go(2) },
+                    icon = { FluentIcon("settings", pal.text, 22.dp) }, modifier = Modifier.padding(horizontal = 12.dp))
+            }
+        },
+    ) {
+        Column(Modifier.fillMaxSize().background(pal.bg)) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp).clickable { scope.launch { drawer.open() } }, contentAlignment = Alignment.Center) { FluentIcon("menu", pal.text, 24.dp) }
+                Text(
+                    when (page) { 0 -> tr("Home", "Ana sayfa"); 2 -> tr("Settings", "Ayarlar"); else -> when (filter) { 1 -> tr("Installed", "Yüklü"); 2 -> tr("Hidden", "Gizli"); else -> tr("Library", "Kütüphane") } },
+                    color = pal.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp),
+                )
+                Box(Modifier.size(44.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { FluentIcon("close", pal.text, 22.dp) }
+            }
+            when (page) {
+                0 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+                    val week = times.filterKeys { k -> games.any { it.pkg == k } }
+                    val total = week.values.sum()
+                    Text(tr("Welcome to Game Hub", "Game Hub'a hoş geldin"), color = pal.text, fontSize = 26.sp, modifier = Modifier.padding(top = 8.dp))
+                    Text(tr("Your games, in one place", "Oyunların, tek yerde"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.padding(bottom = 16.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        StatCard(pal, Modifier.weight(1f), tr("Games", "Oyun"), games.size.toString())
+                        StatCard(pal, Modifier.weight(1f), tr("Hidden", "Gizli"), hidden.size.toString())
+                        StatCard(pal, Modifier.weight(1f), tr("This week", "Bu hafta"), if (total > 0) hm(total) else "-")
+                    }
+                    val top = games.map { it to (week[it.pkg] ?: 0L) }.filter { it.second > 0 }.sortedByDescending { it.second }.take(7)
+                    Text(tr("Most played this week", "Bu hafta en çok oynanan"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 18.dp, bottom = 8.dp))
+                    if (top.isNotEmpty()) {
+                        val max = top.first().second.toFloat()
+                        Canvas(Modifier.fillMaxWidth().height(150.dp).clip(RoundedCornerShape(16.dp)).background(pal.card)) {
+                            val bw = size.width / (top.size * 1.6f)
+                            top.forEachIndexed { i, (_, t) ->
+                                val h = size.height * 0.8f * (t / max)
+                                drawRect(pal.accent, topLeft = Offset(i * bw * 1.6f + bw * 0.3f, size.height - h - 12f), size = Size(bw, h))
                             }
                         }
-                    }
-                    if (wide) {
-                        Box(Modifier.weight(1.6f).fillMaxHeight()) { grid() }
-                        Box(Modifier.weight(1f).fillMaxHeight().padding(8.dp).clip(RoundedCornerShape(16.dp)).background(pal.card), contentAlignment = Alignment.TopCenter) {
-                            if (chosen != null) GamePanel(chosen, pal, can, chosen.pkg in hidden, times[chosen.pkg] ?: 0L) { setHidden(chosen.pkg, it) }
-                            else Text(tr("Pick a game", "Bir oyun seç"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.padding(20.dp))
+                        top.forEach { (g, t) ->
+                            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(pal.card), contentAlignment = Alignment.Center) { GameIcon(g.pkg, pal) }
+                                Spacer(Modifier.width(12.dp))
+                                Text(g.name, color = pal.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.weight(1f))
+                                Text(hm(t), color = pal.sub, fontSize = 13.sp)
+                            }
                         }
-                    } else Box(Modifier.fillMaxSize()) { grid() }
+                    } else Text(tr("Play a game and its time shows here.", "Bir oyun oynayın, süresi burada görünür."), color = pal.sub, fontSize = 13.sp)
+                    if (!can) Text(tr("Hiding, profiles and play time need root or Shizuku.", "Gizleme, profiller ve oynama süresi root ya da Shizuku ister."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 18.dp))
+                    Spacer(Modifier.height(24.dp))
                 }
-            }
-            1 -> Column(Modifier.fillMaxSize().padding(14.dp).verticalScroll(rememberScrollState())) {
-                val week = times.filterKeys { k -> games.any { it.pkg == k } }
-                val total = week.values.sum()
-                Text(tr("This week", "Bu hafta"), color = pal.sub, fontSize = 13.sp)
-                Text(if (total > 0) hm(total) else tr("No play yet", "Henüz oynanmadı"), color = pal.text, fontSize = 30.sp)
-                Text(tr("${games.size} games · ${hidden.size} hidden", "${games.size} oyun · ${hidden.size} gizli"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(bottom = 16.dp))
-                val top = games.map { it to (week[it.pkg] ?: 0L) }.filter { it.second > 0 }.sortedByDescending { it.second }.take(7)
-                if (top.isNotEmpty()) {
-                    val max = top.first().second.toFloat()
-                    Canvas(Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(14.dp)).background(pal.card)) {
-                        val bw = size.width / (top.size * 1.6f)
-                        top.forEachIndexed { i, (_, t) ->
-                            val h = size.height * 0.85f * (t / max)
-                            drawRect(pal.accent, topLeft = androidx.compose.ui.geometry.Offset(i * bw * 1.6f + bw * 0.3f, size.height - h - 10f), size = androidx.compose.ui.geometry.Size(bw, h))
+                1 -> Box(Modifier.fillMaxSize()) {
+                    val shown = games.filter { g ->
+                        when (filter) {
+                            1 -> g.pkg !in hidden
+                            2 -> g.pkg in hidden
+                            else -> showHidden || g.pkg !in hidden
                         }
                     }
-                    Spacer(Modifier.height(10.dp))
-                    top.forEach { (g, t) ->
-                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                            GameIcon(g.pkg, pal)
-                            Spacer(Modifier.width(10.dp))
-                            Text(g.name, color = pal.text, fontSize = 14.sp, maxLines = 1, modifier = Modifier.weight(1f))
-                            Text(hm(t), color = pal.sub, fontSize = 13.sp)
+                    if (shown.isEmpty()) Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(tr("No games here yet", "Burada henüz oyun yok"), color = pal.sub, fontSize = 15.sp, modifier = Modifier.padding(top = 40.dp))
+                        Text(tr("Tap + to add an app", "Bir uygulama eklemek için + dokun"), color = pal.sub, fontSize = 13.sp)
+                    } else LazyVerticalGrid(
+                        GridCells.Adaptive(gridDpOf(tileSize).dp),
+                        Modifier.fillMaxSize().padding(horizontal = 10.dp),
+                        contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 90.dp),
+                    ) {
+                        items(shown, key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden) { profile = g } }
+                    }
+                    FloatingActionButton(
+                        onClick = { addOpen = true },
+                        containerColor = pal.accent,
+                        contentColor = pal.bg,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(20.dp),
+                    ) { FluentIcon("add", pal.bg, 24.dp) }
+                }
+                else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
+                    SectionTitle(pal, tr("Look", "Görünüm"))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf("amoled" to "Amoled", "material" to "Material", "windows" to "Windows").forEach { (k, label) ->
+                            Chip(pal, if (theme == k) "● $label" else label) { setTheme(k) }
                         }
                     }
-                } else Text(tr("Play a game and its time shows here.", "Bir oyun oynayın, süresi burada görünür."), color = pal.sub, fontSize = 13.sp)
-            }
-            else -> Column(Modifier.fillMaxSize().padding(14.dp)) {
-                Text(tr("Look", "Görünüm"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 8.dp, bottom = 6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf("amoled" to "Amoled", "material" to "Material", "windows" to "Windows").forEach { (k, label) ->
-                        PChip(theme == k, label) { theme = k; prefs(ctx).edit().putString("theme", k).apply() }
+                    SectionTitle(pal, tr("Library", "Kütüphane"))
+                    Text(tr("Tile size", "Kart boyutu"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0 to tr("Small", "Küçük"), 1 to tr("Medium", "Orta"), 2 to tr("Large", "Büyük")).forEach { (k, label) ->
+                            Chip(pal, if (tileSize == k) "● $label" else label) { tileSize = k; prefs(ctx).edit().putInt("grid", k).apply() }
+                        }
                     }
-                }
-                Text(
-                    when (mode) {
-                        Privilege.Mode.Root -> tr("Root is on", "Root açık")
-                        Privilege.Mode.Shizuku -> tr("Shizuku is on", "Shizuku açık")
-                        Privilege.Mode.None -> tr("No root and no Shizuku", "Root ve Shizuku yok")
-                    },
-                    color = pal.text, fontSize = 15.sp, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
-                )
-                PChip(false, tr("Check again", "Yeniden kontrol et")) { recheck() }
-                Text(tr("Library", "Kütüphane"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 20.dp, bottom = 6.dp))
-                Text(tr("Tile size", "Kart boyutu"), color = pal.text, fontSize = 14.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(0 to tr("Small", "Küçük"), 1 to tr("Medium", "Orta"), 2 to tr("Large", "Büyük")).forEach { (k, label) ->
-                        PChip(prefs(ctx).getInt("grid", 1) == k, label) { prefs(ctx).edit().putInt("grid", k).apply(); gridTick++ }
+                    SettingRow(pal, tr("Show hidden games in All games", "Tüm oyunlarda gizlileri göster"), showHidden, true) { on ->
+                        showHidden = on; prefs(ctx).edit().putBoolean("showHidden", on).apply()
                     }
-                }
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(tr("Show hidden games in the library", "Gizli oyunları kütüphanede göster"), color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                    PSwitch(showHiddenInLibrary(ctx), { on -> prefs(ctx).edit().putBoolean("showHidden", on).apply(); gridTick++ })
-                }
-                Text(tr("Opens on", "Açılış sayfası"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    listOf(0 to tr("Library", "Kütüphane"), 1 to tr("Home", "Ana sayfa")).forEach { (k, label) ->
-                        PChip(prefs(ctx).getInt("start", 0) == k, label) { prefs(ctx).edit().putInt("start", k).apply(); gridTick++ }
+                    SectionTitle(pal, tr("Start page", "Açılış sayfası"))
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        listOf(0 to tr("Home", "Ana sayfa"), 1 to tr("Library", "Kütüphane")).forEach { (k, label) ->
+                            Chip(pal, if (prefs(ctx).getInt("start", 1) == k) "● $label" else label) { prefs(ctx).edit().putInt("start", k).apply(); page = page }
+                        }
                     }
+                    SectionTitle(pal, tr("Access", "Erişim"))
+                    Text(
+                        when (mode) {
+                            Privilege.Mode.Root -> tr("Root is on", "Root açık")
+                            Privilege.Mode.Shizuku -> tr("Shizuku is on", "Shizuku açık")
+                            Privilege.Mode.None -> tr("No root and no Shizuku", "Root ve Shizuku yok")
+                        },
+                        color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp),
+                    )
+                    Chip(pal, tr("Check again", "Yeniden kontrol et")) {
+                        scope.launch { withContext(Dispatchers.IO) { Privilege.detect() }; mode = Privilege.mode }
+                    }
+                    SectionTitle(pal, tr("Covers", "Kapaklar"))
+                    Text(tr("A cover picture can be set on each game from its page (at most 3 MB).", "Her oyunun sayfasından kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 13.sp)
+                    Spacer(Modifier.height(24.dp))
                 }
-                Text(tr("A cover picture can be set on each game (at most 3 MB).", "Her oyuna kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
             }
         }
     }
     if (addOpen) AddGamesDialog(pal, onClose = { addOpen = false }, onChanged = { games = loadGames(ctx) })
-    // a tall screen: a game's panel opens in a dialog
-    if (profileOpen && chosen != null) Dialog(onDismissRequest = { profileOpen = false }) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(pal.card)) {
-            GamePanel(chosen, pal, can, chosen.pkg in hidden, times[chosen.pkg] ?: 0L) { setHidden(chosen.pkg, it) }
+    profile?.let { g ->
+        Dialog(onDismissRequest = { profile = null }) {
+            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(pal.card)) {
+                GamePanel(g, pal, can, g.pkg in hidden, times[g.pkg] ?: 0L) { want -> setHidden(g.pkg, want) }
+            }
         }
     }
+}
+
+private fun gridDpOf(size: Int): Int = when (size) { 0 -> 92; 2 -> 150; else -> 118 }
+
+/** A small number card on the home page. */
+@Composable
+private fun StatCard(pal: Pal, modifier: Modifier, label: String, value: String) {
+    Column(modifier.clip(RoundedCornerShape(16.dp)).background(pal.card).padding(12.dp)) {
+        Text(value, color = pal.text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+        Text(label, color = pal.sub, fontSize = 12.sp, maxLines = 1)
+    }
+}
+
+/** A section heading on the settings page. */
+@Composable
+private fun SectionTitle(pal: Pal, label: String) {
+    Text(label, color = pal.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 22.dp, bottom = 8.dp))
 }
