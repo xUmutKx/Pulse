@@ -1893,4 +1893,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.329 derlendi: Auto EQ: a song without a genre tag is measured for its first 25 seconds (bass, middle, treble) and gets the preset that fits its sound
 - 1.0.330 derlendi: Game Hub: its own icon, games hidden in every launcher (pm hide), per-game profile (restrict in background, free memory), looks Amoled/Material/Windows; alarm dismiss copy follows the finger; keyboard English grammar fixes; alarm weekday label checked
 - 1.0.331 derlendi: Game Hub in the three-dot menu and the extra apps list; game profile; looks Amoled/Material/Windows
-- 1.0.332 derlenmedi: Settings search finds setting rows by their English or Turkish text (not only the categories); partial index of the main rows
+- 1.0.332 derlendi: Settings search finds setting rows by their English or Turkish text (not only the categories); partial index of the main rows
