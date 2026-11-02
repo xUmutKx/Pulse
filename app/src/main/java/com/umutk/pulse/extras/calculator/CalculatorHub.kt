@@ -146,7 +146,7 @@ fun CalculatorHub(back: () -> Unit) {
             // the Material calculator: a roomy display (the earlier sum or the answer so far above, the number being typed below) and round keys of a sensible size
             Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp), verticalArrangement = Arrangement.Bottom, horizontalAlignment = Alignment.End) {
                 Text(preview?.let { "= $it" } ?: history.firstOrNull() ?: " ", color = T.sub, fontSize = 20.sp, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
-                Text(shown, color = T.text, fontSize = if (shown.length > 12) 40.sp else 64.sp, fontWeight = FontWeight.Light, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
+                Text(shown, color = T.text, fontSize = if (shown.length > 12) 40.sp else 64.sp, fontWeight = FontWeight.Light, maxLines = 2, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth().padding(top = 6.dp))
             }
             RoundPad(listOf(listOf("C", "⌫", "%", "÷"), listOf("7", "8", "9", "×"), listOf("4", "5", "6", "−"), listOf("1", "2", "3", "+"), listOf("( )", "0", ".", "="))) { press(it) }
             Spacer(Modifier.height(48.dp))
@@ -158,7 +158,7 @@ fun CalculatorHub(back: () -> Unit) {
             horizontalAlignment = Alignment.End,
         ) {
             Text(preview?.let { "= $it" } ?: if (mem != 0.0) "M" else " ", color = if (classic) Color.Black else T.sub, fontSize = 16.sp, maxLines = 1)
-            Text(shown, color = if (classic) Color.Black else T.text, fontSize = if (shown.length > 12) 30.sp else 46.sp, fontWeight = FontWeight.Light, maxLines = 1, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
+            Text(shown, color = if (classic) Color.Black else T.text, fontSize = if (shown.length > 12) 30.sp else 46.sp, fontWeight = FontWeight.Light, maxLines = 2, textAlign = TextAlign.End, modifier = Modifier.fillMaxWidth())
         }
         Spacer(Modifier.height(6.dp))
         val rows = if (classic) listOf(
