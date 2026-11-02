@@ -1,0 +1,47 @@
+package com.umutk.pulse
+
+/**
+ * The text of the settings rows, by category: the search of the settings page finds a row by its English or Turkish text and opens its category.
+ * Written from the settings pages; a row that is missing here is still found through its category's name and description.
+ */
+internal val SETTINGS_ROWS: List<Triple<String, String, String>> = listOf(
+    Triple("look", "Background", "Arka plan"),
+    Triple("look", "Black (AMOLED)", "Siyah (AMOLED)"),
+    Triple("look", "Dark grey", "Koyu gri"),
+    Triple("look", "Icons (Windows 11)", "İkonlar (Windows 11)"),
+    Triple("look", "Blur amount", "Bulanıklık"),
+    Triple("look", "Tint (darkness)", "Koyuluk"),
+    Triple("look", "Other colors", "Diğer renkler"),
+    Triple("look", "Edit picture", "Resmi düzenle"),
+    Triple("look", "Appearance mode", "Appearance mode"),
+    Triple("look", "Window material (Windows 11 only)", "Window material (Windows 11 only)"),
+    Triple("look", "Theme", "Theme"),
+    Triple("look", "Windows", "Windows"),
+    Triple("look", "Accent colour", "Accent colour"),
+    Triple("general", "Old monitor filter", "Eski monitör filtresi"),
+    Triple("general", "Scan lines and dots, like a CRT", "CRT gibi tarama çizgileri ve noktalar"),
+    Triple("general", "Sign-in screen at start", "Açılışta giriş ekranı"),
+    Triple("general", "Windows 95, XP, 7, 10 and 11 looks", "Windows 95, XP, 7, 10 ve 11 görünümleri"),
+    Triple("general", "Start-up sound", "Açılış sesi"),
+    Triple("general", "Opening animation", "Açılış animasyonu"),
+    Triple("general", "The Pulse splash at start", "Başlangıçtaki Pulse açılış animasyonu"),
+    Triple("general", "Language", "Dil"),
+    Triple("general", "Open files", "Open files"),
+    Triple("general", "Opening picture", "Opening picture"),
+    Triple("general", "Start page", "Start page"),
+    Triple("functions", "Notification history", "Bildirim geçmişi"),
+    Triple("functions", "Keeps the notifications you get; off keeps none", "Aldığın bildirimleri saklar; kapalıyken hiçbiri saklanmaz"),
+    Triple("functions", "Files: full screen", "Dosyalar: tam ekran"),
+    Triple("functions", "APK extract folder", "APK çıkarma klasörü"),
+    Triple("functions", "Cannot use this folder", "Bu klasör kullanılamaz"),
+    Triple("functions", "App manager's Extract APK saves here", "App manager'ın APK çıkarma işlemi buraya kaydeder"),
+    Triple("functions", "Pop-up windows", "Açılır pencereler"),
+    Triple("functions", "Current theme", "Mevcut tema"),
+    Triple("functions", "Refresh rate", "Yenileme hızı"),
+    Triple("functions", "Report", "Rapor"),
+    Triple("functions", "Permissions", "İzinler"),
+    Triple("monitor", "Needs the 'display over other apps' permission.", "Needs the 'display over other apps' permission."),
+    Triple("monitor", "Show", "Show"),
+    Triple("monitor", "Alerts", "Alerts"),
+    Triple("monitor", "Needs the notification permission.", "Needs the notification permission."),
+)
