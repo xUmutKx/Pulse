@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -77,6 +78,8 @@ private fun hiddenSet(c: Context): Set<String> = prefs(c).getStringSet("hidden",
 private fun saveHidden(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("hidden", s).apply() }
 private fun restrictOn(c: Context, pkg: String): Boolean = prefs(c).getBoolean("restrict_$pkg", false)
 /** Apps the person added to the library by hand (any app, not only the ones the system marks as games). */
+private fun gridDp(c: Context): Int = when (prefs(c).getInt("grid", 1)) { 0 -> 84; 2 -> 128; else -> 100 }
+private fun showHiddenInLibrary(c: Context): Boolean = prefs(c).getBoolean("showHidden", true)
 private fun customSet(c: Context): Set<String> = prefs(c).getStringSet("custom", emptySet()) ?: emptySet()
 private fun saveCustom(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("custom", s).apply() }
 
@@ -95,6 +98,10 @@ private fun loadGames(c: Context): List<GameRow> {
     }
     return (installed + hiddenRows + added).distinctBy { it.pkg }.sortedBy { it.name.lowercase() }
 }
+
+/** The cover a person picked for a game (at most 3 MB). */
+private const val COVER_MAX = 3L * 1024 * 1024
+private fun coverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/cover_" + pkg.replace('.', '_') + ".jpg")
 
 /** The icon file of a hidden game (kept, because a hidden app has no icon for the system any more). */
 private fun iconFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/icon_" + pkg.replace('.', '_') + ".png")
@@ -143,8 +150,10 @@ private fun GameIcon(pkg: String, pal: Pal) {
     val img by produceState<ImageBitmap?>(null, pkg) {
         value = withContext(Dispatchers.IO) {
             runCatching {
+                val cover = coverFile(ctx, pkg)
                 val f = iconFile(ctx, pkg)
-                if (f.isFile) android.graphics.BitmapFactory.decodeFile(f.path).asImageBitmap()
+                if (cover.isFile) android.graphics.BitmapFactory.decodeFile(cover.path).asImageBitmap()
+                else if (f.isFile) android.graphics.BitmapFactory.decodeFile(f.path).asImageBitmap()
                 else ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap()
             }.getOrNull()
         }
@@ -195,11 +204,27 @@ private fun GameTile(g: GameRow, pal: Pal, selected: Boolean, hidden: Boolean, o
 private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time: Long, onHidden: (Boolean) -> Unit) {
     val ctx = LocalContext.current
     var restrict by remember(g.pkg) { mutableStateOf(restrictOn(ctx, g.pkg)) }
+    var coverTick by remember(g.pkg) { mutableStateOf(0) }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            val size = runCatching { ctx.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L }.getOrDefault(-1L)
+            if (size > COVER_MAX) toast(ctx, tr("The picture is bigger than 3 MB", "Resim 3 MB'tan büyük"))
+            else runCatching {
+                val bytes = ctx.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@runCatching
+                if (bytes.size > COVER_MAX) toast(ctx, tr("The picture is bigger than 3 MB", "Resim 3 MB'tan büyük"))
+                else { coverFile(ctx, g.pkg).parentFile?.mkdirs(); coverFile(ctx, g.pkg).writeBytes(bytes); coverTick++ }
+            }
+        }
+    }
     Column(Modifier.fillMaxWidth().padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        GameIcon(g.pkg, pal)
+        key(coverTick) { GameIcon(g.pkg, pal) }
         Spacer(Modifier.height(8.dp))
         Text(g.name, color = pal.text, fontSize = 17.sp, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
         Text(tr("Played: ", "Oynanan: ") + (if (time > 0) hm(time) else tr("no data", "veri yok")), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            PChip(false, tr("Change cover", "Kapağı değiştir")) { pick.launch("image/*") }
+            PChip(false, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
+        }
         Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Hidden from every launcher", "Her başlatıcıdan gizli"), color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
             PSwitch(hidden, onHidden, enabled = can)
@@ -260,13 +285,17 @@ fun GameHubHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
     var theme by remember { mutableStateOf(prefs(ctx).getString("theme", "amoled") ?: "amoled") }
     val pal = palOf(theme)
-    var tab by remember { mutableStateOf(0) }
+    var tab by remember { mutableStateOf(prefs(ctx).getInt("start", 0)) }
     var games by remember { mutableStateOf(emptyList<GameRow>()) }
     var hidden by remember { mutableStateOf(hiddenSet(ctx)) }
     var mode by remember { mutableStateOf(Privilege.mode) }
     var selected by remember { mutableStateOf<String?>(null) }
     var profileOpen by remember { mutableStateOf(false) }
     var addOpen by remember { mutableStateOf(false) }
+    // a settings change redraws the page
+    var gridTick by remember { mutableStateOf(0) }
+    // read here, so that a change of the settings redraws the library
+    if (gridTick < 0) return
     var times by remember { mutableStateOf(emptyMap<String, Long>()) }
     fun recheck() { Privilege.detect(); mode = Privilege.mode }
     LaunchedEffect(Unit) {
@@ -299,8 +328,8 @@ fun GameHubHub(onBack: () -> Unit) {
                 Row(Modifier.fillMaxSize()) {
                     val grid: @Composable () -> Unit = {
                         if (games.isEmpty()) Text(tr("No games found on this phone.", "Bu telefonda oyun bulunamadı."), color = pal.sub, fontSize = 14.sp, modifier = Modifier.padding(14.dp))
-                        else LazyVerticalGrid(GridCells.Adaptive(96.dp), Modifier.fillMaxSize().padding(horizontal = 8.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)) {
-                            items(games, key = { it.pkg }) { g ->
+                        else LazyVerticalGrid(GridCells.Adaptive(gridDp(ctx).dp), Modifier.fillMaxSize().padding(horizontal = 8.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)) {
+                            items(games.filter { showHiddenInLibrary(ctx) || it.pkg !in hidden }, key = { it.pkg }) { g ->
                                 GameTile(g, pal, selected == g.pkg, g.pkg in hidden) {
                                     selected = g.pkg
                                     if (!wide) profileOpen = true
@@ -360,6 +389,24 @@ fun GameHubHub(onBack: () -> Unit) {
                     color = pal.text, fontSize = 15.sp, modifier = Modifier.padding(top = 16.dp, bottom = 8.dp),
                 )
                 PChip(false, tr("Check again", "Yeniden kontrol et")) { recheck() }
+                Text(tr("Library", "Kütüphane"), color = pal.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 20.dp, bottom = 6.dp))
+                Text(tr("Tile size", "Kart boyutu"), color = pal.text, fontSize = 14.sp)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(0 to tr("Small", "Küçük"), 1 to tr("Medium", "Orta"), 2 to tr("Large", "Büyük")).forEach { (k, label) ->
+                        PChip(prefs(ctx).getInt("grid", 1) == k, label) { prefs(ctx).edit().putInt("grid", k).apply(); gridTick++ }
+                    }
+                }
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Show hidden games in the library", "Gizli oyunları kütüphanede göster"), color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    PSwitch(showHiddenInLibrary(ctx), { on -> prefs(ctx).edit().putBoolean("showHidden", on).apply(); gridTick++ })
+                }
+                Text(tr("Opens on", "Açılış sayfası"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(0 to tr("Library", "Kütüphane"), 1 to tr("Home", "Ana sayfa")).forEach { (k, label) ->
+                        PChip(prefs(ctx).getInt("start", 0) == k, label) { prefs(ctx).edit().putInt("start", k).apply(); gridTick++ }
+                    }
+                }
+                Text(tr("A cover picture can be set on each game (at most 3 MB).", "Her oyuna kapak resmi konabilir (en fazla 3 MB)."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
             }
         }
     }
