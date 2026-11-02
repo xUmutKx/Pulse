@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.fillMaxSize
@@ -212,6 +213,14 @@ private fun GameIcon(pkg: String, pal: Pal) {
 }
 
 /** Game Hub: the games, hidden from every launcher with a switch, a profile per game, and the settings with the three looks. */
+/** The usage record of each app over the last [days] days: total time in the foreground and the last time it was used. */
+private fun usageOf(c: Context, days: Int): Map<String, android.app.usage.UsageStats> {
+    if (Build.VERSION.SDK_INT < 22) return emptyMap()
+    val usm = c.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager ?: return emptyMap()
+    val end = System.currentTimeMillis()
+    return runCatching { usm.queryAndAggregateUsageStats(end - days * 86_400_000L, end) }.getOrDefault(emptyMap())
+}
+
 /** Time in the foreground of each game over the last [days] days (Android usage statistics; needs the usage access, granted by root or Shizuku). */
 private fun playTimes(c: Context, days: Int): Map<String, Long> {
     if (Build.VERSION.SDK_INT < 22) return emptyMap()
@@ -276,9 +285,9 @@ private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, onClick: () -> Unit)
     }
 }
 
-/** A game's page: cover, play time, cover picture, hide and background switches, memory clean-up. */
+/** A game's page, like a store page: the banner with the cover, the name, a big Play button, the play time and the last played day, and the settings of the game. */
 @Composable
-private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time: Long, onHidden: (Boolean) -> Unit) {
+private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed: Long, onHidden: (Boolean) -> Unit) {
     val ctx = LocalContext.current
     var restrict by remember(g.pkg) { mutableStateOf(restrictOn(ctx, g.pkg)) }
     var coverTick by remember(g.pkg) { mutableStateOf(0) }
@@ -293,35 +302,48 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, hidden: Boolean, time:
             }
         }
     }
-    Column(Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (!can) Text(tr("Root or Shizuku is not connected: switches are off. Press Check again in Settings.", "Root ya da Shizuku bağlı değil: anahtarlar kapalı. Ayarlar'da Yeniden kontrol et'e bas."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(pal.accent).clickable { openGame(ctx, g.pkg) }.padding(12.dp), contentAlignment = Alignment.Center) {
-            Text(tr("Open game", "Oyunu aç"), color = pal.bg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-        }
-        Spacer(Modifier.height(10.dp))
+    Column(Modifier.fillMaxWidth()) {
+        // the banner: the cover across the top, the icon and the name over its bottom edge
         key(coverTick) {
-            Box(Modifier.fillMaxWidth().height(190.dp).clip(RoundedCornerShape(18.dp)).background(pal.bg)) {
+            Box(Modifier.fillMaxWidth().height(230.dp).background(pal.bg)) {
                 GameCover(g.pkg, pal)
-                Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, pal.card))))
+                Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, pal.bg))))
             }
         }
-        Spacer(Modifier.height(10.dp))
-        Text(g.name, color = pal.text, fontSize = 18.sp, textAlign = TextAlign.Center)
-        Text(tr("Played this week: ", "Bu hafta: ") + (if (time > 0) hm(time) else tr("no data", "veri yok")), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp, bottom = 12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip(pal, tr("Change cover", "Kapağı değiştir")) { pick.launch("image/*") }
-            Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-30).dp), verticalAlignment = Alignment.Bottom) {
+            Box(Modifier.size(64.dp).clip(RoundedCornerShape(14.dp)).background(pal.card), contentAlignment = Alignment.Center) { GameIcon(g.pkg, pal) }
+            Spacer(Modifier.width(12.dp))
+            Text(g.name, color = pal.text, fontSize = 22.sp, fontWeight = FontWeight.Bold, maxLines = 2, modifier = Modifier.padding(bottom = 6.dp))
         }
-        SettingRow(pal, tr("Restrict in background", "Arka planda kısıtla"), restrict, can) { want -> if (setRestricted(ctx, g.pkg, want)) restrict = want }
-        Row(
-            Modifier.fillMaxWidth().padding(top = 10.dp).clip(RoundedCornerShape(14.dp)).background(pal.accent)
-                .clickable { freeMemory(ctx) }.padding(14.dp),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            FluentIcon("clean", pal.bg, 18.dp)
-            Spacer(Modifier.width(8.dp))
-            Text(tr("Free memory now", "Şimdi bellek boşalt"), color = pal.bg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-18).dp)) {
+            if (!can) Text(tr("Root or Shizuku is not connected: the hide and background switches are off. Press Check again in Settings.", "Root ya da Shizuku bağlı değil: gizleme ve arka plan anahtarları kapalı. Ayarlar'da Yeniden kontrol et'e bas."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
+            // the big Play button
+            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(pal.accent).clickable { openGame(ctx, g.pkg) }.padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    FluentIcon("play", pal.bg, 22.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr("Play", "Oyna"), color = pal.bg, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            Spacer(Modifier.height(16.dp))
+            // the facts: total time, last played
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                StatCard(pal, Modifier.weight(1f), tr("Total played", "Toplam oynama"), if (total > 0) hm(total) else "-")
+                StatCard(pal, Modifier.weight(1f), tr("Last played", "Son oynama"), if (lastUsed > 0) java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(lastUsed)) else "-")
+            }
+            SectionTitle(pal, tr("Cover", "Kapak"))
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Chip(pal, tr("Change cover", "Kapağı değiştir")) { pick.launch("image/*") }
+                Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
+            }
+            SectionTitle(pal, tr("Game", "Oyun"))
+            SettingRow(pal, tr("Restrict in background", "Arka planda kısıtla"), restrict, can) { want -> if (setRestricted(ctx, g.pkg, want)) restrict = want }
+            // achievements and community need a service the phone's games do not have: said here, not faked
+            SectionTitle(pal, tr("Achievements", "Başarımlar"))
+            Text(tr("This game does not report achievements to Pulse.", "Bu oyun başarımlarını Pulse'a bildirmiyor."), color = pal.sub, fontSize = 13.sp)
+            SectionTitle(pal, tr("Community", "Topluluk"))
+            Text(tr("No community for an Android app here.", "Bir Android uygulaması için burada topluluk yok."), color = pal.sub, fontSize = 13.sp)
+            Spacer(Modifier.height(24.dp))
         }
     }
 }
@@ -418,6 +440,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var profile by remember { mutableStateOf<GameRow?>(null) }
     var addOpen by remember { mutableStateOf(false) }
     var times by remember { mutableStateOf(emptyMap<String, Long>()) }
+    var usage by remember { mutableStateOf(emptyMap<String, android.app.usage.UsageStats>()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 1)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
     LaunchedEffect(Unit) {
@@ -428,6 +451,7 @@ fun GameHubHub(onBack: () -> Unit) {
         hidden = hiddenSet(ctx)
         if (mode != Privilege.Mode.None) withContext(Dispatchers.IO) { grantUsageAccess(ctx) }
         times = withContext(Dispatchers.IO) { playTimes(ctx, 7) }
+        usage = withContext(Dispatchers.IO) { usageOf(ctx, 3650) }
     }
     val can = mode != Privilege.Mode.None
     fun setHidden(pkg: String, want: Boolean) { if (setGameHidden(ctx, pkg, want)) hidden = hiddenSet(ctx) }
@@ -575,7 +599,8 @@ fun GameHubHub(onBack: () -> Unit) {
                 Box(Modifier.size(44.dp).clickable { profile = null }, contentAlignment = Alignment.Center) { FluentIcon("back", pal.text, 22.dp) }
             }
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                GamePanel(g, pal, can, g.pkg in hidden, times[g.pkg] ?: 0L) { want -> setHidden(g.pkg, want) }
+                val u = usage[g.pkg]
+                GamePanel(g, pal, can, u?.totalTimeInForeground ?: 0L, u?.lastTimeUsed ?: 0L) { want -> setHidden(g.pkg, want) }
                 Spacer(Modifier.height(24.dp))
             }
         }
