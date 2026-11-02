@@ -1899,3 +1899,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.335 derlendi: Game Hub: add any installed app to the library ("+ Add"), so it shows up with the games; the library works with hidden games too
 - 1.0.336 derlendi: Game Hub settings: a cover picture per game (at most 3 MB), tile size, hidden games shown or not, the page it opens on
 - 1.0.337 derlendi: Game Hub rewritten: side menu (Home, All games, Installed, Hidden, Settings), home page with welcome, stats and chart, library grid with covers and a round add button, settings sections; hidden games keep their names and icons
+- 1.0.338 derlenmedi: Game Hub library: tall covers in a grid, the name under each game
