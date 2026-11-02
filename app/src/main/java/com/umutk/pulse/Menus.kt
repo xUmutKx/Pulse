@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.Email
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.Equalizer
@@ -212,6 +213,7 @@ object AppPlace {
         App("BlackOutLauncher", "BlackOut", "BlackOut", "shield", Icons.Outlined.DarkMode) { _, o -> o("blackout") },
         App("IslandLauncher", "Island", "Ada", "phone", Icons.Outlined.PhoneAndroid) { _, o -> o("island") },
         App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "history", Icons.Outlined.History) { _, o -> o("notifhist") },
+        App("GameHubLauncher", "Game Hub", "Game Hub", "phone", Icons.Outlined.SportsEsports) { _, o -> o("gamehub") },
     )
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
