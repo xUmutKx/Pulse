@@ -68,6 +68,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -84,12 +85,41 @@ import kotlinx.coroutines.withContext
 
 private const val PREFS = "gamehub"
 
-/** The three looks of Game Hub: Amoled (true black), Material (dark grey) and Windows (light grey). */
-private class Pal(val bg: Color, val card: Color, val text: Color, val sub: Color, val accent: Color)
+/** A look of Game Hub: its colours, its corner radius, and whether it is flat (no gradients, as the Windows looks are). */
+private class Pal(val bg: Color, val card: Color, val text: Color, val sub: Color, val accent: Color, val radius: Dp = 14.dp, val flat: Boolean = false)
 
-private fun palOf(theme: String): Pal = when (theme) {
-    "material" -> Pal(Color(0xFF1C1B1F), Color(0xFF2B2930), Color(0xFFE6E1E5), Color(0xFFCAC4D0), Color(0xFFD0BCFF))
-    "windows" -> Pal(Color(0xFFF0F0F0), Color(0xFFFFFFFF), Color(0xFF1A1A1A), Color(0xFF5A5A5A), Color(0xFF0078D4))
+/** The looks of Game Hub, in the order they are offered. */
+private val THEMES = listOf("amoled", "material", "win95", "winxp", "win8", "win10", "win11")
+
+private fun themeName(k: String): String = when (k) {
+    "material" -> "Material"
+    "win95" -> "Windows 95"
+    "winxp" -> "Windows XP"
+    "win8" -> "Windows 8"
+    "win10" -> "Windows 10"
+    "win11" -> "Windows 11"
+    else -> "Amoled"
+}
+
+/** A colour of the system theme (Android 12 and later: the wallpaper colours), or the fallback on older phones. */
+private fun systemColor(c: Context, res: Int, fallback: Color): Color =
+    if (Build.VERSION.SDK_INT >= 31) runCatching { Color(c.getColor(res)) }.getOrDefault(fallback) else fallback
+
+private fun palOf(theme: String, c: Context): Pal = when (theme) {
+    // Material follows the phone's own colours (the wallpaper palette) for the background, the cards and the accent
+    "material" -> Pal(
+        systemColor(c, android.R.color.system_neutral1_900, Color(0xFF1C1B1F)),
+        systemColor(c, android.R.color.system_neutral1_800, Color(0xFF2B2930)),
+        systemColor(c, android.R.color.system_neutral1_50, Color(0xFFE6E1E5)),
+        systemColor(c, android.R.color.system_neutral2_200, Color(0xFFCAC4D0)),
+        systemColor(c, android.R.color.system_accent1_200, Color(0xFFD0BCFF)),
+        20.dp,
+    )
+    "win95" -> Pal(Color(0xFF008080), Color(0xFFC0C0C0), Color.Black, Color(0xFF404040), Color(0xFF000080), 0.dp, true)
+    "winxp" -> Pal(Color(0xFFECE9D8), Color(0xFFFFFFFF), Color(0xFF000000), Color(0xFF444444), Color(0xFF316AC5), 6.dp, true)
+    "win8" -> Pal(Color(0xFF000000), Color(0xFF1F1F1F), Color.White, Color(0xFFB0B0B0), Color(0xFF1BA1E2), 0.dp, true)
+    "win10" -> Pal(Color(0xFFF0F0F0), Color(0xFFFFFFFF), Color(0xFF1A1A1A), Color(0xFF5A5A5A), Color(0xFF0078D4), 4.dp, true)
+    "win11" -> Pal(Color(0xFFF3F3F3), Color(0xCCFFFFFF), Color(0xFF1A1A1A), Color(0xFF5A5A5A), Color(0xFF0067C0), 8.dp, true)
     else -> Pal(Color.Black, Color(0xFF111111), Color.White, Color(0xFF9A9A9A), Color(0xFF00E676))
 }
 
@@ -121,6 +151,20 @@ private fun readHiddenInfo(c: Context) {
         }
         Privilege.run("pm hide $pkg")
     }
+}
+
+/** Whether the system still shows the app to Pulse (a hidden app cannot be found by its package name). */
+private fun visibleTo(c: Context, pkg: String): Boolean = runCatching { c.packageManager.getApplicationInfo(pkg, 0) }.isSuccess
+
+/** The hidden list must match the system: a game listed as hidden that the system still shows is hidden again, and one that
+ *  stays visible leaves the list, so the switch never says "hidden" for a game that is on the screen. Needs root or Shizuku. */
+private fun reconcileHidden(c: Context) {
+    if (!Privilege.mode.let { it == Privilege.Mode.Root || it == Privilege.Mode.Shizuku }) return
+    val real = hiddenSet(c).filter { pkg ->
+        if (!visibleTo(c, pkg)) true
+        else { Privilege.run("pm hide $pkg"); !visibleTo(c, pkg) }
+    }.toSet()
+    if (real != hiddenSet(c)) saveHidden(c, real)
 }
 
 /** The games: the installed ones the system marks as games (Android 8 and later), and the hidden ones from the saved name. */
@@ -266,21 +310,74 @@ private fun GameCover(pkg: String, pal: Pal) {
             }.getOrNull()
         }
     }
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(pal.card, pal.bg))), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(if (pal.flat) pal.card else Color.Transparent).then(if (pal.flat) Modifier else Modifier.background(Brush.verticalGradient(listOf(pal.card, pal.bg)))), contentAlignment = Alignment.Center) {
         val c = cover
         if (c != null) Image(c, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         else icon?.let { Image(it, null, Modifier.fillMaxSize(0.5f)) }
     }
 }
 
-/** One game as a card: a tall cover, the name under it, and a mark when it is hidden. */
+/** One game as a card: a banner, a small info line under it (play time or size, when sorted so), the name, and a mark when it is hidden. */
 @Composable
-private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, onClick: () -> Unit) {
+private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, info: String?, onClick: () -> Unit) {
     Column(Modifier.padding(6.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.Start) {
-        Box(Modifier.fillMaxWidth().aspectRatio(2.14f).clip(RoundedCornerShape(10.dp))) { GameCover(g.pkg, pal) }
-        Spacer(Modifier.height(6.dp))
+        Box(Modifier.fillMaxWidth().aspectRatio(2.14f).clip(RoundedCornerShape(pal.radius))) { GameCover(g.pkg, pal) }
+        if (info != null) Text(info, color = pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(top = 4.dp))
+        Spacer(Modifier.height(4.dp))
         Text(g.name, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 17.sp)
         if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 11.sp)
+    }
+}
+
+/** The small info under a banner for the chosen sort: the play time of the week, or the size of the app. */
+private fun infoOf(g: GameRow, sort: Int, usage: Map<String, android.app.usage.UsageStats>, sizes: Map<String, Long>): String? = when (sort) {
+    1 -> usage[g.pkg]?.totalTimeInForeground?.takeIf { it > 0 }?.let { hm(it) } ?: "-"
+    2 -> sizes[g.pkg]?.takeIf { it > 0 }?.let { "%.1f MB".format(it / 1_048_576.0) } ?: "-"
+    else -> null
+}
+
+/** A row with a label, its value and a chevron, which opens a dialog. */
+@Composable
+private fun ValueRow(pal: Pal, label: String, value: String, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(pal.radius)).clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(value, color = pal.sub, fontSize = 14.sp)
+        Spacer(Modifier.width(6.dp))
+        FluentIcon("right", pal.sub, 14.dp)
+    }
+}
+
+/** A small picture of a look: its desktop, a title bar in its accent, a window with a card and a sample of text. */
+@Composable
+private fun ThemePreview(tp: Pal) {
+    Column(Modifier.size(112.dp, 66.dp).clip(RoundedCornerShape(tp.radius / 2)).background(tp.bg).padding(6.dp)) {
+        Box(Modifier.fillMaxWidth().height(14.dp).background(tp.accent))
+        Spacer(Modifier.height(4.dp))
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(tp.radius / 2)).background(tp.card).padding(6.dp)) {
+            Box(Modifier.size(16.dp).clip(RoundedCornerShape(tp.radius / 2)).background(tp.accent))
+            Spacer(Modifier.height(4.dp))
+            Text("Aa", color = tp.text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+/** The look chooser: each look as a row with its preview; the chosen one is marked. */
+@Composable
+private fun ThemeDialog(current: String, ctx: Context, onPick: (String) -> Unit, onClose: () -> Unit) {
+    val p = palOf(current, ctx)
+    Dialog(onDismissRequest = onClose) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(16.dp).verticalScroll(rememberScrollState())) {
+            Text(tr("Look", "Görünüm"), color = p.text, fontSize = 18.sp, modifier = Modifier.padding(bottom = 6.dp))
+            THEMES.forEach { k ->
+                val tp = palOf(k, ctx)
+                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(12.dp)).background(p.bg).clickable { onPick(k) }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ThemePreview(tp)
+                    Spacer(Modifier.width(12.dp))
+                    Text(themeName(k), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    if (k == current) FluentIcon("check", p.accent, 18.dp)
+                }
+            }
+        }
     }
 }
 
@@ -306,7 +403,7 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
         key(coverTick) {
             Box(Modifier.fillMaxWidth().height(230.dp).background(pal.bg)) {
                 GameCover(g.pkg, pal)
-                Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, pal.bg))))
+                if (!pal.flat) Box(Modifier.matchParentSize().background(Brush.verticalGradient(listOf(Color.Transparent, pal.bg))))
             }
         }
         Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-30).dp), verticalAlignment = Alignment.Bottom) {
@@ -429,8 +526,9 @@ fun GameHubHub(onBack: () -> Unit) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val drawer = rememberDrawerState(DrawerValue.Closed)
-    var theme by remember { mutableStateOf(prefs(ctx).getString("theme", "amoled") ?: "amoled") }
-    val pal = palOf(theme)
+    var theme by remember { mutableStateOf(prefs(ctx).getString("theme", "material") ?: "material") }
+    var themeOpen by remember { mutableStateOf(false) }
+    val pal = palOf(theme, ctx)
     var page by remember { mutableStateOf(prefs(ctx).getInt("start", 1)) }   // 0 home, 1 library, 2 settings
     var filter by remember { mutableStateOf(0) }                              // library: 0 all, 1 installed, 2 hidden
     var games by remember { mutableStateOf(emptyList<GameRow>()) }
@@ -447,7 +545,7 @@ fun GameHubHub(onBack: () -> Unit) {
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) { Privilege.detect() }
         mode = Privilege.mode
-        withContext(Dispatchers.IO) { readHiddenInfo(ctx) }
+        withContext(Dispatchers.IO) { readHiddenInfo(ctx); reconcileHidden(ctx) }
         games = withContext(Dispatchers.IO) { loadGames(ctx) }
         hidden = hiddenSet(ctx)
         if (mode != Privilege.Mode.None) withContext(Dispatchers.IO) { grantUsageAccess(ctx) }
@@ -536,7 +634,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         Modifier.fillMaxSize().padding(horizontal = 10.dp),
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 56.dp, bottom = 90.dp),
                     ) {
-                        items(sortGames(shown, sort, usage, sizes), key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden) { profile = g } }
+                        items(sortGames(shown, sort, usage, sizes), key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden, infoOf(g, sort, usage, sizes)) { profile = g } }
                     }
                     // the sort row, like the library bar of a store: name, play time, size
                     Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -553,11 +651,7 @@ fun GameHubHub(onBack: () -> Unit) {
                 }
                 else -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
                     SectionTitle(pal, tr("Look", "Görünüm"))
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        listOf("amoled" to "Amoled", "material" to "Material", "windows" to "Windows").forEach { (k, label) ->
-                            Chip(pal, if (theme == k) "● $label" else label) { setTheme(k) }
-                        }
-                    }
+                    ValueRow(pal, tr("Look", "Görünüm"), themeName(theme)) { themeOpen = true }
                     SectionTitle(pal, tr("Library", "Kütüphane"))
                     Text(tr("Tile size", "Kart boyutu"), color = pal.text, fontSize = 14.sp, modifier = Modifier.padding(bottom = 6.dp))
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -599,6 +693,7 @@ fun GameHubHub(onBack: () -> Unit) {
             }
         }
     }
+    if (themeOpen) ThemeDialog(theme, ctx, onPick = { k -> setTheme(k); themeOpen = false }, onClose = { themeOpen = false })
     if (addOpen) AddGamesDialog(pal, onClose = { addOpen = false }, onChanged = { games = loadGames(ctx) })
     // a game opens as its own page: the back arrow at the top left returns to the library
     profile?.let { g ->
