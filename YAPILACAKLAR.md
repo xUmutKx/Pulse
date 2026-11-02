@@ -1900,3 +1900,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.336 derlendi: Game Hub settings: a cover picture per game (at most 3 MB), tile size, hidden games shown or not, the page it opens on
 - 1.0.337 derlendi: Game Hub rewritten: side menu (Home, All games, Installed, Hidden, Settings), home page with welcome, stats and chart, library grid with covers and a round add button, settings sections; hidden games keep their names and icons
 - 1.0.338 derlendi: Game Hub library: tall covers in a grid, the name under each game
+- 1.0.339 derlenmedi: Game Hub library in banner cards like a store, sort row (name, play time, size); game page as a store page with Play; artist pictures kept in memory; weather tiles kept longer; calculator figure wraps to two lines
