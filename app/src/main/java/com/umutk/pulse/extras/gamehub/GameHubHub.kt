@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -48,7 +50,6 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.runtime.mutableStateOf as _mso
 import androidx.core.graphics.drawable.toBitmap
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PIcon
@@ -220,6 +221,7 @@ fun GameHubHub(onBack: () -> Unit) {
     var hidden by remember { mutableStateOf(hiddenSet(ctx)) }
     var mode by remember { mutableStateOf(Privilege.mode) }
     var selected by remember { mutableStateOf<String?>(null) }
+    var profileOpen by remember { mutableStateOf(false) }
     var times by remember { mutableStateOf(emptyMap<String, Long>()) }
     fun recheck() { Privilege.detect(); mode = Privilege.mode }
     LaunchedEffect(Unit) {
@@ -247,7 +249,7 @@ fun GameHubHub(onBack: () -> Unit) {
                 val wide = maxWidth > maxHeight
                 if (!can) Text(tr("Hiding and profiles need root or Shizuku.", "Gizleme ve profiller root ya da Shizuku ister."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 14.dp, vertical = 4.dp))
                 Row(Modifier.fillMaxSize()) {
-                    val grid = @Composable {
+                    val grid: @Composable () -> Unit = {
                         if (games.isEmpty()) Text(tr("No games found on this phone.", "Bu telefonda oyun bulunamadı."), color = pal.sub, fontSize = 14.sp, modifier = Modifier.padding(14.dp))
                         else LazyVerticalGrid(GridCells.Adaptive(96.dp), Modifier.fillMaxSize().padding(horizontal = 8.dp), contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 16.dp)) {
                             items(games, key = { it.pkg }) { g ->
