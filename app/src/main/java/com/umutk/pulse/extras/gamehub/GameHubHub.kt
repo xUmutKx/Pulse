@@ -19,6 +19,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -229,19 +231,37 @@ private fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit.
     }
 }
 
-/** One game as a card: its cover (or icon) and name, and a mark when it is hidden. */
+/** A game's cover, filling its card (the picture the person picked, else the APK icon centred on a gradient). */
+@Composable
+private fun GameCover(pkg: String, pal: Pal) {
+    val ctx = LocalContext.current
+    val cover by produceState<ImageBitmap?>(null, pkg) {
+        value = withContext(Dispatchers.IO) { runCatching { coverFile(ctx, pkg).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }.getOrNull() }
+    }
+    val icon by produceState<ImageBitmap?>(null, pkg) {
+        value = withContext(Dispatchers.IO) {
+            runCatching {
+                val f = iconFile(ctx, pkg)
+                if (f.isFile) BitmapFactory.decodeFile(f.path)?.asImageBitmap()
+                else ctx.packageManager.getApplicationIcon(pkg).toBitmap(192, 192).asImageBitmap()
+            }.getOrNull()
+        }
+    }
+    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(pal.card, pal.bg))), contentAlignment = Alignment.Center) {
+        val c = cover
+        if (c != null) Image(c, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        else icon?.let { Image(it, null, Modifier.fillMaxSize(0.5f)) }
+    }
+}
+
+/** One game as a card: a tall cover, the name under it, and a mark when it is hidden. */
 @Composable
 private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, onClick: () -> Unit) {
-    Column(
-        Modifier.padding(6.dp).clip(RoundedCornerShape(16.dp)).background(pal.card).clickable(onClick = onClick).padding(8.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(pal.bg), contentAlignment = Alignment.Center) {
-            GameIcon(g.pkg, pal)
-        }
+    Column(Modifier.padding(6.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.Start) {
+        Box(Modifier.fillMaxWidth().aspectRatio(0.75f).clip(RoundedCornerShape(14.dp))) { GameCover(g.pkg, pal) }
         Spacer(Modifier.height(6.dp))
-        Text(g.name, color = pal.text, fontSize = 13.sp, maxLines = 2, textAlign = TextAlign.Center)
-        if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 10.sp)
+        Text(g.name, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 17.sp)
+        if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 11.sp)
     }
 }
 
@@ -513,7 +533,7 @@ fun GameHubHub(onBack: () -> Unit) {
     }
 }
 
-private fun gridDpOf(size: Int): Int = when (size) { 0 -> 92; 2 -> 150; else -> 118 }
+private fun gridDpOf(size: Int): Int = when (size) { 0 -> 130; 2 -> 210; else -> 165 }
 
 /** A small number card on the home page. */
 @Composable
