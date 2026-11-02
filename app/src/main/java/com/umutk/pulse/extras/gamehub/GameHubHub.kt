@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.ui.graphics.Brush
@@ -458,7 +459,6 @@ fun GameHubHub(onBack: () -> Unit) {
                     when (page) { 0 -> tr("Home", "Ana sayfa"); 2 -> tr("Settings", "Ayarlar"); else -> when (filter) { 1 -> tr("Installed", "Yüklü"); 2 -> tr("Hidden", "Gizli"); else -> tr("Library", "Kütüphane") } },
                     color = pal.text, fontSize = 22.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f).padding(start = 4.dp),
                 )
-                Box(Modifier.size(44.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { FluentIcon("close", pal.text, 22.dp) }
             }
             when (page) {
                 0 -> Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp)) {
@@ -568,10 +568,15 @@ fun GameHubHub(onBack: () -> Unit) {
         }
     }
     if (addOpen) AddGamesDialog(pal, onClose = { addOpen = false }, onChanged = { games = loadGames(ctx) })
+    // a game opens as its own page: the back arrow at the top left returns to the library
     profile?.let { g ->
-        Dialog(onDismissRequest = { profile = null }) {
-            Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(22.dp)).background(pal.card)) {
+        Column(Modifier.fillMaxSize().background(pal.bg).statusBarsPadding()) {
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(44.dp).clickable { profile = null }, contentAlignment = Alignment.Center) { FluentIcon("back", pal.text, 22.dp) }
+            }
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 GamePanel(g, pal, can, g.pkg in hidden, times[g.pkg] ?: 0L) { want -> setHidden(g.pkg, want) }
+                Spacer(Modifier.height(24.dp))
             }
         }
     }
