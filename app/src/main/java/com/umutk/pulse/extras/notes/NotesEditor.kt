@@ -95,6 +95,11 @@ fun NoteEditor(
 
     var preview by remember(note.id) { mutableStateOf(false) }
     var palette by remember(note.id) { mutableStateOf(false) }
+    // the S Pen: on, the picture of the note takes the pen; the colour and the width are the pen's own
+    var inkOn by remember(note.id) { mutableStateOf(false) }
+    var inkColor by remember { mutableStateOf(0xFF1E88E5.toInt()) }
+    var inkWide by remember { mutableStateOf(false) }
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
     // the tools of the note (pin, colour, folder, reminder, lock, photo, sketch, voice, read aloud, checklist) sit behind one plus button
     var more by remember(note.id) { mutableStateOf(false) }
     // the text row: a heading, bold, a bullet or a checklist line, added at the end of the note
@@ -205,7 +210,7 @@ fun NoteEditor(
             NIcon(if (note.locked) "unlock" else "lock", fg, tr("Lock", "Kilitle")) { toggleLock() }
             MIcon(Icons.Outlined.Image, tr("Add photo", "Fotoğraf ekle"), fg) { pickImage.launch(arrayOf("image/*")) }
             NIcon("document", fg, tr("Add a file", "Dosya ekle")) { pickFile.launch(arrayOf("*/*")) }
-            MIcon(Icons.Outlined.Edit, tr("Sketch", "Çizim"), fg) { onSketch() }
+            MIcon(Icons.Outlined.Edit, tr("Pen", "Kalem"), if (inkOn) T.accent else fg) { inkOn = !inkOn }
             MIcon(Icons.Outlined.RadioButtonChecked, tr("Record", "Ses kaydet"), if (recording) Color(0xFFE53935) else fg) { toggleRecord() }
             if (canDictate) NIcon("mic", fg, tr("Dictate", "Diktе et")) {
                 dictate.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM))
@@ -219,9 +224,23 @@ fun NoteEditor(
             NSwatchRow(note.color) { v -> onEdit { it.copy(color = v) }; palette = false }
         }
 
-        // the paper: title, body, links, attachments and counts scroll together
+        // the pen's own bar: colours, width, undo; it shows while the pen is on
+        if (inkOn) Row(Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .95f)).padding(horizontal = 10.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+            listOf(0xFF1E88E5.toInt(), 0xFFE53935.toInt(), 0xFF43A047.toInt(), 0xFF000000.toInt(), 0xFFFFFFFF.toInt()).forEach { c ->
+                Box(Modifier.size(26.dp).clip(CircleShape).background(Color(c)).border(if (inkColor == c) 2.dp else 1.dp, if (inkColor == c) T.accent else inkSub, CircleShape).clickable { inkColor = c })
+            }
+            Box(Modifier.size(30.dp).clip(CircleShape).clickable { inkWide = !inkWide }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(if (inkWide) 14.dp else 6.dp).clip(CircleShape).background(fg))
+            }
+            MIcon(Icons.Outlined.Undo, tr("Undo", "Geri al"), fg) { onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink).dropLast(1))) } }
+            MIcon(Icons.Outlined.Check, tr("Done", "Bitti"), T.accent) { inkOn = false }
+        }
+
+        // the paper: title, body, links, attachments and counts scroll together; the pen draws over it
+        Box(Modifier.fillMaxWidth().weight(1f)) {
         Column(
-            Modifier.fillMaxWidth().weight(1f).padding(top = 6.dp, bottom = 12.dp)
+            Modifier.fillMaxSize().padding(top = 6.dp, bottom = 12.dp)
                 .clip(shape).background(surface, shape).then(edge)
                 .verticalScroll(rememberScrollState()).padding(14.dp),
         ) {
@@ -257,6 +276,10 @@ fun NoteEditor(
             }
             Text(tr("$words words · ${note.body.length} characters", "$words kelime · ${note.body.length} karakter"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
         }
+        InkLayer(NotesInk.decode(note.ink), inkOn, inkColor, if (inkWide) 9f * density else 3f * density) { st ->
+            onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink) + st)) }
+        }
+        }
         if (fmt) Row(
             Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
@@ -276,7 +299,7 @@ fun NoteEditor(
             Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(28.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
         ) {
-            MIcon(Icons.Outlined.Edit, tr("Sketch", "Çizim"), fg) { onSketch() }
+            MIcon(Icons.Outlined.Edit, tr("Pen", "Kalem"), if (inkOn) T.accent else fg) { inkOn = !inkOn }
             Box(Modifier.size(40.dp).clip(CircleShape).clickable { fmt = !fmt }.semantics { contentDescription = tr("Text", "Yazı") }, contentAlignment = Alignment.Center) {
                 Text("Aa", color = if (fmt) T.accent else fg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
