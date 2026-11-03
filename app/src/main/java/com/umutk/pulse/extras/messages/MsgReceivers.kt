@@ -17,11 +17,11 @@ import com.umutk.pulse.Outbox
 import com.umutk.pulse.sendSms
 import com.umutk.pulse.tr
 
-/** The automatic spam block: an unwanted message makes no notification and its number goes on the blocked list (Settings shows it, Unblock takes it off). */
+/** An unwanted message makes no notification; its number is listed as suspicious, and the person confirms any block (nothing is blocked on its own). */
 internal fun spam(c: Context, addr: String, body: String): Boolean {
     if (!MsgPrefs.spamBlock(c)) return false
     if (!MsgCore.isSpam(com.umutk.pulse.contactName(c, addr) != null, body)) return false
-    MsgPrefs.setBlocked(c, MsgPrefs.blocked(c) + addr)
+    MsgPrefs.setSuspects(c, MsgPrefs.suspects(c) + addr)
     return true
 }
 
@@ -32,8 +32,9 @@ class SmsDeliverReceiver : BroadcastReceiver() {
         if (parts.isEmpty()) return
         val addr = parts[0].displayOriginatingAddress ?: parts[0].originatingAddress ?: return
         val body = parts.joinToString("") { it.displayMessageBody ?: "" }
-        if (addr in MsgPrefs.blocked(c)) return
+        // every message is kept (a blocked one shows under Blocked); only the notification is left out
         MsgCore.storeInbox(c, addr, body, System.currentTimeMillis(), parts[0].timestampMillis)
+        if (addr in MsgPrefs.blocked(c)) return
         if (spam(c, addr, body)) return
         MsgNotifier.incoming(c, addr, body)
     }
