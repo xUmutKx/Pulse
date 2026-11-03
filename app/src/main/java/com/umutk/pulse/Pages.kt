@@ -777,6 +777,7 @@ fun PremiumCard() {
     if (!com.umutk.pulse.ads.PulseAds.ENABLED) return
     val ctx = LocalContext.current
     val owned = com.umutk.pulse.ads.Premium.on(ctx)
+    var features by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         PIcon("star", T.accent, 22.dp)
         Spacer(Modifier.width(10.dp))
@@ -784,17 +785,61 @@ fun PremiumCard() {
             Text("Premium", color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(
                 if (owned) tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık")
-                else tr("A separate premium app: one payment (15 USD), one account, one device. No ads, every feature.", "Ayrı premium uygulama: tek ödeme (15 ABD doları), hesap başına 1 cihaz. Reklam yok, her özellik."),
+                else tr("A separate premium app: one payment (350 TL), one account, one device. No ads, every feature.", "Ayrı premium uygulama: tek ödeme (350 TL), hesap başına 1 cihaz. Reklam yok, her özellik."),
                 color = T.sub, fontSize = 12.sp,
             )
         }
-        if (!owned) CardButton("apps", tr("Get", "Al")) {
-            // the purchase lives in the premium app's Play listing: open it in the store
-            val pkg = "com.umutk.pulse.premium"
-            runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                .onFailure { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        CardButton("info", tr("Features", "Özellikler")) { features = true }
+        if (!owned) {
+            Spacer(Modifier.width(6.dp))
+            CardButton("apps", tr("Get", "Al")) {
+                // the purchase lives in the premium app's Play listing: open it in the store
+                val pkg = "com.umutk.pulse.premium"
+                runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    .onFailure { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
         }
     }
+    if (features) PremiumFeatures(owned) { features = false }
+}
+
+/** What the premium app unlocks: each line with its own icon (the look's icon set). */
+@Composable
+private fun PremiumFeatures(owned: Boolean, onClose: () -> Unit) {
+    val ctx = LocalContext.current
+    val rows = listOf(
+        "apps" to tr("Every feature, no waiting for an ad", "Her özellik, reklam beklemeden"),
+        "video" to tr("No ads anywhere", "Hiçbir yerde reklam yok"),
+        "lock" to tr("Every theme open, all the time", "Her tema her zaman açık"),
+        "music" to tr("Music recap, Game Hub, Poweramp and lyrics share", "Müzik özeti, Game Hub, Poweramp ve şarkı sözü paylaşımı"),
+        "folder" to tr("Files, Office and Photos without limits", "Dosyalar, Office ve Fotoğraflar sınırsız"),
+        "performance" to tr("Monitor and alerts", "Monitör ve uyarılar"),
+        "star" to tr("One payment, one account, one device", "Tek ödeme, bir hesap, bir cihaz"),
+    )
+    WinAlert(
+        onDismissRequest = onClose,
+        title = { Text("Premium", color = T.text) },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                rows.forEach { (icon, label) ->
+                    Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        PIcon(icon, T.accent, 20.dp)
+                        Spacer(Modifier.width(12.dp))
+                        Text(label, color = T.text, fontSize = 13.sp)
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            if (!owned) com.umutk.pulse.PButton(tr("Get", "Al")) {
+                val pkg = "com.umutk.pulse.premium"
+                runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                    .onFailure { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                onClose()
+            }
+        },
+        dismissButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { onClose() } },
+    )
 }
 
 /** A small bordered button with a Fluent-style icon (the look's own icon set through PIcon). */

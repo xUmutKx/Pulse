@@ -1925,3 +1925,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Widgets: the Windows 11 tile has no mountain picture by default; it is a darker, more see-through plain tile (the old default is moved once)
 - (sürüm sonra) derlenmedi: Widgets: each widget asks for its own short ad before it is added (play build); Office viewer: banner at the foot
 - (sürüm sonra) derlenmedi: Settings: ad credit and Premium cards sit between Monitor and About; Watch has an icon; Premium opens the premium app's store page (one account, one device, 15 USD)
+- (sürüm sonra) derlenmedi: Premium: price 350 TL; a Features dialog lists what it unlocks with icons; Get opens the store
