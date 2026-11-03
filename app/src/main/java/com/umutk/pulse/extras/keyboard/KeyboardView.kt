@@ -423,10 +423,15 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
     val barHasContent = st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
-    // no suggestions: the bar stays as a rounded strip, so the keys never start with a cut edge
-    if (!barHasContent) { Box(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(th.sub.copy(alpha = .12f))); return }
+    // no suggestions: no container, only a rounded, thick handle line at the top of the keys
+    if (!barHasContent) {
+        Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.Center) {
+            Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .35f)))
+        }
+        return
+    }
     Row(
-        Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(th.sub.copy(alpha = .12f)).padding(horizontal = 4.dp).pointerInput(Unit) {
+        Modifier.fillMaxWidth().height(52.dp).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
             detectVerticalDragGestures(onDragEnd = { onRelease() }, onDragCancel = { onRelease() }) { change, dy -> change.consume(); onPull(dy) }
         },
