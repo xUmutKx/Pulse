@@ -328,7 +328,7 @@ fun NowPlayingScreen(
             val view = LocalView.current
             DisposableEffect(view) { onDispose { if (android.os.Build.VERSION.SDK_INT >= 29) view.systemGestureExclusionRects = emptyList() } }
             // the cover settles a little smaller when the music is paused and springs back when it plays
-            val coverScale by animateFloatAsState(if (playing) 1f else .9f, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f), label = "coverScale")
+            val coverScale by animateFloatAsState(if (playing) 1f else .97f, androidx.compose.animation.core.spring(dampingRatio = .62f, stiffness = 260f), label = "coverScale")
             Box(
                 // not clipped here: each cover is clipped itself, so one pulled up or down can leave the square
                 // the cover reaches out over the page margin on both sides, so it sits close to the screen edges
@@ -680,11 +680,12 @@ private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, w
     Box(
         Modifier.width(width).height(36.dp).clip(CircleShape).background(style.panel)
             .semantics { contentDescription = label; role = Role.Button }
-            .combinedClickable(onClick = onClick, onLongClick = { menu = true }),
+            .combinedClickable(onClick = { big = true }, onLongClick = { menu = true }),
         contentAlignment = Alignment.Center,
     ) {
-        // hold: the visualisations to pick from, the default on top; the pick opens full screen and is remembered
+        // hold: the equalizer and the visualisations to pick from; a pick opens the visualisation full screen and is remembered
         DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+            DropdownMenuItem(text = { Text(label, color = Color.Unspecified) }, onClick = { menu = false; onClick() })
             VIS_MODES.forEachIndexed { i, (e1, t1) ->
                 DropdownMenuItem(
                     text = { Text(tr(e1, t1), color = if (i == visMode) style.accent else Color.Unspecified) },
