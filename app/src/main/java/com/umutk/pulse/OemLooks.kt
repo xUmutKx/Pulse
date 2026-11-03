@@ -89,10 +89,12 @@ fun OemDialog(w: PTheme, onDismiss: () -> Unit, title: (@Composable () -> Unit)?
     if (!one) { ColorOsDialog(w, onDismiss, title, text, confirm, dismissBtn, containerColor); return }
     Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false)) {
         val view = LocalView.current
-        if (one) SideEffect { (view.parent as? DialogWindowProvider)?.window?.setGravity(Gravity.BOTTOM) }
+        // a phone: the dialog rises from the bottom; a tablet: it sits in the middle of the screen, like the rest of One UI on a tablet
+        val tabletDlg = androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600
+        if (one) SideEffect { (view.parent as? DialogWindowProvider)?.window?.setGravity(if (tabletDlg) Gravity.CENTER else Gravity.BOTTOM) }
         val acc = Look.accent.copy(alpha = 1f)
         val shape = RoundedCornerShape(if (one) 32.dp else 22.dp)
-        Column(Modifier.padding(if (one) 12.dp else 24.dp).widthIn(max = 480.dp).fillMaxWidth()
+        Column(Modifier.padding(if (one) 12.dp else 24.dp).widthIn(max = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 560.dp else 480.dp).fillMaxWidth()
             .background(containerColor ?: w.panel, shape).then(if (one) Modifier else Modifier.border(1.dp, w.line, shape))
             .padding(horizontal = 24.dp, vertical = 26.dp), horizontalAlignment = if (one) Alignment.CenterHorizontally else Alignment.Start) {
             if (title != null) CompositionLocalProvider(LocalContentColor provides w.text) { androidx.compose.material3.ProvideTextStyle(TextStyle(color = w.text, fontSize = if (one) 22.sp else 20.sp, fontWeight = if (one) FontWeight.Medium else FontWeight.Bold)) { title() } }

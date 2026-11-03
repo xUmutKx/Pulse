@@ -2002,3 +2002,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: PDF tools: flatten (form fields become page content)
 - (sürüm sonra) derlenmedi: One UI theme tokens follow the One UI design library (page #F7F7F7, text #010101, secondary #8C8C8C, dividers #E6E6E6); the switch animates
 - (sürüm sonra) derlenmedi: Tablet layout setting (Settings > General): centre, left, right or full screen for the pages
+- (sürüm sonra) derlenmedi: One UI tablet dialogs: centred on screen and up to 560 dp wide (a phone keeps the bottom sheet)
