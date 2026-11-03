@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.LocalContentColor
@@ -39,9 +40,15 @@ fun OemSwitch(on: Boolean, onChange: (Boolean) -> Unit, enabled: Boolean) {
     val w = if (one) 52.dp else 44.dp; val h = if (one) 30.dp else 26.dp
     val thumb = if (one) 24.dp else if (on) 20.dp else 14.dp
     val off = if (T.dark) Color(0xFF48484A) else Color(0xFFCFCFD4)
-    Box(Modifier.size(w, h).alpha2(enabled).background(if (on) acc else off, CircleShape)
+    // One UI: the thumb slides across and the track changes colour together, a short spring, not a jump
+    val pos by androidx.compose.animation.core.animateFloatAsState(if (on) 1f else 0f, androidx.compose.animation.core.spring(dampingRatio = .75f, stiffness = 600f), label = "switchPos")
+    val track by androidx.compose.animation.core.animateColorAsState(if (on) acc else off, androidx.compose.animation.core.tween(160), label = "switchTrack")
+    Box(Modifier.size(w, h).alpha2(enabled).background(track, CircleShape)
         .then(if (enabled) Modifier.clickable { onChange(!on) } else Modifier)) {
-        Box(Modifier.align(if (on) Alignment.CenterEnd else Alignment.CenterStart).padding(horizontal = if (one) 3.dp else 4.dp).size(thumb).background(Color.White, CircleShape))
+        val pad = if (one) 3.dp else 4.dp
+        val travel = w - thumb - pad * 2
+        Box(Modifier.offset(x = pad + travel * pos).align(Alignment.CenterStart).size(thumb)
+            .shadow(if (one) 2.dp else 0.dp, CircleShape).background(Color.White, CircleShape))
     }
 }
 
