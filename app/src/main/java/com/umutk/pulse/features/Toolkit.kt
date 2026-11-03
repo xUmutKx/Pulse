@@ -182,6 +182,28 @@ private fun FloatingKeyboardTool() {
     }
 }
 
+/** A Toolkit tile: it sinks a little while it is pressed and springs back on release, then opens its tool. */
+@Composable
+private fun ToolTile(modifier: Modifier, icon: String, label: String, onClick: () -> Unit) {
+    val press = remember { androidx.compose.animation.core.Animatable(1f) }
+    val scope = rememberCoroutineScope()
+    PCard(modifier.clip(RoundedCornerShape(T.radius))
+        .graphicsLayer { scaleX = press.value; scaleY = press.value }
+        .pointerInput(Unit) {
+            androidx.compose.foundation.gestures.detectTapGestures(
+                onPress = {
+                    scope.launch { press.animateTo(.92f, androidx.compose.animation.core.tween(90)) }
+                    val released = tryAwaitRelease()
+                    scope.launch { press.animateTo(1f, androidx.compose.animation.core.spring(dampingRatio = .45f, stiffness = 500f)) }
+                },
+                onTap = { onClick() },
+            )
+        }) {
+        PIcon(icon, Look.accent, 28.dp, Modifier.align(Alignment.CenterHorizontally))
+        Text(label, Modifier.fillMaxWidth(), color = T.text, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 2, minLines = 2)
+    }
+}
+
 /** The Toolkit page: a 3-column grid of tiles; a tile opens its tool, the chevron goes back. */
 @Composable
 fun ToolkitPage() {
@@ -191,9 +213,14 @@ fun ToolkitPage() {
     // a tool opens in a window over the Toolkit (not the whole screen): the grid stays behind it, and a tap outside or the back button closes it
     if (open >= 0) {
         val t = tools[open]
+        // the window grows out of the middle and fades in when it opens
+        val enter = remember { androidx.compose.animation.core.Animatable(0f) }
+        LaunchedEffect(open) { enter.animateTo(1f, androidx.compose.animation.core.tween(220)) }
         androidx.compose.ui.window.Dialog(onDismissRequest = { open = -1 }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
             Column(
-                Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp).clip(RoundedCornerShape(T.radius)).background(T.panel)
+                Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp)
+                    .graphicsLayer { alpha = enter.value; val k = .9f + .1f * enter.value; scaleX = k; scaleY = k }
+                    .clip(RoundedCornerShape(T.radius)).background(T.panel)
                     .verticalScroll(rememberScrollState()).padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
@@ -207,10 +234,7 @@ fun ToolkitPage() {
         tools.chunked(3).forEachIndexed { r, row ->
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 row.forEachIndexed { c, t ->
-                    PCard(Modifier.weight(1f).clip(RoundedCornerShape(T.radius)).clickable { open = r * 3 + c }) {
-                        PIcon(t.icon, Look.accent, 28.dp, Modifier.align(Alignment.CenterHorizontally))
-                        Text(tr(t.label, t.trLabel), Modifier.fillMaxWidth(), color = T.text, fontSize = 13.sp, textAlign = TextAlign.Center, maxLines = 2, minLines = 2)
-                    }
+                    ToolTile(Modifier.weight(1f), t.icon, tr(t.label, t.trLabel)) { open = r * 3 + c }
                 }
                 repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
             }
