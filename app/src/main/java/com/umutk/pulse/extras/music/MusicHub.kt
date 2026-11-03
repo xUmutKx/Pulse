@@ -133,6 +133,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
     var noiseOpen by remember { mutableStateOf(false) }
     var radioOpen by remember { mutableStateOf(false) }
     var recapOpen by remember { mutableStateOf(false) }
+    val recapGate = com.umutk.pulse.ads.rememberAdGate(tr("Music recap", "Müzik özeti"), tr("Watch a short ad to open the recap.", "Özeti açmak için kısa bir reklam izle."), key = "recap", minutes = 30)
     var onlineOpen by remember { mutableStateOf(false) }
     var spotifyOpen by remember { mutableStateOf(false) }
     var floating by remember { mutableStateOf(false) }
@@ -187,7 +188,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
               androidx.compose.runtime.key(rev) {
                 when {
                     lyrics && look != MusicLook.WINAMP -> LyricsPanel(st.current, rememberPosition(engine, st).value.first, Modifier.fillMaxSize(), onSeek = { engine.seekTo(it) })
-                    look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it }, onNoise = { noiseOpen = true }, onRadio = { radioOpen = true }, onRecap = { recapOpen = true })
+                    look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it }, onNoise = { noiseOpen = true }, onRadio = { radioOpen = true }, onRecap = { recapGate { recapOpen = true } }, onSettings = { settingsOpen = true })
                     look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx, onSettings = { settingsOpen = true })
                     look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") }, startLyrics = lyrics, onSettings = { settingsOpen = true })
                     look == MusicLook.CASSETTE -> com.umutk.pulse.extras.music.cassette.CassettePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant)
