@@ -24,6 +24,12 @@ android {
             storePassword = "pulsepulse"; keyAlias = "pulse"; keyPassword = "pulsepulse"
         }
     }
+    // foss: the full app, no ads and no Google SDK; play: the same app with the AdMob ads (src/play)
+    flavorDimensions += "store"
+    productFlavors {
+        create("foss") { dimension = "store" }
+        create("play") { dimension = "store" }
+    }
     buildTypes {
         release {
             isMinifyEnabled = true
@@ -49,6 +55,7 @@ dependencies {
         exclude(group = "org.bouncycastle") // the app already ships bcprov 1.79 (bcpkix below); the 1.72 copy clashes with it
     }
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
+    add("playImplementation", "com.google.android.gms:play-services-ads:23.6.0") // AdMob: banner and rewarded ads, the play build only
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.autofill:autofill:1.1.0") // the password manager's suggestions inside the keyboard bar (inline autofill, Android 11+)
     implementation("androidx.webkit:webkit:1.11.0") // Browser (extras/browser): force-dark on the phone's own WebView, no bundled engine
