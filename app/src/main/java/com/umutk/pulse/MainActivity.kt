@@ -351,6 +351,11 @@ private fun FilesRoot() = LookHost(transparent = FilesGlass.on) { th ->
                     if (sub.isEmpty()) Text("Files", color = T.text, fontSize = 17.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold, maxLines = 1, modifier = Modifier.padding(start = 4.dp))
                 }
                 Box(Modifier.weight(1f)) { if (sub.isNotEmpty()) SubScreen(sub) { sub = "" } else com.umutk.pulse.features.FilesPage() }
+                // the play build's ads: a native card in the look, then the banner at the very bottom (nothing is shown in the foss build)
+                if (com.umutk.pulse.ads.PulseAds.ENABLED && sub.isEmpty()) {
+                    com.umutk.pulse.ads.PulseAds.NativeCard(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), bg = th.panel, text = th.text, sub = th.sub, accent = th.accent)
+                    com.umutk.pulse.ads.PulseAds.Banner(Modifier.fillMaxWidth())
+                }
             }
             com.umutk.pulse.features.FilesInstall.file?.let { f ->
                 com.umutk.pulse.features.InstallWindow(f, com.umutk.pulse.features.FilesLook.theme) { com.umutk.pulse.features.FilesInstall.file = null }

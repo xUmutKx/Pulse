@@ -448,6 +448,7 @@ private fun ThemeDialog(current: String, ctx: Context, onPick: (String) -> Unit,
 private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed: Long, onHidden: (Boolean) -> Unit) {
     val ctx = LocalContext.current
     var coverTick by remember(g.pkg) { mutableStateOf(0) }
+    var askAd by remember(g.pkg) { mutableStateOf(false) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
             val size = runCatching { ctx.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L }.getOrDefault(-1L)
@@ -459,6 +460,20 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
             }
         }
     }
+    if (askAd) com.umutk.pulse.ads.RewardAdDialog(
+        title = tr("Change the cover", "Kapağı değiştir"),
+        text = tr("Watch a short ad to change the cover. It is given only when the ad is watched to the end.", "Kapağı değiştirmek için kısa bir reklam izle. Reklam sonuna kadar izlenirse verilir."),
+        watch = tr("Watch", "İzle"), cancel = tr("Cancel", "İptal"),
+        onWatch = {
+            askAd = false
+            val act = ctx as? android.app.Activity
+            if (act == null) toast(ctx, tr("No ad now, try again", "Şu an reklam yok, tekrar dene"))
+            else com.umutk.pulse.ads.PulseAds.showRewarded(act,
+                onReward = { pick.launch("image/*") },
+                onFail = { toast(ctx, tr("No ad now, try again", "Şu an reklam yok, tekrar dene")) })
+        },
+        onCancel = { askAd = false },
+    )
     Column(Modifier.fillMaxWidth()) {
         // the banner: the cover across the top, the icon and the name over its bottom edge
         key(coverTick) {
@@ -490,7 +505,7 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
             }
             SectionTitle(pal, tr("Cover", "Kapak"))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip(pal, tr("Change cover", "Kapağı değiştir")) { pick.launch("image/*") }
+                Chip(pal, tr("Change cover", "Kapağı değiştir")) { if (com.umutk.pulse.ads.PulseAds.ENABLED) askAd = true else pick.launch("image/*") }
                 Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
             }
             // achievements and community need a service the phone's games do not have: said here, not faked
