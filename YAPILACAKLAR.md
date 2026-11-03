@@ -1911,3 +1911,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Theme locks (play build): the look in use stays open, the others show a padlock; one short ad opens all of them for 2 minutes, then only the look in use is open again (foss and Premium: no locks)
 - (sürüm sonra) derlenmedi: Music recap: each page fades and rises in, the minutes count up, and the top song's cover shows on the top songs and card pages
 - (sürüm sonra) derlenmedi: Keyboard dictionary from the owner's own data: common words are never autocorrected (kbd_keep), undone corrections are remembered from the start (kbd_rejected), 1097 typo fixes bundled (habits_user_add)
+- (sürüm sonra) derlenmedi: Setup: permissions card (each group with its reason, ticked when granted, optional ones marked); keyboard: the top bar keeps its height when a panel opens (no jump)
