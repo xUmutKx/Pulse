@@ -252,6 +252,8 @@ class OfficeViewActivity : ComponentActivity() {
         Box(Modifier.fillMaxSize()) {
             Box(Modifier.align(Alignment.TopStart).fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(barTop))
             Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().windowInsetsBottomHeight(WindowInsets.navigationBars).background(barBot))
+            // the play build's banner at the foot of the Office viewer (nothing in the foss build)
+            if (com.umutk.pulse.ads.PulseAds.ENABLED) Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().windowInsetsPadding(WindowInsets.navigationBars)) { com.umutk.pulse.ads.PulseAds.Banner(Modifier.fillMaxWidth()) }
         }
         val sbView = androidx.compose.ui.platform.LocalView.current
         SideEffect {
