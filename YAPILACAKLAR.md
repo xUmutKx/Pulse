@@ -1921,3 +1921,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Files: the home's three lines open the Browse side menu (same menu and ad everywhere); Hidden part on the storage bar (files in dot-folders, no longer Other); ad banner cannot crash the screen (empty place when the ad fails)
 - (sürüm sonra) derlenmedi: Game Hub: the game page is laid over its own cover, blurred; a hidden game keeps the size it had (shown in the list)
 - (sürüm sonra) derlenmedi: Ads: the native card's button label is black on a light accent (AMOLED's white button showed an empty white box)
+- (sürüm sonra) derlenmedi: Ads: the reward is given when the rewarded ad is closed (not while it still shows); the AMOLED ad card is black

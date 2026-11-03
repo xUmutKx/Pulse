@@ -14,6 +14,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material3.Text
@@ -37,7 +38,7 @@ fun RewardAdDialog(title: String, text: String, watch: String, cancel: String, o
             Column(Modifier.fillMaxWidth()) {
                 Text(text, color = look.sub, fontSize = 14.sp)
                 Spacer(Modifier.height(10.dp))
-                PulseAds.NativeCard(Modifier.fillMaxWidth(), bg = look.panel, text = look.text, sub = look.sub, accent = look.accent)
+                PulseAds.NativeCard(Modifier.fillMaxWidth(), bg = if (look.id == "amoled") Color.Black else look.panel, text = look.text, sub = look.sub, accent = look.accent)
             }
         },
         confirmButton = { PButton(watch, onClick = onWatch) },
