@@ -38,7 +38,7 @@ fun RewardAdDialog(title: String, text: String, watch: String, cancel: String, o
             Column(Modifier.fillMaxWidth()) {
                 Text(text, color = look.sub, fontSize = 14.sp)
                 Spacer(Modifier.height(10.dp))
-                PulseAds.NativeCard(Modifier.fillMaxWidth(), bg = if (look.id == "amoled") Color.Black else look.panel, text = look.text, sub = look.sub, accent = look.accent)
+                PulseAds.NativeCard(Modifier.fillMaxWidth(), bg = Color.Transparent, text = look.text, sub = look.sub, accent = look.accent)
             }
         },
         confirmButton = { PButton(watch, onClick = onWatch) },
