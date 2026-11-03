@@ -1968,3 +1968,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Floating keyboard (tile): the transparent window no longer blocks the screen before the keyboard is measured; the keyboard is asked once the window has focus
 - (sürüm sonra) derlenmedi: Files: a CSV opens in the spreadsheet viewer (not the text editor); text is read as UTF-8, or Windows-1254 when it is not UTF-8 (Turkish characters); keyboard lays out again on each new field
 - (sürüm sonra) derlenmedi: Toolkit: Converter tile removed; a Floating keyboard tile with a preview, a show button and an edit button (keyboard settings)
+- (sürüm sonra) derlenmedi: Keyboard Turkish: the capital I is ı in Turkish (taps, glide and the word after a key are lower-cased by the language, not by the phone's language)
