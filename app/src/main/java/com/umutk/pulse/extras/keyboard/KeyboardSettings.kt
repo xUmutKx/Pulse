@@ -207,6 +207,31 @@ fun KeyboardSettings(back: () -> Unit) {
         }
 
         // swipes, extra keys and the toolbar
+        KbSection("numpad", tr("Number pad", "Sayı paneli")) {
+            Title(tr("Bottom right key", "Sağ alt tuş"))
+            val opts = listOf("enter", "=", ",", "/", "%", "-", "*")
+            Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                opts.forEach { o ->
+                    val on = KeyboardPrefs.numEnter == o
+                    Box(Modifier.size(56.dp, 48.dp).clip(RoundedCornerShape(12.dp))
+                        .background(if (on) T.accent else T.sub.copy(alpha = .12f))
+                        .clickable { KeyboardPrefs.numEnter = o; save() },
+                        contentAlignment = Alignment.Center) {
+                        Text(if (o == "enter") "↵" else o, color = if (on) T.bg else T.text, fontSize = 20.sp, fontWeight = FontWeight.Medium)
+                    }
+                }
+            }
+            Spacer(Modifier.height(10.dp))
+            // the preview: the bottom row of the number pad as it will look
+            Title(tr("Preview", "Önizleme"))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                listOf("*", "#", KeyboardPrefs.numEnter).forEach { k ->
+                    Box(Modifier.weight(1f).height(44.dp).clip(RoundedCornerShape(10.dp)).background(T.sub.copy(alpha = .16f)), contentAlignment = Alignment.Center) {
+                        Text(if (k == "enter") "↵" else k, color = T.text, fontSize = 18.sp)
+                    }
+                }
+            }
+        }
         KbSection("keyboard", tr("Swipes and keys", "Kaydırma ve tuşlar")) {
             Switch(tr("Swipe typing", "Kaydırarak yazma"), tr("Slide over the letters to type a word", "Harflerin üstünde kaydırarak kelime yaz"), KeyboardPrefs.glide) { KeyboardPrefs.glide = it; save() }
             Switch(tr("Flick up for the symbol", "Yukarı kaydırınca sembol"), tr("A short flick up on a key types its first long-press character", "Tuşu kısaca yukarı kaydırmak uzun basış karakterini yazar"), KeyboardPrefs.flick) { KeyboardPrefs.flick = it; save() }
