@@ -13,6 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import kotlinx.coroutines.Dispatchers
@@ -58,6 +59,11 @@ private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v", 
  * Videos the media index does not know (a file copied in by another app, or a folder the index skipped): found by walking
  * the shared storage. Files the index already lists (same name and size) are not added twice.
  */
+private var unindexedCache: List<VideoItem>? = null
+
+/** [unindexedVideos] once per run: walking the whole storage on every change of the view froze the browser. */
+internal fun unindexedOnce(known: List<VideoItem>): List<VideoItem> = unindexedCache ?: unindexedVideos(known).also { unindexedCache = it }
+
 internal fun unindexedVideos(known: List<VideoItem>): List<VideoItem> {
     val seen = known.mapTo(HashSet()) { it.name to it.size }
     val root = android.os.Environment.getExternalStorageDirectory()
@@ -118,10 +124,34 @@ fun videoThumb(item: VideoItem): ImageBitmap? {
     val key = item.uri.toString()
     val bmp by produceState(thumbs.get(key), key) {
         if (value == null) value = withContext(Dispatchers.IO) {
-            if (android.os.Build.VERSION.SDK_INT < 29) null else runCatching { ctx.contentResolver.loadThumbnail(item.uri, Size(320, 180), null).asImageBitmap() }.getOrNull()
+            val sys = if (android.os.Build.VERSION.SDK_INT < 29 || item.uri.scheme == "file") null
+                else runCatching { ctx.contentResolver.loadThumbnail(item.uri, Size(320, 180), null).asImageBitmap() }.getOrNull()
+            // the system picture is often black (a fade-in first frame) or missing: then a frame from the middle of this video
+            if (sys != null && !isDark(sys)) sys else middleFrame(ctx, item.uri) ?: sys
         }?.also { thumbs.put(key, it) }
     }
     return bmp
+}
+
+/** True when the picture is nearly black: sampled on a 6x4 grid. */
+private fun isDark(b: ImageBitmap): Boolean {
+    val a = b.asAndroidBitmap()
+    var sum = 0L; var n = 0
+    for (y in 0 until 4) for (x in 0 until 6) {
+        val c = a.getPixel(a.width * (2 * x + 1) / 12, a.height * (2 * y + 1) / 8)
+        sum += ((c shr 16) and 0xff) + ((c shr 8) and 0xff) + (c and 0xff); n++
+    }
+    return sum / (3L * n) < 14
+}
+
+/** A frame at 30% of the video, read by the retriever (works for files the media index does not know). */
+private fun middleFrame(ctx: Context, u: Uri): ImageBitmap? {
+    val r = android.media.MediaMetadataRetriever()
+    return try {
+        r.setDataSource(ctx, u)
+        val ms = (r.extractMetadata(android.media.MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L)
+        r.getScaledFrameAtTime(ms * 300, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC, 320, 180)?.asImageBitmap()
+    } catch (e: Exception) { null } finally { runCatching { r.release() } }
 }
 
 private fun bool(sp: () -> SharedPreferences, k: String, d: Boolean) = object : ReadWriteProperty<Any?, Boolean> {

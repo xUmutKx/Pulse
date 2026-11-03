@@ -2031,3 +2031,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: İntro kaynağı: önce IntroDB (api.introdb.app, anahtarsız; dizinin IMDb kimliği OpenSubtitles anahtarıyla), bulamazsa yerel karşılaştırma
 - (sürüm sonra) derlenmedi: Hoş geldin ekranı boyut metni 11 MB yerine 44 MB
 - 1.0.351 derlendi: commits since 1.0.350 (video: intro, mini window, menus, subtitles; keyboard @ suggestions)
+- (sürüm sonra) derlenmedi: Gözat depolama taramasını uygulama açılışında bir kez yapar (donma); kapak: sistem kapağı siyahsa ya da yoksa videonun %30 karesi; altyazı arama listesi küçük satırlar

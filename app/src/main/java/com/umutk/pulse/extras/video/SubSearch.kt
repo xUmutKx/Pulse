@@ -255,9 +255,9 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
                 }
                 if (line.isNotEmpty()) Text(line, color = if (err) Color(0xFFC42B1C) else w.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
                 hits.forEach { h ->
-                    Column(Modifier.fillMaxWidth().clickable { pick(h) }.padding(vertical = 6.dp)) {
-                        Text(h.release.ifBlank { "-" }, color = w.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${h.lang} · ${tr("rating", "puan")} ${h.score}", color = w.sub, fontSize = 12.sp)
+                    Column(Modifier.fillMaxWidth().clickable { pick(h) }.padding(vertical = 3.dp)) {
+                        Text(h.release.ifBlank { "-" }, color = w.text, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text("${h.lang} · ${tr("rating", "puan")} ${h.score}", color = w.sub, fontSize = 9.sp)
                     }
                 }
             }
