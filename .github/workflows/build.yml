@@ -29,7 +29,7 @@ jobs:
           gradle-version: 8.9
       - name: Build release APK
         shell: bash
-        run: set -o pipefail; gradle assembleFossRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon 2>&1 | tee build.log
+        run: set -o pipefail; gradle assembleFossRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease --no-daemon 2>&1 | tee build.log
       - name: Compile errors as annotations
         if: failure()
         run: |
@@ -46,10 +46,10 @@ jobs:
           VER=$(grep -oP 'versionName = "\K[^"]+' app/build.gradle.kts)
           # the build above is the Android 5 and up one; the normal one (Android 12 and up, the same code) is built now
           cp app/build/outputs/apk/foss/release/app-foss-release.apk "Pulse-$VER-android5.apk"
-          gradle assembleFossRelease -PpulseMinSdk=31 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon
+          gradle assembleFossRelease -PpulseMinSdk=31 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease --no-daemon
           cp app/build/outputs/apk/foss/release/app-foss-release.apk "Pulse-$VER.apk"
           # the play build: the same app with the ads (Google Play store)
-          gradle assemblePlayRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease --no-daemon
+          gradle assemblePlayRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
           cp app/build/outputs/apk/play/release/app-play-release.apk "Pulse-$VER-play.apk"
           # the notes: every YAPILACAKLAR.md entry from the version after the last release up to this one
           PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
