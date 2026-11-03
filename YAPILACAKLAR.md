@@ -1998,3 +1998,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notes start page: the last eight notes as nine squares (the bottom middle one is Notes, a new note), with a space above
 - (sürüm sonra) derlenmedi: PDF dark copy: light greys go to black (a steep curve; ink and photos as before). Notes: a Black background switch in the notes settings
 - (sürüm sonra) derlenmedi: One UI switch: the thumb slides with a spring and the track changes colour, with a soft shadow
+- (sürüm sonra) derlenmedi: PDF tools: delete pages, rotate pages, extract text, PDF to images, lock and unlock with a password, watermark, compress
