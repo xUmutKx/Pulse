@@ -1905,3 +1905,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.341 derlendi: Game Hub add list: switch hides an app at once (pm hide), one scrolling list, games switched on before are hidden once, library keeps its place when the sort changes
 - 1.0.342 derlendi: Keyboard: rounded suggestion bar even when empty; number pad + key; bottom right number pad key chosen in settings with preview; Game Hub controller icon and placed in Extra apps; floating keyboard as its own window; tile opens it in one step; keep Pulse as default keyboard (root/Shizuku)
 - 1.0.343 derlendi: Play and FOSS flavours (play has AdMob banner and native card, test ids while testing, rewarded only after watching; FOSS has no ads); Game Hub faster with APK banner art and store covers; blur smoother; Windows 11 splash sharper; launcher icon and sounds
+- (sürüm sonra) derlenmedi: Lyrics share card asks for a short ad (play build; foss shares at once), opens for 30 minutes
