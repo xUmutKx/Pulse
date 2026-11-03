@@ -34,7 +34,7 @@ class KeyboardTile : TileService() {
         KeyboardPrefs.floatSession = true
         tilePrefs(this).edit().putBoolean("active", true).apply()
         qsTile?.apply { state = Tile.STATE_ACTIVE; updateTile() }
-        val i = Intent(this, KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val i = com.umutk.pulse.ads.TileAds.wrap(this, Intent(this, KeyboardFloatActivity::class.java)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             startActivityAndCollapse(android.app.PendingIntent.getActivity(this, 0, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
         } else {
