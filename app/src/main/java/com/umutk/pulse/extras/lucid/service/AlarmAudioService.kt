@@ -71,6 +71,7 @@ class AlarmAudioService : Service() {
     private var currentSnoozeCount: Int = 0
     private var currentSnoozeLimit: Int = -1
     private var forceMaxVolume: Boolean = false
+    private var fixedVolume: Float = -1f
     private var isAwakeCheckActive: Boolean = false
 
     private val nowBar: NowBarNotification by lazy { NowBarNotification(this) }
@@ -203,6 +204,7 @@ class AlarmAudioService : Service() {
                 currentVibrate = intent.getBooleanExtra(AlarmReceiver.EXTRA_VIBRATE, true)
                 forceMaxVolume =
                     intent.getBooleanExtra(AlarmReceiver.EXTRA_FORCE_MAX_VOLUME, false)
+                fixedVolume = intent.getFloatExtra(AlarmReceiver.EXTRA_FIXED_VOLUME, -1f)
                 isAwakeCheckActive =
                     intent.getBooleanExtra(AlarmReceiver.EXTRA_IS_AWAKE_CHECK_ACTIVE, false)
 
@@ -295,6 +297,7 @@ class AlarmAudioService : Service() {
 
         val targetNormalizedVolume = when {
             forceMaxVolume -> 1.0f
+            fixedVolume >= 0f -> fixedVolume
             volumePolicy == VolumePolicy.UNIFIED -> unifiedVolume
             else -> currentVolumeLevel
         }.coerceIn(MIN_VOLUME, 1.0f)
