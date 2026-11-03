@@ -67,7 +67,7 @@ object PulseAds {
         AndroidView(
             modifier = modifier,
             // a failed ad must never take the screen down: the place stays empty instead
-            factory = { ctx -> runCatching { AdView(ctx).apply { setAdSize(AdSize.BANNER); adUnitId = BANNER; loadAd(AdRequest.Builder().build()) } }.getOrElse { View(ctx) } },
+            factory = { ctx -> runCatching { AdView(ctx).apply { setAdSize(AdSize.BANNER); adUnitId = BANNER; setBackgroundColor(android.graphics.Color.TRANSPARENT); loadAd(AdRequest.Builder().build()) } }.getOrElse { View(ctx) } },
             onRelease = { (it as? AdView)?.destroy() },
         )
     }
