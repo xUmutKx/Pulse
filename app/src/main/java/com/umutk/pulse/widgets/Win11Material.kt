@@ -61,7 +61,8 @@ object Win11Material {
             val tintA = (WidgetOver.tint(ctx, id).coerceIn(0f, 1f) * 255).toInt() shl 24
             val b = blurSource(ctx, WidgetOver.blur(ctx, id).coerceIn(0f, 1f) * 40f, tintA)
             if (b == null) { // "none": only the dark tint, no picture
-                c.drawRect(box, Paint().apply { color = Color.argb(205 + (tintA ushr 24) / 5, 20, 20, 20) })
+                // no picture: a dark, see-through tile (darker and more transparent than before)
+                c.drawRect(box, Paint().apply { color = Color.argb(150 + (tintA ushr 24) / 5, 8, 8, 8) })
                 c.restore(); c.restore()
                 c.drawRoundRect(RectF(.75f, .75f, w - .75f, h - .75f), radius, radius, Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; strokeWidth = 1.5f; color = Color.argb(40, 255, 255, 255) })
                 return
