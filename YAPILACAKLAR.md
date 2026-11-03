@@ -1948,3 +1948,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard clipboard: the delete button is a trash bin
 - (sürüm sonra) derlenmedi: Keyboard: automatic capital only on the first letter of a sentence; the rest of the word stays small
 - (sürüm sonra) derlenmedi: Download popup: the Open with button is gone; the Download button becomes Open when the file is downloaded
+- (sürüm sonra) derlenmedi: Keyboard: the suggestion bar is at the foot of the keys (not the top). The count of 5 to 6 suggestions is not done yet
