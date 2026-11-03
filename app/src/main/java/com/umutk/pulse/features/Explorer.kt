@@ -1237,6 +1237,8 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
             if (Opt.recycle) ExDrawerRow("delete", tr("Trash", "Çöp kutusu"), false) { drawer = false; openToolFn("recycle") }
             ExDrawerRow("settings", tr("Settings", "Ayarlar"), false) { drawer = false; openToolFn("files_settings") }
             ExDrawerRow("info", tr("About", "Hakkında"), false) { drawer = false; about = true }
+            // the play build's ad at the foot of the side menu (nothing in the foss build)
+            if (com.umutk.pulse.ads.PulseAds.ENABLED) com.umutk.pulse.ads.PulseAds.Banner(Modifier.fillMaxWidth().padding(top = 8.dp))
         }
     }
     }
