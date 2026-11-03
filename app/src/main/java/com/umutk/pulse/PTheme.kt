@@ -310,7 +310,7 @@ private fun WinDialog(w: PTheme, onDismissRequest: () -> Unit, title: (@Composab
             else -> Modifier.clip(RoundedCornerShape(8.dp)).background(if (id == "win11") Color.Transparent else body)
                 .border(1.dp, if (id == "win11") (if (w.dark) Color.White.copy(alpha = .14f) else Color.White.copy(alpha = .8f)) else w.line, RoundedCornerShape(8.dp))
         }
-        Column(Modifier.then(if (id == "win11") Modifier.widthIn(min = 280.dp, max = minOf(480, androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 32).dp) else Modifier.padding(16.dp).widthIn(min = 280.dp, max = 480.dp)).then(outer)) {
+        Column(Modifier.then(if (id == "win11") Modifier.widthIn(min = 280.dp, max = minOf(480, androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 32).dp) else Modifier.padding(16.dp).widthIn(min = 280.dp, max = if (androidx.compose.ui.platform.LocalConfiguration.current.smallestScreenWidthDp >= 600) 560.dp else 480.dp)).then(outer)) {
             Row(Modifier.fillMaxWidth().height(when (id) { "win95" -> 20.dp; "xp", "win7" -> 28.dp; else -> 32.dp })
                 .then(if (id == "xp") Modifier.background(Brush.verticalGradient(0f to Color(0xFF0058EE), .14f to Color(0xFF3A93FF), .32f to Color(0xFF0A60EE), .85f to Color(0xFF0050E0), 1f to Color(0xFF0046C8)))
                 .drawBehind { drawLine(Color(0xFF7DB4FF), Offset(0f, 1.dp.toPx() / 2), Offset(size.width, 1.dp.toPx() / 2), 1.dp.toPx()) } else if (id == "win95") Modifier.background(Color(0xFF000080)) else if (classic) w.title?.let { Modifier.background(it) } ?: Modifier else if (id == "win11") Modifier.background(body) else Modifier)
