@@ -173,31 +173,46 @@ class WeatherClearWidget : PulseWidget() {
         return bmp
     }
 
-    /** Seven days in columns under the current weather: the day, the sky, the high and the low. */
+    /** Seven days (or the next seven hours) in columns under the current weather: the day or hour, the sky, the high and the low. */
     private fun forecastRow(ctx: Context, c: Canvas, f: Forecast, w: Int, h: Int) {
         val imp = WeatherFmt.imperial(ctx)
-        val days = f.days.take(7)
-        val colW = w * .92f / days.size
+        val hourly = com.umutk.pulse.extras.weather.WeatherStore.widgetHours(ctx) && f.hours.isNotEmpty()
+        // (label, sky code, high, low or null)
+        val cells: List<Quad> = if (hourly) {
+            val fmt = SimpleDateFormat("HH", Locale.getDefault())
+            val parse = SimpleDateFormat("yyyy-MM-dd'T'HH:mm", Locale.US)
+            f.hours.take(7).map { hr -> Quad(runCatching { parse.parse(hr.time)?.let { fmt.format(it) } }.getOrNull() ?: hr.time.takeLast(5), hr.code, WeatherFmt.temp(hr.temp, imp), null) }
+        } else {
+            val dayFmt = SimpleDateFormat("EEE", Locale.getDefault())
+            val parse = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            f.days.take(7).map { d -> Quad(runCatching { parse.parse(d.date)?.let { dayFmt.format(it) } }.getOrNull() ?: d.date.takeLast(5), d.code, WeatherFmt.temp(d.max, imp), WeatherFmt.temp(d.min, imp)) }
+        }
+        if (cells.isEmpty()) return
+        val colW = w * .92f / cells.size
         val left0 = w * .04f
         val y0 = h * .6f
         val name = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = h * .07f; typeface = Typeface.create("sans-serif", Typeface.BOLD); setShadowLayer(h * .02f, 0f, h * .006f, 0x99000000.toInt()) }
         val temp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = h * .062f; setShadowLayer(h * .02f, 0f, h * .006f, 0x99000000.toInt()) }
         val low = Paint(temp).apply { alpha = 190 }
-        val dayFmt = SimpleDateFormat("EEE", Locale.getDefault())
-        val parse = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        days.forEachIndexed { i, d ->
+        cells.forEachIndexed { i, cell ->
             val cx = left0 + colW * (i + .5f)
-            val label = runCatching { parse.parse(d.date)?.let { dayFmt.format(it) } }.getOrNull() ?: d.date.takeLast(5)
-            c.drawText(label, cx - name.measureText(label) / 2, y0 + h * .13f, name)
-            ContextCompat.getDrawable(ctx, WeatherApi.drawable(d.code))?.let { dr ->
+            c.drawText(cell.label, cx - name.measureText(cell.label) / 2, y0 + h * .13f, name)
+            ContextCompat.getDrawable(ctx, WeatherApi.drawable(cell.code))?.let { dr ->
                 val s = minOf(colW * .7f, h * .14f).toInt()
                 val top = (y0 + h * .17f).toInt()
                 dr.setBounds((cx - s / 2).toInt(), top, (cx + s / 2).toInt(), top + s); dr.draw(c)
             }
-            val hi = WeatherFmt.temp(d.max, imp); val lo = WeatherFmt.temp(d.min, imp)
-            c.drawText(hi, cx - temp.measureText(hi) / 2, y0 + h * .33f + h * .07f, temp)
-            c.drawText(lo, cx - low.measureText(lo) / 2, y0 + h * .33f + h * .14f, low)
+            c.drawText(cell.hi, cx - temp.measureText(cell.hi) / 2, y0 + h * .40f, temp)
+            cell.lo?.let { lo -> c.drawText(lo, cx - low.measureText(lo) / 2, y0 + h * .47f, low) }
         }
+    }
+
+    private class Quad(val label: String, val code: Int, val hi: String, val lo: String?)
+
+    /** Redraws every placed weather widget (after a setting changed). */
+    fun refreshAll(ctx: Context) {
+        val mgr = AppWidgetManager.getInstance(ctx)
+        mgr.getAppWidgetIds(ComponentName(ctx, WeatherClearWidget::class.java)).forEach { mgr.updateAppWidget(it, WeatherClearWidget().contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
     }
 
     private fun placesOf(c: Context): List<Place> =

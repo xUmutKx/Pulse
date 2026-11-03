@@ -2037,3 +2037,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: İntro/özet atlama düğmesi sağa yaslı değil, bir miktar sola (64 dp)
 - (sürüm sonra) derlenmedi: İntro önbelleği bölüm bazlı oldu (eskiden klasör bazlıydı, bütün bölümler aynı süreyi kullanıyordu); IntroDB sonucu ayrı, yerel eşleşme ayrı önbellekte; özet bilgisi eski kayıtlardan gelmiyordu
 - (sürüm sonra) derlenmedi: Hava widget: konum yoksa son kayıtlı/hava sayfası konumu denenir; büyük widgette 7 günlük tahmin
+- (sürüm sonra) derlenmedi: Hava: büyük widgette saatlik seçeneği (ayarlar > Büyük widget); Ekran kapağı: 2x1 yatay ve 1x2 dikey widget

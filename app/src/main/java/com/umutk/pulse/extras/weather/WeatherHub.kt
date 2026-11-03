@@ -51,6 +51,7 @@ import com.umutk.pulse.PButton
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.PSwitch
+import com.umutk.pulse.widgets.WeatherClearWidget
 import com.umutk.pulse.T
 import com.umutk.pulse.pageGutter
 import com.umutk.pulse.tr
@@ -527,6 +528,15 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
                 Text(tr("The next 24 hours: four models through Open-Meteo (best match, ECMWF, GFS, ICON), met.no, wttr.in and 7Timer, plus OpenWeatherMap when its key is set, and MGM for places in Turkey when it is the source; the middle temperature and the sky most of them agree on. A service that fails is left out.", "Sonraki 24 saat: Open-Meteo üzerinden dört model (en iyi eşleşme, ECMWF, GFS, ICON), met.no, wttr.in ve 7Timer, anahtar girildiyse OpenWeatherMap, kaynak MGM ise Türkiye için MGM de; orta sıcaklık ve çoğunun uyuştuğu gökyüzü. Hata veren servis atlanır."), color = sub, fontSize = 12.sp)
             }
             PSwitch(comb, { comb = it; onCombine(it) })
+        }
+        // the large weather widget: the seven days, or the next seven hours
+        var hours by remember { mutableStateOf(WeatherStore.widgetHours(wctx)) }
+        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Big widget: next hours", "Büyük widget: sonraki saatler"), color = fg, fontSize = 16.sp)
+                Text(tr("Off shows the seven days", "Kapalıyken yedi gün gösterilir"), color = sub, fontSize = 12.sp)
+            }
+            PSwitch(hours, { hours = it; WeatherStore.setWidgetHours(wctx, it); WeatherClearWidget().refreshAll(wctx) })
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Severe weather alerts", "Sert hava uyarıları"), color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
