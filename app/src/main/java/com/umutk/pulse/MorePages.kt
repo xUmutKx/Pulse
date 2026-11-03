@@ -431,7 +431,13 @@ fun AppsPage() {
         hasDetail = sel.isNotEmpty(), listWidth = 380.dp,
         list = { AppManagerScreen(onOpen = { sel = it }) },
         detail = { if (sel.isNotEmpty()) key(sel) { com.umutk.pulse.features.AppDetailsScreen(sel, { sel = "" }) } })
-    else com.umutk.pulse.ui.MaxWidthBox { AppManagerScreen(onOpen = { open("app:$it") }) }
+    else com.umutk.pulse.ui.MaxWidthBox {
+        Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { AppManagerScreen(onOpen = { open("app:$it") }) }
+            // the ad strip at the foot of the manager (play build): the look's own colours
+            com.umutk.pulse.ads.AdStrip(bg = Color.Transparent, text = T.text, sub = T.sub, accent = T.accent)
+        }
+    }
 }
 
 // ---------------------------------------------------------------- searchable lists
