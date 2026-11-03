@@ -1985,3 +1985,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard with a physical keyboard: a row of the Turkish letters (ç ğ ı ö ş ü, capitals with shift) under the suggestion bar
 - (sürüm sonra) derlenmedi: Toolkit: a tool opens in a window over the Toolkit grid (tap outside or back closes it), not full screen
 - (sürüm sonra) derlenmedi: Keyboard with a physical keyboard: the bar has a keyboard button that opens the full keyboard; the keyboard service works before the first unlock (direct boot)
+- (sürüm sonra) derlenmedi: Toolkit dice and coin: lit surfaces (a metal coin with a rim, a bevelled die)
