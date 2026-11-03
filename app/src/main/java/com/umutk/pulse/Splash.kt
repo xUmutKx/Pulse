@@ -99,7 +99,8 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
         // the opening screen is the look's own colour or a drawn backdrop, never a wallpaper picture: wallpapers live in the theme's window and are placed by hand there
         when (th.id) {
             // turned sideways on a tablet: a plain dark gradient (no picture, no blur), so the opening is not the white wallpaper stretched
-            "win11" -> if (landscapeTablet()) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF0B1424), Color(0xFF000000)))))
+            // the dark Windows 11 look opens on the same dark gradient as a tablet turned sideways (the light wallpaper stays for the light look)
+            "win11" -> if (landscapeTablet() || th.dark) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF0B1424), Color(0xFF000000)))))
                 else Image(painterResource(R.drawable.splash_win11_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             "win95" -> Box(Modifier.fillMaxSize().background(Color(0xFF008080)))
             else -> Box(Modifier.fillMaxSize().background(th.bg))
