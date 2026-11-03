@@ -52,18 +52,16 @@ fun Welcome(onDone: () -> Unit) {
             color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
 
         WelcomeCard(tr("What's new", "Yenilikler")) {
-            WelcomeLine(tr("Pulse 1.0: the keyboard, the messages app, the Buds manager and the launcher are part of the app.",
-                "Pulse 1.0: klavye, mesajlar, Buds yöneticisi ve launcher uygulamanın parçası."))
-            WelcomeLine(tr("A keyboard that learns your typos, with a number pad, emoji search, clipboard history and translation.",
-                "Yazım hatalarınızı öğrenen klavye: sayı tuşları, emoji arama, pano geçmişi ve çeviri."))
-            WelcomeLine(tr("Messages: SMS and MMS, reply from the notification, mute, pin, block and spam blocking.",
-                "Mesajlar: SMS ve MMS, bildirimden yanıt, sessize alma, sabitleme, engelleme ve spam engelleme."))
-            WelcomeLine(tr("Galaxy Buds: noise control by movement, touch controls, equalizer, 360 audio.",
-                "Galaxy Buds: harekete göre gürültü denetimi, dokunma denetimi, ekolayzır, 360 ses."))
-            WelcomeLine(tr("Music: Poweramp backup in and out, stars and favourites, lyrics on the cover.",
-                "Müzik: Poweramp yedeği içe ve dışa, yıldızlar ve favoriler, kapakta sözler."))
-            WelcomeLine(tr("Update check: a pop-up when a newer version is out.",
-                "Güncelleme denetimi: yeni bir sürüm çıkınca bildirim."))
+            WelcomeLine(tr("Keyboard: a floating keyboard, a number pad with +, a rounded suggestion bar and a custom bottom key.",
+                "Klavye: yüzen klavye, + tuşlu sayı paneli, yuvarlak öneri çubuğu ve özel alt tuş."))
+            WelcomeLine(tr("Game Hub: your game library with covers, play time, hidden games and the Play button.",
+                "Game Hub: kapaklı oyun kütüphanesi, oynama süresi, gizli oyunlar ve Oyna düğmesi."))
+            WelcomeLine(tr("Weather from several sources combined, and the last forecast when nothing answers.",
+                "Hava durumu: birden çok kaynak birleşik, hiçbiri yanıt vermezse son tahmin."))
+            WelcomeLine(tr("Alarms: awake check, its own volume for the final ring, and a dismiss you hold and drag.",
+                "Alarmlar: uyanıklık kontrolü, son çalmanın kendi sesi ve basılı tutup sürükleyerek kapatma."))
+            WelcomeLine(tr("Video links from other apps open in Pulse, with a download or an outside player.",
+                "Diğer uygulamalardan gelen video bağlantıları Pulse'ta açılır: indirme ya da dış oynatıcı."))
         }
 
         WelcomeCard(tr("Built from open source", "Açık kaynak parçalar")) {
