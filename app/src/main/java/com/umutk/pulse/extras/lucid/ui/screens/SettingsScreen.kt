@@ -145,6 +145,7 @@ fun SettingsScreen(
 
     val volumePolicy by settingsDataStore.volumePolicyFlow.collectAsState(initial = VolumePolicy.UNIFIED)
     val unifiedVolume by settingsDataStore.unifiedVolumeFlow.collectAsState(initial = 0.85f)
+    val awakeEmergencyVolume by settingsDataStore.awakeEmergencyVolumeFlow.collectAsState(initial = 1f)
     val vibrateAlarmsAndTimers by settingsDataStore.vibrateAlarmsAndTimersFlow.collectAsState(initial = true)
     val defaultAlarmRingtoneUri by settingsDataStore.defaultAlarmRingtoneUriFlow.collectAsState(initial = "")
     val defaultAlarmRingtoneTitle by settingsDataStore.defaultAlarmRingtoneTitleFlow.collectAsState(
@@ -941,6 +942,37 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth()
                             )
                         }
+
+                        // the final "Are you awake?" ring: its own level, always shown
+                        var tempEmergency by remember { mutableFloatStateOf(awakeEmergencyVolume) }
+                        LaunchedEffect(awakeEmergencyVolume) { tempEmergency = awakeEmergencyVolume }
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Final \"Are you awake?\" volume",
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                            Text(
+                                text = "${(tempEmergency * 100).roundToInt()}%",
+                                fontSize = 14.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = accentColor
+                            )
+                        }
+                        Slider(
+                            value = tempEmergency,
+                            onValueChange = { tempEmergency = it },
+                            onValueChangeFinished = {
+                                scope.launch { settingsDataStore.setAwakeEmergencyVolume(tempEmergency) }
+                            },
+                            valueRange = 0f..1f,
+                            modifier = Modifier.fillMaxWidth()
+                        )
 
                         HorizontalDivider(
                             modifier = Modifier.padding(vertical = 12.dp),

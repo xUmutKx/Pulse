@@ -490,6 +490,11 @@ class SettingsDataStore(private val context: Context) {
         (prefs[KEY_UNIFIED_VOLUME] ?: 0.85f).coerceIn(0f, 1f)
     }
 
+    /** The volume of the final "Are you awake?" ring (0 to 1). */
+    val awakeEmergencyVolumeFlow: Flow<Float> = context.settingsDataStore.data.map { prefs ->
+        (prefs[KEY_AWAKE_EMERGENCY_VOLUME] ?: 1f).coerceIn(0f, 1f)
+    }
+
     val ringingBackgroundFlow: Flow<RingingBackgroundStyle> = context.settingsDataStore.data.map { prefs ->
         val raw = prefs[KEY_RINGING_BACKGROUND] ?: RingingBackgroundStyle.AMOLED_BLACK.name
         runCatching { RingingBackgroundStyle.valueOf(raw) }
@@ -951,6 +956,10 @@ class SettingsDataStore(private val context: Context) {
 
     suspend fun setUnifiedVolume(volume: Float) {
         context.settingsDataStore.edit { it[KEY_UNIFIED_VOLUME] = volume.coerceIn(0f, 1f) }
+    }
+
+    suspend fun setAwakeEmergencyVolume(volume: Float) {
+        context.settingsDataStore.edit { it[KEY_AWAKE_EMERGENCY_VOLUME] = volume.coerceIn(0f, 1f) }
     }
 
     suspend fun setRingingBackground(style: RingingBackgroundStyle) {
@@ -1520,6 +1529,7 @@ class SettingsDataStore(private val context: Context) {
 
         private val KEY_VOLUME_POLICY = stringPreferencesKey("volume_policy")
         private val KEY_UNIFIED_VOLUME = floatPreferencesKey("unified_volume")
+        private val KEY_AWAKE_EMERGENCY_VOLUME = floatPreferencesKey("awake_emergency_volume")
 
         private val KEY_RINGING_BACKGROUND = stringPreferencesKey("ringing_background")
         private val KEY_RINGING_BACKGROUND_IMAGE_URI =

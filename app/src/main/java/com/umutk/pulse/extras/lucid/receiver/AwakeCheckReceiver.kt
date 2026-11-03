@@ -14,7 +14,9 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
 import com.umutk.pulse.extras.lucid.AlarmRingingActivity
+import com.umutk.pulse.extras.lucid.data.prefs.SettingsDataStore
 import com.umutk.pulse.extras.lucid.service.AlarmAudioService
+import kotlinx.coroutines.flow.first
 import java.util.Calendar
 
 class AwakeCheckReceiver : BroadcastReceiver() {
@@ -86,6 +88,11 @@ class AwakeCheckReceiver : BroadcastReceiver() {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.cancel(alarmId + NOTIFICATION_ID_BASE)
 
+        // the volume the person chose for the final ring in Settings
+        val emergencyVolume = runCatching {
+            kotlinx.coroutines.runBlocking { SettingsDataStore(context).awakeEmergencyVolumeFlow.first() }
+        }.getOrDefault(1f)
+
         val now = Calendar.getInstance()
         val serviceIntent = Intent(context, AlarmAudioService::class.java).apply {
             action = AlarmAudioService.ACTION_START_ALARM
@@ -93,8 +100,8 @@ class AwakeCheckReceiver : BroadcastReceiver() {
             putExtra(AlarmReceiver.EXTRA_ALARM_LABEL, "Are you awake?")
             putExtra(AlarmReceiver.EXTRA_ALARM_HOUR, now.get(Calendar.HOUR_OF_DAY))
             putExtra(AlarmReceiver.EXTRA_ALARM_MINUTE, now.get(Calendar.MINUTE))
-            putExtra(AlarmReceiver.EXTRA_ALARM_VOLUME, 1.0f)
-            putExtra(AlarmReceiver.EXTRA_FORCE_MAX_VOLUME, true)
+            putExtra(AlarmReceiver.EXTRA_ALARM_VOLUME, emergencyVolume)
+            putExtra(AlarmReceiver.EXTRA_FIXED_VOLUME, emergencyVolume)
             putExtra(AlarmReceiver.EXTRA_VIBRATE, true)
         }
         runCatching { ContextCompat.startForegroundService(context, serviceIntent) }
