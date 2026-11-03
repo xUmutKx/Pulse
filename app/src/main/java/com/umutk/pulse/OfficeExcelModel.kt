@@ -156,7 +156,7 @@ fun xLoad(f: File, name: String): XBook {
     val zip = head[0] == 'P'.code.toByte() && head[1] == 'K'.code.toByte()
     if (!zip) {
         if (head[0] == 0xD0.toByte() && head[1] == 0xCF.toByte()) return xLoad(OfXls.toXlsx(f), name) // legacy .xls: converted to a temporary .xlsx; saving always writes xlsx
-        val text = f.readText()
+        val text = ofReadText(f)
         val first = text.lineSequence().firstOrNull() ?: ""
         val d = if (name.endsWith(".tsv", true) || first.count { it == '\t' } > first.count { it == ',' }) '\t' else if (first.count { it == ';' } > first.count { it == ',' }) ';' else ','
         return XBook(f, true, d).also { b -> b.styles.add(XStyle()); b.sheets.add(csvSheet(text, d, name.substringBeforeLast('.'))) }

@@ -61,6 +61,7 @@ fun ofOpen(ctx: Context, f: File, lookDefault: String? = null) = ofOpenUri(ctx, 
 fun ofOpenUri(ctx: Context, uri: Uri, lookDefault: String? = null) {
     // a text file always opens in the text editor (Notepad in the Windows looks), whichever way it was reached
     uri.takeIf { it.scheme == "file" }?.path?.let { File(it) }?.takeIf { ofIsText(it) }?.let { ofOpenText(ctx, it); return }
+    // csv opens in the spreadsheet viewer (the text editor only shows it as plain text)
     val i = Intent(ctx, OfficeViewActivity::class.java).setData(uri).putExtra("edit", true).putExtra("recent", true)
     if (lookDefault != null) i.putExtra("of_look_default", lookDefault)
     if (ctx !is Activity) i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
