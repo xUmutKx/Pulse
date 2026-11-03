@@ -662,7 +662,8 @@ fun InstallerPage() {
             val e = Installer.engine(p)
             val m = Installer.modeOf(p, e)
             if (m != p.mode) Installer.status = "Silent needs root; using the system installer"
-            if (m == "background" && !uninst) {
+            // root installs run in the install service, so leaving the window does not stop them
+            if ((m == "background" || e == "root") && !uninst) {
                 Installer.startBackground(ctx, items); win = null; busy = false
                 return@launch
             }
