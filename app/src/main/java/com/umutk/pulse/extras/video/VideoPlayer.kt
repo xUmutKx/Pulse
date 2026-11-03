@@ -38,6 +38,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -110,6 +111,8 @@ import androidx.media3.ui.PlayerView
 import com.umutk.pulse.LocalWindowLook
 import com.umutk.pulse.Look
 import com.umutk.pulse.PButton
+import com.umutk.pulse.PCheck
+import com.umutk.pulse.PSlider
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.PRadio
 import com.umutk.pulse.PSwitch
@@ -661,16 +664,16 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 dlg = null
             }
         }
-        "sleep" -> {
-            val mins = listOf(0, 10, 15, 30, 45, 60, 90, 120, -1)
-            val names = mins.map { when (it) { 0 -> tr("Off", "Kapalı"); -1 -> tr("End of video", "Video sonu"); else -> "$it min" } }
-            PickDialog(tr("Sleep timer", "Uyku zamanlayıcı"), names.mapIndexed { i, n -> n to ((mins[i] == 0 && sleepAt == 0L && !sleepEnd) || (mins[i] == -1 && sleepEnd)) }, { dlg = null }) { i ->
-                val m = mins[i]
-                sleepEnd = m == -1
-                sleepAt = if (m > 0) SystemClock.elapsedRealtime() + m * 60_000L else 0L
+        "sleep" -> SleepDialog(
+            minutes = sleepAt.let { if (it > 0L) ((it - SystemClock.elapsedRealtime()) / 60_000L + 1).toInt().coerceIn(1, 120) else 0 },
+            endOfVideo = sleepEnd,
+            onSet = { m, end ->
+                sleepEnd = end
+                sleepAt = if (!end && m > 0) SystemClock.elapsedRealtime() + m * 60_000L else 0L
                 dlg = null
-            }
-        }
+            },
+            onDismiss = { dlg = null },
+        )
         "eq" -> EqDialog(prefs, equalizer[0], sk, { applyEq(player.audioSessionId) }) { dlg = null }
         "boost" -> {
             val boosts = listOf(0, 300, 600, 900, 1200, 1500)
@@ -811,6 +814,35 @@ private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, o
 
 
 /** A list of radio rows in the look's own window. */
+/** Sleep timer: a slider from off to 120 minutes, and a switch for "stop at the end of this video". */
+@Composable
+private fun SleepDialog(minutes: Int, endOfVideo: Boolean, onSet: (Int, Boolean) -> Unit, onDismiss: () -> Unit) {
+    val w = LocalWindowLook.current
+    var m by remember { mutableFloatStateOf(minutes.toFloat()) }
+    var end by remember { mutableStateOf(endOfVideo) }
+    WinAlert(
+        onDismissRequest = onDismiss,
+        title = { Text(tr("Sleep timer", "Uyku zamanlayıcı"), color = w.text) },
+        text = {
+            Column(Modifier.fillMaxWidth()) {
+                Text(
+                    if (end) tr("End of video", "Video sonu") else if (m < 1f) tr("Off", "Kapalı") else "${m.roundToInt()} min",
+                    color = w.text, fontSize = 18.sp, fontWeight = FontWeight.SemiBold,
+                )
+                Spacer(Modifier.height(8.dp))
+                PSlider(m, { m = it; end = false }, 0f..120f, modifier = Modifier.fillMaxWidth()) { }
+                Row(Modifier.fillMaxWidth().clickable { end = !end; if (end) m = 0f }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                    PCheck(end) { end = !end; if (end) m = 0f }
+                    Spacer(Modifier.width(8.dp))
+                    Text(tr("End of video", "Video sonu"), color = w.text, fontSize = 14.sp)
+                }
+            }
+        },
+        confirmButton = { PButton(tr("OK", "Tamam")) { onSet(m.roundToInt(), end) } },
+        dismissButton = { PButton(tr("Cancel", "İptal"), onClick = onDismiss) },
+    )
+}
+
 @Composable
 internal fun PickDialog(title: String, rows: List<Pair<String, Boolean>>, onDismiss: () -> Unit, extra: (@Composable () -> Unit)? = null, onPick: (Int) -> Unit) {
     val w = LocalWindowLook.current
