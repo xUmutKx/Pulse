@@ -7,6 +7,10 @@ import android.graphics.Paint
 import android.graphics.Path as APath
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -95,28 +99,50 @@ fun NSketch(onDone: (String?) -> Unit) {
     // 0 pen, 1 highlighter, 2 straight line
     var tool by remember { mutableStateOf(0) }
     var favs by remember { mutableStateOf(PenFavs.load(ctx)) }
+    val redoList = remember { mutableStateListOf<Pen>() }
+    var fingerDraw by remember { mutableStateOf(false) }
+    var menu by remember { mutableStateOf(false) }
     val penSeen = remember { mutableStateOf(false) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     Column(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }.background(PaintBar)) {
         // actions and line widths on the first row, the colour grid under it, like Paint's tool bar
-        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        fun addFavourite() {
+            val e = "$ink:${PAINT_WIDTHS.indexOf(width)}:$tool"
+            favs = (listOf(e) + favs.filter { it != e }).take(6); PenFavs.save(ctx, favs)
+        }
+        Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             PaintTool("close") { onDone(null) }
-            PaintTool("undo") { if (strokes.isNotEmpty()) strokes.removeAt(strokes.lastIndex) }
-            PaintTool("delete") { strokes.clear() }
-            Spacer(Modifier.width(8.dp))
-            PAINT_WIDTHS.forEach { w -> PaintWidth(w, w == width) { width = w } }
-            Spacer(Modifier.width(8.dp))
-            listOf(0 to tr("Pen", "Kalem"), 1 to tr("Highlight", "Vurgu"), 2 to tr("Line", "Çizgi")).forEach { (k, label) ->
+            Spacer(Modifier.width(6.dp))
+            // the tools: pen, highlighter, eraser, straight line
+            listOf(0 to tr("Pen", "Kalem"), 1 to tr("Highlight", "Vurgu"), 3 to tr("Eraser", "Silgi"), 2 to tr("Line", "Çizgi")).forEach { (k, label) ->
                 Text(label, color = if (tool == k) com.umutk.pulse.T.accent else PaintInk, fontSize = 13.sp, fontWeight = if (tool == k) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp).clickable2 { tool = k })
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp).clickable2 { tool = k })
             }
+            Spacer(Modifier.width(6.dp))
+            // the five colours of the bar; the whole palette is under it
+            listOf(PAINT_COLORS[10], PAINT_COLORS[12], PAINT_COLORS[8], PAINT_COLORS[14], PAINT_COLORS[15]).forEach { c ->
+                Box(Modifier.size(28.dp).clickable2 { ink = c; if (tool == 3) tool = 0 }, contentAlignment = Alignment.Center) {
+                    Box(Modifier.size(if (ink == c) 20.dp else 18.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(c))
+                        .border(if (ink == c) 2.dp else 0.dp, PaintInk, androidx.compose.foundation.shape.CircleShape))
+                }
+            }
+            Spacer(Modifier.width(6.dp))
+            PAINT_WIDTHS.forEach { w -> PaintWidth(w, w == width) { width = w } }
+            Spacer(Modifier.width(6.dp))
+            PaintTool("undo") { if (strokes.isNotEmpty()) redoList.add(strokes.removeAt(strokes.lastIndex)) }
+            PaintTool("redo") { if (redoList.isNotEmpty()) strokes.add(redoList.removeAt(redoList.lastIndex)) }
             Spacer(Modifier.weight(1f))
-            // the current pen (colour, width, tool) goes into the favourites; a favourite is picked from the row under the colours
-            PaintTool("bookmark") {
-                val e = "$ink:${PAINT_WIDTHS.indexOf(width)}:$tool"
-                favs = (listOf(e) + favs.filter { it != e }).take(6); PenFavs.save(ctx, favs)
+            Text(tr("Save", "Kaydet"), color = com.umutk.pulse.T.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp).clickable2 { onDone(renderSketch(ctx, strokes.toList(), size.width, size.height, paper.toArgb())) })
+            Box {
+                PaintTool("more") { menu = true }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    DropdownMenuItem(text = { Text(if (fingerDraw) tr("Turn off finger drawing", "Parmakla çizimi kapat") else tr("Turn on finger drawing", "Parmakla çizimi aç")) },
+                        onClick = { fingerDraw = !fingerDraw; menu = false })
+                    DropdownMenuItem(text = { Text(tr("Save as favourite pen", "Favori kalem olarak kaydet")) }, onClick = { addFavourite(); menu = false })
+                    DropdownMenuItem(text = { Text(tr("Clear", "Temizle")) }, onClick = { strokes.clear(); redoList.clear(); menu = false })
+                }
             }
-            PaintTool("check") { onDone(renderSketch(ctx, strokes.toList(), size.width, size.height, paper.toArgb())) }
         }
         Column(Modifier.padding(start = 6.dp, end = 6.dp, bottom = 4.dp)) {
             PAINT_COLORS.chunked(8).forEach { row ->
@@ -138,14 +164,15 @@ fun NSketch(onDone: (String?) -> Unit) {
             Modifier.weight(1f).fillMaxWidth().border(1.dp, PaintLine).background(paper)
                 .onSizeChanged { size = it }
                 // keyed on the colour and width, so a change applies to the next stroke
-                .pointerInput(ink, width, tool) {
+                .pointerInput(ink, width, tool, fingerDraw) {
                     // the pen draws; once a pen has been used, a finger is ignored (the palm rests on the screen). The pen's button held erases
                     awaitEachGesture {
                         val first = awaitPointerEvent(PointerEventPass.Main)
                         val c0 = first.changes.first()
                         val stylus = c0.type == PointerType.Stylus
-                        if (stylus) penSeen.value = true else if (penSeen.value) return@awaitEachGesture
-                        val eraser = stylus && (((first.nativeEvent as? MotionEvent)?.buttonState ?: 0) and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
+                        if (stylus) penSeen.value = true else if (penSeen.value && !fingerDraw) return@awaitEachGesture
+                        val eraser = tool == 3 || (stylus && (((first.nativeEvent as? MotionEvent)?.buttonState ?: 0) and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0)
+                        if (!eraser) redoList.clear()
                         if (!eraser) strokes.add(Pen(ink, if (tool == 1) width.toPx() * 3f else width.toPx(), mutableStateListOf(c0.position), if (tool == 1) 1 else 0, tool == 2)) else eraseAt(strokes, c0.position, 28.dp.toPx())
                         while (true) {
                             val ev = awaitPointerEvent(PointerEventPass.Main)

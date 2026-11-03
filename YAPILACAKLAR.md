@@ -1976,3 +1976,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notes sketch: pen, highlighter (wide, see-through) and straight line tools
 - (sürüm sonra) derlenmedi: Notes editor: transparent paper on the background, 720dp centred column for tablets, bottom toolbar (sketch, photo, checklist, record, colour, more)
 - (sürüm sonra) derlenmedi: Notes sketch: favourite pens (save the current pen with the bookmark button; pick it from the row under the colours)
+- (sürüm sonra) derlenmedi: Notes sketch toolbar in the Samsung-like order: close, tools (pen, highlight, eraser, line), five colours, widths, undo and redo, Save, and a menu (finger drawing on or off, favourite pen, clear)
