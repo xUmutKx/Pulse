@@ -2044,3 +2044,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notlar: kalem notun kendi üstünde çizer (S Pen; parmak kaydırır, dokunma çizmez); üstte renk, kalınlık, geri al bar; notun mürekkebi kaydedilir
 - (sürüm sonra) derlenmedi: Launcher ikonları: 28 ek uygulamanın alias ikonu siyah zemin + beyaz çizgi (adaptive, drawable-v26 + yedek); Pulse ana ikonları (IconDefault, IconWin*) dokunulmadı
 - (sürüm sonra) derlenmedi: Uygulama sayfası: APK çıkar ikonu Fluent Box, Zorla durdur ikonu Fluent Prohibited (önceden ikisi de bilinmeyen "i" idi); Material için de eşlendi
+- (sürüm sonra) derlenmedi: Launcher ikonları Blaux 2.3.0 paketinden seçildi (28 uygulama, birebir ve uygun eşleşmeler); kendi çizimlerim kaldırıldı
