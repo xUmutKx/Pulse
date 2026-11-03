@@ -111,7 +111,8 @@ val Themes = listOf(
         title = Brush.horizontalGradient(listOf(c(0xFF000080), c(0xFF1084D0))), titleName = "Windows Task Manager"),
     PTheme("material", "Material You", false, c(0xFFFEF7FF), c(0xFFF3EDF7), c(0xFF1D1B20), c(0xFF49454F), c(0xFFFFFFFF), c(0xFFCAC4D0), 20.dp, material = true, glassA = .9f),
     // One UI (Samsung): soft, very round, big headers. ColorOS (OPPO): clean, green accent, pill shapes. Both have a dark mode (see effective).
-    PTheme("oneui", "One UI", false, c(0xFFF4F4F6), c(0xFFFFFFFF), c(0xFF000000), c(0xFF6B6B70), c(0xFF3E91FF), c(0xFFE6E6EA), 28.dp, material = true, glassA = .9f),
+    // the values of the One UI design library: primary text #010101, secondary #8C8C8C, dividers #E6E6E6, cards white on a light grey page
+    PTheme("oneui", "One UI", false, c(0xFFF7F7F7), c(0xFFFFFFFF), c(0xFF010101), c(0xFF8C8C8C), c(0xFF3E91FF), c(0xFFE6E6E6), 28.dp, material = true, glassA = .9f),
     PTheme("coloros", "ColorOS", false, c(0xFFEAF5EE), c(0xFFFFFFFF), c(0xFF0F1A14), c(0xFF667B6E), c(0xFF00B96B), c(0xFFD3E6DB), 18.dp, material = true, glassA = .9f),
     PTheme("aurora", "Aurora", true, c(0xFF0A0F1F), c(0xFF1B2540), c(0xFFFFFFFF), c(0xFFA9B4D0), c(0xFF5EEAD4), c(0xFF2C3A5C), 16.dp,
         glassA = .55f, wall = Brush.linearGradient(listOf(c(0xFF0B1B3A), c(0xFF12506B), c(0xFF3B1F6B)))),
