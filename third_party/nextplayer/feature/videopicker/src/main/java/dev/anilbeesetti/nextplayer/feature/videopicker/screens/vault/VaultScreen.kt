@@ -1,0 +1,860 @@
+package dev.anilbeesetti.nextplayer.feature.videopicker.screens.vault
+
+import android.widget.Toast
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.focusGroup
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.calculateStartPadding
+import androidx.compose.foundation.layout.displayCutout
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.itemsIndexed
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.ZeroCornerSize
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExperimentalMaterial3ExpressiveApi
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.PreviewLightDark
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.repeatOnLifecycle
+import dev.anilbeesetti.nextplayer.core.common.extensions.isTelevision
+import dev.anilbeesetti.nextplayer.core.model.MediaLayoutMode
+import dev.anilbeesetti.nextplayer.core.model.Sort
+import dev.anilbeesetti.nextplayer.core.model.Video
+import dev.anilbeesetti.nextplayer.core.ui.R
+import dev.anilbeesetti.nextplayer.core.ui.components.CancelButton
+import dev.anilbeesetti.nextplayer.core.ui.components.MediaQuickSettingsDialog
+import dev.anilbeesetti.nextplayer.core.ui.components.NextDialog
+import dev.anilbeesetti.nextplayer.core.ui.components.NextTopAppBar
+import dev.anilbeesetti.nextplayer.core.ui.components.rememberRestorableFocusState
+import dev.anilbeesetti.nextplayer.core.ui.components.restorableFocusGroup
+import dev.anilbeesetti.nextplayer.core.ui.components.restorableFocusItem
+import dev.anilbeesetti.nextplayer.core.ui.components.thenIf
+import dev.anilbeesetti.nextplayer.core.ui.components.tvFocusRing
+import dev.anilbeesetti.nextplayer.core.ui.designsystem.NextIcons
+import dev.anilbeesetti.nextplayer.core.ui.extensions.copy
+import dev.anilbeesetti.nextplayer.core.ui.theme.NextPlayerTheme
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.CenterCircularProgressBar
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.MediaInfoDialog
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.SelectionAction
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.VideoItem
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.vault.PinDotsIndicator
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.vault.PinKeypad
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.vault.VaultBiometricButton
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.vault.VaultBiometricSetupDialog
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.vault.VaultProgressDialog
+import dev.anilbeesetti.nextplayer.feature.videopicker.composables.vault.VaultSettingsDialog
+import dev.anilbeesetti.nextplayer.feature.videopicker.state.SelectionItem
+import dev.anilbeesetti.nextplayer.feature.videopicker.state.rememberSelectionManager
+
+@Composable
+fun VaultScreen(viewModel: VaultViewModel) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    LaunchedEffect(
+        key1 = lifecycleOwner,
+        key2 = viewModel,
+    ) {
+        lifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            viewModel.events.collect { event ->
+                when (event) {
+                    is VaultEvent.VideosRelocated -> {
+                        val message = context.resources.getQuantityString(
+                            R.plurals.videos_relocated_to_movies,
+                            event.count,
+                            event.count,
+                        )
+                        Toast.makeText(
+                            context,
+                            message,
+                            Toast.LENGTH_LONG,
+                        ).show()
+                    }
+                }
+            }
+        }
+    }
+
+    VaultScreenContent(
+        state = state,
+        onAction = viewModel::onAction,
+    )
+}
+
+@Composable
+internal fun VaultScreenContent(state: VaultUiState, onAction: (VaultAction) -> Unit) {
+    when (state.stage) {
+        VaultStage.LOADING -> CenterCircularProgressBar()
+
+        VaultStage.LOCKED -> VaultPinContent(
+            title = stringResource(R.string.enter_vault_pin),
+            description = stringResource(R.string.enter_vault_pin_description),
+            pinErrorCount = state.pinErrorCount,
+            errorMessage = stringResource(R.string.incorrect_pin),
+            onSubmit = { onAction(VaultAction.SubmitUnlockPin(pin = it)) },
+            onBiometricAuthenticated = if (state.biometricEnabled) {
+                { onAction(VaultAction.BiometricAuthenticated) }
+            } else {
+                null
+            },
+            onNavigateUp = { onAction(VaultAction.NavigateUp) },
+        )
+
+        VaultStage.SET_PIN -> VaultPinContent(
+            title = stringResource(R.string.set_vault_pin),
+            description = stringResource(R.string.set_vault_pin_description),
+            pinErrorCount = state.setPinGeneration,
+            onSubmit = { onAction(VaultAction.SubmitNewPin(pin = it)) },
+            onNavigateUp = { onAction(VaultAction.NavigateUp) },
+        )
+
+        VaultStage.CONFIRM_PIN -> VaultPinContent(
+            title = stringResource(R.string.confirm_vault_pin),
+            description = stringResource(R.string.confirm_vault_pin_description),
+            pinErrorCount = state.pinErrorCount,
+            errorMessage = stringResource(R.string.pins_do_not_match),
+            onSubmit = { onAction(VaultAction.SubmitPinConfirmation(pin = it)) },
+            onNavigateUp = { onAction(VaultAction.NavigateUp) },
+        )
+
+        VaultStage.BIOMETRIC_SETUP -> VaultBiometricSetupDialog(
+            onComplete = { onAction(VaultAction.CompleteBiometricSetup(enabled = it)) },
+        )
+
+        VaultStage.UNLOCKED -> VaultGalleryContent(
+            state = state,
+            onAction = onAction,
+        )
+    }
+
+    if (state.isUnhiding) {
+        VaultProgressDialog(message = stringResource(R.string.unhiding_videos_in_progress))
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VaultPinContent(
+    title: String,
+    description: String,
+    pinErrorCount: Int,
+    onSubmit: (String) -> Unit,
+    onNavigateUp: () -> Unit,
+    errorMessage: String = "",
+    onBiometricAuthenticated: (() -> Unit)? = null,
+) {
+    Scaffold(
+        topBar = {
+            NextTopAppBar(
+                title = "",
+                navigationIcon = {
+                    FilledTonalIconButton(
+                        onClick = onNavigateUp,
+                        modifier = Modifier.tvFocusRing(),
+                    ) {
+                        Icon(
+                            imageVector = NextIcons.ArrowBack,
+                            contentDescription = stringResource(id = R.string.navigate_up),
+                        )
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            onBiometricAuthenticated?.let { onAuthenticated ->
+                VaultBiometricButton(
+                    onAuthenticated = onAuthenticated,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(
+                            horizontal = 24.dp,
+                            vertical = 8.dp,
+                        ),
+                )
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ) { padding ->
+        PinEntryContent(
+            modifier = Modifier.padding(paddingValues = padding),
+            title = title,
+            description = description,
+            pinErrorCount = pinErrorCount,
+            errorMessage = errorMessage,
+            onSubmit = onSubmit,
+        )
+    }
+}
+
+@Composable
+private fun PinEntryContent(
+    modifier: Modifier = Modifier,
+    title: String,
+    description: String,
+    pinErrorCount: Int,
+    errorMessage: String,
+    onSubmit: (String) -> Unit,
+) {
+    // pin resets on every wrong attempt because pinErrorCount increments each time
+    var pin by rememberSaveable(pinErrorCount) { mutableStateOf(value = "") }
+    // showError is true whenever there has been at least one error, resets when pinErrorCount resets to 0
+    var showError by rememberSaveable(pinErrorCount) { mutableStateOf(value = pinErrorCount > 0) }
+
+    val context = LocalContext.current
+    val isTv = remember { context.isTelevision }
+
+    val onDigit: (Char) -> Unit = { digit ->
+        if (pin.length < VAULT_PIN_LENGTH) {
+            showError = false
+            pin += digit
+            if (pin.length == VAULT_PIN_LENGTH) {
+                onSubmit(pin)
+            }
+        }
+    }
+    val onBackspace: () -> Unit = {
+        if (pin.isNotEmpty()) pin = pin.dropLast(n = 1)
+    }
+
+    if (isTv) {
+        // Landscape two-pane layout: the info sits on the left, the keypad (kept at a comfortable
+        // width so the keys don't stretch across the screen) on the right.
+        Row(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 48.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            PinEntryHeader(
+                modifier = Modifier.weight(weight = 1f),
+                title = title,
+                description = description,
+                filledCount = pin.length,
+                showError = showError,
+                errorMessage = errorMessage,
+            )
+            Box(
+                modifier = Modifier.weight(weight = 1f),
+                contentAlignment = Alignment.Center,
+            ) {
+                PinKeypad(
+                    modifier = Modifier.widthIn(max = 360.dp),
+                    onDigit = onDigit,
+                    onBackspace = onBackspace,
+                )
+            }
+        }
+    } else {
+        Column(
+            modifier = modifier
+                .fillMaxSize()
+                .padding(horizontal = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Spacer(modifier = Modifier.size(16.dp))
+            PinEntryHeader(
+                title = title,
+                description = description,
+                filledCount = pin.length,
+                showError = showError,
+                errorMessage = errorMessage,
+            )
+            Spacer(modifier = Modifier.size(32.dp))
+            PinKeypad(
+                modifier = Modifier.padding(horizontal = 24.dp),
+                onDigit = onDigit,
+                onBackspace = onBackspace,
+            )
+            Spacer(modifier = Modifier.size(16.dp))
+        }
+    }
+}
+
+@Composable
+private fun PinEntryHeader(
+    title: String,
+    description: String,
+    filledCount: Int,
+    showError: Boolean,
+    errorMessage: String,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(20.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = NextIcons.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(32.dp),
+            )
+        }
+        Spacer(modifier = Modifier.size(20.dp))
+        Text(
+            text = title,
+            style = MaterialTheme.typography.headlineSmall,
+            fontWeight = FontWeight.Bold,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(
+            text = description,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+        Spacer(modifier = Modifier.size(32.dp))
+        PinDotsIndicator(
+            filledCount = filledCount,
+            error = showError,
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        if (showError && errorMessage.isNotEmpty()) {
+            Text(
+                text = errorMessage,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
+
+@OptIn(
+    ExperimentalMaterial3Api::class,
+    ExperimentalMaterial3ExpressiveApi::class,
+)
+@Composable
+private fun VaultGalleryContent(state: VaultUiState, onAction: (VaultAction) -> Unit) {
+    val context = LocalContext.current
+    val isTv = remember { context.isTelevision }
+    val focusState = rememberRestorableFocusState()
+    val selectionManager = rememberSelectionManager()
+    var showQuickSettings by rememberSaveable { mutableStateOf(value = false) }
+    var showSettings by rememberSaveable { mutableStateOf(value = false) }
+    var showDeleteConfirmation by rememberSaveable { mutableStateOf(value = false) }
+    var showUnhideConfirmation by rememberSaveable { mutableStateOf(value = false) }
+
+    val selectedCount = selectionManager.selectionItems.size
+    val totalCount = state.hiddenVideos.size
+
+    BackHandler(enabled = selectionManager.isInSelectionMode) {
+        selectionManager.exitSelectionMode()
+    }
+
+    Scaffold(
+        topBar = {
+            NextTopAppBar(
+                title = {
+                    val titleText =
+                        stringResource(R.string.hidden_videos).takeIf {
+                            !selectionManager.isInSelectionMode
+                        }
+                            ?: ""
+                    Text(
+                        text = titleText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        fontWeight = FontWeight.Bold,
+                    )
+                },
+                navigationIcon = {
+                    if (selectionManager.isInSelectionMode) {
+                        Row(
+                            modifier = Modifier
+                                .clip(shape = CircleShape)
+                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                                .clickable { selectionManager.exitSelectionMode() }
+                                .padding(8.dp)
+                                .padding(end = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.Close,
+                                contentDescription = stringResource(id = R.string.navigate_up),
+                            )
+                            Text(
+                                text = stringResource(
+                                    R.string.m_n_selected,
+                                    selectedCount,
+                                    totalCount,
+                                ),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                        }
+                    } else {
+                        FilledTonalIconButton(
+                            onClick = { onAction(VaultAction.NavigateUp) },
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.ArrowBack,
+                                contentDescription = stringResource(id = R.string.navigate_up),
+                            )
+                        }
+                    }
+                },
+                actions = {
+                    if (selectionManager.isInSelectionMode) {
+                        FilledTonalIconButton(
+                            onClick = {
+                                if (selectedCount != totalCount) {
+                                    state.hiddenVideos.forEach {
+                                        selectionManager.selectVideo(video = it)
+                                    }
+                                } else {
+                                    selectionManager.clearSelection()
+                                }
+                            },
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Icon(
+                                imageVector = if (selectedCount != totalCount) {
+                                    NextIcons.SelectAll
+                                } else {
+                                    NextIcons.DeselectAll
+                                },
+                                contentDescription = if (selectedCount != totalCount) {
+                                    stringResource(R.string.select_all)
+                                } else {
+                                    stringResource(R.string.deselect_all)
+                                },
+                            )
+                        }
+                    } else {
+                        IconButton(
+                            onClick = { showQuickSettings = true },
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.Sensitivity,
+                                contentDescription = stringResource(R.string.quick_settings),
+                            )
+                        }
+                        IconButton(
+                            onClick = { showSettings = true },
+                            modifier = Modifier.tvFocusRing(),
+                        ) {
+                            Icon(
+                                imageVector = NextIcons.Settings,
+                                contentDescription = stringResource(R.string.vault_settings),
+                            )
+                        }
+                    }
+                },
+            )
+        },
+        bottomBar = {
+            VaultSelectionActionsSheet(
+                show =
+                    selectionManager.isInSelectionMode &&
+                        selectionManager.selectionItems.isNotEmpty(),
+                contentFocusRequester = focusState.requester,
+                onPlayAction = {
+                    onAction(VaultAction.PlaySelected(selectionManager.selectionItems))
+                    selectionManager.exitSelectionMode()
+                },
+                onInfoAction = {
+                    val selected = selectionManager.selectionItems.firstOrNull()
+                    val video = state.hiddenVideos.find {
+                        it.uriString == (selected as? SelectionItem.Video)?.uriString
+                    }
+                    if (video != null) onAction(VaultAction.ShowMediaInfo(video = video))
+                    selectionManager.exitSelectionMode()
+                },
+                showInfoAction = selectionManager.selectionItems.size == 1,
+                onUnhideAction = { showUnhideConfirmation = true },
+                onDeleteAction = { showDeleteConfirmation = true },
+            )
+        },
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ) { padding ->
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(top = padding.calculateTopPadding())
+                .padding(start = padding.calculateStartPadding(LocalLayoutDirection.current))
+                .clip(
+                    shape = RoundedCornerShape(
+                        topStart = 24.dp,
+                        topEnd = 24.dp,
+                    ),
+                )
+                .background(MaterialTheme.colorScheme.background),
+        ) {
+            val updatedPadding = padding.copy(
+                top = 0.dp,
+                start = 0.dp,
+            )
+            when {
+                state.isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(paddingValues = updatedPadding),
+                        contentAlignment = Alignment.Center,
+                    ) { CircularProgressIndicator() }
+                }
+
+                state.hiddenVideos.isEmpty() -> {
+                    VaultEmptyState(contentPadding = updatedPadding)
+                }
+
+                else -> {
+                    LazyVerticalGrid(
+                        modifier = Modifier.fillMaxSize().restorableFocusGroup(state = focusState),
+                        columns = if (state.preferences.mediaLayoutMode == MediaLayoutMode.GRID) {
+                            GridCells.Adaptive(minSize = 130.dp)
+                        } else {
+                            GridCells.Fixed(count = 1)
+                        },
+                        contentPadding = PaddingValues(
+                            start = 8.dp,
+                            end = 8.dp,
+                            top = updatedPadding.calculateTopPadding() + 8.dp,
+                            bottom = updatedPadding.calculateBottomPadding() + 8.dp,
+                        ),
+                    ) {
+                        itemsIndexed(
+                            items = state.hiddenVideos,
+                            key = { _, video -> video.uriString },
+                        ) { _, video ->
+                            val selected = selectionManager.isVideoSelected(video = video)
+                            VideoItem(
+                                modifier = Modifier
+                                    .padding(2.dp)
+                                    .restorableFocusItem(
+                                        state = focusState,
+                                        video.uriString,
+                                    ),
+                                video = video,
+                                isRecentlyPlayedVideo = false,
+                                preferences = state.preferences,
+                                selected = selected,
+                                onClick = {
+                                    if (selectionManager.isInSelectionMode) {
+                                        selectionManager.toggleVideoSelection(video = video)
+                                    } else {
+                                        onAction(VaultAction.PlayVideo(video = video))
+                                    }
+                                },
+                                onLongClick = {
+                                    selectionManager.toggleVideoSelection(video = video)
+                                },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if (showSettings) {
+        VaultSettingsDialog(
+            biometricEnabled = state.biometricEnabled,
+            onBiometricEnabledChange = { onAction(VaultAction.SetBiometricEnabled(enabled = it)) },
+            onDismiss = { showSettings = false },
+        )
+    }
+
+    if (showQuickSettings) {
+        MediaQuickSettingsDialog(
+            layoutMode = state.preferences.mediaLayoutMode,
+            sort = state.sort,
+            sortOptions = listOf(
+                Sort.By.TITLE,
+                Sort.By.LENGTH,
+                Sort.By.DATE,
+                Sort.By.SIZE,
+            ),
+            dateLabel = R.string.date_hidden,
+            onDismiss = { showQuickSettings = false },
+            onConfirm = { layout, sort ->
+                onAction(
+                    VaultAction.UpdateQuickSettings(
+                        layoutMode = layout,
+                        sort = sort,
+                    ),
+                )
+            },
+        )
+    }
+
+    if (showDeleteConfirmation) {
+        NextDialog(
+            onDismissRequest = { showDeleteConfirmation = false },
+            title = {
+                Text(
+                    text = if (selectedCount == 1) {
+                        stringResource(R.string.delete_one_video_from_vault)
+                    } else {
+                        stringResource(
+                            R.string.delete_videos_from_vault,
+                            selectedCount,
+                        )
+                    },
+                )
+            },
+            content = { Text(text = stringResource(R.string.delete_from_vault_info)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onAction(VaultAction.DeleteSelected(selectionManager.selectionItems))
+                        selectionManager.exitSelectionMode()
+                        showDeleteConfirmation = false
+                    },
+                ) { Text(text = stringResource(R.string.delete)) }
+            },
+            dismissButton = { CancelButton(onClick = { showDeleteConfirmation = false }) },
+        )
+    }
+
+    if (showUnhideConfirmation) {
+        NextDialog(
+            onDismissRequest = { showUnhideConfirmation = false },
+            title = { Text(text = stringResource(R.string.unhide)) },
+            content = {
+                Text(
+                    text = if (selectedCount == 1) {
+                        stringResource(R.string.unhide_one_video_confirmation)
+                    } else {
+                        stringResource(
+                            R.string.unhide_videos_confirmation,
+                            selectedCount,
+                        )
+                    },
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onAction(VaultAction.UnhideSelected(selectionManager.selectionItems))
+                        selectionManager.exitSelectionMode()
+                        showUnhideConfirmation = false
+                    },
+                ) { Text(text = stringResource(R.string.unhide)) }
+            },
+            dismissButton = { CancelButton(onClick = { showUnhideConfirmation = false }) },
+        )
+    }
+
+    state.mediaInfo?.let { mediaInfo ->
+        MediaInfoDialog(
+            mediaInfo = mediaInfo,
+            onDismiss = { onAction(VaultAction.DismissMediaInfo) },
+        )
+    }
+}
+
+@Composable
+private fun VaultEmptyState(contentPadding: PaddingValues) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(state = rememberScrollState())
+            .padding(paddingValues = contentPadding)
+            .padding(
+                horizontal = 24.dp,
+                vertical = 40.dp,
+            ),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Box(
+            modifier = Modifier
+                .clip(MaterialTheme.shapes.large)
+                .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                .padding(24.dp),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(
+                imageVector = NextIcons.Lock,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(40.dp),
+            )
+        }
+        Spacer(modifier = Modifier.size(16.dp))
+        Text(
+            text = stringResource(R.string.vault_empty_title),
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+        )
+        Spacer(modifier = Modifier.size(8.dp))
+        Text(
+            text = stringResource(R.string.vault_empty_description),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center,
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
+@Composable
+private fun VaultSelectionActionsSheet(
+    modifier: Modifier = Modifier,
+    show: Boolean,
+    contentFocusRequester: FocusRequester,
+    onPlayAction: () -> Unit,
+    onInfoAction: () -> Unit,
+    showInfoAction: Boolean,
+    onUnhideAction: () -> Unit,
+    onDeleteAction: () -> Unit,
+) {
+    val context = LocalContext.current
+    val isTv = remember { context.isTelevision }
+    val firstActionFocusRequester = remember { FocusRequester() }
+
+    AnimatedVisibility(
+        modifier = modifier.padding(
+            start = WindowInsets.displayCutout.asPaddingValues()
+                .calculateStartPadding(LocalLayoutDirection.current),
+        ),
+        visible = show,
+        enter = slideInVertically { it },
+        exit = slideOutVertically { it },
+    ) {
+        val shape = MaterialTheme.shapes.largeIncreased.copy(
+            bottomStart = ZeroCornerSize,
+            bottomEnd = ZeroCornerSize,
+        )
+        Column(modifier = Modifier.fillMaxWidth()) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .fillMaxWidth()
+                    .background(
+                        color = MaterialTheme.colorScheme.surfaceContainer,
+                        shape = shape,
+                    )
+                    .clip(shape = shape)
+                    .horizontalScroll(state = rememberScrollState())
+                    .thenIf(condition = isTv) {
+                        focusRestorer(fallback = firstActionFocusRequester).focusGroup()
+                            .focusProperties { up = contentFocusRequester }
+                    }
+                    .navigationBarsPadding()
+                    .padding(
+                        horizontal = 8.dp,
+                        vertical = 12.dp,
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                SelectionAction(
+                    modifier = Modifier.thenIf(condition = isTv) {
+                        focusRequester(focusRequester = firstActionFocusRequester)
+                    },
+                    isTv = isTv,
+                    imageVector = NextIcons.Play,
+                    title = stringResource(R.string.play),
+                    onClick = onPlayAction,
+                )
+                if (showInfoAction) {
+                    SelectionAction(
+                        isTv = isTv,
+                        imageVector = NextIcons.Info,
+                        title = stringResource(R.string.info),
+                        onClick = onInfoAction,
+                    )
+                }
+                SelectionAction(
+                    isTv = isTv,
+                    imageVector = NextIcons.Lock,
+                    title = stringResource(R.string.unhide),
+                    onClick = onUnhideAction,
+                )
+                SelectionAction(
+                    isTv = isTv,
+                    imageVector = NextIcons.Delete,
+                    title = stringResource(R.string.delete),
+                    onClick = onDeleteAction,
+                )
+            }
+        }
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun VaultPinContentPreview() {
+    NextPlayerTheme {
+        VaultPinContent(
+            title = stringResource(R.string.enter_vault_pin),
+            description = stringResource(R.string.enter_vault_pin_description),
+            pinErrorCount = 0,
+            onSubmit = {},
+            onNavigateUp = {},
+        )
+    }
+}
+
+@PreviewLightDark
+@Composable
+private fun VaultEmptyStatePreview() {
+    NextPlayerTheme { Surface { VaultEmptyState(contentPadding = PaddingValues()) } }
+}
