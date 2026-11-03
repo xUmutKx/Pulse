@@ -1912,3 +1912,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Music recap: each page fades and rises in, the minutes count up, and the top song's cover shows on the top songs and card pages
 - (sürüm sonra) derlenmedi: Keyboard dictionary from the owner's own data: common words are never autocorrected (kbd_keep), undone corrections are remembered from the start (kbd_rejected), 1097 typo fixes bundled (habits_user_add)
 - (sürüm sonra) derlenmedi: Setup: permissions card (each group with its reason, ticked when granted, optional ones marked); keyboard: the top bar keeps its height when a panel opens (no jump)
+- 1.0.344 derlenmedi: Build for the release: the changes since 1.0.343 (theme locks, recap and Poweramp recap row with page animation, lyrics share and search ad gates, Debloat selection kept, keyboard seed from the owner's data, setup permissions card, keyboard top bar height fixed)
