@@ -56,7 +56,7 @@ fun AdBarTune(modifier: Modifier = Modifier) {
     if (open) WinAlert(
         onDismissRequest = { open = false },
         title = { Text(tr("Ad transparency", "Reklam saydamlığı"), color = T.text) },
-        text = { PSlider(AdBar.alpha, { AdBar.set(ctx, it) }, 0.2f..1f) },
+        text = { PSlider(AdBar.alpha, { AdBar.set(ctx, it) }, 0.2f..1f, onDone = { }) },
         confirmButton = { PButton(tr("Close", "Kapat")) { open = false } },
     )
 }
