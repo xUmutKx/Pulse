@@ -213,7 +213,7 @@ object AppPlace {
         App("BlackOutLauncher", "BlackOut", "BlackOut", "shield", Icons.Outlined.DarkMode) { _, o -> o("blackout") },
         App("IslandLauncher", "Island", "Ada", "phone", Icons.Outlined.PhoneAndroid) { _, o -> o("island") },
         App("NotifHistLauncher", "Notification history", "Bildirim geçmişi", "history", Icons.Outlined.History) { _, o -> o("notifhist") },
-        App("GameHubLauncher", "Game Hub", "Game Hub", "phone", Icons.Outlined.SportsEsports) { _, o -> o("gamehub") },
+        App("GameHubLauncher", "Game Hub", "Game Hub", "phone", Icons.Outlined.SportsEsports) { c, _ -> launchExtra(c, TOOL, "gamehub") },
     )
     private val placed = androidx.compose.runtime.mutableStateMapOf<String, String>()
     private fun sp(c: Context) = c.getSharedPreferences("app_place", Context.MODE_PRIVATE)
