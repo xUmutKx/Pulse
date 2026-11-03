@@ -48,11 +48,16 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.PIcon
+import com.umutk.pulse.tr
+import androidx.compose.material3.Text
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.sp
 import java.io.FileOutputStream
 import java.util.UUID
 
 /** One pen stroke: its colour, its width in canvas pixels and its points in canvas pixels. */
-class Pen(val color: Int, val width: Float, val pts: SnapshotStateList<Offset>)
+/** kind 1 is the highlighter (wide and see-through); straight keeps only its first and last point, so it draws a line. */
+class Pen(val color: Int, val width: Float, val pts: SnapshotStateList<Offset>, val kind: Int = 0, val straight: Boolean = false)
 
 /** Paint's own 16 colours. */
 private val PAINT_COLORS = listOf(
@@ -79,6 +84,8 @@ fun NSketch(onDone: (String?) -> Unit) {
     val fade = remember { androidx.compose.animation.core.Animatable(0f) }
     androidx.compose.runtime.LaunchedEffect(Unit) { fade.animateTo(1f, androidx.compose.animation.core.tween(220)) }
     var width by remember { mutableStateOf(PAINT_WIDTHS[1]) }
+    // 0 pen, 1 highlighter, 2 straight line
+    var tool by remember { mutableStateOf(0) }
     val penSeen = remember { mutableStateOf(false) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     Column(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }.background(PaintBar)) {
@@ -89,6 +96,11 @@ fun NSketch(onDone: (String?) -> Unit) {
             PaintTool("delete") { strokes.clear() }
             Spacer(Modifier.width(8.dp))
             PAINT_WIDTHS.forEach { w -> PaintWidth(w, w == width) { width = w } }
+            Spacer(Modifier.width(8.dp))
+            listOf(0 to tr("Pen", "Kalem"), 1 to tr("Highlight", "Vurgu"), 2 to tr("Line", "Çizgi")).forEach { (k, label) ->
+                Text(label, color = if (tool == k) com.umutk.pulse.T.accent else PaintInk, fontSize = 13.sp, fontWeight = if (tool == k) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp).clickable2 { tool = k })
+            }
             Spacer(Modifier.weight(1f))
             PaintTool("check") { onDone(renderSketch(ctx, strokes.toList(), size.width, size.height, paper.toArgb())) }
         }
@@ -101,7 +113,7 @@ fun NSketch(onDone: (String?) -> Unit) {
             Modifier.weight(1f).fillMaxWidth().border(1.dp, PaintLine).background(paper)
                 .onSizeChanged { size = it }
                 // keyed on the colour and width, so a change applies to the next stroke
-                .pointerInput(ink, width) {
+                .pointerInput(ink, width, tool) {
                     // the pen draws; once a pen has been used, a finger is ignored (the palm rests on the screen). The pen's button held erases
                     awaitEachGesture {
                         val first = awaitPointerEvent(PointerEventPass.Main)
@@ -109,13 +121,16 @@ fun NSketch(onDone: (String?) -> Unit) {
                         val stylus = c0.type == PointerType.Stylus
                         if (stylus) penSeen.value = true else if (penSeen.value) return@awaitEachGesture
                         val eraser = stylus && (((first.nativeEvent as? MotionEvent)?.buttonState ?: 0) and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
-                        if (!eraser) strokes.add(Pen(ink, width.toPx(), mutableStateListOf(c0.position))) else eraseAt(strokes, c0.position, 28.dp.toPx())
+                        if (!eraser) strokes.add(Pen(ink, if (tool == 1) width.toPx() * 3f else width.toPx(), mutableStateListOf(c0.position), if (tool == 1) 1 else 0, tool == 2)) else eraseAt(strokes, c0.position, 28.dp.toPx())
                         while (true) {
                             val ev = awaitPointerEvent(PointerEventPass.Main)
                             val c = ev.changes.firstOrNull { it.id == c0.id } ?: break
                             if (!c.pressed) break
                             c.consume()
-                            if (eraser) eraseAt(strokes, c.position, 28.dp.toPx()) else strokes.lastOrNull()?.pts?.add(c.position)
+                            if (eraser) eraseAt(strokes, c.position, 28.dp.toPx()) else strokes.lastOrNull()?.let { s ->
+                                // a straight line keeps only its start and its end
+                                if (s.straight) { if (s.pts.size > 1) s.pts[1] = c.position else s.pts.add(c.position) } else s.pts.add(c.position)
+                            }
                         }
                     }
                 },
@@ -125,7 +140,8 @@ fun NSketch(onDone: (String?) -> Unit) {
                     if (s.pts.size > 1) {
                         val p = Path()
                         s.pts.forEachIndexed { i, o -> if (i == 0) p.moveTo(o.x, o.y) else p.lineTo(o.x, o.y) }
-                        drawPath(p, Color(s.color), style = Stroke(width = s.width, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                        if (s.kind == 1) drawPath(p, Color(s.color).copy(alpha = .35f), style = Stroke(width = s.width, cap = androidx.compose.ui.graphics.StrokeCap.Square, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                        else drawPath(p, Color(s.color), style = Stroke(width = s.width, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
                     }
                 }
             }
