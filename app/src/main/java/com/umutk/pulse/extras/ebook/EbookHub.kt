@@ -174,10 +174,13 @@ fun paginate(measurer: androidx.compose.ui.text.TextMeasurer, paras: List<Para>,
 @Composable
 fun EbookHub(onBack: () -> Unit) {
     var open by remember { mutableStateOf<Book?>(null) }
-    if (open != null) {
-        ReaderScreen(open!!) { open = null }
-    } else {
-        Shelf(onBack = onBack, onOpen = { open = it })
+    val rt = READER_THEMES.getOrElse(autoIndex()) { READER_THEMES.first() }
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            if (open != null) ReaderScreen(open!!) { open = null } else Shelf(onBack = onBack, onOpen = { open = it })
+        }
+        // the ad strip under the shelf and the reader (play build): see-through, in the reader's own colours
+        com.umutk.pulse.ads.AdStrip(bg = Color.Transparent, text = rt.ink, sub = rt.sub, accent = rt.ink)
     }
 }
 
