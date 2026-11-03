@@ -85,6 +85,9 @@ object MsgPrefs {
     fun readUpTo(c: Context, addr: String): Long = p(c).getLong("read_$addr", 0L)
     fun setReadUpTo(c: Context, addr: String, t: Long) { p(c).edit().putLong("read_$addr", t).apply() }
     fun blocked(c: Context): Set<String> = p(c).getStringSet("blocked", null).orEmpty().toSet()
+    /** Numbers that look like spam: never blocked on their own, the person confirms each one. */
+    fun suspects(c: Context): Set<String> = p(c).getStringSet("suspects", null).orEmpty().toSet()
+    fun setSuspects(c: Context, s: Set<String>) { p(c).edit().putStringSet("suspects", s.toSet()).apply() }
     fun setPinned(c: Context, s: Set<String>) { p(c).edit().putStringSet("pinned", s.toSet()).apply() }
     fun setBlocked(c: Context, s: Set<String>) { p(c).edit().putStringSet("blocked", s.toSet()).apply() }
     fun archived(c: Context): Set<String> = p(c).getStringSet("archived", null).orEmpty().toSet()
@@ -303,6 +306,9 @@ fun MessagesScreen(back: () -> Unit) {
     var pins by remember { mutableStateOf(MsgPrefs.pinned(ctx)) }
     var blocks by remember { mutableStateOf(MsgPrefs.blocked(ctx)) }
     var archives by remember { mutableStateOf(MsgPrefs.archived(ctx)) }
+    var suspects by remember { mutableStateOf(MsgPrefs.suspects(ctx)) }
+    var blockedView by remember { mutableStateOf(false) }
+    var askSuspect by remember { mutableStateOf(false) }
     val startIntent = remember { MsgCore.activityOf(ctx)?.intent }
     var open by remember { mutableStateOf<SmsThread?>(MsgCore.addressOf(startIntent)?.let { SmsThread(-1L, it, null, "", 0L) }) }
     var newMode by remember { mutableStateOf(false) }
@@ -340,7 +346,7 @@ fun MessagesScreen(back: () -> Unit) {
     }
     var reload by remember { mutableIntStateOf(0) }
     val listState = rememberLazyListState()
-    fun goBack() { if (settings) settings = false else if (newMode) newMode = false else if (open != null) open = null else back() }
+    fun goBack() { if (settings) settings = false else if (newMode) newMode = false else if (open != null) open = null else if (blockedView) blockedView = false else back() }
 
     LaunchedEffect(Unit) { if (!granted) ask.launch(MESSAGE_PERMS) }
     // a conversation that is open is read: its notification goes and its unread count is cleared
@@ -372,8 +378,9 @@ fun MessagesScreen(back: () -> Unit) {
     }
     LaunchedEffect(t?.address, msgs?.size) { listState.scrollToItem(0) }
 
-    val shown = remember(threads, query, pins, blocks, archives, unreadFirst) {
-        val all = threads.orEmpty().filter { it.address !in blocks && it.address !in archives }
+    val shown = remember(threads, query, pins, blocks, archives, unreadFirst, blockedView) {
+        // the blocked list shows the blocked conversations; the main list leaves them out (their messages are kept)
+        val all = threads.orEmpty().filter { if (blockedView) it.address in blocks else it.address !in blocks && it.address !in archives }
         val hit = if (query.isBlank()) all else all.filter { th ->
             th.name?.contains(query, true) == true || th.address.contains(query) || th.snippet.contains(query, true) }
         hit.sortedWith(compareByDescending<SmsThread> { it.address in pins }.thenByDescending { unreadFirst && it.unread > 0 })
@@ -384,6 +391,7 @@ fun MessagesScreen(back: () -> Unit) {
         settings -> tr("Settings", "Ayarlar")
         newMode -> tr("New message", "Yeni mesaj")
         t != null -> openName ?: t.address.ifEmpty { tr("Unknown", "Bilinmiyor") }
+        blockedView -> tr("Blocked", "Engellenenler")
         else -> tr("Messages", "Mesajlar")
     }
 
@@ -477,6 +485,17 @@ fun MessagesScreen(back: () -> Unit) {
                                 else Toast.makeText(ctx, tr("Pulse must be the default SMS app to delete", "Silmek için Pulse varsayılan SMS uygulaması olmalı"), Toast.LENGTH_SHORT).show()
                             }
                         }
+                        if (!blockedView && suspects.isNotEmpty()) Text(tr("Suspicious numbers (${suspects.size})", "Şüpheli numaralar (${suspects.size})"), color = T.accent, fontSize = 14.sp,
+                            modifier = Modifier.fillMaxWidth().clickable { askSuspect = true }.padding(horizontal = 16.dp, vertical = 8.dp))
+                        if (!blockedView && blocks.isNotEmpty()) Text(tr("Blocked (${blocks.size})", "Engellenenler (${blocks.size})"), color = T.accent, fontSize = 14.sp,
+                            modifier = Modifier.fillMaxWidth().clickable { blockedView = true }.padding(horizontal = 16.dp, vertical = 8.dp))
+                        // a confirmation for each suspicious number: nothing is blocked without the person's yes
+                        val sus = suspects.firstOrNull()
+                        if (askSuspect && sus != null) WinAlert(onDismissRequest = { askSuspect = false }, title = { Text(tr("Block this number?", "Bu numara engellensin mi?"), color = T.text) },
+                            text = { Text(sus + "\n" + tr("Its messages stay in Blocked, and you can read them there.", "Mesajları Engellenenler'de kalır, orada okuyabilirsin."), color = T.sub) },
+                            confirmButton = { PButton(tr("Block", "Engelle")) { blocks = blocks + sus; MsgPrefs.setBlocked(ctx, blocks); suspects = suspects - sus; MsgPrefs.setSuspects(ctx, suspects); if (suspects.isEmpty()) askSuspect = false } },
+                            dismissButton = { PButton(tr("Keep", "Engelleme")) { suspects = suspects - sus; MsgPrefs.setSuspects(ctx, suspects); if (suspects.isEmpty()) askSuspect = false } })
+                        else if (askSuspect) askSuspect = false
                         PField(query, { query = it }, tr("Search", "Ara"), Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 4.dp))
                         if (shown.isEmpty()) MessagesEmpty(Modifier.weight(1f), tr("No matches", "Eşleşme yok"))
                         else Box(Modifier.weight(1f).fillMaxWidth()) { LazyColumn(Modifier.fillMaxSize()) {
@@ -485,7 +504,7 @@ fun MessagesScreen(back: () -> Unit) {
                                 onMute = { muted = if (th.address in muted) muted - th.address else muted + th.address; MsgPrefs.setMuted(ctx, muted) },
                                 onPin = { pins = if (th.address in pins) pins - th.address else pins + th.address; MsgPrefs.setPinned(ctx, pins) },
                                 onArchive = { archives = archives + th.address; MsgPrefs.setArchived(ctx, archives) },
-                                onBlock = { blocks = blocks + th.address; MsgPrefs.setBlocked(ctx, blocks) }) }
+                                onBlock = { if (blockedView) blocks = blocks - th.address else blocks = blocks + th.address; MsgPrefs.setBlocked(ctx, blocks) }) }
                         }
                             Box(Modifier.align(Alignment.BottomEnd).padding(18.dp).size(56.dp).clip(CircleShape).background(T.accent).clickable { newMode = true; newTo = "" }, contentAlignment = Alignment.Center) { PIcon("add", onAccent(T.accent), 26.dp) }
                         }
