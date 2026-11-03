@@ -313,7 +313,7 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             val wdp = (cfgW.screenWidthDp / zoom).toInt()
             // the ad banner sits at the bottom of the pages (play build only); the pages keep clear of it
             // the native ad: a small, see-through card at the very bottom of the home page (play build only); the page keeps clear of it
-            val adPad = if (com.umutk.pulse.ads.PulseAds.ENABLED) 78.dp else 0.dp
+            val adPad = if (com.umutk.pulse.ads.PulseAds.ENABLED && !com.umutk.pulse.ads.PulseAds.off(wctx)) 78.dp else 0.dp
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens0.density * zoom, dens0.fontScale)) {
                 // the tablet layout (Settings > General): centred, left, right, or the full width of the screen
                 val tabletMode = com.umutk.pulse.TabletLayout.mode
@@ -326,7 +326,7 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
                         App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it })
                     }
                     // the ad strip at the foot of every page (play build): see-through, with its own transparency button on top
-                    if (com.umutk.pulse.ads.PulseAds.ENABLED) {
+                    if (com.umutk.pulse.ads.PulseAds.ENABLED && !com.umutk.pulse.ads.PulseAds.off(wctx)) {
                         androidx.compose.foundation.layout.Box(Modifier.align(androidx.compose.ui.Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
                             androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().graphicsLayer { alpha = com.umutk.pulse.ads.AdBar.alpha }) {
                                 com.umutk.pulse.ads.PulseAds.NativeCard(
