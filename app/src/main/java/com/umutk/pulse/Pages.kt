@@ -543,6 +543,8 @@ fun SettingsPage() {
             "monitor" -> MonitorSettings()
             else -> AboutPage()
         }
+        // the empty space at the foot of the settings: a native ad in the look's own colours (play build only)
+        if (com.umutk.pulse.ads.PulseAds.ENABLED && !com.umutk.pulse.ads.Premium.on(ctx)) com.umutk.pulse.ads.PulseAds.NativeCard(Modifier.fillMaxWidth().padding(top = 12.dp), bg = T.panel, text = T.text, sub = T.sub, accent = T.accent)
         Spacer(Modifier.height(12.dp))
     }
 }
