@@ -1979,3 +1979,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notes sketch toolbar in the Samsung-like order: close, tools (pen, highlight, eraser, line), five colours, widths, undo and redo, Save, and a menu (finger drawing on or off, favourite pen, clear)
 - (sürüm sonra) derlenmedi: Notes sketch: the pen's button pressed twice quickly opens a tool panel beside the pen (tools, 16 colours, widths); a tap outside closes it; also from the menu
 - (sürüm sonra) derlenmedi: PDF viewer: a text layer (PDFBox) with a select-text tool (drag over the words), and copy text; selected words are shaded
+- (sürüm sonra) derlenmedi: Network: per-app access list shows each app's icon and Wi-Fi and mobile icons with switches (saved at once); the list is taller
