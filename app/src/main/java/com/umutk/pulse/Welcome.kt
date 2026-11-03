@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Column
@@ -45,11 +46,11 @@ fun rememberLauncherLogo(): ImageBitmap {
 }
 
 /** Shown once, after the splash, on the first start: what Pulse does, what it is built from, and its size. */
-@Composable
 /** The installed version name: the welcome (with what is new) shows again after every update. */
 fun appVersionName(c: android.content.Context): String =
     runCatching { c.packageManager.getPackageInfo(c.packageName, 0).versionName.orEmpty() }.getOrDefault("")
 
+@Composable
 fun Welcome(onDone: () -> Unit) {
     val ctx = LocalContext.current
     fun finish() {

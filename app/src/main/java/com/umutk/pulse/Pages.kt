@@ -504,9 +504,6 @@ fun SettingsPage() {
                         }
                     }
                 }
-                        if (pair.size == 1 && !center) Spacer(Modifier.weight(1f))
-                    }
-                }
                 fun byId(vararg ids: String) = ids.map { id -> Themes.first { it.id == id } }
                 val folded = listOf("aurora", "sakura", "ocean", "ember", "frost")
                 // Material You and AMOLED are plain appearance choices; the Windows looks have their own group, 95 centred on top
