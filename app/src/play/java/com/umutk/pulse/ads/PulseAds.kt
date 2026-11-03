@@ -20,10 +20,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.viewinterop.AndroidView
+import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdLoader
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
+import com.google.android.gms.ads.FullScreenContentCallback
 import com.google.android.gms.ads.LoadAdError
 import com.google.android.gms.ads.MobileAds
 import com.google.android.gms.ads.nativead.NativeAd
@@ -121,12 +123,20 @@ object PulseAds {
         })
     }
 
-    /** Shows a rewarded ad when one is ready: [onReward] after it is watched to the end, [onNone] when none is ready (the next one loads). */
-    fun showRewarded(a: Activity, onReward: () -> Unit, onNone: () -> Unit) {
+    /**
+     * Shows a rewarded ad. [onReward] only when it was watched to the end. [onFail] when no ad is ready, when it cannot be shown, or when it is
+     * closed before it was watched to the end: no reward in any of those cases. The next ad loads at once.
+     */
+    fun showRewarded(a: Activity, onReward: () -> Unit, onFail: () -> Unit) {
         val ad = rewarded
-        if (ad == null) { onNone(); loadRewarded(a); return }
+        val app = a.applicationContext
+        if (ad == null) { onFail(); loadRewarded(app); return }
         rewarded = null
-        ad.show(a) { _ -> onReward() }
-        loadRewarded(a)
+        var earned = false
+        ad.fullScreenContentCallback = object : FullScreenContentCallback() {
+            override fun onAdDismissedFullScreenContent() { if (!earned) onFail(); loadRewarded(app) }
+            override fun onAdFailedToShowFullScreenContent(error: AdError) { onFail(); loadRewarded(app) }
+        }
+        ad.show(a) { _ -> earned = true; onReward() }
     }
 }
