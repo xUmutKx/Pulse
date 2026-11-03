@@ -188,14 +188,19 @@ fun ToolkitPage() {
     var open by rememberSaveable { mutableStateOf(-1) }
     LaunchedEffect(ToolkitOpen.tool) { if (ToolkitOpen.tool.isNotEmpty()) { open = tools.indexOfFirst { it.icon == ToolkitOpen.tool }; ToolkitOpen.tool = "" } }
     com.umutk.pulse.InnerBackStep(open >= 0) { open = -1 }
+    // a tool opens in a window over the Toolkit (not the whole screen): the grid stays behind it, and a tap outside or the back button closes it
     if (open >= 0) {
         val t = tools[open]
-        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            PHead(tr(t.label, t.trLabel))
-            t.body()
-            Spacer(Modifier.height(12.dp))
+        androidx.compose.ui.window.Dialog(onDismissRequest = { open = -1 }, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
+            Column(
+                Modifier.fillMaxWidth(.94f).heightIn(max = 640.dp).clip(RoundedCornerShape(T.radius)).background(T.panel)
+                    .verticalScroll(rememberScrollState()).padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                PHead(tr(t.label, t.trLabel))
+                t.body()
+            }
         }
-        return
     }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         PHead(tr("Toolkit", "Araç kutusu"), guide = "toolkit")
