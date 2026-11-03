@@ -38,7 +38,8 @@ class WeatherClearWidget : PulseWidget() {
         val sz = WidgetSize.dp(ctx, id) ?: (250 to 130)
         val w = (sz.first * dens).toInt().coerceIn(200, 1400); val h = (sz.second * dens).toInt().coerceIn(100, 1400)
         return RemoteViews(ctx.packageName, R.layout.widget_usage).apply {
-            setImageViewBitmap(R.id.tile, draw(ctx, f, pl, w, h))
+            // a large widget (two cells high and wide) adds the seven days under the current weather
+            setImageViewBitmap(R.id.tile, draw(ctx, f, pl, w, h, expanded = sz.first >= 200 && sz.second >= 200))
             setViewVisibility(R.id.tile, View.VISIBLE)
             setContentDescription(R.id.tile, tr("Weather", "Hava durumu") + " " + (f?.let { WeatherFmt.temp(it.temp, WeatherFmt.imperial(ctx)) } ?: ""))
             setViewVisibility(R.id.icon, View.GONE); setViewVisibility(R.id.title, View.GONE); setViewVisibility(R.id.value, View.GONE)
@@ -104,14 +105,30 @@ class WeatherClearWidget : PulseWidget() {
             val at = prefs(ctx).getLong("at_" + key(pl), 0L)
             if (System.currentTimeMillis() - at < 25 * 60_000L) return@forEach
             runCatching {
-                val spot = if (pl.device) kotlinx.coroutines.runBlocking { com.umutk.pulse.extras.weather.deviceLocation(ctx) }?.let { Place(pl.name, it.latitude, it.longitude, true) } ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.device } ?: return@runCatching else pl
+                // the device's place: the current fix, else the last saved one, else the place the weather page uses; no place means no fetch
+                val spot = if (pl.device) {
+                    val here = kotlinx.coroutines.runBlocking { com.umutk.pulse.extras.weather.deviceLocation(ctx) }?.let { Place(pl.name, it.latitude, it.longitude, true) }
+                    here ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.device }
+                        ?: com.umutk.pulse.extras.weather.WeatherStore.savedPlace(ctx)?.takeIf { it.lat != 0.0 || it.lon != 0.0 }
+                        ?: return@runCatching
+                } else pl
                 prefs(ctx).edit().putString("raw_" + key(pl), WeatherApi.forecast(spot.lat, spot.lon)).putLong("at_" + key(pl), System.currentTimeMillis()).apply()
             }
         }
         ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
     }
 
-    private fun draw(ctx: Context, f: Forecast?, pl: Place, w: Int, h: Int): Bitmap {
+    private fun draw(ctx: Context, f: Forecast?, pl: Place, w: Int, h: Int, expanded: Boolean = false): Bitmap {
+        if (expanded && f != null && f.days.isNotEmpty()) {
+            // the current weather on the top 60 %, the days under it
+            val topH = (h * .6f).toInt()
+            val top = draw(ctx, f, pl, w, topH, false)
+            val all = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
+            val c = Canvas(all)
+            c.drawBitmap(top, 0f, 0f, null)
+            forecastRow(ctx, c, f, w, h)
+            return all
+        }
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val imp = WeatherFmt.imperial(ctx)
@@ -154,6 +171,33 @@ class WeatherClearWidget : PulseWidget() {
         val fmt = if (android.text.format.DateFormat.is24HourFormat(ctx)) "HH:mm" else "h:mm"
         c.drawText(SimpleDateFormat(fmt, Locale.getDefault()).format(now), w - padR, h * .86f, paint(.20f, true).apply { textAlign = Paint.Align.RIGHT })
         return bmp
+    }
+
+    /** Seven days in columns under the current weather: the day, the sky, the high and the low. */
+    private fun forecastRow(ctx: Context, c: Canvas, f: Forecast, w: Int, h: Int) {
+        val imp = WeatherFmt.imperial(ctx)
+        val days = f.days.take(7)
+        val colW = w * .92f / days.size
+        val left0 = w * .04f
+        val y0 = h * .6f
+        val name = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = h * .07f; typeface = Typeface.create("sans-serif", Typeface.BOLD); setShadowLayer(h * .02f, 0f, h * .006f, 0x99000000.toInt()) }
+        val temp = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = android.graphics.Color.WHITE; textSize = h * .062f; setShadowLayer(h * .02f, 0f, h * .006f, 0x99000000.toInt()) }
+        val low = Paint(temp).apply { alpha = 190 }
+        val dayFmt = SimpleDateFormat("EEE", Locale.getDefault())
+        val parse = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+        days.forEachIndexed { i, d ->
+            val cx = left0 + colW * (i + .5f)
+            val label = runCatching { parse.parse(d.date)?.let { dayFmt.format(it) } }.getOrNull() ?: d.date.takeLast(5)
+            c.drawText(label, cx - name.measureText(label) / 2, y0 + h * .13f, name)
+            ContextCompat.getDrawable(ctx, WeatherApi.drawable(d.code))?.let { dr ->
+                val s = minOf(colW * .7f, h * .14f).toInt()
+                val top = (y0 + h * .17f).toInt()
+                dr.setBounds((cx - s / 2).toInt(), top, (cx + s / 2).toInt(), top + s); dr.draw(c)
+            }
+            val hi = WeatherFmt.temp(d.max, imp); val lo = WeatherFmt.temp(d.min, imp)
+            c.drawText(hi, cx - temp.measureText(hi) / 2, y0 + h * .33f + h * .07f, temp)
+            c.drawText(lo, cx - low.measureText(lo) / 2, y0 + h * .33f + h * .14f, low)
+        }
     }
 
     private fun placesOf(c: Context): List<Place> =
