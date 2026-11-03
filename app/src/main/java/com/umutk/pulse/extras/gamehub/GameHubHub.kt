@@ -391,6 +391,58 @@ private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, info: String?, onCli
     }
 }
 
+/** The small info under a banner for the chosen sort: the play time of the week, or the size of the app. */
+private fun infoOf(g: GameRow, sort: Int, usage: Map<String, android.app.usage.UsageStats>, sizes: Map<String, Long>): String? = when (sort) {
+    1 -> usage[g.pkg]?.totalTimeInForeground?.takeIf { it > 0 }?.let { hm(it) } ?: "-"
+    2 -> sizes[g.pkg]?.takeIf { it > 0 }?.let { "%.1f MB".format(it / 1_048_576.0) } ?: "-"
+    else -> null
+}
+
+/** A row with a label, its value and a chevron, which opens a dialog. */
+@Composable
+private fun ValueRow(pal: Pal, label: String, value: String, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(pal.radius)).clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(value, color = pal.sub, fontSize = 14.sp)
+        Spacer(Modifier.width(6.dp))
+        FluentIcon("right", pal.sub, 14.dp)
+    }
+}
+
+/** A small picture of a look: its desktop, a title bar in its accent, a window with a card and a sample of text. */
+@Composable
+private fun ThemePreview(tp: Pal) {
+    Column(Modifier.size(112.dp, 66.dp).clip(RoundedCornerShape(tp.radius / 2)).background(tp.bg).padding(6.dp)) {
+        Box(Modifier.fillMaxWidth().height(14.dp).background(tp.accent))
+        Spacer(Modifier.height(4.dp))
+        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(tp.radius / 2)).background(tp.card).padding(6.dp)) {
+            Box(Modifier.size(16.dp).clip(RoundedCornerShape(tp.radius / 2)).background(tp.accent))
+            Spacer(Modifier.height(4.dp))
+            Text("Aa", color = tp.text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+        }
+    }
+}
+
+/** The look chooser: each look as a row with its preview; the chosen one is marked. */
+@Composable
+private fun ThemeDialog(current: String, ctx: Context, onPick: (String) -> Unit, onClose: () -> Unit) {
+    val p = palOf(current, ctx)
+    Dialog(onDismissRequest = onClose) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(16.dp).verticalScroll(rememberScrollState())) {
+            Text(tr("Look", "Görünüm"), color = p.text, fontSize = 18.sp, modifier = Modifier.padding(bottom = 6.dp))
+            THEMES.forEach { k ->
+                val tp = palOf(k, ctx)
+                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(12.dp)).background(p.bg).clickable { onPick(k) }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    ThemePreview(tp)
+                    Spacer(Modifier.width(12.dp))
+                    Text(themeName(k), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                    if (k == current) FluentIcon("check", p.accent, 18.dp)
+                }
+            }
+        }
+    }
+}
+
 /** A game's page, like a store page: the banner with the cover, the name, a big Play button, the play time and the last played day, and the settings of the game. */
 @Composable
 private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed: Long, onHidden: (Boolean) -> Unit) {
