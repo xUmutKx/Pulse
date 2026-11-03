@@ -264,27 +264,61 @@ private fun rehideLaunched(c: Context) {
 
 private fun toast(c: Context, s: String) = Toast.makeText(c, s, Toast.LENGTH_SHORT).show()
 
-/** The game's own icon from its APK, drawn small; an empty square when the system gives none. */
+/** Decoded pictures of the games, kept in memory: each picture is decoded once, at the size it is drawn (no decode on every scroll or return). */
+private object GameArt {
+    private val cache = android.util.LruCache<String, ImageBitmap>(120)
+
+    private fun cached(key: String, make: () -> ImageBitmap?): ImageBitmap? {
+        synchronized(cache) { cache.get(key)?.let { return it } }
+        val made = runCatching { make() }.getOrNull() ?: return null
+        synchronized(cache) { cache.put(key, made) }
+        return made
+    }
+
+    private fun decodeFile(path: String, px: Int): ImageBitmap? {
+        val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
+        android.graphics.BitmapFactory.decodeFile(path, o)
+        val opts = android.graphics.BitmapFactory.Options().apply {
+            inSampleSize = Integer.highestOneBit((maxOf(o.outWidth, o.outHeight) / px).coerceAtLeast(1))
+        }
+        return android.graphics.BitmapFactory.decodeFile(path, opts)?.asImageBitmap()
+    }
+
+    /** The picture the person chose (at most 3 MB), decoded at [px] wide. */
+    fun cover(c: Context, pkg: String, px: Int): ImageBitmap? {
+        val f = coverFile(c, pkg).takeIf { it.isFile } ?: return null
+        return cached("c/$pkg/${f.lastModified()}/$px") { decodeFile(f.path, px) }
+    }
+
+    /** The game's own banner from its APK (the art its developer made for the store), when the APK has one. */
+    fun banner(c: Context, pkg: String, px: Int): ImageBitmap? = cached("b/$pkg/$px") {
+        val pm = c.packageManager
+        val d = pm.getApplicationInfo(pkg, 0).loadBanner(pm) ?: return@cached null
+        val w = px
+        val h = (px * (d.intrinsicHeight.coerceAtLeast(1).toFloat() / d.intrinsicWidth.coerceAtLeast(1))).toInt().coerceAtLeast(1)
+        d.toBitmap(w, h).asImageBitmap()
+    }
+
+    /** The game's icon from its APK (or the one kept when it was hidden). */
+    fun icon(c: Context, pkg: String, px: Int): ImageBitmap? = cached("i/$pkg/$px") {
+        val f = iconFile(c, pkg)
+        if (f.isFile) decodeFile(f.path, px)
+        else c.packageManager.getApplicationIcon(pkg).toBitmap(px, px).asImageBitmap()
+    }
+}
+
+/** The game's icon, drawn small; an empty square when the system gives none. */
 @Composable
 private fun GameIcon(pkg: String, pal: Pal) {
     val ctx = LocalContext.current
     val img by produceState<ImageBitmap?>(null, pkg) {
-        value = withContext(Dispatchers.IO) {
-            runCatching {
-                val cover = coverFile(ctx, pkg)
-                val f = iconFile(ctx, pkg)
-                if (cover.isFile) android.graphics.BitmapFactory.decodeFile(cover.path).asImageBitmap()
-                else if (f.isFile) android.graphics.BitmapFactory.decodeFile(f.path).asImageBitmap()
-                else ctx.packageManager.getApplicationIcon(pkg).toBitmap(96, 96).asImageBitmap()
-            }.getOrNull()
-        }
+        value = withContext(Dispatchers.IO) { GameArt.icon(ctx, pkg, 96) }
     }
     Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(pal.card), contentAlignment = Alignment.Center) {
         img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
     }
 }
 
-/** Game Hub: the games, hidden from every launcher with a switch, a profile per game, and the settings with the three looks. */
 /** The usage record of each app over the last [days] days: total time in the foreground and the last time it was used. */
 private fun usageOf(c: Context, days: Int): Map<String, android.app.usage.UsageStats> {
     if (Build.VERSION.SDK_INT < 22) return emptyMap()
@@ -322,92 +356,38 @@ private fun FluentIcon(key: String, tint: Color, size: androidx.compose.ui.unit.
     }
 }
 
-/** A game's cover, filling its card (the picture the person picked, else the APK icon centred on a gradient). */
+/**
+ * A game's cover, filling its card: the picture the person picked, else the APK's own banner (the art of its store page), else its icon on the card.
+ * "APK only" in the settings skips the picked picture.
+ */
 @Composable
-private fun GameCover(pkg: String, pal: Pal) {
+private fun GameCover(pkg: String, pal: Pal, wide: Boolean = true) {
     val ctx = LocalContext.current
     val apkOnly = prefs(ctx).getInt("iconMode", 0) == 1
-    val cover by produceState<ImageBitmap?>(null, pkg, apkOnly) {
-        value = if (apkOnly) null else withContext(Dispatchers.IO) { runCatching { coverFile(ctx, pkg).takeIf { it.isFile }?.let { BitmapFactory.decodeFile(it.path)?.asImageBitmap() } }.getOrNull() }
+    val px = if (wide) 960 else 600
+    val art by produceState<ImageBitmap?>(null, pkg, apkOnly, wide) {
+        value = withContext(Dispatchers.IO) { (if (apkOnly) null else GameArt.cover(ctx, pkg, px)) ?: GameArt.banner(ctx, pkg, px) }
     }
     val icon by produceState<ImageBitmap?>(null, pkg) {
-        value = withContext(Dispatchers.IO) {
-            runCatching {
-                val f = iconFile(ctx, pkg)
-                if (f.isFile) BitmapFactory.decodeFile(f.path)?.asImageBitmap()
-                else ctx.packageManager.getApplicationIcon(pkg).toBitmap(192, 192).asImageBitmap()
-            }.getOrNull()
-        }
+        value = withContext(Dispatchers.IO) { GameArt.icon(ctx, pkg, 192) }
     }
-    Box(Modifier.fillMaxSize().background(if (pal.flat) pal.card else Color.Transparent).then(if (pal.flat) Modifier else Modifier.background(Brush.verticalGradient(listOf(pal.card, pal.bg)))), contentAlignment = Alignment.Center) {
-        val c = cover
-        if (c != null) Image(c, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+    val bg = if (pal.flat) Modifier.background(pal.card) else Modifier.background(Brush.verticalGradient(listOf(pal.card, pal.bg)))
+    Box(Modifier.fillMaxSize().then(bg), contentAlignment = Alignment.Center) {
+        val a = art
+        if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
         else icon?.let { Image(it, null, Modifier.fillMaxSize(0.5f)) }
     }
 }
 
-/** One game as a card: a banner, a small info line under it (play time or size, when sorted so), the name, and a mark when it is hidden. */
+/** One game as a store card: a tall cover (2:3, like a Steam library), the name under it, a small info line and a mark when it is hidden. */
 @Composable
 private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, info: String?, onClick: () -> Unit) {
     Column(Modifier.padding(6.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.Start) {
-        Box(Modifier.fillMaxWidth().aspectRatio(2.14f).clip(RoundedCornerShape(pal.radius))) { GameCover(g.pkg, pal) }
+        Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(pal.radius))) { GameCover(g.pkg, pal, wide = false) }
         // the info line always takes its place, so a tile keeps its height when the sort changes
         Box(Modifier.padding(top = 4.dp).height(16.dp)) { if (info != null) Text(info, color = pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
-        Spacer(Modifier.height(4.dp))
         Text(g.name, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 17.sp)
         if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 11.sp)
-    }
-}
-
-/** The small info under a banner for the chosen sort: the play time of the week, or the size of the app. */
-private fun infoOf(g: GameRow, sort: Int, usage: Map<String, android.app.usage.UsageStats>, sizes: Map<String, Long>): String? = when (sort) {
-    1 -> usage[g.pkg]?.totalTimeInForeground?.takeIf { it > 0 }?.let { hm(it) } ?: "-"
-    2 -> sizes[g.pkg]?.takeIf { it > 0 }?.let { "%.1f MB".format(it / 1_048_576.0) } ?: "-"
-    else -> null
-}
-
-/** A row with a label, its value and a chevron, which opens a dialog. */
-@Composable
-private fun ValueRow(pal: Pal, label: String, value: String, onClick: () -> Unit) {
-    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(pal.radius)).clickable(onClick = onClick).padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = pal.text, fontSize = 14.sp, modifier = Modifier.weight(1f))
-        Text(value, color = pal.sub, fontSize = 14.sp)
-        Spacer(Modifier.width(6.dp))
-        FluentIcon("right", pal.sub, 14.dp)
-    }
-}
-
-/** A small picture of a look: its desktop, a title bar in its accent, a window with a card and a sample of text. */
-@Composable
-private fun ThemePreview(tp: Pal) {
-    Column(Modifier.size(112.dp, 66.dp).clip(RoundedCornerShape(tp.radius / 2)).background(tp.bg).padding(6.dp)) {
-        Box(Modifier.fillMaxWidth().height(14.dp).background(tp.accent))
-        Spacer(Modifier.height(4.dp))
-        Column(Modifier.fillMaxSize().clip(RoundedCornerShape(tp.radius / 2)).background(tp.card).padding(6.dp)) {
-            Box(Modifier.size(16.dp).clip(RoundedCornerShape(tp.radius / 2)).background(tp.accent))
-            Spacer(Modifier.height(4.dp))
-            Text("Aa", color = tp.text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-        }
-    }
-}
-
-/** The look chooser: each look as a row with its preview; the chosen one is marked. */
-@Composable
-private fun ThemeDialog(current: String, ctx: Context, onPick: (String) -> Unit, onClose: () -> Unit) {
-    val p = palOf(current, ctx)
-    Dialog(onDismissRequest = onClose) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(20.dp)).background(p.card).padding(16.dp).verticalScroll(rememberScrollState())) {
-            Text(tr("Look", "Görünüm"), color = p.text, fontSize = 18.sp, modifier = Modifier.padding(bottom = 6.dp))
-            THEMES.forEach { k ->
-                val tp = palOf(k, ctx)
-                Row(Modifier.fillMaxWidth().padding(vertical = 5.dp).clip(RoundedCornerShape(12.dp)).background(p.bg).clickable { onPick(k) }.padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
-                    ThemePreview(tp)
-                    Spacer(Modifier.width(12.dp))
-                    Text(themeName(k), color = p.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                    if (k == current) FluentIcon("check", p.accent, 18.dp)
-                }
-            }
-        }
     }
 }
 
@@ -542,6 +522,15 @@ private fun AddGamesDialog(pal: Pal, onClose: () -> Unit, onChanged: () -> Unit)
 
 private val PAGE_TITLES = listOf("Home", "Library", "Settings")
 
+/** What Game Hub showed last time, kept while the app runs: the screen opens with it, then it is refreshed. */
+private object GameHubState {
+    var checked = false
+    var games: List<GameRow>? = null
+    var times: Map<String, Long>? = null
+    var usage: Map<String, android.app.usage.UsageStats>? = null
+    var sizes: Map<String, Long>? = null
+}
+
 /**
  * Game Hub: a side menu (Home, Library with its filters, Settings), the home page with the week's play time, the library as a
  * grid of covers with a round add button, and the settings.
@@ -556,28 +545,38 @@ fun GameHubHub(onBack: () -> Unit) {
     val pal = palOf(theme, ctx)
     var page by remember { mutableStateOf(prefs(ctx).getInt("start", 1)) }   // 0 home, 1 library, 2 settings
     var filter by remember { mutableStateOf(0) }                              // library: 0 all, 1 installed, 2 hidden
-    var games by remember { mutableStateOf(emptyList<GameRow>()) }
+    var games by remember { mutableStateOf(GameHubState.games ?: emptyList()) }
     var hidden by remember { mutableStateOf(hiddenSet(ctx)) }
     var mode by remember { mutableStateOf(Privilege.mode) }
     var profile by remember { mutableStateOf<GameRow?>(null) }
     var addOpen by remember { mutableStateOf(false) }
-    var times by remember { mutableStateOf(emptyMap<String, Long>()) }
-    var usage by remember { mutableStateOf(emptyMap<String, android.app.usage.UsageStats>()) }
+    var times by remember { mutableStateOf(GameHubState.times ?: emptyMap()) }
+    var usage by remember { mutableStateOf(GameHubState.usage ?: emptyMap()) }
     var sort by remember { mutableStateOf(prefs(ctx).getInt("sort", 0)) }   // 0 name, 1 play time, 2 size
-    var sizes by remember { mutableStateOf(emptyMap<String, Long>()) }
+    var sizes by remember { mutableStateOf(GameHubState.sizes ?: emptyMap()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 1)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
     val gridState = rememberLazyGridState()
     LaunchedEffect(Unit) {
-        withContext(Dispatchers.IO) { Privilege.detect() }
+        // the lists of the last visit are on the screen at once; the shell checks run once per start of the app, not on every return
+        if (!GameHubState.checked) {
+            withContext(Dispatchers.IO) {
+                Privilege.detect()
+                readHiddenInfo(ctx); migrateAdded(ctx); reconcileHidden(ctx)
+                if (Privilege.mode != Privilege.Mode.None) grantUsageAccess(ctx)
+            }
+            GameHubState.checked = true
+        }
         mode = Privilege.mode
-        withContext(Dispatchers.IO) { readHiddenInfo(ctx); migrateAdded(ctx); reconcileHidden(ctx) }
-        games = withContext(Dispatchers.IO) { loadGames(ctx) }
+        val g = withContext(Dispatchers.IO) { loadGames(ctx) }
+        games = g; GameHubState.games = g
         hidden = hiddenSet(ctx)
-        if (mode != Privilege.Mode.None) withContext(Dispatchers.IO) { grantUsageAccess(ctx) }
-        times = withContext(Dispatchers.IO) { playTimes(ctx, 7) }
-        usage = withContext(Dispatchers.IO) { usageOf(ctx, 3650) }
-        sizes = withContext(Dispatchers.IO) { games.associate { it.pkg to appSize(ctx, it.pkg) } }
+        val t = withContext(Dispatchers.IO) { playTimes(ctx, 7) }
+        times = t; GameHubState.times = t
+        val u = withContext(Dispatchers.IO) { usageOf(ctx, 3650) }
+        usage = u; GameHubState.usage = u
+        val z = withContext(Dispatchers.IO) { g.associate { it.pkg to appSize(ctx, it.pkg) } }
+        sizes = z; GameHubState.sizes = z
     }
     val can = mode != Privilege.Mode.None
     fun setHidden(pkg: String, want: Boolean) { if (setGameHidden(ctx, pkg, want)) hidden = hiddenSet(ctx) }
