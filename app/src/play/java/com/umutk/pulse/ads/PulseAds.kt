@@ -65,7 +65,7 @@ object PulseAds {
             modifier = modifier,
             // a failed ad must never take the screen down: the place stays empty instead
             factory = { ctx -> runCatching { AdView(ctx).apply { setAdSize(AdSize.BANNER); adUnitId = BANNER; loadAd(AdRequest.Builder().build()) } }.getOrElse { View(ctx) } },
-            onRelease = { it.destroy() },
+            onRelease = { (it as? AdView)?.destroy() },
         )
     }
 
