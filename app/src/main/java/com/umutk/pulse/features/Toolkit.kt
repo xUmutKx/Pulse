@@ -452,7 +452,8 @@ private fun Dice() {
     PCard {
         Box(Modifier.align(Alignment.CenterHorizontally).padding(12.dp).size(140.dp)
             .graphicsLayer { rotationX = tiltX.value; rotationY = turnY.value; rotationZ = spinZ.value; translationY = -lift.value * density; cameraDistance = 16f * density }
-            .background(T.panel, RoundedCornerShape(22.dp)).border(2.dp, T.sub, RoundedCornerShape(22.dp))) {
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(androidx.compose.ui.graphics.lerp(T.panel, Color.White, .22f), T.panel, androidx.compose.ui.graphics.lerp(T.panel, Color.Black, .3f))), RoundedCornerShape(22.dp))
+            .border(2.dp, T.sub, RoundedCornerShape(22.dp))) {
             Canvas(Modifier.fillMaxSize().padding(22.dp)) {
                 PIPS[shown - 1].forEach { s -> drawCircle(pip, size.width * .11f, Offset(size.width * (s % 3) / 2f, size.height * (s / 3) / 2f)) }
             }
@@ -493,7 +494,8 @@ private fun CoinFlip() {
     PCard {
         Box(Modifier.align(Alignment.CenterHorizontally).padding(8.dp).size(160.dp)
             .graphicsLayer { rotationX = turn.value; translationY = -lift.value * density; cameraDistance = 14f * density }
-            .background(Look.accent, CircleShape).border(4.dp, Color.White.copy(alpha = .35f), CircleShape), contentAlignment = Alignment.Center) {
+            .background(androidx.compose.ui.graphics.Brush.radialGradient(listOf(androidx.compose.ui.graphics.lerp(Look.accent, Color.White, .45f), Look.accent, androidx.compose.ui.graphics.lerp(Look.accent, Color.Black, .35f)), center = Offset(60f, 50f), radius = 260f), CircleShape)
+            .border(4.dp, androidx.compose.ui.graphics.lerp(Look.accent, Color.Black, .5f), CircleShape), contentAlignment = Alignment.Center) {
             // the letter turns with the back of the coin, so it reads the right way round
             Text(if (showHeads) tr("H", "T") else tr("T", "Y"), Modifier.graphicsLayer { rotationX = if (showHeads) 0f else 180f },
                 color = Color.White, fontSize = 64.sp, fontWeight = FontWeight.Bold)
