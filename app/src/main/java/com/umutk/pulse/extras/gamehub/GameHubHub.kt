@@ -64,6 +64,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.graphics.toArgb
+import com.umutk.pulse.features.BlurBackdrop
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.vector.PathParser
@@ -474,6 +477,16 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
         },
         onCancel = { askAd = false },
     )
+    // the page's ground is the game's own cover, blurred and laid under the page (the flat colour when there is no cover)
+    val blurCtx = LocalContext.current
+    val blurred by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, g.pkg, coverTick) {
+        value = withContext(Dispatchers.IO) {
+            GameArt.cover(blurCtx, g.pkg, 240)?.let { img -> BlurBackdrop.blur(img.asAndroidBitmap(), 14f, pal.bg.toArgb()).asImageBitmap() }
+        }
+    }
+    Box(Modifier.fillMaxWidth()) {
+    blurred?.let { Image(it, null, Modifier.matchParentSize(), contentScale = ContentScale.Crop) }
+    if (blurred != null) Box(Modifier.matchParentSize().background(pal.bg.copy(alpha = .72f)))
     Column(Modifier.fillMaxWidth()) {
         // the banner: the cover across the top, the icon and the name over its bottom edge
         key(coverTick) {
@@ -515,6 +528,7 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
             Text(tr("No community for an Android app here.", "Bir Android uygulaması için burada topluluk yok."), color = pal.sub, fontSize = 13.sp)
             Spacer(Modifier.height(24.dp))
         }
+    }
     }
 }
 
@@ -842,7 +856,13 @@ private fun SectionTitle(pal: Pal, label: String) {
 }
 
 /** The size of an app's APK in bytes (0 when it cannot be read). */
-private fun appSize(c: Context, pkg: String): Long = runCatching { java.io.File(c.packageManager.getApplicationInfo(pkg, 0).sourceDir).length() }.getOrDefault(0L)
+/** The size of the app's APK. A hidden game is not visible to the package manager any more, so the size seen last is kept and shown instead. */
+private fun appSize(c: Context, pkg: String): Long {
+    val live = runCatching { java.io.File(c.packageManager.getApplicationInfo(pkg, 0).sourceDir).length() }.getOrDefault(0L)
+    val p = prefs(c)
+    if (live > 0) { p.edit().putLong("size_$pkg", live).apply(); return live }
+    return p.getLong("size_$pkg", 0L)
+}
 
 /** The library in the chosen order: name, the play time of the last years, or the size of the app. */
 private fun sortGames(list: List<GameRow>, sort: Int, usage: Map<String, android.app.usage.UsageStats>, sizes: Map<String, Long>): List<GameRow> = when (sort) {
