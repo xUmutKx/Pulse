@@ -66,6 +66,9 @@ class KbState {
     var recents by mutableStateOf(listOf<String>())
     /** The width of the keyboard's window in px, for keeping the pop-ups inside it. */
     var rootW by mutableStateOf(0f)
+    /** The floating keyboard's place in its window (left, top, right, bottom): only this part takes touches, the rest of the window is the app's. */
+    var floatRect: IntArray? = null
+    var refreshInsets: (() -> Unit)? = null
     /** The field wants no suggestions or learning (password, email, URL). */
     var plain by mutableStateOf(false)
     /** A number, phone, date or numeric-password field: only the number pad shows. */

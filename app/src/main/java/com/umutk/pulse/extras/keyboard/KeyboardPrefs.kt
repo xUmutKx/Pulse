@@ -92,6 +92,9 @@ object KeyboardPrefs {
     var split by mutableStateOf(false)
     /** Floating: a narrower keyboard (70 percent of the width) that slides sideways by a handle on top; [floatX] is its place, 0 left to 1 right. */
     var floating by mutableStateOf(false)
+    /** The floating keyboard of the quick settings tile: only for the time its window is open, and never saved. The normal keyboard stays the normal keyboard. */
+    var floatSession by mutableStateOf(false)
+    val floatNow: Boolean get() = floating || floatSession
     var floatX by mutableStateOf(.5f)
     /** Floating: how far the keyboard is lifted off its place at the bottom, 0 (down) to 1 (up to the middle of the screen). */
     var floatY by mutableStateOf(0f)
