@@ -421,8 +421,6 @@ fun SettingsPage() {
         Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title)
         when (cat) {
             null -> {
-                // the ad credit: a 60-second ad opens the ad-gated apps for an hour (play build only)
-                AdPassCard()
                 // search over the settings categories
                 var q by remember { mutableStateOf("") }
                 PField(q, { q = it }, tr("Search settings", "Ayarlarda ara"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
@@ -439,6 +437,8 @@ fun SettingsPage() {
                     }
                 }
                 cats.filter { q.isBlank() || it.title.contains(q, true) || it.sub.contains(q, true) }.forEach { c ->
+                    // the ad credit and Premium sit between Monitor and About (play build only)
+                    if (c.id == "about") AdPassCard()
                     Row(Modifier.fillMaxWidth().clickable { cat = c.id }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(44.dp), contentAlignment = Alignment.Center) { PIcon(c.icon, T.accent, 26.dp) }
                         Spacer(Modifier.width(14.dp))
@@ -766,7 +766,7 @@ fun AdPassCard() {
                 color = T.sub, fontSize = 12.sp,
             )
         }
-        PButton(tr("Watch", "İzle"), compact = true, onClick = { gate { } })
+        CardButton("video", tr("Watch", "İzle")) { gate { } }
     }
     PremiumCard()
 }
@@ -784,10 +784,25 @@ fun PremiumCard() {
             Text("Premium", color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(
                 if (owned) tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık")
-                else tr("A separate premium app, one payment: no ads, every feature", "Ayrı bir premium uygulama, tek ödeme: reklam yok, her özellik"),
+                else tr("A separate premium app: one payment (15 USD), one account, one device. No ads, every feature.", "Ayrı premium uygulama: tek ödeme (15 ABD doları), hesap başına 1 cihaz. Reklam yok, her özellik."),
                 color = T.sub, fontSize = 12.sp,
             )
         }
-        if (!owned) PButton(tr("Soon", "Yakında"), compact = true, onClick = { })
+        if (!owned) CardButton("apps", tr("Get", "Al")) {
+            // the purchase lives in the premium app's Play listing: open it in the store
+            val pkg = "com.umutk.pulse.premium"
+            runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                .onFailure { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+        }
+    }
+}
+
+/** A small bordered button with a Fluent-style icon (the look's own icon set through PIcon). */
+@Composable
+private fun CardButton(icon: String, label: String, onClick: () -> Unit) {
+    Row(Modifier.clip(RoundedCornerShape(8.dp)).border(1.dp, T.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        PIcon(icon, T.text, 16.dp)
+        Spacer(Modifier.width(6.dp))
+        Text(label, color = T.text, fontSize = 13.sp)
     }
 }
