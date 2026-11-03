@@ -220,8 +220,12 @@ object AppPlace {
     // an app that is switched on in Settings > Apps is listed in the top-right Apps menu; the chevron there can move it to the left menu or hide it
     /** Every app from the calculator on only lives in the Extra apps list at first; Settings > Apps puts them in the ⋮ menu. */
     private val quiet = setOf("CalculatorLauncher", "ArtCraftLauncher", "MusicLauncher", "VideoLauncher", "WhiteNoiseLauncher", "VoiceLauncher", "NotesLauncher", "WeatherLauncher",
-        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher", "BrowserLauncher", "OfficeLauncher")
-    fun load(c: Context) { all.forEach { placed[it.alias] = sp(c).getString(it.alias, if (it.alias in quiet) "hidden" else "menu") ?: "menu" } }
+        "MessagesLauncher", "ScreenRecLauncher", "KeyboardLauncher", "LocalSendLauncher", "NotifHistLauncher", "BrowserLauncher", "OfficeLauncher", "GameHubLauncher")
+    fun load(c: Context) {
+        // Game Hub lives in the Extra apps list (once, for everyone: a place chosen before this stays only in Settings > Apps)
+        if (!sp(c).getBoolean("gamehub_extra", false)) { sp(c).edit().putString("GameHubLauncher", "hidden").putBoolean("gamehub_extra", true).apply() }
+        all.forEach { placed[it.alias] = sp(c).getString(it.alias, if (it.alias in quiet) "hidden" else "menu") ?: "menu" }
+    }
     fun where(alias: String): String = placed[alias] ?: if (alias in quiet) "hidden" else "menu"
     fun set(c: Context, alias: String, place: String) { placed[alias] = place; sp(c).edit().putString(alias, place).apply() }
     fun byAlias(alias: String) = all.firstOrNull { it.alias == alias }
