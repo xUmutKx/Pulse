@@ -2030,3 +2030,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: İntro algılama (yerel, sonraki bölümle kare karşılaştırma, klasör bazlı önbellek); "İntroyu geç" düğmesi. IntroDB/TheIntroDB kaynakları domain açılınca eklenecek; ses eşleştirme yok
 - (sürüm sonra) derlenmedi: İntro kaynağı: önce IntroDB (api.introdb.app, anahtarsız; dizinin IMDb kimliği OpenSubtitles anahtarıyla), bulamazsa yerel karşılaştırma
 - (sürüm sonra) derlenmedi: Hoş geldin ekranı boyut metni 11 MB yerine 44 MB
+- 1.0.351 derlendi: commits since 1.0.350 (video: intro, mini window, menus, subtitles; keyboard @ suggestions)
