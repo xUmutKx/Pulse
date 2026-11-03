@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
+import android.widget.Toast
 import android.view.WindowManager
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
@@ -48,6 +49,16 @@ import androidx.savedstate.SavedStateRegistryController
 import androidx.savedstate.SavedStateRegistryOwner
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import java.util.Locale
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.shape.CircleShape
+import com.umutk.pulse.PIcon
+import com.umutk.pulse.tr
+
+/** What the floating pad has typed (for the games and the places with no field): copied out to the clipboard by its button. */
+object AccessScratch {
+    var text by mutableStateOf("")
+}
 
 /** The settings of the accessibility keyboard: its own switch, separate from the input method's floating mode. */
 object AccessKeyboard {
@@ -84,15 +95,107 @@ class AccessKeyboardService : AccessibilityService() {
     private var wm: WindowManager? = null
     private var view: ComposeView? = null
     private var owner: AccessOwner? = null
+    // the always-there button, and the pad it opens (a text area with the keys, for the places with no text field)
+    private var bubble: ComposeView? = null
+    private var bubbleOwner: AccessOwner? = null
+    private var pad: ComposeView? = null
+    private var padOwner: AccessOwner? = null
+    private var padParams: WindowManager.LayoutParams? = null
 
     override fun onServiceConnected() {
         super.onServiceConnected()
         instance = this
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
+        if (AccessKeyboard.on(this)) showBubble()
+    }
+
+    /** The button at the screen's bottom right: always there while the keyboard is on, so it works in games too. */
+    private fun showBubble() {
+        if (bubble != null) return
+        val w = wm ?: return
+        val params = WindowManager.LayoutParams(
+            WindowManager.LayoutParams.WRAP_CONTENT, WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.BOTTOM or Gravity.END; x = 16; y = 120 }
+        val o = AccessOwner().also { it.start() }
+        val v = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(o)
+            setViewTreeSavedStateRegistryOwner(o)
+            setContent {
+                Box(Modifier.size(52.dp).clip(CircleShape).background(Color(0xFF1F6FEB)).clickable { togglePad() }, contentAlignment = Alignment.Center) {
+                    PIcon("keyboard", Color.White, 24.dp)
+                }
+            }
+        }
+        bubble = v; bubbleOwner = o
+        runCatching { w.addView(v, params) }.onFailure { bubble = null; o.stop(); bubbleOwner = null }
+    }
+
+    private fun hideBubble() {
+        val v = bubble ?: return
+        runCatching { wm?.removeView(v) }
+        bubbleOwner?.stop(); bubbleOwner = null; bubble = null
+    }
+
+    private fun togglePad() { if (pad != null) hidePad() else showPad() }
+
+    /** The pad: what has been typed, copy and clear, and the keys; the keys write here whenever no field has the focus. */
+    private fun showPad() {
+        if (pad != null) return
+        val w = wm ?: return
+        val d = resources.displayMetrics
+        val params = WindowManager.LayoutParams(
+            (d.widthPixels * 0.94f).toInt(), WindowManager.LayoutParams.WRAP_CONTENT,
+            WindowManager.LayoutParams.TYPE_ACCESSIBILITY_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.TOP or Gravity.START; x = (d.widthPixels * 0.03f).toInt(); y = (d.heightPixels * 0.08f).toInt() }
+        padParams = params
+        val o = AccessOwner().also { it.start() }
+        val v = ComposeView(this).apply {
+            setViewTreeLifecycleOwner(o)
+            setViewTreeSavedStateRegistryOwner(o)
+            setContent {
+                Column(Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xF01C1C22)).padding(10.dp)) {
+                    Text(AccessScratch.text.ifEmpty { tr("Type here, then copy it", "Buraya yaz, sonra kopyala") }, color = Color.White,
+                        fontSize = 16.sp, maxLines = 4, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(bottom = 6.dp))
+                    Row {
+                        Text(tr("Copy", "Kopyala"), color = Color(0xFF7FB0FF), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { copyPad() }.padding(horizontal = 12.dp, vertical = 8.dp))
+                        Text(tr("Clear", "Temizle"), color = Color(0xFF9AA0B0), fontSize = 14.sp,
+                            modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable { AccessScratch.text = "" }.padding(horizontal = 12.dp, vertical = 8.dp))
+                    }
+                    AccessKeys(
+                        onKey = { AccessScratch.text += it },
+                        onBackspace = { AccessScratch.text = AccessScratch.text.dropLast(1) },
+                        onEnter = { AccessScratch.text += "\n" },
+                        onDrag = { dx, dy -> params.x += dx.toInt(); params.y += dy.toInt(); runCatching { w.updateViewLayout(this@apply, params) } },
+                        onClose = { hidePad() },
+                    )
+                }
+            }
+        }
+        pad = v; padOwner = o
+        runCatching { w.addView(v, params) }.onFailure { pad = null; o.stop(); padOwner = null }
+    }
+
+    private fun copyPad() {
+        val cm = getSystemService(CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        cm.setPrimaryClip(android.content.ClipData.newPlainText("", AccessScratch.text))
+        Toast.makeText(this, tr("Copied", "Kopyalandı"), Toast.LENGTH_SHORT).show()
+    }
+
+    private fun hidePad() {
+        val v = pad ?: return
+        runCatching { wm?.removeView(v) }
+        padOwner?.stop(); padOwner = null; pad = null
     }
 
     override fun onAccessibilityEvent(event: AccessibilityEvent) {
-        if (!AccessKeyboard.on(this)) { hideKeys(); return }
+        if (!AccessKeyboard.on(this)) { hideKeys(); hidePad(); hideBubble(); return }
+        showBubble()
         when (event.eventType) {
             AccessibilityEvent.TYPE_VIEW_FOCUSED, AccessibilityEvent.TYPE_WINDOW_CONTENT_CHANGED -> {
                 val f = focusedField()
@@ -104,9 +207,9 @@ class AccessKeyboardService : AccessibilityService() {
 
     override fun onInterrupt() = hideKeys()
 
-    override fun onUnbind(intent: android.content.Intent?): Boolean { instance = null; hideKeys(); return super.onUnbind(intent) }
+    override fun onUnbind(intent: android.content.Intent?): Boolean { instance = null; hideKeys(); hidePad(); hideBubble(); return super.onUnbind(intent) }
 
-    override fun onDestroy() { instance = null; hideKeys(); super.onDestroy() }
+    override fun onDestroy() { instance = null; hideKeys(); hidePad(); hideBubble(); super.onDestroy() }
 
     /** The keyboard's window, kept so a turn of the phone can place it again. */
     private var kbParams: WindowManager.LayoutParams? = null
