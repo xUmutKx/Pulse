@@ -337,14 +337,16 @@ private fun NumPad(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.comp
         Row(Modifier.fillMaxWidth()) { line.forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, 1f), h) } }
     }
     Row(Modifier.fillMaxWidth()) {
-        Key(th, st, act, KbKey(".", KeyKind.CHAR, 1f), h)
+        Key(th, st, act, KbKey("+", KeyKind.CHAR, 1f), h)
         Key(th, st, act, KbKey("0", KeyKind.CHAR, 1f), h)
         Key(th, st, act, KbKey("", KeyKind.DELETE, 1f), h)
     }
     Row(Modifier.fillMaxWidth()) {
         Key(th, st, act, KbKey("*", KeyKind.CHAR, 1f), h * .8f)
         Key(th, st, act, KbKey("#", KeyKind.CHAR, 1f), h * .8f)
-        Key(th, st, act, KbKey("", KeyKind.ENTER, 1f), h * .8f)
+        // the bottom right key: the field's action, or the character chosen in Settings > Keyboard > Number pad
+        val ek = KeyboardPrefs.numEnter
+        Key(th, st, act, if (ek == "enter") KbKey("", KeyKind.ENTER, 1f) else KbKey(ek, KeyKind.CHAR, 1f), h * .8f)
     }
 }
 
@@ -421,9 +423,10 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
     val barHasContent = st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
-    if (!barHasContent) { Box(Modifier.fillMaxWidth().height(0.dp)); return }
+    // no suggestions: the bar stays as a rounded strip, so the keys never start with a cut edge
+    if (!barHasContent) { Box(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(th.sub.copy(alpha = .12f))); return }
     Row(
-        Modifier.fillMaxWidth().height(52.dp).pointerInput(Unit) {
+        Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp, vertical = 4.dp).clip(RoundedCornerShape(16.dp)).background(th.sub.copy(alpha = .12f)).padding(horizontal = 4.dp).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
             detectVerticalDragGestures(onDragEnd = { onRelease() }, onDragCancel = { onRelease() }) { change, dy -> change.consume(); onPull(dy) }
         },
