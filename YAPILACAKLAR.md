@@ -1956,3 +1956,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Files previews: a row reused for another file no longer keeps the old file's picture
 - (sürüm sonra) derlenmedi: Notes: a side panel with the note groups (all, favourites, locked, trash) with icons, and the folders as a tree; opened from the header's folder button
 - (sürüm sonra) derlenmedi: Keyboard feel: a hold-to-test vibration button at the chosen strength
+- (sürüm sonra) derlenmedi: Notes: a book view (pages with the text) next to list and grid; the view is a three-way choice
