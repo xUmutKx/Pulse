@@ -551,6 +551,10 @@ object WeatherStore {
     fun combine(c: Context): Boolean = p(c).getBoolean("combine", true)
     fun setCombine(c: Context, v: Boolean) = p(c).edit().putBoolean("combine", v).apply()
 
+    /** The large weather widget shows the next hours instead of the seven days. */
+    fun widgetHours(c: Context): Boolean = p(c).getBoolean("widget_hours", false)
+    fun setWidgetHours(c: Context, v: Boolean) = p(c).edit().putBoolean("widget_hours", v).apply()
+
     /** Hour of the last severe-weather notice, so one storm is announced once. */
     fun lastAlert(c: Context): String = p(c).getString("alert_hour", "") ?: ""
 

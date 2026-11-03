@@ -26,7 +26,10 @@ class CoverWidget : PulseWidget() {
         if (intent.action == ACTION_TOGGLE) {
             if (CoverService.running) CoverService.stop(ctx) else CoverService.start(ctx)
             val mgr = AppWidgetManager.getInstance(ctx)
-            mgr.getAppWidgetIds(ComponentName(ctx, CoverWidget::class.java)).forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
+            // all three sizes redraw: the cell shapes are separate widgets
+            listOf(CoverWidget::class.java, CoverWideWidget::class.java, CoverTallWidget::class.java).forEach { cls ->
+                mgr.getAppWidgetIds(ComponentName(ctx, cls)).forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
+            }
             return
         }
         super.onReceive(ctx, intent)
@@ -36,3 +39,9 @@ class CoverWidget : PulseWidget() {
         const val ACTION_TOGGLE = "com.umutk.pulse.action.COVER_TOGGLE"
     }
 }
+
+/** The screen cover in a wide cell (two across, one down): the same toggle. */
+class CoverWideWidget : CoverWidget()
+
+/** The screen cover in a tall cell (one across, two down): the same toggle. */
+class CoverTallWidget : CoverWidget()
