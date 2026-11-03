@@ -438,7 +438,7 @@ fun NowPlayingScreen(
             Spacer(Modifier.height(19.dp))
             // mode row as pills: equalizer, sleep timer, track count centred, repeat and shuffle at the ends
             Row(Modifier.fillMaxWidth().padding(start = 1.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                LiveBarsBtn(playing, tr("Equalizer", "Ekolayzır"), style, 65.dp, onOpenEffects)
+                LiveBarsBtn(playing, tr("Equalizer", "Ekolayzır"), style, 65.dp, track, onOpenEffects)
                 Spacer(Modifier.width(4.5.dp))
                 FlatBtn(Icons.Rounded.Timer, tr("Sleep timer", "Uyku zamanlayıcı"), sleepMinutes != 0, style) { sleepOpen = true }
                 Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
@@ -660,13 +660,13 @@ private val SEEK_EXTRA = 56.dp
 /** Thin bars that fill the button height and move with the live level while playing, and sit at their low stop when paused. Taps go to [onClick]. */
 @Composable
 @OptIn(ExperimentalFoundationApi::class)
-private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, width: Dp, onClick: () -> Unit) {
+private fun LiveBarsBtn(playing: Boolean, label: String, style: PowerampStyle, width: Dp, track: Track?, onClick: () -> Unit) {
     val n = 12
     var big by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
     val vctx = LocalContext.current
     var visMode by remember { mutableIntStateOf(vctx.getSharedPreferences("poweramp_vis", android.content.Context.MODE_PRIVATE).getInt("mode", 0).coerceIn(0, VIS_MODES.lastIndex)) }
-    if (big) FullVisualizer(playing, style, visMode) { big = false }
+    if (big) FullVisualizer(playing, style, visMode, track) { big = false }
     var levels by remember { mutableStateOf(List(n) { 0f }) }
     LaunchedEffect(playing) {
         while (playing) {
@@ -716,7 +716,7 @@ private val VIS_MODES = listOf(
 
 /** Full-screen visualisation: live bands drawn in the picked style on the dark player backdrop; a tap closes it. */
 @Composable
-private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, onDismiss: () -> Unit) {
+private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, track: Track?, onDismiss: () -> Unit) {
     val n = 48
     var levels by remember { mutableStateOf(List(n) { 0f }) }
     LaunchedEffect(playing) {
@@ -733,6 +733,7 @@ private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, on
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
     ) {
         Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .94f)).clickable(onClick = onDismiss), contentAlignment = Alignment.Center) {
+          Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Canvas(Modifier.fillMaxWidth().height(if (mode == 3) 340.dp else 300.dp).padding(horizontal = 16.dp)) {
                 val slot = size.width / n
                 fun tint(v: Float) = androidx.compose.ui.graphics.lerp(style.accent, Color.White, v.coerceIn(0f, 1f) * .6f)
@@ -786,6 +787,13 @@ private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, on
                     }
                 }
             }
+            // a few lines under the bands: the song, and the bass level (the first bands of the spectrum)
+            val bass = (MusicLevels.snapshot().take(6).average() * 100).toInt().coerceIn(0, 100)
+            Spacer(Modifier.height(18.dp))
+            Text(track?.title ?: "", color = style.onBackdrop, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(listOfNotNull(track?.artist, track?.album).joinToString(" · "), color = style.textDim, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(tr("Bass $bass%", "Bas %$bass"), color = style.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
+          }
         }
     }
 }
