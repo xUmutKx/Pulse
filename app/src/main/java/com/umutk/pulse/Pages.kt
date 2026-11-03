@@ -755,16 +755,16 @@ fun AdPassCard() {
     }
     val gate = com.umutk.pulse.ads.rememberAdGate(
         tr("Ad credit", "Reklam kredisi"),
-        tr("Watch the ad to open the apps for an hour.", "Uygulamaları bir saat açmak için reklamı izle."),
+        tr("Watch the ad to open the apps for 5 minutes.", "Uygulamaları 5 dakika açmak için reklamı izle."),
         key = com.umutk.pulse.ads.AdUnlocks.PASS,
-        minutes = 60,
+        minutes = com.umutk.pulse.ads.AdUnlocks.PASS_MINUTES,
     )
     val mins = (left / 60_000L).coerceAtLeast(0L)
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         Column(Modifier.weight(1f)) {
             Text(tr("Ad credit", "Reklam kredisi"), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(
-                if (mins > 0) tr("Open: $mins min left", "Açık: $mins dk kaldı") else tr("One ad = one hour open", "Bir reklam = bir saat açık"),
+                if (mins > 0) tr("Open: $mins min left", "Açık: $mins dk kaldı") else tr("One ad = 5 minutes open", "Bir reklam = 5 dakika açık"),
                 color = T.sub, fontSize = 12.sp,
             )
         }
@@ -785,11 +785,7 @@ fun PremiumCard() {
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text("Premium", color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            Text(
-                if (owned) tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık")
-                else tr("A separate premium app: one payment (350 TL), one account, one device. No ads, every feature.", "Ayrı premium uygulama: tek ödeme (350 TL), hesap başına 1 cihaz. Reklam yok, her özellik."),
-                color = T.sub, fontSize = 12.sp,
-            )
+            if (owned) Text(tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık"), color = T.sub, fontSize = 12.sp)
         }
         CardButton("info", tr("Features", "Özellikler")) { features = true }
         if (!owned) {
