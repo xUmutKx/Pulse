@@ -1919,3 +1919,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard on a tablet turned sideways: the letter rows are always split (own layout); keys size unchanged (the 2.3 figure is not clear yet)
 - (sürüm sonra) derlenmedi: App icon: the window is drawn at 70 percent inside the adaptive icon, so the mask no longer cuts its corners
 - (sürüm sonra) derlenmedi: Files: the home's three lines open the Browse side menu (same menu and ad everywhere); Hidden part on the storage bar (files in dot-folders, no longer Other); ad banner cannot crash the screen (empty place when the ad fails)
+- (sürüm sonra) derlenmedi: Game Hub: the game page is laid over its own cover, blurred; a hidden game keeps the size it had (shown in the list)
