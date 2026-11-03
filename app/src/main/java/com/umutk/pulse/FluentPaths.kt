@@ -3,6 +3,7 @@ package com.umutk.pulse
 /** Fluent System Icons (MIT, Microsoft) 24px regular outlines, fetched by tools/fetch_icons.py */
 object FluentPaths {
     val map: Map<String, List<String>> = mapOf(
+        "extraGameHub" to listOf("M21.58 16.09l-1.09-7.66C20.21 6.46 18.52 5 16.53 5H7.47C5.48 5 3.79 6.46 3.5 8.43l-1.09 7.66C2.2 17.63 3.39 19 4.94 19h0c.68 0 1.32-.27 1.8-.75L9 16h6l2.25 2.25c.48.48 1.13.75 1.8.75h0c1.56 0 2.75-1.37 2.53-2.91zM11 11H9v2H8v-2H6v-1h2V8h1v2h2v1zm4-1c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"),
         "extraPalette" to listOf("M5 8h1.6a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-9a2 2 0 0 1 2-2Z M11.2 3h1.6a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-1.6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z M17.4 6H19a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2h-1.6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"),
         "extraBlackOut" to listOf("M21.5 14.2A9.5 9.5 0 0 1 9.8 2.5a9.5 9.5 0 1 0 11.7 11.7Z"),
         "extraIsland" to listOf("M7 7h10a4 4 0 0 1 0 8H7a4 4 0 0 1 0 -8Z M16 9.5a1.5 1.5 0 1 0 0 3a1.5 1.5 0 1 0 0 -3Z M8 18h8a1 1 0 0 1 0 2H8a1 1 0 0 1 0 -2Z"),
