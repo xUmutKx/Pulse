@@ -775,7 +775,7 @@ fun PremiumCard() {
             Text("Premium", color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(
                 if (owned) tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık")
-                else tr("One payment, 15 USD / 200 TRY: no ads, every feature", "Tek ödeme, 15 USD / 200 TRY: reklam yok, her özellik"),
+                else tr("A separate premium app, one payment: no ads, every feature", "Ayrı bir premium uygulama, tek ödeme: reklam yok, her özellik"),
                 color = T.sub, fontSize = 12.sp,
             )
         }
