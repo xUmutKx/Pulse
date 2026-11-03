@@ -84,6 +84,8 @@ fun PlayerLyrics(
                 Lyrics.keep(localPath, r)
             }
         }
+        // sharing the lyrics card is an ad-gated feature (play build): the ad opens it for 30 minutes
+        val shareGate = com.umutk.pulse.ads.rememberAdGate(tr("Share lyrics", "Şarkı sözünü paylaş"), tr("Watch a short ad to share the lyrics.", "Şarkı sözünü paylaşmak için kısa bir reklam izle."), key = "lyrics_share", minutes = 30)
         // 0 reading, 1 picking lines to share, 2 the card to share
         var mode by remember(title, artist) { mutableIntStateOf(0) }
         var picked by remember(title, artist) { mutableStateOf(emptySet<Int>()) }
@@ -112,7 +114,7 @@ fun PlayerLyrics(
             val (busy, res) = state
             when {
                 res != null && mode == 1 -> LyricsSelect(res, picked, ::toggle, { mode = 2 }, Modifier.fillMaxSize().padding(top = 36.dp))
-                res != null && mode == 2 -> LyricsSharePage(title, artist, art, picked.sorted().map { res.lines[it].text }, style, { style = it }, { LyricsShare.share(ctx, it) }, Modifier.fillMaxSize().padding(top = 40.dp))
+                res != null && mode == 2 -> LyricsSharePage(title, artist, art, picked.sorted().map { res.lines[it].text }, style, { style = it }, { bmp -> shareGate { LyricsShare.share(ctx, bmp) } }, Modifier.fillMaxSize().padding(top = 40.dp))
                 res != null && full -> Column(Modifier.fillMaxSize().padding(top = 8.dp)) {
                     Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(56.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(Color.White.copy(alpha = .12f))) {
