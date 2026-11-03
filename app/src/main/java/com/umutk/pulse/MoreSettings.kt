@@ -83,6 +83,7 @@ private fun SliderRow(title: String, value: Float, range: ClosedFloatingPointRan
 @Composable
 fun GeneralSettings() {
     val ctx = LocalContext.current
+    TabletLayoutRow()
     WatchdogSettings()
     DnsSettings()
     val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
