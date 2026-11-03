@@ -1,5 +1,10 @@
 package com.umutk.pulse.extras.lucid
 
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.geometry.Offset
+import kotlin.math.hypot
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -570,6 +575,10 @@ fun AlarmRingingScreen(
     var dateH by remember { mutableFloatStateOf(0f) }
     val dateGapPx = with(LocalDensity.current) { 14.dp.toPx() }
 
+    // the dismiss circle: its progress (0 to 1) and centre, drawn over the screen while the Dismiss button is dragged
+    var revealProgress by remember { mutableFloatStateOf(0f) }
+    var revealCenter by remember { mutableStateOf(Offset.Zero) }
+    var overlayOrigin by remember { mutableStateOf(Offset.Zero) }
     AlarmLockBackground(
         style = effectiveBackgroundStyle,
         imageUri = effectiveImageUri,
@@ -659,6 +668,24 @@ fun AlarmRingingScreen(
                 }
             }
 
+            if (revealProgress > 0f) Canvas(
+                Modifier
+                    .fillMaxSize()
+                    .onGloballyPositioned { overlayOrigin = it.positionInRoot() }
+            ) {
+                val c = revealCenter - overlayOrigin
+                val far = maxOf(
+                    hypot(c.x, c.y), hypot(size.width - c.x, c.y),
+                    hypot(c.x, size.height - c.y), hypot(size.width - c.x, size.height - c.y)
+                )
+                val start = 40.dp.toPx()
+                drawCircle(
+                    color = if (dismissContainerColorLong != 0L) Color(dismissContainerColorLong.toInt()) else AlarmLockPalette.DismissButton,
+                    radius = start + (far - start) * revealProgress,
+                    center = c
+                )
+            }
+
             Column(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
@@ -689,6 +716,7 @@ fun AlarmRingingScreen(
                 DragDismissPill(
                     text = "Dismiss",
                     onDismiss = onDismiss,
+                    onReveal = { p, c -> revealProgress = p; revealCenter = c },
                     containerColor = if (dismissContainerColorLong != 0L) {
                         Color(dismissContainerColorLong.toInt())
                     } else {
