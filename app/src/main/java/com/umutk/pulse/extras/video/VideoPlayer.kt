@@ -446,7 +446,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             }.getOrNull()
         } ?: preview
     }
-    LaunchedEffect(bg) { if (bg) MediaService.start(ctx, VideoPlaybackService::class.java) else MediaService.stop(ctx, VideoPlaybackService::class.java) }
+    // the notification shows while the video plays (and while it plays in the background); its Stop pauses the video
+    LaunchedEffect(playing, bg) { if (playing || bg) MediaService.start(ctx, VideoPlaybackService::class.java) else MediaService.stop(ctx, VideoPlaybackService::class.java) }
     LaunchedEffect(shown, playing, poke, dlg, rev) { if (shown && playing && dlg == null && prefs.ctrlTimeout > 0) { delay(prefs.ctrlTimeout.toLong()); shown = false } }
     LaunchedEffect(hudStamp) { delay(900); hud = null }
     LaunchedEffect(orient, vsize) {

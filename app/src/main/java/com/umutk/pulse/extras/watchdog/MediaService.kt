@@ -160,6 +160,9 @@ class MusicPlaybackService : MediaService() {
 class VideoPlaybackService : MediaService() {
     override val title: String get() = tr("Playing video", "Video oynatılıyor")
     override val notifId = 9302
+    // the notification's Stop pauses the video that is on screen
+    override val hasStop = true
+    override fun onStop() { com.umutk.pulse.extras.video.VideoSessionService.player?.pause() }
 }
 
 class AmbientPlaybackService : MediaService() {
