@@ -10,6 +10,9 @@ import androidx.compose.ui.graphics.Color
 object PulseAds {
     const val ENABLED = false
 
+    /** The foss build shows no ads: nothing to switch off. */
+    fun off(c: android.content.Context): Boolean = true
+
     fun init(c: Context) { }
 
     @Composable
