@@ -98,7 +98,9 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
     ) {
         // the opening screen is the look's own colour or a drawn backdrop, never a wallpaper picture: wallpapers live in the theme's window and are placed by hand there
         when (th.id) {
-            "win11" -> Image(painterResource(R.drawable.splash_win11_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            // turned sideways on a tablet: a plain dark gradient (no picture, no blur), so the opening is not the white wallpaper stretched
+            "win11" -> if (landscapeTablet()) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF0B1424), Color(0xFF000000)))))
+                else Image(painterResource(R.drawable.splash_win11_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             "win95" -> Box(Modifier.fillMaxSize().background(Color(0xFF008080)))
             else -> Box(Modifier.fillMaxSize().background(th.bg))
         }
@@ -414,4 +416,10 @@ private fun rememberPicture(uri: String): androidx.compose.ui.graphics.ImageBitm
             ctx.contentResolver.openInputStream(android.net.Uri.parse(uri))?.use { android.graphics.BitmapFactory.decodeStream(it, null, opts) }
         }.getOrNull()?.asImageBitmap()
     }
+}
+
+@Composable
+private fun landscapeTablet(): Boolean {
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    return cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.smallestScreenWidthDp >= 600
 }
