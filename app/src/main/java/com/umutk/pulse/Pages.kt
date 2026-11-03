@@ -486,12 +486,24 @@ fun SettingsPage() {
                 }
                 }
                 Text("Theme", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                // theme locks: a look other than the one in use is locked until one ad opens them all for 2 minutes
+                val themeGate = com.umutk.pulse.ads.rememberAdGate(tr("Unlock themes", "Temaları aç"), tr("Watch a short ad to pick any theme for 2 minutes.", "2 dakika boyunca istediğin temayı seçmek için kısa bir reklam izle."), key = com.umutk.pulse.ads.ThemeLock.KEY, minutes = com.umutk.pulse.ads.ThemeLock.MINUTES, pass = false)
+                // the lock state is read again every few seconds, so the padlocks close when the 2 minutes run out
+                val lockTick by produceState(0L) { while (true) { value = System.currentTimeMillis(); kotlinx.coroutines.delay(5000) } }
                 @Composable fun ThemeRow(pair: List<PTheme>, center: Boolean = false) {
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp, if (center) Alignment.CenterHorizontally else Alignment.Start)) {
-                        pair.forEach { th -> Column((if (center) Modifier.fillMaxWidth(.5f) else Modifier.weight(1f)).semantics { contentDescription = th.name }.clickable { Cfg.setTheme(ctx, th.id) }.then(if (th.id == Look.theme.id) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier.border(1.dp, T.line, RoundedCornerShape(10.dp))).padding(8.dp)) {
-                            ThemePreview(th)
-                            Text(th.name, color = T.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
-                        } }
+                        pair.forEach { th ->
+                            val locked = remember(th.id, lockTick) { com.umutk.pulse.ads.ThemeLock.isLocked(ctx, th.id) }
+                            Column((if (center) Modifier.fillMaxWidth(.5f) else Modifier.weight(1f)).semantics { contentDescription = th.name }.clickable { if (locked) themeGate { Cfg.setTheme(ctx, th.id) } else Cfg.setTheme(ctx, th.id) }.then(if (th.id == Look.theme.id) Modifier.border(2.dp, Look.accent, RoundedCornerShape(10.dp)) else Modifier.border(1.dp, T.line, RoundedCornerShape(10.dp))).padding(8.dp)) {
+                                Box(Modifier.fillMaxWidth()) {
+                                    Box(Modifier.fillMaxWidth().alpha(if (locked) .45f else 1f)) { ThemePreview(th) }
+                                    if (locked) PIcon("lock", T.text, 26.dp, Modifier.align(Alignment.Center))
+                                }
+                                Text(th.name, color = T.text, fontSize = 12.sp, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
+                            }
+                        }
+                    }
+                }
                         if (pair.size == 1 && !center) Spacer(Modifier.weight(1f))
                     }
                 }

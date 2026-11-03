@@ -49,7 +49,7 @@ fun RewardAdDialog(title: String, text: String, watch: String, cancel: String, o
  * (the themed dialog) comes first and the action runs only after the ad is watched to the end. The foss build runs the action at once.
  */
 @Composable
-fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int = 0): (() -> Unit) -> Unit {
+fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int = 0, pass: Boolean = true): (() -> Unit) -> Unit {
     val ctx = LocalContext.current
     if (!PulseAds.ENABLED || Premium.on(ctx)) return { action -> action() }
     var pending by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -64,7 +64,7 @@ fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int =
                 pending = null
                 val act = ctx as? Activity
                 val noAd = { Toast.makeText(ctx, tr("No ad now, try again", "Şu an reklam yok, tekrar dene"), Toast.LENGTH_SHORT).show() }
-                if (act == null) noAd() else PulseAds.showRewarded(act, onReward = { if (key.isNotEmpty()) AdUnlocks.open(ctx, key, minutes); if (key != AdUnlocks.PASS) AdUnlocks.open(ctx, AdUnlocks.PASS, AdUnlocks.PASS_MINUTES); action() }, onFail = noAd)
+                if (act == null) noAd() else PulseAds.showRewarded(act, onReward = { if (key.isNotEmpty()) AdUnlocks.open(ctx, key, minutes); if (pass && key != AdUnlocks.PASS) AdUnlocks.open(ctx, AdUnlocks.PASS, AdUnlocks.PASS_MINUTES); action() }, onFail = noAd)
             },
             onCancel = { pending = null },
         )
@@ -72,7 +72,7 @@ fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int =
     return { cb ->
         // a feature unlocked by an ad stays open for its time: no new ad until it runs out
         // the pass (30 minutes, everywhere) or the feature's own time opens it without a new ad
-        if (AdUnlocks.isOpen(ctx, AdUnlocks.PASS) || (key.isNotEmpty() && AdUnlocks.isOpen(ctx, key))) cb() else pending = cb
+        if ((pass && AdUnlocks.isOpen(ctx, AdUnlocks.PASS)) || (key.isNotEmpty() && AdUnlocks.isOpen(ctx, key))) cb() else pending = cb
     }
 }
 
