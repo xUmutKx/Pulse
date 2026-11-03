@@ -2036,3 +2036,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: IntroDB özeti (recap) de atlanır ("Özeti geç"); atlama düğmesi ilerleme çubuğuna yaklaştırıldı (84 dp)
 - (sürüm sonra) derlenmedi: İntro/özet atlama düğmesi sağa yaslı değil, bir miktar sola (64 dp)
 - (sürüm sonra) derlenmedi: İntro önbelleği bölüm bazlı oldu (eskiden klasör bazlıydı, bütün bölümler aynı süreyi kullanıyordu); IntroDB sonucu ayrı, yerel eşleşme ayrı önbellekte; özet bilgisi eski kayıtlardan gelmiyordu
+- (sürüm sonra) derlenmedi: Hava widget: konum yoksa son kayıtlı/hava sayfası konumu denenir; büyük widgette 7 günlük tahmin
