@@ -1933,3 +1933,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Reward dialog: the ad card background is transparent (it takes the dialog's own background)
 - (sürüm sonra) derlenmedi: Win11 desktop: the icon backing is a bluer, far more see-through tile; icons move left by two fifths of their width
 - (sürüm sonra) derlenmedi: Ads: a native ad strip under the e-book shelf and reader, and under the app manager (play build)
+- (sürüm sonra) derlenmedi: Weather: an ad strip at the foot; the weather map opens after a rewarded ad each time (play build)

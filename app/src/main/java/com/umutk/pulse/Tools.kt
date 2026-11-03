@@ -122,7 +122,11 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "tempmail" -> com.umutk.pulse.extras.tempmail.TempMailHub(back)
         id == "ebook" -> com.umutk.pulse.extras.ebook.EbookHub(back)
         id == "weathermap" -> com.umutk.pulse.extras.weathermap.WeatherMapHub(back)
-        id == "weather" -> com.umutk.pulse.extras.weather.WeatherHub(back)
+        id == "weather" -> Column(Modifier.fillMaxSize()) {
+            Box(Modifier.weight(1f).fillMaxWidth()) { com.umutk.pulse.extras.weather.WeatherHub(back) }
+            // the ad strip at the foot of the weather (play build; nothing in the foss build or with Premium)
+            com.umutk.pulse.ads.AdStrip(bg = androidx.compose.ui.graphics.Color.Transparent, text = T.text, sub = T.sub, accent = T.accent)
+        }
         id == "paint" -> com.umutk.pulse.extras.paint.PaintHub(back)
         id == "browser" -> com.umutk.pulse.extras.browser.BrowserHub(back)
         id == "office" -> { androidx.activity.compose.BackHandler { back() }; OfficePage() }

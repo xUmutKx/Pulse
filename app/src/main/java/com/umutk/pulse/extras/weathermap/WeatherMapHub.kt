@@ -427,6 +427,22 @@ private fun DrawScope.drawTile(img: ImageBitmap, z: Int, tx: Int, ty: Int, p: Ma
 
 @Composable
 fun WeatherMapHub(onBack: () -> Unit, at: Place? = null) {
+    // the whole map opens after a rewarded ad (play build; each opening asks again; the foss build and Premium open it at once)
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    var unlocked by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(!com.umutk.pulse.ads.PulseAds.ENABLED || com.umutk.pulse.ads.Premium.on(ctx)) }
+    val mapGate = com.umutk.pulse.ads.rememberAdGate(com.umutk.pulse.tr("Weather map", "Hava haritası"), com.umutk.pulse.tr("Watch a short ad to open the map.", "Haritayı açmak için kısa bir reklam izle."), pass = false)
+    if (!unlocked) {
+        androidx.activity.compose.BackHandler { onBack() }
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = androidx.compose.ui.Alignment.Center) {
+            com.umutk.pulse.PButton(com.umutk.pulse.tr("Watch an ad to open the map", "Haritayı açmak için reklam izle"), onClick = { mapGate { unlocked = true } })
+        }
+        return
+    }
+    WeatherMapScreen(onBack, at)
+}
+
+@Composable
+private fun WeatherMapScreen(onBack: () -> Unit, at: Place? = null) {
     val ctx = LocalContext.current
     val density = LocalDensity.current.density
     val prefs = remember { ctx.getSharedPreferences("weathermap", Context.MODE_PRIVATE) }
