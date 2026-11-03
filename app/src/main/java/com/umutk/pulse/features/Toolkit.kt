@@ -126,7 +126,7 @@ private val tools = listOf(
     Tool("Flashlight", "El feneri", "flash") { Flashlight() },
     Tool("Lux meter", "Işık ölçer", "light") { LuxMeter() },
     Tool("Dice", "Zar", "dice") { Dice() },
-    Tool("Converter", "Dönüştürücü", "filetypes") { com.umutk.pulse.extras.convert.ConverterPage() },
+    Tool("Floating keyboard", "Yüzen klavye", "keyboard") { FloatingKeyboardTool() },
     Tool("Coin flip", "Yazı tura", "coin") { CoinFlip() },
     Tool("Clipboard", "Pano", "clipboard") { ClipboardTool() },
     Tool("Screenshot", "Ekran görüntüsü", "screenshot") { ScreenshotTool() },
@@ -153,6 +153,34 @@ private val tools = listOf(
     Tool("Floating timer", "Yüzen sayaç", "pin") { FloatingTimerTool() },
     Tool("Big text", "Büyük yazı", "document") { BigTextTool() },
 )
+
+/**
+ * The floating keyboard, as a Toolkit tile: a preview in the keyboard's own colours, a button that shows it (the same as the quick settings tile)
+ * and one that opens its settings, where it is edited.
+ */
+@Composable
+private fun FloatingKeyboardTool() {
+    val ctx = LocalContext.current
+    val openTool = com.umutk.pulse.LocalOpenTool.current
+    val th = com.umutk.pulse.extras.keyboard.KeyboardThemes.of(com.umutk.pulse.extras.keyboard.KeyboardPrefs.theme, true)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        // the preview: a handle and three rows of keys, in the keyboard's colours
+        Column(Modifier.fillMaxWidth(.9f).align(Alignment.CenterHorizontally).clip(RoundedCornerShape(16.dp)).background(th.bg).padding(10.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Box(Modifier.align(Alignment.CenterHorizontally).width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f)))
+            repeat(3) { r ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    repeat(if (r == 2) 7 else 10) { Box(Modifier.weight(1f).height(30.dp).clip(RoundedCornerShape(th.radius.dp)).background(th.key)) }
+                }
+            }
+        }
+        PButton(tr("Show the floating keyboard", "Yüzen klavyeyi göster"), Modifier.fillMaxWidth()) {
+            com.umutk.pulse.extras.keyboard.KeyboardPrefs.load(ctx)
+            com.umutk.pulse.extras.keyboard.KeyboardPrefs.floatSession = true
+            ctx.startActivity(Intent(ctx, com.umutk.pulse.extras.keyboard.KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        PButton(tr("Edit the keyboard", "Klavyeyi düzenle"), Modifier.fillMaxWidth()) { openTool("keyboard") }
+    }
+}
 
 /** The Toolkit page: a 3-column grid of tiles; a tile opens its tool, the chevron goes back. */
 @Composable
