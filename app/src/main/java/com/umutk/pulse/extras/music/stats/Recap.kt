@@ -85,7 +85,7 @@ object PlayLog {
 
 private val DEEP = Color(0xFF14102B); private val VIOLET = Color(0xFF7C4DFF); private val PINK = Color(0xFFFF4F9A); private val LIME = Color(0xFFC6FF3D); private val SOFT = Color(0xFFEDE7FF)
 
-class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList(), val songPaths: List<String> = emptyList(), val latest: List<Pair<String, String>> = emptyList())
+class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList(), val songPaths: List<String> = emptyList(), val latest: List<Triple<String, String, String>> = emptyList())
 
 private fun makeRecap(c: Context, days: Int): Recap {
     val from = System.currentTimeMillis() - days * 86_400_000L
@@ -114,7 +114,18 @@ private fun makeRecap(c: Context, days: Int): Recap {
     return Recap(from, minutes, e.count { it.counted }, artists, songs, part.toList(), day.toList(), hour.indices.maxByOrNull { hour[it] } ?: 0, PlayLog.since(c),
         mood.toList().sortedByDescending { it.second }.take(5), genre.toList().sortedByDescending { it.second }.take(5), songPaths,
         // the last songs played in the range, newest first, each once
-        e.sortedByDescending { it.t }.distinctBy { it.path }.take(6).map { it.title to it.artist })
+        e.sortedByDescending { it.t }.distinctBy { it.path }.take(6).map { Triple(it.title, it.artist, it.path) })
+}
+
+/** A song's cover, small, found by its path in the library; an empty square when it has none. */
+@Composable
+private fun RecapCover(path: String?, size: androidx.compose.ui.unit.Dp) {
+    val ctx = LocalContext.current
+    val track = remember(path) { path?.let { p -> com.umutk.pulse.extras.music.MusicLibrary.tracks.value.firstOrNull { it.path == p } } }
+    val img by produceState<ImageBitmap?>(null, track) { value = track?.let { t -> withContext(Dispatchers.IO) { com.umutk.pulse.extras.music.trackArt(ctx, t) } } }
+    Box(Modifier.size(size).clip(RoundedCornerShape(10.dp)).background(Color.White.copy(alpha = .08f)), contentAlignment = Alignment.Center) {
+        img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop) }
+    }
 }
 
 /** The card as a picture (1080 x 1920): the figures of the recap on a dark violet ground. Saved as a PNG in Download/Pulse. */
@@ -187,8 +198,11 @@ fun RecapScreen(back: () -> Unit) {
                                 else tr("Swipe to see what you listened to.", "Dinlediklerini görmek için kaydır."), color = SOFT.copy(alpha = .8f), fontSize = 16.sp)
                             if (r.latest.isNotEmpty()) {
                                 Text(tr("Last played", "Son çalınanlar"), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, modifier = Modifier.padding(top = 24.dp))
-                                r.latest.forEach { (title, artist) ->
-                                    Text(title + (if (artist.isNotBlank()) "  ·  $artist" else ""), color = SOFT.copy(alpha = .85f), fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                                r.latest.forEach { (title, artist, path) ->
+                                    Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        RecapCover(path, 40.dp)
+                                        Text(title + (if (artist.isNotBlank()) "  ·  $artist" else ""), color = SOFT.copy(alpha = .85f), fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(start = 12.dp).weight(1f))
+                                    }
                                 }
                             }
                             if (since != null) Text(tr("Counted from $since, when Pulse began to note the listening.", "$since tarihinden beri sayılır: Pulse dinlemeyi o gün yazmaya başladı."), color = SOFT.copy(alpha = .55f), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
@@ -216,9 +230,12 @@ fun RecapScreen(back: () -> Unit) {
                             cover?.let { Image(it, null, Modifier.padding(top = 14.dp).size(150.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop) }
                             if (r.songs.isEmpty()) Text("—", color = SOFT, fontSize = 30.sp)
                             r.songs.forEachIndexed { i, s ->
-                                Column(Modifier.padding(top = 12.dp)) {
-                                    Text("${i + 1}  " + s.first, color = SOFT, fontSize = if (i == 0) 28.sp else 19.sp, fontWeight = if (i == 0) FontWeight.Black else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                                    Text(s.second + (if (s.second.isNotBlank()) "  ·  " else "") + "${s.third} " + tr("plays", "dinleme"), color = SOFT.copy(alpha = .55f), fontSize = 12.sp)
+                                Row(Modifier.padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    RecapCover(r.songPaths.getOrNull(i), if (i == 0) 64.dp else 48.dp)
+                                    Column(Modifier.padding(start = 12.dp).weight(1f)) {
+                                        Text("${i + 1}  " + s.first, color = SOFT, fontSize = if (i == 0) 28.sp else 19.sp, fontWeight = if (i == 0) FontWeight.Black else FontWeight.Medium, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        Text(s.second + (if (s.second.isNotBlank()) "  ·  " else "") + "${s.third} " + tr("plays", "dinleme"), color = SOFT.copy(alpha = .55f), fontSize = 12.sp)
+                                    }
                                 }
                             }
                         }

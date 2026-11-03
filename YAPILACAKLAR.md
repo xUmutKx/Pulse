@@ -1963,3 +1963,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.347 derlenmedi: Game Hub library: the info line (size/play time) is no longer cut off; a wide store banner (e.g. Resident Evil 4) shows whole on the tile instead of being cropped
 - (sürüm sonra) derlenmedi: Music player cover: the lyrics and the three-dot buttons no longer touch (gap added); the favourite star is the same 36dp size as them, and smaller
 - (sürüm sonra) derlenmedi: Music recap: black background and a 'Last played' list on the first page; Statistics: a 'Recently added' section next to 'Recently played'
+- (sürüm sonra) derlenmedi: Music recap: song covers next to the top songs and the last-played list
