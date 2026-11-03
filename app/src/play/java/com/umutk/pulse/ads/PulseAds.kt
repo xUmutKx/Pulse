@@ -39,6 +39,9 @@ import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback
  */
 object PulseAds {
     const val ENABLED = true
+
+    /** No ad is drawn while the premium is owned or the ad credit is open (the credit: a watched ad, 5 minutes). */
+    fun off(c: Context): Boolean = Premium.on(c) || AdUnlocks.isOpen(c, AdUnlocks.PASS)
     const val USE_TEST = true
     private const val BANNER_LIVE = "ca-app-pub-2608227008506779/9168342683"
     private const val NATIVE_LIVE = "ca-app-pub-2608227008506779/8545526151"
@@ -60,7 +63,7 @@ object PulseAds {
     @Composable
     fun Banner(modifier: Modifier = Modifier) {
         // premium: no ads at all
-        if (Premium.on(LocalContext.current)) return
+        if (off(LocalContext.current)) return
         AndroidView(
             modifier = modifier,
             // a failed ad must never take the screen down: the place stays empty instead
@@ -76,7 +79,7 @@ object PulseAds {
     @Composable
     fun NativeCard(modifier: Modifier = Modifier, bg: Color, text: Color, sub: Color, accent: Color) {
         val ctx = LocalContext.current
-        if (Premium.on(ctx)) return
+        if (off(ctx)) return
         var ad by remember { mutableStateOf<NativeAd?>(null) }
         DisposableEffect(Unit) {
             val loader = AdLoader.Builder(ctx, NATIVE).forNativeAd { ad = it }.build()

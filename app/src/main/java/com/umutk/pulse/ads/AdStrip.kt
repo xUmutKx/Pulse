@@ -11,6 +11,6 @@ import androidx.compose.ui.unit.dp
 /** A native ad strip for a page's foot, in the page's own colours (play build; nothing in the foss build or with Premium). */
 @Composable
 fun AdStrip(bg: Color, text: Color, sub: Color, accent: Color) {
-    if (!PulseAds.ENABLED || Premium.on(LocalContext.current)) return
+    if (!PulseAds.ENABLED || PulseAds.off(LocalContext.current)) return
     PulseAds.NativeCard(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp), bg = bg, text = text, sub = sub, accent = accent)
 }
