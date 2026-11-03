@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -377,7 +378,9 @@ private fun GameCover(pkg: String, pal: Pal, wide: Boolean = true) {
     val bg = if (pal.flat) Modifier.background(pal.card) else Modifier.background(Brush.verticalGradient(listOf(pal.card, pal.bg)))
     Box(Modifier.fillMaxSize().then(bg), contentAlignment = Alignment.Center) {
         val a = art
-        if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+        // a wide banner (a landscape store picture) is shown whole on a tile, so its logo is not cut off; covers still fill the card
+        val wideArt = a != null && !wide && a.width > a.height * 1.2f
+        if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = if (wideArt) ContentScale.Fit else ContentScale.Crop)
         else icon?.let { Image(it, null, Modifier.fillMaxSize(0.5f)) }
     }
 }
@@ -388,7 +391,7 @@ private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, info: String?, onCli
     Column(Modifier.padding(6.dp).clickable(onClick = onClick), horizontalAlignment = Alignment.Start) {
         Box(Modifier.fillMaxWidth().aspectRatio(2f / 3f).clip(RoundedCornerShape(pal.radius))) { GameCover(g.pkg, pal, wide = false) }
         // the info line always takes its place, so a tile keeps its height when the sort changes
-        Box(Modifier.padding(top = 4.dp).height(16.dp)) { if (info != null) Text(info, color = pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
+        Box(Modifier.padding(top = 4.dp).heightIn(min = 20.dp)) { if (info != null) Text(info, color = pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
         Text(g.name, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 17.sp)
         if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 11.sp)
     }

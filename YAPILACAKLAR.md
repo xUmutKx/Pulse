@@ -1960,3 +1960,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notes: the folder menu is at the top right; folders open into sub folders with an arrow (Windows style)
 - (sürüm sonra) derlenmedi: Notes: a file can be linked to a note (the address is kept, the file is not copied); the note shows its name and place, and opens it
 - 1.0.346 derlenmedi: Notes side panel and folder tree, book view, file links; the menu at the top right; download popup; Files date and previews; installer via root; tablet opening; vibration test; keyboard hardware bar; widgets: square weather detail
+- (sürüm sonra) derlenmedi: Game Hub library: the info line (size/play time) is no longer cut off; a wide store banner (e.g. Resident Evil 4) shows whole on the tile instead of being cropped
