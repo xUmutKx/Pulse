@@ -85,7 +85,9 @@ internal object YifySubs {
 
     suspend fun search(query: String, lang: String): Result<List<SubHit>> = withContext(Dispatchers.IO) {
         runCatching {
-            val movies = JSONArray(String(http("$SITE/ajax/search/?mov=${URLEncoder.encode(query, "UTF-8")}"), Charsets.UTF_8))
+            // the site only knows films: the episode tag (S03E07) is taken off, it would make the search find nothing
+            val title = OpenSubs.episodeOf(query).first
+            val movies = JSONArray(String(http("$SITE/ajax/search/?mov=${URLEncoder.encode(title, "UTF-8")}"), Charsets.UTF_8))
             if (movies.length() == 0) return@runCatching emptyList<SubHit>()
             val imdb = movies.getJSONObject(0).getString("imdb")
             parseRows(String(http("$SITE/movie-imdb/$imdb"), Charsets.UTF_8), lang)
@@ -194,6 +196,7 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
     val w = LocalWindowLook.current
     val scope = rememberCoroutineScope()
     val none = tr("No subtitles found", "Altyazı bulunamadı")
+    val noEpisode = tr("Without an OpenSubtitles key only films are searched. Add a key for TV episodes.", "OpenSubtitles anahtarı olmadan yalnızca filmler aranır. Diziler için anahtar ekleyin.")
     val failed = tr("Failed. Check the connection and try again.", "Olmadı. Bağlantıyı kontrol edip yeniden deneyin.")
     var query by remember { mutableStateOf(searchTitle(fileName)) }
     var lang by remember { mutableStateOf(appLangName()) }
@@ -208,8 +211,18 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
         busy = true; err = false; hits = emptyList(); line = tr("Searching...", "Aranıyor...")
         scope.launch {
             val k = OpenSubs.key(ctx)
-            (if (k.isNotBlank()) OpenSubs.search(query.trim(), lang, k) else YifySubs.search(query.trim(), lang))
-                .onSuccess { hits = it; line = if (it.isEmpty()) none else "" }
+            val isEpisode = OpenSubs.episodeOf(query.trim()).second != null
+            // with a key the OpenSubtitles index (films and TV episodes); without one the film-only site, then the reason when nothing is found
+            val found = if (k.isNotBlank()) OpenSubs.search(query.trim(), lang, k) else YifySubs.search(query.trim(), lang)
+            found
+                .onSuccess {
+                    hits = it
+                    line = when {
+                        it.isNotEmpty() -> ""
+                        isEpisode && k.isBlank() -> noEpisode
+                        else -> none
+                    }
+                }
                 .onFailure { err = true; line = failed }
             busy = false
         }
