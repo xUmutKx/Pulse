@@ -1970,3 +1970,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Toolkit: Converter tile removed; a Floating keyboard tile with a preview, a show button and an edit button (keyboard settings)
 - (sürüm sonra) derlenmedi: Keyboard Turkish: the capital I is ı in Turkish (taps, glide and the word after a key are lower-cased by the language, not by the phone's language)
 - (sürüm sonra) derlenmedi: Keyboard shift: one tap = one capital letter; two quick taps = caps lock; another tap turns it off
+- (sürüm sonra) derlenmedi: Messages: blocked messages are kept (no notification) and shown under Blocked; spam numbers are never blocked on their own, each one is confirmed in a popup (Suspicious numbers)
