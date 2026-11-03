@@ -115,6 +115,19 @@ fun KeyboardSettings(back: () -> Unit) {
             }
             Spacer(Modifier.height(8.dp))
             PField(test, { test = it }, tr("Try it here", "Burada dene"), Modifier.fillMaxWidth())
+            // keeps Pulse Keyboard the default after Pulse is force-stopped (set back through root or Shizuku when Pulse opens)
+            var keepDefault by remember { mutableStateOf(KeyboardDefault.keep(ctx)) }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text(tr("Keep Pulse as the keyboard", "Pulse'u klavye olarak tut"), color = T.text, fontSize = 15.sp)
+                    Text(tr("Needs root or Shizuku", "Root ya da Shizuku gerekir"), color = T.sub, fontSize = 12.sp)
+                }
+                PSwitch(keepDefault, { on ->
+                    keepDefault = on
+                    KeyboardDefault.setKeep(ctx, on)
+                    if (on) Thread { runCatching { KeyboardDefault.restore(ctx.applicationContext) } }.start()
+                })
+            }
         }
 
         // themes
