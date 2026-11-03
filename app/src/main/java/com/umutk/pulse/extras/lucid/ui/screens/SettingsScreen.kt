@@ -59,6 +59,7 @@ import androidx.compose.material.icons.outlined.FileDownload
 import androidx.compose.material.icons.outlined.FileUpload
 import androidx.compose.material.icons.outlined.KeyboardArrowUp
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -156,6 +157,8 @@ fun SettingsScreen(
     val upcomingEnabled by settingsDataStore.upcomingAlarmEnabledFlow.collectAsState(initial = false)
     val upcomingMinutesRaw by settingsDataStore.rawUpcomingAlarmMinutesFlow.collectAsState(initial = 15)
     val awakeCheckEnabled by settingsDataStore.awakeCheckEnabledFlow.collectAsState(initial = false)
+    val alarmTaskOn by settingsDataStore.alarmTaskEnabledFlow.collectAsState(initial = false)
+    val alarmTaskLevel by settingsDataStore.alarmTaskLevelFlow.collectAsState(initial = 0)
     val awakeCheckMinutes by settingsDataStore.awakeCheckMinutesFlow.collectAsState(
         initial = SettingsDataStore.DEFAULT_AWAKE_CHECK_MINUTES
     )
@@ -1170,6 +1173,33 @@ fun SettingsScreen(
                             color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f)
                         )
 
+                        // the alarm task: solve a sum to stop the alarm (off by default)
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = "Alarm task", fontSize = 16.sp, fontWeight = FontWeight.Medium, color = MaterialTheme.colorScheme.onSurface)
+                                Text(text = "Solve a sum to stop the alarm", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                            Switch(
+                                checked = alarmTaskOn,
+                                onCheckedChange = { checked -> scope.launch { settingsDataStore.setAlarmTaskEnabled(checked) } }
+                            )
+                        }
+                        if (alarmTaskOn) {
+                            Row(modifier = Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                listOf(0 to "Easy", 1 to "Medium", 2 to "Hard").forEach { (lv, label) ->
+                                    Button(
+                                        onClick = { scope.launch { settingsDataStore.setAlarmTaskLevel(lv) } },
+                                        colors = ButtonDefaults.buttonColors(
+                                            containerColor = if (alarmTaskLevel == lv) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                                        )
+                                    ) { Text(label) }
+                                }
+                            }
+                        }
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.SpaceBetween,
