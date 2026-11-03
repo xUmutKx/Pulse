@@ -93,21 +93,24 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
     val scope = rememberCoroutineScope()
     val ramPct = if (s.ramTotalMb == 0) 0 else 100 * s.ramUsedMb / s.ramTotalMb
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        // every detail page of the overview needs its own short ad (play build; the foss build opens at once)
+        val detailGate = com.umutk.pulse.ads.rememberAdGate(tr("Open details", "Ayrıntıları aç"), tr("Watch a short ad to open this.", "Bunu açmak için kısa bir reklam izle."), pass = false)
+        val openGated: (String) -> Unit = { k -> detailGate { onOpen(k) } }
         PHead("Overview", if (s.root) "root" else "")
         com.umutk.pulse.features.DeviceHeader()
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { onOpen("cpu") }
-            Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { onOpen("memory") }
+            Tile("Processor", "%${s.cpu}", resColor("cpu"), s.cpu / 100f, Modifier.weight(1f)) { openGated("cpu") }
+            Tile("Memory", "%$ramPct", resColor("memory"), ramPct / 100f, Modifier.weight(1f)) { openGated("memory") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f)) { onOpen("thermal") }
-            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f)) { onOpen("battery") }
+            Tile("Temperature", Opt.temp(s.cpuTemp), resColor("thermal"), (s.cpuTemp / 90f), Modifier.weight(1f)) { openGated("thermal") }
+            Tile("Battery", "%${s.batPct}" + "", resColor("battery"), s.batPct / 100f, Modifier.weight(1f)) { openGated("battery") }
         }
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f)) { onOpen("storage") }
+            Tile("Storage", "%${(storage * 100).toInt()}", resColor("disk"), storage, Modifier.weight(1f)) { openGated("storage") }
             Tile("Graphics", if (s.gpu >= 0) "%${s.gpu}" else "—", resColor("gpu"), s.gpu.coerceAtLeast(0) / 100f, Modifier.weight(1f))
         }
-        PCard(Modifier.clickable { onOpen("network") }) {
+        PCard(Modifier.clickable { openGated("network") }) {
             Text("Network", color = T.sub, fontSize = 12.sp)
             Row { Text("↓ ${rate(s.down.toFloat())}", color = resColor("net"), fontSize = 16.sp, modifier = Modifier.weight(1f)); Text("↑ ${rate(s.up.toFloat())}", color = resColor("net"), fontSize = 16.sp) }
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 70.dp)
@@ -116,7 +119,7 @@ fun DashboardPage(onOpen: (String) -> Unit = {}) {
         val secRows by androidx.compose.runtime.produceState<List<Pair<String, String>>?>(null) {
             value = withContext(Dispatchers.IO) { runCatching { Hw.system(ctx).firstOrNull { it.title == "Security" }?.rows.orEmpty() }.getOrDefault(emptyList()) }
         }
-        PCard(Modifier.fillMaxWidth().clickable { onOpen("security") }) {
+        PCard(Modifier.fillMaxWidth().clickable { openGated("security") }) {
             // the title with its shield, drawn for the look like the other icons of the page
             androidx.compose.foundation.layout.Row(verticalAlignment = Alignment.CenterVertically) {
                 PIcon("shieldOk", T.sub, 16.dp)

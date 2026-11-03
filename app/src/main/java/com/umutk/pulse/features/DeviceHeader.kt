@@ -54,27 +54,19 @@ fun DeviceHeader() {
         if (photo != null) {
             Image(photo, null, Modifier.height(170.dp))
         } else {
-            // a Samsung Galaxy S23 seen from the back: a thin flat aluminium frame, a glass back, the camera island at the top left
+            // a Samsung Galaxy S23 seen from the front: a thin flat aluminium frame, the screen with thin bezels, the front camera in the top centre
             Canvas(Modifier.width(84.dp).height(176.dp)) {
                 val w = size.width
                 val h = size.height
                 // the aluminium frame: straight sides and small corners
                 drawRoundRect(color = Color(0xFF9EA3AD), size = size, cornerRadius = CornerRadius(w * .09f, w * .09f))
-                // the glass back, inside a thin edge
-                drawRoundRect(color = Color(0xFF1C1E24), topLeft = Offset(w * .035f, h * .03f), size = Size(w * .93f, h * .94f), cornerRadius = CornerRadius(w * .075f, w * .075f))
-                // the camera island: a square at the top left with a fine edge
-                val isl = Size(w * .46f, w * .46f)
-                val islTL = Offset(w * .1f, h * .075f)
-                drawRoundRect(color = Color(0xFF2A2D35), topLeft = Offset(islTL.x - 1.5f, islTL.y - 1.5f), size = Size(isl.width + 3f, isl.height + 3f), cornerRadius = CornerRadius(w * .1f, w * .1f))
-                drawRoundRect(color = Color(0xFF101216), topLeft = islTL, size = isl, cornerRadius = CornerRadius(w * .085f, w * .085f))
-                // three lenses in the island, the flash beside them
-                val lens = w * .085f
-                drawCircle(color = Color(0xFF30343D), radius = lens, center = Offset(islTL.x + isl.width * .3f, islTL.y + isl.height * .3f))
-                drawCircle(color = Color(0xFF0A0B0E), radius = lens * .62f, center = Offset(islTL.x + isl.width * .3f, islTL.y + isl.height * .3f))
-                drawCircle(color = Color(0xFF30343D), radius = lens * .8f, center = Offset(islTL.x + isl.width * .72f, islTL.y + isl.height * .3f))
-                drawCircle(color = Color(0xFF30343D), radius = lens * .8f, center = Offset(islTL.x + isl.width * .3f, islTL.y + isl.height * .72f))
-                drawCircle(color = Color(0xFFE9E3CC), radius = w * .03f, center = Offset(islTL.x + isl.width * .74f, islTL.y + isl.height * .74f))
-            }
+                // the screen (black glass) inside a thin bezel
+                drawRoundRect(color = Color(0xFF0B0C0F), topLeft = Offset(w * .035f, h * .03f), size = Size(w * .93f, h * .94f), cornerRadius = CornerRadius(w * .075f, w * .075f))
+                // the front camera: a small hole in the top centre with a fine ring
+                val cam = Offset(w / 2f, h * .06f)
+                drawCircle(color = Color(0xFF1B1D22), radius = w * .05f, center = cam)
+                drawCircle(color = Color(0xFF05060A), radius = w * .035f, center = cam)
+                        }
         }
         Text(phoneName(), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp, bottom = 6.dp))
     }
