@@ -100,7 +100,9 @@ object PulseAds {
         val label = TextView(c).apply { this.text = "Ad"; setTextColor(sub); textSize = 10f }
         val headline = TextView(c).apply { setTextColor(text); textSize = 15f; setTypeface(typeface, android.graphics.Typeface.BOLD); maxLines = 1 }
         val body = TextView(c).apply { setTextColor(sub); textSize = 12f; maxLines = 2 }
-        val cta = Button(c).apply { setTextColor(text); setBackgroundColor(accent); isAllCaps = false; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(36)).apply { leftMargin = dp(10) } }
+        // the button's text is black on a light accent (AMOLED and Win11 accents are white): otherwise the label is white on white
+        val ctaText = if (androidx.core.graphics.ColorUtils.calculateLuminance(accent) > 0.45) android.graphics.Color.BLACK else android.graphics.Color.WHITE
+        val cta = Button(c).apply { setTextColor(ctaText); setBackgroundColor(accent); isAllCaps = false; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(36)).apply { leftMargin = dp(10) } }
         texts.addView(label); texts.addView(headline); texts.addView(body)
         row.addView(icon); row.addView(texts); row.addView(cta)
         root.addView(row)
