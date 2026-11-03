@@ -42,3 +42,6 @@
 -dontwarn org.bouncycastle.**
 -dontwarn com.gemalto.**
 -dontwarn com.github.jaiimageio.**
+
+# the Google Mobil Reklamlar SDK refers to an Android 14 class (loudness control) that the build's SDK does not have; the ads do not use it
+-dontwarn android.media.LoudnessCodecController**
