@@ -780,6 +780,18 @@ class SettingsDataStore(private val context: Context) {
             .getOrDefault(TimerVibrationPattern.TICK_TICK)
     }
 
+    /** Alarm task: the alarm is stopped by solving a sum (off by default). Level 0 easy, 1 medium, 2 hard. */
+    val alarmTaskEnabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { prefs -> prefs[KEY_ALARM_TASK_ENABLED] ?: false }
+    val alarmTaskLevelFlow: Flow<Int> = context.settingsDataStore.data.map { prefs -> (prefs[KEY_ALARM_TASK_LEVEL] ?: 0).coerceIn(0, 2) }
+
+    suspend fun setAlarmTaskEnabled(enabled: Boolean) {
+        context.settingsDataStore.edit { it[KEY_ALARM_TASK_ENABLED] = enabled }
+    }
+
+    suspend fun setAlarmTaskLevel(level: Int) {
+        context.settingsDataStore.edit { it[KEY_ALARM_TASK_LEVEL] = level.coerceIn(0, 2) }
+    }
+
     val awakeCheckEnabledFlow: Flow<Boolean> = context.settingsDataStore.data.map { prefs ->
         prefs[KEY_AWAKE_CHECK_ENABLED] ?: false
     }
@@ -1609,6 +1621,8 @@ private val KEY_WORLD_CLOCK_CARD_COLOR = longPreferencesKey("world_clock_card_co
         private val KEY_TIMER_VIBRATION_PATTERN = stringPreferencesKey("timer_vibration_pattern")
 
         private val KEY_AWAKE_CHECK_ENABLED = booleanPreferencesKey("awake_check_enabled")
+        private val KEY_ALARM_TASK_ENABLED = booleanPreferencesKey("alarm_task_enabled")
+        private val KEY_ALARM_TASK_LEVEL = intPreferencesKey("alarm_task_level")
         private val KEY_AWAKE_CHECK_MINUTES = intPreferencesKey("awake_check_minutes")
 
         private val KEY_WORLD_CLOCK_ZONES = stringPreferencesKey("world_clock_zones")

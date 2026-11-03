@@ -1,5 +1,6 @@
 package com.umutk.pulse.extras.lucid
 
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.Canvas
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
@@ -284,6 +285,8 @@ fun AlarmRingingScreen(
 ) {
     val scope = rememberCoroutineScope()
     val appContext = LocalContext.current.applicationContext
+    val alarmTaskOn by settingsDataStore.alarmTaskEnabledFlow.collectAsState(initial = false)
+    val alarmTaskLevel by settingsDataStore.alarmTaskLevelFlow.collectAsState(initial = 0)
 
     var alarmEntity by remember { mutableStateOf<AlarmEntity?>(null) }
     LaunchedEffect(alarmId) {
@@ -713,22 +716,26 @@ fun AlarmRingingScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                DragDismissPill(
-                    text = "Dismiss",
-                    onDismiss = onDismiss,
-                    onReveal = { p, c -> revealProgress = p; revealCenter = c },
-                    containerColor = if (dismissContainerColorLong != 0L) {
-                        Color(dismissContainerColorLong.toInt())
-                    } else {
-                        AlarmLockPalette.DismissButton
-                    },
-                    contentColor = if (dismissTextColorLong != 0L) {
-                        Color(dismissTextColorLong.toInt())
-                    } else {
-                        Color.White
-                    },
-                    fontFamily = dismissTypeface
-                )
+                var taskOpen by remember { mutableStateOf(false) }
+                if (taskOpen && alarmTaskOn) AlarmMathTask(alarmTaskLevel, onSolved = onDismiss)
+                else {
+                    DragDismissPill(
+                        text = "Dismiss",
+                        onDismiss = { if (alarmTaskOn) taskOpen = true else onDismiss() },
+                        onReveal = { p, c -> revealProgress = p; revealCenter = c },
+                        containerColor = if (dismissContainerColorLong != 0L) {
+                            Color(dismissContainerColorLong.toInt())
+                        } else {
+                            AlarmLockPalette.DismissButton
+                        },
+                        contentColor = if (dismissTextColorLong != 0L) {
+                            Color(dismissTextColorLong.toInt())
+                        } else {
+                            Color.White
+                        },
+                        fontFamily = dismissTypeface
+                    )
+                }
 
                 Spacer(modifier = Modifier.height(20.dp))
 
@@ -768,4 +775,36 @@ fun AlarmRingingScreen(
             }
         }
     }
+}
+
+/** The alarm task: one sum, easy, medium or hard by the setting; a right answer stops the alarm, a wrong one shows again. */
+@Composable
+private fun AlarmMathTask(level: Int, onSolved: () -> Unit) {
+    val q = remember(level) { mathQuestion(level) }
+    var answer by remember { mutableStateOf("") }
+    var wrong by remember { mutableStateOf(false) }
+    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(com.umutk.pulse.tr("Solve to stop the alarm", "Alarmı durdurmak için çöz"), color = Color.White, fontSize = 16.sp)
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(q.first, color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+        Spacer(modifier = Modifier.height(8.dp))
+        androidx.compose.material3.OutlinedTextField(
+            value = answer,
+            onValueChange = { answer = it.filter { ch -> ch.isDigit() || ch == '-' }.take(6); wrong = false },
+            singleLine = true,
+            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = androidx.compose.ui.text.input.KeyboardType.Number),
+        )
+        if (wrong) Text(com.umutk.pulse.tr("Wrong, try again", "Yanlış, tekrar dene"), color = Color(0xFFFF7070), fontSize = 13.sp)
+        Spacer(modifier = Modifier.height(10.dp))
+        androidx.compose.material3.Button(onClick = {
+            if (answer.toIntOrNull() == q.second) onSolved() else { wrong = true; answer = "" }
+        }) { Text(com.umutk.pulse.tr("OK", "Tamam")) }
+    }
+}
+
+/** A sum for the alarm task: easy adds, medium small products, hard larger products. The pair is the question and its answer. */
+private fun mathQuestion(level: Int): Pair<String, Int> = when (level) {
+    0 -> { val a = (1..20).random(); val b = (1..20).random(); "$a + $b = ?" to (a + b) }
+    1 -> { val a = (2..12).random(); val b = (2..12).random(); "$a × $b = ?" to (a * b) }
+    else -> { val a = (12..99).random(); val b = (3..19).random(); "$a × $b = ?" to (a * b) }
 }
