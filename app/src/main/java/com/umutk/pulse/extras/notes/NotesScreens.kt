@@ -77,6 +77,7 @@ fun HomeView(
     val grid = view != "list"
     val showDates = NotesPrefs.dates(ctx)
     var drawer by remember { mutableStateOf(false) }
+    var expanded by remember { mutableStateOf(setOf<String>()) }
     val unlocked = notes.filter { it.trashedAt == 0L && (!it.locked || it.id in NotesPrefs.unlocked) }
     // tags and folders come only from notes that are open, so a locked note leaks nothing
     val tags = unlocked.flatMap { NotesStore.tagsOf(it.body) }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(8).map { it.key }
@@ -107,6 +108,8 @@ fun HomeView(
         folders = folders,
         counts = unlocked.groupingBy { it.folder }.eachCount(),
         current = folder,
+        expanded = expanded,
+        onToggle = { path -> expanded = if (path in expanded) expanded - path else expanded + path },
         onAll = { folder?.let { onFolder(it) }; drawer = false },
         onFolder = { onFolder(it); drawer = false },
         onPinned = { drawer = false },
@@ -117,9 +120,9 @@ fun HomeView(
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             if (selected.isEmpty()) {
-                NIcon("folder", fg, tr("Folders", "Klasörler")) { drawer = true }
                 NIcon("back", fg, tr("Back", "Geri")) { onBack() }
                 Text(tr("Notes", "Notlar"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                NIcon("menu", fg, tr("Folders", "Klasörler")) { drawer = true }
                 NIcon("settings", fg, tr("Settings", "Ayarlar")) { onOpenSettings() }
                 NIcon("add", fg, tr("New note", "Yeni not")) { onNew() }
             } else {
@@ -403,6 +406,7 @@ fun StatsView(notes: List<Note>, onBack: () -> Unit) {
 private fun NotesSidePanel(
     all: Int, pinned: Int, locked: Int, trash: Int, folders: List<String>, counts: Map<String, Int>, current: String?,
     onAll: () -> Unit, onFolder: (String) -> Unit, onPinned: () -> Unit, onLocked: () -> Unit, onTrash: () -> Unit, onClose: () -> Unit,
+    expanded: Set<String> = emptySet(), onToggle: (String) -> Unit = {},
 ) {
     val fg = T.text
     val sub = T.sub
@@ -419,9 +423,14 @@ private fun NotesSidePanel(
                 NoteSideRow("delete", tr("Trash", "Çöp kutusu"), trash, false, fg, sub, onTrash)
                 Text(tr("Folders", "Klasörler"), color = sub, fontSize = 12.sp, modifier = Modifier.padding(start = 18.dp, top = 14.dp, bottom = 4.dp))
                 // each folder with its depth as indentation, the sub folders right under their parent
-                folders.sorted().forEach { path ->
+                // a folder shows when all its parents are open; a folder with sub folders has an arrow that opens them (as in Windows)
+                folders.sorted().filter { path -> path.split('/').dropLast(1).indices.all { k -> path.split('/').take(k + 1).joinToString("/") in expanded } }.forEach { path ->
                     val depth = path.count { it == '/' }
-                    NoteSideRow("folder", path.substringAfterLast('/'), counts[path] ?: 0, current == path, fg, sub, { onFolder(path) }, indent = depth * 14)
+                    val hasKids = folders.any { it.startsWith("$path/") }
+                    val open = path in expanded
+                    NoteSideRow("folder", path.substringAfterLast('/'), counts[path] ?: 0, current == path, fg, sub,
+                        onClick = { if (hasKids) onToggle(path) else onFolder(path) }, indent = depth * 14,
+                        arrow = if (hasKids) open else null)
                 }
                 if (folders.isEmpty()) Text(tr("No folders yet. Move a note into one from its menu.", "Henüz klasör yok. Bir notu menüsünden klasöre taşıyın."), color = sub, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 18.dp, vertical = 8.dp))
             }
@@ -430,7 +439,7 @@ private fun NotesSidePanel(
 }
 
 @Composable
-private fun NoteSideRow(icon: String, label: String, count: Int, selected: Boolean, fg: androidx.compose.ui.graphics.Color, sub: androidx.compose.ui.graphics.Color, onClick: () -> Unit, indent: Int = 0) {
+private fun NoteSideRow(icon: String, label: String, count: Int, selected: Boolean, fg: androidx.compose.ui.graphics.Color, sub: androidx.compose.ui.graphics.Color, onClick: () -> Unit, indent: Int = 0, arrow: Boolean? = null) {
     Row(
         Modifier.fillMaxWidth().padding(start = 8.dp + indent.dp, end = 8.dp, top = 2.dp, bottom = 2.dp)
             .clip(RoundedCornerShape(12.dp))
@@ -438,6 +447,9 @@ private fun NoteSideRow(icon: String, label: String, count: Int, selected: Boole
             .clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (arrow != null) PIcon("chevron", sub, 16.dp, Modifier.graphicsLayer { rotationZ = if (arrow) 0f else -90f })
+        else Spacer(Modifier.width(16.dp))
+        Spacer(Modifier.width(6.dp))
         PIcon(icon, if (selected) fg else sub, 20.dp)
         Spacer(Modifier.width(12.dp))
         Text(label, color = fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
