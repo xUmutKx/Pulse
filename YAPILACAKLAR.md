@@ -1922,3 +1922,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Game Hub: the game page is laid over its own cover, blurred; a hidden game keeps the size it had (shown in the list)
 - (sürüm sonra) derlenmedi: Ads: the native card's button label is black on a light accent (AMOLED's white button showed an empty white box)
 - (sürüm sonra) derlenmedi: Ads: the reward is given when the rewarded ad is closed (not while it still shows); the AMOLED ad card is black
+- (sürüm sonra) derlenmedi: Widgets: the Windows 11 tile has no mountain picture by default; it is a darker, more see-through plain tile (the old default is moved once)
