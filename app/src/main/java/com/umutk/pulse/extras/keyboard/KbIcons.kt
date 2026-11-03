@@ -153,6 +153,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Filled.FArrowForward
         "ArrowUpward" -> Icons.Filled.FArrowUpward
         "Backspace" -> Icons.Filled.FBackspace
+        "Delete" -> androidx.compose.material.icons.Icons.Filled.Delete
         "Check" -> Icons.Filled.FCheck
         "Close" -> Icons.Filled.FClose
         "ContentCopy" -> Icons.Filled.FContentCopy
@@ -191,6 +192,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Rounded.RArrowForward
         "ArrowUpward" -> Icons.Rounded.RArrowUpward
         "Backspace" -> Icons.Rounded.RBackspace
+        "Delete" -> androidx.compose.material.icons.Icons.Rounded.Delete
         "Check" -> Icons.Rounded.RCheck
         "Close" -> Icons.Rounded.RClose
         "ContentCopy" -> Icons.Rounded.RContentCopy
@@ -231,6 +233,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Sharp.SArrowForward
         "ArrowUpward" -> Icons.Sharp.SArrowUpward
         "Backspace" -> Icons.Sharp.SBackspace
+        "Delete" -> androidx.compose.material.icons.Icons.Sharp.Delete
         "Check" -> Icons.Sharp.SCheck
         "Close" -> Icons.Sharp.SClose
         "ContentCopy" -> Icons.Sharp.SContentCopy
@@ -269,6 +272,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Outlined.OArrowForward
         "ArrowUpward" -> Icons.Outlined.OArrowUpward
         "Backspace" -> Icons.Outlined.OBackspace
+        "Delete" -> androidx.compose.material.icons.Icons.Outlined.Delete
         "Check" -> Icons.Outlined.OCheck
         "Close" -> Icons.Outlined.OClose
         "ContentCopy" -> Icons.Outlined.OContentCopy

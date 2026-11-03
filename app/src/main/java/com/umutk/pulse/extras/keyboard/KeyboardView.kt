@@ -1336,7 +1336,7 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
                 if (m.image == null) Icon(kbIcon(th, "Bolt"), tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
                 Icon(kbIcon(th, "Check"), tr("Select", "Seç"), tint = th.text, modifier = Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp).padding(10.dp))
                 // delete this one item (the same as the swipe, but with a button)
-                Icon(kbIcon(th, "Backspace"), tr("Delete", "Sil"), tint = th.text, modifier = Modifier.clickable { act.clipDelete(setOf(m.id)); menuFor = null }.size(42.dp).padding(10.dp))
+                Icon(kbIcon(th, "Delete"), tr("Delete", "Sil"), tint = th.text, modifier = Modifier.clickable { act.clipDelete(setOf(m.id)); menuFor = null }.size(42.dp).padding(10.dp))
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 Text("✕", color = th.sub, fontSize = 16.sp, modifier = Modifier.clickable { menuFor = null }.padding(10.dp))
             }
