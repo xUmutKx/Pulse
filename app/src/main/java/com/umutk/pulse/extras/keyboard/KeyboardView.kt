@@ -216,7 +216,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     // a phone turned sideways takes a much smaller keyboard (a tablet keeps its size)
     val phoneLand = land && cfg.screenWidthDp < 600
-    val scale = KeyboardPrefs.heightPct / 100f * (if (phoneLand) .42f else if (land) .6f else 1f)
+    val scale = KeyboardPrefs.heightPct / 100f * (if (phoneLand) .52f else if (land) .6f else 1f)
     val keyH = (61f * scale).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
@@ -303,7 +303,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 }
                 .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFx)
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
-                .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
+                .padding(horizontal = if (phoneLand) 2.dp else KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
             if (float) Box(Modifier.fillMaxWidth().height(34.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) { Box(Modifier.width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f))) }
