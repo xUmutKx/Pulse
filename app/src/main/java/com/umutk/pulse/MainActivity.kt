@@ -305,10 +305,15 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             val dens0 = androidx.compose.ui.platform.LocalDensity.current
             val zoom = if (tablet) 1.2f else 1f
             val wdp = (cfgW.screenWidthDp / zoom).toInt()
+            // the ad banner sits at the bottom of the pages (play build only); the pages keep clear of it
+            val adPad = if (com.umutk.pulse.ads.PulseAds.ENABLED && appPage == "processes") 50.dp else 0.dp
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens0.density * zoom, dens0.fontScale)) {
                 androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
-                    androidx.compose.foundation.layout.Box(if (wdp > 900) Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()) {
+                    androidx.compose.foundation.layout.Box((if (wdp > 900) Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()).padding(bottom = adPad)) {
                         App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it })
+                    }
+                    if (com.umutk.pulse.ads.PulseAds.ENABLED && appPage == "processes") {
+                        com.umutk.pulse.ads.PulseAds.Banner(Modifier.align(androidx.compose.ui.Alignment.BottomCenter).fillMaxWidth())
                     }
                 }
             }
