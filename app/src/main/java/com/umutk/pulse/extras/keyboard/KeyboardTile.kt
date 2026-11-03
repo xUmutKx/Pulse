@@ -73,7 +73,20 @@ class KeyboardFloatActivity : Activity() {
         val field = EditText(this).apply { alpha = 0f; isFocusableInTouchMode = true }
         setContentView(field)
         field.requestFocus()
-        window.decorView.post {
+        // the keyboard comes up once this window has focus (asked before that, the system ignores it and the window stays empty)
+        shownFor = field
+    }
+
+    private var shownFor: EditText? = null
+    private var asked = false
+
+    override fun onWindowFocusChanged(hasFocus: Boolean) {
+        super.onWindowFocusChanged(hasFocus)
+        val field = shownFor ?: return
+        if (!hasFocus || asked) return
+        asked = true
+        field.post {
+            field.requestFocus()
             (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(field, InputMethodManager.SHOW_FORCED)
         }
     }

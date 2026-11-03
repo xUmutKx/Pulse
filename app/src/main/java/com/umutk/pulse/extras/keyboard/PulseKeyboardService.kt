@@ -312,7 +312,15 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         super.onComputeInsets(outInsets)
         val r = st.floatRect
         val root = kbRoot
-        if (!KeyboardPrefs.floatNow || r == null || root == null) return
+        if (!KeyboardPrefs.floatNow) return
+        // until the keyboard has been measured, nothing in the tall window takes touches: otherwise the empty window would block the screen behind it
+        if (r == null || root == null) {
+            outInsets.contentTopInsets = window.window?.decorView?.height ?: 0
+            outInsets.visibleTopInsets = outInsets.contentTopInsets
+            outInsets.touchableInsets = android.inputmethodservice.InputMethodService.Insets.TOUCHABLE_INSETS_REGION
+            outInsets.touchableRegion.setEmpty()
+            return
+        }
         val h = window.window?.decorView?.height ?: return
         val loc = IntArray(2); root.getLocationInWindow(loc)
         outInsets.contentTopInsets = h
