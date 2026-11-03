@@ -236,9 +236,20 @@ private fun freeMemory(c: Context) {
 
 /** Opens the game itself (its launch activity). */
 private fun openGame(c: Context, pkg: String) {
-    val i = c.packageManager.getLaunchIntentForPackage(pkg)
-    if (i == null) toast(c, tr("This app cannot be opened from here", "Bu uygulama buradan açılamıyor"))
-    else runCatching { c.startActivity(i.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+    val pm = c.packageManager
+    // the launch activity; when the system gives none, the launcher activity of the package; else the root or Shizuku shell starts it
+    val launcher = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER).setPackage(pkg)
+    val activity = pm.queryIntentActivities(launcher, 0).firstOrNull()?.activityInfo?.name
+    val intent = pm.getLaunchIntentForPackage(pkg)
+        ?: activity?.let { android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER).setClassName(pkg, it) }
+    val started = intent != null && runCatching {
+        c.startActivity(android.content.Intent(intent).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        true
+    }.getOrDefault(false)
+    if (started) return
+    val out = Privilege.run("monkey -p $pkg -c android.intent.category.LAUNCHER 1")
+    val ok = out.code >= 0 && !Regex("(?i)aborted|error|no activities|exception").containsMatchIn(out.text)
+    if (!ok) toast(c, tr("This app cannot be opened from here", "Bu uygulama buradan açılamıyor") + if (out.text.isBlank()) "" else ": " + out.text.take(100))
 }
 
 private fun toast(c: Context, s: String) = Toast.makeText(c, s, Toast.LENGTH_SHORT).show()
