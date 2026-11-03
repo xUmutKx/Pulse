@@ -350,6 +350,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         runCatching { ctx.startService(android.content.Intent(ctx, VideoSessionService::class.java)) }
         onDispose {
             saveResume(); player.removeListener(l); runCatching { booster[0]?.release() }; runCatching { equalizer[0]?.release() }
+            // the mini window keeps this player (and its media session) alive: it is released when the window closes
+            if (FloatingVideo.owns(player)) return@onDispose
             VideoSessionService.player = null
             runCatching { ctx.stopService(android.content.Intent(ctx, VideoSessionService::class.java)) }
             player.release()
@@ -380,7 +382,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     DisposableEffect(owner, player) {
         val observer = LifecycleEventObserver { _, e ->
             if (e == Lifecycle.Event.ON_STOP) {
-                if (pipWas[0]) {
+                if (FloatingVideo.owns(player)) Unit // the mini window plays on above other apps
+                else if (pipWas[0]) {
                     // the picture-in-picture window was closed: the video stops, background audio does not keep it going
                     pipWas[0] = false
                     player.pause()
@@ -740,6 +743,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         "more" -> {
             // only what the bottom bar does not already do (speed, repeat and the sleep timer have their own buttons there)
             val moreItems = CONTROL_IDS.filter { it !in barList(prefs.barButtons) }.map { MoreItem("ctl_$it", "", controlName(it), "") } + listOf(
+                MoreItem("mini", "video", tr("Mini window", "Mini pencere"), ""),
                 MoreItem("shuffle", "sort", tr("Shuffle", "Karıştır"), if (shuffle) tr("On", "Açık") else tr("Off", "Kapalı")),
                 MoreItem("bg", "volume", tr("Background audio", "Arka plan sesi"), if (bg) tr("On", "Açık") else tr("Off", "Kapalı")),
                 MoreItem("eq", "tune", tr("Equalizer", "Ekolayzır"), ""),
@@ -751,6 +755,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             MoreSheet(moreItems, { dlg = null }, sk) { key ->
                 dlg = null
                 when (key) {
+                    // the video goes to the mini window above other apps and this screen closes; the window keeps playing
+                    "mini" -> if (FloatingVideo.show(ctx, player, vsize)) onBack()
                     "shuffle" -> { shuffle = !shuffle; player.shuffleModeEnabled = shuffle }
                     "bg" -> { bg = !bg; prefs.bg = bg }
                     "eq" -> dlg = "eq"
