@@ -10,8 +10,10 @@ import java.io.File
 class Finding(val path: String, val size: Long, val rule: String, val label: String = "")
 
 /** A line in the list: one app, one leftover folder or one system rule, holding the findings behind it. */
-class CleanRow(val id: String, val pkg: String?, val title: String, val sub: String, val items: List<Finding>) {
+class CleanRow(val id: String, val pkg: String?, val title: String, val sub: String, val items: List<Finding>, val info: Long = 0L) {
     val size get() = items.sumOf { it.size }
+    /** What the row shows: its files, or (for an app whose cache is inside its own folder) the cache the system reports for it. */
+    val shownSize get() = if (items.isEmpty()) info else size
 }
 
 /**
@@ -124,7 +126,28 @@ object CleanerRules {
             val label = runCatching { pm.getApplicationInfo(pkg, 0).loadLabel(pm).toString() }.getOrDefault(pkg)
             val cache = f.filter { it.rule == CACHE }.sumOf { it.size }
             CleanRow(pkg, pkg, label, "Cache ${mb(cache)} · Other junk ${mb(f.sumOf { it.size } - cache)}", f)
-        }.sortedByDescending { it.size }
+        }.sortedByDescending { it.size }.toMutableList().also { rows -> rows += systemCacheRows(ctx, byPkg.keys) }
+    }
+
+    /**
+     * The cache the system reports for every other app (StorageStatsManager, with the usage-access permission): an app's folder may be
+     * out of reach without root, but its size is still known. Such a row shows the size and is opened in the app's settings to clear it.
+     */
+    private fun systemCacheRows(ctx: Context, seen: Set<String>): List<CleanRow> {
+        if (android.os.Build.VERSION.SDK_INT < 26) return emptyList()
+        val ssm = ctx.getSystemService(android.app.usage.StorageStatsManager::class.java) ?: return emptyList()
+        val pm = ctx.packageManager
+        val user = android.os.Process.myUserHandle()
+        return pm.getInstalledApplications(0).asSequence()
+            .filter { it.packageName !in seen && it.packageName != ctx.packageName }
+            .mapNotNull { ai ->
+                val cache = runCatching { ssm.queryStatsForPackage(android.os.storage.StorageManager.UUID_DEFAULT, ai.packageName, user).cacheBytes }.getOrDefault(0L)
+                if (cache <= 0L) null else {
+                    val label = runCatching { pm.getApplicationLabel(ai).toString() }.getOrDefault(ai.packageName)
+                    CleanRow(ai.packageName, ai.packageName, label, com.umutk.pulse.tr("Cache reported by the system · clear it in the app's settings", "Sistemin bildirdiği önbellek · app ayarlarından temizle"), emptyList(), cache)
+                }
+            }
+            .sortedByDescending { it.info }.toList()
     }
 
     private fun mb(b: Long) = if (b >= 1073741824L) "%.1f GB".format(b / 1073741824.0) else "%.1f MB".format(b / 1048576.0)
