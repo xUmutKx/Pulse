@@ -343,8 +343,6 @@ class VideoPrefs(ctx: Context) {
     /** true: use only the options here, false: keep the colours and sizes of the subtitle file */
     // the subtitle file's own styling (colour, place) is used by default; off ignores it and uses the settings below
     var subIgnoreStyle by bool(g, "sub_ignore", false)
-    // "Skip intro" button: shown while the first this-many seconds play, 0 = off
-    var introSec by int(g, "intro_sec", 90)
 
     // player extras
     var rememberVolume by bool(g, "rem_vol", false)
