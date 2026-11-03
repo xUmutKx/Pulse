@@ -2040,3 +2040,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Hava: büyük widgette saatlik seçeneği (ayarlar > Büyük widget); Ekran kapağı: 2x1 yatay ve 1x2 dikey widget
 - (sürüm sonra) derlenmedi: Video oynarken bildirim (Durdur düğmesi videoyu duraklatır); duraklayınca bildirim kalkar
 - (sürüm sonra) derlenmedi: Hava veri kaynağı seçiminde "Hepsi, birleştirilmiş" (tüm servisler)
+- (sürüm sonra) derlenmedi: Mini pencere: varsayılan küçük, en büyük ekran genişliği, kontroller gizli (dokununca açılır), iki parmak bırakılınca sınıra animasyonla döner
