@@ -2025,3 +2025,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Video OpenSubtitles anahtarı artık video ayarları > Altyazı içinde; PiP penceresi kapatılınca video durur (arka plan sesi açık olsa bile)
 - (sürüm sonra) derlenmedi: Video üç nokta menüsü iki sütunlu ve üç noktanın altında açılıyor; yeni eklenen altyazı kendi parçası seçiliyor
 - (sürüm sonra) derlenmedi: Video mini pencere (üstte, yuvarlak köşeli, sürüklenir, kenara yapışır, aşağı fırlatınca kapanır, çift dokunma 10 sn, altyazılı); üç nokta menüsünde "Mini pencere"
+- (sürüm sonra) derlenmedi: Altyazı uygulanınca bildirim (açıldı / okunamadı / eklendi ama gösterilmedi)
