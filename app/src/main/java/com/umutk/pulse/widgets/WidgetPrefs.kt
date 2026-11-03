@@ -34,7 +34,7 @@ object WidgetLook {
     var material by mutableStateOf("acrylic")
     var tint by mutableFloatStateOf(.25f)
     /** What the Windows 11 "blur" material shows behind the tile: stock (the Windows 11 wallpaper) / phone (the phone wallpaper) / file (own picture) / none (just the dark tint). */
-    var blurBg by mutableStateOf("stock")
+    var blurBg by mutableStateOf("none")
     /** The widget configuration window: material (Material You, default) / own (the widget's design) / blur (Windows 11 over a blurred wallpaper). */
     var windowLook by mutableStateOf("material")
     private var loaded = false
@@ -50,7 +50,9 @@ object WidgetLook {
         blur = p.getFloat("blur", .3f)
         accentColor = p.getInt("accentColor", 0)
         material = p.getString("material", "acrylic") ?: "acrylic"; tint = p.getFloat("tint", .25f); windowLook = p.getString("windowLook", "material") ?: "material"
-        blurBg = p.getString("blurBg", "stock") ?: "stock"
+        blurBg = p.getString("blurBg", "none") ?: "none"
+        // the old default was the mountain wallpaper behind the Windows 11 tiles: once, the default moves to a plain dark tile
+        if (p.getInt("bgVer", 0) < 1) { blurBg = "none"; p.edit().putInt("bgVer", 1).putString("blurBg", "none").apply() }
     }
 
     /** Saves and redraws the placed widgets. */
