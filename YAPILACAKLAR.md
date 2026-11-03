@@ -1983,3 +1983,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Ads (play only): the settings gear is gone from the ad strip; the card is see-through; only the button is black with white text
 - (sürüm sonra) derlenmedi: Keyboard bar: 5 words from 600 dp and 6 from 900 dp of width (3 on a phone); the first three keep their place
 - (sürüm sonra) derlenmedi: Keyboard with a physical keyboard: a row of the Turkish letters (ç ğ ı ö ş ü, capitals with shift) under the suggestion bar
+- (sürüm sonra) derlenmedi: Toolkit: a tool opens in a window over the Toolkit grid (tap outside or back closes it), not full screen
