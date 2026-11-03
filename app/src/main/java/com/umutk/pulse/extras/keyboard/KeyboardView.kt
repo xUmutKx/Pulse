@@ -222,8 +222,19 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val dens = LocalDensity.current.density
     // a hardware keyboard is attached: only the suggestion bar shows, at the foot of the screen
     if (st.hardware) {
-        Box(modifier.fillMaxWidth().height(52.dp).background(th.bg)) {
-            TopBar(th, st, act, onPull = { }, onRelease = { })
+        // the Turkish letters the physical keyboard's layout cannot type are tapped here (in capitals while shift is on)
+        Column(modifier.fillMaxWidth().background(th.bg)) {
+            Box(Modifier.fillMaxWidth().height(52.dp)) {
+                TopBar(th, st, act, onPull = { }, onRelease = { })
+            }
+            Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 2.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
+                listOf("ç", "ğ", "ı", "ö", "ş", "ü").forEach { ch ->
+                    val out = if (st.shift > 0) ch.uppercase(java.util.Locale("tr", "TR")) else ch
+                    Box(Modifier.weight(1f).height(40.dp).clip(RoundedCornerShape(8.dp)).background(th.key).clickable { act.type(out) }, contentAlignment = Alignment.Center) {
+                        Text(out, color = th.text, fontSize = 18.sp)
+                    }
+                }
+            }
         }
         return
     }
