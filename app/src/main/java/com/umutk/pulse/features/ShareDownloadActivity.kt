@@ -158,9 +158,10 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
     }
     if (look.startsWith("win")) {
         // the Windows looks get a Windows dialog box
+        val finishedWin = task?.state?.value == DlState.DONE
         WinAlert(onDismissRequest = close, title = { Text(tr("Download", "İndir")) }, text = { body(); progressBlock() },
-            confirmButton = { PButton(tr("Download", "İndir")) { if (started == null) download() } },
-            dismissButton = { Row { PButton(tr("Open Pulse", "Pulse'u aç")) { openPulse() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Open with", "Birlikte aç")) { openPlayer() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Cancel", "İptal")) { close() } } })
+            confirmButton = { if (finishedWin) PButton(tr("Open", "Aç")) { openPulse() } else PButton(tr("Download", "İndir")) { if (started == null) download() } },
+            dismissButton = { Row { PButton(tr("Open Pulse", "Pulse'u aç")) { openPulse() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Cancel", "İptal")) { if (task?.state?.value == DlState.RUNNING || task?.state?.value == DlState.PAUSED) askCancel = true else close() } } })
     } else {
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .35f)).clickable(onClick = close), contentAlignment = Alignment.BottomCenter) {
             Column(Modifier.fillMaxWidth().clip26().background(T.bg).clickable(enabled = false) {}.navigationBarsPadding().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -176,9 +177,9 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
                         val running = task?.let { it.state.value == DlState.RUNNING || it.state.value == DlState.PAUSED } == true
                         if (running) askCancel = true else close()
                     }
+                    // the download button becomes Open once the file is downloaded
                     if (finished) PButton(tr("Open", "Aç"), Modifier.weight(1f), compact = true) { openPulse() }
-                    PButton(tr("Open with", "Birlikte aç"), Modifier.weight(1f), compact = true) { openPlayer() }
-                    PButton(tr("Download", "İndir"), Modifier.weight(1f), compact = true) { if (started == null) download() }
+                    else PButton(tr("Download", "İndir"), Modifier.weight(1f), compact = true) { if (started == null) download() }
                 }
                 // the progress is a thin line at the very bottom
                 progressBlock()
