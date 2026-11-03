@@ -2014,3 +2014,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notes start page like the Samsung one: a large 'All notes' title with the count, three columns of notes; the nine-square block is taken out
 - (sürüm sonra) derlenmedi: Pen page: the tool row uses Material icons (pen, highlighter, eraser, line) instead of words
 - (sürüm sonra) derlenmedi: Notes editor: the top and bottom bars use Material icons (back, add, undo, preview, share, copy, duplicate, delete; sketch, image, check, record, colour)
+- (sürüm sonra) derlenmedi: Notes list: the sort row (date modified, arrow to reverse) and the list icons (folders at left, settings and new note at right)
