@@ -516,15 +516,15 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
         Row2(tr("Colours", "Renkler"), skins.first { it.first == skin }.second) { ask = "skin" }
         Row2(tr("Temperature unit", "Sıcaklık birimi"), if (imp) "°F" else "°C") { ask = "units" }
         Row2(tr("Data source", "Veri kaynağı"), sources.first { it.first == source }.second) { ask = "source" }
-        if (source == "owm") {
-            var key by remember { mutableStateOf(WeatherStore.owmKey(wctx)) }
-            PField(key, { key = it; WeatherStore.setOwmKey(wctx, it) }, tr("OpenWeatherMap key", "OpenWeatherMap anahtarı"), Modifier.fillMaxWidth())
-        }
+        // the key is shown always: OpenWeatherMap is a source, and it also joins the combined forecast when the key is set
+        var key by remember { mutableStateOf(WeatherStore.owmKey(wctx)) }
+        Text(tr("OpenWeatherMap key (optional)", "OpenWeatherMap anahtarı (isteğe bağlı)"), color = sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+        PField(key, { key = it; WeatherStore.setOwmKey(wctx, it) }, tr("API key", "API anahtarı"), Modifier.fillMaxWidth())
         var comb by remember { mutableStateOf(combine) }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(tr("Combine several forecasts", "Birden fazla tahmini birleştir"), color = fg, fontSize = 16.sp)
-                Text(tr("The next 24 hours: four models through Open-Meteo (best match, ECMWF, GFS, ICON) and met.no, plus MGM for places in Turkey when it is the source; the middle temperature and the sky most of them agree on", "Sonraki 24 saat: Open-Meteo üzerinden dört model (en iyi eşleşme, ECMWF, GFS, ICON) ve met.no, kaynak MGM ise Türkiye için MGM de; orta sıcaklık ve çoğunun uyuştuğu gökyüzü"), color = sub, fontSize = 12.sp)
+                Text(tr("The next 24 hours: four models through Open-Meteo (best match, ECMWF, GFS, ICON), met.no, wttr.in and 7Timer, plus OpenWeatherMap when its key is set, and MGM for places in Turkey when it is the source; the middle temperature and the sky most of them agree on. A service that fails is left out.", "Sonraki 24 saat: Open-Meteo üzerinden dört model (en iyi eşleşme, ECMWF, GFS, ICON), met.no, wttr.in ve 7Timer, anahtar girildiyse OpenWeatherMap, kaynak MGM ise Türkiye için MGM de; orta sıcaklık ve çoğunun uyuştuğu gökyüzü. Hata veren servis atlanır."), color = sub, fontSize = 12.sp)
             }
             PSwitch(comb, { comb = it; onCombine(it) })
         }
