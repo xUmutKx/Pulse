@@ -1971,3 +1971,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard Turkish: the capital I is ı in Turkish (taps, glide and the word after a key are lower-cased by the language, not by the phone's language)
 - (sürüm sonra) derlenmedi: Keyboard shift: one tap = one capital letter; two quick taps = caps lock; another tap turns it off
 - (sürüm sonra) derlenmedi: Messages: blocked messages are kept (no notification) and shown under Blocked; spam numbers are never blocked on their own, each one is confirmed in a popup (Suspicious numbers)
+- (sürüm sonra) derlenmedi: Game Hub tiles: the card's background is the app's icon, blurred under a black veil; the crisp icon sits centred on top; no dash when the play time or size is unknown; 'hidden' is easier to read
