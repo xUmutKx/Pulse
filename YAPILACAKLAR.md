@@ -1942,3 +1942,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Debloat: the reinstall list shows the apps this phone had, by name, also after they are gone; keyboard height can go up to 250
 - (sürüm sonra) derlenmedi: Splash: on a tablet turned sideways the Windows 11 opening is a plain dark gradient (no picture)
 - (sürüm sonra) derlenmedi: Widgets: a square weather detail widget (the next hours as lines, more of them when taller)
+- (sürüm sonra) derlenmedi: Files: the smart date is short (short month, year only when it is not this one)
