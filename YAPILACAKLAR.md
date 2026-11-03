@@ -2049,3 +2049,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Palette: kurulu ikon paketleri okunur (appfilter), ikon kaynağı olarak seçilebilir (Blaux dahil); ayarlar > İkon paketi
 - (sürüm sonra) derlenmedi: Palette ikon paketi: eşleşmeyen uygulamalarda ad araması (tam ya da kelime başı, 4 harften kısa adlar aranmaz)
 - (sürüm sonra) derlenmedi: Winamp: Medya kütüphanesi penceresi (KÜTÜPHANE: telefondaki müzik; RADYO: eklenen internet radyoları, ekleme ve silme)
+- (sürüm sonra) derlenmedi: Ekran kapağı widget: durum yerine saat yüzü (2x2 analog, 2x1 dijital, 1x2 matrix); dakikada bir yenilenir; dokununca kapak açılıp kapanır
