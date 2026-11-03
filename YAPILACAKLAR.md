@@ -1937,3 +1937,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.345 derlenmedi: README intro; the changes since 1.0.344 (ads on pages, widget ads, device overview front view, Poweramp tap/cover, Settings ad credit and Premium, weather map ad, e-book and manager strips, desktop icon backing)
 - 1.0.345 derlenmedi: connected devices on the Wi-Fi (neighbour table) and per-app Wi-Fi and mobile access (iptables, root or Shizuku)
 - (sürüm sonra) derlenmedi: Splash: the Windows 11 opening wallpaper has a darker veil
+- 1.0.345 build fix: the ad strip slider needs its onDone
