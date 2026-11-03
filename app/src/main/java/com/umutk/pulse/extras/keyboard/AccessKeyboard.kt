@@ -108,6 +108,32 @@ class AccessKeyboardService : AccessibilityService() {
 
     override fun onDestroy() { instance = null; hideKeys(); super.onDestroy() }
 
+    /** The keyboard's window, kept so a turn of the phone can place it again. */
+    private var kbParams: WindowManager.LayoutParams? = null
+
+    /** Where the keyboard sits for the current screen: a full-width strip when upright, a narrower one low on the screen when turned sideways. */
+    private fun placeKeys(p: WindowManager.LayoutParams) {
+        val d = resources.displayMetrics
+        val land = resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+        if (land) {
+            p.width = (d.widthPixels * 0.62f).toInt()
+            p.x = (d.widthPixels * 0.19f).toInt()
+            p.y = (d.heightPixels * 0.22f).toInt()
+        } else {
+            p.width = (d.widthPixels * 0.94f).toInt()
+            p.x = (d.widthPixels * 0.03f).toInt()
+            p.y = (d.heightPixels * 0.55f).toInt()
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+        super.onConfigurationChanged(newConfig)
+        val p = kbParams ?: return
+        val v = view ?: return
+        placeKeys(p)
+        runCatching { wm?.updateViewLayout(v, p) }
+    }
+
     private fun showKeys() {
         if (view != null) return
         val w = wm ?: return
@@ -120,9 +146,9 @@ class AccessKeyboardService : AccessibilityService() {
             PixelFormat.TRANSLUCENT,
         ).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = (d.widthPixels * 0.03f).toInt()
-            y = (d.heightPixels * 0.55f).toInt()
+            placeKeys(this)
         }
+        kbParams = params
         val o = AccessOwner().also { it.start() }
         val v = ComposeView(this).apply {
             setViewTreeLifecycleOwner(o)
