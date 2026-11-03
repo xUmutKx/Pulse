@@ -59,6 +59,8 @@ object PulseAds {
     /** A standard banner; it is released when it leaves the screen. */
     @Composable
     fun Banner(modifier: Modifier = Modifier) {
+        // premium: no ads at all
+        if (Premium.on(LocalContext.current)) return
         AndroidView(
             modifier = modifier,
             factory = { ctx -> AdView(ctx).apply { setAdSize(AdSize.BANNER); adUnitId = BANNER; loadAd(AdRequest.Builder().build()) } },
@@ -73,6 +75,7 @@ object PulseAds {
     @Composable
     fun NativeCard(modifier: Modifier = Modifier, bg: Color, text: Color, sub: Color, accent: Color) {
         val ctx = LocalContext.current
+        if (Premium.on(ctx)) return
         var ad by remember { mutableStateOf<NativeAd?>(null) }
         DisposableEffect(Unit) {
             val loader = AdLoader.Builder(ctx, NATIVE).forNativeAd { ad = it }.build()
