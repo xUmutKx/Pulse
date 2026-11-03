@@ -350,6 +350,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         super.onStartInputView(info, restarting)
         // a hardware keyboard: the screen keyboard still comes up, as its suggestion bar only
         st.hardware = resources.configuration.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS
+        st.hwOpen = false
         st.inline = emptyList(); st.emojiQuery = null
         st.forceLayout = null; st.panel = "keys"
         st.clipItems = ClipStore.load(this)

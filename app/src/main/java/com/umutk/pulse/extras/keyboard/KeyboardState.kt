@@ -15,6 +15,8 @@ class KbState {
     var shift by mutableIntStateOf(0)
     /** A hardware keyboard is attached: the screen keyboard shrinks to its suggestion bar, at the foot of the screen. */
     var hardware by mutableStateOf(false)
+    /** With a physical keyboard: the bar alone (false) or the full keyboard (true), opened by the keyboard button of the bar. */
+    var hwOpen by mutableStateOf(false)
     /** 0 letters, 1 symbols, 2 more symbols. */
     var page by mutableIntStateOf(0)
     /** keys, emoji, menu, clip, resize */

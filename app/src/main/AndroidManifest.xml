@@ -1492,7 +1492,7 @@
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
         <activity android:name=".KeyboardSettingsActivity" android:exported="true" android:theme="@style/Theme.Pulse" android:label="Pulse Keyboard" android:taskAffinity="com.umutk.pulse.tools"
             android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
-        <service android:name="com.umutk.pulse.extras.keyboard.PulseKeyboardService" android:label="Pulse Keyboard" android:exported="true" android:permission="android.permission.BIND_INPUT_METHOD">
+        <service android:name="com.umutk.pulse.extras.keyboard.PulseKeyboardService" android:label="Pulse Keyboard" android:exported="true" android:directBootAware="true" android:permission="android.permission.BIND_INPUT_METHOD">
             <intent-filter>
                 <action android:name="android.view.InputMethod" />
             </intent-filter>

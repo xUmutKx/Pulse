@@ -49,6 +49,15 @@ Looks: Windows 95, XP, 7, 10, 11, Material, AMOLED (+ One UI, ColorOS where they
 - Build cache is off globally (`org.gradle.caching=false`).
 - Agents split by file ownership; they never start Gradle.
 
+## Icons
+
+- Every new icon is a Fluent icon (the Fluent set in `FluentIcons`/`PIcon`). No Material icons in new UI, and no text where an icon fits.
+
+## Working style
+
+- When the user lists several changes, do them in order in the same turn, without asking which first. Ask only for things that need the user's device, an account, or a secret.
+- Commit and push each finished part (the stop hook asks for it); build only on "derle".
+
 ## Pitfalls seen
 
 - `FilesActivity` must not depend on process-global `Look`/`Cfg`/`Opt`; use its own provider.
