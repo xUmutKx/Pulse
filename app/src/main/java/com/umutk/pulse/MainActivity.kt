@@ -284,6 +284,7 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         }
         val wctx = androidx.compose.ui.platform.LocalContext.current
         // the welcome shows on the first start and again after every update (its "What's new" card is the update notes)
+        var setupDone by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("setup_done", false)) }
         var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).let { it.getBoolean("welcomed", false) && it.getString("seen_version", "") == com.umutk.pulse.appVersionName(wctx) }) }
         // the open page lives here, not in App: App is remounted when the theme changes dark/light, and that must not close the page
         var appPage by rememberSaveable { mutableStateOf(if (wctx is FilesActivity) "files" else if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
@@ -296,7 +297,9 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
         androidx.compose.runtime.LaunchedEffect(Unit) {
             if (Opt.startSound && !SplashGate.soundDone && wctx !is FilesActivity && th.id in loginLooks) { SplashGate.soundDone = true; com.umutk.pulse.extras.launcher.LauncherSounds.play(wctx, th.id) }
         }
-        if (!SplashGate.splashed && wctx !is FilesActivity && Opt.splash) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
+        // the setup (terms, root and Shizuku) comes first, once; the Files app has none of it
+        if (!setupDone && wctx !is FilesActivity) SetupScreen { setupDone = true }
+        else if (!SplashGate.splashed && wctx !is FilesActivity && Opt.splash) { if (Opt.signIn && th.id in loginLooks) LoginScreen(th) { SplashGate.splashed = true } else Splash(th) { SplashGate.splashed = true } }
         else if (!welcomed) Welcome { welcomed = true }
         else key(th.dark) {
             // tablets and landscape: the pages are phone lists, so on a wide screen they keep a readable width in the middle instead of stretching edge to edge
