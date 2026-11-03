@@ -183,25 +183,11 @@ private fun MusicHubBody(onBack: () -> Unit) {
         val fullNow = look == MusicLook.POWERAMP || (nowPlaying && look == MusicLook.MATERIAL)
         Column(Modifier.fillMaxSize().padding(horizontal = if (fullNow) 0.dp else 12.dp, vertical = if (fullNow) 0.dp else 8.dp)) {
             // the Winamp look has no bar: its window starts at the top and its SET button sits in the window
-            if (!fullNow && look != MusicLook.WINAMP) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { PIcon("back", Color.White, 22.dp) }
-                    Spacer(Modifier.weight(1f))
-                    // white noise opens from here; playlists sit in the library
-                    // Poweramp carries its own settings button at the right end of its tab bar
-                    Box(Modifier.size(40.dp).clickable { noiseOpen = true }, contentAlignment = Alignment.Center) { PIcon("volume", Color.White, 22.dp) }
-                    // radio is reached from the player only (no Extra apps row)
-                    Box(Modifier.size(40.dp).clickable { radioOpen = true }, contentAlignment = Alignment.Center) { PIcon("radio", Color.White, 22.dp) }
-                    Box(Modifier.size(40.dp).clickable { recapOpen = true }, contentAlignment = Alignment.Center) { PIcon("heart", Color.White, 22.dp) }
-                    if (look != MusicLook.POWERAMP && look != MusicLook.MATERIAL) Box(Modifier.size(40.dp).clickable { settingsOpen = true }, contentAlignment = Alignment.Center) { PIcon("settings", Color.White, 22.dp) }
-                }
-                Spacer(Modifier.height(8.dp))
-            }
             Box(Modifier.weight(1f).fillMaxWidth()) {
               androidx.compose.runtime.key(rev) {
                 when {
                     lyrics && look != MusicLook.WINAMP -> LyricsPanel(st.current, rememberPosition(engine, st).value.first, Modifier.fillMaxSize(), onSeek = { engine.seekTo(it) })
-                    look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it })
+                    look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it }, onNoise = { noiseOpen = true }, onRadio = { radioOpen = true }, onRecap = { recapOpen = true })
                     look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx, onSettings = { settingsOpen = true })
                     look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") }, startLyrics = lyrics, onSettings = { settingsOpen = true })
                     look == MusicLook.CASSETTE -> com.umutk.pulse.extras.music.cassette.CassettePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant)
