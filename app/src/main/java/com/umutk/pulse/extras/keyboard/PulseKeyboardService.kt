@@ -94,7 +94,6 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private var corrAt = 0L
     private var selStart = 0
     private var selEnd = 0
-    private var shiftTap = 0L
     private var spaceTap = 0L
     private var lastWasSpace = false
     private var punctTyped = false
@@ -687,8 +686,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     // ---- keys of the keyboard ----------------------------------------------------------------------------------------------------------------------
 
     override fun shift() {
-        val now = SystemClock.uptimeMillis()
-        st.shift = when (st.shift) { 0 -> { shiftTap = now; 1 }; 1 -> if (now - shiftTap < 450) 2 else 0; else -> 0 }
+        // shift is for one letter: a tap on, the next letter takes it, a tap again turns it off. Caps lock is the long press (or the caps key), never a quick double tap
+        st.shift = if (st.shift == 0) 1 else 0
         // a word is open: the bar shows (or drops) its capital-letter form
         if (word.isNotEmpty()) updateSuggestions()
     }
