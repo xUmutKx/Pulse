@@ -253,7 +253,7 @@ fun KeyboardSettings(back: () -> Unit) {
         // size
         KbSection("height", tr("Size", "Boyut")) {
             Text("${tr("Height", "Yükseklik")}: ${KeyboardPrefs.heightPct}%", color = T.sub, fontSize = 12.sp)
-            PSlider((KeyboardPrefs.heightPct - 70) / 100f, { KeyboardPrefs.heightPct = 70 + (it * 100).roundToInt() }, 0f..1f, onDone = { save() })
+            PSlider((KeyboardPrefs.heightPct - 70) / 180f, { KeyboardPrefs.heightPct = 70 + (it * 180).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Bottom space", "Alt boşluk")}: ${KeyboardPrefs.bottomPad} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.bottomPad / 60f, { KeyboardPrefs.bottomPad = (it * 60).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Gamepad size", "Gamepad boyutu")}: ${KeyboardPrefs.padScale}%", color = T.sub, fontSize = 12.sp)

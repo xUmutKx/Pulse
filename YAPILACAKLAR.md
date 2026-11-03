@@ -1939,3 +1939,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Splash: the Windows 11 opening wallpaper has a darker veil
 - 1.0.345 build fix: the ad strip slider needs its onDone
 - 1.0.345 build fix: the banner release casts the view to AdView before destroy
+- (sürüm sonra) derlenmedi: Debloat: the reinstall list shows the apps this phone had, by name, also after they are gone; keyboard height can go up to 250
