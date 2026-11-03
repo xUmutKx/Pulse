@@ -101,6 +101,54 @@ object WeatherProviders {
         return build(now, hours.take(120), lat, lon, zone)
     }
 
+    // ---- 7Timer: no key, worldwide (the civil product: a point every three hours; read defensively, a missing field is a neutral value) ----
+    private fun t7Code(prec: String, amount: Int, cloud: Int): Int = when {
+        prec == "rain" -> if (amount >= 5) 65 else if (amount >= 3) 63 else 61
+        prec == "snow" -> 73
+        prec == "frzr" -> 66
+        prec == "icep" -> 77
+        cloud <= 2 -> 0
+        cloud <= 4 -> 2
+        else -> 3
+    }
+
+    /** The wind of 7Timer is a scale from 1 to 8; these are its speeds in km/h. */
+    private val t7Wind = doubleArrayOf(0.0, 1.0, 7.0, 20.0, 34.0, 50.0, 76.0, 104.0, 130.0)
+
+    private fun t7Dir(d: String): Int = when (d.uppercase()) {
+        "N" -> 0; "NE" -> 45; "E" -> 90; "SE" -> 135; "S" -> 180; "SW" -> 225; "W" -> 270; "NW" -> 315; else -> 0
+    }
+
+    fun t7(lat: Double, lon: Double): String {
+        val j = JSONObject(WeatherApi.get("https://www.7timer.info/bin/api.pl?lon=%.4f&lat=%.4f&product=civil&output=json".format(java.util.Locale.US, lat, lon)))
+        val zone = ZoneId.systemDefault()
+        // "init" is the start of the run in UTC, as yyyyMMddHH
+        val init = j.optString("init", "")
+        if (init.length < 10) error("7Timer sent no start time")
+        val start = LocalDateTime.of(init.substring(0, 4).toInt(), init.substring(4, 6).toInt(), init.substring(6, 8).toInt(), init.substring(8, 10).toInt(), 0)
+            .atZone(ZoneOffset.UTC).withZoneSameInstant(zone).toLocalDateTime()
+        val series = j.getJSONArray("dataseries")
+        val hours = ArrayList<Hr>(); var now: Now? = null
+        for (i in 0 until series.length()) {
+            val e = series.getJSONObject(i)
+            val t = start.plusHours(e.optLong("timepoint", 0L))
+            val temp = e.optDouble("temp2m", Double.NaN)
+            if (temp.isNaN()) continue
+            val cloud = e.optInt("cloudcover", 1)
+            val prec = e.optString("prec_type", "none")
+            val amount = e.optInt("prec_amount", 0)
+            val code = t7Code(prec, amount, cloud)
+            val rain = if (prec == "none") 0 else 60
+            val wind = e.optJSONObject("wind10m")
+            val speed = t7Wind.getOrElse(wind?.optInt("speed", 1) ?: 1) { 0.0 }
+            val hum = e.optString("rh2m", "50").replace("%", "").toIntOrNull() ?: 50
+            if (now == null) now = Now(t, temp, temp, hum, code, speed, t7Dir(wind?.optString("direction", "N") ?: "N"), 1013.0, (cloud - 1) * 12, if (prec == "none") 0.0 else amount.toDouble())
+            hours += Hr(t, temp, code, rain)
+        }
+        val n = now ?: error("7Timer sent no readings")
+        return build(n, hours.take(120), lat, lon, zone)
+    }
+
     // ---- MET Norway: no key -----------------------------------------------------------------------------------------------------------------
     fun metno(lat: Double, lon: Double): String {
         val body = WeatherApi.get("https://api.met.no/weatherapi/locationforecast/2.0/compact?lat=%.4f&lon=%.4f".format(java.util.Locale.US, lat, lon))

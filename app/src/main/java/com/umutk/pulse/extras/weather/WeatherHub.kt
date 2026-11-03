@@ -117,7 +117,10 @@ fun WeatherHub(onBack: () -> Unit) {
                     WeatherWidgets.refreshAll(ctx)
                 }.onFailure {
                     // the last forecast saved for this place stays on the screen, with its time, instead of an error
-                    val saved = WeatherStore.cached(ctx)?.takeIf { f -> f.place == spot.name }
+                    // the last saved forecast: of this place, of the saved place, or any from the last six hours (it shows its own name and time)
+                    val cache = WeatherStore.cached(ctx)
+                    val recent = cache != null && System.currentTimeMillis() - cache.at < 6 * 3_600_000L
+                    val saved = cache?.takeIf { f -> f.place == spot.name || f.place == place?.name || recent }
                     if (saved != null) { fc = saved; place = spot; error = "" }
                     else error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" }
                 }
@@ -500,7 +503,7 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
                             onSkin: (String) -> Unit, onUnits: (Boolean) -> Unit, onSource: (String) -> Unit, onAlerts: (Boolean) -> Unit, onBack: () -> Unit) {
     var ask by remember { mutableStateOf("") }
     val skins = listOf("sky" to tr("Sky (follows the weather)", "Gökyüzü (havaya göre)"), "amoled" to "AMOLED", "app" to tr("App look", "Uygulama teması"))
-    val sources = listOf("om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "metno" to tr("MET Norway (no key)", "MET Norway (anahtarsız)"), "owm" to "OpenWeatherMap")
+    val sources = listOf("om" to "Open-Meteo", "mgm" to tr("MGM + Open-Meteo (Turkey)", "MGM + Open-Meteo (Türkiye)"), "metno" to tr("MET Norway (no key)", "MET Norway (anahtarsız)"), "t7" to tr("7Timer (no key)", "7Timer (anahtarsız)"), "owm" to "OpenWeatherMap")
     val wctx = LocalContext.current
     @Composable fun Row2(title: String, value: String, onClick: () -> Unit) {
         Row(Modifier.fillMaxWidth().clickable(onClick = onClick).padding(vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
