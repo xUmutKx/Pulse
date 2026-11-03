@@ -1721,6 +1721,12 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather" />
         </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherDetailWidget" android:label="Pulse · Weather, detail" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_detail" />
+        </receiver>
         <receiver android:name="com.umutk.pulse.widgets.WeatherWideWidget" android:label="Pulse · Weather, wide" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
