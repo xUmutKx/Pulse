@@ -343,6 +343,7 @@ fun KeyboardSettings(back: () -> Unit) {
             if (KeyboardPrefs.haptic) {
                 Text("${tr("Vibration strength", "Titreşim gücü")}: ${KeyboardPrefs.hapticMs}", color = T.sub, fontSize = 12.sp)
                 PSlider((KeyboardPrefs.hapticMs - 1) / 39f, { KeyboardPrefs.hapticMs = 1 + (it * 39).roundToInt() }, 0f..1f, onDone = { save() })
+                VibeTestButton()
             }
             Text("${tr("Brightness", "Parlaklık")}: ${KeyboardPrefs.bright}%", color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
             PSlider((KeyboardPrefs.bright - 5) / 95f, { KeyboardPrefs.bright = 5 + (it * 95).roundToInt() }, 0f..1f, onDone = { save() })
@@ -626,3 +627,38 @@ private fun ItemPicker(all: List<Pair<String, String>>, csv: String, onChange: (
 
 /** The keyboard's theme as the settings draw it: the one the keyboard uses now. */
 private fun keyboardThemeNow(): KbTheme = KeyboardThemes.of(KeyboardPrefs.theme, true)
+
+/** Hold to feel the vibration at the chosen strength; it stops when the finger leaves the button. */
+@Composable
+private fun VibeTestButton() {
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    Box(
+        Modifier.padding(top = 6.dp).clip(RoundedCornerShape(12.dp)).background(T.panel)
+            .pointerInput(Unit) {
+                androidx.compose.foundation.gestures.detectTapGestures(onPress = {
+                    vibeStart(ctx, KeyboardPrefs.hapticMs)
+                    try { awaitRelease() } finally { vibeStop(ctx) }
+                })
+            }
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(tr("Hold to test the vibration", "Titreşimi denemek için basılı tut"), color = T.text, fontSize = 13.sp)
+    }
+}
+
+/** Keeps the phone vibrating until stopped: the chosen strength where the phone can set it, else the default strength. */
+private fun vibeStart(c: Context, ms: Int) {
+    val vib = c.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator ?: return
+    if (!vib.hasVibrator()) return
+    if (android.os.Build.VERSION.SDK_INT >= 26) {
+        val amp = if (vib.hasAmplitudeControl()) (12 + ms * 5).coerceAtMost(255) else android.os.VibrationEffect.DEFAULT_AMPLITUDE
+        vib.vibrate(android.os.VibrationEffect.createWaveform(longArrayOf(0L, 60_000L), intArrayOf(0, amp), -1))
+    } else {
+        @Suppress("DEPRECATION") vib.vibrate(60_000L)
+    }
+}
+
+private fun vibeStop(c: Context) {
+    (c.getSystemService(Context.VIBRATOR_SERVICE) as? android.os.Vibrator)?.cancel()
+}
