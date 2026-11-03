@@ -1945,3 +1945,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Files: the smart date is short (short month, year only when it is not this one)
 - (sürüm sonra) derlenmedi: Keyboard clipboard: the pin is a real thumbtack
 - (sürüm sonra) derlenmedi: Keyboard clipboard: the item menu has a delete button
+- (sürüm sonra) derlenmedi: Keyboard clipboard: the delete button is a trash bin
