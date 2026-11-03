@@ -1951,3 +1951,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard: the suggestion bar is at the foot of the keys (not the top). The count of 5 to 6 suggestions is not done yet
 - (sürüm sonra) derlenmedi: Installer: with root the install goes through root (pm), not the system installer screen
 - (sürüm sonra) derlenmedi: Keyboard: with a hardware keyboard attached, the screen keyboard shows only its suggestion bar at the foot
+- (sürüm sonra) derlenmedi: Installer: root installs run in the install service, so leaving the window does not stop them
