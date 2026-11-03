@@ -642,6 +642,18 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="text/plain" />
             </intent-filter>
+            <!-- a video stream opened with "open with" from an app (as Free Download Manager does): the same window, to download or to play it outside -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="http" android:mimeType="video/*" />
+                <data android:scheme="https" android:mimeType="video/*" />
+                <data android:scheme="http" android:mimeType="application/x-mpegURL" />
+                <data android:scheme="https" android:mimeType="application/x-mpegURL" />
+                <data android:scheme="http" android:mimeType="application/vnd.apple.mpegurl" />
+                <data android:scheme="https" android:mimeType="application/vnd.apple.mpegurl" />
+            </intent-filter>
         </activity>
         <activity android:name="com.umutk.pulse.FramedToolActivity" android:exported="false" android:theme="@style/Theme.Pulse.Office" android:excludeFromRecents="true" android:taskAffinity="" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" />
         <service android:name="com.umutk.pulse.extras.screenrec.ScreenRecService" android:exported="false" android:foregroundServiceType="mediaProjection" />

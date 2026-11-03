@@ -67,7 +67,9 @@ class ShareDownloadActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         Cfg.load(this); Opt.load(this)
-        val url = Regex("https?://\\S+").find(intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty())?.value
+        // a shared text (SEND), or a stream opened from another app (VIEW with the link as its data)
+        val raw = if (intent.action == Intent.ACTION_VIEW) intent.dataString.orEmpty() else intent.getStringExtra(Intent.EXTRA_TEXT).orEmpty()
+        val url = Regex("https?://\\S+").find(raw)?.value
         if (url == null) { finish(); return }
         setContent {
             val ctx = LocalContext.current
@@ -127,6 +129,12 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
         onConfirm = { askCancel = false; task?.let { Downloads.remove(it) }; close() },
         onDismiss = { askCancel = false },
     )
+    // the link in an outside player (the app chooser); a stream plays there, the download stays here
+    fun openPlayer() {
+        val i = Intent(Intent.ACTION_VIEW).setDataAndType(Uri.parse(target ?: url), "video/*").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        runCatching { ctx.startActivity(Intent.createChooser(i, tr("Open with", "Birlikte aç")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            .onFailure { Toast.makeText(ctx, tr("No player found", "Oynatıcı bulunamadı"), Toast.LENGTH_SHORT).show() }
+    }
     fun openPulse() { Downloads.wanted = true; ctx.startActivity(Intent(ctx, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); close() }
     val body: @Composable () -> Unit = {
         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -152,7 +160,7 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
         // the Windows looks get a Windows dialog box
         WinAlert(onDismissRequest = close, title = { Text(tr("Download", "İndir")) }, text = { body(); progressBlock() },
             confirmButton = { PButton(tr("Download", "İndir")) { if (started == null) download() } },
-            dismissButton = { Row { PButton(tr("Open Pulse", "Pulse'u aç")) { openPulse() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Cancel", "İptal")) { close() } } })
+            dismissButton = { Row { PButton(tr("Open Pulse", "Pulse'u aç")) { openPulse() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Open with", "Birlikte aç")) { openPlayer() }; Spacer(Modifier.padding(4.dp)); PButton(tr("Cancel", "İptal")) { close() } } })
     } else {
         Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Color.Black.copy(alpha = .35f)).clickable(onClick = close), contentAlignment = Alignment.BottomCenter) {
             Column(Modifier.fillMaxWidth().clip26().background(T.bg).clickable(enabled = false) {}.navigationBarsPadding().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -169,6 +177,7 @@ private fun ShareUi(url: String, look: String, close: () -> Unit) {
                         if (running) askCancel = true else close()
                     }
                     if (finished) PButton(tr("Open", "Aç"), Modifier.weight(1f), compact = true) { openPulse() }
+                    PButton(tr("Open with", "Birlikte aç"), Modifier.weight(1f), compact = true) { openPlayer() }
                     PButton(tr("Download", "İndir"), Modifier.weight(1f), compact = true) { if (started == null) download() }
                 }
                 // the progress is a thin line at the very bottom
