@@ -2053,3 +2053,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Ekran kapağı widget arka planı: siyah ya da şeffaf (ekran kapağı ayarları)
 - (sürüm sonra) derlenmedi: Good Lock: kurulu modüllere kaldırma düğmesi; APKMirror bağlantısı yoksa site kısıtlı Samsung araması
 - (sürüm sonra) derlenmedi: Game Hub: kütüphanede yüzen arama (sağda, alanı üstte açılır); her oyunda süre ve boyut; oyun sayfasında boyut ve Data klasörünü Files ile aç
+- 1.0.352 derlendi: commits since 1.0.351 (Blaux launcher icons, Winamp media library, Palette icon packs, Game Hub search and data folder, screen cover clock widgets, app page run/uninstall, Good Lock uninstall)
