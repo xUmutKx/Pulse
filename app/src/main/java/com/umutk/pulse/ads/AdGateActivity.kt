@@ -61,7 +61,7 @@ class AdGateActivity : ComponentActivity() {
 /** The intent a tile or a shortcut starts: its own screen, or the ad offer first (the play build; the foss build starts the screen directly). */
 object TileAds {
     fun wrap(c: android.content.Context, target: Intent, key: String = "tiles"): Intent {
-        if (!PulseAds.ENABLED) return target
+        if (!PulseAds.ENABLED || Premium.on(c)) return target
         return Intent(c, AdGateActivity::class.java)
             .putExtra("target", target).putExtra("key", key).putExtra("minutes", AdUnlocks.PASS_MINUTES)
     }
