@@ -100,8 +100,8 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
         when (th.id) {
             // turned sideways on a tablet: a plain dark gradient (no picture, no blur), so the opening is not the white wallpaper stretched
             // the dark Windows 11 look opens on the same dark gradient as a tablet turned sideways (the light wallpaper stays for the light look)
-            "win11" -> if (landscapeTablet() || th.dark) Box(Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF0B1424), Color(0xFF000000)))))
-                else Image(painterResource(R.drawable.splash_win11_wallpaper), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            // the Windows 11 opening uses the dark blue wave wallpaper in both looks and on tablets (the user's picture)
+            "win11" -> Image(painterResource(R.drawable.win11_splash_bg), null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             "win95" -> Box(Modifier.fillMaxSize().background(Color(0xFF008080)))
             else -> Box(Modifier.fillMaxSize().background(th.bg))
         }
