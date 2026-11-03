@@ -7,6 +7,9 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -468,16 +471,39 @@ private fun NoteBookCard(n: Note, selected: Boolean, onTap: () -> Unit, onLong: 
     val title = if (hidden) tr("Locked note", "Kilitli not") else NotesStore.titleOf(n).ifBlank { tr("Untitled", "Adsız") }
     val lines = if (hidden) emptyList() else n.body.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
     val text = (if (n.title.isBlank()) lines.drop(1) else lines).take(8).joinToString("\n")
-    Column(
+    // a page in 3D: pressed, it leans towards the finger and lifts a little less; the spine on its left edge stays dark
+    var pressed by remember(n.id) { mutableStateOf(false) }
+    var tx by remember(n.id) { mutableFloatStateOf(0f) }
+    var ty by remember(n.id) { mutableFloatStateOf(0f) }
+    val rx by androidx.compose.animation.core.animateFloatAsState(if (pressed) ty * 9f else 0f, androidx.compose.animation.core.spring(dampingRatio = .6f, stiffness = 400f), label = "noteRx")
+    val ry by androidx.compose.animation.core.animateFloatAsState(if (pressed) tx * -9f else 0f, androidx.compose.animation.core.spring(dampingRatio = .6f, stiffness = 400f), label = "noteRy")
+    val lift by androidx.compose.animation.core.animateDpAsState(if (pressed) 2.dp else 8.dp, label = "noteLift")
+    val dens = LocalDensity.current.density
+    Box(
         Modifier.fillMaxWidth().aspectRatio(0.72f)
-            .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) T.accent.copy(alpha = .22f) else T.panel)
-            .pointerInput(n, selected) { detectTapGestures(onTap = { onTap() }, onLongPress = { onLong() }) }
-            .padding(12.dp),
+            .graphicsLayer {
+                rotationX = rx; rotationY = ry; cameraDistance = 14f * dens
+                shadowElevation = lift.toPx(); shape = RoundedCornerShape(10.dp); clip = false
+            }
+            .background(if (selected) T.accent.copy(alpha = .22f) else T.panel, RoundedCornerShape(10.dp))
+            .pointerInput(n, selected) {
+                detectTapGestures(
+                    onPress = { p ->
+                        tx = (p.x / size.width) * 2f - 1f; ty = (p.y / size.height) * 2f - 1f
+                        pressed = true
+                        tryAwaitRelease()
+                        pressed = false
+                    },
+                    onTap = { onTap() }, onLongPress = { onLong() },
+                )
+            },
     ) {
-        Text(title, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-        Spacer(Modifier.height(6.dp))
-        Text(if (hidden) "" else text, color = sub, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 9, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-        Text(date.format(Date(n.updated)), color = sub, fontSize = 11.sp)
+        Box(Modifier.align(Alignment.CenterStart).fillMaxSize().width(7.dp).background(Brush.horizontalGradient(listOf(Color.Black.copy(alpha = .35f), Color.Transparent))))
+        Column(Modifier.fillMaxSize().padding(start = 16.dp, end = 12.dp, top = 12.dp, bottom = 12.dp)) {
+            Text(title, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            Spacer(Modifier.height(6.dp))
+            Text(if (hidden) "" else text, color = sub, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 9, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+            Text(date.format(Date(n.updated)), color = sub, fontSize = 11.sp)
+        }
     }
 }
