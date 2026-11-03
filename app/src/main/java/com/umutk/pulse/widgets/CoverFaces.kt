@@ -19,7 +19,8 @@ object CoverFaces {
     fun draw(ctx: Context, face: String, w: Int, h: Int, now: Long): Bitmap {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
-        c.drawColor(Color.BLACK)
+        // the black background is the default; off, the picture has no background and the wallpaper shows through
+        if (com.umutk.pulse.features.StandByPrefs.widgetBlack(ctx)) c.drawColor(Color.BLACK)
         val cal = Calendar.getInstance().apply { timeInMillis = now }
         when (face) {
             "digital" -> digital(ctx, c, w, h, now, cal)
