@@ -47,6 +47,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.window.Popup
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.window.PopupProperties
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -229,6 +231,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var inPip by remember { mutableStateOf(false) }
     // set while the video was in the picture-in-picture window: when that window is closed (the activity stops), the video stops too
     val pipWas = remember { booleanArrayOf(false) }
+    // the label of the subtitle just added, until its text track shows up in the player
+    val pendingSubLabel = remember { arrayOfNulls<String>(1) }
     var shown by remember { mutableStateOf(true) }
     var poke by remember { mutableIntStateOf(0) }
     var locked by remember { mutableStateOf(false) }
@@ -292,6 +296,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     /** Loads the picked subtitle file again with the saved encoding and the delay. */
     fun applySub() {
         val e = ext ?: return
+        pendingSubLabel[0] = e.second
         val i = player.currentMediaItemIndex
         val at = player.currentPosition
         val item = player.currentMediaItem ?: return
@@ -309,7 +314,22 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 // a video takes over: the music player must not keep playing underneath it
                 if (isPlaying) runCatching { com.umutk.pulse.extras.music.MusicPlayerEngine.get(ctx).player.takeIf { it.isPlaying }?.pause() }
             }
-            override fun onTracksChanged(t: Tracks) { tracks = t }
+            override fun onTracksChanged(t: Tracks) {
+                tracks = t
+                // a subtitle just added: select its text track by its label (the default pick did not always take it)
+                val lbl = pendingSubLabel[0] ?: return
+                for (g in t.groups) {
+                    if (g.type != C.TRACK_TYPE_TEXT) continue
+                    for (i in 0 until g.length) {
+                        if (g.getTrackFormat(i).label != lbl || !g.isTrackSupported(i)) continue
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                            .addOverride(TrackSelectionOverride(g.mediaTrackGroup, i)).build()
+                        pendingSubLabel[0] = null
+                        return
+                    }
+                }
+            }
             override fun onVideoSizeChanged(v: VideoSize) { vsize = v }
             override fun onAudioSessionIdChanged(audioSessionId: Int) { applyBoost(audioSessionId); applyEq(audioSessionId) }
             override fun onMediaItemTransition(m: MediaItem?, reason: Int) {
@@ -794,31 +814,34 @@ private fun SubOptions(p: VideoPrefs, delayMs: Long, hasExt: Boolean, onDelay: (
 private class MoreItem(val key: String, val icon: String, val name: String, val state: String)
 
 /**
- * The More menu: a dark panel at the bottom of the screen, above the progress bar, with an icon for each action. It stays dark
- * over a white picture, so its text reads on any video.
+ * The More menu: a small two-column list under the three-dot button (top right), not a full-width sheet.
  */
 @Composable
 private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, onPick: (String) -> Unit) {
-    Popup(alignment = Alignment.BottomCenter, onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
-        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 18.dp, topEnd = 18.dp)).background(Color(0xF2101010))
-            .navigationBarsPadding().padding(start = 12.dp, end = 12.dp, top = 14.dp, bottom = 12.dp)) {
-            items.chunked(4).forEach { row ->
+    val d = LocalDensity.current
+    val dx = with(d) { (-12).dp.roundToPx() }
+    val dy = with(d) { 52.dp.roundToPx() }
+    Popup(alignment = Alignment.TopEnd, offset = IntOffset(dx, dy), onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+        Column(Modifier.width(300.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xF2101010)).padding(6.dp)) {
+            items.chunked(2).forEach { row ->
                 Row(Modifier.fillMaxWidth()) {
                     row.forEach { item ->
-                        Column(Modifier.weight(1f).clickable { onPick(item.key) }.padding(vertical = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        Row(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { onPick(item.key) }.padding(horizontal = 8.dp, vertical = 9.dp),
+                            verticalAlignment = Alignment.CenterVertically) {
                             if (item.key.startsWith("ctl_")) ControlGlyph(item.key.removePrefix("ctl_"), Color.White, sk, false)
-                            else PIcon(item.icon, Color.White, 26.dp)
-                            Text(if (item.state.isEmpty()) item.name else item.name + "\n" + item.state, color = Color.White, fontSize = 12.sp,
-                                textAlign = androidx.compose.ui.text.style.TextAlign.Center, maxLines = 2, modifier = Modifier.padding(top = 6.dp))
+                            else PIcon(item.icon, Color.White, 18.dp)
+                            Column(Modifier.padding(start = 8.dp).weight(1f)) {
+                                Text(item.name, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                if (item.state.isNotEmpty()) Text(item.state, color = Color(0xFFB0B0B0), fontSize = 11.sp, maxLines = 1)
+                            }
                         }
                     }
-                    repeat(4 - row.size) { Spacer(Modifier.weight(1f)) }
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
                 }
             }
         }
     }
 }
-
 
 /** A list of radio rows in the look's own window. */
 /** Sleep timer: a slider from off to 120 minutes, and a switch for "stop at the end of this video". */
