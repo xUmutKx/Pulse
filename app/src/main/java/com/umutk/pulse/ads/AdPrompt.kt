@@ -81,10 +81,31 @@ fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int =
  * the foss build has everything without it.
  */
 object Premium {
-    private fun prefs(c: Context) = c.getSharedPreferences("premium", Context.MODE_PRIVATE)
-    fun on(c: Context): Boolean = prefs(c).getBoolean("owned", false)
-    /** Called by the purchase check once Google Play confirms the one-time product. */
-    fun setOwned(c: Context, owned: Boolean) { prefs(c).edit().putBoolean("owned", owned).apply() }
+    /** The premium app (sold on Google Play as one purchase). Pulse trusts it only when it is installed and signed with the key below. */
+    const val UNLOCKER_PACKAGE = "com.umutk.pulse.premium"
+    /**
+     * SHA-256 of the premium app's Play signing certificate (hex, no colons). Empty until the premium app is on Play: then premium is off everywhere.
+     */
+    const val UNLOCKER_CERT_SHA256 = ""
+
+    /** True when the premium app is installed and its signing certificate is the one above. Nothing is stored, so removing the app ends it. */
+    fun on(c: Context): Boolean {
+        if (UNLOCKER_CERT_SHA256.isEmpty()) return false
+        return runCatching {
+            val pm = c.packageManager
+            val signers = if (android.os.Build.VERSION.SDK_INT >= 28) {
+                val info = pm.getPackageInfo(UNLOCKER_PACKAGE, android.content.pm.PackageManager.GET_SIGNING_CERTIFICATES)
+                info.signingInfo?.apkContentsSigners.orEmpty()
+            } else {
+                @Suppress("DEPRECATION")
+                pm.getPackageInfo(UNLOCKER_PACKAGE, android.content.pm.PackageManager.GET_SIGNATURES).signatures.orEmpty()
+            }
+            signers.any { sig ->
+                val digest = java.security.MessageDigest.getInstance("SHA-256").digest(sig.toByteArray())
+                digest.joinToString("") { "%02x".format(it) }.equals(UNLOCKER_CERT_SHA256, ignoreCase = true)
+            }
+        }.getOrDefault(false)
+    }
 }
 
 /** Features unlocked by a watched ad, each open for its own number of minutes (kept on the phone). */
