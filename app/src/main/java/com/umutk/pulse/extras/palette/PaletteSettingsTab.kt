@@ -4,6 +4,9 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -21,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PCard
+import com.umutk.pulse.PRadio
 import com.umutk.pulse.PSwitch
 import com.umutk.pulse.T
 import com.umutk.pulse.extras.palette.automation.ThemeWorker
@@ -46,6 +50,28 @@ fun PaletteSettingsTab(st: PaletteState) {
             Switch(tr("Follow the wallpaper colours", "Duvar kağıdı renklerini izle"), tr("Takes a new palette from the wallpaper every few hours", "Birkaç saatte bir duvar kağıdından yeni palet alır"), follow) { follow = it; PaletteStore.setFollowWallpaper(ctx, it); sync() }
             Text(tr("For Tasker, Modes and Routines or adb:", "Tasker, Modlar ve Rutinler ya da adb için:") + "\nam broadcast -a com.umutk.pulse.palette.APPLY_THEME --es theme \"Nord\"\nam broadcast -a com.umutk.pulse.palette.NEXT_PALETTE\nam broadcast -a com.umutk.pulse.palette.REGENERATE --ez wallpaper true",
                 color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+        }
+
+        // the app icons: the phone's own, or the picture an installed icon pack gives each app
+        SectionTitle(tr("Icon pack", "İkon paketi"))
+        PCard(Modifier.fillMaxWidth()) {
+            var chosen by remember { mutableStateOf(PaletteStore.iconPack(ctx)) }
+            val packs = remember { com.umutk.pulse.extras.palette.iconpack.InstalledIconPacks.list(ctx) }
+            Text(tr("App icons come from", "Uygulama ikonları kaynağı"), color = T.sub, fontSize = 12.sp)
+            (listOf("" to tr("The phone's own icons", "Telefonun kendi ikonları")) + packs.map { it.pkg to it.label }).forEach { (pkg, label) ->
+                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp).clickable {
+                    chosen = pkg; PaletteStore.setIconPack(ctx, pkg)
+                    com.umutk.pulse.extras.palette.iconpack.IconPackCache.forget(); st.clearCache()
+                }, verticalAlignment = Alignment.CenterVertically) {
+                    PRadio(chosen == pkg) {
+                        chosen = pkg; PaletteStore.setIconPack(ctx, pkg)
+                        com.umutk.pulse.extras.palette.iconpack.IconPackCache.forget(); st.clearCache()
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Text(label, color = T.text, fontSize = 14.sp)
+                }
+            }
+            if (packs.isEmpty()) Text(tr("No icon pack is installed. Install one, for example Blaux, and it shows here.", "Kurulu ikon paketi yok. Bir tane kurun, örneğin Blaux; burada görünür."), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 6.dp))
         }
 
         SectionTitle(tr("Upkeep", "Bakım"))

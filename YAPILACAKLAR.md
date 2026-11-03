@@ -2046,3 +2046,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Uygulama sayfası: APK çıkar ikonu Fluent Box, Zorla durdur ikonu Fluent Prohibited (önceden ikisi de bilinmeyen "i" idi); Material için de eşlendi
 - (sürüm sonra) derlenmedi: Launcher ikonları Blaux 2.3.0 paketinden seçildi (28 uygulama, birebir ve uygun eşleşmeler); kendi çizimlerim kaldırıldı
 - (sürüm sonra) derlenmedi: Uygulama sayfası: activity, service, receiver ve intent action satırlarına dokununca çalıştırılır; sonuç üstte yazılır
+- (sürüm sonra) derlenmedi: Palette: kurulu ikon paketleri okunur (appfilter), ikon kaynağı olarak seçilebilir (Blaux dahil); ayarlar > İkon paketi
