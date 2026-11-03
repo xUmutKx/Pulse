@@ -330,7 +330,6 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
                                     accent = androidx.compose.ui.graphics.Color.White,
                                 )
                             }
-                            com.umutk.pulse.ads.AdBarTune(Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(4.dp))
                         }
                     }
                 }
