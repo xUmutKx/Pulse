@@ -111,10 +111,13 @@ fun HomeView(
     val showDates = NotesPrefs.dates(ctx)
     var drawer by remember { mutableStateOf(false) }
     var expanded by remember { mutableStateOf(setOf<String>()) }
+    // the search is an icon at the top: the field opens with it, and stays open while a search is typed
+    var searchOpen by remember { mutableStateOf(false) }
+    var newFolder by remember { mutableStateOf(false) }
     val unlocked = notes.filter { it.trashedAt == 0L && (!it.locked || it.id in NotesPrefs.unlocked) }
     // tags and folders come only from notes that are open, so a locked note leaks nothing
     val tags = unlocked.flatMap { NotesStore.tagsOf(it.body) }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(8).map { it.key }
-    val folders = unlocked.map { it.folder }.filter { it.isNotBlank() }.distinct().sorted()
+    val folders = (unlocked.map { it.folder } + NotesPrefs.extraFolders(ctx)).filter { it.isNotBlank() }.distinct().sorted()
     val base: Comparator<Note> = when (sort) {
         NotesPrefs.Sort.UPDATED -> compareByDescending<Note> { it.updated }
         NotesPrefs.Sort.CREATED -> compareByDescending<Note> { it.created }
@@ -156,8 +159,10 @@ fun HomeView(
                 // the list's icons: folders at the left, then the settings and the new note at the right
                 NIcon("menu", fg, tr("Folders", "Klasörler")) { drawer = true }
                 Spacer(Modifier.weight(1f))
+                NIcon("search", fg, tr("Search", "Ara")) { searchOpen = !searchOpen }
                 NIcon("settings", fg, tr("Settings", "Ayarlar")) { onOpenSettings() }
                 NIcon("add", fg, tr("New note", "Yeni not")) { onNew() }
+                NIcon("folder", fg, tr("New folder", "Yeni klasör")) { newFolder = true }
             } else {
                 NIcon("close", fg, tr("Cancel", "İptal")) { onSelect(emptySet()) }
                 Text(tr("${selected.size} selected", "${selected.size} seçili"), color = fg, fontSize = 17.sp, modifier = Modifier.weight(1f))
@@ -169,7 +174,10 @@ fun HomeView(
                 NIcon("delete", fg, tr("Move to trash", "Çöpe taşı")) { onTrash() }
             }
         }
-        PField(query, onQuery, tr("Search", "Ara"), Modifier.fillMaxWidth())
+        if (searchOpen || query.isNotBlank()) PField(query, onQuery, tr("Search", "Ara"), Modifier.fillMaxWidth())
+        if (newFolder) NInput(tr("New folder", "Yeni klasör"), tr("Folder path, e.g. School/Math", "Klasör yolu, ör. Okul/Matematik"), "", folders, { path ->
+            NotesPrefs.addFolder(ctx, path); newFolder = false; onChanged()
+        }, { newFolder = false })
         // the sort: what the list is ordered by, and the arrow that turns it round
         val sortLabel = when (sort) {
             NotesPrefs.Sort.UPDATED -> tr("Date modified", "Tarih değiştirildi")
