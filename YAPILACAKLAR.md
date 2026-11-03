@@ -1986,3 +1986,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Toolkit: a tool opens in a window over the Toolkit grid (tap outside or back closes it), not full screen
 - (sürüm sonra) derlenmedi: Keyboard with a physical keyboard: the bar has a keyboard button that opens the full keyboard; the keyboard service works before the first unlock (direct boot)
 - (sürüm sonra) derlenmedi: Toolkit dice and coin: lit surfaces (a metal coin with a rim, a bevelled die)
+- (sürüm sonra) derlenmedi: Quick panel coin: a translucent rim on the coin in every frame (the tile tints it, so the rim is transparency only)

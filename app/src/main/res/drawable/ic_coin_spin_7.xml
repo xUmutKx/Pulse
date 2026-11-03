@@ -5,5 +5,7 @@
     <group android:pivotX="12" android:pivotY="12" android:scaleX="0.924">
     <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
         android:pathData="M12,2a10,10 0 1 0 0,20a10,10 0 1 0 0,-20z M12,4.5a7.5,7.5 0 1 1 0,15a7.5,7.5 0 1 1 0,-15z M8.5,8.8 H15.5 V10.2 H8.5 z M8.5,11.3 H15.5 V12.7 H8.5 z M8.5,13.8 H13.5 V15.2 H8.5 z" />
+    <path android:fillColor="#59FFFFFF" android:fillType="evenOdd"
+        android:pathData="M12,2a10,10 0 1 0 0,20a10,10 0 1 0 0,-20z M12,3.3a8.7,8.7 0 1 1 0,17.4a8.7,8.7 0 1 1 0,-17.4z" />
     </group>
 </vector>
