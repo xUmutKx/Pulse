@@ -93,6 +93,8 @@ open class MainActivity : ComponentActivity() {
         // installer copies from an earlier run are dead weight: a fresh start clears them (a restored instance keeps its window)
         if (savedInstanceState == null) File(cacheDir, "installer").deleteRecursively()
         disableExtraAppsOnFreshInstall(this)
+        // a force-stopped Pulse Keyboard is set back as the default when Pulse opens (root or Shizuku)
+        Thread { runCatching { com.umutk.pulse.extras.keyboard.KeyboardDefault.restore(applicationContext) } }.start()
         Watchdog.sync(this)
         // coming back to a process Android restarted: the saved page and scroll are restored, so the opening screen is not played again
         // a fresh start plays the opening screen again, even when the process was still alive (back out, then open)
