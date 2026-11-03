@@ -1988,3 +1988,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Toolkit dice and coin: lit surfaces (a metal coin with a rim, a bevelled die)
 - (sürüm sonra) derlenmedi: Quick panel coin: a translucent rim on the coin in every frame (the tile tints it, so the rim is transparency only)
 - (sürüm sonra) derlenmedi: Accessibility keyboard: placed again when the phone turns (narrower, low on the screen in landscape)
+- (sürüm sonra) derlenmedi: Accessibility keyboard: a floating button is always there (while on), with a pad for games and places with no text field: type, copy, clear
