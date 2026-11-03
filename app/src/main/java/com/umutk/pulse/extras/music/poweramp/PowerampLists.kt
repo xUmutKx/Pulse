@@ -252,7 +252,6 @@ fun LibraryScreen(
                 val cats = listOf(
                     Triple(Icons.Rounded.LibraryMusic, Color(0xFF5B8DD9), Lib.Songs to tr("All songs", "Tüm şarkılar")),
                     Triple(Icons.Rounded.TrendingUp, Color(0xFFD9695B), Lib.Quick(0) to quickNames[0]),
-                    Triple(Icons.Rounded.History, Color(0xFF5BA0D9), Lib.Quick(1) to quickNames[1]),
                     Triple(Icons.Rounded.NewReleases, Color(0xFF6BC08A), Lib.Quick(2) to quickNames[2]),
                     Triple(Icons.Rounded.Air, Color(0xFF4FA3C7), Lib.WhiteNoise to tr("White noise", "Beyaz gürültü")),
                     Triple(Icons.Rounded.Cloud, Color(0xFF7A8FD9), Lib.OnlinePlaylists to tr("Online playlists", "Çevrimiçi çalma listeleri")),
@@ -263,6 +262,7 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.Event, Color(0xFF5BA0D9), Lib.Cat(3) to catNames[3]),
                     Triple(Icons.Rounded.Folder, Color(0xFF4A7BD6), Lib.Folders to tr("Folders", "Klasörler")),
                     Triple(Icons.Rounded.QueueMusic, Color(0xFF8E5BD9), Lib.Playlists to tr("Playlists", "Çalma listeleri")),
+                    Triple(Icons.Rounded.History, Color(0xFF5BA0D9), Lib.Quick(1) to quickNames[1]),
                     Triple(Icons.Rounded.Star, Color(0xFFD9A05B), Lib.Favs to tr("Favourites", "Favoriler")),
                     Triple(Icons.Rounded.BarChart, Color(0xFF5BB5A8), Lib.Stats to tr("Statistics", "İstatistikler")),
                 )
