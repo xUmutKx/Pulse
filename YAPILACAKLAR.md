@@ -1946,3 +1946,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard clipboard: the pin is a real thumbtack
 - (sürüm sonra) derlenmedi: Keyboard clipboard: the item menu has a delete button
 - (sürüm sonra) derlenmedi: Keyboard clipboard: the delete button is a trash bin
+- (sürüm sonra) derlenmedi: Keyboard: automatic capital only on the first letter of a sentence; the rest of the word stays small
