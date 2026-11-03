@@ -425,6 +425,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         val key = IntroCache.key(me.uri)
         intro = IntroCache.get(ctx, key)
         if (intro == null) {
+            // 1) IntroDB by the show's IMDb id (needs the OpenSubtitles key); 2) the picture match with a neighbouring episode
+            val fromDb = IntroSources.forFile(ctx, me.name)
+            if (fromDb != null) { IntroCache.put(ctx, key, fromDb); intro = fromDb; return@LaunchedEffect }
             val other = items.getOrNull(cur + 1) ?: items.getOrNull(cur - 1)
             if (other != null) IntroFinder.find(ctx, me.uri, other.uri)?.let { found -> IntroCache.put(ctx, key, found); intro = found }
         }
