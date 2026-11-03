@@ -292,7 +292,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         }
     }) {
         Column(
-            (if (float) Modifier.fillMaxWidth(.9f).align(Alignment.BottomStart)
+            (if (float) Modifier.fillMaxWidth(.7f).align(Alignment.BottomStart)
                 .offset { IntOffset((st.rootW * .1f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
                 .onSizeChanged { kbH = it.height.toFloat() }
                 .onGloballyPositioned { c ->
@@ -306,7 +306,11 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 .padding(horizontal = if (phoneLand) 2.dp else KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
-            if (float) Box(Modifier.fillMaxWidth().height(34.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) { Box(Modifier.width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f))) }
+            if (float) Box(Modifier.fillMaxWidth().height(28.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {
+                Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f)))
+                // back to the normal keyboard (the floating one is put away for good, until it is chosen again)
+                Box(Modifier.align(Alignment.CenterEnd).padding(end = 2.dp)) { BarIcon(th, kbIcon(th, "Keyboard")) { KeyboardPrefs.floating = false; KeyboardPrefs.floatSession = false } }
+            }
             if (!st.numpad) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
@@ -443,6 +447,8 @@ private fun Trail(th: KbTheme, st: KbState) {
 @Composable
 private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
     val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    // the floating keyboard keeps its bar slim, so its keys get the room
+    if (KeyboardPrefs.floatNow) return 36.dp
     return if (cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.screenWidthDp < 600) 35.dp else 52.dp
 }
 
