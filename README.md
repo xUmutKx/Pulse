@@ -2,6 +2,8 @@
 
 ### Pulse
 
+> I love some apps, but sometimes a single feature I want is missing. After a while I started adding things one by one to random apps, and then I thought: why not pack them into a single app, all for convenience. Simple, and under 50 MB.
+
 | Pulse keyboard settings | BlackOut | Buds manager | System font | Windows 11 look: flyout |
 |---|---|---|---|---|
 | <img src="docs/screenshots/keyboard.jpg" width="170" alt="Pulse keyboard settings"> | <img src="docs/screenshots/blackout.jpg" width="170" alt="BlackOut"> | <img src="docs/screenshots/buds-manager.jpg" width="170" alt="Buds manager"> | <img src="docs/screenshots/system-font.jpg" width="170" alt="System font"> | <img src="docs/screenshots/win11-flyout.jpg" width="170" alt="Windows 11 look: flyout"> |

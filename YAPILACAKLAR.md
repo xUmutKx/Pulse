@@ -1934,3 +1934,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Win11 desktop: the icon backing is a bluer, far more see-through tile; icons move left by two fifths of their width
 - (sürüm sonra) derlenmedi: Ads: a native ad strip under the e-book shelf and reader, and under the app manager (play build)
 - (sürüm sonra) derlenmedi: Weather: an ad strip at the foot; the weather map opens after a rewarded ad each time (play build)
+- 1.0.345 derlenmedi: README intro; the changes since 1.0.344 (ads on pages, widget ads, device overview front view, Poweramp tap/cover, Settings ad credit and Premium, weather map ad, e-book and manager strips, desktop icon backing)
