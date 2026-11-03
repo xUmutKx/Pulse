@@ -418,6 +418,17 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             delay(250)
         }
     }
+    // the intro: the saved one of this folder, or found by comparing this episode with the next (or previous) one
+    var intro by remember { mutableStateOf<LongRange?>(null) }
+    LaunchedEffect(cur) {
+        val me = items.getOrNull(cur) ?: return@LaunchedEffect
+        val key = IntroCache.key(me.uri)
+        intro = IntroCache.get(ctx, key)
+        if (intro == null) {
+            val other = items.getOrNull(cur + 1) ?: items.getOrNull(cur - 1)
+            if (other != null) IntroFinder.find(ctx, me.uri, other.uri)?.let { found -> IntroCache.put(ctx, key, found); intro = found }
+        }
+    }
     val retriever = remember(cur) { arrayOfNulls<MediaMetadataRetriever>(1) }
     DisposableEffect(cur) { onDispose { runCatching { retriever[0]?.release() } } }
     LaunchedEffect(seeking, pos / 1000) {
@@ -623,12 +634,15 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
         VideoExtras(player, prefs, act, rev)
         if (!inPip) VideoStatus(prefs, rev, Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 12.dp))
-        // Netflix-style skip: while the first minutes (the intro) play, a button jumps to the end of them
-        if (!inPip && prefs.introSec > 0 && pos < prefs.introSec * 1000L && dur > prefs.introSec * 1000L) {
-            Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 96.dp).clip(RoundedCornerShape(6.dp))
-                .background(Color(0xE6FFFFFF)).clickable { player.seekTo(prefs.introSec * 1000L) }.padding(horizontal = 16.dp, vertical = 9.dp)) {
-                Text(tr("Skip intro", "İntroyu geç"), color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        // skip the intro: the button shows while the intro plays and jumps to its end (found from the next episode, see IntroFinder)
+        intro?.let { r ->
+            if (!inPip && pos >= r.first && pos < r.last) {
+                Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 96.dp).clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xE6FFFFFF)).clickable { player.seekTo(r.last + 1) }.padding(horizontal = 16.dp, vertical = 9.dp)) {
+                    Text(tr("Skip intro", "İntroyu geç"), color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
             }
+        }
         }
         hud?.let { (icon, text) ->
             Row(Modifier.align(Alignment.Center).background(Color(0x99000000), RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {

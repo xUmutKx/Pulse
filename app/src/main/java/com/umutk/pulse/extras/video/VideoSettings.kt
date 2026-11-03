@@ -206,7 +206,6 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Sw(tr("Select automatically", "Kendiliğinden seç"), { prefs.subAutoSel }, { prefs.subAutoSel = it }, done)
                 Sw(tr("Load .srt next to the video", "Yanındaki altyazıyı yükle"), { prefs.subAuto }, { prefs.subAuto = it }, done)
                 Sw(tr("Ignore file styling", "Dosya stilini yok say"), { prefs.subIgnoreStyle }, { prefs.subIgnoreStyle = it }, done)
-                Num(tr("Skip intro button", "İntroyu geç düğmesi"), listOf(0, 60, 90, 120, 150), { prefs.introSec }, { if (it == 0) tr("Off", "Kapalı") else "$it s" }, done) { prefs.introSec = it }
                 Pick(tr("Font", "Yazı tipi"), subFontNames(), { prefs.subFont }, done) { prefs.subFont = it }
                 Num(tr("Text size", "Yazı boyu"), listOf(14, 16, 18, 20, 24, 28, 34, 40), { prefs.subSize }, { "$it" }, done) { prefs.subSize = it }
                 Pick(tr("Colour", "Renk"), subColorNames(), { prefs.subColor }, done) { prefs.subColor = it }

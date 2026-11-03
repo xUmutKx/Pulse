@@ -2027,3 +2027,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Video mini pencere (üstte, yuvarlak köşeli, sürüklenir, kenara yapışır, aşağı fırlatınca kapanır, çift dokunma 10 sn, altyazılı); üç nokta menüsünde "Mini pencere"
 - (sürüm sonra) derlenmedi: Altyazı uygulanınca bildirim (açıldı / okunamadı / eklendi ama gösterilmedi)
 - (sürüm sonra) derlenmedi: Altyazı dosyasının kendi stili varsayılan olarak kullanılır; "İntroyu geç" düğmesi (ayarlanabilir süre, varsayılan 90 sn)
+- (sürüm sonra) derlenmedi: İntro algılama (yerel, sonraki bölümle kare karşılaştırma, klasör bazlı önbellek); "İntroyu geç" düğmesi. IntroDB/TheIntroDB kaynakları domain açılınca eklenecek; ses eşleştirme yok
