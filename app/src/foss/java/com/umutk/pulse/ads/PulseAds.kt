@@ -18,5 +18,5 @@ object PulseAds {
     @Composable
     fun NativeCard(modifier: Modifier = Modifier, bg: Color, text: Color, sub: Color, accent: Color) { }
 
-    fun showRewarded(a: Activity, onReward: () -> Unit, onNone: () -> Unit) = onNone()
+    fun showRewarded(a: Activity, onReward: () -> Unit, onFail: () -> Unit) = onFail()
 }
