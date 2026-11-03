@@ -37,6 +37,9 @@ object NotesPrefs {
 
     fun grid(c: Context) = sp(c).getBoolean("grid", false)
     fun setGrid(c: Context, on: Boolean) = sp(c).edit().putBoolean("grid", on).apply()
+    /** How the notes are laid out: "list" (one row each), "grid" (two columns of cards) or "book" (two columns of page-like cards). */
+    fun view(c: Context): String = sp(c).getString("view", null) ?: if (grid(c)) "grid" else "list"
+    fun setView(c: Context, v: String) = sp(c).edit().putString("view", v).putBoolean("grid", v != "list").apply()
 
     fun groups(c: Context) = sp(c).getBoolean("groups", true)
     fun setGroups(c: Context, on: Boolean) = sp(c).edit().putBoolean("groups", on).apply()
