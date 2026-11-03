@@ -139,10 +139,11 @@ object PulseAds {
         if (ad == null) { onFail(); loadRewarded(app); return }
         rewarded = null
         var earned = false
+        // the reward is given once the ad is closed (the earned signal comes while the ad still shows; the action must not open over it)
         ad.fullScreenContentCallback = object : FullScreenContentCallback() {
-            override fun onAdDismissedFullScreenContent() { if (!earned) onFail(); loadRewarded(app) }
+            override fun onAdDismissedFullScreenContent() { if (earned) onReward() else onFail(); loadRewarded(app) }
             override fun onAdFailedToShowFullScreenContent(error: AdError) { onFail(); loadRewarded(app) }
         }
-        ad.show(a) { _ -> earned = true; onReward() }
+        ad.show(a) { _ -> earned = true }
     }
 }
