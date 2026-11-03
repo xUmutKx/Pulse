@@ -8,6 +8,11 @@ import androidx.compose.material.icons.filled.ArrowForward as FArrowForward
 import androidx.compose.material.icons.filled.ArrowUpward as FArrowUpward
 import androidx.compose.material.icons.filled.Backspace as FBackspace
 import androidx.compose.material.icons.filled.Check as FCheck
+import androidx.compose.material.icons.filled.Delete as FDelete
+import androidx.compose.material.icons.rounded.Delete as RDelete
+import androidx.compose.material.icons.sharp.Delete as SDelete
+import androidx.compose.material.icons.outlined.Delete as ODelete
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.material.icons.filled.Close as FClose
 import androidx.compose.material.icons.filled.ContentCopy as FContentCopy
 import androidx.compose.material.icons.filled.ContentCut as FContentCut
@@ -153,7 +158,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Filled.FArrowForward
         "ArrowUpward" -> Icons.Filled.FArrowUpward
         "Backspace" -> Icons.Filled.FBackspace
-        "Delete" -> androidx.compose.material.icons.Icons.Filled.Delete
+        "Delete" -> Icons.Filled.FDelete
         "Check" -> Icons.Filled.FCheck
         "Close" -> Icons.Filled.FClose
         "ContentCopy" -> Icons.Filled.FContentCopy
@@ -192,7 +197,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Rounded.RArrowForward
         "ArrowUpward" -> Icons.Rounded.RArrowUpward
         "Backspace" -> Icons.Rounded.RBackspace
-        "Delete" -> androidx.compose.material.icons.Icons.Rounded.Delete
+        "Delete" -> Icons.Rounded.RDelete
         "Check" -> Icons.Rounded.RCheck
         "Close" -> Icons.Rounded.RClose
         "ContentCopy" -> Icons.Rounded.RContentCopy
@@ -233,7 +238,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Sharp.SArrowForward
         "ArrowUpward" -> Icons.Sharp.SArrowUpward
         "Backspace" -> Icons.Sharp.SBackspace
-        "Delete" -> androidx.compose.material.icons.Icons.Sharp.Delete
+        "Delete" -> Icons.Sharp.SDelete
         "Check" -> Icons.Sharp.SCheck
         "Close" -> Icons.Sharp.SClose
         "ContentCopy" -> Icons.Sharp.SContentCopy
@@ -272,7 +277,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "ArrowForward" -> Icons.Outlined.OArrowForward
         "ArrowUpward" -> Icons.Outlined.OArrowUpward
         "Backspace" -> Icons.Outlined.OBackspace
-        "Delete" -> androidx.compose.material.icons.Icons.Outlined.Delete
+        "Delete" -> Icons.Outlined.ODelete
         "Check" -> Icons.Outlined.OCheck
         "Close" -> Icons.Outlined.OClose
         "ContentCopy" -> Icons.Outlined.OContentCopy
