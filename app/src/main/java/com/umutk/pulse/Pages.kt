@@ -769,6 +769,8 @@ fun PremiumCard() {
     val ctx = LocalContext.current
     val owned = com.umutk.pulse.ads.Premium.on(ctx)
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        PIcon("star", T.accent, 22.dp)
+        Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text("Premium", color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
             Text(
