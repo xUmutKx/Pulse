@@ -1737,6 +1737,13 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_wide" />
         </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.CoverWidget" android:label="Pulse · Screen cover" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+                <action android:name="com.umutk.pulse.action.COVER_TOGGLE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_cover" />
+        </receiver>
         <receiver android:name="com.umutk.pulse.widgets.WeatherClearWidget" android:label="Pulse · Weather and clock, no background" android:exported="false">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
