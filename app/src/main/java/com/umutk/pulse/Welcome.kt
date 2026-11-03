@@ -107,3 +107,42 @@ private fun WelcomeCard(title: String, content: @Composable () -> Unit) {
 private fun WelcomeLine(text: String) {
     Text("•  $text", color = T.text, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
 }
+
+/** The first screen: the terms and privacy note (the person accepts them once), and what root and Shizuku are for. Pulse works without either. */
+@Composable
+fun SetupScreen(onDone: () -> Unit) {
+    val ctx = LocalContext.current
+    var accepted by remember { mutableStateOf(false) }
+    fun finish() {
+        ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit()
+            .putBoolean("setup_done", true).putLong("terms_accepted_at", System.currentTimeMillis()).putString("terms_version", "1").apply()
+        onDone()
+    }
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = pageGutter).padding(top = 40.dp, bottom = 24.dp)) {
+        Image(rememberLauncherLogo(), null, Modifier.size(72.dp))
+        Text(tr("Set up Pulse", "Pulse'u kur"), color = T.text, fontSize = 28.sp, fontWeight = FontWeight.Black, modifier = Modifier.padding(top = 12.dp))
+        Text(tr("Two things before you start.", "Başlamadan önce iki şey."), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
+        WelcomeCard(tr("Terms and privacy", "Koşullar ve gizlilik")) {
+            WelcomeLine(tr("Pulse keeps your files, music and settings on this phone. Nothing is sent to us.",
+                "Pulse dosyalarını, müziğini ve ayarlarını bu telefonda tutar. Bize hiçbir şey gönderilmez."))
+            WelcomeLine(tr("The Play version shows ads from Google AdMob. Google may use an advertising ID for them, and you can change that in your phone's settings.",
+                "Play sürümü Google AdMob reklamları gösterir. Google bunlar için bir reklam kimliği kullanabilir; bunu telefonunuzun ayarlarından değiştirebilirsiniz."))
+            WelcomeLine(tr("The terms of use and the privacy notice are in About.", "Kullanım koşulları ve gizlilik bildirimi Hakkında bölümünde."))
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                PCheck(accepted, { accepted = it })
+                Text(tr("I have read and accept the terms and the privacy notice", "Koşulları ve gizlilik bildirimini okudum, kabul ediyorum"),
+                    color = T.text, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
+            }
+        }
+        WelcomeCard(tr("Root and Shizuku (optional)", "Root ve Shizuku (isteğe bağlı)")) {
+            WelcomeLine(tr("Some tools need root or Shizuku: hiding games, Debloat, and keeping Pulse as the default keyboard.",
+                "Bazı araçlar root veya Shizuku ister: oyunları gizlemek, Debloat ve Pulse'u varsayılan klavye olarak tutmak."))
+            WelcomeLine(tr("Pulse works without either. Those tools just stay off until you give access in their settings.",
+                "Pulse ikisi olmadan da çalışır. Bu araçlar, ayarlarından erişim verene kadar kapalı kalır."))
+        }
+        Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.Center) {
+            if (accepted) PButton(tr("Continue", "Devam"), onClick = { finish() })
+            else Text(tr("Accept the terms to continue", "Devam etmek için koşulları kabul et"), color = T.sub, fontSize = 13.sp)
+        }
+    }
+}
