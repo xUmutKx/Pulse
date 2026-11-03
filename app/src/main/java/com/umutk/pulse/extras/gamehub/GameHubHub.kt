@@ -131,7 +131,6 @@ private class GameRow(val pkg: String, val name: String)
 private fun prefs(c: Context) = c.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 private fun hiddenSet(c: Context): Set<String> = prefs(c).getStringSet("hidden", emptySet()) ?: emptySet()
 private fun saveHidden(c: Context, s: Set<String>) { prefs(c).edit().putStringSet("hidden", s).apply() }
-private fun restrictOn(c: Context, pkg: String): Boolean = prefs(c).getBoolean("restrict_$pkg", false)
 /** Apps the person added to the library by hand (any app, not only the ones the system marks as games). */
 private fun gridDp(c: Context): Int = when (prefs(c).getInt("grid", 1)) { 0 -> 84; 2 -> 128; else -> 100 }
 private fun showHiddenInLibrary(c: Context): Boolean = prefs(c).getBoolean("showHidden", true)
@@ -216,17 +215,6 @@ private fun setGameHidden(c: Context, pkg: String, hide: Boolean, quiet: Boolean
     val ok = out.code >= 0 && !Regex("(?i)error|exception|failure|unknown|denied").containsMatchIn(out.text)
     if (ok) saveHidden(c, if (hide) hiddenSet(c) + pkg else hiddenSet(c) - pkg)
     else if (!quiet) toast(c, tr("Not changed: ", "Değişmedi: ") + (out.text.ifBlank { tr("no answer from root or Shizuku", "root ya da Shizuku yanıt vermedi") }).take(140))
-    return ok
-}
-
-/** The game's background restriction: no background run and the restricted standby bucket, lifted again on allow. */
-private fun setRestricted(c: Context, pkg: String, restrict: Boolean): Boolean {
-    val mode = if (restrict) "ignore" else "allow"
-    val bucket = if (restrict) "restricted" else "active"
-    val out = Privilege.run("cmd appops set $pkg RUN_IN_BACKGROUND $mode; cmd appops set $pkg RUN_ANY_IN_BACKGROUND $mode; am set-standby-bucket $pkg $bucket")
-    val ok = out.code >= 0
-    if (ok) prefs(c).edit().putBoolean("restrict_$pkg", restrict).apply()
-    else toast(c, tr("Could not change it. Root or Shizuku is needed.", "Değiştirilemedi. Root ya da Shizuku gerekir."))
     return ok
 }
 
@@ -427,7 +415,6 @@ private fun ThemeDialog(current: String, ctx: Context, onPick: (String) -> Unit,
 @Composable
 private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed: Long, onHidden: (Boolean) -> Unit) {
     val ctx = LocalContext.current
-    var restrict by remember(g.pkg) { mutableStateOf(restrictOn(ctx, g.pkg)) }
     var coverTick by remember(g.pkg) { mutableStateOf(0) }
     val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -474,8 +461,6 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
                 Chip(pal, tr("Change cover", "Kapağı değiştir")) { pick.launch("image/*") }
                 Chip(pal, tr("Remove cover", "Kapağı kaldır")) { coverFile(ctx, g.pkg).delete(); coverTick++ }
             }
-            SectionTitle(pal, tr("Game", "Oyun"))
-            SettingRow(pal, tr("Restrict in background", "Arka planda kısıtla"), restrict, can) { want -> if (setRestricted(ctx, g.pkg, want)) restrict = want }
             // achievements and community need a service the phone's games do not have: said here, not faked
             SectionTitle(pal, tr("Achievements", "Başarımlar"))
             Text(tr("This game does not report achievements to Pulse.", "Bu oyun başarımlarını Pulse'a bildirmiyor."), color = pal.sub, fontSize = 13.sp)
