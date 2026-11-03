@@ -50,6 +50,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.ArrowUpward
+import androidx.compose.material.icons.outlined.ArrowDownward
 import com.umutk.pulse.ExtraLookIcon
 import com.umutk.pulse.ExtraLookRow
 import com.umutk.pulse.PChip
@@ -177,7 +180,7 @@ fun HomeView(
             Text(sortLabel, color = sub, fontSize = 14.sp)
             Spacer(Modifier.weight(1f))
             Box(Modifier.size(34.dp).clip(CircleShape).clickable { NotesPrefs.setReverse(ctx, !NotesPrefs.reverse(ctx)); onChanged() }, contentAlignment = Alignment.Center) {
-                androidx.compose.material3.Icon(if (NotesPrefs.reverse(ctx)) androidx.compose.material.icons.Icons.Outlined.ArrowUpward else androidx.compose.material.icons.Icons.Outlined.ArrowDownward, sortLabel, tint = sub, modifier = Modifier.size(18.dp))
+                androidx.compose.material3.Icon(if (NotesPrefs.reverse(ctx)) ArrowUpward else ArrowDownward, sortLabel, tint = sub, modifier = Modifier.size(18.dp))
             }
         }
         if (folders.isNotEmpty() || tags.isNotEmpty()) Row(

@@ -63,6 +63,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.awaitEachGesture
 import android.view.MotionEvent
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Create
+import androidx.compose.material.icons.outlined.DeleteSweep
+import androidx.compose.material.icons.outlined.Highlight
+import androidx.compose.material.icons.outlined.Remove
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
@@ -179,9 +185,12 @@ fun NSketch(onDone: (String?) -> Unit) {
             PaintTool("close") { onDone(null) }
             Spacer(Modifier.width(6.dp))
             // the tools: pen, highlighter, eraser, straight line
-            listOf(0 to tr("Pen", "Kalem") to androidx.compose.material.icons.Icons.Outlined.Create, 1 to tr("Highlight", "Vurgu") to androidx.compose.material.icons.Icons.Outlined.Highlight,
-                3 to tr("Eraser", "Silgi") to androidx.compose.material.icons.Icons.Outlined.DeleteSweep, 2 to tr("Line", "Çizgi") to androidx.compose.material.icons.Icons.Outlined.Remove).forEach { (kl, icon) ->
-                val (k, label) = kl
+            val toolDefs: List<Triple<Int, String, ImageVector>> = listOf(
+                Triple(0, tr("Pen", "Kalem"), Icons.Outlined.Create),
+                Triple(1, tr("Highlight", "Vurgu"), Icons.Outlined.Highlight),
+                Triple(3, tr("Eraser", "Silgi"), Icons.Outlined.DeleteSweep),
+                Triple(2, tr("Line", "Çizgi"), Icons.Outlined.Remove))
+            toolDefs.forEach { (k, label, icon) ->
                 Box(Modifier.size(38.dp).clip(androidx.compose.foundation.shape.CircleShape).background(if (tool == k) com.umutk.pulse.T.accent.copy(alpha = .22f) else androidx.compose.ui.graphics.Color.Transparent).clickable2 { tool = k },
                     contentAlignment = Alignment.Center) {
                     androidx.compose.material3.Icon(icon, label, tint = if (tool == k) com.umutk.pulse.T.accent else PaintInk, modifier = Modifier.size(22.dp))
