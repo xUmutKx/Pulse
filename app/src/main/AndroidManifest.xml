@@ -180,7 +180,7 @@
                 <data android:pathPattern=".*\\..*\\.zip" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".FilesLauncher" android:enabled="false" android:targetActivity=".FilesActivity" android:exported="true" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:label="@string/files_name">
+        <activity-alias android:name=".FilesLauncher" android:enabled="false" android:targetActivity=".FilesActivity" android:exported="true" android:icon="@drawable/launch_files" android:roundIcon="@drawable/launch_files" android:label="@string/files_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -219,7 +219,7 @@
                 <data android:mimeType="vnd.android.cursor.item/event" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".CalendarLauncher" android:enabled="false" android:targetActivity=".CalendarActivity" android:exported="true" android:icon="@mipmap/ic_calendar" android:roundIcon="@mipmap/ic_calendar" android:label="Calendar">
+        <activity-alias android:name=".CalendarLauncher" android:enabled="false" android:targetActivity=".CalendarActivity" android:exported="true" android:icon="@drawable/launch_calendar" android:roundIcon="@drawable/launch_calendar" android:label="Calendar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -283,7 +283,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".ContactsLauncher" android:enabled="false" android:targetActivity=".ContactsActivity" android:exported="true" android:icon="@mipmap/ic_contacts" android:roundIcon="@mipmap/ic_contacts" android:label="@string/contacts_name">
+        <activity-alias android:name=".ContactsLauncher" android:enabled="false" android:targetActivity=".ContactsActivity" android:exported="true" android:icon="@drawable/launch_contacts" android:roundIcon="@drawable/launch_contacts" android:label="@string/contacts_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -291,7 +291,7 @@
         </activity-alias>
         <!-- ArtCraft: launcher for the APKs of MostafaXS1/artcraft-android (download, install, update) -->
         <activity android:name=".ArtCraftActivity" android:process=":artcraft" android:exported="true" android:label="ArtCraft" android:icon="@mipmap/ic_files" android:roundIcon="@mipmap/ic_files" android:launchMode="singleTop" android:taskAffinity="com.umutk.pulse.artcraft" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
-        <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@mipmap/ic_ad_artcraft" android:roundIcon="@mipmap/ic_ad_artcraft" android:label="ArtCraft">
+        <activity-alias android:name=".ArtCraftLauncher" android:enabled="false" android:targetActivity=".ArtCraftActivity" android:exported="true" android:icon="@drawable/launch_artcraft" android:roundIcon="@drawable/launch_artcraft" android:label="ArtCraft">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -328,7 +328,7 @@
                 <data android:mimeType="video/*" />
             </intent-filter>
         </activity>
-        <activity-alias android:name=".PhotosLauncher" android:enabled="false" android:targetActivity=".ImageViewActivity" android:exported="true" android:icon="@mipmap/ic_photos" android:roundIcon="@mipmap/ic_photos" android:label="@string/photos_name">
+        <activity-alias android:name=".PhotosLauncher" android:enabled="false" android:targetActivity=".ImageViewActivity" android:exported="true" android:icon="@drawable/launch_photos" android:roundIcon="@drawable/launch_photos" android:label="@string/photos_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -869,7 +869,7 @@
         <receiver android:name="com.umutk.pulse.extras.island.IslandBoot" android:exported="true">
             <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
         </receiver>
-        <activity-alias android:name=".IslandLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_island" android:roundIcon="@mipmap/ic_ad_island" android:label="Island">
+        <activity-alias android:name=".IslandLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_island" android:roundIcon="@drawable/launch_island" android:label="Island">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
@@ -1502,135 +1502,135 @@
             </intent-filter>
             <meta-data android:name="android.view.im" android:resource="@xml/method" />
         </service>
-        <activity-alias android:name=".MusicLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_music" android:roundIcon="@mipmap/ic_music" android:label="Music Player">
+        <activity-alias android:name=".MusicLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_music" android:roundIcon="@drawable/launch_music" android:label="Music Player">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".VideoLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_video" android:roundIcon="@mipmap/ic_video" android:label="Video Player">
+        <activity-alias android:name=".VideoLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_video" android:roundIcon="@drawable/launch_video" android:label="Video Player">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
             <intent-filter><action android:name="android.intent.action.VIEW"/><category android:name="android.intent.category.DEFAULT"/><category android:name="android.intent.category.BROWSABLE"/><data android:mimeType="video/*"/></intent-filter>
         </activity-alias>
-        <activity-alias android:name=".WhiteNoiseLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_noise" android:roundIcon="@mipmap/ic_ad_noise" android:label="White Noise">
+        <activity-alias android:name=".WhiteNoiseLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_noise" android:roundIcon="@drawable/launch_noise" android:label="White Noise">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".VoiceLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_voice" android:roundIcon="@mipmap/ic_ad_voice" android:label="Voice Recorder">
+        <activity-alias android:name=".VoiceLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_voice" android:roundIcon="@drawable/launch_voice" android:label="Voice Recorder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".NotesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_notes" android:roundIcon="@mipmap/ic_ad_notes" android:label="Notes">
+        <activity-alias android:name=".NotesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_notes" android:roundIcon="@drawable/launch_notes" android:label="Notes">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".PaintLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_paint" android:roundIcon="@mipmap/ic_ad_paint" android:label="Paint">
+        <activity-alias android:name=".PaintLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_paint" android:roundIcon="@drawable/launch_paint" android:label="Paint">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".BrowserLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_browser" android:roundIcon="@mipmap/ic_ad_browser" android:label="Browser">
+        <activity-alias android:name=".BrowserLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_browser" android:roundIcon="@drawable/launch_browser" android:label="Browser">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".OfficeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_office" android:roundIcon="@mipmap/ic_ad_office" android:label="Office">
+        <activity-alias android:name=".OfficeLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_office" android:roundIcon="@drawable/launch_office" android:label="Office">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".CalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_calc" android:roundIcon="@mipmap/ic_ad_calc" android:label="Calculator">
+        <activity-alias android:name=".CalculatorLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_calc" android:roundIcon="@drawable/launch_calc" android:label="Calculator">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".ClockLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_clock" android:roundIcon="@mipmap/ic_ad_clock" android:label="Clock">
+        <activity-alias android:name=".ClockLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_clock" android:roundIcon="@drawable/launch_clock" android:label="Clock">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".EbookLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_notes" android:roundIcon="@mipmap/ic_ad_notes" android:label="Books">
+        <activity-alias android:name=".EbookLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_books" android:roundIcon="@drawable/launch_books" android:label="Books">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".TempMailLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_tempmail" android:roundIcon="@mipmap/ic_ad_tempmail" android:label="TempMail">
+        <activity-alias android:name=".TempMailLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_tempmail" android:roundIcon="@drawable/launch_tempmail" android:label="TempMail">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".KeyboardLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_keyboard" android:roundIcon="@mipmap/ic_ad_keyboard" android:label="Keyboard">
+        <activity-alias android:name=".KeyboardLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_keyboard" android:roundIcon="@drawable/launch_keyboard" android:label="Keyboard">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".WeatherLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_weather" android:roundIcon="@mipmap/ic_ad_weather" android:label="Weather">
+        <activity-alias android:name=".WeatherLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_weather" android:roundIcon="@drawable/launch_weather" android:label="Weather">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
         <!-- standalone entries for the in-app tools (the route is picked by the alias name in ExtraToolActivity.routeOf) -->
-        <activity-alias android:name=".MessagesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_messages" android:roundIcon="@mipmap/ic_ad_messages" android:label="Messages">
+        <activity-alias android:name=".MessagesLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_messages" android:roundIcon="@drawable/launch_messages" android:label="Messages">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".ScreenRecLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_record" android:roundIcon="@mipmap/ic_ad_record" android:label="Screen recorder">
+        <activity-alias android:name=".ScreenRecLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_screenrec" android:roundIcon="@drawable/launch_screenrec" android:label="Screen recorder">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".NotifHistLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_notif" android:roundIcon="@mipmap/ic_ad_notif" android:label="Notification history">
+        <activity-alias android:name=".NotifHistLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_notifhist" android:roundIcon="@drawable/launch_notifhist" android:label="Notification history">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".ExtraStoreLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_extras" android:roundIcon="@mipmap/ic_ad_extras" android:label="Store">
+        <activity-alias android:name=".ExtraStoreLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_store" android:roundIcon="@drawable/launch_store" android:label="Store">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".LocalSendLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_localsend" android:roundIcon="@mipmap/ic_ad_localsend" android:label="LocalSend">
+        <activity-alias android:name=".LocalSendLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_localsend" android:roundIcon="@drawable/launch_localsend" android:label="LocalSend">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".PaletteLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_localsend" android:roundIcon="@mipmap/ic_ad_localsend" android:label="Palette">
+        <activity-alias android:name=".PaletteLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_palette" android:roundIcon="@drawable/launch_palette" android:label="Palette">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".GameHubLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/ic_ad_gamehub" android:roundIcon="@drawable/ic_ad_gamehub" android:label="Game Hub">
+        <activity-alias android:name=".GameHubLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_gamehub" android:roundIcon="@drawable/launch_gamehub" android:label="Game Hub">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity-alias>
-        <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@mipmap/ic_ad_blackout" android:roundIcon="@mipmap/ic_ad_blackout" android:label="BlackOut">
+        <activity-alias android:name=".BlackOutLauncher" android:enabled="false" android:targetActivity=".ExtraToolActivity" android:exported="true" android:icon="@drawable/launch_blackout" android:roundIcon="@drawable/launch_blackout" android:label="BlackOut">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
