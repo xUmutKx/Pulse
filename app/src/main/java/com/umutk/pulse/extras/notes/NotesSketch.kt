@@ -7,6 +7,8 @@ import android.graphics.Paint
 import android.graphics.Path as APath
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.DropdownMenu
@@ -102,6 +104,8 @@ fun NSketch(onDone: (String?) -> Unit) {
     val redoList = remember { mutableStateListOf<Pen>() }
     var fingerDraw by remember { mutableStateOf(false) }
     var menu by remember { mutableStateOf(false) }
+    var paletteAt by remember { mutableStateOf<Offset?>(null) }
+    val buttonClock = remember { mutableStateOf(0L) }
     val penSeen = remember { mutableStateOf(false) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     Column(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }.background(PaintBar)) {
@@ -140,6 +144,7 @@ fun NSketch(onDone: (String?) -> Unit) {
                     DropdownMenuItem(text = { Text(if (fingerDraw) tr("Turn off finger drawing", "Parmakla çizimi kapat") else tr("Turn on finger drawing", "Parmakla çizimi aç")) },
                         onClick = { fingerDraw = !fingerDraw; menu = false })
                     DropdownMenuItem(text = { Text(tr("Save as favourite pen", "Favori kalem olarak kaydet")) }, onClick = { addFavourite(); menu = false })
+                    DropdownMenuItem(text = { Text(tr("Tool panel", "Araç paneli")) }, onClick = { paletteAt = Offset(40f, 40f); menu = false })
                     DropdownMenuItem(text = { Text(tr("Clear", "Temizle")) }, onClick = { strokes.clear(); redoList.clear(); menu = false })
                 }
             }
@@ -160,8 +165,9 @@ fun NSketch(onDone: (String?) -> Unit) {
                 }
             }
         }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
         Box(
-            Modifier.weight(1f).fillMaxWidth().border(1.dp, PaintLine).background(paper)
+            Modifier.fillMaxSize().border(1.dp, PaintLine).background(paper)
                 .onSizeChanged { size = it }
                 // keyed on the colour and width, so a change applies to the next stroke
                 .pointerInput(ink, width, tool, fingerDraw) {
@@ -171,12 +177,18 @@ fun NSketch(onDone: (String?) -> Unit) {
                         val c0 = first.changes.first()
                         val stylus = c0.type == PointerType.Stylus
                         if (stylus) penSeen.value = true else if (penSeen.value && !fingerDraw) return@awaitEachGesture
+                        // the pen's button pressed twice quickly opens the tool panel beside the pen
+                        var btnDown = stylusButton(first)
+                        if (btnDown) { if (System.currentTimeMillis() - buttonClock.value < 450) paletteAt = c0.position; buttonClock.value = System.currentTimeMillis() }
                         val eraser = tool == 3 || (stylus && (((first.nativeEvent as? MotionEvent)?.buttonState ?: 0) and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0)
                         if (!eraser) redoList.clear()
                         if (!eraser) strokes.add(Pen(ink, if (tool == 1) width.toPx() * 3f else width.toPx(), mutableStateListOf(c0.position), if (tool == 1) 1 else 0, tool == 2)) else eraseAt(strokes, c0.position, 28.dp.toPx())
                         while (true) {
                             val ev = awaitPointerEvent(PointerEventPass.Main)
                             val c = ev.changes.firstOrNull { it.id == c0.id } ?: break
+                            val nowBtn = stylusButton(ev)
+                            if (nowBtn && !btnDown) { if (System.currentTimeMillis() - buttonClock.value < 450) paletteAt = c.position; buttonClock.value = System.currentTimeMillis() }
+                            btnDown = nowBtn
                             if (!c.pressed) break
                             c.consume()
                             if (eraser) eraseAt(strokes, c.position, 28.dp.toPx()) else strokes.lastOrNull()?.let { s ->
@@ -198,8 +210,49 @@ fun NSketch(onDone: (String?) -> Unit) {
                 }
             }
         }
+        // the tool panel: opened by pressing the pen's button twice quickly, or from the menu; a tap outside closes it
+        paletteAt?.let { at ->
+            ToolPanel(at, ink, width, tool,
+                onInk = { ink = it }, onWidth = { width = it }, onTool = { tool = it },
+                onDismiss = { paletteAt = null })
+        }
+        }
     }
 }
+
+/** The floating tool panel: tools, colours and widths in one place, beside the pen. */
+@Composable
+private fun ToolPanel(at: Offset, ink: Int, width: Dp, tool: Int, onInk: (Int) -> Unit, onWidth: (Dp) -> Unit, onTool: (Int) -> Unit, onDismiss: () -> Unit) {
+    Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { onDismiss() } })
+    Column(
+        Modifier.offset { androidx.compose.ui.unit.IntOffset(at.x.toInt(), at.y.toInt()) }
+            .clip(RoundedCornerShape(16.dp)).background(Color(0xE6202020)).padding(8.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            listOf(0 to tr("Pen", "Kalem"), 1 to tr("Highlight", "Vurgu"), 3 to tr("Eraser", "Silgi"), 2 to tr("Line", "Çizgi")).forEach { (k, label) ->
+                Text(label, color = if (tool == k) com.umutk.pulse.T.accent else Color.White, fontSize = 13.sp, fontWeight = if (tool == k) FontWeight.Bold else FontWeight.Normal,
+                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp).clickable2 { onTool(k) })
+            }
+        }
+        PAINT_COLORS.chunked(8).forEach { row ->
+            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                row.forEach { c ->
+                    Box(Modifier.size(30.dp).clickable2 { onInk(c); if (tool == 3) onTool(0) }, contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(if (ink == c) 22.dp else 20.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(c))
+                            .border(if (ink == c) 2.dp else 0.dp, Color.White, androidx.compose.foundation.shape.CircleShape))
+                    }
+                }
+            }
+        }
+        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            PAINT_WIDTHS.forEach { w -> PaintWidth(w, w == width) { onWidth(w) } }
+        }
+    }
+}
+
+/** Whether the pen's button is held in this event. */
+private fun stylusButton(ev: androidx.compose.ui.input.pointer.PointerEvent): Boolean =
+    (((ev.nativeEvent as? MotionEvent)?.buttonState ?: 0) and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
 
 /** Removes the strokes that pass under [p] (the eraser of the pen's button). */
 private fun eraseAt(strokes: MutableList<Pen>, p: Offset, radius: Float) {
