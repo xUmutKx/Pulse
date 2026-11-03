@@ -303,11 +303,33 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onEvaluateFullscreenMode() = false
 
+    private var kbRoot: View? = null
+
+    /**
+     * The floating keyboard: the window is tall (the keyboard sits at the bottom of it and moves up inside it), so only the keyboard's own part takes touches and
+     * the app does not make room for it; everything else in the window is the app's. The normal keyboard keeps the system's own insets.
+     */
+    override fun onComputeInsets(outInsets: android.inputmethodservice.InputMethodService.Insets) {
+        super.onComputeInsets(outInsets)
+        val r = st.floatRect
+        val root = kbRoot
+        if (!KeyboardPrefs.floatNow || r == null || root == null) return
+        val h = window.window?.decorView?.height ?: return
+        val loc = IntArray(2); root.getLocationInWindow(loc)
+        outInsets.contentTopInsets = h
+        outInsets.visibleTopInsets = h
+        outInsets.touchableInsets = android.inputmethodservice.InputMethodService.Insets.TOUCHABLE_INSETS_REGION
+        outInsets.touchableRegion.set(r[0] + loc[0], r[1] + loc[1], r[2] + loc[0], r[3] + loc[1])
+    }
+
     override fun onCreateInputView(): View {
         val o = owner ?: StandByOwner().also { it.start(); owner = it }
         // Compose finds its lifecycle on the root of the window, which for a keyboard is the window's decor view
         window.window?.decorView?.let { it.setViewTreeLifecycleOwner(o); it.setViewTreeSavedStateRegistryOwner(o) }
         return ComposeView(this).apply {
+            kbRoot = this
+            // the floating keyboard moved: the system is asked again which part of the window takes touches
+            st.refreshInsets = { post { this@PulseKeyboardService.window.window?.decorView?.requestLayout() } }
             setViewTreeLifecycleOwner(o); setViewTreeSavedStateRegistryOwner(o)
             setContent { KeyboardView(st, this@PulseKeyboardService) }
             // the bottom keys sit where the system's home swipe starts: the whole keyboard keeps its touches (Android 10+)

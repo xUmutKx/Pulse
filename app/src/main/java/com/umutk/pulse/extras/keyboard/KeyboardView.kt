@@ -221,11 +221,36 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val dens = LocalDensity.current.density
     var rootH by remember { mutableStateOf(0f) }
+    // the floating keyboard: its own height, and the handle's place in the window (the drag is read on the window, which stays still)
+    val float = KeyboardPrefs.floatNow
+    var kbH by remember { mutableStateOf(0f) }
+    var handleRect by remember { mutableStateOf<Rect?>(null) }
     val rootHue = LocalHue.current
     // the gamepad paints no board of its own: its buttons float over whatever the game shows
-    Box(modifier.fillMaxWidth().then(if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
-        .then(if (KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
-        .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(Unit) {
+    Box(modifier.fillMaxWidth().then(if (float) Modifier.height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .85f).dp) else if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
+        .then(if (!float && KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
+        .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(float) {
+        // the floating keyboard moves by its handle: the finger is followed on the window (which stays still), so the drag is smooth wherever the keyboard goes
+        if (!float) return@pointerInput
+        awaitEachGesture {
+            val d = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+            val hr = handleRect
+            if (hr == null || !hr.contains(d.position)) return@awaitEachGesture
+            d.consume()
+            var last = d.position
+            while (true) {
+                val ev = awaitPointerEvent(androidx.compose.ui.input.pointer.PointerEventPass.Initial)
+                val c = ev.changes.firstOrNull { it.id == d.id } ?: break
+                if (!c.pressed) break
+                val dx = c.position.x - last.x; val dy = c.position.y - last.y
+                last = c.position
+                c.consume()
+                KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH - kbH).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .1f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+            }
+            KeyboardPrefs.saveFloat()
+        }
+    }.pointerInput(Unit) {
         // a quick swipe down anywhere on the keyboard: it slides away and the keyboard closes (watched first, so the keys still get their touches)
         awaitEachGesture {
             val d = awaitFirstDown(requireUnconsumed = false, pass = androidx.compose.ui.input.pointer.PointerEventPass.Initial)
@@ -236,7 +261,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 val c = ev.changes.firstOrNull { it.id == d.id } ?: break
                 if (!c.pressed) break
                 val dy = c.position.y - d.position.y; val dx = c.position.x - d.position.x
-                if (st.panel == "keys" && !st.cursorDrag && dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
+                if (!float && st.panel == "keys" && !st.cursorDrag && dy > 80.dp.toPx() && abs(dx) < dy * .45f && c.uptimeMillis - t0 < 420 && st.preview?.alts.isNullOrEmpty()) {
                     done = true; c.consume(); st.trail = emptyList(); st.swiped = true; st.preview = null
                     act.hide()
                 }
@@ -244,24 +269,21 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         }
     }) {
         Column(
-            (if (KeyboardPrefs.floating) Modifier.fillMaxWidth(.9f).align(Alignment.TopStart).offset { IntOffset((st.rootW * .1f * KeyboardPrefs.floatX).roundToInt(), -(rootH * .5f * KeyboardPrefs.floatY).roundToInt()) }
+            (if (float) Modifier.fillMaxWidth(.9f).align(Alignment.BottomStart)
+                .offset { IntOffset((st.rootW * .1f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
+                .onSizeChanged { kbH = it.height.toFloat() }
+                .onGloballyPositioned { c ->
+                    // the keyboard's place tells the system which part of the window takes touches; the rest of the window belongs to the app
+                    val bnd = c.boundsInRoot()
+                    val r = intArrayOf(bnd.left.roundToInt(), bnd.top.roundToInt(), bnd.right.roundToInt(), bnd.bottom.roundToInt())
+                    if (!r.contentEquals(st.floatRect)) { st.floatRect = r; st.refreshInsets?.invoke() }
+                }
+                .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFx)
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
                 .padding(horizontal = KeyboardPrefs.sidePad.dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
-            // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (sideways and up or down)
-            if (KeyboardPrefs.floating) Box(Modifier.fillMaxWidth().height(34.dp).pointerInput(Unit) {
-                awaitEachGesture {
-                    val d = awaitFirstDown(requireUnconsumed = false)
-                    drag(d.id) { c ->
-                        c.consume()
-                        val dy = c.position.y - c.previousPosition.y
-                        val dx = c.position.x - c.previousPosition.x
-                        KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH * .5f).coerceAtLeast(1f)).coerceIn(0f, 1f)
-                        KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .1f).coerceAtLeast(1f)).coerceIn(0f, 1f)
-                    }
-                    KeyboardPrefs.saveFloat()
-                }
-            }, contentAlignment = Alignment.Center) { Box(Modifier.width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f))) }
+            // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
+            if (float) Box(Modifier.fillMaxWidth().height(34.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) { Box(Modifier.width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f))) }
             if (!st.numpad) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
@@ -271,7 +293,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
             else Panel(st.panel, th, st, act, keyH)
         }
         // the brightness: a black veil over the keys (the pop-up above stays bright)
-        if (KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
+        if (!float && KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
         Trail(th, st)
         Preview(th, st)
         // private typing: the hat mark sits at the bottom middle, so it is seen whatever the keyboard shows

@@ -31,11 +31,43 @@ class KeyboardTile : TileService() {
         }
         // the tile opens the normal keyboard as its own window: the floating keyboard is put away (a float left over from before is cleared)
         KeyboardPrefs.floating = false
+        KeyboardPrefs.floatSession = false
         tilePrefs(this).edit().putBoolean("active", true).apply()
         qsTile?.apply { state = Tile.STATE_ACTIVE; updateTile() }
         val i = Intent(this, KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         if (android.os.Build.VERSION.SDK_INT >= 34) {
             startActivityAndCollapse(android.app.PendingIntent.getActivity(this, 0, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
+        } else {
+            @Suppress("DEPRECATION")
+            startActivityAndCollapse(i)
+        }
+    }
+}
+
+/**
+ * Quick settings tile: the floating keyboard, a keyboard of its own that sits over the app and is moved anywhere by its handle. The normal keyboard (the
+ * "Keyboard" tile and the setting) is not changed: the floating one lasts only while its window is open, and is never saved as the keyboard's mode.
+ */
+@androidx.annotation.RequiresApi(24)
+class KeyboardFloatTile : TileService() {
+    override fun onStartListening() {
+        qsTile?.apply { state = if (KeyboardPrefs.floatSession && KeyboardFloatActivity.current != null) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE; updateTile() }
+    }
+
+    override fun onClick() {
+        // a second tap puts it away
+        if (KeyboardPrefs.floatSession) {
+            KeyboardPrefs.floatSession = false
+            KeyboardFloatActivity.current?.finish()
+            qsTile?.apply { state = Tile.STATE_INACTIVE; updateTile() }
+            return
+        }
+        KeyboardPrefs.load(this)
+        KeyboardPrefs.floatSession = true
+        qsTile?.apply { state = Tile.STATE_ACTIVE; updateTile() }
+        val i = Intent(this, KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        if (android.os.Build.VERSION.SDK_INT >= 34) {
+            startActivityAndCollapse(android.app.PendingIntent.getActivity(this, 1, i, android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT))
         } else {
             @Suppress("DEPRECATION")
             startActivityAndCollapse(i)
@@ -56,8 +88,9 @@ class KeyboardFloatActivity : Activity() {
     override fun onDestroy() {
         super.onDestroy()
         if (current === this) current = null
-        // however the window closes (tile, back, the field left), the tile is off again
+        // however the window closes (tile, back, the field left), the tile is off again and the floating keyboard is put away
         tileOff(this)
+        KeyboardPrefs.floatSession = false
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
