@@ -112,9 +112,9 @@ object Premium {
 
 /** Features unlocked by a watched ad, each open for its own number of minutes (kept on the phone). */
 object AdUnlocks {
-    /** One ad watched opens this for 30 minutes in every feature that asks for an ad. */
+    /** One ad watched opens this for 5 minutes in every feature that asks for an ad. */
     const val PASS = "pass"
-    const val PASS_MINUTES = 30
+    const val PASS_MINUTES = 5
     private fun prefs(c: Context) = c.getSharedPreferences("ad_unlocks", Context.MODE_PRIVATE)
     fun isOpen(c: Context, key: String): Boolean = System.currentTimeMillis() < prefs(c).getLong(key, 0L)
     fun open(c: Context, key: String, minutes: Int) { prefs(c).edit().putLong(key, System.currentTimeMillis() + minutes * 60_000L).apply() }

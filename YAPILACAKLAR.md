@@ -2005,3 +2005,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: One UI tablet dialogs: centred on screen and up to 560 dp wide (a phone keeps the bottom sheet)
 - (sürüm sonra) derlenmedi: Tablet, every Windows-style dialog: up to 560 dp wide on a tablet (was 480)
 - (sürüm sonra) derlenmedi: Cache cleaner: apps whose cache is inside their own folder show the cache the system reports (needs the usage-access permission); tapping clears nothing for them, the app settings do
+- (sürüm sonra) derlenmedi: Ad credit: one ad = 5 minutes (was 60); the premium card has no description text when not bought
