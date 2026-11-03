@@ -1994,3 +1994,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notes book view: the pages lean towards the finger when pressed, with a shadow that lifts and a dark spine on the left
 - (sürüm sonra) derlenmedi: Notes home: notes fill the width of a tablet (as many columns as fit); a phone keeps two in the grid and one in the list
 - (sürüm sonra) derlenmedi: Network: Devices on this Wi-Fi has a Scan again button; the count shows … while it scans
+- (sürüm sonra) derlenmedi: Network type: a change counts when the phone keeps at least one of the asked types (a phone without 5G now reports done instead of failing)
