@@ -2007,3 +2007,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Cache cleaner: apps whose cache is inside their own folder show the cache the system reports (needs the usage-access permission); tapping clears nothing for them, the app settings do
 - (sürüm sonra) derlenmedi: Ad credit: one ad = 5 minutes (was 60); the premium card has no description text when not bought
 - (sürüm sonra) derlenmedi: Ads: while the ad credit (5 minutes) or premium is open, no banner or native ad is drawn and the bottom space is freed
+- (sürüm sonra) derlenmedi: Floating keyboard: 70% of the width, a slimmer bar and handle, and a button to go back to the normal keyboard
