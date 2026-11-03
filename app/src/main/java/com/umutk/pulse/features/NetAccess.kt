@@ -36,6 +36,18 @@ import com.umutk.pulse.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.produceState
+import androidx.core.graphics.drawable.toBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.foundation.Image
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.layout.size
+import com.umutk.pulse.PIcon
 
 /**
  * Per-app network access: an app can be cut off from Wi-Fi and from mobile data. The cut is an iptables rule per app (owner match on its
@@ -112,18 +124,26 @@ private fun NetAppsDialog(onDismiss: () -> Unit) {
         onDismissRequest = onDismiss,
         title = { Text(tr("Access per app", "Uygulama başına erişim"), color = T.text) },
         text = {
-            Column(Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
+            Column(Modifier.heightIn(max = 560.dp).verticalScroll(rememberScrollState())) {
                 if (Privilege.mode == Privilege.Mode.None) Text(tr("Needs root or Shizuku.", "Root ya da Shizuku gerekir."), color = T.sub, fontSize = 12.sp)
                 apps.forEach { ai ->
                     val pkg = ai.packageName
                     var wifi by remember(pkg) { mutableStateOf(NetPolicy.wifiBlocked(ctx, pkg)) }
                     var mobile by remember(pkg) { mutableStateOf(NetPolicy.mobileBlocked(ctx, pkg)) }
+                    // the app's own icon, then its name, then a switch for Wi-Fi and one for mobile data (each with its icon); a change is saved at once
+                    val icon by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, pkg) {
+                        value = withContext(Dispatchers.IO) { runCatching { ctx.packageManager.getApplicationIcon(ai).toBitmap(96, 96).asImageBitmap() }.getOrNull() }
+                    }
                     Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Text(ctx.packageManager.getApplicationLabel(ai).toString(), color = T.text, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                        Text("Wi-Fi", color = T.sub, fontSize = 11.sp)
+                        Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
+                            icon?.let { Image(it, null, Modifier.size(36.dp).clip(RoundedCornerShape(9.dp)), contentScale = ContentScale.Fit) }
+                        }
+                        Spacer(Modifier.width(10.dp))
+                        Text(ctx.packageManager.getApplicationLabel(ai).toString(), color = T.text, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                        PIcon("wifi", if (!wifi) T.accent else T.sub, 18.dp, Modifier.semantics { contentDescription = "Wi-Fi" })
                         PSwitch(!wifi, { on -> val was = wifi; wifi = !on; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, !on, mobile)) wifi = was } })
-                        Spacer(Modifier.width(8.dp))
-                        Text(tr("Mobile", "Mobil"), color = T.sub, fontSize = 11.sp)
+                        Spacer(Modifier.width(10.dp))
+                        PIcon("phone", if (!mobile) T.accent else T.sub, 18.dp, Modifier.semantics { contentDescription = tr("Mobile", "Mobil") })
                         PSwitch(!mobile, { on -> val was = mobile; mobile = !on; scope.launch(Dispatchers.IO) { if (!NetPolicy.setRule(ctx, pkg, wifi, !on)) mobile = was } })
                     }
                 }
