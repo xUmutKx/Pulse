@@ -229,6 +229,17 @@ private fun pdfWatermark(ctx: Context, uri: Uri, text: String, outName: String):
     }
 }
 
+/** Form fields and their values become plain page content: the file can no longer be filled in. */
+private fun pdfFlatten(ctx: Context, uri: Uri, outName: String): File {
+    com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(ctx)
+    val src = uriToTemp(ctx, uri, "pdf")
+    com.tom_roush.pdfbox.pdmodel.PDDocument.load(src).use { doc ->
+        val form = doc.documentCatalog.acroForm ?: throw java.io.IOException(tr("This PDF has no form fields", "Bu PDF'de form alanı yok"))
+        form.flatten()
+        val out = targetFile(outName); doc.save(out); return out
+    }
+}
+
 /** A smaller copy: each page is drawn again as a JPEG at a lower quality (pages become pictures, so text is no longer selectable). */
 private fun pdfCompress(ctx: Context, uri: Uri, outName: String): File {
     val src = uriToTemp(ctx, uri, "pdf")
@@ -267,7 +278,7 @@ private fun imagesToPdf(ctx: Context, uris: List<Uri>, outName: String): File {
     } finally { pd.close() }
 }
 
-private enum class PdfJob { MERGE, SPLIT, IMAGES, DELETE, ROTATE, TEXT, TOIMG, LOCK, UNLOCK, WATERMARK, COMPRESS }
+private enum class PdfJob { MERGE, SPLIT, IMAGES, DELETE, ROTATE, TEXT, TOIMG, LOCK, UNLOCK, WATERMARK, COMPRESS, FLATTEN }
 
 /** PDF Tools: merge, split/extract pages, and images-to-PDF — reached from the Office hub. */
 @Composable
@@ -321,7 +332,7 @@ fun PdfToolsPage(onBack: () -> Unit) {
         listOf(
             PdfJob.DELETE to tr("Delete pages", "Sayfa sil"), PdfJob.ROTATE to tr("Rotate pages", "Sayfa döndür"), PdfJob.TEXT to tr("Extract text", "Metni çıkar"),
             PdfJob.TOIMG to tr("PDF to images", "PDF'den resme"), PdfJob.LOCK to tr("Lock PDF (password)", "PDF'i kilitle (şifre)"), PdfJob.UNLOCK to tr("Unlock PDF", "PDF'in kilidini aç"),
-            PdfJob.WATERMARK to tr("Watermark", "Filigran"), PdfJob.COMPRESS to tr("Compress PDF", "PDF'i küçült"),
+            PdfJob.WATERMARK to tr("Watermark", "Filigran"), PdfJob.COMPRESS to tr("Compress PDF", "PDF'i küçült"), PdfJob.FLATTEN to tr("Flatten PDF (forms)", "PDF'i düzleştir (formlar)"),
         ).forEach { (j, label) -> PButton(label, Modifier.fillMaxWidth(), compact = true) { pendingJob = j; pickPdfOne.launch("application/pdf") } }
     }
 
@@ -350,6 +361,7 @@ fun PdfToolsPage(onBack: () -> Unit) {
                     PdfJob.TEXT -> doJob { pdfText(ctx, us.first(), n) }; PdfJob.TOIMG -> doJob { pdfToImages(ctx, us.first(), n) }
                     PdfJob.LOCK -> doJob { pdfLock(ctx, us.first(), sec, n) }; PdfJob.UNLOCK -> doJob { pdfUnlock(ctx, us.first(), sec, n) }
                     PdfJob.WATERMARK -> doJob { pdfWatermark(ctx, us.first(), sec, n) }; PdfJob.COMPRESS -> doJob { pdfCompress(ctx, us.first(), n) }
+                    PdfJob.FLATTEN -> doJob { pdfFlatten(ctx, us.first(), n) }
                 }
             }) { Text(tr("Create", "Oluştur")) } },
             dismissButton = { TextButton({ job = null }) { Text(tr("Cancel", "İptal")) } })
