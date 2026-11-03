@@ -267,11 +267,11 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     )
                 }
-                act("block", tr("Force stop", "Durmaya zorla")) {
+                act("forceStop", tr("Force stop", "Durmaya zorla")) {
                     Shell.run("am force-stop $pkg")
                     note = "${d?.label ?: pkg} was stopped"
                 }
-                act("archive", tr("Extract APK", "APK çıkar")) { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
+                act("apkPackage", tr("Extract APK", "APK çıkar")) { scope.launch { note = tr("Extracting…", "Çıkarılıyor…"); note = withContext(Dispatchers.IO) { extractApp(ctx, pkg) } } }
                 if (d != null && !d.isSystem) act("delete", tr("Uninstall", "Kaldır"), danger = true) { confirmUninstall = true }
             }
             if (note.isNotEmpty()) Text(note, color = androidx.compose.ui.graphics.Color.White, fontSize = 12.sp)
