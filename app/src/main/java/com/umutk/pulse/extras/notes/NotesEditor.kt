@@ -36,6 +36,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -127,6 +130,25 @@ fun NoteEditor(
         }
         onEdit { it.copy(body = v) }
     }
+    // the body with its selection, so the text row formats the selected words (or the place of the cursor)
+    var bodyField by remember(note.id) { mutableStateOf(TextFieldValue(note.body, TextRange(note.body.length))) }
+    LaunchedEffect(note.body) { if (bodyField.text != note.body) bodyField = TextFieldValue(note.body, TextRange(note.body.length)) }
+    fun applyFmt(kind: String) {
+        val t = bodyField.text
+        val lo = minOf(bodyField.selection.min, bodyField.selection.max).coerceIn(0, t.length)
+        val hi = maxOf(bodyField.selection.min, bodyField.selection.max).coerceIn(0, t.length)
+        val (out, cur) = if (kind == "bold") {
+            if (lo == hi) { val ins = "**" + tr("bold", "kalın") + "**"; (t.substring(0, lo) + ins + t.substring(hi)) to lo + ins.length }
+            else { val w = "**" + t.substring(lo, hi) + "**"; (t.substring(0, lo) + w + t.substring(hi)) to lo + w.length }
+        } else {
+            // a line marker goes at the start of the line where the selection starts
+            val prefix = when (kind) { "heading" -> "## "; "bullet" -> "- "; else -> "[ ] " }
+            val ls = t.lastIndexOf('\n', lo - 1) + 1
+            (t.substring(0, ls) + prefix + t.substring(ls)) to hi + prefix.length
+        }
+        bodyField = TextFieldValue(out, TextRange(cur.coerceIn(0, out.length)))
+        changeBody(out)
+    }
     fun toggleRecord() {
         if (recording) {
             recording = false
@@ -208,7 +230,7 @@ fun NoteEditor(
             }
             Spacer(Modifier.height(10.dp))
             if (preview) NoteBody(note.body, size, ink, T.accent) { changeBody(it) }
-            else NField(note.body, { changeBody(it) }, tr("Write here", "Buraya yaz"), ink, inkSub, size, false, false, Modifier.fillMaxWidth().heightIn(min = 180.dp))
+            else NFieldTV(bodyField, { tv -> bodyField = tv; if (tv.text != note.body) changeBody(tv.text) }, tr("Write here", "Buraya yaz"), ink, inkSub, size, Modifier.fillMaxWidth().heightIn(min = 180.dp))
 
             if (links.isNotEmpty()) {
                 Text(tr("Links", "Bağlantılar"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
@@ -236,12 +258,12 @@ fun NoteEditor(
             horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
         ) {
             listOf(
-                Triple("H", tr("Heading", "Başlık"), "\n## "),
-                Triple("B", tr("Bold", "Kalın"), "\n**" + tr("bold", "kalın") + "** "),
-                Triple("•", tr("Bullet", "Madde"), "\n- "),
-                Triple("☐", tr("Checklist", "Kontrol"), "\n[ ] "),
-            ).forEach { (label, desc, marker) ->
-                Box(Modifier.size(40.dp).clip(CircleShape).clickable { changeBody(note.body + marker) }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
+                Triple("H", tr("Heading", "Başlık"), "heading"),
+                Triple("B", tr("Bold", "Kalın"), "bold"),
+                Triple("•", tr("Bullet", "Madde"), "bullet"),
+                Triple("☐", tr("Checklist", "Kontrol"), "check"),
+            ).forEach { (label, desc, kind) ->
+                Box(Modifier.size(40.dp).clip(CircleShape).clickable { applyFmt(kind) }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
                     Text(label, color = fg, fontSize = 17.sp, fontWeight = if (label == "B") FontWeight.Bold else FontWeight.SemiBold)
                 }
             }
@@ -292,6 +314,22 @@ private fun AudioRow(ctx: Context, name: String, ink: Color, onRemove: () -> Uni
         Text(tr("Voice note", "Ses notu"), color = ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
         NIcon("close", ink, tr("Remove", "Kaldır")) { onRemove() }
     }
+}
+
+/** The body field: its text and its selection, so the text row can format what is selected. */
+@Composable
+private fun NFieldTV(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, hint: String, ink: Color, sub: Color, size: Int, modifier: Modifier) {
+    BasicTextField(
+        value, onChange, modifier,
+        textStyle = TextStyle(color = ink, fontSize = size.sp),
+        cursorBrush = SolidColor(T.accent),
+        decorationBox = { inner ->
+            Box(contentAlignment = Alignment.TopStart) {
+                if (value.text.isEmpty()) Text(hint, color = sub, fontSize = size.sp)
+                inner()
+            }
+        },
+    )
 }
 
 /** A field in the paper's own ink; the hint shows while it is empty. */

@@ -1990,3 +1990,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Accessibility keyboard: placed again when the phone turns (narrower, low on the screen in landscape)
 - (sürüm sonra) derlenmedi: Accessibility keyboard: a floating button is always there (while on), with a pad for games and places with no text field: type, copy, clear
 - (sürüm sonra) derlenmedi: Toolkit: a tile sinks while pressed and springs back; a tool window grows and fades in
+- (sürüm sonra) derlenmedi: Notes editor: the text row formats the selected text (bold wraps it; heading, bullet and checklist go at the start of the line); with no selection they go at the cursor
