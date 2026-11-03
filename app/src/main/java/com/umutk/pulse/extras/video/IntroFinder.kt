@@ -88,10 +88,15 @@ internal object IntroFinder {
     }
 }
 
-/** The found parts per show: the key is the folder of the episode, the value is "introStart,introEnd;recapStart,recapEnd" in ms. */
+/**
+ * The found parts per episode (key: the file's address). IntroDB results and picture-match results are kept apart, so a
+ * match never stops the IntroDB lookup. Files are the v2 ones: older entries were per folder and had no recap.
+ */
 internal object IntroCache {
-    private fun prefs(c: Context) = c.getSharedPreferences("video_intro", Context.MODE_PRIVATE)
-    fun key(u: Uri): String = u.toString().substringBeforeLast('/')
+    const val DB_FILE = "video_intro_db2"
+    const val LOCAL_FILE = "video_intro_local2"
+    private fun prefs(c: Context, file: String) = c.getSharedPreferences(file, Context.MODE_PRIVATE)
+    fun key(u: Uri): String = u.toString()
     private fun part(p: String): LongRange? {
         val f = p.split(',')
         if (f.size != 2) return null
@@ -100,10 +105,10 @@ internal object IntroCache {
         return a until b
     }
     private fun text(r: LongRange?) = if (r == null) "" else "${r.first},${r.last + 1}"
-    fun get(c: Context, key: String): Segs? = runCatching {
-        val v = prefs(c).getString(key, null) ?: return null
+    fun get(c: Context, key: String, file: String): Segs? = runCatching {
+        val v = prefs(c, file).getString(key, null) ?: return null
         val parts = v.split(';')
         Segs(part(parts[0]), part(parts.getOrElse(1) { "" })).takeIf { !it.empty }
     }.getOrNull()
-    fun put(c: Context, key: String, s: Segs) { prefs(c).edit().putString(key, text(s.intro) + ";" + text(s.recap)).apply() }
+    fun put(c: Context, key: String, s: Segs, file: String) { prefs(c, file).edit().putString(key, text(s.intro) + ";" + text(s.recap)).apply() }
 }
