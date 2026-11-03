@@ -623,6 +623,13 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
         VideoExtras(player, prefs, act, rev)
         if (!inPip) VideoStatus(prefs, rev, Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 12.dp))
+        // Netflix-style skip: while the first minutes (the intro) play, a button jumps to the end of them
+        if (!inPip && prefs.introSec > 0 && pos < prefs.introSec * 1000L && dur > prefs.introSec * 1000L) {
+            Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 96.dp).clip(RoundedCornerShape(6.dp))
+                .background(Color(0xE6FFFFFF)).clickable { player.seekTo(prefs.introSec * 1000L) }.padding(horizontal = 16.dp, vertical = 9.dp)) {
+                Text(tr("Skip intro", "İntroyu geç"), color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+            }
+        }
         hud?.let { (icon, text) ->
             Row(Modifier.align(Alignment.Center).background(Color(0x99000000), RoundedCornerShape(12.dp)).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                 PIcon(icon, Color.White, 22.dp)
