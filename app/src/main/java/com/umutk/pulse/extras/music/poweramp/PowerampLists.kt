@@ -34,6 +34,7 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.AccountTree
 import androidx.compose.material.icons.rounded.Album
+import androidx.compose.material.icons.rounded.Insights
 import androidx.compose.material.icons.rounded.TrendingUp
 import androidx.compose.material.icons.rounded.History
 import androidx.compose.material.icons.rounded.NewReleases
@@ -70,6 +71,8 @@ import androidx.compose.material3.CircularProgressIndicator
 import com.umutk.pulse.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -118,6 +121,8 @@ private sealed interface Lib {
     object Songs : Lib
     object Folders : Lib
     object Stats : Lib
+    /** The music recap: a full page that replaces the library (the same ad gate as the music screen). */
+    object Recap : Lib
     object Favs : Lib
     /** Hidden categories (composers, folder tree), opened from the bottom row of the library list. */
     object More : Lib
@@ -194,6 +199,9 @@ fun LibraryScreen(
     val root = remember(tracks) {
         tracks.map { dirOf(it.path) }.reduceOrNull(::commonDir) ?: ""
     }
+    // every page fades and rises in when it opens (the list arrives with its contents)
+    val enter = remember { Animatable(0f) }
+    LaunchedEffect(node) { enter.snapTo(0f); enter.animateTo(1f, tween(450)) }
     BackHandler(enabled = node != Lib.Root) {
         node = when (val n = node) {
             is Lib.Tree -> if (n.dir.length > root.length) Lib.Tree(dirOf(n.dir)) else Lib.Root
@@ -208,6 +216,7 @@ fun LibraryScreen(
         Lib.Songs -> tr("All songs", "Tüm şarkılar")
         Lib.Folders -> tr("Folders", "Klasörler")
         Lib.Stats -> tr("Statistics", "İstatistikler")
+        Lib.Recap -> tr("Music recap", "Müzik özeti")
         Lib.Favs -> tr("Favourites", "Favoriler")
         Lib.More -> tr("More categories", "Daha fazla kategori")
         is Lib.Quick -> quickNames[n.kind]
@@ -226,12 +235,13 @@ fun LibraryScreen(
     // these hubs have their own header and back button, so they replace the library page
     when (node) {
         Lib.WhiteNoise, Lib.AllSounds -> { Box(modifier.fillMaxSize()) { WhiteNoiseHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
+        Lib.Recap -> { Box(modifier.fillMaxSize()) { RecapGated(back = { node = Lib.Root }) }; return@LibraryScreen }
         Lib.OnlinePlaylists -> { Box(modifier.fillMaxSize()) { OnlinePlaylistsHub(onBack = { node = Lib.Root }) }; return@LibraryScreen }
         // the radio of the app (the one in the music screen's top bar)
         Lib.Radio -> { Box(modifier.fillMaxSize()) { com.umutk.pulse.extras.radio.RadioScreen(back = { node = Lib.Root }) }; return@LibraryScreen }
         else -> Unit
     }
-    Column(modifier.fillMaxSize()) {
+    Column(modifier.fillMaxSize().graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 24.dp.toPx() }) {
         Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, top = 8.dp, bottom = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             if (node != Lib.Root) {
                 IconButton(onClick = { node = Lib.Root }) { Icon(Icons.Rounded.ArrowBack, tr("Back", "Geri"), tint = fg) }
@@ -265,6 +275,7 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.History, Color(0xFF5BA0D9), Lib.Quick(1) to quickNames[1]),
                     Triple(Icons.Rounded.Star, Color(0xFFD9A05B), Lib.Favs to tr("Favourites", "Favoriler")),
                     Triple(Icons.Rounded.BarChart, Color(0xFF5BB5A8), Lib.Stats to tr("Statistics", "İstatistikler")),
+                    Triple(Icons.Rounded.Insights, Color(0xFFC0609A), Lib.Recap to tr("Music recap", "Müzik özeti")),
                 )
                 itemsIndexed(cats) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
                 // the suggestions sit at the bottom of the library, under the categories
@@ -300,6 +311,7 @@ fun LibraryScreen(
                 SongList(items, current, style, onPlay, onPlayTracks, stars)
             }
             Lib.Stats -> StatsPage(style)
+            Lib.Recap -> Unit
             Lib.More -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
                 val hidden = listOf(
                     Triple(Icons.Rounded.Edit, Color(0xFF6BC08A), Lib.Cat(4) to catNames[4]),
@@ -691,5 +703,21 @@ internal fun TrackRow(
             Text(track.folderName(), color = style.textDim, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.End) { trailing() }
+    }
+}
+
+/** The music recap in the Poweramp library: one short ad opens it (shared with the music screen's recap: 30 minutes). */
+@Composable
+private fun RecapGated(back: () -> Unit) {
+    val ctx = LocalContext.current
+    val free = !com.umutk.pulse.ads.PulseAds.ENABLED || com.umutk.pulse.ads.Premium.on(ctx)
+    var unlocked by remember { mutableStateOf(free || com.umutk.pulse.ads.AdUnlocks.isOpen(ctx, com.umutk.pulse.ads.AdUnlocks.PASS) || com.umutk.pulse.ads.AdUnlocks.isOpen(ctx, "recap")) }
+    val gate = com.umutk.pulse.ads.rememberAdGate(tr("Music recap", "Müzik özeti"), tr("Watch a short ad to open the recap.", "Özeti açmak için kısa bir reklam izle."), key = "recap", minutes = 30)
+    if (unlocked) {
+        com.umutk.pulse.extras.music.stats.RecapScreen(back = back)
+    } else {
+        Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
+            com.umutk.pulse.PButton(tr("Watch an ad to open the recap", "Özeti açmak için reklam izle"), onClick = { gate { unlocked = true } })
+        }
     }
 }
