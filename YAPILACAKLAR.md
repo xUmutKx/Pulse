@@ -1909,3 +1909,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Debloat: the selected apps stay selected when the page is left or the app restarts; cleared after a removal
 - (sürüm sonra) derlenmedi: Poweramp search tab: one short ad opens it for 30 minutes (play build; foss and Premium open at once)
 - (sürüm sonra) derlenmedi: Theme locks (play build): the look in use stays open, the others show a padlock; one short ad opens all of them for 2 minutes, then only the look in use is open again (foss and Premium: no locks)
+- (sürüm sonra) derlenmedi: Music recap: each page fades and rises in, the minutes count up, and the top song's cover shows on the top songs and card pages
