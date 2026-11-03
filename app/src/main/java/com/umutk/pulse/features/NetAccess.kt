@@ -98,15 +98,24 @@ fun NetAccessCard() {
     val ctx = LocalContext.current
     var devices by remember { mutableIntStateOf(0) }
     var open by remember { mutableStateOf(false) }
-    LaunchedEffect(Unit) {
+    // the scan runs again each time the button is pressed (and once when the card opens)
+    var scan by remember { mutableIntStateOf(0) }
+    var scanning by remember { mutableStateOf(true) }
+    LaunchedEffect(scan) {
+        scanning = true
         withContext(Dispatchers.IO) { NetPolicy.reapply(ctx); devices = NetPolicy.devices() }
+        scanning = false
     }
     PCard(Modifier.fillMaxWidth()) {
         Text(tr("Devices on this Wi-Fi", "Bu Wi-Fi'deki cihazlar"), color = T.sub, fontSize = 12.sp)
-        Text("${devices + 1}", color = T.text, fontSize = 26.sp)
+        Text(if (scanning) "…" else "${devices + 1}", color = T.text, fontSize = 26.sp)
         Text(tr("this phone and the others it sees (the router too)", "bu telefon ve gördüğü diğerleri (yönlendirici dahil)"), color = T.sub, fontSize = 11.sp)
         Spacer(Modifier.padding(top = 6.dp))
-        PButton(tr("Access per app", "Uygulama başına erişim")) { open = true }
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PButton(tr("Access per app", "Uygulama başına erişim")) { open = true }
+            Spacer(Modifier.padding(start = 8.dp))
+            PButton(tr("Scan again", "Tekrar tara"), compact = true) { if (!scanning) scan++ }
+        }
     }
     if (open) NetAppsDialog { open = false }
 }
