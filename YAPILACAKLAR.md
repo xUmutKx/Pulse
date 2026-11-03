@@ -1930,3 +1930,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Device overview: the phone is drawn from the front (camera top centre); each detail (processor, memory, temperature, battery, storage, network, security) asks for its own short ad
 - (sürüm sonra) derlenmedi: Poweramp: the cover shrinks less when paused; a tap on the visualizer opens it at once, a hold opens the equalizer and the modes
 - (sürüm sonra) derlenmedi: Settings: a native ad card in the empty space at the foot of the settings (play build)
+- (sürüm sonra) derlenmedi: Reward dialog: the ad card background is transparent (it takes the dialog's own background)
