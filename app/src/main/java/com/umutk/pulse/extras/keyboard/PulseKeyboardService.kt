@@ -1460,7 +1460,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // first the completions alone (a prefix look-up, no waiting), then the same with the corrections
             if (typed.length >= 2) {
                 val q = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc, fast = true) }
-                if (word.toString() == typed) { target = q.third; targetFor = typed; slotWords = q.second; st.slots = q.first }
+                if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first }
             }
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) {
@@ -1468,10 +1468,32 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 // saved e-mail addresses are offered only in e-mail fields (above) or after an "@", never while ordinary words are typed
                 val sc = if (typed.length >= 2) KeyShortcuts.find(this@PulseKeyboardService, typed.lowercase(l.locale)) else null
                 if (sc != null) { target = null; slotWords = arrayOf(typed, sc, res.second[2]); st.slots = listOf("\"$typed\"", sc, res.first[2]) }
-                else { target = res.third; targetFor = typed; slotWords = res.second; st.slots = res.first }
+                else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first }
                 showClipSlot()
             }
         }
+    }
+
+    /** How many words the bar shows: three on a phone, five from 600 dp of width, six from 900 dp (a tablet, also in landscape). */
+    private fun slotCount(): Int {
+        val w = resources.configuration.screenWidthDp
+        return when { w >= 900 -> 6; w >= 600 -> 5; else -> 3 }
+    }
+
+    /** The first three slots stay as they are (the word, the one in the middle, the special one); more words follow them when the screen is wide. */
+    private fun widenBar(words: Array<String>, list: List<String>, typed: String, code: String, prev: String?, up: Boolean): Pair<List<String>, Array<String>> {
+        val n = slotCount()
+        if (n <= 3) return list to words
+        val have = HashSet<String>(); list.forEach { if (it.isNotEmpty()) have.add(it.lowercase(lang.locale)) }
+        val lowerTyped = typed.lowercase(lang.locale)
+        val cands: List<String> = if (typed.isEmpty()) KeyboardDictionary.next(code, prev, 14).filter { !KeyboardDictionary.isBanned(it) }
+            .map { if (up) it.replaceFirstChar { c -> c.titlecase(lang.locale) } else KeyboardDictionary.form(it) }
+        else KeyboardDictionary.complete(dictCodes(code).first(), lowerTyped, 14).map { it.word }
+            .map { if (up) it.replaceFirstChar { c -> c.titlecase(lang.locale) } else it }
+        val extra = cands.filter { it.isNotEmpty() && have.add(it.lowercase(lang.locale)) }.take(n - 3)
+        val newList = list.take(3).let { it + List(maxOf(0, 3 - it.size)) { "" } } + extra
+        val newWords = words.take(3).toTypedArray().let { arr -> Array(3) { arr.getOrElse(it) { "" } } } + extra.toTypedArray()
+        return newList to newWords
     }
 
     /** The three slots of the bar (shown and as words), and the word the space key would correct [typed] to. */
