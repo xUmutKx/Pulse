@@ -387,7 +387,10 @@ private fun WinampHeader(count: Int, open: Boolean, title: String = tr("Skins", 
 
 /** A see-through card: the preview square on top, the name and add button below. */
 @Composable
-private fun WidgetCard(label: String, onAdd: () -> Unit, aspect: Float = 1f, preview: @Composable () -> Unit) {
+private fun WidgetCard(label: String, onAddNow: () -> Unit, aspect: Float = 1f, preview: @Composable () -> Unit) {
+    // every widget asks for its own short ad before it is added (play build; the foss build adds it at once)
+    val addGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget.", "Bu widget'ı eklemek için kısa bir reklam izle."), pass = false)
+    val onAdd: () -> Unit = { addGate { onAddNow() } }
     // a tap on the card opens its settings as a floating window over the page
     var open by remember { mutableStateOf(false) }
     if (open) {
