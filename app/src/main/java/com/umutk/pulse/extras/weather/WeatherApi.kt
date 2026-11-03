@@ -40,7 +40,8 @@ object WeatherApi {
     /** The context the stores were last opened with, so the plain calls below know which provider is chosen. */
     @Volatile var appCtx: android.content.Context? = null
     /** "om" and "mgm" read Open-Meteo; "metno" is MET Norway and "owm" OpenWeatherMap (with the user's key). */
-    private fun provider(): String = appCtx?.let { WeatherStore.source(it) } ?: "om"
+    // "all" is the combined forecast: its first service is Open-Meteo, the others join through the combine setting
+    private fun provider(): String = appCtx?.let { WeatherStore.source(it) }?.let { if (it == "all") "om" else it } ?: "om"
     private fun openMeteo() = provider().let { it == "om" || it == "mgm" }
 
     fun forecast(lat: Double, lon: Double): String {
@@ -545,7 +546,11 @@ object WeatherStore {
 
     /** The data source: "om" Open-Meteo alone, "mgm" MGM station values for places in Turkey on top of Open-Meteo. */
     fun source(c: Context): String = p(c).getString("source", "om") ?: "om"
-    fun setSource(c: Context, v: String) = p(c).edit().putString("source", v).apply()
+    fun setSource(c: Context, v: String) {
+        // "all" uses every service at once: the combined forecast is switched on with it
+        p(c).edit().putString("source", v).apply()
+        if (v == "all") setCombine(c, true)
+    }
 
     /** Combine several forecasts (models and met.no) for the next 24 hours; on by default. */
     fun combine(c: Context): Boolean = p(c).getBoolean("combine", true)
