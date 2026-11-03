@@ -2018,3 +2018,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notes pen page: the tool palette floats over the page at the top (rounded, lifted), like the Apple Notes markup tools
 - 1.0.349 derlendi: commits since 1.0.348 (see git log)
 - 1.0.350 derlendi: 1.0.349 build failed (missing Material icon imports in NotesScreens/NotesSketch); fixed, see git log
+- (sürüm sonra) derlenmedi: Video player media controls: VideoSessionService (media3 session for the video) so the notification, lock screen and headphone buttons drive the video; a video pauses the music player

@@ -708,6 +708,10 @@
         <service android:name="com.umutk.pulse.extras.watchdog.MusicPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <service android:name="com.umutk.pulse.extras.watchdog.VideoPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
         <service android:name="com.umutk.pulse.extras.watchdog.AmbientPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback" />
+        <!-- Media3 session service for the video screen: the system media controls drive the video, not the music -->
+        <service android:name="com.umutk.pulse.extras.video.VideoSessionService" android:exported="false" android:foregroundServiceType="mediaPlayback">
+            <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
+        </service>
         <!-- Media3 session service the player binds to (MusicPlayerEngine) -->
         <service android:name="com.umutk.pulse.extras.music.MusicPlaybackService" android:exported="false" android:foregroundServiceType="mediaPlayback">
             <intent-filter><action android:name="androidx.media3.session.MediaSessionService" /></intent-filter>
