@@ -284,13 +284,14 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
         ) {
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
             if (float) Box(Modifier.fillMaxWidth().height(34.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) { Box(Modifier.width(72.dp).height(8.dp).clip(RoundedCornerShape(4.dp)).background(th.sub.copy(alpha = .8f))) }
+            if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
+            else Panel(st.panel, th, st, act, keyH)
+            // the suggestion bar sits under the keys, where the thumbs are (as on the Samsung keyboard)
             if (!st.numpad) Box { TopBar(th, st, act, onPull = { dy -> scope.launch { pull.snapTo((pull.value + dy).coerceAtLeast(0f)) } }, onRelease = {
                 // a pull down on the bar closes the keyboard at once (nothing slides: the window behind it stayed black while it moved)
                 if (pull.value > 56 * dens) act.hide()
                 scope.launch { pull.snapTo(0f) }
             }); if (KeyboardPrefs.topBright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.topBright) / 100f))) }
-            if (KeyboardPrefs.anim) AnimatedContent(st.panel, transitionSpec = { (fadeIn(tween(130)) + slideInVertically(tween(160)) { it / 14 }) togetherWith fadeOut(tween(90)) }, label = "panel") { p -> Panel(p, th, st, act, keyH) }
-            else Panel(st.panel, th, st, act, keyH)
         }
         // the brightness: a black veil over the keys (the pop-up above stays bright)
         if (!float && KeyboardPrefs.bright < 100) Box(Modifier.matchParentSize().background(Color.Black.copy(alpha = (100 - KeyboardPrefs.bright) / 100f)))
