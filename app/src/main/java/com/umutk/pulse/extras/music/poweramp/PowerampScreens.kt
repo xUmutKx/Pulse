@@ -719,11 +719,16 @@ private val VIS_MODES = listOf(
 private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, track: Track?, onDismiss: () -> Unit) {
     val n = 48
     var levels by remember { mutableStateOf(List(n) { 0f }) }
-    LaunchedEffect(playing) {
+    // the tempo is heard from the bass of each frame; a new song starts a new estimate
+    val est = remember(track?.path) { com.umutk.pulse.extras.music.BpmEstimator() }
+    var bpmNow by remember(track?.path) { mutableIntStateOf(0) }
+    LaunchedEffect(playing, est) {
         while (playing) {
             val s = MusicLevels.snapshot()
             val prev = levels
             levels = List(n) { g -> s.subList(g * MusicLevels.BANDS / n, ((g + 1) * MusicLevels.BANDS / n).coerceAtLeast(g * MusicLevels.BANDS / n + 1)).average().toFloat().let { v -> maxOf(v, prev[g] * .86f) } }
+            est.feed(s.take(6).average().toFloat(), System.currentTimeMillis())
+            bpmNow = est.bpm
             delay(33)
         }
         levels = List(n) { 0f }
@@ -793,6 +798,7 @@ private fun FullVisualizer(playing: Boolean, style: PowerampStyle, mode: Int, tr
             Text(track?.title ?: "", color = style.onBackdrop, fontSize = 18.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(listOfNotNull(track?.artist, track?.album).joinToString(" · "), color = style.textDim, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(tr("Bass $bass%", "Bas %$bass"), color = style.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 6.dp))
+            Text(if (bpmNow > 0) "BPM ≈ $bpmNow" else "BPM —", color = style.accent, fontSize = 14.sp, fontWeight = FontWeight.Medium)
           }
         }
     }
