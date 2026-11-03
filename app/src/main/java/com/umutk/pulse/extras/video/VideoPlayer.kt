@@ -852,7 +852,7 @@ private fun SubOptions(p: VideoPrefs, delayMs: Long, hasExt: Boolean, onDelay: (
 private class MoreItem(val key: String, val icon: String, val name: String, val state: String)
 
 /**
- * The More menu: a small two-column list under the three-dot button (top right), not a full-width sheet.
+ * The More menu: one column under the three-dot button (top right). Every row has the same height; a state (On / Off) sits at the end.
  */
 @Composable
 private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, onPick: (String) -> Unit) {
@@ -860,21 +860,15 @@ private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, o
     val dx = with(d) { (-12).dp.roundToPx() }
     val dy = with(d) { 52.dp.roundToPx() }
     Popup(alignment = Alignment.TopEnd, offset = IntOffset(dx, dy), onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
-        Column(Modifier.width(300.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xF2101010)).padding(6.dp)) {
-            items.chunked(2).forEach { row ->
-                Row(Modifier.fillMaxWidth()) {
-                    row.forEach { item ->
-                        Row(Modifier.weight(1f).clip(RoundedCornerShape(10.dp)).clickable { onPick(item.key) }.padding(horizontal = 8.dp, vertical = 9.dp),
-                            verticalAlignment = Alignment.CenterVertically) {
-                            if (item.key.startsWith("ctl_")) ControlGlyph(item.key.removePrefix("ctl_"), Color.White, sk, false)
-                            else PIcon(item.icon, Color.White, 18.dp)
-                            Column(Modifier.padding(start = 8.dp).weight(1f)) {
-                                Text(item.name, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                if (item.state.isNotEmpty()) Text(item.state, color = Color(0xFFB0B0B0), fontSize = 11.sp, maxLines = 1)
-                            }
-                        }
-                    }
-                    if (row.size == 1) Spacer(Modifier.weight(1f))
+        Column(Modifier.width(230.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xF2101010)).padding(6.dp)) {
+            items.forEach { item ->
+                Row(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(10.dp)).clickable { onPick(item.key) }.padding(horizontal = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically) {
+                    if (item.key.startsWith("ctl_")) ControlGlyph(item.key.removePrefix("ctl_"), Color.White, sk, false)
+                    else PIcon(item.icon, Color.White, 18.dp)
+                    Spacer(Modifier.width(10.dp))
+                    Text(item.name, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    if (item.state.isNotEmpty()) Text(item.state, color = Color(0xFFB0B0B0), fontSize = 11.sp, maxLines = 1)
                 }
             }
         }
