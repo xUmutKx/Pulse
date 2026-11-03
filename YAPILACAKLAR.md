@@ -1955,3 +1955,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Files previews: MKV frames try more times; the picture fallback is only for picture files (no random pictures for APK/video)
 - (sürüm sonra) derlenmedi: Files previews: a row reused for another file no longer keeps the old file's picture
 - (sürüm sonra) derlenmedi: Notes: a side panel with the note groups (all, favourites, locked, trash) with icons, and the folders as a tree; opened from the header's folder button
+- (sürüm sonra) derlenmedi: Keyboard feel: a hold-to-test vibration button at the chosen strength
