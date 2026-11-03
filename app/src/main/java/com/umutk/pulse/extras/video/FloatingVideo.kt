@@ -12,7 +12,10 @@ import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.input.pointer.awaitPointerEvent
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -59,6 +62,7 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 
@@ -94,14 +98,33 @@ object FloatingVideo {
         val wm = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val d = app.resources.displayMetrics
         val portrait = size != null && size.width > 0 && size.height > size.width
-        val w = if (portrait) (d.widthPixels * .42f).toInt() else (d.widthPixels * .62f).toInt()
+        val w = if (portrait) (d.widthPixels * .34f).toInt() else (d.widthPixels * .46f).toInt()
         val h = if (portrait) (w * 16f / 9f).toInt() else (w * 9f / 16f).toInt()
+        val ratio = h.toFloat() / w
+        val minW = (d.widthPixels * .22f).toInt(); val maxW = (d.widthPixels * .92f).toInt()
         val margin = (12 * d.density).toInt()
         val lp = WindowManager.LayoutParams(
             w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
             WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, PixelFormat.TRANSLUCENT,
         ).apply { gravity = Gravity.TOP or Gravity.START; x = d.widthPixels - w - margin; y = d.heightPixels / 3 }
         val o = MiniOwner().also { it.start() }
+        // the close target: a round button at the bottom middle of the screen, shown only while the window is dragged
+        val dismissLp = WindowManager.LayoutParams(
+            (72 * d.density).toInt(), (72 * d.density).toInt(), WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE, PixelFormat.TRANSLUCENT,
+        ).apply { gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL; y = (48 * d.density).toInt() }
+        val dismiss = ComposeView(app).apply {
+            setViewTreeLifecycleOwner(o)
+            setViewTreeSavedStateRegistryOwner(o)
+            setContent {
+                Box(Modifier.size(72.dp).clip(RoundedCornerShape(36.dp)).background(Color(0xCC000000)), contentAlignment = Alignment.Center) {
+                    PIcon("close", Color.White, 26.dp)
+                }
+            }
+        }
+        var dragging = false
+        // the window size is state, so the picture follows a pinch
+        val winSize = mutableStateOf(androidx.compose.ui.unit.IntSize(w, h))
         val v = ComposeView(app).apply {
             setViewTreeLifecycleOwner(o)
             setViewTreeSavedStateRegistryOwner(o)
@@ -114,19 +137,36 @@ object FloatingVideo {
                 androidx.compose.runtime.CompositionLocalProvider(LocalOnBackPressedDispatcherOwner provides back) {
                     MiniBody(
                         p = p,
-                        w = with(LocalDensity.current) { w.toDp() },
-                        h = with(LocalDensity.current) { h.toDp() },
+                        w = with(LocalDensity.current) { winSize.value.width.toDp() },
+                        h = with(LocalDensity.current) { winSize.value.height.toDp() },
+                        onDragStart = {
+                            dragging = true
+                            if (dismiss.parent == null) runCatching { wm.addView(dismiss, dismissLp) }
+                        },
                         onDrag = { dx, dy -> lp.x += dx.toInt(); lp.y += dy.toInt(); runCatching { wm.updateViewLayout(this, lp) } },
                         onEnd = { vx, vy ->
+                            dragging = false
+                            runCatching { wm.removeView(dismiss) }
                             val screenW = d.widthPixels
                             val screenH = d.heightPixels
-                            if (vy > 2200f && lp.y > screenH / 2) { hide(app) }
+                            val cx = lp.x + lp.width / 2
+                            val cy = lp.y + lp.height
+                            // dropped on the close target at the bottom middle: the window closes
+                            val onTarget = abs(cx - screenW / 2) < 90 * d.density && cy > screenH - 170 * d.density
+                            if (onTarget || (vy > 2200f && lp.y > screenH / 2)) hide(app)
                             else {
-                                // snap to the nearer side edge, keep inside the top and bottom
-                                lp.x = if (lp.x + w / 2 < screenW / 2) margin else screenW - w - margin
-                                lp.y = min(max(lp.y, margin), screenH - h - margin)
+                                lp.x = if (lp.x + lp.width / 2 < screenW / 2) margin else screenW - lp.width - margin
+                                lp.y = min(max(lp.y, margin), screenH - lp.height - margin)
                                 runCatching { wm.updateViewLayout(this, lp) }
                             }
+                        },
+                        onZoom = { z ->
+                            val nw = (lp.width * z).toInt().coerceIn(minW, maxW)
+                            lp.width = nw; lp.height = (nw * ratio).toInt()
+                            winSize.value = androidx.compose.ui.unit.IntSize(lp.width, lp.height)
+                            // keep the window inside the screen after a size change
+                            lp.x = min(max(lp.x, 0), d.widthPixels - lp.width); lp.y = min(max(lp.y, 0), d.heightPixels - lp.height)
+                            runCatching { wm.updateViewLayout(this, lp) }
                         },
                         onClose = { hide(app) },
                     )
@@ -141,7 +181,8 @@ object FloatingVideo {
     fun hide(ctx: Context) {
         val app = ctx.applicationContext
         val v = view ?: return
-        runCatching { (app.getSystemService(Context.WINDOW_SERVICE) as WindowManager).removeView(v) }
+        val wm = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
+        runCatching { wm.removeView(v) }
         owner?.stop(); owner = null; view = null
         held?.release(); held = null
         runCatching { app.stopService(Intent(app, com.umutk.pulse.extras.video.VideoSessionService::class.java)) }
@@ -149,7 +190,10 @@ object FloatingVideo {
 }
 
 @Composable
-private fun MiniBody(p: Player, w: Dp, h: Dp, onDrag: (Float, Float) -> Unit, onEnd: (Float, Float) -> Unit, onClose: () -> Unit) {
+private fun MiniBody(
+    p: Player, w: Dp, h: Dp, onDragStart: () -> Unit, onDrag: (Float, Float) -> Unit, onEnd: (Float, Float) -> Unit,
+    onZoom: (Float) -> Unit, onClose: () -> Unit,
+) {
     val density = LocalDensity.current
     val wPx = with(density) { w.toPx() }
     var playing by remember { mutableStateOf(p.isPlaying) }
@@ -176,9 +220,27 @@ private fun MiniBody(p: Player, w: Dp, h: Dp, onDrag: (Float, Float) -> Unit, on
                 )
             }
             .pointerInput(Unit) {
+                // two fingers: the window grows or shrinks with the pinch
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    var prev = -1f
+                    while (true) {
+                        val ev = awaitPointerEvent()
+                        val down = ev.changes.filter { it.pressed }
+                        if (down.size >= 2) {
+                            val dist = (down[0].position - down[1].position).getDistance()
+                            if (prev > 0f && dist > 0f) onZoom(dist / prev)
+                            prev = dist
+                            ev.changes.forEach { it.consume() }
+                        } else prev = -1f
+                        if (ev.changes.none { it.pressed }) break
+                    }
+                }
+            }
+            .pointerInput(Unit) {
                 val vt = VelocityTracker()
                 detectDragGestures(
-                    onDragStart = { vt.resetTracking() },
+                    onDragStart = { vt.resetTracking(); onDragStart() },
                     onDrag = { change, drag ->
                         change.consume()
                         vt.addPosition(change.uptimeMillis, change.position)
