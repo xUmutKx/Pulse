@@ -300,7 +300,12 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         val i = player.currentMediaItemIndex
         val at = player.currentPosition
         val item = player.currentMediaItem ?: return
-        val u = prepareSub(ctx, e.first, e.second, prefs.subEnc, subDelay) ?: e.first
+        val u = prepareSub(ctx, e.first, e.second, prefs.subEnc, subDelay)
+        if (u == null) { android.widget.Toast.makeText(ctx, tr("The subtitle file could not be read", "Altyazı dosyası okunamadı"), android.widget.Toast.LENGTH_LONG).show(); return }
+        // a few seconds later the track must be selected; if not, say so instead of leaving the subtitles off without a word
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
+            if (pendingSubLabel[0] != null) android.widget.Toast.makeText(ctx, tr("The subtitle was added but not shown. Pick it in the Subtitles menu.", "Altyazı eklendi ama gösterilmedi. Altyazı menüsünden seçin."), android.widget.Toast.LENGTH_LONG).show()
+        }, 4000)
         val cfg = MediaItem.SubtitleConfiguration.Builder(u).setMimeType(subMimeOf(e.second)).setLabel(e.second).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
         player.replaceMediaItem(i, item.buildUpon().setSubtitleConfigurations(siblingSubs(ctx, items[i.coerceIn(items.indices)], prefs) + cfg).build())
         player.seekTo(i, at)
@@ -326,6 +331,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
                             .addOverride(TrackSelectionOverride(g.mediaTrackGroup, i)).build()
                         pendingSubLabel[0] = null
+                        android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı"), android.widget.Toast.LENGTH_SHORT).show()
                         return
                     }
                 }
