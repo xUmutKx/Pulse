@@ -168,6 +168,11 @@ fun GoodLockHub(onBack: () -> Unit) {
                     }
                     if (upd) Text(tr("Update", "Güncelle"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Medium,
                         modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(Look.accent).clickable { openMirror(ctx, m.label, latestItem(m.label)?.link) }.padding(horizontal = 12.dp, vertical = 6.dp))
+                    Spacer(Modifier.width(6.dp))
+                    // the system asks for the confirmation itself
+                    Box(Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).clickable { uninstall(ctx, m.pkg) }, contentAlignment = Alignment.Center) {
+                        PIcon("delete", T.sub, 20.dp)
+                    }
                 }
             }
             grouped.forEach { (title, names) ->
@@ -232,8 +237,15 @@ private fun openModule(ctx: Context, pkg: String) {
     runCatching { ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
+/** The system's uninstall screen for [pkg]; the system asks for the confirmation. */
+private fun uninstall(ctx: Context, pkg: String) {
+    runCatching { ctx.startActivity(Intent(Intent.ACTION_DELETE, Uri.parse("package:$pkg")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
+}
+
 /** The page of the newest release when the feed gave one, else the search for the name. */
 private fun openMirror(ctx: Context, label: String, link: String? = null) {
-    val url = link?.takeIf { it.startsWith("https://www.apkmirror.com/") } ?: ("https://www.apkmirror.com/?s=" + Uri.encode(label))
+    // the release page of the feed when it has one; else a web search limited to APKMirror and Samsung (the site's own search lists other apps)
+    val url = link?.takeIf { it.startsWith("https://www.apkmirror.com/") }
+        ?: ("https://www.google.com/search?q=" + Uri.encode("site:apkmirror.com Samsung \"$label\" apk"))
     runCatching { ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
