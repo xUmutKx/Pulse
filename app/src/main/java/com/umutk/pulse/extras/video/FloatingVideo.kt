@@ -7,6 +7,7 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.view.Gravity
+import android.view.View
 import android.view.WindowManager
 import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.compose.foundation.background
@@ -98,10 +99,10 @@ object FloatingVideo {
         val wm = app.getSystemService(Context.WINDOW_SERVICE) as WindowManager
         val d = app.resources.displayMetrics
         val portrait = size != null && size.width > 0 && size.height > size.width
-        val w = if (portrait) (d.widthPixels * .34f).toInt() else (d.widthPixels * .46f).toInt()
+        val w = if (portrait) (d.widthPixels * .24f).toInt() else (d.widthPixels * .32f).toInt()
         val h = if (portrait) (w * 16f / 9f).toInt() else (w * 9f / 16f).toInt()
         val ratio = h.toFloat() / w
-        val minW = (d.widthPixels * .22f).toInt(); val maxW = (d.widthPixels * .92f).toInt()
+        val minW = (d.widthPixels * .18f).toInt(); val maxW = d.widthPixels
         val margin = (12 * d.density).toInt()
         val lp = WindowManager.LayoutParams(
             w, h, WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY,
@@ -160,6 +161,7 @@ object FloatingVideo {
                                 runCatching { wm.updateViewLayout(this, lp) }
                             }
                         },
+                        onPinchEnd = { animateSize(app, lp, this, wm, winSize, minW, maxW, d.widthPixels, d.heightPixels, ratio, margin) },
                         onZoom = { z ->
                             val nw = (lp.width * z).toInt().coerceIn(minW, maxW)
                             lp.width = nw; lp.height = (nw * ratio).toInt()
@@ -189,15 +191,40 @@ object FloatingVideo {
     }
 }
 
+/** Animates the window to the nearest allowed size (between [minW] and [maxW]) and keeps it on the screen; about 0.2 s, eased. */
+private fun animateSize(
+    ctx: Context, lp: WindowManager.LayoutParams, v: View, wm: WindowManager, winSize: androidx.compose.runtime.MutableState<androidx.compose.ui.unit.IntSize>,
+    minW: Int, maxW: Int, screenW: Int, screenH: Int, ratio: Float, margin: Int,
+) {
+    val from = lp.width
+    val to = from.coerceIn(minW, maxW)
+    if (to == from) return
+    val handler = android.os.Handler(android.os.Looper.getMainLooper())
+    val steps = 12
+    for (i in 1..steps) {
+        handler.postDelayed({
+            // ease-out: fast at first, then slowing down into the final size
+            val t = i / steps.toFloat()
+            val e = 1f - (1f - t) * (1f - t)
+            val nw = (from + (to - from) * e).toInt()
+            lp.width = nw; lp.height = (nw * ratio).toInt()
+            lp.x = min(max(lp.x, margin), screenW - lp.width - margin)
+            lp.y = min(max(lp.y, margin), screenH - lp.height - margin)
+            winSize.value = androidx.compose.ui.unit.IntSize(lp.width, lp.height)
+            runCatching { wm.updateViewLayout(v, lp) }
+        }, (i * 16L))
+    }
+}
+
 @Composable
 private fun MiniBody(
     p: Player, w: Dp, h: Dp, onDragStart: () -> Unit, onDrag: (Float, Float) -> Unit, onEnd: (Float, Float) -> Unit,
-    onZoom: (Float) -> Unit, onClose: () -> Unit,
+    onZoom: (Float) -> Unit, onPinchEnd: () -> Unit, onClose: () -> Unit,
 ) {
     val density = LocalDensity.current
     val wPx = with(density) { w.toPx() }
     var playing by remember { mutableStateOf(p.isPlaying) }
-    var shown by remember { mutableStateOf(true) }
+    var shown by remember { mutableStateOf(false) }
     var speedIdx by remember { mutableIntStateOf(0) }
     DisposableEffect(p) {
         val l = object : Player.Listener { override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying } }
@@ -224,6 +251,7 @@ private fun MiniBody(
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
                     var prev = -1f
+                    var pinching = false
                     while (true) {
                         val ev = awaitPointerEvent()
                         val down = ev.changes.filter { it.pressed }
@@ -231,9 +259,13 @@ private fun MiniBody(
                             val dist = (down[0].position - down[1].position).getDistance()
                             if (prev > 0f && dist > 0f) onZoom(dist / prev)
                             prev = dist
+                            pinching = true
                             ev.changes.forEach { it.consume() }
-                        } else prev = -1f
-                        if (ev.changes.none { it.pressed }) break
+                        } else {
+                            // the pinch ended (a finger came up): the window settles into its allowed size
+                            if (pinching) { pinching = false; prev = -1f; onPinchEnd() }
+                        }
+                        if (down.isEmpty()) break
                     }
                 }
             }
