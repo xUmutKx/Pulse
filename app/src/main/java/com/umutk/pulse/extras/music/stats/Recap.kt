@@ -6,7 +6,10 @@ import android.graphics.Canvas
 import android.graphics.Paint
 import android.graphics.Typeface
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -25,6 +28,8 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -34,6 +39,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -44,7 +52,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.tr
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.util.Calendar
@@ -75,7 +85,7 @@ object PlayLog {
 
 private val DEEP = Color(0xFF14102B); private val VIOLET = Color(0xFF7C4DFF); private val PINK = Color(0xFFFF4F9A); private val LIME = Color(0xFFC6FF3D); private val SOFT = Color(0xFFEDE7FF)
 
-class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList())
+class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList(), val songPaths: List<String> = emptyList())
 
 private fun makeRecap(c: Context, days: Int): Recap {
     val from = System.currentTimeMillis() - days * 86_400_000L
@@ -99,8 +109,10 @@ private fun makeRecap(c: Context, days: Int): Recap {
         com.umutk.pulse.extras.music.Recommendations.moodsOf(t).forEach { m -> mood[m] = (mood[m] ?: 0L) + x.ms }
         t.genre?.trim()?.takeIf { it.isNotEmpty() }?.let { g -> genre[g] = (genre[g] ?: 0L) + x.ms }
     }
+    // the file path of each top song (same order as songs), for its cover
+    val songPaths = e.filter { it.counted }.groupBy { it.path }.entries.sortedByDescending { it.value.size }.take(5).map { it.key }
     return Recap(from, minutes, e.count { it.counted }, artists, songs, part.toList(), day.toList(), hour.indices.maxByOrNull { hour[it] } ?: 0, PlayLog.since(c),
-        mood.toList().sortedByDescending { it.second }.take(5), genre.toList().sortedByDescending { it.second }.take(5))
+        mood.toList().sortedByDescending { it.second }.take(5), genre.toList().sortedByDescending { it.second }.take(5), songPaths)
 }
 
 /** The card as a picture (1080 x 1920): the figures of the recap on a dark violet ground. Saved as a PNG in Download/Pulse. */
@@ -141,6 +153,9 @@ fun RecapScreen(back: () -> Unit) {
     val pager = rememberPagerState { 7 }
     val scope = rememberCoroutineScope()
     var saved by remember { mutableStateOf("") }
+    // the top song's cover: its track is looked up in the library by path
+    val coverTrack = remember(r) { r.songPaths.firstOrNull()?.let { p -> com.umutk.pulse.extras.music.MusicLibrary.tracks.value.firstOrNull { it.path == p } } }
+    val cover by produceState<ImageBitmap?>(null, coverTrack) { value = coverTrack?.let { t -> withContext(Dispatchers.IO) { com.umutk.pulse.extras.music.trackArt(ctx, t) } } }
     val label = when (days) { 30 -> tr("Last 30 days", "Son 30 gün"); 365 -> tr("Last year", "Son bir yıl"); else -> tr("Last 3 months", "Son 3 ay") }
     val since = if (r.firstNote > 0) java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(r.firstNote)) else null
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(DEEP, Color(0xFF241A4D))))) {
@@ -157,7 +172,10 @@ fun RecapScreen(back: () -> Unit) {
                 repeat(7) { i -> Box(Modifier.padding(horizontal = 3.dp).size(if (pager.currentPage == i) 18.dp else 7.dp, 7.dp).clip(RoundedCornerShape(4.dp)).background(if (pager.currentPage == i) LIME else Color.White.copy(alpha = .25f))) }
             }
             HorizontalPager(pager, Modifier.weight(1f).fillMaxWidth()) { page ->
-                Column(Modifier.fillMaxSize().padding(28.dp), verticalArrangement = Arrangement.Center) {
+                // each page fades and rises in when it is turned to; the numbers count up with it
+                val enter = remember { Animatable(0f) }
+                LaunchedEffect(pager.currentPage == page) { if (pager.currentPage == page) enter.animateTo(1f, tween(700)) else enter.snapTo(0f) }
+                Column(Modifier.fillMaxSize().padding(28.dp).graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 48.dp.toPx() }, verticalArrangement = Arrangement.Center) {
                     when (page) {
                         0 -> {
                             Text(label.uppercase(), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
@@ -169,7 +187,7 @@ fun RecapScreen(back: () -> Unit) {
                         }
                         1 -> {
                             Text(tr("You listened for", "Şu kadar dinledin"), color = SOFT.copy(alpha = .8f), fontSize = 16.sp)
-                            Text("${r.minutes}", color = LIME, fontSize = 110.sp, fontWeight = FontWeight.Black, lineHeight = 112.sp)
+                            Text("${(r.minutes * enter.value).toLong()}", color = LIME, fontSize = 110.sp, fontWeight = FontWeight.Black, lineHeight = 112.sp)
                             Text(tr("minutes", "dakika") + (if (r.minutes >= 60) "  ·  %.1f ".format(r.minutes / 60f) + tr("hours", "saat") else ""), color = SOFT, fontSize = 22.sp)
                             Text(tr("${r.plays} songs played to the end of their 30 seconds or more", "${r.plays} şarkı en az 30 saniye dinlendi"), color = SOFT.copy(alpha = .6f), fontSize = 13.sp, modifier = Modifier.padding(top = 10.dp))
                         }
@@ -187,6 +205,7 @@ fun RecapScreen(back: () -> Unit) {
                         }
                         3 -> {
                             Text(tr("Top songs", "En çok dinlenen şarkılar"), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                            cover?.let { Image(it, null, Modifier.padding(top = 14.dp).size(150.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop) }
                             if (r.songs.isEmpty()) Text("—", color = SOFT, fontSize = 30.sp)
                             r.songs.forEachIndexed { i, s ->
                                 Column(Modifier.padding(top = 12.dp)) {
@@ -235,6 +254,7 @@ fun RecapScreen(back: () -> Unit) {
                         }
                         else -> {
                             Text(tr("Your card", "Kartın"), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+                            cover?.let { Image(it, null, Modifier.padding(top = 12.dp).size(120.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop) }
                             Text("${r.minutes} " + tr("minutes", "dakika"), color = LIME, fontSize = 44.sp, fontWeight = FontWeight.Black)
                             Text(r.artists.take(3).joinToString("  ·  ") { it.first }, color = SOFT, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp))
                             Spacer(Modifier.height(20.dp))
