@@ -166,7 +166,7 @@ fun VideoHub(onBack: () -> Unit) {
             // the media index shows at once; the storage is walked after it for the videos the index does not know
             val indexed = withContext(Dispatchers.IO) { queryVideos(ctx) }
             videos = indexed
-            videos = indexed + withContext(Dispatchers.IO) { unindexedVideos(indexed) }
+            videos = indexed + withContext(Dispatchers.IO) { unindexedOnce(indexed) }
         }
     }
     BackHandler(enabled = play == null && !settings) {
