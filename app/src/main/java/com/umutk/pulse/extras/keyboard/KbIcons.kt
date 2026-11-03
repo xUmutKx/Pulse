@@ -216,7 +216,7 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "OpenWith" -> Icons.Rounded.ROpenWith
         "Palette" -> Icons.Rounded.RPalette
         "Pin" -> Icons.Rounded.RPin
-        "PushPin" -> Icons.Rounded.RPushPin
+        "PushPin" -> ThumbTack
         "Bolt" -> Icons.Rounded.RBolt
         "Settings" -> Icons.Rounded.RSettings
         "Spellcheck" -> Icons.Rounded.RSpellcheck
@@ -301,4 +301,19 @@ fun kbIcon(th: KbTheme, name: String, filled: Boolean = false): ImageVector = wh
         "KeyboardCapslock" -> Icons.Outlined.OKeyboardCapslock
         else -> Icons.Outlined.OArrowBack
     }
+}
+
+/** A real thumbtack (a round head, a flat brim, a needle), for the pin of the clipboard. */
+private val ThumbTack: androidx.compose.ui.graphics.vector.ImageVector by lazy {
+    androidx.compose.ui.graphics.vector.ImageVector.Builder("thumbtack", androidx.compose.ui.unit.Dp(24f), androidx.compose.ui.unit.Dp(24f), 24f, 24f).apply {
+        path(fill = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black)) {
+            moveTo(7.5f, 2f); lineTo(16.5f, 2f); lineTo(17f, 3.5f); lineTo(15.5f, 9f); lineTo(8.5f, 9f); lineTo(7f, 3.5f); close()
+        }
+        path(fill = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black)) {
+            moveTo(5f, 9f); lineTo(19f, 9f); lineTo(19f, 11f); lineTo(5f, 11f); close()
+        }
+        path(fill = androidx.compose.ui.graphics.SolidColor(androidx.compose.ui.graphics.Color.Black)) {
+            moveTo(11f, 11f); lineTo(13f, 11f); lineTo(12.5f, 22f); lineTo(11.5f, 22f); close()
+        }
+    }.build()
 }
