@@ -39,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.PDialog
 import com.umutk.pulse.PIcon
+import com.umutk.pulse.PField
 import com.umutk.pulse.T
 import com.umutk.pulse.extras.ui.SettingsSection
 import com.umutk.pulse.extras.ui.SliderRow
@@ -215,7 +216,10 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Sld(tr("Background opacity", "Arka plan koyuluğu"), "%", 0..100, { prefs.subBgAlpha }, done) { prefs.subBgAlpha = it }
                 Sld(tr("Height", "Yükseklik"), "%", 0..40, { prefs.subPos }, done) { prefs.subPos = it }
                 Sld(tr("Side margin", "Yan boşluk"), " dp", 0..80, { prefs.subMargin }, done) { prefs.subMargin = it }
-                Pick(tr("Encoding", "Kodlama"), encodings, { encodings.indexOf(prefs.subEnc).coerceAtLeast(0) }, done) { prefs.subEnc = encodings[it] }            }
+                Pick(tr("Encoding", "Kodlama"), encodings, { encodings.indexOf(prefs.subEnc).coerceAtLeast(0) }, done) { prefs.subEnc = encodings[it] }
+                // the key of opensubtitles.com (free account): the online search uses it for films and TV episodes
+                PField(OpenSubs.key(ctx), { OpenSubs.saveKey(ctx, it) }, tr("OpenSubtitles API key", "OpenSubtitles API anahtarı"), Modifier.fillMaxWidth())
+            }
 
             if (cat == "decoder") FlatSection(tr("Decoder", "Çözücü")) {
                 Pick(tr("Priority", "Öncelik"), listOf("HW+", "SW", "HW"), { prefs.decoder }, done) { prefs.decoder = it }

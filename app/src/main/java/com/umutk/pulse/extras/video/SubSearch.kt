@@ -200,7 +200,6 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
     val failed = tr("Failed. Check the connection and try again.", "Olmadı. Bağlantıyı kontrol edip yeniden deneyin.")
     var query by remember { mutableStateOf(searchTitle(fileName)) }
     var lang by remember { mutableStateOf(appLangName()) }
-    var apiKey by remember { mutableStateOf(OpenSubs.key(ctx)) }
     var hits by remember { mutableStateOf<List<SubHit>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
     var line by remember { mutableStateOf("") }
@@ -243,8 +242,8 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
         text = {
             Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
                 PField(query, { query = it }, tr("Title", "Ad"), Modifier.fillMaxWidth(), onDone = { search() })
-                // the OpenSubtitles key (free at opensubtitles.com): with it the search finds TV episodes too
-                PField(apiKey, { apiKey = it; OpenSubs.saveKey(ctx, it) }, tr("OpenSubtitles API key", "OpenSubtitles API anahtarı"), Modifier.fillMaxWidth())
+                // the key is set in the video settings (Subtitles); without it only films are found
+                Text(tr("OpenSubtitles key: video settings > Subtitles", "OpenSubtitles anahtarı: video ayarları > Altyazı"), color = w.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
                 Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
                     listOf("English" to tr("English", "İngilizce"), "Turkish" to tr("Turkish", "Türkçe")).forEach { (name, label) ->
                         Text(
