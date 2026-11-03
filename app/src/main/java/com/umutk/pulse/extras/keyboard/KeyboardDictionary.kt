@@ -142,6 +142,10 @@ object KeyboardDictionary {
         runCatching { File(c.filesDir, "kbd_banned.txt").forEachLine { l -> if (l.isNotBlank()) banned += l.trim() } }
         // the slips of one person's everyday writing that no near-word rule mends (two or three letters wrong in the same word): a small list inside the app, under what is learned
         runCatching { c.assets.open("kbd/habits.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } } }
+        // the slips the owner's typing showed (typed -> fixed), the corrections the owner undid, and the words the owner types as they are: bundled, so a new install has them too
+        runCatching { c.assets.open("kbd/habits_user_add.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) typos.putIfAbsent(p[0], p[1]) } } }
+        runCatching { c.assets.open("kbd/kbd_rejected.txt").bufferedReader().useLines { it.forEach { l -> val p = l.split(' '); if (p.size == 2) rejects.putIfAbsent(p[0], p[1].toIntOrNull() ?: 1) } } }
+        runCatching { c.assets.open("kbd/kbd_keep.txt").bufferedReader().useLines { it.forEach { l -> if (l.isNotBlank()) kept += l.trim().lowercase(Locale.ROOT) } } }
         runCatching { File(c.filesDir, "kbd_typos.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typos[p[0]] = p[1] } }
         runCatching { File(c.filesDir, "kbd_typo_seen.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) typoSeen[p[0]] = p[1].toIntOrNull() ?: 1 } }
         runCatching { File(c.filesDir, "kbd_forms.txt").forEachLine { l -> val p = l.split(' '); if (p.size == 2) forms[p[0]] = p[1] } }
@@ -487,6 +491,10 @@ object KeyboardDictionary {
     // corrections the person undid: "typed>corrected" -> how often. A correction undone once is not made again; twice, the typed word counts as one of their words.
     private val rejects = ConcurrentHashMap<String, Int>()
     fun isRejected(typed: String, corrected: String) = (rejects["$typed>$corrected"] ?: 0) > 0
+
+    /** Words the keyboard never corrects (the common ones the owner types as they are: ya, da, ben, falan ...). */
+    private val kept: MutableSet<String> = ConcurrentHashMap.newKeySet()
+    fun isKept(typed: String): Boolean = typed.lowercase(Locale.ROOT) in kept
     fun reject(c: Context, typed: String, corrected: String) {
         if (!userLoaded) loadUser(c)
         val k = typed.lowercase(Locale.ROOT) + ">" + corrected.lowercase(Locale.ROOT)

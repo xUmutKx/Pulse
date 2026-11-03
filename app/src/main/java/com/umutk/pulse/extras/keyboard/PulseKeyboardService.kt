@@ -530,7 +530,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             val lw = typed.lowercase(lang.locale)
             if (sep != "." && typed.length >= 2 && lw !in tlds && KeyboardDictionary.isKnown(lw)) spaceBefore = true
         }
-        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
+        if (correct && KeyboardPrefs.autocorrect && !KeyboardPrefs.practicing && !st.plain && !urlNow() && (!noAuto || uriField) && t != null && !t.equals(typed, true) && !KeyboardDictionary.isKept(typed) && (!KeyboardDictionary.isRejected(typed.lowercase(lang.locale), t.lowercase(lang.locale)) || (KeyboardDictionary.isSwap(typed.lowercase(lang.locale), t.lowercase(lang.locale)) && KeyboardDictionary.rejectCount(typed.lowercase(lang.locale), t.lowercase(lang.locale)) < 1))) out = t
         // a name typed in lower case takes its capital when the word is ended: adana becomes Adana (words that are also ordinary words do not)
         if (lang.code == "tr" && out == typed && typed.none { it.isUpperCase() } && typed.lowercase(lang.locale).let { it in KeyboardDictionary.properNouns && it !in KeyboardDictionary.commonNames })
             out = typed.replaceFirstChar { it.titlecase(lang.locale) }
