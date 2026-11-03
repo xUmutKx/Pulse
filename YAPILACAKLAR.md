@@ -1938,3 +1938,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.345 derlenmedi: connected devices on the Wi-Fi (neighbour table) and per-app Wi-Fi and mobile access (iptables, root or Shizuku)
 - (sürüm sonra) derlenmedi: Splash: the Windows 11 opening wallpaper has a darker veil
 - 1.0.345 build fix: the ad strip slider needs its onDone
+- 1.0.345 build fix: the banner release casts the view to AdView before destroy
