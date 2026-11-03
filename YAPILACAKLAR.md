@@ -1969,3 +1969,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Files: a CSV opens in the spreadsheet viewer (not the text editor); text is read as UTF-8, or Windows-1254 when it is not UTF-8 (Turkish characters); keyboard lays out again on each new field
 - (sürüm sonra) derlenmedi: Toolkit: Converter tile removed; a Floating keyboard tile with a preview, a show button and an edit button (keyboard settings)
 - (sürüm sonra) derlenmedi: Keyboard Turkish: the capital I is ı in Turkish (taps, glide and the word after a key are lower-cased by the language, not by the phone's language)
+- (sürüm sonra) derlenmedi: Keyboard shift: one tap = one capital letter; two quick taps = caps lock; another tap turns it off

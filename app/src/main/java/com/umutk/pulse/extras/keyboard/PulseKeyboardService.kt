@@ -699,9 +699,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     // ---- keys of the keyboard ----------------------------------------------------------------------------------------------------------------------
 
+    private var lastShiftTap = 0L
+
     override fun shift() {
-        // shift is for one letter: a tap on, the next letter takes it, a tap again turns it off. Caps lock is the long press (or the caps key), never a quick double tap
-        st.shift = if (st.shift == 0) 1 else 0
+        // one tap: the next letter is capital; a tap again turns it off. Two quick taps (the second within 400 ms of the first) turn on caps lock; a tap turns it off again
+        val now = android.os.SystemClock.uptimeMillis()
+        st.shift = when {
+            st.shift == 2 -> 0
+            st.shift == 1 && now - lastShiftTap < 400 -> 2
+            st.shift == 0 -> 1
+            else -> 0
+        }
+        lastShiftTap = now
         // a word is open: the bar shows (or drops) its capital-letter form
         if (word.isNotEmpty()) updateSuggestions()
     }
