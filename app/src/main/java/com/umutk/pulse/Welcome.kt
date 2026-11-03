@@ -35,10 +35,14 @@ fun rememberLauncherLogo(): ImageBitmap {
 
 /** Shown once, after the splash, on the first start: what Pulse does, what it is built from, and its size. */
 @Composable
+/** The installed version name: the welcome (with what is new) shows again after every update. */
+fun appVersionName(c: android.content.Context): String =
+    runCatching { c.packageManager.getPackageInfo(c.packageName, 0).versionName.orEmpty() }.getOrDefault("")
+
 fun Welcome(onDone: () -> Unit) {
     val ctx = LocalContext.current
     fun finish() {
-        ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putBoolean("welcomed", true).apply()
+        ctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).edit().putBoolean("welcomed", true).putString("seen_version", appVersionName(ctx)).apply()
         // the one Shizuku question: only when it runs and Pulse has no root to fall back on; never on later starts
         Shell.refreshShizuku()
         if (Shell.root != true && Shell.shizuku == 1) Shell.askShizuku(ctx)

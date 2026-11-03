@@ -283,7 +283,8 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
         }
         val wctx = androidx.compose.ui.platform.LocalContext.current
-        var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("welcomed", false)) }
+        // the welcome shows on the first start and again after every update (its "What's new" card is the update notes)
+        var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).let { it.getBoolean("welcomed", false) && it.getString("seen_version", "") == com.umutk.pulse.appVersionName(wctx) }) }
         // the open page lives here, not in App: App is remounted when the theme changes dark/light, and that must not close the page
         var appPage by rememberSaveable { mutableStateOf(if (wctx is FilesActivity) "files" else if (Opt.startPage in Pages.map { it.id }) Opt.startPage else "processes") }
         var appSub by rememberSaveable { mutableStateOf("") }
