@@ -48,6 +48,9 @@ object KeyboardLayouts {
         }
     }
 
+    /** Lower case by the language's own rules: in Turkish the capital I is the dotless ı, in English it is i (the device's language must not decide). */
+    fun lower(s: String, code: String): String = s.lowercase(if (code.startsWith("tr")) Locale("tr", "TR") else lang(code).locale)
+
     fun cap(s: String, l: Lang, upper: Boolean) = if (upper) s.uppercase(l.locale) else s
 
     /** The symbol pages: the first with digits and the common signs, the second with the rest. Rows of single characters. */

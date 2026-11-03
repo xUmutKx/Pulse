@@ -437,7 +437,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         editAt = SystemClock.uptimeMillis()
         c.setComposingRegion(newStart - w.length, newStart)
         word.append(w); touchPts.clear(); target = null; peak = null; lastCorrection = null
-        prevWord = before.dropLast(w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }.lowercase().ifEmpty { null }
+        prevWord = before.dropLast(w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }.let { KeyboardLayouts.lower(it, st.lang) }.ifEmpty { null }
         updateSuggestions()
     }
 
@@ -496,7 +496,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             // the touch model: where this letter was touched, and the finger's drift from the key's centre is learned
             val tp = st.touch; st.touch = null
             touchPts.add(tp); if (touchPts.size > 48) touchPts.removeAt(0)
-            if (tp != null) st.letterRects[ch.lowercase()]?.let { r -> KeyboardDictionary.learnTouch(ch.lowercaseChar(), tp, r.center, r.width) }
+            if (tp != null) st.letterRects[KeyboardLayouts.lower(ch.toString(), st.lang)]?.let { r -> KeyboardDictionary.learnTouch(KeyboardLayouts.lower(ch.toString(), st.lang).first(), tp, r.center, r.width) }
             if (lang.code == "tr") apostropheAfterName(c)
             c.setComposingText(word, 1)
             lastCorrection = null
@@ -686,7 +686,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val before = tb.dropLast(1 + w.length).trimEnd().takeLastWhile { it.isLetter() || it == '\'' }
                 c.beginBatchEdit(); c.deleteSurroundingText(w.length + 1, 0); c.setComposingText(w, 1); c.endBatchEdit()
                 word.setLength(0); word.append(w); touchPts.clear(); target = null; lastCorrection = null
-                prevWord = before.ifEmpty { null }?.lowercase()
+                prevWord = before.ifEmpty { null }?.let { KeyboardLayouts.lower(it, st.lang) }
                 updateCaps(); updateSuggestions(); return
             }
         }
