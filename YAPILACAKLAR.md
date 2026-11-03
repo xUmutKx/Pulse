@@ -2048,3 +2048,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Uygulama sayfası: activity, service, receiver ve intent action satırlarına dokununca çalıştırılır; sonuç üstte yazılır
 - (sürüm sonra) derlenmedi: Palette: kurulu ikon paketleri okunur (appfilter), ikon kaynağı olarak seçilebilir (Blaux dahil); ayarlar > İkon paketi
 - (sürüm sonra) derlenmedi: Palette ikon paketi: eşleşmeyen uygulamalarda ad araması (tam ya da kelime başı, 4 harften kısa adlar aranmaz)
+- (sürüm sonra) derlenmedi: Winamp: Medya kütüphanesi penceresi (KÜTÜPHANE: telefondaki müzik; RADYO: eklenen internet radyoları, ekleme ve silme)
