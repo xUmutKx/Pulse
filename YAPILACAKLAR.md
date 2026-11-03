@@ -1915,3 +1915,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.344 derlenmedi: Build for the release: the changes since 1.0.343 (theme locks, recap and Poweramp recap row with page animation, lyrics share and search ad gates, Debloat selection kept, keyboard seed from the owner's data, setup permissions card, keyboard top bar height fixed)
 - (sürüm sonra) derlenmedi: Keyboard shift is for one letter only (two quick taps no longer make caps lock; caps is the long press or the caps key). Poweramp visualizer: the song, artist and album and the bass level under the bands
 - (sürüm sonra) derlenmedi: Keyboard: after . ! ? ; : a space comes at once, like the comma (numbers, web and mail addresses excluded); backspace removes that space with the mark
+- (sürüm sonra) derlenmedi: Poweramp visualizer: BPM line (estimated live from the bass beats; shows — until enough beats)
