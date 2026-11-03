@@ -75,7 +75,7 @@ class AppRepository(private val ctx: Context) {
     fun loadIcon(app: AppInfo): Drawable? {
         // the chosen installed icon pack first: its picture of this app, when it has one
         val pack = PaletteStore.iconPack(ctx)
-        if (pack.isNotBlank()) com.umutk.pulse.extras.palette.iconpack.IconPackCache.get(ctx, pack)?.iconFor(app.packageName, app.activityName)?.let { return it }
+        if (pack.isNotBlank()) com.umutk.pulse.extras.palette.iconpack.IconPackCache.get(ctx, pack)?.iconFor(app.packageName, app.activityName, app.label)?.let { return it }
         return loadSystemIcon(app)
     }
 
