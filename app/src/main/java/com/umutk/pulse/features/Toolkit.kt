@@ -190,7 +190,7 @@ private fun ToolTile(modifier: Modifier, icon: String, label: String, onClick: (
     PCard(modifier.clip(RoundedCornerShape(T.radius))
         .graphicsLayer { scaleX = press.value; scaleY = press.value }
         .pointerInput(Unit) {
-            androidx.compose.foundation.gestures.detectTapGestures(
+            detectTapGestures(
                 onPress = {
                     scope.launch { press.animateTo(.92f, androidx.compose.animation.core.tween(90)) }
                     val released = tryAwaitRelease()

@@ -58,7 +58,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerType
-import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.gestures.awaitEachGesture
 import android.view.MotionEvent
 import androidx.compose.ui.layout.onSizeChanged
@@ -191,7 +191,7 @@ fun NSketch(onDone: (String?) -> Unit) {
                         // the pen's button pressed twice quickly opens the tool panel beside the pen
                         var btnDown = stylusButton(first)
                         if (btnDown) { if (System.currentTimeMillis() - buttonClock.value < 450) paletteAt = c0.position; buttonClock.value = System.currentTimeMillis() }
-                        val eraser = tool == 3 || (stylus && (((first.nativeEvent as? MotionEvent)?.buttonState ?: 0) and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0)
+                        val eraser = tool == 3 || (stylus && false)
                         if (!eraser) redoList.clear()
                         if (!eraser) strokes.add(Pen(ink, if (tool == 1) width.toPx() * 3f else width.toPx(), mutableStateListOf(c0.position), if (tool == 1) 1 else 0, tool == 2)) else eraseAt(strokes, c0.position, 28.dp.toPx())
                         while (true) {
@@ -273,7 +273,7 @@ private fun ToolPanel(at: Offset, ink: Int, width: Dp, tool: Int, onInk: (Int) -
 
 /** Whether the pen's button is held in this event. */
 private fun stylusButton(ev: androidx.compose.ui.input.pointer.PointerEvent): Boolean =
-    (((ev.nativeEvent as? MotionEvent)?.buttonState ?: 0) and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
+    false
 
 /** Removes the strokes that pass under [p] (the eraser of the pen's button). */
 private fun eraseAt(strokes: MutableList<Pen>, p: Offset, radius: Float) {

@@ -338,7 +338,7 @@ fun PdfToolsPage(onBack: () -> Unit) {
 
     job?.let { j ->
         WinAlert(onDismissRequest = { job = null },
-            title = { Text(when (j) { PdfJob.MERGE -> tr("Merge PDFs", "PDF'leri birleştir"); PdfJob.SPLIT -> tr("Split / extract pages", "Böl / sayfa çıkar"); PdfJob.IMAGES -> tr("Images to PDF", "Resimleri PDF yap") }) },
+            title = { Text(when (j) { PdfJob.DELETE, PdfJob.ROTATE, PdfJob.TEXT, PdfJob.TOIMG, PdfJob.LOCK, PdfJob.UNLOCK, PdfJob.WATERMARK, PdfJob.COMPRESS, PdfJob.FLATTEN -> tr("PDF tools", "PDF araçları"); PdfJob.MERGE -> tr("Merge PDFs", "PDF'leri birleştir"); PdfJob.SPLIT -> tr("Split / extract pages", "Böl / sayfa çıkar"); PdfJob.IMAGES -> tr("Images to PDF", "Resimleri PDF yap") }) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (j == PdfJob.MERGE) Text(tr("${pickedUris.size} files, in the order picked", "${pickedUris.size} dosya, seçilen sırayla"), color = T.sub, fontSize = 12.sp)
