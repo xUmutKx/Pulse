@@ -8,6 +8,9 @@ import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.border
@@ -184,31 +187,31 @@ fun NoteEditor(
     Column(Modifier.widthIn(max = 720.dp).fillMaxSize()) {
         // the actions of the note
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            NIcon("back", fg, tr("Back", "Geri")) { onBack() }
+            MIcon(Icons.AutoMirrored.Filled.ArrowBack, tr("Back", "Geri"), fg) { onBack() }
             Box(Modifier.weight(1f))
-            NIcon(if (more) "close" else "add", if (more) T.accent else fg, tr("Add to the note", "Nota ekle")) { more = !more }
-            NIcon("undo", fg, tr("Undo", "Geri al")) { undo.removeLastOrNull()?.let { prev -> onEdit { it.copy(body = prev) } } }
-            NIcon(if (preview) "edit" else "view", fg, tr("Preview", "Önizleme")) { preview = !preview }
-            NIcon("share", fg, tr("Share", "Paylaş")) { shareNote(ctx, text) }
-            NIcon("copy", fg, tr("Copy", "Kopyala")) { copyNote(ctx, text) }
-            NIcon("newfile", fg, tr("Duplicate", "Çoğalt")) { onDuplicate() }
-            NIcon("delete", fg, tr("Move to trash", "Çöpe taşı")) { onTrash() }
+            MIcon(if (more) Icons.Outlined.Close else Icons.Outlined.Add, tr("Add to the note", "Nota ekle"), if (more) T.accent else fg) { more = !more }
+            MIcon(Icons.Outlined.Undo, tr("Undo", "Geri al"), fg) { undo.removeLastOrNull()?.let { prev -> onEdit { it.copy(body = prev) } } }
+            MIcon(if (preview) Icons.Outlined.Edit else Icons.Outlined.Visibility, tr("Preview", "Önizleme"), fg) { preview = !preview }
+            MIcon(Icons.Outlined.Share, tr("Share", "Paylaş"), fg) { shareNote(ctx, text) }
+            MIcon(Icons.Outlined.ContentCopy, tr("Copy", "Kopyala"), fg) { copyNote(ctx, text) }
+            MIcon(Icons.Outlined.NoteAdd, tr("Duplicate", "Çoğalt"), fg) { onDuplicate() }
+            MIcon(Icons.Outlined.Delete, tr("Move to trash", "Çöpe taşı"), fg) { onTrash() }
         }
         if (more) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             NIcon("pin", if (note.pinned) T.accent else fg, tr("Pin", "Sabitle")) { onEdit { it.copy(pinned = !it.pinned) } }
-            NIcon("palette", if (palette) T.accent else fg, tr("Colour", "Renk")) { palette = !palette }
+            MIcon(Icons.Outlined.Palette, tr("Colour", "Renk"), if (palette) T.accent else fg) { palette = !palette }
             NIcon("folder", fg, tr("Folder", "Klasör")) { onDlg(NDlg.Folder(setOf(note.id))) }
             NIcon("bell", if (note.remindAt > 0) T.accent else fg, tr("Reminder", "Hatırlatma")) { onDlg(NDlg.Remind(setOf(note.id))) }
             NIcon(if (note.locked) "unlock" else "lock", fg, tr("Lock", "Kilitle")) { toggleLock() }
-            NIcon("image", fg, tr("Add photo", "Fotoğraf ekle")) { pickImage.launch(arrayOf("image/*")) }
+            MIcon(Icons.Outlined.Image, tr("Add photo", "Fotoğraf ekle"), fg) { pickImage.launch(arrayOf("image/*")) }
             NIcon("document", fg, tr("Add a file", "Dosya ekle")) { pickFile.launch(arrayOf("*/*")) }
-            NIcon("edit", fg, tr("Sketch", "Çizim")) { onSketch() }
-            NIcon("record", if (recording) Color(0xFFE53935) else fg, tr("Record", "Ses kaydet")) { toggleRecord() }
+            MIcon(Icons.Outlined.Edit, tr("Sketch", "Çizim"), fg) { onSketch() }
+            MIcon(Icons.Outlined.RadioButtonChecked, tr("Record", "Ses kaydet"), if (recording) Color(0xFFE53935) else fg) { toggleRecord() }
             if (canDictate) NIcon("mic", fg, tr("Dictate", "Diktе et")) {
                 dictate.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM))
             }
             NIcon("speak", if (speaking) T.accent else fg, tr("Read aloud", "Sesli oku")) { toggleSpeak() }
-            NIcon("check", fg, tr("Checklist line", "Kontrol satırı")) {
+            MIcon(Icons.Outlined.Check, tr("Checklist line", "Kontrol satırı"), fg) {
                 changeBody(if (note.body.isEmpty() || note.body.endsWith("\n")) note.body + "[ ] " else note.body + "\n[ ] ")
             }
         }
@@ -273,17 +276,17 @@ fun NoteEditor(
             Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(28.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
         ) {
-            NIcon("edit", fg, tr("Sketch", "Çizim")) { onSketch() }
+            MIcon(Icons.Outlined.Edit, tr("Sketch", "Çizim"), fg) { onSketch() }
             Box(Modifier.size(40.dp).clip(CircleShape).clickable { fmt = !fmt }.semantics { contentDescription = tr("Text", "Yazı") }, contentAlignment = Alignment.Center) {
                 Text("Aa", color = if (fmt) T.accent else fg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
-            NIcon("image", fg, tr("Add photo", "Fotoğraf ekle")) { pickImage.launch(arrayOf("image/*")) }
-            NIcon("check", fg, tr("Checklist line", "Kontrol satırı")) {
+            MIcon(Icons.Outlined.Image, tr("Add photo", "Fotoğraf ekle"), fg) { pickImage.launch(arrayOf("image/*")) }
+            MIcon(Icons.Outlined.Check, tr("Checklist line", "Kontrol satırı"), fg) {
                 changeBody(if (note.body.isEmpty() || note.body.endsWith("\n")) note.body + "[ ] " else note.body + "\n[ ] ")
             }
-            NIcon("record", if (recording) Color(0xFFE53935) else fg, tr("Record", "Ses kaydet")) { toggleRecord() }
-            NIcon("palette", if (palette) T.accent else fg, tr("Colour", "Renk")) { palette = !palette }
-            NIcon(if (more) "close" else "add", if (more) T.accent else fg, tr("More tools", "Diğer araçlar")) { more = !more }
+            MIcon(Icons.Outlined.RadioButtonChecked, tr("Record", "Ses kaydet"), if (recording) Color(0xFFE53935) else fg) { toggleRecord() }
+            MIcon(Icons.Outlined.Palette, tr("Colour", "Renk"), if (palette) T.accent else fg) { palette = !palette }
+            MIcon(if (more) Icons.Outlined.Close else Icons.Outlined.Add, tr("More tools", "Diğer araçlar"), if (more) T.accent else fg) { more = !more }
         }
     }
     }
@@ -314,6 +317,14 @@ private fun AudioRow(ctx: Context, name: String, ink: Color, onRemove: () -> Uni
         NIcon(if (playing) "pause" else "play", ink, tr("Play", "Oynat")) { playing = player.toggle() }
         Text(tr("Voice note", "Ses notu"), color = ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
         NIcon("close", ink, tr("Remove", "Kaldır")) { onRemove() }
+    }
+}
+
+/** A Material icon of the note editor: the same round touch target as the others. */
+@Composable
+private fun MIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, tint: Color, onClick: () -> Unit) {
+    Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable { onClick() }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
+        androidx.compose.material3.Icon(icon, desc, tint = tint, modifier = Modifier.size(22.dp))
     }
 }
 
