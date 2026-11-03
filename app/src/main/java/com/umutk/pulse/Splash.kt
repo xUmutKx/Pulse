@@ -102,8 +102,8 @@ fun Splash(th: PTheme, onDone: () -> Unit) {
             "win95" -> Box(Modifier.fillMaxSize().background(Color(0xFF008080)))
             else -> Box(Modifier.fillMaxSize().background(th.bg))
         }
-        // a light veil over the whole screen, so the wallpaper still shows through
-        Box(Modifier.fillMaxSize().background(Color(0x3A000000)))
+        // a veil over the whole screen, so the wallpaper still shows through: darker on the Windows 11 opening
+        Box(Modifier.fillMaxSize().background(if (th.id == "win11") Color(0x8C000000) else Color(0x3A000000)))
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
