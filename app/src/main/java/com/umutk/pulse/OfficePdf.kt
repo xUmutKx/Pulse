@@ -21,6 +21,7 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import android.graphics.pdf.PdfDocument
 import android.widget.Toast
 import androidx.compose.ui.platform.LocalContext
@@ -59,7 +60,17 @@ fun Modifier.ofPinch(onZoom: (Float) -> Unit): Modifier = pointerInput(Unit) {
     }
 }
 
-class OfPdf(file: File) {
+/** A text selection: from word [a] to word [b] of page [page] (the same page). */
+class PSel(val page: Int, val a: Int, val b: Int)
+
+/** The word under a point (page fractions), or -1. */
+private fun wordAt(words: List<PWord>, fx: Float, fy: Float): Int =
+    words.indexOfFirst { fx >= it.x - .004f && fx <= it.x + it.w + .004f && fy >= it.y - .004f && fy <= it.y + it.h + .004f }
+
+/** One word of a page's text layer: its text and its box as fractions of the page (top-left origin). */
+class PWord(val text: String, val x: Float, val y: Float, val w: Float, val h: Float)
+
+class OfPdf(private val file: File) {
     private val pfd = ParcelFileDescriptor.open(file, ParcelFileDescriptor.MODE_READ_ONLY)
     private val r = PdfRenderer(pfd)
     val count = r.pageCount
@@ -75,7 +86,43 @@ class OfPdf(file: File) {
             b
         } finally { pg.close() }
     }
-    fun close() { runCatching { synchronized(r) { r.close() } }; runCatching { pfd.close() } }
+    fun close() { runCatching { synchronized(r) { r.close() } }; runCatching { pfd.close() }; runCatching { textDoc?.close() } }
+
+    // the text layer (for selecting and copying): read once per page, by PDFBox
+    private var textDoc: com.tom_roush.pdfbox.pdmodel.PDDocument? = null
+    private val wordsCache = HashMap<Int, List<PWord>>()
+    fun words(i: Int, appCtx: android.content.Context): List<PWord> = synchronized(wordsCache) {
+        wordsCache[i] ?: (runCatching { extractWords(i, appCtx) }.getOrDefault(emptyList())).also { wordsCache[i] = it }
+    }
+    private fun extractWords(i: Int, appCtx: android.content.Context): List<PWord> {
+        if (i !in 0 until count) return emptyList()
+        com.tom_roush.pdfbox.android.PDFBoxResourceLoader.init(appCtx)
+        val doc = textDoc ?: com.tom_roush.pdfbox.pdmodel.PDDocument.load(file).also { textDoc = it }
+        val box = doc.getPage(i).mediaBox
+        val pw = box.width; val ph = box.height
+        val stripper = object : com.tom_roush.pdfbox.text.PDFTextStripper() {
+            val chars = ArrayList<com.tom_roush.pdfbox.text.TextPosition>()
+            override fun writeString(text: String?, textPositions: MutableList<com.tom_roush.pdfbox.text.TextPosition>?) { textPositions?.let { chars.addAll(it) } }
+        }
+        stripper.startPage = i + 1; stripper.endPage = i + 1
+        stripper.getText(doc)
+        val out = ArrayList<PWord>()
+        val sb = StringBuilder(); var x0 = 0f; var y0 = 0f; var x1 = 0f; var y1 = 0f
+        fun flush() {
+            if (sb.isNotEmpty()) out.add(PWord(sb.toString(), x0 / pw, y0 / ph, (x1 - x0) / pw, (y1 - y0) / ph))
+            sb.clear()
+        }
+        for (tp in stripper.chars) {
+            val ch = tp.unicode ?: continue
+            if (ch.isBlank()) { flush(); continue }
+            val l = tp.xDirAdj; val b = tp.yDirAdj; val t = b - tp.heightDir; val r = l + tp.widthDirAdj
+            if (sb.isEmpty()) { x0 = l; y0 = t; x1 = r; y1 = b }
+            else { x0 = minOf(x0, l); y0 = minOf(y0, t); x1 = maxOf(x1, r); y1 = maxOf(y1, b) }
+            sb.append(ch)
+        }
+        flush()
+        return out
+    }
     private val darkCache = android.util.LruCache<String, Bitmap>(6)
     /** Display-only dark copy of a page (never used for saving); cached per page and width. */
     fun renderDark(i: Int, w: Int): Bitmap? {
@@ -220,6 +267,16 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
     val cols = intArrayOf(0xFFD32F2F.toInt(), 0xFFFFEB3B.toInt(), 0xFF1976D2.toInt(), 0xFF388E3C.toInt(), 0xFF000000.toInt())
     var textAt by remember { mutableStateOf<Triple<Int, Float, Float>?>(null) }; var editing by remember { mutableStateOf<PAnn?>(null) }; var textVal by remember { mutableStateOf("") }
     var jump by remember { mutableStateOf(false) }; var jumpText by remember { mutableStateOf("") }
+    var sel by remember { mutableStateOf<PSel?>(null) }
+    fun copySel() {
+        val s = sel ?: return
+        val ws = p.words(s.page, ctx)
+        val lo = minOf(s.a, s.b); val hi = maxOf(s.a, s.b).coerceAtMost(ws.lastIndex)
+        if (lo > hi) return
+        val txt = (lo..hi).joinToString(" ") { ws[it].text }
+        (ctx.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("", txt))
+        Toast.makeText(ctx, tr("Copied", "Kopyalandı"), Toast.LENGTH_SHORT).show()
+    }
     val widthDp = LocalConfiguration.current.screenWidthDp.dp
     val pagePx = with(LocalDensity.current) { (widthDp * committed).roundToPx() }.coerceIn(300, 2400)
     fun goto(i: Int) { scope.launch { list.animateScrollToItem(i.coerceIn(0, p.count - 1)) } }
@@ -239,6 +296,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
         OAct(tr("Add text", "Yazı ekle"), "Edit", Icons.Outlined.TextFields, on = tool == 3, cap = tr("Text", "Yazı")) { tool = if (tool == 3) 0 else 3 },
         OAct(tr("Edit text", "Metni düzenle"), "Edit", Icons.Outlined.EditNote, on = tool == 4, cap = tr("Text", "Yazı")) { tool = if (tool == 4) 0 else 4; if (tool == 4) ci = cols.size - 1 },
         OAct(tr("Colour", "Renk"), "Edit", Icons.Outlined.Palette, cap = tr("Colour", "Renk")) { ci = (ci + 1) % cols.size },
+        OAct(tr("Select text", "Metin seç"), "Edit", Icons.Outlined.Create, on = tool == 5, cap = tr("Text", "Yazı")) { tool = if (tool == 5) 0 else 5 },
+        OAct(tr("Copy text", "Metni kopyala"), "Edit", Icons.Outlined.ContentCopy, enabled = sel != null, cap = tr("Text", "Yazı")) { copySel() },
         OAct(tr("Undo", "Geri al"), "Edit", Icons.Outlined.Undo, enabled = anns.isNotEmpty(), cap = tr("Edit", "Düzenle")) { anns.removeAt(anns.size - 1) },
         OAct(tr("Clear marks", "İşaretleri sil"), "Edit", Icons.Outlined.Delete, enabled = anns.isNotEmpty(), cap = tr("Edit", "Düzenle")) { anns.clear() },
         OAct(tr("Save a copy", "Kopya kaydet"), "File", Icons.Outlined.ContentCopy, png = "copy") {
@@ -265,7 +324,8 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
             Box(Modifier.fillMaxSize().horizontalScroll(rememberScrollState())) {
                 LazyColumn(Modifier.width(widthDp * zoom), state = list, contentPadding = PaddingValues(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(p.count) { i -> PdfPage(p, i, pagePx, anns.filter { it.page == i }, tool, cols[ci],
-                        { a -> anns.add(a); doc.dirty = true }, { x, y, hit -> editing = hit; textVal = hit?.text ?: ""; textAt = Triple(i, x, y) }) }
+                        { a -> anns.add(a); doc.dirty = true }, { x, y, hit -> editing = hit; textVal = hit?.text ?: ""; textAt = Triple(i, x, y) },
+                        sel?.takeIf { it.page == i }, { s -> sel = s }) }
                 }
             }
         }
@@ -286,7 +346,7 @@ fun OfPdfScreen(doc: OfDoc, theme: OfTheme) {
 }
 
 @Composable
-private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, color: Int, onAdd: (PAnn) -> Unit, onText: (Float, Float, PAnn?) -> Unit) {
+private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, color: Int, onAdd: (PAnn) -> Unit, onText: (Float, Float, PAnn?) -> Unit, sel: PSel?, onSel: (PSel?) -> Unit) {
     val dark = OfficePrefs.darkPdf
     val bmp by produceState<ImageBitmap?>(null, i, px, dark) {
         if (!dark) { value = withContext(Dispatchers.IO) { runCatching { p.render(i, px)?.asImageBitmap() }.getOrNull() }; return@produceState }
@@ -298,11 +358,14 @@ private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, colo
     val paint = remember { android.graphics.Paint() }
     var cur by remember { mutableStateOf<PAnn?>(null) }
     val toolNow by rememberUpdatedState(tool); val colNow by rememberUpdatedState(color)
+    val appCtx = LocalContext.current.applicationContext
+    val words by produceState<List<PWord>>(emptyList(), i) { value = withContext(Dispatchers.IO) { p.words(i, appCtx) } }
+    var selStart by remember(i) { mutableStateOf(-1) }
     Box(Modifier.fillMaxWidth()) {
         if (b != null) Image(b, null, Modifier.fillMaxWidth().background(bg), contentScale = ContentScale.FillWidth)
         else Box(Modifier.fillMaxWidth().aspectRatio(.707f).background(bg), contentAlignment = Alignment.Center) { Text("${i + 1}", color = Color.Gray) }
         if (anns.isNotEmpty() || tool != 0 || cur != null) Canvas(Modifier.matchParentSize()
-            .pointerInput(tool, anns) {
+            .pointerInput(tool, anns, words) {
                 if (tool == 3) detectTapGestures { o ->
                     val hit = anns.lastOrNull { it.kind >= 2 && annBounds(it, size.width.toFloat(), size.height.toFloat(), paint).contains(o.x, o.y) }
                     onText(o.x / size.width, o.y / size.height, hit) }
@@ -319,12 +382,23 @@ private fun PdfPage(p: OfPdf, i: Int, px: Int, anns: List<PAnn>, tool: Int, colo
                                 onText(a.x, a.y, hit) }
                         }
                     }, onDragCancel = { cur = null })
+                else if (tool == 5) detectDragGestures(
+                    onDragStart = { o -> val k = wordAt(words, o.x / size.width, o.y / size.height); selStart = k; onSel(if (k >= 0) PSel(i, k, k) else null) },
+                    onDrag = { ch, _ -> val k = wordAt(words, ch.position.x / size.width, ch.position.y / size.height); if (k >= 0 && selStart >= 0) onSel(PSel(i, selStart, k)) },
+                    onDragEnd = { }, onDragCancel = { })
                 else if (tool != 0) detectDragGestures(
                     onDragStart = { o -> cur = PAnn(i, toolNow - 1, listOf(Offset(o.x / size.width, o.y / size.height)), colNow) },
                     onDragEnd = { cur?.let(onAdd); cur = null }, onDragCancel = { cur = null },
                     onDrag = { ch, _ -> cur?.let { c -> cur = PAnn(c.page, c.kind, c.pts + Offset(ch.position.x / size.width, ch.position.y / size.height), c.color) } })
             }) {
             drawIntoCanvas { cv -> (anns + listOfNotNull(cur)).forEach { drawAnn(cv.nativeCanvas, it, size.width, size.height, paint, dark) } }
+            // the selected words, shaded
+            sel?.takeIf { it.page == i }?.let { s ->
+                for (k in minOf(s.a, s.b)..maxOf(s.a, s.b)) if (k in words.indices) {
+                    val w = words[k]
+                    drawRect(Color(0x663D8BFD), Offset(w.x * size.width, w.y * size.height), Size(w.w * size.width, w.h * size.height))
+                }
+            }
         }
     }
 }
