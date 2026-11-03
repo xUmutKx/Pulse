@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -125,6 +126,55 @@ fun NSketch(onDone: (String?) -> Unit) {
             val e = "$ink:${PAINT_WIDTHS.indexOf(width)}:$tool"
             favs = (listOf(e) + favs.filter { it != e }).take(6); PenFavs.save(ctx, favs)
         }
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+        Box(
+            Modifier.fillMaxSize().border(1.dp, PaintLine).background(paper)
+                .onSizeChanged { size = it }
+                // keyed on the colour and width, so a change applies to the next stroke
+                .pointerInput(ink, width, tool, fingerDraw) {
+                    // the pen draws; once a pen has been used, a finger is ignored (the palm rests on the screen). The pen's button held erases
+                    awaitEachGesture {
+                        val first = awaitPointerEvent(PointerEventPass.Main)
+                        val c0 = first.changes.first()
+                        val stylus = c0.type == PointerType.Stylus
+                        if (stylus) penSeen.value = true else if (penSeen.value && !fingerDraw) return@awaitEachGesture
+                        // the pen's button pressed twice quickly opens the tool panel beside the pen
+                        var btnDown = stylusButton(first)
+                        if (btnDown) { if (System.currentTimeMillis() - buttonClock.value < 450) paletteAt = c0.position; buttonClock.value = System.currentTimeMillis() }
+                        val eraser = tool == 3 || (stylus && false)
+                        if (!eraser) redoList.clear()
+                        if (!eraser) strokes.add(Pen(ink, if (tool == 1) width.toPx() * 3f else width.toPx(), mutableStateListOf(c0.position), if (tool == 1) 1 else 0, tool == 2)) else eraseAt(strokes, c0.position, 28.dp.toPx())
+                        while (true) {
+                            val ev = awaitPointerEvent(PointerEventPass.Main)
+                            val c = ev.changes.firstOrNull { it.id == c0.id } ?: break
+                            val nowBtn = stylusButton(ev)
+                            if (nowBtn && !btnDown) { if (System.currentTimeMillis() - buttonClock.value < 450) paletteAt = c.position; buttonClock.value = System.currentTimeMillis() }
+                            btnDown = nowBtn
+                            if (!c.pressed) break
+                            c.consume()
+                            if (eraser) eraseAt(strokes, c.position, 28.dp.toPx()) else strokes.lastOrNull()?.let { s ->
+                                // a straight line keeps only its start and its end
+                                if (s.straight) { if (s.pts.size > 1) s.pts[1] = c.position else s.pts.add(c.position) } else s.pts.add(c.position)
+                            }
+                        }
+                    }
+                },
+        ) {
+            Canvas(Modifier.fillMaxSize()) {
+                strokes.forEach { s ->
+                    if (s.pts.size > 1) {
+                        val p = Path()
+                        s.pts.forEachIndexed { i, o -> if (i == 0) p.moveTo(o.x, o.y) else p.lineTo(o.x, o.y) }
+                        if (s.kind == 1) drawPath(p, Color(s.color).copy(alpha = .35f), style = Stroke(width = s.width, cap = androidx.compose.ui.graphics.StrokeCap.Square, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                        else drawPath(p, Color(s.color), style = Stroke(width = s.width, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+                    }
+                }
+            }
+        }
+        // the tool panel: opened by pressing the pen's button twice quickly, or from the menu; a tap outside closes it
+        // the palette floats over the page at the top, rounded and lifted, like the markup tools of Apple Notes
+        Column(Modifier.align(Alignment.TopCenter).padding(top = 8.dp, start = 8.dp, end = 8.dp)
+            .shadow(6.dp, RoundedCornerShape(22.dp)).clip(RoundedCornerShape(22.dp)).background(PaintBar.copy(alpha = .94f)).padding(horizontal = 4.dp, vertical = 2.dp)) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 4.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             PaintTool("close") { onDone(null) }
             Spacer(Modifier.width(6.dp))
@@ -180,52 +230,7 @@ fun NSketch(onDone: (String?) -> Unit) {
                 }
             }
         }
-        Box(Modifier.weight(1f).fillMaxWidth()) {
-        Box(
-            Modifier.fillMaxSize().border(1.dp, PaintLine).background(paper)
-                .onSizeChanged { size = it }
-                // keyed on the colour and width, so a change applies to the next stroke
-                .pointerInput(ink, width, tool, fingerDraw) {
-                    // the pen draws; once a pen has been used, a finger is ignored (the palm rests on the screen). The pen's button held erases
-                    awaitEachGesture {
-                        val first = awaitPointerEvent(PointerEventPass.Main)
-                        val c0 = first.changes.first()
-                        val stylus = c0.type == PointerType.Stylus
-                        if (stylus) penSeen.value = true else if (penSeen.value && !fingerDraw) return@awaitEachGesture
-                        // the pen's button pressed twice quickly opens the tool panel beside the pen
-                        var btnDown = stylusButton(first)
-                        if (btnDown) { if (System.currentTimeMillis() - buttonClock.value < 450) paletteAt = c0.position; buttonClock.value = System.currentTimeMillis() }
-                        val eraser = tool == 3 || (stylus && false)
-                        if (!eraser) redoList.clear()
-                        if (!eraser) strokes.add(Pen(ink, if (tool == 1) width.toPx() * 3f else width.toPx(), mutableStateListOf(c0.position), if (tool == 1) 1 else 0, tool == 2)) else eraseAt(strokes, c0.position, 28.dp.toPx())
-                        while (true) {
-                            val ev = awaitPointerEvent(PointerEventPass.Main)
-                            val c = ev.changes.firstOrNull { it.id == c0.id } ?: break
-                            val nowBtn = stylusButton(ev)
-                            if (nowBtn && !btnDown) { if (System.currentTimeMillis() - buttonClock.value < 450) paletteAt = c.position; buttonClock.value = System.currentTimeMillis() }
-                            btnDown = nowBtn
-                            if (!c.pressed) break
-                            c.consume()
-                            if (eraser) eraseAt(strokes, c.position, 28.dp.toPx()) else strokes.lastOrNull()?.let { s ->
-                                // a straight line keeps only its start and its end
-                                if (s.straight) { if (s.pts.size > 1) s.pts[1] = c.position else s.pts.add(c.position) } else s.pts.add(c.position)
-                            }
-                        }
-                    }
-                },
-        ) {
-            Canvas(Modifier.fillMaxSize()) {
-                strokes.forEach { s ->
-                    if (s.pts.size > 1) {
-                        val p = Path()
-                        s.pts.forEachIndexed { i, o -> if (i == 0) p.moveTo(o.x, o.y) else p.lineTo(o.x, o.y) }
-                        if (s.kind == 1) drawPath(p, Color(s.color).copy(alpha = .35f), style = Stroke(width = s.width, cap = androidx.compose.ui.graphics.StrokeCap.Square, join = androidx.compose.ui.graphics.StrokeJoin.Round))
-                        else drawPath(p, Color(s.color), style = Stroke(width = s.width, cap = androidx.compose.ui.graphics.StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
-                    }
-                }
-            }
         }
-        // the tool panel: opened by pressing the pen's button twice quickly, or from the menu; a tap outside closes it
         paletteAt?.let { at ->
             ToolPanel(at, ink, width, tool,
                 onInk = { ink = it }, onWidth = { width = it }, onTool = { tool = it },
