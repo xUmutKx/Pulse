@@ -25,7 +25,7 @@ class ScreenRecTile : TileService() {
             return
         }
         // the shade must be gone before the picture is taken, so a transparent activity waits a moment and does it
-        val i = Intent(this, ScreenRecActivity::class.java).putExtra("shot", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val i = com.umutk.pulse.ads.TileAds.wrap(this, Intent(this, ScreenRecActivity::class.java).putExtra("shot", true).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         if (Build.VERSION.SDK_INT >= 34) startActivityAndCollapse(PendingIntent.getActivity(this, 0, i, PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT))
         else @Suppress("DEPRECATION") startActivityAndCollapse(i)
     }
