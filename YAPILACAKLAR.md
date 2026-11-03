@@ -1996,3 +1996,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Network: Devices on this Wi-Fi has a Scan again button; the count shows … while it scans
 - (sürüm sonra) derlenmedi: Network type: a change counts when the phone keeps at least one of the asked types (a phone without 5G now reports done instead of failing)
 - (sürüm sonra) derlenmedi: Notes start page: the last eight notes as nine squares (the bottom middle one is Notes, a new note), with a space above
+- (sürüm sonra) derlenmedi: PDF dark copy: light greys go to black (a steep curve; ink and photos as before). Notes: a Black background switch in the notes settings

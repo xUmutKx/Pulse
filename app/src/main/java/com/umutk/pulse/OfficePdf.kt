@@ -132,6 +132,12 @@ class OfPdf(private val file: File) {
     }
 }
 
+/** The new lightness of a pixel of lightness l in the dark copy: ink turns light; paper and light greys go to black (a steep curve, so #E0 is nearly #000). */
+private val PAPER_LUT = IntArray(256) { l ->
+    if (l < 128) 242 - l * 38 / 128
+    else (255.0 * Math.pow((255 - l) / 127.0, 2.4)).toInt().coerceIn(0, 255)
+}
+
 /**
  * Smart invert in place: document blocks (16px) get a per-pixel lightness inversion (white paper -> black, any text darker than 128 -> >= #CC, pure black text -> >= #E6, hue kept);
  * photos stay as they are, with a 2px feathered edge. A block is a photo only inside a LARGE connected region (>= 6 blocks, >= 3 wide/tall, >= 4% of the page) of colourful
@@ -194,7 +200,7 @@ fun smartInvert(b: Bitmap) {
             }
             val c = px[y * w + x]; val r = c shr 16 and 255; val g = c shr 8 and 255; val bl = c and 255
             val l = (r * 77 + g * 151 + bl * 28) shr 8
-            val l2 = if (l < 128) 242 - l * 38 / 128 else (255 - l) * 204 / 127 // dark ink -> light, paper -> black
+            val l2 = PAPER_LUT[l.coerceIn(0, 255)] // dark ink -> light, paper (and every light grey) -> black
             val d = l2 - l
             var nr = (r + d).coerceIn(0, 255); var ng = (g + d).coerceIn(0, 255); var nb = (bl + d).coerceIn(0, 255)
             if (keep > 0) { nr = (nr * (3 - keep) + r * keep) / 3; ng = (ng * (3 - keep) + g * keep) / 3; nb = (nb * (3 - keep) + bl * keep) / 3 }
