@@ -241,6 +241,27 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     BackHandler { onBack() }
 
     val d = details
+    // a tap on an activity, service, receiver or intent action runs it; the result is said in the note under the buttons
+    fun kindOf(name: String): String = when {
+        d?.services?.any { it.name == name } == true -> "service"
+        d?.receivers?.any { it.name == name } == true -> "receiver"
+        else -> "activity"
+    }
+    fun runComp(name: String, action: String?) {
+        val kind = kindOf(name)
+        val intent = (if (action != null) Intent(action) else Intent()).setComponent(android.content.ComponentName(pkg, name))
+        note = runCatching {
+            when (kind) {
+                "service" -> ctx.startService(intent)
+                "receiver" -> ctx.sendBroadcast(intent)
+                else -> ctx.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }
+            when (kind) {
+                "receiver" -> tr("Sent to ${name.substringAfterLast('.')} (it may ignore it)", "${name.substringAfterLast('.')} alıcısına gönderildi (yoksayabilir)")
+                else -> tr("Started ${name.substringAfterLast('.')}", "${name.substringAfterLast('.')} başlatıldı")
+            }
+        }.getOrElse { tr("Could not start it: ", "Başlatılamadı: ") + (it.message ?: it.javaClass.simpleName) }
+    }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
@@ -286,17 +307,17 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
             }
 
             section("Activities (${d.activities.size})", Icons.Filled.Web)
-            components(d.activities, Icons.Filled.Web)
+            components(d.activities, Icons.Filled.Web) { runComp(it.name, null) }
             section("Services (${d.services.size})", Icons.Filled.Build)
-            components(d.services, Icons.Filled.Build)
+            components(d.services, Icons.Filled.Build) { runComp(it.name, null) }
             section("Receivers (${d.receivers.size})", Icons.Filled.Sensors)
-            components(d.receivers, Icons.Filled.Sensors)
+            components(d.receivers, Icons.Filled.Sensors) { runComp(it.name, null) }
 
             section("Intent actions (${d.actions.size})", Icons.Filled.Share)
             if (d.actionsNote != null) item { Text(d.actionsNote, color = T.sub, fontSize = 12.sp) }
             else if (d.actions.isEmpty()) item { Text("None declared", color = T.sub, fontSize = 12.sp) }
             items(d.actions, key = { it.action + "|" + it.component }) { a ->
-                IconCard(fnFor(a.action).icon, a.action, a.component)
+                IconCard(fnFor(a.action).icon, a.action, a.component, onClick = { runComp(a.component, a.action) })
             }
 
             section("Permissions (${d.permissions.size})", Icons.Filled.Lock)
@@ -326,8 +347,8 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
 }
 
 @Composable
-private fun IconCard(icon: ImageVector, title: String, subtitle: String, bold: Boolean = false) {
-    PCard {
+private fun IconCard(icon: ImageVector, title: String, subtitle: String, bold: Boolean = false, onClick: (() -> Unit)? = null) {
+    PCard(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, null, Modifier.size(20.dp), Look.accent)
             Spacer(Modifier.width(10.dp))
@@ -349,9 +370,9 @@ private fun LazyListScope.section(title: String, icon: ImageVector) {
     }
 }
 
-private fun LazyListScope.components(list: List<CompRow>, icon: ImageVector) {
+private fun LazyListScope.components(list: List<CompRow>, icon: ImageVector, onRun: (CompRow) -> Unit) {
     if (list.isEmpty()) item { Text("None declared", color = T.sub, fontSize = 12.sp) }
     items(list, key = { "c|" + it.name }) { c ->
-        IconCard(icon, c.name.substringAfterLast('.'), c.name + (if (c.exported) " · exported" else " · not exported"))
+        IconCard(icon, c.name.substringAfterLast('.'), c.name + (if (c.exported) " · exported" else " · not exported"), onClick = { onRun(c) })
     }
 }
