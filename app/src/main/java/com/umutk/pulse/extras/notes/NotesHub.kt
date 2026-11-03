@@ -246,7 +246,8 @@ fun NotesHub(onBack: () -> Unit) {
     }
 
     androidx.compose.runtime.DisposableEffect(Unit) { com.umutk.pulse.PageBg.transparent = NotesPrefs.transparent(ctx); onDispose { com.umutk.pulse.PageBg.transparent = false } }
-    Box(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg)) {
+    NotesBg.black = NotesPrefs.black(LocalContext.current)
+    Box(Modifier.fillMaxSize().background(if (NotesBg.black) Color.Black else com.umutk.pulse.pageBg)) {
         when (val s = screen) {
             is NScreen.Edit -> {
                 val n = notes.firstOrNull { it.id == s.id }
