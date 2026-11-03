@@ -419,17 +419,17 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         }
     }
     // the intro: the saved one of this folder, or found by comparing this episode with the next (or previous) one
-    var intro by remember { mutableStateOf<LongRange?>(null) }
+    var segs by remember { mutableStateOf<Segs?>(null) }
     LaunchedEffect(cur) {
         val me = items.getOrNull(cur) ?: return@LaunchedEffect
         val key = IntroCache.key(me.uri)
-        intro = IntroCache.get(ctx, key)
-        if (intro == null) {
+        segs = IntroCache.get(ctx, key)
+        if (segs == null) {
             // 1) IntroDB by the show's IMDb id (needs the OpenSubtitles key); 2) the picture match with a neighbouring episode
             val fromDb = IntroSources.forFile(ctx, me.name)
-            if (fromDb != null) { IntroCache.put(ctx, key, fromDb); intro = fromDb; return@LaunchedEffect }
+            if (fromDb != null) { IntroCache.put(ctx, key, fromDb); segs = fromDb; return@LaunchedEffect }
             val other = items.getOrNull(cur + 1) ?: items.getOrNull(cur - 1)
-            if (other != null) IntroFinder.find(ctx, me.uri, other.uri)?.let { found -> IntroCache.put(ctx, key, found); intro = found }
+            if (other != null) IntroFinder.find(ctx, me.uri, other.uri)?.let { found -> Segs(found, null).also { IntroCache.put(ctx, key, it); segs = it } }
         }
     }
     val retriever = remember(cur) { arrayOfNulls<MediaMetadataRetriever>(1) }
@@ -637,12 +637,15 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
         VideoExtras(player, prefs, act, rev)
         if (!inPip) VideoStatus(prefs, rev, Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 12.dp))
-        // skip the intro: the button shows while the intro plays and jumps to its end (found from the next episode, see IntroFinder)
-        intro?.let { r ->
-            if (!inPip && pos >= r.first && pos < r.last) {
-                Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 96.dp).clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xE6FFFFFF)).clickable { player.seekTo(r.last + 1) }.padding(horizontal = 16.dp, vertical = 9.dp)) {
-                    Text(tr("Skip intro", "İntroyu geç"), color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+        // skip the opening and the "previously on" recap: a button shows while one of them plays and jumps to its end
+        segs?.let { sg ->
+            val hit = listOf(sg.intro to tr("Skip intro", "İntroyu geç"), sg.recap to tr("Skip recap", "Özeti geç"))
+                .firstOrNull { (r, _) -> r != null && pos >= r.first && pos < r.last }
+            if (!inPip && hit != null) {
+                val end2 = hit.first!!.last + 1
+                Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 84.dp).clip(RoundedCornerShape(6.dp))
+                    .background(Color(0xE6FFFFFF)).clickable { player.seekTo(end2) }.padding(horizontal = 16.dp, vertical = 9.dp)) {
+                    Text(hit.second, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
             }
         }

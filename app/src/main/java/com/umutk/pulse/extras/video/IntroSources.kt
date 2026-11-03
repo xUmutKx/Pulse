@@ -9,22 +9,32 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
+/** The skippable parts of an episode: the opening and the "previously on" recap, in milliseconds. */
+internal data class Segs(val intro: LongRange?, val recap: LongRange?) {
+    val empty: Boolean get() = intro == null && recap == null
+}
+
 /** Where the intro of an episode comes from, in order: IntroDB (community timestamps, no key), then the picture match of [IntroFinder]. */
 internal object IntroSources {
     private const val INTRODB = "https://api.introdb.app/segments"
     private const val OS_API = "https://api.opensubtitles.com/api/v1"
 
-    /** IntroDB's intro for one episode, in milliseconds; null when it has none or the request fails. */
-    suspend fun introDb(imdb: String, season: Int, episode: Int): LongRange? = withContext(Dispatchers.IO) {
+    /** IntroDB's intro and recap for one episode; empty when it has neither or the request fails. */
+    suspend fun introDb(imdb: String, season: Int, episode: Int): Segs = withContext(Dispatchers.IO) {
         runCatching {
             val c = URL("$INTRODB?imdb_id=$imdb&season=$season&episode=$episode").openConnection() as HttpURLConnection
             c.connectTimeout = 10_000; c.readTimeout = 10_000
             c.setRequestProperty("Accept", "application/json")
-            val text = try { if (c.responseCode !in 200..299) return@runCatching null; c.inputStream.use { String(it.readBytes(), Charsets.UTF_8) } } finally { c.disconnect() }
-            val intro = JSONObject(text).optJSONObject("intro") ?: return@runCatching null
-            val a = intro.optLong("start_ms", -1L); val b = intro.optLong("end_ms", -1L)
-            if (a < 0 || b <= a) null else a until b
-        }.getOrNull()
+            val text = try { if (c.responseCode !in 200..299) return@runCatching Segs(null, null); c.inputStream.use { String(it.readBytes(), Charsets.UTF_8) } } finally { c.disconnect() }
+            val root = JSONObject(text)
+            Segs(range(root.optJSONObject("intro")), range(root.optJSONObject("recap")))
+        }.getOrElse { Segs(null, null) }
+    }
+
+    private fun range(o: JSONObject?): LongRange? {
+        if (o == null) return null
+        val a = o.optLong("start_ms", -1L); val b = o.optLong("end_ms", -1L)
+        return if (a < 0 || b <= a) null else a until b
     }
 
     /** The IMDb id of the show for a file name like "Dexter.S03E07...mkv", found through the OpenSubtitles key the user typed in. */
@@ -55,10 +65,10 @@ internal object IntroSources {
     }
 
     /** Intro of [file] (a file name): from IntroDB when the show and episode are known, else null. */
-    suspend fun forFile(ctx: Context, file: String): LongRange? {
+    suspend fun forFile(ctx: Context, file: String): Segs? {
         val (title, season, episode) = OpenSubs.episodeOf(file)
         if (season == null || episode == null) return null
         val imdb = showImdb(ctx, file) ?: return null
-        return introDb(imdb, season, episode)
+        return introDb(imdb, season, episode).takeIf { !it.empty }
     }
 }

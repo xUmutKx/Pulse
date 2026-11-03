@@ -2033,3 +2033,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.351 derlendi: commits since 1.0.350 (video: intro, mini window, menus, subtitles; keyboard @ suggestions)
 - (sürüm sonra) derlenmedi: Gözat depolama taramasını uygulama açılışında bir kez yapar (donma); kapak: sistem kapağı siyahsa ya da yoksa videonun %30 karesi; altyazı arama listesi küçük satırlar
 - (sürüm sonra) derlenmedi: Notlar: arama artık üstte ikon (açılınca alan çıkar); yanına yeni klasör ikonu (yol yazılır, klasör yan menüde)
+- (sürüm sonra) derlenmedi: IntroDB özeti (recap) de atlanır ("Özeti geç"); atlama düğmesi ilerleme çubuğuna yaklaştırıldı (84 dp)
