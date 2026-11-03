@@ -20,6 +20,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.ui.semantics.semantics
 import com.umutk.pulse.PIcon
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -88,6 +90,8 @@ fun NoteEditor(
     var palette by remember(note.id) { mutableStateOf(false) }
     // the tools of the note (pin, colour, folder, reminder, lock, photo, sketch, voice, read aloud, checklist) sit behind one plus button
     var more by remember(note.id) { mutableStateOf(false) }
+    // the text row: a heading, bold, a bullet or a checklist line, added at the end of the note
+    var fmt by remember(note.id) { mutableStateOf(false) }
     var recording by remember(note.id) { mutableStateOf(false) }
     var speaking by remember(note.id) { mutableStateOf(false) }
     val undo = remember(note.id) { mutableStateListOf<String>() }
@@ -227,11 +231,29 @@ fun NoteEditor(
             }
             Text(tr("$words words · ${note.body.length} characters", "$words kelime · ${note.body.length} karakter"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
         }
+        if (fmt) Row(
+            Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
+        ) {
+            listOf(
+                Triple("H", tr("Heading", "Başlık"), "\n## "),
+                Triple("B", tr("Bold", "Kalın"), "\n**" + tr("bold", "kalın") + "** "),
+                Triple("•", tr("Bullet", "Madde"), "\n- "),
+                Triple("☐", tr("Checklist", "Kontrol"), "\n[ ] "),
+            ).forEach { (label, desc, marker) ->
+                Box(Modifier.size(40.dp).clip(CircleShape).clickable { changeBody(note.body + marker) }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
+                    Text(label, color = fg, fontSize = 17.sp, fontWeight = if (label == "B") FontWeight.Bold else FontWeight.SemiBold)
+                }
+            }
+        }
         Row(
             Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(28.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
         ) {
             NIcon("edit", fg, tr("Sketch", "Çizim")) { onSketch() }
+            Box(Modifier.size(40.dp).clip(CircleShape).clickable { fmt = !fmt }.semantics { contentDescription = tr("Text", "Yazı") }, contentAlignment = Alignment.Center) {
+                Text("Aa", color = if (fmt) T.accent else fg, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+            }
             NIcon("image", fg, tr("Add photo", "Fotoğraf ekle")) { pickImage.launch(arrayOf("image/*")) }
             NIcon("check", fg, tr("Checklist line", "Kontrol satırı")) {
                 changeBody(if (note.body.isEmpty() || note.body.endsWith("\n")) note.body + "[ ] " else note.body + "\n[ ] ")
