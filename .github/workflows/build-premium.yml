@@ -1,6 +1,8 @@
 name: Build premium app
-# The premium unlocker: a separate app (its own package, sold once on Google Play). It builds only when its module exists
-# (settings.gradle.kts includes ":premium"). Publishing to Google Play needs the account secrets below; none are in this file.
+# Pulse Premium: a separate app (its own package, sold once on Google Play). Builds only when run by hand.
+# Optional secrets (add in GitHub > Settings > Secrets): PREMIUM_KEYSTORE_BASE64, PREMIUM_KEYSTORE_PASSWORD,
+# PREMIUM_KEY_ALIAS, PREMIUM_KEY_PASSWORD. Without them the APK is built unsigned. Google Play re-signs the uploaded app
+# with its own signing key; that certificate's SHA-256 goes into Premium.UNLOCKER_CERT_SHA256 in the main app.
 on:
   workflow_dispatch:
 permissions:
@@ -10,24 +12,30 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Is the premium module there?
-        id: module
-        run: |
-          if grep -q 'include(":premium")' settings.gradle.kts; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; echo "The premium module is not in settings.gradle.kts yet: nothing to build."; fi
       - uses: actions/setup-java@v5
-        if: steps.module.outputs.present == 'true'
         with:
           distribution: temurin
           java-version: 17
       - uses: gradle/actions/setup-gradle@v5
-        if: steps.module.outputs.present == 'true'
         with:
           gradle-version: 8.9
+      - name: Decode the upload key (if the secret is set)
+        env:
+          KEYSTORE_B64: ${{ secrets.PREMIUM_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/premium-upload.jks"
+            echo "PREMIUM_KEYSTORE_FILE=$RUNNER_TEMP/premium-upload.jks" >> "$GITHUB_ENV"
+          else
+            echo "No upload key secret: the premium APK will be unsigned."
+          fi
       - name: Build the premium release APK
-        if: steps.module.outputs.present == 'true'
+        env:
+          PREMIUM_KEYSTORE_PASSWORD: ${{ secrets.PREMIUM_KEYSTORE_PASSWORD }}
+          PREMIUM_KEY_ALIAS: ${{ secrets.PREMIUM_KEY_ALIAS }}
+          PREMIUM_KEY_PASSWORD: ${{ secrets.PREMIUM_KEY_PASSWORD }}
         run: gradle :premium:assembleRelease --no-daemon -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
       - uses: actions/upload-artifact@v5
-        if: steps.module.outputs.present == 'true'
         with:
           name: pulse-premium-apk
           path: premium/build/outputs/apk/release/*.apk
