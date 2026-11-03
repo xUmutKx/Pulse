@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -76,7 +77,8 @@ class Win11LauncherLook : LauncherLook {
     private fun taskbarFill(): Color = if (dark()) Color(0xFF0E0E0E) else Color(0xFFF3F3F3)
     private fun flyoutFill(): Color = if (dark()) Color(0xFF151515) else Color(0xFFF3F3F3)
     private fun fg(): Color = if (dark()) Color.White else Color(0xFF1B1B1B)
-    private fun tile(): Color = if (dark()) Color(0xFF3A3A3A) else Color(0xFFE0E0E0)
+    // the desktop icon backing: 86 percent more see-through than before, with a blue tint
+    private fun tile(): Color = if (dark()) Color(0x2440648F) else Color(0x2440648F)
     private fun field(): Color = if (dark()) Color(0x26FFFFFF) else Color(0x14000000)
 
     // the window material from Settings > Appearance (Mica, Mica Alt, Acrylic, Glass); "none" keeps the flat fills above
@@ -232,7 +234,8 @@ class Win11LauncherLook : LauncherLook {
     // the desktop sits on the blue wallpaper, so its labels stay white with a soft shadow
     @Composable
     override fun IconCell(app: LaunchApp, iconDp: Int, modifier: Modifier) {
-        Column(modifier.padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        // the icons sit two fifths of their own width further to the left, closer to the screen edge
+        Column(modifier.offset(x = -(iconDp * .4f).dp).padding(4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             LaunchAppPicture(app, iconDp.dp, tile(), Color.White)
             Text(
                 app.label, color = Color.White, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center,
