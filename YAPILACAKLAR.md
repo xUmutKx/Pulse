@@ -2022,3 +2022,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Windows 11 açılış arka planı yeni duvar kağıdı (win11_splash_bg.jpg)
 - (sürüm sonra) derlenmedi: Video uyku zamanlayıcı artık kaydırmalı (0-120 dk) ve "video sonu" anahtarlı
 - (sürüm sonra) derlenmedi: Klavye: normal alanda "@" yazınca kayıtlı e-postalar ve alan adı önerileri gelir (önce kayıtlılar, sonra gmail/outlook vb.)
+- (sürüm sonra) derlenmedi: Video OpenSubtitles anahtarı artık video ayarları > Altyazı içinde; PiP penceresi kapatılınca video durur (arka plan sesi açık olsa bile)

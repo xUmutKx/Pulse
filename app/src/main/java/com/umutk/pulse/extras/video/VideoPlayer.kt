@@ -227,6 +227,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var tracks by remember { mutableStateOf(Tracks.EMPTY) }
     var vsize by remember { mutableStateOf(VideoSize.UNKNOWN) }
     var inPip by remember { mutableStateOf(false) }
+    // set while the video was in the picture-in-picture window: when that window is closed (the activity stops), the video stops too
+    val pipWas = remember { booleanArrayOf(false) }
     var shown by remember { mutableStateOf(true) }
     var poke by remember { mutableIntStateOf(0) }
     var locked by remember { mutableStateOf(false) }
@@ -358,7 +360,11 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     DisposableEffect(owner, player) {
         val observer = LifecycleEventObserver { _, e ->
             if (e == Lifecycle.Event.ON_STOP) {
-                if ((android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)) Unit
+                if (pipWas[0]) {
+                    // the picture-in-picture window was closed: the video stops, background audio does not keep it going
+                    pipWas[0] = false
+                    player.pause()
+                } else if ((android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)) Unit
                 else if (prefs.bg) player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_VIDEO, true).build()
                 else player.pause()
                 saveResume()
@@ -378,6 +384,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             if (sleepAt > 0 && SystemClock.elapsedRealtime() >= sleepAt) { player.pause(); sleepAt = 0L }
             dur = player.duration.coerceAtLeast(0L)
             inPip = (android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)
+            if (inPip) pipWas[0] = true
             if (++n % 8 == 0 && player.isPlaying) saveResume()
             delay(250)
         }
