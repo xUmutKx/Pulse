@@ -109,3 +109,27 @@ class NSpeaker(c: Context) {
     fun stop() { tts?.stop() }
     fun release() { tts?.stop(); tts?.shutdown(); tts = null; ready = false }
 }
+
+/**
+ * A file linked into a note: the note keeps the file's address (not a copy), so the file stays where it is and opens from the note.
+ * Stored as "fl|<address>|<name>" in the note's file list.
+ */
+object NotesFileLink {
+    const val PREFIX = "fl|"
+    fun make(c: Context, uri: Uri): String {
+        runCatching { c.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
+        val name = runCatching {
+            c.contentResolver.query(uri, arrayOf(android.provider.OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cur -> if (cur.moveToFirst()) cur.getString(0) else null }
+        }.getOrNull() ?: uri.lastPathSegment?.substringAfterLast('/') ?: "file"
+        return PREFIX + uri.toString() + "|" + name
+    }
+    fun uriOf(entry: String): Uri? = entry.removePrefix(PREFIX).substringBeforeLast('|').takeIf { it.isNotEmpty() }?.let { Uri.parse(it) }
+    fun nameOf(entry: String): String = entry.substringAfterLast('|')
+    fun open(c: Context, entry: String): Boolean {
+        val uri = uriOf(entry) ?: return false
+        val mime = c.contentResolver.getType(uri) ?: "*/*"
+        val i = android.content.Intent(android.content.Intent.ACTION_VIEW).setDataAndType(uri, mime)
+            .addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        return runCatching { c.startActivity(android.content.Intent.createChooser(i, null).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+    }
+}

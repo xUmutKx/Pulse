@@ -1958,3 +1958,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard feel: a hold-to-test vibration button at the chosen strength
 - (sürüm sonra) derlenmedi: Notes: a book view (pages with the text) next to list and grid; the view is a three-way choice
 - (sürüm sonra) derlenmedi: Notes: the folder menu is at the top right; folders open into sub folders with an arrow (Windows style)
+- (sürüm sonra) derlenmedi: Notes: a file can be linked to a note (the address is kept, the file is not copied); the note shows its name and place, and opens it
