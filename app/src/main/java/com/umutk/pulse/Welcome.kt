@@ -1,6 +1,17 @@
 package com.umutk.pulse
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.layout.Row
+import androidx.compose.ui.Alignment
+import androidx.compose.foundation.layout.Box
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -134,6 +145,7 @@ fun SetupScreen(onDone: () -> Unit) {
                     color = T.text, fontSize = 13.sp, modifier = Modifier.padding(start = 8.dp))
             }
         }
+        PermissionsCard()
         WelcomeCard(tr("Root and Shizuku (optional)", "Root ve Shizuku (isteğe bağlı)")) {
             WelcomeLine(tr("Some tools need root or Shizuku: hiding games, Debloat, and keeping Pulse as the default keyboard.",
                 "Bazı araçlar root veya Shizuku ister: oyunları gizlemek, Debloat ve Pulse'u varsayılan klavye olarak tutmak."))
@@ -143,6 +155,44 @@ fun SetupScreen(onDone: () -> Unit) {
         Box(Modifier.fillMaxWidth().padding(top = 18.dp), contentAlignment = Alignment.Center) {
             if (accepted) PButton(tr("Continue", "Devam"), onClick = { finish() })
             else Text(tr("Accept the terms to continue", "Devam etmek için koşulları kabul et"), color = T.sub, fontSize = 13.sp)
+        }
+    }
+}
+
+/** One permission group and the feature it serves. Nothing is asked until the box is ticked; a group left empty is skipped. */
+private class PermItem(val title: String, val why: String, val perms: List<String>, val optional: Boolean)
+
+private fun permItems(): List<PermItem> = listOf(
+    PermItem(tr("Files and music", "Dosyalar ve müzik"), tr("Shows your music, photos and videos.", "Müziğini, fotoğraflarını ve videolarını gösterir."),
+        if (Build.VERSION.SDK_INT >= 33) listOf(Manifest.permission.READ_MEDIA_AUDIO, Manifest.permission.READ_MEDIA_VIDEO, Manifest.permission.READ_MEDIA_IMAGES)
+        else listOf(Manifest.permission.READ_EXTERNAL_STORAGE), optional = false),
+    PermItem(tr("Notifications", "Bildirimler"), tr("Music controls and download progress.", "Müzik kontrolleri ve indirme durumu."),
+        if (Build.VERSION.SDK_INT >= 33) listOf(Manifest.permission.POST_NOTIFICATIONS) else emptyList(), optional = true),
+    PermItem(tr("Contacts", "Kişiler"), tr("The Pulse contacts list.", "Pulse kişi listesi."), listOf(Manifest.permission.READ_CONTACTS), optional = true),
+    PermItem(tr("Calendar", "Takvim"), tr("The Pulse calendar.", "Pulse takvimi."), listOf(Manifest.permission.READ_CALENDAR), optional = true),
+    PermItem(tr("Phone calls", "Telefon aramaları"), tr("Call from Pulse contacts and the call history.", "Pulse kişilerinden arama yapma ve arama geçmişi."),
+        listOf(Manifest.permission.CALL_PHONE, Manifest.permission.READ_CALL_LOG), optional = true),
+    PermItem(tr("Messages", "Mesajlar"), tr("Read and send text messages from Pulse.", "Pulse'tan kısa mesaj okuma ve gönderme."),
+        listOf(Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS), optional = true),
+)
+
+@Composable
+private fun PermissionsCard() {
+    val ctx = LocalContext.current
+    var tick by remember { mutableIntStateOf(0) }
+    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { tick++ }
+    WelcomeCard(tr("Permissions", "İzinler")) {
+        WelcomeLine(tr("Each one is for one feature. Tick the ones you want; the rest you can skip, and the feature asks again when you open it.",
+            "Her biri tek bir özellik için. İstediklerini işaretle; kalanlarını atlayabilirsin, özellik açıldığında yeniden sorar."))
+        permItems().forEach { item ->
+            val granted = remember(tick, item.title) { item.perms.isEmpty() || item.perms.all { ContextCompat.checkSelfPermission(ctx, it) == PackageManager.PERMISSION_GRANTED } }
+            Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                PCheck(granted, { wanted -> if (wanted && !granted && item.perms.isNotEmpty()) launcher.launch(item.perms.toTypedArray()) })
+                Column(Modifier.weight(1f).padding(start = 8.dp)) {
+                    Text(item.title, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    Text(item.why + " " + (if (item.optional) tr("Optional.", "İsteğe bağlı.") else tr("Recommended.", "Önerilir.")), color = T.sub, fontSize = 12.sp)
+                }
+            }
         }
     }
 }

@@ -423,9 +423,10 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     // the emoji page: the bar above takes the categories, with only a back button at its left
     if (st.panel == "emoji" && st.emojiQuery == null) { EmojiTopBar(th, st, act); return }
     val barHasContent = st.toolbar || st.panel != "keys" || st.inline.isNotEmpty() || st.slots.any { it.isNotEmpty() }
-    // no suggestions: no container, only a rounded, thick handle line at the top of the keys
+    // no suggestions: no container, only a rounded, thick handle line at the top of the keys. The slot keeps the bar's full height,
+    // so the keyboard does not grow or shrink when a panel (quick auth, emoji, clipboard) opens or closes
     if (!barHasContent) {
-        Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().height(52.dp), contentAlignment = Alignment.Center) {
             Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .35f)))
         }
         return
