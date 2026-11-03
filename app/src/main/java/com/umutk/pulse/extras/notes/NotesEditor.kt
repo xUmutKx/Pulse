@@ -18,6 +18,9 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.clickable
+import com.umutk.pulse.PIcon
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -93,6 +96,10 @@ fun NoteEditor(
     DisposableEffect(note.id) { onDispose { rec.release(); speaker.release() } }
     val canDictate = remember { Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).resolveActivity(ctx.packageManager) != null }
 
+    // a file is linked, not copied: the note shows its name and opens it where it is
+    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) { val entry = NotesFileLink.make(ctx, uri); onEdit { it.copy(files = it.files + entry) } }
+    }
     val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         val name = uri?.let { NotesMedia.copyIn(ctx, it) }
         if (name != null) onEdit { it.copy(files = it.files + name) }
@@ -165,6 +172,7 @@ fun NoteEditor(
             NIcon("bell", if (note.remindAt > 0) T.accent else fg, tr("Reminder", "Hatırlatma")) { onDlg(NDlg.Remind(setOf(note.id))) }
             NIcon(if (note.locked) "unlock" else "lock", fg, tr("Lock", "Kilitle")) { toggleLock() }
             NIcon("image", fg, tr("Add photo", "Fotoğraf ekle")) { pickImage.launch(arrayOf("image/*")) }
+            NIcon("document", fg, tr("Add a file", "Dosya ekle")) { pickFile.launch(arrayOf("*/*")) }
             NIcon("edit", fg, tr("Sketch", "Çizim")) { onSketch() }
             NIcon("record", if (recording) Color(0xFFE53935) else fg, tr("Record", "Ses kaydet")) { toggleRecord() }
             if (canDictate) NIcon("mic", fg, tr("Dictate", "Diktе et")) {
@@ -210,7 +218,8 @@ fun NoteEditor(
             }
             note.files.forEach { name ->
                 Box(Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                    if (name.startsWith("au_")) AudioRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) }; NotesMedia.remove(ctx, name) }
+                    if (name.startsWith(NotesFileLink.PREFIX)) FileLinkRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) } }
+                    else if (name.startsWith("au_")) AudioRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) }; NotesMedia.remove(ctx, name) }
                     else ImageRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) }; NotesMedia.remove(ctx, name) }
                 }
             }
@@ -270,3 +279,23 @@ private fun PIconDim(key: String, tint: Color) = com.umutk.pulse.PIcon(key, tint
 /** Clickable without the ripple, for the link words. */
 private fun Modifier.clickable2(onClick: () -> Unit): Modifier =
     this.then(Modifier.pointerInput(Unit) { detectTapGestures(onTap = { onClick() }) })
+
+/** A linked file in the note: its name and where it lives; a tap opens it, the cross takes the link out (the file stays). */
+@Composable
+private fun FileLinkRow(ctx: Context, entry: String, ink: Color, onRemove: () -> Unit) {
+    val uri = NotesFileLink.uriOf(entry)
+    val place = uri?.let { u -> u.path?.takeIf { it.isNotBlank() } ?: u.toString() }.orEmpty()
+    Row(
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(T.panel)
+            .clickable { NotesFileLink.open(ctx, entry) }.padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        PIcon("document", T.accent, 22.dp)
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(NotesFileLink.nameOf(entry), color = ink, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(place, color = T.sub, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }
+        Box(Modifier.size(36.dp).clickable { onRemove() }, contentAlignment = Alignment.Center) { PIcon("close", T.sub, 16.dp) }
+    }
+}
