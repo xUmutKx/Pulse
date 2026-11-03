@@ -2041,3 +2041,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Video oynarken bildirim (Durdur düğmesi videoyu duraklatır); duraklayınca bildirim kalkar
 - (sürüm sonra) derlenmedi: Hava veri kaynağı seçiminde "Hepsi, birleştirilmiş" (tüm servisler)
 - (sürüm sonra) derlenmedi: Mini pencere: varsayılan küçük, en büyük ekran genişliği, kontroller gizli (dokununca açılır), iki parmak bırakılınca sınıra animasyonla döner
+- (sürüm sonra) derlenmedi: Notlar: kalem notun kendi üstünde çizer (S Pen; parmak kaydırır, dokunma çizmez); üstte renk, kalınlık, geri al bar; notun mürekkebi kaydedilir
