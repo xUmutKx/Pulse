@@ -85,7 +85,7 @@ object PlayLog {
 
 private val DEEP = Color(0xFF14102B); private val VIOLET = Color(0xFF7C4DFF); private val PINK = Color(0xFFFF4F9A); private val LIME = Color(0xFFC6FF3D); private val SOFT = Color(0xFFEDE7FF)
 
-class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList(), val songPaths: List<String> = emptyList())
+class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList(), val songPaths: List<String> = emptyList(), val latest: List<Pair<String, String>> = emptyList())
 
 private fun makeRecap(c: Context, days: Int): Recap {
     val from = System.currentTimeMillis() - days * 86_400_000L
@@ -112,7 +112,9 @@ private fun makeRecap(c: Context, days: Int): Recap {
     // the file path of each top song (same order as songs), for its cover
     val songPaths = e.filter { it.counted }.groupBy { it.path }.entries.sortedByDescending { it.value.size }.take(5).map { it.key }
     return Recap(from, minutes, e.count { it.counted }, artists, songs, part.toList(), day.toList(), hour.indices.maxByOrNull { hour[it] } ?: 0, PlayLog.since(c),
-        mood.toList().sortedByDescending { it.second }.take(5), genre.toList().sortedByDescending { it.second }.take(5), songPaths)
+        mood.toList().sortedByDescending { it.second }.take(5), genre.toList().sortedByDescending { it.second }.take(5), songPaths,
+        // the last songs played in the range, newest first, each once
+        e.sortedByDescending { it.t }.distinctBy { it.path }.take(6).map { it.title to it.artist })
 }
 
 /** The card as a picture (1080 x 1920): the figures of the recap on a dark violet ground. Saved as a PNG in Download/Pulse. */
@@ -158,7 +160,7 @@ fun RecapScreen(back: () -> Unit) {
     val cover by produceState<ImageBitmap?>(null, coverTrack) { value = coverTrack?.let { t -> withContext(Dispatchers.IO) { com.umutk.pulse.extras.music.trackArt(ctx, t) } } }
     val label = when (days) { 30 -> tr("Last 30 days", "Son 30 gün"); 365 -> tr("Last year", "Son bir yıl"); else -> tr("Last 3 months", "Son 3 ay") }
     val since = if (r.firstNote > 0) java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(r.firstNote)) else null
-    Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(DEEP, Color(0xFF241A4D))))) {
+    Box(Modifier.fillMaxSize().background(Color.Black)) {
         Column(Modifier.fillMaxSize()) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(44.dp).clickable { back() }, contentAlignment = Alignment.Center) { PIcon("back", SOFT, 22.dp) }
@@ -183,6 +185,12 @@ fun RecapScreen(back: () -> Unit) {
                             Spacer(Modifier.height(14.dp))
                             Text(if (r.minutes == 0L) tr("Nothing noted yet. From now on every song you listen to is written down, and this page fills in.", "Henüz kayıt yok. Bundan sonra dinlediğin her şarkı yazılır ve bu sayfa dolar.")
                                 else tr("Swipe to see what you listened to.", "Dinlediklerini görmek için kaydır."), color = SOFT.copy(alpha = .8f), fontSize = 16.sp)
+                            if (r.latest.isNotEmpty()) {
+                                Text(tr("Last played", "Son çalınanlar"), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, modifier = Modifier.padding(top = 24.dp))
+                                r.latest.forEach { (title, artist) ->
+                                    Text(title + (if (artist.isNotBlank()) "  ·  $artist" else ""), color = SOFT.copy(alpha = .85f), fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 6.dp))
+                                }
+                            }
                             if (since != null) Text(tr("Counted from $since, when Pulse began to note the listening.", "$since tarihinden beri sayılır: Pulse dinlemeyi o gün yazmaya başladı."), color = SOFT.copy(alpha = .55f), fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
                         }
                         1 -> {

@@ -64,6 +64,8 @@ internal fun StatsPage(style: PowerampStyle) {
     }
     val most = remember(rev) { MusicStats.mostPlayed(c, 10) }
     val recent = remember(rev) { MusicStats.recent(c, 10) }
+    // the newest songs of the library, by the date they were added
+    val added = remember(rev) { com.umutk.pulse.extras.music.MusicLibrary.tracks.value.filter { it.dateAdded > 0 }.sortedByDescending { it.dateAdded }.take(10) }
     val artists = remember(rev) { MusicStats.top(c, true, 5) }
     val albums = remember(rev) { MusicStats.top(c, false, 5) }
     // the songs that were given stars, best rated first
@@ -86,6 +88,8 @@ internal fun StatsPage(style: PowerampStyle) {
         most.forEach { line(it.title, "${it.plays}") }
         head(tr("Recently played", "Son çalınan"))
         recent.forEach { line(it.title, it.artist) }
+        head(tr("Recently added", "Son eklenenler"))
+        added.forEach { line(it.displayName(), it.artist.orEmpty()) }
         if (rated.isNotEmpty()) {
             head(tr("Starred songs", "Yıldızlı şarkılar"))
             rated.forEach { (t, n) -> line(t.displayName(), "★".repeat(n)) }
