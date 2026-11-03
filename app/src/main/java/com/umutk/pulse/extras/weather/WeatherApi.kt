@@ -243,6 +243,25 @@ object WeatherApi {
             }
             if (got) sources++
         }
+        // the other services, each read in the Open-Meteo shape; one that fails or has nothing is left out and the rest still count
+        fun addHourly(raw: String): Boolean {
+            val h = JSONObject(raw).optJSONObject("hourly") ?: return false
+            val times = h.optJSONArray("time") ?: return false
+            val temps = h.optJSONArray("temperature_2m"); val codes = h.optJSONArray("weather_code"); val rains = h.optJSONArray("precipitation_probability")
+            var got = false
+            for (i in 0 until times.length()) {
+                val sl = slots[times.getString(i)] ?: continue
+                temps?.optDouble(i, Double.NaN)?.takeIf { !it.isNaN() }?.let { sl.temps += it; got = true }
+                codes?.optInt(i, -1)?.takeIf { it >= 0 }?.let { sl.codes += it }
+                rains?.optInt(i, -1)?.takeIf { it >= 0 }?.let { sl.rain += it }
+            }
+            return got
+        }
+        runCatching { if (addHourly(WeatherProviders.wttr(lat, lon))) sources++ }
+        runCatching { if (addHourly(WeatherProviders.t7(lat, lon))) sources++ }
+        appCtx?.let { WeatherStore.owmKey(it) }?.takeIf { it.isNotBlank() }?.let { key ->
+            runCatching { if (addHourly(WeatherProviders.owm(lat, lon, key))) sources++ }
+        }
         // MGM's own hours, for a place in Turkey when the MGM source is chosen
         mgm?.optJSONArray("hours")?.let { a ->
             var got = false

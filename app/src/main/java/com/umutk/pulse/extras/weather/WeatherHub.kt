@@ -117,10 +117,8 @@ fun WeatherHub(onBack: () -> Unit) {
                     WeatherWidgets.refreshAll(ctx)
                 }.onFailure {
                     // the last forecast saved for this place stays on the screen, with its time, instead of an error
-                    // the last saved forecast: of this place, of the saved place, or any from the last six hours (it shows its own name and time)
-                    val cache = WeatherStore.cached(ctx)
-                    val recent = cache != null && System.currentTimeMillis() - cache.at < 6 * 3_600_000L
-                    val saved = cache?.takeIf { f -> f.place == spot.name || f.place == place?.name || recent }
+                    // when no source answers, the last forecast saved is shown with its own time, never an empty screen
+                    val saved = WeatherStore.cached(ctx)
                     if (saved != null) { fc = saved; place = spot; error = "" }
                     else error = tr("Could not load the weather.", "Hava durumu alınamadı.") + WeatherApi.lastError.let { if (it.isBlank()) "" else "\n$it" }
                 }
