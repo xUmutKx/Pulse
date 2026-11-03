@@ -644,7 +644,9 @@ private fun KeysPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
             "1234567890".forEach { d -> Key(th, st, act, KbKey(d.toString(), KeyKind.CHAR, n1 / 10f, KeyboardLayouts.symbolAlts[d].orEmpty()), keyH, small = true) }
         }
         // split keys (for a tablet): a gap in the middle of each row, so both thumbs reach their half
-        val gapW = if (KeyboardPrefs.split) 2f else 0f
+        // a tablet turned sideways always splits the letter rows (its own layout), the phone only when the setting is on
+        val tabletLand = androidx.compose.ui.platform.LocalConfiguration.current.let { it.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && it.smallestScreenWidthDp >= 600 }
+        val gapW = if (KeyboardPrefs.split || tabletLand) 2f else 0f
         Row(Modifier.fillMaxWidth()) { rows[0].forEachIndexed { i, k -> if (gapW > 0 && i == rows[0].size / 2) Spacer(gapW); Key(th, st, act, k, keyH) } }
         Row(Modifier.fillMaxWidth()) {
             val sp = (n1 - rows[1].size) / 2f
