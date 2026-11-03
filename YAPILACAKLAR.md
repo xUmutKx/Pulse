@@ -2052,3 +2052,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Ekran kapağı widget: durum yerine saat yüzü (2x2 analog, 2x1 dijital, 1x2 matrix); dakikada bir yenilenir; dokununca kapak açılıp kapanır
 - (sürüm sonra) derlenmedi: Ekran kapağı widget arka planı: siyah ya da şeffaf (ekran kapağı ayarları)
 - (sürüm sonra) derlenmedi: Good Lock: kurulu modüllere kaldırma düğmesi; APKMirror bağlantısı yoksa site kısıtlı Samsung araması
+- (sürüm sonra) derlenmedi: Game Hub: kütüphanede yüzen arama (sağda, alanı üstte açılır); her oyunda süre ve boyut; oyun sayfasında boyut ve Data klasörünü Files ile aç

@@ -1,6 +1,7 @@
 package com.umutk.pulse.extras.gamehub
 
 import android.content.Context
+import android.content.Intent
 import android.content.pm.ApplicationInfo
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -647,6 +648,9 @@ fun GameHubHub(onBack: () -> Unit) {
     var sizes by remember { mutableStateOf(GameHubState.sizes ?: emptyMap()) }
     var tileSize by remember { mutableStateOf(prefs(ctx).getInt("grid", 1)) }
     var showHidden by remember { mutableStateOf(showHiddenInLibrary(ctx)) }
+    // the library's own search: a floating button on the right opens the field under the sort row
+    var libSearch by remember { mutableStateOf(false) }
+    var libQuery by remember { mutableStateOf("") }
     val gridState = rememberLazyGridState()
     LaunchedEffect(Unit) {
         // the lists of the last visit are on the screen at once; the shell checks run once per start of the app, not on every return
@@ -757,7 +761,7 @@ fun GameHubHub(onBack: () -> Unit) {
                     // a new order starts at the top, so the list does not jump to a row that moved
                     LaunchedEffect(sort, filter) { gridState.scrollToItem(0) }
                     val shown = games.filter { g ->
-                        when (filter) {
+                        (libQuery.isBlank() || g.name.contains(libQuery, true)) && when (filter) {
                             1 -> g.pkg !in hidden
                             2 -> g.pkg in hidden
                             else -> showHidden || g.pkg !in hidden
@@ -772,7 +776,7 @@ fun GameHubHub(onBack: () -> Unit) {
                         state = gridState,
                         contentPadding = androidx.compose.foundation.layout.PaddingValues(top = 56.dp, bottom = 90.dp),
                     ) {
-                        items(sortGames(shown, sort, usage, sizes), key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden, infoOf(g, sort, usage, sizes)) { profile = g } }
+                        items(sortGames(shown, sort, usage, sizes), key = { it.pkg }) { g -> GameTile(g, pal, g.pkg in hidden, infoLine(g, usage, sizes)) { profile = g } }
                     }
                     // the sort row, like the library bar of a store: name, play time, size
                     Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -780,6 +784,15 @@ fun GameHubHub(onBack: () -> Unit) {
                             Chip(pal, if (sort == k) "● $label" else label) { sort = k; prefs(ctx).edit().putInt("sort", k).apply() }
                         }
                     }
+                    // the search: a round button on the right; the field opens under the sort row
+                    if (libSearch) PField(libQuery, { libQuery = it }, tr("Search games", "Oyun ara"),
+                        Modifier.align(Alignment.TopCenter).fillMaxWidth().padding(start = 12.dp, end = 12.dp, top = 56.dp))
+                    FloatingActionButton(
+                        onClick = { libSearch = !libSearch; if (!libSearch) libQuery = "" },
+                        containerColor = pal.card,
+                        contentColor = pal.text,
+                        modifier = Modifier.align(Alignment.BottomEnd).padding(end = 20.dp, bottom = 96.dp),
+                    ) { FluentIcon("search", pal.text, 22.dp) }
                     FloatingActionButton(
                         onClick = { addOpen = true },
                         containerColor = pal.accent,
@@ -842,10 +855,35 @@ fun GameHubHub(onBack: () -> Unit) {
             Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
                 val u = usage[g.pkg]
                 GamePanel(g, pal, can, u?.totalTimeInForeground ?: 0L, u?.lastTimeUsed ?: 0L) { want -> setHidden(g.pkg, want) }
+                // the size of the app, and its data folder opened straight in Pulse's Files
+                Row(Modifier.padding(horizontal = 16.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(tr("Size", "Boyut"), color = pal.sub, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                    Text(sizes[g.pkg]?.takeIf { it > 0 }?.let { "%.1f MB".format(it / 1_048_576.0) } ?: "-", color = pal.text, fontSize = 14.sp)
+                }
+                Row(Modifier.padding(horizontal = 16.dp, vertical = 8.dp).clip(RoundedCornerShape(14.dp)).background(pal.card)
+                    .clickable { openDataFolder(ctx, g.pkg) }.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+                    FluentIcon("folder", pal.accent, 20.dp); Spacer(Modifier.width(10.dp))
+                    Text(tr("Open data folder", "Data klasörünü aç"), color = pal.text, fontSize = 15.sp)
+                }
                 Spacer(Modifier.height(24.dp))
             }
         }
     }
+}
+
+/** Play time and size of a game under its banner, both when known (the sort order does not hide either). */
+private fun infoLine(g: GameRow, usage: Map<String, android.app.usage.UsageStats>, sizes: Map<String, Long>): String? {
+    val parts = listOfNotNull(
+        usage[g.pkg]?.totalTimeInForeground?.takeIf { it > 0 }?.let { hm(it) },
+        sizes[g.pkg]?.takeIf { it > 0 }?.let { "%.0f MB".format(it / 1_048_576.0) },
+    )
+    return parts.joinToString(" · ").ifEmpty { null }
+}
+
+/** The app's data folder in Pulse's Files, opened at once. */
+private fun openDataFolder(c: Context, pkg: String) {
+    val dir = "/storage/emulated/0/Android/data/$pkg"
+    runCatching { c.startActivity(Intent(c, com.umutk.pulse.FilesActivity::class.java).putExtra("open_dir", dir).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
 }
 
 private fun gridDpOf(size: Int): Int = when (size) { 0 -> 150; 2 -> 240; else -> 190 }
