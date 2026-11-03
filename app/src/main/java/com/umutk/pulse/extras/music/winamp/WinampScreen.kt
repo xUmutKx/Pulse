@@ -114,6 +114,7 @@ fun WinampScreen(
     var showSpec by remember { mutableStateOf(prefs.getBoolean("spec", true)) }
     val art = com.umutk.pulse.extras.music.rememberTrackArt(st.current)
     var showPl by remember { mutableStateOf(true) }
+    var showLib by remember { mutableStateOf(false) }
     var showEq by remember { mutableStateOf(false) }
     var shade by remember { mutableStateOf(false) }
     var volume by remember { mutableStateOf(engine.player.volume) }
@@ -152,6 +153,9 @@ fun WinampScreen(
                 },
                 onShade = { shade = !shade },
             )
+            // the media library (library and internet radio) opens under the playlist, from its own button
+            if (showLib) WinampLibraryWindow(skin, engine, { showLib = false }, sEff)
+            com.umutk.pulse.PButton(tr("Media library", "Medya kütüphanesi")) { showLib = !showLib }
             if (lyricsOn) WinampLyricsPane(skin, st.current, pos, { engine.seekTo(it) }, sEff)
             if (showEq) WinampEqWindow(
                 skin = skin, enabled = eqEnabled, bandHz = eq.centerFrequenciesHz, range = eq.levelRange, levels = bands,

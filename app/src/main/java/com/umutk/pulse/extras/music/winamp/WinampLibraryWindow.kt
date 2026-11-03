@@ -71,7 +71,8 @@ object RadioStations {
 fun WinampLibraryWindow(skin: WinampSkin, engine: MusicPlayerEngine, onClose: () -> Unit, scaleDp: Float) {
     val ctx = LocalContext.current
     val c = skin.playlist
-    val font = FontFamily.Monospace
+    // the same pixel font as the playlist window
+    val font = com.umutk.pulse.BundledFonts.first { it.first == "Press Start 2P" }.second
     val tracks by MusicLibrary.tracks.collectAsState()
     var tab by remember { mutableIntStateOf(0) }
     var stations by remember { mutableStateOf(RadioStations.list(ctx)) }
