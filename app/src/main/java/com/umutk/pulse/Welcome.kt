@@ -94,8 +94,8 @@ fun Welcome(onDone: () -> Unit) {
         }
 
         WelcomeCard(tr("Size and permissions", "Boyut ve izinler")) {
-            WelcomeLine(tr("The app is about 11 MB, for arm64 phones with Android 10 or newer.",
-                "Uygulama yaklaşık 11 MB, Android 10 veya üstü arm64 telefonlar için."))
+            WelcomeLine(tr("The app is about 44 MB, for arm64 phones with Android 10 or newer.",
+                "Uygulama yaklaşık 44 MB, Android 10 veya üstü arm64 telefonlar için."))
             WelcomeLine(tr("Features that need a permission ask for it when you use them, and you can say no.",
                 "İzin gerektiren özellikler, kullanırken izin ister; hayır diyebilirsin."))
             WelcomeLine(tr("Root and Shizuku are optional. Without them, Pulse shows less, and says so.",
