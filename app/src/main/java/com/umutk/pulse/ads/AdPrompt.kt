@@ -49,7 +49,7 @@ fun RewardAdDialog(title: String, text: String, watch: String, cancel: String, o
  * (the themed dialog) comes first and the action runs only after the ad is watched to the end. The foss build runs the action at once.
  */
 @Composable
-fun rememberAdGate(title: String, text: String): (() -> Unit) -> Unit {
+fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int = 0): (() -> Unit) -> Unit {
     if (!PulseAds.ENABLED) return { action -> action() }
     val ctx = LocalContext.current
     var pending by remember { mutableStateOf<(() -> Unit)?>(null) }
@@ -64,10 +64,22 @@ fun rememberAdGate(title: String, text: String): (() -> Unit) -> Unit {
                 pending = null
                 val act = ctx as? Activity
                 val noAd = { Toast.makeText(ctx, tr("No ad now, try again", "Şu an reklam yok, tekrar dene"), Toast.LENGTH_SHORT).show() }
-                if (act == null) noAd() else PulseAds.showRewarded(act, onReward = action, onFail = noAd)
+                if (act == null) noAd() else PulseAds.showRewarded(act, onReward = { if (key.isNotEmpty()) AdUnlocks.open(ctx, key, minutes); action() }, onFail = noAd)
             },
             onCancel = { pending = null },
         )
     }
-    return { cb -> pending = cb }
+    return { cb ->
+        // a feature unlocked by an ad stays open for its time: no new ad until it runs out
+        if (key.isNotEmpty() && AdUnlocks.isOpen(ctx, key)) cb() else pending = cb
+    }
+}
+
+/** Features unlocked by a watched ad, each open for its own number of minutes (kept on the phone). */
+object AdUnlocks {
+    private fun prefs(c: Context) = c.getSharedPreferences("ad_unlocks", Context.MODE_PRIVATE)
+    fun isOpen(c: Context, key: String): Boolean = System.currentTimeMillis() < prefs(c).getLong(key, 0L)
+    fun open(c: Context, key: String, minutes: Int) { prefs(c).edit().putLong(key, System.currentTimeMillis() + minutes * 60_000L).apply() }
+    /** When the feature closes again, in epoch milliseconds (0 when it is not open). */
+    fun until(c: Context, key: String): Long = prefs(c).getLong(key, 0L).takeIf { System.currentTimeMillis() < it } ?: 0L
 }
