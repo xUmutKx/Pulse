@@ -48,6 +48,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -250,7 +251,27 @@ private fun openGame(c: Context, pkg: String) {
     if (started) return
     val out = Privilege.run("monkey -p $pkg -c android.intent.category.LAUNCHER 1")
     val ok = out.code >= 0 && !Regex("(?i)aborted|error|no activities|exception").containsMatchIn(out.text)
-    if (!ok) toast(c, tr("This app cannot be opened from here", "Bu uygulama buradan açılamıyor") + if (out.text.isBlank()) "" else ": " + out.text.take(100))
+    if (ok) return
+    // a hidden game: shown for the start only (pm unhide), and hidden again when Game Hub comes back to the screen
+    if (pkg in hiddenSet(c)) {
+        Privilege.run("pm unhide $pkg")
+        val again = pm.getLaunchIntentForPackage(pkg)
+        if (again != null && runCatching { c.startActivity(android.content.Intent(again).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) {
+            val pending = prefs(c).getStringSet("pendingHide", emptySet()) ?: emptySet()
+            prefs(c).edit().putStringSet("pendingHide", pending + pkg).apply()
+            return
+        }
+        Privilege.run("pm hide $pkg")
+    }
+    toast(c, tr("This app cannot be opened from here", "Bu uygulama buradan açılamıyor") + if (out.text.isBlank()) "" else ": " + out.text.take(100))
+}
+
+/** Hides again the hidden games that were shown for their start; the ones that still cannot be hidden stay in the list. */
+private fun rehideLaunched(c: Context) {
+    val pending = prefs(c).getStringSet("pendingHide", emptySet()) ?: emptySet()
+    if (pending.isEmpty()) return
+    val left = pending.filter { pkg -> !setGameHidden(c, pkg, true, quiet = true) }.toSet()
+    prefs(c).edit().putStringSet("pendingHide", left).apply()
 }
 
 private fun toast(c: Context, s: String) = Toast.makeText(c, s, Toast.LENGTH_SHORT).show()
@@ -577,6 +598,17 @@ fun GameHubHub(onBack: () -> Unit) {
     fun setHidden(pkg: String, want: Boolean) { if (setGameHidden(ctx, pkg, want)) hidden = hiddenSet(ctx) }
     fun go(p: Int) { page = p; prefs(ctx).edit().putInt("start", p).apply(); scope.launch { drawer.close() } }
     fun setTheme(k: String) { theme = k; prefs(ctx).edit().putString("theme", k).apply() }
+    // back on the screen: the games shown for their start are hidden again
+    val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                scope.launch { withContext(Dispatchers.IO) { rehideLaunched(ctx) }; hidden = hiddenSet(ctx) }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
     // the system back: first closes what is open (the game page, the side menu), then goes to the library, and only then leaves Game Hub
     BackHandler(enabled = profile != null || drawer.isOpen || page != 1) {
         when {
