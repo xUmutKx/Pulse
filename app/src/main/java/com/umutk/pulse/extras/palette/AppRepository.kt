@@ -72,7 +72,14 @@ class AppRepository(private val ctx: Context) {
         }
     }
 
-    fun loadIcon(app: AppInfo): Drawable? = runCatching {
+    fun loadIcon(app: AppInfo): Drawable? {
+        // the chosen installed icon pack first: its picture of this app, when it has one
+        val pack = PaletteStore.iconPack(ctx)
+        if (pack.isNotBlank()) com.umutk.pulse.extras.palette.iconpack.IconPackCache.get(ctx, pack)?.iconFor(app.packageName, app.activityName)?.let { return it }
+        return loadSystemIcon(app)
+    }
+
+    private fun loadSystemIcon(app: AppInfo): Drawable? = runCatching {
         val pm = ctx.packageManager
         pm.getActivityIcon(android.content.ComponentName(app.packageName, app.activityName))
     }.getOrElse {
