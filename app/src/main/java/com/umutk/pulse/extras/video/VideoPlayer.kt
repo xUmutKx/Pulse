@@ -423,14 +423,12 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     LaunchedEffect(cur) {
         val me = items.getOrNull(cur) ?: return@LaunchedEffect
         val key = IntroCache.key(me.uri)
-        segs = IntroCache.get(ctx, key)
-        if (segs == null) {
-            // 1) IntroDB by the show's IMDb id (needs the OpenSubtitles key); 2) the picture match with a neighbouring episode
-            val fromDb = IntroSources.forFile(ctx, me.name)
-            if (fromDb != null) { IntroCache.put(ctx, key, fromDb); segs = fromDb; return@LaunchedEffect }
-            val other = items.getOrNull(cur + 1) ?: items.getOrNull(cur - 1)
-            if (other != null) IntroFinder.find(ctx, me.uri, other.uri)?.let { found -> Segs(found, null).also { IntroCache.put(ctx, key, it); segs = it } }
-        }
+        // 1) saved IntroDB result of this episode; 2) IntroDB now (intro and recap, by the show's IMDb id); 3) saved picture match; 4) a picture match now
+        IntroCache.get(ctx, key, IntroCache.DB_FILE)?.let { segs = it; return@LaunchedEffect }
+        IntroSources.forFile(ctx, me.name)?.let { fromDb -> IntroCache.put(ctx, key, fromDb, IntroCache.DB_FILE); segs = fromDb; return@LaunchedEffect }
+        IntroCache.get(ctx, key, IntroCache.LOCAL_FILE)?.let { segs = it; return@LaunchedEffect }
+        val other = items.getOrNull(cur + 1) ?: items.getOrNull(cur - 1)
+        if (other != null) IntroFinder.find(ctx, me.uri, other.uri)?.let { found -> Segs(found, null).also { IntroCache.put(ctx, key, it, IntroCache.LOCAL_FILE); segs = it } }
     }
     val retriever = remember(cur) { arrayOfNulls<MediaMetadataRetriever>(1) }
     DisposableEffect(cur) { onDispose { runCatching { retriever[0]?.release() } } }
