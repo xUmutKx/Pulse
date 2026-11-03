@@ -457,9 +457,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             }
             if (punctTyped && KeyboardPrefs.autoSpace && !st.plain && ch.isLetter() && !spaceAfterCursor(c)) {
                 c.commitText(" ", 1)
-                // behind a full stop, ! or ? the next sentence starts with a capital
-                if (dotEnd && KeyboardPrefs.autoCap && word.isEmpty()) ch = ch.toString().uppercase(lang.locale).first()
             }
+            // behind a full stop, ! or ? the next sentence starts with a capital (the space is already there)
+            if (dotEnd && KeyboardPrefs.autoCap && word.isEmpty() && ch.isLetter() && !st.plain) ch = ch.toString().uppercase(lang.locale).first()
             dotEnd = false
             dotFix = false
             if (word.isEmpty() && !punctTyped && ch.isLetter() && !st.plain && !emailField && !urlNow() && KeyboardPrefs.autoSpace) {
@@ -498,8 +498,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (!finishWord(s, false, s)) c.commitText(s, 1)
             punctTyped = ch in ",;!?:" || dotOk
             dotEnd = ch in "!?" || dotOk
-            // a comma behind a word is followed by a space at once (not in numbers, addresses, passwords or web addresses)
-            if (ch == ',' && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true && !spaceAfterCursor(c)) {
+            // a mark behind a word (, ; : ! ? or a full stop after a known word) is followed by a space at once (not in numbers, addresses, passwords or web addresses)
+            if ((ch == ',' || ch in ";:!?" || dotOk) && !st.plain && !emailField && !urlNow() && c.getTextBeforeCursor(2, 0)?.getOrNull(0)?.isLetter() == true && !spaceAfterCursor(c)) {
                 c.commitText(" ", 1); commaSpace = true; punctTyped = false
             }
             lastWasSpace = false
@@ -676,7 +676,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 updateCaps(); updateSuggestions(); return
             }
         }
-        if (commaSpace && tb.endsWith(", ") && c.getSelectedText(0).isNullOrEmpty()) { commaSpace = false; c.deleteSurroundingText(2, 0) }
+        if (commaSpace && tb.length >= 2 && tb.last() == ' ' && tb[tb.length - 2] in ",;:!?." && c.getSelectedText(0).isNullOrEmpty()) { commaSpace = false; c.deleteSurroundingText(2, 0) }
         else if (c.getSelectedText(0)?.isNotEmpty() == true) c.commitText("", 1) else sendDownUpKeyEvents(KeyEvent.KEYCODE_DEL)
         // text was deleted that the remembered words may have belonged to: they are forgotten, so no old prediction is written back
         prevWord = null; prevWord2 = null; lastCorrection = null; lastGlide = null
