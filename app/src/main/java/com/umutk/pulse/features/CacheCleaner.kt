@@ -176,7 +176,7 @@ private fun CacheCleanerContent(onBack: () -> Unit) {
                             Text(row.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(row.sub, style = MaterialTheme.typography.bodySmall, maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
-                        Text(Guard.gb(row.size), style = MaterialTheme.typography.bodyMedium)
+                        Text(Guard.gb(row.shownSize), style = MaterialTheme.typography.bodyMedium)
                     }
                 }
             }
