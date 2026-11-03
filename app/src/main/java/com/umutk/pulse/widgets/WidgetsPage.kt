@@ -132,6 +132,7 @@ private val WIDGET_ENTRIES = listOf(
     WidgetEntry("Weather, wide", "WeatherWideWidget"),
     WidgetEntry("Weather, detail", "WeatherDetailWidget"),
     WidgetEntry("Weather and clock, no background", "WeatherClearWidget"),
+    WidgetEntry("Screen cover", "CoverWidget"),
 )
 
 // Skins.draw caches art in a plain HashMap, so previews are drawn one at a time
@@ -465,6 +466,7 @@ private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style:
         "WeatherWideWidget" -> DpSize(250.dp, 110.dp)
         "WeatherDetailWidget" -> DpSize(110.dp, 110.dp)
         "WeatherClearWidget" -> DpSize(250.dp, 130.dp)
+        "CoverWidget" -> DpSize(110.dp, 110.dp)
         else -> DpSize(264.dp, 120.dp)
     }
     // laid out at a real widget size, then scaled down as a whole so the text keeps its proportions (some blank space is fine)
