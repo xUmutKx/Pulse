@@ -27,6 +27,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -76,11 +77,11 @@ fun NoteEditor(
     val paper = NotesPrefs.paper(ctx)
     val size = NotesPrefs.fontSize(ctx)
     val plain = paper.id == "auto"
-    val surface = if (plain) T.panel else Color(paper.bg)
+    val surface = if (plain) Color.Transparent else Color(paper.bg)
     val ink = if (plain) fg else Color(paper.ink)
     val inkSub = ink.copy(alpha = .6f)
     val shape = RoundedCornerShape(if (T.material) 16.dp else T.radius.coerceAtMost(8.dp))
-    val edge = if (T.bevel) Modifier.bevel(false) else Modifier.border(1.dp, T.line, shape)
+    val edge = if (plain) Modifier else if (T.bevel) Modifier.bevel(false) else Modifier.border(1.dp, T.line, shape)
     val date = remember { SimpleDateFormat("d MMM HH:mm", Locale.getDefault()) }
 
     var preview by remember(note.id) { mutableStateOf(false) }
@@ -152,7 +153,8 @@ fun NoteEditor(
             NotesStore.linksOf(other.body).any { it.equals(myTitle, true) || (note.title.isNotBlank() && it.equals(note.title, true)) }
     }
 
-    Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
+    Box(Modifier.fillMaxSize().padding(horizontal = pageGutter), contentAlignment = Alignment.TopCenter) {
+    Column(Modifier.widthIn(max = 720.dp).fillMaxSize()) {
         // the actions of the note
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             NIcon("back", fg, tr("Back", "Geri")) { onBack() }
@@ -225,6 +227,20 @@ fun NoteEditor(
             }
             Text(tr("$words words · ${note.body.length} characters", "$words kelime · ${note.body.length} karakter"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
         }
+        Row(
+            Modifier.fillMaxWidth().padding(bottom = 10.dp).clip(RoundedCornerShape(28.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
+        ) {
+            NIcon("edit", fg, tr("Sketch", "Çizim")) { onSketch() }
+            NIcon("image", fg, tr("Add photo", "Fotoğraf ekle")) { pickImage.launch(arrayOf("image/*")) }
+            NIcon("check", fg, tr("Checklist line", "Kontrol satırı")) {
+                changeBody(if (note.body.isEmpty() || note.body.endsWith("\n")) note.body + "[ ] " else note.body + "\n[ ] ")
+            }
+            NIcon("record", if (recording) Color(0xFFE53935) else fg, tr("Record", "Ses kaydet")) { toggleRecord() }
+            NIcon("palette", if (palette) T.accent else fg, tr("Colour", "Renk")) { palette = !palette }
+            NIcon(if (more) "close" else "add", if (more) T.accent else fg, tr("More tools", "Diğer araçlar")) { more = !more }
+        }
+    }
     }
 }
 

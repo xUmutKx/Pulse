@@ -1974,3 +1974,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Game Hub tiles: the card's background is the app's icon, blurred under a black veil; the crisp icon sits centred on top; no dash when the play time or size is unknown; 'hidden' is easier to read
 - (sürüm sonra) derlenmedi: Notes sketch: the pen draws and a finger is ignored once a pen is used (palm rejection); the pen's button held erases. Pressure, pen menu, PDF, editor toolbar, text options and 3D previews are still to do
 - (sürüm sonra) derlenmedi: Notes sketch: pen, highlighter (wide, see-through) and straight line tools
+- (sürüm sonra) derlenmedi: Notes editor: transparent paper on the background, 720dp centred column for tablets, bottom toolbar (sketch, photo, checklist, record, colour, more)
