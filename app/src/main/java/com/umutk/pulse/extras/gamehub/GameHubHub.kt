@@ -60,6 +60,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -373,15 +374,21 @@ private fun GameCover(pkg: String, pal: Pal, wide: Boolean = true) {
         value = withContext(Dispatchers.IO) { (if (apkOnly) null else GameArt.cover(ctx, pkg, px)) ?: GameArt.banner(ctx, pkg, px) }
     }
     val icon by produceState<ImageBitmap?>(null, pkg) {
-        value = withContext(Dispatchers.IO) { GameArt.icon(ctx, pkg, 192) }
+        value = withContext(Dispatchers.IO) { GameArt.icon(ctx, pkg, 256) }
     }
     val bg = if (pal.flat) Modifier.background(pal.card) else Modifier.background(Brush.verticalGradient(listOf(pal.card, pal.bg)))
     Box(Modifier.fillMaxSize().then(bg), contentAlignment = Alignment.Center) {
         val a = art
+        val ic = icon
+        // the tile's ambient glow: its icon, blurred and under a black veil, so the colours show but the icon is not read (the crisp icon is on top)
+        if (!wide && ic != null) {
+            Image(ic, null, Modifier.fillMaxSize().blur(48.dp), contentScale = ContentScale.Crop)
+            Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .5f)))
+        }
         // a wide banner (a landscape store picture) is shown whole on a tile, so its logo is not cut off; covers still fill the card
         val wideArt = a != null && !wide && a.width > a.height * 1.2f
         if (a != null) Image(a, null, Modifier.fillMaxSize(), contentScale = if (wideArt) ContentScale.Fit else ContentScale.Crop)
-        else icon?.let { Image(it, null, Modifier.fillMaxSize(0.5f)) }
+        else ic?.let { Image(it, null, Modifier.fillMaxSize(0.6f), contentScale = ContentScale.Fit) }
     }
 }
 
@@ -393,14 +400,14 @@ private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, info: String?, onCli
         // the info line always takes its place, so a tile keeps its height when the sort changes
         Box(Modifier.padding(top = 4.dp).heightIn(min = 20.dp)) { if (info != null) Text(info, color = pal.accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1) }
         Text(g.name, color = pal.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, lineHeight = 17.sp)
-        if (hidden) Text(tr("hidden", "gizli"), color = pal.sub, fontSize = 11.sp)
+        if (hidden) Text(tr("hidden", "gizli"), color = pal.text.copy(alpha = .8f), fontSize = 12.sp)
     }
 }
 
 /** The small info under a banner for the chosen sort: the play time of the week, or the size of the app. */
 private fun infoOf(g: GameRow, sort: Int, usage: Map<String, android.app.usage.UsageStats>, sizes: Map<String, Long>): String? = when (sort) {
-    1 -> usage[g.pkg]?.totalTimeInForeground?.takeIf { it > 0 }?.let { hm(it) } ?: "-"
-    2 -> sizes[g.pkg]?.takeIf { it > 0 }?.let { "%.1f MB".format(it / 1_048_576.0) } ?: "-"
+    1 -> usage[g.pkg]?.totalTimeInForeground?.takeIf { it > 0 }?.let { hm(it) }
+    2 -> sizes[g.pkg]?.takeIf { it > 0 }?.let { "%.1f MB".format(it / 1_048_576.0) }
     else -> null
 }
 
