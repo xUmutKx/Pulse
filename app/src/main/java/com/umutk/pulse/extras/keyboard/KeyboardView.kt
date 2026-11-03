@@ -212,8 +212,11 @@ fun KeyboardView(st: KbState, act: KbActions, themeId: String = KeyboardPrefs.th
 @Composable
 private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier: Modifier) {
     // turned sideways the keyboard would fill the screen: the keys are lower there (about 60%)
-    val land = androidx.compose.ui.platform.LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
-    val scale = KeyboardPrefs.heightPct / 100f * (if (land) .6f else 1f)
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    val land = cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
+    // a phone turned sideways takes a much smaller keyboard (a tablet keeps its size)
+    val phoneLand = land && cfg.screenWidthDp < 600
+    val scale = KeyboardPrefs.heightPct / 100f * (if (phoneLand) .42f else if (land) .6f else 1f)
     val keyH = (61f * scale).dp
     val one = KeyboardPrefs.oneHand
     // a pull down on the bar: the keys follow the finger, and let go far enough they go away
@@ -436,6 +439,13 @@ private fun Trail(th: KbTheme, st: KbState) {
 
 // ---- the bar ---------------------------------------------------------------------------------------------------------------------------------------
 
+/** The height of the suggestion bar: a third lower on a phone turned sideways. */
+@Composable
+private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
+    val cfg = androidx.compose.ui.platform.LocalConfiguration.current
+    return if (cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.screenWidthDp < 600) 35.dp else 52.dp
+}
+
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> Unit, onRelease: () -> Unit) {
@@ -446,13 +456,13 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
     // no suggestions: no container, only a rounded, thick handle line at the top of the keys. The slot keeps the bar's full height,
     // so the keyboard does not grow or shrink when a panel (quick auth, emoji, clipboard) opens or closes
     if (!barHasContent) {
-        Box(Modifier.fillMaxWidth().height(52.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().height(kbBarHeight()), contentAlignment = Alignment.Center) {
             Box(Modifier.width(56.dp).height(6.dp).clip(RoundedCornerShape(3.dp)).background(th.sub.copy(alpha = .35f)))
         }
         return
     }
     Row(
-        Modifier.fillMaxWidth().height(52.dp).pointerInput(Unit) {
+        Modifier.fillMaxWidth().height(kbBarHeight()).pointerInput(Unit) {
             // a pull down on the bar closes the keyboard
             detectVerticalDragGestures(onDragEnd = { onRelease() }, onDragCancel = { onRelease() }) { change, dy -> change.consume(); onPull(dy) }
         },
