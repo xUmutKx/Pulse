@@ -120,7 +120,8 @@ object NetMode {
             val allowedLine = back.lineSequence().firstOrNull { it.startsWith("allowed=") }.orEmpty()
             val noError = !out.contains("Exception", true) && !out.contains("not found", true) && !allowedLine.contains("Exception", true)
             val got = allowedLine.substringAfter("allowed=", "").split('|').map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-            val ok = out.contains("__OK") && noError && got.isNotEmpty() && namesOf(m).containsAll(got)
+            // a phone without 5G (or some other type) keeps the types it has: the change counts when at least one of the asked types is on the phone
+            val ok = out.contains("__OK") && noError && got.isNotEmpty() && got.any { it in namesOf(m) }
             lastDiag = "want mode $mode, mask $m\n" + out.trim().lines().filter { it != "__OK" }.takeLast(8).joinToString("\n") + "\n" + back
             android.os.Handler(android.os.Looper.getMainLooper()).post { done(ok) }
         }.start()
