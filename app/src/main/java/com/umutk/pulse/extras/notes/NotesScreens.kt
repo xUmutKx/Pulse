@@ -11,6 +11,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import com.umutk.pulse.PRadio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.verticalScroll
@@ -71,7 +73,8 @@ fun HomeView(
     val fg = T.text
     val sub = T.sub
     val sort = NotesPrefs.sort(ctx)
-    val grid = NotesPrefs.grid(ctx)
+    val view = NotesPrefs.view(ctx)
+    val grid = view != "list"
     val showDates = NotesPrefs.dates(ctx)
     var drawer by remember { mutableStateOf(false) }
     val unlocked = notes.filter { it.trashedAt == 0L && (!it.locked || it.id in NotesPrefs.unlocked) }
@@ -151,7 +154,10 @@ fun HomeView(
                     Text(label, color = sub, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.padding(top = 10.dp, bottom = 2.dp))
                 }
                 gridItems(items, key = { it.id }) { n ->
-                    NoteCard(n, query, grid, showDates, n.id in selected,
+                    if (view == "book") NoteBookCard(n, n.id in selected,
+                        onTap = { if (selected.isNotEmpty()) onSelect(if (n.id in selected) selected - n.id else selected + n.id) else onOpen(n.id) },
+                        onLong = { onSelect(if (n.id in selected) selected - n.id else selected + n.id) })
+                    else NoteCard(n, query, grid, showDates, n.id in selected,
                         onTap = { if (selected.isNotEmpty()) onSelect(if (n.id in selected) selected - n.id else selected + n.id) else onOpen(n.id) },
                         onLong = { onSelect(if (n.id in selected) selected - n.id else selected + n.id) },
                         onSwipe = { onSwipe(it) })
@@ -308,7 +314,10 @@ fun SettingsView(
         item {
             NSection(tr("List", "Liste"), "list" in open, { toggle("list") }) {
                 NRow("sort", tr("Sort by", "Sırala"), tr(NotesPrefs.sort(ctx).en, NotesPrefs.sort(ctx).tr), onClick = { onDlg(NDlg.Sort) })
-                NRow("view", tr("Grid", "Izgara"), trailing = { PSwitch(NotesPrefs.grid(ctx), { NotesPrefs.setGrid(ctx, it); onChanged() }) })
+                // the three ways of showing the notes: a list, a grid of cards, or pages like a book
+                listOf("list" to tr("List", "Liste"), "grid" to tr("Grid", "Izgara"), "book" to tr("Book", "Kitap")).forEach { (v, label) ->
+                    NRow("view", label, trailing = { PRadio(NotesPrefs.view(ctx) == v, { NotesPrefs.setView(ctx, v); onChanged() }) })
+                }
                 NRow("add", tr("New from a template", "Şablondan yeni not"), onClick = { onDlg(NDlg.Template) })
                 NRow("recycle", tr("Trash", "Çöp kutusu"), onClick = { onTrash() })
                 NRow("sort", tr("Reverse order", "Ters sırala"), trailing = { PSwitch(NotesPrefs.reverse(ctx), { NotesPrefs.setReverse(ctx, it); onChanged() }) })
@@ -433,5 +442,30 @@ private fun NoteSideRow(icon: String, label: String, count: Int, selected: Boole
         Spacer(Modifier.width(12.dp))
         Text(label, color = fg, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
         Text(count.toString(), color = sub, fontSize = 13.sp)
+    }
+}
+
+/** One note as a page: the title on top, the first lines of the text under it, the date at the foot. Locked notes show no text. */
+@Composable
+private fun NoteBookCard(n: Note, selected: Boolean, onTap: () -> Unit, onLong: () -> Unit) {
+    val ctx = LocalContext.current
+    val fg = T.text
+    val sub = T.sub
+    val date = remember { SimpleDateFormat("d MMM", Locale.getDefault()) }
+    val hidden = n.locked
+    val title = if (hidden) tr("Locked note", "Kilitli not") else NotesStore.titleOf(n).ifBlank { tr("Untitled", "Adsız") }
+    val lines = if (hidden) emptyList() else n.body.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.toList()
+    val text = (if (n.title.isBlank()) lines.drop(1) else lines).take(8).joinToString("\n")
+    Column(
+        Modifier.fillMaxWidth().aspectRatio(0.72f)
+            .clip(RoundedCornerShape(10.dp))
+            .background(if (selected) T.accent.copy(alpha = .22f) else T.panel)
+            .pointerInput(n, selected) { detectTapGestures(onTap = { onTap() }, onLongPress = { onLong() }) }
+            .padding(12.dp),
+    ) {
+        Text(title, color = fg, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(6.dp))
+        Text(if (hidden) "" else text, color = sub, fontSize = 12.sp, lineHeight = 17.sp, maxLines = 9, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        Text(date.format(Date(n.updated)), color = sub, fontSize = 11.sp)
     }
 }
