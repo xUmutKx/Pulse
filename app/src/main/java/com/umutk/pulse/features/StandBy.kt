@@ -161,6 +161,9 @@ object StandByPrefs {
     fun idleSec(c: Context) = p(c).getInt("idleSec", 0)
     fun setIdleSec(c: Context, v: Int) = p(c).edit().putInt("idleSec", v).apply()
     /** ... and only while it lies sideways, like a bedside clock on its charger. */
+    /** The cover widgets on the home screen: a black background (default) or see-through, so the wallpaper shows behind the clock. */
+    fun widgetBlack(c: Context) = p(c).getBoolean("widget_black", true)
+    fun setWidgetBlack(c: Context, v: Boolean) = p(c).edit().putBoolean("widget_black", v).apply()
     fun sideways(c: Context) = p(c).getBoolean("sideways", true)
     fun setSideways(c: Context, v: Boolean) = p(c).edit().putBoolean("sideways", v).apply()
     val COLOURS = listOf(0xFFFFFFFF, 0xFFFF9F0A, 0xFFFF453A, 0xFF30D158, 0xFF0A84FF, 0xFFFF6BD6).map { Color(it) }
@@ -532,6 +535,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     var auto by remember { mutableStateOf(StandByPrefs.autoCharge(ctx)) }
     var idle by remember { mutableStateOf(StandByPrefs.idleSec(ctx)) }
     var side by remember { mutableStateOf(StandByPrefs.sideways(ctx)) }
+    var black by remember { mutableStateOf(StandByPrefs.widgetBlack(ctx)) }
     @Composable fun sw(label: String, on: Boolean, f: (Boolean) -> Unit) = Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(label, color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f)); PSwitch(on, f)
     }
@@ -663,6 +667,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
             sw(tr("Night mode: dim red from 22:00 to 06:00", "Gece modu: 22:00-06:00 arası loş kırmızı"), night) { night = it; StandByPrefs.setNight(ctx, it) }
             Text(tr("Triggers", "Tetikleyiciler"), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 10.dp))
             sw(tr("Start by itself while charging", "Şarjdayken kendiliğinden başla"), auto) { auto = it; StandByPrefs.setAutoCharge(ctx, it) }
+            sw(tr("Home screen widgets: black background", "Ana ekran widget'ları: siyah arka plan"), black) { black = it; StandByPrefs.setWidgetBlack(ctx, it) }
             if (auto) sw(tr("Only when the phone lies sideways", "Yalnızca telefon yan yatıkken"), side) { side = it; StandByPrefs.setSideways(ctx, it) }
             Text(tr("Start when the screen is not touched", "Ekrana dokunulmayınca başla"), color = T.text, fontSize = 14.sp, modifier = Modifier.padding(top = 8.dp))
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
