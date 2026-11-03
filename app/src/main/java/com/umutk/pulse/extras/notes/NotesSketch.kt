@@ -38,6 +38,11 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerType
+import androidx.compose.ui.input.pointer.awaitPointerEvent
+import androidx.compose.foundation.gestures.awaitEachGesture
+import android.view.MotionEvent
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
@@ -74,6 +79,7 @@ fun NSketch(onDone: (String?) -> Unit) {
     val fade = remember { androidx.compose.animation.core.Animatable(0f) }
     androidx.compose.runtime.LaunchedEffect(Unit) { fade.animateTo(1f, androidx.compose.animation.core.tween(220)) }
     var width by remember { mutableStateOf(PAINT_WIDTHS[1]) }
+    val penSeen = remember { mutableStateOf(false) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     Column(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }.background(PaintBar)) {
         // actions and line widths on the first row, the colour grid under it, like Paint's tool bar
@@ -96,10 +102,22 @@ fun NSketch(onDone: (String?) -> Unit) {
                 .onSizeChanged { size = it }
                 // keyed on the colour and width, so a change applies to the next stroke
                 .pointerInput(ink, width) {
-                    detectDragGestures(
-                        onDragStart = { o -> strokes.add(Pen(ink, width.toPx(), mutableStateListOf(o))) },
-                        onDrag = { change, _ -> strokes.lastOrNull()?.pts?.add(change.position); change.consume() },
-                    )
+                    // the pen draws; once a pen has been used, a finger is ignored (the palm rests on the screen). The pen's button held erases
+                    awaitEachGesture {
+                        val first = awaitPointerEvent(PointerEventPass.Main)
+                        val c0 = first.changes.first()
+                        val stylus = c0.type == PointerType.Stylus
+                        if (stylus) penSeen.value = true else if (penSeen.value) return@awaitEachGesture
+                        val eraser = stylus && (((first.nativeEvent as? MotionEvent)?.buttonState ?: 0) and MotionEvent.BUTTON_STYLUS_PRIMARY) != 0
+                        if (!eraser) strokes.add(Pen(ink, width.toPx(), mutableStateListOf(c0.position))) else eraseAt(strokes, c0.position, 28.dp.toPx())
+                        while (true) {
+                            val ev = awaitPointerEvent(PointerEventPass.Main)
+                            val c = ev.changes.firstOrNull { it.id == c0.id } ?: break
+                            if (!c.pressed) break
+                            c.consume()
+                            if (eraser) eraseAt(strokes, c.position, 28.dp.toPx()) else strokes.lastOrNull()?.pts?.add(c.position)
+                        }
+                    }
                 },
         ) {
             Canvas(Modifier.fillMaxSize()) {
@@ -113,6 +131,11 @@ fun NSketch(onDone: (String?) -> Unit) {
             }
         }
     }
+}
+
+/** Removes the strokes that pass under [p] (the eraser of the pen's button). */
+private fun eraseAt(strokes: MutableList<Pen>, p: Offset, radius: Float) {
+    strokes.removeAll { s -> s.pts.any { (it - p).getDistance() < radius } }
 }
 
 /** A square tool button of the Paint bar, drawn in black on Paint's grey. */

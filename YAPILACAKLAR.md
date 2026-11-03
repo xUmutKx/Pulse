@@ -1972,3 +1972,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard shift: one tap = one capital letter; two quick taps = caps lock; another tap turns it off
 - (sürüm sonra) derlenmedi: Messages: blocked messages are kept (no notification) and shown under Blocked; spam numbers are never blocked on their own, each one is confirmed in a popup (Suspicious numbers)
 - (sürüm sonra) derlenmedi: Game Hub tiles: the card's background is the app's icon, blurred under a black veil; the crisp icon sits centred on top; no dash when the play time or size is unknown; 'hidden' is easier to read
+- (sürüm sonra) derlenmedi: Notes sketch: the pen draws and a finger is ignored once a pen is used (palm rejection); the pen's button held erases. Pressure, pen menu, PDF, editor toolbar, text options and 3D previews are still to do
