@@ -3,6 +3,8 @@ package com.umutk.pulse
 /** Fluent System Icons (MIT, Microsoft) 24px filled glyphs of the Apps card and its pages: Windows 11 shows these solid, not as outlines. */
 object FluentFilled {
     val map: Map<String, List<String>> = mapOf(
+        // the Game Hub: a game controller (its own glyph in the Apps menu and the Extra apps store)
+        "extraGameHub" to listOf("M21.58 16.09l-1.09-7.66C20.21 6.46 18.52 5 16.53 5H7.47C5.48 5 3.79 6.46 3.5 8.43l-1.09 7.66C2.2 17.63 3.39 19 4.94 19h0c.68 0 1.32-.27 1.8-.75L9 16h6l2.25 2.25c.48.48 1.13.75 1.8.75h0c1.56 0 2.75-1.37 2.53-2.91zM11 11H9v2H8v-2H6v-1h2V8h1v2h2v1zm4-1c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm2 3c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"),
         "tool_relay" to listOf("M3 7.2 H14 V4.5 L21 8.5 L14 12.5 V9.8 H3 Z M21 16.2 H10 V13.5 L3 17.5 L10 21.5 V18.8 H21 Z"),
         "tool_clock" to listOf("M12 2 A10 10 0 1 1 12 22 A10 10 0 1 1 12 2 Z M11 6 L11 12.4 L15.2 14.9 L15.9 13.7 L13 12 L13 6 Z"),
         "tool_radio" to listOf("M14.3 2.8 L15.3 4.3 L9.6 8 L7 8 Z M5 8 H19 A2 2 0 0 1 21 10 V19 A2 2 0 0 1 19 21 H5 A2 2 0 0 1 3 19 V10 A2 2 0 0 1 5 8 Z M9 11.3 A3.2 3.2 0 1 0 9 17.7 A3.2 3.2 0 1 0 9 11.3 Z M14 12 L14 13.6 L18 13.6 L18 12 Z M14 15.6 L14 17.2 L18 17.2 L18 15.6 Z"),
@@ -70,6 +72,7 @@ object FluentFilled {
     /** The colour a Fluent glyph wears in Windows 11 settings lists (the app's own colour, not the text colour). */
     fun color(key: String): androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color(when (key) {
         "extraFiles", "extraNotes" -> 0xFFF2B01E
+        "extraGameHub" -> 0xFF107C10
         "extraPhotos" -> 0xFF00A5B5
         "extraCalendar", "tool_netusage", "page_performance" -> 0xFF0F6CBD
         "extraContacts", "extraNotifHist", "extraLocalSend", "extraStore", "tool_office", "page_office" -> 0xFF0078D4
