@@ -63,6 +63,33 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
+/** Nine squares of the last notes; the bottom middle square is the "Notes" tile that starts a new note. */
+@Composable
+private fun RecentNotes(recent: List<Note>, onOpen: (String) -> Unit, onNew: () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        for (row in 0 until 3) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            for (col in 0 until 3) {
+                val idx = row * 3 + col
+                val isNew = idx == 7
+                // the squares before the new-note one take notes 0..6, the one after it takes note 7
+                val note = if (isNew) null else recent.getOrNull(if (idx < 7) idx else idx - 1)
+                Box(
+                    Modifier.weight(1f).aspectRatio(1f).clip(RoundedCornerShape(12.dp))
+                        .background(if (isNew) T.accent.copy(alpha = .22f) else T.panel)
+                        .clickable { if (isNew) onNew() else note?.let { onOpen(it.id) } },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (isNew) Text(tr("Notes", "Notlar"), color = T.text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    else if (note != null) Column(Modifier.fillMaxSize().padding(10.dp)) {
+                        Text(NotesStore.titleOf(note).ifBlank { tr("Untitled", "Adsız") }, color = T.text, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text(note.body.lineSequence().map { it.trim() }.filter { it.isNotEmpty() }.drop(1).joinToString(" ").take(120), color = T.sub, fontSize = 11.sp, maxLines = 4, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                    }
+                }
+            }
+        }
+    }
+}
+
 /** The list of notes: search, folder and tag filters, pinned and date groups, grid or list. */
 @Composable
 fun HomeView(
@@ -148,6 +175,12 @@ fun HomeView(
             tags.forEach { t -> PChip(tag == t, "#$t") { onTag(t) } }
         }
         if (sorted.isEmpty()) Text(tr("No notes", "Not yok"), color = sub, fontSize = 14.sp, modifier = Modifier.padding(8.dp))
+        // the start page: the last notes as nine squares, the bottom middle one is "Notes" (a new note)
+        if (query.isBlank() && tag == null && folder == null && unlocked.isNotEmpty()) {
+            Spacer(Modifier.height(48.dp))
+            RecentNotes(unlocked.sortedByDescending { it.updated }.take(8), onOpen = onOpen, onNew = onNew)
+            Spacer(Modifier.height(12.dp))
+        }
         LazyVerticalGrid(
             // as many columns as the screen takes: two notes across on a phone, more on a tablet (the list gets wider rows there too)
             columns = if (grid) GridCells.Adaptive(160.dp) else GridCells.Adaptive(340.dp),
