@@ -1775,11 +1775,15 @@ private fun exSmartDate(ms: Long): String {
     val sameMonth = sameYear && now.get(java.util.Calendar.MONTH) == t.get(java.util.Calendar.MONTH)
     val sameDay = sameMonth && now.get(java.util.Calendar.DAY_OF_MONTH) == t.get(java.util.Calendar.DAY_OF_MONTH)
     val loc = java.util.Locale.getDefault()
-    // the month spelled out in full, whatever the system's short form is
-    val months = java.text.DateFormatSymbols.getInstance(loc).months
-    val d = t.get(java.util.Calendar.DAY_OF_MONTH); val y = t.get(java.util.Calendar.YEAR)
+    // a short date: the short month, the year only when it is not this one
+    val months = java.text.DateFormatSymbols.getInstance(loc).shortMonths
+    val d = t.get(java.util.Calendar.DAY_OF_MONTH); val y = t.get(java.util.Calendar.YEAR) % 100
     val hm = java.text.SimpleDateFormat("HH:mm", loc).format(Date(ms))
-    return if (sameDay) hm else "$d ${months[t.get(java.util.Calendar.MONTH)]} $y $hm"
+    return when {
+        sameDay -> hm
+        sameYear -> "$d ${months[t.get(java.util.Calendar.MONTH)]} $hm"
+        else -> "$d ${months[t.get(java.util.Calendar.MONTH)]} ${"%02d".format(y)} $hm"
+    }
 }
 
 private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "heic", "heif")
