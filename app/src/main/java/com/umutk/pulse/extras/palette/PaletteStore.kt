@@ -105,4 +105,7 @@ object PaletteStore {
     fun setDayNightAuto(c: Context, v: Boolean) { sp(c).edit().putBoolean("dayNightAuto", v).apply() }
     fun followWallpaper(c: Context) = sp(c).getBoolean("followWall", false)
     fun setFollowWallpaper(c: Context, v: Boolean) { sp(c).edit().putBoolean("followWall", v).apply() }
+    /** The installed icon pack the app icons come from; "" is the phone's own icons. */
+    fun iconPack(c: Context): String = sp(c).getString("iconPack", "") ?: ""
+    fun setIconPack(c: Context, pkg: String) { sp(c).edit().putString("iconPack", pkg).apply() }
 }
