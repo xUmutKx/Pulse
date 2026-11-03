@@ -13,6 +13,8 @@ class KbState {
     var listening by mutableStateOf(false)
     /** 0 off, 1 the next letter, 2 caps lock. */
     var shift by mutableIntStateOf(0)
+    /** A hardware keyboard is attached: the screen keyboard shrinks to its suggestion bar, at the foot of the screen. */
+    var hardware by mutableStateOf(false)
     /** 0 letters, 1 symbols, 2 more symbols. */
     var page by mutableIntStateOf(0)
     /** keys, emoji, menu, clip, resize */
