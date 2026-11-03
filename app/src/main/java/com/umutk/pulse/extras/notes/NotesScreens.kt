@@ -149,7 +149,8 @@ fun HomeView(
         }
         if (sorted.isEmpty()) Text(tr("No notes", "Not yok"), color = sub, fontSize = 14.sp, modifier = Modifier.padding(8.dp))
         LazyVerticalGrid(
-            columns = GridCells.Fixed(if (grid) 2 else 1),
+            // as many columns as the screen takes: two notes across on a phone, more on a tablet (the list gets wider rows there too)
+            columns = if (grid) GridCells.Adaptive(160.dp) else GridCells.Adaptive(340.dp),
             modifier = Modifier.fillMaxWidth().weight(1f),
             contentPadding = PaddingValues(top = 6.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(if (grid) 8.dp else 2.dp),
