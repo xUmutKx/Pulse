@@ -64,7 +64,7 @@ fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int =
                 pending = null
                 val act = ctx as? Activity
                 val noAd = { Toast.makeText(ctx, tr("No ad now, try again", "Şu an reklam yok, tekrar dene"), Toast.LENGTH_SHORT).show() }
-                if (act == null) noAd() else PulseAds.showRewarded(act, onReward = { if (key.isNotEmpty()) AdUnlocks.open(ctx, key, minutes); AdUnlocks.open(ctx, AdUnlocks.PASS, AdUnlocks.PASS_MINUTES); action() }, onFail = noAd)
+                if (act == null) noAd() else PulseAds.showRewarded(act, onReward = { if (key.isNotEmpty()) AdUnlocks.open(ctx, key, minutes); if (key != AdUnlocks.PASS) AdUnlocks.open(ctx, AdUnlocks.PASS, AdUnlocks.PASS_MINUTES); action() }, onFail = noAd)
             },
             onCancel = { pending = null },
         )

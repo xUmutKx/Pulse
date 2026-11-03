@@ -421,6 +421,8 @@ fun SettingsPage() {
         Header(if (cat == null) "Settings" else cats.first { it.id == cat }.title)
         when (cat) {
             null -> {
+                // the ad credit: a 60-second ad opens the ad-gated apps for an hour (play build only)
+                AdPassCard()
                 // search over the settings categories
                 var q by remember { mutableStateOf("") }
                 PField(q, { q = it }, tr("Search settings", "Ayarlarda ara"), Modifier.fillMaxWidth().padding(vertical = 6.dp))
@@ -726,4 +728,35 @@ private suspend fun exportUsage(ctx: android.content.Context, rows: List<UsageRo
     val name = "pulse-usage-${days}d-" + System.currentTimeMillis() / 1000 + ".csv"
     docScanSave(ctx, name, "text/csv") { it.write(sb.toString().toByteArray()) }
     return tr("Saved $name in Download/Pulse", "$name kaydedildi, Download/Pulse içinde")
+}
+
+/** The ad credit: one 60-second rewarded ad opens every ad-gated feature for an hour (the play build; nothing in the foss build). */
+@Composable
+fun AdPassCard() {
+    if (!com.umutk.pulse.ads.PulseAds.ENABLED) return
+    val ctx = LocalContext.current
+    var left by remember { mutableStateOf(0L) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            left = com.umutk.pulse.ads.AdUnlocks.until(ctx, com.umutk.pulse.ads.AdUnlocks.PASS) - System.currentTimeMillis()
+            delay(15_000L)
+        }
+    }
+    val gate = com.umutk.pulse.ads.rememberAdGate(
+        tr("Ad credit", "Reklam kredisi"),
+        tr("Watch the ad to open the apps for an hour.", "Uygulamaları bir saat açmak için reklamı izle."),
+        key = com.umutk.pulse.ads.AdUnlocks.PASS,
+        minutes = 60,
+    )
+    val mins = (left / 60_000L).coerceAtLeast(0L)
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text(tr("Ad credit", "Reklam kredisi"), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(
+                if (mins > 0) tr("Open: $mins min left", "Açık: $mins dk kaldı") else tr("One ad = one hour open", "Bir reklam = bir saat açık"),
+                color = T.sub, fontSize = 12.sp,
+            )
+        }
+        PButton(tr("Watch", "İzle"), compact = true, onClick = { gate { } })
+    }
 }
