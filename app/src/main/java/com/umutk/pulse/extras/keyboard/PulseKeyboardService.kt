@@ -373,6 +373,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.numpad = cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME
         st.page = if (cls == InputType.TYPE_CLASS_NUMBER || cls == InputType.TYPE_CLASS_PHONE || cls == InputType.TYPE_CLASS_DATETIME) 1 else 0
         st.panel = "keys"; st.toolbar = false
+        // a new field: the keyboard is laid out again (a number field and a text field differ in size), so its touch area and page follow the field at once
+        st.refreshInsets?.invoke()
         st.enter = when {
             (info.imeOptions and EditorInfo.IME_FLAG_NO_ENTER_ACTION) != 0 -> "newline"
             else -> when (info.imeOptions and EditorInfo.IME_MASK_ACTION) {

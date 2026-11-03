@@ -1966,3 +1966,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Music recap: song covers next to the top songs and the last-played list
 - (sürüm sonra) derlenmedi: Files: tapping a type in the Types list (images, videos…) opens its list at once, without the overview in between
 - (sürüm sonra) derlenmedi: Floating keyboard (tile): the transparent window no longer blocks the screen before the keyboard is measured; the keyboard is asked once the window has focus
+- (sürüm sonra) derlenmedi: Files: a CSV opens in the spreadsheet viewer (not the text editor); text is read as UTF-8, or Windows-1254 when it is not UTF-8 (Turkish characters); keyboard lays out again on each new field
