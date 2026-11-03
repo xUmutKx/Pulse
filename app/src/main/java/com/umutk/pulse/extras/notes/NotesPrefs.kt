@@ -41,6 +41,9 @@ object NotesPrefs {
     fun view(c: Context): String = sp(c).getString("view", null) ?: if (grid(c)) "grid" else "list"
     fun setView(c: Context, v: String) = sp(c).edit().putString("view", v).putBoolean("grid", v != "list").apply()
 
+    /** A black background for the notes (the paper stays as it is): the switch in the notes settings. */
+    fun black(c: Context) = sp(c).getBoolean("black", false)
+    fun setBlack(c: Context, on: Boolean) { sp(c).edit().putBoolean("black", on).apply(); NotesBg.black = on }
     fun groups(c: Context) = sp(c).getBoolean("groups", true)
     fun setGroups(c: Context, on: Boolean) = sp(c).edit().putBoolean("groups", on).apply()
 
@@ -88,4 +91,9 @@ object NotesPrefs {
 
     /** A note colour as a Compose colour; 0 is no colour. */
     fun argb(v: Int): Color = if (v == 0) Color.Transparent else Color(v)
+}
+
+/** The notes background for this session (set from the settings and when the notes open): black, or the look's page colour. */
+object NotesBg {
+    @JvmStatic var black = false
 }

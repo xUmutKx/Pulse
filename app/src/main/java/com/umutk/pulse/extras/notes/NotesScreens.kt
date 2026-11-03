@@ -280,7 +280,7 @@ fun TrashView(notes: List<Note>, onBack: () -> Unit, onRestore: (String) -> Unit
     val sub = T.sub
     val now = System.currentTimeMillis()
     val trashed = notes.filter { it.trashedAt > 0 }.sortedByDescending { it.trashedAt }
-    LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
+    LazyColumn(Modifier.fillMaxSize().background(if (NotesBg.black) Color.Black else com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 NIcon("back", fg, tr("Back", "Geri")) { onBack() }
@@ -342,7 +342,7 @@ fun SettingsView(
     fun toggle(k: String) { open = if (k in open) open - k else open + k }
     val paper = NotesPrefs.paper(ctx)
     val defColor = NotesPrefs.defaultColor(ctx)
-    LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
+    LazyColumn(Modifier.fillMaxSize().background(if (NotesBg.black) Color.Black else com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 NIcon("back", T.text, tr("Back", "Geri")) { onBack() }
@@ -351,6 +351,7 @@ fun SettingsView(
         }
         item { ExtraLookRow() }
         item { NRow("view", tr("Transparent background", "Şeffaf arka plan"), trailing = { PSwitch(NotesPrefs.transparent(ctx), { NotesPrefs.setTransparent(ctx, it); com.umutk.pulse.PageBg.transparent = it; onChanged() }) }) }
+        item { NRow("view", tr("Black background", "Siyah arka plan"), trailing = { PSwitch(NotesPrefs.black(ctx), { NotesPrefs.setBlack(ctx, it); onChanged() }) }) }
         item {
             NSection(tr("List", "Liste"), "list" in open, { toggle("list") }) {
                 NRow("sort", tr("Sort by", "Sırala"), tr(NotesPrefs.sort(ctx).en, NotesPrefs.sort(ctx).tr), onClick = { onDlg(NDlg.Sort) })
@@ -418,7 +419,7 @@ fun StatsView(notes: List<Note>, onBack: () -> Unit) {
         tr("Voice notes", "Ses notları") to live.sumOf { n -> n.files.count { it.startsWith("au_") } }.toString(),
         tr("In the trash", "Çöp kutusunda") to notes.count { it.trashedAt > 0 }.toString(),
     )
-    LazyColumn(Modifier.fillMaxSize().background(com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
+    LazyColumn(Modifier.fillMaxSize().background(if (NotesBg.black) Color.Black else com.umutk.pulse.pageBg).padding(horizontal = pageGutter)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 NIcon("back", T.text, tr("Back", "Geri")) { onBack() }
