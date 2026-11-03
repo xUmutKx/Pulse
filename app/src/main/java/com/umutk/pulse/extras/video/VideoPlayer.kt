@@ -299,7 +299,11 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
 
     DisposableEffect(player) {
         val l = object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) { playing = isPlaying }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playing = isPlaying
+                // a video takes over: the music player must not keep playing underneath it
+                if (isPlaying) runCatching { com.umutk.pulse.extras.music.MusicPlayerEngine.get(ctx).player.takeIf { it.isPlaying }?.pause() }
+            }
             override fun onTracksChanged(t: Tracks) { tracks = t }
             override fun onVideoSizeChanged(v: VideoSize) { vsize = v }
             override fun onAudioSessionIdChanged(audioSessionId: Int) { applyBoost(audioSessionId); applyEq(audioSessionId) }
@@ -316,7 +320,15 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         player.addListener(l)
         items.getOrNull(cur)?.let { prefs.addRecent(it) }
         applyBoost(player.audioSessionId); applyEq(player.audioSessionId)
-        onDispose { saveResume(); player.removeListener(l); runCatching { booster[0]?.release() }; runCatching { equalizer[0]?.release() }; player.release() }
+        // the system media controls (notification, lock screen, headphones) now drive this video, see VideoSessionService
+        VideoSessionService.player = player
+        runCatching { ctx.startService(android.content.Intent(ctx, VideoSessionService::class.java)) }
+        onDispose {
+            saveResume(); player.removeListener(l); runCatching { booster[0]?.release() }; runCatching { equalizer[0]?.release() }
+            VideoSessionService.player = null
+            runCatching { ctx.stopService(android.content.Intent(ctx, VideoSessionService::class.java)) }
+            player.release()
+        }
     }
 
     // the screen stays on, the system bars hide, the options of the window return to normal on leave
