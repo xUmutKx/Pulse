@@ -182,9 +182,9 @@ object Installer {
 
     val cur: Profile get() = profiles.firstOrNull { it.name == active } ?: profiles[0]
 
-    /** root only when Shell really has root; otherwise the system installer. */
+    /** root whenever Shell really has root (the profile's "none" keeps the system screen); otherwise the system installer. */
     fun engine(p: Profile) = when {
-        p.auth == "root" && Shell.root == true -> "root"
+        Shell.root == true && p.auth != "none" -> "root"
         p.auth == "shizuku" && Shell.shizuku == 2 -> "shizuku"
         p.auth == "none" -> "none"
         else -> "system"
