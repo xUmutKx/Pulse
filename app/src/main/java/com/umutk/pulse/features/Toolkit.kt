@@ -11,6 +11,7 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.widget.Toast
 import android.content.IntentFilter
 import android.hardware.Sensor
 import android.hardware.SensorEvent
@@ -174,9 +175,12 @@ private fun FloatingKeyboardTool() {
             }
         }
         PButton(tr("Show the floating keyboard", "Yüzen klavyeyi göster"), Modifier.fillMaxWidth()) {
-            com.umutk.pulse.extras.keyboard.KeyboardPrefs.load(ctx)
-            com.umutk.pulse.extras.keyboard.KeyboardPrefs.floatSession = true
-            ctx.startActivity(Intent(ctx, com.umutk.pulse.extras.keyboard.KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            // a failure here is shown, never a crash of the whole app
+            runCatching {
+                com.umutk.pulse.extras.keyboard.KeyboardPrefs.load(ctx)
+                com.umutk.pulse.extras.keyboard.KeyboardPrefs.floatSession = true
+                ctx.startActivity(Intent(ctx, com.umutk.pulse.extras.keyboard.KeyboardFloatActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+            }.onFailure { Toast.makeText(ctx, tr("Could not show the keyboard: ${it.message ?: it.javaClass.simpleName}", "Klavye gösterilemedi: ${it.message ?: it.javaClass.simpleName}"), Toast.LENGTH_LONG).show() }
         }
         PButton(tr("Edit the keyboard", "Klavyeyi düzenle"), Modifier.fillMaxWidth()) { openTool("keyboard") }
     }
