@@ -2010,3 +2010,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Floating keyboard: 70% of the width, a slimmer bar and handle, and a button to go back to the normal keyboard
 - (sürüm sonra) derlenmedi: Toolkit floating keyboard tile: a failure is shown as a message instead of crashing the app
 - (sürüm sonra) derlenmedi: Banner ads: the banner's own background is transparent
+- (sürüm sonra) derlenmedi: Windows 11 splash: in the dark look the opening is the dark gradient, not the light wallpaper
