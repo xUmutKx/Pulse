@@ -6,6 +6,7 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.os.Build
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
@@ -576,6 +577,14 @@ fun GameHubHub(onBack: () -> Unit) {
     fun setHidden(pkg: String, want: Boolean) { if (setGameHidden(ctx, pkg, want)) hidden = hiddenSet(ctx) }
     fun go(p: Int) { page = p; prefs(ctx).edit().putInt("start", p).apply(); scope.launch { drawer.close() } }
     fun setTheme(k: String) { theme = k; prefs(ctx).edit().putString("theme", k).apply() }
+    // the system back: first closes what is open (the game page, the side menu), then goes to the library, and only then leaves Game Hub
+    BackHandler(enabled = profile != null || drawer.isOpen || page != 1) {
+        when {
+            profile != null -> profile = null
+            drawer.isOpen -> scope.launch { drawer.close() }
+            else -> page = 1
+        }
+    }
 
     ModalNavigationDrawer(
         drawerState = drawer,
