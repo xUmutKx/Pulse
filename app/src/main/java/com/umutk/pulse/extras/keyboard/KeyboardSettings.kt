@@ -10,6 +10,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -635,7 +636,7 @@ private fun VibeTestButton() {
     Box(
         Modifier.padding(top = 6.dp).clip(RoundedCornerShape(12.dp)).background(T.panel)
             .pointerInput(Unit) {
-                androidx.compose.foundation.gestures.detectTapGestures(onPress = {
+                detectTapGestures(onPress = {
                     vibeStart(ctx, KeyboardPrefs.hapticMs)
                     try { awaitRelease() } finally { vibeStop(ctx) }
                 })
