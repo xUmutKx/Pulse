@@ -64,12 +64,28 @@ class IconPack(c: Context, val pkg: String) {
         }
     }
 
-    /** The picture this pack gives the activity [activity] of [app], or null when the pack has none. */
-    fun iconFor(app: String, activity: String): Drawable? {
-        val name = map["$app/$activity"] ?: return null
+    /** Every drawable name the pack uses, for the name search below. */
+    private val names: List<String> by lazy { map.values.distinct().sorted() }
+
+    /**
+     * The picture this pack gives the activity [activity] of [app]: its own entry first; without one, the first icon whose name is
+     * the app's name (or starts with it, as a word). Names shorter than four letters are never searched ("fm", "get" match nothing).
+     */
+    fun iconFor(app: String, activity: String, label: String): Drawable? {
+        val name = map["$app/$activity"] ?: byName(label) ?: return null
         val id = res.getIdentifier(name, "drawable", pkg)
         if (id == 0) return null
         return runCatching { res.getDrawable(id, null) }.getOrNull()
+    }
+
+    private fun byName(label: String): String? {
+        val full = label.lowercase().filter { it.isLetterOrDigit() }
+        val first = label.lowercase().trim().split(' ').firstOrNull()?.filter { it.isLetterOrDigit() }.orEmpty()
+        for (key in listOf(full, first)) {
+            if (key.length < 4) continue
+            names.filter { it == key || it.startsWith(key + "_") }.minByOrNull { it.length }?.let { return it }
+        }
+        return null
     }
 }
 
