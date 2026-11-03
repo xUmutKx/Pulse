@@ -284,6 +284,7 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             Box(Modifier.fillMaxSize().background(com.umutk.pulse.micaTint().copy(alpha = .12f)))
         }
         val wctx = androidx.compose.ui.platform.LocalContext.current
+        com.umutk.pulse.TabletLayout.load(wctx)
         // the welcome shows on the first start and again after every update (its "What's new" card is the update notes)
         var setupDone by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).getBoolean("setup_done", false)) }
         var welcomed by remember { mutableStateOf(wctx.getSharedPreferences("p", android.content.Context.MODE_PRIVATE).let { it.getBoolean("welcomed", false) && it.getString("seen_version", "") == com.umutk.pulse.appVersionName(wctx) }) }
@@ -314,8 +315,14 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             // the native ad: a small, see-through card at the very bottom of the home page (play build only); the page keeps clear of it
             val adPad = if (com.umutk.pulse.ads.PulseAds.ENABLED) 78.dp else 0.dp
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens0.density * zoom, dens0.fontScale)) {
-                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
-                    androidx.compose.foundation.layout.Box((if (wdp > 900) Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()).padding(bottom = adPad)) {
+                // the tablet layout (Settings > General): centred, left, right, or the full width of the screen
+                val tabletMode = com.umutk.pulse.TabletLayout.mode
+                androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = when (tabletMode) {
+                    "left" -> androidx.compose.ui.Alignment.TopStart
+                    "right" -> androidx.compose.ui.Alignment.TopEnd
+                    else -> androidx.compose.ui.Alignment.TopCenter
+                }) {
+                    androidx.compose.foundation.layout.Box((if (wdp > 900 && tabletMode != "full") Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()).padding(bottom = adPad)) {
                         App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it })
                     }
                     // the ad strip at the foot of every page (play build): see-through, with its own transparency button on top
