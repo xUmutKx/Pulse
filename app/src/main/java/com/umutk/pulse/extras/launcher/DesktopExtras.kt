@@ -59,6 +59,7 @@ fun LauncherStoreWindow() {
     var pickWall by remember { mutableStateOf(false) }
     var pickWidget by remember { mutableStateOf(false) }
     val addWidget = rememberWidgetAdd { }
+    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             PChip(tab == 0, tr("Looks", "Görünümler")) { tab = 0 }
@@ -89,7 +90,7 @@ fun LauncherStoreWindow() {
     if (pickWall) com.umutk.pulse.features.WallPickDialog(LauncherPrefs.look, LauncherPrefs.wallIndex(LauncherPrefs.look), onDismiss = { pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(LauncherPrefs.look, i); LauncherPrefs.save(ctx); pickWall = false
     }
-    if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; addWidget(it) }, onDismiss = { pickWidget = false })
+    if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; adGate { addWidget(it) } }, onDismiss = { pickWidget = false })
 }
 
 /** File Explorer with tabs: each tab keeps its own folder, only the open one is shown. */

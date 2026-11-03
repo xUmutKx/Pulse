@@ -83,6 +83,7 @@ fun LauncherSettings(back: () -> Unit) {
     var pickWall by remember { mutableStateOf(false) }
     var pickWidget by remember { mutableStateOf(false) }
     val addWidget = rememberWidgetAdd { }
+    val adGate = com.umutk.pulse.ads.rememberAdGate(tr("Add the widget", "Widget ekle"), tr("Watch a short ad to add this widget. It is added only when the ad is watched to the end.", "Bu widget'ı eklemek için kısa bir reklam izle. Reklam sonuna kadar izlenirse eklenir."))
     // the live previews of the placed widgets update only while the host listens
     val widgetHost = LauncherWidgetHost.get(ctx)
     DisposableEffect(widgetHost) { widgetHost.startListening(); onDispose { widgetHost.stopListening() } }
@@ -298,7 +299,7 @@ fun LauncherSettings(back: () -> Unit) {
         },
         confirmButton = { com.umutk.pulse.PButton(tr("Close", "Kapat")) { pickLook = false } })
     if (pickPack) IconPackPicker(LauncherPrefs.iconPack, onPick = { LauncherPrefs.iconPack = it; save(); pickPack = false }, onDismiss = { pickPack = false })
-    if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; addWidget(it) }, onDismiss = { pickWidget = false })
+    if (pickWidget) WidgetPickDialog(onPick = { pickWidget = false; adGate { addWidget(it) } }, onDismiss = { pickWidget = false })
     if (pickWall) com.umutk.pulse.features.WallPickDialog(cur.id, LauncherPrefs.wallIndex(cur.id), onDismiss = { pickWall = false }) { i ->
         LauncherPrefs.setWallIndex(cur.id, i); save(); pickWall = false
     }
