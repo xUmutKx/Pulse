@@ -175,15 +175,16 @@ fun HomeView(
             tags.forEach { t -> PChip(tag == t, "#$t") { onTag(t) } }
         }
         if (sorted.isEmpty()) Text(tr("No notes", "Not yok"), color = sub, fontSize = 14.sp, modifier = Modifier.padding(8.dp))
-        // the start page: the last notes as nine squares, the bottom middle one is "Notes" (a new note)
-        if (query.isBlank() && tag == null && folder == null && unlocked.isNotEmpty()) {
-            Spacer(Modifier.height(48.dp))
-            RecentNotes(unlocked.sortedByDescending { it.updated }.take(8), onOpen = onOpen, onNew = onNew)
-            Spacer(Modifier.height(12.dp))
+        // the start page, as the Samsung notes: a large title and the number of notes above the list
+        if (query.isBlank() && tag == null && folder == null) {
+            Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(tr("All notes", "Tüm notlar"), color = fg, fontSize = 34.sp, fontWeight = FontWeight.Bold)
+                Text(tr("${unlocked.size} notes", "${unlocked.size} not"), color = sub, fontSize = 16.sp, modifier = Modifier.padding(top = 4.dp))
+            }
         }
         LazyVerticalGrid(
             // as many columns as the screen takes: two notes across on a phone, more on a tablet (the list gets wider rows there too)
-            columns = if (grid) GridCells.Adaptive(160.dp) else GridCells.Adaptive(340.dp),
+            columns = if (grid) GridCells.Adaptive(118.dp) else GridCells.Adaptive(340.dp),
             modifier = Modifier.fillMaxWidth().weight(1f),
             contentPadding = PaddingValues(top = 6.dp, bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(if (grid) 8.dp else 2.dp),
