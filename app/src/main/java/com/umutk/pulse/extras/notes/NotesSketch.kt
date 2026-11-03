@@ -7,6 +7,7 @@ import android.graphics.Paint
 import android.graphics.Path as APath
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -64,6 +65,13 @@ private val PAINT_COLORS = listOf(
     0xFF000000, 0xFF808080, 0xFF800000, 0xFF808000, 0xFF008000, 0xFF008080, 0xFF000080, 0xFF800080,
     0xFFFFFFFF, 0xFFC0C0C0, 0xFFFF0000, 0xFFFFFF00, 0xFF00FF00, 0xFF00FFFF, 0xFF0000FF, 0xFFFF00FF,
 ).map { it.toInt() }
+/** Favourite pens: a pen kept as "colour:width index:tool", up to six, in the phone's own preferences. */
+private object PenFavs {
+    private fun p(c: android.content.Context) = c.getSharedPreferences("notes_pens", android.content.Context.MODE_PRIVATE)
+    fun load(c: android.content.Context): List<String> = p(c).getString("list", "").orEmpty().split(";").filter { it.isNotBlank() }
+    fun save(c: android.content.Context, l: List<String>) { p(c).edit().putString("list", l.take(6).joinToString(";")).apply() }
+}
+
 /** Paint's three line widths: thin, medium, thick. */
 private val PAINT_WIDTHS = listOf(2.dp, 5.dp, 10.dp)
 /** Paint's grey bar in the Windows looks; the other looks draw the bar in their own panel, line and text colours. */
@@ -86,6 +94,7 @@ fun NSketch(onDone: (String?) -> Unit) {
     var width by remember { mutableStateOf(PAINT_WIDTHS[1]) }
     // 0 pen, 1 highlighter, 2 straight line
     var tool by remember { mutableStateOf(0) }
+    var favs by remember { mutableStateOf(PenFavs.load(ctx)) }
     val penSeen = remember { mutableStateOf(false) }
     var size by remember { mutableStateOf(IntSize.Zero) }
     Column(Modifier.fillMaxSize().graphicsLayer { alpha = fade.value }.background(PaintBar)) {
@@ -102,11 +111,27 @@ fun NSketch(onDone: (String?) -> Unit) {
                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp).clickable2 { tool = k })
             }
             Spacer(Modifier.weight(1f))
+            // the current pen (colour, width, tool) goes into the favourites; a favourite is picked from the row under the colours
+            PaintTool("bookmark") {
+                val e = "$ink:${PAINT_WIDTHS.indexOf(width)}:$tool"
+                favs = (listOf(e) + favs.filter { it != e }).take(6); PenFavs.save(ctx, favs)
+            }
             PaintTool("check") { onDone(renderSketch(ctx, strokes.toList(), size.width, size.height, paper.toArgb())) }
         }
         Column(Modifier.padding(start = 6.dp, end = 6.dp, bottom = 4.dp)) {
             PAINT_COLORS.chunked(8).forEach { row ->
                 Row { row.forEach { c -> PaintColor(c, c == ink) { ink = c } } }
+            }
+            if (favs.isNotEmpty()) Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                favs.forEach { f ->
+                    val parts = f.split(":")
+                    val fc = parts.getOrNull(0)?.toIntOrNull() ?: 0
+                    val fw = PAINT_WIDTHS.getOrNull(parts.getOrNull(1)?.toIntOrNull() ?: 1) ?: PAINT_WIDTHS[1]
+                    val ft = parts.getOrNull(2)?.toIntOrNull() ?: 0
+                    Box(Modifier.size(30.dp).clickable2 { ink = fc; width = fw; tool = ft }, contentAlignment = Alignment.Center) {
+                        Box(Modifier.size(22.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(fc)).border(1.dp, PaintLine, androidx.compose.foundation.shape.CircleShape))
+                    }
+                }
             }
         }
         Box(
