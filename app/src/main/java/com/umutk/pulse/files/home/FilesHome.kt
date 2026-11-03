@@ -95,6 +95,8 @@ private val PARTS = listOf(
     Part("docs", "Documents", "Belgeler", "document", Color(0xFF3E63DD)),
     Part("archives", "Archives", "Arşivler", "zip", Color(0xFFD6409F)),
     Part("apps", "Apps", "Uygulamalar", "apps", Color(0xFF46A758)),
+    // files inside folders whose name starts with a dot: the media index leaves them out, so they are measured on their own
+    Part("hidden", "Hidden", "Gizli", "folder", Color(0xFFC9A227)),
 )
 
 /** The newest files on the phone, when the app may read them: the recent list is filled up with these. */
@@ -162,6 +164,24 @@ private fun installedApps(ctx: Context): Pair<Long, Int> {
     return bytes to apps.size
 }
 
+/** The size and count of the files inside hidden folders (a name starting with a dot) under [top]; symbolic links and unreadable folders are skipped. */
+private fun hiddenBytes(top: File): Pair<Long, Int> {
+    var bytes = 0L
+    var count = 0
+    fun walk(d: File, inHidden: Boolean, depth: Int) {
+        if (depth > 16) return
+        val list = d.listFiles() ?: return
+        for (f in list) {
+            if (com.umutk.pulse.Compat.isLink(f)) continue
+            val hidden = inHidden || f.name.startsWith(".")
+            if (f.isDirectory) walk(f, hidden, depth + 1)
+            else if (hidden && f.isFile) { bytes += f.length(); count++ }
+        }
+    }
+    walk(top, false, 0)
+    return bytes to count
+}
+
 private fun loadStats(ctx: Context): Stats {
     val top = Environment.getExternalStorageDirectory()
     val st = runCatching { StatFs(top.path) }.getOrNull()
@@ -180,6 +200,7 @@ private fun loadStats(ctx: Context): Stats {
     // Apps: every installed app's size (its program, and its data when the usage access is on); the APK files are not apps
     val apps = installedApps(ctx)
     parts.first { it.key == "apps" }.also { it.bytes = apps.first; it.count = apps.second }
+    hiddenBytes(top).let { (hb, hc) -> parts.first { it.key == "hidden" }.also { it.bytes = hb; it.count = hc } }
     val other = (total - free - parts.sumOf { it.bytes }).coerceAtLeast(0L)
     return Stats(total, free, parts, other)
 }
@@ -213,26 +234,16 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
         }
     }
 
-    // the three lines open a folder list here on the home page; only a picked folder goes to the Browse tab
-    var folderList by remember { mutableStateOf(false) }
-    val homeFolders = remember {
-        val root = Environment.getExternalStorageDirectory()
-        listOf(tr("Storage", "Dahili depolama") to root) + listOf("Download", "DCIM", "Pictures", "Documents", "Music").map { it to File(root, it) }
-    }
     LazyColumn(Modifier.fillMaxSize().background(bg).padding(horizontal = 18.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 0.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clickable { folderList = !folderList }, contentAlignment = Alignment.Center) { PIcon("menu", fg, 24.dp) }
+                // the three lines open the Browse tab's side menu (the same one, with the same ad, everywhere)
+                Box(Modifier.size(44.dp).clickable { FilesHomeNav.openDrawer = true; onTab("files") }, contentAlignment = Alignment.Center) { PIcon("menu", fg, 24.dp) }
                 Row(Modifier.weight(1f), verticalAlignment = Alignment.Bottom) {
                     Text(tr("Files", "Dosyalar"), color = fg, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                     Text(".", color = accent, fontSize = 34.sp, fontWeight = FontWeight.Bold)
                 }
                 Box(Modifier.size(44.dp).clickable { onSettings() }, contentAlignment = Alignment.Center) { PIcon("settings", fg, 26.dp) }
-            }
-        }
-        if (folderList) items(homeFolders.filter { it.second.isDirectory }) { (label, dir) ->
-            Row(box(Modifier).clickable { FilesHomeNav.pendingDir = dir.path; folderList = false; onTab("files") }.padding(horizontal = 16.dp, vertical = 12.dp).fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(label, color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
             }
         }
         item {
