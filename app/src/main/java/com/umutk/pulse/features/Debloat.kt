@@ -73,6 +73,7 @@ import java.net.URL
 // Downloaded on demand and kept in the app's own storage; the licence of that list does not limit how Pulse uses it here.
 private const val LIST_URL = "https://raw.githubusercontent.com/Universal-Debloater-Alliance/universal-android-debloater-next-generation/main/resources/assets/uad_lists.json"
 private const val PREF_REMOVED = "debloat_removed"
+private const val PREF_PICKED = "debloat_picked"
 
 /** One package from the list: how safe it is to remove, and a short text about it. */
 class DebloatInfo(
@@ -133,6 +134,13 @@ fun safetyOf(removal: String): String = when (removal) {
 private fun removedOf(ctx: Context): List<String> =
     ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getString(PREF_REMOVED, "").orEmpty().split('\n').filter { it.isNotBlank() }
 
+private fun pickedOf(ctx: Context): Set<String> =
+    ctx.getSharedPreferences("p", Context.MODE_PRIVATE).getString(PREF_PICKED, "").orEmpty().split('\n').filter { it.isNotBlank() }.toSet()
+
+private fun savePicked(ctx: Context, set: Set<String>) {
+    ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString(PREF_PICKED, set.joinToString("\n")).apply()
+}
+
 private fun saveRemoved(ctx: Context, list: List<String>) {
     ctx.getSharedPreferences("p", Context.MODE_PRIVATE).edit().putString(PREF_REMOVED, list.joinToString("\n")).apply()
 }
@@ -183,7 +191,9 @@ fun DebloatScreen(onBack: () -> Unit) {
     var levels by remember { mutableStateOf<Set<String>>(emptySet()) }
     var flags by remember { mutableStateOf<Set<String>>(emptySet()) }
     var filterOpen by remember { mutableStateOf(false) }
-    var picked by remember { mutableStateOf<Set<String>>(emptySet()) }
+    // the selection survives leaving the page or closing the app until it is removed or cleared
+    var picked by remember { mutableStateOf(pickedOf(ctx)) }
+    LaunchedEffect(picked) { savePicked(ctx, picked) }
     var askBatch by remember { mutableStateOf(false) }
     // search: by app name or package, on both the uninstall and the reinstall lists
     var query by remember { mutableStateOf("") }
