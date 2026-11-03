@@ -1917,3 +1917,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard: after . ! ? ; : a space comes at once, like the comma (numbers, web and mail addresses excluded); backspace removes that space with the mark
 - (sürüm sonra) derlenmedi: Poweramp visualizer: BPM line (estimated live from the bass beats; shows — until enough beats)
 - (sürüm sonra) derlenmedi: Keyboard on a tablet turned sideways: the letter rows are always split (own layout); keys size unchanged (the 2.3 figure is not clear yet)
+- (sürüm sonra) derlenmedi: App icon: the window is drawn at 70 percent inside the adaptive icon, so the mask no longer cuts its corners
