@@ -1,5 +1,8 @@
 package com.umutk.pulse.extras.lucid.ui.components
 
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import com.umutk.pulse.extras.lucid.ui.theme.clockFontFamilyOf
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.rotate
@@ -53,6 +56,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
@@ -1052,53 +1058,55 @@ fun RingingActionPill(
 }
 
 /**
- * The alarm's Dismiss: a tap does nothing. The button is pressed and dragged outward; released far enough from where it started, the alarm stops.
- * Released early, it springs back.
+ * The alarm's Dismiss: always visible and fixed. Press and hold it, then drag: a circle grows out of the button, and it fills the
+ * screen when the drag is far enough, and the alarm stops. Let go early and the circle shrinks back.
+ * [onReveal] gives the circle's progress (0 to 1) and its centre in the screen's coordinates.
  */
 @Composable
 fun DragDismissPill(
     text: String,
     onDismiss: () -> Unit,
+    onReveal: (progress: Float, center: Offset) -> Unit,
     containerColor: Color = AlarmLockPalette.DismissButton,
     contentColor: Color = Color.White,
     fontFamily: FontFamily? = null,
     modifier: Modifier = Modifier
 ) {
-    val offset = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
     val scope = rememberCoroutineScope()
-    val threshold = with(LocalDensity.current) { 120.dp.toPx() }
-    // the button stays where it is; while the finger drags, a see-through white copy follows it, and it goes back when let go
-    Box(
-        modifier.pointerInput(Unit) {
-            detectDragGestures(
-                onDragEnd = {
-                    if (offset.value.getDistance() >= threshold) onDismiss()
-                    else scope.launch { offset.animateTo(Offset.Zero, spring()) }
-                },
-                onDragCancel = { scope.launch { offset.animateTo(Offset.Zero, spring()) } },
-                onDrag = { change, drag ->
-                    change.consume()
-                    scope.launch { offset.snapTo(offset.value + drag) }
-                }
-            )
-        }
-    ) {
-        RingingActionPill(
-            text = text,
-            onClick = { },
-            containerColor = containerColor,
-            contentColor = contentColor,
-            fontFamily = fontFamily,
-            modifier = Modifier.matchParentSize()
-        )
-        if (offset.value != Offset.Zero) Box(
-            Modifier
-                .matchParentSize()
-                .offset { IntOffset(offset.value.x.roundToInt(), offset.value.y.roundToInt()) }
-                .clip(RoundedCornerShape(50))
-                .background(Color.White.copy(alpha = .35f))
-        )
-    }
+    val travel = with(LocalDensity.current) { 420.dp.toPx() }
+    val progress = remember { Animatable(0f) }
+    val finished = remember { mutableStateOf(false) }
+    var center by remember { mutableStateOf(Offset.Zero) }
+    val currentReveal by rememberUpdatedState(onReveal)
+    val currentDismiss by rememberUpdatedState(onDismiss)
+    LaunchedEffect(progress.value) { currentReveal(progress.value, center) }
+    RingingActionPill(
+        text = text,
+        onClick = { },
+        containerColor = containerColor,
+        contentColor = contentColor,
+        fontFamily = fontFamily,
+        modifier = modifier
+            .onGloballyPositioned { center = it.positionInRoot() + Offset(it.size.width / 2f, it.size.height / 2f) }
+            .pointerInput(Unit) {
+                var total = Offset.Zero
+                detectDragGesturesAfterLongPress(
+                    onDragStart = { total = Offset.Zero },
+                    onDragEnd = { if (!finished.value) scope.launch { progress.animateTo(0f, tween(260)) } },
+                    onDragCancel = { if (!finished.value) scope.launch { progress.animateTo(0f, tween(260)) } },
+                    onDrag = { change, drag ->
+                        change.consume()
+                        total += drag
+                        val p = (total.getDistance() / travel).coerceIn(0f, 1f)
+                        scope.launch { progress.snapTo(p) }
+                        if (p >= 1f && !finished.value) {
+                            finished.value = true
+                            currentDismiss()
+                        }
+                    }
+                )
+            }
+    )
 }
 
 @Composable
