@@ -2051,3 +2051,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Winamp: Medya kütüphanesi penceresi (KÜTÜPHANE: telefondaki müzik; RADYO: eklenen internet radyoları, ekleme ve silme)
 - (sürüm sonra) derlenmedi: Ekran kapağı widget: durum yerine saat yüzü (2x2 analog, 2x1 dijital, 1x2 matrix); dakikada bir yenilenir; dokununca kapak açılıp kapanır
 - (sürüm sonra) derlenmedi: Ekran kapağı widget arka planı: siyah ya da şeffaf (ekran kapağı ayarları)
+- (sürüm sonra) derlenmedi: Good Lock: kurulu modüllere kaldırma düğmesi; APKMirror bağlantısı yoksa site kısıtlı Samsung araması
