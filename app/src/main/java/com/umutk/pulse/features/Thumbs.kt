@@ -60,7 +60,7 @@ object Thumbs {
         val bmp = runCatching { if (disk.exists()) BitmapFactory.decodeFile(disk.path) else null }.getOrNull()
             ?: runCatching {
                 // keeps the aspect ratio and reads the EXIF rotation; HEIC included
-                (previewOf(ctx, f) ?: if (android.os.Build.VERSION.SDK_INT >= 29) ThumbnailUtils.createImageThumbnail(f, Size(PX, PX), null) else decodeSmall(f)).also { b ->
+                (previewOf(ctx, f) ?: if (f.extension.lowercase() !in PV_IMAGE) throw java.io.IOException("no preview") else if (android.os.Build.VERSION.SDK_INT >= 29) ThumbnailUtils.createImageThumbnail(f, Size(PX, PX), null) else decodeSmall(f)).also { b ->
                     runCatching { disk.outputStream().use { b.compress(if (android.os.Build.VERSION.SDK_INT >= 30) Bitmap.CompressFormat.WEBP_LOSSY else @Suppress("DEPRECATION") Bitmap.CompressFormat.WEBP, 92, it) } }
                 }
             }.getOrNull()
@@ -101,7 +101,7 @@ private fun previewOf(ctx: Context, f: File): Bitmap? {
         }.getOrNull()
         e in PV_VIDEO -> runCatching {
             val m = android.media.MediaMetadataRetriever()
-            try { m.setDataSource(f.path); m.getFrameAtTime(1_000_000L)?.let { Bitmap.createScaledBitmap(it, 480, (480 * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
+            try { m.setDataSource(f.path); (m.getFrameAtTime(1_000_000L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(0L, android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC) ?: m.getFrameAtTime(-1L))?.let { Bitmap.createScaledBitmap(it, 480, (480 * it.height / it.width.toFloat()).toInt().coerceAtLeast(1), true) } } finally { m.release() }
         }.getOrNull()
         e in PV_AUDIO -> runCatching {
             val m = android.media.MediaMetadataRetriever()
