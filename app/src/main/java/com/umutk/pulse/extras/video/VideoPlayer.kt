@@ -897,7 +897,7 @@ private fun SleepDialog(minutes: Int, endOfVideo: Boolean, onSet: (Int, Boolean)
                 Spacer(Modifier.height(8.dp))
                 PSlider(m, { m = it; end = false }, 0f..120f, modifier = Modifier.fillMaxWidth()) { }
                 Row(Modifier.fillMaxWidth().clickable { end = !end; if (end) m = 0f }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    PCheck(end) { end = !end; if (end) m = 0f }
+                    PCheck(end, { v -> end = v; if (v) m = 0f })
                     Spacer(Modifier.width(8.dp))
                     Text(tr("End of video", "Video sonu"), color = w.text, fontSize = 14.sp)
                 }
