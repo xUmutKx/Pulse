@@ -8,6 +8,17 @@ import android.graphics.Path as APath
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.graphics.TransformOrigin
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -220,32 +231,42 @@ fun NSketch(onDone: (String?) -> Unit) {
     }
 }
 
-/** The floating tool panel: tools, colours and widths in one place, beside the pen. */
+/** The floating tool panel: it grows out of the pen's place and shrinks back when closed; a tap outside closes it. */
 @Composable
 private fun ToolPanel(at: Offset, ink: Int, width: Dp, tool: Int, onInk: (Int) -> Unit, onWidth: (Dp) -> Unit, onTool: (Int) -> Unit, onDismiss: () -> Unit) {
-    Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { onDismiss() } })
-    Column(
-        Modifier.offset { androidx.compose.ui.unit.IntOffset(at.x.toInt(), at.y.toInt()) }
-            .clip(RoundedCornerShape(16.dp)).background(Color(0xE6202020)).padding(8.dp),
+    var shown by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(Unit) { shown = true }
+    // the close runs its animation first, then the panel is taken away
+    fun close() { shown = false; scope.launch { delay(170); onDismiss() } }
+    Box(Modifier.fillMaxSize().pointerInput(Unit) { detectTapGestures { close() } })
+    val origin = TransformOrigin(0f, 0f)
+    AnimatedVisibility(
+        visible = shown,
+        modifier = Modifier.offset { androidx.compose.ui.unit.IntOffset(at.x.toInt(), at.y.toInt()) },
+        enter = fadeIn(tween(150)) + scaleIn(tween(190), initialScale = .85f, transformOrigin = origin),
+        exit = fadeOut(tween(140)) + scaleOut(tween(170), targetScale = .85f, transformOrigin = origin),
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            listOf(0 to tr("Pen", "Kalem"), 1 to tr("Highlight", "Vurgu"), 3 to tr("Eraser", "Silgi"), 2 to tr("Line", "Çizgi")).forEach { (k, label) ->
-                Text(label, color = if (tool == k) com.umutk.pulse.T.accent else Color.White, fontSize = 13.sp, fontWeight = if (tool == k) FontWeight.Bold else FontWeight.Normal,
-                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp).clickable2 { onTool(k) })
+        Column(Modifier.clip(RoundedCornerShape(16.dp)).background(Color(0xE6202020)).padding(8.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                listOf(0 to tr("Pen", "Kalem"), 1 to tr("Highlight", "Vurgu"), 3 to tr("Eraser", "Silgi"), 2 to tr("Line", "Çizgi")).forEach { (k, label) ->
+                    Text(label, color = if (tool == k) com.umutk.pulse.T.accent else Color.White, fontSize = 13.sp, fontWeight = if (tool == k) FontWeight.Bold else FontWeight.Normal,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 6.dp).clickable2 { onTool(k) })
+                }
             }
-        }
-        PAINT_COLORS.chunked(8).forEach { row ->
-            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                row.forEach { c ->
-                    Box(Modifier.size(30.dp).clickable2 { onInk(c); if (tool == 3) onTool(0) }, contentAlignment = Alignment.Center) {
-                        Box(Modifier.size(if (ink == c) 22.dp else 20.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(c))
-                            .border(if (ink == c) 2.dp else 0.dp, Color.White, androidx.compose.foundation.shape.CircleShape))
+            PAINT_COLORS.chunked(8).forEach { row ->
+                Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                    row.forEach { c ->
+                        Box(Modifier.size(30.dp).clickable2 { onInk(c); if (tool == 3) onTool(0) }, contentAlignment = Alignment.Center) {
+                            Box(Modifier.size(if (ink == c) 22.dp else 20.dp).clip(androidx.compose.foundation.shape.CircleShape).background(Color(c))
+                                .border(if (ink == c) 2.dp else 0.dp, Color.White, androidx.compose.foundation.shape.CircleShape))
+                        }
                     }
                 }
             }
-        }
-        Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            PAINT_WIDTHS.forEach { w -> PaintWidth(w, w == width) { onWidth(w) } }
+            Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                PAINT_WIDTHS.forEach { w -> PaintWidth(w, w == width) { onWidth(w) } }
+            }
         }
     }
 }
