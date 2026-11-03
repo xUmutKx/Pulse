@@ -1991,3 +1991,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Accessibility keyboard: a floating button is always there (while on), with a pad for games and places with no text field: type, copy, clear
 - (sürüm sonra) derlenmedi: Toolkit: a tile sinks while pressed and springs back; a tool window grows and fades in
 - (sürüm sonra) derlenmedi: Notes editor: the text row formats the selected text (bold wraps it; heading, bullet and checklist go at the start of the line); with no selection they go at the cursor
+- (sürüm sonra) derlenmedi: Notes book view: the pages lean towards the finger when pressed, with a shadow that lifts and a dark spine on the left
