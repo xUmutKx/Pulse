@@ -2042,3 +2042,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Hava veri kaynağı seçiminde "Hepsi, birleştirilmiş" (tüm servisler)
 - (sürüm sonra) derlenmedi: Mini pencere: varsayılan küçük, en büyük ekran genişliği, kontroller gizli (dokununca açılır), iki parmak bırakılınca sınıra animasyonla döner
 - (sürüm sonra) derlenmedi: Notlar: kalem notun kendi üstünde çizer (S Pen; parmak kaydırır, dokunma çizmez); üstte renk, kalınlık, geri al bar; notun mürekkebi kaydedilir
+- (sürüm sonra) derlenmedi: Launcher ikonları: 28 ek uygulamanın alias ikonu siyah zemin + beyaz çizgi (adaptive, drawable-v26 + yedek); Pulse ana ikonları (IconDefault, IconWin*) dokunulmadı
