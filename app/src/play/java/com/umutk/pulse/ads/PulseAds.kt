@@ -94,15 +94,16 @@ object PulseAds {
     private fun nativeView(c: Context, bg: Int, text: Int, sub: Int, accent: Int): NativeAdView {
         fun dp(v: Int) = (v * c.resources.displayMetrics.density).toInt()
         val root = NativeAdView(c)
-        val row = LinearLayout(c).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(14), dp(12), dp(14), dp(12)); setBackgroundColor(bg) }
+        // the card is see-through: the page shows behind it, and only the button keeps a black ground
+        val row = LinearLayout(c).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL; setPadding(dp(14), dp(12), dp(14), dp(12)); setBackgroundColor(android.graphics.Color.TRANSPARENT) }
         val icon = ImageView(c).apply { layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply { rightMargin = dp(12) } }
         val texts = LinearLayout(c).apply { orientation = LinearLayout.VERTICAL; layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f) }
         val label = TextView(c).apply { this.text = "Ad"; setTextColor(sub); textSize = 10f }
         val headline = TextView(c).apply { setTextColor(text); textSize = 15f; setTypeface(typeface, android.graphics.Typeface.BOLD); maxLines = 1 }
         val body = TextView(c).apply { setTextColor(sub); textSize = 12f; maxLines = 2 }
         // the button's text is black on a light accent (AMOLED and Win11 accents are white): otherwise the label is white on white
-        val ctaText = if (androidx.core.graphics.ColorUtils.calculateLuminance(accent) > 0.45) android.graphics.Color.BLACK else android.graphics.Color.WHITE
-        val cta = Button(c).apply { setTextColor(ctaText); setBackgroundColor(accent); isAllCaps = false; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(36)).apply { leftMargin = dp(10) } }
+        val ctaText = android.graphics.Color.WHITE
+        val cta = Button(c).apply { setTextColor(ctaText); setBackgroundColor(android.graphics.Color.BLACK); isAllCaps = false; layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, dp(36)).apply { leftMargin = dp(10) } }
         texts.addView(label); texts.addView(headline); texts.addView(body)
         row.addView(icon); row.addView(texts); row.addView(cta)
         root.addView(row)
