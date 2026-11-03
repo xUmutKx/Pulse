@@ -36,7 +36,18 @@ import androidx.compose.ui.unit.sp
 import java.io.File
 
 /** Text-based files the Office page can create and edit. */
-val OF_TEXT_EXTS = listOf("txt", "json", "lrc", "md", "csv", "xml", "html", "srt", "log", "ini", "yml")
+val OF_TEXT_EXTS = listOf("txt", "json", "lrc", "md", "xml", "html", "srt", "log", "ini", "yml")
+
+/** The text of a file: UTF-8 when it reads as UTF-8 (a BOM is dropped), else Windows-1254, the Turkish code page most old files are saved in. */
+fun ofReadText(f: File): String {
+    val b = f.readBytes()
+    if (b.size >= 3 && b[0] == 0xEF.toByte() && b[1] == 0xBB.toByte() && b[2] == 0xBF.toByte()) return String(b, 3, b.size - 3, Charsets.UTF_8)
+    return try {
+        Charsets.UTF_8.newDecoder().onMalformedInput(java.nio.charset.CodingErrorAction.REPORT).onUnmappableCharacter(java.nio.charset.CodingErrorAction.REPORT).decode(java.nio.ByteBuffer.wrap(b)).toString()
+    } catch (e: java.nio.charset.CharacterCodingException) {
+        String(b, java.nio.charset.Charset.forName("windows-1254"))
+    }
+}
 
 fun ofIsText(f: File) = f.extension.lowercase() in OF_TEXT_EXTS || f.extension.lowercase() in setOf("kt", "java", "py", "sh", "properties", "yaml", "cfg", "gradle", "htm")
 
@@ -66,7 +77,7 @@ class OfficeTextActivity : ComponentActivity() {
         val f = intent.getStringExtra("path")?.let { File(it) }
         if (f == null || !f.exists()) { finish(); return }
         OfficePrefs.addRecent(this, Uri.fromFile(f).toString(), f.name, OfKind.WORD)
-        val first = runCatching { f.readText() }.getOrDefault("")
+        val first = runCatching { ofReadText(f) }.getOrDefault("")
         setContent {
             LookHost(transparent = false, lookId = intent.getStringExtra("look")) {
                 var text by remember { mutableStateOf(first) }
