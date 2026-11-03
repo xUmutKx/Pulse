@@ -759,4 +759,24 @@ fun AdPassCard() {
         }
         PButton(tr("Watch", "İzle"), compact = true, onClick = { gate { } })
     }
+    PremiumCard()
+}
+
+/** Premium: one purchase, no ads, every feature. The purchase itself is Google Play's one-time product (not connected yet: the button says so). */
+@Composable
+fun PremiumCard() {
+    if (!com.umutk.pulse.ads.PulseAds.ENABLED) return
+    val ctx = LocalContext.current
+    val owned = com.umutk.pulse.ads.Premium.on(ctx)
+    Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Column(Modifier.weight(1f)) {
+            Text("Premium", color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            Text(
+                if (owned) tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık")
+                else tr("One payment, 15 USD / 200 TRY: no ads, every feature", "Tek ödeme, 15 USD / 200 TRY: reklam yok, her özellik"),
+                color = T.sub, fontSize = 12.sp,
+            )
+        }
+        if (!owned) PButton(tr("Soon", "Yakında"), compact = true, onClick = { })
+    }
 }

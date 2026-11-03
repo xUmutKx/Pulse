@@ -50,8 +50,8 @@ fun RewardAdDialog(title: String, text: String, watch: String, cancel: String, o
  */
 @Composable
 fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int = 0): (() -> Unit) -> Unit {
-    if (!PulseAds.ENABLED) return { action -> action() }
     val ctx = LocalContext.current
+    if (!PulseAds.ENABLED || Premium.on(ctx)) return { action -> action() }
     var pending by remember { mutableStateOf<(() -> Unit)?>(null) }
     val action = pending
     if (action != null) {
@@ -74,6 +74,17 @@ fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int =
         // the pass (30 minutes, everywhere) or the feature's own time opens it without a new ad
         if (AdUnlocks.isOpen(ctx, AdUnlocks.PASS) || (key.isNotEmpty() && AdUnlocks.isOpen(ctx, key))) cb() else pending = cb
     }
+}
+
+/**
+ * Premium: one purchase in the play build (no ads, every ad-gated feature open). The flag is set only by a verified purchase;
+ * the foss build has everything without it.
+ */
+object Premium {
+    private fun prefs(c: Context) = c.getSharedPreferences("premium", Context.MODE_PRIVATE)
+    fun on(c: Context): Boolean = prefs(c).getBoolean("owned", false)
+    /** Called by the purchase check once Google Play confirms the one-time product. */
+    fun setOwned(c: Context, owned: Boolean) { prefs(c).edit().putBoolean("owned", owned).apply() }
 }
 
 /** Features unlocked by a watched ad, each open for its own number of minutes (kept on the phone). */
