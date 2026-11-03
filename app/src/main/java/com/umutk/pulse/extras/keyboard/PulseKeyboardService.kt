@@ -1386,13 +1386,30 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
     }
 
+    /** The word right before the cursor (no spaces) holds an "@": the e-mail suggestions apply here, in any field. */
+    private fun atTokenNow(): Boolean {
+        val tok = currentInputConnection?.getTextBeforeCursor(64, 0)?.toString().orEmpty().takeLastWhile { !it.isWhitespace() }
+        return '@' in tok
+    }
+
     private fun emailSuggestions() {
         val before = currentInputConnection?.getTextBeforeCursor(100, 0)?.toString().orEmpty()
         if (emailRe.matches(before)) lastEmail = before
+        // the text being typed: the last word without spaces, so "@" in an earlier word does not count
+        val tok = before.takeLastWhile { !it.isWhitespace() }
+        val saved = getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }
         val list = when {
             // the addresses used most come first (the list is kept most recent first); all of them scroll on the bar
-            before.isEmpty() -> getSharedPreferences("pulse_kb_emails", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }.take(8)
-            '@' in before -> domains.filter { it.startsWith("@" + before.substringAfterLast('@'), true) && it.length > before.substringAfterLast('@').length + 1 }.take(8)
+            tok.isEmpty() -> saved.take(8)
+            // the continuation of an address: saved addresses first, then the domains after the "@"
+            '@' in tok -> {
+                val local = tok.substringBefore('@')
+                val domainPart = tok.substringAfterLast('@')
+                val mine = saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }
+                val dom = domains.filter { it.startsWith("@" + domainPart, true) && it.length > domainPart.length + 1 }
+                    .map { local + it }
+                (mine + dom).distinct().take(8)
+            }
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
         }
@@ -1423,7 +1440,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     private fun updateSuggestions() {
         job?.cancel()
         if (st.trans) scheduleTrans()
-        if (emailField) { emailSuggestions(); return }
+        if (emailField || atTokenNow()) { emailSuggestions(); return }
         // a name field: the names typed in such fields before
         if (nameField && !st.incognito) {
             val saved = getSharedPreferences("pulse_kb_names", MODE_PRIVATE).getString("list", "").orEmpty().split('\n').filter { it.isNotBlank() }
