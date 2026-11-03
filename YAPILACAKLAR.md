@@ -1965,3 +1965,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Music recap: black background and a 'Last played' list on the first page; Statistics: a 'Recently added' section next to 'Recently played'
 - (sürüm sonra) derlenmedi: Music recap: song covers next to the top songs and the last-played list
 - (sürüm sonra) derlenmedi: Files: tapping a type in the Types list (images, videos…) opens its list at once, without the overview in between
+- (sürüm sonra) derlenmedi: Floating keyboard (tile): the transparent window no longer blocks the screen before the keyboard is measured; the keyboard is asked once the window has focus
