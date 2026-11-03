@@ -210,7 +210,7 @@ private fun LevelBars(playing: Boolean, color: Color, modifier: Modifier = Modif
 
 @Composable
 fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Modifier = Modifier, artBackground: Boolean = false, onNowPlaying: (Boolean) -> Unit = {},
-                   onNoise: () -> Unit = {}, onRadio: () -> Unit = {}, onRecap: () -> Unit = {}) {
+                   onNoise: () -> Unit = {}, onRadio: () -> Unit = {}, onRecap: () -> Unit = {}, onSettings: () -> Unit = {}) {
     val ctx = LocalContext.current
     val st by engine.state.collectAsState()
     val cur = st.current
@@ -326,6 +326,8 @@ fun MaterialPlayer(engine: MusicPlayerEngine, library: List<Track>, modifier: Mo
                 Icon(Icons.Rounded.Radio, null, tint = SUB, modifier = Modifier.size(24.dp).clickable { onRadio() })
                 Spacer(Modifier.width(14.dp))
                 Icon(Icons.Rounded.FavoriteBorder, null, tint = SUB, modifier = Modifier.size(24.dp).clickable { onRecap() })
+                Spacer(Modifier.width(14.dp))
+                Icon(Icons.Rounded.Settings, null, tint = SUB, modifier = Modifier.size(24.dp).clickable { onSettings() })
             }
             // tabs
             Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
