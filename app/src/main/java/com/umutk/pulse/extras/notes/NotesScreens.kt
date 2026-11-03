@@ -150,9 +150,9 @@ fun HomeView(
     Column(Modifier.fillMaxSize().padding(horizontal = pageGutter)) {
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
             if (selected.isEmpty()) {
-                NIcon("back", fg, tr("Back", "Geri")) { onBack() }
-                Text(tr("Notes", "Notlar"), color = fg, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                // the list's icons: folders at the left, then the settings and the new note at the right
                 NIcon("menu", fg, tr("Folders", "Klasörler")) { drawer = true }
+                Spacer(Modifier.weight(1f))
                 NIcon("settings", fg, tr("Settings", "Ayarlar")) { onOpenSettings() }
                 NIcon("add", fg, tr("New note", "Yeni not")) { onNew() }
             } else {
@@ -167,6 +167,19 @@ fun HomeView(
             }
         }
         PField(query, onQuery, tr("Search", "Ara"), Modifier.fillMaxWidth())
+        // the sort: what the list is ordered by, and the arrow that turns it round
+        val sortLabel = when (sort) {
+            NotesPrefs.Sort.UPDATED -> tr("Date modified", "Tarih değiştirildi")
+            NotesPrefs.Sort.CREATED -> tr("Date created", "Oluşturulma tarihi")
+            NotesPrefs.Sort.TITLE -> tr("Title", "Başlık")
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(sortLabel, color = sub, fontSize = 14.sp)
+            Spacer(Modifier.weight(1f))
+            Box(Modifier.size(34.dp).clip(CircleShape).clickable { NotesPrefs.setReverse(ctx, !NotesPrefs.reverse(ctx)); onChanged() }, contentAlignment = Alignment.Center) {
+                androidx.compose.material3.Icon(if (NotesPrefs.reverse(ctx)) androidx.compose.material.icons.Icons.Outlined.ArrowUpward else androidx.compose.material.icons.Icons.Outlined.ArrowDownward, sortLabel, tint = sub, modifier = Modifier.size(18.dp))
+            }
+        }
         if (folders.isNotEmpty() || tags.isNotEmpty()) Row(
             Modifier.fillMaxWidth().padding(top = 8.dp).horizontalScroll(rememberScrollState()),
             horizontalArrangement = Arrangement.spacedBy(6.dp),
