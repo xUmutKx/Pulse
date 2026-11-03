@@ -242,6 +242,7 @@ fun NetworkPage() {
     var busy by remember { mutableStateOf(false) }
     LiveSections("Network", 4000, top = {
         // the graph opens the two network tools: they are reached from here only
+        com.umutk.pulse.features.NetAccessCard()
         PCard(Modifier.clickable { openTool("netusage") }) {
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 80.dp)
             Text("Orange: download · Blue: upload", color = T.sub, fontSize = 11.sp)
