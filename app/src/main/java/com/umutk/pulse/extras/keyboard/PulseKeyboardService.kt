@@ -1313,6 +1313,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     /** The sentence start puts the shift on, as the field asks. */
     private fun updateCaps() {
         if (!KeyboardPrefs.autoCap || st.plain || st.shift == 2) return
+        // automatic capitals belong to the first letter of a sentence only: while a word is under way, the rest of it stays small
+        if (word.isNotEmpty()) return
         val c = currentInputConnection ?: return
         val info = currentInputEditorInfo ?: return
         if (info.inputType and InputType.TYPE_MASK_CLASS != InputType.TYPE_CLASS_TEXT) return
