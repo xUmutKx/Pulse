@@ -1,0 +1,33 @@
+name: Build premium app
+# The premium unlocker: a separate app (its own package, sold once on Google Play). It builds only when its module exists
+# (settings.gradle.kts includes ":premium"). Publishing to Google Play needs the account secrets below; none are in this file.
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Is the premium module there?
+        id: module
+        run: |
+          if grep -q 'include(":premium")' settings.gradle.kts; then echo "present=true" >> "$GITHUB_OUTPUT"; else echo "present=false" >> "$GITHUB_OUTPUT"; echo "The premium module is not in settings.gradle.kts yet: nothing to build."; fi
+      - uses: actions/setup-java@v5
+        if: steps.module.outputs.present == 'true'
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: gradle/actions/setup-gradle@v5
+        if: steps.module.outputs.present == 'true'
+        with:
+          gradle-version: 8.9
+      - name: Build the premium release APK
+        if: steps.module.outputs.present == 'true'
+        run: gradle :premium:assembleRelease --no-daemon -x lintVitalAnalyzeRelease -x lintVitalReportRelease -x lintVitalRelease
+      - uses: actions/upload-artifact@v5
+        if: steps.module.outputs.present == 'true'
+        with:
+          name: pulse-premium-apk
+          path: premium/build/outputs/apk/release/*.apk
