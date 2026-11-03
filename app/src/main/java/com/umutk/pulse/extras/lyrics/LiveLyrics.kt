@@ -71,6 +71,9 @@ object LiveLyrics {
     /** The lyric notification is shown on the lock screen too (its text, not only the title). */
     // on by default (as the notification's lyrics are): the line shows on the lock screen for a track that has lyrics
     fun lockScreen(c: Context) = prefs(c).getBoolean("lock_screen", true)
+    /** The fewest lines a song needs before its lyrics show (1 to 3; the default is 3). */
+    fun minLines(c: Context): Int = prefs(c).getInt("min_lines", 3).coerceIn(1, 3)
+    fun setMinLines(c: Context, n: Int) { prefs(c).edit().putInt("min_lines", n.coerceIn(1, 3)).apply() }
     // a notification of its own for the lyrics, beside the media one. Off by default: two notifications from one app collapse into one
     // and the media notification (with its controls) disappeared; the lyric line sits in the media notification instead
     fun separate(c: Context) = prefs(c).getBoolean("separate", false)
@@ -116,7 +119,7 @@ object LiveLyrics {
         // plain lyrics: the lines are spread over the sounding part of the song (the silences are left out)
         // a track with fewer than three lines (an instrumental, or an .lrc with a stub) shows no lyrics in the notification, the lock screen or the widget
         val timed = r?.let { if (it.synced) it else spread(it, t.durationSec * 1000L, withContext(Dispatchers.IO) { ActiveSound.of(t.path) }) }
-            ?.takeIf { res -> res.lines.count { it.text.isNotBlank() } >= 3 }
+            ?.takeIf { res -> res.lines.count { it.text.isNotBlank() } >= LiveLyrics.minLines(ctx) }
         slot = t.path to timed; slotAt = android.os.SystemClock.uptimeMillis()
         return timed
     }
@@ -332,6 +335,7 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
     var floating by remember { mutableStateOf(LiveLyrics.floating(c)) }
     var notif by remember { mutableStateOf(LiveLyrics.notification(c)) }
     var lock by remember { mutableStateOf(LiveLyrics.lockScreen(c)) }
+    var minL by remember { mutableStateOf(LiveLyrics.minLines(c)) }
     var emph by remember { mutableStateOf(LiveLyrics.emphasis(c)) }
     // where the lock screen window starts (the preview and the slider share it)
     var top by remember { mutableStateOf(LiveLyrics.lockTop(c)) }
@@ -357,6 +361,10 @@ private fun LiveLyricsPage(onBack: () -> Unit) {
                     runCatching { c.startActivity(android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${c.packageName}")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
             }
             if (lock) {
+                Text(tr("Least lines to show", "Gösterilecek en az satır"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    listOf(1, 2, 3).forEach { n -> PChip(minL == n, "$n") { minL = n; LiveLyrics.setMinLines(c, n) } }
+                }
                 // two places to start from, then a slider to move the window the rest of the way
                 Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     PChip(kotlin.math.abs(top - LiveLyrics.LOCK_UNDER_DATE) < .01f, tr("Under the date", "Tarih altı")) { top = LiveLyrics.LOCK_UNDER_DATE; LiveLyrics.setLockTop(c, top) }
