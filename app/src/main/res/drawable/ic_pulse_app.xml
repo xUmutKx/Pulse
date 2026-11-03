@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Pulse's app icon: the window with the blue title bar and the green pulse line, drawn as a vector so it stays sharp at every size -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
+    <path android:fillColor="#FFC0C0C0" android:pathData="M18,18H90V90H18Z" />
+    <path android:fillColor="#FF404040" android:fillType="evenOdd" android:pathData="M18,18H90V90H18Z M20,20V88H88V20Z" />
+    <path android:fillColor="#FF000080" android:pathData="M22,22H86V33H22Z" />
+    <path android:fillColor="#FF000000" android:pathData="M24,36H84V86H24Z" />
+    <path android:strokeColor="#FF00FF00" android:strokeWidth="3" android:strokeLineCap="round" android:strokeLineJoin="round"
+        android:pathData="M26,62 L36,60 L44,48 L52,30 L60,70 L70,58 L84,58" />
+</vector>
