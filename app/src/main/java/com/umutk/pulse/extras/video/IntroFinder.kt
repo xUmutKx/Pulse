@@ -88,14 +88,22 @@ internal object IntroFinder {
     }
 }
 
-/** The found intro per show: the key is the folder of the episode, the value is "startMs,endMs". */
+/** The found parts per show: the key is the folder of the episode, the value is "introStart,introEnd;recapStart,recapEnd" in ms. */
 internal object IntroCache {
     private fun prefs(c: Context) = c.getSharedPreferences("video_intro", Context.MODE_PRIVATE)
     fun key(u: Uri): String = u.toString().substringBeforeLast('/')
-    fun get(c: Context, key: String): LongRange? = runCatching {
+    private fun part(p: String): LongRange? {
+        val f = p.split(',')
+        if (f.size != 2) return null
+        val a = f[0].toLongOrNull() ?: return null
+        val b = f[1].toLongOrNull() ?: return null
+        return a until b
+    }
+    private fun text(r: LongRange?) = if (r == null) "" else "${r.first},${r.last + 1}"
+    fun get(c: Context, key: String): Segs? = runCatching {
         val v = prefs(c).getString(key, null) ?: return null
-        val (a, b) = v.split(',').map { it.toLong() }
-        a until b
+        val parts = v.split(';')
+        Segs(part(parts[0]), part(parts.getOrElse(1) { "" })).takeIf { !it.empty }
     }.getOrNull()
-    fun put(c: Context, key: String, r: LongRange) { prefs(c).edit().putString(key, "${r.first},${r.last + 1}").apply() }
+    fun put(c: Context, key: String, s: Segs) { prefs(c).edit().putString(key, text(s.intro) + ";" + text(s.recap)).apply() }
 }
