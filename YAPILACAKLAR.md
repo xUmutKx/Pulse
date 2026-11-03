@@ -2016,3 +2016,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notes editor: the top and bottom bars use Material icons (back, add, undo, preview, share, copy, duplicate, delete; sketch, image, check, record, colour)
 - (sürüm sonra) derlenmedi: Notes list: the sort row (date modified, arrow to reverse) and the list icons (folders at left, settings and new note at right)
 - (sürüm sonra) derlenmedi: Notes pen page: the tool palette floats over the page at the top (rounded, lifted), like the Apple Notes markup tools
+- 1.0.349 derlendi: commits since 1.0.348 (see git log)
