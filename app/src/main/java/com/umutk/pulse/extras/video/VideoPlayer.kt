@@ -643,7 +643,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 .firstOrNull { (r, _) -> r != null && pos >= r.first && pos < r.last }
             if (!inPip && hit != null) {
                 val end2 = hit.first!!.last + 1
-                Box(Modifier.align(Alignment.BottomEnd).padding(end = 16.dp, bottom = 84.dp).clip(RoundedCornerShape(6.dp))
+                Box(Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp).clip(RoundedCornerShape(6.dp))
                     .background(Color(0xE6FFFFFF)).clickable { player.seekTo(end2) }.padding(horizontal = 16.dp, vertical = 9.dp)) {
                     Text(hit.second, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
