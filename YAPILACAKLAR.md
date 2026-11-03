@@ -1953,3 +1953,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Keyboard: with a hardware keyboard attached, the screen keyboard shows only its suggestion bar at the foot
 - (sürüm sonra) derlenmedi: Installer: root installs run in the install service, so leaving the window does not stop them
 - (sürüm sonra) derlenmedi: Files previews: MKV frames try more times; the picture fallback is only for picture files (no random pictures for APK/video)
+- (sürüm sonra) derlenmedi: Files previews: a row reused for another file no longer keeps the old file's picture

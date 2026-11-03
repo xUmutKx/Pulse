@@ -1793,8 +1793,10 @@ private val EX_IMAGE_EXT = setOf("jpg", "jpeg", "png", "gif", "webp", "bmp", "he
 internal fun exThumb(f: File): ImageBitmap? {
     if (!FilesPrefs.thumbs || !canPreview(f)) return null
     val ctx = LocalContext.current
-    val first = remember(f.path) { Thumbs.cached(f) }
-    return produceState(first, f.path) { if (value == null) value = Thumbs.load(ctx, f) }.value
+    // a row reused for another file must not keep the old file's picture: every new path starts from its own cache entry (or a fresh load)
+    return produceState<androidx.compose.ui.graphics.ImageBitmap?>(Thumbs.cached(f), f.path) {
+        value = Thumbs.cached(f) ?: Thumbs.load(ctx, f)
+    }.value
 }
 
 /** Total and free bytes of the shared storage; zeros when the system will not say. */
