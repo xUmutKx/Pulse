@@ -1926,3 +1926,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Widgets: each widget asks for its own short ad before it is added (play build); Office viewer: banner at the foot
 - (sürüm sonra) derlenmedi: Settings: ad credit and Premium cards sit between Monitor and About; Watch has an icon; Premium opens the premium app's store page (one account, one device, 15 USD)
 - (sürüm sonra) derlenmedi: Premium: price 350 TL; a Features dialog lists what it unlocks with icons; Get opens the store
+- (sürüm sonra) derlenmedi: Ads: the strip at the foot is on every page, see-through, with a small button on top that sets its transparency

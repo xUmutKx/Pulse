@@ -24,6 +24,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -311,20 +312,26 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
             val wdp = (cfgW.screenWidthDp / zoom).toInt()
             // the ad banner sits at the bottom of the pages (play build only); the pages keep clear of it
             // the native ad: a small, see-through card at the very bottom of the home page (play build only); the page keeps clear of it
-            val adPad = if (com.umutk.pulse.ads.PulseAds.ENABLED && appPage == "processes") 78.dp else 0.dp
+            val adPad = if (com.umutk.pulse.ads.PulseAds.ENABLED) 78.dp else 0.dp
             androidx.compose.runtime.CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides androidx.compose.ui.unit.Density(dens0.density * zoom, dens0.fontScale)) {
                 androidx.compose.foundation.layout.Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.TopCenter) {
                     androidx.compose.foundation.layout.Box((if (wdp > 900) Modifier.widthIn(max = 900.dp).fillMaxHeight() else Modifier.fillMaxSize()).padding(bottom = adPad)) {
                         App(appPage, { restoreLook(); appPage = it }, appSub, { restoreLook(); appSub = it })
                     }
-                    if (com.umutk.pulse.ads.PulseAds.ENABLED && appPage == "processes") {
-                        com.umutk.pulse.ads.PulseAds.NativeCard(
-                            Modifier.align(androidx.compose.ui.Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                            bg = androidx.compose.ui.graphics.Color.Transparent,
-                            text = androidx.compose.ui.graphics.Color.White,
-                            sub = androidx.compose.ui.graphics.Color.White.copy(alpha = .7f),
-                            accent = androidx.compose.ui.graphics.Color.White,
-                        )
+                    // the ad strip at the foot of every page (play build): see-through, with its own transparency button on top
+                    if (com.umutk.pulse.ads.PulseAds.ENABLED) {
+                        androidx.compose.foundation.layout.Box(Modifier.align(androidx.compose.ui.Alignment.BottomCenter).fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)) {
+                            androidx.compose.foundation.layout.Box(Modifier.fillMaxWidth().graphicsLayer { alpha = com.umutk.pulse.ads.AdBar.alpha }) {
+                                com.umutk.pulse.ads.PulseAds.NativeCard(
+                                    Modifier.fillMaxWidth(),
+                                    bg = androidx.compose.ui.graphics.Color.Black.copy(alpha = .6f),
+                                    text = androidx.compose.ui.graphics.Color.White,
+                                    sub = androidx.compose.ui.graphics.Color.White.copy(alpha = .7f),
+                                    accent = androidx.compose.ui.graphics.Color.White,
+                                )
+                            }
+                            com.umutk.pulse.ads.AdBarTune(Modifier.align(androidx.compose.ui.Alignment.TopEnd).padding(4.dp))
+                        }
                     }
                 }
             }
