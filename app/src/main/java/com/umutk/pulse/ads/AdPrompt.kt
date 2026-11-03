@@ -64,19 +64,23 @@ fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int =
                 pending = null
                 val act = ctx as? Activity
                 val noAd = { Toast.makeText(ctx, tr("No ad now, try again", "Şu an reklam yok, tekrar dene"), Toast.LENGTH_SHORT).show() }
-                if (act == null) noAd() else PulseAds.showRewarded(act, onReward = { if (key.isNotEmpty()) AdUnlocks.open(ctx, key, minutes); action() }, onFail = noAd)
+                if (act == null) noAd() else PulseAds.showRewarded(act, onReward = { if (key.isNotEmpty()) AdUnlocks.open(ctx, key, minutes); AdUnlocks.open(ctx, AdUnlocks.PASS, AdUnlocks.PASS_MINUTES); action() }, onFail = noAd)
             },
             onCancel = { pending = null },
         )
     }
     return { cb ->
         // a feature unlocked by an ad stays open for its time: no new ad until it runs out
-        if (key.isNotEmpty() && AdUnlocks.isOpen(ctx, key)) cb() else pending = cb
+        // the pass (30 minutes, everywhere) or the feature's own time opens it without a new ad
+        if (AdUnlocks.isOpen(ctx, AdUnlocks.PASS) || (key.isNotEmpty() && AdUnlocks.isOpen(ctx, key))) cb() else pending = cb
     }
 }
 
 /** Features unlocked by a watched ad, each open for its own number of minutes (kept on the phone). */
 object AdUnlocks {
+    /** One ad watched opens this for 30 minutes in every feature that asks for an ad. */
+    const val PASS = "pass"
+    const val PASS_MINUTES = 30
     private fun prefs(c: Context) = c.getSharedPreferences("ad_unlocks", Context.MODE_PRIVATE)
     fun isOpen(c: Context, key: String): Boolean = System.currentTimeMillis() < prefs(c).getLong(key, 0L)
     fun open(c: Context, key: String, minutes: Int) { prefs(c).edit().putLong(key, System.currentTimeMillis() + minutes * 60_000L).apply() }
