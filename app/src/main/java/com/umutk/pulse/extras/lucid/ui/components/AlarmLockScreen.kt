@@ -1073,8 +1073,12 @@ fun DragDismissPill(
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
-    val travel = with(LocalDensity.current) { 420.dp.toPx() }
+    // a plain swipe in any direction (no long press): about 240 dp of travel; the pill follows the finger and shrinks a little,
+    // the circle grows out of it, and past 60 % of the way the alarm is dismissed; short of that it springs back
+    val travel = with(LocalDensity.current) { 240.dp.toPx() }
+    val closeAt = .6f
     val progress = remember { Animatable(0f) }
+    val shift = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
     val finished = remember { mutableStateOf(false) }
     var center by remember { mutableStateOf(Offset.Zero) }
     val currentReveal by rememberUpdatedState(onReveal)
@@ -1088,20 +1092,36 @@ fun DragDismissPill(
         fontFamily = fontFamily,
         modifier = modifier
             .onGloballyPositioned { center = it.positionInRoot() + Offset(it.size.width / 2f, it.size.height / 2f) }
+            .graphicsLayer {
+                translationX = shift.value.x
+                translationY = shift.value.y
+                val s = 1f - .08f * progress.value
+                scaleX = s
+                scaleY = s
+            }
             .pointerInput(Unit) {
                 var total = Offset.Zero
-                detectDragGesturesAfterLongPress(
+                fun settle() {
+                    if (finished.value) return
+                    if (total.getDistance() / travel >= closeAt) {
+                        finished.value = true
+                        scope.launch { progress.animateTo(1f, tween(160)); currentDismiss() }
+                    } else {
+                        scope.launch { progress.animateTo(0f, spring()) }
+                        scope.launch { shift.animateTo(Offset.Zero, spring()) }
+                    }
+                }
+                detectDragGestures(
                     onDragStart = { total = Offset.Zero },
-                    onDragEnd = { if (!finished.value) scope.launch { progress.animateTo(0f, tween(260)) } },
-                    onDragCancel = { if (!finished.value) scope.launch { progress.animateTo(0f, tween(260)) } },
+                    onDragEnd = { settle() },
+                    onDragCancel = { settle() },
                     onDrag = { change, drag ->
                         change.consume()
-                        total += drag
-                        val p = (total.getDistance() / travel).coerceIn(0f, 1f)
-                        scope.launch { progress.snapTo(p) }
-                        if (p >= 1f && !finished.value) {
-                            finished.value = true
-                            currentDismiss()
+                        if (!finished.value) {
+                            total += drag
+                            val p = (total.getDistance() / travel).coerceIn(0f, 1f)
+                            val moved = total * .5f
+                            scope.launch { progress.snapTo(p); shift.snapTo(moved) }
                         }
                     }
                 )
