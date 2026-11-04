@@ -671,8 +671,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         VideoExtras(player, prefs, act, rev)
         if (!inPip) VideoStatus(prefs, rev, Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 12.dp))
         // skip the opening and the "previously on" recap: a button shows while one of them plays and jumps to its end
-        // the skip button: on the play build a short rewarded ad is watched first (each skip); the other builds skip at once
+        // the skip button: on the play build every third skip waits for a short rewarded ad; the other skips and the other builds are at once
         val skipGate = rememberAdGate(tr("Skip with an ad", "Reklam izleyerek atla"), tr("Watch a short ad to skip this part.", "Bu bölümü atlamak için kısa bir reklam izle."), pass = false)
+        var skipCount by remember { mutableIntStateOf(0) }
         segs?.let { sg ->
             // a segment whose button already ran out is not shown again
             val hit = listOf(sg.intro to tr("Skip intro", "İntroyu geç"), sg.recap to tr("Skip recap", "Özeti geç"))
@@ -682,7 +683,10 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 SkipPill(
                     text = hit.second,
                     startKey = range.first,
-                    onTap = { skipGate { player.seekTo(range.last + 1) } },
+                    onTap = {
+                        skipCount++
+                        if (skipCount % 3 == 0) skipGate { player.seekTo(range.last + 1) } else player.seekTo(range.last + 1)
+                    },
                     onTimeout = { skipGone = skipGone + range.first },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp),
                 )
