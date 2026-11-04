@@ -94,6 +94,9 @@ private val PARTS = listOf(
     Part("audio", "Audio", "Ses", "music", Color(0xFF12A594)),
     Part("docs", "Documents", "Belgeler", "document", Color(0xFF3E63DD)),
     Part("archives", "Archives", "Arşivler", "zip", Color(0xFFD6409F)),
+    // APK files (installers lying in folders) and the installed apps are two different things: this one counts the files...
+    Part("apk", "APK", "APK", "download", Color(0xFFF76808)),
+    // ...this one the apps that are installed (their size on the phone)
     Part("apps", "Apps", "Uygulamalar", "apps", Color(0xFF46A758)),
     // files inside folders whose name starts with a dot: the media index leaves them out, so they are measured on their own
     Part("hidden", "Hidden", "Gizli", "folder", Color(0xFFC9A227)),
@@ -189,9 +192,10 @@ private fun loadStats(ctx: Context): Stats {
     val parts = PARTS.map { Part(it.key, it.en, it.tr, it.icon, it.color) }
     if (RecentStore.canListAll(ctx)) runCatching {
         ctx.contentResolver.query(MediaStore.Files.getContentUri("external"),
-            arrayOf(MediaStore.Files.FileColumns.SIZE, MediaStore.Files.FileColumns.MEDIA_TYPE, MediaStore.Files.FileColumns.MIME_TYPE), null, null, null)?.use { c ->
+            arrayOf(MediaStore.Files.FileColumns.SIZE, MediaStore.Files.FileColumns.MEDIA_TYPE, MediaStore.Files.FileColumns.MIME_TYPE, MediaStore.Files.FileColumns.DISPLAY_NAME), null, null, null)?.use { c ->
             while (c.moveToNext()) {
-                val k = partOf(c.getInt(1), c.getString(2)) ?: continue
+                val ext = c.getString(3).orEmpty().substringAfterLast('.', "").lowercase()
+                val k = (if (ext in setOf("apk", "apks", "xapk", "apkm") || c.getString(2) == "application/vnd.android.package-archive") "apk" else partOf(c.getInt(1), c.getString(2))) ?: continue
                 val p = parts.first { it.key == k }
                 p.bytes += c.getLong(0); p.count++
             }
@@ -283,7 +287,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
                 Spacer(Modifier.height(14.dp))
                 val legend = s.parts.filter { it.bytes > 0 }.map { Triple(it.color, tr(it.en, it.tr), exSize(it.bytes)) } + Triple(Color(0xFF8B8D98), tr("Other", "Diğer"), exSize(s.other)) + Triple(if (mat) Color(0xFF2A2A2A) else T.line, tr("Free", "Boş"), exSize(s.free))
                 // each kind opens its own list; Other opens the files that are in no kind; Free opens nothing
-                val keys = s.parts.filter { it.bytes > 0 }.map { it.key } + listOf("other", "")
+                val keys = s.parts.filter { it.bytes > 0 }.map { if (it.key == "apps") "" else it.key } + listOf("other", "")
                 legend.mapIndexed { i, x -> i to x }.chunked(3).forEach { row ->
                     Row(Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                         row.forEach { (i, x) ->
@@ -333,7 +337,7 @@ fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: 
         }
         item { Caption(tr("Types", "Türler")) }
         items(stats?.parts.orEmpty().filter { it.bytes > 0 || it.count > 0 }, key = { it.key }) { p ->
-            Row(Modifier.fillMaxWidth().clickable { FilesHomeNav.kind = p.key; onTab("types") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clickable(enabled = p.key != "apps") { FilesHomeNav.kind = p.key; onTab("types") }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.size(52.dp).clip(RoundedCornerShape(if (mat) 14.dp else 4.dp)).background(p.color), contentAlignment = Alignment.Center) { PIcon(p.icon, Color.White, 28.dp) }
                 Column(Modifier.weight(1f).padding(horizontal = 14.dp)) {
                     Text(tr(p.en, p.tr), color = fg, fontSize = 18.sp)
