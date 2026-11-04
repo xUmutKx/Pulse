@@ -2062,4 +2062,3 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Ekran kapağı widget'ları saniyede bir yenileniyor (CoverTicker); Alarm Dismiss düğmesi kendi jest kutusuyla kaydırılarak kapanıyor; altyazı boyu tam ekranda yarıya indi, PiP'te %40
 - (sürüm sonra) derlenmedi: Video listesi: .ts dosyaları (küçük TypeScript kaynakları) video sayılmıyor, geliştirici klasörleri (node_modules, build vb.) taranmıyor
 - (sürüm sonra) derlenmedi: Atla (intro/özet) düğmesi: içi zaman çubuğu gibi 5 sn'de dolar, dolunca kapanır; dokunulursa hemen atlar
-- (sürüm sonra) derlenmedi: Video alt çubuğu yeniden yazıldı: zaman ve kaydırma çubuğu üstte, kontroller kaydırmasız eşit aralıklı tek satırda (en fazla 6), diğerleri Diğer menüsünde
