@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -79,9 +80,11 @@ fun IpodPlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<Track
         if (menu) sel = (sel + n).coerceIn(0, (library.size - 1).coerceAtLeast(0))
         else { vol = (vol + n * 0.03f).coerceIn(0f, 1f); engine.player.volume = vol; volShown = System.currentTimeMillis() }
     }
+    val plastic = rememberTexture(Tex.PLASTIC)
+    val steel = rememberTexture(Tex.STEEL)
     Column(modifier.background(Color(0xFF101010)).padding(14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         // the body
-        Column(Modifier.weight(1f).fillMaxWidth().shadow(10.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(th.body, th.body.copy(alpha = .94f), th.body.copy(alpha = .86f)))).border(1.5.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = .75f), Color.Black.copy(alpha = .25f))), RoundedCornerShape(26.dp)).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(Modifier.weight(1f).fillMaxWidth().shadow(10.dp, RoundedCornerShape(26.dp)).clip(RoundedCornerShape(26.dp)).background(Brush.verticalGradient(listOf(th.body, th.body.copy(alpha = .94f), th.body.copy(alpha = .86f)))).drawBehind { drawRect(plastic, alpha = .22f) }.border(1.5.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = .75f), Color.Black.copy(alpha = .25f))), RoundedCornerShape(26.dp)).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             // the screen
             Column(Modifier.fillMaxWidth().height(210.dp).clip(RoundedCornerShape(8.dp)).background(Brush.verticalGradient(listOf(Color(0xFFF1F6EE), Color(0xFFD9E3D4)))).border(5.dp, Color(0xFF1A1A1C), RoundedCornerShape(8.dp)).border(1.dp, Color.White.copy(alpha = .25f), RoundedCornerShape(8.dp))) {
                 Row(Modifier.fillMaxWidth().background(Brush.verticalGradient(listOf(Color(0xFFE3E9E0), Color(0xFFA9B8A5)))).border(0.5.dp, Color(0xFF6E7C6B)).padding(horizontal = 8.dp, vertical = 3.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -128,7 +131,7 @@ fun IpodPlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<Track
                 val side = minOf(maxWidth, 300.dp)
                 var lastAngle by remember { mutableStateOf<Float?>(null) }
                 var acc by remember { mutableStateOf(0f) }
-                Box(Modifier.size(side).shadow(3.dp, CircleShape).clip(CircleShape).background(Brush.radialGradient(listOf(th.wheel, th.wheel.copy(alpha = .9f), th.wheel.copy(alpha = .78f)))).border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = .6f), Color.Black.copy(alpha = .2f))), CircleShape).pointerInput(menu, library.size) {
+                Box(Modifier.size(side).shadow(3.dp, CircleShape).clip(CircleShape).drawBehind { drawRect(steel, alpha = .0f) }.background(Brush.radialGradient(listOf(th.wheel, th.wheel.copy(alpha = .9f), th.wheel.copy(alpha = .78f)))).border(1.dp, Brush.verticalGradient(listOf(Color.White.copy(alpha = .6f), Color.Black.copy(alpha = .2f))), CircleShape).pointerInput(menu, library.size) {
                     detectDragGestures(onDragStart = { lastAngle = null; acc = 0f }, onDragEnd = { lastAngle = null }) { c, _ ->
                         val ctr = Offset(size.width / 2f, size.height / 2f)
                         val d = c.position - ctr
