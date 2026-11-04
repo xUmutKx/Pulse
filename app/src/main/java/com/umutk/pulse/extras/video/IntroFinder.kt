@@ -97,6 +97,8 @@ internal object IntroCache {
     const val LOCAL_FILE = "video_intro_local2"
     private fun prefs(c: Context, file: String) = c.getSharedPreferences(file, Context.MODE_PRIVATE)
     fun key(u: Uri): String = u.toString()
+    /** The same episode found again under another address (the media index or a file path): its name and size are the same. */
+    fun nameKey(name: String, size: Long): String = "n:" + name + "|" + size
     private fun part(p: String): LongRange? {
         val f = p.split(',')
         if (f.size != 2) return null
