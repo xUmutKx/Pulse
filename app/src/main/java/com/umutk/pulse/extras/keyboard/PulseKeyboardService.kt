@@ -405,6 +405,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     }
 
     private var editAt = 0L
+    private var shiftDropAt = 0L
 
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
@@ -519,6 +520,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (s.length == 1 && (st.ctrl > 0 || st.alt > 0 || st.win > 0 || st.shiftMod > 0) && sendChord(s[0])) return
         var ch = s[0]
         val letter = ch.isLetter() || (ch == '\'' && word.isNotEmpty())
+        // fast typing: the keys are redrawn a moment after the automatic capital is used, so the next letters can still arrive as capitals; inside the word they stay small
+        if (letter && ch.isUpperCase() && st.shift == 0 && word.isNotEmpty() && !st.plain && SystemClock.uptimeMillis() - shiftDropAt < 700) ch = ch.toString().lowercase(lang.locale).first()
         if (letter) {
             // a comma right before a letter, behind a word: a slip of the finger; the comma goes and the word is reopened
             if (punctTyped && ch.isLetter() && KeyboardPrefs.commaSlip && !st.plain && word.isEmpty()) {
@@ -561,7 +564,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (lang.code == "tr") apostropheAfterName(c)
             c.setComposingText(word, 1)
             lastCorrection = null
-            if (st.shift == 1) st.shift = 0
+            if (st.shift == 1) { st.shift = 0; shiftDropAt = SystemClock.uptimeMillis() }
             updateSuggestions()
         } else {
             // a second comma right behind a comma (or the comma and its space) is dropped: one comma stays
