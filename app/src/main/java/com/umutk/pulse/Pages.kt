@@ -773,37 +773,52 @@ fun AdPassCard() {
     PremiumCard()
 }
 
-/** Premium: one purchase, no ads, every feature. The purchase itself is Google Play's one-time product (not connected yet: the button says so). */
+/** Premium: one purchase, no ads, every feature. The purchase is Google Play's one-time product, made inside Pulse (play build). */
 @Composable
 fun PremiumCard() {
     if (!com.umutk.pulse.ads.PulseAds.ENABLED) return
     val ctx = LocalContext.current
-    val owned = com.umutk.pulse.ads.Premium.on(ctx)
+    var owned by remember { mutableStateOf(com.umutk.pulse.ads.Premium.on(ctx)) }
+    var note by remember { mutableStateOf("") }
     var features by remember { mutableStateOf(false) }
+    // the purchase sheet of Google Play, opened inside Pulse; the card shows the result
+    val buy: () -> Unit = {
+        val act = ctx.findActivity()
+        if (act != null) {
+            note = tr("Opening Google Play…", "Google Play açılıyor…")
+            com.umutk.pulse.ads.PulseAds.buyPremium(act) { ok ->
+                owned = com.umutk.pulse.ads.Premium.on(ctx)
+                note = if (ok || owned) tr("Thank you. Pulse Premium is active.", "Teşekkürler. Pulse Premium açık.")
+                    else tr("The purchase did not finish. Nothing was charged.", "Satın alma tamamlanmadı. Ücret alınmadı.")
+            }
+        }
+    }
     Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(T.panel).padding(horizontal = 12.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
         PIcon("star", T.accent, 22.dp)
         Spacer(Modifier.width(10.dp))
         Column(Modifier.weight(1f)) {
             Text("Premium", color = T.text, fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            if (owned) Text(tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık"), color = T.sub, fontSize = 12.sp)
+            val msg = note.ifEmpty { if (owned) tr("Owned: no ads, everything open", "Sahipsiniz: reklam yok, her şey açık") else "" }
+            if (msg.isNotEmpty()) Text(msg, color = T.sub, fontSize = 12.sp)
         }
         CardButton("info", tr("Features", "Özellikler")) { features = true }
         if (!owned) {
             Spacer(Modifier.width(6.dp))
-            CardButton("apps", tr("Get", "Al")) {
-                // the purchase lives in the premium app's Play listing: open it in the store
-                val pkg = "com.umutk.pulse.premium"
-                runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                    .onFailure { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-            }
+            CardButton("apps", tr("Get", "Al")) { buy() }
         }
     }
-    if (features) PremiumFeatures(owned) { features = false }
+    if (features) PremiumFeatures(owned, onBuy = buy) { features = false }
 }
 
-/** What the premium app unlocks: each line with its own icon (the look's icon set). */
+private tailrec fun Context.findActivity(): android.app.Activity? = when (this) {
+    is android.app.Activity -> this
+    is android.content.ContextWrapper -> baseContext.findActivity()
+    else -> null
+}
+
+/** What Premium unlocks: each line with its own icon (the look's icon set). */
 @Composable
-private fun PremiumFeatures(owned: Boolean, onClose: () -> Unit) {
+private fun PremiumFeatures(owned: Boolean, onBuy: () -> Unit, onClose: () -> Unit) {
     val ctx = LocalContext.current
     val rows = listOf(
         "apps" to tr("Every feature, no waiting for an ad", "Her özellik, reklam beklemeden"),
@@ -830,9 +845,7 @@ private fun PremiumFeatures(owned: Boolean, onClose: () -> Unit) {
         },
         confirmButton = {
             if (!owned) com.umutk.pulse.PButton(tr("Get", "Al")) {
-                val pkg = "com.umutk.pulse.premium"
-                runCatching { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
-                    .onFailure { ctx.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=$pkg")).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+                onBuy()
                 onClose()
             }
         },

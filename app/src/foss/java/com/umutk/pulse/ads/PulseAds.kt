@@ -15,6 +15,11 @@ object PulseAds {
 
     fun init(c: Context) { }
 
+    /** No purchase in the foss build. */
+    fun restorePremium(c: Context, done: (Boolean) -> Unit = { }) = done(false)
+
+    fun buyPremium(a: Activity, done: (Boolean) -> Unit) = done(false)
+
     @Composable
     fun Banner(modifier: Modifier = Modifier) { }
 
