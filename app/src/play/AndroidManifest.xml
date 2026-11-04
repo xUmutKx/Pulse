@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The play build only: the AdMob app id, and the advertising id permission the ads need on Android 13 and up.
-     Not in the Play build: SMS, call log and all-files access (Play restricts them; the files are shown through the media permissions). -->
+     Not in the Play build: SMS, call log and all-files access (Play restricts them; the files are shown through the media permissions).
+     Also not in the Play build: the four accessibility services (app lock, dimming, keyboard extra keys, cover), the secure-settings permissions, and the Termux and Shizuku hooks. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
     <uses-permission android:name="android.permission.READ_SMS" tools:node="remove" />
@@ -11,7 +12,15 @@
     <uses-permission android:name="android.permission.WRITE_SMS" tools:node="remove" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" tools:node="remove" />
     <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" tools:node="remove" />
+    <uses-permission android:name="com.termux.permission.RUN_COMMAND" tools:node="remove" />
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" tools:node="remove" />
     <application>
         <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-3940256099942544~3347511713" />
+        <service android:name="com.umutk.pulse.applock.LockService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.blackout.AppWatch" tools:node="remove" />
+        <service android:name="com.umutk.pulse.extras.keyboard.AccessKeyboardService" tools:node="remove" />
+        <service android:name="com.umutk.pulse.features.CoverAccessibilityService" tools:node="remove" />
     </application>
 </manifest>
