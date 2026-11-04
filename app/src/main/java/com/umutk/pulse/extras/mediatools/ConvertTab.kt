@@ -64,7 +64,7 @@ internal fun ConvertTab() {
     var to by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { list ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { list ->
         if (list.isEmpty()) return@rememberLauncherForActivityResult
         files = list; note = ""
         kind = kindOf(nameOf(ctx, list.first())); to = targets(kind).firstOrNull()?.first.orEmpty()

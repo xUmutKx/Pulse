@@ -307,7 +307,7 @@ fun PdfToolsPage(onBack: () -> Unit) {
         if (us.size >= 2) { pickedUris = us; nameText = OtPrefs.prefix(ctx).ifEmpty { "Merged" }; job = PdfJob.MERGE }
         else if (us.isNotEmpty()) Toast.makeText(ctx, tr("Pick two or more PDFs", "İki veya daha fazla PDF seç"), Toast.LENGTH_SHORT).show()
     }
-    val pickPdfOne = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
+    val pickPdfOne = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { u ->
         if (u != null) { pickedUris = listOf(u); nameText = OtPrefs.prefix(ctx).ifEmpty { "Split" }; rangeText = ""; secretText = ""; job = pendingJob }
     }
     val pickImages = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { us ->

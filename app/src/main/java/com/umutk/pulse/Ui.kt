@@ -368,7 +368,7 @@ fun ProfileAvatar(size: androidx.compose.ui.unit.Dp, th: PTheme = T, modifier: M
 @Composable
 fun ProfilePhotoRow() {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia()) { u -> if (u != null) ProfilePhoto.set(ctx, u) }
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickVisualMedia()) { u -> if (u != null) ProfilePhoto.set(ctx, u) }
     PCard {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ProfileAvatar(56.dp)

@@ -341,7 +341,7 @@ fun MessagesScreen(back: () -> Unit) {
     // the file picked for one conversation (by address); it goes out as MMS with that conversation's text
     val attach = remember { mutableStateMapOf<String, Uri>() }
     var pickFor by remember { mutableStateOf("") }
-    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pickFile = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri != null && pickFor.isNotEmpty()) attach[pickFor] = uri
     }
     var reload by remember { mutableIntStateOf(0) }

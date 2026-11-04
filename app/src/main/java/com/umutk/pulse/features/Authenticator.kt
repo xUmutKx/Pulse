@@ -329,7 +329,7 @@ fun AuthenticatorScreen(back: () -> Unit) {
             parseOtpauth(text)?.let { a -> if (issuer.isBlank()) issuer = a.issuer; if (name.isBlank()) name = a.name }
         } else msg = tr("No authenticator QR code found", "Doğrulayıcı QR kodu bulunamadı")
     }
-    val pickQr = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pickQr = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch { useQr(withContext(Dispatchers.IO) { decodeQr(ctx, uri) }) }
     }

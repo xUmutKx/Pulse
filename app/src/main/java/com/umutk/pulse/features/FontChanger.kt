@@ -210,7 +210,7 @@ fun FontChangerScreen() {
             runCatching { FontPack.install(ctx, FontPack.build(ctx, ttf)); "" }.getOrElse { tr("Failed: ", "Olmadı: ") + (it.message ?: it.javaClass.simpleName) }
         }
     }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri: Uri? ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri: Uri? ->
         if (uri != null) scope.launch {
             val f = withContext(Dispatchers.IO) { File(ctx.cacheDir, "picked_font.ttf").also { f -> ctx.contentResolver.openInputStream(uri)?.use { i -> f.outputStream().use { i.copyTo(it) } } } }
             if (runCatching { Typeface.createFromFile(f) }.isSuccess) pack(f) else note = tr("Not a font file", "Yazı tipi dosyası değil")

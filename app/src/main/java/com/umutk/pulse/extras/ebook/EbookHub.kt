@@ -244,7 +244,7 @@ private fun Shelf(onBack: () -> Unit, onOpen: (Book) -> Unit) {
             else -> onBack()
         }
     }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri == null) return@rememberLauncherForActivityResult
         runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
         // reading a file (a PDF's text too) takes time: it is done off the main thread, then the shelf is updated

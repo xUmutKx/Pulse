@@ -46,7 +46,7 @@ internal fun CutTab() {
     var to by remember { mutableStateOf("") }
     var note by remember { mutableStateOf("") }
     var busy by remember { mutableStateOf(false) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u -> if (u != null) { file = u; note = "" } }
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u -> if (u != null) { file = u; note = "" } }
 
     fun run(soundOnly: Boolean) {
         val u = file ?: return
