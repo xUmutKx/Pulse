@@ -190,35 +190,30 @@ fun NoteEditor(
 
     Box(Modifier.fillMaxSize().padding(horizontal = pageGutter), contentAlignment = Alignment.TopCenter) {
     Column(Modifier.widthIn(max = 720.dp).fillMaxSize()) {
-        // the actions of the note
+        // the note's own actions: four icons up here; the rest is in the "+" row below, each with its name
         Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             MIcon(Icons.AutoMirrored.Filled.ArrowBack, tr("Back", "Geri"), fg) { onBack() }
             Box(Modifier.weight(1f))
-            MIcon(if (more) Icons.Outlined.Close else Icons.Outlined.Add, tr("Add to the note", "Nota ekle"), if (more) T.accent else fg) { more = !more }
-            MIcon(Icons.Outlined.Undo, tr("Undo", "Geri al"), fg) { undo.removeLastOrNull()?.let { prev -> onEdit { it.copy(body = prev) } } }
-            MIcon(if (preview) Icons.Outlined.Edit else Icons.Outlined.Visibility, tr("Preview", "Önizleme"), fg) { preview = !preview }
-            MIcon(Icons.Outlined.Share, tr("Share", "Paylaş"), fg) { shareNote(ctx, text) }
-            MIcon(Icons.Outlined.ContentCopy, tr("Copy", "Kopyala"), fg) { copyNote(ctx, text) }
-            MIcon(Icons.Outlined.NoteAdd, tr("Duplicate", "Çoğalt"), fg) { onDuplicate() }
-            MIcon(Icons.Outlined.Delete, tr("Move to trash", "Çöpe taşı"), fg) { onTrash() }
-        }
-        if (more) Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
             NIcon("pin", if (note.pinned) T.accent else fg, tr("Pin", "Sabitle")) { onEdit { it.copy(pinned = !it.pinned) } }
-            MIcon(Icons.Outlined.Palette, tr("Colour", "Renk"), if (palette) T.accent else fg) { palette = !palette }
-            NIcon("folder", fg, tr("Folder", "Klasör")) { onDlg(NDlg.Folder(setOf(note.id))) }
-            NIcon("bell", if (note.remindAt > 0) T.accent else fg, tr("Reminder", "Hatırlatma")) { onDlg(NDlg.Remind(setOf(note.id))) }
-            NIcon(if (note.locked) "unlock" else "lock", fg, tr("Lock", "Kilitle")) { toggleLock() }
-            MIcon(Icons.Outlined.Image, tr("Add photo", "Fotoğraf ekle"), fg) { pickImage.launch(arrayOf("image/*")) }
-            NIcon("document", fg, tr("Add a file", "Dosya ekle")) { pickFile.launch(arrayOf("*/*")) }
-            MIcon(Icons.Outlined.Edit, tr("Pen", "Kalem"), if (inkOn) T.accent else fg) { inkOn = !inkOn }
-            MIcon(Icons.Outlined.RadioButtonChecked, tr("Record", "Ses kaydet"), if (recording) Color(0xFFE53935) else fg) { toggleRecord() }
-            if (canDictate) NIcon("mic", fg, tr("Dictate", "Diktе et")) {
+            MIcon(Icons.Outlined.Share, tr("Share", "Paylaş"), fg) { shareNote(ctx, text) }
+            MIcon(if (more) Icons.Outlined.Close else Icons.Outlined.Add, tr("More", "Diğer"), if (more) T.accent else fg) { more = !more }
+        }
+        if (more) Row(Modifier.fillMaxWidth().padding(top = 6.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+            NChip(tr("Undo", "Geri al"), fg) { undo.removeLastOrNull()?.let { prev -> onEdit { it.copy(body = prev) } } }
+            NChip(if (preview) tr("Edit", "Düzenle") else tr("Preview", "Önizleme"), fg) { preview = !preview }
+            NChip(tr("Copy", "Kopyala"), fg) { copyNote(ctx, text) }
+            NChip(tr("Duplicate", "Çoğalt"), fg) { onDuplicate() }
+            NChip(tr("Colour", "Renk"), if (palette) T.accent else fg) { palette = !palette }
+            NChip(tr("Folder", "Klasör"), fg) { onDlg(NDlg.Folder(setOf(note.id))) }
+            NChip(if (note.remindAt > 0) tr("Reminder set", "Hatırlatma var") else tr("Reminder", "Hatırlatma"), if (note.remindAt > 0) T.accent else fg) { onDlg(NDlg.Remind(setOf(note.id))) }
+            NChip(if (note.locked) tr("Unlock", "Kilidi aç") else tr("Lock", "Kilitle"), fg) { toggleLock() }
+            NChip(tr("Add a file", "Dosya ekle"), fg) { pickFile.launch(arrayOf("*/*")) }
+            NChip(if (recording) tr("Stop recording", "Kaydı durdur") else tr("Record", "Ses kaydet"), if (recording) Color(0xFFE53935) else fg) { toggleRecord() }
+            if (canDictate) NChip(tr("Dictate", "Konuşarak yaz"), fg) {
                 dictate.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM))
             }
-            NIcon("speak", if (speaking) T.accent else fg, tr("Read aloud", "Sesli oku")) { toggleSpeak() }
-            MIcon(Icons.Outlined.Check, tr("Checklist line", "Kontrol satırı"), fg) {
-                changeBody(if (note.body.isEmpty() || note.body.endsWith("\n")) note.body + "[ ] " else note.body + "\n[ ] ")
-            }
+            NChip(tr("Read aloud", "Sesli oku"), if (speaking) T.accent else fg) { toggleSpeak() }
+            NChip(tr("Move to trash", "Çöpe taşı"), fg) { onTrash() }
         }
         if (palette) Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
             NSwatchRow(note.color) { v -> onEdit { it.copy(color = v) }; palette = false }
@@ -307,9 +302,7 @@ fun NoteEditor(
             MIcon(Icons.Outlined.Check, tr("Checklist line", "Kontrol satırı"), fg) {
                 changeBody(if (note.body.isEmpty() || note.body.endsWith("\n")) note.body + "[ ] " else note.body + "\n[ ] ")
             }
-            MIcon(Icons.Outlined.RadioButtonChecked, tr("Record", "Ses kaydet"), if (recording) Color(0xFFE53935) else fg) { toggleRecord() }
-            MIcon(Icons.Outlined.Palette, tr("Colour", "Renk"), if (palette) T.accent else fg) { palette = !palette }
-            MIcon(if (more) Icons.Outlined.Close else Icons.Outlined.Add, tr("More tools", "Diğer araçlar"), if (more) T.accent else fg) { more = !more }
+            MIcon(if (more) Icons.Outlined.Close else Icons.Outlined.Add, tr("More", "Diğer"), if (more) T.accent else fg) { more = !more }
         }
     }
     }
@@ -345,6 +338,14 @@ private fun AudioRow(ctx: Context, name: String, ink: Color, onRemove: () -> Uni
 
 /** A Material icon of the note editor: the same round touch target as the others. */
 @Composable
+/** A named action in the "more" row: the words show what it does, so no icon has to be guessed. */
+@Composable
+private fun NChip(label: String, tint: Color, onClick: () -> Unit) {
+    Box(Modifier.padding(end = 8.dp).clip(RoundedCornerShape(16.dp)).background(T.panel.copy(alpha = .9f)).clickable { onClick() }.padding(horizontal = 12.dp, vertical = 8.dp)) {
+        Text(label, color = tint, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+    }
+}
+
 private fun MIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, tint: Color, onClick: () -> Unit) {
     Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable { onClick() }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
         androidx.compose.material3.Icon(icon, desc, tint = tint, modifier = Modifier.size(22.dp))
