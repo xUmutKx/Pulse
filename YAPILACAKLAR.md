@@ -2104,3 +2104,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) Play sürümü minSdk 24 (Google Play gereği); FOSS sürümü minSdk 21/31 aynı kaldı. derlenmedi
 1.0.361 derlendi: Play sürümü minSdk 24; ilk sürüm sürüm notları
 1.0.362 derlendi: Play için billing 8.0.0, hedef API 36 (play), compileSdk 36, yerel sembol; 762 zaten Play'de olduğu için 763
+1.0.363 (764): Play 763 kodu zaten kullanıldığı için sürüm kodu artırıldı. derlenmedi
