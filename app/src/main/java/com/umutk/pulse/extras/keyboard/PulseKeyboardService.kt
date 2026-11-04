@@ -444,6 +444,41 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     // ---- typing ------------------------------------------------------------------------------------------------------------------------------------
 
+    // ---- the physical keyboard, Turkish: with an English (US) keyboard layout, the Turkish letters sit on the Turkish Q positions
+    // (the same as a Turkish Q keyboard). Only when Turkish is the keyboard's language and the device layout is plain ASCII.
+    private val turkishDown = HashSet<Int>()
+
+    private fun turkishQ(keyCode: Int, shift: Boolean): String? = when (keyCode) {
+        KeyEvent.KEYCODE_LEFT_BRACKET -> if (shift) "Ğ" else "ğ"
+        KeyEvent.KEYCODE_RIGHT_BRACKET -> if (shift) "Ü" else "ü"
+        KeyEvent.KEYCODE_SEMICOLON -> if (shift) "Ş" else "ş"
+        KeyEvent.KEYCODE_APOSTROPHE -> if (shift) "İ" else "i"
+        KeyEvent.KEYCODE_I -> if (shift) null else "ı"
+        KeyEvent.KEYCODE_COMMA -> if (shift) "Ö" else "ö"
+        KeyEvent.KEYCODE_PERIOD -> if (shift) "Ç" else "ç"
+        else -> null
+    }
+
+    override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        val e = event ?: return super.onKeyDown(keyCode, event)
+        if (e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || e.repeatCount > 0) return super.onKeyDown(keyCode, event)
+        if (KeyboardPrefs.langList().firstOrNull() != "tr") return super.onKeyDown(keyCode, event)
+        // the device layout already types Turkish (not plain ASCII): the system's own letter is right, nothing to change
+        val device = e.getUnicodeChar(0)
+        if (device !in 1..127) return super.onKeyDown(keyCode, event)
+        val ch = turkishQ(keyCode, e.isShiftPressed) ?: return super.onKeyDown(keyCode, event)
+        val c = currentInputConnection ?: return super.onKeyDown(keyCode, event)
+        turkishDown.add(keyCode)
+        c.commitText(ch, 1)
+        return true
+    }
+
+    override fun onKeyUp(keyCode: Int, event: KeyEvent?): Boolean {
+        // the key's release goes with its press: the field does not see a stray key up
+        if (turkishDown.remove(keyCode)) return true
+        return super.onKeyUp(keyCode, event)
+    }
+
     override fun type(s: String) {
         st.keyTick++
         val c = currentInputConnection ?: return
