@@ -2080,3 +2080,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) Intro/atla verisi bölüm adı ve boyutuyla da saklanıyor; liste yüklenince yeniden aranıyor
 - (sonraki güncelleme) Atla/özet: OpenSubtitles anahtarı yoksa dizinin IMDb kimliği TVmaze'den (anahtarsız) alınıyor
 - (sonraki güncelleme) Atla/özet: üçüncü kaynak TheIntroDB (api.theintrodb.org/v2/media, anahtarsız); sıra IntroDB, TheIntroDB, görüntü eşleştirme
+1.0.355 derlendi: atla/özet için TheIntroDB ikinci kaynak, IntroDB/TVmaze anahtarsız dizi kimliği, intro önbelleği ad+boyut anahtarı; klavye (fiziksel Türkçe Q, öneri çubuğu, yüzen klavye hareketi), kalem paneli ve vurgulayıcı, altyazı arama ve CC seçimi
