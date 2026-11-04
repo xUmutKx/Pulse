@@ -106,10 +106,18 @@ fun AlarmEditSheet(
     is24Hour: Boolean,
     settingsDataStore: SettingsDataStore,
     onDismiss: () -> Unit,
-    onSave: (AlarmEntity) -> Unit
+    onSave: (AlarmEntity) -> Unit,
+    recentAlarm: AlarmEntity? = null
 ) {
-    // a new alarm starts at the phone's current time, not at a fixed 08:00
-    val nowCal = remember { Calendar.getInstance() }
+    // a new alarm starts at the phone's current time, not at a fixed 08:00; when another alarm was made in the last five minutes, five minutes after that one
+    val nowCal = remember {
+        Calendar.getInstance().also { c ->
+            if (initialAlarm == null && recentAlarm != null) {
+                c.set(Calendar.HOUR_OF_DAY, recentAlarm.hour.coerceIn(0, 23)); c.set(Calendar.MINUTE, recentAlarm.minute.coerceIn(0, 59))
+                c.add(Calendar.MINUTE, 5)
+            }
+        }
+    }
     var hour by remember { mutableIntStateOf(initialAlarm?.hour ?: nowCal.get(Calendar.HOUR_OF_DAY)) }
     var minute by remember { mutableIntStateOf(initialAlarm?.minute ?: nowCal.get(Calendar.MINUTE)) }
     var label by remember { mutableStateOf(initialAlarm?.label ?: "") }
