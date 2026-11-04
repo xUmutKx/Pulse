@@ -792,11 +792,17 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     }
                 },
             ) { i ->
-                player.trackSelectionParameters = if (i == 0) player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
-                else rows[i - 1].let { r ->
-                    if (prefs.rememberSel) r.lang?.let { prefs.prefSub = it }
-                    player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
-                        .addOverride(TrackSelectionOverride(r.group.mediaTrackGroup, r.idx)).build()
+                if (i == 0) player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+                else {
+                    // the choice is made on the tracks the player has now: the list above can be from before a subtitle reload, and its groups then match nothing
+                    val live = trackRows(player.currentTracks, C.TRACK_TYPE_TEXT)
+                    val want = rows[i - 1]
+                    val r = live.firstOrNull { it.label == want.label } ?: live.getOrNull(i - 1)
+                    if (r != null) {
+                        if (prefs.rememberSel) r.lang?.let { prefs.prefSub = it }
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                            .addOverride(TrackSelectionOverride(r.group.mediaTrackGroup, r.idx)).build()
+                    }
                 }
                 dlg = null
             }
