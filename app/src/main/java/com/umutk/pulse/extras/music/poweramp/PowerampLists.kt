@@ -411,6 +411,7 @@ private fun CatChips(selected: Any?, root: String, style: PowerampStyle, onNode:
 }
 
 /** A list of songs: icons on top play it in its order or shuffled; a tapped song starts this list from that song. */
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: PowerampStyle, onPlay: (Int) -> Unit, onPlayTracks: (List<Track>, Int) -> Unit, stars: Map<String, Int>? = null, headerExtra: @Composable () -> Unit = {}, top: (@Composable () -> Unit)? = null) {
     val songs = remember(items) { items.map { it.value } }
@@ -430,7 +431,7 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
     val scope = rememberCoroutineScope()
     val sysDelete = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()) { r ->
         if (r.resultCode == android.app.Activity.RESULT_OK) { android.widget.Toast.makeText(appCtx, tr("Deleted", "Silindi"), android.widget.Toast.LENGTH_SHORT).show(); picked = emptySet() }
-        com.umutk.pulse.extras.music.MusicLibrary.refresh(appCtx)
+        scope.launch { com.umutk.pulse.extras.music.MusicLibrary.refresh(appCtx) }
     }
     BackHandler(enabled = selecting) { picked = emptySet() }
     fun toggle(t: Track) { picked = if (t.path in picked) picked - t.path else picked + t.path }
