@@ -117,7 +117,7 @@ class WeatherClearWidget : PulseWidget() {
         ids.forEach { mgr.updateAppWidget(it, contentFor(ctx, it, WidgetStyles.of(ctx, it))) }
     }
 
-    private fun draw(ctx: Context, f: Forecast?, pl: Place, w: Int, h: Int): Bitmap {
+    fun draw(ctx: Context, f: Forecast?, pl: Place, w: Int, h: Int): Bitmap {
         val bmp = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888)
         val c = Canvas(bmp)
         val imp = WeatherFmt.imperial(ctx)
