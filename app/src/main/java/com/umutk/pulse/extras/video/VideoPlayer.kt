@@ -212,7 +212,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             setAudioAttributes(AudioAttributes.Builder().setUsage(C.USAGE_MEDIA).setContentType(C.AUDIO_CONTENT_TYPE_MOVIE).build(), prefs.audioFocus)
             setHandleAudioBecomingNoisy(prefs.pauseNoisy)
             setMediaItems(
-                items.map { MediaItem.Builder().setUri(it.uri).setMediaId(it.key).setSubtitleConfigurations(siblingSubs(ctx, it, prefs)).build() },
+                items.map { MediaItem.Builder().setUri(it.uri).setMediaId(it.key).setMediaMetadata(androidx.media3.common.MediaMetadata.Builder().setTitle(it.name.substringBeforeLast('.')).build()).setSubtitleConfigurations(siblingSubs(ctx, it, prefs)).build() },
                 at, prefs.resume(items[at].key),
             )
             trackSelectionParameters = trackSelectionParameters.buildUpon()
@@ -743,8 +743,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     }
 
     when (dlg) {
-        "speed" -> PickDialog("x", speeds.map { speedName(it) to (it == speed) }, { dlg = null }) { i ->
-            speed = speeds[i]; player.setPlaybackSpeed(speed); if (prefs.rememberSpeed) prefs.speed = speed; dlg = null
+        "speed" -> VideoSpeedDialog(speed, prefs.speedMin, prefs.speedMax, { dlg = null }) { v ->
+            speed = v; player.setPlaybackSpeed(v); if (prefs.rememberSpeed) prefs.speed = v
         }
         "audio" -> {
             val rows = trackRows(tracks, C.TRACK_TYPE_AUDIO)

@@ -2105,3 +2105,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 1.0.361 derlendi: Play sürümü minSdk 24; ilk sürüm sürüm notları
 1.0.362 derlendi: Play için billing 8.0.0, hedef API 36 (play), compileSdk 36, yerel sembol; 762 zaten Play'de olduğu için 763
 1.0.363 (764): Play 763 kodu zaten kullanıldığı için sürüm kodu artırıldı. derlenmedi
+- (sonraki güncelleme) Yayın: GitHub release'inde yalnız FOSS APK'ları (Obtainium, F-Droid için); Play dosyaları yalnızca "play" seçeneğiyle
+- (sonraki güncelleme) Video: hız çubuğu (0.25–2x uçlar ayarlanır, ok düğmeleri 0.01 adım, normal hız düğmesi); altyazı indirilen dosya altyazı değilse pencere kapanmaz, hata gösterir; bildirim: kapak, ad, önceki/oynat-duraklat/sonraki düğmeleri. derlenmedi

@@ -157,7 +157,9 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Sw(tr("Play next", "Sonrakini oynat"), { prefs.autoPlay }, { prefs.autoPlay = it }, done)
                 Pick(tr("Repeat", "Tekrar"), repeatNames(), { prefs.repeat }, done) { prefs.repeat = it }
                 Sw(tr("Remember speed", "Hızı hatırla"), { prefs.rememberSpeed }, { prefs.rememberSpeed = it }, done)
-                Pick(tr("Default speed", "Varsayılan hız"), speeds.map { speedName(it) }, { speeds.indexOf(prefs.defSpeed).coerceAtLeast(0) }, done) { prefs.defSpeed = speeds[it] }
+                Num(tr("Default speed", "Varsayılan hız"), listOf(50, 75, 100, 125, 150, 200), { (prefs.defSpeed * 100).toInt() }, { speedName(it / 100f) }, done) { prefs.defSpeed = it / 100f }
+                Num(tr("Slowest speed", "En yavaş hız"), listOf(5, 10, 25, 50), { (prefs.speedMin * 100).toInt() }, { speedName(it / 100f) }, done) { prefs.speedMin = it / 100f }
+                Num(tr("Fastest speed", "En hızlı hız"), listOf(200, 300, 400, 500, 800), { (prefs.speedMax * 100).toInt() }, { speedName(it / 100f) }, done) { prefs.speedMax = it / 100f }
                 Pick(tr("Orientation", "Yön"), orientNames(), { prefs.orient }, done) { prefs.orient = it }
                 Sw(tr("Keep screen on", "Ekran açık kalsın"), { prefs.keepAwake }, { prefs.keepAwake = it }, done)
                 Sw(tr("Fast seek", "Hızlı atlama"), { prefs.fastSeek }, { prefs.fastSeek = it }, done)
