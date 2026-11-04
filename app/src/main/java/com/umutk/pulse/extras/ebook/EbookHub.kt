@@ -180,7 +180,6 @@ fun EbookHub(onBack: () -> Unit) {
             if (open != null) ReaderScreen(open!!) { open = null } else Shelf(onBack = onBack, onOpen = { open = it })
         }
         // the ad strip under the shelf and the reader (play build): see-through, in the reader's own colours
-        com.umutk.pulse.ads.AdStrip(bg = Color.Transparent, text = rt.ink, sub = rt.sub, accent = rt.ink)
     }
 }
 
