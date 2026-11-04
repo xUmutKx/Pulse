@@ -3,6 +3,7 @@ package com.umutk.pulse
 import android.content.Context
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +19,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
+import com.umutk.pulse.PIcon
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -72,8 +75,15 @@ fun StorageCard() {
     var reload by remember { mutableIntStateOf(0) }
     val rows by produceState<List<StoreRow>?>(null, reload) { value = withContext(Dispatchers.IO) { storeRows(ctx) } }
     var askDelete by remember { mutableStateOf<StoreRow?>(null) }
+    // collapsed at first, like the Privacy section: the heading opens and closes the list
+    var open by remember { mutableStateOf(false) }
     PCard {
-        Text(tr("Storage", "Depolama"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+        Row(Modifier.fillMaxWidth().clickable { open = !open }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Storage", "Depolama"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+            PIcon("chevron", T.sub, 20.dp, Modifier.graphicsLayer { rotationZ = if (open) 180f else 0f })
+        }
+    }
+    if (open) PCard {
         Text(
             tr("Where Pulse keeps its data and cache, and what each part is for. The path is inside the app's own folder.",
                 "Pulse'ın veri ve önbelleğinin yeri ve her parçanın ne için olduğu. Yol uygulamanın kendi klasörü içindedir."),

@@ -218,7 +218,9 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Sld(tr("Side margin", "Yan boşluk"), " dp", 0..80, { prefs.subMargin }, done) { prefs.subMargin = it }
                 Pick(tr("Encoding", "Kodlama"), encodings, { encodings.indexOf(prefs.subEnc).coerceAtLeast(0) }, done) { prefs.subEnc = encodings[it] }
                 // the key of opensubtitles.com (free account): the online search uses it for films and TV episodes
-                PField(OpenSubs.key(ctx), { OpenSubs.saveKey(ctx, it) }, tr("OpenSubtitles API key", "OpenSubtitles API anahtarı"), Modifier.fillMaxWidth())
+                // kept as state: the box shows what was typed or pasted, and the saved key is written on each change
+                var osKey by remember { mutableStateOf(OpenSubs.key(ctx)) }
+                PField(osKey, { osKey = it; OpenSubs.saveKey(ctx, it) }, tr("OpenSubtitles API key", "OpenSubtitles API anahtarı"), Modifier.fillMaxWidth())
             }
 
             if (cat == "decoder") FlatSection(tr("Decoder", "Çözücü")) {

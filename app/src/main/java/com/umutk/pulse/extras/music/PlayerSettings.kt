@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.Text
+import com.umutk.pulse.extras.music.stats.MusicStats
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -41,6 +42,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.umutk.pulse.PButton
 import com.umutk.pulse.PChip
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.T
@@ -51,6 +53,7 @@ import com.umutk.pulse.extras.music.poweramp.PowerampLineAction
 import com.umutk.pulse.extras.ui.SettingsSection
 import com.umutk.pulse.extras.ui.SliderRow
 import com.umutk.pulse.extras.ui.SwitchRow
+import com.umutk.pulse.WinAlert
 import com.umutk.pulse.tr
 import kotlinx.coroutines.launch
 
@@ -164,6 +167,42 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
             importNote = tr("Writing the backup…", "Yedek yazılıyor…")
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.export(c, uri) } }
             importNote = r.getOrNull()?.let { (l, n) -> tr("Saved: $l playlists, $n songs with a rating or plays", "Kaydedildi: $l çalma listesi, puanlı ya da dinlenmiş $n şarkı") } ?: tr("The backup could not be written", "Yedek yazılamadı")
+        }
+    }
+    // Pulse's own backup: the favourites and the stars; loading one asks before they are added
+    var pulseAsk by remember { mutableStateOf<String?>(null) }
+    val savePulse = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+        if (uri != null) scope.launch {
+            val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.contentResolver.openOutputStream(uri)?.use { it.write(MusicStats.backupJson(c).toByteArray()) } } }
+            importNote = if (r.isSuccess) tr("Pulse backup saved", "Pulse yedeği kaydedildi") else tr("The backup could not be written", "Yedek yazılamadı")
+        }
+    }
+    val loadPulse = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) scope.launch {
+            val text = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } } }.getOrNull()
+            if (text == null || !text.contains("pulse_backup")) importNote = tr("This is not a Pulse backup", "Bu bir Pulse yedeği değil")
+            else pulseAsk = text
+        }
+    }
+    pulseAsk?.let { json ->
+        val (fv, rt) = MusicStats.backupCounts(json)
+        WinAlert(
+            onDismissRequest = { pulseAsk = null },
+            title = { Text(tr("Add them back?", "Geri eklensin mi?"), color = T.text) },
+            text = { Text(tr("The backup has $fv favourites and $rt stars. Add them to this phone? What is already set stays.",
+                "Yedekte $fv favori ve $rt yıldız var. Bu telefona eklensin mi? Zaten ayarlı olanlar kalır."), color = T.text, fontSize = 14.sp) },
+            confirmButton = { PButton(tr("Add", "Ekle"), onClick = { MusicStats.restoreJson(c, json); importNote = tr("Added from the backup", "Yedekten eklendi"); pulseAsk = null }) },
+            dismissButton = { PButton(tr("No", "Hayır"), onClick = { pulseAsk = null }) },
+        )
+    }
+    if (cat == "library") FlatSection(tr("Pulse backup", "Pulse yedeği")) {
+        Row(Modifier.fillMaxWidth().clickable { savePulse.launch("Pulse-favourites-" + java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US).format(java.util.Date()) + ".json") }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("save", T.text, 22.dp)
+            Text(tr("Save favourites and stars", "Favoriler ve yıldızları kaydet"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
+        }
+        Row(Modifier.fillMaxWidth().clickable { loadPulse.launch(arrayOf("application/json", "*/*")) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            PIcon("download", T.text, 22.dp)
+            Text(tr("Load a Pulse backup", "Pulse yedeğini yükle"), color = T.text, fontSize = 15.sp, modifier = Modifier.weight(1f).padding(horizontal = 12.dp))
         }
     }
     if (cat == "library") FlatSection(tr("Poweramp backup", "Poweramp yedeği")) {
