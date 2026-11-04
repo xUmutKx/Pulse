@@ -146,9 +146,15 @@ fun NotesHub(onBack: () -> Unit) {
     val entry = remember { NotesEntry.request.also { NotesEntry.request = null } }
 
     fun save(list: List<Note>) { notes = list; NotesStore.save(ctx, list) }
+    // linked folders: new and changed text files are read in when the app opens and whenever a folder is linked (rev changes)
+    androidx.compose.runtime.LaunchedEffect(rev) {
+        val synced = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { NotesLink.sync(ctx, notes) }
+        if (synced !== notes) save(synced)
+    }
     fun edit(id: String, touch: Boolean = true, f: (Note) -> Note) {
         val old = notes.firstOrNull { it.id == id } ?: return
         val new = f(old).let { if (touch) it.copy(updated = System.currentTimeMillis()) else it }
+        if (new.body != old.body) NotesLink.write(new)
         if (new.remindAt != old.remindAt) { if (new.remindAt > 0) NotesReminders.schedule(ctx, new) else NotesReminders.cancel(ctx, id) }
         save(notes.map { if (it.id == id) new else it })
     }
@@ -191,20 +197,20 @@ fun NotesHub(onBack: () -> Unit) {
     }
 
     // the launchers of the hub: export, import, notification permission
-    val exportJson = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    val exportJson = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/json")) { uri ->
         if (uri != null) noteToast(ctx, runCatching {
             ctx.contentResolver.openOutputStream(uri)?.use { it.write(NotesStore.exportJson(notes.filter { n -> n.trashedAt == 0L }).toByteArray()) }
             tr("Exported", "Dışa aktarıldı")
         }.getOrElse { tr("Export failed", "Dışa aktarılamadı") })
     }
-    val exportMd = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/markdown")) { uri ->
+    val exportMd = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("text/markdown")) { uri ->
         if (uri != null) noteToast(ctx, runCatching {
             val text = notes.filter { it.trashedAt == 0L }.joinToString("\n\n---\n\n") { "# ${NotesStore.titleOf(it)}\n\n${it.body}" }
             ctx.contentResolver.openOutputStream(uri)?.use { it.write(text.toByteArray()) }
             tr("Exported", "Dışa aktarıldı")
         }.getOrElse { tr("Export failed", "Dışa aktarılamadı") })
     }
-    val importJson = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val importJson = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) {
             val added = runCatching { NotesStore.importJson(ctx.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) }.orEmpty()) }.getOrNull()
             if (added == null) noteToast(ctx, tr("Not a notes file", "Not dosyası değil"))

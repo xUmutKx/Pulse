@@ -62,7 +62,7 @@ fun HomeSheet() {
         if (path == null) { android.widget.Toast.makeText(ctx, tr("This file cannot be put on the home screen", "Bu dosya ana ekrana konamaz"), android.widget.Toast.LENGTH_SHORT).show(); return }
         LauncherPrefs.links = (LauncherPrefs.links + "file:$path").distinct(); LauncherPrefs.save(ctx)
     }
-    val pickFile = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u -> if (u != null) addLink(pathOf(ctx, u)) }
+    val pickFile = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u -> if (u != null) addLink(pathOf(ctx, u)) }
     var folderName by androidx.compose.runtime.remember { mutableStateOf("") }
     if (HomeSheetState.sheet) ContextPopup(220.dp, 400.dp, onDismiss = { HomeSheetState.sheet = false }) {
         val w = com.umutk.pulse.LocalWindowLook.current

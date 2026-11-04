@@ -178,7 +178,7 @@ fun SettingsScreen(
     var showAppFontMenu by remember { mutableStateOf(false) }
 
     val appFontFilePickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
@@ -255,7 +255,7 @@ fun SettingsScreen(
     )
 
     val exportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("application/json")
+        contract = com.umutk.pulse.PulsePick.CreateDocument("application/json")
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {
@@ -271,7 +271,7 @@ fun SettingsScreen(
     }
 
     val importLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {

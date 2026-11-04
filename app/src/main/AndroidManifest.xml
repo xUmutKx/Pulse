@@ -1448,6 +1448,8 @@
             <intent-filter><action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" /></intent-filter>
         </activity>
         <!-- Music player (white noise and playlists inside it), video: one activity, one launcher entry each (the entry's name picks the page) -->
+        <!-- Pulse's own file picker, used wherever the system document picker used to open -->
+        <activity android:name=".PulsePickActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:configChanges="orientation|screenSize|keyboardHidden|uiMode" />
         <activity android:name=".ExtraToolActivity" android:exported="false" android:theme="@style/Theme.Pulse" android:documentLaunchMode="always" android:taskAffinity="com.umutk.pulse.tools"
             android:supportsPictureInPicture="true" android:configChanges="orientation|screenSize|smallestScreenSize|screenLayout|keyboardHidden|uiMode" android:windowSoftInputMode="adjustResize" />
 

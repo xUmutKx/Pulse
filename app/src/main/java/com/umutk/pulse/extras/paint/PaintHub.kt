@@ -241,7 +241,7 @@ fun PaintHub(back: () -> Unit) {
     val ctx = LocalContext.current
     val st = remember { PaintState() }
     BackHandler { back() }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri != null) runCatching {
             ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it) }?.let { st.load(it) }
         }.onFailure { Toast.makeText(ctx, tr("Could not open it", "Açılamadı"), Toast.LENGTH_SHORT).show() }

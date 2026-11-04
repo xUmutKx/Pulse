@@ -287,7 +287,7 @@ fun DocScanPage(onBack: () -> Unit) {
     }
 
     // the system picker (no storage permission needed): the picked picture is copied to the cache, then handled like a photo
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri == null || busy) return@rememberLauncherForActivityResult
         scope.launch {
             val f = withContext(Dispatchers.IO) {

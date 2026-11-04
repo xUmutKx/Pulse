@@ -114,6 +114,10 @@ fun HomeView(
     // the search is an icon at the top: the field opens with it, and stays open while a search is typed
     var searchOpen by remember { mutableStateOf(false) }
     var newFolder by remember { mutableStateOf(false) }
+    // a folder of the phone, picked in Pulse's own file picker: its .md / .txt files become notes and stay in that folder
+    val linkFolder = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickFolder()) { path ->
+        if (path != null) { NotesLink.add(ctx, path); onChanged() }
+    }
     val unlocked = notes.filter { it.trashedAt == 0L && (!it.locked || it.id in NotesPrefs.unlocked) }
     // tags and folders come only from notes that are open, so a locked note leaks nothing
     val tags = unlocked.flatMap { NotesStore.tagsOf(it.body) }.groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(8).map { it.key }
@@ -162,7 +166,7 @@ fun HomeView(
                 NIcon("search", fg, tr("Search", "Ara")) { searchOpen = !searchOpen }
                 NIcon("settings", fg, tr("Settings", "Ayarlar")) { onOpenSettings() }
                 NIcon("add", fg, tr("New note", "Yeni not")) { onNew() }
-                NIcon("folder", fg, tr("New folder", "Yeni klasör")) { newFolder = true }
+                NIcon("folder", fg, tr("Link a folder", "Klasör bağla")) { linkFolder.launch(Unit) }
             } else {
                 NIcon("close", fg, tr("Cancel", "İptal")) { onSelect(emptySet()) }
                 Text(tr("${selected.size} selected", "${selected.size} seçili"), color = fg, fontSize = 17.sp, modifier = Modifier.weight(1f))

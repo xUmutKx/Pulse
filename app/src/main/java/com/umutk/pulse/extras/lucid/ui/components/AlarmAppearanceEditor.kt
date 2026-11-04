@@ -491,7 +491,7 @@ fun AlarmAppearanceEditor(
     }
 
     val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { picked ->
         if (picked != null) {
             runCatching {
@@ -506,7 +506,7 @@ fun AlarmAppearanceEditor(
     }
 
     val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { picked ->
         if (picked != null) {
             runCatching {

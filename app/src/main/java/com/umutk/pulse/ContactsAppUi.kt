@@ -320,7 +320,7 @@ fun CtRoot() {
     LaunchedEffect(ctInInsert) { ctInInsert?.let { ctInInsert = null; push(CtScreen.Edit(0, it)) } }
 
     var expIds by remember { mutableStateOf<Set<Long>?>(null) }
-    val exportL = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/x-vcard")) { uri ->
+    val exportL = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("text/x-vcard")) { uri ->
         if (uri != null) scope.launch {
             val n = withContext(Dispatchers.IO) {
                 val all = ctLoadDetails(ctx, expIds)
@@ -329,7 +329,7 @@ fun CtRoot() {
             ctx.toast(if (n >= 0) "$n" else ctr("Failed", "Başarısız"))
         }
     }
-    val importL = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val importL = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val n = withContext(Dispatchers.IO) {
                 runCatching {
@@ -871,7 +871,7 @@ private fun CtEditScreen(id: Long, seed: CtDetail?, onBack: () -> Unit, onSaved:
     val addrs = remember { mutableStateListOf<CtField>().apply { addAll(b?.addrs ?: emptyList()) } }
     var newPhoto by remember { mutableStateOf<Bitmap?>(null) }
     var clearPhoto by remember { mutableStateOf(false) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { u ->
         if (u != null) scope.launch { newPhoto = withContext(Dispatchers.IO) { ctPhotoBitmap(ctx, u) }; clearPhoto = false }
     }
     val can = given.isNotBlank() || family.isNotBlank() || prefix.isNotBlank() || middle.isNotBlank() || suffix.isNotBlank() || phones.any { it.value.isNotBlank() } || emails.any { it.value.isNotBlank() }
@@ -977,7 +977,7 @@ private fun CtBgRow(lookup: String, onChange: () -> Unit = {}) {
     val scope = rememberCoroutineScope()
     var rev by remember { mutableStateOf(0) }
     val bg = remember(lookup, rev) { ctBgAll(ctx)[lookup] }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { u ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickVisualMedia()) { u ->
         if (u != null) scope.launch {
             if (!withContext(Dispatchers.IO) { ctBgSet(ctx, lookup, u) }) ctx.toast(ctr("Failed", "Başarısız"))
             rev++; onChange()
@@ -1017,7 +1017,7 @@ private fun CtCustomScreen(id: Long, onBack: () -> Unit, onChanged: () -> Unit) 
         val ok = withContext(Dispatchers.IO) { ctSetPhoto(ctx, c.raws, b?.let { ctJpeg(ctSquare(it)) }) }
         if (!ok) ctx.toast(ctr("Failed", "Başarısız")); rev++; onChanged()
     }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { u -> if (u != null) scope.launch { photo(withContext(Dispatchers.IO) { ctPhotoBitmap(ctx, u) }) } }
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { u -> if (u != null) scope.launch { photo(withContext(Dispatchers.IO) { ctPhotoBitmap(ctx, u) }) } }
     val shoot = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { b -> if (b != null) photo(b) }
     val name = CtContact(c.id, c.display, c.given, c.family, c.starred, c.photo, "", c.prefix, c.middle, c.suffix).label()
     Column(Modifier.fillMaxSize()) {

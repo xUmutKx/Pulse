@@ -141,13 +141,13 @@ fun DataCard(sp: SharedPreferences) {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     var msg by remember { mutableStateOf("") }
-    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    val save = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/json")) { uri ->
         if (uri != null) msg = runCatching { ctx.contentResolver.openOutputStream(uri)?.use { it.write(BlackOutData.export(sp).toByteArray()) }; tr("Saved.", "Kaydedildi.") }.getOrElse { tr("Save failed: ", "Kaydedilemedi: ") + it.message }
     }
-    val load = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val load = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) msg = runCatching { BlackOutData.import(sp, ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes().decodeToString() }); tr("Loaded. Reopen the page.", "Yüklendi. Sayfayı yeniden açın.") }.getOrElse { tr("Load failed: ", "Yüklenemedi: ") + it.message }
     }
-    val auto = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    val auto = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/json")) { uri ->
         if (uri != null) {
             runCatching { ctx.contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
             sp.edit().putString("backup_uri", uri.toString()).apply()

@@ -128,12 +128,12 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
     var cat by remember { mutableStateOf<String?>(null) }
     fun changed() { tick.intValue++; onChange() }
     val done = { changed() }
-    val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { u ->
+    val export = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/json")) { u ->
         if (u != null) runCatching { ctx.contentResolver.openOutputStream(u)!!.use { it.write(prefs.exportJson().toByteArray()) } }
             .onSuccess { Toast.makeText(ctx, tr("Saved", "Kaydedildi"), Toast.LENGTH_SHORT).show() }
             .onFailure { Toast.makeText(ctx, tr("Failed", "Olmadı"), Toast.LENGTH_SHORT).show() }
     }
-    val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+    val import = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) {
             val ok = runCatching { prefs.importJson(ctx.contentResolver.openInputStream(u)!!.bufferedReader().use { it.readText() }) }.getOrDefault(false)
             Toast.makeText(ctx, if (ok) tr("Restored", "Geri yüklendi") else tr("Failed", "Olmadı"), Toast.LENGTH_SHORT).show()

@@ -167,7 +167,7 @@ private fun MusicHubBody(onBack: () -> Unit) {
         onDispose { hostView.keepScreenOn = false }
     }
 
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { uris ->
         if (uris.isNotEmpty()) engine.playQueue(uris.map { Track(it.toString()) })
     }
     // registered last so it takes priority: back closes the open lyrics first, and leaves the hub only when they are closed
@@ -510,10 +510,10 @@ private fun PlaylistsDialog(engine: MusicPlayerEngine, queue: List<Track>, onClo
     val ctx = LocalContext.current
     var names by remember { mutableStateOf(Playlists.names(ctx)) }
     var name by remember { mutableStateOf("") }
-    val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val import = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) Playlists.import(ctx, uri).takeIf { it.isNotEmpty() }?.let { engine.playQueue(it); onClose() }
     }
-    val export = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("audio/x-mpegurl")) { uri ->
+    val export = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("audio/x-mpegurl")) { uri ->
         if (uri != null) runCatching { Playlists.export(ctx, uri, queue) }
     }
     WinAlert(

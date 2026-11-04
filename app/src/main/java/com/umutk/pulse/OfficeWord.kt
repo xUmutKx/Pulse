@@ -428,7 +428,7 @@ private fun WordBody(doc: OfDoc, theme: OfTheme, w: WDoc) {
         (if (copy) doc.saveCopy else doc.save)(wr) { msg -> if (!copy && !msg.startsWith("Save failed")) doc.dirty = false; toast(msg) }
     }
     SideEffect { doc.txt = { commit(); w.plain() } } // "TXT olarak kaydet" reads what is on screen now
-    val pickImg = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pickImg = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri != null) scope.launch {
             val pic = withContext(Dispatchers.IO) { runCatching { prepImage(ctx, uri) }.getOrNull() }
             if (pic == null) { toast(tr("Cannot read image", "Resim okunamadı")); return@launch }

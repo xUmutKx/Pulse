@@ -91,7 +91,7 @@ class OfficeViewActivity : ComponentActivity() {
     private var name = ""
     private var srcFile: File? = null
     private var srcUri: Uri? = null
-    private val pickOther = registerForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+    private val pickOther = registerForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) {
             runCatching { contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION) }
             ofOpenUri(this, u)

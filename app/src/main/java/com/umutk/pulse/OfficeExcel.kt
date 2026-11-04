@@ -288,7 +288,7 @@ private fun XScreen(doc: OfDoc, t: OfTheme, book: XBook) {
         if (pc.anchor < 0) sh.pics.remove(pc) else pc.deleted = true
         st.pic = null; sh.picsDirty = true; doc.dirty = true; st.ver++
     }
-    val pickImg = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri -> if (uri != null) insertPic(uri) }
+    val pickImg = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri -> if (uri != null) insertPic(uri) }
 
     fun commit(text: String) {
         val old = sh.cells[xKey(st.r, st.c)]; val os = old?.st ?: 0

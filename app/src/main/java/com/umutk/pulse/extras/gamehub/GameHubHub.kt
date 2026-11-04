@@ -463,7 +463,7 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
     val ctx = LocalContext.current
     var coverTick by remember(g.pkg) { mutableStateOf(0) }
     var askAd by remember(g.pkg) { mutableStateOf(false) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri != null) {
             val size = runCatching { ctx.contentResolver.openFileDescriptor(uri, "r")?.use { it.statSize } ?: -1L }.getOrDefault(-1L)
             if (size > COVER_MAX) toast(ctx, tr("The picture is bigger than 3 MB", "Resim 3 MB'tan büyük"))

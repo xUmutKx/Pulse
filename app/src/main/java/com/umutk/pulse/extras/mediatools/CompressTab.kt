@@ -60,7 +60,7 @@ internal fun CompressTab() {
     // picture quality set by hand (30..95); -1 follows the strength above
     var quality by remember { mutableStateOf(-1) }
     var running by remember { mutableStateOf(false) }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { list ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { list ->
         list.forEach { u -> val n = nameOf(ctx, u); val k = kindOf(n); if (k == "image" || k == "video" || k == "audio") items += Item(u, n, k, sizeOf(ctx, u)) }
     }
     PCard {

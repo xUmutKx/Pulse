@@ -274,7 +274,7 @@ private fun SheetCell(icon: ImageVector, label: String, modifier: Modifier, onLo
 @Composable
 private fun CanvasPane(key: String, onDismiss: () -> Unit, onDone: () -> Unit) {
     val ctx = LocalContext.current
-    val picker = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
+    val picker = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) { com.umutk.pulse.extras.music.TrackCanvas.keep(ctx, u); com.umutk.pulse.extras.music.TrackCanvas.set(ctx, key, u.toString()); onDone() }
     }
     val has = com.umutk.pulse.extras.music.TrackCanvas.get(ctx, key) != null

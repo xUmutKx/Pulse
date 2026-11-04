@@ -156,11 +156,11 @@ fun CalSettings(cals: List<CalCal>, onClose: () -> Unit, onChange: () -> Unit) {
     BackHandler(onBack = onClose)
     val ctx = LocalContext.current
     fun target() = cals.firstOrNull { it.id == CalPrefs.defCal && it.writable } ?: cals.firstOrNull { it.writable }
-    val imp = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+    val imp = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) { val t = target(); val n = if (t == null) -1 else CalData.importIcs(ctx, u, t.id)
             Toast.makeText(ctx, if (n >= 0) "${ct("Imported")}: $n" else ct("Failed"), Toast.LENGTH_SHORT).show(); onChange() }
     }
-    val exp = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/calendar")) { u ->
+    val exp = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("text/calendar")) { u ->
         if (u != null) Toast.makeText(ctx, ct(if (CalData.exportIcs(ctx, u)) "Exported" else "Failed"), Toast.LENGTH_SHORT).show()
     }
     fun p(f: () -> Unit) { f(); CalPrefs.save() }

@@ -339,7 +339,7 @@ private fun LookSettings(ctx: Context, win11: Boolean) {
                 Text(tr("Tint (darkness)", "Koyuluk"), color = T.text, fontSize = 14.sp)
                 PSlider(WidgetLook.tint, { WidgetLook.tint = it }, 0f..1f) { WidgetLook.save(ctx) }
                 Text(tr("Picture behind the blur", "Bulanıklığın arkasındaki resim"), color = T.text, fontSize = 14.sp)
-                val pickBg = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri: android.net.Uri? ->
+                val pickBg = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri: android.net.Uri? ->
                     if (uri != null) {
                         val ok = runCatching { ctx.contentResolver.openInputStream(uri)?.use { i -> java.io.File(ctx.filesDir, "widget_blur_bg.jpg").outputStream().use { i.copyTo(it) } } }.isSuccess
                         if (ok) { WidgetLook.blurBg = "file"; WidgetLook.save(ctx) }

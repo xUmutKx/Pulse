@@ -86,17 +86,17 @@ internal fun GifTab() {
     fun set(a: Anim) { anim?.let { undo += it; if (undo.size > 6) undo.removeAt(0) }; anim = a }
     fun run(label: String, work: suspend () -> Anim?) { scope.launch { busy = label; note = ""; val r = runCatching { work() }; busy = ""; r.getOrNull()?.let { set(it) }; r.exceptionOrNull()?.let { note = tr("Failed: ", "Olmadı: ") + (it.message ?: it.javaClass.simpleName) } } }
 
-    val pickGif = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+    val pickGif = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) run(tr("Reading the GIF", "GIF okunuyor")) { withContext(Dispatchers.Default) { readGif(ctx, u, fps.roundToInt(), maxW.roundToInt()) } }
     }
-    val pickVideo = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+    val pickVideo = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) {
             videoUri = u
             videoSecs = runCatching { val r = MediaMetadataRetriever(); r.setDataSource(ctx, u); val d = (r.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull() ?: 0L) / 1000f; r.release(); d }.getOrDefault(0f)
             from = 0f; to = minOf(videoSecs, 5f)
         }
     }
-    val pickPics = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { list ->
+    val pickPics = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { list ->
         if (list.isNotEmpty()) run(tr("Reading the pictures", "Resimler okunuyor")) { withContext(Dispatchers.Default) { fromPictures(ctx, list, maxW.roundToInt()) } }
     }
 

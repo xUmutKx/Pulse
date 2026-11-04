@@ -742,7 +742,7 @@ fun InstallerPage() {
             if (Installer.cur.mode == "auto" && uris.size == 1) start(items)
         }
     }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris -> loadUris(uris) }
+    val picker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { uris -> loadUris(uris) }
     // several APKs picked in Files arrive here as paths: they are read like a pick, and shown as one multi install
     androidx.compose.runtime.LaunchedEffect(Unit) {
         val ps = InstallerPreload.paths

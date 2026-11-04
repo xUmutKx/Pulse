@@ -155,14 +155,14 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
                 ?: (tr("The pictures could not be read", "Resimler okunamadı") + (r.exceptionOrNull()?.let { ": " + (it.message ?: it.javaClass.simpleName) } ?: ""))
         }
     }
-    val pickBackup = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) doImport(uri) }
+    val pickBackup = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri -> if (uri != null) doImport(uri) }
     // the backup files found on the phone: the system picker does not always show a file of this unknown kind
     val found by androidx.compose.runtime.produceState(emptyList<java.io.File>(), cat) {
         value = if (cat != "library") emptyList() else kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             (java.io.File(c.filesDir, "pa_backups").listFiles()?.filter { it.isFile }.orEmpty()) + runCatching { android.os.Environment.getExternalStorageDirectory().walkTopDown().maxDepth(4).onEnter { !it.name.startsWith(".") || it.name == ".poweramp" }.filter { it.isFile && it.name.endsWith(".poweramp-backup") }.sortedByDescending { it.lastModified() }.take(8).toList() }.getOrDefault(emptyList())
         }
     }
-    val exportBackup = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/octet-stream")) { uri ->
+    val exportBackup = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/octet-stream")) { uri ->
         if (uri != null) scope.launch {
             importNote = tr("Writing the backup…", "Yedek yazılıyor…")
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PowerampImport.export(c, uri) } }
@@ -171,13 +171,13 @@ fun MusicSettingsSections(engine: MusicPlayerEngine, which: SettingsFor, onResca
     }
     // Pulse's own backup: the favourites and the stars; loading one asks before they are added
     var pulseAsk by remember { mutableStateOf<String?>(null) }
-    val savePulse = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+    val savePulse = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/json")) { uri ->
         if (uri != null) scope.launch {
             val r = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.contentResolver.openOutputStream(uri)?.use { it.write(MusicStats.backupJson(c).toByteArray()) } } }
             importNote = if (r.isSuccess) tr("Pulse backup saved", "Pulse yedeği kaydedildi") else tr("The backup could not be written", "Yedek yazılamadı")
         }
     }
-    val loadPulse = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val loadPulse = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val text = runCatching { kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { c.contentResolver.openInputStream(uri)?.use { it.readBytes().toString(Charsets.UTF_8) } } }.getOrNull()
             if (text == null || !text.contains("pulse_backup")) importNote = tr("This is not a Pulse backup", "Bu bir Pulse yedeği değil")

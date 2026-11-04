@@ -148,7 +148,7 @@ fun VideoHub(onBack: () -> Unit) {
     var renameFor by remember { mutableStateOf<VideoItem?>(null) }
     var pendingRename by remember { mutableStateOf<Pair<VideoItem, String>?>(null) }
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted = it }
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { us ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenMultipleDocuments()) { us ->
         if (us.isNotEmpty()) play = Play(us.map { VideoItem(it, displayName(ctx, it), 0, "") }, 0)
     }
     val sender = rememberLauncherForActivityResult(ActivityResultContracts.StartIntentSenderForResult()) { r ->
