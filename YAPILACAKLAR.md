@@ -2059,3 +2059,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Kapak widget'ları artık kapağın ilk sayfasını gösteriyor (renk, font, düzen aynı): dijital, analog (4 çeşit), matrix (durağan), piksel, çizgili analog ve çizgili dijital; diğer sayfalar dijital saat olarak çizilir
 - (sürüm sonra) derlenmedi: Alarm ekranı: Dismiss artık uzun basma gerektirmeden kaydırılarak kapatılıyor (düğme parmakla gider, daire büyür, yeterince kayınca kapanır, yoksa geri döner)
 - (sürüm sonra) derlenmedi: Ekran kapağı widget'ları varsayılan olarak arka plansız (şeffaf); siyah arka plan ayarla açılır
+- (sürüm sonra) derlenmedi: Ekran kapağı widget'ları saniyede bir yenileniyor (CoverTicker); Alarm Dismiss düğmesi kendi jest kutusuyla kaydırılarak kapanıyor; altyazı boyu tam ekranda yarıya indi, PiP'te %40

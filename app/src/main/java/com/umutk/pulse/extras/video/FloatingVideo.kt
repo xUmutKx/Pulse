@@ -287,7 +287,7 @@ private fun MiniBody(
                     useController = false
                     setShutterBackgroundColor(android.graphics.Color.BLACK)
                     player = p
-                    subtitleView?.applySubPrefs(VideoPrefs(c))
+                    subtitleView?.applySubPrefs(VideoPrefs(c), pip = true)
                 }
             },
             modifier = Modifier.fillMaxSize(),
