@@ -435,8 +435,6 @@ fun AppsPage() {
     else com.umutk.pulse.ui.MaxWidthBox {
         Column(Modifier.fillMaxSize()) {
             Box(Modifier.weight(1f).fillMaxWidth()) { AppManagerScreen(onOpen = { open("app:$it") }) }
-            // the ad strip at the foot of the manager (play build): the look's own colours
-            com.umutk.pulse.ads.AdStrip(bg = Color.Transparent, text = T.text, sub = T.sub, accent = T.accent)
         }
     }
 }
