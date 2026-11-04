@@ -59,6 +59,7 @@ import com.umutk.pulse.extras.music.Track
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
 import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.draw.drawBehind
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -87,7 +88,9 @@ fun TurntablePlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<
     val armAngle = if (st.isPlaying || pos > 0) 8f + 22f * progress else -6f
     val spin = if (st.isPlaying) turn else 0f
     val ink = if (th.base.luminance() > .5f) Color(0xFF1B1B1B) else Color.White
-    Column(modifier.background(Brush.verticalGradient(listOf(th.base, th.baseDark))).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+    val wood = rememberTexture(Tex.WALNUT)
+    val steel = rememberTexture(Tex.STEEL)
+    Column(modifier.background(Brush.verticalGradient(listOf(th.base, th.baseDark))).drawBehind { drawRect(wood, alpha = if (th.id == "walnut") .85f else if (th.id == "black") .16f else .10f); drawRect(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = .35f)))) }.padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Text(st.current?.title?.ifBlank { null } ?: st.current?.path?.substringAfterLast('/')?.substringBeforeLast('.') ?: tr("Put a record on", "Bir plak tak"), color = ink, fontSize = 20.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Text((st.current?.artist ?: "").uppercase(), color = ink.copy(alpha = .7f), fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp, maxLines = 1, textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth())
         Box(Modifier.weight(1f).fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
@@ -96,6 +99,7 @@ fun TurntablePlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<
                 // the plinth edge: a soft shadow and a lighter rim under the platter
                 drawCircle(Color.Black.copy(alpha = .35f), r * 1.14f, Offset(c.x + s * .012f, c.y + s * .016f))
                 drawCircle(Brush.radialGradient(listOf(th.metal, th.metal.copy(alpha = .75f).compositeOver(Color.Black)), c, r * 1.1f), r * 1.1f, c)
+                drawCircle(steel, r * 1.1f, c, alpha = .45f)
                 // the strobe dots of the platter rim (they turn with it)
                 rotate(spin, c) { for (i in 0 until 60) { val an = Math.toRadians(i * 6.0); drawCircle(Color.Black.copy(alpha = .45f), s * .0045f, Offset(c.x + (cos(an) * r * 1.075f).toFloat(), c.y + (sin(an) * r * 1.075f).toFloat())) } }
                 // the vinyl: black with a sheen, the lead-in ring, many fine grooves and the gaps between the tracks

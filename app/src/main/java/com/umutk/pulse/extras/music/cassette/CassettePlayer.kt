@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -112,7 +113,8 @@ private fun CassetteBody(engine: MusicPlayerEngine, st: PlaybackState, library: 
     val turn by rememberInfiniteTransition(label = "reel").animateFloat(0f, 360f, infiniteRepeatable(tween(2600, easing = LinearEasing), RepeatMode.Restart), label = "turn")
     val spin = if (st.isPlaying) turn else 0f
     val progress = if (dur > 0) (pos / dur.toFloat()).coerceIn(0f, 1f) else 0f
-    Box(modifier.background(cas.main)) {
+    val leather = rememberTexture(Tex.LEATHER)
+    Box(modifier.background(cas.main).drawBehind { drawRect(leather, alpha = .10f) }) {
         Column(Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 10.dp)) {
             Text("PULSE TAPE", color = cas.ink, fontSize = 30.sp, fontWeight = FontWeight.Black, fontStyle = FontStyle.Italic, letterSpacing = (-1).sp)
             Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(top = 4.dp)) {
@@ -138,7 +140,7 @@ private fun CassetteBody(engine: MusicPlayerEngine, st: PlaybackState, library: 
             }
             Spacer(Modifier.height(10.dp))
             // the keys of the deck
-            Row(Modifier.fillMaxWidth().background(cas.deck, RoundedCornerShape(14.dp)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().background(cas.deck, RoundedCornerShape(14.dp)).drawBehind { drawRect(leather, alpha = .30f) }.clip(RoundedCornerShape(14.dp)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 DeckKey("prev", Modifier.weight(1f), onClick = { engine.previous() })
                 DeckKey(if (st.isPlaying) "pause" else "play", Modifier.weight(1.3f), red = st.isPlaying, onClick = { if (st.queue.isEmpty()) shelf = true else engine.togglePlayPause() })
                 DeckKey("next", Modifier.weight(1f), onClick = { engine.next() })
@@ -197,6 +199,7 @@ private fun Toggle(icon: String, on: Boolean, onClick: () -> Unit) {
 @Composable
 private fun Cassette(track: Track?, spin: Float, progress: Float, modifier: Modifier) {
     val cas = LocalCas.current
+    val steel = rememberTexture(Tex.STEEL)
     BoxWithConstraints(modifier) {
         Canvas(Modifier.fillMaxSize()) {
             val w = size.width; val h = size.height
@@ -250,6 +253,7 @@ private fun Cassette(track: Track?, spin: Float, progress: Float, modifier: Modi
                 moveTo(w * .20f, h * .84f); lineTo(w * .80f, h * .84f); lineTo(w * .86f, h * .97f); lineTo(w * .14f, h * .97f); close()
             }
             drawPath(tp, Brush.verticalGradient(listOf(Color(0xFF8C887A), Color(0xFF55534A)), h * .84f, h * .97f))
+            drawPath(tp, steel, alpha = .4f)
             drawPath(tp, edge, style = Stroke(h * .006f))
             for (hx in listOf(.30f, .40f, .50f, .60f, .70f)) drawRoundRect(Color(0xFF14130E), Offset(w * hx - w * .016f, h * .875f), Size(w * .032f, h * .07f), CornerRadius(h * .01f))
             drawCircle(Color(0xFF14130E), h * .026f, Offset(w * .24f, h * .905f)); drawCircle(Color(0xFF14130E), h * .026f, Offset(w * .76f, h * .905f))
