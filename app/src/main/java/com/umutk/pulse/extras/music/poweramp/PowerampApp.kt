@@ -146,8 +146,8 @@ fun PowerampApp(
     // the list pages; also drawn under the now playing page while it is pulled down, so the page it lands on is already there (no jump at the hand-over)
     val tabBody: @Composable (PowerampTab) -> Unit = { t ->
         when (t) {
-            PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it) }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i) })
-            PowerampTab.SEARCH -> SearchGated(library, track, style, onPlay = { engine.playQueue(library, it) })
+            PowerampTab.LIBRARY -> LibraryScreen(library, track, style, onPlay = { engine.playQueue(library, it); tab = null }, queue = st.queue, onPlayTracks = { l, i -> engine.playQueue(l, i); tab = null })
+            PowerampTab.SEARCH -> SearchGated(library, track, style, onPlay = { engine.playQueue(library, it); tab = null })
             PowerampTab.EFFECTS -> EffectsScreen(engine.equalizer, style, engine = engine, ui = eqUi)
             PowerampTab.QUEUE -> QueueScreen(
                 tracks = st.queue,
