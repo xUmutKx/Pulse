@@ -2124,3 +2124,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Authenticator: kayıtlı hesaplar açılamazsa (Keystore anahtarı eşleşmiyor) dosya kenara alınır, yeni hesap eklenebilir (derlenmedi)
 
 - Klavye: hızlı yazarken otomatik büyük harf sonraki 2-3 harfe de bulaşıyordu; kelime içinde küçük kalır (derlenmedi)
+
+- Poweramp: kütüphane/arama listesinde şarkıya basınca now playing tam ekran açılır (derlenmedi)
