@@ -2103,3 +2103,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 1.0.360 derlendi: Play için AAB ve alpha yükleme dosyası; Premium Google Play'de tek seferlik ürün (pulse_premium); sayfa içi ikinci reklamlar kaldırıldı; depolama açılır-kapanır; kilit/pano simgeleri bardan kaldırıldı; OpenSubtitles anahtarı yapıştırılabiliyor; Pulse yedeği (favori ve yıldızlar); hava widget'ları sadeleşti; imza sabit ci/pulse.keystore
 - (sonraki güncelleme) Play sürümü minSdk 24 (Google Play gereği); FOSS sürümü minSdk 21/31 aynı kaldı. derlenmedi
 1.0.361 derlendi: Play sürümü minSdk 24; ilk sürüm sürüm notları
+1.0.362 derlendi: Play için billing 8.0.0, hedef API 36 (play), compileSdk 36, yerel sembol; 762 zaten Play'de olduğu için 763
