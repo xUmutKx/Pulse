@@ -58,6 +58,7 @@ import com.umutk.pulse.extras.music.PlaybackState
 import com.umutk.pulse.extras.music.Track
 import com.umutk.pulse.tr
 import kotlinx.coroutines.delay
+import androidx.compose.ui.graphics.compositeOver
 import kotlin.math.cos
 import kotlin.math.sin
 
@@ -92,27 +93,53 @@ fun TurntablePlayer(engine: MusicPlayerEngine, st: PlaybackState, library: List<
         Box(Modifier.weight(1f).fillMaxWidth().padding(vertical = 12.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxWidth().aspectRatio(1f).pointerInput(Unit) { detectTapGestures { if (st.queue.isEmpty()) list = true else engine.togglePlayPause() } }) {
                 val s = size.minDimension; val c = Offset(size.width * .46f, size.height * .52f); val r = s * .40f
-                // the platter and the record
-                drawCircle(th.metal, r * 1.07f, c)
-                drawCircle(Color(0xFF0C0C0D), r, c)
-                for (k in 1..9) drawCircle(Color.White.copy(alpha = .05f), r * (0.42f + k * .055f), c, style = Stroke(1f))
+                // the plinth edge: a soft shadow and a lighter rim under the platter
+                drawCircle(Color.Black.copy(alpha = .35f), r * 1.14f, Offset(c.x + s * .012f, c.y + s * .016f))
+                drawCircle(Brush.radialGradient(listOf(th.metal, th.metal.copy(alpha = .75f).compositeOver(Color.Black)), c, r * 1.1f), r * 1.1f, c)
+                // the strobe dots of the platter rim (they turn with it)
+                rotate(spin, c) { for (i in 0 until 60) { val an = Math.toRadians(i * 6.0); drawCircle(Color.Black.copy(alpha = .45f), s * .0045f, Offset(c.x + (cos(an) * r * 1.075f).toFloat(), c.y + (sin(an) * r * 1.075f).toFloat())) } }
+                // the vinyl: black with a sheen, the lead-in ring, many fine grooves and the gaps between the tracks
+                drawCircle(Brush.radialGradient(listOf(Color(0xFF1B1B1D), Color(0xFF070708)), c, r), r, c)
+                for (k in 0..34) drawCircle(Color.White.copy(alpha = if (k % 7 == 0) .09f else .035f), r * (0.40f + k * .0165f), c, style = Stroke(1f))
+                for (g in listOf(.52f, .66f, .79f, .90f)) drawCircle(Color.Black.copy(alpha = .8f), r * g, c, style = Stroke(s * .004f))
+                drawCircle(Color.White.copy(alpha = .08f), r * .985f, c, style = Stroke(s * .006f))
                 rotate(spin, c) {
-                    // a shine that turns with the record, so the turning can be seen
-                    drawArc(Color.White.copy(alpha = .10f), -20f, 40f, true, Offset(c.x - r, c.y - r), androidx.compose.ui.geometry.Size(r * 2, r * 2))
-                    drawArc(Color.White.copy(alpha = .10f), 160f, 40f, true, Offset(c.x - r, c.y - r), androidx.compose.ui.geometry.Size(r * 2, r * 2))
+                    // two soft light wedges turn with the record, so the turning can be seen
+                    drawArc(Brush.sweepGradient(listOf(Color.White.copy(alpha = .14f), Color.Transparent), c), -22f, 44f, true, Offset(c.x - r, c.y - r), androidx.compose.ui.geometry.Size(r * 2, r * 2))
+                    drawArc(Brush.sweepGradient(listOf(Color.White.copy(alpha = .14f), Color.Transparent), c), 158f, 44f, true, Offset(c.x - r, c.y - r), androidx.compose.ui.geometry.Size(r * 2, r * 2))
+                    // the paper label: the colour, a ring of print, a lighter inner disc
                     drawCircle(th.label, r * .36f, c)
-                    drawCircle(Color.Black.copy(alpha = .25f), r * .36f, c, style = Stroke(2f))
-                    drawLine(Color.White.copy(alpha = .55f), Offset(c.x, c.y - r * .30f), Offset(c.x, c.y - r * .12f), 4f, StrokeCap.Round)
+                    drawCircle(Color.White.copy(alpha = .18f), r * .30f, c, style = Stroke(s * .004f))
+                    drawCircle(Color.Black.copy(alpha = .18f), r * .36f, c, style = Stroke(s * .004f))
+                    for (i in 0 until 24) { val an = Math.toRadians(i * 15.0); drawLine(Color.Black.copy(alpha = .35f), Offset(c.x + (cos(an) * r * .25f).toFloat(), c.y + (sin(an) * r * .25f).toFloat()), Offset(c.x + (cos(an) * r * .275f).toFloat(), c.y + (sin(an) * r * .275f).toFloat()), s * .003f) }
+                    drawLine(Color.White.copy(alpha = .55f), Offset(c.x, c.y - r * .20f), Offset(c.x, c.y - r * .08f), 4f, StrokeCap.Round)
                 }
-                drawCircle(th.metal, r * .045f, c)
-                // the tonearm: pivot at the top right, the head swings over the record
+                // the spindle
+                drawCircle(Brush.radialGradient(listOf(Color.White, th.metal), c, r * .05f), r * .05f, c)
+                // the tonearm: a round base with a ring, the counterweight behind the pivot, the tube and the headshell with its cartridge
                 val pivot = Offset(size.width * .86f, size.height * .12f)
-                drawCircle(th.metal, s * .045f, pivot); drawCircle(th.baseDark, s * .02f, pivot)
+                drawCircle(Color.Black.copy(alpha = .3f), s * .07f, Offset(pivot.x + s * .008f, pivot.y + s * .01f))
+                drawCircle(Brush.radialGradient(listOf(Color.White.copy(alpha = .7f), th.metal), pivot, s * .065f), s * .065f, pivot)
+                drawCircle(th.baseDark, s * .036f, pivot); drawCircle(th.metal, s * .018f, pivot)
                 val len = s * .62f
                 val a = Math.toRadians((100.0 + armAngle * 1.9))
-                val head = Offset(pivot.x + (cos(a) * len).toFloat(), pivot.y + (sin(a) * len).toFloat())
+                val ux = cos(a).toFloat(); val uy = sin(a).toFloat()
+                val head = Offset(pivot.x + ux * len, pivot.y + uy * len)
+                val tail = Offset(pivot.x - ux * s * .13f, pivot.y - uy * s * .13f)
+                drawLine(Color.Black.copy(alpha = .3f), Offset(pivot.x + 3f, pivot.y + 4f), Offset(head.x + 3f, head.y + 4f), s * .017f, StrokeCap.Round)
                 drawLine(th.metal, pivot, head, s * .017f, StrokeCap.Round)
-                drawCircle(th.metal, s * .02f, head)
+                drawLine(Color.White.copy(alpha = .5f), Offset(pivot.x - 1f, pivot.y - 1f), Offset(head.x - 1f, head.y - 1f), s * .004f, StrokeCap.Round)
+                drawLine(Color(0xFF3A3A3D), pivot, tail, s * .05f, StrokeCap.Round)
+                drawCircle(Color(0xFF55555A), s * .026f, tail)
+                // the headshell and its small cartridge
+                rotate(Math.toDegrees(a).toFloat() - 90f + 14f, head) {
+                    drawRoundRect(Color(0xFF2A2A2C), Offset(head.x - s * .018f, head.y - s * .008f), androidx.compose.ui.geometry.Size(s * .036f, s * .06f), androidx.compose.ui.geometry.CornerRadius(s * .006f))
+                    drawRect(th.label, Offset(head.x - s * .012f, head.y + s * .036f), androidx.compose.ui.geometry.Size(s * .024f, s * .012f))
+                }
+                // the rest post and a speed indicator lamp at the lower left
+                drawRoundRect(th.metal, Offset(size.width * .92f, size.height * .78f), androidx.compose.ui.geometry.Size(s * .02f, s * .09f), androidx.compose.ui.geometry.CornerRadius(s * .01f))
+                drawCircle(if (st.isPlaying) Color(0xFF5CFF7A) else Color(0xFF3A5A40), s * .014f, Offset(size.width * .06f, size.height * .93f))
+                drawCircle(Color.White.copy(alpha = .35f), s * .014f, Offset(size.width * .06f, size.height * .93f), style = Stroke(1.5f))
             }
         }
         Row(Modifier.fillMaxWidth().padding(bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterHorizontally), verticalAlignment = Alignment.CenterVertically) {

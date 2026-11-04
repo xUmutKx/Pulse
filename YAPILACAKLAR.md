@@ -2128,3 +2128,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Poweramp: kütüphane/arama listesinde şarkıya basınca now playing tam ekran açılır (derlenmedi)
 
 - Winamp: Media library düğmesi playlist penceresinin stilinde; RADIO sekmesi istasyonları kendiliğinden çeker (ülkeye göre en çok dinlenenler) + arama, elle ekleme kalktı (derlenmedi)
+
+- Kaset, pikap, iPod: çok daha ayrıntılı çizim (vidalar, makara paketleri, etiket çizgileri, plak olukları, kol/karşı ağırlık, iPod ekran/pil/tekerlek gradyanları) (derlenmedi)
