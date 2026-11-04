@@ -227,8 +227,8 @@ fun AllColorsCard(app: AppRow, mode: Privilege.Mode) {
     var editing by remember(app.pkg) { mutableStateOf<Candidate?>(null) }
     var made by remember(app.pkg) { mutableStateOf(Overlays.overrides(sp, app.pkg)) }
     var query by remember(app.pkg) { mutableStateOf("") }
-    var open by remember(app.pkg) { mutableStateOf(false) }
-    var onlyDark by remember(app.pkg) { mutableStateOf(true) }
+    var open by remember(app.pkg) { mutableStateOf(mode != Privilege.Mode.None) }
+    var onlyDark by remember(app.pkg) { mutableStateOf(false) }
     var pickedFrom by remember(app.pkg) { mutableStateOf("FFFFFF") }
     var showAll by remember(app.pkg) { mutableStateOf(false) }
     val canOv = !Overlays.refused(app.pkg)
@@ -277,6 +277,15 @@ fun AllColorsCard(app: AppRow, mode: Privilege.Mode) {
                 msg = if (ok) "$label (${cands.size}). " + tr("Reopen the app. If nothing changes, the app does not use these colours.", "Uygulamayı yeniden açın. Değişmezse uygulama bu renkleri kullanmıyordur.") else text
                 busy = false
             }
+        }
+        // with root or Shizuku everything is on by default: the colours are read when the card opens, and the first time the app's light
+        // backgrounds go black and its grey text goes white (kept per app; "Restore original" turns it off, Apply again turns it back on)
+        LaunchedEffect(app.pkg, mode, canOv) {
+            if (mode == Privilege.Mode.None || !canOv) return@LaunchedEffect
+            val list = all ?: withContext(Dispatchers.IO) { runCatching { Arsc.scan(app.sourceDir, all = true).candidates }.getOrDefault(emptyList()) }.also { scanned[app.pkg to app.sourceDir] = it; all = it }
+            if (sp.getBoolean("auto_done_${app.pkg}", false) || made.isNotEmpty()) return@LaunchedEffect
+            sp.edit().putBoolean("auto_done_${app.pkg}", true).apply()
+            quick(list.filter { isBg(it.name) && lumOf(it.color) > .8f }, 0xFF000000.toInt(), "Backgrounds made black")
         }
         if (open && canOv) all?.let { list ->
             PNameField(query, { query = it }, tr("Search colours", "Renklerde ara"), Modifier.fillMaxWidth().padding(top = 6.dp))
