@@ -155,7 +155,7 @@ fun WinampScreen(
             )
             // the media library (library and internet radio) opens under the playlist, from its own button
             if (showLib) WinampLibraryWindow(skin, engine, { showLib = false }, sEff)
-            com.umutk.pulse.PButton(tr("Media library", "Medya kütüphanesi")) { showLib = !showLib }
+            WinampTextButton(skin, tr("MEDIA LIBRARY", "MEDYA KÜTÜPHANESİ"), showLib, sEff) { showLib = !showLib }
             if (lyricsOn) WinampLyricsPane(skin, st.current, pos, { engine.seekTo(it) }, sEff)
             if (showEq) WinampEqWindow(
                 skin = skin, enabled = eqEnabled, bandHz = eq.centerFrequenciesHz, range = eq.levelRange, levels = bands,
@@ -288,4 +288,16 @@ private fun WinampArt(art: ImageBitmap?, scaleDp: Float) {
             if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Fit)
         }
     }
+}
+
+/** A flat button of the playlist window's own look (its colours and pixel font), as wide as the windows: the media library button. */
+@Composable
+private fun WinampTextButton(skin: com.umutk.pulse.extras.music.skin.WinampSkin, label: String, on: Boolean, scaleDp: Float, onClick: () -> Unit) {
+    val c = skin.playlist
+    val font = com.umutk.pulse.BundledFonts.first { it.first == "Press Start 2P" }.second
+    Box(
+        Modifier.width((WINAMP_W * scaleDp).dp).height((16 * scaleDp).dp).background(if (on) c.selectedBg else c.normalBg)
+            .border(1.dp, Color(0xFF5A6070)).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { Text(label, color = if (on) c.current else c.normal, fontFamily = font, fontSize = maxOf(8f * scaleDp, 10f).sp, maxLines = 1) }
 }
