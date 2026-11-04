@@ -2120,3 +2120,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) Poweramp widget ayarları: yazı tipi (7), başlık/sanatçı/düğme/vurgu rengi, düğme stili (dolu/çerçeve) ve boyutu, albüm/sayaç/karıştır-tekrar/ilerleme çizgisi aç-kapa, sıfırla; önizleme canlı. derlenmedi
 
 - BlackOut: root/Shizuku ile "Tüm renkler" kartı varsayılan açık, renkler kendiliğinden taranır, ilk açılışta açık zeminler siyaha çevrilir; "Yalnız koyu renkler" varsayılan kapalı (derlenmedi)
+
+- Authenticator: kayıtlı hesaplar açılamazsa (Keystore anahtarı eşleşmiyor) dosya kenara alınır, yeni hesap eklenebilir (derlenmedi)

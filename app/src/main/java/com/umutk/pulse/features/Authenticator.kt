@@ -146,6 +146,12 @@ internal object AuthStore {
         }
     }
 
+    /** The saved file cannot be opened with this phone's key (key lost after a reinstall, restore or lock-screen change): it is set aside, not deleted, so adding works again. */
+    fun quarantine(ctx: Context): Boolean {
+        val f = File(ctx.filesDir, FILE)
+        return f.exists() && f.renameTo(File(ctx.filesDir, "$FILE.unreadable-${System.currentTimeMillis()}"))
+    }
+
     fun save(ctx: Context, list: List<Acct>) {
         val arr = JSONArray()
         list.forEach { a ->
@@ -290,7 +296,11 @@ fun AuthenticatorScreen(back: () -> Unit) {
     LaunchedEffect(Unit) {
         withContext(Dispatchers.IO) { runCatching { AuthStore.load(ctx) } }.fold(
             onSuccess = { accounts = it },
-            onFailure = { loadErr = "Saved accounts could not be opened: ${it.message}" }
+            onFailure = {
+                // usually the Keystore key no longer matches the file (reinstall or restore): keep the old file aside and let new accounts be added
+                if (withContext(Dispatchers.IO) { runCatching { AuthStore.quarantine(ctx) }.getOrDefault(false) }) msg = "Earlier accounts could not be decrypted with this phone's key (${it.javaClass.simpleName}). Add them again or restore a backup."
+                else loadErr = "Saved accounts could not be opened: ${it.javaClass.simpleName} ${it.message}"
+            }
         )
     }
     // Wake at each whole second so the codes change right at the period boundary.
