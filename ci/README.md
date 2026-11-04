@@ -1,5 +1,6 @@
 # Signing key
 
-`pulse.keystore` signs every release build (GitHub Actions and the Termux script), so a new APK installs over the previous one.
-The key is public because this repository is. It only proves that an APK came from this project's builds; do not reuse it for anything else.
-To move to a private key later, replace the file and the passwords in `app/build.gradle.kts` (installed copies must be uninstalled once).
+Releases are signed with a private key that is not in this repository. It lives in the GitHub Actions secrets
+`PULSE_KEYSTORE_B64` (the keystore, base64), `PULSE_STORE_PASSWORD` and `PULSE_KEY_PASSWORD` (alias `pulse`).
+The workflow decodes it into a temporary file and passes it to Gradle through `PULSE_KEYSTORE`, `PULSE_STORE_PASSWORD` and `PULSE_KEY_PASSWORD`.
+Without them (forks, local builds) the release is signed with the debug key.
