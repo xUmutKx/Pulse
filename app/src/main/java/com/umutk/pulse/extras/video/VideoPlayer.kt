@@ -695,24 +695,15 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     }
                     VBtn({ if (many) player.seekToNextMediaItem() else player.seekTo(player.currentPosition + step); poke++ }) { if (many) com.umutk.pulse.extras.ui.TIcon("next", Color.White, 26.dp, sk.icons) else Tag("+${prefs.dtapSec}", false, Color.White) }
                 }
-            // the bottom bar: a black fade over the picture; the time and the seek bar on top, the controls in one even row below.
-            // No scrolling row: a tap on a control always reaches it. Controls past the sixth are in the More sheet.
-            Column(
-                Modifier.align(Alignment.BottomCenter).fillMaxWidth()
-                    .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000))))
-                    .pointerInput(Unit) { detectTapGestures {} }
-                    .then(if (sk.bevel) Modifier.bevel(true) else Modifier)
-                    .padding(horizontal = 12.dp, vertical = 4.dp)
-            ) {
+            // the bottom bar is a see-through black fade over the picture, whatever the skin (the skin colour used to cover it)
+            Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color.Transparent, Color(0xCC000000)))).pointerInput(Unit) { detectTapGestures {} }.then(if (sk.bevel) Modifier.bevel(true) else Modifier).padding(horizontal = 12.dp, vertical = 4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(clock(pos), color = fg, fontSize = 12.sp)
                     SkinSeek(pos.toFloat(), dur.toFloat(), sk, { seeking = true; pos = it.toLong(); poke++ }, { seeking = false; player.seekTo(pos) }, Modifier.weight(1f).padding(horizontal = 8.dp))
                     Text(if (remaining) "-" + clock(dur - pos) else clock(dur), Modifier.clickable { remaining = !remaining; prefs.showRemaining = remaining }, color = fg, fontSize = 12.sp)
                 }
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                    barList(prefs.barButtons).take(6).forEach { id ->
-                        SkinBtn(sk, { runControl(id) }, size = 40.dp) { ControlGlyph(id, fg, sk, controlOn(id)) }
-                    }
+                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    barList(prefs.barButtons).forEach { id -> SkinBtn(sk, { runControl(id) }) { ControlGlyph(id, fg, sk, controlOn(id)) } }
                 }
             }
         }
