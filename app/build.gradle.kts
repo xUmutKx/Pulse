@@ -17,11 +17,11 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
-    // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
+    // release key: private, kept in GitHub Actions secrets (see ci/README.md); the workflow writes it to a file and passes its path
     signingConfigs {
         create("pulse") {
-            storeFile = rootProject.file("ci/pulse.keystore")
-            storePassword = "pulsepulse"; keyAlias = "pulse"; keyPassword = "pulsepulse"
+            storeFile = file(System.getenv("PULSE_KEYSTORE") ?: "pulse-missing.keystore")
+            storePassword = System.getenv("PULSE_STORE_PASSWORD"); keyAlias = "pulse"; keyPassword = System.getenv("PULSE_KEY_PASSWORD")
         }
     }
     // foss: the full app, no ads and no Google SDK; play: the same app with the AdMob ads (src/play)
