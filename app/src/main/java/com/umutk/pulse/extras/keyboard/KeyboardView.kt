@@ -437,8 +437,8 @@ private fun Trail(th: KbTheme, st: KbState) {
 private fun kbBarHeight(): androidx.compose.ui.unit.Dp {
     val cfg = androidx.compose.ui.platform.LocalConfiguration.current
     // the floating keyboard keeps its bar slim, so its keys get the room
-    if (KeyboardPrefs.floatNow) return 31.dp
-    return if (cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.screenWidthDp < 600) 30.dp else 44.dp
+    if (KeyboardPrefs.floatNow) return 24.dp
+    return if (cfg.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE && cfg.screenWidthDp < 600) 24.dp else 34.dp
 }
 
 @OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
