@@ -21,6 +21,8 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.offset
 import androidx.compose.animation.core.Animatable
@@ -1073,7 +1075,7 @@ fun DragDismissPill(
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
-    // a plain swipe in any direction (no long press): about 240 dp of travel; the pill follows the finger and shrinks a little,
+    // a plain swipe in any direction: about 240 dp of travel; the pill follows the finger and shrinks a little,
     // the circle grows out of it, and past 60 % of the way the alarm is dismissed; short of that it springs back
     val travel = with(LocalDensity.current) { 240.dp.toPx() }
     val closeAt = .6f
@@ -1084,12 +1086,20 @@ fun DragDismissPill(
     val currentReveal by rememberUpdatedState(onReveal)
     val currentDismiss by rememberUpdatedState(onDismiss)
     LaunchedEffect(progress.value) { currentReveal(progress.value, center) }
-    RingingActionPill(
-        text = text,
-        onClick = { },
-        containerColor = containerColor,
-        contentColor = contentColor,
-        fontFamily = fontFamily,
+
+    fun settle(total: Offset) {
+        if (finished.value) return
+        if (total.getDistance() / travel >= closeAt) {
+            finished.value = true
+            scope.launch { progress.animateTo(1f, tween(160)); currentDismiss() }
+        } else {
+            scope.launch { progress.animateTo(0f, spring()) }
+            scope.launch { shift.animateTo(Offset.Zero, spring()) }
+        }
+    }
+
+    Box(
+        contentAlignment = Alignment.Center,
         modifier = modifier
             .onGloballyPositioned { center = it.positionInRoot() + Offset(it.size.width / 2f, it.size.height / 2f) }
             .graphicsLayer {
@@ -1099,34 +1109,42 @@ fun DragDismissPill(
                 scaleX = s
                 scaleY = s
             }
+            .clip(RoundedCornerShape(50))
+            .background(containerColor)
+            // a plain Box with its own gesture: no button in the way, so a press and a drag always reach it
             .pointerInput(Unit) {
-                var total = Offset.Zero
-                fun settle() {
-                    if (finished.value) return
-                    if (total.getDistance() / travel >= closeAt) {
-                        finished.value = true
-                        scope.launch { progress.animateTo(1f, tween(160)); currentDismiss() }
-                    } else {
-                        scope.launch { progress.animateTo(0f, spring()) }
-                        scope.launch { shift.animateTo(Offset.Zero, spring()) }
-                    }
-                }
-                detectDragGestures(
-                    onDragStart = { total = Offset.Zero },
-                    onDragEnd = { settle() },
-                    onDragCancel = { settle() },
-                    onDrag = { change, drag ->
-                        change.consume()
-                        if (!finished.value) {
-                            total += drag
-                            val p = (total.getDistance() / travel).coerceIn(0f, 1f)
-                            val moved = total * .5f
-                            scope.launch { progress.snapTo(p); shift.snapTo(moved) }
+                awaitEachGesture {
+                    awaitFirstDown(requireUnconsumed = false)
+                    var total = Offset.Zero
+                    var up = false
+                    while (!up) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull() ?: break
+                        if (change.pressed) {
+                            change.consume()
+                            if (!finished.value) {
+                                total += change.positionChange()
+                                val p = (total.getDistance() / travel).coerceIn(0f, 1f)
+                                val moved = total * .5f
+                                scope.launch { progress.snapTo(p); shift.snapTo(moved) }
+                            }
+                        } else {
+                            up = true
+                            settle(total)
                         }
                     }
-                )
+                }
             }
-    )
+            .padding(horizontal = 56.dp, vertical = 18.dp)
+    ) {
+        Text(
+            text = text,
+            color = contentColor,
+            fontFamily = fontFamily,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 18.sp
+        )
+    }
 }
 
 @Composable

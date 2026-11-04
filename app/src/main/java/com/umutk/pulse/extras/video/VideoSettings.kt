@@ -110,7 +110,7 @@ private fun SubPreview(p: VideoPrefs) {
     Box(Modifier.fillMaxWidth().background(Color(0xFF3A4A5A), RoundedCornerShape(10.dp)).padding(vertical = 18.dp), contentAlignment = Alignment.Center) {
         Text(
             "Subtitle  Altyazı", Modifier.background(if (p.subBg) Color.Black.copy(alpha = p.subBgAlpha / 100f) else Color.Transparent).padding(horizontal = 6.dp),
-            style = TextStyle(color = c, fontSize = p.subSize.sp, fontFamily = fam, fontWeight = if (p.subBold) FontWeight.Bold else FontWeight.Normal, shadow = shadow),
+            style = TextStyle(color = c, fontSize = subTextSp(p).sp, fontFamily = fam, fontWeight = if (p.subBold) FontWeight.Bold else FontWeight.Normal, shadow = shadow),
         )
     }
 }
