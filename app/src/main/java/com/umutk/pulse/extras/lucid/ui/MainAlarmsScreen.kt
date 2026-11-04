@@ -829,6 +829,7 @@ fun MainAlarmsScreen(
             showVolumeSlider = volumePolicy == VolumePolicy.PER_ALARM,
             is24Hour = timeFormat.is24Hour,
             settingsDataStore = settingsDataStore,
+            recentAlarm = if (editingAlarm == null) alarms.filter { !it.isTrashed && System.currentTimeMillis() - it.createdAt in 0..300_000L }.maxByOrNull { it.createdAt } else null,
             onDismiss = { showEditSheet = false },
             onSave = { updatedAlarm ->
                 if (editingAlarm == null) {
