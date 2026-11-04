@@ -5,6 +5,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.material.icons.outlined.Crop
 import com.umutk.pulse.features.themeWallpaper
 import com.umutk.pulse.features.builtinWall
+import android.content.Context
 import android.content.Intent
 import com.umutk.pulse.features.ThemeWallPicture
 import com.umutk.pulse.features.setThemeWallPos
