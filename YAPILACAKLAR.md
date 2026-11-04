@@ -2083,3 +2083,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 1.0.355 derlendi: atla/özet için TheIntroDB ikinci kaynak, IntroDB/TVmaze anahtarsız dizi kimliği, intro önbelleği ad+boyut anahtarı; klavye (fiziksel Türkçe Q, öneri çubuğu, yüzen klavye hareketi), kalem paneli ve vurgulayıcı, altyazı arama ve CC seçimi
 - (sonraki güncelleme) Play sürümünde atla düğmesine basınca ödüllü reklam izlenir (her atlamada); foss'ta reklam yok
 1.0.356 derlendi: 1.0.355 derlemesi iptal edildi; play sürümünde atla düğmesi ödüllü reklam izletir (her atlamada); önceki değişiklikler aynen
+- (sonraki güncelleme) Play: atlamalarda her 3. atlamada ödüllü reklam (1 ve 2 doğrudan)
