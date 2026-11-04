@@ -14,10 +14,30 @@ internal data class Segs(val intro: LongRange?, val recap: LongRange?) {
     val empty: Boolean get() = intro == null && recap == null
 }
 
-/** Where the intro of an episode comes from, in order: IntroDB (community timestamps, no key), then the picture match of [IntroFinder]. */
+/** Where the intro of an episode comes from, in order: IntroDB, then TheIntroDB (both community timestamps, no key), then the picture match of [IntroFinder]. */
 internal object IntroSources {
     private const val INTRODB = "https://api.introdb.app/segments"
     private const val OS_API = "https://api.opensubtitles.com/api/v1"
+    private const val THEINTRODB = "https://api.theintrodb.org/v2/media"
+
+    /** TheIntroDB's intro and recap for one episode (the first range of each); empty when it has neither or the request fails. */
+    suspend fun theIntroDb(imdb: String, season: Int, episode: Int): Segs = withContext(Dispatchers.IO) {
+        runCatching {
+            val c = URL("$THEINTRODB?imdb_id=$imdb&season=$season&episode=$episode").openConnection() as HttpURLConnection
+            c.connectTimeout = 10_000; c.readTimeout = 10_000
+            c.setRequestProperty("Accept", "application/json")
+            val text = try { if (c.responseCode !in 200..299) return@runCatching Segs(null, null); c.inputStream.use { String(it.readBytes(), Charsets.UTF_8) } } finally { c.disconnect() }
+            val root = JSONObject(text)
+            Segs(firstRange(root.optJSONArray("intro")), firstRange(root.optJSONArray("recap")))
+        }.getOrElse { Segs(null, null) }
+    }
+
+    private fun firstRange(a: org.json.JSONArray?): LongRange? {
+        if (a == null || a.length() == 0) return null
+        val o = a.optJSONObject(0) ?: return null
+        val s = o.optLong("start_ms", -1L); val e = o.optLong("end_ms", -1L)
+        return if (s < 0 || e <= s) null else s until e
+    }
 
     /** IntroDB's intro and recap for one episode; empty when it has neither or the request fails. */
     suspend fun introDb(imdb: String, season: Int, episode: Int): Segs = withContext(Dispatchers.IO) {
@@ -80,6 +100,7 @@ internal object IntroSources {
         val (title, season, episode) = OpenSubs.episodeOf(file)
         if (season == null || episode == null) return null
         val imdb = showImdb(ctx, file) ?: return null
-        return introDb(imdb, season, episode).takeIf { !it.empty }
+        // IntroDB first; TheIntroDB for the episodes IntroDB does not have
+        return introDb(imdb, season, episode).takeIf { !it.empty } ?: theIntroDb(imdb, season, episode).takeIf { !it.empty }
     }
 }

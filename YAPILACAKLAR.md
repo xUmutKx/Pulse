@@ -2079,3 +2079,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 1.0.354 derlendi: 1.0.353 derlemesi iptal edildi; son değişiklikler: klavye (fiziksel Türkçe Q eşlemesi, Türkçe harf satırı kaldırıldı, öneri çubuğu ve yüzen klavye hareketi), kalem paneli, vurgulayıcı, notlar düzenleyici sadeleştirme, alt çubuk geri alındı, altyazı arama penceresi ve CC seçimi, video kaynak tarama düzeltmesi, kapak ticker/sayfası, alarm kaydırma
 - (sonraki güncelleme) Intro/atla verisi bölüm adı ve boyutuyla da saklanıyor; liste yüklenince yeniden aranıyor
 - (sonraki güncelleme) Atla/özet: OpenSubtitles anahtarı yoksa dizinin IMDb kimliği TVmaze'den (anahtarsız) alınıyor
+- (sonraki güncelleme) Atla/özet: üçüncü kaynak TheIntroDB (api.theintrodb.org/v2/media, anahtarsız); sıra IntroDB, TheIntroDB, görüntü eşleştirme
