@@ -448,13 +448,18 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     }
     // the intro: the saved one of this folder, or found by comparing this episode with the next (or previous) one
     var segs by remember { mutableStateOf<Segs?>(null) }
-    LaunchedEffect(cur) {
+    // runs again when the list has loaded (the first call may have seen no items yet)
+    LaunchedEffect(cur, items.size) {
         val me = items.getOrNull(cur) ?: return@LaunchedEffect
         val key = IntroCache.key(me.uri)
-        // 1) saved IntroDB result of this episode; 2) IntroDB now (intro and recap, by the show's IMDb id); 3) saved picture match; 4) a picture match now
-        IntroCache.get(ctx, key, IntroCache.DB_FILE)?.let { segs = it; return@LaunchedEffect }
-        IntroSources.forFile(ctx, me.name)?.let { fromDb -> IntroCache.put(ctx, key, fromDb, IntroCache.DB_FILE); segs = fromDb; return@LaunchedEffect }
-        IntroCache.get(ctx, key, IntroCache.LOCAL_FILE)?.let { segs = it; return@LaunchedEffect }
+        val nkey = IntroCache.nameKey(me.name, me.size)
+        // 1) saved IntroDB result of this episode (by its address, then by its name and size); 2) IntroDB now (intro and recap, by the show's IMDb id); 3) saved picture match; 4) a picture match now
+        (IntroCache.get(ctx, key, IntroCache.DB_FILE) ?: IntroCache.get(ctx, nkey, IntroCache.DB_FILE))?.let { segs = it; return@LaunchedEffect }
+        IntroSources.forFile(ctx, me.name)?.let { fromDb ->
+            IntroCache.put(ctx, key, fromDb, IntroCache.DB_FILE); IntroCache.put(ctx, nkey, fromDb, IntroCache.DB_FILE)
+            segs = fromDb; return@LaunchedEffect
+        }
+        (IntroCache.get(ctx, key, IntroCache.LOCAL_FILE) ?: IntroCache.get(ctx, nkey, IntroCache.LOCAL_FILE))?.let { segs = it; return@LaunchedEffect }
         val other = items.getOrNull(cur + 1) ?: items.getOrNull(cur - 1)
         if (other != null) IntroFinder.find(ctx, me.uri, other.uri)?.let { found -> Segs(found, null).also { IntroCache.put(ctx, key, it, IntroCache.LOCAL_FILE); segs = it } }
     }
