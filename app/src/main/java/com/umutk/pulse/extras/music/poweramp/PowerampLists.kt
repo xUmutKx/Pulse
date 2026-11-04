@@ -7,6 +7,7 @@ import androidx.compose.material.icons.rounded.Shuffle
 import com.umutk.pulse.extras.music.shownArtist
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -48,6 +49,9 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material.icons.rounded.ArrowDownward
 import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.SelectAll
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.DragHandle
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.LibraryMusic
@@ -419,12 +423,51 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
     }
     // how the songs are laid out: one per row, or two or three to a row with the cover on top and the name under it
     var cols by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableIntStateOf(1) }
+    // many songs at once: a long press picks the first, a tap picks or drops the next ones; the bin deletes them after one question
+    var picked by remember { mutableStateOf(setOf<String>()) }
+    var askDelete by remember { mutableStateOf(false) }
+    val selecting = picked.isNotEmpty()
+    val scope = rememberCoroutineScope()
+    val sysDelete = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.StartIntentSenderForResult()) { r ->
+        if (r.resultCode == android.app.Activity.RESULT_OK) { android.widget.Toast.makeText(appCtx, tr("Deleted", "Silindi"), android.widget.Toast.LENGTH_SHORT).show(); picked = emptySet() }
+        com.umutk.pulse.extras.music.MusicLibrary.refresh(appCtx)
+    }
+    BackHandler(enabled = selecting) { picked = emptySet() }
+    fun toggle(t: Track) { picked = if (t.path in picked) picked - t.path else picked + t.path }
+    if (askDelete) com.umutk.pulse.WinAlert(
+        onDismissRequest = { askDelete = false },
+        title = { Text(tr("Delete ${picked.size} songs?", "${picked.size} şarkı silinsin mi?")) },
+        text = { Text(tr("The files are deleted from the phone. This cannot be undone.", "Dosyalar telefondan silinir. Bu geri alınamaz.")) },
+        confirmButton = {
+            androidx.compose.material3.TextButton(onClick = {
+                askDelete = false
+                val victims = songs.filter { it.path in picked }
+                scope.launch {
+                    val out = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { deleteTracks(appCtx, victims) }
+                    if (out.ask != null) {
+                        // Android 11 and newer: one system question for all the songs that were left
+                        runCatching { sysDelete.launch(androidx.activity.result.IntentSenderRequest.Builder(out.ask).build()) }
+                    } else {
+                        android.widget.Toast.makeText(appCtx, if (out.failed == 0) tr("Deleted", "Silindi") else tr("${out.deleted} deleted, ${out.failed} could not be", "${out.deleted} silindi, ${out.failed} silinemedi"), android.widget.Toast.LENGTH_SHORT).show()
+                        picked = emptySet()
+                        com.umutk.pulse.extras.music.MusicLibrary.refresh(appCtx)
+                    }
+                }
+            }) { Text(tr("Delete", "Sil")) }
+        },
+        dismissButton = { androidx.compose.material3.TextButton(onClick = { askDelete = false }) { Text(tr("Cancel", "Vazgeç")) } },
+    )
     val stars5: @Composable (Track, Dp) -> Unit = { t, sz ->
         val n = (starMap[t.path] ?: 0).coerceAtMost(5)
         if (n > 0) Row(verticalAlignment = Alignment.CenterVertically) { repeat(n) { Icon(Icons.Rounded.Star, null, tint = Color.White, modifier = Modifier.size(sz)) } }
     }
     val header: @Composable () -> Unit = {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+        if (selecting) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, tr("Cancel", "Vazgeç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
+            Text("${picked.size}", color = style.onBackdrop, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = songs.map { it.path }.toSet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.SelectAll, tr("Select all", "Tümünü seç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
+            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { askDelete = true }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Delete, tr("Delete", "Sil"), tint = Color(0xFFFF5A5F), modifier = Modifier.size(22.dp)) }
+        } else Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
             headerExtra()
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { cols = cols % 3 + 1 }, contentAlignment = Alignment.Center) {
@@ -438,7 +481,7 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
     if (cols == 1) LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
         top?.let { p -> item { p() } }
         item { header() }
-        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { onPlayTracks(songs, pos) }, trailing = {
+        itemsIndexed(items) { pos, (_, t) -> TrackRow(t, t == current, style, onClick = { if (selecting) toggle(t) else onPlayTracks(songs, pos) }, onLongClick = { toggle(t) }, checked = t.path in picked, trailing = {
             Box(Modifier.padding(end = 8.dp)) { stars5(t, 13.dp) }
         }) }
     } else androidx.compose.foundation.lazy.grid.LazyVerticalGrid(androidx.compose.foundation.lazy.grid.GridCells.Fixed(cols), Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 8.dp),
@@ -447,10 +490,13 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
         item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) { header() }
         gridItemsIndexed(items) { pos, (_, t) ->
             val art = rememberTrackArt(t)
-            Column(Modifier.clickable { onPlayTracks(songs, pos) }) {
+            Column(Modifier.combinedClickable(onClick = { if (selecting) toggle(t) else onPlayTracks(songs, pos) }, onLongClick = { toggle(t) })) {
                 Box(Modifier.fillMaxWidth().aspectRatio(1f).clip(RoundedCornerShape(10.dp)).background(style.chip), contentAlignment = Alignment.Center) {
                     if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                     else Icon(Icons.Rounded.MusicNote, null, tint = style.textDim, modifier = Modifier.size(32.dp))
+                    if (t.path in picked) Box(Modifier.fillMaxSize().background(style.accent.copy(alpha = .35f)), contentAlignment = Alignment.Center) {
+                        Icon(Icons.Rounded.Check, null, tint = Color.White, modifier = Modifier.size(34.dp))
+                    }
                 }
                 Text(t.displayName(), color = if (t == current) style.accent else style.onBackdrop, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                 stars5(t, 11.dp)
@@ -673,22 +719,30 @@ fun QueueScreen(
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 internal fun TrackRow(
     track: Track,
     selected: Boolean,
     style: PowerampStyle,
     onClick: () -> Unit,
+    onLongClick: (() -> Unit)? = null,
+    checked: Boolean = false,
     trailing: @Composable () -> Unit = {},
 ) {
     Row(
-        Modifier.fillMaxWidth().height(rowHeight).clickable(onClick = onClick).padding(start = 16.dp, end = 8.dp),
+        Modifier.fillMaxWidth().height(rowHeight).background(if (checked) style.accent.copy(alpha = .22f) else Color.Transparent)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(start = 16.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val art = rememberTrackArt(track)
         Box(Modifier.size(44.dp).clip(RoundedCornerShape(10.dp)).background(style.chip), contentAlignment = Alignment.Center) {
             if (art != null) Image(art, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
             else Icon(Icons.Rounded.MusicNote, null, tint = if (selected) style.accent else style.textDim, modifier = Modifier.size(22.dp))
+            // a picked song wears a check mark over its cover
+            if (checked) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = .55f)), contentAlignment = Alignment.Center) {
+                Icon(Icons.Rounded.Check, null, tint = style.accent, modifier = Modifier.size(26.dp))
+            }
         }
         Spacer(Modifier.width(14.dp))
         Column(Modifier.weight(1f)) {
