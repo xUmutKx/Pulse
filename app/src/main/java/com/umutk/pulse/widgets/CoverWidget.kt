@@ -2,6 +2,8 @@ package com.umutk.pulse.widgets
 
 import android.app.AlarmManager
 import android.app.PendingIntent
+import android.os.Handler
+import android.os.Looper
 import android.appwidget.AppWidgetManager
 import android.content.ComponentName
 import android.content.Context
@@ -33,6 +35,7 @@ open class CoverWidget : PulseWidget() {
     override fun onUpdate(ctx: Context, mgr: AppWidgetManager, ids: IntArray) {
         super.onUpdate(ctx, mgr, ids)
         scheduleTick(ctx)
+        CoverTicker.start(ctx)
     }
 
     override fun onReceive(ctx: Context, intent: Intent) {
@@ -41,7 +44,7 @@ open class CoverWidget : PulseWidget() {
                 if (CoverService.running) CoverService.stop(ctx) else CoverService.start(ctx)
                 redrawAll(ctx)
             }
-            ACTION_TICK -> redrawAll(ctx)
+            ACTION_TICK -> { redrawAll(ctx); CoverTicker.start(ctx) }
             else -> super.onReceive(ctx, intent)
         }
     }
@@ -77,6 +80,31 @@ open class CoverWidget : PulseWidget() {
             }
             return any
         }
+    }
+}
+
+/**
+ * Redraws the placed screen cover widgets once a second, so the second hand and the seconds are live. The ticker runs only while a cover widget is placed.
+ * The app process runs it; if the system stops the process, the minute alarm starts it again.
+ */
+object CoverTicker {
+    private val handler = Handler(Looper.getMainLooper())
+    private var app: Context? = null
+    private var running = false
+    private val tick = object : Runnable {
+        override fun run() {
+            val c = app
+            if (c == null || !CoverWidget.refreshAll(c)) { running = false; return }
+            // the next redraw lands on the next whole second
+            handler.postDelayed(this, 1000L - System.currentTimeMillis() % 1000L)
+        }
+    }
+
+    fun start(ctx: Context) {
+        app = ctx.applicationContext
+        if (running) return
+        running = true
+        handler.post(tick)
     }
 }
 

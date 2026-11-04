@@ -101,10 +101,13 @@ internal fun subStyle(prefs: VideoPrefs): CaptionStyleCompat = CaptionStyleCompa
     }, Color.BLACK, subTypeface(prefs),
 )
 
+/** The subtitle text size in sp: half the chosen size on the full screen, and a smaller share of it in the picture-in-picture window. */
+internal fun subTextSp(p: VideoPrefs, pip: Boolean = false): Float = p.subSize * (if (pip) .4f else .5f)
+
 /** Applies every subtitle option to the player's subtitle view. */
-internal fun SubtitleView.applySubPrefs(p: VideoPrefs) {
+internal fun SubtitleView.applySubPrefs(p: VideoPrefs, pip: Boolean = false) {
     setStyle(subStyle(p))
-    setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, p.subSize.toFloat())
+    setFixedTextSize(TypedValue.COMPLEX_UNIT_SP, subTextSp(p, pip))
     setApplyEmbeddedStyles(!p.subIgnoreStyle); setApplyEmbeddedFontSizes(!p.subIgnoreStyle)
     setBottomPaddingFraction(p.subPos.coerceIn(0, 40) / 100f)
     val m = (p.subMargin * resources.displayMetrics.density).toInt()
