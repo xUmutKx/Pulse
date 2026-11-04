@@ -2122,3 +2122,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - BlackOut: root/Shizuku ile "Tüm renkler" kartı varsayılan açık, renkler kendiliğinden taranır, ilk açılışta açık zeminler siyaha çevrilir; "Yalnız koyu renkler" varsayılan kapalı (derlenmedi)
 
 - Authenticator: kayıtlı hesaplar açılamazsa (Keystore anahtarı eşleşmiyor) dosya kenara alınır, yeni hesap eklenebilir (derlenmedi)
+
+- Klavye: hızlı yazarken otomatik büyük harf sonraki 2-3 harfe de bulaşıyordu; kelime içinde küçük kalır (derlenmedi)
