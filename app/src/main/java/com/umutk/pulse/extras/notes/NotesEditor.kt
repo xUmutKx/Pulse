@@ -146,9 +146,11 @@ fun NoteEditor(
         val t = bodyField.text
         val lo = minOf(bodyField.selection.min, bodyField.selection.max).coerceIn(0, t.length)
         val hi = maxOf(bodyField.selection.min, bodyField.selection.max).coerceIn(0, t.length)
-        val (out, cur) = if (kind == "bold") {
-            if (lo == hi) { val ins = "**" + tr("bold", "kalın") + "**"; (t.substring(0, lo) + ins + t.substring(hi)) to lo + ins.length }
-            else { val w = "**" + t.substring(lo, hi) + "**"; (t.substring(0, lo) + w + t.substring(hi)) to lo + w.length }
+        // bold wraps in **, the highlighter in ==; with nothing selected a word is put in to be replaced
+        val (out, cur) = if (kind == "bold" || kind == "highlight") {
+            val m = if (kind == "bold") "**" else "=="
+            if (lo == hi) { val ins = m + (if (kind == "bold") tr("bold", "kalın") else tr("highlighted", "vurgulu")) + m; (t.substring(0, lo) + ins + t.substring(hi)) to lo + ins.length }
+            else { val w = m + t.substring(lo, hi) + m; (t.substring(0, lo) + w + t.substring(hi)) to lo + w.length }
         } else {
             // a line marker goes at the start of the line where the selection starts
             val prefix = when (kind) { "heading" -> "## "; "bullet" -> "- "; else -> "[ ] " }
@@ -284,9 +286,10 @@ fun NoteEditor(
                 Triple("B", tr("Bold", "Kalın"), "bold"),
                 Triple("•", tr("Bullet", "Madde"), "bullet"),
                 Triple("☐", tr("Checklist", "Kontrol"), "check"),
+                Triple("▮", tr("Highlight", "Vurgula"), "highlight"),
             ).forEach { (label, desc, kind) ->
                 Box(Modifier.size(40.dp).clip(CircleShape).clickable { applyFmt(kind) }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
-                    Text(label, color = fg, fontSize = 17.sp, fontWeight = if (label == "B") FontWeight.Bold else FontWeight.SemiBold)
+                    Text(label, color = if (kind == "highlight") Color(0xFFFFD60A) else fg, fontSize = 17.sp, fontWeight = if (label == "B") FontWeight.Bold else FontWeight.SemiBold)
                 }
             }
         }
@@ -358,6 +361,7 @@ private fun NFieldTV(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, 
     BasicTextField(
         value, onChange, modifier,
         textStyle = TextStyle(color = ink, fontSize = size.sp),
+        visualTransformation = HighlightView,
         cursorBrush = SolidColor(T.accent),
         decorationBox = { inner ->
             Box(contentAlignment = Alignment.TopStart) {
