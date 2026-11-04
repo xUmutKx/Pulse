@@ -2126,3 +2126,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Klavye: hızlı yazarken otomatik büyük harf sonraki 2-3 harfe de bulaşıyordu; kelime içinde küçük kalır (derlenmedi)
 
 - Poweramp: kütüphane/arama listesinde şarkıya basınca now playing tam ekran açılır (derlenmedi)
+
+- Winamp: Media library düğmesi playlist penceresinin stilinde; RADIO sekmesi istasyonları kendiliğinden çeker (ülkeye göre en çok dinlenenler) + arama, elle ekleme kalktı (derlenmedi)
