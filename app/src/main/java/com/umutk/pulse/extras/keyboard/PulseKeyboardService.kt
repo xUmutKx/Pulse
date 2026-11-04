@@ -884,9 +884,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         }
         val w = slotWords.getOrNull(i).orEmpty()
         if (w.isEmpty()) return
-        if (emailField) {
+        if (emailField || atTokenNow()) {
             val before = c.getTextBeforeCursor(100, 0)?.toString().orEmpty()
-            if (w.startsWith("@") && '@' in before) c.deleteSurroundingText(before.length - before.lastIndexOf('@'), 0)
+            val tok = before.takeLastWhile { !it.isWhitespace() }
+            // a domain ("@outlook.com") replaces what stands after the typed "@"; a whole saved address replaces the typed beginning: the name is never written twice
+            if (w.startsWith("@") && '@' in tok) c.deleteSurroundingText(tok.length - tok.lastIndexOf('@'), 0)
+            else if ('@' in w && tok.isNotEmpty()) c.deleteSurroundingText(tok.length, 0)
             c.commitText(w, 1); afterText(); return
         }
         val isEmoji = !w[0].isLetterOrDigit()
@@ -1466,9 +1469,9 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 val local = tok.substringBefore('@')
                 val domainPart = tok.substringAfterLast('@')
                 val mine = saved.filter { it.startsWith(tok, true) && !it.equals(tok, true) }
+                // the domains are offered as "@gmail.com" alone: that is what is missing, it is short enough to read on the bar, and a tap puts only it after the typed name
                 val dom = domains.filter { it.startsWith("@" + domainPart, true) && it.length > domainPart.length + 1 }
-                    .map { local + it }
-                (mine + dom).distinct().take(8)
+                (dom + mine).distinct().take(8)
             }
             // the domains (@gmail.com ...) only after an "@" is typed; otherwise they would replace words that have nothing to do with e-mail
             else -> emptyList()
