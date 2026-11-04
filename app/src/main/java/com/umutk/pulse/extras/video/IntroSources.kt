@@ -37,10 +37,21 @@ internal object IntroSources {
         return if (a < 0 || b <= a) null else a until b
     }
 
+    /** The IMDb id of a show by its title, from TVmaze (free, no key); null when it is not found. */
+    private fun tvMazeImdb(title: String): String? = runCatching {
+        if (title.isBlank()) return@runCatching null
+        val c = URL("https://api.tvmaze.com/singlesearch/shows?q=" + URLEncoder.encode(title, "UTF-8")).openConnection() as HttpURLConnection
+        c.connectTimeout = 10_000; c.readTimeout = 10_000
+        c.setRequestProperty("Accept", "application/json")
+        val text = try { if (c.responseCode !in 200..299) return@runCatching null; c.inputStream.use { String(it.readBytes(), Charsets.UTF_8) } } finally { c.disconnect() }
+        JSONObject(text).optJSONObject("externals")?.optString("imdb", "")?.takeIf { it.startsWith("tt") }
+    }.getOrNull()
+
     /** The IMDb id of the show for a file name like "Dexter.S03E07...mkv", found through the OpenSubtitles key the user typed in. */
     suspend fun showImdb(ctx: Context, fileTitle: String): String? = withContext(Dispatchers.IO) {
         val key = OpenSubs.key(ctx)
-        if (key.isBlank()) return@withContext null
+        // no OpenSubtitles key: the show's IMDb id from TVmaze, which needs no key, by the show's title
+        if (key.isBlank()) return@withContext tvMazeImdb(OpenSubs.episodeOf(fileTitle).first)
         runCatching {
             val (title, season, episode) = OpenSubs.episodeOf(fileTitle)
             val q = StringBuilder("$OS_API/subtitles?query=${URLEncoder.encode(title, "UTF-8")}")
