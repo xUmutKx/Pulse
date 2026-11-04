@@ -528,15 +528,6 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
             }
             PSwitch(comb, { comb = it; onCombine(it) })
         }
-        // the large weather widget: the seven days, or the next seven hours
-        var hours by remember { mutableStateOf(WeatherStore.widgetHours(wctx)) }
-        Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text(tr("Forecast widget: next hours", "Tahmin widget'ı: sonraki saatler"), color = fg, fontSize = 16.sp)
-                Text(tr("Off shows the seven days", "Kapalıyken yedi gün gösterilir"), color = sub, fontSize = 12.sp)
-            }
-            PSwitch(hours, { hours = it; WeatherStore.setWidgetHours(wctx, it); WeatherWidgets.refreshAll(wctx) })
-        }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Severe weather alerts", "Sert hava uyarıları"), color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))
             PSwitch(alerts, onAlerts)
