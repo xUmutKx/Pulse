@@ -12,19 +12,16 @@ import com.umutk.pulse.R
 import com.umutk.pulse.features.CoverService
 
 /**
- * The screen cover as a widget: its clock face (analog here; the wide and tall sizes show the digital and matrix faces).
+ * The screen cover as a widget: the same page the cover shows (its colours, font and layout), in any size.
  * A tap turns the screen cover on or off, the same as its Quick settings tile. The clock redraws every minute.
  */
 open class CoverWidget : PulseWidget() {
-    /** The face this size shows: "analog", "digital" or "matrix". */
-    protected open val face: String get() = "analog"
-
     override fun content(ctx: Context, s: WidgetStyle): RemoteViews {
         val dens = ctx.resources.displayMetrics.density
         val sz = WidgetSize.dp(ctx, textId) ?: (110 to 110)
         val w = (sz.first * dens).toInt().coerceIn(120, 1400); val h = (sz.second * dens).toInt().coerceIn(120, 1400)
         return RemoteViews(ctx.packageName, R.layout.widget_usage).apply {
-            setImageViewBitmap(R.id.tile, CoverFaces.draw(ctx, face, w, h, System.currentTimeMillis()))
+            setImageViewBitmap(R.id.tile, CoverFaces.draw(ctx, CoverFaces.page(ctx), w, h, System.currentTimeMillis()))
             setViewVisibility(R.id.tile, View.VISIBLE)
             setViewVisibility(R.id.icon, View.GONE); setViewVisibility(R.id.title, View.GONE); setViewVisibility(R.id.value, View.GONE)
             setInt(R.id.root, "setBackgroundResource", 0)
@@ -51,14 +48,7 @@ open class CoverWidget : PulseWidget() {
 
     /** Every cover widget is drawn again (the clock moved, or the screen cover changed). */
     private fun redrawAll(ctx: Context) {
-        val mgr = AppWidgetManager.getInstance(ctx)
-        var any = false
-        listOf(CoverWidget(), CoverWideWidget(), CoverTallWidget()).forEach { w ->
-            mgr.getAppWidgetIds(ComponentName(ctx, w.javaClass)).forEach { id ->
-                any = true
-                mgr.updateAppWidget(id, w.contentFor(ctx, id, WidgetStyles.of(ctx, id)))
-            }
-        }
+        val any = refreshAll(ctx)
         if (!any) ctx.getSystemService(AlarmManager::class.java)?.cancel(tickPending(ctx))
     }
 
@@ -74,15 +64,24 @@ open class CoverWidget : PulseWidget() {
     companion object {
         const val ACTION_TOGGLE = "com.umutk.pulse.action.COVER_TOGGLE"
         const val ACTION_TICK = "com.umutk.pulse.action.COVER_TICK"
+
+        /** Draws every placed screen cover widget again (after the cover's page or its colours changed). Returns false when none is placed. */
+        fun refreshAll(ctx: Context): Boolean {
+            val mgr = AppWidgetManager.getInstance(ctx)
+            var any = false
+            listOf(CoverWidget(), CoverWideWidget(), CoverTallWidget()).forEach { w ->
+                mgr.getAppWidgetIds(ComponentName(ctx, w.javaClass)).forEach { id ->
+                    any = true
+                    mgr.updateAppWidget(id, w.contentFor(ctx, id, WidgetStyles.of(ctx, id)))
+                }
+            }
+            return any
+        }
     }
 }
 
-/** The screen cover in a wide cell (two across, one down): the digital face. */
-open class CoverWideWidget : CoverWidget() {
-    override val face: String get() = "digital"
-}
+/** The screen cover in a wide cell (two across, one down): the same page as the cover. */
+open class CoverWideWidget : CoverWidget()
 
-/** The screen cover in a tall cell (one across, two down): the matrix face. */
-open class CoverTallWidget : CoverWidget() {
-    override val face: String get() = "matrix"
-}
+/** The screen cover in a tall cell (one across, two down): the same page as the cover. */
+open class CoverTallWidget : CoverWidget()
