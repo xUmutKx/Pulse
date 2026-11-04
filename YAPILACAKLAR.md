@@ -2136,3 +2136,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - BlackOut LSPosed: modül açıkken her uygulamada (kendi kuralı yoksa) beyazlar uygulama açılırken otomatik siyah; "Her uygulamada otomatik" anahtarı (derlenmedi)
 
 - Klavye: çok hızlı yazınca öneri çubuğu yetişemiyordu; kelime biterken düzeltme o anda hesaplanır (derlenmedi)
+
+- Alarm: "Turn back on for Friday" artık perşembeyi atlar (kapatılan çalma atlanır, geri sayım ve zamanlama cuma olur); anahtarla açmak ilk çalmayı korur (derlenmedi)

@@ -106,6 +106,12 @@ class AlarmScheduler(private val context: Context) {
         return target.timeInMillis
     }
 
+    /** The next ring of [alarm] is skipped when it is switched on again ("Turn back on for Friday"); [clearSkip] forgets that. */
+    fun skipNextRing(alarm: AlarmEntity) {
+        AlarmSkip.set(context, alarm.id, calculateTriggerTimeMillis(alarm.hour, alarm.minute, alarm.daysOfWeek))
+    }
+    fun clearSkip(id: Int) = AlarmSkip.clear(context, id)
+
     fun scheduleAlarm(alarm: AlarmEntity, upcomingLeadMinutes: Int = 0) {
         if (!alarm.isEnabled) {
             cancelAlarm(alarm.id)
@@ -113,11 +119,11 @@ class AlarmScheduler(private val context: Context) {
         }
 
         runCatching {
-            val triggerAtMillis = calculateTriggerTimeMillis(
+            val triggerAtMillis = AlarmSkip.adjust(context, alarm.id, alarm.hour, alarm.minute, alarm.daysOfWeek, calculateTriggerTimeMillis(
                 hour24 = alarm.hour,
                 minute = alarm.minute,
                 daysOfWeek = alarm.daysOfWeek
-            )
+            ))
 
             setAlarmClockExact(
                 RETURN_CODE_FIRE_BASE + alarm.id,
