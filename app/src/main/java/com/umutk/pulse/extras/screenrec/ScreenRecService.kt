@@ -64,7 +64,7 @@ class ScreenRecService : Service() {
         )
         val audio = cfg.mic && androidx.core.content.ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         try {
-            val mp = getSystemService(MediaProjectionManager::class.java).getMediaProjection(i.getIntExtra(EXTRA_CODE, 0), data)
+            val mp = getSystemService(MediaProjectionManager::class.java).getMediaProjection(i.getIntExtra(EXTRA_CODE, 0), data) ?: error("no media projection")
             projection = mp
             mp.registerCallback(object : MediaProjection.Callback() { override fun onStop() = stopRecording() }, main)
             startRecording(mp, cfg, audio)
