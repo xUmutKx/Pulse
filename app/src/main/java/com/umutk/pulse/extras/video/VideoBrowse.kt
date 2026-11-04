@@ -62,6 +62,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupProperties
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.sp
 import com.umutk.pulse.LocalWindowLook
 import com.umutk.pulse.Look
@@ -357,35 +361,42 @@ private fun Thumb(v: VideoItem, modifier: Modifier, shape: androidx.compose.ui.g
     if (bmp != null) Image(bmp, null, modifier.clip(shape), contentScale = ContentScale.Crop)
 }
 
-/** View mode, sort field, order and layout in one window; [onMode] runs when the view mode changed. */
+/** View mode, sort field, order and layout in one popup under the sort button (top right, like the player's menu); [onMode] runs when the view mode or a setting changed. */
 @Composable
 private fun ViewOptions(p: VideoPrefs, onDismiss: () -> Unit, onMode: () -> Unit) {
-    val w = LocalWindowLook.current
+    val d = LocalDensity.current
+    val dx = with(d) { (-12).dp.roundToPx() }
+    val dy = with(d) { 52.dp.roundToPx() }
+    val modes = listOf(tr("Folders", "Klasörler") to "folder", tr("Files", "Dosyalar") to "video", tr("Tree", "Ağaç") to "view")
+    val sorts = listOf(
+        tr("Title", "Ad") to "edit", tr("Date added", "Eklenme") to "calendar", tr("Length", "Süre") to "timer",
+        tr("Size", "Boyut") to "storage", tr("Path", "Yol") to "folder", tr("Resolution", "Çözünürlük") to "details", tr("Modified", "Değişme") to "history",
+    )
     var rev by remember { mutableIntStateOf(0) }
-    rev.let { }
-    val modes = listOf(tr("Folders", "Klasörler"), tr("Files", "Dosyalar"), tr("Tree", "Ağaç"))
-    val sorts = listOf(tr("Title", "Ad"), tr("Date added", "Eklenme"), tr("Length", "Süre"), tr("Size", "Boyut"), tr("Path", "Yol"), tr("Resolution", "Çözünürlük"), tr("Modified", "Değişme"))
-    @Composable fun group(head: String, names: List<String>, cur: Int, set: (Int) -> Unit) {
-        Text(head, color = Look.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
-        names.forEachIndexed { i, n ->
-            Row(Modifier.fillMaxWidth().clickable { set(i); rev++ }.padding(vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                PRadio(cur == i) { set(i); rev++ }; Spacer(Modifier.width(8.dp)); Text(n, color = w.text, fontSize = 14.sp)
+    @Composable fun group(head: String, items: List<Pair<String, String>>, cur: Int, set: (Int) -> Unit) {
+        Text(head, color = Color(0xFF8AB4FF), fontSize = 12.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 10.dp, top = 8.dp, bottom = 2.dp))
+        items.forEachIndexed { i, (n, icon) ->
+            Row(
+                Modifier.fillMaxWidth().height(42.dp).clip(RoundedCornerShape(10.dp)).clickable { set(i); rev++ }.padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PIcon(icon, if (cur == i) Color(0xFF8AB4FF) else Color.White, 18.dp)
+                Spacer(Modifier.width(10.dp))
+                Text(n, color = Color.White, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                if (cur == i) PIcon("check", Color(0xFF8AB4FF), 16.dp)
             }
         }
     }
-    WinAlert(
-        onDismissRequest = onDismiss,
-        title = { Text(tr("View", "Görünüm"), color = w.text) },
-        text = {
-            Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
-                group(tr("View", "Görünüm"), modes, p.browse) { p.browse = it; onMode() }
-                group(tr("Sort", "Sırala"), sorts, p.sortBy) { p.sortBy = it }
-                group(tr("Order", "Sıra"), listOf(tr("Ascending", "Artan"), tr("Descending", "Azalan")), if (p.sortDesc) 1 else 0) { p.sortDesc = it == 1 }
-                group(tr("Layout", "Düzen"), listOf(tr("List", "Liste"), tr("Grid", "Izgara")), if (p.grid) 1 else 0) { p.grid = it == 1 }
-            }
-        },
-        confirmButton = { PButton(tr("OK", "Tamam"), onClick = { onMode(); onDismiss() }) },
-    )
+    val close = { onMode(); onDismiss() }
+    Popup(alignment = Alignment.TopEnd, offset = IntOffset(dx, dy), onDismissRequest = close, properties = PopupProperties(focusable = true)) {
+        rev.let { }
+        Column(Modifier.width(230.dp).heightIn(max = 420.dp).verticalScroll(rememberScrollState()).clip(RoundedCornerShape(14.dp)).background(Color(0xF2101010)).padding(6.dp)) {
+            group(tr("View", "Görünüm"), modes, p.browse) { p.browse = it; onMode() }
+            group(tr("Sort", "Sırala"), sorts, p.sortBy) { p.sortBy = it }
+            group(tr("Order", "Sıra"), listOf(tr("Ascending", "Artan") to "sort", tr("Descending", "Azalan") to "sort"), if (p.sortDesc) 1 else 0) { p.sortDesc = it == 1 }
+            group(tr("Layout", "Düzen"), listOf(tr("List", "Liste") to "table", tr("Grid", "Izgara") to "photos"), if (p.grid) 1 else 0) { p.grid = it == 1 }
+        }
+    }
 }
 
 @Composable
