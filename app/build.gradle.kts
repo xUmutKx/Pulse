@@ -17,12 +17,11 @@ android {
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
-    // release key: private, kept in GitHub Actions secrets (see ci/README.md); without it (forks, local builds) the release is signed with the debug key
-    val pulseStore = System.getenv("PULSE_KEYSTORE")?.takeIf { it.isNotBlank() && file(it).exists() }
+    // one fixed key for every build (CI and Termux), so each new APK installs over the last one; the key is public on purpose (see ci/README.md)
     signingConfigs {
-        if (pulseStore != null) create("pulse") {
-            storeFile = file(pulseStore)
-            storePassword = System.getenv("PULSE_STORE_PASSWORD"); keyAlias = "pulse"; keyPassword = System.getenv("PULSE_KEY_PASSWORD")
+        create("pulse") {
+            storeFile = rootProject.file("ci/pulse.keystore")
+            storePassword = "pulsepulse"; keyAlias = "pulse"; keyPassword = "pulsepulse"
         }
     }
     // foss: the full app, no ads and no Google SDK; play: the same app with the AdMob ads (src/play)
@@ -36,7 +35,7 @@ android {
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            signingConfig = signingConfigs.findByName("pulse") ?: signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName("pulse")
         }
     }
     compileOptions {
