@@ -190,79 +190,87 @@ internal fun searchTitle(fileName: String): String {
 /** Subtitle language offered first: the app language, as the site names it. */
 internal fun appLangName(): String = if (tr("en", "tr") == "tr") "Turkish" else "English"
 
-/** Subtitle search in the look's window: query and language, a result list; a tap downloads it and hands the file to [onPick] with a name. */
+/**
+ * Subtitle search: a title and a language, then the results as rows. A tap on a row downloads that subtitle and hands the file to [onPick].
+ * The list shows what happens (searching, downloading, nothing found, failed), so the window never stays silent.
+ */
 @Composable
 internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, String) -> Unit, onDismiss: () -> Unit) {
     val w = LocalWindowLook.current
     val scope = rememberCoroutineScope()
-    val none = tr("No subtitles found", "Altyazı bulunamadı")
-    val noEpisode = tr("Without an OpenSubtitles key only films are searched. Add a key for TV episodes.", "OpenSubtitles anahtarı olmadan yalnızca filmler aranır. Diziler için anahtar ekleyin.")
-    val failed = tr("Failed. Check the connection and try again.", "Olmadı. Bağlantıyı kontrol edip yeniden deneyin.")
     var query by remember { mutableStateOf(searchTitle(fileName)) }
     var lang by remember { mutableStateOf(appLangName()) }
     var hits by remember { mutableStateOf<List<SubHit>>(emptyList()) }
     var busy by remember { mutableStateOf(false) }
-    var line by remember { mutableStateOf("") }
-    var err by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf("") }
+    var isError by remember { mutableStateOf(false) }
+
+    fun fail(text: String) { busy = false; isError = true; message = text }
 
     fun search() {
         if (busy || query.isBlank()) return
-        busy = true; err = false; hits = emptyList(); line = tr("Searching...", "Aranıyor...")
+        busy = true; isError = false; hits = emptyList(); message = tr("Searching...", "Aranıyor...")
         scope.launch {
-            val k = OpenSubs.key(ctx)
-            val isEpisode = OpenSubs.episodeOf(query.trim()).second != null
-            // with a key the OpenSubtitles index (films and TV episodes); without one the film-only site, then the reason when nothing is found
-            val found = if (k.isNotBlank()) OpenSubs.search(query.trim(), lang, k) else YifySubs.search(query.trim(), lang)
-            found
-                .onSuccess {
-                    hits = it
-                    line = when {
-                        it.isNotEmpty() -> ""
-                        isEpisode && k.isBlank() -> noEpisode
-                        else -> none
-                    }
+            val key = OpenSubs.key(ctx)
+            val q = query.trim()
+            // with a key the OpenSubtitles index (films and episodes); without one the film-only site
+            val result = if (key.isNotBlank()) OpenSubs.search(q, lang, key) else YifySubs.search(q, lang)
+            result.onSuccess { found ->
+                busy = false
+                hits = found
+                message = when {
+                    found.isNotEmpty() -> ""
+                    key.isBlank() && OpenSubs.episodeOf(q).second != null -> tr(
+                        "Without an OpenSubtitles key only films are searched. Add a key in video settings > Subtitles.",
+                        "OpenSubtitles anahtarı olmadan yalnızca filmler aranır. Video ayarları > Altyazı bölümünden anahtar ekleyin.",
+                    )
+                    else -> tr("No subtitles found", "Altyazı bulunamadı")
                 }
-                .onFailure { err = true; line = failed }
-            busy = false
+            }.onFailure { fail(tr("Failed. Check the connection and try again.", "Olmadı. Bağlantıyı kontrol edip yeniden deneyin.")) }
         }
     }
+
     fun pick(h: SubHit) {
         if (busy) return
-        busy = true; err = false; line = tr("Downloading...", "İndiriliyor...")
+        busy = true; isError = false; message = tr("Downloading...", "İndiriliyor...")
         scope.launch {
-            (if (h.slug.startsWith("os:")) OpenSubs.download(ctx, h, OpenSubs.key(ctx)) else YifySubs.download(ctx, h))
-                .onSuccess { onPick(it, h.release.ifBlank { "subtitle" }.replace('/', '_') + ".srt") }
-                .onFailure { err = true; line = failed; busy = false }
+            val r = if (h.slug.startsWith("os:")) OpenSubs.download(ctx, h, OpenSubs.key(ctx)) else YifySubs.download(ctx, h)
+            r.onSuccess { uri ->
+                busy = false; message = ""
+                onPick(uri, h.release.ifBlank { "subtitle" }.replace('/', '_') + ".srt")
+            }.onFailure { fail(tr("Download failed. Try another result.", "İndirilemedi. Başka bir sonuç deneyin.")) }
         }
     }
 
     WinAlert(
         onDismissRequest = onDismiss,
-        title = { Text(tr("Search online", "Çevrimiçi ara"), color = w.text) },
+        title = { Text(tr("Search subtitles", "Altyazı ara"), color = w.text) },
         text = {
-            Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
+            Column(Modifier.fillMaxWidth().heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                 PField(query, { query = it }, tr("Title", "Ad"), Modifier.fillMaxWidth(), onDone = { search() })
-                // the key is set in the video settings (Subtitles); without it only films are found
-                Text(tr("OpenSubtitles key: video settings > Subtitles", "OpenSubtitles anahtarı: video ayarları > Altyazı"), color = w.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
-                Row(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     listOf("English" to tr("English", "İngilizce"), "Turkish" to tr("Turkish", "Türkçe")).forEach { (name, label) ->
                         Text(
-                            label, Modifier.padding(end = 18.dp).clickable { lang = name },
-                            color = if (lang == name) Look.accent else w.sub, fontSize = 14.sp,
+                            label,
+                            Modifier.padding(end = 18.dp).clickable { lang = name },
+                            color = if (lang == name) Look.accent else w.sub,
+                            fontSize = 14.sp,
                             fontWeight = if (lang == name) FontWeight.SemiBold else FontWeight.Normal,
                         )
                     }
                 }
-                if (line.isNotEmpty()) Text(line, color = if (err) Color(0xFFC42B1C) else w.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp))
+                if (message.isNotEmpty()) {
+                    Text(message, color = if (isError) Color(0xFFC42B1C) else w.sub, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp))
+                }
                 hits.forEach { h ->
-                    Column(Modifier.fillMaxWidth().clickable { pick(h) }.padding(vertical = 3.dp)) {
-                        Text(h.release.ifBlank { "-" }, color = w.text, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text("${h.lang} · ${tr("rating", "puan")} ${h.score}", color = w.sub, fontSize = 9.sp)
+                    Column(Modifier.fillMaxWidth().clickable { pick(h) }.padding(vertical = 8.dp)) {
+                        Text(h.release.ifBlank { "-" }, color = w.text, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("${h.lang} · ${tr("rating", "puan")} ${h.score}", color = w.sub, fontSize = 11.sp)
                     }
                 }
             }
         },
-        confirmButton = { PButton(tr("Search", "Ara")) { search() } },
+        confirmButton = { PButton(tr("Search", "Ara"), onClick = { search() }) },
         dismissButton = { PButton(tr("Close", "Kapat"), onClick = onDismiss) },
     )
 }
