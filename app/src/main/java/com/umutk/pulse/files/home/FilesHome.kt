@@ -205,6 +205,11 @@ private fun loadStats(ctx: Context): Stats {
     return Stats(total, free, parts, other)
 }
 
+/** True when the Files window is see-through: Windows 11 with the glass option on, or with a background picture chosen. */
+@Composable
+private fun filesSeeThrough(): Boolean =
+    com.umutk.pulse.FilesGlass.on || (T.id == "win11" && com.umutk.pulse.features.Backdrop.mode != "off" && com.umutk.pulse.features.Backdrop.image != null)
+
 /**
  * The first page of the Files app: free space, what takes the room, recent files and folders, and the file types. Black in the Material looks, with the look's own accent colour;
  * the Windows looks draw it with their own panels and borders.
@@ -213,7 +218,9 @@ private fun loadStats(ctx: Context): Stats {
 fun FilesHome(onTab: (String) -> Unit, onOpenDir: (String) -> Unit, onOpenFile: (File) -> Unit, onSettings: () -> Unit) {
     val ctx = LocalContext.current
     val mat = T.material
-    val bg = if (mat) Color.Black else T.bg
+    // Windows 11 with the glass option or a background picture: the page is see-through, so the picture or the wallpaper shows behind it (AMOLED and Material stay black)
+    val glass = filesSeeThrough()
+    val bg = if (glass) Color.Transparent else if (mat) Color.Black else T.bg
     val fg = if (mat) Color.White else T.text
     val sub = if (mat) Color(0xFF8E8E93) else T.sub
     val tile = if (mat) Color(0xFF161616) else T.panel
@@ -352,7 +359,7 @@ fun openFileWithSystem(ctx: Context, f: File) {
 @Composable
 fun FilesNavBar(tab: String, onTab: (String) -> Unit, onShare: () -> Unit) {
     val mat = T.material
-    val bg = if (mat) Color.Black else T.panel
+    val bg = if (filesSeeThrough()) T.panel.copy(alpha = .55f) else if (mat) Color.Black else T.panel
     val fg = if (mat) Color(0xFF9A9A9F) else T.sub
     val accent = T.accent
     var menu by remember { mutableStateOf(false) }
