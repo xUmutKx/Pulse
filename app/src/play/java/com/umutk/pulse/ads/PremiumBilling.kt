@@ -14,7 +14,7 @@ import com.android.billingclient.api.QueryPurchasesParams
 
 /**
  * Pulse Premium inside the app (play build only): one Google Play purchase of the product [PRODUCT_ID].
- * Play confirms the purchase; the phone keeps only the flag "owned", which [Premium.on] reads. Nothing else leaves the phone.
+ * Play confirms the purchase on every start ([restore]); nothing is stored on the phone. [Premium.on] reads the result for this run.
  */
 object PremiumBilling {
     const val PRODUCT_ID = "pulse_premium"
@@ -31,10 +31,6 @@ object PremiumBilling {
             .build()
         client = b
         return b
-    }
-
-    private fun save(c: Context, owned: Boolean) {
-        runCatching { c.getSharedPreferences("premium", Context.MODE_PRIVATE).edit().putBoolean("owned", owned).apply() }
     }
 
     /** Connects to Play; [done] gets true when the connection is ready. */
@@ -59,7 +55,7 @@ object PremiumBilling {
                 if (result.responseCode == BillingClient.BillingResponseCode.OK) {
                     val has = purchases.any(::owns)
                     if (has) acknowledge(billing(c), purchases.filter(::owns))
-                    save(c, has)
+                    Premium.verified = has
                 }
                 done(Premium.on(c))
             }
@@ -94,7 +90,7 @@ object PremiumBilling {
         val mine = purchases.orEmpty().filter(::owns)
         if (result.responseCode == BillingClient.BillingResponseCode.OK && mine.isNotEmpty()) {
             acknowledge(billing(c), mine)
-            save(c, true)
+            Premium.verified = true
         }
         pending?.invoke(Premium.on(c))
         pending = null
