@@ -238,12 +238,14 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     // the floating keyboard: its own height, and the handle's place in the window (the drag is read on the window, which stays still)
     val float = KeyboardPrefs.floatNow
     var kbH by remember { mutableStateOf(0f) }
+    // the bar that stays when the keyboard slides down out of the window
+    val barPx = with(LocalDensity.current) { kbBarHeight().toPx() }
     var handleRect by remember { mutableStateOf<Rect?>(null) }
     val rootHue = LocalHue.current
     // the gamepad paints no board of its own: its buttons float over whatever the game shows
     Box(modifier.fillMaxWidth().then(if (float) Modifier.height((androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp * .85f).dp) else if (st.panel == "gamepad") Modifier.background(Color.Black) else Modifier.background(th.bg).boardWash(KeyboardPrefs.boardFx))
         .then(if (!float && KeyboardPrefs.rgb == 1 && rootHue != null) Modifier.drawWithContent { drawContent(); val h = rootHue.value; drawRect(androidx.compose.ui.graphics.Brush.sweepGradient(List(8) { i -> Color.hsv((h + i * 45f) % 360f, .9f, 1f) }), style = androidx.compose.ui.graphics.drawscope.Stroke(width = 3.dp.toPx())) } else Modifier)
-        .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(float) {
+        .onSizeChanged { st.rootW = it.width.toFloat(); rootH = it.height.toFloat() }.pointerInput(float, barPx) {
         // the floating keyboard moves by its handle: the finger is followed on the window (which stays still), so the drag is smooth wherever the keyboard goes
         if (!float) return@pointerInput
         awaitEachGesture {
@@ -259,8 +261,11 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 val dx = c.position.x - last.x; val dy = c.position.y - last.y
                 last = c.position
                 c.consume()
-                KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH - kbH).coerceAtLeast(1f)).coerceIn(0f, 1f)
-                KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .1f).coerceAtLeast(1f)).coerceIn(0f, 1f)
+                // down: the keyboard may slide out until only its top bar is left in the window; up: to the top
+                val minY = -((kbH - barPx) / (rootH - kbH).coerceAtLeast(1f)).coerceAtLeast(0f)
+                KeyboardPrefs.floatY = (KeyboardPrefs.floatY - dy / (rootH - kbH).coerceAtLeast(1f)).coerceIn(minY, 1f)
+                // the keyboard is 70 percent wide: its free room is the other 30, from the left edge to the right one
+                KeyboardPrefs.floatX = (KeyboardPrefs.floatX + dx / (st.rootW * .3f).coerceAtLeast(1f)).coerceIn(0f, 1f)
             }
             KeyboardPrefs.saveFloat()
         }
@@ -284,7 +289,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     }) {
         Column(
             (if (float) Modifier.fillMaxWidth(.7f).align(Alignment.BottomStart)
-                .offset { IntOffset((st.rootW * .1f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
+                .offset { IntOffset((st.rootW * .3f * KeyboardPrefs.floatX).roundToInt(), -((rootH - kbH).coerceAtLeast(0f) * KeyboardPrefs.floatY).roundToInt()) }
                 .onSizeChanged { kbH = it.height.toFloat() }
                 .onGloballyPositioned { c ->
                     // the keyboard's place tells the system which part of the window takes touches; the rest of the window belongs to the app
