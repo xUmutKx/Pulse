@@ -575,13 +575,13 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
         // the order of the swipe: move the page one place earlier or later
         if (editing in pages && pages.size > 1) {
             val at = pages.indexOf(editing)
-            fun move(d: Int) { val to = at + d; if (to in pages.indices) { pages = pages.toMutableList().also { val x = it.removeAt(at); it.add(to, x) }; StandByPrefs.setPages(ctx, pages); rev++ } }
+            fun move(d: Int) { val to = at + d; if (to in pages.indices) { pages = pages.toMutableList().also { val x = it.removeAt(at); it.add(to, x) }; StandByPrefs.setPages(ctx, pages); com.umutk.pulse.widgets.CoverWidget.refreshAll(ctx); rev++ } }
             Box(Modifier.size(34.dp).clickable { move(-1) }, contentAlignment = Alignment.Center) { PIcon("back", if (at > 0) T.text else T.sub.copy(alpha = .4f), 20.dp) }
             Text("${at + 1}", color = T.sub, fontSize = 13.sp)
             Box(Modifier.size(34.dp).clickable { move(1) }, contentAlignment = Alignment.Center) { PIcon("back", if (at < pages.lastIndex) T.text else T.sub.copy(alpha = .4f), 20.dp, Modifier.graphicsLayer { rotationZ = 180f }) }
         }
         PIcon("check", if (editing in pages) T.accent else T.sub, 22.dp, Modifier.padding(end = 8.dp))
-        PSwitch(editing in pages, { on -> pages = if (on) (if (editing == "blank") listOf("blank") else (pages - "blank") + editing).distinct() else (pages - editing).ifEmpty { listOf("blank") }; StandByPrefs.setPages(ctx, pages) })
+        PSwitch(editing in pages, { on -> pages = if (on) (if (editing == "blank") listOf("blank") else (pages - "blank") + editing).distinct() else (pages - editing).ifEmpty { listOf("blank") }; StandByPrefs.setPages(ctx, pages); com.umutk.pulse.widgets.CoverWidget.refreshAll(ctx) })
     }
     Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         listOf(tr("Pages", "Sayfalar"), tr("Style", "Stil"), tr("Colour", "Renk"), tr("More", "Diğer")).forEachIndexed { i, label -> PChip(tab == i, label) { tab = i } }
