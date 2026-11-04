@@ -2085,3 +2085,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 1.0.356 derlendi: 1.0.355 derlemesi iptal edildi; play sürümünde atla düğmesi ödüllü reklam izletir (her atlamada); önceki değişiklikler aynen
 - (sonraki güncelleme) Play: atlamalarda her 3. atlamada ödüllü reklam (1 ve 2 doğrudan)
 - (sonraki güncelleme) Pano satırı simgeleri Fluent (sabitle, kısayol, seç, sil)
+- (sonraki derleme) Paket sahiplik doğrulaması: assets/adi-registration.properties eklendi; APK'yı Play Console'da yükle
