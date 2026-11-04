@@ -99,6 +99,8 @@ fun NoteEditor(
     var inkOn by remember(note.id) { mutableStateOf(false) }
     var inkColor by remember { mutableStateOf(0xFF1E88E5.toInt()) }
     var inkWide by remember { mutableStateOf(false) }
+    // the highlighter: a wide, see-through yellow stroke that lies over the text
+    var inkMark by remember { mutableStateOf(false) }
     val density = androidx.compose.ui.platform.LocalDensity.current.density
     // the tools of the note (pin, colour, folder, reminder, lock, photo, sketch, voice, read aloud, checklist) sit behind one plus button
     var more by remember(note.id) { mutableStateOf(false) }
@@ -146,11 +148,9 @@ fun NoteEditor(
         val t = bodyField.text
         val lo = minOf(bodyField.selection.min, bodyField.selection.max).coerceIn(0, t.length)
         val hi = maxOf(bodyField.selection.min, bodyField.selection.max).coerceIn(0, t.length)
-        // bold wraps in **, the highlighter in ==; with nothing selected a word is put in to be replaced
-        val (out, cur) = if (kind == "bold" || kind == "highlight") {
-            val m = if (kind == "bold") "**" else "=="
-            if (lo == hi) { val ins = m + (if (kind == "bold") tr("bold", "kalın") else tr("highlighted", "vurgulu")) + m; (t.substring(0, lo) + ins + t.substring(hi)) to lo + ins.length }
-            else { val w = m + t.substring(lo, hi) + m; (t.substring(0, lo) + w + t.substring(hi)) to lo + w.length }
+        val (out, cur) = if (kind == "bold") {
+            if (lo == hi) { val ins = "**" + tr("bold", "kalın") + "**"; (t.substring(0, lo) + ins + t.substring(hi)) to lo + ins.length }
+            else { val w = "**" + t.substring(lo, hi) + "**"; (t.substring(0, lo) + w + t.substring(hi)) to lo + w.length }
         } else {
             // a line marker goes at the start of the line where the selection starts
             val prefix = when (kind) { "heading" -> "## "; "bullet" -> "- "; else -> "[ ] " }
@@ -230,6 +230,10 @@ fun NoteEditor(
             Box(Modifier.size(30.dp).clip(CircleShape).clickable { inkWide = !inkWide }, contentAlignment = Alignment.Center) {
                 Box(Modifier.size(if (inkWide) 14.dp else 6.dp).clip(CircleShape).background(fg))
             }
+            Box(Modifier.size(30.dp).clip(CircleShape).background(if (inkMark) Color(0x66FFD60A) else Color.Transparent).clickable { inkMark = !inkMark }
+                .semantics { contentDescription = tr("Highlighter", "Vurgulayıcı") }, contentAlignment = Alignment.Center) {
+                Box(Modifier.size(width = 16.dp, height = 8.dp).background(Color(0xFFFFD60A)))
+            }
             MIcon(Icons.Outlined.Undo, tr("Undo", "Geri al"), fg) { onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink).dropLast(1))) } }
             MIcon(Icons.Outlined.Check, tr("Done", "Bitti"), T.accent) { inkOn = false }
         }
@@ -273,7 +277,7 @@ fun NoteEditor(
             }
             Text(tr("$words words · ${note.body.length} characters", "$words kelime · ${note.body.length} karakter"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
         }
-        InkLayer(NotesInk.decode(note.ink), inkOn, inkColor, if (inkWide) 9f * density else 3f * density) { st ->
+        InkLayer(NotesInk.decode(note.ink), inkOn, if (inkMark) HIGHLIGHTER_INK else inkColor, if (inkMark) 16f * density else if (inkWide) 9f * density else 3f * density) { st ->
             onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink) + st)) }
         }
         }
@@ -286,10 +290,9 @@ fun NoteEditor(
                 Triple("B", tr("Bold", "Kalın"), "bold"),
                 Triple("•", tr("Bullet", "Madde"), "bullet"),
                 Triple("☐", tr("Checklist", "Kontrol"), "check"),
-                Triple("▮", tr("Highlight", "Vurgula"), "highlight"),
             ).forEach { (label, desc, kind) ->
                 Box(Modifier.size(40.dp).clip(CircleShape).clickable { applyFmt(kind) }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
-                    Text(label, color = if (kind == "highlight") Color(0xFFFFD60A) else fg, fontSize = 17.sp, fontWeight = if (label == "B") FontWeight.Bold else FontWeight.SemiBold)
+                    Text(label, color = fg, fontSize = 17.sp, fontWeight = if (label == "B") FontWeight.Bold else FontWeight.SemiBold)
                 }
             }
         }
@@ -341,6 +344,9 @@ private fun AudioRow(ctx: Context, name: String, ink: Color, onRemove: () -> Uni
 
 /** A Material icon of the note editor: the same round touch target as the others. */
 @Composable
+/** The highlighter's colour: yellow, see-through, drawn with Multiply so the text shows through. */
+private val HIGHLIGHTER_INK = 0x88FFD60A.toInt()
+
 /** A named action in the "more" row: the words show what it does, so no icon has to be guessed. */
 @Composable
 private fun NChip(label: String, tint: Color, onClick: () -> Unit) {
@@ -361,7 +367,6 @@ private fun NFieldTV(value: TextFieldValue, onChange: (TextFieldValue) -> Unit, 
     BasicTextField(
         value, onChange, modifier,
         textStyle = TextStyle(color = ink, fontSize = size.sp),
-        visualTransformation = HighlightView,
         cursorBrush = SolidColor(T.accent),
         decorationBox = { inner ->
             Box(contentAlignment = Alignment.TopStart) {

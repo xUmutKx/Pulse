@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
@@ -82,5 +83,7 @@ private fun DrawScope.drawInk(pts: List<Offset>, color: Int, width: Float) {
         moveTo(pts[0].x, pts[0].y)
         for (i in 1 until pts.size) lineTo(pts[i].x, pts[i].y)
     }
-    drawPath(path, Color(color), style = Stroke(width = width, cap = StrokeCap.Round, join = StrokeJoin.Round))
+    // a see-through stroke (the highlighter) is multiplied onto what is under it, so the words stay readable
+    val blend = if ((color ushr 24) < 0xFF) BlendMode.Multiply else BlendMode.SrcOver
+    drawPath(path, Color(color), style = Stroke(width = width, cap = StrokeCap.Round, join = StrokeJoin.Round), blendMode = blend)
 }
