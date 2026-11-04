@@ -2092,3 +2092,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) Sayı klavyesinde (numpad) 1 uzun basınca auth, 2 uzun basınca pano; normal klavyede uzun basma karakterleri aynen
 - (sonraki güncelleme) İmza: release key moved to GitHub secrets (PULSE_KEYSTORE_B64, PULSE_STORE_PASSWORD, PULSE_KEY_PASSWORD); ci/pulse.keystore removed from the repo; no key = debug signing.
 1.0.358 derlendi: 1.0.357 yayın adımında 403 verdi; imza anahtarı artık GitHub secret'larında (özel), eski herkese açık anahtar repodan kaldırıldı
+- (sonraki güncelleme) Hava widget'ları: iç içe geçen yeni haftalık/saatlik/birleşik widget'lar kaldırıldı; sadece ilk 'Weather and clock' (arka planısız) kaldı; güneş ikonu 8 ışınlı yapıldı. derlenmedi
