@@ -1361,11 +1361,12 @@ private fun ClipPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.c
         }
         menuFor?.let { m ->
             Row(Modifier.fillMaxWidth().height(40.dp).background(th.special).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(kbIcon(th, "PushPin"), tr("Pin", "Sabitle"), tint = if (m.pinned) th.accent else th.text, modifier = Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp).padding(10.dp))
-                if (m.image == null) Icon(kbIcon(th, "Bolt"), tr("Shortcut", "Kısayol"), tint = th.text, modifier = Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp).padding(10.dp))
-                Icon(kbIcon(th, "Check"), tr("Select", "Seç"), tint = th.text, modifier = Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp).padding(10.dp))
+                // the row's actions: Fluent glyphs (the same set as the rest of Pulse), in a 42 dp touch target each
+                Box(Modifier.clickable { act.clipPin(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("pin", if (m.pinned) th.accent else th.text, 22.dp) }
+                if (m.image == null) Box(Modifier.clickable { act.clipShortcut(m.id); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("bolt", th.text, 22.dp) }
+                Box(Modifier.clickable { sel = sel + m.id; menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("check", th.text, 22.dp) }
                 // delete this one item (the same as the swipe, but with a button)
-                Icon(kbIcon(th, "Delete"), tr("Delete", "Sil"), tint = th.text, modifier = Modifier.clickable { act.clipDelete(setOf(m.id)); menuFor = null }.size(42.dp).padding(10.dp))
+                Box(Modifier.clickable { act.clipDelete(setOf(m.id)); menuFor = null }.size(42.dp), contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("trash", th.text, 22.dp) }
                 androidx.compose.foundation.layout.Spacer(Modifier.weight(1f))
                 Text("✕", color = th.sub, fontSize = 16.sp, modifier = Modifier.clickable { menuFor = null }.padding(10.dp))
             }
