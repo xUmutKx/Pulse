@@ -469,9 +469,6 @@ private fun TopBar(th: KbTheme, st: KbState, act: KbActions, onPull: (Float) -> 
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BarIcon(th, if (st.toolbar || st.panel != "keys") kbIcon(th, "Close") else kbIcon(th, "ExpandMore")) { if (st.panel != "keys") st.panel = "keys" else st.toolbar = !st.toolbar }
-        // the authenticator's codes: a small lock, one tap opens them (and a second tap closes them)
-        FluentBarIcon(th, "lock", on = st.panel == "auth") { act.menu("auth") }
-        FluentBarIcon(th, "clipboard", on = st.panel == "clip") { act.menu("clip") }
         if (st.toolbar) {
             // the icons share the width evenly; only when they would be smaller than a finger's reach does the row scroll
             val shown = KeyboardPrefs.toolbarItems.split(',').filter { id -> id != "menu" && ExtraKeys.toolbar.any { it.first == id } }
