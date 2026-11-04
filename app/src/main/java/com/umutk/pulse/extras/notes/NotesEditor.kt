@@ -98,9 +98,16 @@ fun NoteEditor(
     // the S Pen: on, the picture of the note takes the pen; the colour and the width are the pen's own
     var inkOn by remember(note.id) { mutableStateOf(false) }
     var inkColor by remember { mutableStateOf(0xFF1E88E5.toInt()) }
-    var inkWide by remember { mutableStateOf(false) }
-    // the highlighter: a wide, see-through yellow stroke that lies over the text
-    var inkMark by remember { mutableStateOf(false) }
+    // the pen panel: which tool, and how big (an index into INK_SIZES)
+    var inkTool by remember { mutableStateOf(0) }
+    var inkSize by remember { mutableStateOf(2) }
+    val inkTools = listOf(
+        InkTool(Icons.Outlined.Edit, tr("Pen", "Kalem"), 3f, 255),
+        InkTool(Icons.Outlined.Create, tr("Fine pen", "İnce kalem"), 1.5f, 255),
+        InkTool(Icons.Outlined.Brush, tr("Brush", "Fırça"), 7f, 255),
+        InkTool(Icons.Outlined.BorderColor, tr("Marker", "İşaretleyici"), 12f, 0xB3),
+        InkTool(Icons.Outlined.Highlight, tr("Highlighter", "Vurgulayıcı"), 18f, 0x66),
+    )
     val density = androidx.compose.ui.platform.LocalDensity.current.density
     // the tools of the note (pin, colour, folder, reminder, lock, photo, sketch, voice, read aloud, checklist) sit behind one plus button
     var more by remember(note.id) { mutableStateOf(false) }
@@ -222,59 +229,31 @@ fun NoteEditor(
         }
 
         // the pen's own bar: colours, width, undo; it shows while the pen is on
-        if (inkOn) Row(Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .95f)).padding(horizontal = 10.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-            listOf(0xFF1E88E5.toInt(), 0xFFE53935.toInt(), 0xFF43A047.toInt(), 0xFF000000.toInt(), 0xFFFFFFFF.toInt()).forEach { c ->
-                Box(Modifier.size(26.dp).clip(CircleShape).background(Color(c)).border(if (inkColor == c) 2.dp else 1.dp, if (inkColor == c) T.accent else inkSub, CircleShape).clickable { inkColor = c })
+        // the pen panel, shown while the pen is on: the tools, the size, and the five colours
+        if (inkOn) Column(Modifier.fillMaxWidth().padding(top = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .95f)).padding(horizontal = 10.dp, vertical = 6.dp)) {
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+                inkTools.forEachIndexed { i, t -> MIcon(t.icon, t.label, if (inkTool == i) T.accent else fg) { inkTool = i } }
+                MIcon(Icons.Outlined.Undo, tr("Undo", "Geri al"), fg) { onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink).dropLast(1))) } }
+                MIcon(Icons.Outlined.Check, tr("Done", "Bitti"), T.accent) { inkOn = false }
             }
-            Box(Modifier.size(30.dp).clip(CircleShape).clickable { inkWide = !inkWide }, contentAlignment = Alignment.Center) {
-                Box(Modifier.size(if (inkWide) 14.dp else 6.dp).clip(CircleShape).background(fg))
+            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+                INK_SIZES.indices.forEach { i ->
+                    Box(Modifier.size(30.dp).clip(CircleShape).clickable { inkSize = i }, contentAlignment = Alignment.Center) {
+                        Box(Modifier.size((4 + 3 * i).dp).clip(CircleShape).background(if (inkSize == i) T.accent else fg))
+                    }
+                }
             }
-            MIcon(Icons.Outlined.Highlight, tr("Highlighter", "Vurgulayıcı"), if (inkMark) T.accent else fg) { inkMark = !inkMark }
-            MIcon(Icons.Outlined.Undo, tr("Undo", "Geri al"), fg) { onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink).dropLast(1))) } }
-            MIcon(Icons.Outlined.Check, tr("Done", "Bitti"), T.accent) { inkOn = false }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
+                INK_COLOURS.forEach { c ->
+                    Box(Modifier.size(30.dp).clip(CircleShape).background(Color(c)).border(if (inkColor == c) 2.dp else 1.dp, if (inkColor == c) T.accent else inkSub, CircleShape).clickable { inkColor = c })
+                }
+            }
         }
 
-        // the paper: title, body, links, attachments and counts scroll together; the pen draws over it
-        Box(Modifier.fillMaxWidth().weight(1f)) {
-        Column(
-            Modifier.fillMaxSize().padding(top = 6.dp, bottom = 12.dp)
-                .clip(shape).background(surface, shape).then(edge)
-                .verticalScroll(rememberScrollState()).padding(14.dp),
-        ) {
-            NField(note.title, { v -> onEdit { it.copy(title = v) } }, tr("Title", "Başlık"), ink, inkSub, size + 4, true, true, Modifier.fillMaxWidth())
-            if (note.remindAt > 0) Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                PIconDim("bell", inkSub)
-                Spacer(Modifier.width(6.dp))
-                Text(date.format(Date(note.remindAt)), color = inkSub, fontSize = 13.sp, modifier = Modifier.weight(1f))
-                NIcon("close", inkSub, tr("Remove reminder", "Hatırlatmayı kaldır")) { onEdit { it.copy(remindAt = 0L) } }
-            }
-            Spacer(Modifier.height(10.dp))
-            if (preview) NoteBody(note.body, size, ink, T.accent) { changeBody(it) }
-            else NFieldTV(bodyField, { tv -> bodyField = tv; if (tv.text != note.body) changeBody(tv.text) }, tr("Write here", "Buraya yaz"), ink, inkSub, size, Modifier.fillMaxWidth().heightIn(min = 180.dp))
-
-            if (links.isNotEmpty()) {
-                Text(tr("Links", "Bağlantılar"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    links.forEach { l -> Text(l, color = T.accent, fontSize = 14.sp, modifier = Modifier.clickable2 { onOpenTitle(l) }) }
-                }
-            }
-            if (backlinks.isNotEmpty()) {
-                Text(tr("Linked from", "Bağlantılı notlar"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 12.dp))
-                Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    backlinks.forEach { b -> Text(NotesStore.titleOf(b).ifBlank { tr("Untitled", "Adsız") }, color = T.accent, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.clickable2 { onOpenTitle(NotesStore.titleOf(b)) }) }
-                }
-            }
-            note.files.forEach { name ->
-                Box(Modifier.fillMaxWidth().padding(top = 10.dp)) {
-                    if (name.startsWith(NotesFileLink.PREFIX)) FileLinkRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) } }
-                    else if (name.startsWith("au_")) AudioRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) }; NotesMedia.remove(ctx, name) }
-                    else ImageRow(ctx, name, ink) { onEdit { it.copy(files = it.files - name) }; NotesMedia.remove(ctx, name) }
-                }
-            }
-            Text(tr("$words words · ${note.body.length} characters", "$words kelime · ${note.body.length} karakter"), color = inkSub, fontSize = 12.sp, modifier = Modifier.padding(top = 14.dp))
-        }
-        InkLayer(NotesInk.decode(note.ink), inkOn, if (inkMark) HIGHLIGHTER_INK else inkColor, if (inkMark) 16f * density else if (inkWide) 9f * density else 3f * density) { st ->
+        // the chosen tool: its width and its see-through share, in the chosen colour
+        val tool = inkTools[inkTool.coerceIn(0, inkTools.lastIndex)]
+        val penColour = (inkColor and 0x00FFFFFF) or (tool.alpha shl 24)
+        InkLayer(NotesInk.decode(note.ink), inkOn, penColour, tool.width * INK_SIZES[inkSize.coerceIn(0, INK_SIZES.lastIndex)] * density) { st ->
             onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink) + st)) }
         }
         }
@@ -341,8 +320,14 @@ private fun AudioRow(ctx: Context, name: String, ink: Color, onRemove: () -> Uni
 
 /** A Material icon of the note editor: the same round touch target as the others. */
 @Composable
-/** The highlighter's colour: yellow, see-through, drawn with Multiply so the text shows through. */
-private val HIGHLIGHTER_INK = 0x88FFD60A.toInt()
+/** The pen's tool, drawn in the panel: its name, its width at size 1 and its alpha (255 is solid). */
+private class InkTool(val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String, val width: Float, val alpha: Int)
+
+/** The sizes the size dots choose from (times the tool's width). */
+private val INK_SIZES = listOf(0.5f, 0.75f, 1f, 1.5f, 2f)
+
+/** The five colours of the pen panel. */
+private val INK_COLOURS = listOf(0xFF000000.toInt(), 0xFFFFFFFF.toInt(), 0xFFE53935.toInt(), 0xFF1E88E5.toInt(), 0xFFFFD60A.toInt())
 
 /** A named action in the "more" row: the words show what it does, so no icon has to be guessed. */
 @Composable

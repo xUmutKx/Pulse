@@ -2069,3 +2069,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Notlarda vurgulayıcı: seçili yazıyı ==...== ile sarar; düzenleyicide sarı zemin, önizlemede işaretsiz sarı zemin
 - (sürüm sonra) derlenmedi: Vurgulayıcı artık kalem: çizim katmanında yarı saydam sarı kalın çizgi (Multiply); metin işaretlemesi kaldırıldı
 - (sürüm sonra) derlenmedi: Vurgulayıcı düğmesi diğer kalem düğmeleriyle aynı stilde (Outlined.Highlight simgesi)
+- (sürüm sonra) derlenmedi: Notlar kalem paneli: 5 kalem türü (kalem, ince kalem, fırça, işaretleyici, vurgulayıcı), 5 boyut noktası, 5 renk; geri al ve bitti üstte
