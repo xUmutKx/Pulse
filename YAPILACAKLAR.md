@@ -2075,3 +2075,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) Fiziksel klavye ABD düzenindeyken Türkçe dilde Türkçe Q yerleşimi: [ ] ; ' , . I tuşları ğ ü ş i ö ç ı yazar (Shift ile büyük)
 - (sonraki güncelleme) Fiziksel klavye bağlıyken alttaki Türkçe harf satırı kaldırıldı; yalnızca öneri çubuğu kalıyor
 - (sonraki güncelleme) Klavye: öneri çubuğu %15 incelti (yüzen, normal, yatay); yüzen klavyenin sağ üstteki klavye simgesi kaldırıldı
+- (sonraki güncelleme) Öneri çubuğu bir kez daha incelti (yüzen 24dp, normal 34dp, yatay 24dp)
