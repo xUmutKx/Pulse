@@ -51,7 +51,10 @@ jobs:
           # the play build: the same app with the ads (Google Play store)
           gradle assemblePlayRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
           cp app/build/outputs/apk/play/release/app-play-release.apk "Pulse-$VER-play.apk"
+          # the play bundle (AAB) for the Google Play upload: the same app, Play delivers the split APKs
+          gradle bundlePlayRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
+          cp app/build/outputs/bundle/playRelease/app-play-release.aab "Pulse-$VER-play.aab"
           # the notes: every YAPILACAKLAR.md entry from the version after the last release up to this one
           PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
           python3 -I .github/release_notes.py "$VER" "$PREV" > RELEASE_NOTES.md
-          gh release create "v$VER" "Pulse-$VER.apk" "Pulse-$VER-android5.apk" "Pulse-$VER-play.apk" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          gh release create "v$VER" "Pulse-$VER.apk" "Pulse-$VER-android5.apk" "Pulse-$VER-play.apk" "Pulse-$VER-play.aab" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
