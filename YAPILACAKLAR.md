@@ -2063,3 +2063,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Video listesi: .ts dosyaları (küçük TypeScript kaynakları) video sayılmıyor, geliştirici klasörleri (node_modules, build vb.) taranmıyor
 - (sürüm sonra) derlenmedi: Atla (intro/özet) düğmesi: içi zaman çubuğu gibi 5 sn'de dolar, dolunca kapanır; dokunulursa hemen atlar
 - (sürüm sonra) derlenmedi: Altyazı ara penceresi baştan yazıldı: arama, dil, sonuç satırları; indirme ve hata durumları ekranda yazıyor. Alt çubuk değişikliği geri alındı.
+- (sürüm sonra) derlenmedi: Altyazı indirilince video başa dönmüyor ve durmuyor; yüklenen altyazı etiketi eşleşmezse son metin parçası seçiliyor

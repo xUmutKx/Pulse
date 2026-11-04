@@ -241,6 +241,9 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     val pipWas = remember { booleanArrayOf(false) }
     // the label of the subtitle just added, until its text track shows up in the player
     val pendingSubLabel = remember { arrayOfNulls<String>(1) }
+    // while a picked subtitle reloads the item: the resume jump must not move the video back, and the text track count before the reload
+    val subReload = remember { booleanArrayOf(false) }
+    val textBefore = remember { intArrayOf(-1) }
     var shown by remember { mutableStateOf(true) }
     var poke by remember { mutableIntStateOf(0) }
     var locked by remember { mutableStateOf(false) }
@@ -313,10 +316,15 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         // a few seconds later the track must be selected; if not, say so instead of leaving the subtitles off without a word
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             if (pendingSubLabel[0] != null) android.widget.Toast.makeText(ctx, tr("The subtitle was added but not shown. Pick it in the Subtitles menu.", "Altyazı eklendi ama gösterilmedi. Altyazı menüsünden seçin."), android.widget.Toast.LENGTH_LONG).show()
+            subReload[0] = false
         }, 4000)
         val cfg = MediaItem.SubtitleConfiguration.Builder(u).setMimeType(subMimeOf(e.second)).setLabel(e.second).setSelectionFlags(C.SELECTION_FLAG_DEFAULT).build()
+        val wasPlaying = player.playWhenReady
+        subReload[0] = true
+        textBefore[0] = player.currentTracks.groups.count { it.type == C.TRACK_TYPE_TEXT }
         player.replaceMediaItem(i, item.buildUpon().setSubtitleConfigurations(siblingSubs(ctx, items[i.coerceIn(items.indices)], prefs) + cfg).build())
         player.seekTo(i, at)
+        player.playWhenReady = wasPlaying
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).build()
     }
 
@@ -338,9 +346,22 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
                             .addOverride(TrackSelectionOverride(g.mediaTrackGroup, i)).build()
-                        pendingSubLabel[0] = null
+                        pendingSubLabel[0] = null; textBefore[0] = -1; subReload[0] = false
                         android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı"), android.widget.Toast.LENGTH_SHORT).show()
                         return
+                    }
+                }
+                // the label did not match: the picked file is the last text track the reload added
+                val texts = t.groups.filter { it.type == C.TRACK_TYPE_TEXT }
+                if (textBefore[0] >= 0 && texts.size > textBefore[0]) {
+                    val g = texts.last()
+                    val idx = (0 until g.length).firstOrNull { g.isTrackSupported(it) }
+                    if (idx != null) {
+                        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+                            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
+                            .addOverride(TrackSelectionOverride(g.mediaTrackGroup, idx)).build()
+                        pendingSubLabel[0] = null; textBefore[0] = -1; subReload[0] = false
+                        android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı"), android.widget.Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -351,7 +372,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 items.getOrNull(cur)?.let { prefs.addRecent(it) }
                 ext = null; subDelay = 0L; abA = -1L; abB = -1L
                 if (sleepEnd && reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) { player.pause(); sleepEnd = false }
-                if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK) {
+                if (!subReload[0] && (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK)) {
                     m?.let { val r = prefs.resume(it.mediaId); if (r > 0) player.seekTo(r) }
                 }
             }
