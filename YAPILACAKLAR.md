@@ -2070,3 +2070,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Vurgulayıcı artık kalem: çizim katmanında yarı saydam sarı kalın çizgi (Multiply); metin işaretlemesi kaldırıldı
 - (sürüm sonra) derlenmedi: Vurgulayıcı düğmesi diğer kalem düğmeleriyle aynı stilde (Outlined.Highlight simgesi)
 - (sürüm sonra) derlenmedi: Notlar kalem paneli: 5 kalem türü (kalem, ince kalem, fırça, işaretleyici, vurgulayıcı), 5 boyut noktası, 5 renk; geri al ve bitti üstte
+1.0.353 derlendi: commits since 1.0.352 (Hava durumu parçalı widget'lar, kapak widget'ları kapak sayfasını gösteriyor ve saniyede yenileniyor, alarm Dismiss kaydırma, altyazı yükleme/CC seçimi ve arama penceresi, video alt çubuğu geri alındı, altyazı süresi yarıya, atla düğmesi zaman çubuğu, notlarda vurgulayıcı kalem ve kalem paneli)
