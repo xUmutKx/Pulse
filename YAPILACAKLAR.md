@@ -2088,3 +2088,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki derleme) Paket sahiplik doğrulaması: assets/adi-registration.properties eklendi; APK'yı Play Console'da yükle
 1.0.357 derlendi: 1.0.356 derlemesi iptal edildi; paket doğrulama dosyası (assets/adi-registration.properties) eklendi; atla düğmesi Play sürümünde her 3. atlamada reklam; pano simgeleri Fluent
 - (sonraki güncelleme) Klavye: öneri çubuğunda kilit (auth) simgesi; 1'e uzun basınca auth, 2'ye uzun basınca pano
+- (sonraki güncelleme) Klavye: 1/2 uzun basma kısayolu kaldırıldı (üst karakterler geri); çubukta kilit (auth) ve pano simgeleri
