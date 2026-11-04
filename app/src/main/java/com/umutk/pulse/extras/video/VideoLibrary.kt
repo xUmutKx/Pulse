@@ -53,6 +53,9 @@ fun queryVideos(ctx: Context): List<VideoItem> {
     return out
 }
 
+/** Folders the walk never enters: app data, the Android folder and developer folders with source code or dependencies. */
+private val SKIP_DIRS = setOf("Android", "node_modules", "build", "__pycache__", "vendor")
+
 private val VIDEO_EXT = setOf("mp4", "mkv", "webm", "avi", "mov", "3gp", "m4v", "ts", "flv", "wmv", "mpg", "mpeg")
 
 /**
@@ -72,8 +75,9 @@ internal fun unindexedVideos(known: List<VideoItem>): List<VideoItem> {
         if (depth > 8 || out.size > 3000) return
         dir.listFiles()?.forEach { f ->
             when {
-                f.isDirectory -> if (!f.name.startsWith(".") && f.name != "Android") walk(f, depth + 1)
-                f.isFile && f.extension.lowercase() in VIDEO_EXT && (f.name to f.length()) !in seen -> {
+                f.isDirectory -> if (!f.name.startsWith(".") && f.name !in SKIP_DIRS) walk(f, depth + 1)
+                // a .ts file is a video only when it is big: small ones are TypeScript source code, which sits in developer folders
+                f.isFile && f.extension.lowercase() in VIDEO_EXT && (f.extension.lowercase() != "ts" || f.length() >= 5L * 1024 * 1024) && (f.name to f.length()) !in seen -> {
                     val parent = f.parentFile
                     out += VideoItem(
                         Uri.fromFile(f), f.name, 0L, parent?.name.orEmpty(),
