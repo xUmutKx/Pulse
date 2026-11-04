@@ -2073,3 +2073,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 1.0.353 derlendi: commits since 1.0.352 (Hava durumu parçalı widget'lar, kapak widget'ları kapak sayfasını gösteriyor ve saniyede yenileniyor, alarm Dismiss kaydırma, altyazı yükleme/CC seçimi ve arama penceresi, video alt çubuğu geri alındı, altyazı süresi yarıya, atla düğmesi zaman çubuğu, notlarda vurgulayıcı kalem ve kalem paneli)
 - (sonraki güncelleme) Klavye tablet yan konumda artık otomatik bölünmüyor; bölünmüş tuşlar yalnızca ayar açıkken
 - (sonraki güncelleme) Fiziksel klavye ABD düzenindeyken Türkçe dilde Türkçe Q yerleşimi: [ ] ; ' , . I tuşları ğ ü ş i ö ç ı yazar (Shift ile büyük)
+- (sonraki güncelleme) Fiziksel klavye bağlıyken alttaki Türkçe harf satırı kaldırıldı; yalnızca öneri çubuğu kalıyor
