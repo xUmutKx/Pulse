@@ -408,7 +408,7 @@ private fun GameTile(g: GameRow, pal: Pal, hidden: Boolean, info: String?, onCli
 /** The small info under a banner for the chosen sort: the play time of the week, or the size of the app. */
 private fun infoOf(g: GameRow, sort: Int, usage: Map<String, android.app.usage.UsageStats>, sizes: Map<String, Long>): String? = when (sort) {
     1 -> usage[g.pkg]?.totalTimeInForeground?.takeIf { it > 0 }?.let { hm(it) }
-    2 -> sizes[g.pkg]?.takeIf { it > 0 }?.let { "%.1f MB".format(it / 1_048_576.0) }
+    2 -> sizes[g.pkg]?.takeIf { it > 0 }?.let { if (it >= 1_073_741_824L) "%.2f GB".format(it / 1_073_741_824.0) else "%.1f MB".format(it / 1_048_576.0) }
     else -> null
 }
 
@@ -903,13 +903,41 @@ private fun SectionTitle(pal: Pal, label: String) {
     Text(label, color = pal.accent, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 22.dp, bottom = 8.dp))
 }
 
-/** The size of an app's APK in bytes (0 when it cannot be read). */
-/** The size of the app's APK. A hidden game is not visible to the package manager any more, so the size seen last is kept and shown instead. */
+/**
+ * The size of a game on the phone: its program files, its data and its extra files (the OBB). It is worked out from the best source there is:
+ * with root or Shizuku the folders of the game are counted (this also works for a game that is hidden, which the package manager no longer shows),
+ * else the system's own count (needs the usage access), else the APK files (base and splits). The last good number is kept, and shown while a
+ * game cannot be measured; a fresh one is made at most every twelve hours, so the library opens fast.
+ */
 private fun appSize(c: Context, pkg: String): Long {
-    val live = runCatching { java.io.File(c.packageManager.getApplicationInfo(pkg, 0).sourceDir).length() }.getOrDefault(0L)
     val p = prefs(c)
-    if (live > 0) { p.edit().putLong("size_$pkg", live).apply(); return live }
-    return p.getLong("size_$pkg", 0L)
+    val cached = p.getLong("size_$pkg", 0L)
+    val age = System.currentTimeMillis() - p.getLong("sizet_$pkg", 0L)
+    if (cached > 0 && age in 0..43_200_000L) return cached
+    var best = 0L
+    // the program files: the base APK and every split
+    runCatching {
+        val ai = c.packageManager.getApplicationInfo(pkg, 0)
+        var apk = java.io.File(ai.sourceDir).length()
+        ai.splitSourceDirs?.forEach { apk += java.io.File(it).length() }
+        best = maxOf(best, apk)
+    }
+    // the system's count: program, data and cache
+    if (android.os.Build.VERSION.SDK_INT >= 26) runCatching {
+        val ssm = c.getSystemService(Context.STORAGE_STATS_SERVICE) as android.app.usage.StorageStatsManager
+        val st = ssm.queryStatsForPackage(android.os.storage.StorageManager.UUID_DEFAULT, pkg, android.os.Process.myUserHandle())
+        best = maxOf(best, st.appBytes + st.dataBytes + st.cacheBytes)
+    }
+    // root or Shizuku: the folders of the game, hidden or not (program, data, the OBB and the media folder)
+    if (Privilege.mode != Privilege.Mode.None) runCatching {
+        val out = Privilege.run(
+            "du -sk /data/app/*/$pkg-* /data/app/$pkg-* /data/data/$pkg /storage/emulated/0/Android/data/$pkg /storage/emulated/0/Android/obb/$pkg /storage/emulated/0/Android/media/$pkg 2>/dev/null " +
+                "| awk '{ if (!seen[\$2]++) s += \$1 } END { print s * 1024 }'"
+        ).text.lines().lastOrNull { it.isNotBlank() }?.trim()?.toDoubleOrNull()?.toLong() ?: 0L
+        best = maxOf(best, out)
+    }
+    if (best > 0) { p.edit().putLong("size_$pkg", best).putLong("sizet_$pkg", System.currentTimeMillis()).apply(); return best }
+    return cached
 }
 
 /** The library in the chosen order: name, the play time of the last years, or the size of the app. */
