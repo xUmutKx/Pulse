@@ -20,6 +20,21 @@ internal object IntroSources {
     private const val OS_API = "https://api.opensubtitles.com/api/v1"
     private const val THEINTRODB = "https://api.theintrodb.org/v2/media"
 
+    private val seRe = Regex("""(?i)(?<![a-z0-9])s(\d{1,2})[ ._-]?e(\d{1,3})(?![0-9])""")
+    private val xRe = Regex("""(?i)(?<![a-z0-9])(\d{1,2})x(\d{2,3})(?![0-9])""")
+
+    /**
+     * The show, the season and the episode of a file name like "Dexter.S03E10.1080p.5.1Ch.BluRay-Group.mkv": the show is only what stands BEFORE the
+     * season and episode mark, with the dots, the underscores, a trailing year and a trailing "(US)" tag cleaned off ("Dexter", not the whole rest of the name).
+     */
+    fun parseEpisode(file: String): Triple<String, Int?, Int?> {
+        val m = seRe.find(file) ?: xRe.find(file) ?: return Triple(file.substringBeforeLast('.').replace('.', ' ').replace('_', ' ').trim(), null, null)
+        val raw = file.substring(0, m.range.first)
+        val title = raw.replace('.', ' ').replace('_', ' ').replace(Regex("[\\[\\](){}]"), " ")
+            .replace(Regex("\\s+(19|20)\\d{2}\\s*$"), "").replace(Regex("[\\s-]+$"), "").replace(Regex("\\s+"), " ").trim()
+        return Triple(title, m.groupValues[1].toInt(), m.groupValues[2].toInt())
+    }
+
     /** TheIntroDB's intro and recap for one episode (the first range of each); empty when it has neither or the request fails. */
     suspend fun theIntroDb(imdb: String, season: Int, episode: Int): Segs = withContext(Dispatchers.IO) {
         runCatching {
@@ -71,9 +86,13 @@ internal object IntroSources {
     suspend fun showImdb(ctx: Context, fileTitle: String): String? = withContext(Dispatchers.IO) {
         val key = OpenSubs.key(ctx)
         // no OpenSubtitles key: the show's IMDb id from TVmaze, which needs no key, by the show's title
-        if (key.isBlank()) return@withContext tvMazeImdb(OpenSubs.episodeOf(fileTitle).first)
+        if (key.isBlank()) {
+            val t = parseEpisode(fileTitle).first
+            // a country tag ("The Office US") is tried again without it
+            return@withContext tvMazeImdb(t) ?: tvMazeImdb(t.replace(Regex("\\s+[A-Za-z]{2}$"), "")).takeIf { t.contains(' ') }
+        }
         runCatching {
-            val (title, season, episode) = OpenSubs.episodeOf(fileTitle)
+            val (title, season, episode) = parseEpisode(fileTitle)
             val q = StringBuilder("$OS_API/subtitles?query=${URLEncoder.encode(title, "UTF-8")}")
             if (season != null) q.append("&season_number=$season")
             if (episode != null) q.append("&episode_number=$episode")
@@ -97,7 +116,7 @@ internal object IntroSources {
 
     /** Intro of [file] (a file name): from IntroDB when the show and episode are known, else null. */
     suspend fun forFile(ctx: Context, file: String): Segs? {
-        val (title, season, episode) = OpenSubs.episodeOf(file)
+        val (_, season, episode) = parseEpisode(file)
         if (season == null || episode == null) return null
         val imdb = showImdb(ctx, file) ?: return null
         // IntroDB first; TheIntroDB for the episodes IntroDB does not have
