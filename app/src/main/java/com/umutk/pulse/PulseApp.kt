@@ -13,6 +13,9 @@ class PulseApp : Application() {
         super.onCreate()
         // the lyrics kept in the app's data and cache move beside their songs, once, in the background
         CoroutineScope(Dispatchers.IO).launch { LyricsMigrate.run(this@PulseApp) }
+        // the ads start (play build) and Premium is checked with Google Play, so a reinstall gets it back
+        com.umutk.pulse.ads.PulseAds.init(this)
+        com.umutk.pulse.ads.PulseAds.restorePremium(this)
     }
 
     override fun onTrimMemory(level: Int) {
