@@ -256,7 +256,6 @@ fun NoteEditor(
         InkLayer(NotesInk.decode(note.ink), inkOn, penColour, tool.width * INK_SIZES[inkSize.coerceIn(0, INK_SIZES.lastIndex)] * density) { st ->
             onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink) + st)) }
         }
-        }
         if (fmt) Row(
             Modifier.fillMaxWidth().padding(bottom = 6.dp).clip(RoundedCornerShape(22.dp)).background(T.panel.copy(alpha = .9f)).padding(horizontal = 8.dp, vertical = 2.dp),
             horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically,
