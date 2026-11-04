@@ -4,6 +4,9 @@ import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.foundation.layout.Row
 
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -80,6 +83,20 @@ fun WinampLibraryWindow(skin: WinampSkin, engine: MusicPlayerEngine, onClose: ()
     var name by remember { mutableStateOf("") }
     var url by remember { mutableStateOf("") }
     val fs = maxOf(9f * scaleDp, 11f).sp
+    // the radio tab fills itself from the open station directory (most listened of the phone's country); the box searches it by name
+    var found by remember { mutableStateOf<List<com.umutk.pulse.extras.radio.Station>>(emptyList()) }
+    var query by remember { mutableStateOf("") }
+    var loading by remember { mutableStateOf(false) }
+    var failed by remember { mutableStateOf(false) }
+    val country = remember { java.util.Locale.getDefault().country.ifBlank { "" } }
+    androidx.compose.runtime.LaunchedEffect(tab, query) {
+        if (tab != 1) return@LaunchedEffect
+        loading = true; failed = false
+        if (query.isNotBlank()) kotlinx.coroutines.delay(500)
+        runCatching { com.umutk.pulse.extras.radio.RadioDirectory.search(query, if (query.isBlank()) country else "") }
+            .onSuccess { found = it }.onFailure { failed = true }
+        loading = false
+    }
 
     Column(Modifier.width((WINAMP_W * scaleDp).dp).background(c.normalBg).padding((4 * scaleDp).dp)) {
         Row(Modifier.fillMaxWidth().height((20 * scaleDp).dp).background(c.selectedBg), verticalAlignment = Alignment.CenterVertically) {
@@ -110,8 +127,16 @@ fun WinampLibraryWindow(skin: WinampSkin, engine: MusicPlayerEngine, onClose: ()
                     }
                 }
                 item {
-                    Text(tr("+ ADD STATION", "+ İSTASYON EKLE"), color = c.current, fontFamily = font, fontSize = fs,
-                        modifier = Modifier.fillMaxWidth().clickable { adding = true }.padding(4.dp))
+                    BasicTextField(query, { query = it }, singleLine = true, textStyle = TextStyle(color = c.current, fontFamily = font, fontSize = fs),
+                        cursorBrush = SolidColor(c.current),
+                        modifier = Modifier.fillMaxWidth().background(c.selectedBg).padding(4.dp),
+                        decorationBox = { inner -> if (query.isEmpty()) Text(tr("SEARCH STATIONS", "İSTASYON ARA"), color = c.normal, fontFamily = font, fontSize = fs); inner() })
+                }
+                if (loading) item { Text(tr("LOADING…", "YÜKLENİYOR…"), color = c.normal, fontFamily = font, fontSize = fs, modifier = Modifier.padding(4.dp)) }
+                if (failed) item { Text(tr("NO CONNECTION", "BAĞLANTI YOK"), color = c.normal, fontFamily = font, fontSize = fs, modifier = Modifier.padding(4.dp)) }
+                itemsIndexed(found) { _, s ->
+                    Text(s.name + if (s.bitrate > 0) "  ${s.bitrate}k" else "", color = c.normal, fontFamily = font, fontSize = fs, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.fillMaxWidth().clickable { engine.playQueue(listOf(Track(s.url, s.name))) }.padding(horizontal = 4.dp, vertical = 3.dp))
                 }
             }
         }
