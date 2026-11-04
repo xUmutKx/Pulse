@@ -2130,3 +2130,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Winamp: Media library düğmesi playlist penceresinin stilinde; RADIO sekmesi istasyonları kendiliğinden çeker (ülkeye göre en çok dinlenenler) + arama, elle ekleme kalktı (derlenmedi)
 
 - Kaset, pikap, iPod: çok daha ayrıntılı çizim (vidalar, makara paketleri, etiket çizgileri, plak olukları, kol/karşı ağırlık, iPod ekran/pil/tekerlek gradyanları) (derlenmedi)
+
+- Kaset/pikap/iPod: ambientCG CC0 doku fotoğrafları (ceviz, çelik, plastik, deri) çizimin altına; bildirim kartı bu üç görünüm için çizimli resim + üç tuş (derlenmedi)
