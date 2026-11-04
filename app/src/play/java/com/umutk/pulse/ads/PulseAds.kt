@@ -59,6 +59,12 @@ object PulseAds {
         loadRewarded(c)
     }
 
+    /** Premium from Google Play: asks Play at start (a reinstall gets it back). */
+    fun restorePremium(c: Context, done: (Boolean) -> Unit = { }) = PremiumBilling.restore(c, done)
+
+    /** Opens the Premium purchase inside the app. */
+    fun buyPremium(a: Activity, done: (Boolean) -> Unit) = PremiumBilling.buy(a, done)
+
     /** A standard banner; it is released when it leaves the screen. */
     @Composable
     fun Banner(modifier: Modifier = Modifier) {
