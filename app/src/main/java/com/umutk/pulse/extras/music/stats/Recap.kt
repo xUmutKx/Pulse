@@ -23,6 +23,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -83,9 +85,13 @@ object PlayLog {
     fun since(c: Context): Long = runCatching { file(c).useLines { it.firstOrNull()?.substringBefore('\t')?.toLong() } }.getOrNull() ?: 0L
 }
 
-private val DEEP = Color(0xFF14102B); private val VIOLET = Color(0xFF7C4DFF); private val PINK = Color(0xFFFF4F9A); private val LIME = Color(0xFFC6FF3D); private val SOFT = Color(0xFFEDE7FF)
+// white text on black; the labels and the bars are greys, so nothing is pink or violet any more
+private val DEEP = Color.Black; private val VIOLET = Color(0xFF8C8C8C); private val PINK = Color(0xFFB5B5B5); private val LIME = Color.White; private val SOFT = Color.White
 
-class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList(), val songPaths: List<String> = emptyList(), val latest: List<Triple<String, String, String>> = emptyList())
+class Recap(val from: Long, val minutes: Long, val plays: Int, val artists: List<Pair<String, Long>>, val songs: List<Triple<String, String, Int>>, val byPart: List<Long>, val byDay: List<Long>, val busiestHour: Int, val firstNote: Long, val moods: List<Pair<String, Long>> = emptyList(), val genres: List<Pair<String, Long>> = emptyList(), val songPaths: List<String> = emptyList(), val latest: List<Triple<String, String, String>> = emptyList(),
+    /** the figures of the summary page: how many different songs and artists, on how many days, the busiest day, every hour, the longer top lists */
+    val distinctSongs: Int = 0, val distinctArtists: Int = 0, val activeDays: Int = 0, val bestDayMs: Long = 0L, val bestDayAt: Long = 0L,
+    val byHour: List<Long> = emptyList(), val artists10: List<Pair<String, Long>> = emptyList(), val songs10: List<Triple<String, String, Int>> = emptyList())
 
 private fun makeRecap(c: Context, days: Int): Recap {
     val from = System.currentTimeMillis() - days * 86_400_000L
@@ -111,10 +117,23 @@ private fun makeRecap(c: Context, days: Int): Recap {
     }
     // the file path of each top song (same order as songs), for its cover
     val songPaths = e.filter { it.counted }.groupBy { it.path }.entries.sortedByDescending { it.value.size }.take(5).map { it.key }
+    // the summary page: different songs and artists, the days with listening, the busiest day
+    val byCalDay = HashMap<Int, Long>(); val dayStart = HashMap<Int, Long>()
+    e.forEach { x ->
+        cal.timeInMillis = x.t
+        val k = cal.get(Calendar.YEAR) * 1000 + cal.get(Calendar.DAY_OF_YEAR)
+        byCalDay[k] = (byCalDay[k] ?: 0L) + x.ms; if (k !in dayStart) dayStart[k] = x.t
+    }
+    val bestKey = byCalDay.maxByOrNull { it.value }?.key
+    val artists10 = e.filter { it.artist.isNotBlank() }.groupBy { it.artist }.mapValues { it.value.sumOf { x -> x.ms } }.toList().sortedByDescending { it.second }.take(10)
+    val songs10 = e.filter { it.counted }.groupBy { it.path }.map { (_, l) -> Triple(l.first().title, l.first().artist, l.size) }.sortedByDescending { it.third }.take(10)
     return Recap(from, minutes, e.count { it.counted }, artists, songs, part.toList(), day.toList(), hour.indices.maxByOrNull { hour[it] } ?: 0, PlayLog.since(c),
         mood.toList().sortedByDescending { it.second }.take(5), genre.toList().sortedByDescending { it.second }.take(5), songPaths,
         // the last songs played in the range, newest first, each once
-        e.sortedByDescending { it.t }.distinctBy { it.path }.take(6).map { Triple(it.title, it.artist, it.path) })
+        e.sortedByDescending { it.t }.distinctBy { it.path }.take(6).map { Triple(it.title, it.artist, it.path) },
+        distinctSongs = e.filter { it.counted }.map { it.path }.distinct().size, distinctArtists = e.filter { it.artist.isNotBlank() }.map { it.artist }.distinct().size,
+        activeDays = byCalDay.size, bestDayMs = bestKey?.let { byCalDay[it] } ?: 0L, bestDayAt = bestKey?.let { dayStart[it] } ?: 0L,
+        byHour = hour.toList(), artists10 = artists10, songs10 = songs10)
 }
 
 /** A song's cover, small, found by its path in the library; an empty square when it has none. */
@@ -132,27 +151,123 @@ private fun RecapCover(path: String?, size: androidx.compose.ui.unit.Dp) {
 private fun cardBitmap(r: Recap, label: String): Bitmap {
     val b = Bitmap.createBitmap(1080, 1920, Bitmap.Config.ARGB_8888)
     val cv = Canvas(b)
-    cv.drawColor(0xFF14102B.toInt())
+    cv.drawColor(0xFF000000.toInt())
     val p = Paint(Paint.ANTI_ALIAS_FLAG)
-    p.color = 0xFF7C4DFF.toInt(); cv.drawCircle(900f, 180f, 380f, p)
-    p.color = 0xFFFF4F9A.toInt(); cv.drawCircle(120f, 1750f, 300f, p)
-    p.color = 0xFFEDE7FF.toInt(); p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); p.textSize = 64f
+    p.color = 0xFF1A1A1A.toInt(); cv.drawCircle(900f, 180f, 380f, p)
+    p.color = 0xFF111111.toInt(); cv.drawCircle(120f, 1750f, 300f, p)
+    p.color = 0xFFFFFFFF.toInt(); p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); p.textSize = 64f
     cv.drawText("PULSE", 80f, 150f, p)
-    p.typeface = Typeface.DEFAULT; p.textSize = 40f; p.color = 0xCCEDE7FF.toInt(); cv.drawText(label, 80f, 215f, p)
-    p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); p.color = 0xFFC6FF3D.toInt(); p.textSize = 220f
+    p.typeface = Typeface.DEFAULT; p.textSize = 40f; p.color = 0xCCFFFFFF.toInt(); cv.drawText(label, 80f, 215f, p)
+    p.typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD); p.color = 0xFFFFFFFF.toInt(); p.textSize = 220f
     cv.drawText("${r.minutes}", 80f, 560f, p)
-    p.typeface = Typeface.DEFAULT; p.color = 0xFFEDE7FF.toInt(); p.textSize = 54f; cv.drawText(tr("minutes of music", "dakika müzik"), 80f, 640f, p)
+    p.typeface = Typeface.DEFAULT; p.color = 0xFFFFFFFF.toInt(); p.textSize = 54f; cv.drawText(tr("minutes of music", "dakika müzik"), 80f, 640f, p)
     var y = 800f
-    p.textSize = 40f; p.color = 0xAAEDE7FF.toInt(); cv.drawText(tr("TOP ARTISTS", "EN ÇOK DİNLENEN SANATÇILAR"), 80f, y, p); y += 70f
-    p.textSize = 56f; p.color = 0xFFEDE7FF.toInt()
+    p.textSize = 40f; p.color = 0xAAFFFFFF.toInt(); cv.drawText(tr("TOP ARTISTS", "EN ÇOK DİNLENEN SANATÇILAR"), 80f, y, p); y += 70f
+    p.textSize = 56f; p.color = 0xFFFFFFFF.toInt()
     r.artists.take(3).forEachIndexed { i, a -> cv.drawText("${i + 1}  " + a.first.take(26), 80f, y, p); y += 80f }
     y += 60f
-    p.textSize = 40f; p.color = 0xAAEDE7FF.toInt(); cv.drawText(tr("TOP SONGS", "EN ÇOK DİNLENEN ŞARKILAR"), 80f, y, p); y += 70f
-    p.textSize = 56f; p.color = 0xFFEDE7FF.toInt()
+    p.textSize = 40f; p.color = 0xAAFFFFFF.toInt(); cv.drawText(tr("TOP SONGS", "EN ÇOK DİNLENEN ŞARKILAR"), 80f, y, p); y += 70f
+    p.textSize = 56f; p.color = 0xFFFFFFFF.toInt()
     r.songs.take(3).forEachIndexed { i, s -> cv.drawText("${i + 1}  " + s.first.take(26), 80f, y, p); y += 80f }
-    p.textSize = 44f; p.color = 0xFFFF4F9A.toInt()
+    p.textSize = 44f; p.color = 0xFFB5B5B5.toInt()
     cv.drawText(tr("${r.plays} plays  ·  most at ${"%02d".format(r.busiestHour)}:00", "${r.plays} dinleme  ·  en çok ${"%02d".format(r.busiestHour)}:00'da"), 80f, 1780f, p)
     return b
+}
+
+/** One line of the summary: the name of a figure and its value. */
+@Composable
+private fun SummaryLine(name: String, value: String) {
+    Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(name, color = Color.White.copy(alpha = .7f), fontSize = 14.sp, modifier = Modifier.weight(1f))
+        Text(value, color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+/** A heading inside the summary. */
+@Composable
+private fun SummaryHead(text: String) {
+    Text(text.uppercase(), color = Color.White.copy(alpha = .6f), fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp, modifier = Modifier.padding(top = 26.dp, bottom = 2.dp))
+}
+
+/** A bar row: a name, a bar as long as the value is next to the largest one, and the value. */
+@Composable
+private fun SummaryBar(name: String, value: Long, top: Long, text: String, nameWidth: androidx.compose.ui.unit.Dp = 120.dp) {
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        Text(name, color = Color.White, fontSize = 14.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.size(width = nameWidth, height = 20.dp))
+        Box(Modifier.weight(1f).height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color.White.copy(alpha = .12f))) {
+            Box(Modifier.fillMaxWidth((value / top.coerceAtLeast(1L).toFloat()).coerceIn(0f, 1f)).fillMaxHeight().background(Color.White.copy(alpha = .85f)))
+        }
+        Text(" $text", color = Color.White.copy(alpha = .7f), fontSize = 12.sp)
+    }
+}
+
+/**
+ * The last page: everything the recap counted, on one page you scroll. The figures, the ten best artists and songs, the time of the day, the days of the week,
+ * every hour, mood and genre, and the button that saves the card as a picture.
+ */
+@Composable
+private fun RecapSummary(r: Recap, days: Int, label: String, since: String?, cover: ImageBitmap?, saved: String, onSave: () -> Unit) {
+    val dn = listOf(tr("Mon", "Pzt"), tr("Tue", "Sal"), tr("Wed", "Çar"), tr("Thu", "Per"), tr("Fri", "Cum"), tr("Sat", "Cmt"), tr("Sun", "Paz"))
+    Text(label.uppercase(), color = Color.White.copy(alpha = .7f), fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
+    Text(tr("Summary", "Özet"), color = Color.White, fontSize = 36.sp, fontWeight = FontWeight.Black)
+    Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+        cover?.let { Image(it, null, Modifier.size(72.dp).clip(RoundedCornerShape(12.dp)), contentScale = ContentScale.Crop) }
+        Column(Modifier.padding(start = if (cover != null) 14.dp else 0.dp)) {
+            Text("${r.minutes} " + tr("minutes", "dakika"), color = Color.White, fontSize = 34.sp, fontWeight = FontWeight.Black)
+            if (r.minutes >= 60) Text("%.1f ".format(r.minutes / 60f) + tr("hours", "saat"), color = Color.White.copy(alpha = .7f), fontSize = 14.sp)
+        }
+    }
+    SummaryHead(tr("In numbers", "Sayılarla"))
+    SummaryLine(tr("Songs played (30 s or more)", "Dinlenen şarkı (30 sn ve üzeri)"), "${r.plays}")
+    SummaryLine(tr("Different songs", "Farklı şarkı"), "${r.distinctSongs}")
+    SummaryLine(tr("Different artists", "Farklı sanatçı"), "${r.distinctArtists}")
+    SummaryLine(tr("Days with music", "Müzik dinlenen gün"), "${r.activeDays} / $days")
+    SummaryLine(tr("Average per day", "Günlük ortalama"), "${r.minutes / days.coerceAtLeast(1)} " + tr("min", "dk"))
+    if (r.activeDays > 0) SummaryLine(tr("Average on a day with music", "Dinlenen günde ortalama"), "${r.minutes / r.activeDays} " + tr("min", "dk"))
+    if (r.bestDayMs > 0) SummaryLine(tr("Busiest day", "En yoğun gün"), java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(r.bestDayAt)) + "  ·  ${r.bestDayMs / 60_000L} " + tr("min", "dk"))
+    if (r.minutes > 0) SummaryLine(tr("Busiest hour", "En yoğun saat"), "%02d:00".format(r.busiestHour))
+    val topDay = r.byDay.indices.maxByOrNull { r.byDay[it] } ?: 0
+    if (r.minutes > 0) SummaryLine(tr("Favourite day of the week", "En çok dinlenen gün"), dn[topDay])
+    if (r.artists10.isNotEmpty()) {
+        SummaryHead(tr("Top artists", "En çok dinlenen sanatçılar"))
+        val top = r.artists10.first().second
+        r.artists10.forEachIndexed { i, a -> SummaryBar("${i + 1}  " + a.first, a.second, top, "${a.second / 60_000L} " + tr("min", "dk"), 150.dp) }
+    }
+    if (r.songs10.isNotEmpty()) {
+        SummaryHead(tr("Top songs", "En çok dinlenen şarkılar"))
+        val top = r.songs10.first().third.toLong()
+        r.songs10.forEachIndexed { i, s -> SummaryBar("${i + 1}  " + s.first, s.third.toLong(), top, "${s.third} " + tr("plays", "dinleme"), 150.dp) }
+    }
+    val names = listOf(tr("Morning", "Sabah"), tr("Afternoon", "Öğleden sonra"), tr("Evening", "Akşam"), tr("Night", "Gece"))
+    val tot = r.byPart.sum().coerceAtLeast(1L)
+    SummaryHead(tr("Time of day", "Günün saati"))
+    names.forEachIndexed { i, n -> SummaryBar(n, r.byPart[i], tot, "%d%%".format(r.byPart[i] * 100 / tot)) }
+    SummaryHead(tr("Days of the week", "Haftanın günleri"))
+    val dmx = (r.byDay.maxOrNull() ?: 1L).coerceAtLeast(1L)
+    r.byDay.forEachIndexed { i, v -> SummaryBar(dn[i], v, dmx, "${v / 60_000L} " + tr("min", "dk"), 60.dp) }
+    if (r.byHour.size == 24) {
+        SummaryHead(tr("Every hour", "Her saat"))
+        val hmx = (r.byHour.maxOrNull() ?: 1L).coerceAtLeast(1L)
+        Row(Modifier.fillMaxWidth().padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
+            r.byHour.forEachIndexed { h, v -> Box(Modifier.weight(1f).height((4 + 60 * v / hmx.toFloat()).dp).clip(RoundedCornerShape(2.dp)).background(Color.White.copy(alpha = if (v == hmx && v > 0) 1f else .5f))) }
+        }
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+            listOf("00", "06", "12", "18", "23").forEach { Text(it, color = Color.White.copy(alpha = .55f), fontSize = 10.sp, modifier = Modifier.weight(1f)) }
+        }
+    }
+    listOf(r.moods to tr("Mood", "Ruh hâli"), r.genres to tr("Genre", "Tür")).forEach { (rows, title) ->
+        if (rows.isNotEmpty()) {
+            SummaryHead(title)
+            val top = rows.first().second
+            rows.forEach { (n, ms) -> SummaryBar(n.replaceFirstChar { it.uppercase() }, ms, top, "${ms / 60_000L} " + tr("min", "dk")) }
+        }
+    }
+    if (since != null) Text(tr("Counted from $since, when Pulse began to note the listening.", "$since tarihinden beri sayılır: Pulse dinlemeyi o gün yazmaya başladı."), color = Color.White.copy(alpha = .5f), fontSize = 12.sp, modifier = Modifier.padding(top = 22.dp))
+    Spacer(Modifier.height(22.dp))
+    Text(tr("Save as picture", "Resim olarak kaydet"), color = Color.Black, fontSize = 16.sp, fontWeight = FontWeight.Bold,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.White).clickable { onSave() }.padding(horizontal = 22.dp, vertical = 12.dp))
+    if (saved.isNotEmpty()) Text(saved, color = Color.White.copy(alpha = .7f), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+    Spacer(Modifier.height(24.dp))
 }
 
 /** The music recap: pages you swipe through (minutes, artists, songs, when you listen, the card to save), for the last 30 days, 3 months or a year. */
@@ -162,7 +277,10 @@ fun RecapScreen(back: () -> Unit) {
     val ctx = LocalContext.current
     BackHandler { back() }
     var days by remember { mutableIntStateOf(90) }
-    val r = remember(days) { makeRecap(ctx, days) }
+    // the play log can be thousands of lines: it is read and counted off the main thread, so the screen never stops; the last figures stay until the new ones are ready
+    var recap by remember { mutableStateOf<Recap?>(null) }
+    LaunchedEffect(days) { recap = withContext(Dispatchers.Default) { makeRecap(ctx, days) } }
+    val r = recap ?: run { Box(Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) { Text("…", color = Color.White, fontSize = 28.sp) }; return }
     val pager = rememberPagerState { 7 }
     val scope = rememberCoroutineScope()
     var saved by remember { mutableStateOf("") }
@@ -188,7 +306,7 @@ fun RecapScreen(back: () -> Unit) {
                 // each page fades and rises in when it is turned to; the numbers count up with it
                 val enter = remember { Animatable(0f) }
                 LaunchedEffect(pager.currentPage == page) { if (pager.currentPage == page) enter.animateTo(1f, tween(700)) else enter.snapTo(0f) }
-                Column(Modifier.fillMaxSize().padding(28.dp).graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 48.dp.toPx() }, verticalArrangement = Arrangement.Center) {
+                Column(Modifier.fillMaxSize().then(if (page == 6) Modifier.verticalScroll(rememberScrollState()) else Modifier).padding(28.dp).graphicsLayer { alpha = enter.value; translationY = (1f - enter.value) * 48.dp.toPx() }, verticalArrangement = if (page == 6) Arrangement.Top else Arrangement.Center) {
                     when (page) {
                         0 -> {
                             Text(label.uppercase(), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
@@ -277,19 +395,12 @@ fun RecapScreen(back: () -> Unit) {
                                 }
                             }
                         }
-                        else -> {
-                            Text(tr("Your card", "Kartın"), color = PINK, fontSize = 14.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
-                            cover?.let { Image(it, null, Modifier.padding(top = 12.dp).size(120.dp).clip(RoundedCornerShape(14.dp)), contentScale = ContentScale.Crop) }
-                            Text("${r.minutes} " + tr("minutes", "dakika"), color = LIME, fontSize = 44.sp, fontWeight = FontWeight.Black)
-                            Text(r.artists.take(3).joinToString("  ·  ") { it.first }, color = SOFT, fontSize = 16.sp, modifier = Modifier.padding(top = 6.dp))
-                            Spacer(Modifier.height(20.dp))
-                            Text(tr("Save as picture", "Resim olarak kaydet"), color = DEEP, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.clip(RoundedCornerShape(50)).background(LIME)
-                                .clickable { scope.launch {
-                                    val bytes = ByteArrayOutputStream().also { cardBitmap(r, label).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray()
-                                    val n = "pulse-recap-" + System.currentTimeMillis() / 1000 + ".png"
-                                    saved = runCatching { com.umutk.pulse.docScanSave(ctx, n, "image/png") { it.write(bytes) }; tr("Saved $n in Download/Pulse", "$n kaydedildi, Download/Pulse içinde") }.getOrElse { tr("Could not save", "Kaydedilemedi") }
-                                } }.padding(horizontal = 22.dp, vertical = 12.dp))
-                            if (saved.isNotEmpty()) Text(saved, color = SOFT.copy(alpha = .7f), fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                        else -> RecapSummary(r, days, label, since, cover, saved) {
+                            scope.launch {
+                                val bytes = withContext(Dispatchers.Default) { ByteArrayOutputStream().also { cardBitmap(r, label).compress(Bitmap.CompressFormat.PNG, 100, it) }.toByteArray() }
+                                val n = "pulse-recap-" + System.currentTimeMillis() / 1000 + ".png"
+                                saved = runCatching { withContext(Dispatchers.IO) { com.umutk.pulse.docScanSave(ctx, n, "image/png") { it.write(bytes) } }; tr("Saved $n in Download/Pulse", "$n kaydedildi, Download/Pulse içinde") }.getOrElse { tr("Could not save", "Kaydedilemedi") }
+                            }
                         }
                     }
                 }

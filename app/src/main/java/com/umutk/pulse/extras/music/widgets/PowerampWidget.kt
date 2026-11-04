@@ -134,7 +134,8 @@ class PowerampWidget : AppWidgetProvider() {
 
         /** Whole-window fit: the largest scale at which W x H fits the box, centred. */
         fun fit(bw: Int, bh: Int): Fit {
-            val s = minOf(bw / W.toFloat(), bh / H.toFloat())
+            // the window never grows past MAX_DP of the screen for each unit: a widget pulled wider or taller keeps the window about the size of a normal one, centred, with empty space around it
+            val s = minOf(bw / W.toFloat(), bh / H.toFloat(), lastCap)
             val w = (W * s).toInt(); val h = (H * s).toInt()
             return Fit(s, (bw - w) / 2, (bh - h) / 2, w, h)
         }
@@ -144,6 +145,10 @@ class PowerampWidget : AppWidgetProvider() {
         /** The widget's box in pixels from its options: portrait uses the narrow width and the tall height, landscape the reverse. */
         /** How much smaller the bitmap is than the widget on screen (set by [boxPx]); the touch padding is in screen pixels. */
         private var lastShrink = 1f
+        /** The most the window may be scaled in bitmap pixels per unit (set by [boxPx] from [MAX_DP] and the screen's density). */
+        private var lastCap = Float.MAX_VALUE
+        /** The window is at most this many dp per unit: 320 x 200 dp, about a tenth more than the first size of the widget. */
+        private const val MAX_DP = 1.0f
 
         private fun boxPx(c: Context, id: Int): Pair<Int, Int> {
             val o = AppWidgetManager.getInstance(c).getAppWidgetOptions(id)
@@ -157,6 +162,7 @@ class PowerampWidget : AppWidgetProvider() {
             // RemoteViews carries bitmaps over a 1 MB binder limit; RGB_565 is 2 bytes a pixel, so keep about 350k pixels
             val shrink = kotlin.math.sqrt(pw * ph / 900_000f).coerceAtLeast(1f)
             lastShrink = shrink
+            lastCap = MAX_DP * d / shrink
             return (pw / shrink).toInt().coerceAtLeast(1) to (ph / shrink).toInt().coerceAtLeast(1)
         }
 
