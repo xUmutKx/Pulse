@@ -129,6 +129,12 @@ import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.hypot
 import kotlin.math.roundToInt
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.foundation.layout.matchParentSize
+import androidx.compose.foundation.layout.fillMaxHeight
 
 @Composable
 internal fun VBtn(onClick: () -> Unit, raised: Boolean = false, content: @Composable () -> Unit) {
@@ -222,6 +228,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     }
 
     var playing by remember { mutableStateOf(false) }
+    // the skip buttons that ran out, by the start of their segment: each shows once, then closes by itself
+    var skipGone by remember { mutableStateOf(setOf<Long>()) }
     var pos by remember { mutableLongStateOf(0L) }
     var dur by remember { mutableLongStateOf(0L) }
     var seeking by remember { mutableStateOf(false) }
@@ -638,14 +646,18 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         if (!inPip) VideoStatus(prefs, rev, Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 12.dp))
         // skip the opening and the "previously on" recap: a button shows while one of them plays and jumps to its end
         segs?.let { sg ->
+            // a segment whose button already ran out is not shown again
             val hit = listOf(sg.intro to tr("Skip intro", "İntroyu geç"), sg.recap to tr("Skip recap", "Özeti geç"))
-                .firstOrNull { (r, _) -> r != null && pos >= r.first && pos < r.last }
+                .firstOrNull { (r, _) -> r != null && pos >= r.first && pos < r.last && r.first !in skipGone }
             if (!inPip && hit != null) {
-                val end2 = hit.first!!.last + 1
-                Box(Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp).clip(RoundedCornerShape(6.dp))
-                    .background(Color(0xE6FFFFFF)).clickable { player.seekTo(end2) }.padding(horizontal = 16.dp, vertical = 9.dp)) {
-                    Text(hit.second, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                }
+                val range = hit.first!!
+                SkipPill(
+                    text = hit.second,
+                    startKey = range.first,
+                    onTap = { player.seekTo(range.last + 1) },
+                    onTimeout = { skipGone = skipGone + range.first },
+                    modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp),
+                )
             }
         }
         hud?.let { (icon, text) ->
@@ -853,6 +865,26 @@ private class MoreItem(val key: String, val icon: String, val name: String, val 
 /**
  * The More menu: one column under the three-dot button (top right). Every row has the same height; a state (On / Off) sits at the end.
  */
+/** A skip button whose inside fills like a timeline over [durationMs]; a tap skips, and when it is full the button closes. */
+@Composable
+private fun SkipPill(text: String, startKey: Long, onTap: () -> Unit, onTimeout: () -> Unit, modifier: Modifier = Modifier, durationMs: Int = 5000) {
+    val fill = remember(startKey) { Animatable(0f) }
+    val currentTimeout by rememberUpdatedState(onTimeout)
+    LaunchedEffect(startKey) {
+        fill.animateTo(1f, tween(durationMs, easing = LinearEasing))
+        currentTimeout()
+    }
+    Box(
+        modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x66FFFFFF)).clickable { onTap() }
+            .padding(horizontal = 16.dp, vertical = 9.dp)
+    ) {
+        Box(Modifier.matchParentSize()) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(fill.value).background(Color(0xE6FFFFFF)))
+        }
+        Text(text, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+    }
+}
+
 @Composable
 private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, onPick: (String) -> Unit) {
     val d = LocalDensity.current
