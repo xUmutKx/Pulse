@@ -73,6 +73,36 @@ object MusicStats {
         if (stars in 1..5) m[path] = stars else m.remove(path)
         sp(c).edit().putString("ratings", m.entries.joinToString("\n") { "${it.value}\t${it.key}" }).apply()
     }
+
+    /** Pulse's own backup of the favourites and the stars (the song paths are the phone's own). */
+    fun backupJson(c: Context): String = JSONObject().apply {
+        put("pulse_backup", 1)
+        put("favourites", org.json.JSONArray(favourites(c).sorted()))
+        put("ratings", JSONObject().apply { ratings(c).forEach { (k, v) -> put(k, v) } })
+    }.toString(2)
+
+    /** How many favourites and stars a backup holds, before the user says whether to add them. */
+    fun backupCounts(json: String): Pair<Int, Int> = runCatching {
+        val o = JSONObject(json)
+        val f = o.optJSONArray("favourites")?.length() ?: 0
+        val r = o.optJSONObject("ratings")?.length() ?: 0
+        f to r
+    }.getOrDefault(0 to 0)
+
+    /** Adds the backup's favourites and stars to the ones on this phone; nothing that is already set is removed. */
+    fun restoreJson(c: Context, json: String) {
+        val o = JSONObject(json)
+        o.optJSONArray("favourites")?.let { a ->
+            val s = favourites(c).toMutableSet()
+            for (i in 0 until a.length()) s.add(a.getString(i))
+            sp(c).edit().putStringSet("fav", s).apply()
+        }
+        o.optJSONObject("ratings")?.let { r ->
+            val m = ratings(c).toMutableMap()
+            r.keys().forEach { k -> val n = r.optInt(k, 0); if (n in 1..5) m[k] = n }
+            sp(c).edit().putString("ratings", m.entries.joinToString("\n") { "${it.value}\t${it.key}" }).apply()
+        }
+    }
 }
 
 /** Attach once to the engine's player: measures real playing time per track, even with the screen off. */
