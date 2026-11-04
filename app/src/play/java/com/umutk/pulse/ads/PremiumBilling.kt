@@ -72,8 +72,9 @@ object PremiumBilling {
                     QueryProductDetailsParams.Product.newBuilder().setProductId(PRODUCT_ID).setProductType(BillingClient.ProductType.INAPP).build()
                 ))
                 .build()
-            billing(a).queryProductDetailsAsync(params) { result, details ->
-                val item = details.firstOrNull()
+            billing(a).queryProductDetailsAsync(params) { result, queried ->
+                // Billing 8: the list of products is inside the result object
+                val item = queried.productDetailsList.firstOrNull()
                 if (result.responseCode != BillingClient.BillingResponseCode.OK || item == null) { done(false); return@queryProductDetailsAsync }
                 product = item
                 pending = done
