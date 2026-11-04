@@ -2076,3 +2076,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) Fiziksel klavye bağlıyken alttaki Türkçe harf satırı kaldırıldı; yalnızca öneri çubuğu kalıyor
 - (sonraki güncelleme) Klavye: öneri çubuğu %15 incelti (yüzen, normal, yatay); yüzen klavyenin sağ üstteki klavye simgesi kaldırıldı
 - (sonraki güncelleme) Yüzen klavye: yatay hareket ekranın tamamına (boş %30), aşağı çekince yalnızca öneri çubuğu kalacak şekilde
+1.0.354 derlendi: 1.0.353 derlemesi iptal edildi; son değişiklikler: klavye (fiziksel Türkçe Q eşlemesi, Türkçe harf satırı kaldırıldı, öneri çubuğu ve yüzen klavye hareketi), kalem paneli, vurgulayıcı, notlar düzenleyici sadeleştirme, alt çubuk geri alındı, altyazı arama penceresi ve CC seçimi, video kaynak tarama düzeltmesi, kapak ticker/sayfası, alarm kaydırma
