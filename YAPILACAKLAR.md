@@ -2098,3 +2098,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) İmza geri alındı: sabit eski ci/pulse.keystore kullanılıyor (Play kaydıyla aynı parmak izi); GitHub secret'ları kullanılmıyor. derlenmedi
 - (sonraki güncelleme) Premium: ayrı premium uygulaması kaldırıldı; satın alma uygulamanın içinde Google Play tek seferlik ürün (pulse_premium) ile yapılıyor (play sürümü); açılışta Play'den geri yükleme; premium modülü ve build-premium workflow'u silindi. derlenmedi
 - (sonraki güncelleme) Premium: kayıtlı bayrak kaldırıldı; her açılışta Google Play'den sorgulanıyor, sonuç sadece bellekte tutuluyor. derlenmedi
+- (sonraki güncelleme) Reklam: sayfa içi ikinci reklamlar kaldırıldı (hava, uygulama yöneticisi, e-kitap, ayarlar); altta tek reklam şeridi kaldı. derlenmedi
