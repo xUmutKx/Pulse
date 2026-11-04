@@ -14,6 +14,7 @@ import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import kotlin.math.roundToInt
 import androidx.compose.runtime.produceState
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -207,6 +208,8 @@ fun WeatherHub(onBack: () -> Unit) {
     Box(Modifier.fillMaxSize().background(bgBrush).pointerInput(place, cities) {
         detectHorizontalDragGestures(onDragStart = { dragSum = 0f }, onDragEnd = { if (dragSum < -160f) go(1) else if (dragSum > 160f) go(-1); dragSum = 0f }) { _, dx -> dragSum += dx }
     }) {
+    // the sky look: the weather scene (clouds, sun, rain) is the background of the whole page, not only of the first card
+    if (skin == "sky") fc?.let { WeatherScene(it.code, Modifier.fillMaxSize(), day = it.isDay) }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = pageGutter), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item {
             Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -270,7 +273,7 @@ fun WeatherHub(onBack: () -> Unit) {
             val rainSoon = f.hours.take(6).maxOfOrNull { it.rain } ?: 0
             item {
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp))) {
-                WeatherScene(f.code, Modifier.matchParentSize(), day = f.isDay)
+                if (skin != "sky") WeatherScene(f.code, Modifier.matchParentSize(), day = f.isDay)
                 Column(Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     val wh = androidx.compose.ui.graphics.Color.White
                     Text(f.place, color = wh.copy(alpha = .85f), fontSize = 15.sp, maxLines = 1)
@@ -302,7 +305,7 @@ fun WeatherHub(onBack: () -> Unit) {
             item {
                 LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     // the first one is the hour it is now: it is lit
-                    itemsIndexed(if (f.hours48.isNotEmpty()) f.hours48 else f.hours) { hi, h ->
+                    itemsIndexed(fillHours(if (f.hours48.isNotEmpty()) f.hours48 else f.hours)) { hi, h ->
                         Column(Modifier.then(if (hi == 0) Modifier.background(Color.White.copy(alpha = .20f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(horizontal = 8.dp, vertical = 6.dp) else Modifier), horizontalAlignment = Alignment.CenterHorizontally) {
                             val midnight = h.time.length >= 16 && h.time.substring(11, 16) == "00:00"
                             Text(if (midnight) runCatching { LocalDate.parse(h.time.take(10)).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault("") else WeatherFmt.clock(h.time), color = if (midnight) fg else sub, fontSize = 12.sp, fontWeight = if (midnight) FontWeight.Medium else FontWeight.Normal)
@@ -404,6 +407,34 @@ fun WeatherHub(onBack: () -> Unit) {
         if (error.isNotEmpty()) item { Text(error, color = sub, fontSize = 13.sp) }
     }
     }
+}
+
+/**
+ * One entry per hour. A service that gives a point every three or six hours (7Timer, wttr.in, the far end of met.no) is filled in between: the temperature and the
+ * chance of rain run in a straight line from one point to the next, the sky stays as the earlier point until the middle and then takes the later one.
+ */
+private fun fillHours(src: List<Hour>): List<Hour> {
+    if (src.size < 2) return src
+    val fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm")
+    val out = ArrayList<Hour>(src.size * 2)
+    for (i in src.indices) {
+        val a = src[i]
+        out += a
+        val b = src.getOrNull(i + 1) ?: break
+        val ta = runCatching { java.time.LocalDateTime.parse(a.time.take(16), fmt) }.getOrNull() ?: continue
+        val tb = runCatching { java.time.LocalDateTime.parse(b.time.take(16), fmt) }.getOrNull() ?: continue
+        val gap = java.time.Duration.between(ta, tb).toHours().toInt()
+        if (gap in 2..6) for (k in 1 until gap) {
+            val r = k.toDouble() / gap
+            out += a.copy(
+                time = ta.plusHours(k.toLong()).format(fmt),
+                code = if (r < .5) a.code else b.code,
+                temp = a.temp + (b.temp - a.temp) * r,
+                rain = if (a.rain >= 0 && b.rain >= 0) (a.rain + (b.rain - a.rain) * r).roundToInt() else a.rain,
+            )
+        }
+    }
+    return out
 }
 
 /** The colours of the sky page: a gradient that follows the weather and whether it is day. */
