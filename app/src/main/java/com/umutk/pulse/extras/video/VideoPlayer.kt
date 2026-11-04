@@ -134,6 +134,7 @@ import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.layout.fillMaxHeight
+import com.umutk.pulse.ads.rememberAdGate
 
 @Composable
 internal fun VBtn(onClick: () -> Unit, raised: Boolean = false, content: @Composable () -> Unit) {
@@ -670,6 +671,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         VideoExtras(player, prefs, act, rev)
         if (!inPip) VideoStatus(prefs, rev, Modifier.align(Alignment.TopEnd).padding(top = 56.dp, end = 12.dp))
         // skip the opening and the "previously on" recap: a button shows while one of them plays and jumps to its end
+        // the skip button: on the play build a short rewarded ad is watched first (each skip); the other builds skip at once
+        val skipGate = rememberAdGate(tr("Skip with an ad", "Reklam izleyerek atla"), tr("Watch a short ad to skip this part.", "Bu bölümü atlamak için kısa bir reklam izle."), pass = false)
         segs?.let { sg ->
             // a segment whose button already ran out is not shown again
             val hit = listOf(sg.intro to tr("Skip intro", "İntroyu geç"), sg.recap to tr("Skip recap", "Özeti geç"))
@@ -679,7 +682,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 SkipPill(
                     text = hit.second,
                     startKey = range.first,
-                    onTap = { player.seekTo(range.last + 1) },
+                    onTap = { skipGate { player.seekTo(range.last + 1) } },
                     onTimeout = { skipGone = skipGone + range.first },
                     modifier = Modifier.align(Alignment.BottomEnd).padding(end = 64.dp, bottom = 84.dp),
                 )
