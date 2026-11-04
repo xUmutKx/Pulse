@@ -7,13 +7,13 @@ plugins {
 
 android {
     namespace = "com.umutk.pulse"
-    compileSdk = 34
+    compileSdk = 36
     defaultConfig {
         applicationId = "com.umutk.pulse"
         minSdk = (project.findProperty("pulseMinSdk") as String?)?.toIntOrNull() ?: 21 // -PpulseMinSdk=31 builds the Android 12+ flavour of the same code
         targetSdk = 34
-        versionCode = 762
-        versionName = "1.0.361"
+        versionCode = 763
+        versionName = "1.0.362"
         ndk { abiFilters += listOf("arm64-v8a", "armeabi-v7a", "x86_64") }
         resourceConfigurations += listOf("en", "tr")
     }
@@ -28,10 +28,11 @@ android {
     flavorDimensions += "store"
     productFlavors {
         create("foss") { dimension = "store" }
-        create("play") { dimension = "store" }
+        create("play") { dimension = "store"; targetSdk = 36 } // Google Play requires API 36 for new uploads; the foss flavor keeps 34
     }
     buildTypes {
         release {
+            ndk { debugSymbolLevel = "SYMBOL_TABLE" } // native symbols in the bundle: no "missing symbols" warning in Play
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
@@ -55,7 +56,7 @@ dependencies {
         exclude(group = "org.bouncycastle") // the app already ships bcprov 1.79 (bcpkix below); the 1.72 copy clashes with it
     }
     implementation("com.google.zxing:core:3.5.3") // reads the QR code of an authenticator from a picture
-    add("playImplementation", "com.android.billingclient:billing:7.1.1") // Google Play one-time purchase (Premium), the play build only
+    add("playImplementation", "com.android.billingclient:billing:8.0.0") // Google Play one-time purchase (Premium), the play build only
     add("playImplementation", "com.google.android.gms:play-services-ads:23.6.0") // AdMob: banner and rewarded ads, the play build only
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.autofill:autofill:1.1.0") // the password manager's suggestions inside the keyboard bar (inline autofill, Android 11+)

@@ -34,7 +34,7 @@ jobs:
         run: |
           SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin | tail -1)/sdkmanager
           yes | "$SDKMANAGER" --licenses > /dev/null
-          "$SDKMANAGER" "platforms;android-34" "build-tools;34.0.0"
+          "$SDKMANAGER" "platforms;android-34" "platforms;android-36" "build-tools;34.0.0"
       - uses: gradle/actions/setup-gradle@v5
         with:
           gradle-version: 8.9
