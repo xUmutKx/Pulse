@@ -2109,3 +2109,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) Video: hız çubuğu (0.25–2x uçlar ayarlanır, ok düğmeleri 0.01 adım, normal hız düğmesi); altyazı indirilen dosya altyazı değilse pencere kapanmaz, hata gösterir; bildirim: kapak, ad, önceki/oynat-duraklat/sonraki düğmeleri. derlenmedi
 - (sonraki güncelleme) Files ana sayfası: Windows 11'de cam seçeneği ya da arka plan resmi varsa sayfa saydam (arkadaki görünür); AMOLED/Material siyah kalır. derlenmedi
 - (sonraki güncelleme) Files ana sayfası: APK dosyaları ('APK') ve kurulu uygulamalar ('Apps') ayrı satırlar; APK satırı dosya listesini açar, Apps açmaz; tür sayfasında etiket APK. derlenmedi
+- (sonraki güncelleme) Video giriş/özet atlama: dosya adından dizi adı artık yalnızca S/E işaretinden ÖNCEKİ kısım (önceden tüm adın kalanı TVmaze'ye gidiyordu, bu yüzden atla düğmesi çıkmıyordu); 3x07 biçimi ve ülke etiketi (US/UK) desteği. derlenmedi
