@@ -321,6 +321,9 @@ class VideoPrefs(ctx: Context) {
     var defSpeed by flt(g, "def_speed", 1f) // start speed when "Remember speed" is off
     var rememberSpeed by bool(g, "remember_speed", false)
     var lpSpeed by flt(g, "lp_speed", 2f)
+    /** the two ends of the speed bar; any speed between them in steps of 0.01 */
+    var speedMin by flt(g, "speed_min", 0.25f)
+    var speedMax by flt(g, "speed_max", 2f)
     var gestSeek by bool(g, "g_seek", true)
     var gestVol by bool(g, "g_vol", true)
     var gestBright by bool(g, "g_bright", true)

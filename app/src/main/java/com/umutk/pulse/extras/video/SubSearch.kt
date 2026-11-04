@@ -237,6 +237,11 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
         scope.launch {
             val r = if (h.slug.startsWith("os:")) OpenSubs.download(ctx, h, OpenSubs.key(ctx)) else YifySubs.download(ctx, h)
             r.onSuccess { uri ->
+                // a file that holds no subtitle (an error page, an empty answer) must not close the window as if it worked
+                val looksRight = withContext(Dispatchers.IO) {
+                    runCatching { java.io.File(uri.path.orEmpty()).readText(Charsets.UTF_8).let { it.contains("-->") || it.contains("WEBVTT") } }.getOrDefault(false)
+                }
+                if (!looksRight) { fail(tr("That file is not a subtitle. Try another result.", "Bu dosya altyazı değil. Başka bir sonuç deneyin.")); return@onSuccess }
                 busy = false; message = ""
                 onPick(uri, h.release.ifBlank { "subtitle" }.replace('/', '_') + ".srt")
             }.onFailure { fail(tr("Download failed. Try another result.", "İndirilemedi. Başka bir sonuç deneyin.")) }

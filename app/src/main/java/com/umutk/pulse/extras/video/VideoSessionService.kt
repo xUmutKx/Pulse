@@ -23,11 +23,16 @@ class VideoSessionService : MediaSessionService() {
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         session = MediaSession.Builder(this, p).setId("pulse_video").setSessionActivity(open).build()
+        current = session
     }
+
+    // Pulse's own video notification (VideoPlaybackService: cover, previous, play or pause, next) is the only one; the default one would repeat it
+    override fun onUpdateNotification(session: MediaSession, startInForegroundRequired: Boolean) { }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = session
 
     override fun onDestroy() {
+        current = null
         session?.release()
         session = null
         super.onDestroy()
@@ -36,5 +41,9 @@ class VideoSessionService : MediaSessionService() {
     companion object {
         /** The player of the video screen that is open now; null when no video is on screen. */
         @Volatile var player: Player? = null
+
+        /** The media session of that player, for the notification's media card. */
+        @Volatile var current: MediaSession? = null
+        val session: MediaSession? get() = current
     }
 }

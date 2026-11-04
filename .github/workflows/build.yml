@@ -8,6 +8,10 @@ on:
         description: "Publish this build as a GitHub release (tag v<versionName>)"
         type: boolean
         default: false
+      play:
+        description: "Also build the Google Play files (play APK and AAB) and attach them to the release"
+        type: boolean
+        default: false
 permissions:
   contents: write
 jobs:
@@ -59,13 +63,18 @@ jobs:
           cp app/build/outputs/apk/foss/release/app-foss-release.apk "Pulse-$VER-android5.apk"
           gradle assembleFossRelease -PpulseMinSdk=31 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease --no-daemon
           cp app/build/outputs/apk/foss/release/app-foss-release.apk "Pulse-$VER.apk"
-          # the play build: the same app with the ads (Google Play store)
-          gradle assemblePlayRelease -PpulseMinSdk=24 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
-          cp app/build/outputs/apk/play/release/app-play-release.apk "Pulse-$VER-play.apk"
-          # the play bundle (AAB) for the Google Play upload: the same app, Play delivers the split APKs
-          gradle bundlePlayRelease -PpulseMinSdk=24 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
-          cp app/build/outputs/bundle/playRelease/app-play-release.aab "Pulse-$VER-play.aab"
+          # the Google Play files only when asked (input "play"): the open-source releases (GitHub, Obtainium, F-Droid) carry the two foss APKs
+          PLAYFILES=""
+          if [ "${{ inputs.play }}" = "true" ]; then
+            # the play build: the same app with the ads (Google Play store)
+            gradle assemblePlayRelease -PpulseMinSdk=24 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
+            cp app/build/outputs/apk/play/release/app-play-release.apk "Pulse-$VER-play.apk"
+            # the play bundle (AAB) for the Google Play upload: the same app, Play delivers the split APKs
+            gradle bundlePlayRelease -PpulseMinSdk=24 -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzePlayRelease -x lintVitalReportPlayRelease -x lintVitalPlayRelease --no-daemon
+            cp app/build/outputs/bundle/playRelease/app-play-release.aab "Pulse-$VER-play.aab"
+            PLAYFILES="Pulse-$VER-play.apk Pulse-$VER-play.aab"
+          fi
           # the notes: every YAPILACAKLAR.md entry from the version after the last release up to this one
           PREV=$(gh release list --limit 1 --exclude-drafts --json tagName -q '.[0].tagName' 2>/dev/null | sed 's/^v//')
           python3 -I .github/release_notes.py "$VER" "$PREV" > RELEASE_NOTES.md
-          gh release create "v$VER" "Pulse-$VER.apk" "Pulse-$VER-android5.apk" "Pulse-$VER-play.apk" "Pulse-$VER-play.aab" --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
+          gh release create "v$VER" "Pulse-$VER.apk" "Pulse-$VER-android5.apk" $PLAYFILES --target "$GITHUB_SHA" --title "Pulse $VER" --notes-file RELEASE_NOTES.md
