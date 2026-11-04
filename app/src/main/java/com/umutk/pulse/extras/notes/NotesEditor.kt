@@ -230,10 +230,7 @@ fun NoteEditor(
             Box(Modifier.size(30.dp).clip(CircleShape).clickable { inkWide = !inkWide }, contentAlignment = Alignment.Center) {
                 Box(Modifier.size(if (inkWide) 14.dp else 6.dp).clip(CircleShape).background(fg))
             }
-            Box(Modifier.size(30.dp).clip(CircleShape).background(if (inkMark) Color(0x66FFD60A) else Color.Transparent).clickable { inkMark = !inkMark }
-                .semantics { contentDescription = tr("Highlighter", "Vurgulayıcı") }, contentAlignment = Alignment.Center) {
-                Box(Modifier.size(width = 16.dp, height = 8.dp).background(Color(0xFFFFD60A)))
-            }
+            MIcon(Icons.Outlined.Highlight, tr("Highlighter", "Vurgulayıcı"), if (inkMark) T.accent else fg) { inkMark = !inkMark }
             MIcon(Icons.Outlined.Undo, tr("Undo", "Geri al"), fg) { onEdit { it.copy(ink = NotesInk.encode(NotesInk.decode(it.ink).dropLast(1))) } }
             MIcon(Icons.Outlined.Check, tr("Done", "Bitti"), T.accent) { inkOn = false }
         }
