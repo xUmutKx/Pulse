@@ -83,8 +83,13 @@ fun rememberAdGate(title: String, text: String, key: String = "", minutes: Int =
  * the foss build has everything without it.
  */
 object Premium {
-    /** The one-time purchase made inside Pulse (play build, Google Play Billing, see PremiumBilling). Only the flag "owned" is kept on the phone. */
-    fun on(c: Context): Boolean = runCatching { c.getSharedPreferences("premium", Context.MODE_PRIVATE).getBoolean("owned", false) }.getOrDefault(false)
+    /**
+     * True while Google Play confirms the purchase in this run of the app (set by PremiumBilling, play build only).
+     * Nothing is stored on the phone: every start asks Play again, so a refund or a new phone is checked by Play itself.
+     */
+    @Volatile var verified = false
+
+    fun on(c: Context): Boolean = verified
 }
 
 /** Features unlocked by a watched ad, each open for its own number of minutes (kept on the phone). */
