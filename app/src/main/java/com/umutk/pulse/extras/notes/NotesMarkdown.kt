@@ -58,42 +58,12 @@ fun toggle(lines: List<String>, index: Int): String = lines.mapIndexed { j, l ->
     else l.replaceFirst(Regex("\\[[xX]]"), "[ ]")
 }.joinToString("\n")
 
-/** The colour of a highlighter stroke behind text. */
-private val HIGHLIGHT = Color(0x80FFEB3B)
-
-/** **bold** and ==highlighted== runs in one line; the markers are removed. */
+/** **bold** runs in one line; the markers are removed. */
 fun mdInline(s: String): AnnotatedString = buildAnnotatedString {
-    var hi = false
-    s.split("==").forEachIndexed { h, hpart ->
-        if (h > 0) hi = !hi
-        var bold = false
-        hpart.split("**").forEachIndexed { k, part ->
-            if (k > 0) bold = !bold
-            if (part.isNotEmpty()) withStyle(SpanStyle(fontWeight = if (bold) FontWeight.Bold else null, background = if (hi) HIGHLIGHT else Color.Unspecified)) { append(part) }
-        }
-    }
-}
-
-/**
- * The editor's view of ==highlights==: the words get the highlighter colour, and the two markers turn invisible. The text keeps its length,
- * so the cursor and the selection stay where they are.
- */
-object HighlightView : androidx.compose.ui.text.input.VisualTransformation {
-    override fun filter(text: AnnotatedString): androidx.compose.ui.text.input.TransformedText {
-        val s = text.text
-        val b = AnnotatedString.Builder(text)
-        val marks = ArrayList<Int>()
-        var i = s.indexOf("==")
-        while (i >= 0) { marks += i; i = s.indexOf("==", i + 2) }
-        var k = 0
-        while (k + 1 < marks.size) {
-            val a = marks[k]; val c = marks[k + 1]
-            b.addStyle(SpanStyle(background = HIGHLIGHT), a + 2, c)
-            b.addStyle(SpanStyle(color = Color.Transparent), a, a + 2)
-            b.addStyle(SpanStyle(color = Color.Transparent), c, c + 2)
-            k += 2
-        }
-        return androidx.compose.ui.text.input.TransformedText(b.toAnnotatedString(), androidx.compose.ui.text.input.OffsetMapping.Identity)
+    var bold = false
+    s.split("**").forEachIndexed { k, part ->
+        if (k > 0) bold = !bold
+        if (bold) withStyle(SpanStyle(fontWeight = FontWeight.Bold)) { append(part) } else append(part)
     }
 }
 
