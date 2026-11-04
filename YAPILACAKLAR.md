@@ -2138,3 +2138,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Klavye: çok hızlı yazınca öneri çubuğu yetişemiyordu; kelime biterken düzeltme o anda hesaplanır (derlenmedi)
 
 - Alarm: "Turn back on for Friday" artık perşembeyi atlar (kapatılan çalma atlanır, geri sayım ve zamanlama cuma olur); anahtarla açmak ilk çalmayı korur (derlenmedi)
+
+- Clock: yeni alarm son 5 dk içinde kurulan alarmdan 5 dk sonrasına başlar, yoksa sistem saatinden (derlenmedi)
