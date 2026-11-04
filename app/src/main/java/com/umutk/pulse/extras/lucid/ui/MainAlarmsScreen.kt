@@ -615,7 +615,7 @@ fun MainAlarmsScreen(
                                 alarm.id in recentlyDisabledRepeating &&
                                 !alarm.isEnabled &&
                                 alarm.daysOfWeek.isNotEmpty(),
-                            onReenable = { viewModel.toggleAlarm(alarm, true) },
+                            onReenable = { viewModel.toggleAlarm(alarm, true, skipNext = true) },
                             cardShape = cardShape,
                             cardPadding = cardPadding,
                             showBottomDivider = showBottomDivider,
@@ -1010,10 +1010,11 @@ private fun NextAlarmHeader(
         }
     }
 
+    val skipCtx = androidx.compose.ui.platform.LocalContext.current
     val now = remember(nowTick) { Calendar.getInstance() }
     val upcoming = alarms
         .filter { it.isEnabled }
-        .minByOrNull { nextTriggerMillis(it, now) }
+        .minByOrNull { nextTriggerMillis(skipCtx, it, now) }
 
     val isLight = MaterialTheme.colorScheme.background.luminance() > 0.5f
     val titleColor = if (isLight) Color(0xFF0B0C10) else Color.White
@@ -1046,7 +1047,7 @@ private fun NextAlarmHeader(
                 maxLines = 1
             )
         } else {
-            val triggerMillis = nextTriggerMillis(upcoming, now)
+            val triggerMillis = nextTriggerMillis(skipCtx, upcoming, now)
             Text(
                 text = formatCountdownLines(triggerMillis - nowTick),
                 fontSize = 36.sp,
@@ -1071,7 +1072,7 @@ private fun NextAlarmHeader(
     }
 }
 
-private fun nextTriggerMillis(alarm: AlarmEntity, now: Calendar): Long {
+private fun nextTriggerMillis(ctx: android.content.Context, alarm: AlarmEntity, now: Calendar): Long {
     val target = (now.clone() as Calendar).apply {
         set(Calendar.HOUR_OF_DAY, alarm.hour.coerceIn(0, 23))
         set(Calendar.MINUTE, alarm.minute.coerceIn(0, 59))
@@ -1087,7 +1088,7 @@ private fun nextTriggerMillis(alarm: AlarmEntity, now: Calendar): Long {
             guard++
         }
     }
-    return target.timeInMillis
+    return com.umutk.pulse.extras.lucid.receiver.AlarmSkip.adjust(ctx, alarm.id, alarm.hour, alarm.minute, days, target.timeInMillis)
 }
 
 private fun formatCountdownLines(diffMillis: Long): String {
