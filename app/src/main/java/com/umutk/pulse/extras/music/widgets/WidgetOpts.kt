@@ -20,5 +20,34 @@ object WidgetOpts {
     /** The cover as a circle ("round icon" in Poweramp). */
     fun artCircle(c: Context): Boolean = p(c).getBoolean("art_circle", false)
     fun setArtCircle(c: Context, v: Boolean) = p(c).edit().putBoolean("art_circle", v).apply()
+    /** The text, the buttons and what is shown on the Poweramp widget; the cover, the corners and the background are the options above. */
+    fun look(c: Context): WidgetLook = p(c).let { q ->
+        WidgetLook(
+            font = q.getString("w_font", "bold") ?: "bold",
+            title = q.getInt("w_title", WidgetLook().title), sub = q.getInt("w_sub", WidgetLook().sub),
+            button = q.getInt("w_button", WidgetLook().button), accent = q.getInt("w_accent", 0),
+            outline = q.getBoolean("w_outline", false), btnPct = q.getInt("w_btn_pct", 100).coerceIn(70, 140),
+            album = q.getBoolean("w_album", true), counter = q.getBoolean("w_counter", true), marks = q.getBoolean("w_marks", true), seek = q.getBoolean("w_seek", true),
+        )
+    }
+    fun setLook(c: Context, l: WidgetLook) = p(c).edit()
+        .putString("w_font", l.font).putInt("w_title", l.title).putInt("w_sub", l.sub).putInt("w_button", l.button).putInt("w_accent", l.accent)
+        .putBoolean("w_outline", l.outline).putInt("w_btn_pct", l.btnPct)
+        .putBoolean("w_album", l.album).putBoolean("w_counter", l.counter).putBoolean("w_marks", l.marks).putBoolean("w_seek", l.seek).apply()
     fun refresh(c: Context) { PowerampWidget.refresh(c); WindowsPlayerWidget.refresh(c) }
 }
+
+/**
+ * How the text and the buttons of the Poweramp widget look. [font] is a key of [WIDGET_FONTS]; the colours are ARGB; an [accent] of 0 follows the skin;
+ * [outline] draws the buttons as outlines; [btnPct] is the size of the transport buttons (70 to 140); the rest switch parts of the widget on or off.
+ */
+data class WidgetLook(
+    val font: String = "bold", val title: Int = 0xFFFFFFFF.toInt(), val sub: Int = 0xFFA8A8A8.toInt(), val button: Int = 0xFFD2D2D2.toInt(), val accent: Int = 0,
+    val outline: Boolean = false, val btnPct: Int = 100, val album: Boolean = true, val counter: Boolean = true, val marks: Boolean = true, val seek: Boolean = true,
+)
+
+/** The typefaces the widget offers: the key, its name on the settings page and the system family it uses. */
+val WIDGET_FONTS = listOf(
+    Triple("bold", "Sans", "sans-serif"), Triple("condensed", "Condensed", "sans-serif-condensed"), Triple("light", "Light", "sans-serif-light"),
+    Triple("serif", "Serif", "serif"), Triple("mono", "Mono", "monospace"), Triple("casual", "Casual", "casual"), Triple("cursive", "Cursive", "cursive"),
+)
