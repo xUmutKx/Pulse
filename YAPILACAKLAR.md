@@ -2134,3 +2134,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Kaset/pikap/iPod: ambientCG CC0 doku fotoğrafları (ceviz, çelik, plastik, deri) çizimin altına; bildirim kartı bu üç görünüm için çizimli resim + üç tuş (derlenmedi)
 
 - BlackOut LSPosed: modül açıkken her uygulamada (kendi kuralı yoksa) beyazlar uygulama açılırken otomatik siyah; "Her uygulamada otomatik" anahtarı (derlenmedi)
+
+- Klavye: çok hızlı yazınca öneri çubuğu yetişemiyordu; kelime biterken düzeltme o anda hesaplanır (derlenmedi)
