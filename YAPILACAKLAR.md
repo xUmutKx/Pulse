@@ -2090,3 +2090,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sonraki güncelleme) Klavye: öneri çubuğunda kilit (auth) simgesi; 1'e uzun basınca auth, 2'ye uzun basınca pano
 - (sonraki güncelleme) Klavye: 1/2 uzun basma kısayolu kaldırıldı (üst karakterler geri); çubukta kilit (auth) ve pano simgeleri
 - (sonraki güncelleme) Sayı klavyesinde (numpad) 1 uzun basınca auth, 2 uzun basınca pano; normal klavyede uzun basma karakterleri aynen
+- Signing: release key moved to GitHub secrets (PULSE_KEYSTORE_B64, PULSE_STORE_PASSWORD, PULSE_KEY_PASSWORD); ci/pulse.keystore removed from the repo; no key = debug signing. derlenmedi

@@ -29,7 +29,14 @@ jobs:
           gradle-version: 8.9
       - name: Build release APK
         shell: bash
-        run: set -o pipefail; gradle assembleFossRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease --no-daemon 2>&1 | tee build.log
+        env:
+          PULSE_KEYSTORE_B64: ${{ secrets.PULSE_KEYSTORE_B64 }}
+          PULSE_STORE_PASSWORD: ${{ secrets.PULSE_STORE_PASSWORD }}
+          PULSE_KEY_PASSWORD: ${{ secrets.PULSE_KEY_PASSWORD }}
+        run: |
+          set -o pipefail
+          if [ -n "$PULSE_KEYSTORE_B64" ]; then echo "$PULSE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/pulse.keystore"; export PULSE_KEYSTORE="$RUNNER_TEMP/pulse.keystore"; fi
+           gradle assembleFossRelease -Dorg.gradle.jvmargs='-Xmx6g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8' -Pkotlin.daemon.jvmargs=-Xmx6g -Porg.gradle.workers.max=4 -x lintVitalAnalyzeFossRelease -x lintVitalReportFossRelease -x lintVitalFossRelease --no-daemon 2>&1 | tee build.log
       - name: Compile errors as annotations
         if: failure()
         run: |
