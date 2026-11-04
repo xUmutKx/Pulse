@@ -463,10 +463,12 @@ private fun SongList(items: List<IndexedValue<Track>>, current: Track?, style: P
     }
     val header: @Composable () -> Unit = {
         if (selecting) Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, tr("Cancel", "Vazgeç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
-            Text("${picked.size}", color = style.onBackdrop, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+            // the number of picked songs stands at the left, where the count of the list was; the buttons are on the right
+            Text("${picked.size}", color = style.accent, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            Text(tr("selected", "seçili"), color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = songs.map { it.path }.toSet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.SelectAll, tr("Select all", "Tümünü seç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
             Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { askDelete = true }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Delete, tr("Delete", "Sil"), tint = Color(0xFFFF5A5F), modifier = Modifier.size(22.dp)) }
+            Box(Modifier.size(40.dp).clip(CircleShape).background(style.chip).clickable { picked = emptySet() }, contentAlignment = Alignment.Center) { Icon(Icons.Rounded.Close, tr("Cancel", "Vazgeç"), tint = style.accent, modifier = Modifier.size(22.dp)) }
         } else Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 4.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("${items.size}", color = style.textDim, fontSize = 13.sp, modifier = Modifier.weight(1f))
             headerExtra()
@@ -731,7 +733,7 @@ internal fun TrackRow(
     trailing: @Composable () -> Unit = {},
 ) {
     Row(
-        Modifier.fillMaxWidth().height(rowHeight).background(if (checked) style.accent.copy(alpha = .22f) else Color.Transparent)
+        Modifier.fillMaxWidth().height(rowHeight).background(if (checked) style.accent.copy(alpha = .32f) else Color.Transparent)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick).padding(start = 16.dp, end = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
