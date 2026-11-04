@@ -279,6 +279,9 @@ object Recolor {
         else -> emptyList()
     }
 
+    /** What every app gets once the module is on, without any setup: whites and near-whites become black (the colour rules of an app replace it). */
+    fun auto(): List<Rule> = listOf(0xFFFFFFFF.toInt(), 0xFFFAFAFA.toInt(), 0xFFF5F5F5.toInt(), 0xFFF0F0F0.toInt()).map { Rule(it, 0xFF000000.toInt(), 15) }
+
     /** "RRGGBB>RRGGBB>percent;..." as stored by the app. */
     fun parse(s: String?): List<Rule> = s.orEmpty().split(';').mapNotNull { p ->
         val a = p.split('>')

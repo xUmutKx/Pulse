@@ -88,6 +88,8 @@ fun ModulePage(mode: Privilege.Mode, sp: SharedPreferences) {
                     sp.edit().putFloat("limit", limit).putInt("tint", tint).apply()
                 }
             }
+            var auto by remember { mutableStateOf(sp.getBoolean("lsp_auto", true)) }
+            BoSwitchRow(tr("Every app automatically", "Her uygulamada otomatik"), tr("Whites turn black in each app the module is on for, as it opens. An app with its own colour rules keeps those.", "Modülün açık olduğu her uygulamada beyazlar, uygulama açılırken siyah olur. Kendi renk kuralı olan uygulama onları korur."), auto) { auto = it; sp.edit().putBoolean("lsp_auto", it).apply() }
             BoText(tr("Which greys count as surfaces", "Hangi griler yüzey sayılır"), 13, T.text, modifier = Modifier.padding(top = 6.dp))
             GreySlider(limit, { limit = it }) { sp.edit().putFloat("limit", limit).apply() }
             BoText(if (keep < 1f) tr("Result: pure black", "Sonuç: saf siyah") else tr("Result: ${keep.toInt()}% of the brightness stays", "Sonuç: parlaklığın %${keep.toInt()}'i kalır"), 13, T.text)

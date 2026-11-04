@@ -2132,3 +2132,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Kaset, pikap, iPod: çok daha ayrıntılı çizim (vidalar, makara paketleri, etiket çizgileri, plak olukları, kol/karşı ağırlık, iPod ekran/pil/tekerlek gradyanları) (derlenmedi)
 
 - Kaset/pikap/iPod: ambientCG CC0 doku fotoğrafları (ceviz, çelik, plastik, deri) çizimin altına; bildirim kartı bu üç görünüm için çizimli resim + üç tuş (derlenmedi)
+
+- BlackOut LSPosed: modül açıkken her uygulamada (kendi kuralı yoksa) beyazlar uygulama açılırken otomatik siyah; "Her uygulamada otomatik" anahtarı (derlenmedi)
