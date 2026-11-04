@@ -2058,3 +2058,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: Hava durumu widget'ları parça parça: sadece hava+saat, 7 gün, saatlik, ve tüm kombinasyonlar (hava+7 gün, hava+saatlik, 7 gün+saatlik, hepsi); ayrı widget olarak seçilir; ayardaki saatlik anahtarı kaldırıldı
 - (sürüm sonra) derlenmedi: Kapak widget'ları artık kapağın ilk sayfasını gösteriyor (renk, font, düzen aynı): dijital, analog (4 çeşit), matrix (durağan), piksel, çizgili analog ve çizgili dijital; diğer sayfalar dijital saat olarak çizilir
 - (sürüm sonra) derlenmedi: Alarm ekranı: Dismiss artık uzun basma gerektirmeden kaydırılarak kapatılıyor (düğme parmakla gider, daire büyür, yeterince kayınca kapanır, yoksa geri döner)
+- (sürüm sonra) derlenmedi: Ekran kapağı widget'ları varsayılan olarak arka plansız (şeffaf); siyah arka plan ayarla açılır
