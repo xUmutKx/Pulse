@@ -162,7 +162,7 @@ object StandByPrefs {
     fun setIdleSec(c: Context, v: Int) = p(c).edit().putInt("idleSec", v).apply()
     /** ... and only while it lies sideways, like a bedside clock on its charger. */
     /** The cover widgets on the home screen: a black background (default) or see-through, so the wallpaper shows behind the clock. */
-    fun widgetBlack(c: Context) = p(c).getBoolean("widget_black", true)
+    fun widgetBlack(c: Context) = p(c).getBoolean("widget_black", false)
     fun setWidgetBlack(c: Context, v: Boolean) = p(c).edit().putBoolean("widget_black", v).apply()
     fun sideways(c: Context) = p(c).getBoolean("sideways", true)
     fun setSideways(c: Context, v: Boolean) = p(c).edit().putBoolean("sideways", v).apply()
