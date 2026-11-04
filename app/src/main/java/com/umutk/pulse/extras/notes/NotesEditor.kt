@@ -317,8 +317,6 @@ private fun AudioRow(ctx: Context, name: String, ink: Color, onRemove: () -> Uni
     }
 }
 
-/** A Material icon of the note editor: the same round touch target as the others. */
-@Composable
 /** The pen's tool, drawn in the panel: its name, its width at size 1 and its alpha (255 is solid). */
 private class InkTool(val icon: androidx.compose.ui.graphics.vector.ImageVector, val label: String, val width: Float, val alpha: Int)
 
@@ -336,6 +334,8 @@ private fun NChip(label: String, tint: Color, onClick: () -> Unit) {
     }
 }
 
+/** A Material icon of the note editor: the same round touch target as the others. */
+@Composable
 private fun MIcon(icon: androidx.compose.ui.graphics.vector.ImageVector, desc: String, tint: Color, onClick: () -> Unit) {
     Box(Modifier.size(40.dp).clip(androidx.compose.foundation.shape.CircleShape).clickable { onClick() }.semantics { contentDescription = desc }, contentAlignment = Alignment.Center) {
         androidx.compose.material3.Icon(icon, desc, tint = tint, modifier = Modifier.size(22.dp))
