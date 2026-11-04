@@ -13,8 +13,19 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      PULSE_STORE_PASSWORD: ${{ secrets.PULSE_STORE_PASSWORD }}
+      PULSE_KEY_PASSWORD: ${{ secrets.PULSE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v5
+      - name: Release key from the secrets (written to a temporary file, never in the repo)
+        shell: bash
+        env:
+          PULSE_KEYSTORE_B64: ${{ secrets.PULSE_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$PULSE_KEYSTORE_B64" ]; then echo "::error::PULSE_KEYSTORE_B64 secret is missing"; exit 1; fi
+          echo "$PULSE_KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/pulse.keystore"
+          echo "PULSE_KEYSTORE=$RUNNER_TEMP/pulse.keystore" >> "$GITHUB_ENV"
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
