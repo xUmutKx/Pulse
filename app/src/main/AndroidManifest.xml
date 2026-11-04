@@ -1763,6 +1763,12 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_clear" />
         </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherForecastWidget" android:label="Pulse · Weather, forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_forecast" />
+        </receiver>
 
         <!-- BlackOut (extras/blackout): Pulse is also an LSPosed / Vector module (legacy entry, assets/xposed_init); the module turns dark greys black inside the apps ticked in LSPosed -->
         <meta-data android:name="xposedmodule" android:value="true" />

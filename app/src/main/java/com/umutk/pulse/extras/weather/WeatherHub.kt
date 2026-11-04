@@ -51,11 +51,10 @@ import com.umutk.pulse.PButton
 import com.umutk.pulse.PField
 import com.umutk.pulse.PIcon
 import com.umutk.pulse.PSwitch
-import com.umutk.pulse.widgets.WeatherClearWidget
+import com.umutk.pulse.widgets.WeatherWidgets
 import com.umutk.pulse.T
 import com.umutk.pulse.pageGutter
 import com.umutk.pulse.tr
-import com.umutk.pulse.widgets.WeatherWidgets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -533,10 +532,10 @@ private fun WeatherSettings(fg: Color, sub: Color, bg: Brush, skin: String, imp:
         var hours by remember { mutableStateOf(WeatherStore.widgetHours(wctx)) }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text(tr("Big widget: next hours", "Büyük widget: sonraki saatler"), color = fg, fontSize = 16.sp)
+                Text(tr("Forecast widget: next hours", "Tahmin widget'ı: sonraki saatler"), color = fg, fontSize = 16.sp)
                 Text(tr("Off shows the seven days", "Kapalıyken yedi gün gösterilir"), color = sub, fontSize = 12.sp)
             }
-            PSwitch(hours, { hours = it; WeatherStore.setWidgetHours(wctx, it); WeatherClearWidget().refreshAll(wctx) })
+            PSwitch(hours, { hours = it; WeatherStore.setWidgetHours(wctx, it); WeatherWidgets.refreshAll(wctx) })
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Severe weather alerts", "Sert hava uyarıları"), color = fg, fontSize = 16.sp, modifier = Modifier.weight(1f))

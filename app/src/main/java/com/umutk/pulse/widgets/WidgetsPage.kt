@@ -132,6 +132,7 @@ private val WIDGET_ENTRIES = listOf(
     WidgetEntry("Weather, wide", "WeatherWideWidget"),
     WidgetEntry("Weather, detail", "WeatherDetailWidget"),
     WidgetEntry("Weather and clock, no background", "WeatherClearWidget"),
+    WidgetEntry("Weather, forecast", "WeatherForecastWidget"),
     WidgetEntry("Screen cover", "CoverWidget"),
     WidgetEntry("Screen cover, wide", "CoverWideWidget"),
     WidgetEntry("Screen cover, tall", "CoverTallWidget"),
@@ -468,6 +469,7 @@ private fun TextCard(ctx: Context, w: WidgetEntry, provider: PulseWidget, style:
         "WeatherWideWidget" -> DpSize(250.dp, 110.dp)
         "WeatherDetailWidget" -> DpSize(110.dp, 110.dp)
         "WeatherClearWidget" -> DpSize(250.dp, 130.dp)
+        "WeatherForecastWidget" -> DpSize(250.dp, 110.dp)
         "CoverWidget" -> DpSize(110.dp, 110.dp)
         "CoverWideWidget" -> DpSize(180.dp, 56.dp)
         "CoverTallWidget" -> DpSize(56.dp, 180.dp)
