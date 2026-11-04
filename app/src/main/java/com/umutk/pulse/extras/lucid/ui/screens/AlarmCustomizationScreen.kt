@@ -363,7 +363,7 @@ fun AlarmCustomizationScreen(
     }
 
     val imagePicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri ->
         if (uri != null) {
             runCatching {
@@ -378,7 +378,7 @@ fun AlarmCustomizationScreen(
     }
 
     val videoPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri ->
         if (uri != null) {
             runCatching {

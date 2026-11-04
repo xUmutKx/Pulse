@@ -18,6 +18,8 @@ data class Note(
     val trashedAt: Long = 0L, val locked: Boolean = false, val remindAt: Long = 0L, val files: List<String> = emptyList(),
     /** The note's own ink (S Pen drawing), see NotesInk. */
     val ink: String = "",
+    /** The text file this note is kept in when it comes from a linked folder (see NotesLink); empty for ordinary notes. */
+    val path: String = "",
 )
 
 /** Notes in one JSON file in the app's files folder. A write goes to a temp file first, so a crash keeps the old list. */
@@ -56,7 +58,7 @@ object NotesStore {
     private fun toJson(n: Note): JSONObject = JSONObject()
         .put("id", n.id).put("title", n.title).put("body", n.body).put("updated", n.updated).put("created", n.created)
         .put("pinned", n.pinned).put("color", n.color).put("folder", n.folder).put("trashedAt", n.trashedAt)
-        .put("locked", n.locked).put("remindAt", n.remindAt).put("files", JSONArray(n.files)).put("ink", n.ink)
+        .put("locked", n.locked).put("remindAt", n.remindAt).put("files", JSONArray(n.files)).put("ink", n.ink).put("path", n.path)
 
     private fun parse(arr: JSONArray): List<Note> = (0 until arr.length()).map { i ->
         val o = arr.getJSONObject(i)
@@ -64,7 +66,7 @@ object NotesStore {
         Note(
             o.getString("id"), o.optString("title"), o.optString("body"), o.optLong("updated"), o.optLong("created", o.optLong("updated")),
             o.optBoolean("pinned"), o.optInt("color"), o.optString("folder"), o.optLong("trashedAt"), o.optBoolean("locked"),
-            o.optLong("remindAt"), files, o.optString("ink"),
+            o.optLong("remindAt"), files, o.optString("ink"), o.optString("path"),
         )
     }
 

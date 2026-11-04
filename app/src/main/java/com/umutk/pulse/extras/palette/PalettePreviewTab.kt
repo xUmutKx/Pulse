@@ -74,7 +74,7 @@ fun PreviewTab(st: PaletteState) {
 private fun HomeTab(st: PaletteState) {
     val spec = st.spec
     val image = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-    val gridPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) st.paletteFromGrid(uri) }
+    val gridPicker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickVisualMedia()) { uri -> if (uri != null) st.paletteFromGrid(uri) }
     ChipRow { LauncherSkin.entries.forEach { s -> PChip(spec.skin == s, nice(s.name)) { st.update("skin") { it.copy(skin = s) } } } }
     ChipRow {
         ActionChip(tr("Colour icons from my home screen", "İkonları ana ekranımdan renklendir")) { gridPicker.launch(image) }
@@ -95,10 +95,10 @@ private fun WallpaperTab(st: PaletteState) {
     var confirm by remember { mutableStateOf(false) }
     var videoUri by remember { mutableStateOf(WidgetRefresher.currentVideoUri(ctx)) }
     var useVideo by remember { mutableStateOf(WidgetRefresher.useVideoWallpaper(ctx)) }
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+    val picker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickVisualMedia()) { uri ->
         if (uri != null) { runCatching { st.decode(uri, 1024) }.getOrNull()?.let { st.useWallpaper(it) }; st.paletteFromImage(uri) }
     }
-    val videoPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) { st.setWallpaperVideo(uri); videoUri = uri; useVideo = true } }
+    val videoPicker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri -> if (uri != null) { st.setWallpaperVideo(uri); videoUri = uri; useVideo = true } }
 
     if (confirm) WinAlert(onDismissRequest = { confirm = false }, title = { Text(tr("Set as wallpaper?", "Duvar kağıdı yapılsın mı?")) },
         text = { Text(tr("This replaces your current home screen wallpaper.", "Bu, mevcut ana ekran duvar kağıdınızın yerine geçer.")) },
@@ -156,7 +156,7 @@ private fun WidgetsTab(st: PaletteState) {
     val image = PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
     var art by remember { mutableStateOf(false) }
     var samples by remember { mutableStateOf(false) }
-    val photoPicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> if (uri != null) runCatching { st.decode(uri, 1024) }.getOrNull()?.let { st.setWidgetPhoto(it) } }
+    val photoPicker = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.PickVisualMedia()) { uri -> if (uri != null) runCatching { st.decode(uri, 1024) }.getOrNull()?.let { st.setWidgetPhoto(it) } }
     SectionTitle(tr("Widgets", "Widget'lar"))
     HintText(tr("Add Palette and Palette swatch from the widget list of your launcher. A tap on the square preview picks a photo.", "Başlatıcınızın widget listesinden Palette ve Palette swatch ekleyin. Kare önizlemeye dokunmak fotoğraf seçer."))
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {

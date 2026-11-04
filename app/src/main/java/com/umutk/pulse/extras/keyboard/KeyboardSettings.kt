@@ -85,13 +85,13 @@ fun KeyboardSettings(back: () -> Unit) {
     // the live keyboard at the bottom is shown only when asked for (the button at the top), so it does not take the room of the settings
     var showKb by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(false) }
     var dataNote by remember { mutableStateOf("") }
-    val exportData = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+    val exportData = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/zip")) { uri ->
         if (uri != null) scope.launch {
             val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.export(ctx, uri) }.getOrDefault(-1) }
             dataNote = if (n >= 0) tr("Saved ($n files)", "Kaydedildi ($n dosya)") else tr("Could not save", "Kaydedilemedi")
         }
     }
-    val importData = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+    val importData = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) scope.launch {
             val n = withContext(Dispatchers.IO) { runCatching { KeyboardBackup.import(ctx, uri) }.getOrDefault(-1) }
             dataNote = if (n >= 0) tr("Loaded ($n files)", "Yüklendi ($n dosya)") else tr("This is not a keyboard backup", "Bu bir klavye yedeği değil")

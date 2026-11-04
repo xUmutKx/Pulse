@@ -156,7 +156,7 @@ private fun PptEditor(m: PptModel, doc: OfDoc, theme: OfTheme) {
     var sizePick by remember { mutableStateOf(false) }
     val ctx = LocalContext.current
     var msg by remember { mutableStateOf("") }
-    val pickImg = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+    val pickImg = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.GetContent()) { uri ->
         if (uri != null) runCatching {
             val bytes = ctx.contentResolver.openInputStream(uri)!!.use { it.readBytes() }
             val ext = when (ctx.contentResolver.getType(uri)) { "image/jpeg" -> "jpg"; "image/gif" -> "gif"; "image/webp" -> "webp"; "image/bmp" -> "bmp"; else -> "png" }

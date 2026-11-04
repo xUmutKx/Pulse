@@ -86,7 +86,7 @@ fun GeneralSettings() {
     TabletLayoutRow()
     WatchdogSettings()
     DnsSettings()
-    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { ctx.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
             SplashPic.set(ctx, uri.toString())
@@ -147,14 +147,14 @@ private fun DataBackupCard() {
     var info by remember { mutableStateOf<Pair<Int, Long>?>(null) }
     var restored by remember { mutableStateOf<DataBackup.Restored?>(null) }
     LaunchedEffect(Unit) { info = withContext(Dispatchers.IO) { DataBackup.summary(ctx) } }
-    val save = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
+    val save = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.CreateDocument("application/zip")) { uri ->
         if (uri != null) scope.launch {
             status = tr("Saving...", "Kaydediliyor...")
             val n = withContext(Dispatchers.IO) { runCatching { ctx.contentResolver.openOutputStream(uri)?.use { DataBackup.export(ctx, it) } ?: -1 }.getOrDefault(-1) }
             status = if (n >= 0) tr("Saved $n files", "$n dosya kaydedildi") else tr("Could not save", "Kaydedilemedi")
         }
     }
-    val open = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) askImport = uri }
+    val open = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri -> if (uri != null) askImport = uri }
     PCard {
         Text(tr("Data", "Veri"), color = Look.accent, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         Text(tr("Settings and files in one zip file.", "Ayarlar ve dosyalar tek bir zip dosyasında."), color = T.sub, fontSize = 12.sp)
@@ -322,7 +322,7 @@ fun BackdropSettings() {
     val ctx = LocalContext.current
     val scope = rememberCoroutineScope()
     val bd = com.umutk.pulse.features.Backdrop
-    val pick = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val pick = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) scope.launch(Dispatchers.IO) { bd.set(ctx, "custom", uri) }
     }
     PCard {
@@ -493,7 +493,7 @@ fun ThemeWallpaperRow(lookId: String) {
     val ctx = LocalContext.current
     var uri by remember(lookId) { mutableStateOf(themeWallpaper(lookId)) }
     val scope = rememberCoroutineScope()
-    val pick = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { u ->
+    val pick = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) {
             runCatching { ctx.contentResolver.takePersistableUriPermission(u, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
             setThemeWallpaper(ctx, lookId, u.toString()); uri = u.toString()

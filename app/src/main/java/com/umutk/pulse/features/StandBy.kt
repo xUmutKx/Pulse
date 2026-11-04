@@ -548,7 +548,7 @@ fun StandBySettings(adv: Boolean, onAdv: (Boolean) -> Unit) {
     var rev by remember { mutableIntStateOf(0) }
     var outline by remember { mutableStateOf(StandByPrefs.outline(ctx)) }
     var custom by remember { mutableIntStateOf(StandByPrefs.custom(ctx)) }
-    val pickFont = androidx.activity.compose.rememberLauncherForActivityResult(androidx.activity.result.contract.ActivityResultContracts.OpenDocument()) { uri ->
+    val pickFont = androidx.activity.compose.rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) {
             runCatching { ctx.contentResolver.openInputStream(uri)?.use { i -> java.io.File(ctx.filesDir, "standby_font").outputStream().use { o -> i.copyTo(o) } } }
             StandByPrefs.loadCustom(ctx)

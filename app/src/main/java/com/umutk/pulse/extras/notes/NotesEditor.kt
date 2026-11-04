@@ -123,10 +123,10 @@ fun NoteEditor(
     val canDictate = remember { Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).resolveActivity(ctx.packageManager) != null }
 
     // a file is linked, not copied: the note shows its name and opens it where it is
-    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val pickFile = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         if (uri != null) { val entry = NotesFileLink.make(ctx, uri); onEdit { it.copy(files = it.files + entry) } }
     }
-    val pickImage = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+    val pickImage = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { uri ->
         val name = uri?.let { NotesMedia.copyIn(ctx, it) }
         if (name != null) onEdit { it.copy(files = it.files + name) }
     }

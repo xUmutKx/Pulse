@@ -548,7 +548,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var volF by remember { mutableFloatStateOf(restoreVolume(audio, prefs)) }
     var bright by remember { mutableFloatStateOf((act?.window?.attributes?.screenBrightness ?: -1f).let { if (it < 0) .5f else it }) }
 
-    val pickSub = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { u ->
+    val pickSub = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
         if (u != null) { ext = u to displayName(ctx, u); applySub(); dlg = null }
     }
 

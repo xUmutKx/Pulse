@@ -176,7 +176,7 @@ fun rememberFontPicker(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val launcher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument()
+        contract = com.umutk.pulse.PulsePick.OpenDocument()
     ) { uri: Uri? ->
         if (uri != null) {
             scope.launch {

@@ -2140,3 +2140,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Alarm: "Turn back on for Friday" artık perşembeyi atlar (kapatılan çalma atlanır, geri sayım ve zamanlama cuma olur); anahtarla açmak ilk çalmayı korur (derlenmedi)
 
 - Clock: yeni alarm son 5 dk içinde kurulan alarmdan 5 dk sonrasına başlar, yoksa sistem saatinden (derlenmedi)
+
+- Dosya seçiciler: Android sistem seçicisi yerine Pulse'un kendi seçicisi (PulsePick: aç, çoklu, foto, kaydet; tüm dosya erişimi yoksa eskisi). Notes: klasör simgesi telefondan klasör bağlar, içindeki .md/.txt dosyalar not olur, düzenleme dosyaya yazılır (derlenmedi)
