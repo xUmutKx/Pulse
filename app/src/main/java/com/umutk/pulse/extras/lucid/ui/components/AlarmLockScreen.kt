@@ -1076,17 +1076,18 @@ fun DragDismissPill(
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
-    // a plain swipe in any direction: about 240 dp of travel; the pill follows the finger and shrinks a little,
-    // the circle grows out of it, and past 60 % of the way the alarm is dismissed; short of that it springs back
-    val travel = with(LocalDensity.current) { 240.dp.toPx() }
-    val closeAt = .6f
+    // a plain swipe in any direction: the pill follows the finger and shrinks a little, the circle grows out of it, and past 55 % of
+    // 200 dp of travel (about 110 dp) the alarm is dismissed; short of that it springs back
+    val travel = with(LocalDensity.current) { 200.dp.toPx() }
+    val closeAt = .55f
     val progress = remember { Animatable(0f) }
     val shift = remember { Animatable(Offset.Zero, Offset.VectorConverter) }
     val finished = remember { mutableStateOf(false) }
     var center by remember { mutableStateOf(Offset.Zero) }
     val currentReveal by rememberUpdatedState(onReveal)
     val currentDismiss by rememberUpdatedState(onDismiss)
-    LaunchedEffect(progress.value) { currentReveal(progress.value, center) }
+    // the circle grows from where the pill is now, not from where it rests
+    LaunchedEffect(progress.value, shift.value) { currentReveal(progress.value, center + shift.value) }
 
     fun settle(total: Offset) {
         if (finished.value) return
@@ -1099,20 +1100,11 @@ fun DragDismissPill(
         }
     }
 
+    // The outer box stays where it is and takes the gesture; only the inner pill moves. A gesture on the moving pill itself would measure the
+    // finger against a layer that moves with it, and the drag would count for about half.
     Box(
-        contentAlignment = Alignment.Center,
         modifier = modifier
             .onGloballyPositioned { center = it.positionInRoot() + Offset(it.size.width / 2f, it.size.height / 2f) }
-            .graphicsLayer {
-                translationX = shift.value.x
-                translationY = shift.value.y
-                val s = 1f - .08f * progress.value
-                scaleX = s
-                scaleY = s
-            }
-            .clip(RoundedCornerShape(50))
-            .background(containerColor)
-            // a plain Box with its own gesture: no button in the way, so a press and a drag always reach it
             .pointerInput(Unit) {
                 awaitEachGesture {
                     awaitFirstDown(requireUnconsumed = false)
@@ -1126,8 +1118,7 @@ fun DragDismissPill(
                             if (!finished.value) {
                                 total += change.positionChange()
                                 val p = (total.getDistance() / travel).coerceIn(0f, 1f)
-                                val moved = total * .5f
-                                scope.launch { progress.snapTo(p); shift.snapTo(moved) }
+                                scope.launch { progress.snapTo(p); shift.snapTo(total) }
                             }
                         } else {
                             up = true
@@ -1136,15 +1127,29 @@ fun DragDismissPill(
                     }
                 }
             }
-            .padding(horizontal = 56.dp, vertical = 18.dp)
     ) {
-        Text(
-            text = text,
-            color = contentColor,
-            fontFamily = fontFamily,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 18.sp
-        )
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier
+                .graphicsLayer {
+                    translationX = shift.value.x
+                    translationY = shift.value.y
+                    val sc = 1f - .08f * progress.value
+                    scaleX = sc
+                    scaleY = sc
+                }
+                .clip(RoundedCornerShape(50))
+                .background(containerColor)
+                .padding(horizontal = 56.dp, vertical = 18.dp)
+        ) {
+            Text(
+                text = text,
+                color = contentColor,
+                fontFamily = fontFamily,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp
+            )
+        }
     }
 }
 
