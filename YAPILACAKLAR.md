@@ -2067,3 +2067,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - (sürüm sonra) derlenmedi: CC altyazı seçimi, oynatıcının o anki parça gruplarından yapılıyor (yeniden yüklemeden sonra eski liste eşleşmiyordu)
 - (sürüm sonra) derlenmedi: Notlar düzenleyici sadeleştirildi: üstte 4 simge, altta 4 simge + Diğer; Diğer satırı adlı chip'ler (Geri al, Önizleme, Kopyala, Çoğalt, Renk, Klasör, Hatırlatma, Kilit, Dosya, Ses kaydet, Sesli oku, Çöpe taşı)
 - (sürüm sonra) derlenmedi: Notlarda vurgulayıcı: seçili yazıyı ==...== ile sarar; düzenleyicide sarı zemin, önizlemede işaretsiz sarı zemin
+- (sürüm sonra) derlenmedi: Vurgulayıcı artık kalem: çizim katmanında yarı saydam sarı kalın çizgi (Multiply); metin işaretlemesi kaldırıldı
