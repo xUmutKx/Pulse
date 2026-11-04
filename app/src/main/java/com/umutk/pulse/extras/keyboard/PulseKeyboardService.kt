@@ -459,8 +459,33 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         else -> null
     }
 
+    /**
+     * A hardware keyboard is attached: its letters go through the same typing as the screen keys, so the suggestion bar follows the word, the automatic correction works
+     * (a Turkish word typed with plain letters is fixed), and the function keys F1, F2 and F3 pick the left, the middle and the right suggestion. The Turkish letters sit on the Turkish Q positions.
+     * Shortcuts (Ctrl, Alt, Win) and keys that are not text are left to the system.
+     */
+    private fun hardwareKey(keyCode: Int, e: KeyEvent): Boolean {
+        if (e.isCtrlPressed || e.isAltPressed || e.isMetaPressed) return false
+        if (currentInputConnection == null) return false
+        val fn = keyCode - KeyEvent.KEYCODE_F1
+        if (fn in 0..2) { turkishDown.add(keyCode); slot(fn); return true }
+        if (st.plain || st.panel != "keys") return false
+        when (keyCode) {
+            KeyEvent.KEYCODE_SPACE -> { turkishDown.add(keyCode); space(); return true }
+            KeyEvent.KEYCODE_DEL -> { turkishDown.add(keyCode); backspace(); return true }
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { turkishDown.add(keyCode); enter(); return true }
+        }
+        val asciiDevice = e.getUnicodeChar(0) in 1..127
+        val tr = if (KeyboardPrefs.langList().firstOrNull() == "tr" && asciiDevice) turkishQ(keyCode, e.isShiftPressed) else null
+        val ch = tr ?: e.getUnicodeChar(e.metaState).takeIf { it >= 32 }?.let { String(Character.toChars(it)) } ?: return false
+        turkishDown.add(keyCode)
+        type(ch)
+        return true
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         val e = event ?: return super.onKeyDown(keyCode, event)
+        if (st.hardware && hardwareKey(keyCode, e)) return true
         if (e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || e.repeatCount > 0) return super.onKeyDown(keyCode, event)
         if (KeyboardPrefs.langList().firstOrNull() != "tr") return super.onKeyDown(keyCode, event)
         // the device layout already types Turkish (not plain ASCII): the system's own letter is right, nothing to change
