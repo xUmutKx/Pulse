@@ -55,6 +55,8 @@ object ModuleCore {
         fun ticked(key: String) = pkg in (sp.getStringSet(key, emptySet()) ?: emptySet())
         val keys = try { sp.all?.size ?: -1 } catch (_: Throwable) { -1 }   // 0 = BlackOut's settings could not be read from inside this app
         Reporter.install(pkg, keys, ticked("fd_apps"), ticked("smart_apps"), ticked("pgmod_apps") || (sp.getStringSet("pgview_" + pkg, emptySet()) ?: emptySet()).isNotEmpty(), sp.getBoolean("hook_test", false))
+        // the per-app colour switch (BlackOut > the app > Colours) turns every change off for this app: the grey, web, dark-page and recolour hooks below were still installed when it said "off"
+        if (!RecolorRules.enabled(sp, pkg)) return
         if (sp.getBoolean("web_black", true)) WebBlack.install(limit)
         if (ticked("fd_apps")) ForceDarkHooks.install()
         if (ticked("smart_apps")) PageHooks.install(PageDark.Cfg(0x000000, 0xEBEBEB, true), smart = true)
