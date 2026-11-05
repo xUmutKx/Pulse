@@ -2199,3 +2199,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Güncelleme: foss sürümünde direkt; theming seçenekleri unutulmayacak.
 
 - Klavye: öneri hesabı her harfte iptal edilmez (hızlı yazınca hiç sonuç gelmiyordu); biten hesabın ardından en yeni metin için hemen yeniden çalışır; kelime sonu eşzamanlı düzeltme sınırı 90 ms (derlenmedi)
+
+- Alarm ekranı: Dismiss düğmesine kısa basış da alarmı kapatır (kaydırma yine çalışır); durdurma/erteleme servisi isteği hata verirse yedek yol, ekran her durumda kapanır (derlenmedi)
