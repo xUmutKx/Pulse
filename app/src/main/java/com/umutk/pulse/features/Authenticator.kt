@@ -218,7 +218,7 @@ internal object AuthBackup {
 }
 
 /** The system prompt (fingerprint, face, or the screen lock when no biometrics are set) before the codes show. Nothing is asked when the phone has no lock at all. */
-private fun askSystemLock(ctx: Context, onOk: () -> Unit, onFail: () -> Unit) {
+internal fun askSystemLock(ctx: Context, onOk: () -> Unit, onFail: () -> Unit) {
     if (android.os.Build.VERSION.SDK_INT < 30) { onOk(); return }
     val auth = android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG or android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL
     val bm = ctx.getSystemService(android.hardware.biometrics.BiometricManager::class.java)
