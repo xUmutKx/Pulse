@@ -68,14 +68,26 @@ fun Welcome(onDone: () -> Unit) {
             color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
 
         // prominent disclosure for the Accessibility API: shown on the first start of every version, before any of its services is switched on
+        // one switch per Accessibility service: it shows whether the service is on; a tap opens Accessibility settings, where Android turns it on or off
+        val accLifecycle = androidx.compose.ui.platform.LocalLifecycleOwner.current.lifecycle
+        var accTick by remember { mutableIntStateOf(0) }
+        androidx.compose.runtime.DisposableEffect(accLifecycle) {
+            val observer = androidx.lifecycle.LifecycleEventObserver { _, e -> if (e == androidx.lifecycle.Lifecycle.Event.ON_RESUME) accTick++ }
+            accLifecycle.addObserver(observer)
+            onDispose { accLifecycle.removeObserver(observer) }
+        }
         WelcomeCard(tr("Accessibility", "Erişilebilirlik")) {
-            WelcomeLine(tr("Pulse uses the Accessibility service for four features. You switch each one on yourself in Accessibility settings:",
-                "Pulse dört özellik için Erişilebilirlik servisini kullanır. Her birini Erişilebilirlik ayarlarında sen açarsın:"))
-            WelcomeLine(tr("App Lock: sees which app is in front, to lock it.", "Uygulama kilidi: hangi uygulamanın önde olduğunu görür, kilitlemek için."))
-            WelcomeLine(tr("Screen cover: draws over other apps. It reads no screen content.", "Ekran kapağı: diğer uygulamaların üstüne çizer. Ekran içeriğini okumaz."))
-            WelcomeLine(tr("BlackOut: sees the app in front, to change its colors.", "BlackOut: önde olan uygulamaya göre renkleri değiştirir."))
-            WelcomeLine(tr("Floating keyboard: appears when a text field is focused and writes into that field.",
-                "Yüzen klavye: bir metin alanı seçildiğinde açılır ve o alana yazar."))
+            WelcomeLine(tr("Pulse uses the Accessibility service for four features. Each one is switched on in Accessibility settings:",
+                "Pulse dört özellik için Erişilebilirlik servisini kullanır. Her biri Erişilebilirlik ayarlarında açılır:"))
+            for (s in ACCESS_ROWS) {
+                Row(Modifier.fillMaxWidth().padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f).padding(end = 12.dp)) {
+                        Text(tr(s.titleEn, s.titleTr), color = T.text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                        Text(tr(s.descEn, s.descTr), color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
+                    }
+                    PSwitch(accessOn(ctx, s.cls, accTick), { openAccessibilitySettings(ctx) })
+                }
+            }
             WelcomeLine(tr("Pulse reads only what it needs on this phone. Nothing from the screen is sent off the device.",
                 "Pulse yalnızca bu telefonda ihtiyacı olanı okur. Ekrandaki hiçbir şey cihazdan dışarı gönderilmez."))
         }
@@ -131,6 +143,32 @@ private fun WelcomeCard(title: String, content: @Composable () -> Unit) {
 @Composable
 private fun WelcomeLine(text: String) {
     Text("•  $text", color = T.text, fontSize = 13.sp, modifier = Modifier.padding(top = 6.dp))
+}
+
+/** One Accessibility service of Pulse: its class, and the title and short description shown beside its switch. */
+private class AccessRow(val cls: String, val titleEn: String, val titleTr: String, val descEn: String, val descTr: String)
+
+private val ACCESS_ROWS = listOf(
+    AccessRow("com.umutk.pulse.applock.LockService", "App Lock", "Uygulama kilidi",
+        "Sees which app is in front, to lock it. Reads no content.", "Hangi uygulamanın önde olduğunu görür, kilitlemek için. İçerik okumaz."),
+    AccessRow("com.umutk.pulse.features.CoverAccessibilityService", "Screen cover", "Ekran kapağı",
+        "Draws over other apps. Reads no screen content.", "Diğer uygulamaların üstüne çizer. Ekran içeriğini okumaz."),
+    AccessRow("com.umutk.pulse.extras.blackout.AppWatch", "BlackOut", "BlackOut",
+        "Sees the app in front, to change its colors.", "Önde olan uygulamaya göre renkleri değiştirir."),
+    AccessRow("com.umutk.pulse.extras.keyboard.AccessKeyboardService", "Floating keyboard", "Yüzen klavye",
+        "Appears when a text field is focused and writes into that field.", "Bir metin alanı seçildiğinde açılır ve o alana yazar."),
+)
+
+/** True when the Accessibility service [cls] of this app is on (Android keeps the list in a secure setting; reading it needs no permission). */
+private fun accessOn(c: android.content.Context, cls: String, @Suppress("UNUSED_PARAMETER") tick: Int): Boolean =
+    runCatching {
+        android.provider.Settings.Secure.getString(c.contentResolver, android.provider.Settings.Secure.ENABLED_ACCESSIBILITY_SERVICES)
+            .orEmpty().split(':').any { it.equals("${c.packageName}/$cls", ignoreCase = true) }
+    }.getOrDefault(false)
+
+/** Opens Accessibility settings, where the user turns a Pulse service on or off. Android does not let an app switch them itself. */
+private fun openAccessibilitySettings(c: android.content.Context) {
+    c.startActivity(android.content.Intent(android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
 }
 
 /** The first screen: the terms and privacy note (the person accepts them once), and what root and Shizuku are for. Pulse works without either. */
