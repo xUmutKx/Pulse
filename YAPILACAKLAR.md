@@ -2146,3 +2146,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - 1.0.364 derlendi (yukarıdaki "derlenmedi" maddelerinin hepsi bu sürümde)
 
 - Weather: gökyüzü arka planında beyaz yazılar için yarı saydam siyah kaplar (üst blok, saatler, günler, güneş/ay, kartlar) (derlenmedi)
+
+- Files ana sayfa: pm hide ile gizlenmiş uygulamalar da sayılır (MATCH_UNINSTALLED + root/Shizuku du ile boyut); Uygulamalar satırına basınca APK dosyaları listesi açılır (derlenmedi)
