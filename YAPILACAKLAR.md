@@ -2158,3 +2158,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - DONMA düzeltmeleri: klavye boşlukta eşzamanlı düzeltme artık ayrı iş parçacığı + 40 ms sınır; Files uygulama ölçümü yalnız kullanıcı uygulamaları, en çok 30 gizli (derlenmedi)
 
 - Fiziksel klavye: Files (Ctrl+C/X/V, Ctrl+A, Delete, F2, Ctrl+N, Ctrl+F, F5, Backspace/Alt+Sol, Esc), her ekranda Esc ve Alt+Sol geri (derlenmedi)
+
+- KASMA (ikinci tur): LSPosed otomatik beyaz kuralı artık Canvas çizim kancası takmaz (her karede maliyetliydi), klavye uygulamalarında hiç çalışmaz, kancalarda yansıma önbelleği; klavye öğrenilen kelime kaydı arka planda; önbellek temizleyici root taraması en düşük öncelikte (derlenmedi)

@@ -158,9 +158,16 @@ object KeyboardDictionary {
     /** Numbers for the statistics page: learned words, learned typos, undone corrections, word pairs, letters typed. */
     fun stats(): List<Pair<String, Int>> = listOf("words" to user.size, "typos" to typos.size, "rejects" to rejects.size, "pairs" to pairs.values.sumOf { it.size }, "letters" to keyCounts.values.sum())
 
+    private val saver = java.util.concurrent.Executors.newSingleThreadExecutor { r -> Thread(r, "kbd-save").apply { priority = Thread.MIN_PRIORITY; isDaemon = true } }
+
+    /** Writes what was learned. The five files are sorted and written on a thread of their own (this is called from the typing path every 25 words: on the main thread it stopped the keys); [force] writes at once. */
     fun saveUser(c: Context, force: Boolean = false) {
         if (dirty == 0 && !force) return
         dirty = 0
+        if (force) writeUser(c) else saver.execute { writeUser(c) }
+    }
+
+    private fun writeUser(c: Context) {
         runCatching {
             File(c.filesDir, "kbd_keys.txt").writeText(keyCounts.entries.joinToString("\n") { "${it.key} ${it.value}" })
             File(c.filesDir, "kbd_touch.txt").writeText(bias.entries.joinToString("\n") { "${it.key} ${it.value[0]} ${it.value[1]}" })

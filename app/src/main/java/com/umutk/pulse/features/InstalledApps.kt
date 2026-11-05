@@ -85,7 +85,7 @@ fun measureApps(ctx: Context): List<AppEntry> {
                 val k = a.packageName
                 "echo \"$k \$(du -sk /data/app/*/$k-* /data/app/$k-* /data/data/$k /data/user_de/0/$k /storage/emulated/0/Android/data/$k /storage/emulated/0/Android/obb/$k /storage/emulated/0/Android/media/$k 2>/dev/null | awk '{ if (!seen[\$2]++) s += \$1 } END { print s * 1024 }')\""
             }
-            P.run(script).text.lines().mapNotNull { l -> l.trim().split(' ').takeIf { it.size == 2 }?.let { it[0] to (it[1].toDoubleOrNull()?.toLong() ?: 0L) } }.toMap()
+            P.run("renice -n 19 -p \$\$ >/dev/null 2>&1; " + script).text.lines().mapNotNull { l -> l.trim().split(' ').takeIf { it.size == 2 }?.let { it[0] to (it[1].toDoubleOrNull()?.toLong() ?: 0L) } }.toMap()
         }.getOrDefault(emptyMap()) else emptyMap()
         for (a in hidden) out += AppEntry(a.packageName, label(a), maxOf(sized[a.packageName] ?: 0L, apkBytes(a)), true)
     }

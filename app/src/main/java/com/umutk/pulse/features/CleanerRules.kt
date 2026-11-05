@@ -21,6 +21,9 @@ class CleanRow(val id: String, val pkg: String?, val title: String, val sub: Str
  * and SystemCleaner (thumbnails, trash, old temp files, empty folders). Scanning is read-only; [delete] re-checks every rule.
  */
 object CleanerRules {
+    /** The scans walk the data folders of every app through root: they run at the lowest CPU priority, so the phone and the keyboard stay smooth while they work. */
+    private fun lowRun(script: String): String = Shell.run("renice -n 19 -p \$\$ >/dev/null 2>&1; ionice -c 3 -p \$\$ >/dev/null 2>&1; $script")
+
     const val APP = "app"; const val CACHE = "cache"; const val CORPSE = "corpse"
     private const val TEMP_DAYS = 7L
     private const val APK_DAYS = 30L
@@ -70,7 +73,7 @@ object CleanerRules {
         if (!viaShell) return paths.associateWith { File(it).walkTopDown().filter { f -> f.isFile }.sumOf { f -> f.length() } }
         val m = HashMap<String, Long>()
         paths.filter { safeArg(it) }.chunked(40).forEach { c ->
-            Shell.run("du -sk " + c.joinToString(" ") { "'$it'" } + " 2>/dev/null").lineSequence().forEach { l ->
+            lowRun("du -sk " + c.joinToString(" ") { "'$it'" } + " 2>/dev/null").lineSequence().forEach { l ->
                 val kb = l.substringBefore('\t').trim().toLongOrNull() ?: return@forEach
                 m[l.substringAfter('\t').trim()] = kb * 1024
             }
@@ -107,7 +110,7 @@ object CleanerRules {
         val paths = ArrayList<String>()
         if (viaShell) {
             val prune = neverCache.joinToString(" -o ") { "-name '$it'" }
-            val out = Shell.run("for b in /data/user/*/* '$ext'/Android/data/*; do find \"\$b\" -maxdepth 6 \\( $prune \\) -prune -o -type d -iname '*cache*' -print 2>/dev/null; done; " +
+            val out = lowRun("for b in /data/user/*/* '$ext'/Android/data/*; do find \"\$b\" -maxdepth 6 \\( $prune \\) -prune -o -type d -iname '*cache*' -print 2>/dev/null; done; " +
                 "for b in '$ext'/Android/media/*; do [ -d \"\$b/cache\" ] && echo \"\$b/cache\"; done")
             out.lineSequence().map { it.trim() }.filter { it.startsWith("/") }.forEach { paths += it }
         } else {
@@ -174,7 +177,7 @@ object CleanerRules {
             if (viaShell) { add("/data/user/*"); add("/data/user_de/*") }
         }
         val dirs = roots.flatMap { r ->
-            if ('*' in r) Shell.run("ls -1d $r/* 2>/dev/null").lineSequence().map { it.trim() }.filter { it.startsWith("/") }.map { File(it) }.toList() else listDirs(r)
+            if ('*' in r) lowRun("ls -1d $r/* 2>/dev/null").lineSequence().map { it.trim() }.filter { it.startsWith("/") }.map { File(it) }.toList() else listDirs(r)
         }.filter { it.name !in have && pkgRe.matches(it.name) && !denied(it.name) && corpseRe.matches(it.path) }
         val sz = sizes(dirs.map { it.path })
         return dirs.groupBy { it.name }.mapNotNull { (pkg, ds) ->
