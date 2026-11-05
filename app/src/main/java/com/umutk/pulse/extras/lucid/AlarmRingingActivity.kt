@@ -191,7 +191,8 @@ class AlarmRingingActivity : ComponentActivity() {
                             putExtra(AlarmReceiver.EXTRA_ALARM_ID, alarmId)
                             putExtra(AlarmReceiver.EXTRA_SNOOZE_MINUTES, snoozeMinutes)
                         }
-                        startService(snoozeIntent)
+                        // the service is asked in either way a foreground service can be reached; the screen closes whatever the answer
+                        runCatching { startService(snoozeIntent) }.onFailure { runCatching { ContextCompat.startForegroundService(this, snoozeIntent) } }
                         finishAndRemoveTask()
                     },
                     onDismiss = {
@@ -200,7 +201,7 @@ class AlarmRingingActivity : ComponentActivity() {
                             putExtra(AlarmReceiver.EXTRA_ALARM_ID, alarmId)
                             putExtra(AlarmReceiver.EXTRA_IS_AWAKE_CHECK_ACTIVE, isAwakeCheckActive)
                         }
-                        startService(stopIntent)
+                        runCatching { startService(stopIntent) }.onFailure { runCatching { ContextCompat.startForegroundService(this, stopIntent) } }
                         finishAndRemoveTask()
                     }
                 )

@@ -1089,9 +1089,11 @@ fun DragDismissPill(
     // the circle grows from where the pill is now, not from where it rests
     LaunchedEffect(progress.value, shift.value) { currentReveal(progress.value, center + shift.value) }
 
+    // a plain press (hardly any travel) dismisses too: a sleepy finger that only taps must not be left with a button that does nothing
+    val tapSlop = with(LocalDensity.current) { 12.dp.toPx() }
     fun settle(total: Offset) {
         if (finished.value) return
-        if (total.getDistance() / travel >= closeAt) {
+        if (total.getDistance() < tapSlop || total.getDistance() / travel >= closeAt) {
             finished.value = true
             scope.launch { progress.animateTo(1f, tween(160)); currentDismiss() }
         } else {
