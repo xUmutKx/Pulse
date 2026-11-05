@@ -250,6 +250,7 @@ private fun FilesPageInner() {
                     "tree" -> FolderTreeScreen(top, back)
                     "types" -> TypeBreakdownScreen(top, back)
                     "cache" -> CacheCleanerScreen(back)
+                    "apps" -> InstalledAppsScreen(back)
                     "share" -> com.umutk.pulse.files.home.FilesSharePage(onBack = { tab = "files" })
                     else -> ExplorerTab(full || !standalone, { tab = it }) { full = !full }
                 }
