@@ -94,6 +94,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -224,10 +225,11 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
     val scope = androidx.compose.runtime.rememberCoroutineScope()
     val dens = LocalDensity.current.density
     // a hardware keyboard is attached: only the suggestion bar shows, at the foot of the screen
-    if (st.hardware && !st.hwOpen) {
-        Column(modifier.fillMaxWidth().background(th.bg)) {
-            Row(Modifier.fillMaxWidth().height(52.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).fillMaxHeight()) { TopBar(th, st, act, onPull = { }, onRelease = { }) }
+    // (its other pages, the clipboard, the lock and the rest, open in full as on the screen keyboard, without the letter keys; the translation bar takes the height it needs and sits clear of the screen's foot)
+    if (st.hardware && !st.hwOpen && st.panel == "keys") {
+        Column(modifier.fillMaxWidth().background(th.bg).padding(bottom = if (st.trans) 18.dp else 0.dp)) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f).then(if (st.trans) Modifier else Modifier.fillMaxHeight())) { TopBar(th, st, act, onPull = { }, onRelease = { }) }
                 // the keyboard button: opens the full keyboard (for typing with the screen, and the clipboard and the rest of its keys)
                 BarIcon(th, kbIcon(th, "Keyboard")) { st.hwOpen = true }
             }
