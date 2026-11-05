@@ -305,8 +305,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         rev++
     }
     /** Loads the picked subtitle file again with the saved encoding and the delay. */
-    fun applySub() {
-        val e = ext ?: return
+    fun applySubNow() {
+        val e = ext ?: run { android.widget.Toast.makeText(ctx, tr("No subtitle picked", "Altyazı seçilmedi"), android.widget.Toast.LENGTH_SHORT).show(); return }
         pendingSubLabel[0] = e.second
         val i = player.currentMediaItemIndex
         val at = player.currentPosition
@@ -327,6 +327,11 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         player.playWhenReady = wasPlaying
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).build()
     }
+
+    fun applySub() = runCatching { applySubNow() }.onFailure { t ->
+        android.util.Log.e("PulseVideo", "subtitle", t)
+        android.widget.Toast.makeText(ctx, tr("The subtitle could not be added: ", "Altyazı eklenemedi: ") + (t.message ?: t.javaClass.simpleName), android.widget.Toast.LENGTH_LONG).show()
+    }.let { }
 
     DisposableEffect(player) {
         val l = object : Player.Listener {
@@ -743,7 +748,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     }
 
     when (dlg) {
-        "speed" -> VideoSpeedDialog(speed, prefs.speedMin, prefs.speedMax, { dlg = null }) { v ->
+        "speed" -> VideoSpeedDialog(speed, prefs.speedMin, prefs.speedMax, prefs.rememberSpeed, { on -> prefs.rememberSpeed = on; if (on) prefs.speed = speed }, { dlg = null }) { v ->
             speed = v; player.setPlaybackSpeed(v); if (prefs.rememberSpeed) prefs.speed = v
         }
         "audio" -> {
