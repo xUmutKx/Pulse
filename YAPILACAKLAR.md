@@ -2152,3 +2152,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Files: ana sayfada "Uygulamalar" kendi listesi (yüklü + pm hide ile gizli uygulamalar, boyutla); "APK" ayrı satır, normal .apk dosyaları (derlenmedi)
 
 - Game Hub: oyun ekranında "ana ekrana ekle" düğmesi (GameLaunch kısayolu, gizli oyunu açar); gizli uygulama boyutu: MATCH_UNINSTALLED + user_de klasörü, boyut önbelleği yenilendi (derlenmedi)
+
+- Pulse dosya seçici: klasör listesi arka planda okunur (donma), görsel/video/APK önizlemeleri, sol üstte üç çizgi ile konumlar paneli (derlenmedi)
