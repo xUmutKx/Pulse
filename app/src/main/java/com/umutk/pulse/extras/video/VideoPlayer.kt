@@ -852,7 +852,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 MoreItem("share", "share", tr("Share", "Paylaş"), ""),
                 MoreItem("zoom", "scale", tr("Reset zoom", "Yakınlaştırmayı sıfırla"), ""),
             )
-            MoreSheet(moreItems, { dlg = null }, sk) { key ->
+            MoreSheet(moreItems, { dlg = null }, sk, prefs.moreAt == 1) { key ->
                 dlg = null
                 when (key) {
                     // the video goes to the mini window above other apps and this screen closes; the window keeps playing
@@ -941,11 +941,11 @@ private fun SkipPill(text: String, startKey: Long, onTap: () -> Unit, onTimeout:
 }
 
 @Composable
-private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, onPick: (String) -> Unit) {
+private fun MoreSheet(items: List<MoreItem>, onDismiss: () -> Unit, sk: VSkin, bottomLeft: Boolean = false, onPick: (String) -> Unit) {
     val d = LocalDensity.current
-    val dx = with(d) { (-12).dp.roundToPx() }
-    val dy = with(d) { 52.dp.roundToPx() }
-    Popup(alignment = Alignment.TopEnd, offset = IntOffset(dx, dy), onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
+    val dx = with(d) { (if (bottomLeft) 12 else -12).dp.roundToPx() }
+    val dy = with(d) { (if (bottomLeft) -96 else 52).dp.roundToPx() }
+    Popup(alignment = if (bottomLeft) Alignment.BottomStart else Alignment.TopEnd, offset = IntOffset(dx, dy), onDismissRequest = onDismiss, properties = PopupProperties(focusable = true)) {
         Column(Modifier.width(230.dp).clip(RoundedCornerShape(14.dp)).background(Color(0xF2101010)).padding(6.dp)) {
             items.forEach { item ->
                 Row(Modifier.fillMaxWidth().height(46.dp).clip(RoundedCornerShape(10.dp)).clickable { onPick(item.key) }.padding(horizontal = 10.dp),
