@@ -2186,3 +2186,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Sistem logosu (başlatıcı ikonu + uygulama bilgisi): siyah zemin, beyaz pencere + kalp atışı (ic_pulse_logo); uygulamanın içindeki mavi/yeşil logo (ic_launcher) aynen duruyor (derlenmedi)
 
 - İndirme yöneticisi: indir deyince bağlantı kutudan hemen çıkar, arka planda aranır ("Dosya aranıyor…" satırı), bulununca kendi satırı ve ilerleme çubuğu gelir; art arda birkaç bağlantı eklenebilir (derlenmedi)
+
+- Files > Uygulamalar: uzun basınca seçim, çöp kutusuyla toplu kaldırma (root/Shizuku ile hepsi birden, gizliler önce gösterilip; yoksa sistemin sorusu sırayla); sistem uygulamaları seçilemez; REQUEST_DELETE_PACKAGES izni (derlenmedi)

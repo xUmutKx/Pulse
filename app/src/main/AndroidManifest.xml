@@ -4,6 +4,8 @@
     <!-- LocalSend: the multicast announcement of nearby devices -->
     <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
     <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
+    <!-- Files > Apps: the picked apps are uninstalled (the system asks for each one) -->
+    <uses-permission android:name="android.permission.REQUEST_DELETE_PACKAGES" />
     <!-- Pulse Contacts -->
     <uses-permission android:name="android.permission.CALL_PHONE" />
     <uses-permission android:name="android.permission.READ_CALL_LOG" />
