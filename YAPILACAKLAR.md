@@ -2203,3 +2203,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Alarm ekranı: Dismiss düğmesine kısa basış da alarmı kapatır (kaydırma yine çalışır); durdurma/erteleme servisi isteği hata verirse yedek yol, ekran her durumda kapanır (derlenmedi)
 
 - 1.0.365 derlendi (1.0.364 sonrası tüm "derlenmedi" maddeleri bu sürümde)
+
+- Video listesi: uzun basış artık tam ekran pencere açmaz; seçim modu (sağ üstte seçilen sayı, çöp kutusu, 3 nokta: hepsini seç/oynat/bilgi/paylaş/yeniden adlandır/klasörü gizle/oynanmadı say). Her videonun sağındaki 3 nokta küçük yüzen menü açar (derlenmedi)
+- Altyazı: tam ekran yazı boyu (varsayılan 38) ve pencere içi (PiP/yüzen) yazı boyu (varsayılan 18) ayrı ayarlar; boyut videodan videoya ve hızla değişmez (dosyadaki yazı boyutları yok sayılır); gerçek PiP penceresi küçük boyutu kullanır; A-B tekrar düğmesi "A-B" yazısı oldu (derlenmedi)
