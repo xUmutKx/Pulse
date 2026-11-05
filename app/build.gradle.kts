@@ -27,8 +27,9 @@ android {
     // foss: the full app, no ads and no Google SDK; play: the same app with the AdMob ads (src/play)
     flavorDimensions += "store"
     productFlavors {
-        create("foss") { dimension = "store" }
-        create("play") { dimension = "store"; targetSdk = 36 } // Google Play requires API 36 for new uploads; the foss flavor keeps 34
+        // APK_INSTALL: the app may install APK files itself (REQUEST_INSTALL_PACKAGES). Off in the play build: Play declares that permission separately
+        create("foss") { dimension = "store"; buildConfigField("boolean", "APK_INSTALL", "true") }
+        create("play") { dimension = "store"; targetSdk = 36; buildConfigField("boolean", "APK_INSTALL", "false") } // Google Play requires API 36 for new uploads; the foss flavor keeps 34
     }
     buildTypes {
         release {
@@ -46,7 +47,7 @@ android {
     }
     kotlin { compilerOptions { jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17) } }
     lint { checkOnly += setOf("NewApi"); abortOnError = false; textReport = true; textOutput = file("lint-newapi.txt") }
-    buildFeatures { compose = true; aidl = true }
+    buildFeatures { compose = true; aidl = true; buildConfig = true }
     packaging { resources.excludes += listOf("/META-INF/{AL2.0,LGPL2.1}", "META-INF/versions/9/OSGI-INF/MANIFEST.MF", "META-INF/versions/9/module-info.class") } // the last two: BouncyCastle ships them in several jars
 }
 

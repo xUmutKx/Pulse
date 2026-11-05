@@ -307,6 +307,7 @@ object StoreInstaller {
 
     /** Checks the package name and certificate before the system installer gets the file. */
     private fun installApk(c: Context, m: ExtraModule, apk: File) {
+        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) throw IOException(tr("This version cannot install apps", "Bu sürüm uygulama kuramaz"))
         val info = c.packageManager.getPackageArchiveInfo(apk.path, PackageManager.GET_SIGNING_CERTIFICATES)
             ?: throw IOException(tr("Not a readable package", "Paket okunamadı"))
         if (info.packageName != m.paket) throw IOException(tr("Package name differs", "Paket adı farklı"))
