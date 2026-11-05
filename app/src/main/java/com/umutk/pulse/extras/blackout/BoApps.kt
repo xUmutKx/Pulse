@@ -147,7 +147,7 @@ fun RecolorCard(pkg: String, sp: SharedPreferences) {
             Box(Modifier.padding(start = 8.dp)) { PSwitch(on, { setOn(it) }) }
         }
         // the automatic black (big white surfaces) of "every app automatically": on by default, shown and switched per app here
-        val autoAll = sp.getBoolean("lsp_auto", false)
+        val autoAll = sp.getBoolean("lsp_auto", true)
         var autoOn by remember(pkg) { mutableStateOf(autoAll && pkg !in (sp.getStringSet("lsp_auto_off", emptySet()) ?: emptySet())) }
         Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
