@@ -74,12 +74,14 @@ class LocalSendShareActivity : ComponentActivity() {
             Column(Modifier.padding(horizontal = pageGutter).widthIn(max = 420.dp).fillMaxWidth().background(T.bg).border(1.dp, T.line).clickable(enabled = false) {}.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("LocalSend", color = T.text, fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
-                    if (LocalSendEngine.scanning || LocalSendEngine.peers.isEmpty()) ScanRing()
+                    if (LocalSendEngine.scanning) ScanRing()
                 }
                 Text(tr("${list.size} file(s)", "${list.size} dosya"), color = T.sub, fontSize = 13.sp, modifier = Modifier.padding(top = 2.dp, bottom = 8.dp))
                 Column(Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
                     val peers = LocalSendEngine.peers.values.sortedBy { it.alias.lowercase() }
-                    if (peers.isEmpty()) Text(tr("Looking for devices…", "Cihazlar aranıyor…"), color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
+                    if (peers.isEmpty()) Text(
+                        if (LocalSendEngine.scanning) tr("Looking for devices…", "Cihazlar aranıyor…") else tr("No device found on this Wi-Fi", "Bu Wi-Fi'da cihaz bulunamadı"),
+                        color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(vertical = 12.dp))
                     peers.forEach { p ->
                         Row(Modifier.fillMaxWidth().clickable { send(p, list) }.padding(vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
                             PIcon("phone", T.text, 26.dp)
