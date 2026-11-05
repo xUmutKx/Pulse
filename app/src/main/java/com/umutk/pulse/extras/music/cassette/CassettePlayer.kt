@@ -227,19 +227,29 @@ private fun Cassette(track: Track?, spin: Float, progress: Float, modifier: Modi
             // tick marks of the tape counter along the lower edge of the window
             for (i in 0..12) drawLine(Color.White.copy(alpha = .35f), Offset(wx + ww * (.08f + i * .07f), wy + wh * .93f), Offset(wx + ww * (.08f + i * .07f), wy + wh * (if (i % 3 == 0) .80f else .86f)), h * .004f)
             val rl = Offset(wx + ww * .26f, wy + wh / 2f); val rr = Offset(wx + ww * .74f, wy + wh / 2f)
-            val full = wh * .47f; val empty = wh * .24f
+            val full = wh * .47f; val empty = wh * .30f
             val leftR = empty + (full - empty) * (1f - progress); val rightR = empty + (full - empty) * progress
-            // the tape running from the left pack, under the guide posts, to the right pack
-            val tapeC = Color(0xFF2B1B10)
-            drawLine(tapeC, Offset(rl.x, rl.y + leftR), Offset(wx + ww * .36f, wy + wh * .98f), h * .012f)
-            drawLine(tapeC, Offset(wx + ww * .36f, wy + wh * .98f), Offset(wx + ww * .64f, wy + wh * .98f), h * .012f)
-            drawLine(tapeC, Offset(wx + ww * .64f, wy + wh * .98f), Offset(rr.x, rr.y + rightR), h * .012f)
             // the packs: brown tape with a gloss ring
             for ((c, r) in listOf(rl to leftR, rr to rightR)) {
                 drawCircle(Brush.radialGradient(listOf(Color(0xFF8A5A33), Color(0xFF4B2E19)), c, r), r, c)
                 drawCircle(Color.White.copy(alpha = .14f), r * .86f, c, style = Stroke(r * .08f))
                 drawCircle(Color.Black.copy(alpha = .35f), r, c, style = Stroke(r * .04f))
             }
+            // the tape: it leaves the left pack where a straight line to the first guide post touches it, runs along the foot to the second post, and reaches the right pack the same way
+            val post1 = Offset(wx + ww * .36f, wy + wh * .98f); val post2 = Offset(wx + ww * .64f, wy + wh * .98f)
+            fun touch(c: Offset, r: Float, p: Offset): Offset {
+                val dx = p.x - c.x; val dy = p.y - c.y
+                val d = kotlin.math.hypot(dx, dy).coerceAtLeast(r + 1f)
+                val base = kotlin.math.atan2(dy, dx); val ang = kotlin.math.acos((r / d).coerceIn(0f, 1f))
+                val t1 = Offset(c.x + r * kotlin.math.cos(base + ang), c.y + r * kotlin.math.sin(base + ang))
+                val t2 = Offset(c.x + r * kotlin.math.cos(base - ang), c.y + r * kotlin.math.sin(base - ang))
+                return if (t1.y > t2.y) t1 else t2
+            }
+            val tapeC = Color(0xFF3B2412)
+            val tw = h * .014f
+            drawLine(tapeC, touch(rl, leftR, post1), post1, tw)
+            drawLine(tapeC, post1, post2, tw)
+            drawLine(tapeC, post2, touch(rr, rightR, post2), tw)
             reel(rl, wh * .20f, spin, cas.ink); reel(rr, wh * .20f, spin, cas.ink)
             // two guide posts
             for (gx in listOf(wx + ww * .36f, wx + ww * .64f)) { drawCircle(Color(0xFFB8B8B0), h * .014f, Offset(gx, wy + wh * .98f)); drawCircle(Color.Black.copy(alpha = .4f), h * .014f, Offset(gx, wy + wh * .98f), style = Stroke(h * .003f)) }
