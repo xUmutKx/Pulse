@@ -67,6 +67,25 @@ object NetPolicy {
         }
     }.getOrDefault(0)
 
+    /**
+     * The devices that answer on this Wi-Fi: every address of the phone's own /24 network is asked once, a few dozen at a time (the neighbour table alone shows nothing
+     * on Android 10 and later). The phone itself is not counted; 0 when the phone is not on a Wi-Fi network.
+     */
+    fun scan(c: Context): Int = runCatching {
+        val cm = c.getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+        val net = cm.activeNetwork ?: return 0
+        val caps = cm.getNetworkCapabilities(net)
+        if (caps == null || !caps.hasTransport(android.net.NetworkCapabilities.TRANSPORT_WIFI)) return 0
+        val la = cm.getLinkProperties(net)?.linkAddresses?.firstOrNull { it.address is java.net.Inet4Address } ?: return 0
+        val own = la.address.address
+        val hosts = (1..254).map { i -> own.copyOf().also { it[3] = i.toByte() } }.filter { !it.contentEquals(own) }
+        val pool = java.util.concurrent.Executors.newFixedThreadPool(48)
+        try {
+            val futures = hosts.map { h -> pool.submit<Boolean> { runCatching { java.net.InetAddress.getByAddress(h).isReachable(300) }.getOrDefault(false) } }
+            futures.count { runCatching { it.get(8, java.util.concurrent.TimeUnit.SECONDS) }.getOrDefault(false) }
+        } finally { pool.shutdownNow() }
+    }.getOrDefault(0)
+
     /** Sets the two cuts of one app. Returns false when the rule could not be set (no root or Shizuku). */
     fun setRule(c: Context, pkg: String, wifi: Boolean, mobile: Boolean): Boolean {
         val uid = runCatching { c.packageManager.getApplicationInfo(pkg, 0).uid }.getOrElse { return false }
@@ -104,7 +123,7 @@ fun NetAccessCard() {
     var scanning by remember { mutableStateOf(true) }
     LaunchedEffect(scan) {
         scanning = true
-        withContext(Dispatchers.IO) { NetPolicy.reapply(ctx); devices = NetPolicy.devices() }
+        withContext(Dispatchers.IO) { NetPolicy.reapply(ctx); devices = maxOf(NetPolicy.devices(), NetPolicy.scan(ctx)) }
         scanning = false
     }
     PCard(Modifier.fillMaxWidth()) {

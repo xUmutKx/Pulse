@@ -247,6 +247,14 @@ fun NetworkPage() {
         PCard(Modifier.clickable { openTool("netusage") }) {
             Graph(listOf(h["down"].orEmpty(), h["up"].orEmpty()), listOf(resColor("net"), resColor("gpu")), maxOf(1024f, (h["down"].orEmpty() + h["up"].orEmpty()).maxOrNull() ?: 1f) * 1.2f, height = 80.dp)
             Text("Orange: download · Blue: upload", color = T.sub, fontSize = 11.sp)
+        // the internet speed of the last tests (the average of up to five), so the page shows it without running one
+        val ctx = androidx.compose.ui.platform.LocalContext.current
+        val tests = remember { com.umutk.pulse.extras.speedtest.SpeedHistory.all(ctx).take(5) }
+        if (tests.isNotEmpty()) Text(
+            tr("Internet speed (average of ${tests.size} tests): ", "İnternet hızı (${tests.size} testin ortalaması): ") +
+                "↓ %.1f  ↑ %.1f Mbit/s · %.0f ms".format(tests.map { it.down }.average(), tests.map { it.up }.average(), tests.map { it.pingMs }.average()),
+            color = T.text, fontSize = 13.sp, modifier = Modifier.padding(vertical = 6.dp),
+        )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             PButton(tr("Network usage", "Ağ kullanımı"), Modifier.weight(1f)) { openTool("netusage") }
             PButton(tr("Internet speed test", "İnternet hız testi"), Modifier.weight(1f)) { openTool("speedtest") }
