@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.umutk.pulse.features.AccessNeededCard
 import com.umutk.pulse.features.ownProcesses
+import com.umutk.pulse.features.visibleApps
+import com.umutk.pulse.features.ProcCache
 import com.umutk.pulse.features.ProcStats
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +71,7 @@ fun ProcessesPage() {
     val openTool = LocalOpenTool.current
     val s by Sampler.snap.collectAsState()
     ColW.load(ctx)
+    // the last list that was read shows at once, and stays when a read fails
     var rows by remember { mutableStateOf<List<PRow>>(emptyList()) }
     var loaded by remember { mutableStateOf(false) }
     var sel by remember { mutableStateOf(-1) }
@@ -84,9 +87,16 @@ fun ProcessesPage() {
     var usage by remember { mutableStateOf(false) }    // usage access: needed for network speed and app size
     LaunchedEffect(Unit) {
         while (true) {
+            if (rows.isEmpty()) rows = withContext(Dispatchers.IO) { ProcCache.load(ctx).map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
             val raw = withContext(Dispatchers.IO) { Sampler.processes() }
             own = raw.isEmpty()
-            rows = withContext(Dispatchers.IO) { raw.ifEmpty { ownProcesses(ctx) }.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
+            val fresh = withContext(Dispatchers.IO) { raw.ifEmpty { ownProcesses(ctx) + visibleApps(ctx).filter { v -> ownProcesses(ctx).none { o -> o.name.substringBefore(':') == v.name } } } }
+            if (fresh.isNotEmpty()) {
+                rows = withContext(Dispatchers.IO) { fresh.map { PRow(it, Extra.isApp(ctx, it.name), labelOf(ctx, it.name), ProcStats.uidOf(ctx, it.name)) } }
+                withContext(Dispatchers.IO) { ProcCache.save(ctx, fresh) }
+            }
+            // no memory figures without root: the apps are ordered by the size they take
+            if (own && sort == "mem") sort = "disk"
             loaded = true
             usage = withContext(Dispatchers.IO) { Extra.usageGranted(ctx) }
             net = withContext(Dispatchers.IO) { ProcStats.netRates(ctx) }
@@ -103,7 +113,7 @@ fun ProcessesPage() {
             "cpu" -> l.sortedByDescending { it.cpu }; "name" -> l.sortedBy { it.title.lowercase() }; "pid" -> l.sortedBy { it.head.p.pid }
             "net" -> l.sortedByDescending { net[it.uid] ?: 0f }; "disk" -> l.sortedByDescending { sizes[it.uid] ?: 0L }
             else -> l.sortedByDescending { it.mem } } }
-    val selRow = rows.firstOrNull { it.p.pid == sel }
+    val selRow = rows.firstOrNull { it.p.pid > 0 && it.p.pid == sel }
     val hs = rememberScrollState()
     fun end(r: PRow) { scope.launch { withContext(Dispatchers.IO) { Sampler.kill(r.p) }; ask = null; sel = -1 } }
     ask?.let { r -> PDialog("End ${r.label}?", "Unsaved data in this process will be lost. (PID ${r.p.pid})", "End process", { end(r) }, { ask = null }) }
@@ -164,7 +174,7 @@ fun ProcessesPage() {
                     val isOpen = g.key in expanded
                     item(key = "g${g.key}") {
                         val on = !many && sel == g.head.p.pid
-                        Row(Modifier.fillMaxWidth().height(40.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
+                        Row(Modifier.fillMaxWidth().height(40.dp).background(if (on && xpAuthentic) Color(0xFF316AC5) else if (on && !win95Authentic) Look.accent.copy(alpha = .16f) else Color.Transparent).clickable { if (many) expanded = if (isOpen) expanded - g.key else expanded + g.key else if (g.head.p.pid > 0) sel = if (on) -1 else g.head.p.pid }, verticalAlignment = Alignment.CenterVertically) {
                             Row(Modifier.width(ColW.w("name")).clipToBounds(), verticalAlignment = Alignment.CenterVertically) {
                                 Text(if (many) (if (isOpen) "⌄" else "›") else "", color = T.sub, fontSize = 16.sp, modifier = Modifier.width(26.dp).padding(start = 8.dp))
                                 AppIcon(g.head.p.name, 22.dp); Spacer(Modifier.width(8.dp))
@@ -229,15 +239,16 @@ private fun HeadCellBody(top: String, name: String, w: Dp, active: Boolean, bg: 
 
 @Composable
 private fun Cells(cpu: Float, mem: Int, p: Proc?, ink: Color = T.text, net: Float? = null, size: Long? = null) {
-    HeatCell("%.1f%%".format(cpu), cpu / 100f, ColW.w("cpu"), ink = ink)
-    HeatCell(mb(mem), mem / 1500f, ColW.w("mem"), ink = ink)
+    HeatCell(if (p != null && p.pid <= 0) "" else "%.1f%%".format(cpu), cpu / 100f, ColW.w("cpu"), ink = ink)
+    val seen = p == null || p.pid > 0 // an app listed without root has no memory figure
+    HeatCell(if (seen) mb(mem) else "", mem / 1500f, ColW.w("mem"), ink = ink)
     // speed right now (0 shows as "0 KB/s" so a quiet app reads as measured, not missing); heat from 1 MB/s
     HeatCell(net?.let { rate(it) } ?: "", (net ?: 0f) / 1048576f, ColW.w("net"), ink = ink)
     HeatCell(size?.let { sizeText(it) } ?: "", 0f, ColW.w("disk"), ink = ink)
-    HeatCell(if (p == null) "" else if (p.state == "R") "Running" else "Sleeping", 0f, ColW.w("status"), ink = ink)
-    HeatCell(p?.pid?.toString() ?: "", 0f, ColW.w("pid"), ink = ink)
+    HeatCell(if (p == null || p.pid <= 0) "" else if (p.state == "R") "Running" else "Sleeping", 0f, ColW.w("status"), ink = ink)
+    HeatCell(p?.pid?.takeIf { it > 0 }?.toString() ?: "", 0f, ColW.w("pid"), ink = ink)
     HeatCell(p?.user ?: "", 0f, ColW.w("user"), ink = ink)
-    HeatCell(if (p == null) "" else mb(p.vszMb), 0f, ColW.w("virt"), ink = ink)
+    HeatCell(if (p == null || p.pid <= 0) "" else mb(p.vszMb), 0f, ColW.w("virt"), ink = ink)
     HeatCell(p?.nice?.toString() ?: "", 0f, ColW.w("prio"), ink = ink)
     HeatCell(p?.ppid?.toString() ?: "", 0f, ColW.w("ppid"), ink = ink)
 }
