@@ -61,17 +61,27 @@ internal val encodings = listOf("UTF-8", "windows-1254", "ISO-8859-9", "windows-
 private val tick = mutableIntStateOf(0)
 
 @Composable
-private fun Sw(title: String, get: () -> Boolean, set: (Boolean) -> Unit, done: () -> Unit) {
+private fun Sw(title: String, get: () -> Boolean, set: (Boolean) -> Unit, done: () -> Unit, icon: String? = null) {
     tick.intValue
-    SwitchRow(title, get()) { set(it); done() }
+    if (icon == null) SwitchRow(title, get()) { set(it); done() }
+    else Row(Modifier.fillMaxWidth().padding(vertical = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+        RowIcon(icon)
+        Text(title, Modifier.weight(1f), color = T.text, fontSize = 15.sp)
+        com.umutk.pulse.PSwitch(get(), { set(it); done() })
+    }
 }
+
+/** The small icon in front of a settings row. */
+@Composable
+private fun RowIcon(k: String) { PIcon(k, T.sub, 22.dp, Modifier.padding(end = 14.dp)) }
 
 /** A row with the current value; a tap opens the radio list. */
 @Composable
-private fun Pick(title: String, opts: List<String>, cur: () -> Int, done: () -> Unit, set: (Int) -> Unit) {
+private fun Pick(title: String, opts: List<String>, cur: () -> Int, done: () -> Unit, icon: String? = null, set: (Int) -> Unit) {
     tick.intValue
     var open by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().clickable { open = true }.padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        icon?.let { RowIcon(it) }
         Text(title, Modifier.weight(1f), color = T.text, fontSize = 15.sp)
         Text(opts.getOrElse(cur()) { "" }, color = T.sub, fontSize = 13.sp)
     }
@@ -80,9 +90,9 @@ private fun Pick(title: String, opts: List<String>, cur: () -> Int, done: () -> 
 
 /** Choice among numbers: [get] is the saved value. */
 @Composable
-private fun Num(title: String, values: List<Int>, get: () -> Int, fmt: (Int) -> String, done: () -> Unit, set: (Int) -> Unit) {
+private fun Num(title: String, values: List<Int>, get: () -> Int, fmt: (Int) -> String, done: () -> Unit, icon: String? = null, set: (Int) -> Unit) {
     tick.intValue
-    Pick(title, values.map(fmt), { values.indexOf(get()).let { if (it < 0) values.indexOfFirst { v -> v >= get() }.coerceAtLeast(0) else it } }, done) { set(values[it]) }
+    Pick(title, values.map(fmt), { values.indexOf(get()).let { if (it < 0) values.indexOfFirst { v -> v >= get() }.coerceAtLeast(0) else it } }, done, icon) { set(values[it]) }
 }
 
 @Composable
@@ -152,30 +162,37 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
             if (cat == "skin") FlatSection(tr("Skin", "Kılıf")) { SkinPicker(prefs.skin) { prefs.skin = it; changed() } }
 
             if (cat == "buttons") FlatSection(tr("Buttons on the player", "Oynatıcıdaki düğmeler")) { ButtonsEditor(prefs) { changed() } }
-            if (cat == "player") FlatSection(tr("Player", "Oynatıcı")) {
-                Sw(tr("Resume position", "Kaldığı yerden"), { prefs.resumeOn }, { prefs.resumeOn = it }, done)
-                Sw(tr("Play next", "Sonrakini oynat"), { prefs.autoPlay }, { prefs.autoPlay = it }, done)
-                Pick(tr("Repeat", "Tekrar"), repeatNames(), { prefs.repeat }, done) { prefs.repeat = it }
-                Sw(tr("Remember speed", "Hızı hatırla"), { prefs.rememberSpeed }, { prefs.rememberSpeed = it }, done)
-                Num(tr("Default speed", "Varsayılan hız"), listOf(50, 75, 100, 125, 150, 200), { (prefs.defSpeed * 100).toInt() }, { speedName(it / 100f) }, done) { prefs.defSpeed = it / 100f }
-                Num(tr("Slowest speed", "En yavaş hız"), listOf(5, 10, 25, 50), { (prefs.speedMin * 100).toInt() }, { speedName(it / 100f) }, done) { prefs.speedMin = it / 100f }
-                Num(tr("Fastest speed", "En hızlı hız"), listOf(200, 300, 400, 500, 800), { (prefs.speedMax * 100).toInt() }, { speedName(it / 100f) }, done) { prefs.speedMax = it / 100f }
-                Pick(tr("Orientation", "Yön"), orientNames(), { prefs.orient }, done) { prefs.orient = it }
-                Sw(tr("Keep screen on", "Ekran açık kalsın"), { prefs.keepAwake }, { prefs.keepAwake = it }, done)
-                Sw(tr("Fast seek", "Hızlı atlama"), { prefs.fastSeek }, { prefs.fastSeek = it }, done)
-                Sw(tr("Seek preview", "Atlama önizlemesi"), { prefs.seekPreview }, { prefs.seekPreview = it }, done)
-                Num(tr("Seek step", "Atlama adımı"), listOf(5, 10, 15, 30, 60), { prefs.dtapSec }, { "$it s" }, done) { prefs.dtapSec = it }
-                Num(tr("Hide controls", "Kontrolleri gizle"), listOf(2000, 3500, 5000, 8000, 0), { prefs.ctrlTimeout }, { if (it == 0) tr("Never", "Hiç") else "${it / 1000f} s" }, done) { prefs.ctrlTimeout = it }
-                Sw(tr("Time left", "Kalan süre"), { prefs.showRemaining }, { prefs.showRemaining = it }, done)
-                Sw(tr("Clock", "Saat"), { prefs.showClock }, { prefs.showClock = it }, done)
-                Sw(tr("Battery", "Pil"), { prefs.showBattery }, { prefs.showBattery = it }, done)
-                Sw(tr("Remember brightness", "Parlaklığı hatırla"), { prefs.rememberBright }, { prefs.rememberBright = it }, done)
-                Sw(tr("Remember volume", "Sesi hatırla"), { prefs.rememberVolume }, { prefs.rememberVolume = it }, done)
-                Sw(tr("Audio focus", "Ses odağı"), { prefs.audioFocus }, { prefs.audioFocus = it }, done)
-                Sw(tr("Pause when headphones leave", "Kulaklık çıkınca durdur"), { prefs.pauseNoisy }, { prefs.pauseNoisy = it }, done)
-                Sw(tr("Pause on calls", "Aramada durdur"), { prefs.pauseCall }, { prefs.pauseCall = it }, done)
-                Sw(tr("Background audio", "Arka plan sesi"), { prefs.bg }, { prefs.bg = it }, done)
-                Sw(tr("Picture in picture", "Pencere içinde pencere"), { prefs.autoPip }, { prefs.autoPip = it }, done)
+            if (cat == "playback") FlatSection(tr("Playback", "Oynatma")) {
+                Sw(tr("Resume position", "Kaldığı yerden"), { prefs.resumeOn }, { prefs.resumeOn = it }, done, "history")
+                Sw(tr("Play next", "Sonrakini oynat"), { prefs.autoPlay }, { prefs.autoPlay = it }, done, "play")
+                Pick(tr("Repeat", "Tekrar"), repeatNames(), { prefs.repeat }, done, icon = "rotate") { prefs.repeat = it }
+                Sw(tr("Remember speed", "Hızı hatırla"), { prefs.rememberSpeed }, { prefs.rememberSpeed = it }, done, "speed")
+                Num(tr("Default speed", "Varsayılan hız"), listOf(50, 75, 100, 125, 150, 200), { (prefs.defSpeed * 100).toInt() }, { speedName(it / 100f) }, done, icon = "speed") { prefs.defSpeed = it / 100f }
+                Num(tr("Slowest speed", "En yavaş hız"), listOf(5, 10, 25, 50), { (prefs.speedMin * 100).toInt() }, { speedName(it / 100f) }, done, icon = "timer") { prefs.speedMin = it / 100f }
+                Num(tr("Fastest speed", "En hızlı hız"), listOf(200, 300, 400, 500, 800), { (prefs.speedMax * 100).toInt() }, { speedName(it / 100f) }, done, icon = "timer") { prefs.speedMax = it / 100f }
+                Sw(tr("Fast seek", "Hızlı atlama"), { prefs.fastSeek }, { prefs.fastSeek = it }, done, "speed")
+                Num(tr("Seek step", "Atlama adımı"), listOf(5, 10, 15, 30, 60), { prefs.dtapSec }, { "$it s" }, done, icon = "timer") { prefs.dtapSec = it }
+            }
+
+            if (cat == "controls") FlatSection(tr("Controls", "Kontroller")) {
+                Pick(tr("Orientation", "Yön"), orientNames(), { prefs.orient }, done, icon = "rotate") { prefs.orient = it }
+                Sw(tr("Seek preview", "Atlama önizlemesi"), { prefs.seekPreview }, { prefs.seekPreview = it }, done, "view")
+                Num(tr("Hide controls", "Kontrolleri gizle"), listOf(2000, 3500, 5000, 8000, 0), { prefs.ctrlTimeout }, { if (it == 0) tr("Never", "Hiç") else "${it / 1000f} s" }, done, icon = "timer") { prefs.ctrlTimeout = it }
+                Sw(tr("Time left", "Kalan süre"), { prefs.showRemaining }, { prefs.showRemaining = it }, done, "timer")
+                Sw(tr("Clock", "Saat"), { prefs.showClock }, { prefs.showClock = it }, done, "history")
+                Sw(tr("Battery", "Pil"), { prefs.showBattery }, { prefs.showBattery = it }, done, "battery")
+                Pick(tr("Menu position", "Menü konumu"), listOf(tr("Top right", "Sağ üst"), tr("Bottom left", "Sol alt")), { prefs.moreAt }, done, icon = "more") { prefs.moreAt = it }
+            }
+
+            if (cat == "system") FlatSection(tr("System", "Sistem")) {
+                Sw(tr("Keep screen on", "Ekran açık kalsın"), { prefs.keepAwake }, { prefs.keepAwake = it }, done, "phone")
+                Sw(tr("Remember brightness", "Parlaklığı hatırla"), { prefs.rememberBright }, { prefs.rememberBright = it }, done, "view")
+                Sw(tr("Remember volume", "Sesi hatırla"), { prefs.rememberVolume }, { prefs.rememberVolume = it }, done, "volume")
+                Sw(tr("Audio focus", "Ses odağı"), { prefs.audioFocus }, { prefs.audioFocus = it }, done, "volume")
+                Sw(tr("Pause when headphones leave", "Kulaklık çıkınca durdur"), { prefs.pauseNoisy }, { prefs.pauseNoisy = it }, done, "volume")
+                Sw(tr("Pause on calls", "Aramada durdur"), { prefs.pauseCall }, { prefs.pauseCall = it }, done, "phone")
+                Sw(tr("Background audio", "Arka plan sesi"), { prefs.bg }, { prefs.bg = it }, done, "volume")
+                Sw(tr("Picture in picture", "Pencere içinde pencere"), { prefs.autoPip }, { prefs.autoPip = it }, done, "video")
             }
 
             if (cat == "gestures") FlatSection(tr("Gestures", "Hareketler")) {
@@ -309,8 +326,10 @@ private class VideoCat(val key: String, val icon: String, val en: String, val tr
 
 private val VIDEO_CATS = listOf(
     VideoCat("skin", "palette", "Skin", "Kılıf"),
-    VideoCat("player", "video", "Player", "Oynatıcı"),
-    VideoCat("buttons", "video", "Buttons", "Düğmeler"),
+    VideoCat("playback", "play", "Playback", "Oynatma"),
+    VideoCat("controls", "view", "Controls", "Kontroller"),
+    VideoCat("buttons", "table", "Buttons", "Düğmeler"),
+    VideoCat("system", "phone", "System", "Sistem"),
     VideoCat("gestures", "touch", "Gestures", "Hareketler"),
     VideoCat("audio", "volume", "Audio", "Ses"),
     VideoCat("subtitles", "language", "Subtitles", "Altyazı"),

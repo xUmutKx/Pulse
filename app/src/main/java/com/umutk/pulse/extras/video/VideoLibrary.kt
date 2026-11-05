@@ -305,6 +305,8 @@ class VideoPrefs(ctx: Context) {
     var skin by str(g, "skin", "next")
     /** The buttons on the player's bar, comma-separated (see VideoControls.kt); the rest are in the ⋮ menu. */
     var barButtons by str(g, "bar_buttons", DEFAULT_BAR)
+    /** where the ⋮ menu opens: 0 top right, 1 bottom left (above the control bar) */
+    var moreAt by int(g, "more_at", 0)
     var bg by bool(g, "bg", false)
     /** 0 fit, 1 stretch, 2 crop, 3 16:9, 4 4:3 */
     var aspect by int(g, "aspect", 0)
