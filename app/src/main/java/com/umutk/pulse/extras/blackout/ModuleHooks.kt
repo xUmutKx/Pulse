@@ -362,7 +362,7 @@ object Recolor {
                 val id = param.args.firstOrNull() as? Int ?: return
                 val name = runCatching { (param.thisObject as Resources).getResourceEntryName(id) }.getOrNull()?.lowercase() ?: return
                 val bg = listOf("background", "surface", "window", "_bg", "bg_", "canvas", "page", "screen").any { name.contains(it) }
-                val other = listOf("text", "icon", "on_", "foreground", "label", "title", "hint", "tint", "divider", "stroke", "border", "ripple", "button", "chip", "badge", "accent", "primary").any { name.contains(it) }
+                val other = listOf("text", "icon", "on_", "foreground", "label", "title", "hint", "tint", "divider", "stroke", "border", "ripple", "button", "chip", "badge", "accent", "primary", "ic_", "_ic", "glyph", "symbol", "logo", "image").any { name.contains(it) }
                 if (!bg || other) return
                 val m = map(v); if (m != v) param.result = m
             }
