@@ -301,7 +301,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 }
                 .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFx)
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
-                .padding(horizontal = if (phoneLand) 2.dp else KeyboardPrefs.sidePad.coerceAtMost(((cfg.screenWidthDp - 240) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
+                .padding(horizontal = if (phoneLand) 2.dp else KeyboardPrefs.sidePad.coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
             if (float) Box(Modifier.fillMaxWidth().height(28.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {

@@ -2216,3 +2216,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - İşlemler sayfası: root/Shizuku yokken kendi işlemlerinin yanında son 7 günde kullanılan (ya da simgeli tüm) uygulamalar listelenir; boyut ve ağ hızı gerçek okunur, root gerektiren bellek/CPU boş bırakılır (uydurma sayı yok); son okunan liste kaydedilir, okuma başarısız olursa o gösterilir (derlenmedi)
 - Hava durumu: bulut ve kar animasyonları kesintisiz döngü (bulutlar kendi 60 sn'lik döngüsünde tam sayıda tur atar, başa dönerken atlamaz) (derlenmedi)
 - Klavye: geniş ekranda (600 dp ve üstü) emoji/sembol/metin-ve-sanat sayfası solda, tuşlar sağda yan yana; dar ekranda "Metninizi yazın" kutusuna basınca kutu + stil satırı + tuşlar açılır, geri okuyla dönülür (derlenmedi)
+- Klavye yan boşluk: sınır (ekran genişliği - 240) / 2 idi, dar telefonda 40 dp'de kalıyordu; artık klavye en az 140 dp genişliğe inene kadar artar, klavye ortada kalır (derlenmedi)
