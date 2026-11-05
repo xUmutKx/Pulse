@@ -140,6 +140,8 @@ open class MainActivity : ComponentActivity() {
 
     // no sound plays on these screens: volume up opens the left panel, volume down the ⋮ menu, and the system volume stays untouched
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        // a physical keyboard: Esc, or Alt + Left, is Back in every screen
+        if (keyCode == android.view.KeyEvent.KEYCODE_ESCAPE || (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event?.isAltPressed == true)) { onBackPressedDispatcher.onBackPressed(); return true }
         if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) {
             if ((event?.repeatCount ?: 0) == 0) { if (keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) ChromeKeys.leftTick++ else ChromeKeys.moreTick++ }
             return true
