@@ -296,6 +296,7 @@ object BackupManager {
         put("sortOrder", a.sortOrder)
         put("deletedAt", a.deletedAt)
         put("trashedGroup", a.trashedGroup)
+        put("skipRingAt", a.skipRingAt)
     }
 
     internal fun parseAlarms(arr: JSONArray): List<AlarmEntity> {
@@ -383,7 +384,8 @@ object BackupManager {
                 volumeLevel = o.optDouble("volumeLevel", 0.85).toFloat(),
                 sortOrder = o.optInt("sortOrder", 0),
                 deletedAt = o.optLong("deletedAt", 0L),
-                trashedGroup = o.optString("trashedGroup", "")
+                trashedGroup = o.optString("trashedGroup", ""),
+                skipRingAt = o.optLong("skipRingAt", 0L)
             )
         }
         return out
