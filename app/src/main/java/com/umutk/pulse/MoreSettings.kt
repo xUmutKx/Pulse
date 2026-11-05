@@ -369,12 +369,12 @@ private fun BackdropThumb(name: String, aspect: Float, picked: Boolean, modifier
     val img by produceState<androidx.compose.ui.graphics.ImageBitmap?>(null, name) {
         value = withContext(Dispatchers.IO) {
             val res = ctx.resources.getIdentifier(name, "drawable", ctx.packageName)
-            if (res == 0) null else runCatching { android.graphics.BitmapFactory.decodeResource(ctx.resources, res, android.graphics.BitmapFactory.Options().apply { inSampleSize = 16; inPreferredConfig = android.graphics.Bitmap.Config.RGB_565 })?.asImageBitmap() }.getOrNull()
+            if (res == 0) null else runCatching { android.graphics.BitmapFactory.decodeResource(ctx.resources, res, android.graphics.BitmapFactory.Options().apply { inSampleSize = 3; inPreferredConfig = android.graphics.Bitmap.Config.ARGB_8888 })?.asImageBitmap() }.getOrNull()
         }
     }
     Box(modifier.aspectRatio(aspect).clip(RoundedCornerShape(8.dp)).background(T.panel)
         .border(if (picked) 3.dp else 1.dp, if (picked) Look.accent else T.line, RoundedCornerShape(8.dp)).clickable(onClick = onClick)) {
-        img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop) }
+        img?.let { Image(it, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop, filterQuality = androidx.compose.ui.graphics.FilterQuality.Medium) }
     }
 }
 
