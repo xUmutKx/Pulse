@@ -2188,3 +2188,12 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - İndirme yöneticisi: indir deyince bağlantı kutudan hemen çıkar, arka planda aranır ("Dosya aranıyor…" satırı), bulununca kendi satırı ve ilerleme çubuğu gelir; art arda birkaç bağlantı eklenebilir (derlenmedi)
 
 - Files > Uygulamalar: uzun basınca seçim, çöp kutusuyla toplu kaldırma (root/Shizuku ile hepsi birden, gizliler önce gösterilip; yoksa sistemin sorusu sırayla); sistem uygulamaları seçilemez; REQUEST_DELETE_PACKAGES izni (derlenmedi)
+
+## Planlananlar (kullanıcı istedi, henüz yapılmadı)
+- GameFibre (mrtnkl/gamefibre, lisans dosyası YOK): kullanıcı yazardan izin alacak; izin metni gelmeden kodunu kopyalama. Önce fikir/arayüz (sıralama, listeler, favoriler, etiket süzme) kendi kodumuzla.
+- GameHub: Android oyunları (yüklü + gizli) için GameFibre tarzı daha iyi arayüz ve sıralama.
+- Steam kütüphanesi: herkese açık profil (kullanıcı adı / Steam ID, anahtarsız); Epic/GOG sonra (giriş gerekir). Bu kütüphane görünümü PunkStore'a da eklenecek.
+- PunkStore (xUmutKx/PunkStore): 20 MB iniyor 70 MB çıkıyor, Google girişli olduğu halde çok yavaş, varsayılan yükleyici sürekli root'tan kaçıyor -> düzelt ve hızlandır.
+- Mağaza kaynakları: F-Droid, GitHub, GitLab, IzzyOnDroid, Obtainium (Pure benzeri uygulama kaybolmuş; kullanıcı bulursa gönderecek).
+- FlightScanner Pi: yalnız gemi (marine) tarama yönü -> Weather Map'te gemileri göster. Repo bekleniyor.
+- Güncelleme: foss sürümünde direkt; theming seçenekleri unutulmayacak.
