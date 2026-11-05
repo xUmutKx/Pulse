@@ -2156,3 +2156,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Pulse dosya seçici: klasör listesi arka planda okunur (donma), görsel/video/APK önizlemeleri, sol üstte üç çizgi ile konumlar paneli (derlenmedi)
 
 - DONMA düzeltmeleri: klavye boşlukta eşzamanlı düzeltme artık ayrı iş parçacığı + 40 ms sınır; Files uygulama ölçümü yalnız kullanıcı uygulamaları, en çok 30 gizli (derlenmedi)
+
+- Fiziksel klavye: Files (Ctrl+C/X/V, Ctrl+A, Delete, F2, Ctrl+N, Ctrl+F, F5, Backspace/Alt+Sol, Esc), her ekranda Esc ve Alt+Sol geri (derlenmedi)
