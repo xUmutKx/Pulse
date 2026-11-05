@@ -203,7 +203,15 @@ private const val COVER_MAX = 3L * 1024 * 1024
 private fun coverFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/cover_" + pkg.replace('.', '_') + ".jpg")
 
 /** The icon file of a hidden game (kept, because a hidden app has no icon for the system any more). */
-private fun iconFile(c: Context, pkg: String) = java.io.File(c.filesDir, "gamehub/icon_" + pkg.replace('.', '_') + ".png")
+private fun iconFile(c: Context, pkg: String): java.io.File {
+    // the icons of other apps are not Pulse's own data: they live in the folder that is private and left out of every backup (noBackupFilesDir)
+    val n = "gamehub/icon_" + pkg.replace('.', '_') + ".png"
+    val f = java.io.File(c.noBackupFilesDir, n)
+    val old = java.io.File(c.filesDir, n)
+    // an icon kept by an older version moves over once
+    if (!f.exists() && old.exists()) runCatching { f.parentFile?.mkdirs(); old.copyTo(f, overwrite = true); old.delete() }
+    return f
+}
 
 /** Hides or shows a game in every launcher through the root or Shizuku shell (pm hide / pm unhide). */
 private fun setGameHidden(c: Context, pkg: String, hide: Boolean, quiet: Boolean = false): Boolean {
