@@ -16,6 +16,9 @@ import android.webkit.WebView
 import java.lang.reflect.Method
 import java.util.WeakHashMap
 
+/** The parameter types of a hooked method, read once (reflection copies the array on every call, and these run on every draw). */
+private val ptypes = java.util.concurrent.ConcurrentHashMap<Method, Array<Class<*>>>()
+
 private fun hook(f: () -> Unit) { try { f() } catch (t: Throwable) { Hooks.log("BlackOut: $t") } }
 
 /** The module's color rule, shared with the preview in the app: a dark neutral grey no brighter than [limit] becomes black ([keep] of it stays). */
@@ -147,7 +150,7 @@ object PageHooks {
             private fun change(param: HookParam): Undo? {
                 val canvas = param.thisObject as? Canvas ?: return null
                 val method = param.method as? Method ?: return null
-                val types = method.parameterTypes
+                val types = ptypes.getOrPut(method) { method.parameterTypes }
                 val args = param.args
                 val cw = canvas.width; val chh = canvas.height
                 // smart mode also takes cards and rows; icons and chips (small fills) always stay
@@ -293,7 +296,8 @@ object Recolor {
     private fun near(a: Int, b: Int, tol: Int) =
         Math.abs(((a shr 16) and 255) - ((b shr 16) and 255)) <= tol && Math.abs(((a shr 8) and 255) - ((b shr 8) and 255)) <= tol && Math.abs((a and 255) - (b and 255)) <= tol
 
-    fun install(rules: List<Rule>) {
+    /** [drawing] false hooks only the colour lookups and plain colour drawables (cheap); true also hooks every Canvas draw call, which is needed for an app that paints its own screen but costs time on every frame. */
+    fun install(rules: List<Rule>, drawing: Boolean = true) {
         // text that is dark would vanish on a fill that turned dark
         val lightText = rules.any { lum(it.to) < .35f && lum(it.from) > .5f }
         fun map(c: Int): Int {
@@ -311,7 +315,7 @@ object Recolor {
             override fun beforeHookedMethod(param: HookParam) {
                 val stack = undo.get()!!
                 val method = param.method as? Method ?: run { stack.add(null); return }
-                val types = method.parameterTypes
+                val types = ptypes.getOrPut(method) { method.parameterTypes }
                 if (method.name == "drawColor") {
                     if (types.firstOrNull() == Integer.TYPE) { val c = param.args[0] as Int; val m = map(c); if (m != c) param.args[0] = m }
                     stack.add(null); return
@@ -331,7 +335,7 @@ object Recolor {
         }
         val classes = listOfNotNull(Canvas::class.java, Hooks.find("android.graphics.BaseRecordingCanvas"))
         val names = listOf("drawColor", "drawPaint", "drawRect", "drawRoundRect", "drawCircle", "drawOval", "drawPath", "drawText", "drawTextRun", "drawTextOnPath", "drawPosText")
-        for (k in classes) for (n in names) hook { Hooks.all(k, n, h) }
+        if (drawing) for (k in classes) for (n in names) hook { Hooks.all(k, n, h) }
         // plain color drawables and color lookups (window and view backgrounds)
         hook {
             Hooks.one(android.graphics.drawable.ColorDrawable::class.java, "draw", Canvas::class.java, object : Hook() {
