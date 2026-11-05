@@ -204,6 +204,7 @@ fun SecurityPage() {
                 listOf(
                     Triple("applock", tr("App lock", "Uygulama kilidi"), { openTool("applock") }),
                     Triple("users", tr("Authenticator", "Kimlik doğrulayıcı"), { openTool("authenticator") }),
+                    Triple("key", tr("Passwords", "Şifreler"), { openTool("vault") }),
                     Triple("history", tr("App history", "Uygulama geçmişi"), { com.umutk.pulse.widgets.WidgetOpen.page = "history" }),
                 ).forEach { (icon, label, go) ->
                     Column(Modifier.weight(1f).clickable { go() }.padding(vertical = 12.dp), horizontalAlignment = Alignment.CenterHorizontally) {
