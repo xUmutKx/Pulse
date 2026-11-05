@@ -498,6 +498,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         if (currentInputConnection == null) return false
         val fn = keyCode - KeyEvent.KEYCODE_F1
         if (fn in 0..2) { turkishDown.add(keyCode); slot(fn); return true }
+        // the translation bar is open: Tab puts the translation in, Enter puts it in and sends
+        if (st.trans && !st.plain && st.panel == "keys") when (keyCode) {
+            KeyEvent.KEYCODE_TAB -> { turkishDown.add(keyCode); transOp("apply"); return true }
+            KeyEvent.KEYCODE_ENTER, KeyEvent.KEYCODE_NUMPAD_ENTER -> { turkishDown.add(keyCode); val had = st.transOut.isNotBlank(); transOp("apply"); if (had) enter(); return true }
+        }
         if (st.plain || st.panel != "keys") return false
         when (keyCode) {
             KeyEvent.KEYCODE_SPACE -> { turkishDown.add(keyCode); space(); return true }
@@ -1111,6 +1116,13 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             if (conn.responseCode != 200) null else conn.inputStream.bufferedReader().use { it.readText() }
         }.getOrNull()
         val q = java.net.URLEncoder.encode(text, "UTF-8").replace("+", "%20")
+        // the best machine translation first: Google's own translate service (the one the other keyboards use), then its mirrors, and MyMemory last
+        get("https://translate.googleapis.com/translate_a/single?client=gtx&sl=$from&tl=$to&dt=t&q=$q")?.let { b ->
+            runCatching {
+                val parts = org.json.JSONArray(b).getJSONArray(0)
+                (0 until parts.length()).joinToString("") { parts.getJSONArray(it).optString(0, "") }
+            }.getOrNull()?.takeIf { it.isNotBlank() && !it.equals(text, true) }?.let { return it }
+        }
         get("https://api.mymemory.translated.net/get?q=$q&langpair=$from%7C$to")?.let { b ->
             runCatching { org.json.JSONObject(b).getJSONObject("responseData").getString("translatedText") }.getOrNull()
                 ?.takeIf { it.isNotBlank() && !it.contains("MYMEMORY WARNING", true) && !it.equals(text, true) }?.let { return it }

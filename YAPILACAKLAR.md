@@ -2162,3 +2162,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - KASMA (ikinci tur): LSPosed otomatik beyaz kuralı artık Canvas çizim kancası takmaz (her karede maliyetliydi), klavye uygulamalarında hiç çalışmaz, kancalarda yansıma önbelleği; klavye öğrenilen kelime kaydı arka planda; önbellek temizleyici root taraması en düşük öncelikte (derlenmedi)
 
 - Klavye: fiziksel klavye algısı (yapılandırma + giriş cihazları + canlı dinleyici + ilk tuş), böylece açılışta doğru düzen ve fiziksel yazarken öneri/oto düzeltme; yeni alanın düzeni anında uygulanır (derlenmedi)
+
+- Klavye (fiziksel): pano/kilit/menü sayfaları artık gerçekten açılır, çeviri çubuğu kesilmez ve ekran dibinden yukarıda; çeviri açıkken Tab çeviriyi koyar, Enter koyup gönderir; çeviri kaynağı Google (gtx) önce, sonra Lingva, en son MyMemory (derlenmedi)
