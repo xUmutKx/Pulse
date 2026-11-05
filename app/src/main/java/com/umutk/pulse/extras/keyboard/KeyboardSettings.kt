@@ -270,6 +270,8 @@ fun KeyboardSettings(back: () -> Unit) {
                 Text("${tr("Keyboard width", "Klavye genişliği")}: ${KeyboardPrefs.compactPct}%", color = T.sub, fontSize = 12.sp)
                 PSlider((KeyboardPrefs.compactPct - 40) / 60f, { KeyboardPrefs.compactPct = 40 + (it * 60).roundToInt() }, 0f..1f, onDone = { save() })
             }
+            Switch(tr("Emoji page uses the full width", "Emoji sayfası tüm genişliği kullanır"), tr("The side space only narrows the keys; the emoji page, the symbols and text art fill the screen", "Yan boşluk yalnızca tuşları daraltır; emoji, sembol ve metin sanatı sayfası ekranı doldurur"), KeyboardPrefs.emojiFull) { KeyboardPrefs.emojiFull = it; save() }
+            Switch(tr("Keys on the left, emoji on the right", "Tuşlar solda, emoji sağda"), tr("On a wide screen the emoji page and the keys sit side by side: off puts the emoji on the left, on puts them on the right", "Geniş ekranda emoji sayfası ve tuşlar yan yana durur: kapalıyken emoji solda, açıkken sağda olur"), KeyboardPrefs.emojiRight) { KeyboardPrefs.emojiRight = it; save() }
             Text("${tr("Space between keys", "Tuşlar arası boşluk")}: ${KeyboardPrefs.keyGap} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.keyGap / 8f, { KeyboardPrefs.keyGap = (it * 8).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("?123 key narrower", "?123 tuşu daha dar")}: ${KeyboardPrefs.modeShrink}%", color = T.sub, fontSize = 12.sp)

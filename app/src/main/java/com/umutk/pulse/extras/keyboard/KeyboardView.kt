@@ -301,7 +301,7 @@ private fun KeyboardViewBody(th: KbTheme, st: KbState, act: KbActions, modifier:
                 }
                 .clip(RoundedCornerShape(16.dp)).background(th.bg).boardWash(KeyboardPrefs.boardFx)
                 else if (one == "off") Modifier.fillMaxWidth() else Modifier.fillMaxWidth(.82f).align(if (one == "left") Alignment.TopStart else Alignment.TopEnd))
-                .padding(horizontal = if (phoneLand) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
+                .padding(horizontal = if (phoneLand || (KeyboardPrefs.emojiFull && st.panel == "emoji")) 2.dp else (if (KeyboardPrefs.compact) maxOf(KeyboardPrefs.sidePad, cfg.screenWidthDp * (100 - KeyboardPrefs.compactPct) / 200) else KeyboardPrefs.sidePad).coerceAtMost(((cfg.screenWidthDp - 140) / 2).coerceAtLeast(2)).dp).padding(bottom = KeyboardPrefs.bottomPad.dp),
         ) {
             // the floating keyboard is 90 percent wide and moves by its handle anywhere on the screen (the drag itself is read above, on the window)
             if (float) Box(Modifier.fillMaxWidth().height(28.dp).onGloballyPositioned { handleRect = it.boundsInRoot() }, contentAlignment = Alignment.Center) {
@@ -336,9 +336,11 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
             // the emoji page is opaque: what is behind it (the gamepad, the arrows of the bar) does not show through
             "emoji" -> if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) {
                 // a wide screen shows two pages side by side: the emoji (or symbols, or text and art) on the left, the keys on the right
+                // the keys are rows that stack in a column of their own (a Box would lay them on top of each other, and only the last row would show)
+                val emoji: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { Box(Modifier.weight(1f)) { EmojiPanel(th, st, act, keyH, split = true) } }
+                val keys: @Composable androidx.compose.foundation.layout.RowScope.() -> Unit = { Column(Modifier.weight(1f)) { KeysPanel(th, st, act, keyH) } }
                 Row(Modifier.fillMaxWidth().background(th.bg)) {
-                    Box(Modifier.weight(1f)) { EmojiPanel(th, st, act, keyH, split = true) }
-                    Box(Modifier.weight(1f)) { KeysPanel(th, st, act, keyH) }
+                    if (KeyboardPrefs.emojiRight) { keys(); emoji() } else { emoji(); keys() }
                 }
             } else Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
             "menu" -> MenuPanel(th, st, act, keyH)
