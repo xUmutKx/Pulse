@@ -9,6 +9,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -28,9 +29,13 @@ private val Subs = listOf(
 private val OverviewTileSubs = setOf("cpu", "memory", "thermal", "battery", "network", "storage")
 
 /** Everything about the phone itself in one module, grouped like the parts of a computer: tabs along the top instead of a long menu. */
+/** The tab of the Device module, kept while a tool opened from it (Passwords, Authenticator ...) is on screen, so the back arrow returns to the same tab. */
+private object DeviceKept { var sub = "overview" }
+
 @Composable
 fun DeviceModule() {
-    var sub by rememberSaveable { mutableStateOf("overview") }
+    var sub by remember { mutableStateOf(DeviceKept.sub) }
+    androidx.compose.runtime.SideEffect { DeviceKept.sub = sub }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 8.dp)) {
             // on Overview the parts that have a tile below are not repeated up here (the tile opens them)
