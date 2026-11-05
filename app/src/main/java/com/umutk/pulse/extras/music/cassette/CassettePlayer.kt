@@ -140,7 +140,7 @@ private fun CassetteBody(engine: MusicPlayerEngine, st: PlaybackState, library: 
             }
             Spacer(Modifier.height(10.dp))
             // the keys of the deck
-            Row(Modifier.fillMaxWidth().background(cas.deck, RoundedCornerShape(14.dp)).drawBehind { drawRect(leather, alpha = .30f) }.clip(RoundedCornerShape(14.dp)).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp)).background(cas.deck).drawBehind { drawRect(leather, alpha = .30f) }.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
                 DeckKey("prev", Modifier.weight(1f), onClick = { engine.previous() })
                 DeckKey(if (st.isPlaying) "pause" else "play", Modifier.weight(1.3f), red = st.isPlaying, onClick = { if (st.queue.isEmpty()) shelf = true else engine.togglePlayPause() })
                 DeckKey("next", Modifier.weight(1f), onClick = { engine.next() })
@@ -219,10 +219,7 @@ private fun Cassette(track: Track?, spin: Float, progress: Float, modifier: Modi
             drawRoundRect(Color.Black.copy(alpha = .22f), Offset(lx, ly), Size(lw, lh), CornerRadius(h * .025f), style = Stroke(h * .006f))
             drawRect(cas.main, Offset(lx, ly), Size(lw, lh * .20f))
             drawRect(cas.ink, Offset(lx, ly + lh * .20f), Size(lw, lh * .028f))
-            for (i in 0 until 3) { val y = ly + lh * (.50f + i * .17f); drawLine(Color(0xFF6E8BC7).copy(alpha = .55f), Offset(lx + lw * .04f, y), Offset(lx + lw * .96f, y), h * .005f) }
-            // side letter A in a ring
-            val sa = Offset(lx + lw * .93f, ly + lh * .60f)
-            drawCircle(cas.ink, h * .045f, sa, style = Stroke(h * .008f)); 
+            for (i in 1..2) { val y = ly + lh * (.50f + i * .17f); drawLine(Color(0xFF6E8BC7).copy(alpha = .55f), Offset(lx + lw * .04f, y), Offset(lx + lw * .96f, y), h * .005f) }
             // the window: a smoked plastic opening with a lip, over the dark tape shell
             val wx = w * .17f; val wy = h * .50f; val ww = w * .66f; val wh = h * .30f
             drawRoundRect(Color(0xFF16150F), Offset(wx - h * .015f, wy - h * .015f), Size(ww + h * .03f, wh + h * .03f), CornerRadius(wh * .30f))
@@ -266,8 +263,8 @@ private fun Cassette(track: Track?, spin: Float, progress: Float, modifier: Modi
                 color = cas.ink, fontSize = 22.sp, fontFamily = FontFamily.Cursive, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text((track?.artist ?: tr("Press eject", "Eject'e bas")).uppercase(), color = cas.ink.copy(alpha = .75f), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        Text("D-C90", color = Color(0xFFD9392B), fontSize = 14.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, modifier = Modifier.align(Alignment.BottomStart).padding(start = maxWidth * .05f, bottom = maxHeight * .05f))
-        Text("TYPE I · NORMAL", color = cas.ink.copy(alpha = .6f), fontSize = 9.sp, fontFamily = FontFamily.Monospace, modifier = Modifier.align(Alignment.BottomEnd).padding(end = maxWidth * .05f, bottom = maxHeight * .06f))
+        Text("D-C90", color = Color(0xFFD9392B), fontSize = 11.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, maxLines = 1, modifier = Modifier.align(Alignment.BottomStart).padding(start = maxWidth * .03f, bottom = maxHeight * .015f))
+        Text("TYPE I", color = cas.ink.copy(alpha = .6f), fontSize = 9.sp, fontFamily = FontFamily.Monospace, maxLines = 1, modifier = Modifier.align(Alignment.BottomEnd).padding(end = maxWidth * .03f, bottom = maxHeight * .02f))
     }
 }
 
