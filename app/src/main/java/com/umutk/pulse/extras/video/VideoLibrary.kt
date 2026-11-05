@@ -359,7 +359,9 @@ class VideoPrefs(ctx: Context) {
     var prefAudio by str(g, "pref_audio", "")
     var prefSub by str(g, "pref_sub", "")
     var rememberSel by bool(g, "remember_sel", true)
-    var subSize by int(g, "sub_size", 20)
+    /** subtitle size in sp: one for the full screen, a smaller one for the picture-in-picture window; fixed for every video and speed */
+    var subSize by int(g, "sub_size_sp", 38)
+    var subSizePip by int(g, "sub_size_pip", 18)
     var subBg by bool(g, "sub_bg", false)
     var subBold by bool(g, "sub_bold", false)
     var subEdge by bool(g, "sub_edge", true)

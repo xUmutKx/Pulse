@@ -69,7 +69,7 @@ internal fun ControlGlyph(id: String, tint: Color, sk: VSkin, on: Boolean) {
         "audio" -> PIcon("volume", c, 22.dp)
         "rotate" -> PIcon("rotate", c, 22.dp)
         "repeat" -> com.umutk.pulse.extras.ui.TIcon("repeat", c, 22.dp, sk.icons)
-        "ab" -> Icon(Icons.Outlined.Flip, null, Modifier.size(22.dp), tint = c)
+        "ab" -> Text("A-B", color = c, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         "scale" -> PIcon("scale", c, 22.dp)
         "speed" -> PIcon("speed", c, 22.dp)
         "sleep" -> PIcon("timer", c, 22.dp)
