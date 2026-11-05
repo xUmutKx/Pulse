@@ -241,7 +241,8 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
     val listState = rememberKeptListState("appmanager")
     AmKept.load(ctx)
     var rows by remember { mutableStateOf(AmKept.rows) }
-    var query by remember { mutableStateOf(AmKept.query) }
+    // the search box starts empty every time the page is shown (coming back from an app's page clears it)
+    var query by remember { mutableStateOf("") }
     var show by remember { mutableStateOf(AmKept.show) }
     var source by remember { mutableStateOf(AmKept.source) }
     var sort by remember { mutableStateOf(AmKept.sort) }
@@ -250,7 +251,7 @@ fun AppManagerScreen(onOpen: (String) -> Unit) {
     var showDisabled by remember { mutableStateOf(AmKept.showDisabled) }
     var hidePulse by remember { mutableStateOf(AmKept.hidePulse) }
     SideEffect {
-        AmKept.rows = rows; AmKept.query = query; AmKept.show = show; AmKept.source = source; AmKept.sort = sort
+        AmKept.rows = rows; AmKept.query = ""; AmKept.show = show; AmKept.source = source; AmKept.sort = sort
         AmKept.asc = asc; AmKept.showSystem = showSystem; AmKept.showDisabled = showDisabled; AmKept.hidePulse = hidePulse
     }
     LaunchedEffect(show, source, sort, asc, showSystem, showDisabled, hidePulse) { AmKept.save(ctx) }

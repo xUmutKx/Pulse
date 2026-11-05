@@ -186,6 +186,30 @@ object ApkExtract {
     fun set(c: Context, p: String) { prefs(c).edit().putString("apkExtractDir", p).apply() }
 }
 
+/** The app's icon as a 512 px PNG in Pictures/Pulse; returns what to tell the person. */
+internal fun extractIcon(ctx: Context, pkg: String): String = try {
+    val pm = ctx.packageManager
+    val label = pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString().replace(Regex("[^\\p{L}\\p{N} .-]"), "_").ifBlank { pkg }
+    val bmp = pm.getApplicationIcon(pkg).let { androidx.core.graphics.drawable.DrawableCompat.wrap(it) }.let { d ->
+        val b = android.graphics.Bitmap.createBitmap(512, 512, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(b); d.setBounds(0, 0, 512, 512); d.draw(c); b
+    }
+    val name = "$label.png"
+    if (android.os.Build.VERSION.SDK_INT >= 29) {
+        val cv = android.content.ContentValues().apply {
+            put(android.provider.MediaStore.Images.Media.DISPLAY_NAME, name); put(android.provider.MediaStore.Images.Media.MIME_TYPE, "image/png")
+            put(android.provider.MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Pulse")
+        }
+        val uri = ctx.contentResolver.insert(android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI, cv)!!
+        ctx.contentResolver.openOutputStream(uri)!!.use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        tr("Icon saved: Pictures/Pulse/$name", "Simge kaydedildi: Pictures/Pulse/$name")
+    } else {
+        val dir = File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_PICTURES), "Pulse").apply { mkdirs() }
+        File(dir, name).outputStream().use { bmp.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it) }
+        tr("Icon saved: ${File(dir, name).path}", "Simge kaydedildi: ${File(dir, name).path}")
+    }
+} catch (e: Exception) { tr("The icon could not be saved: ", "Simge kaydedilemedi: ") + (e.message ?: e.javaClass.simpleName) }
+
 internal fun extractApp(ctx: Context, pkg: String): String {
     val pm = ctx.packageManager
     val pi = pm.getPackageInfo(pkg, 0)
@@ -264,10 +288,12 @@ fun AppDetailsScreen(pkg: String, onBack: () -> Unit) {
     }
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
-            Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
-            // the app's own icon with its name, and the actions as icons (a long press on none is needed: the note below says what was done)
+            // top left: the way back and the app's icon; a tap on the icon saves it as a picture (Pictures/Pulse)
             Row(verticalAlignment = Alignment.CenterVertically) {
-                com.umutk.pulse.AppIcon(pkg, 52.dp)
+                Box(Modifier.size(40.dp).clickable { onBack() }, contentAlignment = Alignment.Center) { com.umutk.pulse.PIcon("back", com.umutk.pulse.T.text, 22.dp) }
+                Box(Modifier.padding(start = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).clickable { scope.launch { note = withContext(Dispatchers.IO) { extractIcon(ctx, pkg) } } }) {
+                    com.umutk.pulse.AppIcon(pkg, 52.dp)
+                }
                 Column(Modifier.weight(1f).padding(start = 12.dp)) { PHead(d?.label ?: pkg, d?.version ?: "") }
             }
             Text(pkg, color = T.sub, fontSize = 12.sp)
