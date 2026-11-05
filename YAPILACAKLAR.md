@@ -2210,3 +2210,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Altyazı penceresi baştan: uzun liste yerine 3 kısa sayfa (Kaynak / Görünüm / Zamanlama); boyut, renk, kalın/kenar/arka plan, yükseklik, gecikme, kodlama tek dokunuşla ve anında kaydedilir (derlenmedi)
 - Video oynatıcı: A-B tekrar düğmesi kaldırıldı; kaydırarak ileri/geri sarma 3 saniyeden kısaysa video atlamaz, kaldığı yerden devam eder (derlenmedi)
 - Video ayarları: uzun "Oynatıcı" sayfası üçe bölündü (Oynatma / Kontroller / Sistem), satırların başına simge eklendi; ⋮ menüsünün yeri seçilebilir (sağ üst ya da sol alt, Kontroller sayfasında "Menü konumu") (derlenmedi)
+- Klavye: cümle başında otomatik gelen büyük harfte Shift'e iki kez hızlı basınca artık caps lock açılır (ilk basış otomatik büyüğü kapatır, 400 ms içindeki ikinci basış caps lock yapar) (derlenmedi)
