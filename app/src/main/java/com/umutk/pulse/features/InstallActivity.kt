@@ -27,6 +27,11 @@ class InstallActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // the play build does not install APK files (no REQUEST_INSTALL_PACKAGES there)
+        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) {
+            android.widget.Toast.makeText(this, com.umutk.pulse.tr("This version cannot install apps", "Bu sürüm uygulama kuramaz"), android.widget.Toast.LENGTH_LONG).show()
+            finish(); return
+        }
         Cfg.load(this); Opt.load(this); Installer.load(this); InstallShow.load(this)
         // several APKs from Files: one floating window for all of them
         val many = intent.getStringArrayListExtra("apks")

@@ -235,6 +235,7 @@ object Installer {
 
     /** Reads every picked file; returns the packages and a message for the ones that failed. */
     fun inspectAll(c: Context, uris: List<Uri>): Pair<List<Picked>, String> {
+        if (!com.umutk.pulse.BuildConfig.APK_INSTALL) return Pair(emptyList(), com.umutk.pulse.tr("This version cannot install apps", "Bu sürüm uygulama kuramaz"))
         File(c.cacheDir, "installer").deleteRecursively()
         val ok = ArrayList<Picked>()
         val bad = ArrayList<String>()

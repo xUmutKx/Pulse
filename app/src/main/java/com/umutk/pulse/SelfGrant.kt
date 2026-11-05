@@ -16,6 +16,7 @@ object SelfGrant {
     }
     // app ops, set once per version: all files, display over other apps, usage access, installing apps, writing system settings
     private val ops = listOf("MANAGE_EXTERNAL_STORAGE", "SYSTEM_ALERT_WINDOW", "GET_USAGE_STATS", "REQUEST_INSTALL_PACKAGES", "WRITE_SETTINGS")
+        .filter { it != "REQUEST_INSTALL_PACKAGES" || com.umutk.pulse.BuildConfig.APK_INSTALL }
 
     /** Grants what is missing. Runs the shell, so call it off the main thread. Returns the permissions that were granted now. */
     fun run(c: Context): List<String> {
