@@ -2168,3 +2168,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Klavye: yan boşluk en çok 200 dp (ayar ve yeniden boyutlandırma paneli) (derlenmedi)
 
 - Klavye: yan boşluk en çok 400 dp; ekranda en az 240 dp tuş genişliği kalacak şekilde sınırlanır (derlenmedi)
+
+- Video: hız penceresi kısaltıldı (başlıkta değer, çubuk, "Sonraki videolarda da kalsın" kutusu + 1x düğmesi); altyazı ekleme hatası artık sessiz değil (toast ile neden) (derlenmedi)
