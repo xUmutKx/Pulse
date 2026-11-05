@@ -807,16 +807,25 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     // ---- keys of the keyboard ----------------------------------------------------------------------------------------------------------------------
 
     private var lastShiftTap = 0L
+    /** the shift is on only because a sentence began (not pressed); the tap that turns it off then counts as the first of a caps-lock double tap */
+    private var autoShift = false
+    private var autoOffTap = false
 
     override fun shift() {
-        // one tap: the next letter is capital; a tap again turns it off. Two quick taps (the second within 400 ms of the first) turn on caps lock; a tap turns it off again
+        // one tap: the next letter is capital; a tap again turns it off. Two quick taps (the second within 400 ms of the first) turn on caps lock; a tap turns it off again.
+        // When the capital came by itself at a sentence start, the first tap turns it off and a second quick tap makes caps lock, as if the user had pressed shift twice
         val now = android.os.SystemClock.uptimeMillis()
+        val quick = now - lastShiftTap < 400
+        val wasAuto = st.shift == 1 && autoShift
         st.shift = when {
             st.shift == 2 -> 0
-            st.shift == 1 && now - lastShiftTap < 400 -> 2
+            st.shift == 1 && quick -> 2
+            st.shift == 0 && quick && autoOffTap -> 2
             st.shift == 0 -> 1
             else -> 0
         }
+        autoOffTap = wasAuto && st.shift == 0
+        autoShift = false
         lastShiftTap = now
         // a word is open: the bar shows (or drops) its capital-letter form
         if (word.isNotEmpty()) updateSuggestions()
@@ -1465,6 +1474,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         val untouched = before.isEmpty() && c.getTextAfterCursor(1, 0).isNullOrEmpty() && !emailField && !urlNow() &&
             info.inputType and InputType.TYPE_MASK_VARIATION !in listOf(InputType.TYPE_TEXT_VARIATION_URI, InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS, InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS)
         st.shift = if (c.getCursorCapsMode(info.inputType) != 0 || (own && info.inputType and InputType.TYPE_TEXT_VARIATION_PASSWORD == 0 && info.inputType and InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD == 0 && (!noAuto || untouched))) 1 else 0
+        autoShift = st.shift == 1
     }
 
     private val EN_GRAMMAR: Map<String, String> = mapOf(
