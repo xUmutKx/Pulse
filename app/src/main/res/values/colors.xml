@@ -1,5 +1,6 @@
 <resources>
     <color name="launcher_bg">#FF000000</color>
+    <color name="pulse_logo_bg">#FF000000</color>
     <color name="ti_bg_default">#FF000000</color>
     <color name="ti_bg_95">#FF14181F</color>
     <color name="ti_bg_xp">#FFEAF1FB</color>
