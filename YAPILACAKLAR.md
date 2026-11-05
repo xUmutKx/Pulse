@@ -2184,3 +2184,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Ek müzik görünümleri (kaset/iPod/plak): sağ üstte ayarlar düğmesi (görünüm değiştirilebilir); Ek temalar sekmesi kayıtlı iPod/plak seçimini kasete çevirmez; kasette film paketlerin kenarından teğet olarak ve kılavuz bilyelerden geçerek bağlanır (derlenmedi)
 
 - Sistem logosu (başlatıcı ikonu + uygulama bilgisi): siyah zemin, beyaz pencere + kalp atışı (ic_pulse_logo); uygulamanın içindeki mavi/yeşil logo (ic_launcher) aynen duruyor (derlenmedi)
+
+- İndirme yöneticisi: indir deyince bağlantı kutudan hemen çıkar, arka planda aranır ("Dosya aranıyor…" satırı), bulununca kendi satırı ve ilerleme çubuğu gelir; art arda birkaç bağlantı eklenebilir (derlenmedi)
