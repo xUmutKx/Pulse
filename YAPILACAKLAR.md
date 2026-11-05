@@ -2197,3 +2197,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Mağaza kaynakları: F-Droid, GitHub, GitLab, IzzyOnDroid, Obtainium (Pure benzeri uygulama kaybolmuş; kullanıcı bulursa gönderecek).
 - FlightScanner Pi: yalnız gemi (marine) tarama yönü -> Weather Map'te gemileri göster. Repo bekleniyor.
 - Güncelleme: foss sürümünde direkt; theming seçenekleri unutulmayacak.
+
+- Klavye: öneri hesabı her harfte iptal edilmez (hızlı yazınca hiç sonuç gelmiyordu); biten hesabın ardından en yeni metin için hemen yeniden çalışır; kelime sonu eşzamanlı düzeltme sınırı 90 ms (derlenmedi)
