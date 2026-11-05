@@ -162,7 +162,7 @@ fun WeatherHub(onBack: () -> Unit) {
     val sky = skin != "app"
     val fg = if (sky) Color.White else T.text
     val sub = if (sky) Color.White.copy(alpha = .72f) else T.sub
-    WxTheme.panel = when (skin) { "sky" -> Color.White.copy(alpha = .16f); "amoled" -> Color(0xFF141414); else -> T.panel }
+    WxTheme.panel = when (skin) { "sky" -> Color.Black.copy(alpha = .30f); "amoled" -> Color(0xFF141414); else -> T.panel }
     val bgBrush: Brush = when (skin) {
         "sky" -> Brush.verticalGradient(skyColors(fc?.code ?: 0, fc?.isDay ?: true))
         "amoled" -> Brush.verticalGradient(listOf(Color.Black, Color.Black))
@@ -274,7 +274,7 @@ fun WeatherHub(onBack: () -> Unit) {
             item {
                 Box(Modifier.fillMaxWidth().padding(top = 8.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp))) {
                 if (skin != "sky") WeatherScene(f.code, Modifier.matchParentSize(), day = f.isDay)
-                Column(Modifier.fillMaxWidth().padding(vertical = 20.dp, horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(Modifier.fillMaxWidth().then(if (skin == "sky") Modifier.background(Color.Black.copy(alpha = .30f)) else Modifier).padding(vertical = 20.dp, horizontal = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     val wh = androidx.compose.ui.graphics.Color.White
                     Text(f.place, color = wh.copy(alpha = .85f), fontSize = 15.sp, maxLines = 1)
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -301,7 +301,7 @@ fun WeatherHub(onBack: () -> Unit) {
                 }
             }
             // the hours: 96 of them, the row runs on to the right as it is swiped; a day name stands at each midnight
-            item { Text(tr("Next hours", "Sonraki saatler"), color = sub, fontSize = 13.sp) }
+            item { Text(tr("Next hours", "Sonraki saatler"), color = if (sky) fg else sub, fontSize = 13.sp, modifier = if (sky) Modifier.background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 4.dp) else Modifier) }
             item {
                 LazyRow(Modifier.fillMaxWidth().background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(18.dp)).padding(vertical = 12.dp, horizontal = 12.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                     // the first one is the hour it is now: it is lit
@@ -316,10 +316,10 @@ fun WeatherHub(onBack: () -> Unit) {
                     }
                 }
             }
-            item { Text(tr("Next days", "Sonraki günler"), color = sub, fontSize = 13.sp) }
+            item { Text(tr("Next days", "Sonraki günler"), color = if (sky) fg else sub, fontSize = 13.sp, modifier = if (sky) Modifier.background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).padding(horizontal = 10.dp, vertical = 4.dp) else Modifier) }
             // five days at first; the rest of the 16 open with one tap
             items(if (allDays) f.days else f.days.take(5), key = { it.date }) { d ->
-                Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(Modifier.fillMaxWidth().then(if (sky) Modifier.padding(vertical = 2.dp).background(WxTheme.panel, androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).padding(horizontal = 12.dp) else Modifier).padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         runCatching { LocalDate.parse(d.date).dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()) }.getOrDefault(d.date),
                         color = fg, fontSize = 15.sp, modifier = Modifier.width(64.dp),

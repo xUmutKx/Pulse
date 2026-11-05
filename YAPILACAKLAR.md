@@ -2144,3 +2144,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Dosya seçiciler: Android sistem seçicisi yerine Pulse'un kendi seçicisi (PulsePick: aç, çoklu, foto, kaydet; tüm dosya erişimi yoksa eskisi). Notes: klasör simgesi telefondan klasör bağlar, içindeki .md/.txt dosyalar not olur, düzenleme dosyaya yazılır (derlenmedi)
 
 - 1.0.364 derlendi (yukarıdaki "derlenmedi" maddelerinin hepsi bu sürümde)
+
+- Weather: gökyüzü arka planında beyaz yazılar için yarı saydam siyah kaplar (üst blok, saatler, günler, güneş/ay, kartlar) (derlenmedi)
