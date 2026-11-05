@@ -919,7 +919,7 @@ private class MoreItem(val key: String, val icon: String, val name: String, val 
 /**
  * The More menu: one column under the three-dot button (top right). Every row has the same height; a state (On / Off) sits at the end.
  */
-/** A skip button: white all over, with a thin line along its foot that runs out over [durationMs]; a tap skips, and when the line is gone the button closes. */
+/** A skip button whose white fill runs across the whole button, edge to edge, over [durationMs]; a tap skips, and when it is full the button closes. */
 @Composable
 private fun SkipPill(text: String, startKey: Long, onTap: () -> Unit, onTimeout: () -> Unit, modifier: Modifier = Modifier, durationMs: Int = 5000) {
     val fill = remember(startKey) { Animatable(0f) }
@@ -928,9 +928,12 @@ private fun SkipPill(text: String, startKey: Long, onTap: () -> Unit, onTimeout:
         fill.animateTo(1f, tween(durationMs, easing = LinearEasing))
         currentTimeout()
     }
-    Box(modifier.clip(RoundedCornerShape(6.dp)).background(Color(0xF2FFFFFF)).clickable { onTap() }) {
-        Text(text, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 9.dp, bottom = 12.dp))
-        Box(Modifier.align(Alignment.BottomStart).fillMaxWidth(1f - fill.value).height(3.dp).background(Color(0xFF1B1B1B)))
+    // the padding sits on the text, not on the button: the fill is as tall and as wide as the button itself
+    Box(modifier.clip(RoundedCornerShape(6.dp)).background(Color(0x66FFFFFF)).clickable { onTap() }) {
+        Box(Modifier.matchParentSize()) {
+            Box(Modifier.fillMaxHeight().fillMaxWidth(fill.value).background(Color(0xF2FFFFFF)))
+        }
+        Text(text, color = Color.Black, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(horizontal = 16.dp, vertical = 9.dp))
     }
 }
 

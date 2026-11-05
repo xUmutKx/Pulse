@@ -2172,3 +2172,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Video: hız penceresi kısaltıldı (başlıkta değer, çubuk, "Sonraki videolarda da kalsın" kutusu + 1x düğmesi); altyazı ekleme hatası artık sessiz değil (toast ile neden) (derlenmedi)
 
 - Video: altyazı artık Pulse tarafından okunup (srt/vtt/ass, otomatik kodlama) oynatıcının altyazı görünümüne satır satır verilir (videoyu yeniden yüklemez, iz seçimi yok); indirme zip/gzip/düz metin ve ikinci adres dener; Skip recap/intro düğmesi tamamen beyaz, altında ince süre çizgisi (derlenmedi)
+
+- Video: Skip recap/intro düğmesi: süre dolgusu artık düğmenin tüm yüksekliğini ve genişliğini kaplar (padding metne taşındı) (derlenmedi)
