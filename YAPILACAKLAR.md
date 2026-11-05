@@ -2178,3 +2178,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Klavye emoji önerisi: kelime yazılırken emojiye basınca kelime silinir, yalnız emoji kalır; boşluktan sonra (düzeltme olsa da) emoji önerisi yanında kalır, basınca kelimenin yanına yazılır (derlenmedi)
 
 - Winamp: Media library düğmesi ve penceresinin başlığı, playlist penceresinin pledit.bmp başlık çubuğuyla (altın çizgiler, köşeler) çizilir (derlenmedi)
+
+- Kaset: etiket çizgileri yazının üstünden geçmez, başlık sonundaki halka kalktı, D-C90 / TYPE I yazıları alt yamukla çakışmaz, tuş paneli doku köşeleri yuvarlak (derlenmedi)
