@@ -37,7 +37,7 @@ import com.umutk.pulse.T
 import com.umutk.pulse.tr
 
 /** The buttons the player can show on its bar; the ones not chosen stay in the ⋮ menu. */
-internal val CONTROL_IDS = listOf("cc", "audio", "rotate", "repeat", "ab", "scale", "speed", "sleep", "pip", "lock", "settings")
+internal val CONTROL_IDS = listOf("cc", "audio", "rotate", "repeat", "scale", "speed", "sleep", "pip", "lock", "settings")
 
 /** The bar at the start: subtitles, rotation and picture in picture. */
 internal const val DEFAULT_BAR = "cc,rotate,pip"
@@ -50,7 +50,6 @@ internal fun controlName(id: String): String = when (id) {
     "audio" -> tr("Audio", "Ses")
     "rotate" -> tr("Rotate", "Döndür")
     "repeat" -> tr("Repeat", "Tekrar")
-    "ab" -> tr("A-B repeat", "A-B tekrar")
     "scale" -> tr("Fit", "Sığdır")
     "speed" -> tr("Speed", "Hız")
     "sleep" -> tr("Sleep timer", "Uyku zamanlayıcı")
@@ -69,7 +68,6 @@ internal fun ControlGlyph(id: String, tint: Color, sk: VSkin, on: Boolean) {
         "audio" -> PIcon("volume", c, 22.dp)
         "rotate" -> PIcon("rotate", c, 22.dp)
         "repeat" -> com.umutk.pulse.extras.ui.TIcon("repeat", c, 22.dp, sk.icons)
-        "ab" -> Text("A-B", color = c, fontSize = 12.sp, fontWeight = FontWeight.Bold)
         "scale" -> PIcon("scale", c, 22.dp)
         "speed" -> PIcon("speed", c, 22.dp)
         "sleep" -> PIcon("timer", c, 22.dp)
