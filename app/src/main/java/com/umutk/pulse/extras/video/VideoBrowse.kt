@@ -174,6 +174,7 @@ fun VideoHub(onBack: () -> Unit) {
             val indexed = withContext(Dispatchers.IO) { queryVideos(ctx) }
             videos = indexed
             videos = indexed + withContext(Dispatchers.IO) { unindexedOnce(indexed) }
+            withContext(Dispatchers.IO) { SubStore.prune(ctx, indexed.map { it.key }.toSet()) }
         }
     }
     BackHandler(enabled = play == null && !settings) {
@@ -198,7 +199,7 @@ fun VideoHub(onBack: () -> Unit) {
         val loc = vs.filter { it.local }
         if (loc.isNotEmpty()) {
             if (android.os.Build.VERSION.SDK_INT >= 30) sender.launch(IntentSenderRequest.Builder(MediaStore.createDeleteRequest(ctx.contentResolver, loc.map { it.uri }).intentSender).build())
-            else loc.forEach { runCatching { ctx.contentResolver.delete(it.uri, null, null) } }
+            else loc.forEach { runCatching { ctx.contentResolver.delete(it.uri, null, null) }; SubStore.forget(ctx, it.key) }
         }
         sel = emptySet(); rev++
     }
