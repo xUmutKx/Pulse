@@ -2214,3 +2214,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Hava durumu widget'ları geri geldi: şimdiki hava, 7 gün, sonraki 7 saat ve bunların karışımları (üstte hava+saat, altta günlük/saatlik tahmin) ayrı widget olarak (derlenmedi)
 - Widget sayfası: geniş ekranda satırda 5'e kadar widget kartı (telefonda 2); tüm widget görüntüleri artık orantılı ölçeklenir (fitXY yerine fitCenter), yeniden boyutlandırınca esnemez (derlenmedi)
 - İşlemler sayfası: root/Shizuku yokken kendi işlemlerinin yanında son 7 günde kullanılan (ya da simgeli tüm) uygulamalar listelenir; boyut ve ağ hızı gerçek okunur, root gerektiren bellek/CPU boş bırakılır (uydurma sayı yok); son okunan liste kaydedilir, okuma başarısız olursa o gösterilir (derlenmedi)
+- Hava durumu: bulut ve kar animasyonları kesintisiz döngü (bulutlar kendi 60 sn'lik döngüsünde tam sayıda tur atar, başa dönerken atlamaz) (derlenmedi)
+- Klavye: geniş ekranda (600 dp ve üstü) emoji/sembol/metin-ve-sanat sayfası solda, tuşlar sağda yan yana; dar ekranda "Metninizi yazın" kutusuna basınca kutu + stil satırı + tuşlar açılır, geri okuyla dönülür (derlenmedi)

@@ -334,7 +334,13 @@ private fun Panel(p: String, th: KbTheme, st: KbState, act: KbActions, keyH: and
     Column(Modifier.onSizeChanged { if (p == "keys" && it.height > 0) st.keysH = it.height }) {
         when (p) {
             // the emoji page is opaque: what is behind it (the gamepad, the arrows of the bar) does not show through
-            "emoji" -> Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
+            "emoji" -> if (androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp >= 600) {
+                // a wide screen shows two pages side by side: the emoji (or symbols, or text and art) on the left, the keys on the right
+                Row(Modifier.fillMaxWidth().background(th.bg)) {
+                    Box(Modifier.weight(1f)) { EmojiPanel(th, st, act, keyH, split = true) }
+                    Box(Modifier.weight(1f)) { KeysPanel(th, st, act, keyH) }
+                }
+            } else Box(Modifier.fillMaxWidth().background(th.bg)) { EmojiPanel(th, st, act, keyH) }
             "menu" -> MenuPanel(th, st, act, keyH)
             "clip" -> ClipPanel(th, st, act, keyH)
             "gamepad" -> GamepadPanel(th, act)
@@ -1089,8 +1095,9 @@ private fun Preview(th: KbTheme, st: KbState) {
 // ---- panels ----------------------------------------------------------------------------------------------------------------------------------------
 
 @Composable
-private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp, split: Boolean = false) {
     val ctx = LocalContext.current
+    androidx.compose.runtime.DisposableEffect(Unit) { onDispose { st.artKeys = false } }
     // every emoji of Unicode and the kaomoji, read once from the app
     val all by androidx.compose.runtime.produceState(emptyList<EmojiItem>()) { value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { EmojiData.load(ctx) } }
     // 0 recent, 1..9 the nine groups, 10 kaomoji
@@ -1106,6 +1113,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
     var toneBase by remember { mutableStateOf<String?>(null) }
     val dens = androidx.compose.ui.platform.LocalDensity.current
     // the same height as the keys, so the keyboard does not shrink; the search needs the keys under it and is taller
+    if (st.artKeys && !split && q == null && tab == 11) { ArtKeysMode(th, st, act, keyH); return }
     val fixed = if (q == null && st.keysH > 0) Modifier.height(with(dens) { st.keysH.toDp() }) else Modifier
     Column(Modifier.fillMaxWidth().then(fixed)) {
         // on the symbol page the families sit above the search, where the thumb reaches them
@@ -1147,7 +1155,7 @@ private fun EmojiPanel(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.
             LazyVerticalGrid(GridCells.Adaptive(44.dp), Modifier.fillMaxWidth().height(48.dp)) {
                 items(found) { it2 -> EmojiCell(it2, th, act) }
             }
-            KeysPanel(th, st, act, keyH)
+            if (!split) KeysPanel(th, st, act, keyH)
         } else {
             val pager = androidx.compose.foundation.pager.rememberPagerState(initialPage = EMOJI_ORDER.indexOf(tab).coerceAtLeast(0)) { 12 }
             // the tab follows the page only once it has settled: following it mid-swipe restarted the scroll and left the pages half way
@@ -1189,6 +1197,7 @@ private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, st: KbState) {
     val ctx = LocalContext.current
     // the keys of this keyboard write the text (the app's field is not touched), so the box only shows it
     val typed = st.artIn
+    val narrow = androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp < 600
     val styles = remember(typed) { FancyText.all(typed.ifBlank { "Hi test" }) }
     // the last thing copied is named for a moment, so a tap is seen
     var copied by remember { mutableStateOf<String?>(null) }
@@ -1197,7 +1206,8 @@ private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, st: KbState) {
         Text(
             if (typed.isEmpty()) tr("Type your text", "Metninizi yazın") else typed + "▏",
             color = if (typed.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 2, overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special).padding(10.dp),
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(th.special)
+                .clickable(enabled = narrow) { st.artKeys = true }.padding(10.dp),
         )
         Box(Modifier.fillMaxWidth().height(16.dp), contentAlignment = Alignment.Center) {
             if (copied != null) Text(tr("Copied", "Kopyalandı"), color = th.sub, fontSize = 12.sp)
@@ -1225,6 +1235,31 @@ private fun TextAndArtPage(entries: List<Sign>, th: KbTheme, st: KbState) {
                 }
             }
         }
+    }
+}
+
+/** The text-and-art page with the keys: the box on top, the styles of the text as one line to scroll, and the keys, which write into the box. */
+@Composable
+private fun ArtKeysMode(th: KbTheme, st: KbState, act: KbActions, keyH: androidx.compose.ui.unit.Dp) {
+    val ctx = LocalContext.current
+    androidx.compose.runtime.DisposableEffect(Unit) { st.artOn = true; onDispose { st.artOn = false } }
+    val typed = st.artIn
+    val styles = remember(typed) { FancyText.all(typed.ifBlank { "Hi test" }) }
+    Column(Modifier.fillMaxWidth()) {
+        Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(Modifier.size(40.dp).clickable { st.artKeys = false }, contentAlignment = Alignment.Center) { Icon(kbIcon(th, "ArrowBack"), null, tint = th.text, modifier = Modifier.size(22.dp)) }
+            Text(
+                if (typed.isEmpty()) tr("Type your text", "Metninizi yazın") else typed + "▏",
+                color = if (typed.isEmpty()) th.sub else th.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(end = 8.dp).clip(RoundedCornerShape(10.dp)).background(th.special).padding(horizontal = 12.dp, vertical = 9.dp),
+            )
+        }
+        Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 6.dp, vertical = 3.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            styles.forEach { (_, s) ->
+                Text(s, color = th.text, fontSize = 15.sp, maxLines = 1, modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(th.special).clickable { copyArt(ctx, s) }.padding(horizontal = 10.dp, vertical = 7.dp))
+            }
+        }
+        KeysPanel(th, st, act, keyH)
     }
 }
 
