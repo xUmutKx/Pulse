@@ -2182,3 +2182,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Kaset: etiket çizgileri yazının üstünden geçmez, başlık sonundaki halka kalktı, D-C90 / TYPE I yazıları alt yamukla çakışmaz, tuş paneli doku köşeleri yuvarlak (derlenmedi)
 
 - Ek müzik görünümleri (kaset/iPod/plak): sağ üstte ayarlar düğmesi (görünüm değiştirilebilir); Ek temalar sekmesi kayıtlı iPod/plak seçimini kasete çevirmez; kasette film paketlerin kenarından teğet olarak ve kılavuz bilyelerden geçerek bağlanır (derlenmedi)
+
+- Sistem logosu (başlatıcı ikonu + uygulama bilgisi): siyah zemin, beyaz pencere + kalp atışı (ic_pulse_logo); uygulamanın içindeki mavi/yeşil logo (ic_launcher) aynen duruyor (derlenmedi)
