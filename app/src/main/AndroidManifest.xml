@@ -1831,18 +1831,5 @@
         </service>
         <!-- the keyboard's "Picture to ASCII" tool: opened from the keyboard, copies its text picture to the clipboard -->
         <activity android:name="com.umutk.pulse.extras.keyboard.AsciiMakerActivity" android:exported="false" android:label="Picture to ASCII" android:taskAffinity="" android:excludeFromRecents="true" />
-        <!-- Pulse as an autofill service (Settings > Passwords and autofill): the vault's logins in other apps and browsers; Android 8+ only -->
-        <service
-            android:name=".features.PulseAutofillService"
-            android:exported="true"
-            android:label="Pulse"
-            android:permission="android.permission.BIND_AUTOFILL_SERVICE">
-            <intent-filter>
-                <action android:name="android.service.autofill.AutofillService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.autofill"
-                android:resource="@xml/autofill_service" />
-        </service>
     </application>
 </manifest>

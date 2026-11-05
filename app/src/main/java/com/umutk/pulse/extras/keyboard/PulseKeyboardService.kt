@@ -233,6 +233,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         owner = StandByOwner().also { it.start() }
         st.lang = KeyboardPrefs.langList().first()
         scope.launch(Dispatchers.IO) { runCatching { EmojiData.index(this@PulseKeyboardService) } }
+        // the vault is read once off the main thread, so the first login box has its suggestions at once
+        scope.launch(Dispatchers.IO) { runCatching { com.umutk.pulse.features.VaultStore.all(this@PulseKeyboardService) } }
         st.recents = getSharedPreferences("pulse_keyboard", Context.MODE_PRIVATE).getString("recents", "")?.let { r -> if ('\n' in r) r.split('\n') else r.split(' ') }?.filter { it.isNotEmpty() && !isArt(it) } ?: emptyList()
         scope.launch(Dispatchers.IO) {
             KeyboardPrefs.langList().forEach { code ->
@@ -641,7 +643,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 // never longer than a few frames: the work runs on its own thread and is given 90 ms, so typing cannot hang here (no correction is better than a frozen keyboard)
                 val code = st.lang; val loc = lang.locale; val pw = prevWord; val pw2 = prevWord2; val up = st.shift > 0
                 val f = corrExec.submit<String?> { compute(code, loc, typed, pw, up, pw2).third }
-                try { f.get(90, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); null }
+                try { f.get(45, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); null }
             }.getOrNull()
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
@@ -912,6 +914,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun slot(i: Int) {
         st.banAsk = -1
+        // a login of the vault: its user name or password is written as it is
+        if (vaultTexts.isNotEmpty()) { vaultTexts.getOrNull(i)?.let { currentInputConnection?.commitText(it, 1); afterText() }; return }
         val qc = quickClip
         // the screenshot just taken: a tap pastes it (when the field takes pictures)
         if (i == 2 && word.isEmpty() && st.slots.getOrNull(2)?.startsWith("\u0002") == true) {
@@ -1567,8 +1571,43 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     // It finishes (its result is dropped when the word has moved on) and one more run for the newest text follows at once.
     private var rerunNeeded = false
 
+    /** The texts the vault chips in the bar write, in the order of the chips (empty when the bar shows words). */
+    private var vaultTexts: List<String> = emptyList()
+
+    /**
+     * The logins of the Pulse password vault in the bar of a user-name or password box, read inside the app (no system autofill service). One chip for each
+     * different login: the same user name with the same password shows once. Only for the app the login belongs to; not offered while the vault is behind the screen lock.
+     */
+    private fun loginSuggestions(): Boolean {
+        vaultTexts = emptyList()
+        val info = currentInputEditorInfo ?: return false
+        val cls = info.inputType and InputType.TYPE_MASK_CLASS
+        val v = info.inputType and InputType.TYPE_MASK_VARIATION
+        val pass = (cls == InputType.TYPE_CLASS_TEXT && v in setOf(InputType.TYPE_TEXT_VARIATION_PASSWORD, InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD, InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD)) ||
+            (cls == InputType.TYPE_CLASS_NUMBER && v == InputType.TYPE_NUMBER_VARIATION_PASSWORD)
+        val label = (info.hintText?.toString().orEmpty() + " " + info.label?.toString().orEmpty()).lowercase()
+        val user = !pass && cls == InputType.TYPE_CLASS_TEXT && (v == InputType.TYPE_TEXT_VARIATION_EMAIL_ADDRESS || v == InputType.TYPE_TEXT_VARIATION_WEB_EMAIL_ADDRESS ||
+            listOf("user", "kullanıcı", "kullanici", "login", "e-posta", "email", "mail").any { label.contains(it) })
+        if (!pass && !user) return false
+        if (com.umutk.pulse.features.AuthPrefs.biometric(this)) return false
+        val typed = if (user) currentInputConnection?.getTextBeforeCursor(60, 0)?.toString().orEmpty() else ""
+        val seen = HashSet<String>()
+        val list = com.umutk.pulse.features.VaultStore.matches(this, info.packageName, null)
+            .filter { typed.isEmpty() || it.user.startsWith(typed, true) && !it.user.equals(typed, true) }
+            .filter { seen.add(it.user + "\u0000" + it.pass) }.take(6)
+        if (list.isEmpty()) return false
+        vaultTexts = list.map { if (pass) it.pass else it.user }
+        val shown = list.map { if (pass) "•••••• " + it.name.ifBlank { it.user } else it.user }
+        val n = maxOf(3, shown.size)
+        slotWords = Array(n) { "" }
+        st.slots = (shown + listOf("", "", "")).take(n)
+        st.emailBar = true
+        return true
+    }
+
     private fun updateSuggestions() {
         if (st.trans) scheduleTrans()
+        if (loginSuggestions()) return
         if (emailField || atTokenNow()) { emailSuggestions(); return }
         // a name field: the names typed in such fields before
         if (nameField && !st.incognito) {
@@ -1605,13 +1644,18 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; showClipSlot(); return
             }
         }
-        if (job?.isActive == true) { rerunNeeded = true; return }
+        // every keystroke: the older correction work stops, and the new word is looked at at once (the completions); the corrections follow only when typing pauses
+        KeyboardDictionary.touch()
+        job?.cancel()
         job = scope.launch {
             // first the completions alone (a prefix look-up, no waiting), then the same with the corrections
             if (typed.length >= 2) {
                 val q = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc, fast = true) }
                 if (word.toString() == typed) { target = q.third; targetFor = typed; val wd = widenBar(q.second, q.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first }
             }
+            // the full pass (the corrections) waits for a short pause in the typing: while the letters come fast nothing heavy runs behind them
+            kotlinx.coroutines.delay(180)
+            if (word.toString() != typed) return@launch
             val res = withContext(Dispatchers.Default) { compute(code, l.locale, typed, prev, up, prev2, tc) }
             if (word.toString() == typed) {
                 // a shortcut of the clipboard: the name typed offers the whole text in the middle
@@ -1621,8 +1665,6 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first }
                 showClipSlot()
             }
-            // the word moved on while this ran: the answer for the newest text is worked out now
-            if (rerunNeeded) { rerunNeeded = false; scope.launch { updateSuggestions() } }
         }
     }
 
@@ -1650,6 +1692,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     /** The three slots of the bar (shown and as words), and the word the space key would correct [typed] to. */
     private fun compute(code: String, loc: Locale, typed: String, prev: String?, up: Boolean, prev2: String? = null, tc: KeyboardDictionary.TouchCtx? = null, fast: Boolean = false): Triple<List<String>, Array<String>, String?> {
+        KeyboardDictionary.begin()
         if (typed.isEmpty()) {
             val n = KeyboardDictionary.next(code, prev, 6).filter { !KeyboardDictionary.isBanned(it) }.take(3).map { if (up) it.replaceFirstChar { c -> c.titlecase(loc) } else KeyboardDictionary.form(it) }
             // after a word and a space: the emoji of the word just written takes the last place

@@ -23,7 +23,21 @@ object KeyboardDictionary {
             words.forEachIndexed { i, w -> if (w.length <= 28) lists[w.length].add(i) }
             Array(29) { lists[it].toIntArray() }
         }
+        // by length and by the accent-free first letter, and by length and accent-free second letter: a correction only reads the words that can start like the typed one
+        val byFirst: Array<HashMap<Char, IntArray>> = Array(29) { len -> HashMap<Char, IntArray>().also { m ->
+            byLen[len].groupBy { foldc(words[it][0]) }.forEach { (ch, l) -> m[ch] = l.toIntArray() } } }
+        val bySecond: Array<HashMap<Char, IntArray>> = Array(29) { len -> HashMap<Char, IntArray>().also { m ->
+            byLen[len].filter { words[it].length > 1 }.groupBy { foldc(words[it][1]) }.forEach { (ch, l) -> m[ch] = l.toIntArray() } } }
     }
+
+    // ---- work that a newer keystroke makes useless stops by itself ----------------------------------------------------------------------------------
+    @Volatile private var seq = 0L
+    private val mine = ThreadLocal<Long>()
+    /** Called at every keystroke: the correction work still running for an older word stops at its next check. */
+    fun touch() { seq++ }
+    /** Called where a piece of correction work starts: it belongs to the keystroke that is the latest now. */
+    fun begin() { mine.set(seq) }
+    private fun cancelled() = mine.get()?.let { it != seq } == true
 
     private val lexes = ConcurrentHashMap<String, Lex>()
     private val user = ConcurrentHashMap<String, Int>()
@@ -394,7 +408,16 @@ object KeyboardDictionary {
             best += Cand(w, base - 4f * cost, cost)
         }
         // only the words one or two letters longer or shorter than the typed one can be within reach
-        for (len in maxOf(1, t.length - 2)..minOf(28, t.length + 2)) for (i in lx.byLen[len]) consider(lx.words[i], lx.score[i])
+        var n = 0
+        for (len in maxOf(1, t.length - 2)..minOf(28, t.length + 2)) {
+            if (t.length < 3) { for (i in lx.byLen[len]) consider(lx.words[i], lx.score[i]); continue }
+            // the first letter of a word within reach: the typed one (accent-free), the second one (a letter was dropped before it), or a key next to the first
+            val firsts = HashSet<Char>(); firsts += f0; firsts += f1
+            for (ch in "abcdefghijklmnopqrstuvwxyzçğıöşü") if (near(ch, t[0])) firsts += foldc(ch)
+            for (ch in firsts) lx.byFirst[len][ch]?.let { ids -> for (i in ids) { if ((++n and 1023) == 0 && cancelled()) return emptyList(); consider(lx.words[i], lx.score[i]) } }
+            // a word that has one more letter at the start ("ello" for "hello"): its second letter is the typed first one
+            lx.bySecond[len][f0]?.let { ids -> for (i in ids) { if (foldc(lx.words[i][0]) in firsts) continue; if ((++n and 1023) == 0 && cancelled()) return emptyList(); consider(lx.words[i], lx.score[i]) } }
+        }
         user.forEach { (w, _) -> if (best.none { it.word == w }) consider(w, score(lang, w)) }
         return best.sortedByDescending { it.score }.take(n)
     }
@@ -466,12 +489,18 @@ object KeyboardDictionary {
         if (typed.length < 5 || typed.length > 26) return emptyList()
         val out = ArrayList<Cand>()
         val a = FloatArray(32); val b = FloatArray(32); val c = FloatArray(32)
-        for (k in typed.length - 1 downTo maxOf(3, typed.length - 9)) {
+        for (k in typed.length - 1 downTo maxOf(3, typed.length - 6)) {
+            if (cancelled()) return emptyList()
             val stemT = typed.substring(0, k); val tailT = typed.substring(k)
             // the nearest ending chains
             var bestTail: String? = null; var bestCost = .65f
             val ties = ArrayList<String>()   // endings as near as the best one (micam and micem for "micsm"): the one that agrees with the base's vowel wins below
             for (len in maxOf(0, tailT.length - 1)..minOf(9, tailT.length + 1)) for (tail in chains[len]) {
+                // an ending that starts nothing like the typed one (not the same letter, not a neighbour key, not with a letter dropped) is far away: no need to measure it
+                if (tail.isNotEmpty() && tailT.isNotEmpty() && tail != tailT) {
+                    val t0 = foldc(tailT[0]); val e0 = foldc(tail[0])
+                    if (e0 != t0 && !near(tail[0], tailT[0]) && !(tailT.length > 1 && e0 == foldc(tailT[1])) && !(tail.length > 1 && foldc(tail[1]) == t0)) continue
+                }
                 val cst = if (tail == tailT) 0f else distance(tailT, tail, bestCost, a, b, c)
                 if (cst < bestCost) { bestCost = cst; bestTail = tail; ties.clear(); ties += tail }
                 else if (cst == bestCost && bestTail != null && cst > 0f) ties += tail
