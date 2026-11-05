@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.unit.Dp
 import kotlin.math.PI
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 /** The kinds of sky the forecast codes fall into. */
@@ -137,6 +138,8 @@ fun WeatherGlyph(code: Int, size: Dp, modifier: Modifier = Modifier, day: Boolea
 fun WeatherScene(code: Int, modifier: Modifier = Modifier, day: Boolean = true) {
     val k = skyOf(code)
     val t by rememberInfiniteTransition(label = "sky").animateFloat(0f, 1f, infiniteRepeatable(tween(6000, easing = LinearEasing), RepeatMode.Restart), label = "t")
+    // the clouds drift on their own slow loop; each layer goes round a whole number of times per loop, so the end meets the start and nothing jumps
+    val drift by rememberInfiniteTransition(label = "drift").animateFloat(0f, 1f, infiniteRepeatable(tween(60000, easing = LinearEasing), RepeatMode.Restart), label = "d")
     val flash by rememberInfiniteTransition(label = "flash").animateFloat(0f, 1f, infiniteRepeatable(tween(5200, easing = LinearEasing), RepeatMode.Restart), label = "f")
     Canvas(modifier) {
         val w = size.width; val h = size.height
@@ -163,8 +166,8 @@ fun WeatherScene(code: Int, modifier: Modifier = Modifier, day: Boolean = true) 
             val n = if (heavy) 7 else 5
             for (i in 0 until n) {
                 val depth = (i % 3) / 2f                         // 0 far, 1 near
-                val sp = .45f + depth * .9f
-                val x = (((t * sp) + i * .29f) % 1f) * (w + h * 1.4f) - h * .7f
+                val sp = 1f + (depth * 2f).roundToInt()        // 1, 2 or 3 crossings per loop (far clouds slowest)
+                val x = (((drift * sp) + i * .29f) % 1f) * (w + h * 1.4f) - h * .7f
                 val y = h * (.14f + ((i * 0.37f) % 1f) * .62f) + sin((t * 2f + i) * PI.toFloat()) * h * .012f
                 val base = if (dark) CLOUD_DARK else CLOUD
                 softCloud(x, y, h * (.7f + depth * .6f), if (!day) lerp(base, Color(0xFF38425A), .55f) else base, (.34f + depth * .3f) * (if (heavy) 1.15f else 1f))
@@ -182,7 +185,7 @@ fun WeatherScene(code: Int, modifier: Modifier = Modifier, day: Boolean = true) 
         if (k == Sky.SNOW) for (i in 0 until 36) {
             val seed = (i * 0.6180339f) % 1f
             val x = seed * w + sin((t + seed) * 2f * PI.toFloat()) * 8f
-            val y = ((t * .6f + seed * 2.3f) % 1f) * h
+            val y = ((t + seed * 2.3f) % 1f) * h
             drawCircle(Color.White.copy(alpha = .9f), 2.5f + seed * 2.5f, Offset(x, y))
         }
         if (k == Sky.FOG) for (i in 0..3) {
