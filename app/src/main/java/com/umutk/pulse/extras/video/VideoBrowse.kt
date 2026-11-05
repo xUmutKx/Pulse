@@ -174,7 +174,7 @@ fun VideoHub(onBack: () -> Unit) {
             val indexed = withContext(Dispatchers.IO) { queryVideos(ctx) }
             videos = indexed
             videos = indexed + withContext(Dispatchers.IO) { unindexedOnce(indexed) }
-            withContext(Dispatchers.IO) { SubStore.prune(ctx, indexed.map { it.key }.toSet()) }
+            withContext(Dispatchers.IO) { SubStore.prune(ctx, indexed.flatMap { listOf(it.key, it.subKey) }.toSet()) }
         }
     }
     BackHandler(enabled = play == null && !settings) {
@@ -199,7 +199,7 @@ fun VideoHub(onBack: () -> Unit) {
         val loc = vs.filter { it.local }
         if (loc.isNotEmpty()) {
             if (android.os.Build.VERSION.SDK_INT >= 30) sender.launch(IntentSenderRequest.Builder(MediaStore.createDeleteRequest(ctx.contentResolver, loc.map { it.uri }).intentSender).build())
-            else loc.forEach { runCatching { ctx.contentResolver.delete(it.uri, null, null) }; SubStore.forget(ctx, it.key) }
+            else loc.forEach { runCatching { ctx.contentResolver.delete(it.uri, null, null) }; SubStore.forget(ctx, it.key); SubStore.forget(ctx, it.subKey) }
         }
         sel = emptySet(); rev++
     }
@@ -370,7 +370,7 @@ private fun Entry(e: Any, sk: VSkin, p: VideoPrefs, shape: androidx.compose.ui.g
                     if (e.key != RECENT) Text(e.vids.size.toString(), color = sk.sub, fontSize = 12.sp)
                 }
                 is VideoItem -> {
-                    Text(e.name, color = sk.fg, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(if (p.smartNames) smartName(e.name) else e.name, color = sk.fg, fontSize = 14.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     val sub = listOfNotNull(
                         e.ext.takeIf { p.showExt && it.isNotBlank() }, fmtSize(e.size).takeIf { p.showSize && e.size > 0 },
                         "${e.w}x${e.h}".takeIf { p.showRes && e.w > 0 }, e.path.trimEnd('/').takeIf { p.showPath && it.isNotBlank() },

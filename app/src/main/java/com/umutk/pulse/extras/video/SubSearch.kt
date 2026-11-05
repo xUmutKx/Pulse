@@ -41,8 +41,30 @@ import java.net.URL
 import java.net.URLEncoder
 import java.util.zip.ZipInputStream
 
+/** Marks of a subtitle for the hard of hearing: CC, SDH, HI. */
+private val ccRe = Regex("(?i)(^|[^a-z])(cc|sdh|hi|hearing)([^a-z]|$)")
+
+/**
+ * The results with the best fit first: the one whose release name is the video's own file name (the same release, so the timing fits), then the ones that share the most
+ * words with it (resolution, source, group), then the rating.
+ */
+internal fun rankHits(hits: List<SubHit>, fileName: String): List<SubHit> {
+    fun norm(x: String) = x.lowercase().replace(Regex("\\.(srt|ass|ssa|vtt|mkv|mp4|avi|m4v|zip)$"), "").replace(Regex("[^a-z0-9]+"), " ").trim()
+    val v = norm(fileName)
+    val vt = v.split(' ').filter { it.isNotEmpty() }.toSet()
+    fun exact(h: SubHit): Boolean { val r = norm(h.release); return r.isNotEmpty() && v.isNotEmpty() && (r == v || (r.length >= 8 && (v.contains(r) || r.contains(v)))) }
+    fun overlap(h: SubHit): Float { val rt = norm(h.release).split(' ').toSet(); return if (vt.isEmpty()) 0f else vt.count { it in rt } / vt.size.toFloat() }
+    return hits.sortedWith(compareByDescending<SubHit> { exact(it) }.thenByDescending { overlap(it) }.thenByDescending { it.score })
+}
+
+internal fun isExactFit(h: SubHit, fileName: String): Boolean = rankHits(listOf(h), fileName).isNotEmpty() && run {
+    fun norm(x: String) = x.lowercase().replace(Regex("\\.(srt|ass|ssa|vtt|mkv|mp4|avi|m4v|zip)$"), "").replace(Regex("[^a-z0-9]+"), " ").trim()
+    val r = norm(h.release); val v = norm(fileName)
+    r.isNotEmpty() && v.isNotEmpty() && (r == v || (r.length >= 8 && (v.contains(r) || r.contains(v))))
+}
+
 /** One subtitle of a movie: [slug] is the page path after /subtitles/, [score] the site's rating. */
-internal data class SubHit(val slug: String, val release: String, val lang: String, val score: Int)
+internal data class SubHit(val slug: String, val release: String, val lang: String, val score: Int, val cc: Boolean = false)
 
 /**
  * yifysubtitles.ch, no key needed. Mostly movies. Search: /ajax/search/?mov=... gives the movie's IMDb id,
@@ -77,7 +99,7 @@ internal object YifySubs {
         if (!name.equals(lang, ignoreCase = true)) return@mapNotNull null
         val slug = linkRe.find(row)?.groupValues?.get(1) ?: return@mapNotNull null
         val release = releaseRe.find(row)?.groupValues?.get(1)?.let { clean(it) }.orEmpty()
-        SubHit(slug, release, name, scoreRe.find(row)?.groupValues?.get(1)?.toIntOrNull() ?: 0)
+        SubHit(slug, release, name, scoreRe.find(row)?.groupValues?.get(1)?.toIntOrNull() ?: 0, ccRe.containsMatchIn(release))
     }.toList()
 
     private fun clean(html: String): String = tagRe.replace(html, " ")
@@ -184,7 +206,7 @@ internal object OpenSubs {
                 val a = data.getJSONObject(i).optJSONObject("attributes") ?: return@mapNotNull null
                 val fileId = a.optJSONArray("files")?.optJSONObject(0)?.optLong("file_id", 0L) ?: 0L
                 if (fileId <= 0L) return@mapNotNull null
-                SubHit("os:$fileId", a.optString("release", ""), a.optString("language", code), a.optDouble("ratings", 0.0).toInt())
+                SubHit("os:$fileId", a.optString("release", ""), a.optString("language", code), a.optDouble("ratings", 0.0).toInt(), a.optBoolean("hearing_impaired", false) || ccRe.containsMatchIn(a.optString("release", "")))
             }
         }
     }
@@ -241,7 +263,7 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
             val result = if (key.isNotBlank()) OpenSubs.search(q, lang, key) else YifySubs.search(q, lang)
             result.onSuccess { found ->
                 busy = false
-                hits = found
+                hits = rankHits(found, fileName)
                 message = when {
                     found.isNotEmpty() -> ""
                     key.isBlank() && OpenSubs.episodeOf(q).second != null -> tr(
@@ -293,8 +315,8 @@ internal fun OnlineSubsDialog(ctx: Context, fileName: String, onPick: (Uri, Stri
                 }
                 hits.forEach { h ->
                     Column(Modifier.fillMaxWidth().clickable { pick(h) }.padding(vertical = 8.dp)) {
-                        Text(h.release.ifBlank { "-" }, color = w.text, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        Text("${h.lang} · ${tr("rating", "puan")} ${h.score}", color = w.sub, fontSize = 11.sp)
+                        Text((if (isExactFit(h, fileName)) "★ " else "") + h.release.ifBlank { "-" }, color = if (isExactFit(h, fileName)) Look.accent else w.text, fontSize = 13.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                        Text("${h.lang} · ${tr("rating", "puan")} ${h.score}" + (if (h.cc) " · CC" else "") + (if (isExactFit(h, fileName)) " · " + tr("same release", "aynı sürüm") else ""), color = w.sub, fontSize = 11.sp)
                     }
                 }
             }

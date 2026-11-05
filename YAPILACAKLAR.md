@@ -2241,3 +2241,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Ağ sayfası: Wi-Fi'deki cihaz sayısı artık /24 ağın her adresine sorarak sayılır (komşu tablosu Android 10+'da boştu, hep 1 gösteriyordu); sayfada son testlerin ortalama internet hızı (derlenmedi)
 - 1.0.367 derleniyor (1.0.366 sonrası tüm "derlenmedi" maddeleri bu sürümde)
 - Alarm atlama: "Turn back on for ..." ile atlanan çalma, eski bir kayıt tetiklense bile artık çalmaz (AlarmReceiver atlanan anı tanır, alarmı gerçek sonraki çalmaya kurar); atlama kaydı eşzamanlı yazılır (commit). Kök neden kodda bulunamadı; cihazda yeniden denenip sonuç bildirilecek (derlenmedi)
+- Video altyazı kalıcılığı: kayıt artık videonun adı+boyutuyla tutulur (aynı dosya başka adresle açılsa da bulunur), eski adresle kayıtlı olanlar bulunup yeniden kaydedilir; altyazı menüsünde yüklü altyazının yanında "kayıtlı" yazar; silinen videonun altyazısı temizlenir (derlenmedi)
+- Video akıllı adlandırma (varsayılan açık, Ayarlar > Kütüphane): "Dexter S03E08 · The Damage A Man Can Do", filmlerde "Ad (yıl)"; çözünürlük/kaynak/kodek/grup etiketleri çıkar; liste satırlarında ve oynatıcı başlığında (derlenmedi)
+- Altyazı arama: sonuçlar en iyi uyumdan başlayarak sıralanır (video dosya adıyla aynı sürüm ★ ile en üstte, sonra en çok ortak etiket, sonra puan); CC (işitme engelli) işareti görünür (derlenmedi)

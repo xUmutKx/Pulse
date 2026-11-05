@@ -28,6 +28,8 @@ data class VideoItem(
     val w: Int = 0, val h: Int = 0, val mime: String = "",
 ) {
     val key: String get() = uri.toString()
+    /** What the video's kept subtitle is filed under: its name and size (the same file opened through another address finds it too), else its address. */
+    val subKey: String get() = if (size > 0 && name.isNotBlank()) "nm:$name|$size" else key
     val ext: String get() = name.substringAfterLast('.', "").uppercase()
     val local: Boolean get() = uri.scheme == "content" && uri.authority == "media"
 }
@@ -293,6 +295,8 @@ class VideoPrefs(ctx: Context) {
     var grid by bool(g, "grid", false)
     var showThumb by bool(g, "s_thumb", true)
     var showDur by bool(g, "s_dur", true)
+    /** a clean name for episodes and films: "Dexter S03E08 · The Damage A Man Can Do" instead of the file name with its release tags */
+    var smartNames by bool(g, "smart_names", true)
     var showExt by bool(g, "s_ext", false)
     var showPath by bool(g, "s_path", false)
     var showSize by bool(g, "s_size", false)
