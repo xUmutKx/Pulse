@@ -290,14 +290,8 @@ private fun WinampArt(art: ImageBitmap?, scaleDp: Float) {
     }
 }
 
-/** A flat button of the playlist window's own look (its colours and pixel font), as wide as the windows: the media library button. */
+/** The media library button: the playlist window's own top bar, with the title on it. */
 @Composable
 private fun WinampTextButton(skin: com.umutk.pulse.extras.music.skin.WinampSkin, label: String, on: Boolean, scaleDp: Float, onClick: () -> Unit) {
-    val c = skin.playlist
-    val font = com.umutk.pulse.BundledFonts.first { it.first == "Press Start 2P" }.second
-    Box(
-        Modifier.width((WINAMP_W * scaleDp).dp).height((16 * scaleDp).dp).background(if (on) c.selectedBg else c.normalBg)
-            .border(1.dp, Color(0xFF5A6070)).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center,
-    ) { Text(label, color = if (on) c.current else c.normal, fontFamily = font, fontSize = maxOf(8f * scaleDp, 10f).sp, maxLines = 1) }
+    WinampTitleStrip(skin, label, scaleDp, onClick = onClick)
 }

@@ -2176,3 +2176,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Video: Skip recap/intro düğmesi: süre dolgusu artık düğmenin tüm yüksekliğini ve genişliğini kaplar (padding metne taşındı) (derlenmedi)
 
 - Klavye emoji önerisi: kelime yazılırken emojiye basınca kelime silinir, yalnız emoji kalır; boşluktan sonra (düzeltme olsa da) emoji önerisi yanında kalır, basınca kelimenin yanına yazılır (derlenmedi)
+
+- Winamp: Media library düğmesi ve penceresinin başlığı, playlist penceresinin pledit.bmp başlık çubuğuyla (altın çizgiler, köşeler) çizilir (derlenmedi)
