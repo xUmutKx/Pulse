@@ -144,6 +144,8 @@ object ExtraKeys { var volume: ((Boolean) -> Boolean)? = null }
 open class ExtraToolActivity : ComponentActivity() {
 
     override fun onKeyDown(keyCode: Int, event: android.view.KeyEvent?): Boolean {
+        // a physical keyboard: Esc, or Alt + Left, is Back in every screen
+        if (keyCode == android.view.KeyEvent.KEYCODE_ESCAPE || (keyCode == android.view.KeyEvent.KEYCODE_DPAD_LEFT && event?.isAltPressed == true)) { onBackPressedDispatcher.onBackPressed(); return true }
         if ((keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP || keyCode == android.view.KeyEvent.KEYCODE_VOLUME_DOWN) && ExtraKeys.volume?.invoke(keyCode == android.view.KeyEvent.KEYCODE_VOLUME_UP) == true) return true
         return super.onKeyDown(keyCode, event)
     }

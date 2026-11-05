@@ -28,6 +28,12 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.items
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.foundation.focusable
+import androidx.compose.ui.input.key.isAltPressed
+import androidx.compose.ui.input.key.isCtrlPressed
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -623,7 +629,30 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     var selMore by remember { mutableStateOf(false) }
 
     var arcPasteNow: () -> Unit = {}
-    Box(Modifier.fillMaxSize()) {
+    // a physical keyboard: Ctrl+C / X / V copy, cut and paste the picked files into the folder on screen, Ctrl+A picks all, Delete deletes, F2 renames, Ctrl+N makes a folder,
+    // Ctrl+F searches, F5 reads the folder again, Backspace or Alt+Left goes up, Esc drops the pick. While a field or a dialog is open the keys belong to it.
+    val rootFr = remember { androidx.compose.ui.focus.FocusRequester() }
+    LaunchedEffect(searchOpen, dialog, arcFile) { if (!searchOpen && dialog == null) runCatching { rootFr.requestFocus() } }
+    val onKey: (androidx.compose.ui.input.key.KeyEvent) -> Boolean = handler@{ e ->
+        if (e.type != androidx.compose.ui.input.key.KeyEventType.KeyDown || searchOpen || dialog != null || arcFile != null) return@handler false
+        val k = e.key
+        val ctrl = e.isCtrlPressed
+        when {
+            ctrl && k == androidx.compose.ui.input.key.Key.C -> if (picked.isNotEmpty()) { clip = Clip(picked, false); sel = emptySet(); note = tr("${picked.size} copied", "${picked.size} öğe kopyalandı"); true } else false
+            ctrl && k == androidx.compose.ui.input.key.Key.X -> if (picked.isNotEmpty()) { clip = Clip(picked, true); sel = emptySet(); note = tr("${picked.size} cut", "${picked.size} öğe kesildi"); true } else false
+            ctrl && k == androidx.compose.ui.input.key.Key.V -> if (clip != null) { doPaste(); true } else false
+            ctrl && k == androidx.compose.ui.input.key.Key.A -> { sel = shown.map { it.path }.toSet(); true }
+            ctrl && k == androidx.compose.ui.input.key.Key.F -> { searchOpen = true; true }
+            ctrl && k == androidx.compose.ui.input.key.Key.N -> { name = ""; dialog = "newfolder" to dir; true }
+            k == androidx.compose.ui.input.key.Key.Delete -> if (picked.isNotEmpty()) { askDelete(picked); true } else false
+            k == androidx.compose.ui.input.key.Key.F2 -> picked.singleOrNull()?.let { f -> name = f.name; dialog = "rename" to f; true } ?: false
+            k == androidx.compose.ui.input.key.Key.F5 -> { refresh++; true }
+            k == androidx.compose.ui.input.key.Key.Backspace || (e.isAltPressed && k == androidx.compose.ui.input.key.Key.DirectionLeft) -> if (dir.path != top.path) { go(dir.parentFile?.path ?: top.path); true } else false
+            k == androidx.compose.ui.input.key.Key.Escape -> if (sel.isNotEmpty()) { sel = emptySet(); true } else false
+            else -> false
+        }
+    }
+    Box(Modifier.fillMaxSize().onPreviewKeyEvent(onKey).focusRequester(rootFr).focusable()) {
     Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         // the header stays on screen while the list scrolls under it
         Column(Modifier.padding(horizontal = 12.dp)) {
