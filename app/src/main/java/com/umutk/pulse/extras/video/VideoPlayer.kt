@@ -272,8 +272,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     fun say(icon: String, text: String) { hud = icon to text; hudStamp++ }
     val booster = remember { arrayOfNulls<LoudnessEnhancer>(1) }
     val equalizer = remember { arrayOfNulls<Equalizer>(1) }
-    var abA by remember { mutableLongStateOf(-1L) } // A-B repeat: start, end (-1 = not set)
-    var abB by remember { mutableLongStateOf(-1L) }
     var sleepAt by remember { mutableLongStateOf(0L) } // SystemClock.elapsedRealtime() deadline, 0 = off
     var sleepEnd by remember { mutableStateOf(false) } // stop after the current video
     var preview by remember { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
@@ -402,7 +400,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
             override fun onMediaItemTransition(m: MediaItem?, reason: Int) {
                 cur = player.currentMediaItemIndex
                 items.getOrNull(cur)?.let { prefs.addRecent(it) }
-                ext = null; extCues = null; subDelay = 0L; abA = -1L; abB = -1L
+                ext = null; extCues = null; subDelay = 0L
                 loadSaved(items.getOrNull(cur))
                 if (sleepEnd && reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) { player.pause(); sleepEnd = false }
                 if (!subReload[0] && (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK)) {
@@ -471,7 +469,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         var n = 0
         while (true) {
             if (!seeking) pos = player.currentPosition
-            if (abA >= 0 && abB > abA && player.currentPosition >= abB) player.seekTo(abA)
             if (sleepAt > 0 && SystemClock.elapsedRealtime() >= sleepAt) { player.pause(); sleepAt = 0L }
             dur = player.duration.coerceAtLeast(0L)
             inPip = (android.os.Build.VERSION.SDK_INT >= 24 && act?.isInPictureInPictureMode == true)
@@ -550,14 +547,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 player.repeatMode = when (rep) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF }
                 say("rotate", repeatNames()[rep])
             }
-            "ab" -> {
-                when {
-                    abA < 0 -> { abA = player.currentPosition; say("rotate", "A") }
-                    abB < 0 -> { abB = player.currentPosition.coerceAtLeast(abA + 500); say("rotate", "A-B") }
-                    else -> { abA = -1L; abB = -1L; say("rotate", tr("Off", "Kapalı")) }
-                }
-                poke++
-            }
             "scale" -> { aspect = (aspect + 1) % 5; prefs.aspect = aspect; zoom = 1f; panX = 0f; panY = 0f; poke++; say("scale", aspectNames()[aspect]) }
             "speed" -> dlg = "speed"
             "sleep" -> dlg = "sleep"
@@ -569,7 +558,6 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     fun controlOn(id: String): Boolean = when (id) {
         "cc" -> tracks.isTypeSelected(C.TRACK_TYPE_TEXT) || extCues != null
         "repeat" -> rep != 0
-        "ab" -> abA >= 0
         "speed" -> speed != 1f
         "sleep" -> sleepAt > 0 || sleepEnd
         else -> false
@@ -696,7 +684,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                             if (ev.changes.none { it.pressed }) break
                         }
                         if (held) player.setPlaybackSpeed(speed)
-                        if (mode == 1) player.seekTo(target)
+                        // a swipe shorter than 3 seconds is a slip of the finger: the video goes on from where it was
+                        if (mode == 1 && abs(target - start) >= 3000) player.seekTo(target)
                         if (mode == 2 && prefs.rememberBright) prefs.bright = bright
                     }
                 },
