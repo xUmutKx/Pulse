@@ -15,6 +15,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -98,6 +99,18 @@ import kotlinx.coroutines.delay
 private enum class MusicLook(val label: String) { MATERIAL("Material"), POWERAMP("Poweramp"), WINAMP("Winamp"), WMP("Windows Media Player"), SKINS("Media skins"), LYRICS("Lyrics"), CASSETTE("Cassette"), IPOD("iPod"), TURNTABLE("Turntable") }
 
 private fun prefs(c: Context) = c.getSharedPreferences("music_hub", Context.MODE_PRIVATE)
+
+/** The cassette, iPod and turntable players have no bar of their own: this frame gives each a settings button at the top right, over the player. */
+@Composable
+private fun ExtraPlayerFrame(onSettings: () -> Unit, content: @Composable () -> Unit) {
+    Box(Modifier.fillMaxSize()) {
+        content()
+        Box(
+            Modifier.align(Alignment.TopEnd).padding(top = 8.dp, end = 8.dp).size(44.dp).clip(CircleShape).background(Color.Black.copy(alpha = .38f)).clickable(onClick = onSettings),
+            contentAlignment = Alignment.Center,
+        ) { PIcon("settings", Color.White, 22.dp) }
+    }
+}
 
 /**
  * Music host page: look switcher, library from MediaStore (permission asked once, picker as fallback), playlists with
@@ -191,9 +204,9 @@ private fun MusicHubBody(onBack: () -> Unit) {
                     look == MusicLook.MATERIAL -> MaterialPlayer(engine, library, Modifier.fillMaxSize(), artBackground = artBg, onNowPlaying = { nowPlaying = it }, onNoise = { noiseOpen = true }, onRadio = { radioOpen = true }, onRecap = { recapGate { recapOpen = true } }, onSettings = { settingsOpen = true })
                     look == MusicLook.POWERAMP -> PowerampPage(engine, library, artBg, ctx, onSettings = { settingsOpen = true })
                     look == MusicLook.WINAMP -> com.umutk.pulse.extras.music.winamp.WinampScreen(engine, st, onAdd = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), onGetSkins = { openTool("extrastore") }, startLyrics = lyrics, onSettings = { settingsOpen = true })
-                    look == MusicLook.CASSETTE -> com.umutk.pulse.extras.music.cassette.CassettePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant)
-                    look == MusicLook.IPOD -> com.umutk.pulse.extras.music.cassette.IpodPlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant)
-                    look == MusicLook.TURNTABLE -> com.umutk.pulse.extras.music.cassette.TurntablePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant)
+                    look == MusicLook.CASSETTE -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.CassettePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
+                    look == MusicLook.IPOD -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.IpodPlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
+                    look == MusicLook.TURNTABLE -> ExtraPlayerFrame(onSettings = { settingsOpen = true }) { com.umutk.pulse.extras.music.cassette.TurntablePlayer(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, modifier = Modifier.fillMaxSize(), variant = ExtraThemes.variant) }
                     look == MusicLook.LYRICS -> com.umutk.pulse.extras.music.winamp.LyricsLookPage(engine, st, modifier = Modifier.fillMaxSize())
                     look == MusicLook.SKINS -> SkinsPage(engine, st, onOpen = { pick.launch(arrayOf("audio/*")) })
                     else -> WmpPage(engine, st, library, onOpen = { pick.launch(arrayOf("audio/*")) }, onPlaylists = { playlistsOpen = true })
@@ -396,7 +409,9 @@ private fun MusicThemeGallery(look: MusicLook, ink: Color, onLook: (MusicLook) -
     var skinPick by remember { mutableIntStateOf(prefs(ctx).getInt("img_skin", 0)) }
     var family by remember { mutableStateOf(ThemeFamily.values().firstOrNull { it.look == look } ?: ThemeFamily.EXTRA) }
     val scheme = MaterialTheme.colorScheme
-    fun pick(f: ThemeFamily) { family = f; if (f.look != look && !(f == ThemeFamily.EXTRA && (look == MusicLook.IPOD || look == MusicLook.TURNTABLE))) onLook(f.look) }
+    // the extra themes are three players: the one the saved extra theme names (an iPod chosen before stays an iPod, it does not turn into a cassette)
+    fun extraLook() = when (ExtraThemes.kind) { ExtraThemes.Kind.IPOD -> MusicLook.IPOD; ExtraThemes.Kind.TURNTABLE -> MusicLook.TURNTABLE; else -> MusicLook.CASSETTE }
+    fun pick(f: ThemeFamily) { family = f; val target = if (f == ThemeFamily.EXTRA) extraLook() else f.look; if (target != look) onLook(target) }
     Text(tr("Look", "Görünüm"), color = Look.accent, fontSize = 12.sp)
     Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 6.dp), horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.Bottom) {
         ThemeFamily.values().forEach { f ->
