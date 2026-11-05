@@ -69,7 +69,11 @@ fun measureApps(ctx: Context): List<AppEntry> {
         val st = if (usage && ssm != null && a.packageName in visible) runCatching {
             ssm.queryStatsForPackage(android.os.storage.StorageManager.UUID_DEFAULT, a.packageName, android.os.Process.myUserHandle())
         }.getOrNull() else null
-        if (a.packageName !in visible) { hidden += a; continue }
+        if (a.packageName !in visible) {
+            // only apps of the user count as hidden (a system app removed for this user is not a game hidden by hand), and at most 30 are measured by the shell
+            if ((a.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) == 0 && hidden.size < 30) hidden += a
+            continue
+        }
         out += AppEntry(a.packageName, label(a), if (st != null) st.appBytes + st.dataBytes + st.cacheBytes else apkBytes(a), false)
     }
     // the hidden ones: their folders measured with root or Shizuku (one run for all of them), else only their program files
