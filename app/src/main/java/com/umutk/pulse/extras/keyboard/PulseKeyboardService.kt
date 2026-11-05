@@ -406,6 +406,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     private var editAt = 0L
     private var shiftDropAt = 0L
+    private val corrExec = java.util.concurrent.Executors.newSingleThreadExecutor()
 
     override fun onUpdateSelection(oldSelStart: Int, oldSelEnd: Int, newSelStart: Int, newSelEnd: Int, candidatesStart: Int, candidatesEnd: Int) {
         super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart, candidatesEnd)
@@ -602,7 +603,12 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         var t = if (typed.contains('\'')) null else target?.takeIf { targetFor.equals(typed, true) && slotWords.getOrNull(1).equals(it, true) }
         // typing fast: the bar had no time to catch up with the word (every new letter restarts its work), so the correction is worked out right now, here, for exactly this word
         if (t == null && correct && typed.length >= 2 && !typed.contains('\'') && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions && !st.plain && !urlNow() && !targetFor.equals(typed, true))
-            t = runCatching { compute(st.lang, lang.locale, typed, prevWord, st.shift > 0, prevWord2).third }.getOrNull()
+            t = runCatching {
+                // never longer than a few frames: the work runs on its own thread and is given 40 ms, so typing cannot hang here (no correction is better than a frozen keyboard)
+                val code = st.lang; val loc = lang.locale; val pw = prevWord; val pw2 = prevWord2; val up = st.shift > 0
+                val f = corrExec.submit<String?> { compute(code, loc, typed, pw, up, pw2).third }
+                try { f.get(40, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); null }
+            }.getOrNull()
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
         if (dotFix) {
