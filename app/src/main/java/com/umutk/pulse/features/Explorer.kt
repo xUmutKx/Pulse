@@ -513,7 +513,11 @@ private fun ExplorerTab(full: Boolean, onTab: (String) -> Unit, onToggleFull: ()
     }
     LaunchedEffect(resultsFor, here, showHidden, searchAll) {
         found = null
-        found = resultsFor?.let { q -> withContext(Dispatchers.IO) { if (searchAll) { if (FileIndex.isStale()) FileIndex.build(top); FileIndex.search(q, showHidden) } else exFind(dir, q, showHidden) } }
+        found = resultsFor?.let { q -> withContext(Dispatchers.IO) {
+            val names = if (searchAll) { if (FileIndex.isStale()) FileIndex.build(top); FileIndex.search(q, showHidden) } else exFind(dir, q, showHidden)
+            // then the text inside Word, Excel, PowerPoint, PDF and plain text files, so a word in a document finds the document
+            (names + DocText.contentHits(ctx, if (searchAll) top else dir, q, showHidden)).distinct()
+        } }
     }
     // typing searches this folder and everything under it by itself, a moment after the last key
     LaunchedEffect(query, searchOpen) {
