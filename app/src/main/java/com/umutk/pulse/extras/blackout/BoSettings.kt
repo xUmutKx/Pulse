@@ -88,7 +88,7 @@ fun ModulePage(mode: Privilege.Mode, sp: SharedPreferences) {
                     sp.edit().putFloat("limit", limit).putInt("tint", tint).apply()
                 }
             }
-            var auto by remember { mutableStateOf(sp.getBoolean("lsp_auto", false)) }
+            var auto by remember { mutableStateOf(sp.getBoolean("lsp_auto", true)) }
             BoSwitchRow(tr("Every app automatically", "Her uygulamada otomatik"), tr("Whites turn black in each app the module is on for, as it opens. An app with its own colour rules keeps those.", "Modülün açık olduğu her uygulamada beyazlar, uygulama açılırken siyah olur. Kendi renk kuralı olan uygulama onları korur."), auto) { auto = it; sp.edit().putBoolean("lsp_auto", it).apply() }
             // root or Shizuku: opening an app's card used to turn its light backgrounds black by itself; it is a choice now (off), and the earlier automatic ones can be taken back
             var ovAuto by remember { mutableStateOf(sp.getBoolean("ov_auto", false)) }
