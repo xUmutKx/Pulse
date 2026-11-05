@@ -265,6 +265,11 @@ fun KeyboardSettings(back: () -> Unit) {
             PSlider(KeyboardPrefs.padLift / 40f, { KeyboardPrefs.padLift = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Side space", "Yan boşluk")}: ${KeyboardPrefs.sidePad} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.sidePad / 400f, { KeyboardPrefs.sidePad = (it * 400).roundToInt() }, 0f..1f, onDone = { save() })
+            Switch(tr("Compact layout", "Derli toplu düzen"), tr("Keys close together, the keyboard narrower and in the middle, like a tablet's own keyboard", "Tuşlar bitişik, klavye daha dar ve ortada (tabletin kendi klavyesi gibi)"), KeyboardPrefs.compact) { KeyboardPrefs.compact = it; save() }
+            if (KeyboardPrefs.compact) {
+                Text("${tr("Keyboard width", "Klavye genişliği")}: ${KeyboardPrefs.compactPct}%", color = T.sub, fontSize = 12.sp)
+                PSlider((KeyboardPrefs.compactPct - 40) / 60f, { KeyboardPrefs.compactPct = 40 + (it * 60).roundToInt() }, 0f..1f, onDone = { save() })
+            }
             Text("${tr("Space between keys", "Tuşlar arası boşluk")}: ${KeyboardPrefs.keyGap} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.keyGap / 8f, { KeyboardPrefs.keyGap = (it * 8).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("?123 key narrower", "?123 tuşu daha dar")}: ${KeyboardPrefs.modeShrink}%", color = T.sub, fontSize = 12.sp)
