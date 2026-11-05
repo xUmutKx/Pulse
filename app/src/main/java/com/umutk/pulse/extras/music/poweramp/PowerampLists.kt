@@ -3,6 +3,8 @@ package com.umutk.pulse.extras.music.poweramp
 import com.umutk.pulse.extras.music.foldHas
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Radio
+import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material.icons.rounded.Shuffle
 import com.umutk.pulse.extras.music.shownArtist
 
@@ -134,6 +136,9 @@ private sealed interface Lib {
     object WhiteNoise : Lib
     object AllSounds : Lib
     object OnlinePlaylists : Lib
+    /** The suggestions and the mix maker, each on a page of its own (they were heavy at the bottom of the library list). */
+    object Suggestions : Lib
+    object MixMaker : Lib
     object Radio : Lib
     /** 0 most played, 1 recently played, 2 last added */
     class Quick(val kind: Int) : Lib
@@ -228,6 +233,8 @@ fun LibraryScreen(
         Lib.AllSounds -> tr("All sounds", "Tüm sesler")
         Lib.OnlinePlaylists -> tr("Online playlists", "Çevrimiçi çalma listeleri")
         Lib.Radio -> tr("Radio", "Radyo")
+        Lib.Suggestions -> tr("Recommendations", "Öneriler")
+        Lib.MixMaker -> tr("Mix maker", "Mix yapıcı")
         Lib.Playlists -> tr("Playlists", "Çalma listeleri")
         is Lib.Playlist -> n.name
         is Lib.M3u -> n.name
@@ -270,6 +277,8 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.Air, Color(0xFF4FA3C7), Lib.WhiteNoise to tr("White noise", "Beyaz gürültü")),
                     Triple(Icons.Rounded.Cloud, Color(0xFF7A8FD9), Lib.OnlinePlaylists to tr("Online playlists", "Çevrimiçi çalma listeleri")),
                     Triple(Icons.Rounded.Radio, Color(0xFFD9785B), Lib.Radio to tr("Radio", "Radyo")),
+                    Triple(Icons.Rounded.AutoAwesome, Color(0xFFB65BD9), Lib.Suggestions to tr("Recommendations", "Öneriler")),
+                    Triple(Icons.Rounded.Tune, Color(0xFF5BD9B0), Lib.MixMaker to tr("Mix maker", "Mix yapıcı")),
                     Triple(Icons.Rounded.Album, Color(0xFFD96B6B), Lib.Cat(0) to catNames[0]),
                     Triple(Icons.Rounded.Person, Color(0xFFD98A5B), Lib.Cat(1) to catNames[1]),
                     Triple(Icons.Rounded.Piano, Color(0xFF9B6BD9), Lib.Cat(2) to catNames[2]),
@@ -282,8 +291,13 @@ fun LibraryScreen(
                     Triple(Icons.Rounded.Insights, Color(0xFFC0609A), Lib.Recap to tr("Music recap", "Müzik özeti")),
                 )
                 itemsIndexed(cats) { _, (ic, col, p) -> CatRow(ic, col, p.second, style) { node = p.first } }
-                // the suggestions sit at the bottom of the library, under the categories
-                item { RecommendationHome(tracks, current, style.onBackdrop, style.textDim, style.chip, style.accent, round = true, onPlay = onPlay, onQueue = onPlayTracks) }
+            }
+            // the suggestions and the mix maker open from the list: two taps, and the library list itself stays light
+            Lib.Suggestions -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 8.dp)) {
+                item { RecommendationHome(tracks, current, style.onBackdrop, style.textDim, style.chip, style.accent, round = true, onPlay = onPlay, onQueue = onPlayTracks, showMix = false) }
+            }
+            Lib.MixMaker -> LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)) {
+                item { com.umutk.pulse.extras.music.MixMaker(tracks, style.onBackdrop, style.textDim, style.chip, style.accent) { l -> onPlayTracks(l, 0) } }
             }
             is Lib.Cat -> {
                 val groups = remember(tracks, n.kind) {
