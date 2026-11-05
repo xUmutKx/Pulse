@@ -2166,3 +2166,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Klavye (fiziksel): pano/kilit/menü sayfaları artık gerçekten açılır, çeviri çubuğu kesilmez ve ekran dibinden yukarıda; çeviri açıkken Tab çeviriyi koyar, Enter koyup gönderir; çeviri kaynağı Google (gtx) önce, sonra Lingva, en son MyMemory (derlenmedi)
 
 - Klavye: yan boşluk en çok 200 dp (ayar ve yeniden boyutlandırma paneli) (derlenmedi)
+
+- Klavye: yan boşluk en çok 400 dp; ekranda en az 240 dp tuş genişliği kalacak şekilde sınırlanır (derlenmedi)
