@@ -14,7 +14,12 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -30,6 +35,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -164,17 +170,17 @@ private object PickThumbs {
     private val IMG = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")
     private val VID = setOf("mp4", "mkv", "webm", "3gp", "mov", "avi", "m4v", "ts")
 
-    fun make(ctx: Context, f: File): androidx.compose.ui.graphics.ImageBitmap? = runCatching {
+    fun make(ctx: Context, f: File, px: Int = 128): androidx.compose.ui.graphics.ImageBitmap? = runCatching {
         val ext = f.extension.lowercase()
         val bmp: android.graphics.Bitmap? = when {
             ext in IMG -> {
                 val o = android.graphics.BitmapFactory.Options().apply { inJustDecodeBounds = true }
                 android.graphics.BitmapFactory.decodeFile(f.path, o)
                 var sample = 1
-                while (o.outWidth / (sample * 2) >= 128 && o.outHeight / (sample * 2) >= 128) sample *= 2
+                while (o.outWidth / (sample * 2) >= px && o.outHeight / (sample * 2) >= px) sample *= 2
                 android.graphics.BitmapFactory.decodeFile(f.path, android.graphics.BitmapFactory.Options().apply { inSampleSize = sample })
             }
-            ext in VID -> if (android.os.Build.VERSION.SDK_INT >= 29) android.media.ThumbnailUtils.createVideoThumbnail(f, android.util.Size(160, 160), null)
+            ext in VID -> if (android.os.Build.VERSION.SDK_INT >= 29) android.media.ThumbnailUtils.createVideoThumbnail(f, android.util.Size(px + 32, px + 32), null)
                 else android.media.MediaMetadataRetriever().let { r -> try { r.setDataSource(f.path); r.frameAtTime } finally { r.release() } }
             ext == "apk" -> ctx.packageManager.getPackageArchiveInfo(f.path, 0)?.applicationInfo?.let { ai ->
                 ai.sourceDir = f.path; ai.publicSourceDir = f.path
@@ -187,17 +193,28 @@ private object PickThumbs {
 }
 
 @Composable
-private fun RowIcon(f: File) {
+private fun RowIcon(f: File, box: androidx.compose.ui.unit.Dp = 44.dp, px: Int = 128, modifier: Modifier = Modifier) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
-    val img by produceState<androidx.compose.ui.graphics.ImageBitmap?>(PickThumbs.cache.get(f.path), f.path) {
-        if (value == null && f.isFile) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PickThumbs.make(ctx, f) }?.also { PickThumbs.cache.put(f.path, it) }
+    val key = f.path + "@" + px
+    val img by produceState<androidx.compose.ui.graphics.ImageBitmap?>(PickThumbs.cache.get(key), key) {
+        if (value == null && f.isFile) value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { PickThumbs.make(ctx, f, px) }?.also { PickThumbs.cache.put(key, it) }
     }
-    Box(Modifier.size(44.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+    Box(modifier.size(box).clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp)).background(T.panel), contentAlignment = Alignment.Center) {
         val b = img
         if (b != null) androidx.compose.foundation.Image(b, null, Modifier.fillMaxSize(), contentScale = androidx.compose.ui.layout.ContentScale.Crop)
-        else PIcon(if (f.isDirectory) "folder" else "details", if (f.isDirectory) T.accent else T.sub, 26.dp)
+        else PIcon(if (f.isDirectory) "folder" else "details", if (f.isDirectory) T.accent else T.sub, if (box > 60.dp) 40.dp else 26.dp)
     }
 }
+
+private val EXT_IMG = setOf("jpg", "jpeg", "png", "webp", "gif", "bmp", "heic", "heif")
+private val EXT_VID = setOf("mp4", "mkv", "webm", "3gp", "mov", "avi", "m4v", "ts")
+private val EXT_AUD = setOf("mp3", "m4a", "aac", "wav", "flac", "ogg", "opus", "wma", "amr")
+private val EXT_DOC = setOf("pdf", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "txt", "md", "csv", "rtf", "odt", "json", "xml", "html", "srt", "ass", "vtt")
+private val EXT_ARC = setOf("zip", "rar", "7z", "tar", "gz", "apk", "xapk", "apks")
+
+/** The type filter of the picker: 0 all, 1 pictures, 2 videos, 3 audio, 4 documents, 5 archives and apps. */
+private fun kindOf(f: File): Int = when (f.extension.lowercase()) { in EXT_IMG -> 1; in EXT_VID -> 2; in EXT_AUD -> 3; in EXT_DOC -> 4; in EXT_ARC -> 5; else -> 0 }
+private fun sizeText(b: Long) = when { b >= 1L shl 30 -> "%.1f GB".format(b / 1073741824.0); b >= 1L shl 20 -> "%.1f MB".format(b / 1048576.0); b >= 1024 -> "%d KB".format(b / 1024); else -> "$b B" }
 
 /** The places of the side panel: the phone's storage, its usual folders and any memory card. */
 private class PickPlace(val name: String, val dir: File, val icon: String)
@@ -214,73 +231,144 @@ private fun places(ctx: Context): List<PickPlace> {
     return out
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onCancel: () -> Unit, onPicked: (List<File>) -> Unit) {
     val ctx = androidx.compose.ui.platform.LocalContext.current
+    val sp = remember { ctx.getSharedPreferences("pulse_pick", Context.MODE_PRIVATE) }
     var top by remember { mutableStateOf(Environment.getExternalStorageDirectory()) }
     var cur by remember { mutableStateOf(top) }
     var name by remember { mutableStateOf(suggested) }
     var drawer by remember { mutableStateOf(false) }
+    var search by remember { mutableStateOf<String?>(null) }
+    var kind by remember { mutableStateOf(0) }
+    var sortBy by remember { mutableStateOf(sp.getInt("sort", 1)) }          // 0 name, 1 date, 2 size, 3 type
+    var desc by remember { mutableStateOf(sp.getBoolean("desc", true)) }
+    var grid by remember { mutableStateOf(sp.getBoolean("grid", true)) }
+    var sortMenu by remember { mutableStateOf(false) }
     val ticked = remember { mutableStateListOf<File>() }
     // the folder is read off the main thread: a folder with thousands of pictures must not freeze the window
-    val items by produceState<List<File>?>(null, cur, mode) {
+    val raw by produceState<List<File>?>(null, cur, mode) {
         value = null
         value = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
             val all = cur.listFiles().orEmpty().filter { !it.name.startsWith(".") }
-            all.filter { it.isDirectory }.sortedBy { it.name.lowercase() } +
-                (if (mode == "folder") emptyList() else all.filter { it.isFile && PulsePick.fits(it.name, mimes) }.sortedByDescending { it.lastModified() })
+            all.filter { it.isDirectory } + (if (mode == "folder") emptyList() else all.filter { it.isFile && PulsePick.fits(it.name, mimes) })
         }
     }
-    val up: () -> Unit = { if (drawer) drawer = false else if (cur != top) cur = cur.parentFile ?: top else onCancel() }
+    val q = search?.trim().orEmpty()
+    val list = raw?.let { l ->
+        val dirs = l.filter { it.isDirectory && (q.isEmpty() || it.name.contains(q, true)) }.sortedBy { it.name.lowercase() }
+        val cmp: Comparator<File> = when (sortBy) {
+            0 -> compareBy { it.name.lowercase() }
+            2 -> compareBy { it.length() }
+            3 -> compareBy<File> { it.extension.lowercase() }.thenBy { it.name.lowercase() }
+            else -> compareBy { it.lastModified() }
+        }
+        val files = l.filter { it.isFile && (kind == 0 || kindOf(it) == kind) && (q.isEmpty() || it.name.contains(q, true)) }.sortedWith(cmp).let { if (desc) it.reversed() else it }
+        dirs + files
+    }
+    val up: () -> Unit = { if (drawer) drawer = false else if (search != null) { search = null } else if (ticked.isNotEmpty()) ticked.clear() else if (cur != top) cur = cur.parentFile ?: top else onCancel() }
     BackHandler { up() }
+    fun open(f: File) {
+        when {
+            f.isDirectory -> { cur = f; ticked.clear() }
+            mode == "multi" -> if (f in ticked) ticked.remove(f) else ticked.add(f)
+            mode == "save" -> name = f.name
+            else -> onPicked(listOf(f))
+        }
+    }
+    val sel = ticked.isNotEmpty()
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.size(44.dp).clickable { drawer = !drawer }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 24.dp) }
-                if (cur != top) Box(Modifier.size(40.dp).clickable { cur = cur.parentFile ?: top }, contentAlignment = Alignment.Center) { PIcon("chevron", T.text, 20.dp, Modifier.rotate(180f)) }
-                Text(cur.path.removePrefix(top.path).ifEmpty { "/" }, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 6.dp))
-                Box(Modifier.size(44.dp).clickable { onCancel() }, contentAlignment = Alignment.Center) { PIcon("close", T.text, 22.dp) }
-            }
-            val list = items
-            if (list == null) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { PLoader(Modifier.size(28.dp)) }
-            else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
-                items(list, key = { it.path }) { f ->
-                    val on = f in ticked
-                    Row(
-                        Modifier.fillMaxWidth().background(if (on) T.accent.copy(alpha = .18f) else androidx.compose.ui.graphics.Color.Transparent)
-                            .clickable {
-                                when {
-                                    f.isDirectory -> cur = f
-                                    mode == "multi" -> if (on) ticked.remove(f) else ticked.add(f)
-                                    mode == "save" -> name = f.name
-                                    else -> onPicked(listOf(f))
-                                }
-                            }.padding(horizontal = 14.dp, vertical = 7.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RowIcon(f)
-                        Spacer(Modifier.width(14.dp))
-                        Text(f.name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                        if (mode == "multi" && f.isFile) PCheck(on, { if (on) ticked.remove(f) else ticked.add(f) })
+            // the bar on top (there is none at the bottom): places, the folder, search, sort, view; with files ticked it shows their number and the tick that takes them
+            Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                if (sel) {
+                    Box(Modifier.size(44.dp).clickable { ticked.clear() }, contentAlignment = Alignment.Center) { PIcon("close", T.text, 22.dp) }
+                    Text("${ticked.size}", color = T.text, fontSize = 18.sp, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f).padding(horizontal = 6.dp))
+                    Box(Modifier.size(44.dp).clickable { ticked.clear(); ticked.addAll((list ?: emptyList()).filter { it.isFile }) }, contentAlignment = Alignment.Center) { PIcon("selectAll", T.text, 22.dp) }
+                    Box(Modifier.size(48.dp).clickable { onPicked(ticked.toList()) }, contentAlignment = Alignment.Center) { PIcon("check", T.accent, 26.dp) }
+                } else {
+                    Box(Modifier.size(44.dp).clickable { drawer = !drawer }, contentAlignment = Alignment.Center) { PIcon("menu", T.text, 24.dp) }
+                    if (cur != top) Box(Modifier.size(40.dp).clickable { cur = cur.parentFile ?: top }, contentAlignment = Alignment.Center) { PIcon("chevron", T.text, 20.dp, Modifier.rotate(180f)) }
+                    if (search != null) {
+                        androidx.compose.foundation.text.BasicTextField(
+                            search.orEmpty(), { search = it }, singleLine = true, textStyle = androidx.compose.ui.text.TextStyle(color = T.text, fontSize = 16.sp),
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(T.accent), modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 10.dp),
+                        )
+                    } else Text(cur.path.removePrefix(top.path).ifEmpty { "/" }, color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 6.dp))
+                    Box(Modifier.size(40.dp).clickable { search = if (search == null) "" else null }, contentAlignment = Alignment.Center) { PIcon("search", T.text, 22.dp) }
+                    Box {
+                        Box(Modifier.size(40.dp).clickable { sortMenu = true }, contentAlignment = Alignment.Center) { PIcon("sort", T.text, 22.dp) }
+                        androidx.compose.material3.DropdownMenu(sortMenu, { sortMenu = false }, containerColor = androidx.compose.ui.graphics.Color(0xF2101010)) {
+                            listOf(tr("Name", "Ad"), tr("Date", "Tarih"), tr("Size", "Boyut"), tr("Type", "Tür")).forEachIndexed { i, n ->
+                                androidx.compose.material3.DropdownMenuItem(
+                                    text = { Text(n, color = if (sortBy == i) T.accent else androidx.compose.ui.graphics.Color.White, fontSize = 14.sp) },
+                                    onClick = { if (sortBy == i) desc = !desc else sortBy = i; sp.edit().putInt("sort", sortBy).putBoolean("desc", desc).apply(); sortMenu = false },
+                                    trailingIcon = if (sortBy == i) ({ PIcon(if (desc) "down" else "up", T.accent, 16.dp) }) else null,
+                                )
+                            }
+                        }
                     }
+                    Box(Modifier.size(40.dp).clickable { grid = !grid; sp.edit().putBoolean("grid", grid).apply() }, contentAlignment = Alignment.Center) { PIcon(if (grid) "listView" else "gridView", T.text, 22.dp) }
+                    Box(Modifier.size(40.dp).clickable { onCancel() }, contentAlignment = Alignment.Center) { PIcon("close", T.text, 22.dp) }
+                    if (mode == "folder") Box(Modifier.size(48.dp).clickable { onPicked(listOf(cur)) }, contentAlignment = Alignment.Center) { PIcon("check", T.accent, 26.dp) }
                 }
             }
-            if (mode == "folder") Row(Modifier.fillMaxWidth().padding(10.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                PIcon("folder", T.sub, 20.dp)
-                Text(cur.name.ifEmpty { "/" }, color = T.sub, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f).padding(horizontal = 10.dp))
-                Box(Modifier.size(48.dp).clickable { onPicked(listOf(cur)) }, contentAlignment = Alignment.Center) { PIcon("check", T.accent, 26.dp) }
-            }
-            if (mode == "multi") Row(Modifier.fillMaxWidth().padding(10.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                Text("${ticked.size}", color = T.sub, fontSize = 15.sp, modifier = Modifier.padding(end = 12.dp))
-                Box(Modifier.size(48.dp).clickable(enabled = ticked.isNotEmpty()) { onPicked(ticked.toList()) }, contentAlignment = Alignment.Center) { PIcon("check", if (ticked.isNotEmpty()) T.accent else T.sub, 26.dp) }
-            }
-            if (mode == "save") Row(Modifier.fillMaxWidth().padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (mode == "save") Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                 PNameField(name, { name = it }, "", Modifier.weight(1f))
                 Box(Modifier.size(48.dp).clickable(enabled = name.isNotBlank()) {
                     val f = File(cur, name.trim())
                     runCatching { if (!f.exists()) f.createNewFile() }
                     onPicked(listOf(f))
                 }, contentAlignment = Alignment.Center) { PIcon("check", if (name.isNotBlank()) T.accent else T.sub, 26.dp) }
+            }
+            // what to show: the kinds of files in this folder
+            if (mode != "folder") Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 10.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(tr("All", "Hepsi"), tr("Pictures", "Resimler"), tr("Videos", "Videolar"), tr("Audio", "Ses"), tr("Documents", "Belgeler"), tr("Archives", "Arşivler")).forEachIndexed { i, n -> PChip(kind == i, n) { kind = i } }
+            }
+            if (list == null) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { PLoader(Modifier.size(28.dp)) }
+            else if (list.isEmpty()) Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) { PIcon("folder", T.sub, 48.dp) }
+            else if (grid) androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
+                androidx.compose.foundation.lazy.grid.GridCells.Adaptive(112.dp), Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(list, key = { it.path }) { f ->
+                    val on = f in ticked
+                    Column(
+                        Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(if (on) T.accent.copy(alpha = .22f) else androidx.compose.ui.graphics.Color.Transparent)
+                            .combinedClickable(onClick = { if (sel && f.isFile && mode != "save") { if (on) ticked.remove(f) else ticked.add(f) } else open(f) },
+                                onLongClick = { if (f.isFile && (mode == "multi" || mode == "open")) { if (mode == "open") onPicked(listOf(f)) else if (on) ticked.remove(f) else ticked.add(f) } })
+                            .padding(4.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
+                            RowIcon(f, box = 112.dp, px = 256, modifier = Modifier.fillMaxSize())
+                            if (on) Box(Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp).clip(androidx.compose.foundation.shape.CircleShape).background(T.accent), contentAlignment = Alignment.Center) { PIcon("check", androidx.compose.ui.graphics.Color.White, 14.dp) }
+                        }
+                        Text(f.name, color = T.text, fontSize = 12.sp, maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                        if (f.isFile) Text(sizeText(f.length()), color = T.sub, fontSize = 10.sp, maxLines = 1)
+                    }
+                }
+            }
+            else LazyColumn(Modifier.weight(1f).fillMaxWidth()) {
+                items(list, key = { it.path }) { f ->
+                    val on = f in ticked
+                    Row(
+                        Modifier.fillMaxWidth().background(if (on) T.accent.copy(alpha = .18f) else androidx.compose.ui.graphics.Color.Transparent)
+                            .combinedClickable(onClick = { if (sel && f.isFile && mode != "save") { if (on) ticked.remove(f) else ticked.add(f) } else open(f) },
+                                onLongClick = { if (f.isFile && (mode == "multi" || mode == "open")) { if (mode == "open") onPicked(listOf(f)) else if (on) ticked.remove(f) else ticked.add(f) } })
+                            .padding(horizontal = 14.dp, vertical = 7.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RowIcon(f, px = 128)
+                        Spacer(Modifier.width(14.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(f.name, color = T.text, fontSize = 15.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            if (f.isFile) Text(sizeText(f.length()) + " · " + java.text.DateFormat.getDateInstance(java.text.DateFormat.MEDIUM).format(java.util.Date(f.lastModified())), color = T.sub, fontSize = 12.sp, maxLines = 1)
+                        }
+                        if (mode == "multi" && f.isFile) PCheck(on, { if (on) ticked.remove(f) else ticked.add(f) })
+                    }
+                }
             }
         }
         // the side panel of the three-line button: where to go
@@ -299,3 +387,4 @@ private fun PickerBody(mode: String, mimes: List<String>, suggested: String, onC
         }
     }
 }
+
