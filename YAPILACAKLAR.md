@@ -2164,3 +2164,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Klavye: fiziksel klavye algısı (yapılandırma + giriş cihazları + canlı dinleyici + ilk tuş), böylece açılışta doğru düzen ve fiziksel yazarken öneri/oto düzeltme; yeni alanın düzeni anında uygulanır (derlenmedi)
 
 - Klavye (fiziksel): pano/kilit/menü sayfaları artık gerçekten açılır, çeviri çubuğu kesilmez ve ekran dibinden yukarıda; çeviri açıkken Tab çeviriyi koyar, Enter koyup gönderir; çeviri kaynağı Google (gtx) önce, sonra Lingva, en son MyMemory (derlenmedi)
+
+- Klavye: yan boşluk en çok 200 dp (ayar ve yeniden boyutlandırma paneli) (derlenmedi)

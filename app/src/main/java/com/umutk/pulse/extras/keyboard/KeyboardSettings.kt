@@ -264,7 +264,7 @@ fun KeyboardSettings(back: () -> Unit) {
             Text("${tr("Gamepad sticks height", "Gamepad joystick yüksekliği")}: ${KeyboardPrefs.padLift}", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.padLift / 40f, { KeyboardPrefs.padLift = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Side space", "Yan boşluk")}: ${KeyboardPrefs.sidePad} dp", color = T.sub, fontSize = 12.sp)
-            PSlider(KeyboardPrefs.sidePad / 40f, { KeyboardPrefs.sidePad = (it * 40).roundToInt() }, 0f..1f, onDone = { save() })
+            PSlider(KeyboardPrefs.sidePad / 200f, { KeyboardPrefs.sidePad = (it * 200).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("Space between keys", "Tuşlar arası boşluk")}: ${KeyboardPrefs.keyGap} dp", color = T.sub, fontSize = 12.sp)
             PSlider(KeyboardPrefs.keyGap / 8f, { KeyboardPrefs.keyGap = (it * 8).roundToInt() }, 0f..1f, onDone = { save() })
             Text("${tr("?123 key narrower", "?123 tuşu daha dar")}: ${KeyboardPrefs.modeShrink}%", color = T.sub, fontSize = 12.sp)
