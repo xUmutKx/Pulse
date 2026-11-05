@@ -18,14 +18,14 @@ internal object SubStore {
     fun save(c: Context, v: VideoItem, src: Uri, name: String): Uri? = runCatching {
         val bytes = (if (src.scheme == "file") File(src.path!!).inputStream() else c.contentResolver.openInputStream(src))?.use { it.readBytes() } ?: return null
         val ext = name.substringAfterLast('.', "srt").lowercase().takeIf { it in subExts } ?: "srt"
-        forget(c, v.key)
-        val out = File(dir(c), (v.key.hashCode().toLong() and 0xffffffffL).toString() + "." + ext)
+        forget(c, v.subKey)
+        val out = File(dir(c), (v.subKey.hashCode().toLong() and 0xffffffffL).toString() + "." + ext)
         out.writeBytes(bytes)
-        val e = sp(c).edit().putString("f:" + v.key, out.path).putString("n:" + v.key, name).remove("off:" + v.key)
+        val e = sp(c).edit().putString("f:" + v.subKey, out.path).putString("n:" + v.subKey, name).remove("off:" + v.subKey)
         // next to the video, so other players find it too
         if (v.local && v.path.isNotBlank() && com.umutk.pulse.Compat.isStorageManager()) runCatching {
             val side = File(File(Environment.getExternalStorageDirectory(), v.path), v.name.substringBeforeLast('.') + "." + ext)
-            if (!side.exists()) { side.writeBytes(bytes); e.putString("s:" + v.key, side.path) }
+            if (!side.exists()) { side.writeBytes(bytes); e.putString("s:" + v.subKey, side.path) }
         }
         e.apply()
         Uri.fromFile(out)
@@ -53,7 +53,8 @@ internal object SubStore {
     /** Subtitles of device videos that are gone are deleted; [alive] is every video the media index lists now. */
     fun prune(c: Context, alive: Set<String>) {
         if (alive.isEmpty()) return
-        sp(c).all.keys.filter { it.startsWith("f:content://media/") }.map { it.substring(2) }.filter { it !in alive }.forEach { forget(c, it) }
+        // by name and size ("nm:") only for a video whose folder was read: a subtitle is dropped when its video is gone from the phone
+        sp(c).all.keys.filter { it.startsWith("f:content://media/") || it.startsWith("f:nm:") }.map { it.substring(2) }.filter { it !in alive }.forEach { forget(c, it) }
     }
 }
 
