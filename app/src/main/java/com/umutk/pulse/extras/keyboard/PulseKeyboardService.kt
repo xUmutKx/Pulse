@@ -638,10 +638,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // typing fast: the bar had no time to catch up with the word (every new letter restarts its work), so the correction is worked out right now, here, for exactly this word
         if (t == null && correct && typed.length >= 2 && !typed.contains('\'') && KeyboardPrefs.autocorrect && KeyboardPrefs.suggestions && !st.plain && !urlNow() && !targetFor.equals(typed, true))
             t = runCatching {
-                // never longer than a few frames: the work runs on its own thread and is given 40 ms, so typing cannot hang here (no correction is better than a frozen keyboard)
+                // never longer than a few frames: the work runs on its own thread and is given 90 ms, so typing cannot hang here (no correction is better than a frozen keyboard)
                 val code = st.lang; val loc = lang.locale; val pw = prevWord; val pw2 = prevWord2; val up = st.shift > 0
                 val f = corrExec.submit<String?> { compute(code, loc, typed, pw, up, pw2).third }
-                try { f.get(40, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); null }
+                try { f.get(90, java.util.concurrent.TimeUnit.MILLISECONDS) } catch (e: java.util.concurrent.TimeoutException) { f.cancel(true); null }
             }.getOrNull()
         // "word.next" typed together: a space (and a capital) after the period, unless the next word is a domain ending, ends with a dot itself, or is no word at all
         var spaceBefore = false
@@ -1553,8 +1553,11 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         st.slots = listOf(st.slots.getOrElse(0) { "" }, st.slots.getOrElse(1) { "" }, label)
     }
 
+    // a run that is still working is not cancelled by each new letter: typing faster than it finishes would then never get an answer at all.
+    // It finishes (its result is dropped when the word has moved on) and one more run for the newest text follows at once.
+    private var rerunNeeded = false
+
     private fun updateSuggestions() {
-        job?.cancel()
         if (st.trans) scheduleTrans()
         if (emailField || atTokenNow()) { emailSuggestions(); return }
         // a name field: the names typed in such fields before
@@ -1592,6 +1595,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 slotWords = arrayOf(starts[0], starts[1], starts[2]); st.slots = starts; target = null; showClipSlot(); return
             }
         }
+        if (job?.isActive == true) { rerunNeeded = true; return }
         job = scope.launch {
             // first the completions alone (a prefix look-up, no waiting), then the same with the corrections
             if (typed.length >= 2) {
@@ -1607,6 +1611,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
                 else { target = res.third; targetFor = typed; val wd = widenBar(res.second, res.first, typed, code, prev, up); slotWords = wd.second; st.slots = wd.first }
                 showClipSlot()
             }
+            // the word moved on while this ran: the answer for the newest text is worked out now
+            if (rerunNeeded) { rerunNeeded = false; scope.launch { updateSuggestions() } }
         }
     }
 
