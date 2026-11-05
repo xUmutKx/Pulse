@@ -1089,7 +1089,7 @@ private fun nextTriggerMillis(ctx: android.content.Context, alarm: AlarmEntity, 
             guard++
         }
     }
-    return com.umutk.pulse.extras.lucid.receiver.AlarmSkip.adjust(ctx, alarm.id, alarm.hour, alarm.minute, days, target.timeInMillis)
+    return com.umutk.pulse.extras.lucid.receiver.AlarmSkip.adjust(ctx, alarm.id, alarm.hour, alarm.minute, days, target.timeInMillis, clearOld = false)
 }
 
 private fun formatCountdownLines(diffMillis: Long): String {

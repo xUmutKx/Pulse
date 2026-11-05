@@ -127,7 +127,10 @@ data class AlarmEntity(
 
     val deletedAt: Long = 0L,
 
-    val trashedGroup: String = ""
+    val trashedGroup: String = "",
+
+    /** The one ring that was switched off on purpose ("Turn back on for Monday"): its moment, 0 when none. Kept with the alarm, so it lives and dies with the alarm's own data. */
+    val skipRingAt: Long = 0L
 ) {
     val daysOfWeek: Set<Int>
         get() = if (repeatDays.isBlank()) {
