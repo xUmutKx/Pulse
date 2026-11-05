@@ -2217,3 +2217,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Hava durumu: bulut ve kar animasyonları kesintisiz döngü (bulutlar kendi 60 sn'lik döngüsünde tam sayıda tur atar, başa dönerken atlamaz) (derlenmedi)
 - Klavye: geniş ekranda (600 dp ve üstü) emoji/sembol/metin-ve-sanat sayfası solda, tuşlar sağda yan yana; dar ekranda "Metninizi yazın" kutusuna basınca kutu + stil satırı + tuşlar açılır, geri okuyla dönülür (derlenmedi)
 - Klavye yan boşluk: sınır (ekran genişliği - 240) / 2 idi, dar telefonda 40 dp'de kalıyordu; artık klavye en az 140 dp genişliğe inene kadar artar, klavye ortada kalır (derlenmedi)
+- Klavye "Derli toplu düzen" (Samsung klavyesi gibi) seçeneği: tuşlar bitişik (aralık en fazla 1 dp), klavye ekranın seçilen yüzdesinde (varsayılan 66%) ve ortada, yanlar boş; Ayarlar > Boyut bölümünde anahtar + genişlik kaydırıcısı; kapalıyken normal düzen aynen kalır (derlenmedi)
