@@ -948,7 +948,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
             word.clear(); target = null
             // a tapped suggestion that is not a completion: this typo means that word from now on
             if (!isEmoji && KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learnTypo(this, typed.lowercase(lang.locale), w.lowercase(lang.locale))
-            if (isEmoji) { c.commitText("$typed $w ", 1) } else {
+            if (isEmoji) { c.commitText("$w ", 1) } else {
                 c.commitText("$w ", 1)
                 if (KeyboardPrefs.learn && !st.plain && !st.incognito) KeyboardDictionary.learn(this, prevWord, w)
                 prevWord = w
@@ -1578,8 +1578,10 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         // right after an automatic correction the bar shows what was typed, quoted at the left, so it can be put back with a tap or kept with a long press
         val shown = lastCorrection
         if (typed.isEmpty() && shown != null) {
-            slotWords = arrayOf("", "", ""); target = null
-            st.slots = listOf("\"${shown.original}\"", shown.corrected, "")
+            // the emoji of the word that was just written stays on offer at the right: a tap writes it after the word, which stays
+            val em = if (KeyboardPrefs.emojiPredictions) (KeyboardDictionary.emoji(shown.corrected) ?: EmojiData.forWord(shown.corrected)).orEmpty() else ""
+            slotWords = arrayOf("", "", em); target = null
+            st.slots = listOf("\"${shown.original}\"", shown.corrected, em)
             return
         }
         // the start of the field or of a sentence: the words a sentence begins with, before anything has been typed
