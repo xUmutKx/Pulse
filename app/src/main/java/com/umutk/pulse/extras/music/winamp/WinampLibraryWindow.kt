@@ -3,6 +3,8 @@ package com.umutk.pulse.extras.music.winamp
 import android.content.Context
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.ui.graphics.SolidColor
@@ -98,19 +100,19 @@ fun WinampLibraryWindow(skin: WinampSkin, engine: MusicPlayerEngine, onClose: ()
         loading = false
     }
 
-    Column(Modifier.width((WINAMP_W * scaleDp).dp).background(c.normalBg).padding((4 * scaleDp).dp)) {
-        Row(Modifier.fillMaxWidth().height((20 * scaleDp).dp).background(c.selectedBg), verticalAlignment = Alignment.CenterVertically) {
-            Text(tr("MEDIA LIBRARY", "MEDYA KÜTÜPHANESİ"), color = c.current, fontFamily = font, fontSize = fs,
-                modifier = Modifier.weight(1f).padding(start = (4 * scaleDp).dp))
-            Text("X", color = c.current, fontFamily = font, fontSize = fs, modifier = Modifier.clickable { onClose() }.padding(horizontal = (4 * scaleDp).dp))
+    Column(Modifier.width((WINAMP_W * scaleDp).dp).background(c.normalBg)) {
+        // the title bar of the playlist window; its right corner closes the window
+        Box {
+            WinampTitleStrip(skin, tr("MEDIA LIBRARY", "MEDYA KÜTÜPHANESİ"), scaleDp)
+            Box(Modifier.align(Alignment.CenterEnd).size((25 * scaleDp).dp, (20 * scaleDp).dp).clickable { onClose() })
         }
-        Row(Modifier.fillMaxWidth().padding(vertical = (3 * scaleDp).dp)) {
+        Row(Modifier.fillMaxWidth().padding(start = (4 * scaleDp).dp, end = (4 * scaleDp).dp, top = (3 * scaleDp).dp, bottom = (3 * scaleDp).dp)) {
             listOf(tr("LIBRARY", "KÜTÜPHANE"), tr("RADIO", "RADYO")).forEachIndexed { i, label ->
                 Text(label, color = if (tab == i) c.current else c.normal, fontFamily = font, fontSize = fs,
                     modifier = Modifier.clickable { tab = i }.padding(horizontal = (6 * scaleDp).dp, vertical = (2 * scaleDp).dp))
             }
         }
-        LazyColumn(Modifier.fillMaxWidth().height((190 * scaleDp).dp).background(c.normalBg)) {
+        LazyColumn(Modifier.fillMaxWidth().padding(horizontal = (4 * scaleDp).dp).padding(bottom = (4 * scaleDp).dp).height((190 * scaleDp).dp).background(c.normalBg)) {
             if (tab == 0) {
                 if (tracks.isEmpty()) item { Text(tr("No music found yet", "Henüz müzik bulunamadı"), color = c.normal, fontFamily = font, fontSize = fs, modifier = Modifier.padding(4.dp)) }
                 itemsIndexed(tracks) { i, t ->
