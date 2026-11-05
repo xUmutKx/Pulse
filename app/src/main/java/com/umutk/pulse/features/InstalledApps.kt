@@ -79,7 +79,7 @@ fun measureApps(ctx: Context): List<AppEntry> {
         val sized = if (P.mode != P.Mode.None) runCatching {
             val script = hidden.joinToString("; ") { a ->
                 val k = a.packageName
-                "echo \"$k \$(du -sk /data/app/*/$k-* /data/app/$k-* /data/data/$k /storage/emulated/0/Android/data/$k /storage/emulated/0/Android/obb/$k /storage/emulated/0/Android/media/$k 2>/dev/null | awk '{ if (!seen[\$2]++) s += \$1 } END { print s * 1024 }')\""
+                "echo \"$k \$(du -sk /data/app/*/$k-* /data/app/$k-* /data/data/$k /data/user_de/0/$k /storage/emulated/0/Android/data/$k /storage/emulated/0/Android/obb/$k /storage/emulated/0/Android/media/$k 2>/dev/null | awk '{ if (!seen[\$2]++) s += \$1 } END { print s * 1024 }')\""
             }
             P.run(script).text.lines().mapNotNull { l -> l.trim().split(' ').takeIf { it.size == 2 }?.let { it[0] to (it[1].toDoubleOrNull()?.toLong() ?: 0L) } }.toMap()
         }.getOrDefault(emptyMap()) else emptyMap()

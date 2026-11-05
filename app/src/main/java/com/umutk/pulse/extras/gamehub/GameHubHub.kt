@@ -224,6 +224,19 @@ private fun setGameHidden(c: Context, pkg: String, hide: Boolean, quiet: Boolean
     return ok
 }
 
+/** A shortcut of the game for the home screen: a tap starts it through [GameLaunch], which shows a hidden game for its start. */
+internal fun pinGame(c: Context, pkg: String): Boolean {
+    val name = prefs(c).getString("name_$pkg", null) ?: runCatching { c.packageManager.let { it.getApplicationLabel(it.getApplicationInfo(pkg, 0)).toString() } }.getOrDefault(pkg)
+    val bmp = runCatching { android.graphics.BitmapFactory.decodeFile(iconFile(c, pkg).path) }.getOrNull()
+        ?: runCatching { c.packageManager.getApplicationIcon(pkg).toBitmap(128, 128) }.getOrNull()
+    val info = androidx.core.content.pm.ShortcutInfoCompat.Builder(c, "game_$pkg").setShortLabel(name)
+        .setIntent(android.content.Intent(c, GameLaunch::class.java).setAction(android.content.Intent.ACTION_VIEW).putExtra("pkg", pkg))
+        .also { b -> bmp?.let { b.setIcon(androidx.core.graphics.drawable.IconCompat.createWithBitmap(it)) } }.build()
+    val ok = androidx.core.content.pm.ShortcutManagerCompat.isRequestPinShortcutSupported(c) && androidx.core.content.pm.ShortcutManagerCompat.requestPinShortcut(c, info, null)
+    if (!ok) toast(c, tr("This launcher cannot pin shortcuts", "Bu başlatıcı kısayol sabitleyemiyor"))
+    return ok
+}
+
 /** Frees the memory the background apps hold (the cleanup of a game boost). */
 private fun freeMemory(c: Context) {
     val out = Privilege.run("am kill-all")
@@ -231,7 +244,7 @@ private fun freeMemory(c: Context) {
 }
 
 /** Opens the game itself (its launch activity). */
-private fun openGame(c: Context, pkg: String) {
+internal fun openGame(c: Context, pkg: String) {
     val pm = c.packageManager
     // the launch activity; when the system gives none, the launcher activity of the package; else the root or Shizuku shell starts it
     val launcher = android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER).setPackage(pkg)
@@ -513,13 +526,16 @@ private fun GamePanel(g: GameRow, pal: Pal, can: Boolean, total: Long, lastUsed:
         }
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp).offset(y = (-18).dp)) {
             if (!can) Text(tr("Root or Shizuku is not connected: the hide and background switches are off. Press Check again in Settings.", "Root ya da Shizuku bağlı değil: gizleme ve arka plan anahtarları kapalı. Ayarlar'da Yeniden kontrol et'e bas."), color = pal.sub, fontSize = 12.sp, modifier = Modifier.padding(bottom = 8.dp))
-            // the big Play button
-            Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(pal.accent).clickable { openGame(ctx, g.pkg) }.padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    FluentIcon("play", pal.bg, 22.dp)
-                    Spacer(Modifier.width(8.dp))
-                    Text(tr("Play", "Oyna"), color = pal.bg, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+            // the big Play button, and a shortcut of the game for the home screen (a hidden game starts from it too)
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(pal.accent).clickable { openGame(ctx, g.pkg) }.padding(vertical = 14.dp), contentAlignment = Alignment.Center) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        FluentIcon("play", pal.bg, 22.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(tr("Play", "Oyna"), color = pal.bg, fontSize = 17.sp, fontWeight = FontWeight.Bold)
+                    }
                 }
+                Box(Modifier.size(50.dp).clip(RoundedCornerShape(12.dp)).background(pal.card).clickable { pinGame(ctx, g.pkg) }, contentAlignment = Alignment.Center) { FluentIcon("add", pal.text, 22.dp) }
             }
             Spacer(Modifier.height(16.dp))
             // the facts: total time, last played
@@ -911,13 +927,13 @@ private fun SectionTitle(pal: Pal, label: String) {
  */
 private fun appSize(c: Context, pkg: String): Long {
     val p = prefs(c)
-    val cached = p.getLong("size_$pkg", 0L)
-    val age = System.currentTimeMillis() - p.getLong("sizet_$pkg", 0L)
+    val cached = p.getLong("size2_$pkg", 0L)
+    val age = System.currentTimeMillis() - p.getLong("sizet2_$pkg", 0L)
     if (cached > 0 && age in 0..43_200_000L) return cached
     var best = 0L
     // the program files: the base APK and every split
     runCatching {
-        val ai = c.packageManager.getApplicationInfo(pkg, 0)
+        @Suppress("DEPRECATION") val ai = c.packageManager.getApplicationInfo(pkg, android.content.pm.PackageManager.MATCH_UNINSTALLED_PACKAGES)
         var apk = java.io.File(ai.sourceDir).length()
         ai.splitSourceDirs?.forEach { apk += java.io.File(it).length() }
         best = maxOf(best, apk)
@@ -931,12 +947,12 @@ private fun appSize(c: Context, pkg: String): Long {
     // root or Shizuku: the folders of the game, hidden or not (program, data, the OBB and the media folder)
     if (Privilege.mode != Privilege.Mode.None) runCatching {
         val out = Privilege.run(
-            "du -sk /data/app/*/$pkg-* /data/app/$pkg-* /data/data/$pkg /storage/emulated/0/Android/data/$pkg /storage/emulated/0/Android/obb/$pkg /storage/emulated/0/Android/media/$pkg 2>/dev/null " +
+            "du -sk /data/app/*/$pkg-* /data/app/$pkg-* /data/data/$pkg /data/user_de/0/$pkg /storage/emulated/0/Android/data/$pkg /storage/emulated/0/Android/obb/$pkg /storage/emulated/0/Android/media/$pkg 2>/dev/null " +
                 "| awk '{ if (!seen[\$2]++) s += \$1 } END { print s * 1024 }'"
         ).text.lines().lastOrNull { it.isNotBlank() }?.trim()?.toDoubleOrNull()?.toLong() ?: 0L
         best = maxOf(best, out)
     }
-    if (best > 0) { p.edit().putLong("size_$pkg", best).putLong("sizet_$pkg", System.currentTimeMillis()).apply(); return best }
+    if (best > 0) { p.edit().putLong("size2_$pkg", best).putLong("sizet2_$pkg", System.currentTimeMillis()).apply(); return best }
     return cached
 }
 
