@@ -113,6 +113,7 @@ fun SubScreen(id: String, back: () -> Unit) {
         id == "mediatools" -> com.umutk.pulse.extras.mediatools.MediaToolsScreen(back)
         id == "netusage" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.NetUsageScreen(back) }
         id == "guide" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.GuidePage() }
+        id == "vault" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.VaultScreen(back) }
         id == "authenticator" -> { androidx.activity.compose.BackHandler { back() }; com.umutk.pulse.features.AuthenticatorScreen(back) }
         id == "video" -> com.umutk.pulse.extras.video.VideoHub(back)
         id == "music" -> com.umutk.pulse.extras.music.MusicHub(back)
