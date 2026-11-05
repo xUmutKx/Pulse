@@ -42,6 +42,8 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.FolderOpen
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -142,7 +144,8 @@ fun VideoHub(onBack: () -> Unit) {
     var settings by remember { mutableStateOf(false) }
     var unlocked by remember { mutableStateOf(!prefs.lockOn) }
     var search by remember { mutableStateOf<String?>(null) }
-    var menuFor by remember { mutableStateOf<VideoItem?>(null) }
+    var sel by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var selMenu by remember { mutableStateOf(false) }
     var infoFor by remember { mutableStateOf<VideoItem?>(null) }
     val netScope = rememberCoroutineScope()
     var renameFor by remember { mutableStateOf<VideoItem?>(null) }
@@ -175,6 +178,7 @@ fun VideoHub(onBack: () -> Unit) {
     }
     BackHandler(enabled = play == null && !settings) {
         when {
+            sel.isNotEmpty() -> sel = emptySet()
             search != null -> search = null
             at != null && prefs.browse == 2 && at != "" -> at = parentOf(at!!).takeIf { it.isNotEmpty() } ?: ""
             at != null && prefs.browse != 2 -> at = null
@@ -188,6 +192,28 @@ fun VideoHub(onBack: () -> Unit) {
         return
     }
     if (settings) { VideoSettings(prefs, { settings = false }) { skinId = prefs.skin; rev++ }; return }
+
+    val toggle: (VideoItem) -> Unit = { v -> sel = if (v.key in sel) sel - v.key else sel + v.key }
+    val deleteVideos: (List<VideoItem>) -> Unit = { vs ->
+        val loc = vs.filter { it.local }
+        if (loc.isNotEmpty()) {
+            if (android.os.Build.VERSION.SDK_INT >= 30) sender.launch(IntentSenderRequest.Builder(MediaStore.createDeleteRequest(ctx.contentResolver, loc.map { it.uri }).intentSender).build())
+            else loc.forEach { runCatching { ctx.contentResolver.delete(it.uri, null, null) } }
+        }
+        sel = emptySet(); rev++
+    }
+    // the actions of one video, in the order of [videoActs]
+    val act: (Int, VideoItem) -> Unit = { i, v ->
+        when (i) {
+            0 -> play = Play(listOf(v), 0)
+            1 -> infoFor = v
+            2 -> shareVideo(ctx, v)
+            3 -> renameFor = v
+            4 -> deleteVideos(listOf(v))
+            5 -> { prefs.hidden = prefs.hidden + fk(v); sel = emptySet(); rev++ }
+            6 -> { prefs.forget(v.key); sel = emptySet(); rev++ }
+        }
+    }
 
     val sk = skinOf(skinId)
     val browse = prefs.browse
@@ -225,19 +251,44 @@ fun VideoHub(onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().background(sk.bg)) {
         Row(Modifier.fillMaxWidth().background(sk.top).padding(horizontal = 8.dp, vertical = if (sk.bevel) 2.dp else 0.dp), verticalAlignment = Alignment.CenterVertically) {
-            SkinBtn(sk, { if (search != null) search = null else if (at != null && !(tree && at == "")) at = if (tree) parentOf(at!!) else null else onBack() }) { PIcon("back", sk.topFg, 24.dp) }
-            if (search != null) {
+            SkinBtn(sk, { if (sel.isNotEmpty()) sel = emptySet() else if (search != null) search = null else if (at != null && !(tree && at == "")) at = if (tree) parentOf(at!!) else null else onBack() }) { PIcon("back", sk.topFg, 24.dp) }
+            if (sel.isNotEmpty()) {
+                Text(sel.size.toString(), Modifier.weight(1f).padding(start = 8.dp), color = sk.topFg, fontSize = 18.sp)
+            } else if (search != null) {
                 BasicTextField(
                     search.orEmpty(), { search = it }, singleLine = true,
                     textStyle = TextStyle(color = sk.topFg, fontSize = 16.sp), cursorBrush = SolidColor(sk.topFg),
                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp, vertical = 12.dp),
                 )
             } else Text(title, Modifier.weight(1f), color = sk.topFg, fontSize = 18.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            SkinBtn(sk, { search = if (search == null) "" else null }) { PIcon("search", sk.topFg, 24.dp) }
-            SkinBtn(sk, { optDialog = true }) { PIcon("sort", sk.topFg, 24.dp) }
-            SkinBtn(sk, { pick.launch(arrayOf("video/*")) }) { PIcon("folder", sk.topFg, 24.dp) }
-            SkinBtn(sk, { urlDialog = true }) { PIcon("wifi", sk.topFg, 24.dp) }
-            SkinBtn(sk, { settings = true }) { PIcon("settings", sk.topFg, 24.dp) }
+            if (sel.isNotEmpty()) {
+                val chosen = videos.orEmpty().filter { it.key in sel }
+                SkinBtn(sk, { deleteVideos(chosen) }) { PIcon("delete", sk.topFg, 24.dp) }
+                Box {
+                    SkinBtn(sk, { selMenu = true }) { com.umutk.pulse.extras.ui.TIcon("more", sk.topFg, 24.dp, sk.icons) }
+                    DropdownMenu(selMenu, { selMenu = false }, containerColor = Color(0xF2101010)) {
+                        val one = chosen.singleOrNull()
+                        val items = buildList<Pair<String, () -> Unit>> {
+                            add(tr("Select all", "Hepsini seç") to { sel = sel + list.map { it.key } })
+                            if (one != null) {
+                                add(tr("Play", "Oynat") to { act(0, one) })
+                                add(tr("Info", "Bilgi") to { act(1, one) })
+                                add(tr("Share", "Paylaş") to { act(2, one) })
+                                add(tr("Rename", "Yeniden adlandır") to { act(3, one) })
+                            }
+                            add(tr("Hide folder", "Klasörü gizle") to { prefs.hidden = prefs.hidden + chosen.map { fk(it) }; sel = emptySet(); rev++ })
+                            add(tr("Mark unplayed", "Oynanmadı say") to { chosen.forEach { prefs.forget(it.key) }; sel = emptySet(); rev++ })
+                        }
+                        items.forEach { (n, f) -> DropdownMenuItem(text = { Text(n, color = Color.White, fontSize = 14.sp) }, onClick = { selMenu = false; f() }) }
+                    }
+                }
+            } else {
+                SkinBtn(sk, { search = if (search == null) "" else null }) { PIcon("search", sk.topFg, 24.dp) }
+                SkinBtn(sk, { optDialog = true }) { PIcon("sort", sk.topFg, 24.dp) }
+                SkinBtn(sk, { pick.launch(arrayOf("video/*")) }) { PIcon("folder", sk.topFg, 24.dp) }
+                SkinBtn(sk, { urlDialog = true }) { PIcon("wifi", sk.topFg, 24.dp) }
+                SkinBtn(sk, { settings = true }) { PIcon("settings", sk.topFg, 24.dp) }
+            }
         }
         if (!granted) {
             Column(Modifier.fillMaxSize().padding(16.dp), verticalArrangement = Arrangement.Center, horizontalAlignment = Alignment.CenterHorizontally) {
@@ -259,13 +310,13 @@ fun VideoHub(onBack: () -> Unit) {
             } else if (prefs.grid) {
                 LazyVerticalGrid(GridCells.Adaptive(150.dp), Modifier.fillMaxSize(), contentPadding = androidx.compose.foundation.layout.PaddingValues(8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     items(entries) { e ->
-                        Entry(e, sk, prefs, shape, true, Modifier.combinedClickable(onClick = { onOpen(e) }, onLongClick = { (e as? VideoItem)?.let { menuFor = it } })) { (e as? VideoItem)?.let { menuFor = it } }
+                        Entry(e, sk, prefs, shape, true, Modifier.background(if (e is VideoItem && e.key in sel) sk.accent.copy(alpha = .28f) else Color.Transparent).combinedClickable(onClick = { if (sel.isNotEmpty() && e is VideoItem) toggle(e) else onOpen(e) }, onLongClick = { (e as? VideoItem)?.let { toggle(it) } })) { i -> (e as? VideoItem)?.let { act(i, it) } }
                     }
                 }
             } else {
                 LazyColumn(Modifier.fillMaxSize()) {
                     items(entries) { e ->
-                        Entry(e, sk, prefs, shape, false, Modifier.combinedClickable(onClick = { onOpen(e) }, onLongClick = { (e as? VideoItem)?.let { menuFor = it } })) { (e as? VideoItem)?.let { menuFor = it } }
+                        Entry(e, sk, prefs, shape, false, Modifier.background(if (e is VideoItem && e.key in sel) sk.accent.copy(alpha = .28f) else Color.Transparent).combinedClickable(onClick = { if (sel.isNotEmpty() && e is VideoItem) toggle(e) else onOpen(e) }, onLongClick = { (e as? VideoItem)?.let { toggle(it) } })) { i -> (e as? VideoItem)?.let { act(i, it) } }
                     }
                 }
             }
@@ -279,21 +330,6 @@ fun VideoHub(onBack: () -> Unit) {
         else play = Play(listOf(urlItem(u)), 0)
     }
     if (optDialog) ViewOptions(prefs, { optDialog = false }) { at = if (prefs.browse == 2) "" else null; rev++ }
-    menuFor?.let { v ->
-        val acts = listOf(tr("Play", "Oynat"), tr("Info", "Bilgi"), tr("Share", "Paylaş"), tr("Rename", "Yeniden adlandır"), tr("Delete", "Sil"), tr("Hide folder", "Klasörü gizle"), tr("Mark unplayed", "Oynanmadı say"))
-        PickDialog(v.name, acts.map { it to false }, { menuFor = null }) { i ->
-            menuFor = null
-            when (i) {
-                0 -> play = Play(listOf(v), 0)
-                1 -> infoFor = v
-                2 -> shareVideo(ctx, v)
-                3 -> renameFor = v
-                4 -> if (v.local) { if (android.os.Build.VERSION.SDK_INT >= 30) sender.launch(IntentSenderRequest.Builder(MediaStore.createDeleteRequest(ctx.contentResolver, listOf(v.uri)).intentSender).build()) else { runCatching { ctx.contentResolver.delete(v.uri, null, null) }; rev++ } }
-                5 -> { prefs.hidden = prefs.hidden + fk(v); rev++ }
-                6 -> { prefs.forget(v.key); rev++ }
-            }
-        }
-    }
     infoFor?.let { FileInfoDialog(it, emptyList()) { infoFor = null } }
     renameFor?.let { v ->
         TextDialog(tr("Rename", "Yeniden adlandır"), v.name, { renameFor = null }) { n ->
@@ -308,7 +344,7 @@ fun VideoHub(onBack: () -> Unit) {
 
 /** One folder or video cell, as a list row or a grid cell. */
 @Composable
-private fun Entry(e: Any, sk: VSkin, p: VideoPrefs, shape: androidx.compose.ui.graphics.Shape, grid: Boolean, modifier: Modifier, onMore: () -> Unit) {
+private fun Entry(e: Any, sk: VSkin, p: VideoPrefs, shape: androidx.compose.ui.graphics.Shape, grid: Boolean, modifier: Modifier, onAct: (Int) -> Unit) {
     val boxMod = if (grid) Modifier.fillMaxWidth().aspectRatio(16f / 9f) else Modifier.size(96.dp, 54.dp)
     val first = (e as? Folder)?.vids?.firstOrNull() ?: e as? VideoItem
     val thumb: @Composable () -> Unit = {
@@ -344,11 +380,25 @@ private fun Entry(e: Any, sk: VSkin, p: VideoPrefs, shape: androidx.compose.ui.g
         }
     }
     if (grid) {
-        Column(modifier) { thumb(); Row(verticalAlignment = Alignment.Top) { text(Modifier.weight(1f).padding(top = 4.dp)); if (e is VideoItem) SkinBtn(sk, onMore, 28.dp) { com.umutk.pulse.extras.ui.TIcon("more", sk.sub, 18.dp, sk.icons) } } }
+        Column(modifier) { thumb(); Row(verticalAlignment = Alignment.Top) { text(Modifier.weight(1f).padding(top = 4.dp)); if (e is VideoItem) MoreMenu(sk, 28.dp, 18.dp, onAct) } }
     } else {
         Row(modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             thumb(); Spacer(Modifier.width(12.dp)); text(Modifier.weight(1f))
-            if (e is VideoItem) SkinBtn(sk, onMore, 36.dp) { com.umutk.pulse.extras.ui.TIcon("more", sk.sub, 22.dp, sk.icons) }
+            if (e is VideoItem) MoreMenu(sk, 36.dp, 22.dp, onAct)
+        }
+    }
+}
+
+private fun videoActs() = listOf(tr("Play", "Oynat"), tr("Info", "Bilgi"), tr("Share", "Paylaş"), tr("Rename", "Yeniden adlandır"), tr("Delete", "Sil"), tr("Hide folder", "Klasörü gizle"), tr("Mark unplayed", "Oynanmadı say"))
+
+/** The ⋮ button of a video row with its small floating menu right under it. */
+@Composable
+private fun MoreMenu(sk: VSkin, size: androidx.compose.ui.unit.Dp, icon: androidx.compose.ui.unit.Dp, onAct: (Int) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        SkinBtn(sk, { open = true }, size) { com.umutk.pulse.extras.ui.TIcon("more", sk.sub, icon, sk.icons) }
+        DropdownMenu(open, { open = false }, containerColor = Color(0xF2101010)) {
+            videoActs().forEachIndexed { i, n -> DropdownMenuItem(text = { Text(n, color = Color.White, fontSize = 14.sp) }, onClick = { open = false; onAct(i) }) }
         }
     }
 }

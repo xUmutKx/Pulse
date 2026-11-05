@@ -594,7 +594,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                     if (subView !== it.subtitleView) subView = it.subtitleView
                     rev.let { _ ->
                         it.subtitleView?.apply {
-                            applySubPrefs(prefs)
+                            applySubPrefs(prefs, inPip)
                         }
                     }
                 },
@@ -900,7 +900,7 @@ private fun SubOptions(p: VideoPrefs, delayMs: Long, hasExt: Boolean, onDelay: (
         text = {
             Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
                 if (hasExt) stepper(tr("Delay", "Gecikme"), "%+d ms".format(delayMs), { onDelay(delayMs - 100); rev++ }, { onDelay(delayMs + 100); rev++ })
-                stepper(tr("Size", "Boyut"), "${p.subSize}", { p.subSize = (p.subSize - 2).coerceAtLeast(10); rev++; onStyle() }, { p.subSize = (p.subSize + 2).coerceAtMost(60); rev++; onStyle() })
+                stepper(tr("Size", "Boyut"), "${p.subSize}", { p.subSize = (p.subSize - 2).coerceAtLeast(16); rev++; onStyle() }, { p.subSize = (p.subSize + 2).coerceAtMost(72); rev++; onStyle() })
                 sw(tr("Bold", "Kalın"), p.subBold) { p.subBold = it }
                 sw(tr("Background", "Arka plan"), p.subBg) { p.subBg = it }
                 sw(tr("Outline", "Kenar"), p.subEdge) { p.subEdge = it }

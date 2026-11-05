@@ -209,7 +209,8 @@ fun VideoSettings(prefs: VideoPrefs, onClose: () -> Unit, onChange: () -> Unit) 
                 Sw(tr("Load .srt next to the video", "Yanındaki altyazıyı yükle"), { prefs.subAuto }, { prefs.subAuto = it }, done)
                 Sw(tr("Ignore file styling", "Dosya stilini yok say"), { prefs.subIgnoreStyle }, { prefs.subIgnoreStyle = it }, done)
                 Pick(tr("Font", "Yazı tipi"), subFontNames(), { prefs.subFont }, done) { prefs.subFont = it }
-                Num(tr("Text size", "Yazı boyu"), listOf(14, 16, 18, 20, 24, 28, 34, 40), { prefs.subSize }, { "$it" }, done) { prefs.subSize = it }
+                Num(tr("Text size", "Yazı boyu"), listOf(24, 28, 32, 36, 38, 40, 44, 48, 56), { prefs.subSize }, { "$it" }, done) { prefs.subSize = it }
+                Num(tr("Picture-in-picture text size", "Pencere içi yazı boyu"), listOf(12, 14, 16, 18, 20, 22, 24), { prefs.subSizePip }, { "$it" }, done) { prefs.subSizePip = it }
                 Pick(tr("Colour", "Renk"), subColorNames(), { prefs.subColor }, done) { prefs.subColor = it }
                 Sw(tr("Bold", "Kalın"), { prefs.subBold }, { prefs.subBold = it }, done)
                 Sw(tr("Edge", "Kenar"), { prefs.subEdge }, { prefs.subEdge = it }, done)
