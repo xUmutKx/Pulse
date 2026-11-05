@@ -2245,3 +2245,11 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Video akıllı adlandırma (varsayılan açık, Ayarlar > Kütüphane): "Dexter S03E08 · The Damage A Man Can Do", filmlerde "Ad (yıl)"; çözünürlük/kaynak/kodek/grup etiketleri çıkar; liste satırlarında ve oynatıcı başlığında (derlenmedi)
 - Altyazı arama: sonuçlar en iyi uyumdan başlayarak sıralanır (video dosya adıyla aynı sürüm ★ ile en üstte, sonra en çok ortak etiket, sonra puan); CC (işitme engelli) işareti görünür (derlenmedi)
 - Alarm atlama kaydı alarmın kendi verisine taşındı (skipRingAt, lucid_alarm.json içinde; açık/kapalı durumuyla aynı yazımda): çıkıp girince "3 gün" yerine "7 saat" görünmesi için ayrı bir tercih dosyasına bağımlılık kalktı; arayüz hesaplarken kaydı silmez (derlenmedi)
+
+## 1.0.368 (versionCode 769) — derleniyor
+- Alarm: atlanan çalma kaydı alarmın kendisinde (skipRingAt); "Pazartesi için aç" sonrası sıradaki zaman doğru olmalı (cihazda doğrulanmadı)
+- Video: altyazı kaydı ad+boyut ile, akıllı adlandırma, arama sıralaması (cihazda doğrulanmadı)
+- Hava durumu: 429 alan servis 10 dk duraklatılır, yeniden denenmez; son kayıtlı tahmin her hatada gösterilir
+- Play: APK kurma ve REQUEST_INSTALL_PACKAGES yalnızca foss (APK_INSTALL bayrağı)
+- Hoş geldin: erişilebilirlik servisleri için her biri ayrı anahtarlı satırlar (açıklama + Erişilebilirlik ayarlarına gider)
+- Güncelleme penceresi yalnızca foss; play güncellemeleri Play Store üzerinden
