@@ -1769,6 +1769,42 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_clear" />
         </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherDailyWidget" android:label="Pulse · Weather, daily forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_daily" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherHourlyWidget" android:label="Pulse · Weather, hourly forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_hourly" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherNowDailyWidget" android:label="Pulse · Weather and daily forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_now_daily" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherNowHourlyWidget" android:label="Pulse · Weather and hourly forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_now_hourly" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherDailyHourlyWidget" android:label="Pulse · Daily and hourly forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_daily_hourly" />
+        </receiver>
+        <receiver android:name="com.umutk.pulse.widgets.WeatherAllWidget" android:label="Pulse · Weather, daily and hourly forecast" android:exported="false">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/widget_weather_all" />
+        </receiver>
 
         <!-- BlackOut (extras/blackout): Pulse is also an LSPosed / Vector module (legacy entry, assets/xposed_init); the module turns dark greys black inside the apps ticked in LSPosed -->
         <meta-data android:name="xposedmodule" android:value="true" />
