@@ -199,7 +199,7 @@ open class MainActivity : ComponentActivity() {
             com.umutk.pulse.features.FilesLaunch.full = true; com.umutk.pulse.widgets.WidgetOpen.page = "files"; return
         }
         if (i?.getBooleanExtra("downloads", false) == true) { Downloads.wanted = true; return }
-        if (i?.type == "application/vnd.android.package-archive") {
+        if (i?.type == "application/vnd.android.package-archive" && BuildConfig.APK_INSTALL) {
             val uri = IntentCompat.getParcelableExtra(i, Intent.EXTRA_STREAM, Uri::class.java)
             if (uri != null) handleApk(uri)
             return
