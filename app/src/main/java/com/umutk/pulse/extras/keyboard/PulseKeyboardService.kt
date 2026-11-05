@@ -228,6 +228,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onCreate() {
         super.onCreate()
+        runCatching { (getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager).registerInputDeviceListener(deviceListener, null) }
         KeyboardPrefs.load(this)
         owner = StandByOwner().also { it.start() }
         st.lang = KeyboardPrefs.langList().first()
@@ -296,6 +297,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         clipboard?.removePrimaryClipChangedListener(clipListener)
         runCatching { contentResolver.unregisterContentObserver(shotObserver) }
         KeyboardDictionary.saveUser(this)
+        runCatching { (getSystemService(Context.INPUT_SERVICE) as android.hardware.input.InputManager).unregisterInputDeviceListener(deviceListener) }
         owner?.stop(); scope.cancel()
         super.onDestroy()
     }
@@ -349,7 +351,7 @@ class PulseKeyboardService : InputMethodService(), KbActions {
     override fun onStartInputView(info: EditorInfo, restarting: Boolean) {
         super.onStartInputView(info, restarting)
         // a hardware keyboard: the screen keyboard still comes up, as its suggestion bar only
-        st.hardware = resources.configuration.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS
+        st.hardware = hardwareAttached()
         st.hwOpen = false
         st.inline = emptyList(); st.emojiQuery = null
         st.forceLayout = null; st.panel = "keys"
@@ -386,6 +388,31 @@ class PulseKeyboardService : InputMethodService(), KbActions {
         word.clear(); touchPts.clear(); lastCorrection = null; prevWord = null; prevWord2 = null; lastWasSpace = false; punctTyped = false
         st.shift = 0
         updateCaps(); updateSuggestions()
+        // the new field's layout (number pad, bar only for a hardware keyboard) is handed to the window now, not with the next key: state changes are applied at once and the window is measured again
+        androidx.compose.runtime.snapshots.Snapshot.sendApplyNotifications()
+        kbRoot?.let { v -> v.post { st.refreshInsets?.invoke(); v.requestLayout() } }
+    }
+
+    /**
+     * Is a physical keyboard attached? The configuration alone is not enough: a Bluetooth or USB keyboard connected after the service started may not show in it yet,
+     * so the input devices are asked too (a real keyboard with letter keys, not the phone's own virtual one).
+     */
+    private fun hardwareAttached(): Boolean {
+        if (resources.configuration.keyboard != android.content.res.Configuration.KEYBOARD_NOKEYS) return true
+        return runCatching {
+            android.view.InputDevice.getDeviceIds().any { id ->
+                val d = android.view.InputDevice.getDevice(id) ?: return@any false
+                !d.isVirtual && (d.sources and android.view.InputDevice.SOURCE_KEYBOARD) == android.view.InputDevice.SOURCE_KEYBOARD &&
+                    d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC
+            }
+        }.getOrDefault(false)
+    }
+
+    // a keyboard plugged in or paired while a field is open: the screen keyboard follows at once (no key press needed)
+    private val deviceListener = object : android.hardware.input.InputManager.InputDeviceListener {
+        override fun onInputDeviceAdded(deviceId: Int) { st.hardware = hardwareAttached() }
+        override fun onInputDeviceRemoved(deviceId: Int) { st.hardware = hardwareAttached(); if (!st.hardware) st.hwOpen = false }
+        override fun onInputDeviceChanged(deviceId: Int) { st.hardware = hardwareAttached() }
     }
 
     // a keyboard that is closed with the emoji (or clipboard, or tool) page up comes back as the plain keys, whichever way it is shown again
@@ -487,6 +514,8 @@ class PulseKeyboardService : InputMethodService(), KbActions {
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
         val e = event ?: return super.onKeyDown(keyCode, event)
+        // a key from a real keyboard: one is attached, whatever the configuration said (its letters then go through the keyboard's own typing: suggestions and automatic correction)
+        if (!st.hardware && e.device?.let { d -> !d.isVirtual && d.keyboardType == android.view.InputDevice.KEYBOARD_TYPE_ALPHABETIC } == true) st.hardware = true
         if (st.hardware && hardwareKey(keyCode, e)) return true
         if (e.isCtrlPressed || e.isAltPressed || e.isMetaPressed || e.repeatCount > 0) return super.onKeyDown(keyCode, event)
         if (KeyboardPrefs.langList().firstOrNull() != "tr") return super.onKeyDown(keyCode, event)
