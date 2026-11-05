@@ -146,6 +146,21 @@ fun RecolorCard(pkg: String, sp: SharedPreferences) {
             }
             Box(Modifier.padding(start = 8.dp)) { PSwitch(on, { setOn(it) }) }
         }
+        // the automatic black (big white surfaces) of "every app automatically": on by default, shown and switched per app here
+        val autoAll = sp.getBoolean("lsp_auto", true)
+        var autoOn by remember(pkg) { mutableStateOf(autoAll && pkg !in (sp.getStringSet("lsp_auto_off", emptySet()) ?: emptySet())) }
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(tr("Automatic black", "Otomatik siyah"), color = T.text, fontSize = 14.sp)
+                BoText(if (!autoAll) tr("Off for every app in the module settings", "Modül ayarlarında tüm uygulamalar için kapalı") else tr("Big white surfaces turn black; text, icons and small shapes keep their colour", "Büyük beyaz zeminler siyah olur; yazı, simge ve küçük şekiller kendi renginde kalır"), 12)
+            }
+            PSwitch(autoOn, { v ->
+                autoOn = v
+                val set = (sp.getStringSet("lsp_auto_off", emptySet()) ?: emptySet()).toMutableSet()
+                if (v) set.remove(pkg) else set.add(pkg)
+                sp.edit().putStringSet("lsp_auto_off", set).apply()
+            }, enabled = autoAll)
+        }
         BoText(if (on) tr("Colour changes are on for this app", "Bu uygulamada renk değişiklikleri açık") else tr("Off: this app keeps its own colours", "Kapalı: bu uygulama kendi renklerini korur"), 12)
         BoBtn(tr("Pick on screen", "Ekrandan seç"), modifier = Modifier.padding(top = 6.dp)) { openColourBar(ctx, pkg) }
         if (open) {

@@ -274,7 +274,7 @@ new MutationObserver(function(ms){for(var i=0;i<ms.length;i++){var m=ms[i];if(m.
  * is drawn in another one. When a light color is turned dark, dark text turns light with it so it stays readable.
  */
 object Recolor {
-    class Rule(val from: Int, val to: Int, val tol: Int, val strength: Int = 100)
+    class Rule(val from: Int, val to: Int, val tol: Int, val strength: Int = 100, val auto: Boolean = false)
 
     /** Built-in rules that need no setup: Google Play's dark surfaces go pure black, like AMOLED. */
     fun builtin(pkg: String): List<Rule> = when (pkg) {
@@ -283,7 +283,7 @@ object Recolor {
     }
 
     /** What every app gets once the module is on, without any setup: whites and near-whites become black (the colour rules of an app replace it). */
-    fun auto(): List<Rule> = listOf(0xFFFFFFFF.toInt(), 0xFFFAFAFA.toInt(), 0xFFF5F5F5.toInt(), 0xFFF0F0F0.toInt()).map { Rule(it, 0xFF000000.toInt(), 15) }
+    fun auto(): List<Rule> = listOf(0xFFFFFFFF.toInt(), 0xFFFAFAFA.toInt(), 0xFFF5F5F5.toInt(), 0xFFF0F0F0.toInt()).map { Rule(it, 0xFF000000.toInt(), 15, 100, auto = true) }
 
     /** "RRGGBB>RRGGBB>percent;..." as stored by the app. */
     fun parse(s: String?): List<Rule> = s.orEmpty().split(';').mapNotNull { p ->
@@ -310,6 +310,11 @@ object Recolor {
             if (m != c) return m
             return if (lightText && ((c ushr 24) and 255) >= 128 && lum(c) < .4f) (c and -0x1000000) or 0xEBEBEB else c
         }
+        // the automatic rules (no setup) only turn surfaces black: text, icons and small shapes keep their own colour
+        val autoOnly = rules.isNotEmpty() && rules.all { it.auto }
+        val metrics = android.content.res.Resources.getSystem().displayMetrics
+        /** a fill is a background when it spans a good part of the screen width and is tall enough to hold content */
+        fun bigFill(w: Int, h: Int) = w >= metrics.widthPixels * .4f && h >= 40 * metrics.density
         val undo = ThreadLocal.withInitial { ArrayList<Pair<Paint, Int>?>() }
         val h = object : Hook() {
             override fun beforeHookedMethod(param: HookParam) {
@@ -341,6 +346,7 @@ object Recolor {
             Hooks.one(android.graphics.drawable.ColorDrawable::class.java, "draw", Canvas::class.java, object : Hook() {
                 override fun beforeHookedMethod(param: HookParam) {
                     val d = param.thisObject as android.graphics.drawable.ColorDrawable
+                    if (autoOnly && !bigFill(d.bounds.width(), d.bounds.height())) return
                     val c = d.color; val m = map(c)
                     if (m != c) d.color = m
                 }
@@ -349,9 +355,33 @@ object Recolor {
         val after = object : Hook() {
             override fun afterHookedMethod(param: HookParam) { (param.result as? Int)?.let { val m = map(it); if (m != it) param.result = m } }
         }
+        // automatic mode: only colours named like a background or surface are looked up through (text, icon and button colours are left alone)
+        val afterBg = object : Hook() {
+            override fun afterHookedMethod(param: HookParam) {
+                val v = param.result as? Int ?: return
+                val id = param.args.firstOrNull() as? Int ?: return
+                val name = runCatching { (param.thisObject as Resources).getResourceEntryName(id) }.getOrNull()?.lowercase() ?: return
+                val bg = listOf("background", "surface", "window", "_bg", "bg_", "canvas", "page", "screen").any { name.contains(it) }
+                val other = listOf("text", "icon", "on_", "foreground", "label", "title", "hint", "tint", "divider", "stroke", "border", "ripple", "button", "chip", "badge", "accent", "primary").any { name.contains(it) }
+                if (!bg || other) return
+                val m = map(v); if (m != v) param.result = m
+            }
+        }
         val int = Integer.TYPE
-        hook { Hooks.one(Resources::class.java, "getColor", int, android.content.res.Resources.Theme::class.java, after) }
-        hook { Hooks.one(Resources::class.java, "getColor", int, after) }
-        hook { Hooks.one(android.content.res.TypedArray::class.java, "getColor", int, int, after) }
+        val lookup = if (autoOnly) afterBg else after
+        hook { Hooks.one(Resources::class.java, "getColor", int, android.content.res.Resources.Theme::class.java, lookup) }
+        hook { Hooks.one(Resources::class.java, "getColor", int, lookup) }
+        if (!autoOnly) hook { Hooks.one(android.content.res.TypedArray::class.java, "getColor", int, int, after) }
+        // shape backgrounds (cards, rows, panels drawn from XML): turned black only when big
+        if (autoOnly && android.os.Build.VERSION.SDK_INT >= 24) hook {
+            Hooks.one(android.graphics.drawable.GradientDrawable::class.java, "draw", Canvas::class.java, object : Hook() {
+                override fun beforeHookedMethod(param: HookParam) {
+                    val d = param.thisObject as android.graphics.drawable.GradientDrawable
+                    if (!bigFill(d.bounds.width(), d.bounds.height())) return
+                    val c = d.color?.defaultColor ?: return
+                    val m = map(c); if (m != c) d.setColor(m)
+                }
+            })
+        }
     }
 }
