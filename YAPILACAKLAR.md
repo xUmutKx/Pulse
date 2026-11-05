@@ -2240,3 +2240,4 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - İşlemler tablosu: GPU sütunu CPU'nun sağında (başlıkta toplam GPU kullanımı okunabiliyorsa; tek bir işlemin GPU'su telefondan okunamadığı için satırlar boş); sütunların sırası değiştirilebilir: başlığı basılı tutup yana sürükle, sıra kaydedilir (derlenmedi)
 - Ağ sayfası: Wi-Fi'deki cihaz sayısı artık /24 ağın her adresine sorarak sayılır (komşu tablosu Android 10+'da boştu, hep 1 gösteriyordu); sayfada son testlerin ortalama internet hızı (derlenmedi)
 - 1.0.367 derleniyor (1.0.366 sonrası tüm "derlenmedi" maddeleri bu sürümde)
+- Alarm atlama: "Turn back on for ..." ile atlanan çalma, eski bir kayıt tetiklense bile artık çalmaz (AlarmReceiver atlanan anı tanır, alarmı gerçek sonraki çalmaya kurar); atlama kaydı eşzamanlı yazılır (commit). Kök neden kodda bulunamadı; cihazda yeniden denenip sonuç bildirilecek (derlenmedi)
