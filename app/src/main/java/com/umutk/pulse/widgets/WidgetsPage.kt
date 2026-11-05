@@ -189,6 +189,7 @@ fun WidgetsPage() {
         value = withContext(drawer) { runCatching { installedSkins(ctx) }.getOrDefault(emptyList()) }
     }
 
+    val cols = widgetCols()
     LazyColumn(
         Modifier.fillMaxSize().padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -240,13 +241,13 @@ fun WidgetsPage() {
             if (plainStyle != null) oldShown.forEach { w -> plain += "t_${theme}_${w.provider}" to @Composable { TextCard(ctx, w, providers.getValue(w.provider), plainStyle) } }
             if (cards.isNotEmpty() || plain.isNotEmpty()) {
                 item(key = "h_$theme") { FamilyHeader(theme, label) }
-                items(cards.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                items(cards.chunked(cols), key = { it.first().first }) { pair -> PairRow(pair, cols) { it.second() } }
                 // one row of the plain widgets stays in view, the others are folded
-                items(plain.take(2).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                items(plain.take(2).chunked(cols), key = { it.first().first }) { pair -> PairRow(pair, cols) { it.second() } }
                 if (plain.size > 2) {
                     val more = theme in textOpen || query.isNotBlank()
                     item(key = "pm_$theme") { WinampHeader(plain.size - 2, more, tr("More widgets", "Diğer widget'lar")) { textOpen = if (more) textOpen - theme else textOpen + theme } }
-                    if (more) items(plain.drop(2).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                    if (more) items(plain.drop(2).chunked(cols), key = { it.first().first }) { pair -> PairRow(pair, cols) { it.second() } }
                 }
             }
         }
@@ -288,17 +289,17 @@ fun WidgetsPage() {
             // the three Winamp widgets (window, 4x1 strip, visualizer) are always shown; the skins fold under the arrow, and a search opens them
             val open = winampOpen || query.isNotBlank()
             item(key = "h_winamp") { Text("Winamp", color = T.text, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 6.dp, bottom = 4.dp)) }
-            if (winamp.isNotEmpty()) items(winamp.chunked(2), key = { "w_" + it.first().first }) { pair -> PairRow(pair) { it.second() } }
+            if (winamp.isNotEmpty()) items(winamp.chunked(cols), key = { "w_" + it.first().first }) { pair -> PairRow(pair, cols) { it.second() } }
             if (skinCards.isNotEmpty()) {
                 // three skins stay in view, the rest fold under the arrow
-                items(skinCards.take(3).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                items(skinCards.take(3).chunked(cols), key = { it.first().first }) { pair -> PairRow(pair, cols) { it.second() } }
                 if (skinCards.size > 3) {
                     item(key = "h_winamp_skins") { WinampHeader(skinCards.size - 3, open) { winampOpen = !winampOpen } }
-                    if (open) items(skinCards.drop(3).chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+                    if (open) items(skinCards.drop(3).chunked(cols), key = { it.first().first }) { pair -> PairRow(pair, cols) { it.second() } }
                 }
             }
         }
-        if (music.isNotEmpty()) items(music.chunked(2), key = { it.first().first }) { pair -> PairRow(pair) { it.second() } }
+        if (music.isNotEmpty()) items(music.chunked(cols), key = { it.first().first }) { pair -> PairRow(pair, cols) { it.second() } }
         item { Spacer(Modifier.size(24.dp)) }
     }
 }
@@ -368,12 +369,16 @@ private fun LookSettings(ctx: Context, win11: Boolean) {
 }
 
 @Composable
-private fun <E> PairRow(pair: List<E>, card: @Composable (E) -> Unit) {
+private fun <E> PairRow(pair: List<E>, cols: Int, card: @Composable (E) -> Unit) {
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         pair.forEach { Box(Modifier.weight(1f)) { card(it) } }
-        if (pair.size == 1) Spacer(Modifier.weight(1f))
+        repeat((cols - pair.size).coerceAtLeast(0)) { Spacer(Modifier.weight(1f)) }
     }
 }
+
+/** How many widget cards fit in a row: two on a phone, up to five on a tablet or a wide window. */
+@Composable
+private fun widgetCols(): Int = (((androidx.compose.ui.platform.LocalConfiguration.current.screenWidthDp - 24) / 150).coerceIn(2, 5))
 
 @Composable
 private fun FamilyHeader(theme: String, label: String) {
