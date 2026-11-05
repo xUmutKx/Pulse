@@ -4,6 +4,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -226,7 +227,7 @@ private fun HeadCell(top: String, name: String, key: String, active: Boolean, bg
     var shift by remember(key) { mutableStateOf(0f) }
     Box(Modifier.width(w).fillMaxHeight().graphicsLayer { translationX = shift; alpha = if (shift != 0f) .75f else 1f }.pointerInput(key) {
         // hold the head, then drag it sideways over the other columns: it lands where it is let go
-        androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress(
+        detectDragGesturesAfterLongPress(
             onDrag = { ch, d -> ch.consume(); shift += d.x },
             onDragEnd = {
                 var left = shift / dens; var idx = ColW.order.indexOf(key)
