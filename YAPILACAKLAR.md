@@ -2174,3 +2174,5 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Video: altyazı artık Pulse tarafından okunup (srt/vtt/ass, otomatik kodlama) oynatıcının altyazı görünümüne satır satır verilir (videoyu yeniden yüklemez, iz seçimi yok); indirme zip/gzip/düz metin ve ikinci adres dener; Skip recap/intro düğmesi tamamen beyaz, altında ince süre çizgisi (derlenmedi)
 
 - Video: Skip recap/intro düğmesi: süre dolgusu artık düğmenin tüm yüksekliğini ve genişliğini kaplar (padding metne taşındı) (derlenmedi)
+
+- Klavye emoji önerisi: kelime yazılırken emojiye basınca kelime silinir, yalnız emoji kalır; boşluktan sonra (düzeltme olsa da) emoji önerisi yanında kalır, basınca kelimenin yanına yazılır (derlenmedi)
