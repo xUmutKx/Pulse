@@ -67,6 +67,19 @@ fun Welcome(onDone: () -> Unit) {
             "Windows'a benzeyen bir Android görev yöneticisi, telefonun geri kalanı için araçlarla birlikte."),
             color = T.sub, fontSize = 14.sp, modifier = Modifier.padding(top = 6.dp))
 
+        // prominent disclosure for the Accessibility API: shown on the first start of every version, before any of its services is switched on
+        WelcomeCard(tr("Accessibility", "Erişilebilirlik")) {
+            WelcomeLine(tr("Pulse uses the Accessibility service for four features. You switch each one on yourself in Accessibility settings:",
+                "Pulse dört özellik için Erişilebilirlik servisini kullanır. Her birini Erişilebilirlik ayarlarında sen açarsın:"))
+            WelcomeLine(tr("App Lock: sees which app is in front, to lock it.", "Uygulama kilidi: hangi uygulamanın önde olduğunu görür, kilitlemek için."))
+            WelcomeLine(tr("Screen cover: draws over other apps. It reads no screen content.", "Ekran kapağı: diğer uygulamaların üstüne çizer. Ekran içeriğini okumaz."))
+            WelcomeLine(tr("BlackOut: sees the app in front, to change its colors.", "BlackOut: önde olan uygulamaya göre renkleri değiştirir."))
+            WelcomeLine(tr("Floating keyboard: appears when a text field is focused and writes into that field.",
+                "Yüzen klavye: bir metin alanı seçildiğinde açılır ve o alana yazar."))
+            WelcomeLine(tr("Pulse reads only what it needs on this phone. Nothing from the screen is sent off the device.",
+                "Pulse yalnızca bu telefonda ihtiyacı olanı okur. Ekrandaki hiçbir şey cihazdan dışarı gönderilmez."))
+        }
+
         WelcomeCard(tr("What's new", "Yenilikler")) {
             WelcomeLine(tr("Keyboard: a floating keyboard, a number pad with +, a rounded suggestion bar and a custom bottom key.",
                 "Klavye: yüzen klavye, + tuşlu sayı paneli, yuvarlak öneri çubuğu ve özel alt tuş."))

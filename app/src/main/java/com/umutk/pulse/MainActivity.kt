@@ -344,7 +344,8 @@ private fun Root() = LookHost(transparent = FilesGlass.on) { th ->
                 }
             }
         }
-        if (SplashGate.splashed && welcomed && wctx !is FilesActivity) UpdatePrompt()
+        // the GitHub update window only in the foss build: the play build gets its updates from Google Play
+        if (SplashGate.splashed && welcomed && wctx !is FilesActivity && BuildConfig.APK_INSTALL) UpdatePrompt()
     }
 }
 
