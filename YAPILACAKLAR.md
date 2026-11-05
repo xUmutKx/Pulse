@@ -2211,3 +2211,6 @@ Hepsi kodda hazır; hiçbiri cihazda denenmedi. Bir derleme (`derle`) sonrası h
 - Video oynatıcı: A-B tekrar düğmesi kaldırıldı; kaydırarak ileri/geri sarma 3 saniyeden kısaysa video atlamaz, kaldığı yerden devam eder (derlenmedi)
 - Video ayarları: uzun "Oynatıcı" sayfası üçe bölündü (Oynatma / Kontroller / Sistem), satırların başına simge eklendi; ⋮ menüsünün yeri seçilebilir (sağ üst ya da sol alt, Kontroller sayfasında "Menü konumu") (derlenmedi)
 - Klavye: cümle başında otomatik gelen büyük harfte Shift'e iki kez hızlı basınca artık caps lock açılır (ilk basış otomatik büyüğü kapatır, 400 ms içindeki ikinci basış caps lock yapar) (derlenmedi)
+- Hava durumu widget'ları geri geldi: şimdiki hava, 7 gün, sonraki 7 saat ve bunların karışımları (üstte hava+saat, altta günlük/saatlik tahmin) ayrı widget olarak (derlenmedi)
+- Widget sayfası: geniş ekranda satırda 5'e kadar widget kartı (telefonda 2); tüm widget görüntüleri artık orantılı ölçeklenir (fitXY yerine fitCenter), yeniden boyutlandırınca esnemez (derlenmedi)
+- İşlemler sayfası: root/Shizuku yokken kendi işlemlerinin yanında son 7 günde kullanılan (ya da simgeli tüm) uygulamalar listelenir; boyut ve ağ hızı gerçek okunur, root gerektiren bellek/CPU boş bırakılır (uydurma sayı yok); son okunan liste kaydedilir, okuma başarısız olursa o gösterilir (derlenmedi)

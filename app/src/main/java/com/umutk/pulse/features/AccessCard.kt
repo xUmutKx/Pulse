@@ -65,3 +65,36 @@ fun ownProcesses(ctx: Context): List<Proc> {
     val mem = runCatching { am.getProcessMemoryInfo(list.map { it.pid }.toIntArray()) }.getOrNull()
     return list.mapIndexed { i, p -> Proc(p.pid, p.processName, (mem?.getOrNull(i)?.totalPss ?: 0) / 1024, 0f, "app", "S") }
 }
+
+
+/**
+ * Without root or Shizuku the other apps' processes cannot be read. The page then lists the apps the phone does let it see (the ones used in the last week,
+ * or else every app with a launcher icon): their size and network speed are read for real, and the figures that need root (memory, CPU) are left blank, not invented.
+ */
+fun visibleApps(ctx: Context): List<Proc> {
+    val pm = ctx.packageManager
+    val launch = pm.queryIntentActivities(android.content.Intent(android.content.Intent.ACTION_MAIN).addCategory(android.content.Intent.CATEGORY_LAUNCHER), 0).map { it.activityInfo.packageName }.toSet()
+    val recent = runCatching {
+        if (!com.umutk.pulse.Extra.usageGranted(ctx)) return@runCatching emptyList<String>()
+        val um = ctx.getSystemService(Context.USAGE_STATS_SERVICE) as android.app.usage.UsageStatsManager
+        val now = System.currentTimeMillis()
+        um.queryUsageStats(android.app.usage.UsageStatsManager.INTERVAL_BEST, now - 7 * 86_400_000L, now)
+            .filter { it.lastTimeUsed > 0 && it.packageName in launch }.sortedByDescending { it.lastTimeUsed }.map { it.packageName }
+    }.getOrDefault(emptyList())
+    val names = (recent + launch.sorted()).distinct().take(80)
+    return names.map { Proc(0, it, 0, 0f, "", "") }
+}
+
+/** The last process list that was read, kept so the page has something to show when a read fails. */
+object ProcCache {
+    private fun sp(c: Context) = c.getSharedPreferences("proc_cache", Context.MODE_PRIVATE)
+    fun save(c: Context, l: List<Proc>) {
+        val a = org.json.JSONArray()
+        l.take(250).forEach { p -> a.put(org.json.JSONArray(listOf(p.pid, p.name, p.rssMb, p.cpu.toDouble(), p.user, p.state, p.vszMb, p.nice, p.ppid))) }
+        sp(c).edit().putString("list", a.toString()).apply()
+    }
+    fun load(c: Context): List<Proc> = runCatching {
+        val a = org.json.JSONArray(sp(c).getString("list", "[]"))
+        (0 until a.length()).map { i -> a.getJSONArray(i).let { Proc(it.getInt(0), it.getString(1), it.getInt(2), it.getDouble(3).toFloat(), it.getString(4), it.getString(5), it.getInt(6), it.getInt(7), it.getInt(8)) } }
+    }.getOrDefault(emptyList())
+}
