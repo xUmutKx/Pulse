@@ -98,9 +98,6 @@ fun VaultScreen(back: () -> Unit) {
     var msg by remember { mutableStateOf("") }
     var rev by remember { mutableStateOf(0) }
     LaunchedEffect(rev) { entries = withContext(Dispatchers.IO) { VaultStore.all(ctx) } }
-    val autofillOn = remember(rev) {
-        Build.VERSION.SDK_INT >= 26 && runCatching { ctx.getSystemService(android.view.autofill.AutofillManager::class.java)?.hasEnabledAutofillServices() == true }.getOrDefault(false)
-    }
     val pick = rememberLauncherForActivityResult(PulsePick.OpenDocument()) { u ->
         if (u != null) scope.launch {
             msg = tr("Importing…", "İçe aktarılıyor…")
@@ -122,17 +119,15 @@ fun VaultScreen(back: () -> Unit) {
     LazyColumn(Modifier.fillMaxSize().padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         item {
             PCard {
-                Row(verticalAlignment = Alignment.CenterVertically) { PIcon("shieldOk", T.accent, 22.dp, Modifier.padding(end = 10.dp)); Text(tr("Autofill", "Otomatik doldurma"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium) }
-                Text(
-                    if (Build.VERSION.SDK_INT < 26) tr("Autofill needs Android 8 or newer.", "Otomatik doldurma Android 8 ve üstünü ister.")
-                    else if (autofillOn) tr("An autofill service is on. If it is not Pulse, pick Pulse in the settings: only one can be on at a time.", "Bir otomatik doldurma servisi açık. Pulse değilse ayarlardan Pulse'u seç: aynı anda yalnızca biri açık olur.")
-                    else tr("Pulse offers your logins in other apps and in browsers, and offers to save new ones.", "Pulse girişlerini diğer uygulamalarda ve tarayıcılarda önerir, yenilerini kaydetmeyi sorar."),
-                    color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(vertical = 4.dp),
-                )
-                if (Build.VERSION.SDK_INT >= 26) PButton(tr("Use Pulse for autofill", "Pulse ile otomatik doldur")) {
-                    val i = Intent(Settings.ACTION_REQUEST_SET_AUTOFILL_SERVICE, Uri.parse("package:${ctx.packageName}"))
-                    runCatching { ctx.startActivity(i) }.onFailure { runCatching { ctx.startActivity(Intent(Settings.ACTION_SETTINGS)) } }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    PIcon("shieldOk", T.accent, 22.dp, Modifier.padding(end = 10.dp))
+                    Text(tr("Pulse keyboard", "Pulse klavyesi"), color = T.text, fontSize = 16.sp, fontWeight = FontWeight.Medium)
                 }
+                Text(
+                    tr("In a user name or password box of an app, the Pulse keyboard shows the logins saved here for that app on its bar. Nothing goes through the system autofill service.",
+                        "Bir uygulamanın kullanıcı adı ya da şifre kutusunda Pulse klavyesi, o uygulama için burada kayıtlı girişleri çubuğunda gösterir. Sistemin otomatik doldurma servisi kullanılmaz."),
+                    color = T.sub, fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp),
+                )
             }
         }
         item {
