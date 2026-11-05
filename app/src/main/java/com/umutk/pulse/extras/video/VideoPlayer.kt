@@ -216,7 +216,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 at, prefs.resume(items[at].key),
             )
             trackSelectionParameters = trackSelectionParameters.buildUpon()
-                .setPreferredAudioLanguage(prefs.prefAudio.ifBlank { null }).setPreferredTextLanguage(prefs.prefSub.ifBlank { null }).build()
+                .setPreferredAudioLanguage(prefs.prefAudio.ifBlank { null }).setPreferredTextLanguages(*subLangs(prefs)).build()
             repeatMode = when (prefs.repeat) { 1 -> Player.REPEAT_MODE_ONE; 2 -> Player.REPEAT_MODE_ALL; else -> Player.REPEAT_MODE_OFF }
             skipSilenceEnabled = prefs.skipSilence
             pauseAtEndOfMediaItems = !prefs.autoPlay
@@ -303,12 +303,12 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         player.setHandleAudioBecomingNoisy(prefs.pauseNoisy)
         player.setSeekParameters(if (prefs.fastSeek) SeekParameters.CLOSEST_SYNC else SeekParameters.EXACT)
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
-            .setPreferredAudioLanguage(prefs.prefAudio.ifBlank { null }).setPreferredTextLanguage(prefs.prefSub.ifBlank { null }).build()
+            .setPreferredAudioLanguage(prefs.prefAudio.ifBlank { null }).setPreferredTextLanguages(*subLangs(prefs)).build()
         applyBoost(player.audioSessionId); applyEq(player.audioSessionId)
         rev++
     }
     /** Loads the picked subtitle file again with the saved encoding and the delay. */
-    fun applySubNow() {
+    fun applySubNow(quiet: Boolean = false) {
         val e = ext ?: run { android.widget.Toast.makeText(ctx, tr("No subtitle picked", "Altyazı seçilmedi"), android.widget.Toast.LENGTH_SHORT).show(); return }
         val bytes = (if (e.first.scheme == "file") java.io.File(e.first.path!!).inputStream() else ctx.contentResolver.openInputStream(e.first))?.use { it.readBytes() }
         if (bytes == null) { android.widget.Toast.makeText(ctx, tr("The subtitle file could not be read", "Altyazı dosyası okunamadı"), android.widget.Toast.LENGTH_LONG).show(); return }
@@ -317,12 +317,28 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         extCues = cues
         // the video's own text tracks stay quiet while this one shows
         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
-        android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı") + " (${cues.size})", android.widget.Toast.LENGTH_SHORT).show()
+        if (!quiet) android.widget.Toast.makeText(ctx, tr("Subtitle on", "Altyazı açıldı") + " (${cues.size})", android.widget.Toast.LENGTH_SHORT).show()
     }
     fun applySub() = runCatching { applySubNow() }.onFailure { t ->
         android.util.Log.e("PulseVideo", "subtitle", t)
         android.widget.Toast.makeText(ctx, tr("The subtitle could not be added: ", "Altyazı eklenemedi: ") + (t.message ?: t.javaClass.simpleName), android.widget.Toast.LENGTH_LONG).show()
     }.let { }
+
+    /** Opens the subtitle kept for the video before (and its delay), unless "Off" was chosen for it. */
+    fun loadSaved(v: VideoItem?) {
+        if (v == null || extCues != null) return
+        if (SubStore.isOff(ctx, v.key)) { player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build(); return }
+        val s = SubStore.saved(ctx, v.key) ?: return
+        ext = s; subDelay = SubStore.delay(ctx, v.key)
+        runCatching { applySubNow(quiet = true) }
+    }
+    /** A picked or downloaded subtitle: kept on the phone for this video, then shown. */
+    fun adopt(u: Uri, name: String) {
+        val v = items.getOrNull(cur)
+        val kept = v?.let { SubStore.save(ctx, it, u, name) }
+        ext = (kept ?: u) to name
+        applySub(); dlg = null
+    }
 
     // the line for the moment goes to the subtitle view ten times a second; it is replaced only when it changes
     LaunchedEffect(extCues, subDelay, subView) {
@@ -341,6 +357,8 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     }
     // leaving the external subtitle (a new video, or a subtitle picked from the list): its last line is wiped
     LaunchedEffect(extCues) { if (extCues == null) subView?.setCues(emptyList()) }
+
+    LaunchedEffect(player) { loadSaved(items.getOrNull(cur)) }
 
     DisposableEffect(player) {
         val l = object : Player.Listener {
@@ -385,6 +403,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
                 cur = player.currentMediaItemIndex
                 items.getOrNull(cur)?.let { prefs.addRecent(it) }
                 ext = null; extCues = null; subDelay = 0L; abA = -1L; abB = -1L
+                loadSaved(items.getOrNull(cur))
                 if (sleepEnd && reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO) { player.pause(); sleepEnd = false }
                 if (!subReload[0] && (reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO || reason == Player.MEDIA_ITEM_TRANSITION_REASON_SEEK)) {
                     m?.let { val r = prefs.resume(it.mediaId); if (r > 0) player.seekTo(r) }
@@ -563,7 +582,7 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
     var bright by remember { mutableFloatStateOf((act?.window?.attributes?.screenBrightness ?: -1f).let { if (it < 0) .5f else it }) }
 
     val pickSub = rememberLauncherForActivityResult(com.umutk.pulse.PulsePick.OpenDocument()) { u ->
-        if (u != null) { ext = u to displayName(ctx, u); applySub(); dlg = null }
+        if (u != null) adopt(u, displayName(ctx, u))
     }
 
     BackHandler(enabled = !settings) { if (!locked) onBack() }
@@ -803,40 +822,35 @@ fun VideoPlayerScreen(uri: Uri, onBack: () -> Unit, queue: List<VideoItem> = emp
         }
         "text" -> {
             val rows = trackRows(tracks, C.TRACK_TYPE_TEXT)
-            val off = rows.none { it.selected }
-            val w = LocalWindowLook.current
-            PickDialog(tr("Subtitles", "Altyazı"), listOf(tr("Off", "Kapalı") to off) + rows.map { it.label to it.selected }, { dlg = null },
-                extra = {
-                    Row(Modifier.fillMaxWidth().clickable { pickSub.launch(arrayOf("*/*")) }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("folder", w.text, 22.dp); Spacer(Modifier.width(10.dp)); Text(".srt .ass .vtt", color = w.text, fontSize = 14.sp)
-                    }
-                    Row(Modifier.fillMaxWidth().clickable { dlg = "osub" }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("search", w.text, 22.dp); Spacer(Modifier.width(10.dp)); Text(tr("Search online", "Çevrimiçi ara"), color = w.text, fontSize = 14.sp)
-                    }
-                    Row(Modifier.fillMaxWidth().clickable { dlg = "subopt" }.padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        PIcon("settings", w.text, 22.dp); Spacer(Modifier.width(10.dp)); Text(tr("Style and delay", "Stil ve gecikme"), color = w.text, fontSize = 14.sp)
-                    }
-                },
-            ) { i ->
-                extCues = null
-                if (i == 0) player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
-                else {
+            val key = items.getOrNull(cur)?.key
+            SubMenu(
+                prefs, rows.map { it.label to it.selected }, off = extCues == null && rows.none { it.selected }, extName = ext?.second.takeIf { extCues != null }, delayMs = subDelay,
+                onChoose = { i ->
+                    extCues = null; ext = null; key?.let { SubStore.forget(ctx, it) }
                     // the choice is made on the tracks the player has now: the list above can be from before a subtitle reload, and its groups then match nothing
                     val live = trackRows(player.currentTracks, C.TRACK_TYPE_TEXT)
-                    val want = rows[i - 1]
-                    val r = live.firstOrNull { it.label == want.label } ?: live.getOrNull(i - 1)
+                    val want = rows[i]
+                    val r = live.firstOrNull { it.label == want.label } ?: live.getOrNull(i)
                     if (r != null) {
                         if (prefs.rememberSel) r.lang?.let { prefs.prefSub = it }
                         player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false).clearOverridesOfType(C.TRACK_TYPE_TEXT)
                             .addOverride(TrackSelectionOverride(r.group.mediaTrackGroup, r.idx)).build()
                     }
-                }
-                dlg = null
-            }
+                    rev++
+                },
+                onOff = {
+                    extCues = null; ext = null; key?.let { SubStore.setOff(ctx, it, true) }
+                    player.trackSelectionParameters = player.trackSelectionParameters.buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true).build()
+                    rev++
+                },
+                onFile = { pickSub.launch(arrayOf("*/*")) }, onSearch = { dlg = "osub" },
+                onDelay = { subDelay = it; key?.let { k -> SubStore.setDelay(ctx, k, it) } },
+                onStyle = { rev++ }, onEnc = { dlg = "enc" }, onDismiss = { dlg = null },
+            )
         }
-        "osub" -> OnlineSubsDialog(ctx, items.getOrNull(cur)?.name.orEmpty(), { u, name -> ext = u to name; applySub(); dlg = null }) { dlg = null }
-        "subopt" -> SubOptions(prefs, subDelay, ext != null, { subDelay = it; applySub() }, { rev++ }, { dlg = "enc" }) { dlg = null }
-        "enc" -> PickDialog(tr("Encoding", "Kodlama"), encodings.map { it to (it == prefs.subEnc) }, { dlg = "subopt" }) { i -> prefs.subEnc = encodings[i]; applySub(); dlg = "subopt" }
+        "osub" -> OnlineSubsDialog(ctx, items.getOrNull(cur)?.name.orEmpty(), { u, name -> adopt(u, name) }) { dlg = null }
+        "subopt" -> { dlg = "text" }
+        "enc" -> PickDialog(tr("Encoding", "Kodlama"), encodings.map { it to (it == prefs.subEnc) }, { dlg = "text" }) { i -> prefs.subEnc = encodings[i]; if (ext != null) applySub(); dlg = "text" }
         "more" -> {
             // only what the bottom bar does not already do (speed, repeat and the sleep timer have their own buttons there)
             val moreItems = CONTROL_IDS.filter { it !in barList(prefs.barButtons) }.map { MoreItem("ctl_$it", "", controlName(it), "") } + listOf(
