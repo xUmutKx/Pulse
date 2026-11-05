@@ -82,8 +82,8 @@ fun measureApps(ctx: Context): List<AppEntry> {
     // the hidden ones: their folders measured with root or Shizuku (one run for all of them), else only their program files
     if (hidden.isNotEmpty()) {
         val P = com.umutk.pulse.extras.blackout.Privilege
-        if (P.mode == P.Mode.None) runCatching { P.detect() }
-        val sized = if (P.mode != P.Mode.None) runCatching {
+        if (P.mode == com.umutk.pulse.extras.blackout.Privilege.Mode.None) runCatching { P.detect() }
+        val sized = if (P.mode != com.umutk.pulse.extras.blackout.Privilege.Mode.None) runCatching {
             val script = hidden.joinToString("; ") { a ->
                 val k = a.packageName
                 "echo \"$k \$(du -sk /data/app/*/$k-* /data/app/$k-* /data/data/$k /data/user_de/0/$k /storage/emulated/0/Android/data/$k /storage/emulated/0/Android/obb/$k /storage/emulated/0/Android/media/$k 2>/dev/null | awk '{ if (!seen[\$2]++) s += \$1 } END { print s * 1024 }')\""
@@ -180,7 +180,7 @@ fun InstalledAppsScreen(onBack: () -> Unit) {
                     picked = emptySet()
                     scope.launch {
                         val P = com.umutk.pulse.extras.blackout.Privilege
-                        val power = withContext(Dispatchers.IO) { if (P.mode == P.Mode.None) runCatching { P.detect() }; P.mode != P.Mode.None }
+                        val power = withContext(Dispatchers.IO) { if (P.mode == com.umutk.pulse.extras.blackout.Privilege.Mode.None) runCatching { P.detect() }; P.mode != com.umutk.pulse.extras.blackout.Privilege.Mode.None }
                         if (power) {
                             note = tr("Uninstalling…", "Kaldırılıyor…")
                             val done = withContext(Dispatchers.IO) {
