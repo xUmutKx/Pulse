@@ -48,6 +48,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
+import androidx.core.graphics.drawable.toBitmap
 import java.io.File
 
 /**
@@ -177,7 +178,7 @@ private object PickThumbs {
                 else android.media.MediaMetadataRetriever().let { r -> try { r.setDataSource(f.path); r.frameAtTime } finally { r.release() } }
             ext == "apk" -> ctx.packageManager.getPackageArchiveInfo(f.path, 0)?.applicationInfo?.let { ai ->
                 ai.sourceDir = f.path; ai.publicSourceDir = f.path
-                ai.loadIcon(ctx.packageManager).let { d -> androidx.core.graphics.drawable.toBitmap(d, 96, 96) }
+                ai.loadIcon(ctx.packageManager).toBitmap(96, 96)
             }
             else -> null
         }
