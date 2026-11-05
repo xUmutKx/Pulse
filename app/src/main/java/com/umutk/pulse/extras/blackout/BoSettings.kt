@@ -88,8 +88,18 @@ fun ModulePage(mode: Privilege.Mode, sp: SharedPreferences) {
                     sp.edit().putFloat("limit", limit).putInt("tint", tint).apply()
                 }
             }
-            var auto by remember { mutableStateOf(sp.getBoolean("lsp_auto", true)) }
+            var auto by remember { mutableStateOf(sp.getBoolean("lsp_auto", false)) }
             BoSwitchRow(tr("Every app automatically", "Her uygulamada otomatik"), tr("Whites turn black in each app the module is on for, as it opens. An app with its own colour rules keeps those.", "Modülün açık olduğu her uygulamada beyazlar, uygulama açılırken siyah olur. Kendi renk kuralı olan uygulama onları korur."), auto) { auto = it; sp.edit().putBoolean("lsp_auto", it).apply() }
+            // root or Shizuku: opening an app's card used to turn its light backgrounds black by itself; it is a choice now (off), and the earlier automatic ones can be taken back
+            var ovAuto by remember { mutableStateOf(sp.getBoolean("ov_auto", false)) }
+            BoSwitchRow(tr("Black backgrounds when an app's card opens (root)", "Uygulama kartı açılınca zeminleri siyah yap (root)"), tr("Off: nothing is changed until you press a button. Only colours named like a background are touched, never text or icons.", "Kapalı: bir düğmeye basana kadar hiçbir şey değişmez. Yalnızca zemin adlı renklere dokunulur, yazıya ve simgeye asla."), ovAuto) { ovAuto = it; sp.edit().putBoolean("ov_auto", it).apply() }
+            var undoMsg by remember { mutableStateOf("") }
+            val undoScope = androidx.compose.runtime.rememberCoroutineScope()
+            BoBtn(tr("Undo the automatic blacks", "Otomatik siyahları geri al"), modifier = Modifier.padding(top = 4.dp)) {
+                undoMsg = tr("Working…", "Yapılıyor…")
+                undoScope.launch { val n = withContext(Dispatchers.IO) { undoAutoBlacks(sp) }; undoMsg = tr("Taken back in $n apps. Your own colours stay.", "$n uygulamada geri alındı. Kendi renklerin kalır.") }
+            }
+            if (undoMsg.isNotEmpty()) BoText(undoMsg, 12)
             BoText(tr("Which greys count as surfaces", "Hangi griler yüzey sayılır"), 13, T.text, modifier = Modifier.padding(top = 6.dp))
             GreySlider(limit, { limit = it }) { sp.edit().putFloat("limit", limit).apply() }
             BoText(if (keep < 1f) tr("Result: pure black", "Sonuç: saf siyah") else tr("Result: ${keep.toInt()}% of the brightness stays", "Sonuç: parlaklığın %${keep.toInt()}'i kalır"), 13, T.text)
